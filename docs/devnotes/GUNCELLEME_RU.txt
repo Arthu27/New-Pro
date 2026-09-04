@@ -73,7 +73,7 @@
 - ✅ Калып (temp) модерация активирована: !temp-mute, !tempban, !schedule, !modwhitelist
 - ✅ Команды переименованы на латиницу для удобства:
   - !собрание → !toplanti
-  - !неделяlik-rapor → !haftalik-rapor
+  - старую команду !неделяlik-rapor переименовали в !haftalik-rapor
   - !level-роли → !level-rol
   - !mod-статистика → !mod-stats
   - и другие (anime, dogumgunu, etkinlik, rapor, oyun)

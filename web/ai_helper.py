@@ -137,9 +137,9 @@ def _detect_category_ai (message :str ,history :List [Dict ])->str :
 def _detect_category_fallback (message :str )->str :
     """Fallback: определение категории по ключевым словам"""
     msg =message .lower ()
-    complaint_words =['жалоба','oskorblyaet','spamit','toksicniy','materitsya','ugrojaet','travit']
-    technical_words =['не работает','ошибка','bag','sloazs','vidaet ошибка','не mogu']
-    question_words =['как','где','ne время','ne','почему','zacem','mюmkюn ли']
+    complaint_words =['жалоба','оскорбляет','спамит','токсичный','матерится','угрожает','травит']
+    technical_words =['не работает','ошибка','баг','сломался','выдаёт ошибку','не могу']
+    question_words =['как','где','какое время','что такое','почему','зачем','можно ли']
 
     if any (w in msg for w in complaint_words ):
         return 'complaint'
@@ -283,13 +283,13 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
     # 1. Belirliyoruz kategori с с AI
     category =_detect_category_ai (user_message ,history )
 
-    # 2. Alыyoruz prompt для kategoriler
+    # 2. Собираем промпт для категоризации
     system_prompt =_get_prompt_by_category (category )
 
-    # 3. Topluyoruz baгlam
+    # 3. Собираем контекст
     messages =[{'role':'system','content':system_prompt }]
 
-    # Данныеtabanы информация (для question/technical/other)
+    # Данные базы знаний (для question/technical/other)
     if category in ('question','technical','other'):
         messages .append ({'role':'system','content':_bot_knowledge_base ()})
 
@@ -318,7 +318,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         'content':"ИНФОРМАЦИЯ О У ПОЛЬЗОВАТЕЛЯ:\n"+"\n".join (user_info )
         })
 
-        # 5. Baгlam сервер
+        # 5. Контекст сервера
     server_info =[]
     if guild_context .get ('guild_name'):
         server_info .append (f"Сервер: {guild_context['guild_name']}")
@@ -333,7 +333,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         'content':"КОНТЕКСТ СЕРВЕРА:\n"+"\n".join (server_info )
         })
 
-        # 5.5. Function calling — описание eriшadlerin fonksiyonlarыn
+        # 5.5. Function calling — описание доступных функций
     guild =guild_context .get ('guild')
     ai_functions =None 
     if guild and AIFunctions :
@@ -343,7 +343,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         'content':ai_functions .get_available_functions ()
         })
 
-        # 5.6. Samoobucenie — baгlam из viucennih patternov
+        # 5.6. Самообучение — контекст из выученных шаблонов
     try :
         from web .self_learning import get_self_learning 
         self_learning =get_self_learning ()
@@ -363,7 +363,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         # 7. Tekusee сообщение
     messages .append ({'role':'user','content':user_message })
 
-    # 8. Чтяжелыйыyoruz AI с function calling (maksimum 3 iteracii)
+    # 8. Опрашиваем AI с function calling (максимум 3 итерации)
     # Vibiraem тип задачи для multi-modelnosti
     task_type_map ={
     'complaint':'complaint_analysis',
@@ -378,18 +378,18 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         from web .model_selector import smart_call 
         response ,_ ,_ =smart_call (messages ,task_type =task_type ,max_tokens =2048 ,temperature =0.7 )
 
-        # Контроль ediyoruz есть ли vizovi fonksiyonlarыn
+        # Проверяем, есть ли вызовы функций
         func_calls =re .findall (r'\[FUNC:[^\]]+\]',response )
 
         if not func_calls or not ai_functions or not guild :
-        # Нет vizovov fonksiyonlarыn или function calling deгileriшadlerin — выходim
+        # Нет вызовов функций или function calling недоступен — выходим
             break 
 
             # Vipolnyaem fonksiyonlar
         for func_call in func_calls [:3 ]:# Maksimum 3 fonksiyonlar для kez
             result =await ai_functions .execute_function (func_call ,guild )
             if result :
-            # Ekliyoruz результат fonksiyonlar в baгlam
+            # Добавляем результаты функций в контекст
                 messages .append ({
                 'role':'system',
                 'content':f"РЕЗУЛЬТАТ FONKSIYONLAR {func_call}:\n{result}"
@@ -398,7 +398,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
                 # Убрать вызовы функций из ответа
     response =re .sub (r'\[FUNC:[^\]]+\]','',response ).strip ()
 
-    # 9. Отдельношtыrыyoruz записейler
+    # 9. Разделяем записи
     should_escalate =False 
     if 'ACTION:ESCALATE'in response :
         should_escalate =True 
@@ -420,7 +420,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
     if len (updated_history )>30 :
         updated_history =updated_history [-30 :]
 
-        # 11. Автоматически izvlecenie ve sohranenie gerчдобавитьr
+        # 11. Автоматически извлекаем и сохраняем факты
     if guild and ai_functions :
         try :
             from web .ai_rag import ConversationAnalyzer 
@@ -507,7 +507,7 @@ def parse_ai_actions (response :str )->Dict :
     # Вычищаем ВСЕ служебные маркеры из текста ответа
     response =re .sub (r'ACTION:(WARN|JAIL|ROLE_ASSIGN|CHANNEL_REDIRECT|DELETE_MESSAGES|ESCALATE)[^\n]*','',response )
 
-    # Удален pustie satыrlar
+    # Убираем пустые строки
     response ='\n'.join (line for line in response .split ('\n')if line .strip ())
 
     actions ['cleaned_response']=response
@@ -536,7 +536,7 @@ def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
         'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat ()
         })
 
-        # Ограничиваем 100 записьyami
+        # Ограничиваем 100 записями
         if len (faqs [guild_key ])>100 :
             faqs [guild_key ]=faqs [guild_key ][-100 :]
 
@@ -560,7 +560,7 @@ def get_learned_faqs (guild_id :int )->List [Dict ]:
     return []
 
 
-    # ─── ОБЩИЙ LLM ЧAГRI VE AKILLI YEDEK (FALLBACK) СИСТЕМА ───────────────────────
+    # ─── ОБЩИЙ ВЫЗОВ LLM И УМНЫЙ РЕЗЕРВ (FALLBACK) ───────────────────────
 import time 
 import urllib .request 
 import urllib .error 
@@ -678,7 +678,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         )
 
         # 4. Благодарность (Спасибо / Спс)
-    if any (k in q_lower for k in ["спасибо","спс","благодарю","сяп","thank","tшk","teшekkюr"]):
+    if any (k in q_lower for k in ["спасибо","спс","благодарю","сяп","thank","tşk","teşekkür"]):
         return (
         "Всегда пожалуйста, дружище! ❤️ Рад был помочь. Если понадобится что-то ещё — обращайся в любое время. 👊",
         "moebius-offline-ai",
@@ -842,7 +842,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 14. Модерационный отчет — ТОЛЬКО реальные цифры из audit_log
         # (тот же источник, что /mod-report). Нет данных — честно говорим
         # «нет данных», ничего не выдумываем и не советуем наказания.
-    if any (k in q_lower for k in ["rapor","deгerlendirme raporu","еженедельный","отчет","отчёт","еженедельный","сводка","активност"]):
+    if any (k in q_lower for k in ["rapor","değerlendirme raporu","еженедельный","отчет","отчёт","сводка","активность"]):
         facts =[]
         total =0 
         try :
@@ -905,7 +905,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         )
 
         # 16. Сервер состояние / онлайн
-    if any (k in q_lower for k in ["online","сколько человек","сколько участник","seste","участник количество","статусu","сервер статусu","онлайн","сколько","в сети","состояние","сервер","статус"]):
+    if any (k in q_lower for k in ["online","сколько человек","сколько участников","в голосе","онлайн","сколько","в сети","состояние","сервер","статус"]):
         online_m =re .search (r'(\d+)\s*online',sys_prompt ,re .IGNORECASE )
         voice_m =re .search (r'(\d+)\s*seste',sys_prompt ,re .IGNORECASE )
         on_val =online_m .group (1 )if online_m else "Текущий"
@@ -956,7 +956,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         )
 
         # 19. Тикеты / Поддержка
-    if any (k in q_lower for k in ["ticket","поддержка","тикет","жалоба","sorun","администратор","админ","проблема","админ","модератор","sikayet","жалоба","kufur","kюfюr"]):
+    if any (k in q_lower for k in ["ticket","поддержка","тикет","жалоба","sorun","администратор","админ","проблема","модератор","sikayet","kufur","küfür"]):
         return (
         "🎫 **Система поддержки Hakumo AI:**\n"
         "• Вы можете легко создать тикет с помощью кнопок в канале поддержки.\n"
@@ -1079,7 +1079,7 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
         except Exception as _oe :
             print (f"[AI API] Внешняя API ошибка: {_oe}")
 
-            # 4. Akыllы Hakumo/Moebius Yerel Fallback (Hiчbir LLM servisi olmasa bile никогда ошибка vermez!)
+            # 4. Умный локальный fallback Hakumo (работает, даже если ни один LLM-сервис недоступен — без ошибок!)
     return _local_moebius_fallback (messages )
 
 def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->str :

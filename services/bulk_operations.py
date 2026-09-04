@@ -453,7 +453,7 @@ class BulkExporter:
             except Exception as e:
                 operation.add_failure(ticket_id, str(e))
         
-        # CSV файлna сохранить
+        # Сохраняем в CSV-файл
         if exported_tickets:
             import csv
 
@@ -517,7 +517,7 @@ class BulkImporter:
         operation.mark_started()
         self.operation_manager.update_operation(operation.operation_id)
         
-        # Gerчek uygulamada ticket'larы сохранить
+        # В полноценном развертывании тикеты сохраняются в базу
         for i, ticket_data in enumerate(import_data):
             try:
                 ticket_id = ticket_ids[i]

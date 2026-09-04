@@ -105,7 +105,7 @@ class MetricsCollector:
         
         self.metrics[metric_name].append(metric)
         
-        # Eski metrikleri очистить (son 7 день)
+        # Чистим старые метрики (последние 7 дней)
         cutoff = datetime.now() - timedelta(days=7)
         self.metrics[metric_name] = [
             m for m in self.metrics[metric_name]
@@ -277,7 +277,7 @@ class ErrorRateTracker:
             tags=tags
         )
         
-        # Ошибка сообщениеыnы da сохранить
+        # Сохраняем и текст ошибки
         self.metrics_collector.record_metric(
             'error_message',
             1,
@@ -313,7 +313,7 @@ class ErrorRateTracker:
         start_time = datetime.now() - timedelta(hours=hours)
         error_metrics = self.metrics_collector.get_metrics('error_message', start_time=start_time)
         
-        # Сообщенияa по grupla
+        # Группируем по сообщениям
         by_message = defaultdict(int)
         for metric in error_metrics:
             message = metric.tags.get('message', 'Unknown error')
@@ -373,10 +373,10 @@ class UptimeMonitor:
         self.uptime_records['checks'].append(check)
         self.uptime_records['last_check'] = datetime.now().isoformat()
         
-        # Uptime yюzdesini hesapla
+        # Считаем процент аптайма
         self._calculate_uptime_percentage()
         
-        # Eski kayыtlarы очистить (son 30 день)
+        # Чистим старые записи (последние 30 дней)
         cutoff = datetime.now() - timedelta(days=30)
         self.uptime_records['checks'] = [
             c for c in self.uptime_records['checks']

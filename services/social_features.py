@@ -291,7 +291,7 @@ class VotingSystem:
                 'downvotes': []
             }
         
-        # Ёnceki oyu удалить
+        # Убираем предыдущий голос
         if user_id in self.votes[item_id]['upvotes']:
             self.votes[item_id]['upvotes'].remove(user_id)
         if user_id in self.votes[item_id]['downvotes']:

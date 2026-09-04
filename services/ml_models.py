@@ -50,7 +50,7 @@ class TicketPredictor:
         if not tickets:
             return {'error': 'Нет обучающих данных'}
         
-        # Kategori весlarы
+        # Веса категорий
         category_patterns = defaultdict(lambda: defaultdict(int))
         for ticket in tickets:
             category = ticket.get('category', 'unknown')
@@ -70,7 +70,7 @@ class TicketPredictor:
                 for word, count in patterns.items()
             }
         
-        # Ёncelik весlarы
+        # Веса приоритетов
         priority_patterns = defaultdict(lambda: defaultdict(int))
         for ticket in tickets:
             priority = ticket.get('priority', 'medium')
@@ -88,7 +88,7 @@ class TicketPredictor:
                 for word, count in patterns.items()
             }
         
-        # Чёzюm длительностьleri
+        # Времена решения
         resolution_times = []
         for ticket in tickets:
             if ticket.get('status') == 'closed':
@@ -170,7 +170,7 @@ class TicketPredictor:
         """Предсказать длительность решения"""
         base_time = self.model.get('resolution_patterns', {}).get('avg_resolution_time', 24)
         
-        # Kategori чarpanы
+        # Множитель категории
         category_multipliers = {
             'Вопрос': 0.5,
             'Техническая проблема': 1.5,
@@ -178,7 +178,7 @@ class TicketPredictor:
             'Предложение': 0.8
         }
         
-        # Ёncelik чarpanы
+        # Множитель приоритета
         priority_multipliers = {
             'high': 0.7,
             'medium': 1.0,
@@ -194,7 +194,7 @@ class TicketPredictor:
     
     def _extract_keywords(self, text: str) -> List[str]:
         """Извлечь ключевые слова"""
-        # Basit слово выйтиarыcы
+        # Простой выделитель признаков
         words = re.findall(r'\b\w+\b', text.lower())
         
         # Stop words filtrele
@@ -242,7 +242,7 @@ class ChurnPredictor:
         risk_score = 0.0
         factors = []
         
-        # Faktёr 1: Negatif duygu соотношение
+        # Фактор 1: доля негативных настроений
         negative_count = sum(1 for t in tickets if t.get('sentiment') == 'negative')
         negative_ratio = negative_count / len(tickets) if tickets else 0
         
@@ -255,7 +255,7 @@ class ChurnPredictor:
                 'impact': 0.3
             })
         
-        # Faktёr 2: Чёzюlmemiш ticket'lar
+        # Фактор 2: нерешённые тикеты
         open_count = sum(1 for t in tickets if t.get('status') == 'open')
         open_ratio = open_count / len(tickets) if tickets else 0
         
@@ -268,7 +268,7 @@ class ChurnPredictor:
                 'impact': 0.2
             })
         
-        # Faktёr 3: Uzun чёzюm длительностьleri
+        # Фактор 3: долгие времена решения
         long_resolution_count = 0
         for ticket in tickets:
             if ticket.get('status') == 'closed':
@@ -294,7 +294,7 @@ class ChurnPredictor:
                 'impact': 0.25
             })
         
-        # Faktёr 4: Dюшюk очки
+        # Фактор 4: низкие оценки активности
         low_ratings = [t.get('rating', 5) for t in tickets if t.get('rating') and t.get('rating') < 3]
         low_rating_ratio = len(low_ratings) / len(tickets) if tickets else 0
         
@@ -307,7 +307,7 @@ class ChurnPredictor:
                 'impact': 0.25
             })
         
-        # Risk уровеньsi
+        # Уровень риска
         if risk_score >= 0.7:
             risk_level = 'high'
         elif risk_score >= 0.4:
@@ -368,7 +368,7 @@ class AnomalyDetector:
         avg_tickets = sum(daily_counts) / len(daily_counts) if daily_counts else 10
         std_tickets = self._calculate_std(daily_counts) if len(daily_counts) > 1 else 5
         
-        # Чёzюm длительностьleri
+        # Времена решения
         resolution_times = []
         for ticket in tickets:
             if ticket.get('status') == 'closed':
@@ -416,7 +416,7 @@ class AnomalyDetector:
                     'severity': 'high' if z_score > 3 else 'medium'
                 })
         
-        # Чёzюm длительность anomalisi
+        # Аномалия времени решения
         avg_resolution_today = current_metrics.get('avg_resolution_time', 0)
         baseline_resolution = self.baseline.get('avg_resolution_time', 24)
         std_resolution = self.baseline.get('std_resolution_time', 12)

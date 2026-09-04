@@ -50,7 +50,7 @@ async def _fetch_channel_msgs_async (bot ,channel_mentions ):
     lines =[]
     for g in bot .guilds :
         for ch in g .text_channels :
-        # Канал имя soruda geчiyor mu?
+        # Упомянут ли канал в вопросе?
             if channel_mentions and not any (m .lower ()in ch .name .lower ()for m in channel_mentions ):
                 continue 
             if not channel_mentions :

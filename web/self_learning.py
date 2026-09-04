@@ -19,7 +19,7 @@ class SelfLearning :
 
     def __init__ (self ):
         self .feedback_log =[]# журнал обратной связи
-        self .learned_patterns ={}# Viucennie kalыplar
+        self .learned_patterns ={}  # выученные шаблоны
         self .mistakes =[]# Ошибки AI
         self .successes =[]# Uspesnie cevaplar
 
@@ -147,7 +147,7 @@ class SelfLearning :
         correct_resp =mistake .get ('correct_response','')
         mistake_type =mistake ['mistake_type']
 
-        # Удалить anahtar словоler
+        # Удалить ключевые слова
         keywords =self ._extract_keywords (user_msg )
 
         # Zapominaem pattern
@@ -157,12 +157,12 @@ class SelfLearning :
 
         self .learned_patterns [pattern_key ].append ({
         'keywords':keywords ,
-        'wrong_response':wrong_resp [:200 ],# Ограничиваем длинныйluгu
+        'wrong_response':wrong_resp [:200 ],  # Ограничиваем длину
         'correct_response':correct_resp [:200 ]if correct_resp else '',
         'timestamp':mistake ['timestamp']
         })
 
-        # Ограничиваем kalыplar
+        # Ограничиваем количество шаблонов
         if len (self .learned_patterns [pattern_key ])>100 :
             self .learned_patterns [pattern_key ]=self .learned_patterns [pattern_key ][-100 :]
 
@@ -172,7 +172,7 @@ class SelfLearning :
         ai_resp =success ['ai_response']
         success_type =success ['success_type']
 
-        # Удалить anahtar словоler
+        # Удалить ключевые слова
         keywords =self ._extract_keywords (user_msg )
 
         # Zapominaem pattern
@@ -182,11 +182,11 @@ class SelfLearning :
 
         self .learned_patterns [pattern_key ].append ({
         'keywords':keywords ,
-        'response':ai_resp [:200 ],# Ограничиваем длинныйluгu
+        'response':ai_resp [:200 ],  # Ограничиваем длину
         'timestamp':success ['timestamp']
         })
 
-        # Ограничиваем kalыplar
+        # Ограничиваем количество шаблонов
         if len (self .learned_patterns [pattern_key ])>100 :
             self .learned_patterns [pattern_key ]=self .learned_patterns [pattern_key ][-100 :]
 
@@ -194,13 +194,13 @@ class SelfLearning :
         """Извлекает ключевые слова из текста"""
         import re 
 
-        # Удален stop-словоler
+        # Убраны стоп-слова
         stop_words ={
         've','в','на','с','по','для','из','do','из','e','u',
         'the','a','an','and','or','but','in','on','at','to','for'
         }
 
-        # Удалить словоler
+        # Удалить слова
         words =re .findall (r'\b\w+\b',text .lower ())
 
         # Filtreliyoruz
@@ -219,7 +219,7 @@ class SelfLearning :
 
         context_parts =[]
 
-        # Ищем pohojie kalыplar
+        # Ищем похожие шаблоны
         for pattern_type ,patterns in self .learned_patterns .items ():
             matching_patterns =[]
 
@@ -229,12 +229,12 @@ class SelfLearning :
                 message_keywords =set (keywords )
                 intersection =pattern_keywords &message_keywords 
 
-                if len (intersection )>=2 :# Minimum 2 obsih словоler
+                if len (intersection )>=2 :  # минимум 2 общих слова
                     matching_patterns .append (pattern )
 
             if matching_patterns :
                 if pattern_type .startswith ('avoid_'):
-                # Kalыplar kotorih необходимо izbegat
+                # Шаблоны, которых нужно избегать
                     context_parts .append (
                     "\n⚠️ ИЗБЕГАЙ похожих ответов (прежние ошибки):\n"
                     )
@@ -245,7 +245,7 @@ class SelfLearning :
                             context_parts .append (f"+ Vmesto: {p['correct_response']}\n")
 
                 elif pattern_type .startswith ('repeat_'):
-                # Kalыplar kotorie необходимо povtoryat
+                # Шаблоны, которые нужно повторять
                     context_parts .append (
                     "\n✅ ISPOLZUY podobnie cevaplar (idi uspesni):\n"
                     )
@@ -297,7 +297,7 @@ class SelfLearning :
             print (f"[SELF LEARNING] Ошибка sohraneniya: {e}")
 
 
-            # Kюresel пример
+            # Глобальный кэш
 _self_learning =None 
 
 def get_self_learning ()->SelfLearning :

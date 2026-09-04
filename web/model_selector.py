@@ -66,7 +66,7 @@ class ModelSelector :
         self .model_stats ={}# Статистика по каждый modelleri
         self .task_history =[]# История zadac
 
-        # Загруз istatistiгi если есть
+        # Загружаем статистику, если есть
         self ._load_stats ()
 
     def select_model (self ,task_type :str ,context :Dict =None )->str :
@@ -173,7 +173,7 @@ class ModelSelector :
             _log.debug("_save_stats(): подавлено: %s", _ex)
 
 
-            # Kюresel пример
+            # Глобальный кэш
 _model_selector =None 
 
 def get_model_selector ()->ModelSelector :
@@ -205,7 +205,7 @@ def smart_call (messages :List [Dict ],task_type :str ,max_tokens :int =2048 ,te
     start_time =time .time ()
 
     try :
-    # Чтяжелыйыyoruz AI с vibrannoy modelyu
+    # Опрашиваем AI выбранной моделью
         response ,used_model ,rate_info =_call (
         messages ,
         max_tokens =max_tokens ,

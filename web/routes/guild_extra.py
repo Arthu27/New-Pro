@@ -129,7 +129,7 @@ def register(ctx):
         })
 
 
-        # ── ETKИNLИKLER API ──────────────────────────────────────────────────────
+        # ── АКТИВНОСТИ API ──────────────────────────────────────────────────────
 
     @app .route ('/api/guild/<guild_id>/events')
     @login_required 

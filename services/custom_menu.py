@@ -22,12 +22,12 @@ class CustomMenu:
     # Renk paletleri
     COLORS = {
         'primary': 0x5865F2,      # Discord Blurple
-        'success': 0x2ECC71,      # Yeшil
-        'warning': 0xF39C12,      # Turuncu
-        'danger': 0xE74C3C,       # Kыrлиzы
+        'success': 0x2ECC71,      # зелёный
+        'warning': 0xF39C12,      # оранжевый
+        'danger': 0xE74C3C,       # красный
         'info': 0x00D9FF,         # Cyan
-        'purple': 0x9B59B6,       # Mor
-        'gold': 0xFFD700,         # Altыn
+        'purple': 0x9B59B6,       # фиолетовый
+        'gold': 0xFFD700,         # золотой
         'dark': 0x2C2F33,         # Koyu gri
     }
     
@@ -185,7 +185,7 @@ class CustomMenu:
         else:
             embed.description = f"**{self.title}**"
         
-        # Bёlюmler
+        # Разделы
         for section in self.sections:
             if section['title'] is None:
                 # Separator

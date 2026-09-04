@@ -215,7 +215,7 @@ class _CtxTree2:
         bucket.setdefault(guild, set()).discard(name)
 
 
-# isinstance(c, ContextMenu) в бюджетe: подменяем _context_menus на наш разбор
+# isinstance(c, ContextMenu) в бюджете: подменяем _context_menus на наш разбор
 def _ctx_names(tree, guild=None):
     return sorted(n for n in tree.ctx.get(guild, ()))
 

@@ -25,7 +25,7 @@ def register(ctx):
     @role_required ('admin')
     def api_welcome_settings (guild_id ):
         f =f'data/welcome_{guild_id}.json'
-        os .makedirs ('data',exist_ok =True )# Enдлительность data directory exists
+        os .makedirs ('data',exist_ok =True )  # убеждаемся, что каталог data существует
 
         if request .method =='GET':
             if not os .path .exists (f ):

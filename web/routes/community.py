@@ -397,7 +397,7 @@ def register(ctx):
                     result ['leaderboard']=sorted (lb_map .values (),key =lambda x :x ['total'],reverse =True )[:20 ]
                 except Exception as _ex:
                     _log.debug("api_invite_tracker_full(): подавлено: %s", _ex)
-                    # JSON dosyasыndan Вход история oku
+                    # Читаем историю входов из JSON-файла
         joins_file =f'data/invite_joins_{guild_id}.json'
         if os .path .exists (joins_file ):
             try :
@@ -409,7 +409,7 @@ def register(ctx):
             if not isinstance (joins_data ,list ):joins_data =[]
             result ['total_joins']=len (joins_data )
             result ['recent_joins']=list (reversed ([_norm_join (j )for j in joins_data [-50 :]]))
-            # Ayrыlmalarы da say
+            # Учитываем и выходы с сервера
             leaves_file =f'data/invite_leaves_{guild_id}.json'
             if os .path .exists (leaves_file ):
                 try :
@@ -420,14 +420,14 @@ def register(ctx):
                     leaves_data =[]
                 if not isinstance (leaves_data ,list ):leaves_data =[]
                 result ['total_leaves']=len (leaves_data )
-                # Liderboard'a ayrыlmalarы add
+                # Добавляем выходы в лидерборд
                 for leave in leaves_data :
                     inviter =leave .get ('inviter','')
                     for lb in result ['leaderboard']:
                         if lb ['name']==inviter :
                             lb ['leaves']+=1 
                             break 
-                            # Старый format uyumluluгu
+                            # Совместимость со старым форматом
         old_file =f'data/invites_{guild_id}.json'
         if os .path .exists (old_file )and not result ['leaderboard']:
             with open (old_file )as fp :

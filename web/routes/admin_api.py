@@ -360,7 +360,7 @@ def register(ctx):
 
         # ── API ROUTES ────────────────────────────────────────────────────────────
 
-        # ── НОВЫЙ API ENDPOINT'LERИ ────────────────────────────────────────────────
+        # ── НОВЫЕ API ENDPOINT'Ы ────────────────────────────────────────────────
 
     @app .route ('/api/bot/status',methods =['POST'])
     @login_required 
@@ -378,7 +378,7 @@ def register(ctx):
         def _set ():
             _run_async (bot .change_presence (status =status ,activity =discord .Activity (type =atype ,name =atext )))
         asyncio .run_coroutine_threadsafe (_set (),bot .loop ).result (timeout =5 )
-        # Config'e сохранить — bot новыйden baшlayыnca da hatыrlasыn
+        # Сохраняем в конфиг — бот вспомнит это и после перезапуска
         os .makedirs ('data',exist_ok =True )
         cfg ={}
         cfg_file ='data/bot_config.json'
@@ -414,7 +414,7 @@ def register(ctx):
                 _log.debug("api_bot_prefix(): подавлено: %s", _ex)
         if not isinstance (cfg ,dict ):
             cfg ={}
-            # Mevcut status/activity alanlarыnы KORU
+            # Сохраняем текущие поля status/activity
         cfg ['prefix']=prefix 
         with open (cfg_file ,'w',encoding ='utf-8')as f :
             json .dump (cfg ,f ,indent =2 ,ensure_ascii =False )

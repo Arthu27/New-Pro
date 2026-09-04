@@ -389,7 +389,7 @@ async def _get_channel_context (channel ,limit :int =12 )->list :
             'content':_resolve_mentions (msg .content [:200 ],channel .guild ),# 150 → 200 karakter
             'timestamp':msg .created_at .strftime ('%H:%M')
             })
-            # Ters преобразовать (en старый en baшta)
+            # Развернуть: сначала самые старые
         context_messages .reverse ()
         return context_messages 
     except Exception as e :
@@ -495,7 +495,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         if recent_messages :
             context ['recent_user_messages']=recent_messages 
 
-            # Канал контекстnы add (только на сервере)
+            # Добавить контекст канала (только на сервере)
         if channel_context :
             context ['channel_context']=channel_context 
 
@@ -551,7 +551,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                 guild_key =str (guild_id )
                 if guild_key not in _instructions :
                     _instructions [guild_key ]=[]
-                    # Одинаковый talimat есть mы?
+                    # Проверяем, нет ли уже такой инструкции
                 exists =any (i .get ('trigger')==instr ['trigger']for i in _instructions [guild_key ])
                 if not exists :
                     _instructions [guild_key ].append (instr )
@@ -568,7 +568,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                 if guild_key not in _knowledge_base :
                     _knowledge_base [guild_key ]=[]
 
-                    # Одинаковый info есть mы контроль et
+                    # Проверяем, нет ли уже такой информации
                 existing =False 
                 for item in _knowledge_base [guild_key ]:
                     if (item .get ('name')==learned .get ('name')or 
@@ -866,7 +866,7 @@ class AIChat (commands .Cog ):
         if m :return int (m .group (1 ))*10080 
         m =re .search (r'(\d+)\s*(minutes|dk|min)',cl )
         if m :return int (m .group (1 ))
-        return 10 # varчислоlan
+        return 10  # значение по умолчанию
 
     async def _detect_owner_intent (self ,text :str ,message :discord .Message )->bool :
         """Owner DM команды — на ключевых словах, работает даже при опечатках"""
@@ -876,8 +876,9 @@ class AIChat (commands .Cog ):
 
         #  МУЗЫКА 
         # Зайти в голосовой канал (без музыки)
-        ses_gir_triggers =['voice gir','voice katыl','voice gel','channela gir','benim voice gir',
-        'voice gir','ses в канал gir','ses в канал gir','yanima gel']
+        ses_gir_triggers =['voice gir','voice katil','voice gel','channela gir','benim voice gir',
+        'voice gir','ses в канал gir','yanima gel','зайди в голосовой','зайди в голос',
+        'войди в голосовой','зайди ко мне в голосовой']
         if any (t in cn for t in [self ._norm (x )for x in ses_gir_triggers ]):
             result_msg =' Ты не в голосовом канале.'
             for guild in self .bot .guilds :
@@ -1076,7 +1077,7 @@ class AIChat (commands .Cog ):
                 question =pending ['question']
                 answer =message .content .strip ()
 
-                # Cevabы knowledge base'e сохранить
+                # Сохраняем ответ в базу знаний
                 if pending .get ('guild_id'):
                     guild_key =str (pending ['guild_id'])
                     if guild_key not in _knowledge_base :
@@ -1090,7 +1091,7 @@ class AIChat (commands .Cog ):
                     })
                     _save_knowledge_base (_knowledge_base )
 
-                    # Пользователю cevabы ilet
+                    # Отправляем ответ пользователю
                 try :
                     if pending .get ('is_dm'):
                         user =await self .bot .fetch_user (user_id )
@@ -1211,7 +1212,7 @@ class AIChat (commands .Cog ):
             answer ="Я не могу это сказать. "
 
             # Ответы "не знаю" — спросить у владельца
-        bilmiyorum_triggers =['bilmiyorum','emin deгilim','info bulamadыm','о infom нет']
+        bilmiyorum_triggers =['не знаю','не нашёл ответ','нет данных','информации нет']
         if OWNER_ID and any (t in answer .lower ()for t in bilmiyorum_triggers ):
             try :
                 owner =await self .bot .fetch_user (OWNER_ID )
@@ -1238,7 +1239,7 @@ class AIChat (commands .Cog ):
 
         if is_dm :
         # DM log'a сохранить (входящее сообщение логгер DMLogger'a записывает,
-        # здесь только bot cevabы сохранить, чтобы не дублировать)
+        # здесь сохраняем только ответ бота, чтобы не дублировать)
             try :
                 import datetime as _dt3
                 from services.async_io import load_json_async ,save_json_async
@@ -1248,7 +1249,7 @@ class AIChat (commands .Cog ):
                 uid =str (message .author .id )
                 if uid not in _d or not isinstance (_d [uid ],list ):
                     _d [uid ]=[]
-                # Bot cevabыnы сохранить
+                # Сохраняем ответ бота
                 _d [uid ].append ({
                 'author':'Hakumo',
                 'content':answer ,
@@ -1273,7 +1274,7 @@ async def setup (bot ):
     cog =AIChat (bot )
     await bot .add_cog (cog )
 
-    # Bot kapanыrken history'yi сохранить
+    # Сохраняем историю при остановке бота
     @bot .event 
     async def on_shutdown ():
         _save_histories (_histories ,force =True )

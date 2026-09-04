@@ -108,13 +108,13 @@ class AIFunctions :
     async def execute_function (self ,func_call :str ,guild :discord .Guild )->Optional [str ]:
         """Vipolnyaet funkciyu из vizova AI"""
         try :
-        # Отдельношtыrыyoruz vizov: [FUNC:name(param1=value1, param2=value2)]
+        # Выделяем вызов: [FUNC:name(param1=value1, param2=value2)]
             if not func_call .startswith ('[FUNC:')or not func_call .endswith (']'):
                 return None 
 
             func_call =func_call [6 :-1 ]# Удален [FUNC: ve ]
 
-            # Отдельношtыrыyoruz имя fonksiyonlar ve parametri
+            # Выделяем имя функции и параметры
             if '('not in func_call or ')'not in func_call :
                 return None 
 
@@ -136,7 +136,7 @@ class AIFunctions :
             }
             func_name = _aliases.get(func_name, func_name)
 
-            # Отдельношtыrыyoruz parametri
+            # Выделяем параметры
             params ={}
             if params_str :
                 for param in params_str .split (','):
@@ -155,7 +155,7 @@ class AIFunctions :
 
                         params [key ]=value 
 
-                        # Чтяжелыйыyoruz funkciyu
+                        # Вызываем функцию
             if func_name not in self .functions :
                 # Подсказка ИИ: такой функции нет — даём список реальных,
                 # чтобы он не залипал на выдуманном имени.
@@ -273,7 +273,7 @@ class AIFunctions :
             uid =int (user_id )
             limit =max (1 ,min (int (limit )if str (limit ).isdigit ()else 20 ,100 ))
 
-            # ── 1) DISCORD API DENEMESИ ──────────────────────────────────
+            # ── 1) ПОПЫТКА ЧЕРЕЗ DISCORD API ──────────────────────────────────
             api_msgs =[]
             api_error =None 
             try :
@@ -300,15 +300,15 @@ class AIFunctions :
                                     if len (api_msgs )>=limit :
                                         break 
                 else :
-                # Все каналыda ara (bot online + yetkisi varsa)
+                # Ищем по всем каналам (если бот онлайн и есть права)
                     text_channels =list (guild .text_channels )
                     for ch in text_channels :
                         try :
                             perms =ch .permissions_for (guild .me )
                             if not (perms .read_message_history and perms .read_messages ):
                                 continue 
-                                # Her каналda en son 500 сообщениеы tara (каналda
-                                # mrxway'in написатьdыгы her шeyi bulmak для)
+                                # В каждом канале читаем последние 500 сообщений
+                                # и ищем там всё, что писал пользователь)
                             async for msg in ch .history (limit =500 ):
                                 if msg .author .id ==uid :
                                     api_msgs .append ({
@@ -318,7 +318,7 @@ class AIFunctions :
                                     'timestamp':msg .created_at .isoformat (),
                                     'jump_url':msg .jump_url ,
                                     })
-                                    # 3x limit yeterli (en новый очередьda)
+                                    # 3x запас хватает (самые свежие в очереди)
                                     if len (api_msgs )>=limit *3 :
                                         break 
                             if len (api_msgs )>=limit *3 :
@@ -345,7 +345,7 @@ class AIFunctions :
                 if str (m .get ('author_id',''))==str (uid )
                 and (cid_filter is None or str (m .get ('channel_id',''))==cid_filter )]
 
-                # ── 3) BИRLEШTИR + SIRALA ─────────────────────────────────
+                # ── 3) ОБЪЕДИНЯЕМ И СОРТИРУЕМ ─────────────────────────────────
                 # Сначала результаты Discord API (самые новые), потом только из логов
             api_keys ={(m .get ('channel_id',''),m .get ('timestamp',''),m .get ('content','')[:100 ])
             for m in api_msgs }

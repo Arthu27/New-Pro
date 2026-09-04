@@ -20,7 +20,7 @@ from collections import defaultdict
 from datetime import datetime ,timezone ,timedelta 
 from config import Config 
 
-#  Zararlы domain список 
+#  Список вредоносных доменов 
 MALICIOUS_DOMAINS ={
 # Phishing / scam
 'grabify.link','iplogger.org','blasze.tk','ps3cfw.com',
@@ -67,7 +67,7 @@ def _similarity (a :str ,b :str )->float :
     la ,lb =len (a ),len (b )
     if abs (la -lb )/max (la ,lb )>0.5 :
         return 0.0 
-        # Basit karakter ёrtюшme oranы
+        # Простая доля совпадения символов
     common =sum (1 for c in a if c in b )
     return common /max (la ,lb )
 
@@ -156,7 +156,7 @@ class Security (commands .Cog ):
         if repeat_score >0.5 :
             signals .append (f"повтор ({repeat_count}x)")
 
-            # 4. Длинныйluk anomalisi: очень краткий + очень быстрый
+            # 4. Аномалия длины: очень короткое + очень быстрое
         length_score =0.3 if len (content )<5 and speed_score >0.4 else 0.0 
 
         # весомая оценка
@@ -179,7 +179,7 @@ class Security (commands .Cog ):
         warnings =[]
         score =0.0 
 
-        # Hesap yaшы
+        # Возраст аккаунта
         age_days =(datetime.now(timezone.utc)-member .created_at ).days 
         threshold =cfg .get ('new_account_days',7 )
         if age_days <1 :
@@ -212,7 +212,7 @@ class Security (commands .Cog ):
         domains =_extract_domains (content )
         found =[]
         for domain in domains :
-        # Tam eшleшme
+        # Полное совпадение
             if domain in MALICIOUS_DOMAINS :
                 found .append (domain )
                 continue 

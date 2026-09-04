@@ -360,8 +360,8 @@ class BackupService:
         }
     
     def schedule_backup(self, interval_hours: int = 24):
-        """Запланировать автоматическое резервное копирование (заглушка)"""
-        # Gerчek uygulamada scheduler kullanыlacak
+        """Пометка о расписании автобэкапов (планировщик пока не подключён)."""
+        # В полноценном развертывании здесь подключается планировщик
         print(f"⏰ Автоматическое резервное копирование запланировано: каждые {interval_hours} ч")
     
     def export_stats(self) -> Dict:

@@ -237,7 +237,7 @@ def register(ctx):
             filtered =[m for m in logs 
             if str (m .get ('author_id',''))==user_id 
             and (channel_id is None or str (m .get ('channel_id',''))==channel_id )]
-            # En новыйden старыйye
+            # От новых к старым
             filtered .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
             filtered =filtered [:limit ]
             return jsonify ({

@@ -171,7 +171,7 @@ class ErrorTracker:
                 break
         
         if existing_error:
-            # Текущий hataya новый oluэтотm добавить
+            # Увеличиваем счётчик созданий текущей ошибки
             existing_error.add_occurrence()
             self._save_errors()
             return existing_error
@@ -378,7 +378,7 @@ class ErrorGrouping:
         start_time = datetime.now() - timedelta(hours=hours)
         errors = self.error_tracker.get_all_errors(start_time=start_time)
         
-        # Oluэтотm количествоna по очередьla
+        # Сортируем по количеству созданий
         errors.sort(key=lambda e: e.occurrences, reverse=True)
         
         return errors[:limit]
@@ -536,8 +536,8 @@ class ErrorAnalytics:
         return sum(resolution_times) / len(resolution_times)
     
     def get_impact_score(self, error: Error) -> float:
-        """Etki skorunu hesapla"""
-        # Oluэтотm количество, ёnem derecesi ve чёzюlмем длительностьne по
+        """Оценка влияния ошибки."""
+        # Скор на основе числа созданий, серьёзности и времени решения
         severity_weights = {
             'debug': 1,
             'info': 2,
@@ -548,7 +548,7 @@ class ErrorAnalytics:
         
         severity_weight = severity_weights.get(error.severity, 5)
         
-        # Чёzюlмем длительность (saat)
+        # Время решения (в часах)
         hours_unresolved = (datetime.now() - error.first_seen).total_seconds() / 3600
         
         impact_score = (error.occurrences * severity_weight) + (hours_unresolved * 0.1)

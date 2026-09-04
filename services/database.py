@@ -104,7 +104,7 @@ class Database:
             )
         ''')
         
-        # Предупреждениеs table
+        # Таблица предупреждений
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS warnings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

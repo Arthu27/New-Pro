@@ -51,7 +51,6 @@
                 <input type="text" name="username" id="passUsername" placeholder="например @alex или Discord ID" required autocomplete="username" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Discord ID или ник">
                 <div class="autocomplete-popup" id="passPopup"></div>
               </div>
-              <p class="hint">Кто ты на сервере: найди себя в списке или вставь свой <b>Discord ID</b>.</p>
             </div>
 
             <div class="f-group">
@@ -222,9 +221,8 @@
       .catch(function () {});
   })();
 
-  /* ── Подсказки «кто ты на сервере» ──
-     Правила (жалоба владельца: «написал ник, пошёл писать пароль —
-     а участники всё ещё на экране»):
+  /* ── Автоподсказка логина (поиск себя по нику) ──
+     Правила:
        * список живёт ТОЛЬКО пока фокус в поле логина: Tab/клик в другое
          поле сразу его гасит, даже без клика по странице;
        * запоздавший ответ сервера не «воскрешает» подсказку после того,

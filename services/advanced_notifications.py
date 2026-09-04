@@ -128,7 +128,7 @@ class NotificationRule:
         if event.get('type') != self.event_type:
             return False
         
-        # Koэтотllarы проверить et
+        # Проверяем условия
         for condition in self.conditions:
             field = condition.get('field')
             operator = condition.get('operator')
@@ -632,13 +632,13 @@ class DigestNotification:
         if not config:
             return None
         
-        # Пользовательnыn okunmaлиш уведомлениеlerini al
+        # Достаём непрочитанные уведомления пользователя
         notifications = self.notification_manager.get_user_notifications(user_id, unread_only=True)
         
         if not notifications:
             return None
         
-        # Ёnceliгe по grupla
+        # Группируем по приоритету
         by_priority = {
             'urgent': [],
             'high': [],
@@ -656,7 +656,7 @@ class DigestNotification:
                 priority: len(notifs)
                 for priority, notifs in by_priority.items()
             },
-            'notifications': notifications[:20]  # Иlk 20 уведомление
+            'notifications': notifications[:20]  # первые 20 уведомлений
         }
     
     def mark_digest_sent(self, user_id: str):

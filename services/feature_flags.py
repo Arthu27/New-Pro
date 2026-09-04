@@ -67,12 +67,12 @@ class FeatureFlag:
         if not self.enabled:
             return False
         
-        # Hedefleme kurallarыnы проверить et
+        # Проверяем правила таргетинга
         if self.targeting_rules:
             if not self._matches_targeting_rules(user_id, user_context):
                 return False
         
-        # Yюzde проверка
+        # Проверка процента
         if self.rollout_percentage < 100:
             if not self._is_in_rollout_percentage(user_id):
                 return False
@@ -120,7 +120,7 @@ class FeatureFlag:
         if self.rollout_percentage <= 0:
             return False
         
-        # Deterministik hash (aynы пользователь her zaman aynы sonucu alыr)
+        # Детерминированный хеш: один пользователь всегда получает один результат
         import hashlib
         hash_input = f"{self.flag_key}:{user_id}"
         hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16)
@@ -139,7 +139,7 @@ class FeatureFlag:
         if not enabled_variants:
             return None
         
-        # Deterministik seчim
+        # Детерминированный выбор
         import hashlib
         hash_input = f"{self.flag_key}:variant:{user_id}"
         hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16)
@@ -441,7 +441,7 @@ class FeatureFlagAnalytics:
         flag_analytics['unique_users'].add(user_id)
         flag_analytics['last_check'] = datetime.now().isoformat()
         
-        # Set'i list'e чevir (JSON serialization для)
+        # Преобразуем set в list (для JSON-сериализации)
         flag_analytics['unique_users'] = list(flag_analytics['unique_users'])
         
         self._save_analytics()

@@ -477,10 +477,10 @@ from web.routes.channel_settings import ADAPTERS  # noqa: E402
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')
 ar_get, ar_set = ADAPTERS['antiraid_channel']
 check(ar_set(GID, 4003) and ar_get(GID) == 4003,
-      'антирaid-даптер пишет/читает alert_channel_id')
+      'антирейд-адаптер пишет/читает alert_channel_id')
 antiraid_file = json.load(open(f'data/antiraid_{GID}.json', encoding='utf-8'))
 check(antiraid_file['alert_channel_id'] == 4003,
-      'бот-антирaid увидит тот же canal (общий файл)')
+      'бот-антирейд увидит тот же канал (общий файл)')
 sec_get, sec_set = ADAPTERS['security_channel']
 check(sec_set(GID, 4005) and sec_get(GID) == 4005,
       'адаптер авто-защиты пишет log_channel')

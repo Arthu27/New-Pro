@@ -34,7 +34,7 @@ r"\b(дурак|тупой|глупый|урод|кринж|кринге)\b",
 r"\b(идиот|дебил|лох|олух|придурок)\b",
 ],
 "tr":[
-r"\b(salak|aptal|gerizekalы|ahmak|mal)\b",
+r"\b(salak|aptal|gerizekali|ahmak|mal)\b",
 r"\b(aptal|salak)\b",
 ],
 "en":[
@@ -49,7 +49,7 @@ r"\b(ненавижу|убью|убить|ненависть)\b",
 r"\b(шлюха|проститутка|тварь)\b",
 ],
 "tr":[
-r"\b(ёldюreceгim|nefret|orospu|piч)\b",
+r"\b(öldüreceğim|öldür|nefret|orospu|piç)\b",
 ],
 "en":[
 r"\b(hate|kill yourself|kys|loser)\b",
@@ -63,7 +63,7 @@ r"\b(расстрел|взорвать|террор|isis)\b",
 r"\b(педофил|изнасилование|порно с детьми)\b",
 ],
 "tr":[
-r"\b(tecavюz|terёr|patlayыcы|ыsg)\b",
+r"\b(tecavüz|terör|patlayıcı|silah)\b",
 ],
 "en":[
 r"\b(terrorist|terrorism|bomb|isis)\b",

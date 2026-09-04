@@ -168,7 +168,7 @@ class CalendarManager:
 
 
 class GoogleCalendarIntegration:
-    """Google Calendar entegrasyonu"""
+    """Интеграция с Google Calendar."""
     
     def __init__(self):
         self.config_file = 'data/google_calendar_config.json'
@@ -198,20 +198,20 @@ class GoogleCalendarIntegration:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
     
     def setup(self, client_id: str, client_secret: str, redirect_uri: str):
-        """Kurulum"""
+        """Настройка OAuth-приложения."""
         self.config['client_id'] = client_id
         self.config['client_secret'] = client_secret
         self.config['redirect_uri'] = redirect_uri
         self._save_config()
     
     def get_auth_url(self) -> str:
-        """Yetkilendirme URL'si"""
-        # Placeholder - gerчek uygulamada OAuth2 akышы
+        """Ссылка для авторизации."""
+        # Заглушка: в полноценном развертывании здесь полный OAuth2-поток
         return f"https://accounts.google.com/o/oauth2/auth?client_id={self.config.get('client_id', '')}"
     
     def sync_event(self, event: CalendarEvent) -> Dict[str, Any]:
         """Синхронизировать событие"""
-        # Placeholder - gerчek uygulamada Google Calendar API чaгrыsы
+        # Заглушка: в полноценном развертывании — вызов Google Calendar API
         return {
             'success': True,
             'google_event_id': f"gcal_{event.event_id}",
@@ -220,12 +220,12 @@ class GoogleCalendarIntegration:
     
     def delete_event(self, google_event_id: str) -> bool:
         """Удалить событие"""
-        # Placeholder
+        # Заглушка: в полноценном развертывании — вызов API
         return True
 
 
 class OutlookCalendarIntegration:
-    """Outlook Calendar entegrasyonu"""
+    """Интеграция с Outlook Calendar."""
     
     def __init__(self):
         self.config_file = 'data/outlook_calendar_config.json'
@@ -254,7 +254,7 @@ class OutlookCalendarIntegration:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
     
     def setup(self, client_id: str, client_secret: str, tenant_id: str):
-        """Kurulum"""
+        """Настройка OAuth-приложения."""
         self.config['client_id'] = client_id
         self.config['client_secret'] = client_secret
         self.config['tenant_id'] = tenant_id
@@ -262,7 +262,7 @@ class OutlookCalendarIntegration:
     
     def sync_event(self, event: CalendarEvent) -> Dict[str, Any]:
         """Синхронизировать событие"""
-        # Placeholder - gerчek uygulamada Microsoft Graph API чaгrыsы
+        # Заглушка: в полноценном развертывании — вызов Microsoft Graph API
         return {
             'success': True,
             'outlook_event_id': f"outlook_{event.event_id}",
@@ -271,7 +271,7 @@ class OutlookCalendarIntegration:
     
     def delete_event(self, outlook_event_id: str) -> bool:
         """Удалить событие"""
-        # Placeholder
+        # Заглушка: в полноценном развертывании — вызов API
         return True
 
 
@@ -326,7 +326,7 @@ class AppointmentScheduler:
         if not availability:
             return []
         
-        # Basit implementasyon - gerчek uygulamada mevcut событиеleri проверить et
+        # Простая реализация: в полноценном развертывании сверяется с существующими событиями
         slots = []
         start_hour = int(availability['start_time'].split(':')[0])
         end_hour = int(availability['end_time'].split(':')[0])
@@ -345,7 +345,7 @@ class AppointmentScheduler:
     def book_appointment(self, user_id: str, slot_start: datetime,
                          slot_end: datetime, title: str,
                          attendee_id: str) -> CalendarEvent:
-        """Randevu создать"""
+        """Создать встречу."""
         event = self.calendar_manager.create_event(
             title=title,
             start_time=slot_start,

@@ -443,7 +443,7 @@ def _log_panel_action (action ,detail =''):
     except Exception as _ex:
         _log.debug("_log_panel_action(): подавлено: %s", _ex)
 
-        # ETag: GET + JSON + whitelist path'lerde tarayici/bot уровеньsinde cache
+        # ETag: кэш на уровне браузера/бота для GET + JSON по whitelist-путям
 _ETAG_PATHS =(
 '/api/logs',
 '/api/warnings',
@@ -1331,7 +1331,7 @@ def api_login_probe():
     return jsonify({'success': False,
                     'error': 'Неверное имя пользователя или пароль!'})
 
-    # Geчici проверка kodlarы {discord_id: {code, data}}
+    # Временные коды проверки {discord_id: {code, data}}
 PENDING_VERIFICATIONS ={}
 
 @app .route ('/register',methods =['GET','POST'])
@@ -1886,7 +1886,7 @@ def api_login_log ():
         return jsonify ([])
     try :
         logs =_store .cached_read_json (f ,ttl =5.0 ,default =[])
-        # Owner kendi вход видеть — только diгer userlarы показать
+        # Owner видит и свой вход — остальным пользователям его не показываем
         current_user =session .get ('username','')
         filtered =[l for l in logs if not (l .get ('username')==current_user and l .get ('role')=='owner')]
         for entry in filtered :
@@ -3157,7 +3157,7 @@ def _save_login_token (username ,roles ):
     if os .path .exists (tokens_file ):
         with open (tokens_file ,'r',encoding ='utf-8')as f :
             tokens =json .load (f )
-            # Пользователя текущий tokenыnы найти или новый создать
+            # Находим текущий токен пользователя или создаём новый
     existing =next ((t for t ,v in tokens .items ()if v .get ('username')==username ),None )
     if not existing :
         existing =''.join (random .choices (string .ascii_letters +string .digits ,k =48 ))
@@ -3245,7 +3245,7 @@ def api_change_password ():
     if username !='Arthur'and session .get ('role')!='owner':
         return jsonify ({'error':'Нет доступа'}),403 
     data =request .get_json (silent =True )or {}
-    target =data .get ('target','').strip ()# какой hesabыn parolasi deгiшecek
+    target =data .get ('target','').strip ()  # чей пароль меняем
     new_pass =data .get ('new_password','').strip ()
     if not target or not new_pass or len (new_pass )<4 :
         return jsonify ({'error':'Неверные данные'})
@@ -3320,8 +3320,8 @@ def public_apply ():
 @app .route ('/api/public/check-member',methods =['POST'])
 def api_check_member ():
     if not bot_instance :
-    # Frontend'in 503 с kыrыlmamasы для 200 dёn.
-    # Bot hazыr olana userya anlaшыlыr bir message показ.
+    # Frontend не должен ломаться на 503 — отвечаем 200.
+    # Пока бот не готов, показываем понятное сообщение.
         if _demo_mode ():
             # демо-предпросмотр без бота: принимаем любой валидный ID,
             # чтобы форму заявки можно было проверить целиком
@@ -4333,7 +4333,7 @@ def api_voice_command ():
         # Нашли реальное сообщение — запускаем распознавание intent'а
             result =await cog ._detect_owner_intent (command ,msg )
             if not result :
-            # Handler eшleшmedi, normal AI'ya отправить
+            # Хендлер не сработал — передаём в обычный AI
                 await dm .send (command )
             return 'OK'
             # Если истории сообщений нет — шлём сразу в ЛС
@@ -4369,7 +4369,7 @@ def api_forgot_password ():
     if not discord_id :
         return jsonify ({'error':'Участник с таким Discord ID или ником не найден'})
 
-        # 6 haneli kod юret
+        # Генерируем 6-значный код
     code =''.join ([str (_random .randint (0 ,9 ))for _ in range (6 )])
     import time as _time 
     _reset_codes [discord_id ]={'code':code ,'expires':_time .time ()+300 }# 5 minutes

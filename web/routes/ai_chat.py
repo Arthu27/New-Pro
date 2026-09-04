@@ -58,7 +58,7 @@ def register(ctx):
         user_role =session .get ('role','uye')
         now =_dt .datetime .now ()
 
-        # ── СЕРВЕР VERИSИ собрать ──────────────────────────────────────────────
+        # ── СОБИРАЕМ ДАННЫЕ СЕРВЕРА ──────────────────────────────────────────────
         guild_data =[]
         if bot :
             for g in bot .guilds :
@@ -132,7 +132,7 @@ def register(ctx):
                 +('\n'.join (f'  {c}'for c in server_configs ))
                 )
 
-                # ── ПОЛЬЗОВАТЕЛЬ ID TESPИT ET VE ИНФОРМАЦИЯ ТЯНУТЬ ─────────────────────────────
+                # ── ОПРЕДЕЛЯЕМ ID ПОЛЬЗОВАТЕЛЯ И ТЯНЕМ ДАННЫЕ ─────────────────────────────
         import re as _re2 
         user_info_block =''
         id_matches =_re2 .findall (r'\b(\d{17,20})\b',question )
@@ -357,7 +357,7 @@ def register(ctx):
         f"Вчера ({yesterday}) действия:\n{fmt_actions(yesterday_actions)}"
         )
 
-        # состояние skoru — все guild'lerin health dosyalarыndan тянуть
+        # скор состояния — тянем из health-файлов всех гильдий
         health_info =''
         health_lines =[]
         if bot :
@@ -375,7 +375,7 @@ def register(ctx):
         if health_lines :
             health_info ='Оценки состояния сервера:\n'+'\n'.join (f'  {l}'for l in health_lines )
         else :
-        # Fallback: API'den hesapla
+        # Fallback: считаем сами
             try :
                 # Порт панели берём из того же источника, что и сам сервер
                 # (PANEL_PORT -> PORT из config.py), а не «магическую»
@@ -499,7 +499,7 @@ def register(ctx):
             except Exception :
                 return jsonify ({'error':'AI вернул пустой ответ.'}),502 
 
-                # ── FUNC ИШLE (function calling) — выполнение [FUNC:...] от AI ──────────
+                # ── ВЫПОЛНЕНИЕ FUNC (function calling) — обработка [FUNC:...] от AI ──────────
         import re as _re 
         func_calls_in_answer =_re .findall (r'\[FUNC:[^\]]+\]',answer )
         func_results_text =''
@@ -749,7 +749,7 @@ def register(ctx):
                     # На всякий случай вырежем оставшиеся маркеры
             answer =_re .sub (r'\[FUNC:[^\]]+\]','',answer ).strip ()
 
-            # ── EYLEM ИШLE (только owner) ─────────────────────────────────────────
+            # ── ВЫПОЛНЕНИЕ ДЕЙСТВИЯ (только owner) ─────────────────────────────────────────
         action_result =None 
         action_match =_re .search (r'\[EYLEM:([^\]]+)\]',answer )
         if action_match and bot and user_role =='owner':
@@ -784,13 +784,13 @@ def register(ctx):
                         if val .isdigit ():
                             return guild .get_member (int (val ))
                         val_lower =val .lower ()
-                        # До tam eшleшme
+                        # Сначала точное совпадение
                         exact =discord .utils .find (
                         lambda m :m .display_name .lower ()==val_lower or m .name .lower ()==val_lower ,
                         guild .members 
                         )
                         if exact :return exact 
-                        # В конецra kыsmi eшleшme
+                        # Затем частичное совпадение
                         return discord .utils .find (
                         lambda m :val_lower in m .display_name .lower ()or val_lower in m .name .lower (),
                         guild .members 
@@ -872,7 +872,7 @@ def register(ctx):
                             return f'✅ {m.display_name} → перемещён в {ch.name}'
                         return '❌ Участник или канал не найден'
                     elif tip =='UST_SESE'and len (parts )>1 :
-                    # Юst ses в канал move
+                    # Перемещаем участника в голосовой канал
                         m =resolve_member (parts [1 ])
                         steps =int (parts [2 ])if len (parts )>2 and parts [2 ].isdigit ()else 1 
                         move_back =parts [3 ].lower ()=='geri'if len (parts )>3 else False 
@@ -1031,7 +1031,7 @@ def register(ctx):
         {'role':'user','content':question [:500 ]},
         {'role':'assistant','content':answer [:500 ]}
         ]
-        # Son 12 сообщение (6 user+assistant чifti) — cookie 4KB sыnыrы iчin
+        # Последние 12 сообщений (6 пар user+assistant) — лимит cookie 4KB
         session [history_key ]=new_history [-12 :]
         session .modified =True 
         return jsonify ({'answer':answer ,'model':model_name })

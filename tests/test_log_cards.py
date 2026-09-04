@@ -94,7 +94,7 @@ flat = re.sub(r'\s+', '', logs_src)
 check('get_log_cards_cfg' in flat and '_cfg.get(\'enabled\',True)' in flat.replace('"', "'"),
       '_safe_send читает cfg сервера')
 check("theme=_cfg.get('theme')" in flat and "accent=_cfg.get('accent')" in flat,
-      'тема/акцент проброшены из cfg вrender')
+      'тема/акцент проброшены из cfg в render')
 check("ifnot_cfg.get('enabled',True)" in flat.replace('"', "'")
       and "_png=None" in flat,
       'enabled=False выключает картинку, текст остаётся')

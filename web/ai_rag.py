@@ -74,7 +74,7 @@ class KnowledgeBase :
                 except Exception as _ex:
                     _log.debug("_load_documents(): подавлено: %s", _ex)
 
-                    # 3. Loglar ticketlarыn (son 50)
+                    # 3. Логи тикетов (последние 50)
         tickets_file =f"data/tickets_{self.guild_id}.json"
         if os .path .exists (tickets_file ):
             try :
@@ -152,7 +152,7 @@ class KnowledgeBase :
 
         for i ,doc in enumerate (results ,1 ):
             doc_type =doc ['type']
-            content =doc ['content'][:500 ]# Ограничиваем длинныйluгu
+            content =doc ['content'][:500 ]  # Ограничиваем длину
 
             if doc_type =='rule':
                 context_parts .append (f"\n{i}. ПРАВИЛО СЕРВЕРА:\n{content}")
@@ -174,7 +174,7 @@ class ConversationAnalyzer :
         """Izvlekaet vajnie fakti из разговор"""
         facts =[]
 
-        # Kalыplar для izvleceniya gerчдобавитьr
+        # Шаблоны для извлечения фактов
         patterns =[
         (r'menya zovut (\w+)','Имя пользователя: {}'),
         (r'mne (\d+) (?:let|god)','Возраст: {} лет'),
@@ -202,8 +202,8 @@ class ConversationAnalyzer :
     @staticmethod 
     def detect_sentiment (messages :List [Dict ])->str :
         """Определяет настроение разговора"""
-        positive_words =['teшekkюrler','отлично','kruto','супер','klass','pomog','reудалить']
-        negative_words =['besit','zlyus','nenaviju','aptal','aptal','не работает','ошибка']
+        positive_words =['спасибо','teşekkürler','отлично','супер','класс','помог','решил']
+        negative_words =['бесит','злюсь','ненавижу','тупой','идиот','не работает','ошибка']
 
         all_text =' '.join ([msg .get ('content','')for msg in messages [-10 :]]).lower ()
 
@@ -218,7 +218,7 @@ class ConversationAnalyzer :
             return 'neutral'
 
 
-            # Kюresel ёnbellek baz информация (для не zagrujat каждый kez)
+            # Глобальный кэш базы знаний (чтобы не пересоздавать каждый раз)
 _kb_cache :Dict [int ,KnowledgeBase ]={}
 
 

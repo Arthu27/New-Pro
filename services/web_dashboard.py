@@ -27,8 +27,8 @@ class WebDashboard:
         """Login required decorator"""
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Basit authentication
-            # Gerчek uygulamada session использовать
+            # Простая проверка авторизации
+            # В полноценном развертывании здесь серверные сессии
             return f(*args, **kwargs)
         return decorated_function
     

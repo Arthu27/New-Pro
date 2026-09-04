@@ -129,7 +129,7 @@ class BadgeSystem:
         """Проверить и выдать значки по статистике"""
         awarded = []
         
-        # Иlk ticket
+        # Первый тикет
         if stats.get('total_tickets', 0) >= 1:
             badge = self.award_badge(user_id, 'first_ticket')
             if badge:

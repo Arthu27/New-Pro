@@ -161,13 +161,13 @@ def register(ctx):
                 wl_clean .append (x )
                 # Maks 500 user limit
         data ['whitelist']=wl_clean [:500 ]
-        # raid_action her zaman 'alert' — diгer deгerleri отклонить
+        # raid_action всегда 'alert' — остальные значения отклоняем
         data ['raid_action']='alert'
         # Канал тревоги настраивается в «Каналах и маршрутах» (тот же файл,
         # ключ alert_channel_id): здесь его не принимаем, чтобы пустой POST
         # со страницы анти-рейда не затёр выбранный канал.
         data ['alert_channel_id']=existing .get ('alert_channel_id')
-        # Numeric alanlarыn tipini koru
+        # Сохраняем типы числовых полей
         try :
             data ['join_threshold']=max (2 ,min (50 ,int (data .get ('join_threshold',5 ))))
             data ['join_window']=max (5 ,min (120 ,int (data .get ('join_window',10 ))))
@@ -223,7 +223,7 @@ def register(ctx):
                 clean_ids .append (s )
             if len (clean_ids )>=50 :
                 break 
-                # Кросс-проверка со списком ролей бота — отсутствующие роли могли быть удалены на сервереr
+                # Кросс-проверка со списком ролей бота — часть ролей могла быть удалена на сервере
         import web .app as _app 
         bot =_app .bot_instance 
         guild =None 
@@ -238,10 +238,10 @@ def register(ctx):
         if guild is not None :
             valid_ids =[rid for rid in clean_ids if guild .get_role (int (rid ))is not None ]
         else :
-        # Bot offline veya guild bulunamadы — tюm ID'leri принять et
+        # Бот офлайн или гильдия не найдена — принимаем все ID
             valid_ids =clean_ids 
 
-            # leave_log korunuyor (cog tarafыndan yazыlыr)
+            # leave_log сохраняется (его пишет ког)
         existing ={}
         if os .path .exists (f ):
             try :
@@ -252,7 +252,7 @@ def register(ctx):
         leave_log =data .get ('leave_log')
         if not isinstance (leave_log ,list ):
             leave_log =existing .get ('leave_log',[])
-            # leave_log'u 200 ile sыnыrla
+            # Ограничиваем leave_log 200 записями
         leave_log =leave_log [-200 :]
         result ={
         'enabled':enabled ,
