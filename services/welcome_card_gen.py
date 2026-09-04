@@ -181,6 +181,104 @@ def load_bg_bytes(file_name):
     return None
 
 
+def resolve_image_url(url, max_bytes=None):
+    """Скачать картинку по ссылке «как у пользователя» (в т.ч. Pinterest).
+
+    Люди копируют ссылки из Pinterest и соцсетей, а там чаще всего СТРАНИЦА,
+    а не файл: pin.it/…, pinterest.com/pin/123456/…. Раньше такую ссылку
+    получал только Discord (embed.set_image) и показывал битую картинку.
+
+    Теперь панель сама скачивает и понимает:
+      • прямые ссылки на файл (i.pinimg.com/…jpg, любой сайт);
+      • страницы Pinterest (pin.it, /pin/…) — из HTML берётся og:image;
+      • любую страницу с og:image / twitter:image (VK, TG, сайты).
+
+    Возвращает {'ok': True, 'data': bytes, 'direct_url': str, 'via': str}
+    или {'ok': False, 'error': текст-подсказка для владельца}.
+    """
+    import re as _re
+    import requests as _rq
+    limit = int(max_bytes or BG_MAX_BYTES)
+    u = str(url or '').strip()
+    if not u:
+        return {'ok': False, 'error': 'Ссылка пустая'}
+    if not u.lower().startswith(('https://', 'http://')):
+        return {'ok': False, 'error': 'Ссылка должна начинаться с https://'}
+    low = u.lower()
+    if any(h in low for h in ('//localhost', '//127.0.0.1', '//0.0.0.0', '//[::1]')):
+        return {'ok': False, 'error': 'Адрес должен быть публичным'}
+    headers = {
+        'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                       'AppleWebKit/537.36 (KHTML, like Gecko) '
+                       'Chrome/124.0 Safari/537.36'),
+        'Accept': 'image/avif,image/webp,image/*,*/*;q=0.8',
+    }
+
+    def _download(target):
+        try:
+            r = _rq.get(target, headers=headers, timeout=(8, 15),
+                        allow_redirects=True, stream=True)
+        except _rq.exceptions.ConnectionError:
+            return {'ok': False,
+                    'error': 'Сайт недоступен (не отвечает). Проверь ссылку '
+                             'или скачай файл и загрузи его в панель'}
+        except _rq.exceptions.Timeout:
+            return {'ok': False,
+                    'error': 'Сайт отвечает слишком долго — попробуй позже '
+                             'или загрузи файл напрямую'}
+        except _rq.exceptions.RequestException as _e:
+            return {'ok': False, 'error': f'Не удалось скачать: {_e}'[:160]}
+        if r.status_code >= 400:
+            return {'ok': False,
+                    'error': f'Сайт ответил кодом {r.status_code} — ссылка недоступна'}
+        ct = (r.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+        buf = bytearray()
+        for chunk in r.iter_content(65536):
+            buf.extend(chunk)
+            if len(buf) > limit:
+                return {'ok': False,
+                        'error': 'Картинка больше 8 МБ — сохраните поменьше'}
+        return {'ok': True, 'data': bytes(buf), 'content_type': ct, 'url': str(r.url)}
+
+    first = _download(u)
+    if not first.get('ok') and 'кодом' in first.get('error', ''):
+        return first   # сайт недоступен/404 — честно сказать об этом
+    if first.get('ok') and first['content_type'].startswith('image/'):
+        return {'ok': True, 'data': first['data'],
+                'direct_url': first['url'], 'via': 'прямая ссылка'}
+    # HTML-страница (Pinterest, VK, сайты): вытащить og:image / twitter:image
+    html = ''
+    if first.get('ok'):
+        try:
+            html = first['data'].decode('utf-8', 'ignore')
+        except Exception:
+            html = ''
+    cand = None
+    m = _re.search(r'<meta[^>]+(?:property|name)=["\'](?:og:image(?::secure_url)?|twitter:image(?:src)?)["\'][^>]+content=["\']([^"\']+)["\']', html, _re.I)
+    if not m:
+        m = _re.search(r'content=["\']([^"\']+\.(?:jpg|jpeg|png|webp)[^"\']*)["\'][^>]*(?:property|name)=["\'](?:og:image|twitter:image)["\']', html, _re.I)
+    if m:
+        cand = m.group(1).replace('&amp;', '&')
+    if not cand:
+        if 'pinterest' in low or 'pin.it' in low:
+            return {'ok': False,
+                    'error': 'Pinterest не отдал картинку. Откройте пин, '
+                             'нажмите на изображение правой кнопкой → '
+                             '«Копировать ссылку на изображение» (i.pinimg.com/…jpg) '
+                             '— или пришлите ссылку на сам пин ещё раз позже'}
+        return {'ok': False,
+                'error': 'По ссылке страница, а не картинка. Нужна прямая '
+                         'ссылка на изображение (.jpg/.png/.webp) или пин Pinterest'}
+    second = _download(cand)
+    if second.get('ok') and second['content_type'].startswith('image/'):
+        return {'ok': True, 'data': second['data'],
+                'direct_url': second['url'], 'via': 'страница → og:image'}
+    if not second.get('ok') and 'кодом' in second.get('error', ''):
+        return second
+    return {'ok': False,
+            'error': 'Нашёл на странице картинку, но скачать не смог — сайт закрыт от ботов. Скачайте файл и загрузите его в панель'}
+
+
 def save_bg_file(gid, original_name, data):
     """Принять загрузку фона: валидация картинки → dict результата.
 

@@ -86,6 +86,10 @@
     <span class="spacer"></span>
     <button type="button" class="btn btn-primary" id="lcSave"><i class="fas fa-save"></i> Сохранить</button>
   </div>
+  <div class="filter-row" id="lcByCatRow" style="margin-bottom:10px;display:none;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="font-size:12.5px;color:var(--text-2)">Образ по категориям:</span>
+    <span id="lcByCat" style="display:flex;gap:8px;flex-wrap:wrap"></span>
+  </div>
   <div class="hint" id="lcMsg" style="margin-bottom:10px"></div>
   <div style="border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg)">
     <img id="lcPreview" alt="Предпросмотр карточки лога" style="width:100%;height:auto" loading="lazy">
@@ -196,16 +200,28 @@ else start();
       catSel = document.getElementById('lcCat'),
       accent = document.getElementById('lcAccent'),
       msg = document.getElementById('lcMsg'),
-      img = document.getElementById('lcPreview');
+      img = document.getElementById('lcPreview'),
+      byCatBox = document.getElementById('lcByCat'),
+      byCatRow = document.getElementById('lcByCatRow');
+  var CAT_LABELS = { mod: 'Модерация', automod: 'Автомод', message: 'Сообщения',
+                     voice: 'Войсы', member: 'Зашёл-вышел', nick: 'Никнеймы',
+                     role: 'Роли', channel: 'Каналы', invite: 'Приглашения',
+                     guild: 'Сервер', ticket: 'Тикеты' };
+  function byCatValue(cat) {
+    var el = document.getElementById('lcT_' + cat);
+    return el ? el.value : '';
+  }
   var accentDirty = false; /* не трогаем цвет до первого касания владельца */
   accent.addEventListener('input', function () { accentDirty = true; schedulePreview(); });
 
   var pvT = null;
   function lcPreviewUrl() {
     var q = new URLSearchParams();
-    q.set('theme', themeSel.value || 'hakumo');
+    var cat = catSel.value || 'mod';
+    /* реальный образ категории: её собственный, если задан, иначе общая тема */
+    q.set('theme', byCatValue(cat) || themeSel.value || 'hakumo');
     if (accentDirty) q.set('accent', accent.value.replace('#', ''));
-    q.set('cat', catSel.value || 'mod');
+    q.set('cat', cat);
     return '/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/preview.png?' + q.toString() + '&_=' + Date.now();
   }
   function schedulePreview() {
@@ -228,6 +244,27 @@ else start();
             return '<option value="' + esc(t.id) + '">' + esc(t.label) + '</option>';
           }).join('');
         }
+        if (!byCatBox.options_ && d.cats && d.themes) {
+          var saved = d.cfg.theme_by_cat || {};
+          byCatBox.innerHTML = d.cats.filter(function (c) { return CAT_LABELS[c.id]; })
+            .map(function (c) {
+              var opts = ['<option value="">общая тема</option>'].concat((d.themes || []).map(function (t) {
+                return '<option value="' + esc(t.id) + '"' + (saved[c.id] === t.id ? ' selected' : '') + '>' + esc(t.label) + '</option>';
+              })).join('');
+              return '<label style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--text-2)">' + CAT_LABELS[c.id] +
+                '<select id="lcT_' + esc(c.id) + '" data-cat="' + esc(c.id) + '" style="padding:5px 8px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);font-size:12px;font-family:inherit;cursor:pointer">' + opts + '</select></label>';
+            }).join('');
+          byCatRow.style.display = 'flex';
+          byCatBox.addEventListener('change', function (ev) {
+            if (ev.target && ev.target.id && ev.target.id.indexOf('lcT_') === 0) schedulePreview();
+          });
+        }
+        if (byCatBox.children.length) {
+          Array.prototype.forEach.call(byCatBox.querySelectorAll('select'), function (sel) {
+            var v = (d.cfg.theme_by_cat || {})[sel.getAttribute('data-cat')] || '';
+            sel.value = v;
+          });
+        }
         on.checked = !!d.cfg.enabled;
         themeSel.value = d.cfg.theme || 'hakumo';
         if (d.cfg.accent) { accent.value = '#' + d.cfg.accent; accentDirty = true; }
@@ -237,8 +274,13 @@ else start();
   }
 
   function lcSave(silent) {
+    var tbc = {};
+    Array.prototype.forEach.call(byCatBox.querySelectorAll('select'), function (sel) {
+      if (sel.value) tbc[sel.getAttribute('data-cat')] = sel.value;
+    });
     var body = { enabled: on.checked, theme: themeSel.value || 'hakumo',
-                 accent: accentDirty ? accent.value.replace('#', '') : '' };
+                 accent: accentDirty ? accent.value.replace('#', '') : '',
+                 theme_by_cat: tbc };
     fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     }).then(function (r) { return r.json(); }).then(function (d) {

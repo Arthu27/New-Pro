@@ -78,13 +78,15 @@ check(pal['gold'] == (255, 136, 0) and pal['bright'] != pal['gold'],
 
 print('== 2. Настройки cfg ==')
 cfg = LC.get_log_cards_cfg('424242')
-check(cfg == {'enabled': True, 'theme': 'hakumo', 'accent': ''}, 'нет файла → дефолт')
+check({k: v for k, v in cfg.items() if k != 'theme_by_cat'} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+      and cfg['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT, 'нет файла → дефолт (+образы по категориям)')
 saved = LC.save_log_cards_cfg('424242', {'enabled': False, 'theme': 'ocean', 'accent': '#22d3ee'})
-check(saved == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'},
+check({k: v for k, v in saved.items() if k != 'theme_by_cat'} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'},
       'сохранение нормализует (accent без #)')
 check(LC.get_log_cards_cfg('424242') == saved, 'читается обратно один в один')
 saved2 = LC.save_log_cards_cfg('424242', {'enabled': 'yes', 'theme': 'bad', 'accent': 'bad'})
-check(saved2 == {'enabled': True, 'theme': 'hakumo', 'accent': ''},
+check({k: v for k, v in saved2.items() if k != 'theme_by_cat'} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+      and saved2['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT,
       'мусор в POST не пролезает: enabled bool, тема/акцент по реестру')
 os.remove(LC.log_cards_cfg_path('424242'))
 
@@ -93,8 +95,9 @@ logs_src = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
 flat = re.sub(r'\s+', '', logs_src)
 check('get_log_cards_cfg' in flat and '_cfg.get(\'enabled\',True)' in flat.replace('"', "'"),
       '_safe_send читает cfg сервера')
-check("theme=_cfg.get('theme')" in flat and "accent=_cfg.get('accent')" in flat,
-      'тема/акцент проброшены из cfg в render')
+check("theme=_theme" in flat and "accent=_cfg.get('accent')" in flat
+      and "theme_by_cat" in flat,
+      'тема (с образом категории) и акцент проброшены из cfg в render')
 check("ifnot_cfg.get('enabled',True)" in flat.replace('"', "'")
       and "_png=None" in flat,
       'enabled=False выключает картинку, текст остаётся')
@@ -136,8 +139,8 @@ check(r.status_code == 200 and d['success'] and d['cfg']['theme'] == 'forest',
 check(d['cfg']['accent'] == '22ff88', 'акцент сохранён без решётки')
 check(LC.get_log_cards_cfg('777')['theme'] == 'forest', 'файл на диске — forest')
 r = client.get('/api/guild/777/log-cards/settings').get_json()
-check(r['cfg']['theme'] == 'forest' and len(r['themes']) == 5,
-      'GET отдаёт cfg и 5 тем')
+check(r['cfg']['theme'] == 'forest' and len(r['themes']) == len(LC.LOG_CARD_THEMES),
+      'GET отдаёт cfg и все темы реестра')
 r = client.get('/api/guild/777/log-cards/preview.png?theme=ocean&accent=22d3ee&cat=voice')
 body = r.get_data()
 check(body[:8].startswith(b'\x89PNG') and len(body) > 30000,

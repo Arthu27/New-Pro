@@ -79,6 +79,36 @@ LOG_CARD_THEMES = {
                'bg_top': (8, 22, 16), 'bg_bot': (16, 36, 24),
                'stars': ((90, 220, 150), (190, 250, 200), (255, 255, 255)),
                'label': 'Лес'},
+    'sakura': {'gold': (255, 130, 190), 'bright': (255, 190, 225),
+               'soft': (205, 95, 155), 'dim': (140, 65, 105),
+               'bg_top': (26, 12, 22), 'bg_bot': (44, 20, 36),
+               'stars': ((255, 130, 190), (255, 200, 230), (255, 255, 255)),
+               'label': 'Сакура'},
+    'crimson': {'gold': (255, 75, 85), 'bright': (255, 150, 155),
+                'soft': (200, 50, 60), 'dim': (135, 35, 42),
+                'bg_top': (24, 8, 12), 'bg_bot': (40, 14, 20),
+                'stars': ((255, 75, 85), (255, 190, 120), (255, 255, 255)),
+                'label': 'Багровый неон'},
+    'steel': {'gold': (170, 190, 215), 'bright': (225, 235, 248),
+              'soft': (120, 140, 165), 'dim': (80, 95, 115),
+              'bg_top': (13, 16, 22), 'bg_bot': (24, 30, 40),
+              'stars': ((170, 190, 215), (225, 235, 248), (255, 255, 255)),
+              'label': 'Сталь'},
+    'aurora': {'gold': (95, 235, 210), 'bright': (175, 255, 240),
+               'soft': (70, 180, 165), 'dim': (48, 120, 112),
+               'bg_top': (8, 18, 26), 'bg_bot': (20, 30, 52),
+               'stars': ((95, 235, 210), (170, 160, 255), (255, 255, 255)),
+               'label': 'Аврора'},
+}
+
+# «Разными образами» (заказ владельца): каждой категории логов — свой образ
+# по умолчанию. Владелец может перекрыть любую в панели (Логи → оформление).
+DEFAULT_THEME_BY_CAT = {
+    'mod': 'hakumo', 'automod': 'crimson', 'message': 'ocean',
+    'voice': 'violet', 'member': 'forest', 'nick': 'sakura',
+    'role': 'aurora', 'channel': 'steel', 'invite': 'aurora',
+    'сервер': 'hakumo', 'guild': 'hakumo', 'ticket': 'ocean',
+    'proof': 'steel', 'welcome': 'sakura',
 }
 LOG_CARD_THEME_ORDER = tuple(LOG_CARD_THEMES)
 DEFAULT_LOG_THEME = 'hakumo'
@@ -131,9 +161,23 @@ def log_cards_cfg_path(gid):
     return os.path.join(ROOT, 'data', f'log_cards_{gid}.json')
 
 
+def _valid_theme_by_cat(raw):
+    """dict категория→тема: ключи из CATEGORY_STYLES, значения из тем."""
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for k, v in raw.items():
+        k = str(k).strip().lower()
+        v = str(v).strip().lower()
+        if k in CATEGORY_STYLES and v in LOG_CARD_THEMES:
+            out[k] = v
+    return out
+
+
 def get_log_cards_cfg(gid):
-    """{'enabled': bool, 'theme': str, 'accent': ''} — с валидацией мусора."""
-    cfg = {'enabled': True, 'theme': DEFAULT_LOG_THEME, 'accent': ''}
+    """{'enabled': bool, 'theme': str, 'accent': '', 'theme_by_cat': {}} — с валидацией мусора."""
+    cfg = {'enabled': True, 'theme': DEFAULT_LOG_THEME, 'accent': '',
+           'theme_by_cat': dict(DEFAULT_THEME_BY_CAT)}
     try:
         path = log_cards_cfg_path(gid)
         if os.path.exists(path):
@@ -149,6 +193,8 @@ def get_log_cards_cfg(gid):
                 acc = str(raw.get('accent') or '').strip().lstrip('#')
                 if not acc or _ui_color(acc):
                     cfg['accent'] = acc
+                if 'theme_by_cat' in raw:
+                    cfg['theme_by_cat'] = _valid_theme_by_cat(raw.get('theme_by_cat'))
     except Exception as _ex:
         _log.debug('get_log_cards_cfg(): %s', _ex)
     return cfg
@@ -162,6 +208,9 @@ def save_log_cards_cfg(gid, data):
         'enabled': bool(data.get('enabled', True)),
         'theme': DEFAULT_LOG_THEME,
         'accent': '',
+        'theme_by_cat': _valid_theme_by_cat(data.get('theme_by_cat')
+                                            if 'theme_by_cat' in data
+                                            else DEFAULT_THEME_BY_CAT),
     }
     theme = str(data.get('theme') or '').strip().lower()
     if theme in LOG_CARD_THEMES:
@@ -275,6 +324,16 @@ CATEGORY_STYLES = {
         'tag': '✦ HAKUMO · АВТОМОДЕРАЦИЯ',
         'glow_color': (255, 90, 45),
         'type': 'mod',
+    },
+    'nick': {
+        'tag': '✦ HAKUMO · НИКНЕЙМЫ',
+        'glow_color': (185, 130, 255),
+        'type': 'message',
+    },
+    'proof': {
+        'tag': '✦ HAKUMO · ДОКАЗАТЕЛЬСТВА',
+        'glow_color': (200, 120, 255),
+        'type': 'member',
     },
     'message': {
         'tag': '✦ HAKUMO · АУДИТ СООБЩЕНИЙ',

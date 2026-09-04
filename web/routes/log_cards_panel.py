@@ -37,7 +37,9 @@ def register(ctx):
         cfg = LC.get_log_cards_cfg(gid)
         return jsonify({'success': True, 'cfg': cfg,
                         'themes': [{'id': t, 'label': LC.LOG_CARD_THEMES[t]['label']}
-                                   for t in LC.LOG_CARD_THEME_ORDER]})
+                                   for t in LC.LOG_CARD_THEME_ORDER],
+                        'cats': [{'id': k, 'label': v.get('tag', '').split('· ')[-1].title()}
+                                 for k, v in LC.CATEGORY_STYLES.items()]})
 
     @app.route('/api/guild/<gid>/log-cards/settings', methods=['POST'])
     @login_required
@@ -47,9 +49,11 @@ def register(ctx):
         _log.info('log-cards: %s обновил оформление на %s: %s',
                   session.get('username', '?'), gid, cfg)
         theme_lbl = LC.LOG_CARD_THEMES.get(cfg['theme'], {}).get('label', cfg['theme'])
+        per_cat = len(cfg.get('theme_by_cat') or {})
         return jsonify({'success': True, 'cfg': cfg,
                         'message': f'Оформление сохранено: {theme_lbl}' +
-                                   (' · свой акцент' if cfg['accent'] else '')})
+                                   (' · свой акцент' if cfg['accent'] else '') +
+                                   (f' · образов по категориям: {per_cat}' if per_cat else '')})
 
     @app.route('/api/guild/<gid>/log-cards/preview.png')
     @login_required
@@ -60,6 +64,11 @@ def register(ctx):
         cat = str(request.args.get('cat') or 'mod')
         if cat not in LC.CATEGORY_STYLES:
             cat = 'mod'
+        cfg = LC.get_log_cards_cfg(gid)
+        # «Разными образами»: в превью показываем реальный образ категории —
+        # из theme_by_cat, если владелец задал, иначе общая тема.
+        if not theme:
+            theme = (cfg.get('theme_by_cat') or {}).get(cat) or cfg.get('theme')
         try:
             png = LC.render_log_card(
                 cat, 'Пример: выдано предупреждение', PREVIEW_ROWS,

@@ -21,6 +21,7 @@ AUDIT_FILE ="data/audit_log.json"
 CATEGORIES ={
 'mod':{'label':'Модерация','emoji':'🛡','color':0xE74C3C ,'channel':'модерация'},
 'member':{'label':'Участники','emoji':'👋','color':0x2ECC71 ,'channel':'участники'},
+'nick':{'label':'Никнеймы','emoji':'🏷','color':0x9B59B6 ,'channel':'участники'},
 'message':{'label':'Сообщения','emoji':'💬','color':0x3498DB ,'channel':'сообщения'},
 'role':{'label':'Роли','emoji':'🎭','color':0x9B59B6 ,'channel':'сервер'},
 'channel':{'label':'Каналы','emoji':'🗂','color':0xF39C12 ,'channel':'сервер'},
@@ -119,6 +120,7 @@ def _ensure_worker ():
 _CAT_TOPICS = {
     'mod': ('moderation', 'security', 'modcenter', 'logs'),
     'member': ('members', 'analytics', 'logs'),
+    'nick': ('members', 'logs'),
     'voice': ('voice', 'analytics', 'logs'),
     'invite': ('invites', 'analytics', 'logs'),
     'message': ('logs',),
@@ -177,7 +179,7 @@ LEGACY_CHANNEL_NAMES ={
 
 def log_category_display (category :str ='сервер'):
     """Красивое имя лог-канала категории (то, что видят участники)."""
-    category ={'модерация':'mod','moderasyon':'mod','участники':'member',
+    category ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick',
     'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
     'каналы':'channel'}.get (category ,category )
     ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
@@ -192,7 +194,7 @@ def _configured_log_channel (guild ,category ):
     """
     try :
         from services .log_settings import target_channel_id
-        _cat ={'модерация':'mod','moderasyon':'mod','участники':'member',
+        _cat ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick',
         'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
         'каналы':'channel'}.get (category ,category )
         _cid =target_channel_id (guild .id ,_cat )
@@ -272,7 +274,7 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
             except Exception as _rn:
                 log .debug (f'[LOGS] переименование пропущено: {_rn}')
         return ch
-    category ={'модерация':'mod','moderasyon':'mod','участники':'member',
+    category ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick',
     'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
     'каналы':'channel'}.get (category ,category )
     ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
@@ -375,9 +377,13 @@ async def _safe_send (ch ,**kw ):
                 else :
                     # JPEG + отдельный поток: PNG-кодирование жрало ~1.2с на каждый лог
                     # и фризило весь бот. Теперь ~30-100 мс, бот не замирает.
+                    # «Разными образами»: у каждой категории свой образ —
+                    # theme_by_cat перекрывает общую тему (panel: Логи → оформление)
+                    _theme =( (_cfg .get ('theme_by_cat')or {}) .get (_m ['cat'])
+                              or _cfg .get ('theme') )
                     _png =await _aio .to_thread (render_log_card ,_m ['cat'],_m ['title'],_m ['rows'],
                     color =_m ['color'],cat_name =_cat_meta (_m ['cat'])[2 ],
-                    guild_name =_m ['guild'],theme =_cfg .get ('theme'),
+                    guild_name =_m ['guild'],theme =_theme,
                     accent =_cfg .get ('accent'),
                     time_str =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime ('%H:%M UTC'))
                 if _png :
@@ -495,6 +501,7 @@ def _find_log_category (guild ):
 _LOG_META = {
     'mod':     ('🛡️', 0xE74C3C, 'Модерация'),
     'member':  ('👋', 0xC8922A, 'Участники'),
+    'nick':    ('🏷️', 0x9B59B6, 'Никнеймы'),
     'message': ('💬', 0x3498DB, 'Сообщения'),
     'voice':   ('🔊', 0x1ABC9C, 'Войс'),
     'channel': ('🗂️', 0xE67E22, 'Каналы'),
@@ -1567,7 +1574,9 @@ class Logs (commands .Cog ):
             'new_nick':after .nick or after .name ,
             }
             async def _flush_nicks (items ,_g =before .guild ):
-                _ch =await self .get_log_channel (_g ,'member')
+                # Своя категория «Никнеймы»: владелец выбирает канал в панели
+                # (Логи сервера → Никнеймы); не выбран — прежний «участники».
+                _ch =await self .get_log_channel (_g ,'nick')
                 if not _ch :
                     return
                 _rows =[]

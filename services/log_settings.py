@@ -31,6 +31,7 @@ _log = get_logger('log_settings')
 LOG_CATEGORIES = (
     ('mod',      'Модерация',    '🛡'),
     ('member',   'Участники',    '👋'),
+    ('nick',     'Никнеймы',     '🏷'),
     ('message',  'Сообщения',    '💬'),
     ('voice',    'Голос',        '🔊'),
     ('channel',  'Каналы',       '🗂'),

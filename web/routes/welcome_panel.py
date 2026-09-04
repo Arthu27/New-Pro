@@ -13,6 +13,8 @@ from web.routes._common import (
     _log, render_template, session, request, jsonify, Response,
 )
 
+import os
+
 from services import welcome_card_gen as WCG
 
 
@@ -61,6 +63,27 @@ def register(ctx):
             if any(bad in low for bad in ('localhost', '127.0.0.1', '0.0.0.0')):
                 return jsonify({'success': False,
                                 'error': 'Адрес картинки должен быть публичным'}), 400
+            # Раньше ссылку получал только Discord — страницы Pinterest (pin.it,
+            # /pin/…) показывались битой картинкой. Теперь панель сама скачивает
+            # картинку (в т.ч. вытаскивая og:image со страницы пина) и хранит
+            # как загруженный файл: работает везде и переживает чистки сайтов.
+            res = WCG.resolve_image_url(url)
+            if not res.get('ok'):
+                return jsonify({'success': False, 'error': res.get('error')}), 400
+            fname = 'по-ссылке' + os.path.splitext(res['direct_url'].split('?')[0])[1][:6] or '.jpg'
+            saved = WCG.save_bg_file(gid, fname, res['data'])
+            if not saved.get('ok'):
+                return jsonify({'success': False, 'error': saved.get('error')}), 400
+            ap = saved['appearance']
+            ap['url'] = res['direct_url']   # прямая ссылка — для embed-ов
+            ap = WCG.save_appearance(gid, ap)
+            _notify(f'Фон по URL скачан и сохранён ({res["via"]})')
+            _log.info('welcome-card: %s скачал фон по URL (%s) на %s',
+                      session.get('username', '?'), res['via'], gid)
+            return jsonify({'success': True, 'appearance': ap,
+                            'message': 'Фон по ссылке скачан и сохранён '
+                                       f'({res["via"]}) — Pinterest и '
+                                       'картинки-страницы теперь работают'})
         ap = WCG.save_appearance(gid, ap)
         _notify(f'Оформление приветствия: {WCG.WELCOME_MODE_LABELS[ap["mode"]]}'
                 + (f' ({ap["theme"]})' if ap['mode'] == 'auto' else ''))
