@@ -388,26 +388,26 @@ class Moderation (commands .Cog ):
         return guild .get_channel (cid )
 
     async def _isolate_member (self ,guild ,user ,iso ):
-        """Закрыть все каналы для участника, оставить открытым канал апелляции."""
+        """Закрыть участнику ВСЕ каналы — включая канал апелляции.
+
+        Канал апелляции открывается НЕ в момент бана, а после подачи
+        апелляции в ЛС боту (/апелляция → cogs/appeals.py _submit_appeal):
+        заказ владельца 2026-09-05 — «канал апелляции должно быть видно
+        только после того, как человек подаст апелляцию в личке бота».
+        (Анти-альт при изоляции молодого аккаунта открывает канал сам —
+        там это осознанный механизм проверки «ты живой?».)
+        """
         if iso is None :
             return None ,0
         deny =discord .PermissionOverwrite (view_channel =False ,send_messages =False ,
         connect =False ,speak =False )
-        allow =discord .PermissionOverwrite (view_channel =True ,send_messages =True )
         closed =0
         for ch in guild .channels :
-            if ch ==iso :
-                continue
             try :
                 await ch .set_permissions (user ,overwrite =deny )
                 closed +=1
             except Exception as _ex :
                 log .debug (f'_isolate_member(): {ch}: {_ex}')
-        if iso is not None :
-            try :
-                await iso .set_permissions (user ,overwrite =allow )
-            except Exception as _ex :
-                log .debug (f'_isolate_member(): iso: {_ex}')
         return iso ,closed
 
     async def _unisolate_member (self ,guild ,user ):
@@ -616,17 +616,18 @@ class Moderation (commands .Cog ):
                     _closed =await self ._isolate_member (guild ,user ,_iso )
                     _brole =self ._punish_role (guild ,'ban')
                     if _brole is not None :
-                        # роль бана: каналы закрывает сама роль (настрой её права),
-                        # бот лишь открывает участнику канал апелляции
-                        try :
-                            await _iso .set_permissions (user ,overwrite =discord .PermissionOverwrite (view_channel =True ,send_messages =True ))
-                        except Exception as _pe :
-                            log .debug (f'[MODPANEL] allow апелляции: {_pe}')
+                        # роль бана закрывает каналы; канал апелляции человек
+                        # получит САМ, когда подаст апелляцию в ЛС боту
+                        # (/апелляция) — не в момент бана (заказ владельца)
                         await user .add_roles (_brole ,reason =reason or 'бан')
-                        msg =f"🚫 роль бана «{_brole .name }» + канал апелляции {_iso .mention }"
+                        msg =(f"🚫 роль бана «{_brole .name }» — каналы закрыты. "
+                              f"Апелляция — в ЛС боту (/апелляция), после подачи "
+                              f"откроется канал {_iso .mention }")
                     else :
                         _closed =await self ._isolate_member (guild ,user ,_iso )
-                        msg =f"🚫 апелляция: закрыто каналов {_closed }, открыт {_iso .mention }"
+                        msg =(f"🚫 закрыто каналов {_closed }. Апелляция — в ЛС "
+                              f"боту (/апелляция): после подачи откроется "
+                              f"{_iso .mention }")
                     try :
                         from services .staff_limits import record_hit as _sl_rec
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
@@ -1449,8 +1450,10 @@ class ModHelpButton(discord.ui.Button):
             inline=False)
         embed.add_field(
             name='🚫 Бан — это апелляция',
-            value='Участник остаётся на сервере: все каналы закрыты, открыт только '
-                  'канал апелляции. Настраивается: Панель → Каналы и маршруты.',
+            value='Участник остаётся на сервере, все каналы закрыты. Канал '
+                  'апелляции откроется ему сам — после подачи апелляции в ЛС '
+                  'боту (/апелляция). Канал задаёт владелец: Панель → Каналы '
+                  'и маршруты.',
             inline=False)
         embed.add_field(
             name='🧹 Чистка',

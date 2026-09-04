@@ -576,6 +576,29 @@ class AppealRateModal(discord.ui.Modal):
         item['rating'] = self.verb
         item['rating_comment'] = cm or None
         self.cog._save(self.guild_id, state)
+        # Отзыв летит модерации В КАНАЛ апелляции (тред карточки, иначе —
+        # канал карточек): раньше он сохранялся только в панель, и владелец
+        # не видел, куда уходит «помогли / не помогли» (жалоба 2026-09-05).
+        try:
+            _guild = self.cog.bot.get_guild(self.guild_id)
+            _target = None
+            _tid = int(item.get('thread_id') or 0)
+            if _guild is not None and _tid:
+                _target = (_guild.get_thread(_tid)
+                           or _guild.get_channel(_tid))
+            if _target is None and _guild is not None:
+                _target = self.cog._log_channel(
+                    _guild, self.cog._load(self.guild_id))
+            if _target is not None:
+                _verdict = ('помогли разобраться' if self.verb == 'up'
+                            else 'не помогли')
+                _note = (f'📣 Автор апелляции **#{item["id"]}** оценил '
+                         f'рассмотрение: **{_verdict}**')
+                if cm:
+                    _note += f' — {cm}'
+                await _target.send(_note[:500])
+        except Exception as _ex:
+            log.debug('appeals: отзыв #%s в канал: %s', self.appeal_id, _ex)
         try:
             for child in self.src_view.children:
                 child.disabled = True
@@ -586,7 +609,8 @@ class AppealRateModal(discord.ui.Modal):
                       self.appeal_id, _ex)
         await interaction.response.send_message(
             'Спасибо! Оценка' + (' и комментарий' if cm else '')
-            + ' сохранены — это правда помогает модерации.',
+            + ' сохранены: модерация видит её в канале апелляций '
+            'и в панели (Апелляции → оценки рассмотрения).',
             ephemeral=True)
 
 
@@ -1137,12 +1161,26 @@ class Appeals(commands.Cog):
                 await self._fire_panel_event(item)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.error('appeals: тред #%s не создан: %s', item['id'], _ex)
+        # Канал апелляции открываем автору ТОЛЬКО теперь: владелец просил,
+        # чтобы канал был виден не в момент бана, а после подачи апелляции
+        # в ЛС боту (2026-09-05). До подачи у человека все каналы закрыты.
+        try:
+            from services.channel_routes import get_route as _route_of
+            _cid = int(_route_of(guild_id, 'ban_appeal_channel') or 0)
+            _iso = guild.get_channel(_cid) if _cid else None
+            if _iso is not None:
+                await _iso.set_permissions(
+                    user, overwrite=discord.PermissionOverwrite(
+                        view_channel=True, send_messages=True))
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.debug('appeals: открыть канал апелляции #%s: %s', item['id'], _ex)
         self._save(guild_id, state)
         try:
             embed = _dm_embed('submitted', item, str(guild.name))
             embed.description = (
                 f'Модераторы сервера **{guild.name}** уже получили её. '
-                'Ответ придёт в личные сообщения — обычно в течение суток.')
+                'Канал апелляции на сервере открыт для вас — карточка видна '
+                'там. Ответ придёт в личные сообщения — обычно в течение суток.')
             await user.send(embed=embed)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС подтверждения #%s не дошло: %s', item['id'], _ex)
@@ -1302,9 +1340,26 @@ class Appeals(commands.Cog):
 
     # ---- утилиты ----
     def _log_channel(self, guild, state):
+        """Куда класть карточки апелляций.
+
+        Порядок: канал из «/апелляции настройка» → маршрут владельца
+        «Канал апелляции (бан)» (Панель → Каналы и маршруты) → системный.
+        Раньше маршрут панели не читался вовсе, и карточка улетала не в тот
+        канал, который указал владелец (жалоба 2026-09-05).
+        """
         cid = state.get('log_channel_id')
         ch = guild.get_channel(cid) if cid else None
-        return ch or guild.system_channel
+        if ch is not None:
+            return ch
+        try:
+            from services.channel_routes import get_route
+            rcid = int(get_route(guild.id, 'ban_appeal_channel') or 0)
+            rch = guild.get_channel(rcid) if rcid else None
+            if rch is not None:
+                return rch
+        except Exception as _ex:
+            log.debug('appeals: маршрут канала апелляции: %s', _ex)
+        return guild.system_channel
 
     async def _notify_user(self, item, accept, unbanned, cooldown_hours=0,
                            guild_name='', member_present=False, invite_url=None,

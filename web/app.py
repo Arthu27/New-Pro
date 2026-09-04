@@ -1507,6 +1507,58 @@ def _resolve_member_key (members ,login ):
     return None
 
 
+def _resolve_nick_anywhere (nick ):
+    """Ник → Discord ID: members.json → живой кэш → состав на диске.
+
+    Третий источник (services/member_store — полный состав сервера, который
+    бот хранит на диске) чинит жалобу владельца 2026-09-05: «не находит
+    человека под таким именем», хотя человек выбрал себя из подсказок.
+    Живой кэш discord.py пуст, пока бот не докачал состав / выключен
+    intents.members — раньше на этом регистрация обрывалась.
+    Возвращает ID строкой, список кандидатов (ник неуникален) или None.
+    """
+    nick =str (nick or '').strip ().lstrip ('@')
+    if not nick :
+        return None
+    # 1) уже регистрировавшиеся
+    try :
+        with open ('data/members.json','r',encoding ='utf-8')as f :
+            r =_resolve_member_key (json .load (f ),nick )
+        if r :
+            return str (r )
+    except Exception as _ex :
+        _log .debug ('nick→members.json: %s',_ex )
+    # 2) живой кэш основного сервера
+    _pg =_panel_guild ()
+    if _pg is not None :
+        _q =nick .lower ()
+        _hits =[mm for mm in _pg .members
+                if not getattr (mm ,'bot',False )
+                and (_q ==(str (getattr (mm ,'display_name','')or '')).lower ()
+                     or _q ==(str (getattr (mm ,'name','')or '')).lower ())]
+        if len (_hits )==1 :
+            return str (_hits [0 ].id )
+        if len (_hits )>1 :
+            return _hits
+    # 3) состав на диске — работает при пустом живом кэше
+    try :
+        from services import member_store as _MS
+        _gid =str (MAIN_GUILD_ID or (getattr (_pg ,'id','')if _pg is not None else '')or '')
+        if _gid :
+            _rows =_MS .find (_gid ,nick ,limit =12 )or []
+            _exact =[r for r in _rows
+                     if not r .get ('bot')
+                     and (str (r .get ('display_name')or '').lower ()==nick .lower ()
+                          or str (r .get ('name')or '').lower ()==nick .lower ())]
+            if len (_exact )==1 :
+                return str (_exact [0 ].get ('id'))
+            if len (_exact )>1 :
+                return _exact
+    except Exception as _ex :
+        _log .debug ('nick→member_store: %s',_ex )
+    return None
+
+
 # /api/login-probe УДАЛЁН (2026-09-04, заказ владельца: «чтобы проверки
 # просто так не кружились»): проба дублировала POST /login целиком —
 # пароль и живая роль проверялись ДВАЖДЫ, а оверлей входа показывал
@@ -1592,29 +1644,17 @@ def register ():
             if not (17 <=len (discord_id )<=19 ):
                 return render_template ('register.html',error ='Неверный Discord ID!',step =1 )
         else :
-            _nick =discord_id .lstrip ('@')
-            _resolved =None 
-            try :
-                with open ('data/members.json','r',encoding ='utf-8')as _f :
-                    _resolved =_resolve_member_key (json .load (_f ),_nick )
-            except Exception as _ex :
-                _log .debug('register nick→members.json: %s',_ex )
-            if not _resolved :
-                _pg =_panel_guild ()
-                if _pg is not None :
-                    _q =_nick .lower ()
-                    _hits =[mm for mm in _pg .members
-                            if not getattr (mm ,'bot',False )
-                            and (_q ==(str (getattr (mm ,'display_name','')or '')).lower ()
-                                 or _q ==(str (getattr (mm ,'name','')or '')).lower ())]
-                    if len (_hits )==1 :
-                        _resolved =str (_hits [0 ].id )
-                    elif len (_hits )>1 :
-                        return render_template ('register.html',
-                            error ='Таких ников на сервере несколько — начни печатать ник и выбери СЕБЯ из подсказок.',step =1 )
-            if not _resolved :
+            # Разыменование «ID или ник»: members.json → живой кэш → состав
+            # на диске (member_store). Без третьего источника регистрация
+            # падала с «не находит человека под таким именем», пока бот не
+            # прогреет кэш (жалоба владельца 2026-09-05).
+            _resolved =_resolve_nick_anywhere (discord_id )
+            if _resolved is None :
                 return render_template ('register.html',
-                    error ='Не нашёл участника «'+_nick +'» на основном сервере. Начни печатать ник и выбери себя из подсказок — или введи Discord ID.',step =1 )
+                    error ='Не нашёл участника «'+discord_id .lstrip ('@')+'» на основном сервере. Начни печатать ник и выбери себя из подсказок — или введи Discord ID.',step =1 )
+            if isinstance (_resolved ,list ):
+                return render_template ('register.html',
+                    error ='Таких ников на сервере несколько — начни печатать ник и выбери СЕБЯ из подсказок.',step =1 )
             discord_id =_resolved
 
             # Сначала ищем в кэше, если нет — тянем fetch_member через Discord API
@@ -1634,6 +1674,19 @@ def register ():
                 m =None
             if m and not getattr (m ,'bot',False ):
                 return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
+            # Живого участника нет (кэш не прогрет / intents.members выключен)
+            # — берём запись состава с диска: регистрация не должна зависеть
+            # от прогрева кэша (жалоба владельца 2026-09-05).
+            try :
+                from services import member_store as _MS
+                _gid =str (MAIN_GUILD_ID or getattr (panel_guild ,'id','')or '')
+                row =_MS .get (_gid ,str (discord_id ))if _gid else None
+                if row and not row .get ('bot'):
+                    return {'display_name':row .get ('display_name')or row .get ('name')or str (discord_id ),
+                            'name':row .get ('name')or str (discord_id ),
+                            'avatar':row .get ('avatar')or 'https://cdn.discordapp.com/embed/avatars/0.png'}
+            except Exception as _ex:
+                _log.debug("find_member(): member_store: %s", _ex)
             return None 
 
         import asyncio 
@@ -4001,7 +4054,33 @@ def api_login_suggest ():
         except Exception as _ex:
             _log.debug("api_login_suggest(): подавлено: %s", _ex)
 
-            # 3. Демо-состав — ТОЛЬКО в режиме предпросмотра (DEMO_MODE=1 без
+            # 3. Состав на диске (member_store) — ПОЛНЫЙ список сервера: виден
+    # даже когда живой кэш пуст (бот не прогрелся / intents.members выключен).
+    # Раньше подсказки брались только из кэша, и человек не мог выбрать себя —
+    # регистрация падала «не находит человека под таким именем» (2026-09-05).
+    if len (suggestions )<12 :
+        try :
+            from services import member_store as _MS
+            _gid =str (MAIN_GUILD_ID or (getattr (panel_guild ,'id','')if panel_guild is not None else '')or '')
+            if _gid :
+                for row in (_MS .find (_gid ,query_clean ,limit =14 )or []):
+                    _sid =str (row .get ('id')or '')
+                    if not _sid or _sid in seen_ids or row .get ('bot'):
+                        continue
+                    _dn =str (row .get ('display_name')or row .get ('name')or _sid )
+                    if not query_clean or query_clean in _dn .lower ()or query_clean in _sid :
+                        seen_ids .add (_sid )
+                        suggestions .append ({
+                        'id':_sid ,
+                        'name':str (row .get ('name')or _dn ),
+                        'display_name':_dn ,
+                        'avatar':_safe_avatar_url (row .get ('avatar'))
+                        })
+                        if len (suggestions )>=12 :break
+        except Exception as _ex:
+            _log.debug("api_login_suggest(): member_store: %s", _ex)
+
+            # 4. Демо-состав — ТОЛЬКО в режиме предпросмотра (DEMO_MODE=1 без
     # бота). В бою чужих людей в подсказках быть не может: нет данных —
     # выпадашка честно пустая (заказ владельца: «данные, которых я не добавлял»).
     if not suggestions and _demo_mode ():

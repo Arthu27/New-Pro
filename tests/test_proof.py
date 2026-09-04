@@ -412,13 +412,14 @@ _m = _M(9090)
 _appeal = _Ch(9, 'апелляция')
 _g.channels.append(_appeal)
 iso, closed = run(mod_cog._isolate_member(_g, _m, _appeal))
-check(closed == 3, 'апелляция: закрыты все каналы, кроме канала апелляции')
+check(closed == 4, 'апелляция: закрыты ВСЕ каналы, включая канал апелляции')
 check(iso is _appeal and iso.name == 'апелляция', 'апелляция: канал апелляции передан и возвращён')
-_denied = [c for c in _g.channels if c is not iso]
-check(all(c.perm is not None and c.perm[1] is not None and c.perm[1].view_channel is False for c in _denied),
-      'апелляция: на закрытых каналах view_channel=False')
-check(iso.perm is not None and iso.perm[1].view_channel is True,
-      'апелляция: канал апелляции открыт (view_channel=True)')
+check(all(c.perm is not None and c.perm[1] is not None and c.perm[1].view_channel is False for c in _g.channels),
+      'апелляция: на всех каналах view_channel=False')
+# канал апелляции открывает ПОДАЧА апелляции в ЛС боту (cogs/appeals.py),
+# не бан: заказ владельца 2026-09-05 — до подачи всё закрыто
+check(iso.perm is not None and iso.perm[1].view_channel is False,
+      'апелляция: канал апелляции при бане ЗАКРЫТ (откроется после подачи в ЛС)')
 
 run(mod_cog._unisolate_member(_g, _m))
 check(all(c.perm is not None and c.perm[1] is None for c in _g.channels),
