@@ -42,7 +42,7 @@
       <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
         Наказание
         <select id="pf-action" aria-label="Наказание">
-          <option>варн</option><option>мут</option><option>тихий мут</option>
+          <option>варн</option><option>мут</option>
           <option>кик</option><option>бан</option><option>разбан</option>
         </select>
       </label>
@@ -82,12 +82,9 @@
         к наказанию (по участнику или по роли). Управление — Админ и выше.</span>
     </div>
     <div class="row" style="gap:8px;flex-wrap:wrap" id="pf-wl-addrow">
-      <select id="pf-wl-kind" aria-label="Тип записи белого списка" style="max-width:150px">
-        <option value="user">Участник</option><option value="role">Роль</option>
+      <select id="pf-wl-what" aria-label="Участник или роль" style="flex:1;min-width:260px">
+        <option value="">— выберите участника или роль —</option>
       </select>
-      <input type="text" id="pf-wl-id" placeholder="Имя участника — выберите из списка"
-             style="flex:1;min-width:200px" aria-label="Участник для белого списка">
-      <select id="pf-wl-role" style="flex:1;min-width:200px;display:none" aria-label="Роль для белого списка"></select>
       <span id="pf-wl-status"></span>
       <button type="button" class="btn btn-sm" id="pf-wl-add-btn"><i class="fas fa-plus"></i> Добавить</button>
     </div>
@@ -161,11 +158,11 @@
 
   var TONE = { 'варн': 'tone-warning', 'мут': 'tone-warning', 'тихий мут': 'neutral', 'таймаут': 'tone-warning', 'кик': 'tone-warning', 'бан': 'danger', 'разбан': 'ok' };
 
-  /* «таймаут» и «мут» — одно наказание (мут = нативный таймаут Discord):
-     старые записи показываем как «мут», чтобы в фильтре не было дублей. */
+  /* Без дублей в выборе и фильтре: «таймаут» и «тихий мут» в старых
+     записях показываем как «мут» (мут = нативный таймаут Discord). */
   function _act(a) {
     a = (a || '').toLowerCase();
-    return a === 'таймаут' ? 'мут' : a;
+    return (a === 'таймаут' || a === 'тихий мут') ? 'мут' : a;
   }
 
   function fmt(ts) {
@@ -494,13 +491,36 @@
   }
 
   var WL_GID = '{{ main_guild_id }}';
-  attachMemberPicker($('pf-wl-id'), { gid: WL_GID, statusEl: $('pf-wl-status') });
-  attachSelectPicker($('pf-wl-role'), { gid: WL_GID, kind: 'role', noneLabel: 'не выбрана' });
-  $('pf-wl-kind').addEventListener('change', function () {
-    var isRole = $('pf-wl-kind').value === 'role';
-    $('pf-wl-id').style.display = isRole ? 'none' : '';
-    $('pf-wl-role').style.display = isRole ? '' : 'none';
-  });
+  /* Один выбор вместо трёх контролов (дубликат выбора — жалоба владельца):
+     участники и роли живут в ОДНОМ списке с поиском; префикс значения
+     u:/r: говорит, кого добавили. */
+  var wlSel = $('pf-wl-what');
+  sshdEnhance(wlSel, { search: true, searchPlaceholder: 'Участник или роль…' });
+
+  function wlFill() {
+    var rolesP = window.pickerLoad(WL_GID).then(function (d) { return d.roles || []; })
+      .catch(function () { return []; });
+    var memP = fetch('/api/guild/' + WL_GID + '/member-card/suggest?q=&limit=50')
+      .then(function (r) { return r.json(); })
+      .then(function (d) { return (d && d.items) || []; })
+      .catch(function () { return []; });
+    Promise.all([rolesP, memP]).then(function (res) {
+      var roles = res[0] || [], mems = res[1] || [];
+      var keep = wlSel.value;
+      var g1 = '<optgroup label="Участники">' + mems.map(function (m) {
+        var uid = String(m.user_id || m.id || '');
+        var nm = m.name || m.display_name || uid;
+        return '<option value="u:' + esc(uid) + '">' + esc(nm) + ' · ' + esc(uid) + '</option>';
+      }).join('') + '</optgroup>';
+      var g2 = '<optgroup label="Роли">' + roles.map(function (r) {
+        return '<option value="r:' + esc(r.id) + '">@ ' + esc(r.name) + '</option>';
+      }).join('') + '</optgroup>';
+      wlSel.innerHTML = '<option value="">— выберите участника или роль —</option>' + g1 + g2;
+      if (keep) wlSel.value = keep;
+      if (wlSel._sshdCtl) wlSel._sshdCtl.refresh();
+    });
+  }
+  wlFill();
 
   function wlLoad() {
     fetch('/api/proof-whitelist').then(function (r) { return r.json(); })
@@ -508,14 +528,15 @@
   }
 
   $('pf-wl-add-btn').addEventListener('click', function () {
-    var isRole = $('pf-wl-kind').value === 'role';
-    var id = (isRole ? $('pf-wl-role').value : $('pf-wl-id').value.trim());
-    if (!/^\d{5,25}$/.test(id)) { window.showToast(isRole ? 'Выберите роль из списка' : 'Выберите участника из подсказок', false); return; }
+    var v = String(wlSel.value || '');
+    var mm = /^(u|r):(\d{5,25})$/.exec(v);
+    if (!mm) { window.showToast('Выберите участника или роль из списка', false); return; }
+    var kind = mm[1] === 'u' ? 'user' : 'role';
     fetch('/api/proof-whitelist', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind: $('pf-wl-kind').value, id: id })
+      body: JSON.stringify({ kind: kind, id: mm[2] })
     }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d && d.success) { window.showToast('Добавлено в белый список', true); $('pf-wl-id').value = ''; $('pf-wl-role').value = ''; wlRender(d); }
+      if (d && d.success) { window.showToast('Добавлено в белый список', true); wlSel.value = ''; if (wlSel._sshdCtl) wlSel._sshdCtl.refresh(); wlRender(d); }
       else window.showToast((d && d.error) || 'Ошибка', false);
     }).catch(function () { window.showToast('Сеть не отвечает', false); });
   });
