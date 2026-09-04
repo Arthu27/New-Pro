@@ -15,7 +15,7 @@ from web.routes._common import (
     render_template, session, request, jsonify,
 )
 
-KIND_META = {'card': ('Жалоба', 'fa-flag', 'danger'),
+KIND_META = {'card': ('Вызов модератора', 'fa-bell', 'danger'),
              'report': ('Репорт', 'fa-flag', 'danger'),
              'appeal': ('Апелляция', 'fa-scale-balanced', 'info')}
 
@@ -25,7 +25,7 @@ def _guild_channels_roles(gid):
 
     Делегируем общему резолверу: раньше здесь был только bot.get_guild(),
     который в бою регулярно промахивается (кэш гильдий ещё не наполнен),
-    и пикеры «Канал для жалоб»/«Роль модераторов» оставались с одной
+    и пикеры «Канал для вызовов»/«Роль модераторов» оставались с одной
     строкой «— не задан —», хотя /api/channels те же данные отдавал.
     """
     from web.routes.guild_admin import guild_channels_roles

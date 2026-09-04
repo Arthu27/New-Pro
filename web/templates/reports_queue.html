@@ -6,7 +6,7 @@
   <div class="page-head-copy">
     <div class="eyebrow"> Модерация </div>
     <h1>Репорты участников</h1>
-    <p class="lead">Очередь жалоб из <b>/report</b>: кто пожаловался, на кого, и что решили. Решение принимается в приватной ветке Discord, здесь — мониторинг очереди.</p>
+    <p class="lead">Вызовы модератора из <b>/report</b>: кто позвал, из-за кого и что решили. Разбор идёт прямо в канале модерации Discord, здесь — мониторинг очереди.</p>
   </div>
 </div>
 
@@ -16,11 +16,11 @@
 
 {% if role == 'admin' or role == 'owner' %}
 <div class="card" id="reportSetupCard" style="margin-bottom:14px">
-  <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-sliders"></i> Настройки жалоб</div>
-  <p class="muted" style="margin:0 0 10px">Куда бот присылает карточки <b>/report</b> и какая роль считается модераторской. <b>Роль модераторов — единая для всего бота:</b> она применяется к жалобам, призыву модеров и заявкам в команду — настраивать в разных местах больше не нужно. Канал выбираете вы — если не задать, бот создаст закрытый <b>#модерация</b> сам.</p>
+  <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-sliders"></i> Настройки вызовов</div>
+  <p class="muted" style="margin:0 0 10px">Куда бот присылает карточки <b>/report</b> (вызов модератора) и какая роль считается модераторской. <b>Роль модераторов — единая для всего бота:</b> она применяется к вызовам, призыву модеров и заявкам в команду — настраивать в разных местах больше не нужно. Канал выбираете вы — если не задать, бот создаст закрытый <b>#модерация</b> сам.</p>
   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
     <div style="flex:1;min-width:220px">
-      <label class="muted" for="rsChannel">Канал для жалоб</label>
+      <label class="muted" for="rsChannel">Канал для вызовов</label>
       <select id="rsChannel" class="form-input" style="width:100%"><option value="">— не задан (создастся #модерация) —</option></select>
     </div>
     <div style="flex:1;min-width:220px">
@@ -69,7 +69,7 @@ function render() {
   });
   if (!rows.length) {
     box.innerHTML = '<div class="empty"><i class="fas fa-mug-hot"></i><span>' +
-      (STATUS === 'open' ? 'Открытых репортов нет — очередь чиста.' : 'Здесь пусто') + '</span></div>';
+      (STATUS === 'open' ? 'Открытых вызовов нет — очередь чиста.' : 'Здесь пусто') + '</span></div>';
     return;
   }
   box.innerHTML = rows.map(function (t) {
@@ -96,7 +96,7 @@ function load() {
     $('rqKpis').innerHTML =
       kpi('fa-fire', s.open, 'открытых репортов', s.open ? 'tone-warn' : 'tone-ok') +
       kpi('fa-circle-check', s.closed_week, 'решено за 7 дней', 'tone-ok') +
-      kpi('fa-flag', s.total, 'всего жалоб', 'tone-info');
+      kpi('fa-flag', s.total, 'всего вызовов', 'tone-info');
     render();
   }).catch(function () {});
 }
@@ -140,7 +140,7 @@ function saveSetup() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ channel_id: $('rsChannel').value, mod_role_id: $('rsRole').value })
   }).then(function (r) { return r.json(); }).then(function (d) {
-    if (d.success) setupMsg('Сохранено. Новые жалобы пойдут в выбранный канал.', true);
+    if (d.success) setupMsg('Сохранено. Новые вызовы пойдут в выбранный канал.', true);
     else setupMsg(d.error || 'Не удалось сохранить', false);
   }).catch(function () { setupMsg('Ошибка сети', false); });
 }

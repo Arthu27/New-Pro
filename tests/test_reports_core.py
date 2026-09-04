@@ -119,8 +119,11 @@ check('add_view(ReportPanelView())' in src,
       'панель персистентная — переживает рестарт')
 check('create_thread' in src and 'private_thread' in src,
       'репорт открывает приватную ветку')
-check('discord.Attachment' in src and 'proof_file' in src and 'to_file' in src,
-      'доказательства — файлом сразу в ветку (не только ссылкой)')
+# Доказательства из /report УБРАНЫ (решение владельца 2026-09-05:
+# «/report — это позвать модератора»): ни параметров proof_file/proof,
+# ни конвейера демок в коде быть не должно.
+check('proof_file' not in src and 'ProofCog' not in src,
+      'доказательства из /report убраны (файл, ссылка, конвейер демок)')
 check('zlib' in open(os.path.join(ROOT, 'services', 'reports_core.py'),
                     encoding='utf-8').read(), 'ядро использует zlib')
 # Создание/закрытие канала репортов переехало из слеш-команды /report-setup
@@ -133,11 +136,11 @@ check('channel_id' in _panel and 'mod_role_id' in _panel
 check("'reports.py'" in open(os.path.join(ROOT, 'cogs_policy.py'),
                             encoding='utf-8').read(),
       'ког в лёгком профиле — загрузится на бою')
-# Карточка жалобы нарочно использует значок 🚨 в заголовке (заказ
-# владельца 2026-08-31 «жалоба в канал модерации») — это допустимо;
-# остальное оформление — чистые эмбеды. Проверяем, что файл валиден.
+# Карточка вызова модератора использует значок 🔔 в заголовке (решение
+# владельца 2026-09-05 «/report — это позвать модератора»); остальное
+# оформление — чистые эмбеды. Проверяем, что файл валиден.
 check('ReportCardView' in src and 'rcard_accept' in src,
-      'карточка жалобы в канал модерации с кнопками Принять/Отклонить')
+      'карточка вызова в канал модерации с кнопками Принять/Отклонить')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
