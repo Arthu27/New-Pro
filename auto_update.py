@@ -29,15 +29,45 @@ def _load_dotenv():
 
 _load_dotenv()
 
+def _dotenv_values():
+    """Прочитать свежие значения .env с диска (без os.environ).
+
+    Демон живёт долго, а .env могли отредактировать уже ПОСЛЕ его запуска:
+    os.environ.setdefault в _load_dotenv() сработал один раз при старте.
+    Читаем файл заново при каждом обращении за токеном.
+    """
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    vals = {}
+    try:
+        with open(env_path, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                vals[k.strip()] = v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return vals
+
+
 def _update_token():
     """Токен GitHub для доступа к ПРИВАТНОМУ репозиторию (чтение кода).
 
     Приватный репозиторий анонимно отдаёт 404 — без токена обновление
-    невозможно. Читаем из .env/окружения: GITHUB_TOKEN (историческое имя),
-    UPDATE_TOKEN (отдельный, только для обновлений) или GH_TOKEN.
+    невозможно. Сначала перечитываем .env с диска (его могли поправить уже
+    после запуска демона — os.environ в памяти устарел), затем окружение.
+    Принимаем GITHUB_TOKEN / UPDATE_TOKEN / GH_TOKEN / GITHUB_PAT / GH_PAT.
     Публичному репозиторию токен не нужен — запросы идут анонимно.
     """
-    for _k in ("GITHUB_TOKEN", "UPDATE_TOKEN", "GH_TOKEN"):
+    _env = _dotenv_values()
+    for _k in ("GITHUB_TOKEN", "UPDATE_TOKEN", "GH_TOKEN",
+               "GITHUB_PAT", "GH_PAT"):
+        _v = (_env.get(_k) or "").strip()
+        if _v:
+            return _v
+    for _k in ("GITHUB_TOKEN", "UPDATE_TOKEN", "GH_TOKEN",
+               "GITHUB_PAT", "GH_PAT"):
         _v = (os.getenv(_k) or "").strip()
         if _v:
             return _v

@@ -341,17 +341,83 @@ def _source():
     return repo, branch
 
 
-def _update_token():
+# Имена переменных, в которых может лежать токен GitHub для обновлений.
+# GITHUB_TOKEN — историческое имя (общее с AI через GitHub Models);
+# UPDATE_TOKEN — отдельный, только для обновлений; GH_TOKEN/GH_PAT —
+# имена из CLI-экосистемы GitHub; GITHUB_PAT — распространённая замена.
+TOKEN_ENV_KEYS = ('GITHUB_TOKEN', 'UPDATE_TOKEN', 'GH_TOKEN',
+                  'GITHUB_PAT', 'GH_PAT')
+
+
+def _dotenv_files(bot_dir=None):
+    """Где искать .env: DOTENV_PATH → каталог бота → текущий каталог.
+
+    Возвращает список путей без дублей; файла может не существовать.
+    """
+    root = bot_dir or _bot_dir()
+    paths = []
+    dp = (os.environ.get('DOTENV_PATH') or '').strip()
+    if dp:
+        paths.append(dp if os.path.isabs(dp) else os.path.join(root, dp))
+    paths.append(os.path.join(root, '.env'))
+    paths.append(os.path.join(os.getcwd(), '.env'))
+    out = []
+    for p in paths:
+        if p not in out:
+            out.append(p)
+    return out
+
+
+def dotenv_file_path():
+    """Первый СУЩЕСТВУЮЩИЙ .env из списка (для подсказок в ошибках)."""
+    for p in _dotenv_files():
+        if os.path.isfile(p):
+            return p
+    return ''
+
+
+def _dotenv_token(bot_dir=None):
+    """Токен обновлений прямо из ФАЙЛА .env (мимо os.environ).
+
+    Процесс грузит .env в os.environ ОДИН раз при старте (config.py) —
+    если владелец добавил токен в .env уже после запуска бота, окружение
+    его не видит, и /update ошибочно отвечал «токен НЕ задан». Каждый
+    вызов перечитывает файл с диска, поэтому «добавил в .env и повторил
+    /update без перезапуска» работает.
+    """
+    try:
+        from dotenv import dotenv_values
+        for p in _dotenv_files(bot_dir):
+            vals = {}
+            try:
+                vals = dotenv_values(p)
+            except OSError as _ex:
+                log.debug('self_update: .env %s не прочитан: %s', p, _ex)
+            for _k in TOKEN_ENV_KEYS:
+                _v = str(vals.get(_k) or '').strip()
+                if _v:
+                    return _v
+    except Exception as _ex:
+        log.debug('self_update: _dotenv_token: %s', _ex)
+    return ''
+
+
+def _update_token(bot_dir=None):
     """Токен GitHub для обновлений ИЗ ПРИВАТНОГО репозитория.
 
     Приватный репозиторий анонимно отдаёт 404 (и на codeload, и на API) —
     чтобы качать обновления, нужен токен с доступом на чтение содержимого.
-    Читаем из окружения/.env (бот грузит .env при старте): GITHUB_TOKEN
-    (историческое имя, общее с AI через GitHub Models), UPDATE_TOKEN
-    (отдельный, только для обновлений) или GH_TOKEN. Публичному
-    репозиторию токен не нужен — запросы идут анонимно.
+    Приоритет: СВЕЖЕЕ значение из файла .env на диске (файл могли
+    отредактировать после запуска процесса), затем окружение процесса.
+    Публичному репозиторию токен не нужен — запросы идут анонимно.
     """
-    for _k in ('GITHUB_TOKEN', 'UPDATE_TOKEN', 'GH_TOKEN'):
+    # Сначала файл: он — источник правды владельца и мог измениться
+    # уже после старта бота (см. _dotenv_token).
+    v = _dotenv_token(bot_dir)
+    if v:
+        return v
+    # Затем окружение (токен, выданный лаунчером/системой, без .env).
+    for _k in TOKEN_ENV_KEYS:
         _v = (os.environ.get(_k) or '').strip()
         if _v:
             return _v
@@ -438,9 +504,17 @@ def download_zip(dest_dir):
                 # нарочно (чтобы не светить существование репозитория) —
                 # подсказываем владельцу, что делать.
                 if not token and r.status_code == 404:
-                    hint = (' Репозиторий приватный? Добавьте GITHUB_TOKEN '
-                            '(или UPDATE_TOKEN) с доступом на чтение кода '
-                            'в .env и повторите /update.')
+                    _loc = dotenv_file_path()
+                    if _loc:
+                        hint = (' Репозиторий приватный? Добавьте GITHUB_TOKEN '
+                                '(или UPDATE_TOKEN) с доступом на чтение кода '
+                                f'в файл {_loc} и повторите /update. Токен из .env '
+                                'подхватывается БЕЗ перезапуска бота.')
+                    else:
+                        hint = (' Репозиторий приватный? Добавьте GITHUB_TOKEN '
+                                '(или UPDATE_TOKEN) с доступом на чтение кода '
+                                'в .env рядом с main.py и повторите /update. '
+                                'Файл .env пока не найден — создайте его.')
                 elif token and r.status_code == 404:
                     hint = (' Токен задан, но GitHub отвечает 404: проверьте, '
                             'что у токена есть права Contents: Read-only именно '

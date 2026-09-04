@@ -62,6 +62,42 @@ os.environ['GH_TOKEN'] = 'gho_secret'
 check(SU._update_token() == 'gho_secret', 'GH_TOKEN подхватывается')
 os.environ.pop('GH_TOKEN')
 
+# ─── токен добавлен в .env ПОСЛЕ «старта» процесса ───────────────────────
+# Бот грузит .env в os.environ один раз при запуске: если владелец вписал
+# токен позже и не перезапускал бота, os.environ его не видит. /update
+# обязан перечитать файл .env с диска — иначе вечный «токен НЕ задан».
+print('== Токен из ФАЙЛА .env: добавлен после старта (os.environ пуст) ==')
+_env_test = os.path.join(_TMP, '.env')
+with open(_env_test, 'w', encoding='utf-8') as f:
+    f.write('# комментарий на русском — не мешает\n')
+    f.write('UPDATE_BRANCH=main\n')
+    f.write('GITHUB_TOKEN=github_pat_iz_faila\n')
+check(SU._update_token() == 'github_pat_iz_faila',
+      'GITHUB_TOKEN из .env на диске виден без перезапуска')
+os.remove(_env_test)
+check(SU._update_token() == '',
+      'после удаления .env токен снова пуст (публичный режим)')
+with open(_env_test, 'w', encoding='utf-8') as f:
+    f.write('UPDATE_TOKEN = "github_pat_v_kavychkah"\n')
+check(SU._update_token() == 'github_pat_v_kavychkah',
+      'кавычки и пробелы вокруг значения обрабатываются')
+os.remove(_env_test)
+with open(_env_test, 'w', encoding='utf-8') as f:
+    f.write('GITHUB_PAT=github_pat_alias\n')
+check(SU._update_token() == 'github_pat_alias',
+      'псевдоним GITHUB_PAT тоже принимается')
+os.remove(_env_test)
+# env-переменная остаётся запасным вариантом, когда .env нет
+os.environ['GITHUB_TOKEN'] = 'gho_from_env'
+with open(_env_test, 'w', encoding='utf-8') as f:
+    f.write('GITHUB_TOKEN=file_tok\n')
+check(SU._update_token() == 'file_tok',
+      'свежий .env важнее устаревшего os.environ (файл — источник правды)')
+os.remove(_env_test)
+check(SU._update_token() == 'gho_from_env',
+      'без .env берётся токен из окружения процесса')
+os.environ.pop('GITHUB_TOKEN')
+
 # ─── выбор URL: публичный = codeload, приватный = api zipball ──────────
 print('== URL источника ==')
 from services import update_source as US  # noqa: E402
