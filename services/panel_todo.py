@@ -61,9 +61,13 @@ def add_task(text: str, author: str = '') -> dict:
 
 
 def _mutate(tid, fn) -> bool:
+    try:
+        want = int(tid)
+    except (TypeError, ValueError):
+        return False          # None/мусор вместо id — не 500, а «не найдена»
     tasks = list_tasks()
     for i, t in enumerate(tasks):
-        if t['id'] == int(tid):
+        if t['id'] == want:
             fn(tasks, i)
             _save(tasks)
             return True
