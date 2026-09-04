@@ -214,10 +214,18 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def log_settings_page():
+        # main_guild_id мог не сохраниться в старых сессиях (до 2026-09-05):
+        # страница тогда дёргала /api/guild//log-settings и ловила 404 —
+        # «Логи сервера не работает ничего вообще». Запасные источники ID:
+        # selected_guild сессии и MAIN_GUILD_ID приложения.
+        import web.app as _app
+        _gid = (session.get('main_guild_id')
+                or session.get('selected_guild')
+                or getattr(_app, 'MAIN_GUILD_ID', '') or '')
         return render_template('log_settings.html',
                                role=session.get('role'),
                                username=session.get('username'),
-                               main_guild_id=session.get('main_guild_id', ''))
+                               main_guild_id=str(_gid))
 
     # ── API: лимиты ────────────────────────────────────────────────────
     @app.route('/api/guild/<guild_id>/staff-limits')

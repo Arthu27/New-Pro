@@ -1377,6 +1377,7 @@ def login ():
             session ['discord_id']=discord_id
             session ['_role_checked']=_time .time ()
             session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None
+            session ['main_guild_id']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else ''
             session .modified =True
             _save_login_token (discord_id ,live_role )
             _log_login (display_name ,live_role ,(_res .get ('avatar')if isinstance (_res ,dict )else None ),discord_id ,method ='password+код Discord')
@@ -1411,6 +1412,7 @@ def login ():
             # ставил только демо-логин, и страница уходила в редирект
             # вечно редиректили на выбор сервера.
             session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None
+            session ['main_guild_id']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else ''
             session ['_role_checked']=_time .time ()
             session .modified =True
             _save_login_token (username ,USERS [username ]['role'])
@@ -1482,7 +1484,8 @@ def login ():
             session ['role']=live_role 
             session ['discord_id']=discord_id 
             # тот же выбранный сервер, что и у входа владельца
-            session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
+            session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None
+            session ['main_guild_id']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else ''
             session ['_role_checked']=_time .time ()
             session .modified =True 
             _save_login_token (discord_id ,live_role )
@@ -1773,8 +1776,20 @@ def register ():
             except Exception as ex :
                 print (f"DM не отправлено: {ex}")
 
-        asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop )
-
+        try :
+            _fut =asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop )
+            _fut .result (timeout =20 )
+            _dm_ok =True
+            _dm_err =''
+        except Exception as _dm_ex :
+            _dm_ok =False
+            _dm_err =str (_dm_ex )
+        if not _dm_ok :
+            # Лички закрыты/бот не смог написать — честно говорим, что делать
+            return render_template ('register.html',step =1 ,
+            error ='Не смог отправить тебе код в личные сообщения Discord. '
+                  'Открой личку с ботом на сервере (правый клик по боту → '
+                  '«Сообщить») и отправь форму ещё раз.')
         return render_template ('register.html',step =2 ,discord_id =discord_id ,password =password ,
         info =f'На Discord DM пользователя {member_info["display_name"]} отправлен 6-значный код.')
 
