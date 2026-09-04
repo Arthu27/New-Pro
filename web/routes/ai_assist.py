@@ -3,13 +3,12 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -102,47 +101,6 @@ def register(ctx):
         ]
         announcement =_call_text (messages ,max_tokens =600 )
         return jsonify ({'ok':True ,'text':announcement ,'announcement':announcement ,'result':announcement })
-
-
-    @app.route('/api/ai/mod-report', methods=['POST'])
-    @login_required
-    @role_required('mod')
-    def api_ai_mod_report():
-        from web.ai_helper import _call_text
-        # Заказ владельца 2026-08-26: отчёт строится ТОЛЬКО на реальных
-        # данных журнала (тот же источник, что страница «Отчёты»).
-        # Нет данных — честный ответ без вызова модели. Никаких наказаний
-        # ИИ не предлагает: муты/баны выдаёт только модератор-человек.
-        try:
-            from web.routes.mod_report import mod_report as _build
-            rep = _build(active_guild_id(), days=7)
-        except Exception as _ex:
-            _log.debug("api_ai_mod_report(): подавлено: %s", _ex)
-            rep = {'total': 0, 'mods_total': 0, 'per_mod': [], 'by_action': []}
-
-        if not rep.get('total'):
-            return jsonify({'ok': True, 'report':
-                '📊 За последние 7 дней в журнале модерации нет ни одного действия.\n\n'
-                'Это реальные данные из журнала бота — ничего выдуманного. '
-                'Как только модераторы начнут работать через команды бота, '
-                'здесь появится живая статистика.', 'text': '', 'result': ''})
-
-        lines = ["Реальная статистика модерации за 7 дней (журнал бота):",
-                 f"- Всего действий: {rep['total']}",
-                 f"- Активных модераторов: {rep['mods_total']}",
-                 "- По модераторам: " + ", ".join(f"{m} — {c}" for m, c in rep['per_mod'][:10]),
-                 "- По типам действий: " + ", ".join(f"{a} — {c}" for a, c in rep['by_action'][:10])]
-        messages = [
-        {"role": "system", "content":
-            "Ты — аналитик модерации Discord-сервера. Пишешь краткий отчёт СТРОГО по "
-            "предоставленным цифрам. Запрещено: выдумывать факты, имена и числа; "
-            "предлагать или рекомендовать наказания конкретным людям (муты/баны/варны "
-            "выдаёт только модератор-человек). Нет данных по пункту — напиши «нет данных»."},
-        {"role": "user", "content": "\n".join(lines) +
-            "\n\nНапиши краткую оценку загрузки команды модерации по ЭТИМ цифрам."}
-        ]
-        report = _call_text(messages, max_tokens=700)
-        return jsonify({'ok': True, 'report': report, 'text': report, 'result': report})
 
 
     @app .route ('/api/ai/embed',methods =['POST'])

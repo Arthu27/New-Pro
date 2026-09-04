@@ -60,23 +60,38 @@ def _gc_probe(phase, info):
         _log.debug('gc-probe: %s', _ex)
 
 
+# Пороги GC после стабилизации. ВАЖНО (инцидент 30.08): прежние
+# (50000, 50, 50) держали gen1-порог всего 50 — gen2-проход (самый
+# дорогой: обход ВСЕЙ кучи) запускался каждые ~50 gen0-сборок, т.е.
+# раз в 1–3 минуты, и каждый занимал 2–9 сек на боевом сервере. memory-
+# watchdog дополнительно бил gc.collect() раз в минуту. Для
+# latency-критичного event-loop полная сборка в норме НЕ должна
+# запускаться сама: держим gen1- и gen2-пороги огромными (автоматических
+# gen2 почти нет), а память под контролем держит редкая явная сборка
+# memory-watchdog (gen0 дёшево каждый тик + полная не чаще раза в 5 мин).
+GC_THRESHOLDS = (50_000, 5_000, 5_000)
+
+
 def gc_stabilize():
     """Вылечить мультисекундные паузы GC: заморозить стартовый граф и
     сделать сборки редкими (рецепт для долгоживущих asyncio-сервисов).
 
     gc.collect() + gc.freeze() переносит всё, что накопилось к моменту
     старта, в «постоянное» поколение — сборки его больше не обходят.
-    Порог 50000 (вместо 700) делает gen2-проходы в десятки раз реже.
+    Высокие пороги GC_THRESHOLDS (gen1/gen2 по 5000) убирают
+    автоматические gen2-проходы из горячего пути: их место занимает
+    редкая явная сборка из memory-watchdog.
     """
     try:
         import gc
         before = gc.get_count()
         gc.collect()
         gc.freeze()
-        gc.set_threshold(50_000, 50, 50)
+        gc.set_threshold(*GC_THRESHOLDS)
         _log.info('GC: стартовый граф заморожен (%s → сборки редкие, '
-                  'пороги 50000/50/50) — паузы сборки мусора больше не '
-                  'должны рвать event-loop', before)
+                  'пороги %d/%d/%d) — паузы сборки мусора больше не '
+                  'должны рвать event-loop',
+                  before, *GC_THRESHOLDS)
         return True
     except Exception as _ex:
         _log.warning('GC: стабилизировать не вышло: %s', _ex)
@@ -103,11 +118,45 @@ class _AsyncioSlowPromote(logging.Handler):
             _log.debug('asyncio-slow-promote: %s', _ex)
 
 
-def install_loop_probes(loop):
-    """Включить детектор медленных callback'ов asyncio на данном цикле.
+def _asyncio_debug_enabled():
+    """Включать ли ПОЛНЫЙ debug-режим asyncio (с захватом source-traceback).
 
-    Порог 2 сек: ловим именно зависания, а не мелочь. Издержки
-    debug-режима — один perf_counter на callback (микросекунды).
+    По умолчанию ВЫКЛ. Продакшн-инцидент 30.08 (Windows, папка Downloads,
+    антивирус): set_debug(True) заставляет asyncio при создании КАЖДОГО
+    таймера/задачи сохранять source-traceback через
+    linecache.checkcache() → os.stat() по каждому файлу стека. На Windows
+    каждый stat прогоняется антивирусом, а в Downloads он особенно медлен —
+    секунды I/O на одном месте стека. Пульс-монитор бил wait_for() дважды
+    в секунду (каждый wait_for — 2 таймера), и именно в этом stat застрял
+    главный поток на 6–10 сек (см. стек в логе: linecache.checkcache →
+    os.stat). Это и рвало event-loop паузами каждые 1–3 минуты.
+
+    Детектор зависаний от debug-режима не зависит: gc-проба (длительность
+    каждой сборки) и поток-свидетель stack-monitor (снимает стек виновника
+    прямо в момент фриза) работают без него. Поэтому боевому боту debug
+    не нужен. Включить для глубокой отладки: .env ASYNCIO_DEBUG=1.
+    """
+    try:
+        return str(os.getenv('ASYNCIO_DEBUG', '') or '').strip().lower() \
+            in ('1', 'true', 'yes', 'on', 'да', 'вкл')
+    except Exception:
+        return False
+
+
+def install_loop_probes(loop):
+    """Включить пробы event-loop на данном цикле.
+
+    Всегда ставим:
+      * gc.callbacks-пробу — длительность КАЖДОЙ сборки мусора (дёшево,
+        один perf_counter на сборку);
+      * хендлер промоции «Executing … took N seconds» asyncio в CRITICAL —
+        на случай, если debug включат вручную/флагом.
+
+    ПОЛНЫЙ debug-режим asyncio (loop.set_debug) по умолчанию НЕ включаем:
+    его захват source-traceback на каждый таймер на медленной файловой
+    системе (Windows + антивирус, см. _asyncio_debug_enabled) сам давал
+    паузы 6–10 сек — лечил симптом, создавая причину. Зависания ловит
+    поток-stack-monitor без debug-режима. Порог 2 сек.
     """
     try:
         import gc as _gc
@@ -116,15 +165,30 @@ def install_loop_probes(loop):
     except Exception as _ex:
         _log.debug('gc-probe: не поставить: %s', _ex)
     try:
-        loop.set_debug(True)
-        loop.slow_callback_duration = 2.0
         aio_log = logging.getLogger('asyncio')
         if not any(isinstance(h, _AsyncioSlowPromote) for h in aio_log.handlers):
             aio_log.addHandler(_AsyncioSlowPromote())
         aio_log.setLevel(logging.DEBUG)
         aio_log.propagate = False     # DEBUG-шум asyncio не льётся в консоль
-        _log.info('Пробы цикла включены: медленный callback ≥2с и сборка GC '
-                  '≥2с будут названы поимённо в CRITICAL')
+    except Exception as _ex:
+        _log.debug('loop-probes (handler): %s', _ex)
+    try:
+        if _asyncio_debug_enabled():
+            loop.set_debug(True)
+            loop.slow_callback_duration = 2.0
+            _log.warning('asyncio DEBUG-режим ВКЛЮЧЁН (ASYNCIO_DEBUG=1): '
+                         'захват source-traceback может тормозить цикл на '
+                         'медленном диске/антивирусе — только для отладки')
+        else:
+            # Боевой режим: debug выключен (никаких linecache/stat на
+            # каждый таймер). Зависания ловят gc-проба и stack-monitor.
+            try:
+                loop.set_debug(False)
+            except Exception as _ex:
+                _log.debug('loop-probes: set_debug(False): %s', _ex)
+        _log.info('Пробы цикла включены: сборка GC ≥2с названа поимённо, '
+                  'зависания ловит stack-monitor (debug-режим asyncio '
+                  'выключен — флаг ASYNCIO_DEBUG=1 для глубокой отладки)')
     except Exception as _ex:
         _log.debug('loop-probes: %s', _ex)
 
@@ -143,7 +207,10 @@ def environment_warnings(base_dir, py_version=None):
         out.append('бот запущен из папки ЗАГРУЗКИ (Downloads): Windows '
                    'прогоняет каждый файл через антивирус — это главный '
                    'подозреваемый зависаний. Перенесите папку бота в '
-                   'C:\Hakumo и добавьте её в исключения Defender.')
+                   # r'' обязателен: в 'C:\Hakumo' последовательность \H
+                   # невалидна — Python 3.12+ печатает SyntaxWarning прямо
+                   # в консоль владельца, а дальше это станет ошибкой.
+                   r'C:\Hakumo и добавьте её в исключения Defender.')
     parts = [p for p in base.replace(chr(92), '/').split('/') if p]
     if len(parts) >= 2 and parts[-1].lower() == parts[-2].lower():
         out.append(f'бот лежит ВО ВЛОЖЕННОЙ папке (…/{parts[-1]}/'
@@ -925,16 +992,19 @@ class ErrorHandler:
         ВАЖНО: бьём и ДО готовности бота — иначе медленный старт
         (ожидание гильдий на слабой сети) монитор посчитает зависанием,
         хотя event-loop жив и отвечает.
+
+        РАНЬШЕ здесь стоял `await wait_for(bot.wait_until_ready(), 0.5)`:
+        каждый wait_for создаёт ДВА TimerHandle, т.е. 4 таймера в секунду
+        в плотном бесконечном цикле. В debug-режиме asyncio на каждый
+        таймер пишет source-traceback (linecache.checkcache → os.stat по
+        всем файлам стека) — на Windows с антивирусным stat это давало
+        паузы 6–10 сек (инцидент 30.08, стек в логе указывал ровно на эту
+        строку). Пульс — это обычный sleep: один таймер на тик и никаких
+        traceback, а признак «бот готов» мы и так читаем из is_ready().
         """
         while not self.bot.is_closed():
             self._loop_beat = time.monotonic()
-            try:
-                await asyncio.wait_for(self.bot.wait_until_ready(), timeout=0.5)
-            except asyncio.TimeoutError:
-                # Бот ещё стартует — это норма, а не зависание; пульс выше бьёт.
-                _log.debug("loop-beat: бот ещё не готов (wait_until_ready), пульс продолжается")
-            except Exception:
-                await asyncio.sleep(0.5)
+            await asyncio.sleep(0.5)
 
     def _start_stack_monitor(self):
         """Поток-свидетель: снимает стек ВИНОВНИКА в момент зависания.
@@ -1549,7 +1619,7 @@ class AntiCrashCog(commands.Cog):
     @anticrash.command(name='reload-cog', aliases=['reload'])
     @commands.has_permissions(administrator=True)
     async def ac_reload(self, ctx, module: str = None):
-        """Перезагрузить модуль вручную: !anticrash reload-cog cogs.music_cog"""
+        """Перезагрузить модуль вручную: !anticrash reload-cog cogs.moderation_cog"""
         if not module:
             return await ctx.send("Формат: `!anticrash reload-cog cogs.<имя>`")
         try:

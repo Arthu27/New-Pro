@@ -11,7 +11,16 @@
       html { background: #0f1013; color-scheme: dark; }
       body { background: transparent; margin: 0; }
     </style>
-<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+<!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
+         только разобрав fonts.css и all.subset.css, и они встают в конец
+         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
+         820 мс до последнего шрифта). crossorigin обязателен даже для своего
+         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
+  <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
   <style>
     :root {
@@ -23,7 +32,7 @@
       --line2: #2a3247;
       --text: #e8ecf6;
       --text2: #9aa3ba;
-      --text3: #5f6880;
+      --text3: #767f99;
       --ac: #4f46e5;
       --ac2: #7c3aed;
       --ac3: #22d3ee;
@@ -138,30 +147,6 @@
       animation: wSpin 9s linear infinite;
     }
     @keyframes wSpin { to { transform: rotate(360deg); } }
-    .w-dragon-ring2 {
-      position: absolute; inset: -12px; border-radius: 50%;
-      border: 2px dashed rgba(129, 140, 248, .32);
-      animation: wSpin 28s linear infinite reverse;
-    }
-    .w-dragon-orbit { position: absolute; inset: 0; animation: wSpin 11s linear infinite; }
-    .w-dragon-orbit i {
-      position: absolute; left: 50%; top: 50%;
-      width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
-      border-radius: 50%;
-      background: #22d3ee;
-      box-shadow: 0 0 10px rgba(34, 211, 238, .9), 0 0 26px rgba(34, 211, 238, .45);
-    }
-    .w-dragon-orbit i:nth-child(1) { transform: translate(0, -98px); }
-    .w-dragon-orbit i:nth-child(2) {
-      transform: translate(69px, 69px);
-      background: #a78bfa;
-      box-shadow: 0 0 10px rgba(167, 139, 250, .9), 0 0 26px rgba(167, 139, 250, .45);
-    }
-    .w-dragon-orbit i:nth-child(3) {
-      transform: translate(-69px, 69px);
-      background: #818cf8;
-      box-shadow: 0 0 10px rgba(129, 140, 248, .9), 0 0 26px rgba(129, 140, 248, .45);
-    }
     .w-dragon-halo {
       position: absolute; inset: 14px; border-radius: 50%;
       background: radial-gradient(circle at 30% 25%, rgba(124, 58, 237, .42), transparent 70%);
@@ -393,9 +378,6 @@
       vertical-align: -8px; margin-right: 6px;
     }
 
-    /* ── Звёздное небо ── */
-    #w-stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-
     /* ── Reveal-анимации секций ── */
     .w-reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
     .w-reveal.on { opacity: 1; transform: none; }
@@ -499,9 +481,6 @@
       background: var(--ac3); vertical-align: -2px;
       animation: wCaret .8s steps(1) infinite;
     }
-
-    /* ── Созвездие: линии между звёздами ── */
-    #w-stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
 
     /* ── Scroll-индикатор hero ── */
     .w-scroll-hint {
@@ -892,36 +871,18 @@
           58% { transform: scale(1.045); }
           78% { transform: scale(0.99); }
         }
-        .dragon-smoke { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
-        .dragon-smoke span {
-          position: absolute; left: 50%; top: 18px;
-          width: 18px; height: 18px; margin-left: -9px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(165, 180, 252, .6), rgba(34, 211, 238, .2) 60%, transparent 72%);
-          filter: blur(3px);
-          opacity: 0;
-          animation: dragonSmoke 4.6s ease-out infinite;
-        }
-        .dragon-smoke span:nth-child(2) { animation-delay: 1.53s; margin-left: -16px; }
-        .dragon-smoke span:nth-child(3) { animation-delay: 3.06s; margin-left: -2px; }
-        @keyframes dragonSmoke {
-          0%   { opacity: 0; transform: translateY(0) translateX(0) scale(.45); }
-          18%  { opacity: .85; }
-          100% { opacity: 0; transform: translateY(-74px) translateX(-8px) scale(1.75); }
-        }
 
     @media (prefers-reduced-motion: reduce) {
-      .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-dragon-ring2,
-      .w-dragon-orbit, .w-dragon-floor, .w-dragon::after,
+      .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-dragon-floor,
+      .w-dragon::after,
       .w-marquee-track,
       .w-title.typing::after, .w-term-caret, .w-scroll-hint .mouse::after,
-      .btn-primary-wrap::before, .dragon-live, .dragon-smoke span,
+      .btn-primary-wrap::before, .dragon-live,
       .w-showcase-kpi .k-n.tick,
       .w-title .grad, .w-sec-title .grad,
       .w-faq details[open] .faq-body,
       .w-title.swap-out, .w-title.swap-in { animation: none; }
       .w-title .grad, .w-sec-title .grad { background-size: 100% 100%; }
-      .dragon-smoke { display: none; }
       .w-dragon-par { transform: none !important; }
       .w-section::before, .w-sec-title::after, .w-step .num,
       .w-terminal, .w-chips .chip { transition: none; }
@@ -949,13 +910,12 @@
     <span class="orb orb3"></span>
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
-  <canvas id="w-stars" aria-hidden="true"></canvas>
   <div class="w-progress" id="wProgress" aria-hidden="true"></div>
 
   <!-- Навигация -->
   <nav class="w-nav" aria-label="Навигация">
     <a class="brand" href="/">
-      <img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo">
+      <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo">
       <span><b>HAKUMO</b><small>панель сервера</small></span>
     </a>
     <div class="w-nav-links">
@@ -976,16 +936,13 @@
     <div class="w-dragon-wrap">
       <div class="w-dragon-par" id="wDragonPar">
         <div class="w-dragon-ring" aria-hidden="true"></div>
-        <div class="w-dragon-ring2" aria-hidden="true"></div>
-        <div class="w-dragon-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="w-dragon-halo" aria-hidden="true"></div>
-        <div class="dragon-smoke" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Белый дракон Hakumo"></div>
+        <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Белый дракон Hakumo"></div>
       </div>
       <div class="w-dragon-floor" aria-hidden="true"></div>
     </div>
     <div class="w-eyebrow"><span class="dot"></span> Панель сервера · для всех участников</div>
-    <h1 class="w-title">Управляй сервером <span class="grad">красиво</span></h1>
+    <h1 class="w-title">Панель управления <span class="grad">сервером</span></h1>
     <p class="w-lead">
       Hakumo — тёмный командный центр твоего сообщества. <b>Каждый участник</b> находит своё:
       профиль, заявки, обращения и события — без поисков по сотням сообщений.
@@ -1023,6 +980,7 @@
     </div>
   </header>
 
+  <main id="wMain">
   <!-- Бегущая лента фич -->
   <div class="w-marquee" aria-label="Возможности панели">
     <div class="w-marquee-track" id="wMarqueeTrack">
@@ -1058,7 +1016,7 @@
   <section class="w-section w-reveal w-showcase-section" id="look">
     <div class="w-sec-head">
       <h2 class="w-sec-title">Так <span class="grad">выглядит</span> панель</h2>
-      <p class="w-sec-sub">Обзор сервера: живые показатели, графики и лента событий — всё обновляется само.</p>
+      <p class="w-sec-sub">Обзор сервера: показатели, графики и лента событий с автоматическим обновлением.</p>
     </div>
     <div class="w-showcase">
       <div class="w-showcase-bar">
@@ -1067,7 +1025,7 @@
       </div>
       <div class="w-showcase-grid">
         <div class="w-showcase-side">
-          <div class="s-brand"><img src="/static/brand/emblem-dragon.png" alt="">HAKUMO</div>
+          <div class="s-brand"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="">HAKUMO</div>
           <span class="s-item on"><i class="fas fa-home"></i> Обзор</span>
           <span class="s-item"><i class="fas fa-shield-halved"></i> Модерация</span>
           <span class="s-item"><i class="fas fa-users"></i> Участники</span>
@@ -1168,7 +1126,7 @@
       <div class="w-step">
         <div class="num">3</div>
         <b>Живи на сервере</b>
-        <p>Профиль, заявки, обращения и события — всё обновляется само, без перезагрузок.</p>
+        <p>Профиль, заявки, обращения и события обновляются автоматически.</p>
       </div>
     </div>
   </section>
@@ -1218,13 +1176,15 @@
   <div class="w-cta w-reveal">
     <div class="w-cta-box">
       <h2>Готов? Всё уже настроено.</h2>
-      <p>Один клик — и ты в панели. А дальше — просто нажми @.</p>
+      <p>Вход через Discord-аккаунт, упоминания участников — через @.</p>
       <span class="btn-primary-wrap"><a class="btn btn-primary" href="/login" style="padding:13px 26px;font-size:14px"><i class="fas fa-right-to-bracket"></i> Войти в панель</a></span>
     </div>
   </div>
 
+  </main>
+
   <footer class="w-foot">
-    <img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="">HAKUMO · панель твоего сервера · сделано с душой
+    <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="">HAKUMO · панель твоего сервера · сделано с душой
   </footer>
 
   <script>
@@ -1232,100 +1192,7 @@
     'use strict';
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    /* ── 1. Звёздное небо (лёгкий canvas, пауза в фоне) ── */
-    (function stars() {
-      var cv = document.getElementById('w-stars');
-      if (!cv || reduced) return;
-      var ctx = cv.getContext('2d');
-  if (!ctx) return; /* браузер без canvas 2d — просто не рисуем звёзды */
-      var W, H, stars = [];
-      var last = 0;
-      function resize() {
-        W = cv.width = window.innerWidth;
-        H = cv.height = window.innerHeight;
-        stars = [];
-        var n = Math.min(52, Math.floor(W * H / 28000));
-        for (var i = 0; i < n; i++) {
-          stars.push({
-            x: Math.random() * W, y: Math.random() * H,
-            r: Math.random() * 1.1 + 0.3,
-            p: Math.random() * Math.PI * 2,
-            s: 0.4 + Math.random() * 0.9
-          });
-        }
-      }
-      var LINK = 120;
-      /* редкий метеор: появляется раз в ~7 секунд */
-      var meteor = null, meteorNext = 4200;
-      function step(now) {
-        requestAnimationFrame(step);
-        if (document.hidden) return;
-        if (now - last < 16) return;   /* 60 fps — звёзды мерцают плавно */
-        last = now;
-        ctx.clearRect(0, 0, W, H);
-        /* падающая звезда */
-        if (!meteor && now > meteorNext) {
-          meteor = {
-            x: 140 + Math.random() * Math.max(80, W - 280),
-            y: 60 + Math.random() * H * 0.3,
-            vx: 5.5 + Math.random() * 3,
-            vy: 2.6 + Math.random() * 1.6,
-            life: 0
-          };
-        }
-        if (meteor) {
-          meteor.life++;
-          meteor.x += meteor.vx; meteor.y += meteor.vy;
-          var tail = 14;
-          var mg = ctx.createLinearGradient(
-            meteor.x, meteor.y,
-            meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail
-          );
-          mg.addColorStop(0, 'rgba(196, 181, 253, .95)');
-          mg.addColorStop(1, 'rgba(196, 181, 253, 0)');
-          ctx.strokeStyle = mg;
-          ctx.lineWidth = 1.6;
-          ctx.beginPath();
-          ctx.moveTo(meteor.x, meteor.y);
-          ctx.lineTo(meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail);
-          ctx.stroke();
-          if (meteor.life > 52 || meteor.y > H) {
-            meteor = null;
-            meteorNext = now + 5200 + Math.random() * 6200;
-          }
-        }
-        /* линии созвездия между ближними звёздами */
-        for (var i = 0; i < stars.length; i++) {
-          for (var j = i + 1; j < stars.length; j++) {
-            var dx = stars[i].x - stars[j].x;
-            var dy = stars[i].y - stars[j].y;
-            var d2 = dx * dx + dy * dy;
-            if (d2 < LINK * LINK) {
-              var alpha = (1 - Math.sqrt(d2) / LINK) * 0.14;
-              ctx.strokeStyle = 'rgba(148, 163, 255, ' + alpha.toFixed(3) + ')';
-              ctx.lineWidth = 0.6;
-              ctx.beginPath();
-              ctx.moveTo(stars[i].x, stars[i].y);
-              ctx.lineTo(stars[j].x, stars[j].y);
-              ctx.stroke();
-            }
-          }
-        }
-        for (var k = 0; k < stars.length; k++) {
-          var st = stars[k];
-          var a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(st.p + now * 0.001 * st.s));
-          ctx.beginPath();
-          ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(200, 210, 255, ' + a.toFixed(2) + ')';
-          ctx.fill();
-        }
-      }
-      resize();
-      window.addEventListener('resize', resize, { passive: true });
-      requestAnimationFrame(step);
-    })();
-
-    /* ── 2. Параллакс свечений за мышью ── */
+    /* ── 1. Параллакс свечений за мышью ── */
     (function orbs() {
       if (reduced) return;
       var orb1 = document.querySelector('.orb1');
@@ -1348,7 +1215,7 @@
       }, { passive: true });
     })();
 
-    /* ── 3. Reveal секций при скролле ── */
+    /* ── 2. Reveal секций при скролле ── */
     (function reveal() {
       var els = document.querySelectorAll('.w-reveal');
       if (!els.length) return;
@@ -1364,12 +1231,12 @@
       els.forEach(function (el) { io.observe(el); });
     })();
 
-    /* ── 4. Печатающийся заголовок с ротацией фраз ── */
+    /* ── 3. Печатающийся заголовок с ротацией фраз ── */
     (function typing() {
       var el = document.querySelector('.w-title');
       if (!el || reduced) return;
       var PHRASES = [
-        'Управляй сервером красиво',
+        'Панель управления сервером',
         'Найди всё за секунду',
         'Модерация без хаоса',
         'Живая аналитика 24/7'
@@ -1440,7 +1307,7 @@
       if (el.getBoundingClientRect().top < window.innerHeight) run();
     })();
 
-    /* ── 5. Живые счётчики ── */
+    /* ── 4. Живые счётчики ── */
     (function counters() {
       var nums = document.querySelectorAll('[data-count]');
       if (!nums.length) return;
@@ -1484,14 +1351,14 @@
       if (nums[0]) io.observe(nums[0].closest('.w-stats') || nums[0]);
     })();
 
-    /* ── 6. Лента фич: дублируем контент для бесшовного цикла ── */
+    /* ── 5. Лента фич: дублируем контент для бесшовного цикла ── */
     (function marquee() {
       var track = document.getElementById('wMarqueeTrack');
       if (!track || reduced) return;
       track.innerHTML += track.innerHTML;
     })();
 
-    /* ── 7. Живой терминал-демо ── */
+    /* ── 6. Живой терминал-демо ── */
     (function terminal() {
       var body = document.getElementById('wTerminal');
       if (!body || reduced) return;
@@ -1578,7 +1445,7 @@
       }
     })();
 
-    /* ── 8. Витрина: бары графика и лента событий ── */
+    /* ── 7. Витрина: бары графика и лента событий ── */
     (function showcase() {
       var barsBox = document.getElementById('wShowBars');
       var feedBox = document.getElementById('wShowFeed');
@@ -1663,7 +1530,7 @@
       }, 4000);
     })();
 
-    /* ── 9. Счётчики витрины ── */
+    /* ── 8. Счётчики витрины ── */
     (function showcaseCounters() {
       var nums = document.querySelectorAll('[data-count2]');
       if (!nums.length) return;

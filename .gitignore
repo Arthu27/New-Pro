@@ -22,6 +22,12 @@ __pycache__/
 
 # ffmpeg build folder
 ffmpeg-*-essentials_build/
+# ffmpeg, автоскачанный ботом при старте (services/ffmpeg_probe.py) — не версионируем
+bin/ffmpeg
+bin/ffmpeg.exe
+bin/ffprobe
+bin/ffprobe.exe
+bin/ffmpeg_dl.*
 
 # Flask sessions
 data/flask_sessions/
@@ -160,3 +166,12 @@ scripts/cloudflared.exe
 scripts/config.yml
 scripts/tunnel-creds.json
 scripts/.hakumo_tunnel_runtime.yml
+
+# Зависимости node (jsdom для локальных проверок фронтов)
+node_modules/
+
+# Локальные стенды и черновики агента
+.arena/
+
+# Собранные архивы поставки (не для репозитория)
+dist/

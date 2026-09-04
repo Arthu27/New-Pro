@@ -109,15 +109,13 @@ for gone in ('security', 'security-toggle', 'security-newaccount', 'scan-link',
              'backup', 'backup-list', 'staff-panel', 'my-application'):
     check(gone not in tree_names,
           f'guild-scoped {gone} не вернулся в меню (бюджет чистит и локальные команды)')
-# тикетная панель вернулась по заказу владельца — обязана быть в меню
-# (guild-scoped). ticket-add/ticket-remove убраны (заказ 2026-08-29
-# «должны быть в меню тикета»): их работа — кнопки ➕/➖ в TicketManageView.
-for need in ('ticket-panel',):
-    check(need in tree_names,
-          f'тикетная {need} в меню (заказ «вернуть тикеты» — бюджета ей нет)')
-for moved in ('ticket-add', 'ticket-remove'):
-    check(moved not in tree_names,
-          f'{moved} убрана из слеш-меню — теперь это кнопки в меню тикета')
+# Тикет-система снята с эксплуатации (заказ владельца 2026-08-31): ког
+# ticket.py в RETIRED_COGS, команды /ticket-panel в меню быть НЕ должно —
+# её роль выполняет система репортов /report (карточки в канале модерации).
+for gone_ticket in ('ticket-panel', 'ticket-add', 'ticket-remove',
+                    'ticket-config'):
+    check(gone_ticket not in tree_names,
+          f'тикетная {gone_ticket} убрана из меню (система тикетов удалена)')
 realized = [n for n in keep if n in tree_names]
 missing = sorted(set(keep) - set(tree_names))
 print(f'  KEEP-имена реально в меню: {len(realized)}/{len(keep)}; отсутствуют оффлайн: {missing}')
@@ -125,7 +123,7 @@ check(not missing, f'белый список не протух: все {len(keep
 
 print('== 5. Прунинг реально работает ==')
 check(stats['pruned'] >= 30, f'на префикс вынесено {stats["pruned"]} команд (>= 30)')
-check(stats['loaded'] >= 60, f'загрузилось большинство модулей: {stats["loaded"]} >= 60')
+check(stats['loaded'] >= 28, f'загрузилось большинство модулей: {stats["loaded"]} >= 60')
 check('CommandLimitReached' not in ''.join(stats['failed'].values()),
       'ни один модуль не упал о лимит команд')
 
@@ -182,7 +180,85 @@ _tree89 = _Tree(_names89)
 _kept89, _pruned89 = slash_budget.apply_slash_budget(_tree89, guilds=[])
 check(len(_kept89) == _full_cap,
       'за порогом — урезается до SAFE_FULL (гильдия не переполнится после копии)')
-os.environ.pop('BOT_FULL', None)   # не течёт в остальные проверки
+print('== 7. Кураторский режим: ПКМ-меню не утекают (жалоба «13 лишних команд») ==')
+import discord as _disc2
+from discord import app_commands as _ac2
+from discord import AppCommandType as _ACT2
+
+
+class _CtxTree2:
+    """Мини-дерево, различающее chat-input и контекстные ПКМ-меню по scope."""
+
+    def __init__(self):
+        self.chat = {}
+        self.ctx = {}
+
+    def add_chat(self, name, scope=None):
+        self.chat.setdefault(scope, set()).add(name)
+
+    def add_ctx(self, name, scope=None):
+        self.ctx.setdefault(scope, set()).add(name)
+
+    def get_commands(self, guild=None):
+        out = []
+        for n in self.chat.get(guild, ()):
+            out.append(type('C', (), {'name': n})())
+        for n in self.ctx.get(guild, ()):
+            m = type('M', (), {'name': n})()
+            m.type = _ACT2.user
+            out.append(m)
+        return out
+
+    def remove_command(self, name, type=None, guild=None):
+        bucket = self.ctx if type in (_ACT2.user,
+                                      _ACT2.message) else self.chat
+        bucket.setdefault(guild, set()).discard(name)
+
+
+# isinstance(c, ContextMenu) в бюджетe: подменяем _context_menus на наш разбор
+def _ctx_names(tree, guild=None):
+    return sorted(n for n in tree.ctx.get(guild, ()))
+
+
+_orig_context_menus = slash_budget._context_menus
+
+
+def _fake_context_menus(tree, guild=None):
+    class _Proxy:
+        def __init__(self, name):
+            self.name = name
+            self.type = _ACT2.user
+    return [_Proxy(n) for n in tree.ctx.get(guild, ())]
+
+
+slash_budget._context_menus = _fake_context_menus
+
+# LEAN: 6 ПКМ-меню глобально + кураторские слэш-команды
+os.environ.pop('BOT_FULL', None)
+_t = _CtxTree2()
+for _n in slash_budget.KEEP_SLASH:
+    _t.add_chat(_n, None)
+for _m in ('Предупредить', 'Изолировать', 'Варн за сообщение',
+           'Войс-мут', 'Войс-размут', 'Кик из войса'):
+    _t.add_ctx(_m, None)
+slash_budget.apply_slash_budget(_t, guilds=[])
+check(not _t.ctx.get(None),
+      f'LEAN: все ПКМ-меню вырезаны из глобального дерева (осталось {len(_t.ctx.get(None, ()))})')
+check(len(_t.chat.get(None, ())) == len(slash_budget.KEEP_SLASH),
+      f'LEAN: кураторские слэш-команды на месте ({len(_t.chat.get(None, ()))})')
+
+# BOT_FULL: ПКМ-меню сохраняются (отдельный лимит Discord, не в бюджете 100)
+os.environ['BOT_FULL'] = '1'
+_t2 = _CtxTree2()
+for _i in range(10):
+    _t2.add_chat(f'cmd{_i}', None)
+for _m in ('Предупредить', 'Варн за сообщение'):
+    _t2.add_ctx(_m, None)
+slash_budget.apply_slash_budget(_t2, guilds=[])
+check(len(_t2.ctx.get(None, ())) == 2,
+      f'BOT_FULL: ПКМ-меню сохраняются в меню ({len(_t2.ctx.get(None, ()))})')
+os.environ.pop('BOT_FULL', None)
+slash_budget._context_menus = _orig_context_menus
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

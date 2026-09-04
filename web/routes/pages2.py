@@ -3,13 +3,12 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -24,10 +23,12 @@ def register(ctx):
         # ── НОВЫЙ SAYFALAR ─────────────────────────────────────────────────────────
 
     @app .route ('/ticket-settings')
-    @login_required 
+    @login_required
     @role_required ('admin')
     def ticket_settings_page ():
-        return render_template ('ticket_settings.html',role =session .get ('role'),username =session .get ('username'))
+        # Система тикетов снята владельцем (жалобы идут через /report).
+        # Роль модераторов и каналы настраиваются в «Жалобах» — туда и ведём.
+        return redirect ('/reports')
 
 
     @app .route ('/automod-settings')
@@ -52,10 +53,12 @@ def register(ctx):
 
 
     @app .route ('/backup')
-    @login_required 
+    @login_required
     @role_required ('owner')
     def backup_page ():
-        return render_template ('backup.html',role =session .get ('role'),username =session .get ('username'))
+        # Старый пункт «Бэкапы» в «Логах» дублировал рабочий раздел.
+        # Ведём на единственный живой раздел бэкапов в группе «Бот».
+        return redirect ('/backups')
 
 
     @app .route ('/panel-logs')

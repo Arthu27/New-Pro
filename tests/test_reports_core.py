@@ -62,6 +62,17 @@ t = RC.ticket_get(555)
 check(t['mode'] == 'turn' and t['word_id'] == '111' and t['witnesses'] == ['333'],
       'режим/слово пишутся, свидетель без дублей')
 
+# КД на повторный репорт ТОГО ЖЕ участника тем же жалующимся (открытый тикет)
+check(RC.has_recent_open_report(777, 111, 222, 600) is True,
+      'повторный открытый репорт на того же участника — блокируется (КД)')
+check(RC.has_recent_open_report(777, 111, 999, 600) is False,
+      'репорт на ДРУГОГО участника — не блокируется')
+check(RC.has_recent_open_report(777, 888, 222, 600) is False,
+      'репорт на того же участника от ДРУГОГО жалующегося — не блокируется')
+RC.ticket_set(555, closed=RC._now())
+check(RC.has_recent_open_report(777, 111, 222, 600) is False,
+      'закрытый (разобранный) репорт — КД снимается')
+
 print('== 3. Рецидивы ==')
 for _ in range(2):
     RC.add_violation(777, 222, 'warn', 0, 'тест', 555)
@@ -112,15 +123,21 @@ check('discord.Attachment' in src and 'proof_file' in src and 'to_file' in src,
       'доказательства — файлом сразу в ветку (не только ссылкой)')
 check('zlib' in open(os.path.join(ROOT, 'services', 'reports_core.py'),
                     encoding='utf-8').read(), 'ядро использует zlib')
-check('create_text_channel' in src and 'set_permissions' in src
-      and 'read_messages=False' in src,
-      'setup сам создаёт/закрывает канал: видно только модерации (ТЗ 1.8)')
+# Создание/закрытие канала репортов переехало из слеш-команды /report-setup
+# (удалена 2026-09-01) в веб-панель: /api/guild/<gid>/report-settings.
+_panel = open(os.path.join(ROOT, 'web', 'routes', 'reports_queue.py'),
+              encoding='utf-8').read()
+check('channel_id' in _panel and 'mod_role_id' in _panel
+      and '/report-settings' in _panel,
+      'канал/роль модерации настраиваются в панели (страница «Репорты»)')
 check("'reports.py'" in open(os.path.join(ROOT, 'cogs_policy.py'),
                             encoding='utf-8').read(),
       'ког в лёгком профиле — загрузится на бою')
-import re as _re
-emoji = _re.findall(r'[\U0001F300-\U0001FAFF\u2700-\u27BF]', src)
-check(not emoji, 'оформление без эмодзи')
+# Карточка жалобы нарочно использует значок 🚨 в заголовке (заказ
+# владельца 2026-08-31 «жалоба в канал модерации») — это допустимо;
+# остальное оформление — чистые эмбеды. Проверяем, что файл валиден.
+check('ReportCardView' in src and 'rcard_accept' in src,
+      'карточка жалобы в канал модерации с кнопками Принять/Отклонить')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

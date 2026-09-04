@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Проверка «дружбы» файлов: порты, хосты и вызовы между компонентами.
+r"""Проверка «дружбы» файлов: порты, хосты и вызовы между компонентами.
 
 Запуск:  python3 scripts/check_files.py        (Linux/macOS)
          python scripts\check_files.py         (Windows VDS)

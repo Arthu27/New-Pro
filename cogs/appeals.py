@@ -434,7 +434,9 @@ class AppealView(discord.ui.View):
                         mod = self.cog.bot.get_cog('Moderation')
                         if mod is not None:
                             await mod._unisolate_member(guild, member)
-                            await member.timeout(None)
+                        # снимаем ЛЮБОЙ мут (нативный таймаут + роли чат/войс-мута)
+                        from services import mute_state
+                        await mute_state.clear_all_mutes(guild, member)
                     except Exception as _ex:
                         log.debug('appeals: снятие изоляции/таймаута: %s', _ex)
                 try:
@@ -794,13 +796,16 @@ class Appeals(commands.Cog):
             return 'история наказаний недоступна'
 
     async def _fire_panel_event(self, item):
-        """Событие «новая апелляция» в колокольчик панели (веб)."""
+        """Событие «новая апелляция» в колокольчик панели (веб).
+
+        notify_event делает синхронный HTTP (webhook) и запись файла —
+        уводим в рабочий поток, чтобы не блокировать event loop."""
         try:
+            import asyncio as _asyncio
             from services.notification_dispatcher import notify_event
-            notify_event(
-                'appeal_new', None,
-                f'#{item["id"]} от **{item["user_name"]}**: '
-                f'{item["text"][:120]}')
+            _body = (f'#{item["id"]} от **{item["user_name"]}**: '
+                     f'{item["text"][:120]}')
+            await _asyncio.to_thread(notify_event, 'appeal_new', None, _body)
         except Exception as _ex:
             log.debug('appeals: событие колокольчика: %s', _ex)
 
@@ -1202,6 +1207,7 @@ class Appeals(commands.Cog):
     @app_commands.command(name='апелляция',
                           description='Обжаловать наказание — подаётся в ЛС боту',
                           extras={'keep_global': True})
+    @app_commands.allowed_contexts(guilds=False, dms=True, private_channels=True)
     @app_commands.describe(текст='Что произошло — до 500 символов; без текста откроется форма')
     async def cmd_appeal(self, interaction: discord.Interaction,
                          текст: str = ''):

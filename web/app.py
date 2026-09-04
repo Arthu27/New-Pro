@@ -12,10 +12,10 @@ import random
 import string 
 import hashlib 
 import math 
-from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory 
+from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory ,Response ,g 
 # jsonify ВСЕХ ответов панели — из web.routes._common: снежинки Discord
 # (>2^53) уходят клиенту строкой, иначе JS ломает цифры id.
-from web.routes._common import jsonify
+from web.routes._common import jsonify ,role_member_counts
 import discord 
 from discord .ext import commands 
 import asyncio 
@@ -30,7 +30,7 @@ from datetime import timedelta
 
 # WebSocket импорты
 try :
-    from web .websocket_server import start_websocket_thread ,notify_ticket_created ,notify_ticket_updated ,notify_stats_updated 
+    from web .websocket_server import start_websocket_thread ,notify_stats_updated 
     WEBSOCKET_ENABLED =True 
 except ImportError :
     WEBSOCKET_ENABLED =False 
@@ -58,7 +58,17 @@ if (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','tr
 
 
 def _behind_proxy ():
-    return (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','true','yes','on')
+    # WEB_BEHIND_PROXY=1 ставит scripts/setup_panel_tunnel.bat в .env, но только
+    # если нашёл .env — иначе просит дописать руками, и тогда http->https и HSTS
+    # молча не включаются (internet.nl: «redirect: no», «HSTS: None»). Поэтому
+    # дополнительно определяем Cloudflare по заголовку CF-RAY: его добавляет сам
+    # Cloudflare на каждый запрос, так что работа не зависит от .env.
+    if (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','true','yes','on'):
+        return True
+    try :
+        return bool (request .headers .get ('CF-RAY'))
+    except Exception :
+        return False
 
 
 @app .before_request
@@ -74,7 +84,7 @@ def _force_https_public():
         return None
     return redirect ('https://'+host +request .full_path .rstrip ('?'),code =301)
 
-# Производительность: atomic yazma, TTL cache, toplu (batch) log flusher
+# Производительность: атомарная запись, TTL-кэш, пакетный (batch) флашер логов
 from web import _store # noqa: E402
 from web .demo_mode import demo_mode_active # noqa: E402
 from services .audit_labels import human_action # noqa: E402
@@ -187,6 +197,60 @@ def _demo_mode ():
     """
     return demo_mode_active (bot_connected =bot_instance is not None )
 
+
+def _demo_counts ():
+    """Реальные числа демо-витрины: (участников, в сети, каналов, ролей).
+
+    Раньше в заглушках было зашито 1247/213/16/24 — витрина показывала
+    «1247 участников», а /users перечислял 9 настоящих демо-людей;
+    каналов в демо 18, а счётчик говорил 16. Цифры теперь берутся из тех
+    же файлов, что и сами страницы, поэтому счётчики и списки не спорят.
+    """
+    total ,online ,channels ,roles =1 ,1 ,0 ,0
+    try :
+        from web .routes ._common import DEMO_MEMBERS
+        total =len (DEMO_MEMBERS )or 1
+        online =sum (1 for m in DEMO_MEMBERS
+                     if str (m .get ('status')or '').lower ()in ('online','idle','dnd'))
+        online =online or max (1 ,total //3 )
+    except Exception as _ex :
+        _log .debug ("_demo_counts(): участники: %s",_ex )
+    try :
+        with open ('data/demo_channels.json',encoding ='utf-8')as _f :
+            _ch =json .load (_f )
+        channels =len (_ch )if isinstance (_ch ,list )else len (_ch .get ('channels',[]))
+    except Exception as _ex :
+        _log .debug ("_demo_counts(): каналы: %s",_ex )
+    try :
+        import glob as _glob
+        for _p in _glob .glob ('data/demo_roles_*.json'):
+            with open (_p ,encoding ='utf-8')as _f :
+                _rl =json .load (_f )
+            roles =len (_rl )if isinstance (_rl ,list )else len (_rl .get ('roles',[]))
+            break
+    except Exception as _ex :
+        _log .debug ("_demo_counts(): роли: %s",_ex )
+    return total ,online ,channels ,roles
+
+# Версия сборки: считаем ОДИН раз при старте. За жизнь процесса код не
+# меняется (обновление перезапускает процесс), а дёргать git на каждый
+# запрос — значит замедлять каждую страницу.
+_BUILD_INFO ={'sha':None ,'branch':None }
+try :
+    from services import self_update as _SU
+    _bot_root =os .path .dirname (os .path .dirname (os .path .abspath (__file__ )))
+    _BUILD_INFO ['sha']=_SU .local_sha (_bot_root )
+    _BUILD_INFO ['branch']=_SU .running_branch (_bot_root )
+except Exception as _bi_ex:
+    _log .debug ('build info недоступна: %s',_bi_ex )
+
+
+@app .context_processor
+def inject_build_info ():
+    _sha =_BUILD_INFO .get ('sha')or ''
+    return {'build_sha':_sha [:7 ],'build_branch':_BUILD_INFO .get ('branch')or ''}
+
+
 @app .context_processor
 def inject_demo_mode ():
     return {'demo_mode':_demo_mode ()}
@@ -240,6 +304,9 @@ def inject_build_commit ():
 
 @app .before_request 
 def before_request ():
+    # Замер длительности запроса: медленные видны в логе сразу, с путём и
+    # временем. Без этого «панель тормозит» невозможно разобрать по фактам.
+    g ._req_started =_time .time ()
     # Демо-режим: автоматический вход владельцем без логина и пароля.
     # Авторизация при этом не удаляется — она просто не требуется, пока
     # поднят флаг DEMO_MODE=1.
@@ -386,8 +453,22 @@ _ETAG_PATHS =(
 )
 
 
+# Порог «медленного» запроса в лог. SSE (/api/live) держится открытым
+# всегда — его не измеряем, иначе лог будет состоять из него одного.
+_SLOW_REQUEST_S = 1.0
+
+
 @app .after_request 
 def after_request (response ):
+    try :
+        _t0 =getattr (g ,'_req_started',None )
+        if _t0 and request .path !='/api/live':
+            _dt =_time .time ()-_t0
+            if _dt >=_SLOW_REQUEST_S :
+                _log .warning ('[SLOW] %s %s — %.2f с (статус %s)',
+                               request .method ,request .path ,_dt ,response .status_code )
+    except Exception as _ex :
+        _log .debug ('after_request(): замер времени подавлен: %s',_ex )
     # HSTS за туннелем: браузер запоминает, что домен — только https.
     try :
         if _behind_proxy ()and request .headers .get ('X-Forwarded-Proto','')=='https':
@@ -401,7 +482,22 @@ def after_request (response ):
         if response .is_json :
             _d =response .get_json (silent =True )
             if isinstance (_d ,dict )and _d .get ('error')=='Бот офлайн':
-                _d ['error']='Бот офлайн — запусти его через start.bat и попробуй ещё раз'
+                # Бот может быть ЖИВ, но панель запущена отдельным процессом
+                # (start_panel + start_bot / gunicorn / VDS): действие требует
+                # бота в этом процессе. Это не «бот выключен» — объясняем точно.
+                _remote_alive =False
+                if bot_instance is None :
+                    try :
+                        from services import bot_bridge as _bb
+                        _remote_alive =_bb .state_status ()=='online'
+                    except Exception :
+                        _remote_alive =False
+                if _remote_alive :
+                    _d ['error']=('Бот работает, но панель запущена отдельным '
+                                  'процессом — действие выполняется только при '
+                                  'запуске панели вместе с ботом (start.bat / start.sh)')
+                else :
+                    _d ['error']='Бот офлайн — запусти его через start.bat и попробуй ещё раз'
                 response .set_data (json .dumps (_d ,ensure_ascii =False ))
     except Exception as _ex:
         _log .debug ("after_request(): офлайн-подсказка подавлена: %s",_ex )
@@ -453,14 +549,28 @@ def after_request (response ):
         # Это админ-панель (доверенные пользователи), поэтому inline JS/eval допустим.
         # Все скрипты/стили/шрифты вендорены локально → 'self', внешние домены
         # остались только для Discord-аватарок (img-src https:) и API/WS (connect-src).
+    # За прокси (бой) — строгая политика: connect-src только 'self' плюс wss:
+    # live-канал живёт на отдельном порту, а другой порт — это другой origin,
+    # поэтому 'self' его не покрывает. Внешних fetch с фронта нет (все идут на
+    # /api/...), так что голые схемы https:/http:/ws: из политики убраны —
+    # internet.nl отдельно ругается на «'http:' scheme» и на «'https:' without
+    # a specific main domain». Локально live-канал идёт по ws: — там они нужны.
+    _strict =_behind_proxy ()
+    _connect =("'self' wss:" if _strict else "'self' https: wss: ws: http:")
+    _img =("'self' data: https://*.discordapp.com https://*.discordapp.net "
+           "https://discord.com" if _strict else "'self' data: https:")
     if not response .headers .get ('Content-Security-Policy'):
         csp =(
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        # Cloudflare Web Analytics подставляет beacon.min.js со своего
+        # домена — без него в консоли ошибка CSP, а статистика не собирается.
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: ws: http:; "
+        "img-src " +_img +"; "
+        "connect-src " +_connect +"; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
         "frame-ancestors 'self'"
         )
         response .headers ['Content-Security-Policy']=csp 
@@ -473,11 +583,15 @@ def after_request (response ):
         response .headers .pop ('X-Frame-Options',None )
         response .headers ['Content-Security-Policy']=(
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        # Cloudflare Web Analytics подставляет beacon.min.js со своего
+        # домена — без него в консоли ошибка CSP, а статистика не собирается.
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: ws: http:; "
+        "img-src " +_img +"; "
+        "connect-src " +_connect +"; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
         "frame-ancestors https://discord.com https://*.discord.com https://discordapp.com"
         )
 
@@ -510,6 +624,65 @@ def _norm_guild_id(raw):
 
 
 MAIN_GUILD_ID = _norm_guild_id(os.getenv('MAIN_GUILD_ID', ''))  # задаётся в .env; без него контекст берёт первый сервер бота
+
+
+def _panel_guild ():
+    """Сервер, которым управляет панель.
+
+    При заданном MAIN_GUILD_ID — строго он (бот может состоять в нескольких
+    серверах, но вход/подсказки/регистрация имеют смысл только для людей
+    основного сервера). Без MAIN_GUILD_ID (панель ещё не настроена) берём
+    первый сервер бота. Возвращает discord.Guild или None.
+    """
+    if not bot_instance :
+        return None
+    if MAIN_GUILD_ID :
+        try :
+            g =bot_instance .get_guild (int (MAIN_GUILD_ID ))
+        except (TypeError ,ValueError ):
+            g =None
+        return g
+    try :
+        return bot_instance .guilds [0 ]if bot_instance .guilds else None
+    except Exception :
+        return None
+
+
+def _is_bot_owner (discord_id )->bool :
+    """ID входит в список владельцев бота (OWNER_ID/OWNER_IDS из .env)?"""
+    try :
+        owners =_root_config .Config .all_owner_ids ()
+        return bool (owners )and int (discord_id )in owners
+    except Exception :
+        return False
+
+
+def _main_guild_id_str ():
+    """ID основного сервера строкой (MAIN_GUILD_ID, иначе первый сервер бота)."""
+    if MAIN_GUILD_ID :
+        return str (MAIN_GUILD_ID )
+    try :
+        if bot_instance and bot_instance .guilds :
+            return str (bot_instance .guilds [0 ].id )
+    except Exception as _ex :
+        _log .debug ("_main_guild_id_str(): %s", _ex )
+    return ''
+
+
+def _record_on_main_guild (record ):
+    """Запись {..., 'guild_id': ...} относится к основному серверу?
+
+    Если сервер в записи неизвестен (None/'' — старые данные до привязки),
+    считаем её своей, чтобы не прятать легитимные записи на единственном
+    сервере. Чужие guild_id отсекаются.
+    """
+    gid =str ((record or {}).get ('guild_id')or '').strip ()
+    main =_main_guild_id_str ()
+    if not gid :
+        return True
+    if not main :
+        return True
+    return gid ==main
 
 # Роли панели (от низшей к высшей). Куратор — старший модератор:
 # видит всё модерское + тикеты/сообщество, настраивается владельцем
@@ -736,6 +909,16 @@ def _save_role_map ():
     except Exception as _ex:
         _log.debug("_save_role_map(): подавлено: %s", _ex)
 
+# Стартовые роли из config/role_seed.json — применяем ОДИН раз при старте
+# панели (роли персонала и роль бана заданы до выкатки), затем грузим карту.
+try:
+    from services.role_seed import apply_role_seed as _apply_role_seed
+    _seed_rep = _apply_role_seed()
+    if _seed_rep.get('applied') and _seed_rep.get('role_map_added'):
+        print(f"[РОЛИ] Применён стартовый сид ролей: {_seed_rep['role_map_added']}")
+except Exception as _seed_ex:
+    _log.debug("role_seed при старте панели: %s", _seed_ex)
+
 _load_role_map ()
 
 def _get_role_from_discord (discord_id :str )->str :
@@ -804,9 +987,11 @@ def login_required (f ):
     def decorated_function (*args ,**kwargs ):
         if 'logged_in'not in session :
             return redirect (url_for ('login'))
-            # Каждые 5 минут обновлять роль из Discord (кроме владельца)
+            # Каждые 5 минут обновлять роль из Discord — ВСЕХ, включая
+            # владельца: доступ обязан зависеть от живых ролей сервера, а
+            # не от того, что когда-то записали в сессию или members.json.
         discord_id =session .get ('discord_id')
-        if discord_id and session .get ('role')!='owner':
+        if discord_id :
             import time as _t 
             last_check =session .get ('_role_checked',0 )
             # Бот офлайн — НЕ понижаем роль по живым данным Discord (иначе
@@ -814,8 +999,15 @@ def login_required (f ):
             _bot_online =bool (bot_instance and getattr (bot_instance ,'guilds',None ))
             if _bot_online and _t .time ()-last_check >300 :# 5 минут
                 live_role =_get_role_from_discord (discord_id )
-                session ['role']=live_role 
                 session ['_role_checked']=_t .time ()
+                # Роли больше нет (человек вышел с сервера или роли сняли)
+                # — сессию гасим: без роли в панели делать нечего.
+                if live_role =='uye':
+                    session .clear ()
+                    if request .path .startswith ('/api/'):
+                        return jsonify ({'success':False ,'error':'Доступ к панели потерян: на сервере нет роли модератора.'}),403
+                    return redirect (url_for ('login'))
+                session ['role']=live_role 
                 # также обновить members.json
                 members_file ='data/members.json'
                 if os .path .exists (members_file ):
@@ -858,6 +1050,33 @@ def favicon ():
     return send_from_directory (os .path .join (app .root_path ,'static'),
     'favicon.ico',mimetype ='image/vnd.microsoft.icon')
 
+# security.txt (RFC 9116): internet.nl требует файл в /.well-known/security.txt
+# с полями Contact и Expires. Без него исследователю, нашедшему уязвимость,
+# некуда написать. Файл публичный — без @login_required.
+# Контакт берётся из SECURITY_CONTACT в .env (почта вида mailto:you@example.com
+# или страница с формой); по умолчанию — сам сайт, чтобы файл был валидным
+# даже до настройки.
+@app .route ('/.well-known/security.txt')
+def security_txt ():
+    import datetime as _dt
+    contact =( _os .environ .get ('SECURITY_CONTACT','')or '').strip ()
+    host =(request .host or 'hakumods.xyz')
+    if not contact :
+        contact ='https://'+host +'/'
+    # Expires обязан быть в будущем и не дальше года — считаем от текущей даты,
+    # иначе файл через год станет «протухшим» и проверка снова упадёт.
+    expires =(_dt .datetime .now (_dt .timezone .utc )+_dt .timedelta (days =330 )
+              ).strftime ('%Y-%m-%dT%H:%M:%S.000Z')
+    body =(
+    'Contact: '+contact +'\n'
+    'Expires: '+expires +'\n'
+    'Preferred-Languages: ru, en\n'
+    'Canonical: https://'+host +'/.well-known/security.txt\n'
+    )
+    return Response (body ,mimetype ='text/plain',
+                     headers ={'Cache-Control':'public, max-age=3600'})
+
+
 @app .route ('/health')
 def health_check ():
     """Health check endpoint для Docker и мониторинга"""
@@ -887,6 +1106,22 @@ def health_check ():
             'latency':round (12 + (_time .time ()*10 %19 ),2 ),
             'timestamp':datetime .now (timezone.utc).isoformat ()
             }),200 
+        # Панель отдельным процессом от бота: здоровье по пульсу бота
+        # (data/bot_state.json) — мониторинг не врёт «degraded», когда бот жив.
+        try :
+            from services import bot_bridge as _bb
+            _st =_bb .read_state ()
+            if _bb .state_status (_st )=='online':
+                return jsonify ({
+                'status':'healthy',
+                'bot':'ready',
+                'guilds':len (_bb .guild_ids (_st )),
+                'latency':_st .get ('latency_ms')or 0 ,
+                'remote':True ,
+                'timestamp':datetime .now (timezone.utc).isoformat ()
+                }),200 
+        except Exception as _hex :
+            _log .debug ('health: remote bridge: %s',_hex )
         return jsonify ({
         'status':'degraded',
         'bot':'connecting',
@@ -967,7 +1202,7 @@ def login ():
             session ['username']=username 
             session ['role']=USERS [username ]['role']
             # Реальному входу тоже нужен выбранный сервер — раньше его
-            # ставил только демо-логин, и страницы вроде /ai_ticket_stats
+            # ставил только демо-логин, и страница уходила в редирект
             # вечно редиректили на выбор сервера.
             session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
             session .modified =True 
@@ -975,48 +1210,126 @@ def login ():
             _log_login (username ,'owner',None ,None )
             return redirect (url_for ('index'))
 
-            # Вход участника (по Discord ID) — роль определяется автоматически из Discord
+            # Вход участника по паролю. Логин — Discord ID ЛИБО ник/тег
+            # (display_name/@username): владельца аккаунта система находит
+            # сама, поэтому войти можно и по нику, и по ID.
         members_file ='data/members.json'
+        members ={}
         if os .path .exists (members_file ):
-            with open (members_file ,'r',encoding ='utf-8')as f :
-                members =json .load (f )
-            if username in members and _pw_matches (members [username ].get ('password'),password ):
-                discord_id =username 
-                # Стало слабое хранилище пароля (plaintext или старый sha256)?
-                # Молча апгрейдим до scrypt — пользователь ничего не замечает.
-                if not _pw_is_strong (members [username ].get ('password')):
-                    members [username ]['password']=_hash_pw (password )
-                    with open (members_file ,'w',encoding ='utf-8')as f :
-                        json .dump (members ,f ,indent =2 ,ensure_ascii =False )
-                # members.json'da owner varsa Discord контроль yapma — роль koru
-                stored_role =members [discord_id ].get ('role','uye')
-                if stored_role =='owner':
-                    live_role ='owner'
-                else :
-                    live_role =_get_role_from_discord (discord_id )
-                    members [discord_id ]['role']=live_role 
-                    with open (members_file ,'w',encoding ='utf-8')as f :
-                        json .dump (members ,f ,indent =2 ,ensure_ascii =False )
-                session .permanent =True 
-                session ['logged_in']=True 
-                session ['username']=members [discord_id ]['display_name']
-                session ['role']=live_role 
-                session ['discord_id']=discord_id 
-                # тот же выбранный сервер, что и у входа владельца
-                session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
-                session .modified =True 
-                _save_login_token (discord_id ,live_role )
-                _log_login (
-                members [discord_id ]['display_name'],
-                live_role ,
-                members [discord_id ].get ('avatar'),
-                discord_id 
-                )
-                return redirect (url_for ('index'))
+            try :
+                with open (members_file ,'r',encoding ='utf-8')as f :
+                    members =json .load (f )
+            except Exception as _mex :
+                _log .debug ('login members: %s',_mex )
+        discord_id =_resolve_member_key (members ,username )
+        if discord_id :
+            if not _pw_matches (members [discord_id ].get ('password'),password ):
+                _throttle_failed_login (username )
+                return render_template ('login.html',error ='Неверное имя пользователя или пароль!')
+            # БЕЗОПАСНОСТЬ: роль берём ТОЛЬКО живьём из Discord — если роль
+            # сняли или человека нет на сервере, он не войдёт, даже зная
+            # пароль. Так «без прав вход невозможен» держится на сервере.
+            live_role =_get_role_from_discord (discord_id )
+            if live_role =='uye':
+                return render_template (
+                    'login.html',
+                    error ='Доступа к панели нет: для входа нужна роль '
+                           'модератора на сервере Discord.')
+            members [discord_id ]['role']=live_role 
+            with open (members_file ,'w',encoding ='utf-8')as f :
+                json .dump (members ,f ,indent =2 ,ensure_ascii =False )
+            session .permanent =True 
+            session ['logged_in']=True 
+            session ['username']=members [discord_id ]['display_name']
+            session ['role']=live_role 
+            session ['discord_id']=discord_id 
+            # тот же выбранный сервер, что и у входа владельца
+            session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
+            session .modified =True 
+            _save_login_token (discord_id ,live_role )
+            _log_login (
+            members [discord_id ]['display_name'],
+            live_role ,
+            members [discord_id ].get ('avatar'),
+            discord_id 
+            )
+            return redirect (url_for ('index'))
 
         _throttle_failed_login (username )
         return render_template ('login.html',error ='Неверное имя пользователя или пароль!')
     return render_template ('login.html')
+
+
+def _resolve_member_key (members ,login ):
+    """Найти ключ (Discord ID) в members.json по логину.
+
+    Логином может быть сам Discord ID или ник/тег участника (display_name,
+    name, @username). Сравнение по нику — без учёта регистра и ведущего '@'.
+    Возвращает Discord ID (ключ словаря) или None.
+    """
+    if not login :
+        return None
+    login =str (login ).strip ()
+    if login in members :
+        return login
+    q =login .lstrip ('@').lower ()
+    for key ,rec in members .items ():
+        for field in ('display_name','name','username'):
+            val =str (rec .get (field )or '').strip ().lower ()
+            if val ==q :
+                return key
+    return None
+
+
+@app.route('/api/login-probe', methods=['POST'])
+def api_login_probe():
+    """Пред-проверка для экрана «Проверяем доступ» на странице входа.
+
+    Повторяет ровно ту же логику, что и POST /login (владелец — по USERS,
+    участник — по members.json, логин по Discord ID или нику) + ЖИВАЯ
+    проверка роли в Discord. Сессию не создаёт, редирект не делает.
+    Клиент входа показывает шаги оверлея, на шаге «Проверяем роль и доступ»
+    вызывает этот эндпоинт и только при success=True отправляет настоящую
+    форму. Тексты ошибок — те же, что у формы входа, поэтому оверлей и
+    форма никогда не спорят.
+    """
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username') or '').strip()
+    password = str(data.get('password') or '')
+    if not username or not password:
+        return jsonify({'success': False,
+                        'error': 'Заполни логин и пароль.'})
+    # Владелец панели (USERS): вход по паролю, Discord-роль не нужна.
+    if username in USERS and _pw_matches(
+            USERS[username].get('password_hash'), password):
+        return jsonify({'success': True,
+                        'role': USERS[username].get('role', 'owner')})
+    # Участник: логин — Discord ID или ник, пароль из members.json.
+    # Роль — ТОЛЬКО живьём из Discord (как в POST /login).
+    members_file = 'data/members.json'
+    members = {}
+    if os.path.exists(members_file):
+        try:
+            with open(members_file, 'r', encoding='utf-8') as _f:
+                members = json.load(_f)
+        except Exception as _mex:
+            _log.debug('login-probe: members: %s', _mex)
+            members = {}
+    discord_id = _resolve_member_key(members, username)
+    if discord_id:
+        if not _pw_matches(members[discord_id].get('password'), password):
+            _throttle_failed_login(username)
+            return jsonify({'success': False,
+                            'error': 'Неверное имя пользователя или пароль!'})
+        live_role = _get_role_from_discord(discord_id)
+        if live_role == 'uye':
+            return jsonify({'success': False, 'error':
+                            'Доступа к панели нет: для входа нужна роль '
+                            'модератора на сервере Discord.'})
+        return jsonify({'success': True, 'role': live_role})
+    _throttle_failed_login(username)
+    return jsonify({'success': False,
+                    'error': 'Неверное имя пользователя или пароль!'})
 
     # Geчici проверка kodlarы {discord_id: {code, data}}
 PENDING_VERIFICATIONS ={}
@@ -1061,7 +1374,9 @@ def register ():
             del PENDING_VERIFICATIONS [discord_id ]
             return redirect (url_for ('login')+'?success=1')
 
-            # ADIM 1: Form проверка
+            # Шаг 1: проверка формы. Discord ID обязателен, пароль — тоже:
+            # вход в панель у всех по паролю (участник — по своему Discord ID
+            # или нику + паролю, роль проверяется живьём из Discord).
         if not discord_id or not password :
             return render_template ('register.html',error ='Заполните все поля!',step =1 )
         if not discord_id .isdigit ()or not (17 <=len (discord_id )<=19 ):
@@ -1078,34 +1393,26 @@ def register ():
         member_info =None 
 
         async def find_member ():
-        # Сначала ищем в кэше всех серверов
-            for guild in bot_instance .guilds :
-                m =guild .get_member (int (discord_id ))
-                if m :
-                    return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
-                    # Если в кэше нет — тянем через API (по каждому серверу)
-            for guild in bot_instance .guilds :
-                try :
-                    m =await guild .fetch_member (int (discord_id ))
-                    if m :
-                        return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
-                except Exception as _ex:
-                    _log.debug("find_member(): подавлено: %s", _ex)
-                    continue 
-                    # Если ни на одном сервере не найден — fetch_user через Discord
+        # Ищем СТРОГО на основном сервере панели. Регистрация доступна только
+        # его участникам; раньше перебирались все сервера и в конце дёргался
+        # fetch_user — так доступ создавал себе человек не с нашего сервера.
+            panel_guild =_panel_guild ()
+            if panel_guild is None :
+                return None
             try :
-                user =await bot_instance .fetch_user (int (discord_id ))
-                if user :
-                    return {'display_name':user .display_name ,'name':str (user ),'avatar':str (user .display_avatar .url )}
+                m =await _resolve_guild_member_async (panel_guild ,int (discord_id ))
             except Exception as _ex:
                 _log.debug("find_member(): подавлено: %s", _ex)
+                m =None
+            if m and not getattr (m ,'bot',False ):
+                return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
             return None 
 
         import asyncio 
         member_info =asyncio .run_coroutine_threadsafe (find_member (),bot_instance .loop ).result (timeout =15 )
 
         if not member_info :
-            return render_template ('register.html',error ='Этот Discord ID не найден! Убедитесь, что Discord ID верный.',step =1 )
+            return render_template ('register.html',error ='Этот Discord ID не найден на основном сервере. Регистрация доступна только его участникам — проверьте ID и что вы на сервере.',step =1 )
 
         members_file ='data/members.json'
         if os .path .exists (members_file ):
@@ -1225,7 +1532,8 @@ def api_my_applications ():
         return jsonify ([])
     with open (apps_file ,'r',encoding ='utf-8')as f :
         apps =json .load (f )
-    my_apps =[a for a in apps .values ()if a .get ('user_id')==discord_id ]
+    my_apps =[a for a in apps .values ()
+              if a .get ('user_id')==discord_id and _record_on_main_guild (a )]
     my_apps .sort (key =lambda x :x .get ('created_at',''),reverse =True )
     return jsonify (my_apps )
 
@@ -1334,6 +1642,13 @@ def _save_announcements (anns ):
     with open (tmp ,'w',encoding ='utf-8')as f :
         json .dump (anns ,f ,indent =2 ,ensure_ascii =False )
     os .replace (tmp ,_ANN_FILE )
+    # Живой пуш: лента объявлений изменилась — открытая страница /announcements
+    # обновится сразу, без опроса по таймеру.
+    try :
+        from services .live_bus import publish_global
+        publish_global ('announcements')
+    except Exception as _live_ex :
+        _log .debug ('_save_announcements live-push: %s',_live_ex )
 
 def _deliver_announcement_embed (guild_id ,channel_id ,title ,message ,author ):
     """Отправляет эмбед объявления в канал и ЖДЁТ результата (а не в никуда).
@@ -1611,19 +1926,67 @@ def _bot_connection_truth (bot ):
     return 'online',str (getattr (bot ,'status','online')or 'online')
 
 
+# Короткий кэш сводки /api/stats: виджет пинга опрашивает её постоянно
+# (и раньше — каждые 3 сек с КАЖДОЙ открытой вкладки), а подсчёт online
+# перебирает всех участников всех серверов. 5 секунд свежести достаточно
+# для индикатора; нагрузка на event-loop падает в разы. Ключ кэша включает
+# идентичность объекта бота и правдивый статус соединения — при смене
+# состояния (offline→starting→online) ответ не залипает.
+_STATS_CACHE = {'key': None, 'ts': 0.0, 'payload': None}
+
+
 @app .route ('/api/stats')
-@login_required 
+@login_required
 def api_stats ():
+    _truth_status = None
+    if bot_instance :
+        try :
+            _truth_status ,_ =_bot_connection_truth (bot_instance )
+        except Exception :
+            _truth_status = None
+    _cache_key =(id (bot_instance ),_truth_status )
+    _cache_age =_time .time () -_STATS_CACHE .get ('ts',0.0 )
+    if (_STATS_CACHE .get ('payload')is not None
+            and _STATS_CACHE .get ('key')==_cache_key and _cache_age <5.0 ):
+        return jsonify (_STATS_CACHE ['payload'])
     if not bot_instance :
         # демо: типичные счётчики (welcome и дашборд живые в превью)
         if _demo_mode ():
             return jsonify ({
             'guilds':1 ,
-            'users':1247 ,
-            'online':213 ,
+            'users':_demo_counts ()[0] ,
+            'online':_demo_counts ()[1] ,
             'latency':round (12 + (_time .time ()*10 %19 ),2 ),
             'status':'online'
             })
+        # Панель отдельным процессом от бота: правда — из пульса бота
+        # (data/bot_state.json, services.bot_bridge). Раньше тут всегда был
+        # «offline», хотя бот работал — шапка/дашборд/диагностика врали.
+        try :
+            from services import bot_bridge as _bb
+            _st =_bb .read_state ()
+            _st_status =_bb .state_status (_st )
+            if _st_status in ('online','starting'):
+                _guilds =_bb .guild_ids (_st )
+                _users =0
+                for _g in (_st .get ('guilds')or []):
+                    try :
+                        _users +=int (_g .get ('member_count')or 0 )
+                    except Exception as _mcex :
+                        _log .debug ('api_stats(): member_count: %s',_mcex )
+                return jsonify ({
+                'guilds':len (_guilds ),
+                'users':_users ,
+                # presences (сколько участников «в сети») из пульса не видны —
+                # их знает только живой кэш бота; 0 честнее, чем выдумывать.
+                'online':0 ,
+                'latency':_st .get ('latency_ms')or 0 ,
+                'status':_st_status ,
+                'presence':'online' if _st_status =='online'else 'offline',
+                'remote':True
+                })
+        except Exception as _sex :
+            _log .debug ('api_stats(): remote bridge: %s',_sex )
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.',
         'status':'offline','presence':'offline'})
 
@@ -1648,14 +2011,18 @@ def api_stats ():
             lat_val = 0.0
 
     _status ,_presence =_bot_connection_truth (bot_instance )
-    return jsonify ({
+    _payload = {
     'guilds':guilds ,
     'users':users ,
     'online':online ,
     'latency':lat_val ,
     'status':_status ,        # online | starting | offline — правда о шлюзе
     'presence':_presence      # чем бот выглядит в Discord (idle выглядит «не в сети»)
-    })
+    }
+    _STATS_CACHE ['key'] =(id (bot_instance ),_status )
+    _STATS_CACHE ['ts'] =_time .time ()
+    _STATS_CACHE ['payload'] =_payload
+    return jsonify (_payload)
 
 @app .route ('/api/guilds')
 @login_required 
@@ -1670,12 +2037,12 @@ def api_guilds ():
             # дефолт 777, иначе селекторы получали сервер с id='' и ломались.
             'id':str (MAIN_GUILD_ID or '777'),
             'name':'Главный сервер',
-            'members':1247 ,
+            'members':_demo_counts ()[0] ,
             'icon':None ,
             'owner_id':'987430047889637426',
-            'online':213 ,
-            'channels':16 ,
-            'roles':24 ,
+            'online':_demo_counts ()[1] ,
+            'channels':_demo_counts ()[2] ,
+            'roles':_demo_counts ()[3] ,
             'boost':7 ,
             }])
         return jsonify ([])
@@ -1760,6 +2127,12 @@ def api_set_nick (guild_id ,member_id ):
 
 @app .route ('/api/guild/<guild_id>/members')
 @login_required 
+# Состав сервера — данные не публичные (ники, роли, даты входа, статусы).
+# Раньше здесь была только авторизация: страница /users закрыта ролью admin,
+# но любой залогиненный (включая низшую роль uye) забирал весь список
+# запросом к API напрямую. Порог = mod, потому что этот же список читают
+# /member-notes (mod) и /chat (owner); ниже mod — 403.
+@role_required ('mod')
 def api_guild_members (guild_id ):
     if not bot_instance :
         # демо-предпросмотр без бота: отдаём демо-участников —
@@ -1784,43 +2157,72 @@ def api_guild_members (guild_id ):
         return jsonify ([])
 
     try :
-        guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
-        if not guild :
-            return jsonify ([])
-
-            # Pagination: ?limit=50 (default), max 500
+        guild =None
         try :
-            limit =int (request .args .get ('limit',50 ))
+            guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
         except (TypeError ,ValueError ):
-            limit =50 
+            guild =None
+
+            # Пагинация: ?limit=1000 (по умолчанию), БЕЗ потолка.
+        # Владелец растит сервер: 20 000 участников — это не предел, поэтому
+        # искусственного обрыва списка нет вообще. Лимит ограничен только
+        # реальным размером состава — сколько людей на сервере, столько и
+        # отдадим одним запросом. Срез cached[offset:offset+limit] на
+        # «безумный» limit не падает, Python просто отдаст остаток списка.
+        try :
+            limit =int (request .args .get ('limit',1000 ))
+        except (TypeError ,ValueError ):
+            limit =1000 
         try :
             offset =int (request .args .get ('offset',0 ))
         except (TypeError ,ValueError ):
             offset =0 
-        limit =max (1 ,min (limit ,500 ))
+        limit =max (1 ,limit )
         offset =max (0 ,offset )
 
-        # Кэш 10 с — не перебирать guild.members повторно для того же ответа
-        cache_key =('members',int (guild_id ),guild .member_count )
+        # Состав участников живёт В ФАЙЛЕ (services/member_store.py): бот
+        # сохраняет его и правит событийно (вошёл/вышел), поэтому панель
+        # отдаёт список мгновенно и не выкачивает гильдию заново. Живой кэш
+        # discord.py нужен только для статуса «в сети» здесь и сейчас.
+        from services import member_store as MS
+        store_total =MS .count (guild_id )
+        live_members =list (getattr (guild ,'members',[])or [])if guild else []
+        # Кэш 10 с — не пересобирать ПОЛНЫЙ список для каждой страницы:
+        # ключ без offset/limit, иначе каждая пачка заново разворачивала бы
+        # все 20 000 участников (O(n²) на пагинации).
+        cache_key =('members',str (guild_id ),store_total ,len (live_members ))
         cached =_store ._cache .get (cache_key ,ttl =10.0 )
         if cached is None :
-            cached =[]
-            for m in list (guild .members ):
-                created_at =discord .utils .snowflake_time (m .id )
-                cached .append ({
-                'id':str (m .id ),
-                'name':m .name ,
-                'display_name':m .display_name ,
-                'discriminator':m .discriminator ,
-                'avatar':str (m .display_avatar .url ),
-                'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,
-                'created_at':created_at .replace (tzinfo =timezone .utc ).isoformat (),
-                'roles':[{'name':r .name ,'color':str (r .color )}for r in m .roles [1 :]],
-                'bot':m .bot ,
-                'status':str (m .status )if hasattr (m ,'status')else 'offline',
-                'nick':m .nick ,
-                'top_role':m .top_role .name if m .top_role else None ,
-                })
+            if store_total :
+                rows =MS .snapshot (guild_id )
+                live_by_id ={str (m .id ):m for m in live_members }
+                for row in rows :
+                    lm =live_by_id .get (row ['id'])
+                    if lm is not None :
+                        row ['status']=str (getattr (lm ,'status','')or row .get ('status','offline'))
+                cached =rows
+            elif live_members :
+                # Файл ещё не засеян (первый запуск) — берём живой кэш,
+                # а member_sync сохранит состав в файл сразу после докачки.
+                cached =[]
+                for m in live_members :
+                    created_at =discord .utils .snowflake_time (m .id )
+                    cached .append ({
+                    'id':str (m .id ),
+                    'name':m .name ,
+                    'display_name':m .display_name ,
+                    'discriminator':m .discriminator ,
+                    'avatar':str (m .display_avatar .url ),
+                    'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,
+                    'created_at':created_at .replace (tzinfo =timezone .utc ).isoformat (),
+                    'roles':[{'name':r .name ,'color':str (r .color )}for r in m .roles [1 :]],
+                    'bot':m .bot ,
+                    'status':str (m .status )if hasattr (m ,'status')else 'offline',
+                    'nick':m .nick ,
+                    'top_role':m .top_role .name if m .top_role else None ,
+                    })
+            else :
+                cached =[]
             _store ._cache .set (cache_key ,cached ,ttl =10.0 )
 
             # Чтобы вернуть общее количество через метаданные пагинации, добавляем
@@ -1831,6 +2233,24 @@ def api_guild_members (guild_id ):
         resp .headers ['X-Total-Count']=str (total )
         resp .headers ['X-Limit']=str (limit )
         resp .headers ['X-Offset']=str (offset )
+        # Сколько людей на сервере ПО ДИСКОРДУ и сколько бот уже держит в кэше.
+        # На больших серверах кэш наполняется фоново (services/member_sync.py),
+        # поэтому панель честно показывает «загружено N из M», а не выдаёт
+        # частичный список за полный.
+        # Сколько людей на сервере ПО ДИСКОРДУ и сколько мы реально отдаём.
+        # Состав теперь живёт в файле (services/member_store.py), поэтому
+        # список полный даже когда бот не в сети или кэш гильдии не наполнен.
+        try :
+            _gc =int (getattr (guild ,'member_count',0 )or 0 )
+        except (TypeError ,ValueError ):
+            _gc =0 
+        if not _gc :
+            _gc =store_total 
+        resp .headers ['X-Guild-Count']=str (_gc )
+        resp .headers ['X-Cached-Count']=str (total )
+        resp .headers ['X-Stored-Count']=str (store_total )
+        resp .headers ['X-Stored-At']=str (MS .saved_at (guild_id ))
+        resp .headers ['X-Chunked']='1' if (getattr (guild ,'chunked',False )or store_total )else '0'
         return resp 
     except Exception as e :
         print (f"Ошибка списка участников: {e}")
@@ -2444,21 +2864,6 @@ def api_execute_command ():
                         with open (warns_file ,'w',encoding ='utf-8')as wf :
                             json .dump (warns ,wf ,ensure_ascii =False )
                         _store .invalidate_path (warns_file )
-            elif command =='ticket_panel':
-                from cogs .ticket import TicketView 
-                ch =guild .get_channel (int (data .get ('channel_id',0 )))
-                if not ch :
-                    ch =guild .text_channels [0 ]
-                from cogs .embed_utils import _divider 
-                e =discord .Embed (title =" ПОДДЕРЖКА СИСТЕМА",color =0x5865F2 )
-                e .description =(
-                "```ansi\n\u001b[1;34m Hakumo ПОДДЕРЖКА СИСТЕМА \u001b[0m\n```\n"
-                f"{_divider()}\n\n"
-                "Возникла проблема? Нажми кнопку ниже!\n\n"
-                f"{_divider()}"
-                )
-                e .set_footer (text =f"{guild.name} • Поддержка Система",icon_url =guild .icon .url if guild .icon else None )
-                await ch .send (embed =e ,view =TicketView ())
             elif command in ('текст','zar','rastgele'):
                 pass # Развлекательные команды выполняются в Discord, панель только запускает
                 # Jail kategorisi, канал ve роль создать
@@ -2610,7 +3015,9 @@ def api_staff_apps ():
         return jsonify ([])
     with open (apps_file ,'r',encoding ='utf-8')as f :
         data =json .load (f )
-    apps =list (data .values ())
+    # Заявки показываем ТОЛЬКО с основного сервера (бот может состоять в
+    # нескольких) — иначе в панель нового сервера попадают чужие заявки.
+    apps =[a for a in data .values ()if _record_on_main_guild (a )]
     apps .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
     return jsonify (apps )
 
@@ -2620,11 +3027,14 @@ def api_staff_apps ():
 def api_review_staff_app (app_id ):
     apps_file ='data/staff_apps.json'
     if not os .path .exists (apps_file ):
-        return jsonify ({'error':'Файл заявок отсутствует'})
+        # Честный 404: заявки нет вовсе, а не «запрос прошёл, но ничего не вышло»
+        return jsonify ({'error':'Файл заявок отсутствует'}),404
     with open (apps_file ,'r',encoding ='utf-8')as f :
         data =json .load (f )
     if app_id not in data :
-        return jsonify ({'error':'Заявка не найдена'})
+        return jsonify ({'error':'Заявка не найдена'}),404
+    if not _record_on_main_guild (data [app_id ]):
+        return jsonify ({'error':'Эта заявка с другого сервера — здесь её рассматривать нельзя.'}),404
     req =request .get_json (silent =True )or {}
     action =req .get ('action')# 'approve' or 'reject'
     note =req .get ('note','')
@@ -2957,7 +3367,7 @@ def api_public_guilds ():
     if not bot_instance :
         # демо: сервер для публичной анкеты (иначе «Сервер не найден»)
         if _demo_mode ():
-            return jsonify ([{'id':str (MAIN_GUILD_ID or '777'),'name':'Главный сервер','icon':None ,'members':1247 }])
+            return jsonify ([{'id':str (MAIN_GUILD_ID or '777'),'name':'Главный сервер','icon':None ,'members':_demo_counts ()[0] }])
         return jsonify ([])
     guilds =[{'id':str (g .id ),'name':g .name ,
     'icon':str (g .icon .url )if g .icon else None ,
@@ -3069,52 +3479,129 @@ def api_public_apply ():
 from web .routes_extra import register_extra_routes 
 register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD_ID )
 
-# Роли Map API 
-@app .route ('/api/role-map')
-@login_required 
-@role_required ('admin')
-def api_get_role_map ():
-    """Получить сопоставление ролей + список ролей сервера"""
-    guild_roles =[]
-    if bot_instance :
-        gid =MAIN_GUILD_ID or (str (bot_instance .guilds [0 ].id )if bot_instance .guilds else None )
-        if gid :
-            guild =bot_instance .get_guild (int (gid ))
-            if guild :
-                for r in sorted (guild .roles ,key =lambda x :x .position ,reverse =True ):
-                    if r .name =='@everyone':
-                        continue 
-                    guild_roles .append ({
-                    'id':str (r .id ),
-                    'name':r .name ,
-                    'color':str (r .color ),
-                    'position':r .position ,
-                    'members':r .members .__len__ ()if hasattr (r .members ,'__len__')else 0 ,
+# Роли Map API
+# Раздел «Доступ» опрашивается SSE-страницей постоянно: готовый ответ
+# держим за короткий TTL и отдаём по ETag (304 без тела), а состав ролей
+# кэшируем отдельно — на крупном сервере подсчёт r.members на каждую роль
+# не повторяется на каждый опрос.
+import threading as _threading_rm
+import hashlib as _hashlib_rm
+_ROLE_MAP_LOCK = _threading_rm.Lock()
+_ROLE_MAP_CACHE = {'ts': 0.0, 'raw': None, 'etag': None}
+_ROLE_MAP_ROLES = {'ts': 0.0, 'roles': None}
+_ROLE_MAP_TTL = 5.0
+_ROLE_MAP_ROLES_TTL = 30.0
+
+
+def _role_map_guild_roles():
+    """Список ролей сервера для маппинга (TTL-кэш, без вложенных блокировок)."""
+    import time as _time
+    now = _time.time()
+    with _ROLE_MAP_LOCK:
+        hit = _ROLE_MAP_ROLES
+        if hit['roles'] is not None and now - hit['ts'] < _ROLE_MAP_ROLES_TTL:
+            return list(hit['roles'])
+    # промах кэша — собираем БЕЗ удержания лока (без вложенных блокировок)
+    guild_roles = []
+    if bot_instance:
+        gid = MAIN_GUILD_ID or (str(bot_instance.guilds[0].id)
+                                if bot_instance.guilds else None)
+        if gid:
+            guild = bot_instance.get_guild(int(gid))
+            if guild:
+                _rm_counts = role_member_counts(guild)
+                for r in sorted(guild.roles, key=lambda x: x.position,
+                                reverse=True):
+                    if r.name == '@everyone':
+                        continue
+                    guild_roles.append({
+                        'id': str(r.id),
+                        'name': r.name,
+                        'color': str(r.color),
+                        'position': r.position,
+                        # тем же одним проходом — см. role_member_counts
+                        'members': _rm_counts.get(r.id, 0),
                     })
-    elif _demo_mode ():
+    elif _demo_mode():
         # демо-превью без бота: роли сервера из демо-набора —
         # страница «Панели и роли» живая и показывает маппинг,
         # включая роль Куратора (9013 → curator).
-        try :
-            from web .routes .guild_admin import _demo_roles_seed
-            for r in _demo_roles_seed ():
-                guild_roles .append ({
-                'id':str (r ['id']),
-                'name':r ['name'],
-                'color':r ['color'],
-                'position':int (r ['id'])if str (r ['id']).isdigit ()else 0 ,
-                'members':int (r .get ('members')or 0 ),
+        try:
+            from web.routes.guild_admin import _demo_roles_seed
+            for r in _demo_roles_seed():
+                guild_roles.append({
+                    'id': str(r['id']),
+                    'name': r['name'],
+                    'color': r['color'],
+                    'position': int(r['id']) if str(r['id']).isdigit() else 0,
+                    'members': int(r.get('members') or 0),
                 })
         except Exception as _ex:
-            _log.debug("api_get_role_map(): демо: %s", _ex )
-    role_map =dict (DISCORD_ROLE_MAP )
-    if _demo_mode ()and not role_map :
+            _log.debug("api_get_role_map(): демо: %s", _ex)
+    with _ROLE_MAP_LOCK:
+        _ROLE_MAP_ROLES['ts'] = now
+        _ROLE_MAP_ROLES['roles'] = list(guild_roles)
+    return guild_roles
+
+
+def _role_map_payload():
+    """Собрать {role_map, guild_roles}; роли — с TTL-кэшем."""
+    guild_roles = _role_map_guild_roles()
+    role_map = dict(DISCORD_ROLE_MAP)
+    if _demo_mode() and not role_map:
         # дефолтный демо-маппинг, пока владелец не поменял через панель
-        role_map ={'9001':'owner','9002':'admin','9003':'mod','9013':'curator'}
-    return jsonify ({
-    'role_map':role_map ,
-    'guild_roles':guild_roles ,
-    })
+        role_map = {'9001': 'owner', '9002': 'admin', '9003': 'mod', '9013': 'curator'}
+    return {'role_map': role_map, 'guild_roles': guild_roles}
+
+
+def _role_map_invalidate():
+    with _ROLE_MAP_LOCK:
+        _ROLE_MAP_CACHE.update({'ts': 0.0, 'raw': None, 'etag': None})
+        _ROLE_MAP_ROLES.update({'ts': 0.0, 'roles': None})
+    try:
+        from services.live_bus import publish_global
+        publish_global('role_map')
+    except Exception as _ex:
+        _log.debug("role_map SSE: %s", _ex)
+
+
+@app.route('/api/role-map')
+@login_required
+@role_required('admin')
+def api_get_role_map():
+    """Получить сопоставление ролей + список ролей сервера."""
+    import time as _time
+    now = _time.time()
+    with _ROLE_MAP_LOCK:
+        hit = _ROLE_MAP_CACHE
+        fresh = hit['raw'] is not None and now - hit['ts'] < _ROLE_MAP_TTL
+    if fresh:
+        raw, etag = hit['raw'], hit['etag']
+    else:
+        raw = json.dumps(_role_map_payload(), ensure_ascii=False,
+                         separators=(',', ':'))
+        etag = '"' + _hashlib_rm.md5(raw.encode('utf-8')).hexdigest() + '"'
+        with _ROLE_MAP_LOCK:
+            _ROLE_MAP_CACHE.update({'ts': now, 'raw': raw, 'etag': etag})
+    if etag in request.headers.get('If-None-Match', ''):
+        return Response(status=304,
+                        headers={'ETag': etag, 'Cache-Control': 'no-cache'})
+    return Response(raw, mimetype='application/json',
+                    headers={'ETag': etag, 'Cache-Control': 'no-cache'})
+
+def _role_map_notify ():
+    """Пнуть открытые страницы по SSE после правки карты ролей.
+
+    «Панели и роли» и «Права команд» подписаны на топик role_map, но его
+    никто не публиковал — правка доезжала до соседней вкладки только по
+    страховочному таймеру (30 с).
+    """
+    try :
+        from services .live_bus import publish_global
+        publish_global ('role_map')
+    except Exception as _ex :
+        _log .debug ("role_map SSE-сигнал не отправлен: %s",_ex )
+
 
 @app .route ('/api/role-map',methods =['POST'])
 @login_required 
@@ -3131,8 +3618,10 @@ def api_set_role_map ():
     if panel_role =='uye':
         DISCORD_ROLE_MAP .pop (role_id ,None )
     else :
-        DISCORD_ROLE_MAP [role_id ]=panel_role 
+        DISCORD_ROLE_MAP [role_id ]=panel_role
     _save_role_map ()
+    _role_map_invalidate ()
+    _role_map_notify ()
     _log_panel_action ('ROLE_MAP_SET',f'{role_id} → {panel_role or "uye"}'if panel_role else f'{role_id} → uye')
     return jsonify ({'success':True })
 
@@ -3144,10 +3633,24 @@ def api_delete_role_map (role_id ):
     if role_id in DISCORD_ROLE_MAP :
         del DISCORD_ROLE_MAP [role_id ]
         _save_role_map ()
+        _role_map_invalidate ()
+        _role_map_notify ()
         _log_panel_action ('ROLE_MAP_DELETE',role_id )
     return jsonify ({'success':True })
 
 # ── Panel menu visibility (sidebar categories & rooms per panel) ──
+# ── Версия сборки панели ────────────────────────────────────────────────
+# Заказ владельца: после обновления непонятно, применилось ли оно —
+# ошибки из старой версии выглядели как «не починили». Номер коммита виден
+# в сайдбаре и отдаётся здесь, чтобы сверять с ремоутом.
+@app .route ('/api/build-info')
+@login_required 
+def api_build_info ():
+    sha =_BUILD_INFO .get ('sha')or ''
+    return jsonify ({'success':True ,'sha':sha ,'short':sha [:7 ],
+                    'branch':_BUILD_INFO .get ('branch')or ''})
+
+
 @app .route ('/api/panel-menu')
 @login_required
 @role_required ('owner')
@@ -3214,30 +3717,35 @@ def api_login_suggest ():
     suggestions =[]
     seen_ids =set ()
 
-    # 1. Live Discord bot members if online
-    if bot_instance :
-        for guild in bot_instance .guilds :
-            for m in guild .members :
-                if m .bot :continue 
-                if not query_clean or query_clean in m .name .lower ()or query_clean in m .display_name .lower ()or query_clean in str (m .id ):
-                    if m .id not in seen_ids :
-                        seen_ids .add (m .id )
-                        suggestions .append ({
-                        'id':str (m .id ),
-                        'name':m .name ,
-                        'display_name':m .display_name ,
-                        'avatar':str (m .display_avatar .url )if hasattr (m ,'display_avatar')else 'https://cdn.discordapp.com/embed/avatars/0.png'
-                        })
-                        if len (suggestions )>=12 :break 
-            if len (suggestions )>=12 :break 
+    # 1. Участники ТОЛЬКО основного сервера панели (MAIN_GUILD_ID).
+    # Раньше перебирались все сервера бота — в подсказках входа появлялись
+    # люди с других серверов, где состоит бот (заказ: «убери их»).
+    panel_guild =_panel_guild ()
+    if panel_guild is not None :
+        for m in panel_guild .members :
+            if m .bot :continue 
+            if not query_clean or query_clean in m .name .lower ()or query_clean in m .display_name .lower ()or query_clean in str (m .id ):
+                if m .id not in seen_ids :
+                    seen_ids .add (m .id )
+                    suggestions .append ({
+                    'id':str (m .id ),
+                    'name':m .name ,
+                    'display_name':m .display_name ,
+                    'avatar':str (m .display_avatar .url )if hasattr (m ,'display_avatar')else 'https://cdn.discordapp.com/embed/avatars/0.png'
+                    })
+                    if len (suggestions )>=12 :break 
 
             # 2. Offline / supplemental check from members.json
-    if len (suggestions )<12 and os .path .exists ('data/members.json'):
+    # 2. Офлайн-добор из members.json — но лишь тех, кто реально на главном
+    # сервере (живой кэш бота), чтобы не подсказывать посторонних.
+    if len (suggestions )<12 and os .path .exists ('data/members.json')and panel_guild is not None :
         try :
             with open ('data/members.json','r',encoding ='utf-8')as f :
                 mdata =json .load (f )
+            live_ids ={str (mm .id )for mm in panel_guild .members }
             for uid_str ,minfo in mdata .items ():
-                if uid_str in seen_ids :continue 
+                if uid_str in seen_ids :continue
+                if str (uid_str )not in live_ids :continue   # не на главном сервере — не показываем
                 mname =minfo .get ('display_name',minfo .get ('username',uid_str ))
                 if not query_clean or query_clean in mname .lower ()or query_clean in str (uid_str ):
                     seen_ids .add (uid_str )
@@ -3280,57 +3788,61 @@ def api_discord_check ():
     tests =[]
     discord_id =None 
     member_info =None 
-    user =None 
+    user =None
+    # Ищем СТРОГО на основном сервере панели. Люди с других серверов бота
+    # в панель попасть не должны (заказ: «в войти появляются люди не с
+    # основного сервера — убери их»).
+    panel_guild =_panel_guild ()
     try :
         if query .isdigit ()and 17 <=len (query )<=19 :
             discord_id =query 
-            for guild in bot_instance .guilds :
+            if panel_guild is not None :
                 try :
-                    m =_resolve_guild_member (guild ,discord_id )
+                    user =_resolve_guild_member (panel_guild ,discord_id )
                 except Exception as _ex:
                     _log.debug("api_discord_check(): подавлено: %s", _ex)
-                    m =None 
-                if m :
-                    user =m 
-                    break 
-            if not user :
+                    user =None
+            # Владелец бота (OWNER_ID) может ещё не состоять на сервере на
+            # этапе настройки — ему вход разрешён: тянем профиль напрямую.
+            if user is None and _is_bot_owner (discord_id ):
                 try :
-                    user =asyncio .run_coroutine_threadsafe (bot_instance .fetch_user (int (discord_id )),bot_instance .loop ).result (timeout =10 )
+                    user =asyncio .run_coroutine_threadsafe (
+                    bot_instance .fetch_user (int (discord_id )),bot_instance .loop ).result (timeout =10 )
                 except Exception as _ex:
-                    _log.debug("api_discord_check(): подавлено: %s", _ex)
+                    _log.debug("api_discord_check owner fetch: %s", _ex)
         else :
             uname =query .lstrip ('@').lower ()
-            for guild in bot_instance .guilds :
-                for m in guild .members :
+            if panel_guild is not None :
+                for m in panel_guild .members :
                     if m .name .lower ()==uname or m .display_name .lower ()==uname :
                         user =m 
                         discord_id =str (m .id )
-                        break 
-                if user :
-                    break 
+                        break
         if not user or not discord_id :
-            tests .append ({'name':'Поиск пользователя','status':'fail','detail':'Not found'})
-            return jsonify ({'success':False ,'tests':tests ,'error':'Пользователь не найден.'})
+            tests .append ({'name':'Поиск пользователя','status':'fail','detail':'Не найден на сервере'})
+            return jsonify ({'success':False ,'tests':tests ,'error':'Пользователь не найден на основном сервере. Вход в панель доступен только участникам этого сервера.'})
         member_info ={'display_name':getattr (user ,'display_name',str (user )),'name':str (user ),'avatar':str (user .display_avatar .url )if hasattr (user ,'display_avatar')else ''}
         tests .append ({'name':'Поиск пользователя','status':'ok','detail':member_info ['display_name']})
     except Exception as e :
         tests .append ({'name':'Поиск пользователя','status':'fail','detail':str (e )})
         return jsonify ({'success':False ,'tests':tests ,'error':str (e )})
+    # Жёсткая проверка членства: пользователь должен быть участником
+    # основного сервера. Единственное исключение — владелец бота (OWNER_ID),
+    # он управляет панелью даже не находясь на сервере.
     try :
-        in_guild =False 
-        guild_name =None 
-        for guild in bot_instance .guilds :
-            m =guild .get_member (int (discord_id ))
-            if m :
-                in_guild =True 
-                guild_name =guild .name 
-                break 
+        in_guild =(panel_guild is not None and _resolve_guild_member (panel_guild ,int (discord_id ))is not None )
+        is_owner =_is_bot_owner (discord_id )
         if in_guild :
-            tests .append ({'name':'Участник сервера','status':'ok','detail':guild_name })
+            tests .append ({'name':'Участник сервера','status':'ok','detail':getattr (panel_guild ,'name','')})
+        elif is_owner :
+            tests .append ({'name':'Участник сервера','status':'ok','detail':'Владелец бота'})
         else :
-            tests .append ({'name':'Участник сервера','status':'warn','detail':'Не найден на сервере'})
-    except Exception:
-        tests .append ({'name':'Участник сервера','status':'warn','detail':'Ошибка проверки'})
+            tests .append ({'name':'Участник сервера','status':'fail','detail':'Нет на основном сервере'})
+            return jsonify ({'success':False ,'tests':tests ,'error':'Вы не состоите на основном сервере панели. Доступ только для его участников.'})
+    except Exception as _ex:
+        _log.debug("api_discord_check membership: %s", _ex)
+        tests .append ({'name':'Участник сервера','status':'fail','detail':'Ошибка проверки'})
+        return jsonify ({'success':False ,'tests':tests ,'error':'Не удалось проверить членство на сервере. Попробуйте позже.'})
     try :
         is_bot =getattr (user ,'bot',False )
         if is_bot :
@@ -3396,11 +3908,16 @@ def api_discord_login ():
         members [discord_id ]={'display_name':member_info ['display_name'],'name':member_info ['name'],'avatar':member_info ['avatar'],'role':live_role ,'password':'','registered_at':datetime.now(timezone.utc).isoformat ()}
         with open (members_file ,'w',encoding ='utf-8')as f :
             json .dump (members ,f ,indent =2 ,ensure_ascii =False )
-    stored_role =members [discord_id ].get ('role','uye')
-    if stored_role =='owner':
-        live_role ='owner'
-    else :
-        live_role =_get_role_from_discord (discord_id )
+    # БЕЗОПАСНОСТЬ: роль берём ТОЛЬКО живьём из Discord. Раньше
+    # сохранённое role=='owner' в members.json отменяло проверку — и
+    # любой, кого однажды записали владельцем, входил по PIN, даже если
+    # его давно нет на сервере и ролей у него нет.
+    live_role =_get_role_from_discord (discord_id )
+    if live_role =='uye':
+        return jsonify ({'success':False ,'error':'PIN верный, но доступа к панели нет: нужна роль модератора на сервере.'})
+    members [discord_id ]['role']=live_role 
+    with open (members_file ,'w',encoding ='utf-8')as f :
+        json .dump (members ,f ,indent =2 ,ensure_ascii =False )
     session .permanent =True 
     session ['logged_in']=True 
     session ['username']=member_info ['display_name']
@@ -3411,11 +3928,6 @@ def api_discord_login ():
     _log_login (member_info ['display_name'],live_role ,member_info ['avatar'],discord_id )
     return jsonify ({'success':True ,'redirect':'/'})
 
-@app .route ('/custom-embeds')
-@login_required 
-@role_required ('admin')
-def custom_embeds_page ():
-    return render_template ('custom_embeds.html',role =session .get ('role'),username =session .get ('username'))
 
 @app .route ('/api/send-embed',methods =['POST'])
 @login_required 
@@ -3559,7 +4071,7 @@ def api_bot_memory_profile ():
         return jsonify ({
         'success':True ,'demo':True ,
         'rss_mb':412.6 ,'rss_after_gc_mb':401.8 ,'threads':18 ,
-        'guilds':1 ,'members_cached':1247 ,'channels_cached':14 ,
+        'guilds':1 ,'members_cached':_demo_counts ()[0] ,'channels_cached':14 ,
         'roles_cached':9 ,'voice_clients':0 ,'cogs':24 ,'extensions':24 ,
         'objects_total':486311 ,
         'top_types':[['builtins.dict',94210],['builtins.instance_method',61884],
@@ -3567,7 +4079,7 @@ def api_bot_memory_profile ():
                      ['discord.user.User',8312],['builtins.set',6128],
                      ['builtins.list',5904],['builtins.tuple',5231],
                      ['builtins.type',2140],['builtins.weakref',1987]],
-        'per_guild':[{'name':'Демо-сервер Hakumo','members':1247}],
+        'per_guild':[{'name':'Демо-сервер Hakumo','members':_demo_counts ()[0]}],
         'gc_generations':[{'collections':214,'collected':1894,'uncollectable':0},
                           {'collections':37,'collected':5421,'uncollectable':0},
                           {'collections':9,'collected':12837,'uncollectable':0}]
@@ -3706,8 +4218,15 @@ def api_bot_commands_audit ():
             except Exception as _ex:
                 out ['guilds'][f'{g .name } ({g .id })']=f'ошибка: {_ex }'
         return out
+    coro =do ()
     try :
-        result =asyncio .run_coroutine_threadsafe (do (),bot_instance .loop ).result (timeout =60 )
+        _loop =getattr (bot_instance ,'loop ',None )
+        if _loop is None :
+            # Фейковый бот без работающего event loop (тесты/демо) — корутину
+            # нельзя планировать, закрываем её сами, иначе RuntimeWarning.
+            coro .close ()
+            return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
+        result =asyncio .run_coroutine_threadsafe (coro ,_loop ).result (timeout =60 )
         return jsonify (result )
     except Exception as e :
         return jsonify ({'error':str (e )})
@@ -3723,20 +4242,20 @@ def api_global_search ():
 
     results =[]
 
-    # Участники
-    if bot_instance :
-        for guild in bot_instance .guilds :
-            for member in guild .members :
-                if q in member .display_name .lower ()or q in str (member .id ):
-                    results .append ({
-                    'type':'member',
-                    'icon':'',
-                    'title':member .display_name ,
-                    'subtitle':f'{guild.name} • ID: {member.id}',
-                    'url':f'/users?search={member.id}'
-                    })
-                    if len (results )>=5 :
-                        break 
+    # Участники — только основного сервера панели (не всех серверов бота).
+    _search_guild =_panel_guild ()
+    if _search_guild is not None :
+        for member in _search_guild .members :
+            if q in member .display_name .lower ()or q in str (member .id ):
+                results .append ({
+                'type':'member',
+                'icon':'',
+                'title':member .display_name ,
+                'subtitle':f'{_search_guild.name} • ID: {member.id}',
+                'url':f'/users?search={member.id}'
+                })
+                if len (results )>=5 :
+                    break
 
                         # Предупреждения
     warns_file ='data/warnings.json'
@@ -3828,37 +4347,27 @@ def api_voice_command ():
         return jsonify ({'error':str (e )}),500 
 
 
-if __name__ =='__main__':
-    # Панель отдельным процессом (python web/app.py) — без бота; для
-    # «панель видит бота» запускай main.py (встроенный сервер).
-    _p_port =int (os .environ .get ('PANEL_PORT','')or 0 )
-    if not _p_port:
-        try :
-            from config import Config
-            _p_port =int (getattr (Config ,'PORT',0 )or 0 )
-        except Exception :
-            _p_port =0
-    app .run (host ='0.0.0.0',port =(_p_port or 5000 ),debug =False ,threaded =True )
 
-    # Parola Sыfыrlama (login страница для) 
+# Восстановление пароля: коды для страницы входа
 import random as _random 
 _reset_codes ={}# {discord_id: {code, expires}}
 
 @app .route ('/api/forgot-password',methods =['POST'])
 def api_forgot_password ():
     data =request .get_json (silent =True )or {}
-    discord_id =str (data .get ('discord_id','')).strip ()
-    if not discord_id :
-        return jsonify ({'error':'Требуется Discord ID'})
+    query =str (data .get ('discord_id','')or data .get ('query','')).strip ()
+    if not query :
+        return jsonify ({'error':'Укажи Discord ID или ник'})
 
-        # Проверяем запись участника
+        # Проверяем запись участника: по Discord ID или по нику/тегу
     members_file ='data/members.json'
     if not os .path .exists (members_file ):
         return jsonify ({'error':'Запись участника не найдена'})
     with open (members_file ,'r',encoding ='utf-8')as f :
         members =json .load (f )
-    if discord_id not in members :
-        return jsonify ({'error':'Bu По Discord ID запись hesap нет'})
+    discord_id =_resolve_member_key (members ,query )
+    if not discord_id :
+        return jsonify ({'error':'Участник с таким Discord ID или ником не найден'})
 
         # 6 haneli kod юret
     code =''.join ([str (_random .randint (0 ,9 ))for _ in range (6 )])
@@ -3878,7 +4387,7 @@ def api_forgot_password ():
         )
     try :
         asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop ).result (timeout =10 )
-        return jsonify ({'success':True })
+        return jsonify ({'success':True ,'discord_id':discord_id })
     except Exception as e :
         return jsonify ({'error':f'DM не отправлено: {e}'})
 
@@ -4019,29 +4528,173 @@ _ACTION_MAP = (
     (r'/temp-mod', 'Временные меры', 'fa-clock', '/temp-moderation'),
     (r'/ai-mod', 'Настроили AI-модерацию', 'fa-brain', '/ai-moderation'),
     (r'/autofilter', 'Настроили автофильтр', 'fa-filter', '/autofilter'),
-    (r'/automation', 'Изменили автоматизацию', 'fa-robot', '/automation'),
-    (r'/giveaway', 'Розыгрыши', 'fa-gift', '/giveaway'),
-    (r'/leveling', 'Настроили уровни', 'fa-ranking-star', '/leveling-admin'),
-    (r'/ticket', 'Тикеты', 'fa-ticket', '/ticket-search'),
+    (r'/antifake', 'Изменили защиту от фейков', 'fa-user-secret', '/antifake'),
     (r'/backup', 'Бэкапы', 'fa-box-archive', '/backups'),
     (r'/announcement', 'Объявления', 'fa-bullhorn', '/announcements'),
     (r'/webhook', 'Вебхуки', 'fa-link', '/webhooks'),
-    (r'/ban|/kick|/mute', 'Мод-действие', 'fa-gavel', '/logs'),
+    (r'/ban_appeal_channel', 'Канал апелляции после бана', 'fa-user-lock', '/channel-settings'),
+    (r'/proof_channel', 'Канал доказательств', 'fa-folder-open', '/channel-settings'),
+    (r'/welcome_channel', 'Канал приветствий', 'fa-hand-sparkles', '/channel-settings'),
+    (r'/appeals_channel', 'Канал апелляций', 'fa-scale-balanced', '/channel-settings'),
+    (r'/staff_apply_channel', 'Канал заявок в команду', 'fa-file-signature', '/channel-settings'),
+    (r'/welcome-channel|/welcome-card', 'Приветствие новичков', 'fa-handshake', '/welcome-editor'),
+    (r'/staff-apps|staff_apps', 'Заявка в команду', 'fa-file-signature', '/staff-apps'),
+    (r'/verify/', 'Настроили верификацию', 'fa-clipboard-check', '/verify'),
+    (r'/pagerduty', 'Настроили PagerDuty', 'fa-tower-broadcast', '/pagerduty'),
+    (r'/feature-flags', 'Флаги функций', 'fa-flag', '/feature-flags'),
+    (r'/commands', 'Команды бота', 'fa-terminal', '/commands'),
+    (r'/cog-manager|reload', 'Управление модулями', 'fa-cubes', '/cog-manager'),
+    (r'/bot/restart', 'Перезапустили бота', 'fa-rotate', '/bot-settings'),
+    (r'/bot/sync', 'Синхронизировали команды', 'fa-arrows-rotate', '/bot-settings'),
+    (r'/bot/gc', 'Очистили память бота', 'fa-broom', '/bot-settings'),
+    (r'/bot/diagnose', 'Диагностика бота', 'fa-stethoscope', '/bot-settings'),
+    (r'/bot-settings', 'Настройки бота', 'fa-sliders-h', '/bot-settings'),
+    (r'/log-settings', 'Настроили логи сервера', 'fa-list-check', '/log-settings'),
+    (r'/log-cards', 'Карточки логов', 'fa-id-card', '/log-settings'),
+    (r'/report', 'Настройки репортов', 'fa-flag', '/reports-queue'),
+    (r'/staff-limits', 'Лимиты персонала', 'fa-shield-halved', '/guardian'),
+    (r'/verify', 'Верификация', 'fa-clipboard-check', '/verify'),
+    (r'/anticrash', 'Анти-краш', 'fa-life-ring', '/anticrash'),
+    (r'/antiraid', 'Анти-рейд', 'fa-shield-virus', '/antiraid'),
+    (r'/mod-settings|/ladder', 'Авто-наказания', 'fa-hammer', '/ladder'),
+    (r'/role-settings', 'Роли за наказания', 'fa-user-tag', '/role-settings'),
+    (r'/send-embed', 'Отправили эмбед', 'fa-paper-plane', '/send-command'),
+    (r'/send-message', 'Отправили сообщение', 'fa-paper-plane', '/send-command'),
+    (r'/ban|/kick|/mute|/punish', 'Наказание участника', 'fa-gavel', '/logs'),
 )
 
 
+# Сегменты путей → человеческие названия (для путей, которых нет в точечной
+# карте выше). Последний содержательный сегмент превращаем в русское слово,
+# чтобы в журнале/ленте не светилось сырое «api … settings».
+_SEGMENT_NAMES = {
+    'settings': 'настройки', 'config': 'настройки', 'save': 'сохранение',
+    'log-settings': 'настройки логов', 'log-cards': 'карточки логов',
+    'mod-settings': 'настройки модерации', 'role-settings': 'роли наказаний',
+    'report-settings': 'настройки репортов', 'bot-settings': 'настройки бота',
+    'channel-routes': 'маршруты каналов', 'channel-settings': 'настройки каналов',
+    'staff-limits': 'лимиты персонала', 'guardian': 'щит сервера',
+    'antiraid': 'анти-рейд', 'anticrash': 'анти-краш', 'antifake': 'антифейк',
+    'autofilter': 'автофильтр', 'verify': 'верификация', 'welcome-card': 'карточка приветствия',
+    'pagerduty': 'тревоги PagerDuty', 'feature-flags': 'флаги функций',
+    'commands': 'команды', 'switch': 'переключатель команд', 'switches': 'переключатели команд',
+    'menu-mode': 'режим меню', 'ladder': 'лестница наказаний',
+    'punish': 'наказание', 'appeals': 'апелляции', 'reports': 'репорты',
+    'reports-queue': 'очередь репортов', 'warnings': 'предупреждения',
+    'warn-level': 'роль за уровень варнов', 'mod-schedule': 'расписание наказаний',
+    'mod-control': 'контроль команды', 'mod-insights': 'аналитика рисков',
+    'security-center': 'центр безопасности', 'role': 'роль', 'roles': 'роли',
+    'role-map': 'карта ролей', 'role-permissions': 'права ролей',
+    'members': 'участники', 'member': 'участник', 'nick': 'ник участника',
+    'channels': 'каналы', 'announcements': 'объявления', 'announcement': 'объявление',
+    'backups': 'бэкапы', 'backup': 'бэкап', 'webhook': 'вебхук', 'webhooks': 'вебхуки',
+    'presence': 'статус бота', 'sync': 'синхронизация команд', 'restart': 'перезапуск бота',
+    'diagnose': 'диагностика', 'gc': 'очистка памяти', 'memory-profile': 'профиль памяти',
+    'commands-audit': 'аудит команд', 'update-source': 'обновление источника',
+    'visibility': 'видимость', 'toggle': 'переключение', 'state': 'состояние',
+    'status': 'статус', 'overview': 'обзор', 'summary': 'сводка', 'threshold': 'порог',
+    'protect': 'защита участника', 'unprotect': 'снятие защиты', 'action': 'действие',
+    'strikes': 'нарушения фейк-защиты', 'lab': 'проверка', 'test': 'тест',
+    'cooldown': 'кулдаун', 'add': 'добавление', 'remove': 'удаление',
+    'create': 'создание', 'delete': 'удаление', 'reset': 'сброс', 'clear': 'очистка',
+    'claim': 'взято в работу', 'resolve': 'решение', 'export': 'экспорт',
+    'upload': 'загрузка', 'appearance': 'оформление', 'preview': 'предпросмотр',
+    'publish': 'публикация', 'rollout': 'выкатка', 'amnesty': 'амнистия',
+    'reasons': 'причины', 'dossier': 'досье', 'scan': 'сканирование',
+    'newaccount': 'молодые аккаунты', 'fake-score': 'оценка фейка',
+    'spam-sim': 'симуляция спама', 'protection-reset': 'сброс защиты',
+    'custom': 'отчёт', 'weekly': 'недельный отчёт', 'generate': 'генерация отчёта',
+    'view': 'просмотр', 'records': 'записи', 'revert': 'откат', 'changes': 'журнал изменений',
+    'analytics': 'аналитика', 'advanced': 'расширенная аналитика',
+    'heatmap': 'тепловая карта', 'invite-leaders': 'приглашения', 'member-flow': 'приток участников',
+    'mod-load': 'нагрузка модерации', 'voice-pulse': 'голосовая активность',
+    'week-summary': 'итоги недели', 'channel-drill': 'разбор по каналам',
+    'switch-bulk': 'массовое переключение', 'catalog': 'каталог команд',
+    'leave-guild': 'выход с сервера', 'send-message': 'отправка сообщения',
+    'send-embed': 'отправка эмбеда', 'execute-command': 'выполнение команды',
+    'change-password': 'смена пароля', 'add-member': 'добавление участника',
+    'my-token': 'токен входа', 'tunnel-url': 'адрес туннеля',
+    'panel-menu': 'настройка меню панели', 'layout': 'раскладка меню',
+    'voice-command': 'голосовая команда', 'forgot-password': 'сброс пароля',
+    'reset-password': 'новый пароль', 'discord-login': 'вход через Discord',
+    'discord-check': 'проверка Discord', 'login': 'вход', 'logout': 'выход',
+    'notifications': 'уведомления', 'activity-feed': 'лента активности',
+    'panel-logs': 'журнал панели', 'sidebar': 'сайдбар', 'search': 'поиск',
+}
+
+
+def _human_fallback_title(method, path):
+    """Человеческое название для пути, которого нет в точечной карте.
+
+    Берём последние осмысленные сегменты (отбрасываем api/guild/<id>/числа)
+    и переводим словарём; глагол подбираем по методу (DELETE → «удалили»,
+    POST → «изменили/создали»). Никаких сырых '/api/...' в журнале."""
+    raw_segs = [s for s in str(path or '').split('/') if s]
+    segs = []
+    for s in raw_segs:
+        if s in ('api', 'guild'):
+            continue
+        if s.isdigit():          # id сервера/пользователя
+            continue
+        segs.append(s)
+    # известные составные сегменты переводим целиком (до разбиения по дефису)
+    _known = {
+        'ban_appeal_channel': 'канал апелляции', 'proof_channel': 'канал доказательств',
+        'appeals_channel': 'канал апелляций', 'welcome_channel': 'канал приветствий',
+        'staff_apply_channel': 'канал заявок', 'appeal_menu_channel': 'меню апелляций',
+        'guardian_channel': 'тревоги щита', 'security_channel': 'лог авто-защиты',
+        'antiraid_channel': 'алерты анти-рейда', 'anticrash_channel': 'сводки анти-краша',
+        'pagerduty_channel': 'канал PagerDuty', 'log_settings': 'настройки логов',
+        'role_settings': 'роли наказаний', 'mod_settings': 'настройки модерации',
+        'staff_limits': 'лимиты персонала', 'bot_settings': 'настройки бота',
+        'feature_flags': 'флаги функций', 'panel_menu': 'меню панели',
+        'channel_routes': 'маршруты каналов', 'message_logs': 'логи сообщений',
+        'send_message': 'отправка сообщения', 'send_embed': 'отправка эмбеда',
+        'execute_command': 'выполнение команды', 'memory_profile': 'профиль памяти',
+        'commands_audit': 'аудит команд', 'change_password': 'смена пароля',
+        'forgot_password': 'запрос сброса пароля', 'reset_password': 'сброс пароля',
+        'discord_login': 'вход через Discord', 'discord_check': 'проверка Discord',
+        'activity_feed': 'лента активности', 'panel_logs': 'журнал панели',
+        'leave_guild': 'выход с сервера', 'add_member': 'добавление участника',
+        'my_token': 'токен входа', 'tunnel_url': 'адрес туннеля', 'my_applications': 'мои заявки',
+        'my_notifications': 'уведомления', 'login_suggest': 'подсказки входа',
+        'role_map': 'карта ролей', 'role_permissions': 'права ролей',
+        'staff_apps': 'заявки в команду', 'voice_command': 'голосовая команда',
+    }
+    segs = [_known.get(s.lower(), s) for s in segs]
+    # имя действия — последний сегмент, контекст — предыдущий (если есть)
+    name = ''
+    context = ''
+    if segs:
+        last = segs[-1].lower()
+        name = _SEGMENT_NAMES.get(last, last.replace('-', ' ').replace('_', ' '))
+        if len(segs) >= 2:
+            prev = segs[-2].lower()
+            context = _SEGMENT_NAMES.get(prev, prev.replace('-', ' ').replace('_', ' '))
+    verb = {'DELETE': 'Удалили', 'POST': 'Изменили', 'PUT': 'Изменили',
+            'PATCH': 'Изменили', 'GET': 'Открыли'}.get(str(method or '').upper(), 'Действие')
+    if context and name and name != context:
+        title = f'{verb}: {context} — {name}'
+    elif name:
+        title = f'{verb}: {name}'
+    else:
+        title = 'Действие в панели'
+    return title
+
+
 def _human_panel_action(action):
-    """«POST /api/guild/123/roles/create» → ('Дали роль', 'fa-user-plus', '/roles')."""
-    a = str(action or '')
-    method = a.split(' ', 1)[0]
+    """«POST /api/guild/123/roles/create» → ('Дали роль', 'fa-user-plus', '/roles').
+
+    Сначала точечная карта известных действий; если пути там нет — собираем
+    понятное название из сегментов (без сырого '/api/...')."""
+    a = str(action or '').strip()
+    method = a.split(' ', 1)[0] if ' ' in a else ''
     path = a.split(' ', 1)[1] if ' ' in a else a
     for pat, title, icon, link in _ACTION_MAP:
         if _re.search(pat, path):
             return title, icon, link
-    seg = path.rstrip('/').split('/')[-1].replace('-', ' ').replace('_', ' ').strip()
-    if seg:
-        return 'Изменили: ' + seg, 'fa-sliders', '/panel-logs'
-    return 'Действие в панели', 'fa-sliders', '/panel-logs'
+    title = _human_fallback_title(method, path)
+    return title, 'fa-sliders', '/panel-logs'
 
 
 @app .route ('/api/activity-feed')
@@ -4132,23 +4785,6 @@ def api_activity_feed ():
     except Exception as _ex:
         _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
-    # 4) Тикеты (ai_tickets_*.json)
-    try:
-        for fn in os.listdir('data'):
-            if fn.startswith('ai_tickets_') and fn.endswith('.json'):
-                with open(os.path.join('data', fn), 'r', encoding='utf-8') as fp:
-                    data = json.load(fp)
-                for tid, tk in data.items():
-                    ts = 0
-                    try:
-                        ts = _epoch_from_ts (tk .get ('created_at'))
-                    except Exception:
-                        ts = 0
-                    push('fa-ticket', 'Тикет: '+ (tk.get('category') or 'общий'),
-                         tk.get('user_name'), tk.get('description','')[:80], ts, 'ticket', link='/ticket-search')
-    except Exception as _ex:
-        _log.debug("api_activity_feed(): подавлено: %s", _ex)
-
     # 5) Панель-логи (POST-действия) — broadcast-события пропускаем:
     # они уже попадают из истории уведомлений (источник 6) с иконками и ссылками
     try:
@@ -4173,9 +4809,8 @@ def api_activity_feed ():
     # 6) События диспетчера уведомлений (история с иконками и ссылками)
     try:
         f = 'data/notification_history.json'
-        _ev_type = {'ticket_open':'ticket','ticket_message':'ticket','ticket_close':'ticket',
-                    'priority_change':'ticket','assignment':'ticket','warn':'warn',
-                    'mod_action':'mod','staff_apply':'panel','test':'system'}
+        _ev_type = {'warn':'warn', 'mod_action':'mod', 'staff_apply':'panel',
+                    'test':'system'}
         if os.path.exists(f):
             with open(f, 'r', encoding='utf-8') as fp:
                 hist = json.load(fp)
@@ -4208,3 +4843,23 @@ if WEBSOCKET_ENABLED :
     except Exception as e :
         print (f'[WebSocket] Ошибка инициализации: {e}')
         WEBSOCKET_ENABLED =False 
+
+
+
+# Запуск панели отдельным процессом — ОБЯЗАТЕЛЬНО в самом конце файла.
+# Раньше этот блок стоял в середине, app.run() блокировал импорт, и все
+# маршруты ниже (/api/forgot-password, /api/reset-password,
+# /api/notifications/poll, /api/activity-feed) не регистрировались:
+# «python web/app.py» отвечал на них 404. Через main.py (бот поднимает
+# панель сам) __name__ != "__main__", поэтому там они работали.
+if __name__ =='__main__':
+    # Панель отдельным процессом (python web/app.py) — без бота; для
+    # «панель видит бота» запускай main.py (встроенный сервер).
+    _p_port =int (os .environ .get ('PANEL_PORT','')or 0 )
+    if not _p_port:
+        try :
+            from config import Config
+            _p_port =int (getattr (Config ,'PORT',0 )or 0 )
+        except Exception :
+            _p_port =0
+    app .run (host ='0.0.0.0',port =(_p_port or 5000 ),debug =False ,threaded =True )

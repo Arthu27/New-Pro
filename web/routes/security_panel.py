@@ -165,7 +165,7 @@ def shield_statuses(gid):
     except Exception as _ex:
         _log.debug('shield anti_alt: %s', _ex)
     out.append({'key': 'anti_alt', 'label': 'Анти-альт', 'enabled': on,
-                'href': '/automation', 'hint': 'ловит свежие аккаунты на входе'})
+                'href': '/antifake', 'hint': 'ловит свежие аккаунты на входе'})
 
     # Антифейк: маски под администрацию (impersonation)
     on = False  # opt-in

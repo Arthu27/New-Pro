@@ -10,7 +10,10 @@
 import discord
 from discord.ext import commands
 
+from logger import get_logger
 from services import message_stats
+
+_log = get_logger('activity_stats')
 
 
 class ActivityStats(commands.Cog):

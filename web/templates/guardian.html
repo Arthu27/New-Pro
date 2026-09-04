@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Щит сервера — Панель Hakumo{% endblock %}
+{% block title %}Щит сервера — Hakumo{% endblock %}
 {% block page_title %}Щит сервера{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Защита <span class="sep">·</span> Щит сервера</div>
+    <div class="eyebrow"> Защита </div>
     <h1>Щит сервера</h1>
-    <p>Анти-нюк защита высшего уровня: ловит снос каналов и ролей, раздачу админ-прав,
-       массовые баны и кики, вебхуки и чужих ботов — и мгновенно останавливает виновника.
-       Всё настраивается здесь и работает сразу.</p>
+    <p>Щит охраняет сервер от атак: снос каналов и ролей, раздача админ-прав, массовые баны
+       и кики, вебхуки и чужие боты. Сработал порог — виновник мгновенно остановлен. Настройки
+       применяются сразу, без перезапуска.</p>
   </div>
   <div class="page-head-side">
     <span class="gd-access" title="Смотреть и настраивать Щит могут администраторы. Обзор безопасности видят все модераторы в Центре безопасности">
@@ -116,6 +116,17 @@
 #gdEvents,#gdWlCard,#limits,#gdFeedPanel{scroll-margin-top:14px}
 .gd-empty{display:flex;align-items:center;gap:8px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));font-size:12.5px;padding:10px 0}
 .gd-empty i{color:#7bd88f}
+/* ── Вкладки Щита: 4 понятных раздела вместо одной простыни ── */
+.gd-tabbar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+.gd-tab-btn{appearance:none;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));font-family:inherit;font-size:13px;font-weight:700;padding:9px 16px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.gd-tab-btn i{font-size:12px;color:var(--ac)}
+.gd-tab-btn:hover{border-color:var(--ac);color:var(--text);transform:translateY(-1px)}
+.gd-tab-btn.active{background:color-mix(in srgb, var(--ac) 14%, transparent);border-color:var(--ac);color:var(--text);box-shadow:0 0 0 1px var(--ac) inset}
+.gd-tab-pane[hidden]{display:none !important}
+.gd-pane-tip{margin:10px 0 0;font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent))}
+.gd-section-h{margin:18px 0 2px;font-size:15px;font-weight:800;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.gd-section-h i{color:var(--ac)}
+.gd-section-sub{margin:0 0 4px;font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent));line-height:1.5;max-width:820px}
 @media (max-width:980px){.gd-hero{grid-template-columns:1fr}.gd-cols{grid-template-columns:1fr}}
 </style>
 
@@ -130,12 +141,12 @@
   </div>
   <div class="gd-opts">
     <div class="gd-opt">
-      <label for="gdPun">Общая мера наказания</label>
-      <select id="gdPun" aria-label="Общая мера наказания"></select>
+      <label for="gdPun">Мера для нарушителя (по умолчанию)</label>
+      <select id="gdPun" aria-label="Мера для нарушителя по умолчанию"></select>
     </div>
     <div class="gd-opt">
-      <label for="gdBotAct">Мера для ботов-нарушителей</label>
-      <select id="gdBotAct" aria-label="Мера для ботов-нарушителей"></select>
+      <label for="gdBotAct">Мера для бота-нарушителя</label>
+      <select id="gdBotAct" aria-label="Мера для бота-нарушителя"></select>
     </div>
     <label class="gd-check" for="gdKickBots">
       <input type="checkbox" id="gdKickBots" checked>
@@ -154,37 +165,49 @@
   </div>
 </div>
 
-<nav class="gd-tabs" aria-label="Быстрые разделы Щита">
-  <a href="#gdEvents"><i class="fas fa-bolt"></i> Защита и пороги</a>
-  <a href="#gdWlCard"><i class="fas fa-user-check"></i> Белые списки</a>
-  <a href="#limits"><i class="fas fa-hand"></i> Лимиты команд</a>
-  <a href="#gdFeedPanel"><i class="fas fa-tower-broadcast"></i> Инциденты</a>
-</nav>
-
-<div class="gd-info">
-  <h3><i class="fas fa-circle-info"></i> Как настроить защиту</h3>
-  <b>Порог</b> — сколько опасных действий должно случиться, <b>Время</b> — за какой срок
-  они должны уложиться, <b>Мера</b> — что сделать с виновником.
-  Пример: порог 4 и время 30 сек — если кто-то удалит 4 канала за 30 секунд,
-  Щит остановит его именно на этой мере. Время выбирается в секундах или минутах,
-  быстрые варианты — кнопками под настройками.
+<div class="gd-tabbar" role="tablist" aria-label="Разделы Щита">
+  <button type="button" class="gd-tab-btn active" data-gd-tab="events" role="tab" aria-selected="true"><i class="fas fa-bolt"></i> Анти-нюк</button>
+  <button type="button" class="gd-tab-btn" data-gd-tab="limits" role="tab" aria-selected="false"><i class="fas fa-hand"></i> Лимиты команды</button>
+  <button type="button" class="gd-tab-btn" data-gd-tab="wl" role="tab" aria-selected="false"><i class="fas fa-user-check"></i> Белые списки</button>
+  <button type="button" class="gd-tab-btn" data-gd-tab="feed" role="tab" aria-selected="false"><i class="fas fa-tower-broadcast"></i> Инциденты</button>
 </div>
 
-<div class="gd-evbar" id="gdEvBar" style="display:none">
-  <div class="gd-evbar-t"><i class="fas fa-bolt"></i> События защиты
-    <small>по умолчанию все выключены — включи только то, что нужно</small></div>
-  <div class="gd-evbar-b">
-    <button type="button" class="btn" id="gdEvAllOn" aria-label="Включить все события защиты"><i class="fas fa-toggle-on"></i> Включить все</button>
-    <button type="button" class="btn" id="gdEvAllOff" aria-label="Выключить все события защиты"><i class="fas fa-toggle-off"></i> Выключить все</button>
+<!-- ── Вкладка: Анти-нюк (события и пороги) ─────────────────────────── -->
+<section class="gd-tab-pane" id="gdPaneEvents" data-gd-pane="events">
+  <h2 class="gd-section-h"><i class="fas fa-bolt"></i> Что охраняем и при каком пороге срабатываем</h2>
+  <p class="gd-section-sub">Каждая карточка — один тип атаки. <b>Порог</b> — сколько опасных действий должно случиться,
+     <b>Время</b> — за какой срок, <b>Мера</b> — что сделать с виновником. Пример: порог 4 и время 30 сек —
+     если кто-то удалит 4 канала за 30 секунд, Щит его остановит. «Общая мера» сверху применяется ко всем
+     событиям, где не выбрана своя.</p>
+
+  <div class="gd-evbar" id="gdEvBar" style="display:none">
+    <div class="gd-evbar-t"><i class="fas fa-bolt"></i> События защиты
+      <small>по умолчанию все выключены — включи только то, что нужно</small></div>
+    <div class="gd-evbar-b">
+      <button type="button" class="btn" id="gdEvAllOn" aria-label="Включить все события защиты"><i class="fas fa-toggle-on"></i> Включить все</button>
+      <button type="button" class="btn" id="gdEvAllOff" aria-label="Выключить все события защиты"><i class="fas fa-toggle-off"></i> Выключить все</button>
+    </div>
   </div>
-</div>
 
-<div class="gd-grid" id="gdEvents">
-  <div class="sk-row"></div>
-  <div class="sk-row" style="width:86%"></div>
-  <div class="sk-row" style="width:64%"></div>
-</div>
+  <div class="gd-grid" id="gdEvents">
+    <div class="sk-row"></div>
+    <div class="sk-row" style="width:86%"></div>
+    <div class="sk-row" style="width:64%"></div>
+  </div>
 
+  <div class="gd-actions">
+    <button type="button" class="btn btn-primary" id="gdSaveAnti" aria-label="Сохранить настройки анти-нюка">
+      <i class="fas fa-floppy-disk"></i> Сохранить защиту
+    </button>
+    <span class="gd-save-note">Тумблеры и пороги сохраняются сразу по клику; кнопка — чтобы применить всё разом.</span>
+  </div>
+</section>
+
+<!-- ── Вкладка: Белые списки ───────────────────────────────────────── -->
+<section class="gd-tab-pane" id="gdPaneWl" data-gd-pane="wl" hidden>
+  <h2 class="gd-section-h"><i class="fas fa-user-check"></i> Кого Щит не трогает и кому можно добавлять ботов</h2>
+  <p class="gd-section-sub">Слева — неприкосновенные (Щит их никогда не наказывает, владелец сервера неприкосновенен всегда).
+     Справа — кто имеет право приглашать ботов: остальных приглашающих Щит накажет, а бота выгонит.</p>
 <div class="gd-cols" id="gdWlCard">
   <div class="gd-panel">
     <h3><i class="fas fa-user-check"></i> Белый список</h3>
@@ -235,18 +258,18 @@
   </div>
 </div>
 
+</section>
+
+<!-- ── Вкладка: Инциденты ──────────────────────────────────────────── -->
+<section class="gd-tab-pane" id="gdPaneFeed" data-gd-pane="feed" hidden>
+  <h2 class="gd-section-h"><i class="fas fa-tower-broadcast"></i> Последние срабатывания</h2>
+  <p class="gd-section-sub">Кого остановил Щит и что он с этим сделал — последние 30 событий. Обновляется автоматически.</p>
 <div class="gd-panel" style="margin-top:12px" id="gdFeedPanel">
   <h3><i class="fas fa-tower-broadcast"></i> Последние инциденты</h3>
   <div class="gd-sub">Кого остановил Щит и что он с этим сделал — последние 30 срабатываний.</div>
   <div class="gd-feed" id="gdFeed"></div>
 </div>
-
-<div class="gd-actions">
-  <button type="button" class="btn btn-primary" id="gdSave2" aria-label="Сохранить настройки Щита">
-    <i class="fas fa-floppy-disk"></i> Сохранить настройки
-  </button>
-  <span class="gd-save-note">Бот подхватывает изменения мгновенно — перезапуск не нужен.</span>
-</div>
+</section>
 
 <style>
 .gd-lim{margin-top:18px}
@@ -281,6 +304,11 @@
 @media (max-width:980px){.gd-lim-grid{grid-template-columns:1fr}}
 </style>
 
+<!-- ── Вкладка: Лимиты команды ─────────────────────────────────────── -->
+<section class="gd-tab-pane" id="gdPaneLimits" data-gd-pane="limits" hidden>
+  <h2 class="gd-section-h"><i class="fas fa-hand"></i> Сколько действий разрешено модерации</h2>
+  <p class="gd-section-sub">Глобальные лимиты действуют на весь персонал; каждой роли можно задать свои. Пустые поля = без ограничения.
+     Владельца сервера лимиты не касаются. Ниже — журнал изменений с откатом.</p>
 <div class="gd-lim" id="limits">
   <div class="gd-lim-head">
     <div>
@@ -353,13 +381,14 @@
   </div>
 </div>
 
+</section>
+
 <div class="gd-info">
   <h3><i class="fas fa-circle-info"></i> Как всё связано</h3>
   <b>Куда летят тревоги:</b> настраивается в <a href="/channel-settings">Каналах и маршрутах</a>
   (маршрут «Канал оповещений Щита», по умолчанию — авто, лог-модерации).
   <b>Массовые заходы и рейды</b> — это <a href="/antiraid">Анти-рейд</a>;
   <b>спам, фейки и ссылки</b> — <a href="/security">Центр безопасности</a>;
-  <b>экстренно закрыть сервер</b> — <a href="/lockdown">Локдаун</a>;
   <b>здоровье самого бота</b> — <a href="/anticrash">Анти-краш</a>.
   Вместе они держат сервер в броне. Обзор состояния Щита виден всем модераторам в Центре безопасности.
 </div>
@@ -695,14 +724,19 @@ function renderAll() {
   document.getElementById('gdPun').disabled = !CAN_EDIT;
   document.getElementById('gdBotAct').disabled = !CAN_EDIT;
   document.getElementById('gdSave').disabled = !CAN_EDIT;
-  document.getElementById('gdSave2').disabled = !CAN_EDIT;
+  var _sA = document.getElementById('gdSaveAnti');
+  if (_sA) _sA.disabled = !CAN_EDIT;
+  gdApplyTabs();   /* live-перерисовка не должна открывать чужие вкладки */
 }
 
 var _gdLastRaw = null;
 
 async function gdLoad(live) {
   try {
-    var r = await fetch('/api/guild/' + GUILD_ID + '/guardian', { credentials: 'same-origin' });
+    // Живой опрос — лёгкий (?light=1): только конфиг, без сбора до 1000
+    // участников/ролей на каждый тик (это грузило бота и тормозило страницу).
+    var url = '/api/guild/' + GUILD_ID + '/guardian' + (live ? '?light=1' : '');
+    var r = await fetch(url, { credentials: 'same-origin' });
     var raw = await r.text();
     if (live) {
       if (raw === _gdLastRaw) return;                 /* тишина — DOM не трогаем */
@@ -715,8 +749,10 @@ async function gdLoad(live) {
     _gdLastRaw = raw;
     var d = JSON.parse(raw);
     if (d.success && d.cfg) {
-      G_ROLES = d.roles || G_ROLES;
-      G_MEMBERS = d.members || G_MEMBERS;
+      // Списки для пикеров приходят только в НЕ-lite ответе (первый заход);
+      // на live-опросе их не трогаем.
+      if (d.roles) G_ROLES = d.roles;
+      if (d.members) G_MEMBERS = d.members;
       CFG = d.cfg;
       EVENTS = d.cfg.events || [];
       PUNISHMENTS = d.cfg.punishments || [];
@@ -735,9 +771,10 @@ async function gdLoad(live) {
   if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
 }
 
-/* live: состояние Щита синхронизируется само каждые 1.5 секунды —
-   но перерисовываем ТОЛЬКО когда данные реально изменились */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 1500);
+/* live: состояние Щита обновляется ПУШЕМ (SSE) — когда настройки реально
+   сохранили (панель) или бот записал инцидент. Тяжёлые роли/участники
+   приходят один раз в первом (не-live) ответе; таймер 30с — лишь подстраховка. */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 30000, ['g*:guardian', 'g*:security']);
 
 function collectPayload() {
   var events = {};
@@ -796,9 +833,33 @@ async function gdSave() {
 
 wlComboInit();
 document.getElementById('gdSave').addEventListener('click', gdSave);
-document.getElementById('gdSave2').addEventListener('click', gdSave);
+var _gdSaveAnti = document.getElementById('gdSaveAnti');
+if (_gdSaveAnti) _gdSaveAnti.addEventListener('click', gdSave);
 document.getElementById('gdEvAllOn').addEventListener('click', function () { gdEvAll(true); });
 document.getElementById('gdEvAllOff').addEventListener('click', function () { gdEvAll(false); });
+
+/* ── Вкладки Щита: показываем один раздел, остальные прячем ── */
+function gdApplyTabs() {
+  var active = document.querySelector('.gd-tab-btn.active');
+  var key = active ? active.getAttribute('data-gd-tab') : 'events';
+  document.querySelectorAll('.gd-tab-pane').forEach(function (p) {
+    p.hidden = (p.getAttribute('data-gd-pane') !== key);
+  });
+  document.querySelectorAll('.gd-tab-btn').forEach(function (b) {
+    var on = b.getAttribute('data-gd-tab') === key;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+document.querySelectorAll('.gd-tab-btn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('.gd-tab-btn').forEach(function (x) { x.classList.remove('active'); });
+    b.classList.add('active');
+    gdApplyTabs();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+gdApplyTabs();
 /* Тумблер события = одно нажатие: сразу применяется и сохраняется.
    То же — мастер-выключатель Щита и «кикать чужих ботов». */
 document.addEventListener('change', function (e) {
@@ -1015,7 +1076,7 @@ gdLoad();
       return '<div class="gd-lim-role' + (L.sel === r.id ? ' sel' : '') + '" data-id="' + esc(r.id) + '">' +
         '<span style="display:flex;align-items:center;gap:8px;min-width:0">' +
         '<span style="width:12px;height:12px;border-radius:50%;flex-shrink:0;background:' + (r.color && r.color !== '#000000' ? r.color : '#95a5a6') + '"></span>' +
-        '<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.name) + '</b></span>' + chip + '</div>';
+        '<b style="display:block;overflow-wrap:anywhere;line-height:1.3" title="' + esc(r.name) + '">' + esc(r.name) + '</b></span>' + chip + '</div>';
     }).join('');
     list.innerHTML = html || '<div class="gd-empty"><i class="fas fa-users-slash"></i>Роли не найдены</div>';
     Array.prototype.forEach.call(list.querySelectorAll('.gd-lim-role'), function (el) {

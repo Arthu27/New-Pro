@@ -11,8 +11,17 @@
       html { background: #f5f6f8; color-scheme: light; }
       body { background: transparent; margin: 0; }
     </style>
+<!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
+         только разобрав fonts.css и all.subset.css, и они встают в конец
+         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
+         820 мс до последнего шрифта). crossorigin обязателен даже для своего
+         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
+<link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
-  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
 <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
   <style>
     /* ЭКРАН ДЕЖУРНОГО — стена штаба: ситуация, что делать, кто на смене.
@@ -87,7 +96,7 @@
     .kiosk-duty i { color: var(--ac); }
     .kiosk-duty b { color: var(--ac); }
     .kiosk-duty .wrap { min-width: 0; overflow: hidden; }
-    .kiosk-duty .l1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kiosk-duty .l1 { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
     .kiosk-duty .l2 { display: block; font-size: 11px; color: var(--text-3); font-weight: 700; font-variant-numeric: tabular-nums; }
 
     .kiosk-clock { margin-left: auto; text-align: right; }
@@ -193,7 +202,7 @@
     .k-feed-row[data-tone="ok"] .ico { background: rgba(22,163,74,.12); color: var(--ok); }
     .k-feed-row[data-tone="info"] .ico { background: rgba(14,165,233,.12); color: #0ea5e9; }
     .k-feed-row .copy { min-width: 0; flex: 1; }
-    .k-feed-row .copy b { display: block; font-size: 12.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .k-feed-row .copy b { display: block; font-size: 12.5px; font-weight: 700; color: var(--text); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
     .k-feed-row .copy small { display: block; font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .k-feed-row .tm { flex: 0 0 auto; font-size: 10.5px; color: var(--text-3); white-space: nowrap; padding-top: 2px; font-variant-numeric: tabular-nums; }
     .kiosk-empty { color: var(--text-3); font-size: 12.5px; padding: 14px 6px; }
@@ -206,21 +215,6 @@
       60% { box-shadow: 0 0 0 12px transparent; }
       100% { box-shadow: var(--shadow-1); border-color: var(--line); }
     }
-
-    /* ── смена: таймер + прогресс ── */
-    .kiosk-serenity { font-size: 12.5px; color: var(--text-2); line-height: 1.6; }
-    .kiosk-serenity b { color: var(--text); }
-    .k-shift-bar {
-      margin-top: 10px; height: 8px; border-radius: 6px;
-      background: color-mix(in srgb, var(--text) 8%, transparent); overflow: hidden; position: relative;
-    }
-    .k-shift-bar i {
-      position: absolute; inset: 0 auto 0 0; border-radius: 6px;
-      background: linear-gradient(90deg, var(--ac), color-mix(in srgb, var(--ac) 55%, #22d3ee));
-      width: 0%; transition: width 1s linear;
-    }
-    .k-shift-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--text-3); margin-top: 6px; font-variant-numeric: tabular-nums; }
-    .k-shift-meta b { color: var(--ac); font-family: var(--mono); }
 
     /* ── 24 часа активности: столбики по часам, цвет = строгость ── */
     .k-histo { display: flex; align-items: flex-end; gap: 3px; height: 118px; padding-top: 6px; }
@@ -259,7 +253,7 @@
       background: var(--ac-soft); border: 1px solid var(--ac-line);
     }
     .k-top-row .who { min-width: 0; flex: 1; }
-    .k-top-row .who b { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .k-top-row .who b { display: block; font-size: 12.5px; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
     .k-top-row .who small { display: block; font-size: 10.5px; color: var(--text-3); }
     .k-top-row .n {
       font-family: var(--mono); font-weight: 800; font-size: 15px;
@@ -333,7 +327,7 @@
 
   <div class="kiosk-top">
     <div class="kiosk-brand">
-      <img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo">
+      <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo">
       <div><b>HAKUMO</b><small>Экран дежурного</small></div>
     </div>
 
@@ -348,14 +342,6 @@
       <span class="k-chip" id="kpPing" data-tone="ok" title="Пинг бота до Discord"><i class="fas fa-signal"></i><b id="kpPingV">—</b></span>
     </div>
 
-    <div class="kiosk-duty" id="kioskDuty" title="Кто на смене и сколько осталось">
-      <i class="fas fa-user-shield"></i>
-      <span class="wrap">
-        <span class="l1">На смене: <b id="kioskDutyName">собираем…</b></span>
-        <span class="l2" id="kioskDutyCountdown"></span>
-      </span>
-    </div>
-
     <div class="kiosk-clock">
       <div class="t"><span id="kioskTime">--:--:--</span></div>
       <div class="d" id="kioskDate">—</div>
@@ -367,7 +353,7 @@
     <a class="btn" href="/mod-center" title="Вернуться в центр модерации (Esc)"><i class="fas fa-arrow-left"></i> В штаб</a>
   </div>
 
-  <div class="kiosk-main" id="kioskMain">
+  <main class="kiosk-main" id="kioskMain">
 
     <div class="kiosk-kpis">
       <div class="kiosk-kpi" data-tone="info">
@@ -414,9 +400,9 @@
             <span class="copy"><b>Апелляции в очереди</b><small>Разбери заявки участников на пересмотр</small></span>
             <span class="c" id="ktAppeals">—</span><i class="fas fa-chevron-right go"></i>
           </a>
-          <a class="k-task" data-tone="info" href="/ticket-search">
-            <span class="ico"><i class="fas fa-ticket"></i></span>
-            <span class="copy"><b>Тикеты в работе</b><small>Ответь на обращения или передай коллеге</small></span>
+          <a class="k-task" data-tone="info" href="/reports-queue">
+            <span class="ico"><i class="fas fa-flag"></i></span>
+            <span class="copy"><b>Репорты в очереди</b><small>Разбери жалобы участников или передай коллеге</small></span>
             <span class="c" id="ktTickets">—</span><i class="fas fa-chevron-right go"></i>
           </a>
           <a class="k-task" data-tone="ok" href="/proofs">
@@ -439,13 +425,6 @@
             <span class="copy"><b>Уровень угрозы</b><small>Общий контур безопасности сервера</small></span>
             <span class="c" id="ktThreat">—</span><i class="fas fa-chevron-right go"></i>
           </a>
-        </div>
-
-        <div class="kiosk-panel">
-          <h3><i class="fas fa-user-clock"></i> Смена</h3>
-          <div class="kiosk-serenity" id="kioskShiftInfo"><i class="fas fa-circle-notch fa-spin"></i> Загружаем расписание…</div>
-          <div class="k-shift-bar" id="kShiftBar" hidden><i id="kShiftFill"></i></div>
-          <div class="k-shift-meta" id="kShiftMeta" hidden><span id="kShiftFrom"></span><b id="kShiftTimer"></b></div>
         </div>
 
         <div class="kiosk-panel">
@@ -482,7 +461,7 @@
       <span class="kiosk-ticker-label"><i class="fas fa-bolt"></i> События</span>
       <div class="kiosk-ticker-track"><div class="kiosk-ticker-inner" id="kioskTicker"><span class="chip">Собираем события…</span></div></div>
     </div>
-  </div>
+  </main>
 
   <div class="kiosk-hint">
     <span><kbd>F</kbd> во весь экран</span>
@@ -572,7 +551,6 @@
       $('kioskDate').textContent = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
       var f = $('kioskFresh');
       if (f) f.textContent = STATE.lastRefresh ? Math.max(0, Math.round((Date.now() - STATE.lastRefresh) / 1000)) + ' с назад' : '—';
-      tickShiftTimer();
     }
 
     async function activeGid() {
@@ -692,69 +670,6 @@
     }
 
     /* ── смена: кто на смене + живой таймер до её конца ── */
-    var _shift = null;   /* {mode: 'current'|'next', start: ms, end: ms} */
-    var _shiftFp = '';
-    async function loadShifts() {
-      var gid = await activeGid();
-      if (!gid) return;
-      try {
-        var d = await fetch('/api/guild/' + gid + '/staff-shifts').then(function (r) { return r.json(); });
-        var fp = JSON.stringify(d || {}).slice(0, 300);
-        if (fp === _shiftFp) return;
-        _shiftFp = fp;
-        var cur = d && d.current;
-        var nameEl = $('kioskDutyName'), info = $('kioskShiftInfo');
-        var bar = $('kShiftBar'), fill = $('kShiftFill'), meta = $('kShiftMeta');
-        if (cur) {
-          var name = cur.name || cur.mod_name || cur.moderator || '—';
-          _shift = { mode: 'current', start: cur.start ? new Date(cur.start).getTime() : null, end: cur.end ? new Date(cur.end).getTime() : null };
-          if (nameEl) nameEl.textContent = name;
-          if (info) info.innerHTML = '<i class="fas fa-user-check" style="color:var(--ok)"></i> Сейчас на смене: <b>' + esc(name) + '</b>' +
-            (cur.start ? ' с ' + fmtTime(cur.start) + ' до ' + fmtTime(cur.end) : '') + '.';
-          if (bar && fill && meta && _shift.start && _shift.end) { bar.hidden = false; meta.hidden = false; $('kShiftFrom').textContent = 'смена идёт'; }
-          tickShiftTimer();
-          return;
-        }
-        if (d && d.next) {
-          var nx = d.next;
-          var nxName = nx.name || nx.mod_name || nx.moderator || '—';
-          _shift = { mode: 'next', start: nx.start ? new Date(nx.start).getTime() : null, end: nx.end ? new Date(nx.end).getTime() : null };
-          if (nameEl) nameEl.textContent = 'скоро ' + nxName;
-          if (info) info.innerHTML = '<i class="fas fa-user-clock"></i> Сейчас смен нет. Следующая: <b>' + esc(nxName) + '</b>' +
-            (nx.start ? ' в ' + fmtTime(nx.start) : '') + '.';
-          if (bar && meta) { bar.hidden = true; meta.hidden = false; $('kShiftFrom').textContent = 'до начала смены'; }
-          tickShiftTimer();
-          return;
-        }
-        _shift = null;
-        if (nameEl) nameEl.textContent = 'не задана';
-        if (info) info.innerHTML = '<i class="fas fa-calendar-xmark"></i> Смены не настроены — <a href="/staff-shifts" style="color:var(--ac)">задай расписание в штабе</a>.';
-        if (bar) bar.hidden = true;
-        if (meta) meta.hidden = true;
-        var cd = $('kioskDutyCountdown'); if (cd) cd.textContent = '';
-      } catch (e) {}
-    }
-    function tickShiftTimer() {
-      if (!_shift) return;
-      var cd = $('kioskDutyCountdown'), timer = $('kShiftTimer'), fill = $('kShiftFill');
-      var now = Date.now();
-      if (_shift.mode === 'current') {
-        if (_shift.end) {
-          var left = _shift.end - now;
-          if (cd) cd.textContent = left > 0 ? 'до конца смены ' + fmtDur(left) : 'смена вот-вот закончится';
-          if (timer) timer.textContent = left > 0 ? fmtDur(left) : '00:00:00';
-          if (fill && _shift.start && _shift.end && _shift.end > _shift.start) {
-            var p = Math.min(100, Math.max(0, (now - _shift.start) / (_shift.end - _shift.start) * 100));
-            fill.style.width = p.toFixed(1) + '%';
-          }
-        }
-      } else if (_shift.start) {
-        var until = _shift.start - now;
-        if (cd) cd.textContent = until > 0 ? 'смена через ' + fmtDur(until) : 'смена начинается';
-        if (timer) timer.textContent = until > 0 ? fmtDur(until) : '—';
-      }
-    }
-
     /* ── журнал: лента действий + 24-часовая активность + топ дежурных + тикер ── */
     var _actsFp = '';
     var _actsCount = -1;
@@ -924,7 +839,7 @@
     /* ── обновление данных ── */
     function refresh() {
       STATE.lastRefresh = Date.now();
-      loadPulse(); loadMetrics(); loadShifts(); loadLogs(); loadActivity();
+      loadPulse(); loadMetrics(); loadLogs(); loadActivity();
     }
     refresh();
     tickClock();
@@ -932,7 +847,6 @@
     if (window.setLiveRefresh) {
       window.setLiveRefresh(loadPulse, 1500);
       window.setLiveRefresh(loadMetrics, 1500);
-      window.setLiveRefresh(loadShifts, 1500);
       window.setLiveRefresh(loadLogs, 1500);
       window.setLiveRefresh(loadActivity, 1500);
     }

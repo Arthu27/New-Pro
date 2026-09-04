@@ -59,6 +59,50 @@ def _utcnow_iso():
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
 
+def running_branch(bot_dir):
+    """Ветка, на которой бот реально запущен (для самообновления).
+
+    Раньше /update всегда тянул захардкоженный `main`, даже когда бот
+    запущен с ветки-сессии (распакованный zip вида
+    «New-Pro-arena-01a05336-new-pro») — и обновление ОТКАТЫВАЛО бота на
+    старый main без фиксов. Теперь определяем ветку:
+      1) git-репозиторий → текущая ветка (git rev-parse);
+      2) не-репозиторий (распакованный zip) → маркер data/.update_branch,
+         записанный при прошлой раскатке, или имя папки дистрибутива;
+      3) неизвестно → None (вызывающий берёт main).
+    """
+    # 1) git
+    if is_git_repo(bot_dir):
+        r = _run_git(bot_dir, ['rev-parse', '--abbrev-ref', 'HEAD'], timeout=15)
+        if r is not None and r.returncode == 0:
+            name = (r.stdout or '').strip()
+            if name and name != 'HEAD':
+                return name
+    # 2) маркер после раскатки zip
+    try:
+        with open(os.path.join(bot_dir, 'data', '.update_branch'),
+                  encoding='utf-8') as f:
+            name = f.read().strip()
+            if name:
+                return name
+    except OSError as _ex:
+        log.debug('self_update: маркер ветки не прочитан: %s', _ex)
+    # 3) имя папки дистрибутива: «New-Pro-arena-01a05336-new-pro» → ветка
+    try:
+        base = os.path.basename(os.path.abspath(bot_dir))
+        low = base.lower()
+        if low.startswith('new-pro-') and len(low) > len('new-pro-'):
+            cand = base[len('New-Pro-'):]
+            # в zip-имени ветки слэши заменены дефисами у префикса arena/
+            if cand.lower().startswith('arena-'):
+                cand = 'arena/' + cand[len('arena-'):]
+            if cand and cand != 'main':
+                return cand
+    except Exception as _ex:
+        log.debug('self_update: определение ветки по папке: %s', _ex)
+    return None
+
+
 def marker_path(bot_dir):
     return os.path.join(bot_dir, 'data', 'update_pending.json')
 
@@ -115,6 +159,94 @@ def note_applied_sha(bot_dir, sha):
         log.debug('self_update: note_applied_sha: %s', _ex)
 
 
+# ── Отложенный архив ──────────────────────────────────────────────────────
+# Заказ владельца: «не выключайся, пока не скачается новая версия». Значит
+# бот обязан скачать и проверить архив САМ, оставаясь живым, и только потом
+# уходить на перезапуск. Скачанное кладём рядом с данными — обновлятор
+# применит готовое, а если скачивание не удалось, бот просто продолжит
+# работать на текущем коде.
+PENDING_ZIP = os.path.join('data', '.update_pending.zip')
+PENDING_META = os.path.join('data', '.update_pending.json')
+
+
+def pending_paths(bot_dir):
+    """Абсолютные пути отложенного архива и его описания."""
+    return (os.path.join(bot_dir, PENDING_ZIP),
+            os.path.join(bot_dir, PENDING_META))
+
+
+def save_pending(bot_dir, zip_path, root, rel, sha, branch):
+    """Отложить проверенный архив до перезапуска. Возвращает (ok, err).
+
+    rel приходит из verify_zip МНОЖЕСТВОМ относительных путей — в JSON его
+    писать нельзя («Object of type set is not JSON serializable»), поэтому
+    кладём отсортированным списком и возвращаем обратно множеством.
+    """
+    dst, meta_path = pending_paths(bot_dir)
+    try:
+        rel_list = sorted(rel) if rel else []
+    except TypeError:
+        rel_list = []
+    try:
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(zip_path, dst)
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump({'root': root or '', 'rel': rel_list, 'sha': sha or '',
+                       'branch': branch or '', 'size': os.path.getsize(dst),
+                       'sha256': file_sha256(dst)}, f, ensure_ascii=False)
+        return True, None
+    except (OSError, TypeError, ValueError) as ex:
+        log.warning('self_update: save_pending: %s', ex)
+        return False, f'не удалось отложить архив: {ex}'
+
+
+def load_pending(bot_dir):
+    """Взять отложенный архив. Возвращает (zip_path, root, rel) или (None,)*3.
+
+    Архив принимается только если совпала контрольная сумма из описания —
+    иначе обновлятор раскатал бы недокачанный или подменённый файл.
+    """
+    src, meta_path = pending_paths(bot_dir)
+    if not os.path.isfile(src) or not os.path.isfile(meta_path):
+        return None, None, None
+    try:
+        with open(meta_path, encoding='utf-8') as f:
+            meta = json.load(f)
+    except (OSError, json.JSONDecodeError, ValueError) as ex:
+        log.warning('self_update: load_pending: описание не читается: %s', ex)
+        return None, None, None
+    want = str(meta.get('sha256') or '')
+    if not want or file_sha256(src) != want:
+        log.warning('self_update: load_pending: контрольная сумма не сошлась')
+        return None, None, None
+    rel = meta.get('rel')
+    # обратно — множеством: именно так его отдаёт verify_zip
+    rel_set = set(rel) if isinstance(rel, (list, tuple, set)) else set()
+    return src, meta.get('root'), rel_set
+
+
+def clear_pending(bot_dir):
+    """Убрать отложенный архив после применения (или после отказа)."""
+    for p in pending_paths(bot_dir):
+        try:
+            if os.path.exists(p):
+                os.remove(p)
+        except OSError as ex:
+            log.debug('self_update: clear_pending %s: %s', p, ex)
+
+
+def file_sha256(path):
+    """Контрольная сумма файла (для проверки отложенного архива)."""
+    h = hashlib.sha256()
+    try:
+        with open(path, 'rb') as f:
+            for chunk in iter(lambda: f.read(1024 * 256), b''):
+                h.update(chunk)
+    except OSError:
+        return ''
+    return h.hexdigest()
+
+
 def git_update(bot_dir, branch):
     """Обновить через git: по сети идут только дельты объектов, а не весь бот.
 
@@ -161,16 +293,144 @@ def git_update(bot_dir, branch):
                         'files': files[:50]}
 
 
+def _bot_dir():
+    """Каталог бота: корень репозитория (на уровень выше services/)."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def _source():
-    """Источник обновлений: панель (data/update_source.json) → .env.
-    Заказ 30.08: владелец сам ставит, откуда качать — без правки .env."""
+    """Источник обновлений (repo, branch).
+
+    Приоритет ветки: панель (data/update_source.json) → .env
+    (UPDATE_BRANCH) → АВТО ветка, на которой бот реально запущен
+    (running_branch) → main. Авто-определение чинит баг, когда /update
+    тянул захардкоженный main и откатывал фиксы с ветки-сессии.
+    Репозиторий всегда из панели/.env (дефолт Arthu27/New-Pro).
+    """
+    repo = None
+    branch = None
     try:
         from services import update_source
-        return update_source.get_repo(), update_source.get_branch()
+        repo = update_source.get_repo()
+        branch = update_source.get_branch()
     except Exception as _ex:
-        log.debug('self_update: update_source недоступен (%s) — .env', _ex)
-        from config import Config
-        return Config.UPDATE_REPO, Config.UPDATE_BRANCH
+        log.debug('self_update: update_source недоступен (%s)', _ex)
+
+    # .env, если панель ничего не задала
+    if not repo:
+        repo = (os.environ.get('UPDATE_REPO') or '').strip() or 'Arthu27/New-Pro'
+    env_branch = (os.environ.get('UPDATE_BRANCH') or '').strip()
+    if not branch:
+        branch = env_branch
+
+    # авто: ветка запущенного кода (git или маркер/имя папки)
+    if not branch or branch == 'main':
+        auto = None
+        try:
+            auto = running_branch(_bot_dir())
+        except Exception as _ex:
+            log.debug('self_update: running_branch: %s', _ex)
+        if auto and auto != 'main':
+            # .env явно НЕ просил main — тогда уважаем авто; если в .env
+            # жёстко вписан main, оставляем его (это сознательный выбор).
+            if branch != 'main' or not env_branch:
+                branch = auto
+
+    if not branch:
+        branch = 'main'
+    return repo, branch
+
+
+# Имена переменных, в которых может лежать токен GitHub для обновлений.
+# GITHUB_TOKEN — историческое имя (общее с AI через GitHub Models);
+# UPDATE_TOKEN — отдельный, только для обновлений; GH_TOKEN/GH_PAT —
+# имена из CLI-экосистемы GitHub; GITHUB_PAT — распространённая замена.
+TOKEN_ENV_KEYS = ('GITHUB_TOKEN', 'UPDATE_TOKEN', 'GH_TOKEN',
+                  'GITHUB_PAT', 'GH_PAT')
+
+
+def _dotenv_files(bot_dir=None):
+    """Где искать .env: DOTENV_PATH → каталог бота → текущий каталог.
+
+    Возвращает список путей без дублей; файла может не существовать.
+    """
+    root = bot_dir or _bot_dir()
+    paths = []
+    dp = (os.environ.get('DOTENV_PATH') or '').strip()
+    if dp:
+        paths.append(dp if os.path.isabs(dp) else os.path.join(root, dp))
+    paths.append(os.path.join(root, '.env'))
+    paths.append(os.path.join(os.getcwd(), '.env'))
+    out = []
+    for p in paths:
+        if p not in out:
+            out.append(p)
+    return out
+
+
+def dotenv_file_path():
+    """Первый СУЩЕСТВУЮЩИЙ .env из списка (для подсказок в ошибках)."""
+    for p in _dotenv_files():
+        if os.path.isfile(p):
+            return p
+    return ''
+
+
+def _dotenv_token(bot_dir=None):
+    """Токен обновлений прямо из ФАЙЛА .env (мимо os.environ).
+
+    Процесс грузит .env в os.environ ОДИН раз при старте (config.py) —
+    если владелец добавил токен в .env уже после запуска бота, окружение
+    его не видит, и /update ошибочно отвечал «токен НЕ задан». Каждый
+    вызов перечитывает файл с диска, поэтому «добавил в .env и повторил
+    /update без перезапуска» работает.
+    """
+    try:
+        from dotenv import dotenv_values
+        for p in _dotenv_files(bot_dir):
+            vals = {}
+            try:
+                vals = dotenv_values(p)
+            except OSError as _ex:
+                log.debug('self_update: .env %s не прочитан: %s', p, _ex)
+            for _k in TOKEN_ENV_KEYS:
+                _v = str(vals.get(_k) or '').strip()
+                if _v:
+                    return _v
+    except Exception as _ex:
+        log.debug('self_update: _dotenv_token: %s', _ex)
+    return ''
+
+
+def _update_token(bot_dir=None):
+    """Токен GitHub для обновлений ИЗ ПРИВАТНОГО репозитория.
+
+    Приватный репозиторий анонимно отдаёт 404 (и на codeload, и на API) —
+    чтобы качать обновления, нужен токен с доступом на чтение содержимого.
+    Приоритет: СВЕЖЕЕ значение из файла .env на диске (файл могли
+    отредактировать после запуска процесса), затем окружение процесса.
+    Публичному репозиторию токен не нужен — запросы идут анонимно.
+    """
+    # Сначала файл: он — источник правды владельца и мог измениться
+    # уже после старта бота (см. _dotenv_token).
+    v = _dotenv_token(bot_dir)
+    if v:
+        return v
+    # Затем окружение (токен, выданный лаунчером/системой, без .env).
+    for _k in TOKEN_ENV_KEYS:
+        _v = (os.environ.get(_k) or '').strip()
+        if _v:
+            return _v
+    return ''
+
+
+def _api_headers(token=None):
+    """Заголовки для запросов к api.github.com (Accept + токен, если есть)."""
+    h = {'Accept': 'application/vnd.github+json'}
+    token = _update_token() if token is None else (token or '')
+    if token:
+        h['Authorization'] = 'token ' + token
+    return h
 
 
 def remote_sha():
@@ -180,7 +440,7 @@ def remote_sha():
         _repo, _branch = _source()
         url = 'https://api.github.com/repos/{}/commits/{}'.format(
             _repo, _branch)
-        r = requests.get(url, timeout=10, headers={'Accept': 'application/vnd.github+json'})
+        r = requests.get(url, timeout=10, headers=_api_headers())
         if r.status_code == 200:
             return str(r.json().get('sha') or '') or None
         log.debug('self_update: remote_sha http %s', r.status_code)
@@ -190,24 +450,82 @@ def remote_sha():
 
 
 def zip_url():
+    """Публичная ссылка codeload на zip ветки (только для public-репозитория).
+
+    У приватного репозитория эта ссылка без токена отдаёт 404 — качайте
+    через download_zip(), он сам выберет авторизованный api.zipball.
+    """
     _repo, _branch = _source()
     return 'https://codeload.github.com/{}/zip/refs/heads/{}'.format(
         _repo, _branch)
 
 
+def zipball_url():
+    """Авторизованная ссылка api.github.com на zip ветки (приватный репозиторий).
+
+    GitHub отвечает 302 на подписанную codeload-ссылку; requests идёт за
+    редиректом сам. Без токена у приватного репозитория — 404.
+    """
+    _repo, _branch = _source()
+    return 'https://api.github.com/repos/{}/zipball/{}'.format(
+        _repo, _branch)
+
+
 def download_zip(dest_dir):
-    """Скачать zip ветки в dest_dir/update.zip. Возвращает (ok, err, path)."""
+    """Скачать zip ветки в dest_dir/update.zip. Возвращает (ok, err, path).
+
+    Публичный репозиторий — codeload анонимно. Приватный — api.zipball с
+    токеном из .env (GITHUB_TOKEN / UPDATE_TOKEN / GH_TOKEN): без токена
+    GitHub отвечает 404, и мы честно подсказываем, что нужно добавить.
+    """
     try:
         import requests
     except ImportError:
         return False, 'нет библиотеки requests — обновление недоступно', None
-    url = zip_url()
+    token = _update_token()
+    if token:
+        url = zipball_url()
+        headers = _api_headers(token)
+    else:
+        url = zip_url()
+        headers = None
+    # источник и «есть ли токен» попадают в текст ошибки — сразу видно,
+    # откуда качали и почему GitHub ответил отказом
+    _repo, _branch = _source()
+    _token_note = 'токен задан' if token else 'токен НЕ задан'
+    _src_suffix = f' [источник: {_repo} @ {_branch}; {_token_note}]'
     path = os.path.join(dest_dir, 'update.zip')
     total = 0
     try:
-        with requests.get(url, stream=True, timeout=(10, 120)) as r:
+        with requests.get(url, stream=True, timeout=(10, 120),
+                          headers=headers) as r:
             if r.status_code != 200:
-                return False, f'GitHub ответил {r.status_code} — репозиторий или ветка недоступны', None
+                # 404 у приватного репозитория без токена GitHub отдаёт
+                # нарочно (чтобы не светить существование репозитория) —
+                # подсказываем владельцу, что делать.
+                if not token and r.status_code == 404:
+                    _loc = dotenv_file_path()
+                    if _loc:
+                        hint = (' Репозиторий приватный? Добавьте GITHUB_TOKEN '
+                                '(или UPDATE_TOKEN) с доступом на чтение кода '
+                                f'в файл {_loc} и повторите /update. Токен из .env '
+                                'подхватывается БЕЗ перезапуска бота.')
+                    else:
+                        hint = (' Репозиторий приватный? Добавьте GITHUB_TOKEN '
+                                '(или UPDATE_TOKEN) с доступом на чтение кода '
+                                'в .env рядом с main.py и повторите /update. '
+                                'Файл .env пока не найден — создайте его.')
+                elif token and r.status_code == 404:
+                    hint = (' Токен задан, но GitHub отвечает 404: проверьте, '
+                            'что у токена есть права Contents: Read-only именно '
+                            'на этот репозиторий, и что ветка существует.')
+                elif token and r.status_code in (401, 403):
+                    hint = (' GITHUB_TOKEN не подходит: нужен токен с '
+                            'доступом на чтение содержимого репозитория.')
+                else:
+                    hint = ''
+                return False, (f'GitHub ответил {r.status_code} — репозиторий '
+                               f'или ветка недоступны.{hint}{_src_suffix}'), None
             with open(path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=1024 * 256):
                     if not chunk:
@@ -414,6 +732,15 @@ def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branc
         }
         with open(marker_path(bot_dir), 'w', encoding='utf-8') as f:
             json.dump(marker, f, ensure_ascii=False)
+        # запомнить ветку для не-git копии: следующий /update возьмёт её
+        # же (а не захардкоженный main) — фикс «обновление откатывает фиксы».
+        if branch:
+            try:
+                with open(os.path.join(bot_dir, 'data', '.update_branch'),
+                          'w', encoding='utf-8') as f:
+                    f.write(str(branch).strip())
+            except OSError as _ex:
+                log.debug('self_update: .update_branch: %s', _ex)
         log.info('self_update: изменено %s файлов (без изменений %s), '
                  'устаревших убрано %s (пропущено служебных %s)',
                  copied, unchanged, removed, skipped)

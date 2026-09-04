@@ -463,9 +463,9 @@ gE._audit = [_aentry(9509, 7002)]
 run(cE.on_member_join(BotMember(7002, gE)))
 check(gE.kicked == [7002], 'а вот ЗАШЕДШИЙ чужой бот — кикнут (событие входа)')
 
-print('== хаб каналов: 17 маршрутов ==')
+print('== хаб каналов: живые маршруты ==')
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 20, f'маршрутов в спецификации (17 систем + 3 заявки): {len(keys)}')
+check(len(keys) == 13, f'маршрутов в спецификации (только живые системы): {len(keys)}')
 check('guardian_channel' in keys and 'antiraid_channel' in keys
       and 'security_channel' in keys and 'anticrash_channel' in keys,
       f'все маршруты защиты на хабе ({keys})')
@@ -541,6 +541,16 @@ check(d['cfg']['punishments'] and len(d['cfg']['punishments']) == 4,
       'API GET: 4 меры с русскими подписями')
 check('incidents' in d['cfg'] and 'resolved' in d['cfg'],
       'API GET: инциденты и резолвер имён на месте')
+check('roles' in d and 'members' in d,
+      'API GET (без light): роли и участники для пикеров в ответе')
+
+# Лёгкий live-опрос ?light=1 — только конфиг, без тяжёлых списков.
+rl = client.get(f'/api/guild/{GID}/guardian?light=1')
+dl = rl.get_json()
+check(rl.status_code == 200 and dl.get('success') is True,
+      'API GET ?light=1: живой опрос отвечает 200')
+check('roles' not in dl and 'members' not in dl and len(dl['cfg']['events']) == 11,
+      'API GET ?light=1: тяжёлые роли/участники не собираются (только конфиг)')
 
 bad = client.post(f'/api/guild/{GID}/guardian',
                   json={'punishment': 'yeet', 'events': {}})
@@ -601,10 +611,17 @@ check(r.status_code == 200 and ov.get('success') is True
 
 r = client.get('/api/channel-routes')
 routes = r.get_json().get('routes', [])
-check(len(routes) == 20, f'хаб Каналов отдаёт 20 маршрутов ({len(routes)})')
-hub_guard = [x for x in routes if x['key'] == 'guardian_channel']
-check(hub_guard and hub_guard[0]['label'] == 'Тревоги Щита сервера',
-      'маршрут Щита с русской подписью на хабе')
+# 4 лог-алерт маршрута (guardian/security/antiraid/anticrash) скрыты с хаба —
+# они дублируют категории «Логи сервера»; бот их по-прежнему читает.
+hub_keys = [x['key'] for x in routes]
+check(len(routes) == 9, f'хаб Каналов отдаёт 9 видимых маршрутов ({len(routes)})')
+check('guardian_channel' not in hub_keys and 'security_channel' not in hub_keys
+      and 'antiraid_channel' not in hub_keys and 'anticrash_channel' not in hub_keys,
+      'лог-алерты Щита/защиты/рейда/краша убраны с хаба (дублируют «Логи сервера»)')
+# но сам маршрут жив в ROUTE_SPECS и адаптере (бот читает канал по-прежнему)
+check('guardian_channel' in CHR.native_keys()
+      and ADAPTERS.get('guardian_channel') is not None,
+      'маршрут Щита остаётся рабочим (адаптер/бот), просто скрыт с хаба')
 
 # ═══ 6. Политика модулей и меню ══════════════════════════════════════════
 print('== политика и меню ==')
@@ -621,7 +638,7 @@ check(paths.count('/guardian') == 1, 'Щит сервера — один пун�
 gd = [p for p in pages if p['path'] == '/guardian'][0]
 check(gd.get('section') == 'protection' and gd.get('min_role') == 'admin',
       'пункт в разделе «Защита» модерации, доступ Админ')
-check(len(paths) == 125, f'в меню 125 страниц ({len(paths)})')
+check(len(paths) == 70, f'в меню 70 страниц ({len(paths)}); музыка и тикеты удалены, дубль бэкапов убран')
 
 from web import routes_extra as _re  # noqa: E402
 
@@ -650,8 +667,10 @@ check("{% extends \"base.html\" %}" in tpl and "{% block content %}" in tpl,
       'шаблон встроен в общий каркас')
 check('Кто может добавлять ботов' in tpl and 'gdWlBU' in tpl and 'gdWlBR' in tpl,
       'выделенный белый список ботоводов на странице')
-check('gdBotAct' in tpl and 'Мера для ботов-нарушителей' in tpl,
-      'селект меры для ботов-нарушителей на странице')
+check('gdBotAct' in tpl and 'Мера для бота-нарушителя' in tpl,
+      'селект меры для бота-нарушителя на странице')
+check(tpl.count('data-gd-pane=') == 4 and tpl.count('gd-tab-btn') >= 4,
+      'страница разбита на 4 понятные вкладки (анти-нюк/лимиты/белые списки/инциденты)')
 check('bot_whitelist_users' in tpl and 'bot_action' in tpl,
       'JS собирает и отдаёт бот-поля в API')
 

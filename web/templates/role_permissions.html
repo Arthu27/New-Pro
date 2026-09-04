@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Права команд - Hakumo{% endblock %}
+{% block title %}Права команд — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-user-lock"></i> Права команд{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Доступ <span class="sep">·</span> Права команд</div>
+    <div class="eyebrow"> Доступ </div>
     <h1>Права команд</h1>
     <p class="lead">Выберите роли слева и решите, какие команды им открыть, а какие закрыть. Изменения сохраняются сразу.</p>
   </div>
@@ -35,6 +35,29 @@
     margin-bottom: 16px;
   }
   .acc-info i { color: var(--ac); margin-top: 2px; }
+
+  /* Раскрывающаяся инструкция по доступу к командам (Интеграции Discord) */
+  .acc-guide summary {
+    list-style: none; cursor: pointer; display: flex; gap: 10px; align-items: flex-start;
+    font-size: var(--fs-md); color: var(--text);
+  }
+  .acc-guide summary::-webkit-details-marker { display: none; }
+  .acc-guide summary i { color: var(--ac); margin-top: 2px; }
+  .acc-guide[open] summary { margin-bottom: 4px; }
+  .acc-guide-body { margin-left: 26px; margin-top: 4px; }
+  .acc-guide-body p { margin: 7px 0; }
+  .acc-guide-body ol { margin: 7px 0; padding-left: 20px; }
+  .acc-guide-body ol li { margin: 4px 0; }
+  .acc-guide-body code {
+    background: var(--surface-3); padding: 1px 6px; border-radius: 6px;
+    font-size: .92em;
+  }
+  .acc-guide-note {
+    background: color-mix(in srgb, var(--ok, #16a34a) 9%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ok, #16a34a) 25%, transparent);
+    border-radius: var(--r); padding: 8px 12px; margin-top: 10px;
+  }
+  .acc-guide-note i { color: var(--ok, #16a34a); }
 
   .acc-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
   @media (max-width: 960px) { .acc-layout { grid-template-columns: 1fr; } }
@@ -110,7 +133,7 @@
     border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
     box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text) 5%, transparent);
   }
-  .role-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .role-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 600; color: var(--text); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
   .role-members { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--text-3); }
   .role-empty { padding: 22px 8px; text-align: center; font-size: var(--fs-sm); color: var(--text-3); }
   .role-empty i { display: block; font-size: 20px; margin-bottom: 8px; color: var(--line-3); }
@@ -197,7 +220,7 @@
   }
   .cmd-card.on { border-color: color-mix(in srgb, var(--ac) 45%, transparent); background: color-mix(in srgb, var(--ac) 5%, transparent); }
   .cmd-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .cmd-name { flex: 1; min-width: 0; font-family: var(--mono); font-size: var(--fs-sm); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cmd-name { flex: 1; min-width: 0; font-family: var(--mono); font-size: var(--fs-sm); color: var(--text-2); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
   .cmd-card.on .cmd-name { color: var(--ac); font-weight: 600; }
   .cmd-pill {
     display: inline-flex; align-items: center; gap: 5px;
@@ -206,6 +229,7 @@
   }
   .cmd-pill i { font-size: 9px; }
   .cmd-pill-all { background: var(--surface-3); color: var(--text-2); border: 1px solid var(--line-2); }
+  .cmd-pill-none { background: var(--err-soft, rgba(239,68,68,.1)); color: var(--err, #e5484d); border: 1px dashed color-mix(in srgb, var(--err, #e5484d) 40%, transparent); }
   .cmd-pill-sel { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); }
   .cmd-pill-mix { background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
   .cmd-pill-other { background: var(--err-soft); color: var(--err); border: 1px solid color-mix(in srgb, var(--err) 30%, transparent); }
@@ -242,7 +266,7 @@
     display: grid; place-items: center; font-size: 13px;
     color: var(--tone); background: color-mix(in srgb, var(--tone) 13%, transparent);
   }
-  .act-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .act-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 700; color: var(--text); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 
   .acc-empty { text-align: center; padding: 46px 20px; color: var(--text-3); }
   .acc-empty-ico {
@@ -284,6 +308,23 @@
     <i class="fas fa-circle-info"></i>
     <span><b>Как это работает.</b> Выберите роли слева. У каждой команды есть кнопка: <b>«Дать доступ»</b> — команда откроется выбранным ролям (остальные её потеряют), <b>«Снять доступ»</b> — вернёт команду всем. Статус-пилюля рядом показывает текущее состояние. Изменения применяются сразу.</span>
   </div>
+
+  <details class="acc-info acc-guide">
+    <summary><i class="fas fa-key"></i> <b>Выдали роль доступ, а команда не видна в «/»? Откройте её в Discord (2 минуты).</b></summary>
+    <div class="acc-guide-body">
+      <p>У модерационных команд <b>два уровня доступа</b>:</p>
+      <p>① <b>Видит ли команду</b> — решает Discord. По умолчанию <code>/modpanel</code> показывается только ролям с правом «Модерация участников», чтобы обычные участники её не видели. Это переключается в самом Discord.</p>
+      <p>② <b>Что можно вызвавшему</b> — решает эта страница (роли, действия бан/мут/варн).</p>
+      <p><b>Как открыть команду роли, у которой нет права «Модерация участников»</b> (без выдачи лишних прав):</p>
+      <ol>
+        <li>В Discord откройте <b>Настройки сервера</b> (шестерёнка рядом с именем сервера).</li>
+        <li>Раздел <b>Интеграции</b> → кликните на бота <b>Hakumo</b>.</li>
+        <li>Найдите команду <b>/modpanel</b> → <b>«Изменить»</b> (ограничения доступа).</li>
+        <li>Добавьте нужную роль в «Разрешить». Готово — команда появится у роли в «/», а что ей доступно внутри — рулится тут.</li>
+      </ol>
+      <p class="acc-guide-note"><i class="fas fa-bolt"></i> Быстрый путь: если роль и так должна модерировать — просто выдайте ей право «Модерация участников» (Настройки сервера → Роли), команда появится сама.</p>
+    </div>
+  </details>
 
   <div class="acc-layout">
     <aside class="acc-card acc-roles">
@@ -344,8 +385,9 @@ var openCats = {};
 var ACTION_META = {
   ban:      { icon: 'fa-ban',                tone: 0 },
   kick:     { icon: 'fa-user-slash',         tone: 1 },
-  mute:     { icon: 'fa-microphone-slash',   tone: 2 },
-  timeout:  { icon: 'fa-hourglass-half',     tone: 3 },
+  mute:     { icon: 'fa-comment-slash',       tone: 2 },
+  vmute:    { icon: 'fa-microphone-slash',   tone: 3 },
+  timeout:  { icon: 'fa-hourglass-half',     tone: 4 },
   warn:     { icon: 'fa-triangle-exclamation', tone: 4 },
   purge:    { icon: 'fa-broom',              tone: 5 },
   lockdown: { icon: 'fa-lock',               tone: 6 },
@@ -355,14 +397,23 @@ var ACTION_META = {
 };
 
 var CAT_META = {
-  'Модерация':             { icon: 'fa-shield-halved',      tone: 0 },
-  'Экономика':             { icon: 'fa-coins',              tone: 1 },
-  'Уровни':                { icon: 'fa-ranking-star',       tone: 2 },
-  'Тикеты':                { icon: 'fa-ticket',             tone: 3 },
-  'Развлечения':           { icon: 'fa-gamepad',            tone: 4 },
-  'Сервер':                { icon: 'fa-server',             tone: 5 },
-  'Приглашения/Участники': { icon: 'fa-user-plus',          tone: 6 },
-  'Служебные':             { icon: 'fa-screwdriver-wrench', tone: 7 }
+  /* Подписи разделов — ровно как в services/command_registry.CATEGORIES.
+     Иконки проверены по подмножеству FontAwesome (all.subset.css). */
+  'Модерация':           { icon: 'fa-shield-halved',      tone: 0 },
+  'Тикеты':              { icon: 'fa-ticket',             tone: 1 },
+  'Логи и аудит':        { icon: 'fa-scroll',             tone: 2 },
+  'Голосовые':           { icon: 'fa-microphone',         tone: 3 },
+  'Экономика':           { icon: 'fa-coins',              tone: 4 },
+  'Уровни и карма':     { icon: 'fa-ranking-star',       tone: 5 },
+  'Игры и развлечения':  { icon: 'fa-gamepad',            tone: 6 },
+  'Профили и соц.':      { icon: 'fa-id-card',            tone: 7 },
+  'Инфо и поиск':        { icon: 'fa-magnifying-glass',   tone: 0 },
+  'Автоматизация':       { icon: 'fa-robot',              tone: 1 },
+  'AI':                  { icon: 'fa-brain',              tone: 2 },
+  'События и команда':   { icon: 'fa-calendar-days',      tone: 3 },
+  'Приветствие и вход':  { icon: 'fa-door-open',          tone: 4 },
+  'Система':             { icon: 'fa-cog',                tone: 5 },
+  'Прочее':              { icon: 'fa-ellipsis',           tone: 6 }
 };
 
 function esc(s) {
@@ -588,7 +639,9 @@ function renderCommands() {
 /* ── Классические разрешения (действия) ───────────────────── */
 function actionInfo(key) {
   var allowed = ACTION_ACL[key] || [];
-  var info = { allowed: allowed, label: 'Все роли', cls: 'all', allGranted: false, title: '' };
+  // Строгая модель: пустой список ролей = действие НЕ выдано никому (кнопка
+  // в /modpanel скрыта у всех, кроме владельца бота). Подсвечиваем это.
+  var info = { allowed: allowed, label: 'Никому не выдано', cls: 'none', allGranted: false, title: '' };
   if (!allowed.length) return info;
   var names = allowed.map(roleName);
   info.title = names.join(', ');
@@ -612,8 +665,9 @@ function renderActions() {
   var cards = keys.map(function (key) {
     var meta = ACTION_META[key] || { icon: 'fa-shield', tone: 7 };
     var info = actionInfo(key);
+    var _pillIcon = info.cls === 'none' ? 'fa-ban' : (info.cls === 'all' ? 'fa-globe' : 'fa-lock');
     var pill = '<span class="cmd-pill cmd-pill-' + info.cls + '"' + (info.title ? ' title="' + esc(info.title) + '"' : '') + '>'
-      + '<i class="fas ' + (info.cls === 'all' ? 'fa-globe' : 'fa-lock') + '"></i>' + esc(info.label) + '</span>';
+      + '<i class="fas ' + _pillIcon + '"></i>' + esc(info.label) + '</span>';
     var btn;
     if (!selectedRoleIds.length) {
       btn = '<button type="button" class="cmd-grant give" disabled><i class="fas fa-key"></i> Выберите роли</button>';
@@ -628,10 +682,10 @@ function renderActions() {
       + btn
       + '</div>';
   }).join('');
-  host.innerHTML = '<div class="acc-actions-head"><span class="t"><i class="fas fa-shield-halved"></i> Классические разрешения</span>'
-    + '<span class="hint">Только для команд бота — не меняет роли и права на сервере Discord</span></div>'
+  host.innerHTML = '<div class="acc-actions-head"><span class="t"><i class="fas fa-shield-halved"></i> Действия модерации (что разрешено роли)</span>'
+    + '<span class="hint">Только для бота — НЕ зависит от ролей и прав админа в Discord</span></div>'
     + '<div class="acc-info" style="margin-bottom:10px"><i class="fas fa-circle-info"></i>'
-    + '<span>Без «Бан» модератор не забанит ни одной командой (ban, tempban, /moderate…). Настройка касается только бота и не трогает разрешения ролей в Discord.</span></div>'
+    + '<span><b>По умолчанию действие не выдано никому</b> — отметьте роли слева и нажмите «Дать доступ». Тогда в карточке /modpanel у этих ролей появится соответствующая кнопка; кому не выдали — у той кнопки нет вовсе. «Мут чата» и «Войс-мут» — отдельные разрешения. Права администратора в Discord тут роли не играют: система своя.</span></div>'
     + '<div class="act-grid">' + cards + '</div>';
 }
 
@@ -806,7 +860,9 @@ document.getElementById('acc-body').addEventListener('keydown', function (e) {
 
 loadData();
 
-/* live: доступ/права обновляются сами каждые 1.5 секунды (совпадение везде) */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadData(true); } catch (e) {} }, 1500);
+/* live: обновляемся ПУШЕМ только когда права реально изменились (сохранение
+   на этой/другой вкладке шлёт топик permissions), а не на любое событие
+   сервера. Таймер — лишь редкая страховка (SSE не поднялся). */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadData(true); } catch (e) {} }, 30000, ['g*:permissions', 'role_map']);
 </script>
 {% endblock %}

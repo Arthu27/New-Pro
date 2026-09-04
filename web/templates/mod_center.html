@@ -5,9 +5,9 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Центр модерации</div>
+    <div class="eyebrow"> Модерация </div>
     <h1>Центр модерации</h1>
-    <p class="lead">Вся модерация с одного экрана: живые метрики, тренды нарушений и быстрый вход в любой из инструментов.</p>
+    <p class="lead">Сводка модерации: метрики, тренды нарушений и переходы к инструментам.</p>
   </div>
   <div class="page-head-actions">
     <a class="btn" href="/mod-kiosk" title="Полноэкранная живая стена для штаба (Esc — назад)"><i class="fas fa-tv"></i> Экран дежурного</a>
@@ -74,7 +74,7 @@
 .mod-bar-row:nth-child(1) .mod-bar-rank { background: linear-gradient(135deg, #fbbf24, #d97706); color: #fff; }
 .mod-bar-row:nth-child(2) .mod-bar-rank { background: linear-gradient(135deg, #94a3b8, #64748b); color: #fff; }
 .mod-bar-row:nth-child(3) .mod-bar-rank { background: linear-gradient(135deg, #d97706, #92400e); color: #fff; }
-.mod-bar-name { flex: 0 0 150px; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mod-bar-name { flex: 0 0 150px; min-width: 0; font-size: 12.5px; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .mod-bar-track { flex: 1; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
 .mod-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--ac), #7c3aed); transition: width .5s var(--ease-out); }
 .mod-bar-count { flex: 0 0 auto; font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--ac); min-width: 26px; text-align: right; }
@@ -143,11 +143,16 @@
 </div>
 <div class="quick-cmd-suggest" id="quickCmdSuggest" style="display:none;margin:-6px 0 14px"></div>
 
-<!-- Быстрые действия -->
+<!-- Быстрые действия: плитки фильтруются по тиру — закрытое ролью не показываем,
+     чтобы мод/куратор не видели админский Анти-рейд (его страница отдаёт 403). -->
+{% set _lvl = {'uye':0,'mod':1,'curator':2,'admin':3,'owner':4} %}
+{% set _role_lvl = _lvl.get(panel_role or role or 'uye', 0) %}
 <div class="cc-quick" style="margin-bottom:14px">
   <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Новая мера</b><small>Мьют или бан с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-warn" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Выдать варн</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-err" href="/lockdown"><span class="cc-ico"><i class="fas fa-house-lock"></i></span><span><b>Локдаун</b><small>Экстренное закрытие</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  {% if _role_lvl >= 3 %}
+  <a class="cc-tile tone-err" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Экстренная защита от волн</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  {% endif %}
   <a class="cc-tile" href="/antifake"><span class="cc-ico"><i class="fas fa-user-secret"></i></span><span><b>Скан профиля</b><small>Проверка на подделку</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-info" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Проверить текст</b><small>Тест автофильтра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-ok" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
@@ -158,7 +163,7 @@
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-chart-area"></i> Активность за 7 дней</h2>
       <div class="sub">Все мод-действия команды.</div></div>
-      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a></div>
+      <a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a></div>
     <div class="panel-body"><div class="chart-box" id="mcArea"></div></div>
   </div>
   <div class="panel">
@@ -188,7 +193,7 @@
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-people-group"></i> Нагрузка команды</h2>
       <div class="sub">Кто сколько мер вынес за 7 дней.</div></div>
-      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a></div>
+      <a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a></div>
     <div class="panel-body" id="mcTeamLoad"><div class="sk-line" style="height:12px"></div></div>
   </div>
 </div>

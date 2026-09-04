@@ -380,5 +380,54 @@ check('name ="update"' in diag_src or "name='update'" in diag_src
       '/update — слеш-команда диагностики')
 check('os .execv' in diag_src, 'перезапуск через os.execv (Windows-совместимый)')
 
+print('== 7. Авто-ветка обновления (не откатывать ветку-сессию на main) ==')
+
+
+def _mkdist(name):
+    base = tempfile.mkdtemp(prefix='hakumo_dists_')
+    p = os.path.join(base, name)
+    os.makedirs(os.path.join(p, 'data'), exist_ok=True)
+    return base, p
+
+
+_b, _p = _mkdist('New-Pro-arena-01a05336-new-pro')
+check(SU.running_branch(_p) == 'arena/01a05336-new-pro',
+      'zip-дистрибутив ветки-сессии: ветка по имени папки')
+with open(os.path.join(_p, 'data', '.update_branch'), 'w', encoding='utf-8') as _f:
+    _f.write('arena/from-marker')
+check(SU.running_branch(_p) == 'arena/from-marker',
+      'маркер data/.update_branch главнее имени папки')
+shutil.rmtree(_b, ignore_errors=True)
+
+_b, _p = _mkdist('New-Pro-main')
+check(SU.running_branch(_p) is None, 'дистрибутив main: авто-ветка не навязывается')
+shutil.rmtree(_b, ignore_errors=True)
+
+_b, _p = _mkdist('some-other-folder')
+check(SU.running_branch(_p) is None, 'посторонняя папка: ветка неизвестна (дефолт main)')
+shutil.rmtree(_b, ignore_errors=True)
+
+# _source подхватывает авто-ветку, когда .env/панель не форсят main
+for _k in ('UPDATE_BRANCH', 'UPDATE_REPO'):
+    os.environ.pop(_k, None)
+_b, _p = _mkdist('New-Pro-arena-autotest')
+_orig_botdir = SU._bot_dir
+SU._bot_dir = lambda: _p
+_repo, _br = SU._source()
+SU._bot_dir = _orig_botdir
+check(_br == 'arena/autotest' and _repo == 'Arthu27/New-Pro',
+      '_source тянет ветку запущенного кода, репозиторий по умолчанию')
+shutil.rmtree(_b, ignore_errors=True)
+
+# явный main в .env уважается (сознательный выбор не перетираем)
+os.environ['UPDATE_BRANCH'] = 'main'
+_b, _p = _mkdist('New-Pro-arena-autotest')
+SU._bot_dir = lambda: _p
+_r2, _br2 = SU._source()
+SU._bot_dir = _orig_botdir
+os.environ.pop('UPDATE_BRANCH', None)
+check(_br2 == 'main', 'явный UPDATE_BRANCH=main в .env не перетирается авто-веткой')
+shutil.rmtree(_b, ignore_errors=True)
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

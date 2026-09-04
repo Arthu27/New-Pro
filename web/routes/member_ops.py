@@ -3,13 +3,12 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -255,20 +254,18 @@ def register(ctx):
         # ── WARN CONFIG API ───────────────────────────────────────────────────────
 
     @app .route ('/api/guild/<guild_id>/warn-config',methods =['GET','POST'])
-    @login_required 
+    @login_required
     @role_required ('admin')
     def api_warn_config (guild_id ):
-        f =f'data/warn_config_{guild_id}.json'
+        # Канонический писатель ступеней — «Лестница наказаний» (ladder_panel,
+        # ключ 'steps'). Сырую запись в файл здесь больше не делаем, чтобы
+        # формат 'thresholds' не перетирал боевой 'steps'.
+        from web .routes import ladder_panel as LP
         if request .method =='GET':
-            if not os .path .exists (f ):
-                return jsonify ({'steps':[]})
-            with open (f ,'r',encoding ='utf-8')as fp :
-                return jsonify (json .load (fp ))
-        data =request .get_json (silent =True )or {}
-        os .makedirs ('data',exist_ok =True )
-        with open (f ,'w',encoding ='utf-8')as fp :
-            json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
-        return jsonify ({'success':True })
+            cfg =LP .load_cfg (str (guild_id ))
+            return jsonify ({'steps':LP .steps_of (cfg )})
+        return jsonify ({'success':False ,
+            'error':'Настройка ступеней переехала на страницу «Лестница наказаний» (/ladder)'}),409
 
 
         # ── WARN DM НАСТРОЙКА ─────────────────────────────────────────────────────────

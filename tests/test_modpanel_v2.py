@@ -46,21 +46,30 @@ cat = catalog(force=True)
 pref = [c['name'] for c in cat['commands'] if c['kind'] == 'prefix']
 check(cat.get('prefix', 1) == 0 and not pref,
       f'боевой состав без «!»-команд (осталось: {pref})')
-for name, kind in (('modpanel', 'slash'), ('play', 'slash'),
+for name, kind in (('modpanel', 'slash'), ('report', 'slash'),
                    ('апелляция', 'slash'), ('update', 'slash')):
     hit = next((c for c in cat['commands'] if c['name'] == name), None)
     check(hit is not None and hit['kind'] == kind,
           f'{name} — слеш-команда')
+# Музыка снята 2026-09-01 — /play больше нет в боевом составе
+check(not next((c for c in cat['commands'] if c['name'] == 'play'), None),
+      '/play снят — музыкальная система выведена из боевого состава')
 
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
-check(set(keep) == {'modpanel', 'play', 'апелляция', 'update',
-                    'afk', 'afk-remove',
-                    'ticket-panel'},
-      f'белый список слеш-меню = 7 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'play', 'апелляция', 'update', 'afk', 'afk-remove',
-             'ticket-panel'):
+# Сетап-команды (verify-setup, report-setup/settings) убраны в панель,
+# /afk-remove удалён (AFK спадает авто) — в меню 6 команд (2026-09-01).
+check(set(keep) == {'modpanel', 'апелляция', 'update',
+                    'afk', 'report', 'my-violations'},
+      f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'апелляция', 'update', 'afk',
+             'report', 'my-violations'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
+for gone in ('afk-remove', 'verify-setup', 'report-setup', 'report-settings'):
+    check(gone not in keep, f'{gone} убран из слеш-меню (настройка в панели/авто)')
+check('play' not in keep, '/play снят — музыка выведена из боевого состава')
+# Тикет-система снята 2026-08-31 — ticket-panel не должен вернуться
+check('ticket-panel' not in keep, 'ticket-panel снят — жалобы идут через /report')
 
 # Урезанные из меню имена НЕ должны вернуться в KEEP_SLASH незаметно
 for gone in ('backup', 'backup-list', 'diagnose', 'health', 'hotreload',
@@ -137,17 +146,38 @@ class _Member:
 
 
 g = _Guild(G)
+# Строгая модель: видно только то, что владелец РАЗРЕШИЛ роли в панели.
+# Discord-админ/владелец сервера прав не дают; владелец БОТА (OWNER_ID) — всё.
+import os as _os  # noqa: E402
+from services.permission_acl import set_action_rule, save_action_acl  # noqa: E402
+_os.environ['OWNER_ID'] = '1'   # член с id=1 — владелец бота, видит всё
+save_action_acl(G, {})
 check(actions_for_member(g, _Member(1, [])) == MODPANEL_ACTIONS,
-      'владелец сервера видит все действия')
+      'владелец БОТА (OWNER_ID) видит все действия')
+# Без единого разрешения модератор не видит ничего (default-deny).
+check(actions_for_member(g, _Member(77, [_Role(G), _Role(601)])) == [],
+      'модератор без выданных разрешений не видит ни одного действия')
+
+# Разрешаем ролям действия (как владелец в панели) — ЛИМИТЫ остаются вторым,
+# пересекающим фильтром: мут-роль (лимит на мут) + разрешения mute/vmute/timeout
+# видит мут-семейство; бан срезан лимитом мута.
+set_action_rule(G, 'mute', [601, 604])
+set_action_rule(G, 'vmute', [601, 604])
+set_action_rule(G, 'timeout', [601, 604])
+set_action_rule(G, 'ban', [601, 602])
+set_action_rule(G, 'purge', [603])
 m_mute = actions_for_member(g, _Member(7, [_Role(G), _Role(601)]))
 check([a[0] for a in m_mute] == ['timeout', 'mute_chat', 'vmute'],
-      f'мут-роль видит только муты: {[a[0] for a in m_mute]}')
+      f'мут-роль: лимит мута ∩ разрешения = только муты: {[a[0] for a in m_mute]}')
 m_ban = actions_for_member(g, _Member(8, [_Role(602)]))
-check([a[0] for a in m_ban] == ['ban'], 'бан-роль видит только бан')
+check([a[0] for a in m_ban] == ['ban'], f'бан-роль видит только бан: {[a[0] for a in m_ban]}')
 m_none = actions_for_member(g, _Member(9, [_Role(603)]))
 check([a[0] for a in m_none] == ['clear'], 'роль с окном чистки видит только чистку')
+# роль без настроек лимитов и БЕЗ разрешений — ничего (default-deny)
 m_free = actions_for_member(g, _Member(10, [_Role(699)]))
-check(m_free == MODPANEL_ACTIONS, 'роль без настроек — модер видит всё')
+check(m_free == [], 'роль без настроек и без разрешений — не видит ничего')
+save_action_acl(G, {})
+_os.environ.pop('OWNER_ID', None)
 
 print('== 4. «Бан» живьём: без канала — отказ, с каналом — изоляция ==')
 

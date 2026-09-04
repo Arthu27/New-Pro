@@ -31,7 +31,7 @@ tasklist /fi "imagename eq python.exe" 2>nul | find /i "python.exe" >nul
 if not errorlevel 1 (
     echo [ВНИМАНИЕ] Обнаружен работающий python.exe — если это бот,
     echo             ЗАКРОЙ его окно сначала, иначе файлы не удалятся
-    echo             (будут заняты) и записи появятся снова.
+    echo             ^(будут заняты^) и записи появятся снова.
     echo.
 )
 

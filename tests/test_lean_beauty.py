@@ -33,10 +33,10 @@ import cogs_policy as CP  # noqa: E402
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-# Заказ владельца «как можно меньше» + тикеты: боевое меню — 7 команд
-# (modpanel, play, апелляция, update, afk, afk-remove, ticket-panel;
-# ticket-add/remove переехали кнопками ➕/➖ в меню тикета — заказ 2026-08-29).
-check(data['total'] >= 7, f'lean-каталог собран ({data["total"]} команд после чистки)')
+# Заказ владельца «как можно меньше»: боевое меню — 6 команд
+# (modpanel, апелляция, update, afk, report, my-violations). Сетап-команды
+# убраны в панель, /afk-remove удалён (AFK спадает авто), музыка снесена.
+check(data['total'] == 6, f'lean-каталог собран ({data["total"]} команд после чистки)')
 placeholder = [c['name'] for c in data['commands'] if c['desc'] == 'Описание скоро появится']
 check(not placeholder, f'без описания не осталось ни одной команды {placeholder[:6]}')
 non_ru = [c['name'] for c in data['commands']
@@ -88,11 +88,11 @@ for fn in sorted(os.listdir(os.path.join(ROOT, 'cogs'))):
         junk.append(fn)
 check(not junk, f'старый бренд Aether не встречается (бренд — Hakumo) {junk}')
 
-print('== 5. Красивые подписи в музыке и голосе ==')
-music = open(os.path.join(ROOT, 'cogs', 'music_cog.py'), encoding='utf-8').read()
-check('hakumo_embed' in music and 'embed_utils' in music,
-      'music_cog отвечает фирменными эмбедами')
-check("dark_grey" not in music, 'music_cog: унылый dark_grey убран')
+print('== 5. Голос: трекер жив, музыкальные команды удалены ==')
+# music_cog.py удалён вместе с системой /play (2026-09-01) — проверяем лишь
+# голосовой трекер, который остаётся боевым (статистика времени в голосе).
+check(not os.path.exists(os.path.join(ROOT, 'cogs', 'music_cog.py')),
+      'music_cog.py физически удалён (система /play снесена)')
 tracker = open(os.path.join(ROOT, 'cogs', 'voice_tracker.py'), encoding='utf-8').read()
 check('on_voice_state_update' in tracker and 'def voice_seconds' in tracker,
       'голосовой трекер считает время (команды удалены, трекинг жив)')

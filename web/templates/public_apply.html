@@ -11,7 +11,16 @@
       html { background: #0f1013; color-scheme: dark; }
       body { background: transparent; margin: 0; }
     </style>
-<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+<!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
+         только разобрав fonts.css и all.subset.css, и они встают в конец
+         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
+         820 мс до последнего шрифта). crossorigin обязателен даже для своего
+         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
+<link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
 <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
 <style>
@@ -23,7 +32,7 @@
     --line2: #2a3247;
     --text: #e8ecf6;
     --text2: #9aa3ba;
-    --text3: #5f6880;
+    --text3: #767f99;
     --ac: #4f46e5;
     --ac2: #7c3aed;
     --ac3: #22d3ee;
@@ -362,10 +371,10 @@
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
-<div class="container">
+<main class="container">
   <!-- Header -->
   <div class="header">
-    <img class="logo" id="bot-logo" src="/static/brand/emblem-dragon.png" alt="Hakumo">
+    <img class="logo" id="bot-logo" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo">
     <h1>Hakumo</h1>
     <p>Система заявок администратора</p>
     <div class="divider"></div>
@@ -495,7 +504,7 @@
     <div class="app-id-box" id="app-id-display"></div>
     <p style="margin-top: 18px;">Эту страницу можно закрыть.</p>
   </div>
-</div>
+</main>
 
 <script>
 var selectedGuild = '{{ main_guild_id }}';

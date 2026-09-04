@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Роли наказаний — Панель Hakumo{% endblock %}
+{% block title %}Роли наказаний — Hakumo{% endblock %}
 {% block page_title %}Роли наказаний{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Роли наказаний</div>
+    <div class="eyebrow"> Настройки </div>
     <h1>Роли наказаний</h1>
     <p>Какую роль бот выдаёт за каждое наказание и каждый уровень предупреждений.
        Выбор — только из списка ролей сервера: никаких ID вручную.
@@ -18,8 +18,8 @@
 </div>
 
 <div id="rsBotWarn" class="rs-warnbar" hidden>
-  <i class="fas fa-triangle-exclamation"></i>
-  <span>Бот офлайн — список ролей сервера недоступен, сохранять нельзя. Настройки вернутся, когда бот включится.</span>
+  <i class="fas fa-circle-info" id="rsWarnIcon"></i>
+  <span id="rsBotWarnText"></span>
 </div>
 
 <div id="rsDeletedWarn" class="rs-warnbar" hidden>
@@ -42,26 +42,16 @@
 </div>
 
 <div class="rs-panel">
-  <h3><i class="fas fa-triangle-exclamation"></i> Настройки предупреждений (авто-наказания)</h3>
-  <div class="rs-sub">Накопил N предупреждений — бот сам выдаёт «мут / кик / бан» на выбранный срок.
-    Ступеней может быть несколько, действует последняя пройденная. Данные общие со страницей
-    «Лестница наказаний» — там эта же лестница рисуется картинкой.</div>
-  <div id="rsStepsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
-  <div class="rs-step-add">
-    <input type="number" id="rsStepCount" min="1" max="100" placeholder="варнов" aria-label="Количество предупреждений"
-           style="width:92px">
-    <select id="rsStepAction" aria-label="Наказание за порог">
-      <option value="mute">Мут</option><option value="kick">Кик</option><option value="ban">Бан</option>
-    </select>
-    <input type="number" id="rsStepDur" min="0" max="10000" placeholder="срок" aria-label="Срок"
-           style="width:90px">
-    <select id="rsStepUnit" aria-label="Единицы срока">
-      <option value="minute">мин</option><option value="hour">час</option><option value="day">дн</option>
-    </select>
-    <button type="button" class="btn btn-sm" id="rsStepAdd"><i class="fas fa-plus"></i> Ступень</button>
-  </div>
-  <div class="rs-sub" style="margin:8px 0 0">Мут и бан ролью («Роли за наказания» выше) выигрывают у
-    нативного таймаута — они и будут применены, если назначены. Кик — без срока.</div>
+  <h3><i class="fas fa-stairs"></i> Действия за варны (мут / войс-мут / кик / бан)</h3>
+  <div class="rs-sub">Что бот <b>делает</b> при N предупреждениях — настраивается <b>в одном месте</b>,
+    на странице «Лестница наказаний» (там же — наглядная картинка-лестница и проверка «что будет участнику»).
+    Здесь дублирующего выбора нет, чтобы расхождений не возникало.</div>
+  <a class="btn btn-primary" href="/ladder" style="margin-top:10px;display:inline-flex;align-items:center;gap:8px">
+    <i class="fas fa-stairs"></i> Открыть лестницу наказаний
+  </a>
+  <div class="rs-sub" style="margin:10px 0 0">Мут чата и бан ролью (карточки выше) выигрывают у
+    нативного таймаута/бана — применятся они, если назначены. Войс-мут — отдельное действие
+    (глушит только микрофон), выбирается в лестнице отдельно от чат-мута.</div>
 </div>
 
 <div class="rs-panel">
@@ -81,7 +71,7 @@
 
 <div class="rs-savebar">
   <button type="button" class="btn btn-primary" id="rsSave"><i class="fas fa-save"></i> Сохранить всё</button>
-  <span class="rs-save-note">Применяется к обоим разделам разом. Значения общие с блоком «Роли наказаний» в настройках модерации.</span>
+  <span class="rs-save-note">Сохраняются только роли (виды наказаний и уровни варнов). Что бот делает при N варнах — на странице «Лестница наказаний».</span>
 </div>
 
 <style>
@@ -186,36 +176,76 @@ function refreshPills() {
   });
 }
 
+function rsWarn(d) {
+  /* Полоса-статус сверху: честно объясняет, почему список ролей пуст/живой.
+     Случаи: демо-превью, бот подключается, бот офлайн, бот не видит сервер,
+     роли ещё догружаются. Пусто — бот онлайн и роли на месте. */
+  var bar = $('rsBotWarn');
+  var text = '';
+  var icon = 'fa-circle-info';
+  if (d.roles_source === 'demo') {
+    text = 'Это превью без живого Discord: показан демо-набор ролей. Сохранение идёт только в демо-данные превью — на реальном сервере список подтянется сам, когда запустишь бота (start.bat / start.sh).';
+  } else if (d.bot_state === 'starting' && !d.roles_count) {
+    text = 'Бот подключается к Discord — список ролей сервера появится через несколько секунд. Сохранить можно будет сразу после подключения.';
+    icon = 'fa-triangle-exclamation';
+  } else if (!d.bot_online && !d.roles_count) {
+    text = 'Бот офлайн — список ролей сервера недоступен, сохранять нельзя. Настройки вернутся, когда бот включится (start.bat / start.sh).';
+    icon = 'fa-triangle-exclamation';
+  } else if (d.bot_online && !d.bot_guild_ok) {
+    text = 'Бот не видит этот сервер — проверь MAIN_GUILD_ID в .env и пригласи бота на сервер. Пока роли недоступны, сохранять нельзя.';
+    icon = 'fa-triangle-exclamation';
+  } else if (d.bot_online && !d.roles_count) {
+    text = 'Роли сервера ещё загружаются ботом — обнови страницу через несколько секунд.';
+  }
+  if (!text) { bar.hidden = true; return; }
+  $('rsBotWarnText').textContent = text;
+  $('rsWarnIcon').className = 'fas ' + icon;
+  bar.hidden = false;
+}
+
+function rsCanSave(d) {
+  /* Живой бот и роли на месте (или снимок бота с диска) — сохраняем.
+     Демо-превью — тоже (пишем только в демо-данные, без Discord). */
+  if (d.roles_source === 'demo') return true;
+  return d.bot_online && d.roles_count > 0;
+}
+
+function rsRender(d) {
+  VIEW = d;
+  ROLES = d.roles || [];
+  rsWarn(d);
+  $('rsDeletedWarn').hidden = !(d.unknown_roles > 0);
+  var map = d.mapping || {};
+  $('rsKinds').innerHTML = (d.kinds || []).map(function (k) {
+    return rsCard(k, map[k.key] || '0');
+  }).join('');
+  $('rsLevels').innerHTML = (d.levels || []).map(function (k) {
+    return rsCard(k, map[k.key] || '0');
+  }).join('');
+  $('rsInfo').innerHTML = (d.punish_info || []).map(function (k) {
+    return '<div class="rs-role rs-info"><div class="rs-role-name"><i class="fas ' + k.icon + '"></i> ' +
+      esc(k.label) + '</div><div class="rs-role-hint">' + esc(k.hint) + '</div></div>';
+  }).join('');
+  var lvlInp = $('rsLvlCount');
+  lvlInp.min = d.warn_level_min || 1;
+  lvlInp.max = d.warn_level_max || 100;
+  $('rsLvlRange').textContent = 'Любой уровень от ' + (d.warn_level_min || 1) +
+    ' до ' + (d.warn_level_max || 100) + ' предупреждений.';
+  document.querySelectorAll('#rsKinds select, #rsLevels select').forEach(function (sel) {
+    sel.addEventListener('change', refreshPills);
+  });
+  refreshPills();
+  var sb = $('rsSave');
+  sb.disabled = !rsCanSave(d);
+  sb.title = sb.disabled ? 'Сохранить можно, когда бот онлайн и роли сервера загружены' : '';
+}
+
 async function rsLoad() {
   try {
     var d = await fetch('/api/guild/' + GUILD_ID + '/role-settings', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); });
     if (!d.success) { toast(d.error || 'Не удалось загрузить настройки', false); return; }
-    VIEW = d;
-    ROLES = d.roles || [];
-    $('rsBotWarn').hidden = d.roles_count !== 0;
-    $('rsDeletedWarn').hidden = !(d.unknown_roles > 0);
-    var map = d.mapping || {};
-    $('rsKinds').innerHTML = (d.kinds || []).map(function (k) {
-      return rsCard(k, map[k.key] || '0');
-    }).join('');
-    $('rsLevels').innerHTML = (d.levels || []).map(function (k) {
-      return rsCard(k, map[k.key] || '0');
-    }).join('');
-    $('rsInfo').innerHTML = (d.punish_info || []).map(function (k) {
-      return '<div class="rs-role rs-info"><div class="rs-role-name"><i class="fas ' + k.icon + '"></i> ' +
-        esc(k.label) + '</div><div class="rs-role-hint">' + esc(k.hint) + '</div></div>';
-    }).join('');
-    var lvlInp = $('rsLvlCount');
-    lvlInp.min = d.warn_level_min || 1;
-    lvlInp.max = d.warn_level_max || 100;
-    $('rsLvlRange').textContent = 'Любой уровень от ' + (d.warn_level_min || 1) +
-      ' до ' + (d.warn_level_max || 100) + ' предупреждений.';
-    rsRenderSteps(d.warn_steps || []);
-    document.querySelectorAll('#rsKinds select, #rsLevels select').forEach(function (sel) {
-      sel.addEventListener('change', refreshPills);
-    });
-    refreshPills();
+    rsRender(d);
   } catch (e) {
     toast('Ошибка сети', false);
   }
@@ -235,66 +265,19 @@ async function rsSave() {
       body: JSON.stringify({ mapping: mapping })
     }).then(function (r) { return r.json(); });
     if (d.success) {
-      toast(d.message || 'Роли наказаний сохранены', true);
-      VIEW = d; ROLES = d.roles || ROLES;
-      rsLoad();
-    } else {
-      toast(d.error || 'Ошибка сохранения', false);
+      toast(d.demo
+        ? 'Сохранено в демо-данные превью (живой Discord не нужен)'
+        : (d.message || 'Роли наказаний сохранены'), true);
+      /* Ответ POST — уже полное view: не дёргаем сервер вторым GET. */
+      rsRender(d);
+      return;
     }
+    toast(d.error || 'Ошибка сохранения', false);
   } catch (e) {
     toast('Сеть моргнула — попробуйте ещё раз', false);
-  } finally {
-    btn.disabled = false;
   }
+  btn.disabled = false;
 }
-
-var rsSteps = [];
-var STEP_ACTION = { 'mute': 'Мут', 'kick': 'Кик', 'ban': 'Бан' };
-var STEP_UNIT = { 'minute': 'мин', 'hour': 'ч', 'day': 'д' };
-
-function rsRenderSteps(steps) {
-  rsSteps = steps.slice().sort(function (a, b) { return (a.count || 0) - (b.count || 0); });
-  if (!rsSteps.length) {
-    $('rsStepsList').innerHTML = '<div class="rs-sub" style="margin:0">Ступеней нет — бот только '
-      + 'записывает варны, авто-мер не выдаёт. Добавьте хотя бы «3 → мут 30 мин».</div>';
-    return;
-  }
-  $('rsStepsList').innerHTML = rsSteps.map(function (s) {
-    var lbl = STEP_ACTION[s.action] || s.action;
-    if (s.action !== 'kick' && s.duration) lbl += ' ' + s.duration + ' ' + (STEP_UNIT[s.unit] || s.unit);
-    return '<div class="rs-step"><span class="rs-lvl">' + esc(s.count) + '</span>' +
-      '<b>' + esc(lbl) + '</b><span>с {n} варна'.replace('{n}', esc(s.count)) + '</span>' +
-      '<button type="button" class="btn btn-sm btn-ghost" data-step-del="' + esc(s.count) + '" aria-label="Убрать ступень"><i class="fas fa-trash"></i></button></div>';
-  }).join('');
-}
-
-$('rsStepAdd').addEventListener('click', async function () {
-  var count = parseInt($('rsStepCount').value, 10) || 0;
-  var action = $('rsStepAction').value;
-  var dur = parseInt($('rsStepDur').value, 10);
-  if (isNaN(dur)) dur = action === 'kick' ? 0 : 10;
-  if (!count) { toast('Укажите, с какого количества варнов — например 3', false); return; }
-  try {
-    var d = await fetch('/api/guild/' + GUILD_ID + '/role-settings/warn-step', {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ count: count, action: action, duration: dur, unit: $('rsStepUnit').value })
-    }).then(function (r) { return r.json(); });
-    if (d.success) { toast(d.message || 'Ступень сохранена', true); rsRenderSteps(d.warn_steps || []); }
-    else toast(d.error || 'Ошибка', false);
-  } catch (e) { toast('Сеть моргнула', false); }
-});
-
-document.addEventListener('click', async function (e) {
-  var del = e.target.closest('[data-step-del]');
-  if (!del) return;
-  try {
-    var d = await fetch('/api/guild/' + GUILD_ID + '/role-settings/warn-step/' + del.dataset.stepDel,
-      { method: 'DELETE', credentials: 'same-origin' }).then(function (r) { return r.json(); });
-    if (d.success) { toast(d.message || 'Ступень убрана', true); rsRenderSteps(d.warn_steps || []); }
-    else toast(d.error || 'Ошибка', false);
-  } catch (e2) { toast('Сеть моргнула', false); }
-});
 
 /* ── уровни варнов: добавляем и удаляем сами ─────────────────────── */
 $('rsLvlAdd').addEventListener('click', async function () {

@@ -30,12 +30,17 @@ from services import staff_limits as SL  # noqa: E402
 
 G, MOD, OTHER = 777001, 111, 222
 
-print('== 1. Дефолты: ВСЁ ВЫКЛЮЧЕНО (opt-in) ==')
+print('== 1. Дефолты: безопасные цифры включены (заказ владельца) ==')
 lim = SL.get_limits(G)
-check(all(v == 0 for v in lim.values()),
-      'из коробки лимитов нет — персонал не ограничен ничем')
-ok0, used0, lim0 = SL.check_limit(G, MOD, 'ban', 999)
-check(ok0 and lim0 == 0, 'без заданных цифр — любое количество действий')
+# Защитные дефолты на опасные действия; 0 = «без лимита» для остального.
+check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 3
+      and lim['clear'] == 10,
+      'из коробки: бан 1/день, мут/размут 3/день, очистка 10 сообщ./день')
+check(lim['warn'] == 0 and lim['kick'] == 0 and lim['nuke'] == 0,
+      'варны/кик/нюк без жёсткого дефолта (0 = не ограничено)')
+# Дефолтный бан-лимит (1/день) срабатывает, пока владелец не поднял цифру.
+ok0, _u0, lim0 = SL.check_limit(G, MOD + 9000, 'ban', 2)
+check((not ok0) and lim0 == 1, 'по умолчанию больше 1 бана/день запрещено')
 SL.set_limits(G, ban=8, clear=500)   # дальше тестируем с заданными цифрами
 lim = SL.get_limits(G)
 check(lim['ban'] == 8 and lim['clear'] == 500, 'владелец задал: 8 банов и 500 сообщений')
@@ -142,6 +147,41 @@ for _ in range(11):
     SL.record_hit(gA.id, mA.id, 'ban', 1)
 check(ok_a is False and '10' in (last_text or ''),
       f'check_action: 11-й бан сверх лимита роли 10 запрещён ({last_text})')
+
+print('== 9. Тиры персонала из data/role_map.json (модер/куратор/админ) ==')
+# role_map.json: роль → tier (та же настройка, что «Панели и роли»).
+import json as _json
+_rmap = {
+    '1001': 'mod',      # роль модератора
+    '1002': 'curator',  # роль куратора
+    '1003': 'admin',    # роль администратора
+    '1004': 'owner',    # роль владельца
+}
+with open(os.path.join(_TMP, 'role_map.json'), 'w', encoding='utf-8') as _rf:
+    _json.dump(_rmap, _rf)
+SL.ROLE_MAP_PATH = os.path.join(_TMP, 'role_map.json')
+
+check(SL.tier_for_roles([1001]) == 'mod', 'роль 1001 → тир mod')
+check(SL.tier_for_roles([1002]) == 'curator', 'роль 1002 → тир curator')
+check(SL.tier_for_roles([1003]) == 'admin', 'роль 1003 → тир admin')
+check(SL.tier_for_roles([1003, 1001]) == 'admin', 'несколько ролей → старший тир')
+check(SL.tier_for_roles([9999]) is None, 'немаркированная роль → тир нет')
+
+# Дефолты по тиру: бан 1/3/5, размут 3/5/5.
+GT = 777099
+_lm_mod, _ = SL.effective_limits(GT, [1001])
+_lm_cur, _ = SL.effective_limits(GT, [1002])
+_lm_adm, _ = SL.effective_limits(GT, [1003])
+_lm_own, _ = SL.effective_limits(GT, [1004])
+check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 3 and _lm_adm['ban'] == 5,
+      f'бан по тирам: модер {_lm_mod["ban"]} / куратор {_lm_cur["ban"]} / админ {_lm_adm["ban"]}')
+check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 5 and _lm_adm['unmute'] == 5,
+      'размут по тирам: модер 3 / куратор 5 / админ 5')
+check(_lm_own.get('ban', 0) == 0, 'владелец — без лимита на бан')
+# Пер-рольный оверрайд важнее тирового дефолта.
+SL.set_role_limits(GT, 1002, who='Куратор', ban=9)
+_lm_cur2, _ = SL.effective_limits(GT, [1002])
+check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (3)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

@@ -304,6 +304,13 @@ class warnings(commands.Cog):
             # таймаута/бана: владелец сам выбрал, какими роли наказывать.
             from services import punish_roles as PR
             if action in ('mute', 'timeout'):
+                # чат-мут/таймаут глушат чат (таймаут — ещё и голос): снимаем
+                # любой висящий отдельный войс-мут, чтобы не было двух ограничений
+                try:
+                    from services import mute_state
+                    await mute_state.clear_voice_mute(guild, member)
+                except Exception as _mse:
+                    log.debug('авто-мут: очистка войс-мута: %s', _mse)
                 rid = PR.role_for(guild.id, 'mute')
                 role = guild.get_role(rid) if rid else None
                 if role is not None:
@@ -315,6 +322,33 @@ class warnings(commands.Cog):
                 until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
                 await member.timeout(until, reason=f'Авто-наказание: {warn_count} предупреждений')
                 return f'Мут {minutes} мин'
+            elif action == 'vmute':
+                # Войс-мут — ОТДЕЛЬНО от чат-мута: глушим ТОЛЬКО микрофон.
+                # Чат-мут/таймаут не трогаем (и не снимаем — это другое ограничение).
+                vrid = PR.role_for(guild.id, 'vmute')
+                vrole = guild.get_role(vrid) if vrid else None
+                if vrole is not None:
+                    import time as _time
+                    await member.add_roles(vrole, reason=f'Авто: {warn_count} предупреждений (войс-мут)')
+                    PR.add_temp(guild.id, member.id, vrole.id,
+                                _time.time() + max(60, minutes * 60))
+                    # роль войс-мута сама глушит микрофон в голосовом канале
+                    try:
+                        voice = getattr(member, 'voice', None)
+                        if voice is not None and getattr(voice, 'channel', None) is not None \
+                                and not getattr(voice, 'mute', False):
+                            await member.edit(mute=True, reason=f'Авто войс-мут: {warn_count} предупреждений')
+                    except Exception as _ve:
+                        log.debug('авто войс-мут: server-mute: %s', _ve)
+                    return f'Войс-мут: роль «{vrole.name}» {minutes} мин'
+                # роли нет — нативный server-mute (работает, только если участник в голосе)
+                voice = getattr(member, 'voice', None)
+                if voice is not None and getattr(voice, 'channel', None) is not None:
+                    await member.edit(mute=True, reason=f'Авто войс-мут: {warn_count} предупреждений')
+                    return f'Войс-мут {minutes} мин'
+                # вне голоса нативный server-mute поставить нельзя — мягкий фоллбэк:
+                # ставим роль войс-мута не выйдет (её нет), сообщаем модерации
+                return 'Войс-мут: участник не в голосовом канале и роль войс-мута не назначена'
             elif action == 'kick':
                 await member.kick(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Кик'
@@ -404,7 +438,7 @@ class warnings(commands.Cog):
 
         # Уведомление панели о варне (веб/Discord/email — в фоне)
         try:
-            from cogs.ticket import _notify_panel_ticket_event as _np
+            from services.panel_notify import notify_panel_event as _np
             _np(interaction, 'warn',
                 f"Предупреждение: {user.display_name}",
                 f"Модератор: {interaction.user.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}")
@@ -415,13 +449,11 @@ class warnings(commands.Cog):
         await _log_warn_to_channel (guild ,user ,interaction .user ,reason ,warn_id ,total )
 
         # DM пользователю
-        import json, os
+        # чтение кастомного текста DM — в рабочем потоке (файл не блокирует loop)
+        from services.async_io import load_json_async
         dm_file = f'data/warn_dm_{guild.id}.json'
-        custom_dm = None
-        if os.path.exists(dm_file):
-            with open(dm_file, 'r', encoding='utf-8') as df:
-                dm_cfg = json.load(df)
-            custom_dm = dm_cfg.get('message')
+        dm_cfg = await load_json_async(dm_file, {}, log=_log) or {}
+        custom_dm = dm_cfg.get('message')
 
         if custom_dm:
             msg = custom_dm.replace('{user}', user.display_name).replace('{reason}', reason or 'Не указана').replace('{mod}', interaction.user.display_name).replace('{сервер}', guild.name)

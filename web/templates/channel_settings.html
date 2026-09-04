@@ -1,13 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Каналы и маршруты — Панель Hakumo{% endblock %}
+{% block title %}Каналы и маршруты — Hakumo{% endblock %}
 {% block page_title %}Каналы и маршруты{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Каналы и маршруты</div>
+    <div class="eyebrow"> Настройки </div>
     <h1>Каналы и маршруты</h1>
-    <p>Единое место, куда бот что пишет: доказательства, апелляции, приветствия, джейл-логи.
-       Больше не будет вопросов «почему улетело туда» — всё настраивается здесь.</p>
+    <p>Единое место, куда бот что пишет: доказательства, апелляции, приветствия,
+       тревоги защиты и заявки в команду. Каждый канал настраивается только здесь —
+       на страницах самих функций дублирующих настроек нет.</p>
   </div>
   <div class="page-head-side">
     <span class="chs-access" title="Смотреть эту страницу могут все модераторы, менять маршруты — только администраторы">
@@ -58,7 +59,64 @@
 .chs-info h3{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:8px}
 .chs-info h3 i{color:var(--ac)}
 @media (max-width:860px){.chs-row{grid-template-columns:44px 1fr}.chs-edit{grid-column:1/-1}}
+
+/* ── Шпаргалка «С чего начать» ── */
+.chs-guide{margin-top:14px;border:1px solid color-mix(in srgb, var(--ac) 28%, transparent);background:color-mix(in srgb, var(--ac) 6%, var(--surface-2, transparent));border-radius:14px;overflow:hidden}
+.chs-guide>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px;font-weight:700;color:var(--text-1,#fff)}
+.chs-guide>summary::-webkit-details-marker{display:none}
+.chs-guide>summary .g-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb, var(--ac) 15%, transparent);color:var(--ac);flex:none}
+.chs-guide>summary .g-chev{margin-left:auto;color:var(--text-3);transition:transform .2s}
+.chs-guide[open]>summary .g-chev{transform:rotate(180deg)}
+.chs-guide-body{padding:2px 16px 14px;font-size:12.8px;line-height:1.6;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent))}
+.chs-guide-body p{margin:9px 0}
+.chs-guide-body b{color:var(--text-1,#fff)}
+.chs-guide-steps{margin:10px 0 4px;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.chs-guide-steps li{display:flex;gap:10px;align-items:flex-start}
+.g-num{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:800;background:var(--ac);color:#fff;margin-top:1px}
+.g-num.g-later{background:color-mix(in srgb, var(--ac) 22%, transparent);color:var(--ac)}
+.chs-guide-note{margin-top:11px;border:1px solid color-mix(in srgb, #16a34a 28%, transparent);background:color-mix(in srgb, #16a34a 8%, transparent);border-radius:10px;padding:9px 12px;display:flex;gap:9px;align-items:flex-start}
+.chs-guide-note i{color:#7bd88f;margin-top:2px}
+/* Номер шага в строке маршрута */
+.chs-step{flex:none;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:800;background:color-mix(in srgb, var(--ac) 16%, transparent);color:var(--ac);border:1px solid color-mix(in srgb, var(--ac) 30%, transparent)}
+/* Обязательный шаг (только канал апелляции) — красный */
+.chs-step.req{background:color-mix(in srgb, #f0b26b 20%, transparent);color:#f0b26b;border-color:color-mix(in srgb, #f0b26b 45%, transparent)}
+/* «Можно потом» — синий, но приглушённее обязательного */
+.chs-step.later{background:color-mix(in srgb, var(--ac) 12%, transparent);color:var(--ac);border-color:color-mix(in srgb, var(--ac) 25%, transparent)}
+.chs-step.opt{background:color-mix(in srgb, var(--text) 7%, transparent);color:var(--text-3);border-color:var(--line-2,transparent)}
+/* Подпись-плашка «обязательно» / «можно потом» */
+.chs-tag{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:6px;padding:2px 7px;margin-left:2px}
+.chs-tag.req{color:#f0b26b;background:color-mix(in srgb, #f0b26b 14%, transparent)}
+.chs-tag.later{color:var(--ac);background:color-mix(in srgb, var(--ac) 10%, transparent)}
+.chs-hint{display:block;margin-top:4px;font-size:11.5px;color:var(--ac);opacity:.92}
+.chs-hint i{margin-right:4px}
 </style>
+
+<details class="chs-guide" open>
+  <summary>
+    <span class="g-ico"><i class="fas fa-flag-checkered"></i></span>
+    <span>С чего начать: обязателен только <b style="color:#f0b26b">1 канал</b> — остальное можно настроить потом</span>
+    <i class="fas fa-chevron-down g-chev"></i>
+  </summary>
+  <div class="chs-guide-body">
+    <p>Спокойно: <b>обязательна настройка только одного маршрута</b> — <b style="color:#f0b26b">канала апелляции после бана</b> (шаг <span class="g-num" style="width:18px;height:18px;font-size:10px">1</span>), и то если пользуешься «баном» в /modpanel. У <b>всех остальных</b> есть значение по умолчанию: бот сам создаст лог-каналы или напишет в системный канал — ничего не сломается, настрой когда будет удобно.</p>
+    <p><b>Отдельные каналы плодить не нужно</b> — в каждой строке выбирай уже существующий канал из списка.</p>
+    <p style="margin-bottom:4px"><b style="color:#f0b26b"><i class="fas fa-triangle-exclamation"></i> Надо задать (1 шаг):</b></p>
+    <ol class="chs-guide-steps">
+      <li><span class="g-num">1</span><span><b>Канал апелляции после бана</b> — сюда попадает «забаненный» (с сервера его не выкидывает, просто закрываются каналы). Заведи один канал <code>#апелляции</code>. Без него «бан» из панели не сработает и сам об этом попросит — остальное работает и без настройки.</span></li>
+    </ol>
+    <p style="margin:12px 0 4px"><b style="color:var(--ac)"><i class="fas fa-clock"></i> Можно потом — работает и по умолчанию:</b></p>
+    <ol class="chs-guide-steps chs-optional">
+      <li><span class="g-num g-later">2</span><span><b>Доказательства</b> — не задашь, бот создаст <code>#-доказательства</code> сам.</span></li>
+      <li><span class="g-num g-later">3</span><span><b>Апелляции (карточки)</b> — можно тот же <code>#апелляции</code>; иначе идут в системный канал.</span></li>
+      <li><span class="g-num g-later">4</span><span><b>Тревоги Щита</b> (анти-нюк) — уходят в лог-канал <code>-модерация</code>, бот создаёт его сам.</span></li>
+      <li><span class="g-num g-later">5</span><span><b>Лог авто-защиты</b> (ссылки/спам/фейки) — тоже пишет в <code>-модерация</code> автоматически.</span></li>
+      <li><span class="g-num g-later">6</span><span><b>Приветствия</b> — без настройки идут в системный канал.</span></li>
+      <li><span class="g-num g-later">7</span><span><b>Заявки в команду</b> — нужны, только когда откроешь набор.</span></li>
+    </ol>
+    <p>В каждой строке: выбери канал в списке → галочка «Сохранить» (или несколько строк и кнопка вверху <b>«Сохранить всё»</b>). Строки с «…» в самом низу — дополнительные, их трогать не нужно.</p>
+    <div class="chs-guide-note"><i class="fas fa-circle-check"></i><span>Ничего перезапускать не надо — маршруты применяются сразу, а не заданное просто работает по умолчанию.</span></div>
+  </div>
+</details>
 
 <div class="chs-pendbar" id="chsPendBar">
   <span class="chs-pend-txt"><i class="fas fa-floppy-disk"></i>
@@ -97,8 +155,17 @@ var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% 
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-var CHS_ROUTES = [];
+/* Каркас маршрутов — сразу с сервера (метки/описания/иконки), до fetch.
+   Сохранённые каналы (channel_id) приедут позже и подставятся в селекты. */
+var CHS_ROUTES = {{ route_specs | tojson }}.map(function (s) {
+  return { key: s.key, label: s.label, icon: s.icon, what: s.what,
+           empty: s.empty, access: s.access, channel_id: 0,
+           step: (s.step === null || s.step === undefined) ? null : s.step,
+           required: !!s.required,
+           create_hint: s.create_hint || '' };
+});
 var CHS_CHANNELS = [];
+var CHS_ROUTES_LOADED = false;
 /* Несохранённые выборы: key -> channel_id. Раньше после сохранения ОДНОГО
    маршрута список перерисовывался целиком и молча ЗАТИРАЛ выборы в остальных
    строках («настроил пять, сохранил первый — остальные слетели»). Теперь
@@ -147,29 +214,56 @@ function updatePendingBar() {
     + ' ' + pluralRu(n, 'не сохранено', 'не сохранены', 'не сохранено');
 }
 
+function chsOrder(r) {
+  /* Боевой минимум (step 1..N) — сверху по порядку; необязательные (step=null) — в конец. */
+  return (r.step === null || r.step === undefined) ? (1000 + chsOrder._i++) : r.step;
+}
+chsOrder._i = 0;
+
 function render() {
   var box = document.getElementById('chsList');
   if (!CHS_ROUTES.length) {
     box.innerHTML = '<div class="empty-state"><i class="fas fa-route"></i><p>Не удалось загрузить маршруты</p></div>';
     return;
   }
-  box.innerHTML = CHS_ROUTES.map(function (r) {
+  chsOrder._i = 0;
+  var rows = CHS_ROUTES.slice().sort(function (a, b) { return chsOrder(a) - chsOrder(b); });
+  box.innerHTML = rows.map(function (r) {
     /* Что показать выбранным в селекте: несохранённый выбор важнее
        сохранённого значения — иначе перерисовка затирала бы его. */
     var value = PENDING.hasOwnProperty(r.key)
       ? String(PENDING[r.key])
       : (r.channel_id ? String(r.channel_id) : '0');
     var cur = badgeHtml(r.key, PENDING.hasOwnProperty(r.key) ? undefined : r.channel_id);
-    var opts = '<option value="0"' + (value === '0' ? ' selected' : '') + '>— Авто (по умолчанию) —</option>' +
-      CHS_CHANNELS.map(function (c) {
-        var sel = String(c.id) === value ? ' selected' : '';
-        return '<option value="' + esc(c.id) + '"' + sel + '># ' + esc(c.name) + '</option>';
-      }).join('');
+    var isStep = (r.step !== null && r.step !== undefined);
+    var stepBadge, stepTag;
+    if (isStep && r.required) {
+      stepBadge = '<span class="chs-step req" title="Обязательно: без этого канала «бан» в /modpanel не сработает (остальное работает и так)">' + r.step + '</span>';
+      stepTag = '<span class="chs-tag req" title="Единственное, что надо задать для старта">Обязательно</span>';
+    } else if (isStep) {
+      stepBadge = '<span class="chs-step later" title="Шаг ' + r.step + ' — можно настроить потом, работает по умолчанию">' + r.step + '</span>';
+      stepTag = '<span class="chs-tag later" title="Работает и без настройки — задай, когда удобно">можно потом</span>';
+    } else {
+      stepBadge = '<span class="chs-step opt" title="Дополнительно — работает по умолчанию"><i class="fas fa-ellipsis-h"></i></span>';
+      stepTag = '';
+    }
+    var hint = r.create_hint
+      ? '<span class="chs-hint"><i class="fas fa-lightbulb"></i>' + esc(r.create_hint) + '</span>'
+      : '';
+    /* Пока список каналов не пришёл — показываем «Загрузка…» вместо пустого
+       селекта: видно, что данные грузятся, а не сломаны. */
+    var chanOpts = CHS_CHANNELS.length
+      ? CHS_CHANNELS.map(function (c) {
+          var sel = String(c.id) === value ? ' selected' : '';
+          return '<option value="' + esc(c.id) + '"' + sel + '># ' + esc(c.name) + '</option>';
+        }).join('')
+      : '<option disabled>' + (CHS_ROUTES_LOADED ? 'нет текстовых каналов' : 'Загрузка каналов…') + '</option>';
+    var opts = '<option value="0"' + (value === '0' ? ' selected' : '') + '>— Авто (по умолчанию) —</option>' + chanOpts;
     return '<div class="chs-row">' +
       '<div class="chs-ico"><i class="fas ' + esc(r.icon || 'fa-route') + '"></i></div>' +
-      '<div><div class="chs-name">' + esc(r.label) + ' ' + cur +
+      '<div><div class="chs-name">' + stepBadge + esc(r.label) + stepTag + ' ' + cur +
         '<span class="chs-cur" title="Кто меняет этот маршрут"><i class="fas fa-user-lock"></i>' + esc(r.access || 'Админ') + '</span></div>' +
-        '<div class="chs-what">' + esc(r.what || '') + '</div>' +
+        '<div class="chs-what">' + esc(r.what || '') + hint + '</div>' +
         '<div class="chs-empty">' + esc(r.empty || '') + '</div></div>' +
       '<div class="chs-edit">' +
         '<select id="chs-' + esc(r.key) + '" aria-label="' + esc(r.label) + '"' + (CAN_EDIT ? '' : ' disabled') +
@@ -262,20 +356,61 @@ window.addEventListener('beforeunload', function (e) {
   }
 });
 
-async function chsLoad() {
-  try {
-    var chans = await fetch('/api/channels').then(function (r) { return r.json(); });
-    CHS_CHANNELS = (Array.isArray(chans) ? chans : (chans.channels || [])).filter(function (c) {
-      return c && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5);
-    });
-  } catch (e) { CHS_CHANNELS = []; }
-  try {
-    var d = await fetch('/api/channel-routes').then(function (r) { return r.json(); });
-    if (d.success) CHS_ROUTES = d.routes || [];
-  } catch (e) { /* API Guard покажет */ }
-  if (window.renderSafe) window.renderSafe(render); else render();
+/* Каналы и маршруты грузим ПАРАЛЛЕЛЬНО (не последовательно): списки каналов
+   для выпадающих селектов появляются сразу, как только ответит /api/channels,
+   без ожидания настроек маршрутов. Маршруты дорисовываются по готовности. */
+function chsLoadChannels() {
+  return fetch('/api/channels').then(function (r) { return r.json(); })
+    .then(function (chans) {
+      CHS_CHANNELS = (Array.isArray(chans) ? chans : (chans.channels || [])).filter(function (c) {
+        return c && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5);
+      });
+      if (window.renderSafe) window.renderSafe(render); else render();
+    })
+    .catch(function () { CHS_CHANNELS = []; });
 }
 
-chsLoad();
+function chsLoadRoutes() {
+  return fetch('/api/channel-routes').then(function (r) { return r.json(); })
+    .then(function (d) {
+      CHS_ROUTES_LOADED = true;
+      if (d.success && d.routes && d.routes.length) {
+        /* Подставляем сохранённые каналы в готовый каркас, сохраняя порядок
+           и метки из спецификаций (каркас уже отрисован мгновенно). */
+        CHS_ROUTES = CHS_ROUTES.map(function (r) {
+          var live = d.routes.find(function (x) { return x.key === r.key; });
+          if (!live) return r;
+          return {
+            key: r.key, label: r.label, icon: r.icon,
+            what: live.what || r.what, empty: live.empty || r.empty,
+            access: live.access || r.access,
+            step: (live.step === null || live.step === undefined) ? r.step : live.step,
+            required: !!(live.required || r.required),
+            create_hint: live.create_hint || r.create_hint || '',
+            channel_id: live.channel_id || 0
+          };
+        });
+        /* Если сервер по какой-то причине не знает часть скелетных ключей —
+           не теряем строку: добавляем живые маршруты, которых нет в каркасе. */
+        d.routes.forEach(function (live) {
+          if (!CHS_ROUTES.some(function (r) { return r.key === live.key; })) {
+            CHS_ROUTES.push({
+              key: live.key, label: live.label || live.key, icon: live.icon || 'fa-route',
+              what: live.what || '', empty: live.empty || '',
+              access: live.access || 'Админ',
+              step: (live.step === null || live.step === undefined) ? null : live.step,
+              create_hint: live.create_hint || '',
+              channel_id: live.channel_id || 0
+            });
+          }
+        });
+      }
+      if (window.renderSafe) window.renderSafe(render); else render();
+    })
+    .catch(function () { CHS_ROUTES_LOADED = true; });
+}
+
+chsLoadChannels();
+chsLoadRoutes();
 </script>
 {% endblock %}

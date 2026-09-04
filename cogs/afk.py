@@ -1,5 +1,7 @@
 """AFK-система — /afk с причиной, уведомляет при упоминании"""
 
+import asyncio
+
 from logger import get_logger
 
 _log = get_logger("afk")
@@ -48,12 +50,53 @@ def _afk_file ():
 # Хранение упоминаний, пришедших во время AFK — {user_id: [{from, msg, channel, guild, time}]}
 _pending_mentions :dict ={}
 
+# Состояние AFK живёт в файле: раньше оно было только в памяти, поэтому после
+# любого рестарта бота список обнулялся и страница панели «AFK список»
+# показывала пусто, хотя люди реально стояли в AFK.
+AFK_STATE_FILE ='data/afk_state.json'
+
 
 class AFK (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
         # {guild_id: {user_id: {"reason": str, "since": datetime, "owner_mode": bool}}}
         self ._afk :dict ={}
+        self ._dirty =False 
+
+    async def cog_load (self ):
+        """Восстановить AFK-список из файла при старте бота."""
+        try :
+            from services .async_io import load_json_async
+            data =await load_json_async (AFK_STATE_FILE ,{},log =_log )or {}
+            raw =(data .get ('afk')or {})if isinstance (data ,dict )else {}
+            self ._afk ={str (g ):dict (v )for g ,v in raw .items ()if isinstance (v ,dict )}
+            if self ._afk :
+                _log .debug ("[afk] восстановлено из файла: %s сервер(ов)",len (self ._afk ))
+        except Exception as ex :
+            _log .debug ("[afk] загрузка состояния: %s",ex )
+
+    def _mark_dirty (self ):
+        """Пометить изменение и уйти на сохранение в фоне.
+
+        Запись НЕ синхронная: по правилу репозитория (services/async_io)
+        блокировать гейтвей-цикл нельзя, поэтому сохраняем задачей.
+        """
+        self ._dirty =True 
+        try :
+            asyncio .get_running_loop ().create_task (self ._flush ())
+        except RuntimeError as ex :
+            # Нет активного цикла (вызов вне async) — сохраним в следующий раз.
+            _log .debug ("[afk] отложенное сохранение недоступно: %s",ex )
+
+    async def _flush (self ):
+        if not self ._dirty :
+            return 
+        self ._dirty =False 
+        try :
+            from services .async_io import save_json_async
+            await save_json_async (AFK_STATE_FILE ,{'afk':self ._afk },log =_log )
+        except Exception as ex :
+            _log .debug ("[afk] сохранение состояния: %s",ex )
 
     def _set (self ,guild_id ,user_id ,reason ,owner_mode =False ):
         self ._afk .setdefault (str (guild_id ),{})[str (user_id )]={
@@ -61,12 +104,14 @@ class AFK (commands .Cog ):
         "since":datetime .now (timezone .utc ).isoformat (),
         "owner_mode":owner_mode 
         }
+        self ._mark_dirty ()
 
     def _get (self ,guild_id ,user_id ):
         return self ._afk .get (str (guild_id ),{}).get (str (user_id ))
 
     def _remove (self ,guild_id ,user_id ):
         self ._afk .get (str (guild_id ),{}).pop (str (user_id ),None )
+        self ._mark_dirty ()
 
     def _is_afk_anywhere (self ,user_id ):
         """Есть ли пользователь в AFK на каком-либо сервере?"""
@@ -108,42 +153,15 @@ class AFK (commands .Cog ):
             e .set_thumbnail (url ='attachment://afk_icon.png')
         else :
             e .set_thumbnail (url =interaction .user .display_avatar .url )
-        e .set_footer (text ="💤 Выход из AFK: /afk-remove")
+        e .set_footer (text ="💤 AFK спадёт сам, как только напишешь в чат")
         # Ответ видит только сам пользователь — чат не засоряется
         if icon :
             await interaction .response .send_message (embed =e ,file =icon ,ephemeral =True )
         else :
             await interaction .response .send_message (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="afk-remove",description ="Выйти из режима AFK")
-    async def afk_remove (self ,interaction :discord .Interaction ):
-        data =self ._get (interaction .guild_id ,interaction .user .id )
-        if not data :
-            await interaction .response .send_message ("Вы не в режиме AFK.",ephemeral =True )
-            return 
-        self ._remove (interaction .guild_id ,interaction .user .id )
-        # Убрать 💤 из ника
-        try :
-            nick =interaction .user .display_name 
-            if nick .startswith ("💤"):
-                await interaction .user .edit (nick =nick [2 :].strip ()or None )
-        except Exception as _ex:
-            _log.debug("afk_remove(): подавлено: %s", _ex)
-        # Показать накопившиеся упоминания
-        uid =interaction .user .id 
-        pending =_pending_mentions .pop (uid ,[])
-        if pending :
-            lines =[]
-            for p in pending [-10 :]:
-                lines .append (f"• **{p['from']}** — {p['guild']} #{p['channel']}\n  > {p['msg'][:100]}")
-            embed =discord .Embed (
-            title =f'👋 С возвращением! Тебя ждут {len(pending)} упоминаний',
-            description ='\n\n'.join (lines ),
-            color =0x57F287 
-            )
-            await interaction .response .send_message (embed =embed ,ephemeral =True )
-        else :
-            await interaction .response .send_message ('Режим AFK отключён! Никто тебя не упоминал.',ephemeral =True )
+    # Команды /afk-remove больше нет (2026-09-01): AFK снимается
+    # автоматически при первом же сообщении участника в чат — см. on_message.
 
     @commands .Cog .listener ()
     async def on_message (self ,message :discord .Message ):
@@ -167,6 +185,17 @@ class AFK (commands .Cog ):
             icon_url =message .author .display_avatar .url 
             )
             e .description =f"> **Длительность:** **{dur}**\n> Причина: *{afk_data['reason']}*"
+            # Накопившиеся упоминания показываем прямо при авто-снятии
+            # (отдельной команды /afk-remove больше нет — AFK спадает сам).
+            _pend =_pending_mentions .pop (uid ,[])
+            if _pend :
+                lines =[]
+                for p in _pend [-10 :]:
+                    lines .append (f"• **{p['from']}** — #{p['channel']}\n  > {p['msg'][:100]}")
+                e .add_field (
+                name =f"📬 Тебя упомянули {len(_pend)} раз",
+                value ="\n\n".join (lines )[:1024],
+                inline =False )
             await message .channel .send (embed =e ,delete_after =8 )
             # Убрать 💤 из ника
             try :

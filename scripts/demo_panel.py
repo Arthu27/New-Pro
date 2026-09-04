@@ -48,7 +48,7 @@ def seed():
             ('msg',    'Удалено сообщение',  'Spammer',  'AutoMod',    'Реклама сторонних ссылок',      320),
             ('voice',  'Зашёл в голосовой',  'Meloman',  '',           'Общий голосовой',               500),
             ('mod',    'Бан',                'Griever',  'Arthur',     'Рейд-бот, возраст акка 2 часа', 1400),
-            ('ticket', 'Тикет закрыт',       'Novichok', 'Moder_Nika', 'вопрос решён',                  2600),
+            ('report', 'Жалоба закрыта',      'Novichok', 'Moder_Nika', 'вопрос решён',                  2600),
             ('member', 'Участник вошёл',      'Mira',     '',            'organic',                        5400),
             ('member', 'Участник вошёл',      'Vortex',   '',            'invite:Arthur',                 18200),
             ('member', 'Участник вышел',      'OldPlayer','',            'leave',                         26600),
@@ -266,34 +266,74 @@ class FakeChannel:
         self.id = cid
         self.name = name
         self.mention = f'#{name}'
+        # Реальный discord.ChannelType.text, чтобы /channels и пикеры каналов
+        # в демо-превью отдавали живой список (без типа канал выпадал из
+        # фильтра type == 'text' и селекты объявлений/чата пустовали).
+        import discord as _discord
+        self.type = _discord.ChannelType.text
+        self.category = None
+        self.position = 0
 
     def __str__(self):
         return self.name
 
 
+class _FakeRole:
+    """Мини-роль как у discord.Role: id, имя, цвет (для бейджей в списках)."""
+
+    def __init__(self, rid, name, color):
+        self.id = rid
+        self.name = name
+        self.color = color or 0
+        self.position = rid
+
+
 class _FakeMember:
-    """Лёгкий участник для кэша демо-гильдии (профиль памяти)."""
+    """Участник демо-гильдии — полный «утёнок» discord.Member.
+
+    Сериализатор /api/guild/<id>/members читает discriminator, nick, top_role
+    и пр.; без них список участников падал в jsonify([]) — «я вошёл, а в
+    сервере никого нет». Данные берём из DEMO_MEMBERS (web/routes/_common.py):
+    единый состав людей для поиска, @-пикеров и списков.
+    """
 
     class _Avatar:
         url = 'https://i.imgur.com/demo.png'
+        is_animated = False
 
-    def __init__(self, uid):
-        self.id = uid
-        self.name = f'Участник {uid}'
-        self.display_name = self.name
+    def __init__(self, rec):
+        from web.routes._common import DEMO_MEMBERS  # noqa: F401  (переиспользуем источник имён)
+        self.id = int(rec['id'])
+        self.name = rec.get('name') or str(self.id)
+        self.display_name = rec.get('display_name') or self.name
+        self.discriminator = '0'
         self.bot = False
-        self.status = 'online' if uid % 5 else 'idle'
-        self.roles = []
-        self.avatar = None
+        self.status = rec.get('status') or 'online'
+        self.nick = None
+        self.avatar = rec.get('avatar')
         self.display_avatar = self._Avatar()
-        self.mention = f'<@{uid}>'
-        self.joined_at = NOW - timedelta(days=uid % 90)
+        self.mention = f'<@{self.id}>'
+        self.joined_at = datetime.fromisoformat(
+            rec.get('joined_at') or _iso(NOW - timedelta(days=self.id % 90)))
+        # discord.Member.roles не включает @everyone: добавляем его нулевым,
+        # чтобы сериализатор (roles[1:]) отдал человеческую роль-бейдж.
+        human = [_FakeRole(10 + i, r.get('name') or '', r.get('color'))
+                 for i, r in enumerate(rec.get('roles') or [])]
+        self.roles = [_FakeRole(0, '@everyone', 0)] + human
+        self.top_role = human[-1] if human else self.roles[0]
+        self.guild = None
+
+
+def _members_from_demo():
+    """Участники демо-сервера = демо-состав людей (владелец первый)."""
+    from web.routes._common import DEMO_MEMBERS
+    return [_FakeMember(rec) for rec in DEMO_MEMBERS]
 
 
 class FakeGuild:
     id = GID
     name = 'Демо-сервер Hakumo'
-    member_count = 128
+    member_count = 10
     owner_id = 7
     icon = None
     banner = None
@@ -307,8 +347,11 @@ class FakeGuild:
     def __init__(self):
         self.channels = [FakeChannel(777001, 'доказательства'), FakeChannel(777002, 'общий')]
         self.text_channels = self.channels
-        # лёгкий кэш участников: профиль памяти показывает живые числа
-        self.members = [_FakeMember(2000 + i) for i in range(128)]
+        # Кэш участников = те же люди, что в поиске и @-пикерах (DEMO_MEMBERS):
+        # панель входит под владельцем, и он виден в списках сервера первым.
+        self.members = _members_from_demo()
+        # Счётчик совпадает с составом: список «10 из 128» выглядел бы багом.
+        self.member_count = len(self.members)
         self.voice_channels = []
         self.stage_channels = []
         self.forums = []

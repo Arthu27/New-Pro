@@ -469,22 +469,35 @@ class Security (commands .Cog ):
         for c in guild .categories 
         ],
         }
-        path =os .path .join (BACKUP_DIR ,f'backup_{guild.id}_{timestamp}.json')
-        with open (path ,'w',encoding ='utf-8')as f :
-            json .dump (backup ,f ,indent =2 ,ensure_ascii =False )
+        # запись файла и чистка старых бэкапов — в рабочем потоке
+        # (open/json.dump/listdir/remove не должны морозить event loop)
+        import asyncio as _aio_b
+        def _write_and_prune ():
+            path =os .path .join (BACKUP_DIR ,f'backup_{guild.id}_{timestamp}.json')
+            with open (path ,'w',encoding ='utf-8')as f :
+                json .dump (backup ,f ,indent =2 ,ensure_ascii =False )
+            # Старые бэкапы подчищаем (оставляем последние 7)
+            all_backups =sorted ([
+            x for x in os .listdir (BACKUP_DIR )
+            if x .startswith (f'backup_{guild.id}_')
+            ])
+            for old in all_backups [:-7 ]:
+                try :
+                    os .remove (os .path .join (BACKUP_DIR ,old ))
+                except Exception as _ex:
+                    _log.debug("_backup_guild(): подавлено: %s", _ex)
+        await _aio_b .to_thread (_write_and_prune )
 
-            # Старый yedaddri clear (son 7 tane tut)
-        all_backups =sorted ([
-        x for x in os .listdir (BACKUP_DIR )
-        if x .startswith (f'backup_{guild.id}_')
-        ])
-        for old in all_backups [:-7 ]:
-            try :
-                os .remove (os .path .join (BACKUP_DIR ,old ))
-            except Exception as _ex:
-                _log.debug("_backup_guild(): подавлено: %s", _ex)
-
-    @app_commands .command (name ="backup",description ="Создать резервную копию настроек сервера")
+    # ВАЖНО (инцидент 30.08): имена были "backup" / "backup-list" и в лоб
+    # сталкивались с группой /backup из cogs/backup_cog.py. Итог зависел от
+    # .env: с пустым MAIN_GUILD_ID оба кога лезли в ГЛОБАЛЬНОЕ дерево и
+    # security.py падал на старте (CommandAlreadyRegistered: 'backup'), а с
+    # заданным MAIN_GUILD_ID падения не было, но одна и та же команда
+    # оказывалась и в глобальном, и в серверном меню — «каждая команда по
+    # две». Здесь снимок НАСТРОЕК сервера (роли/каналы в JSON), в backup_cog —
+    # архив data/: разные вещи, поэтому имена разведены по префиксу security-*
+    # (как у соседей /security-toggle и /security-newaccount).
+    @app_commands .command (name ="security-backup",description ="Снимок настроек сервера (роли и каналы)")
     @app_commands .checks .has_permissions (administrator =True )
     async def backup_now (self ,interaction :discord .Interaction ):
         await interaction .response .defer (ephemeral =True )
@@ -504,7 +517,7 @@ class Security (commands .Cog ):
         e .set_footer (text ="💾 Hakumo Backup • ежедневное авто-копирование активно")
         await interaction .followup .send (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="backup-list",description ="Показать список резервных копий")
+    @app_commands .command (name ="security-backup-list",description ="Список снимков настроек сервера")
     @app_commands .checks .has_permissions (administrator =True )
     async def backup_list (self ,interaction :discord .Interaction ):
         if not os .path .exists (BACKUP_DIR ):
@@ -516,7 +529,7 @@ class Security (commands .Cog ):
         ],reverse =True )
         e =discord .Embed (title ="💾 Резервные копии сервера",color =0x3498db ,timestamp =datetime .now (timezone .utc ))
         if not backups :
-            e .description ="Копий пока не найдено. Создайте копию командой `/backup`."
+            e .description ="Копий пока не найдено. Создайте копию командой `/security-backup`."
         else :
             e .description ="\n".join (f"• `{b}`"for b in backups )
         e .set_footer (text ="💾 Хранятся последние 7 копий")

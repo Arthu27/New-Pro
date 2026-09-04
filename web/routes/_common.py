@@ -45,18 +45,6 @@ import discord
 from datetime import datetime, timezone, timedelta
 
 
-def _load_ai_tickets (guild_id :int )->dict :
-    """Загрузить данные AI-тикетов"""
-    path =f"data/ai_tickets_{guild_id}.json"
-    if os .path .exists (path ):
-        try :
-            with open (path ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as _ex:
-            _log.debug("_load_ai_tickets(): подавлено: %s", _ex)
-    return {}
-
-
 async def _fetch_channel_msgs_async (bot ,channel_mentions ):
     """Async helper to fetch recent messages from a channel, given a bot instance and optional mentions filter."""
     lines =[]
@@ -174,9 +162,38 @@ def _fire_panel_notification (event ,title ,body ):
     """Вызвать диспетчер уведомлений, не прерывая основной обработчик."""
     try :
         from services .notification_dispatcher import notify_event
-        return notify_event (event ,title ,body ,discord_sender =_notify_discord_sender )
+        _res =notify_event (event ,title ,body ,discord_sender =_notify_discord_sender )
+        # Живой пуш: колокольчик на всех открытых вкладках обновится сразу,
+        # без 30-секундного опроса.
+        try :
+            from services .live_bus import publish_global
+            publish_global ('notifications')
+        except Exception as _live_ex :
+            _log .debug ('notifications live-push: %s' ,_live_ex )
+        return _res
     except Exception :
         return {}
+
+
+def _live_publish (gid ,topic ):
+    """Толкнуть SSE-сигнал об изменении данных (живые обновления панели).
+
+    Никогда не прерывает основной обработчик — ошибка шины игнорируется.
+    """
+    try :
+        from services .live_bus import publish as _pub
+        _pub (gid ,topic )
+    except Exception as _ex :
+        _log .debug ('live_publish %s/%s: %s' ,gid ,topic ,_ex )
+
+
+def _live_publish_global (topic ):
+    """Глобальный SSE-сигнал (список серверов, тема и т.п.)."""
+    try :
+        from services .live_bus import publish_global as _pubg
+        _pubg (topic )
+    except Exception as _ex :
+        _log .debug ('live_publish_global %s: %s' ,topic ,_ex )
 
 
 # ── Классические разрешения: одна точка для всех веб-роутов ──────────────
@@ -201,9 +218,10 @@ def viewer_member(bot, gid):
 def acl_action_allowed(gid, member, action_key):
     """«Классическое» разрешение действия (панель → Доступ → Права команд).
 
-    Правила нет — можно (как везде в permission_acl.check_action). member
-    None (доверенный вход) — можно. Сбой чтения БД — не режем (fail-open,
-    тот же принцип, что у самого permission_acl).
+    Строгая модель: member None (доверенный вход — владелец панели) — можно;
+    иначе решает check_action — по умолчанию ЗАПРЕТ, пока владелец не разрешит
+    ролью. Discord-права не учитываются. Сбой чтения БД — не открываем действие
+    (fail-close): лучше не показать кнопку, чем дать невыданное право.
     """
     if member is None:
         return True
@@ -212,7 +230,7 @@ def acl_action_allowed(gid, member, action_key):
         return bool(check_action(int(gid), member, action_key))
     except Exception as _ex:
         _log.debug('acl_action_allowed: %s', _ex)
-        return True
+        return False
 
 
 def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
@@ -248,7 +266,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not uid :
                 return '❌ Пользователь ID не найден'
                 # AI asistan никогда автоматически warn не может отправить — только predlojenie предлагает
-            return f'⚠️ AI предлагает warn: выдать {uid} предупреждение за «{reason}». Подтвердите командой /moderate.'
+            return f'⚠️ AI предлагает warn: выдать {uid} предупреждение за «{reason}». Подтвердите через /modpanel.'
 
         elif action_type =='ban':
             reason =action_data .get ('reason','AI ban')
@@ -258,7 +276,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI ban предложение — автоматически примен
-            return f'⚠️ AI ban предложение: {member.display_name} ({uid}) — Причина: "{reason}". Подтвердите командой /moderate ban.'
+            return f'⚠️ AI предлагает бан: {member.display_name} ({uid}) — Причина: "{reason}". Подтвердите через /modpanel.'
             return f'✅ Ban применено (user_id: {uid})'
 
         elif action_type =='kick':
@@ -269,7 +287,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI kick предложение — автоматически примен
-            return f'⚠️ AI kick предложение: {member.display_name} ({uid}) — Причина: "{action_data.get("reason", "AI kick")}". Подтвердите командой /moderate kick.'
+            return f'⚠️ AI предлагает кик: {member.display_name} ({uid}) — Причина: "{action_data.get("reason", "AI kick")}". Подтвердите через /modpanel.'
 
         elif action_type =='dm':
             message =action_data .get ('message','')
@@ -290,7 +308,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI timeout предложение — автоматически примен
-            return f'⚠️ AI timeout предложение: {member.display_name} ({uid}) — {minutes} мин, причина: "{reason}". Подтвердите командой /moderate timeout.'
+            return f'⚠️ AI предлагает таймаут: {member.display_name} ({uid}) — {minutes} мин, причина: "{reason}". Подтвердите через /modpanel.'
 
         elif action_type =='add_role':
             role_id =str (action_data .get ('role_id',''))
@@ -472,6 +490,12 @@ import re as _ms_re
 
 # ── Демо-участники (когда бот офлайн: поиск, @-пикер, подсказки) ─────────
 DEMO_MEMBERS = [
+    # Владелец демо-сервера (owner_id=7): панель входит под ним, поэтому
+    # он обязан быть виден среди участников (списки, поиск, @-пикеры).
+    {'id': '7', 'name': 'owner.hakumo', 'display_name': 'Владелец',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/0.png', 'status': 'online',
+     'roles': [{'name': 'Владелец', 'color': '#f59e0b'}],
+     'joined_at': '2025-10-01T09:00:00+00:00'},
     {'id': '1001', 'name': 'sonya.staff', 'display_name': 'Sonya',
      'avatar': 'https://cdn.discordapp.com/embed/avatars/1.png', 'status': 'online',
      'roles': [{'name': 'Куратор', 'color': '#22d3ee'}], 'joined_at': '2025-11-02T10:00:00+00:00'},
@@ -678,6 +702,27 @@ class Ctx:
             return str(guilds[0].id)
         return configured
 
+    def active_guild_id_int(self):
+        """Активный сервер как int, или None — если сервера нет.
+
+        active_guild_id() отдаёт СТРОКУ и вполне законно возвращает пустую:
+        MAIN_GUILD_ID не задан в .env и бот ещё не подключился (или офлайн).
+        Роуты писали `int(ctx.active_guild_id())` в лоб — и на пустой строке
+        получали ValueError → HTTP 500 «Internal Server Error» вместо
+        внятного «сервер не выбран». Инцидент 30.08: страницы Магазин,
+        Музыка, Дуэли, Ачивки, Отчёт модерации, SLA/экспорт тикетов падали
+        с 500 при пустом MAIN_GUILD_ID — снаружи это «панель сломана».
+
+        Возвращает None вместо взрыва — вызывающий отдаёт 503 и подсказку.
+        """
+        raw = str(self.active_guild_id() or '').strip()
+        if not raw:
+            return None
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+
     def _resolve_member_async(self, guild, user_id):
         """Async helper: get cached member or fetch from API."""
         member = guild.get_member(int(user_id))
@@ -693,101 +738,34 @@ class Ctx:
 
 
 
-def calculate_ai_ticket_stats (guild_id :int )->dict :
-    """AI ticket статистика hesapla"""
-    import json ,os 
-    from datetime import datetime 
-    from collections import Counter 
 
-    # Penalty dosyasыnы загрузить
-    penalty_file ='data/ticket_penalties.json'
-    penalties ={}
-    if os .path .exists (penalty_file ):
-        try :
-            with open (penalty_file ,'r',encoding ='utf-8')as f :
-                penalties =json .load (f )
-        except Exception as _ex:
-            _log.debug("calculate_ai_ticket_stats(): подавлено: %s", _ex)
+def role_member_counts(guild):
+    """Число участников в каждой роли за ОДИН проход по составу сервера.
 
-    guild_penalties =penalties .get (str (guild_id ),{})
+    Role.members в discord.py каждый раз копирует список всех участников и
+    фильтрует его (discord/role.py:415-420):
 
-    # Temel статистика
-    total_penalties =sum (len (p )if isinstance (p ,list )else 1 for p in guild_penalties .values ())
+        all_members = list(self.guild._members.values())
+        return [member for member in all_members if member._roles.has(role_id)]
 
-    # Наказание причина say
-    reasons =[]
-    for user_penalties in guild_penalties .values ():
-        if isinstance (user_penalties ,list ):
-            for p in user_penalties :
-                reasons .append (p .get ('reason','неизвестно'))
-        else :
-            reasons .append (user_penalties .get ('reason','неизвестно'))
-
-    reason_counter =Counter (reasons )
-
-    # Взаимный нарушение, фейковый жалоба число
-    mutual_violations =reason_counter .get ('взаимный мат/оскорбление',0 )
-    fake_complaints =reason_counter .get ('фейковый жалоба + правило нарушение',0 )
-    single_violations =total_penalties -mutual_violations -fake_complaints 
-
-    # Oranlar
-    total =total_penalties if total_penalties >0 else 1 
-    mutual_rate =round ((mutual_violations /total )*100 ,1 )
-    fake_rate =round ((fake_complaints /total )*100 ,1 )
-    single_rate =round ((single_violations /total )*100 ,1 )
-    no_violation_rate =max (0 ,100 -mutual_rate -fake_rate -single_rate )
-
-    # En очень наказание alan userlar
-    top_offenders =[]
-    for user_id ,user_penalties in guild_penalties .items ():
-        if isinstance (user_penalties ,list ):
-            count =len (user_penalties )
-            total_duration =sum (p .get ('duration',0 )for p in user_penalties )
-            last_penalty =user_penalties [-1 ].get ('date','неизвестно')if user_penalties else 'неизвестно'
-            name =user_penalties [-1 ].get ('name',user_id )if user_penalties else user_id 
-        else :
-            count =1 
-            total_duration =user_penalties .get ('duration',0 )
-            last_penalty =user_penalties .get ('date','неизвестно')
-            name =user_penalties .get ('name',user_id )
-
-        top_offenders .append ({
-        'name':name ,
-        'count':count ,
-        'total_duration':total_duration ,
-        'last_penalty':last_penalty [:10 ]if isinstance (last_penalty ,str )else 'неизвестно'
-        })
-
-    top_offenders .sort (key =lambda x :x ['count'],reverse =True )
-    top_offenders =top_offenders [:10 ]
-
-    # Наказание причина
-    penalty_reasons =[]
-    for reason ,count in reason_counter .most_common ():
-        penalty_reasons .append ({
-        'name':reason ,
-        'count':count ,
-        'percentage':round ((count /total )*100 ,1 )
-        })
-
-        # AI ticket verilerini загрузить
-    ai_tickets =_load_ai_tickets (guild_id )
-    total_tickets =len (ai_tickets )
-
-    return {
-    'total_tickets':total_tickets ,
-    'total_penalties':total_penalties ,
-    'mutual_violations':mutual_violations ,
-    'fake_complaints':fake_complaints ,
-    'single_violation_rate':single_rate ,
-    'mutual_rate':mutual_rate ,
-    'fake_rate':fake_rate ,
-    'no_violation_rate':no_violation_rate ,
-    'avg_confidence':75 ,# Placeholder - gerчek hesaplama для AI response'larы saklamak gerek
-    'high_confidence_count':int (total_penalties *0.8 ),# Tahmini
-    'low_confidence_count':int (total_penalties *0.2 ),# Tahmini
-    'appeal_rate':5 ,# Placeholder
-    'appeal_success_rate':30 ,# Placeholder
-    'top_offenders':top_offenders ,
-    'penalty_reasons':penalty_reasons 
-    }
+    Поэтому len(r.members) в цикле по ролям — это O(роли × участники): на
+    20 000 участников и 250 ролей получается 5 млн итераций плюс 250 копий
+    списка на 20 000 элементов. Замер в бою: [SLOW] GET /api/roles — 2.95 с.
+    Один проход по участникам с подсчётом по их ролям даёт те же числа за
+    O(участники + назначения).
+    """
+    counts = {}
+    try:
+        members = guild.members
+    except Exception:
+        return counts
+    for m in members:
+        try:
+            member_roles = m.roles
+        except Exception:
+            # участник без читаемых ролей (частичный кэш, гонка при выходе) —
+            # считаем его без ролей, а не роняем весь подсчёт
+            member_roles = ()
+        for r in member_roles:
+            counts[r.id] = counts.get(r.id, 0) + 1
+    return counts

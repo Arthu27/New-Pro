@@ -6,21 +6,22 @@
                         бот читает через cogs/proof_cog._proof_channel);
   • appeals_channel   — карточки апелляций (GuildData('appeals').state);
   • welcome_channel   — приветствия PRO (GuildData('welcome_pro').settings);
-  • tagjail_channel   — лог Tag Jail (data/tag_jail.json cfg).
+  • antiraid/security/anticrash — логи живых систем защиты (их же конфиги).
+
+Настройки вырезанных/спящих систем (тикеты, считалка, starboard, ночные
+сводки, смены, tag jail) на странице не показываются — маршрутов нет.
 
 Просмотр — mod+ (чтобы у команды не было вопросов «почему улетело туда»),
 изменение — admin+ (остальные просто видят, как настроено).
 """
 from web.routes._common import (
-    _log, _fire_panel_notification,
+    _log, _fire_panel_notification, _live_publish,
     render_template, session, request, jsonify,
     os, json,
 )
 
 from db import GuildData
 from services import channel_routes as CHR
-
-TAGJAIL_CFG = 'data/tag_jail.json'
 
 
 def _active_gid(ctx):
@@ -58,41 +59,33 @@ def _appeals_set(gid, cid):
     return True
 
 
+# Канал приветствий: бот (cogs/welcome_cog._panel_section) и редактор
+# приветствий (/welcome-editor → /welcome-settings) читают и пишут ОДИН файл
+# data/welcome_<gid>.json, секция 'welcome' → 'channel_id'. Раньше адаптер
+# «Каналы и маршруты» писал в другое хранилище (welcome_pro), из-за чего
+# выбор канала тут не совпадал с приветствиями — теперь пишем в тот же файл.
+def _welcome_path(gid):
+    return f'data/welcome_{gid}.json'
+
+
 def _welcome_get(gid):
-    st = GuildData('welcome_pro').get(gid, 'settings', {}) or {}
-    return int(st.get('channel_id') or 0)
+    try:
+        data = _json_load(_welcome_path(gid))
+        sec = data.get('welcome') if isinstance(data, dict) else None
+        return int((sec or {}).get('channel_id') or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _welcome_set(gid, cid):
-    db = GuildData('welcome_pro')
-    st = db.get(gid, 'settings', {}) or {}
-    st['channel_id'] = int(cid)
-    db.set(gid, 'settings', st)
-    return True
-
-
-def _tagjail_load():
-    try:
-        with open(TAGJAIL_CFG, 'r', encoding='utf-8') as fp:
-            data = json.load(fp)
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
-        return {}
-
-
-def _tagjail_get(gid):
-    return int((_tagjail_load().get(str(gid)) or {}).get('log_channel_id') or 0)
-
-
-def _tagjail_set(gid, cid):
-    data = _tagjail_load()
-    row = data.setdefault(str(gid), {})
-    row['log_channel_id'] = int(cid)
-    os.makedirs(os.path.dirname(TAGJAIL_CFG), exist_ok=True)
-    tmp = TAGJAIL_CFG + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as fp:
-        json.dump(data, fp, ensure_ascii=False, indent=2)
-    os.replace(tmp, TAGJAIL_CFG)
+    path = _welcome_path(gid)
+    data = _json_load(path)
+    sec = data.get('welcome')
+    if not isinstance(sec, dict):
+        sec = {}
+    sec['channel_id'] = int(cid) or 0
+    data['welcome'] = sec
+    _json_save(path, data)
     return True
 
 
@@ -163,71 +156,6 @@ def _anticrash_set(_gid, cid):
     return True
 
 
-# ── Дайджесты и игровые каналы: те же хранилища, что у когов бота ──────────
-def _guilddata_channel(db_name, bucket):
-    """Адаптер для GuildData-хранилищ: get(gid, bucket)[channel_id]."""
-    def _get(gid):
-        try:
-            st = GuildData(db_name).get(gid, bucket, {}) or {}
-            return int(st.get('channel_id') or 0)
-        except (TypeError, ValueError):
-            return 0
-
-    def _set(gid, cid):
-        db = GuildData(db_name)
-        st = db.get(gid, bucket, {}) or {}
-        st['channel_id'] = int(cid)
-        db.set(gid, bucket, st)
-        return True
-
-    return _get, _set
-
-
-STARBOARD_CFG = 'data/starboard_settings_{gid}.json'
-NIGHT_CFG = 'data/night_summary.json'
-TICKET_NOTIFY_CFG = 'data/ticket_notify_{gid}.json'
-
-
-def _starboard_get(gid):
-    return int(_json_load(STARBOARD_CFG.format(gid=gid)).get('channel_id') or 0)
-
-
-def _starboard_set(gid, cid):
-    path = STARBOARD_CFG.format(gid=gid)
-    data = _json_load(path)
-    data['channel_id'] = int(cid)
-    _json_save(path, data)
-    return True
-
-
-def _night_get(gid):
-    row = _json_load(NIGHT_CFG).get(str(gid)) or {}
-    try:
-        return int(row.get('channel_id') or 0)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _night_set(gid, cid):
-    data = _json_load(NIGHT_CFG)
-    row = data.setdefault(str(gid), {})
-    row['channel_id'] = int(cid)
-    _json_save(NIGHT_CFG, data)
-    return True
-
-
-def _ticket_notify_get(gid):
-    return int(_json_load(TICKET_NOTIFY_CFG.format(gid=gid)).get('notify_channel_id') or 0)
-
-
-def _ticket_notify_set(gid, cid):
-    path = TICKET_NOTIFY_CFG.format(gid=gid)
-    data = _json_load(path)
-    data['notify_channel_id'] = int(cid) or None
-    _json_save(path, data)
-    return True
-
-
 # ── Заявки в команду: ветки и общий канал (services/staff_roles) ──────────
 from services import staff_roles as _SR
 
@@ -250,11 +178,6 @@ def _staff_set(key):
     return _set
 
 
-_counting_ad = _guilddata_channel('counting', 'state')
-_mod_digest_ad = _guilddata_channel('mod_digest', 'settings')
-_shifts_ad = _guilddata_channel('staff_shifts', 'settings')
-
-
 ADAPTERS = {
     'ban_appeal_channel': (CHR.get_route, CHR.set_route),
     'appeal_menu_channel': (CHR.get_route, CHR.set_route),
@@ -262,17 +185,10 @@ ADAPTERS = {
     'proof_channel': (CHR.get_route, CHR.set_route),
     'appeals_channel': (_appeals_get, _appeals_set),
     'welcome_channel': (_welcome_get, _welcome_set),
-    'tagjail_channel': (_tagjail_get, _tagjail_set),
     'guardian_channel': (CHR.get_route, CHR.set_route),
     'antiraid_channel': (_antiraid_get, _antiraid_set),
     'security_channel': (_security_get, _security_set),
     'anticrash_channel': (_anticrash_get, _anticrash_set),
-    'counting_channel': _counting_ad,
-    'starboard_channel': (_starboard_get, _starboard_set),
-    'night_report_channel': (_night_get, _night_set),
-    'mod_digest_channel': _mod_digest_ad,
-    'shifts_channel': _shifts_ad,
-    'ticket_notify_channel': (_ticket_notify_get, _ticket_notify_set),
     'staff_helper_channel': (_staff_get('staff_helper_channel'), _staff_set('staff_helper_channel')),
     'staff_moderator_channel': (_staff_get('staff_moderator_channel'), _staff_set('staff_moderator_channel')),
     'staff_apply_channel': (_staff_get('staff_apply_channel'), _staff_set('staff_apply_channel')),
@@ -288,9 +204,24 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def channel_settings_page():
+        # Метки/описания маршрутов отдаём сразу с сервера: каркас страницы
+        # (строки и селекты) рисуется мгновенно, до любых fetch — каналы и
+        # сохранённые значения лишь наполняют уже готовые селекты.
+        specs = [{
+            'key': s['key'],
+            'label': s['label'],
+            'icon': s['icon'],
+            'what': s['what'],
+            'empty': s['empty'],
+            'access': s.get('access', 'Админ'),
+            'step': s.get('step'),
+            'required': bool(s.get('required', False)),
+            'create_hint': s.get('create_hint', ''),
+        } for s in CHR.ROUTE_SPECS if not s.get('hidden_from_hub')]
         return render_template('channel_settings.html',
                                role=session.get('role'),
-                               username=session.get('username'))
+                               username=session.get('username'),
+                               route_specs=specs)
 
     @app.route('/api/channel-routes', methods=['GET'])
     @login_required
@@ -299,6 +230,10 @@ def register(ctx):
         gid = _active_gid(ctx)
         out = []
         for spec in CHR.ROUTE_SPECS:
+            if spec.get('hidden_from_hub'):
+                # дублирующие лог-маршруты настраиваются в «Логи сервера» —
+                # в хабе каналов их не показываем (бот их по-прежнему читает)
+                continue
             get_fn = ADAPTERS[spec['key']][0]
             try:
                 cid = int(get_fn(gid, spec['key']) if spec['kind'] == 'native'
@@ -313,6 +248,9 @@ def register(ctx):
                 'what': spec['what'],
                 'empty': spec['empty'],
                 'access': spec['access'],
+                'step': spec.get('step'),
+                'required': bool(spec.get('required', False)),
+                'create_hint': spec.get('create_hint', ''),
                 'channel_id': cid,
             })
         return jsonify({'success': True, 'routes': out, 'gid': str(gid)})
@@ -360,6 +298,7 @@ def register(ctx):
             _fire_panel_notification(
                 'channels', f'Маршрут очищен: {spec["label"]}',
                 f'{who}: вернули поведение по умолчанию')
+        _live_publish(gid, 'channels')   # живой пуш: маршруты/каналы обновились
         return jsonify({'success': True, 'key': key, 'channel_id': cid})
 
     @app.route('/api/staff-role-routes', methods=['GET'])

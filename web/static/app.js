@@ -283,11 +283,108 @@
     return false;
   };
 
-  window.setLiveRefresh = function (fn, ms) {
+  /* Живые обновления: задания бывают двух режимов.
+     • timer (как раньше) — опрос раз в e.ms;
+     • push  — обновляются ПУШЕМ через SSE (services/live_bus.py → /api/live),
+               когда бэкенд реально сообщил об изменении; таймер тут лишь редкая
+               подстраховка (e.safety, по умолчанию 30с), чтобы не опрашивать
+               вхолостую. Это и убирает нагрузку «по секундам».
+     topics — массив масок (поддержка '*'), например ['g*:channels', 'g*:guardian']. */
+  /* Живые обновления. Любое задание работает в push-режиме: при изменении
+     данных на сервере бэк шлёт SSE-сигнал (services/live_bus.py → /api/live),
+     и страница обновляется сразу — без опроса по таймеру.
+     • topics заданы — задание обновляется ТОЛЬКО по своим топикам;
+     • topics нет (старые страницы) — ловит любое событие активного сервера
+       ('g*:*') и глобальные сигналы; таймер остаётся лишь редкой подстраховкой.
+     Опрос по таймеру в обоих случаях отступает на PUSH_SAFETY_MS, чтобы в
+     простое панель не молотила запросами (это и держит пинг бота низким). */
+  var PUSH_SAFETY_MS = 20000;   // подстраховка, если SSE не поднялся
+  window.setLiveRefresh = function (fn, ms, topics) {
     if (typeof fn !== 'function') return;
-    liveFns.push({ fn: fn, ms: ms || 1500, last: 0 });
-    if (liveFns.length > 60) liveFns.shift();
+    var e = {
+      fn: fn,
+      ms: Math.max(ms || 1500, PUSH_SAFETY_MS),
+      last: 0,
+      push: true,
+      topics: null,
+      pending: false
+    };
+    if (topics) {
+      e.topics = (Array.isArray(topics) ? topics : [String(topics)]);
+    } else {
+      // страница без явных топиков — обновляется по любому событию сервера
+      e.topics = ['g*:*', 'dashboard', 'global'];
+    }
+    liveFns.push(e);
+    if (liveFns.length > 80) liveFns.shift();
+    return e;
   };
+
+  /* Простейший glob-матчер масок ('*' и '?') */
+  function globMatch(pattern, text) {
+    if (pattern === '*' || pattern === text) return true;
+    var rx = '^' + String(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\?/g, '.').replace(/\*/g, '.*') + '$';
+    try { return new RegExp(rx).test(text); } catch (e) { return false; }
+  }
+
+  function jobMatches(e, topic) {
+    if (!e.topics) return false;
+    for (var i = 0; i < e.topics.length; i++) {
+      if (globMatch(e.topics[i], topic)) return true;
+    }
+    return false;
+  }
+
+  /* Слить пачку сигналов в один аккуратный прогон (rAF ~ кадр) */
+  function _schedulePushRun() {
+    if (livePaused || document.hidden) return;
+    if (_pushRaf) return;
+    _pushRaf = (window.requestAnimationFrame || function (f) { return setTimeout(f, 120); })(function () {
+      _pushRaf = 0;
+      var now = Date.now();
+      liveFns.forEach(function (e) {
+        if (e.push && e.pending) { e.pending = false; e.last = now; try { e.fn(); } catch (err) {} }
+      });
+    });
+  }
+  var _pushRaf = 0;
+
+  function _liveOnTick(topic) {
+    var hit = false;
+    liveFns.forEach(function (e) {
+      if (e.push && jobMatches(e, topic)) { e.pending = true; hit = true; }
+    });
+    if (hit) _schedulePushRun();
+  }
+
+  /* Один общий SSE-коннект на всю страницу. Если он не поднялся —
+     push-задания тихо живут на редкой страховке (e.safety). */
+  var _liveES = null, _liveESon = false;
+  function _liveConnect() {
+    if (_liveESon || typeof EventSource === 'undefined') return;
+    try {
+      var url = '/api/live?topics=*';
+      var es = new EventSource(url, { withCredentials: true });
+      _liveES = es; _liveESon = true;
+      es.addEventListener('tick', function (ev) {
+        var topic = '';
+        try { topic = (JSON.parse(ev.data || '{}') || {}).topic || ''; } catch (e) {}
+        if (topic) _liveOnTick(topic);
+      });
+      es.addEventListener('hello', function () {
+        // соединение (пере)открылось — могли пропустить сигнал, догоним всё
+        liveFns.forEach(function (e) { if (e.push) { e.pending = true; } });
+        _schedulePushRun();
+      });
+      es.onerror = function () {
+        // EventSource сам переподключится; тут ничего не спамим.
+        _liveESon = false;
+      };
+      es.onopen = function () { _liveESon = true; };
+    } catch (e) { _liveESon = false; }
+  }
+  window.__liveConnect = _liveConnect;
 
   setInterval(function () {
     if (livePaused) return;
@@ -298,7 +395,12 @@
     var now = Date.now();
     if (now < liveHoldUntil) return;
     liveFns.forEach(function (e) {
-      if (now - e.last >= e.ms) { e.last = now; try { e.fn(); } catch (err) {} }
+      // push-задания по короткому таймеру НЕ дёргаем — только по сигналу;
+      // их страховка срабатывает редко (e.ms у push = safety, ~30с).
+      if (now - e.last >= e.ms) {
+        e.last = now;
+        try { e.fn(); } catch (err) {}
+      }
     });
   }, 500);
 
@@ -645,12 +747,12 @@
         }
       });
     });
-    // Подгруппы (раздел модерации): активную раскрываем сразу
+    // Подгруппы (раздел модерации и защиты): пункты ВИДНЫ сразу —
+    // «весь состав меню на виду» (заказ владельца). Клик сворачивает.
     Array.prototype.forEach.call(nav.querySelectorAll('.nav-subgroup'), function (sub) {
       var btn = sub.querySelector('.nav-subgroup-title');
       if (!btn) return;
-      if (sub.classList.contains('has-active')) sub.classList.add('open');
-      btn.addEventListener('click', function () { sub.classList.toggle('open'); });
+      btn.addEventListener('click', function () { sub.classList.toggle('closed'); });
     });
     // Поиск-фильтр по меню: подсветка совпадений, авто-раскрытие групп,
     // счётчик у группы, «ничего не найдено», Esc и хоткей «/»
@@ -774,8 +876,12 @@
       });
     }
 
-    // Сохранение пинга из /api/stats
+    // Сохранение пинга из /api/stats. Раньше опрос шёл каждые 3 сек с КАЖДОЙ
+    // открытой вкладки (а эндпоинт перебирает участников всех серверов) —
+    // теперь 15 сек и только на видимой вкладке; бэкенд вдобавок кэширует
+    // ответ на 5 сек. Пилюля пинга остаётся живой, нагрузка падает в разы.
     function trackPing() {
+      if (document.hidden) return;
       fetch('/api/stats', { guardSilent: true })
         .then(function (r) { return r.json(); })
         .then(function (d) {
@@ -786,7 +892,8 @@
         .catch(function () {});
     }
     trackPing();
-    setInterval(trackPing, 3000);
+    setInterval(trackPing, 15000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) trackPing(); });
     var tick = function () {
       var t = new Date().toLocaleTimeString('ru-RU');
       if (clock) clock.textContent = t;
@@ -983,7 +1090,14 @@
     });
 
     loadNotifs();
-    setInterval(loadNotifs, 30000);
+    /* Колокольчик: новые уведомления прилетают пушем (топик notifications),
+       таймер 60с — лишь подстраховка. */
+    if (window.setLiveRefresh) {
+      window.setLiveRefresh(function () { if (!document.hidden) loadNotifs(); }, 60000,
+                            ['notifications', 'global']);
+    } else {
+      setInterval(loadNotifs, 30000);
+    }
   }
 
   function activityInit() {
@@ -1084,11 +1198,6 @@
       window.wsClient = ws;
       ws.on('connected', function () {
         try { ws.sendPresence('online'); } catch (e) {}
-      });
-      ws.on('ticket_update', function (d) { if (typeof window.handleTicketUpdate === 'function') window.handleTicketUpdate(d); });
-      ws.on('new_ticket', function (d) {
-        window.showToast('Новый тикет создан', true);
-        if (typeof window.handleNewTicket === 'function') window.handleNewTicket(d);
       });
       ws.on('stats_update', function (d) {
         if (typeof window.handleStatsUpdate === 'function') window.handleStatsUpdate(d);
@@ -1292,6 +1401,7 @@
     autoSearchInit();
     revealInit();
     wsInit();
+    if (window.__liveConnect) window.__liveConnect();
   });
 })();
 
@@ -2640,14 +2750,19 @@
 
     var wrap = doc.createElement('div');
     wrap.className = 'fab';
+    // min_role: пункты только для админа+ скрыты от мода/куратора (страница
+    // всё равно отдала бы 403 — не показываем ведущую в никуда ссылку).
+    var FAB_LEVELS = { uye: 0, mod: 1, curator: 2, admin: 3, owner: 4 };
+    var fabRole = (host.getAttribute('data-panel-role') || 'uye');
+    var fabLvl = FAB_LEVELS[fabRole] != null ? FAB_LEVELS[fabRole] : 0;
     var items = [
-      { icon: 'fa-clock', label: 'Новая мера', href: '/temp-moderation', tone: 'tone-info' },
-      { icon: 'fa-triangle-exclamation', label: 'Выдать варн', href: '/warnings', tone: 'tone-warn' },
-      { icon: 'fa-table-columns', label: 'Задача команде', href: '/team-board', tone: '' },
-      { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err' },
-      { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '' },
-      { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok' }
-    ];
+      { icon: 'fa-clock', label: 'Новая мера', href: '/temp-moderation', tone: 'tone-info', min: 1 },
+      { icon: 'fa-triangle-exclamation', label: 'Выдать варн', href: '/warnings', tone: 'tone-warn', min: 1 },
+      { icon: 'fa-table-columns', label: 'Задача команде', href: '/team-board', tone: '', min: 1 },
+      { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err', min: 3 },
+      { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '', min: 1 },
+      { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok', min: 0 }
+    ].filter(function (it) { return fabLvl >= (it.min || 0); });
     wrap.innerHTML = items.map(function (it) {
       return '<a class="fab-item ' + it.tone + '" href="' + esc0(it.href) + '">' +
         '<span class="ico"><i class="fas ' + it.icon + '"></i></span>' + esc0(it.label) + '</a>';
@@ -2929,6 +3044,7 @@
     cv.id = 'fx-confetti';
     doc.body.appendChild(cv);
     var ctx = cv.getContext('2d');
+    if (!ctx) { cv.remove(); return; }   /* нет 2d-контекста — иначе каждый кадр падает */
     var W = cv.width = win.innerWidth;
     var H = cv.height = win.innerHeight;
     var parts = [];
@@ -3287,21 +3403,24 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /* Ключи — ровно те, что живут в services/panel_menu.py. Раньше здесь
+     были tickets/fun/leveling/economy/admin (таких разделов нет) и не было
+     семи настоящих — у них показывалась общая заглушка «Раздел … панели». */
   var GROUP_LEADS = {
     main: 'Главный обзор сервера и ключевые показатели.',
     mod: 'Инструменты модерации: реагирование, расследование, защита и команда.',
+    protection: 'Защита сервера: рейды, антиспам и автоматические меры.',
     members: 'Работа с участниками: профили, поиск, заметки и наблюдение.',
     roles: 'Роли и права: управление, автоматизация и выдача.',
     access: 'Доступы: кто видит какие разделы панели.',
-    tickets: 'Тикеты и обращения: очереди, ответы и SLA.',
-    fun: 'Развлечения и игровые механики сервера.',
-    leveling: 'Уровни, опыт и карьерные системы.',
-    economy: 'Экономика: валюта, магазины и награды.',
-    admin: 'Администрирование сервера и бота.',
-    logs: 'Журналы, история и расследования.',
-    music: 'Музыкальные комнаты и плейлисты.',
+    bot: 'Бот: присутствие, команды, бэкапы и модули.',
     settings: 'Настройки панели и сервера.',
-    other: 'Дополнительные инструменты панели Hakumo.'
+    community: 'Активность сообщества: голос и общение.',
+    logs: 'Журналы, история и расследования.',
+    content: 'Контент: каналы и объявления для участников.',
+    ai: 'ИИ-помощники: чат и автоматическая модерация.',
+    ops: 'Состояние системы: диагностика и флаги функций.',
+    utility: 'Вспомогательные инструменты: команда, задачи и справка.'
   };
 
   function pageHeadAuto() {

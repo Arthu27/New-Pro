@@ -24,7 +24,7 @@ CATEGORIES = {
     'mod': {'label': 'Модерация', 'icon': 'fa-shield-halved'},
     'tickets': {'label': 'Тикеты', 'icon': 'fa-ticket'},
     'logs': {'label': 'Логи и аудит', 'icon': 'fa-scroll'},
-    'music': {'label': 'Музыка', 'icon': 'fa-music'},
+    # Категория «Музыка» удалена вместе с системой /play (2026-09-01).
     'voice': {'label': 'Голосовые', 'icon': 'fa-headset'},
     'economy': {'label': 'Экономика', 'icon': 'fa-coins'},
     'levels': {'label': 'Уровни и карма', 'icon': 'fa-arrow-trend-up'},
@@ -50,16 +50,17 @@ MODULE_CATEGORY = {
     'impersonation.py': 'mod', 'anti_alt.py': 'mod', 'lockdown.py': 'mod',
     'night_mode.py': 'mod', 'media_only.py': 'mod', 'rejoin_roles.py': 'mod',
     'report_cog.py': 'mod', 'dm_report.py': 'mod', 'appeals.py': 'mod',
+    'reports.py': 'mod',   # репорты/жалобы: файл живой, а report_cog.py нет
     'ladder.py': 'mod', 'ab_cog.py': 'mod',
-    # тикеты и поддержка
-    'ticket.py': 'tickets', 'sla_cog.py': 'tickets', 'staff_apply.py': 'tickets',
+    # поддержка и команда (тикет-система удалена: ticket.py/sla_cog.py снесены;
+    # а заявки в команду — это не тикеты, им место в «События и команда»)
+    'staff_apply.py': 'events',
     # логи, аудит, архивы
     'logs.py': 'logs', 'log_menu.py': 'logs', 'dm_logger.py': 'logs',
     'recap.py': 'logs', 'replay.py': 'logs', 'archive.py': 'logs',
     'backup_cog.py': 'logs',
-    # музыка и голос
-    'music_cog.py': 'music',
-    'voice_commands.py': 'voice', 'voice_tracker.py': 'voice',
+    # голос (музыка удалена 2026-09-01: music_cog.py/voice_commands.py снесены)
+    'voice_tracker.py': 'voice',
     'join_to_create.py': 'voice',
     # экономика
     'economy_cog.py': 'economy', 'economy_shop.py': 'economy',
@@ -267,9 +268,20 @@ def _scan():
         full_requested = (os.environ.get('BOT_FULL', '') or '').strip() not in ('', '0', 'false', 'False')
     if KEEP_SLASH and not full_requested:
         keep = set(KEEP_SLASH)
+        # Имена в KEEP_SLASH записаны как в @app_commands.command(name=...),
+        # а реестр нормализует имя (нижний регистр, «_» → «-»). Discord, в
+        # отличие от каталога, подчёркивания и дефисы НЕ различает при
+        # сравнении, поэтому сравниваем по обеим формам — иначе живая
+        # команда (my_violations) пропадала бы из каталога панели.
+        def _kept(c):
+            for cand in (c['bare'], c['name'],
+                         c['bare'].replace('-', '_'),
+                         c['name'].replace('-', '_')):
+                if cand in keep:
+                    return True
+            return False
         deduped = [c for c in deduped
-                   if c['kind'] == 'prefix'
-                   or c['bare'] in keep or c['name'] in keep]
+                   if c['kind'] == 'prefix' or _kept(c)]
     return deduped
 
 

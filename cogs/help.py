@@ -34,7 +34,8 @@ FONT_R = os.path.join(FONTS, 'Regular.ttf')
 # Текстовый формат справки: без картинок, с фильтром по правам.
 # Команды, к которым у участника нет доступа (в т.ч. классические
 # разрешения на действия), скрываются из справки.
-from services.permission_acl import COMMAND_CATEGORIES, has_access as _acl_has_access
+from services.permission_acl import (COMMAND_CATEGORIES, all_categories,
+                                    has_access as _acl_has_access)
 
 _HELP_TITLE = 'Команды бота'
 _HELP_COLOR = 0x4F46E5
@@ -42,6 +43,7 @@ _HELP_COLOR = 0x4F46E5
 # Фирменные маркеры разделов справки: эмодзи в select-меню и в заголовках полей.
 _HELP_EMOJI = {
     'Модерация': '🛡️',
+    'Жалобы': '🚨',
     'Тикеты': '🎫',
     'Логи': '🧾',
     'AI-система': '🤖',
@@ -60,6 +62,7 @@ _HELP_EMOJI = {
 }
 _HELP_BLURB = {
     'Модерация': 'варны, муты, баны, доказательства и дежурства',
+    'Жалобы': 'жалоба на участника с фото/видео — модерации',
     'Тикеты': 'приём обращений и сопровождение до закрытия',
     'Логи': 'журналы событий, аудит и отчёты команды',
     'AI-система': 'автопомощник в тикетах и авто-модерация',
@@ -98,8 +101,9 @@ def _registry_extra_categories():
 
 
 def _all_category_labels():
-    """Порядок разделов справки: ACL-ядро + дополнительные из каталога."""
-    return list(COMMAND_CATEGORIES) + list(_registry_extra_categories())
+    """Порядок разделов справки — живой каталог бота (без призраков)."""
+    live = all_categories()
+    return list(live) + [c for c in _registry_extra_categories() if c not in live]
 
 
 def _plural_cmds(n):
@@ -120,7 +124,7 @@ def _visible_categories(guild_id, member):
     """
     groups = {}
     covered = set()
-    for cat, cmds in COMMAND_CATEGORIES.items():
+    for cat, cmds in all_categories().items():
         visible = []
         for cmd in cmds:
             covered.add(cmd)
@@ -334,37 +338,21 @@ CATEGORIES = [
         ]
     },
     {
-        "id": "tickets",
-        "title": "Тикеты и заявки",
+        "id": "reports",
+        "title": "Жалобы и обращения",
         "commands": [
-            ("/ticket-panel", "Разместить панель обращений в канале", "Админ"),
-            ("кнопки ➕/➖ в тикете", "Добавить/убрать участника — меню под карточкой нового тикета", "Мод"),
-            ("/staff-panel", "Панель набора в команду сервера", "Админ"),
-            ("/my-application", "Статус моей заявки в команду", "Все"),
-        ]
-    },
-    {
-        "id": "music",
-        "title": "Музыка",
-        "commands": [
-            ("!play [запрос]", "Воспроизвести трек", "Все"),
-            ("!pause", "Пауза воспроизведения", "Все"),
-            ("!resume", "Продолжить воспроизведение", "Все"),
-            ("!skip", "Пропустить текущий трек", "Все"),
-            ("!queue", "Очередь воспроизведения", "Все"),
-            ("!nowplaying", "Что сейчас играет", "Все"),
-            ("!leave", "Покинуть голосовой канал", "Все"),
+            ("/report", "Пожаловаться на участника: причина + канал + фото/видео-доказательство", "Все"),
+            ("/my-violations", "Мои нарушения и статусы поданных жалоб", "Все"),
+            ("/апелляция", "Апелляция на бан — пишется боту в личные сообщения", "Все"),
+            ("кнопки под карточкой", "Принять / Отклонить / Открыть разбор / Позвать модераторов", "Мод"),
         ]
     },
     {
         "id": "utility",
         "title": "Утилиты",
         "commands": [
-            ("/afk [причина]", "Уйти в AFK — бот ответит за тебя на упоминания", "Все"),
-            ("/afk-remove", "Вернуться из AFK", "Все"),
+            ("/afk [причина]", "Уйти в AFK — бот ответит за тебя на упоминания; AFK спадает сам, как напишешь в чат", "Все"),
             ("!help", "Это меню команд", "Все"),
-            ("!апелляция", "Подать апелляцию на бан (в личке боту)", "Все"),
-            ("/logs-setup", "Создать/починить категорию и каналы логов", "Админ"),
         ]
     },
 ]
@@ -375,9 +363,9 @@ TOTAL_CMDS = sum(len(c["commands"]) for c in CATEGORIES)
 CAT_ICONS = {
     "moderation": "shield",
     "warnings": "warn",
+    "reports": "warn",
     "tickets": "ticket",
     "economy": "coin",
-    "music": "music",
     "levels": "levelup",
     "utility": "utility",
     "voice": "voice",
@@ -566,7 +554,7 @@ class HelpSelect(discord.ui.Select):
             )
         ]
         for cat in _all_category_labels():
-            cmds = COMMAND_CATEGORIES.get(cat) or _registry_extra_categories().get(cat) or []
+            cmds = (all_categories().get(cat) or _registry_extra_categories().get(cat) or [])
             blurb = _HELP_BLURB.get(cat, f'Команды раздела «{cat}»')
             desc = f'{len(cmds)} {_plural_cmds(len(cmds))} · {blurb}'[:100]
             options.append(

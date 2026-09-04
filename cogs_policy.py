@@ -16,11 +16,14 @@
     DISABLED_COGS=a,b,c   — добить конкретные модули в любом режиме.
     EXTRA_COGS=a,b        — вернуть конкретные модули поверх любого профиля.
 
-    BOT_SLIM=1            — «модерация + тикеты + музыка»: грузятся ядро,
-                            модераторские, тикетные и музыкальные модули;
-                            вся остальная «веселуха» (экономика, игры,
-                            AI-чат, ивенты, левелинг…) выключена. Данные
-                            на диске остаются — вернёшь флаг, всё вернётся.
+    BOT_SLIM=1            — «модерация + заявки + голосовая статистика +
+                            AI-чат»: грузятся ядро, модераторские модули,
+                            заявки в команду, voice_tracker и AI-чат;
+                            музыка (/play) снята окончательно и в этом
+                            профиле не возвращается. Остальная «веселуха»
+                            (экономика, игры, ивенты, левелинг…) выключена.
+                            Данные на диске остаются — вернёшь флаг, модули
+                            вернутся.
 
     BOT_CORE=1            — «модерация + тикеты + логи + AI» (ядро без
                             музыки): грузятся системные, модераторские,
@@ -28,7 +31,7 @@
                             музыка, левелинг и прочая «веселуха» выключена.
 
 Имена модулей в DISABLED_COGS / EXTRA_COGS — с «.py» или без, регистр не
-важен (music_cog == Music_Cog.py). Режим подхватывается при старте бота —
+важен (welcome_cog == Welcome_Cog.py). Режим подхватывается при старте бота —
 поменял .env, перезапустил, готово. Никаких правок кода и миграций данных:
 дата-файлы (экономика, уровни…) на диске остаются, модуль просто спит.
 
@@ -43,10 +46,6 @@ HELPER_COGS = frozenset({
     '_card_style.py',
     'embed_utils.py',
     'icons.py',
-    'leveling_engagement.py',
-    # CRUD-хранилище магазина: импортируют economy_cog и shop_panel,
-    # само по себе когом не является (setup нет и не нужен).
-    'economy_shop.py',
 })
 
 # ─── системные модули — живут всегда, даже в MOD_ONLY ─────────────────────
@@ -54,6 +53,9 @@ CORE_COGS = frozenset({
     'help.py',             # /help индексирует только загруженные команды — полезен всегда
     'cog_manager.py',      # !module load/unload — чтобы вернуть модуль без рестарта
     'diagnostics.py',      # самодиагностика бота
+    'panel_live.py',       # живые пуши в панель (SSE): события Discord → обновление
+    'member_store_sync.py',  # состав участников в data/members_<gid>.json: панель
+                             # читает файл мгновенно, бот правит его по событиям
     # feature_flag_cog.py и health.py убраны из боевого состава (лишние
     # команды в меню Дискорда). Вернуть: EXTRA_COGS=feature_flag_cog,health
 })
@@ -61,30 +63,25 @@ CORE_COGS = frozenset({
 # ─── модерация — ядро, которое остаётся в MOD_ONLY ────────────────────────
 MODERATION_COGS = frozenset({
     # наказания / кейсы / демки
-    'moderation.py', 'moderation_cog.py', 'advanced_mod.py',
-    'mod_case.py', 'mod_kit.py', 'mod_plus.py', 'mod_tools.py',
+    'moderation.py', 'moderation_cog.py',
+    'mod_plus.py',
     'warnings.py', 'temp_moderation.py', 'proof_cog.py',
     # автомод
-    'ai_moderation.py', 'auto_filter.py', 'proactive_mod.py',
+    'ai_moderation.py', 'auto_filter.py',
     # анти-рейд / безопасность / верификация
-    'antiraid.py', 'guardian.py', 'security.py', 'verification.py', 'tag_jail.py',
+    'antiraid.py', 'guardian.py', 'security.py', 'age_verification.py',
     'impersonation.py',
-    # анти-альт / локдаун / ночной режим — аварийный арсенал
-    'anti_alt.py', 'lockdown.py', 'night_mode.py',
-    # модераторская разведка
-    'invite_tracker.py',
-    # контент-ограничения и анти-эвейд
-    'media_only.py', 'rejoin_roles.py',
+    # анти-альт — защита
+    'anti_alt.py',
     # репорты от пользователей
-    'report_cog.py', 'reports.py',
+    'reports.py',
     # журнал аудита (на него завязана веб-панель)
     'logs.py', 'log_menu.py',
-    # обращения к модерам + отчёт по модерации
-    'ticket.py', 'mod_report.py',
-    # апелляции на баны + еженедельный мод-дайджест
-    'appeals.py', 'mod_digest.py',
-    # расписание дежурств стаффа с автонапоминаниями
-    'staff_shifts.py',
+    # апелляции на баны
+    'appeals.py',
+    # активность команды модерации (/staff-stats, лидерборд модеров) —
+    # читает уже собранные мод-действия, своих тяжёлых зависимостей нет
+    'staff_stats.py',
 })
 
 # итоговый список MOD_ONLY
@@ -94,15 +91,15 @@ MOD_ONLY_COGS = CORE_COGS | MODERATION_COGS
 # Тикеты уже сидят в MODERATION_COGS (ticket.py, mod_report.py) — здесь
 # дополнение: SLA, набор команды и приём заявок.
 TICKET_COGS = frozenset({
-    'sla_cog.py',        # SLA тикетов
     'staff_apply.py',    # заявки в команду (веб-панель читает данные)
 })
 
-# Музыка: плеер + голосовые команды + трекер времени в голосе
-# (на трекер завязана веб-панель — голосовая статистика).
-MUSIC_COGS = frozenset({
-    'music_cog.py',
-    'voice_commands.py',
+# Музыка полностью удалена из проекта по решению владельца (2026-09-01):
+# коги cogs/music_cog.py и cogs/voice_commands.py, веб-маршруты, шаблон
+# /music, ffmpeg-бутстрап и тесты снесены — бот только модерационный.
+# voice_tracker.py НЕ трогаем: это статистика пребывания в голосе (её
+# читает панель), к воспроизведению музыки он отношения не имеет.
+VOICE_STATS_COGS = frozenset({
     'voice_tracker.py',
 })
 
@@ -111,8 +108,8 @@ AI_CHAT_COGS = frozenset({
     'ai_chat.py',        # AI-чат (Mistral/OpenRouter/DeepSeek/Ollama)
 })
 
-# Профиль «модерация + тикеты + музыка + AI-чат»
-SLIM_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | MUSIC_COGS | AI_CHAT_COGS
+# Профиль «модерация + заявки + голосовая статистика + AI-чат» (музыка снята).
+SLIM_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | VOICE_STATS_COGS | AI_CHAT_COGS
 
 # Профиль «ядро»: модерация + тикеты + логи + AI (без музыки).
 # Логи (logs.py, log_menu.py) уже в MODERATION_COGS, AI-модерация — тоже.
@@ -124,9 +121,11 @@ CORE_ONLY_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | AI_CHAT_COGS
 MOD_LEAN_COGS = frozenset({
     'moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
     'proof_cog.py', 'auto_filter.py',
-    'antiraid.py', 'guardian.py', 'verification.py',
+    'antiraid.py', 'guardian.py',
+    'age_verification.py',  # верификация молодых аккаунтов: карантин + анкета (заказ 31.08)
     'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
-    'afk.py',              # /afk + /afk-remove — пользователи просили
+    'activity_stats.py',   # сбор активности для страницы «Аналитика» (без команд)
+    'afk.py',              # /afk (выход авто при сообщении, /afk-remove убран)
     # Щит по максимуму (заказ владельца «добавь все возможные для защиты»):
     # security (антиспам/фейки/сканер ссылок), anti_alt (свежие аккаунты),
     # impersonation (маски под админов), ai_moderation (токсичность чата).
@@ -136,11 +135,11 @@ MOD_LEAN_COGS = frozenset({
     # tag_jail.py оставлен спящим (18 лишних команд). Вернуть: EXTRA_COGS=tag_jail
 })
 
-# Тикеты + приём заявок в команду.
+# Приём заявок в команду (тикет-система снята — её роль выполняет /report).
 TICKET_LEAN_COGS = frozenset({
-    'ticket.py', 'staff_apply.py',
-    # sla_cog.py и mod_report.py убраны из боевого состава (12 лишних
-    # команд). Вернуть: EXTRA_COGS=sla_cog,mod_report
+    'staff_apply.py',
+    # ticket.py снят с эксплуатации (RETIRED_COGS); sla_cog.py и mod_report.py
+    # убраны из боевого состава. Вернуть заявки — staff_apply оставлен.
 })
 
 # AI: чат-ассистент + AI-модерация токсичности.
@@ -154,8 +153,10 @@ WELCOME_LEAN_COGS = frozenset({
 })
 
 # Итоговый «лёгкий» состав: ~30 модулей вместо ~110.
+# Музыка удалена (2026-09-01); в составе остаётся VOICE_STATS_COGS
+# (voice_tracker: статистика присутствия в голосе, без /play).
 LEAN_COGS = (CORE_COGS | MOD_LEAN_COGS | TICKET_LEAN_COGS
-             | MUSIC_COGS | AI_LEAN_COGS | WELCOME_LEAN_COGS)
+             | VOICE_STATS_COGS | AI_LEAN_COGS | WELCOME_LEAN_COGS)
 
 # env-переменные
 ENV_MOD_ONLY = 'MOD_ONLY'
@@ -178,7 +179,7 @@ def env_flag(name, default=False, environ=None):
 
 
 def _norm_name(name):
-    """Имя модуля к единому виду: 'Cogs/Music_Cog.py ' -> 'music_cog'."""
+    """Имя модуля к единому виду: 'Cogs/Welcome_Cog.py ' -> 'welcome_cog'."""
     n = str(name or '').strip().lower().replace('\\', '/').split('/')[-1]
     if n.endswith('.py'):
         n = n[:-3]
@@ -203,7 +204,20 @@ def _parse_list(text):
 # репортов (reports.py, ТЗ 2026-08-26) при BOT_FULL=1: discord.py падает на
 # повторной регистрации команды. Новая система — канонична.
 RETIRED_COGS = frozenset({
-    'dm_report.py',
+    # Тикет-система полностью удалена из проекта по решению владельца
+    # (снята с эксплуатации 2026-08-31, снесена с диска 2026-09-03): её роль
+    # выполняет система репортов /report (жалоба → закрытый канал модерации
+    # со скрином/видео, кнопками и тегом роли). Вместе с cogs/ticket.py
+    # удалены веб-страницы /ai-tickets, /ai_ticket_stats, /ticket-tags,
+    # «Про-аналитика» /advanced-analytics (она целиком читала тикеты),
+    # services/ticket_system.py, services/advanced_ticket_features.py и
+    # тикетные хелперы web/routes/_common.py. Общий помощник уведомлений панели переехал в services/panel_notify.py — им пользуются moderation.py
+    # и warnings.py.
+    #
+    # Музыка (/play) полностью удалена из проекта (2026-09-01): коги
+    # music_cog.py / voice_commands.py снесены с диска вместе с веб-страницей
+    # /music, ffmpeg-бутстрапом и тестами. voice_tracker.py (статистика
+    # голоса для панели) НЕ относится к музыке и остаётся боевым.
 })
 
 

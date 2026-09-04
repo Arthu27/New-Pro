@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Бот</div>
+    <div class="eyebrow"> Бот </div>
     <h1>Настройки бота</h1>
     <p class="lead">То, что реально применяется прямо сейчас: присутствие бота, синхронизация slash-команд и заявки в команду.</p>
   </div>
@@ -53,10 +53,10 @@
     </div>
     <div class="row"><label>Статус</label>
       <select id="bs-status" aria-label="Статус бота">
-        <option value="online">Online</option>
-        <option value="idle">Idle</option>
-        <option value="dnd">DND</option>
-        <option value="invisible">Invisible</option>
+        <option value="online">В сети</option>
+        <option value="idle">Не активен</option>
+        <option value="dnd">Не беспокоить</option>
+        <option value="invisible">Невидимка</option>
       </select>
     </div>
     <div class="row"><label>Активность</label>
@@ -81,10 +81,10 @@
     <div class="bs-head">
       <div class="bs-icon"><i class="fas fa-rotate"></i></div>
       <div><div class="bs-title">Slash-команды</div>
-        <div class="bs-sub">Принудительная синхронизация команд с Discord — нужна после обновления бота, если команды «потерялись».</div></div>
+        <div class="bs-sub">Нажми после любого изменения — меню «/» обновляется <b>сразу</b> (синхронизация по серверам мгновенная, ждать Discord не нужно). В меню только боевые команды: модпанель, апелляция, update, afk, report, my-violations — служебные/настроечные команды в «/» не публикуются.</div></div>
     </div>
     <div class="bs-actions">
-      <button class="btn btn-primary" id="bs-sync" type="button"><i class="fas fa-sync"></i> Синхронизировать</button>
+      <button class="btn btn-primary" id="bs-sync" type="button"><i class="fas fa-bolt"></i> Обновить команды мгновенно</button>
     </div>
     <div class="bs-out" id="bs-sync-out"></div>
   </div>
@@ -179,6 +179,12 @@
       activity_type: $('bs-activity').value,
       activity_text: $('bs-text').value
     };
+    // Кнопка держится занятой, пока идёт запрос: иначе её можно нажать
+    // несколько раз подряд и не понять, сохранилось ли что-нибудь.
+    var btn = $('bs-save'), was = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохраняю…'; }
+    $('bs-live').textContent = '';
+    function done() { if (btn) { btn.disabled = false; btn.innerHTML = was; } }
     fetch('/api/bot-settings/presence', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -190,7 +196,7 @@
         } else {
           toast('' + ((res.d.errors || [res.d.error] || ['ошибка']).join(' · ')), false);
         }
-      }).catch(function () { toast('Сеть недоступна', false); });
+      }).catch(function () { toast('Сеть недоступна', false); }).then(done);
   }
 
   /* ── Источник обновлений ─────────────────────────────────── */

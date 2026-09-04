@@ -35,11 +35,6 @@ PANEL_LOGS_FILE = 'data/panel_logs.json'
 
 # event_key -> (ключ настройки-переключателя, подпись по-русски, иконка)
 EVENTS = {
-    'ticket_open': ('event_ticket_open', 'Новый тикет открыт', 'fa-ticket'),
-    'ticket_message': ('event_ticket_message', 'Новое сообщение в тикете', 'fa-comment'),
-    'ticket_close': ('event_ticket_close', 'Тикет закрыт', 'fa-lock'),
-    'priority_change': ('event_priority_change', 'Изменение приоритета', 'fa-bolt'),
-    'assignment': ('event_assignment', 'Назначение тикета', 'fa-user'),
     'warn': ('event_warn', 'Выдано предупреждение', 'fa-triangle-exclamation'),
     'mod_action': ('event_mod_action', 'Действие модерации', 'fa-gavel'),
     'staff_apply': ('event_staff_apply', 'Новая заявка в персонал', 'fa-file-signature'),
@@ -58,11 +53,6 @@ EVENTS = {
 # event_key -> страница панели, куда ведёт клик по уведомлению
 EVENT_LINKS = {
     'backup': '/backups',
-    'ticket_open': '/ticket-search',
-    'ticket_message': '/ticket-search',
-    'ticket_close': '/ticket-search',
-    'priority_change': '/ticket-search',
-    'assignment': '/ticket-search',
     'warn': '/warnings',
     'mod_action': '/logs',
     'staff_apply': '/staff-apps',
@@ -81,11 +71,6 @@ DEFAULT_SETTINGS = {
     'web_enabled': True,
     'discord_enabled': True,
     'email_enabled': False,
-    'event_ticket_open': True,
-    'event_ticket_message': True,
-    'event_ticket_close': True,
-    'event_priority_change': False,
-    'event_assignment': False,
     'event_warn': True,
     'event_mod_action': True,
     'event_staff_apply': True,
@@ -233,7 +218,7 @@ def _send_email_sync(settings, title, body, result_box):
 def notify_event(event, title, body, link='', discord_sender=None):
     """Отправить событие по всем включённым каналам.
 
-    event          — ключ из EVENTS (ticket_open, ticket_close, ...);
+    event          — ключ из EVENTS (appeal_new, report_new, warn, ...);
     title/body     — текст уведомления (по-русски);
     discord_sender — опциональный callback (channel_id, title, body) -> bool
                      для отправки в обычный Discord-канал (бот/web-сторона).
@@ -285,6 +270,13 @@ def notify_event(event, title, body, link='', discord_sender=None):
                 channels['email'] = False
 
         _record_history(event, full_title, body, channels, link=link)
+        # Живой пуш в панель: колокольчик обновится сразу на всех вкладках
+        # (сюда события приходят и из бота, и из веб-роутов).
+        try:
+            from services.live_bus import publish_global
+            publish_global('notifications')
+        except Exception as _live_ex:
+            _log.debug("notify_event live-push: %s", _live_ex)
     except Exception as _ex:
         _log.debug("notify_event(): подавлено: %s", _ex)
     return channels

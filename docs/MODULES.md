@@ -89,7 +89,6 @@
 | `meeting` | Система собраний — собирает реальные данные, сканируя историю сообщений Discord |
 | `menu_bg` | Menu Background Generator — Custom Architectural Background Styles for Each Menu |
 | `minigames` | Мини-игры |
-| `music_cog` | Music Cog |
 | `night_summary` | Night Summary — автоматическая ежедневная сводка. |
 | `proactive_ai` | Проактивный AI — бот сам размышляет и пишет Артуру в ЛС |
 | `profile` | Profile Cog — Professional dashboard/ID-card style generation via Pillow |
@@ -112,8 +111,7 @@
 | `stats` | stats |
 | `time_tracking_cog` | Time Tracking Cog |
 | `triggers` | Автоответы по триггерам (Triggers Cog) |
-| `voice_commands` | Голосовые команды |
-| `voice_tracker` | Отслеживание голосовых каналов |
+| `voice_tracker` | Отслеживание голосовых каналов (войс-статистика для панели) |
 | `webhooks` | Webhook controli |
 | `weekly_crown` | Weekly Crown — еженедельная коронация. |
 | `welcome_card` | Welcome Card — роскошная карточка приветствия (тёмно-синий + золото). |

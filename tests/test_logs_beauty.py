@@ -52,10 +52,19 @@ def check(ok, msg):
 print('== кнопки: главная/сплэш/ошибки/версии ==')
 dash = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'),
             encoding='utf-8').read()
-check('window.shiftAdd = shiftAdd;' in dash
-      and 'window.shiftRemove = shiftRemove;' in dash
-      and 'window.shiftTzSave = shiftTzSave;' in dash,
-      'главная: inline-обработчики смен экспортированы (кнопки живы)')
+# «Мёртвые» кнопки лечатся экспортом window.X = X, но только если X реально
+# определён в файле. Висячий экспорт несуществующей функции бросает
+# ReferenceError при загрузке (ловилось живым аудитом: shiftAdd is not defined).
+# Поэтому караулим обратное: в главной нет самоссылок window.X = X без
+# определения X — ни одной «мёртвой» кнопки.
+_dangling = []
+for m in re.finditer(r'window\.([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\1\s*;', dash):
+    name = m.group(1)
+    if not re.search(r'(function\s+%s\s*\(|(const|let|var)\s+%s\s*=)' % (name, name), dash):
+        _dangling.append(name)
+check(not _dangling,
+      'главная: нет висячих экспортов window.X = X без определения (кнопки живы)'
+      + (f' — найдено: {_dangling}' if _dangling else ''))
 
 base = open(os.path.join(ROOT, 'web', 'templates', 'base.html'),
             encoding='utf-8').read()
@@ -180,12 +189,13 @@ check(i is not None and i.name == '-доказательства',
       'старый канал -доказательства находится для демок')
 
 
-# ═══ 8. «+ ступень»: пустое поле подсвечивается, а не молчит ═══════════════
-print('== mod-settings: пустое поле «Варнов» подсвечивается ==')
+# ═══ 8. Лестница настраивается в одном месте — /ladder (дубль убран) ═════
+print('== mod-settings: редактор ступеней вынесен на /ladder ==')
 _ms = open(os.path.join(ROOT, 'web/templates/mod_settings.html'), encoding='utf-8').read()
-check('countInp.focus();' in _ms and 'var(--err-soft)' in _ms,
-      'msAddStep: пустое поле фокусируется и подсвечивается')
-check('Сначала впишите число варнов' in _ms, 'msAddStep: тост объясняет, что заполнить')
+check('href="/ladder"' in _ms and 'Открыть лестницу наказаний' in _ms,
+      'страница ведёт на «Лестницу наказаний» (/ladder)')
+check('id="msAddStep"' not in _ms and 'msSaveSteps' not in _ms,
+      'дублирующий редактор ступеней убран со страницы настроек модерации')
 
 # ═══ 9. Сидер сбрасывает демо-витрину «всё включено» ═══════════════════════
 print('== сидер: состояния модулей сбрасываются ==')

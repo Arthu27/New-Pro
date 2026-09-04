@@ -1,0 +1,593 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   HAKUMO — единый стиль страниц входа и регистрации (/login, /register).
+   Аккуратная «админка»: спокойный фон, чистая карточка, подписи полей
+   всегда видны (без плавающих лейблов-дублёров), без лишней анимации.
+   Подключается ТОЛЬКО на auth-страницах (не грузит style.css панели).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg0: #05060a;
+  --bg1: #0a0c15;
+  --panel: #10131f;
+  --panel-2: #161a2a;
+  --line: rgba(255, 255, 255, .07);
+  --line-2: rgba(255, 255, 255, .14);
+  --text: #e9ecf6;
+  --text2: #9aa3bf;
+  --text3: #6f7896;
+  --muted: var(--text2);
+  --faint: var(--text3);
+  --bg: #05060a;
+  --indigo: #4f46e5;
+  --violet: #7c3aed;
+  --cyan: #38bdf8;
+  --accent: linear-gradient(135deg, #4f46e5, #6d28d9 58%, #7c3aed);
+  --accent-soft: rgba(99, 102, 241, .15);
+  --ok: #34d399;
+  --err: #f87171;
+  --warn: #fbbf24;
+  --r-lg: 20px;
+  --r-md: 12px;
+  --r-sm: 9px;
+  --shadow-lg: 0 34px 80px -34px rgba(0, 0, 0, .85);
+  --shadow-md: 0 18px 44px -22px rgba(0, 0, 0, .7);
+  --ease: cubic-bezier(.25, .8, .35, 1);
+}
+
+* { box-sizing: border-box; }
+
+html { background: #05060a; color-scheme: dark; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px 28px;
+  background:
+    radial-gradient(900px 560px at 12% -8%, rgba(79, 70, 229, .16), transparent 62%),
+    radial-gradient(760px 520px at 94% 108%, rgba(56, 189, 248, .09), transparent 60%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Тонкая сетка на фоне — едва заметна, без движения */
+.bg-grid {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .016) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: radial-gradient(ellipse 70% 62% at 50% 38%, #000 20%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 62% at 50% 38%, #000 20%, transparent 78%);
+}
+
+.auth-wrap {
+  position: relative; z-index: 1;
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Шапка: эмблема + имя ── */
+.brand { text-align: center; margin-bottom: 22px; }
+
+.brand .logo {
+  width: 74px; height: 74px;
+  margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 22px;
+  background: radial-gradient(circle at 50% 30%, #1a1f38, #0b0e1d 78%);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 16px 38px -14px rgba(79, 70, 229, .55), inset 0 1px 0 rgba(255, 255, 255, .08);
+  overflow: hidden;
+}
+
+.brand .logo img {
+  width: 78%; height: 78%;
+  object-fit: contain;
+}
+
+.brand h1 {
+  margin: 0;
+  font-family: 'Unbounded', 'Inter', sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.brand p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ── Карточка ── */
+.card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .028), rgba(255, 255, 255, 0) 30%), var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute; inset: 0 0 auto 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, .55), rgba(56, 189, 248, .4), transparent);
+  opacity: .8;
+  pointer-events: none;
+}
+
+/* Вкладки Вход / Регистрация */
+.tabs {
+  display: flex;
+  padding: 8px 8px 0;
+  gap: 4px;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 11px 8px 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--faint);
+  text-decoration: none;
+  border-radius: 13px 13px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  transition: color .15s, background .15s;
+}
+
+.tab:hover { color: var(--muted); }
+
+.tab.active {
+  color: var(--text);
+  background: rgba(255, 255, 255, .035);
+  border-color: var(--line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+.card-body { padding: 20px 26px 22px; }
+
+/* ── Заголовок формы ── */
+.form-head { margin-bottom: 18px; }
+
+.form-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: .01em;
+}
+
+.form-head p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Уведомления ── */
+.notice {
+  display: none;
+  align-items: flex-start;
+  gap: 9px;
+  border-radius: var(--r-md);
+  padding: 10px 13px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.notice.show { display: flex; }
+
+.notice i { margin-top: 2px; }
+
+.notice.ok {
+  background: rgba(52, 211, 153, .08);
+  border: 1px solid rgba(52, 211, 153, .26);
+  color: #a7f3d0;
+}
+
+.notice.ok i { color: var(--ok); }
+
+.notice.err {
+  background: rgba(248, 113, 113, .08);
+  border: 1px solid rgba(248, 113, 113, .26);
+  color: #fecaca;
+}
+
+.notice.err i { color: var(--err); }
+
+.notice.shake { animation: shake .4s ease; }
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60% { transform: translateX(3px); }
+}
+
+/* ── Поля: подпись ВСЕГДА видна над полем, placeholder — пример ── */
+.f-group { margin-bottom: 15px; }
+
+.f-group label {
+  display: block;
+  margin: 0 0 6px 2px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .02em;
+  color: var(--muted);
+}
+
+.input-wrap { position: relative; }
+
+.input-wrap > i.f-ico {
+  position: absolute; left: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--faint);
+  font-size: 14px;
+  pointer-events: none;
+  transition: color .15s;
+}
+
+.input-wrap:focus-within > i.f-ico { color: #a5b4fc; }
+
+.input-wrap input {
+  width: 100%;
+  height: 48px;
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 0 44px 0 42px;
+  color: var(--text);
+  font: inherit;
+  font-size: 14.5px;
+  outline: none;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+
+.input-wrap.has-ico input { padding-left: 42px; }
+
+.input-wrap.has-eye input { padding-right: 46px; }
+
+.input-wrap input::placeholder { color: var(--faint); opacity: .85; }
+
+.input-wrap input:hover { border-color: var(--line-2); }
+
+.input-wrap input:focus {
+  border-color: rgba(124, 58, 237, .55);
+  background: rgba(255, 255, 255, .045);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, .14);
+}
+
+.input-wrap .eye {
+  position: absolute; right: 7px; top: 50%;
+  transform: translateY(-50%);
+  width: 34px; height: 34px;
+  border: none; border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  font-size: 14px;
+  transition: color .15s, background .15s;
+}
+
+.input-wrap .eye:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
+
+.cap-hint {
+  position: absolute; right: 50px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 9.5px; font-weight: 700; letter-spacing: .05em;
+  color: var(--warn);
+  opacity: 0;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.hint {
+  font-size: 11.5px;
+  color: var(--faint);
+  margin: 6px 2px 0;
+  line-height: 1.45;
+}
+
+.hint b { color: var(--muted); font-weight: 600; }
+
+.hint a { color: #a5b4fc; text-decoration: none; font-weight: 600; }
+.hint a:hover { text-decoration: underline; }
+
+/* ── Автоподсказка (участники сервера) ── */
+.autocomplete-popup {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+  z-index: 40; display: none;
+  background: #141828;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  box-shadow: 0 24px 50px -18px rgba(0, 0, 0, .8);
+  overflow: hidden;
+  padding: 6px;
+}
+
+.autocomplete-popup.open { display: block; }
+
+.autocomplete-popup .item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 10px;
+  cursor: pointer;
+}
+
+.autocomplete-popup .item:hover,
+.autocomplete-popup .item.hl { background: rgba(255, 255, 255, .06); }
+
+.autocomplete-popup .a-ava {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  font-weight: 800; font-size: 14px; color: #fff; overflow: hidden;
+}
+
+.autocomplete-popup .a-ava img { width: 100%; height: 100%; object-fit: cover; }
+
+.autocomplete-popup .a-copy { min-width: 0; }
+
+.autocomplete-popup .a-copy b {
+  display: block; font-size: 13px; font-weight: 600;
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.3;
+}
+
+.autocomplete-popup .a-copy small { color: var(--faint); font-size: 10.5px; }
+
+/* ── Кнопки ── */
+.btn {
+  width: 100%; height: 50px;
+  border: none;
+  border-radius: var(--r-md);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: .015em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: filter .15s, transform .08s, box-shadow .15s, border-color .15s, color .15s, background .15s;
+}
+
+.btn:active { transform: translateY(1px) scale(.997); }
+
+.btn .spin { animation: rot 1s linear infinite; }
+
+@keyframes rot { to { transform: rotate(360deg); } }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 12px 28px -12px rgba(109, 40, 217, .8), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+
+.btn-primary:hover { filter: brightness(1.09); }
+
+.btn-primary:disabled { opacity: .6; cursor: default; filter: none; }
+
+.btn-ghost {
+  background: rgba(255, 255, 255, .035);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.btn-ghost:hover { color: var(--text); border-color: var(--line-2); background: rgba(255, 255, 255, .06); }
+
+/* ── Служебные строки формы ── */
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -2px 0 14px;
+}
+
+.link-btn {
+  background: none; border: none; padding: 2px 2px;
+  font: inherit; font-size: 12px; font-weight: 600;
+  color: #a5b4fc; cursor: pointer;
+  transition: color .15s;
+}
+
+.link-btn:hover { color: #c7d2fe; text-decoration: underline; }
+
+/* Восстановление пароля */
+.fp-title {
+  display: flex; align-items: center; gap: 9px;
+  font-weight: 750; font-size: 14.5px; margin: 2px 0 6px;
+}
+
+.fp-title .n {
+  width: 23px; height: 23px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent-soft); color: #a5b4fc;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+}
+
+.fp-sub { font-size: 12.5px; color: var(--muted); margin: 0 0 16px; line-height: 1.55; }
+
+.fp-err, .fp-ok, .fp-hint {
+  font-size: 12px;
+  margin: 9px 2px 0;
+  line-height: 1.5;
+  display: none;
+}
+
+.fp-err.show { display: block; color: var(--err); }
+.fp-ok.show { display: block; color: #a7f3d0; }
+.fp-hint.show { display: block; color: var(--faint); }
+
+.pin-inline { letter-spacing: .32em; font-weight: 750; font-size: 15px; text-align: center; padding: 0 14px; }
+
+.step-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: var(--faint); line-height: 1.55;
+  margin: -2px 0 16px 2px;
+}
+
+.step-note i { color: var(--cyan); margin-top: 2px; font-size: 12px; }
+
+.step-note b { color: var(--muted); font-weight: 600; }
+
+/* ── Низ карточки: статус бота и доп. ссылки ── */
+.card-foot {
+  border-top: 1px solid var(--line);
+  padding: 13px 26px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--faint);
+  background: rgba(255, 255, 255, .012);
+}
+
+.card-foot a {
+  color: #a5b4fc; text-decoration: none; font-weight: 600;
+  transition: color .15s;
+}
+
+.card-foot a:hover { color: #c7d2fe; text-decoration: underline; }
+
+.dot-sep { opacity: .45; margin: 0 2px; }
+
+.bot-status {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; color: var(--faint);
+  width: 100%;
+  justify-content: center;
+  padding-top: 2px;
+}
+
+.bot-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px rgba(52, 211, 153, .55); }
+.bot-status .dot.off { background: var(--faint); box-shadow: none; }
+
+/* ── Оверлей «Проверяем доступ / Связываемся с Discord» ── */
+.auth-check {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 6, 12, .82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 20px;
+}
+
+.auth-check[hidden] { display: none; }
+
+.auth-check-card {
+  width: min(400px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 20px;
+  padding: 28px 26px 22px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+
+.auth-check-card .logo {
+  width: 56px; height: 56px; margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 30%, #1a1f38, #0b0e1d 80%);
+  border: 1px solid var(--line-2);
+  overflow: hidden;
+}
+
+.auth-check-card .logo img { width: 100%; height: 100%; object-fit: contain; }
+
+.auth-check-card h3 {
+  margin: 0 0 4px;
+  font-family: 'Unbounded', 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.auth-check-card .sub { margin: 0 0 16px; font-size: 12.5px; color: var(--muted); }
+
+.auth-steps {
+  list-style: none; margin: 0; padding: 0;
+  text-align: left;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.auth-steps li {
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 10px; border-radius: 11px;
+  font-size: 13px; color: var(--faint);
+}
+
+.auth-steps li.on { color: var(--text); background: rgba(255, 255, 255, .03); }
+.auth-steps li.done { color: var(--muted); }
+.auth-steps li.err { color: var(--err); }
+
+.auth-steps .s-ico {
+  width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .05);
+  font-size: 11px;
+}
+
+.auth-steps li.on .s-ico { background: var(--accent-soft); color: #a5b4fc; }
+.auth-steps li.done .s-ico { background: rgba(52, 211, 153, .14); color: var(--ok); }
+.auth-steps li.err .s-ico { background: rgba(248, 113, 113, .15); color: var(--err); }
+
+.auth-check-err {
+  display: none; margin-top: 12px;
+  font-size: 12.5px; color: #fecaca;
+  background: rgba(248, 113, 113, .08);
+  border: 1px solid rgba(248, 113, 113, .22);
+  border-radius: 11px; padding: 9px 12px; line-height: 1.5; text-align: left;
+}
+
+.auth-check-err.show { display: block; }
+
+.retry {
+  display: none;
+  align-items: center; justify-content: center; gap: 8px;
+  margin: 16px auto 0;
+  background: none;
+  border: 1px solid var(--line-2);
+  color: var(--muted);
+  font: inherit; font-size: 12.5px; font-weight: 700;
+  border-radius: 11px; padding: 9px 16px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+
+.retry.show { display: inline-flex; }
+
+.retry:hover { color: var(--text); border-color: var(--faint); }
+
+/* ── Подвал страницы ── */
+.page-foot {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--faint);
+  letter-spacing: .05em;
+}
+
+/* ── Адаптив и снижение движения ── */
+@media (max-width: 520px) {
+  body { padding: 26px 12px 20px; }
+  .card-body { padding: 16px 18px 18px; }
+  .card-foot { padding: 11px 18px 13px; }
+  .brand { margin-bottom: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+}

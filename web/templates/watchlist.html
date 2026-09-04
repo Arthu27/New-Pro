@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Участники <span class="sep">·</span> Наблюдение</div>
+    <div class="eyebrow"> Участники </div>
     <h1>Список наблюдения</h1>
     <p class="lead">Список наблюдения за подозрительными участниками.</p>
   </div>
@@ -71,7 +71,11 @@ async function loadWatchlist(gid) {
 
 loadWatchlist(_guildId);
 
-  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadWatchlist(_guildId); } catch (e) {} }, 1500);
+  /* live: обновление по СОБЫТИЮ, а не опросом. Фигуранта добавляет бот
+     (cogs/moderation.py при 2+ мьютах) и публикует топик «watchlist»;
+     баны/разбаны дают «moderation». Таймер 5 минут — только страховка на
+     случай, если SSE не поднялся: опрашивать список каждые полторы
+     секунды смысла нет, данные сами не меняются. */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadWatchlist(_guildId); } catch (e) {} }, 300000, ['watchlist', 'moderation']);
 </script>
 {% endblock %}

@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Защита <span class="sep">·</span> Антифейк</div>
+    <div class="eyebrow"> Защита </div>
     <h1>Антифейк</h1>
     <p class="lead">Защита от подделок профилей: сканер сходства, лаборатория имён и журнал страйков.</p>
   </div>
@@ -128,7 +128,7 @@
 
 <script src="/static/pickers.js"></script>
 <script>
-var GID = '{{ guild_id }}';
+var GID = "{{ guild_id }}";
 attachMemberPicker(document.getElementById('afTestUid'), { gid: GID, statusEl: document.getElementById('afTestUidStatus') });
 var API = '/api/guild/' + GID + '/antifake';
 var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};

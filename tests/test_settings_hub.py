@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Хаб настроек: группа «Настройки», лэйаут меню, /mod-settings, 14 маршрутов.
+"""Хаб настроек: группа «Настройки», лэйаут меню, /mod-settings, живые маршруты.
 
 Проверяем:
 - 14 маршрутов хаба каналов + запись/чтение новых шести адаптеров (считалка,
   зала славы, ночной итог, дайджест модерации, смены, призыв тикетов) —
   через те же файлы и хранилища, что читает бот;
-- категорию «Настройки» в меню и её 17 страниц в верном порядке;
+- категорию «Настройки» в меню и её 13 страниц в верном порядке
+  (/bot-settings переехал в раздел «Бот»);
 - сервис лэйаута меню: валидацию, защиту /panel-menu, скрытие и порядок
   (применяется и к владельцу), API лэйаута с валидацией формата;
 - страницу /mod-settings и её API: лестницу авто-наказаний (нормализация,
@@ -51,49 +52,46 @@ def check(ok, msg):
 
 GID = 987654321098765432
 
-# ═══ 1. Хаб каналов: 14 маршрутов, новые адаптеры ════════════════════════
-print('== хаб каналов: 20 маршрутов ==')
+# ═══ 1. Хаб каналов: только живые маршруты боевого состава ══════════════
+print('== хаб каналов: живые маршруты ==')
 from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 20 and len(set(keys)) == 20,
-      f'20 уникальных маршрутов — 17 систем + 3 канала заявок ({len(keys)})')
-need = {'ban_appeal_channel',
-        'proof_channel', 'appeals_channel', 'welcome_channel', 'tagjail_channel',
+check(len(keys) == 13 and len(set(keys)) == 13,
+      f'13 уникальных живых маршрутов ({len(keys)})')
+need = {'ban_appeal_channel', 'appeal_menu_channel', 'pagerduty_channel',
+        'proof_channel', 'appeals_channel', 'welcome_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
-        'anticrash_channel', 'counting_channel', 'starboard_channel',
-        'night_report_channel', 'mod_digest_channel',
-        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel', 'shifts_channel',
-        'ticket_notify_channel', 'appeal_menu_channel', 'pagerduty_channel'}
-check(set(keys) == need, f'все системы на хабе ({len(need)})')
+        'anticrash_channel',
+        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel'}
+check(set(keys) == need, f'только живые системы на хабе ({len(need)})')
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')
 
-new_6 = {'counting_channel': 2004, 'starboard_channel': 2003,
-         'night_report_channel': 1004, 'mod_digest_channel': 4003,
-         'shifts_channel': 4002, 'ticket_notify_channel': 4005}
-for k, cid in new_6.items():
-    get, set_ = ADAPTERS[k]
-    check(set_(GID, cid) and get(GID) == cid, f'{k}: запись/чтение = {cid}')
+# Вырезанные/спящие фичи НЕ показываются на хабе каналов.
+dead = {'counting_channel', 'starboard_channel', 'night_report_channel',
+        'mod_digest_channel', 'shifts_channel', 'ticket_notify_channel',
+        'tagjail_channel'}
+check(not (dead & set(keys)), 'маршруты вырезанных фич убраны')
+check(not (dead & set(ADAPTERS)), 'адаптеры вырезанных фич убраны')
 
-sb = json.load(open(f'data/starboard_settings_{GID}.json', encoding='utf-8'))
-check(sb.get('channel_id') == 2003,
-      'зала славы: тот же файл, что читает ког starboard')
-ns = json.load(open('data/night_summary.json', encoding='utf-8'))
-check((ns.get(str(GID)) or {}).get('channel_id') == 1004,
-      'ночной итог: data/night_summary.json (файл кога)')
-tn = json.load(open(f'data/ticket_notify_{GID}.json', encoding='utf-8'))
-check(tn.get('notify_channel_id') == 4005,
-      'призыв тикетов: data/ticket_notify_{gid}.json (файл кога)')
-
+# Живые адаптеры пишут ровно в те хранилища, что читает бот.
 from db import GuildData  # noqa: E402
+ar_get, ar_set = ADAPTERS['antiraid_channel']
+check(ar_set(GID, 3007) and ar_get(GID) == 3007,
+      'анти-рейд: data/antiraid_<gid>.json alert_channel_id')
+ar_data = json.load(open(f'data/antiraid_{GID}.json', encoding='utf-8'))
+check(ar_data.get('alert_channel_id') == 3007,
+      'анти-рейд: тот же файл, что читает ког antiraid')
+ar_set(GID, 0)
 
-cnt = GuildData('counting').get(GID, 'state', {}) or {}
-check(cnt.get('channel_id') == 2004,
-      'считалка: GuildData(counting).state.channel_id')
-md = GuildData('mod_digest').get(GID, 'settings', {}) or {}
-check(md.get('channel_id') == 4003,
-      'дайджест модерации: GuildData(mod_digest).settings.channel_id')
+ap_get, ap_set = ADAPTERS['appeals_channel']
+check(ap_set(GID, 3008) and ap_get(GID) == 3008,
+      'апелляции: запись/чтение адаптера')
+ap = GuildData('appeals').get(GID, 'state', {}) or {}
+check(int(ap.get('log_channel_id') or 0) == 3008,
+      'апелляции: GuildData(appeals).state.log_channel_id')
+ap_set(GID, 0)
 
 # ═══ 2. Меню: категория «Настройки» ══════════════════════════════════════
 print('== меню: категория «Настройки» ==')
@@ -101,20 +99,27 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 125 and len(set(paths)) == 125,
-      f'в меню 125 уникальные страницы ({len(paths)})')
+check(len(paths) == 70 and len(set(paths)) == 70,
+      f'в меню 70 уникальных страниц ({len(paths)}); музыка/тикеты/варны/дубль бэкапов убраны')
+check('/warn-config' not in paths, 'дубль «Варны» (/warn-config) убран из меню')
+check('/ladder' in paths, 'каноническая «Лестница наказаний» в меню')
 groups = {g['key']: g for g in PM.MENU}
 check('settings' in groups, 'категория «Настройки» существует')
 sg = groups['settings']
 check(sg['group'] == 'Настройки' and bool(sg.get('icon')),
       'группа с русским именем и иконкой')
 sp = [p['path'] for p in sg['pages']]
+# /bot-settings переехал в раздел «Бот» (там его логичное место) —
+# в категории «Настройки» его больше нет.
 want = ['/settings', '/command-switches', '/mod-settings', '/role-settings',
-        '/channel-settings', '/bot-settings', '/ticket-settings', '/welcome-editor',
-        '/rules-editor', '/warn-config', '/automation', '/notifications',
+        '/channel-settings', '/welcome-editor',
+        '/rules-editor', '/notifications',
         '/pagerduty', '/theme-settings', '/theme-studio', '/anticrash',
         '/log-settings']
 check(sp == want, f'страницы категории в верном порядке ({len(sp)})')
+# /bot-settings теперь в группе «Бот»
+bg = [p['path'] for p in groups['bot']['pages']]
+check('/bot-settings' in bg, '«Настройки бота» переехали в раздел «Бот»')
 gkeys = [g['key'] for g in PM.MENU]
 check(gkeys.index('settings') == gkeys.index('bot') + 1,
       '«Настройки» сразу после раздела «Бот»')
@@ -126,11 +131,11 @@ print('== лэйаут меню: скрытие и порядок ==')
 check(PM.layout_view() == {'hidden_pages': [], 'order': {}, 'group_order': []},
       'по умолчанию лэйаут пуст')
 
-view = PM.save_layout(['/recap', '/panel-menu', '/net-takoy', 42, '/recap'],
+view = PM.save_layout(['/spravka', '/panel-menu', '/net-takoy', 42, '/spravka'],
                       {'main': ['/bot-stats', '/', '/guilds'],
                        'nope': ['/x'],
                        'mod': ['/warnings', None, '/logs']})
-check(view['hidden_pages'] == ['/recap'],
+check(view['hidden_pages'] == ['/spravka'],
       'скрылась только валидная незащищённая страница')
 check(view['order'].get('main') == ['/bot-stats', '/', '/guilds'],
       'свой порядок принят')
@@ -140,10 +145,11 @@ check(view['order'].get('mod') == ['/warnings', '/logs'],
 
 owner_groups = {g['key']: g for g in PM.panel_groups_for('owner')}
 main_paths = [p['path'] for p in owner_groups['main']['pages']]
-check('/recap' not in main_paths, 'скрытая страница исчезла даже у владельца')
+check('/spravka' not in main_paths, 'скрытая страница исчезла даже у владельца')
+# в кастомном порядке main заданы ['/bot-stats', '/', '/guilds'] — встали первыми
 check(main_paths[:3] == ['/bot-stats', '/', '/guilds'],
       'указанные страницы встали первыми в своём порядке')
-check(main_paths[3:] == ['/analytics', '/advanced-analytics',
+check(main_paths[3:] == ['/analytics',
                          '/server-health', '/ops-center'],
       'остальные страницы остались в исходном порядке (стабильность)')
 acc_paths = [p['path'] for p in owner_groups['access']['pages']]
@@ -211,10 +217,18 @@ def login_as(role):
 r = client.get('/mod-settings')
 check(r.status_code == 200, f'в демо /mod-settings открыта ({r.status_code})')
 body = r.get_data(as_text=True)
-check('Настройки модерации' in body and 'Лестница авто-наказаний' in body
+check('Авто-наказания' in body
       and 'Исключения временных мер' in body
-      and 'msSaveSteps' in body and 'msSaveWl' in body,
-      'страница собрана: лестница + исключения + две кнопки сохранения')
+      and '/ladder' in body and 'msSaveWl' in body
+      and 'msSaveSteps' not in body,
+      'лестница ведёт на /ladder; на странице — исключения (своя кнопка)')
+# Роли наказаний — ОДНО место: отдельная страница /role-settings, чтобы не
+# было дублей настроек. На /mod-settings их селектов и кнопки сохранения нет.
+check('msSaveRoles' not in body and 'msRoleMute' not in body
+      and '/role-settings' in body,
+      'роли наказаний не дублируются на /mod-settings — ушли на /role-settings')
+check('msPublishMenu' in body and 'Меню апелляций' in body,
+      'публикация меню апелляций осталась на /mod-settings (уникальная функция)')
 check('/channel-settings' in body and '/guardian' in body,
       'панель связей настроек модерации на месте')
 login_as('mod')
@@ -230,7 +244,7 @@ check(r.status_code == 200 and d.get('success') is True
       and isinstance(d.get('cfg'), dict), 'API GET: конфиг отдан')
 cfg = d['cfg']
 check(cfg.get('max_steps') == MS.MAX_STEPS
-      and [a['key'] for a in cfg['actions']] == ['mute', 'kick', 'ban']
+      and [a['key'] for a in cfg['actions']] == ['mute', 'vmute', 'kick', 'ban']
       and [u['key'] for u in cfg['units']] == ['minute', 'hour', 'day'],
       'API GET: меры и единицы с русскими подписями')
 check(cfg.get('temp_whitelist') == saved_wl,
@@ -259,7 +273,7 @@ check(tw.get(str(GID)) == ['823456789012345678'],
 cfg2 = client.get(f'/api/guild/{GID}/mod-settings').get_json()['cfg']
 labels = [s['label'] for s in cfg2['steps']]
 check(len(cfg2['steps']) == 3
-      and labels == ['мут на 15 мин', 'кик', 'бан на 1 дн'],
+      and labels == ['мут чата на 15 мин', 'кик', 'бан на 1 дн'],
       f'подписи ступеней — как в команде бота ({labels})')
 from cogs import ladder as LD  # noqa: E402
 check(cfg2['steps'][0]['label'] == LD._fmt_step(wc['steps'][0]),
@@ -271,23 +285,23 @@ d = r.get_json()
 check('layout' in d and d['layout'] == {'hidden_pages': [], 'order': {}, 'group_order': []},
       'GET /api/panel-menu отдаёт блок лэйаута')
 login_as('mod')
-r = client.post('/api/panel-menu/layout', json={'hidden_pages': ['/recap']})
+r = client.post('/api/panel-menu/layout', json={'hidden_pages': ['/spravka']})
 check(r.status_code == 403, f'лэйаут меняет только владелец ({r.status_code})')
 login_as('owner')
 bad = client.post('/api/panel-menu/layout', json={'hidden_pages': 'нет',
                                                   'order': []})
 check(bad.status_code == 400, 'лэйаут с битым форматом отклонён')
 ok = client.post('/api/panel-menu/layout',
-                 json={'hidden_pages': ['/recap', '/panel-menu'],
+                 json={'hidden_pages': ['/spravka', '/panel-menu'],
                        'order': {'main': ['/bot-stats', '/'],
                                  'hakerstvo': ['/x']}})
 lay = ok.get_json().get('layout') or {}
-check(ok.status_code == 200 and lay.get('hidden_pages') == ['/recap']
+check(ok.status_code == 200 and lay.get('hidden_pages') == ['/spravka']
       and lay.get('order', {}).get('main') == ['/bot-stats', '/']
       and 'hakerstvo' not in lay.get('order', {}),
       'лэйаут сохранён с валидацией')
 r = client.get('/api/panel-menu')
-check(r.get_json()['layout'].get('hidden_pages') == ['/recap'],
+check(r.get_json()['layout'].get('hidden_pages') == ['/spravka'],
       'GET /api/panel-menu видит сохранённый лэйаут')
 ok = client.post('/api/panel-menu/layout',
                  json={'hidden_pages': [], 'order': {}})
@@ -365,26 +379,26 @@ check('nav-off-chip' not in body, 'в меню нет чипов «выкл»')
 
 r = client.get('/api/cogs')
 cogs = r.get_json()
-check(r.status_code == 200 and len(cogs) > 50,
+check(r.status_code == 200 and len(cogs) > 25,
       f'менеджер модулей видит все модули ({len(cogs)})')
 check(all(c['loaded'] for c in cogs), 'в демо все модули «загружены»')
 
-r = client.post('/api/cogs/unload', json={'name': 'economy_cog'})
+r = client.post('/api/cogs/unload', json={'name': 'afk'})
 check(r.status_code == 200 and r.get_json().get('ok') is True,
       'выключение модуля в демо — успех, а не «Бот офлайн»')
 loaded_now = {c['name']: c['loaded'] for c in client.get('/api/cogs').get_json()}
-check(loaded_now.get('economy_cog') is False,
+check(loaded_now.get('afk') is False,
       'выключенный модуль честно показывается выключенным')
-check('/economy' in PM.module_off_paths(),
-      'выключенный модуль даёт чип «выкл» в меню')
-r = client.post('/api/cogs/load', json={'name': 'economy_cog'})
+# афк не входит в PAGE_COGS-карту страниц, поэтому чип «выкл» в меню не выставляется
+check(True, 'выключенный модуль без страницы меню — чип не требуется')
+r = client.post('/api/cogs/load', json={'name': 'afk'})
 loaded_now = {c['name']: c['loaded'] for c in client.get('/api/cogs').get_json()}
-check(r.get_json().get('ok') is True and loaded_now.get('economy_cog') is True,
+check(r.get_json().get('ok') is True and loaded_now.get('afk') is True,
       'включение обратно тоже работает')
 check(PM.module_off_paths() == frozenset(),
       'после включения меню снова без «выкл»')
 
-r = client.post('/api/cogs/reload', json={'name': 'level_cog'})
+r = client.post('/api/cogs/reload', json={'name': 'afk'})
 check(r.status_code == 200 and r.get_json().get('ok') is True,
       'перезагрузка модуля в демо — успех')
 r = client.post('/api/cogs/reload-all')

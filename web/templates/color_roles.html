@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Цветные роли — Панель Hakumo{% endblock %}
+{% block title %}Цветные роли — Hakumo{% endblock %}
 {% block page_title %}Цветные роли{% endblock %}
 {% block content %}
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Роли <span class="sep">·</span> Цветовые роли</div>
+    <div class="eyebrow"> Роли </div>
     <h1>Цветные роли</h1>
     <p class="lead">Палитра цветных ролей: добавьте цвет — участник получит его командой <span class="mono">/color</span>. Публикация создаст роли и панель в Discord.</p>
   </div>
@@ -117,6 +117,7 @@
   var colors = [];
   var _fp = '';
   var _saveTimer = null;
+  var _saving = false;
 
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -170,6 +171,8 @@
   }
 
   async function savePalette() {
+    _saving = true;
+    _saveTimer = null;   /* иначе load() вечно считал бы, что сохранение ещё идёт */
     try {
       var r = await fetch('/api/guild/' + GID + '/color-roles', {
         method: 'POST',
@@ -177,8 +180,18 @@
         body: JSON.stringify({ colors: colors })
       });
       var d = await r.json();
-      if (d.success) colors = d.colors || colors;
-    } catch (e) { /* тихо */ }
+      if (d.success) {
+        colors = d.colors || colors;
+        msg('cr-add-msg', true, 'Палитра сохранена');
+      } else {
+        /* молчаливый catch врал «добавлен и сохранён», когда сервер
+           отвечал ошибкой (например, «Нет доступа») */
+        msg('cr-add-msg', false, String(d.error || 'Не удалось сохранить палитру'));
+      }
+    } catch (e) {
+      msg('cr-add-msg', false, 'Не удалось сохранить палитру — проверьте соединение');
+    }
+    _saving = false;
   }
 
   async function load() {
@@ -186,7 +199,9 @@
       var colRes = await fetch('/api/guild/' + GID + '/color-roles').then(function (r) { return r.json(); });
       var chRes = await fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); });
       var fp = JSON.stringify(colRes);
-      if (fp !== _fp) {
+      /* Пока идёт сохранение, сервер ещё не знает о последнем цвете:
+         перечитать список — значит стереть его с экрана (а следом и с диска). */
+      if (fp !== _fp && !_saving && !_saveTimer) {
         _fp = fp;
         colors = (Array.isArray(colRes) ? colRes : []).map(function (c) {
           return { name: String(c.name || ''), hex: String(c.hex || '#c8922a'), emoji: String(c.emoji || '') };
@@ -196,13 +211,17 @@
       var chans = Array.isArray(chRes) ? chRes : (chRes.channels || []);
       var sel = $('cr-channel');
       var prev = sel.value;
-      sel.innerHTML = '<option value="">Выберите канал…</option>';
+      /* собираем строку целиком: += по одному option на каждом шаге
+         перечитывал весь DOM списка каналов */
+      var html = ['<option value="">Выберите канал…</option>'];
       chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
         .sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
         .forEach(function (c) {
           var s = String(c.id) === prev ? ' selected' : '';
-          sel.innerHTML += '<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>';
+          html.push('<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>');
         });
+      var next = html.join('');
+      if (sel.innerHTML !== next) sel.innerHTML = next;
     } catch (e) {
       $('cr-list').innerHTML = '<div class="cr-empty"><i class="fas fa-triangle-exclamation"></i><b>Не удалось загрузить палитру</b><span>Проверьте соединение</span></div>';
     }
@@ -244,8 +263,9 @@
       });
       var d = await r.json();
       if (d.success) {
-        msg('cr-pub-msg', true, String(d.message || 'Цветные роли опубликованы'));
-        toast(String(d.message || 'Цветные роли опубликованы'), true);
+        /* d.partial — панель ушла, но часть ролей создать не удалось */
+        msg('cr-pub-msg', !d.partial, String(d.message || 'Цветные роли опубликованы'));
+        toast(String(d.message || 'Цветные роли опубликованы'), !d.partial);
       } else {
         msg('cr-pub-msg', false, String(d.error || 'Ошибка публикации'));
         toast(String(d.error || 'Ошибка публикации'), false);
@@ -285,7 +305,10 @@
 
   syncPreview();
   load();
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); }, 1500);
+  /* Палитра меняется только когда её правят (публикация создаёт роли —
+     бот шлёт топик roles; каналы — топик channels). 1500 мс без топиков
+     молча превращались в опрос каждые 20 секунд. */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); }, 300000, ['roles', 'channels']);
 })();
 </script>
 {% endblock %}

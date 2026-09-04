@@ -78,10 +78,10 @@ class SentimentAnalyzer :
         """Analiz ediyor bir сообщение"""
         content =message .content .lower ()
 
-        # Belirliyoruz duygular
+        # Определяем эмоции
         emotions =self ._detect_emotions (content )
 
-        # Belirliyoruz dominiruyusuyu emociyu
+        # Определяем доминирующую эмоцию
         dominant =max (emotions ,key =emotions .get )if emotions else 'neutral'
 
         # Hesaplыyoruz skor
@@ -160,7 +160,7 @@ class SentimentAnalyzer :
         for msg in recent :
             emotion_counts [msg ['dominant_emotion']]+=1 
 
-            # Belirliyoruz trend (sravnivaem pervuyu ve vtoruyu polovinu)
+            # Определяем тренд (сравниваем первую и вторую половину)
         mid =len (recent )//2 
         if mid >0 :
             first_half_avg =sum (msg ['sentiment_score']for msg in recent [:mid ])/mid 
@@ -215,7 +215,7 @@ class SentimentAnalyzer :
         s ['avg_sentiment']*s ['message_count']for s in channel_sentiments 
         )/total_messages 
 
-        # Belirliyoruz общий duygu
+        # Определяем общий тон
         if avg_sentiment >0.3 :
             mood ='very_positive'
         elif avg_sentiment >0.1 :
@@ -292,7 +292,7 @@ class SentimentAnalyzer :
         self .alerts_sent .discard (alert_key )
 
     def _load_history (self ):
-        """Загруз история из dosyaya"""
+        """Загрузить историю из файла."""
         history_file ='data/sentiment_history.json'
         if os .path .exists (history_file ):
             try :
@@ -304,7 +304,7 @@ class SentimentAnalyzer :
                 _log.debug("_load_history(): подавлено: %s", _ex)
 
     def _save_history (self ):
-        """Сохран история в dosya"""
+        """Сохранить историю разборов в файл."""
         try :
             os .makedirs ('data',exist_ok =True )
             history_file ='data/sentiment_history.json'

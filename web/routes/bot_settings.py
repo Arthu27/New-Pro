@@ -3,13 +3,12 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -46,13 +45,26 @@ def register(ctx):
         bot = _app.bot_instance
         cfg = _bot_cfg_load()
         online = False
+        guilds_n = 0
         if bot is not None:
             try:
                 online = not bot.is_closed()
             except Exception:
                 online = False
+            guilds_n = len(getattr(bot, 'guilds', []) or [])
+        else:
+            # Панель отдельным процессом от бота — правда по пульсу
+            # (data/bot_state.json), иначе страница вечно показывает «офлайн».
+            try:
+                from services import bot_bridge as _bb
+                _st = _bb.read_state()
+                if _bb.state_status(_st) == 'online':
+                    online = True
+                    guilds_n = len(_bb.guild_ids(_st))
+            except Exception:
+                online = False
         return jsonify({'ok': True, 'bot_online': online,
-                        'guilds': len(getattr(bot, 'guilds', []) or []),
+                        'guilds': guilds_n,
                         'discord_version': _discord.__version__,
                         'prefix': Config.COMMAND_PREFIX,
                         'presence': {'status': cfg.get('status', 'online'),

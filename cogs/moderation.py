@@ -90,6 +90,88 @@ class Moderation (commands .Cog ):
         except Exception as _ex :
             log .debug (f'punish_roles_loop старт: {_ex}')
 
+    def _recent_mute_count(self, guild_id, user_id, hours: float = 48.0) -> int:
+        """Сколько мутов (таймаут/чат/войс) получил пользователь за окно.
+        Источник — data/mod_data.json (те же дела, что пишет save_case)."""
+        try:
+            filepath = 'data/mod_data.json'
+            if not os.path.exists(filepath):
+                return 0
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            cases = (data.get('cases') or {}).get(str(guild_id)) or []
+            horizon = datetime.now(timezone.utc).timestamp() - hours * 3600
+            n = 0
+            for c in cases:
+                if str(c.get('user_id')) != str(user_id):
+                    continue
+                if c.get('action') not in ('timeout', 'mute_chat', 'vmute'):
+                    continue
+                ts = c.get('timestamp')
+                if not ts:
+                    continue
+                try:
+                    when = datetime.fromisoformat(ts).timestamp()
+                except Exception as _te:
+                    log.debug(f"[MOD] _recent_mute_count bad ts {ts}: {_te}")
+                    continue
+                if when >= horizon:
+                    n += 1
+            return n
+        except Exception as e:
+            log.info(f"[MOD] _recent_mute_count: {e}")
+            return 0
+
+    async def _maybe_auto_warn(self, guild, user):
+        """Авто-варн от бота: 3 мута за 48 ч → 1 предупреждение.
+        Порог настраивается через mod-настройки (по умолчанию 3/48ч).
+        Не дублируем: если у пользователя уже есть авто-варн, поставленный
+        ПОСЛЕ его последнего мута — повторно не выдаём."""
+        try:
+            threshold = 3
+            window_h = 48.0
+            try:
+                from services.async_io import load_json_async
+                _cfg_path = f'data/mod_autowarn_{guild.id}.json'
+                _ac = await load_json_async(_cfg_path, None, log=log)
+                if _ac:
+                    threshold = int(_ac.get('mute_threshold', threshold))
+                    window_h = float(_ac.get('window_hours', window_h))
+            except Exception as _ce:
+                log.debug(f"[MOD] auto-warn cfg: {_ce}")
+
+            if self._recent_mute_count(guild.id, user.id, window_h) < threshold:
+                return
+
+            # Не дублировать уже выданный авто-варн после последнего мута.
+            warns_cog = self.bot.get_cog('warnings')
+            if warns_cog is None:
+                return
+            warns = warns_cog._get_warns(guild.id, user.id)
+            last_mute_ts = ''
+            try:
+                from services.async_io import load_json_async
+                _md = await load_json_async('data/mod_data.json', {}, log=log) or {}
+                _cs = (_md.get('cases') or {}).get(str(guild.id)) or []
+                _mine = [c.get('timestamp', '') for c in _cs
+                         if str(c.get('user_id')) == str(user.id)
+                         and c.get('action') in ('timeout', 'mute_chat', 'vmute')]
+                last_mute_ts = max(_mine) if _mine else ''
+            except Exception as _me:
+                log.debug(f"[MOD] auto-warn last-mute scan: {_me}")
+            for w in warns:
+                if (w.get('mod_id') == str(self.bot.user.id)
+                        and 'автоматически' in (w.get('reason') or '').lower()
+                        and w.get('timestamp', '') >= last_mute_ts):
+                    return  # авто-варн за эту серию уже выдан
+
+            bot_member = guild.me
+            reason = (f'Автоматически: {threshold} мута за {window_h:.0f} ч '
+                      f'(правило рецидива). Выдано ботом.')
+            await warns_cog.add_warning(user, bot_member, reason)
+        except Exception as _aw_e:
+            log.info(f'[MOD] auto-warn: {_aw_e}')
+
     def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ):
         os .makedirs ('data',exist_ok =True )
         filepath ='data/mod_data.json'
@@ -146,9 +228,11 @@ class Moderation (commands .Cog ):
             return 
         flag_file ='data/mod_notify.json'
         try :
-            enabled =json .load (open (flag_file ,encoding ='utf-8')).get ('enabled',False )if os .path .exists (flag_file )else False 
+            from services.async_io import load_json_async
+            _flag =await load_json_async (flag_file ,{},log =log )or {}
+            enabled =bool (_flag .get ('enabled',False ))
         except Exception :
-            enabled =False 
+            enabled =False
         if not enabled :
             return 
         try :
@@ -211,8 +295,21 @@ class Moderation (commands .Cog ):
 
 
     #  /modpanel — панель модерации через select-меню════════════════════════════════════════════════════════════════
-    @app_commands .command (name ="modpanel",description ="Панель модерации (выпадающее меню)")
-    @app_commands .checks .has_permissions (moderate_members =True )
+    @app_commands.command(name="modpanel", description="Панель модерации (выпадающее меню)")
+    # Два уровня доступа:
+    #  1) Discord (ВИДИМОСТЬ): default_permissions(moderate_members=True) —
+    #     по умолчанию команда видна только ролям с правом «Модерация
+    #     участников», обычные участники её не видят в меню «/». Это
+    #     настраиваемый дефолт: владелец открывает команду конкретным ролям
+    #     без выдачи полного права — Настройки сервера → Интеграции → Hakumo
+    #     → /modpanel (инструкция продублирована в панели → Доступ).
+    #  2) Бот (ЧТО МОЖНО): ролевой ACL из панели (has_access в main.py) —
+    #     отмеченные тут роли могут вызывать команду, а actions_for_member
+    #     ниже режет конкретные действия (бан/мут/варн/очистка) по ролям.
+    # Рантайм checks.has_permissions(moderate_members) НЕ ставим намеренно:
+    # это жёсткий блок, который не переопределить ни панелью, ни Интеграциями
+    # — из-за него выданные роли «не включались».
+    @app_commands.default_permissions(moderate_members=True)
     async def modpanel (self ,interaction ):
         # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
         # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
@@ -225,59 +322,15 @@ class Moderation (commands .Cog ):
             ephemeral =True )
             return 
         _u =interaction .user 
-        _has =lambda k :any (a [3 ]==k for a in allowed )
-        _groups =[]
-        if _has ('warn'):
-            _groups .append ('⚠️ варн — официальное предупреждение, пишется в дело и уходит в ЛС')
-        if _has ('mute'):
-            _groups .append ('🔇 муты — чат, войс или всё сразу')
-        if _has ('ban'):
-            _groups .append ('🚫 бан с апелляцией — участник остаётся на сервере')
-        if _has ('unban')or _has ('unmute'):
-            _groups .append ('🔓 снятия — размут, разбан, вернуть голос')
-        if _has ('clear'):
-            _groups .append ('🧹 чистка — снести N сообщений в канале')
+        # Компактная карточка: владелец просил «слишком много инфы» —
+        # только строка-подсказка и само выпадающее меню, без простыней.
         embed =discord .Embed (
         title ="🛡 Панель модерации",
-        description =(
-        "Личная панель: кроме вас её никто не видит.\n"
-        "Выберите действие в меню — бот спросит цель, срок и причину."
-        ),
-        color =0x5865F2 ,
-        timestamp =datetime .now (timezone .utc )
-        )
-        try :
-            if getattr (_u ,'display_avatar',None ):
-                embed .set_author (name =f"Модератор: {_u .display_name }",
-                icon_url =_u .display_avatar .url )
-        except Exception as _ex :
-            _log .debug (f'[MODPANEL] аватар модератора: {_ex}')
-        try :
-            if interaction .guild .icon :
-                embed .set_thumbnail (url =interaction .guild .icon .url )
-        except Exception as _ex :
-            _log .debug (f'[MODPANEL] иконка сервера: {_ex}')
-        embed .add_field (
-        name ="⚡ Как это работает",
-        value =("1️⃣ Выберите действие в меню ниже\n"
-        "2️⃣ Укажите цель — @ник, точное имя или ID\n"
-        "3️⃣ Причина — и наказание применится"),
-        inline =False )
-        embed .add_field (
-        name ="🎒 Что внутри",
-        value =("\n".join (_groups )or 'Меню действий ниже'),
-        inline =False )
-        embed .add_field (
-        name ="📜 Хорошая практика",
-        value =("Каждое действие пишется в дело и уходит участнику в ЛС. "
-        "Ссылка на доказательство спросится, если панель этого требует."),
-        inline =False )
+        description ="1) Выберите участника мышкой в первом меню (или впишете вручную), "
+                      "2) выберите действие во втором — цель, срок и причину можно поправить.",
+        color =0x5865F2 )
         if interaction .guild .icon :
-            embed .set_footer (text =f"{interaction.guild.name} · меню живёт 5 минут",icon_url =interaction .guild .icon .url )
-        else :
-            embed .set_footer (text =f"{interaction.guild.name} · меню живёт 5 минут")
-        # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
-        # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
+            embed .set_footer (text =interaction .guild .name )
         await _respond (interaction ,embed =embed ,view =ModPanelView (self ,interaction .user ,allowed ),ephemeral =True )
 
     def _parse_target_id (self ,target :str ):
@@ -581,55 +634,110 @@ class Moderation (commands .Cog ):
                     else :
                         await interaction .response .send_message ("🛡 Кик отключён на этом сервере — используй мут или апелляцию.",ephemeral =True )
                     return 
-                elif action in ("timeout","mute_chat"):
-                    minutes =parse_duration_minutes (amount ,5 )
-                    # Роль мута из панели главнее таймаута (заказ 2026-08-27):
-                    # владелец сам выбрал роль — бот выдаёт её и снимет по сроку
-                    _mrole =self ._punish_role (guild ,'mute')
-                    if _mrole is not None :
-                        await user .add_roles (_mrole ,reason =reason or 'мут')
-                        self ._remember_temp (guild ,user ,_mrole ,minutes *60 )
-                        msg =f"🔇 роль мута «{_mrole .name }» на {minutes } мин — снимется сама"
-                    else :
-                        until =datetime.now(timezone.utc)+timedelta (minutes =minutes )
-                        await user .timeout (until ,reason =reason )
-                        if action =="mute_chat":
-                            msg =f"🔇 чат закрыт на {minutes } мин"
-                        else :
-                            msg =f"🔇 чат и голос закрыты на {minutes } мин"
-                    await self._maybe_watchlist_after_mute (interaction ,user ,reason )
+                elif action == "timeout":
+                    # «Мут (чат + войс)» — это ОДНО нативное состояние Discord:
+                    # member.timeout() глушит И текст, И голос одновременно.
+                    # Роль так не умеет (роль закрывает только чат), поэтому
+                    # таймаут ВСЕГДА нативный — это и есть «за раз и чат, и войс».
+                    # Сначала снимаем любые отдельные мут-роли/серверное
+                    # заглушение, чтобы на участнике не осталось второго мута.
+                    minutes = parse_duration_minutes(amount, 5)
+                    minutes = max(1, min(minutes, 40320))  # потолок Discord — 28 дней
+                    try:
+                        from services import mute_state
+                        await mute_state.clear_all_mutes(guild, user)
+                    except Exception as _mse:
+                        log.debug(f'[MODPANEL] timeout clear all: {_mse}')
+                    until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+                    await user.timeout(until, reason=reason)
+                    # Заказ владельца: при ТАЙМАУТЕ бот дополнительно выдаёт
+                    # СРАЗУ ДВЕ роли — мут чата и мут войса (на тот же срок).
+                    # Нативный таймаут и роли снимаются по времени согласованно.
+                    _extra_roles = []
+                    for _kind in ('mute', 'vmute'):
+                        try:
+                            _r = self._punish_role(guild, _kind)
+                            if _r is not None and _r not in user.roles:
+                                await user.add_roles(_r, reason=reason or 'таймаут')
+                                self._remember_temp(guild, user, _r, minutes * 60)
+                                _extra_roles.append(_r.name)
+                        except Exception as _tre:
+                            log.debug(f'[MODPANEL] timeout доп.роль {_kind}: {_tre}')
+                    msg = (f"🔇 таймаут на {human_duration(minutes)} "
+                           f"(~{minutes} мин) — закрыты и чат, и голос")
+                    if _extra_roles:
+                        msg += " · роли: " + ", ".join(f"«{n}»" for n in _extra_roles)
+                    await self._maybe_watchlist_after_mute(interaction, user, reason)
+                elif action == "mute_chat":
+                    # «Мут (только чат)» — закрываем ТОЛЬКО текст через мут-роль.
+                    # Нативный таймаут тут не подходит: он заглушил бы и голос.
+                    # Поэтому чат-мут работает мут-ролью; без роли честно просим
+                    # её настроить (а не выдаём таймаут с подписью «только чат»).
+                    _mrole = self._punish_role(guild, 'mute')
+                    if _mrole is None:
+                        await _respond(interaction, embed=error_embed(
+                            "Мут только чата работает через мут-роль, а она не выбрана. "
+                            "Настройте её: панель → «Настройки модерации» → роли наказаний. "
+                            "Если нужно заглушить и чат, и голос сразу — выберите «Мут (чат + войс)»."),
+                            ephemeral=True)
+                        return
+                    minutes = parse_duration_minutes(amount, 5)
+                    try:
+                        from services import mute_state
+                        await mute_state.clear_all_mutes(guild, user)
+                    except Exception as _mse:
+                        log.debug(f'[MODPANEL] mute_chat clear all: {_mse}')
+                    await user.add_roles(_mrole, reason=reason or 'мут чата')
+                    self._remember_temp(guild, user, _mrole, minutes * 60)
+                    msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
+                           f"(роль «{_mrole.name}»); голос не тронут")
+                    await self._maybe_watchlist_after_mute(interaction, user, reason)
                 elif action =="vmute":
+                    # Войс-мут — ТОЛЬКО микрофон, чат не трогаем. Снимаем
+                    # нативный таймаут/чат-мут, если он стоял, чтобы не было
+                    # «двойного мута»: роль войс-мута глушит голос сама.
                     _vrole =self ._punish_role (guild ,'vmute')
+                    minutes =parse_duration_minutes (amount ,5 )
                     if _vrole is not None :
                         # роль войс-мута: работает и вне голоса, снимется по сроку
-                        minutes =parse_duration_minutes (amount ,5 )
+                        await self ._clear_chat_mute (guild ,user )
                         await user .add_roles (_vrole ,reason =reason or 'войс-мут')
                         self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
-                        msg =f"🎙️ роль войс-мута «{_vrole .name }» на {minutes } мин"
+                        msg =f"🎙️ войс-мут «{_vrole .name }» на {minutes } мин"
                     else :
                         if not user .voice or not user .voice .channel :
                             await _respond (interaction ,
                             embed =error_embed ("Участник не в голосовом канале. Голосовой мьют невозможен."),
                             ephemeral =True )
                             return
-                        await user .edit (mute =True )
+                        # нативное серверное заглушение микрофона (без таймаута чата)
+                        await self ._clear_chat_mute (guild ,user )
+                        try :
+                            await user .edit (mute =True )
+                        except Exception as _ve :
+                            await _respond (interaction ,
+                            embed =error_embed (f"Не удалось заглушить микрофон: {_ve }"),
+                            ephemeral =True )
+                            return
                         msg ="🎙️ микрофон заглушён (войс-мут)"
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
                     if _vrole is not None :
                         await self ._drop_roles (guild ,user ,[_vrole ])
-                        msg =f"🎙️ роль войс-мута снята ({_vrole .name })"
+                        msg =f"🎙️ войс-мут снят ({_vrole .name })"
                     else :
-                        await user .edit (mute =False )
+                        try :
+                            await user .edit (mute =False )
+                        except Exception as _ve :
+                            log .debug (f'[MODPANEL] vunmute edit: {_ve}')
                         msg ="🎙️ микрофон включён"
-                else :  # untimeout
-                    _mrole =self ._punish_role (guild ,'mute')
-                    if _mrole is not None :
-                        await self ._drop_roles (guild ,user ,[_mrole ])
-                        msg =f"🔊 роль мута снята ({_mrole .name })"
-                    else :
-                        await user .timeout (None )
-                        msg ="🔊 мут снят (чат и голос открыты)"
+                else :  # untimeout — снимаем ЛЮБОЙ мут (чат+войс) разом
+                    try :
+                        from services import mute_state
+                        await mute_state .clear_all_mutes (guild ,user )
+                    except Exception as _mse :
+                        log .debug (f'[MODPANEL] untimeout clear all: {_mse}')
+                    msg ="🔊 мут снят (чат и голос)"
 
                 # Вспомогательные шаги: дело, DM, лог, уведомление панели.
                 # Каждый — в своём try: сбой побочного шага НЕ должен превращать
@@ -646,7 +754,10 @@ class Moderation (commands .Cog ):
                 except Exception as _slr :
                     log .debug (f'[STAFF_LIMIT] rec: {_slr}')
                 try :
-                    case_id =self .save_case (guild .id ,action ,user .id ,interaction .user .id ,reason )
+                    import asyncio as _aio_sc
+                    # запись дела (файл) — в рабочем потоке, без блокировки loop
+                    case_id =await _aio_sc .to_thread (
+                        self .save_case ,guild .id ,action ,user .id ,interaction .user .id ,reason )
                 except Exception as _case_e :
                     case_id =0
                     aux_errors .append ("дело не записано")
@@ -664,9 +775,16 @@ class Moderation (commands .Cog ):
                     aux_errors .append ("лог-канал недоступен")
                     log .warning (f'[MODPANEL] send_log: {_log_e}')
 
+                # Авто-варн за серию мутов (3 за 48 ч) — выдаёт сам бот.
+                if action in ('timeout', 'mute_chat', 'vmute'):
+                    try :
+                        await self ._maybe_auto_warn (guild ,user )
+                    except Exception as _aw_e :
+                        log .info (f'[MODPANEL] auto-warn: {_aw_e}')
+
                 # Уведомление панели о действии модерации (веб/Discord/email — в фоне)
                 try :
-                    from cogs .ticket import _notify_panel_ticket_event as _np
+                    from services .panel_notify import notify_panel_event as _np
                     _label ={"ban":"Апелляция","kick":"Кик","timeout":"Таймаут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","untimeout":"Мут снят"}.get (action ,action )
                     _np (interaction ,'mod_action',
                     f"{_label }: {user .display_name }",
@@ -721,7 +839,9 @@ class Moderation (commands .Cog ):
                     unban_done =True
                 except Exception as _ub_ex :
                     log .debug (f'unban: {_ub_ex}')
-                case_id =self .save_case (guild .id ,"unban",uid ,interaction .user .id ,reason )
+                import asyncio as _aio_sc2
+                case_id =await _aio_sc2 .to_thread (
+                    self .save_case ,guild .id ,"unban",uid ,interaction .user .id ,reason )
                 try :
                     from services .staff_limits import record_hit as _sl_rec
                     _sl_rec (guild .id ,interaction .user .id ,'unban',1 )
@@ -737,7 +857,7 @@ class Moderation (commands .Cog ):
                 await self .send_log (guild ,confirm )
                 # Уведомление панели (веб/Discord/email — в фоне)
                 try :
-                    from cogs .ticket import _notify_panel_ticket_event as _np
+                    from services .panel_notify import notify_panel_event as _np
                     _np (interaction ,'mod_action',
                     f"Разбан/снятие апелляции: {_who }",
                     f"Модератор: {interaction .user .display_name } · Дело #{case_id}")
@@ -835,6 +955,24 @@ class Moderation (commands .Cog ):
         return ok ,text 
 
     # ── Роли наказаний (панель → «Настройки модерации») ─────────────────
+    async def _clear_voice_mute (self ,guild ,user ):
+        """Снять любое голосовое заглушение (роль войс-мута или нативный
+        server-mute), чтобы при чат-муте/таймауте не оставалось второго мута."""
+        try :
+            from services import mute_state
+            await mute_state .clear_voice_mute (guild ,user )
+        except Exception as _e :
+            log .debug (f'[MODPANEL] clear voice-mute: {_e}')
+
+    async def _clear_chat_mute (self ,guild ,user ):
+        """Снять нативный таймаут и чат-мут-роль, чтобы при войс-муте не
+        оставалось второго мута (войс-мут глушит только микрофон)."""
+        try :
+            from services import mute_state
+            await mute_state .clear_chat_mute (guild ,user )
+        except Exception as _e :
+            log .debug (f'[MODPANEL] clear chat-mute: {_e}')
+
     def _punish_role (self ,guild ,kind ):
         """discord.Role для наказания или None (не выбрана — работаем как раньше)."""
         try :
@@ -924,23 +1062,18 @@ class Moderation (commands .Cog ):
         """
         try :
             import datetime as _dt
-            # 1) Считаем мьюты пользователя
-            os .makedirs ('data',exist_ok =True )
+            from services.async_io import load_json_async ,save_json_async
+            # 1) Считаем мьюты пользователя (чтение файла — в потоке)
             mod_file ='data/mod_data.json'
             mute_count =0
-            if os .path .exists (mod_file ):
-                with open (mod_file ,'r',encoding ='utf-8')as f :
-                    data =json .load (f )
-                cases =data .get ('cases',{}).get (str (interaction .guild .id ),[])
-                for c in cases :
-                    if str (c .get ('user_id',''))==str (user .id )and c .get ('action')in ('timeout','mute_chat','vmute'):
-                        mute_count +=1
+            data =await load_json_async (mod_file ,{},log =log )or {}
+            cases =data .get ('cases',{}).get (str (interaction .guild .id ),[])
+            for c in cases :
+                if str (c .get ('user_id',''))==str (user .id )and c .get ('action')in ('timeout','mute_chat','vmute'):
+                    mute_count +=1
             # 2) Добавляем в watchlist (advanced_mod) на 1 неделю
             adv_file ='data/mod_advanced_data.json'
-            adv ={}
-            if os .path .exists (adv_file ):
-                with open (adv_file ,'r',encoding ='utf-8')as f :
-                    adv =json .load (f )
+            adv =await load_json_async (adv_file ,{},log =log )or {}
             adv .setdefault ('watchlist',{})
             gid =str (interaction .guild .id )
             adv ['watchlist'].setdefault (gid ,{})
@@ -952,10 +1085,17 @@ class Moderation (commands .Cog ):
                 "until":until ,
                 "auto":True ,
             }
-            with open (adv_file ,'w',encoding ='utf-8')as f :
-                json .dump (adv ,f ,indent =2 ,ensure_ascii =False )
+            await save_json_async (adv_file ,adv ,log =log )
+            # Панель «Наблюдение» обновляется по событию, а не опросом по
+            # таймеру: без этой публикации страница не узнает о новом
+            # фигуранте, пока её не откроют заново.
+            try :
+                from services import live_bus
+                live_bus .publish (interaction .guild .id ,'watchlist')
+            except Exception as _ex :
+                log .debug ("[watchlist auto] live_bus: %s",_ex )
         except Exception as ex :
-            log .warning (f"[watchlist auto] {ex}")
+            log .debug ("[watchlist auto] %s",ex )
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1024,16 +1164,24 @@ def _embed_text(e):
 
 # Действия панели: (value, label, описание, ключ лимита стаффа).
 # Ключ — как в services/staff_limits: мут чата/войса/таймаут — один ключ mute.
+# 4-е поле — ГРУППА ДЛЯ ЛИМИТОВ («Лимиты команды» в Щите сервера): таймаут,
+# чат-мут и войс-мут — это один потолок «муты» (см. staff_limits DURATION_KEYS).
+# РАЗРЕШЕНИЯ при этом раздельные — их задаёт MODPANEL_ACL_KEYS ниже.
+# kick НАМЕРЕННО отсутствует: система кика отключена владельцем (см. обработку
+# action == "kick" — вежливый отказ). Не добавлять.
+# Порядок — для удобства (заказ владельца): варн → мут-семейство (таймаут,
+# чат-мут, войс-мут и их снятия) → ОЧИСТКА → бан/апелляция внизу (снятие бана
+# — следующим после бана).
 MODPANEL_ACTIONS = [
     ("warn", "Варн (предупреждение)", "Официальный варн: в дело, участнику в ЛС", "warn"),
-    ("ban", "Бан (апелляция)", "Не выгоняет: закроет каналы, оставит только канал апелляции", "ban"),
-    ("timeout", "Мут (чат + войс)", "Тишина сразу везде — и текст, и голос", "mute"),
-    ("mute_chat", "Мут (только чат)", "В чат писать нельзя, голос живёт", "mute"),
-    ("vmute", "Мут (только войс)", "Микрофон в офф, чат не трогаем", "mute"),
-    ("unban", "Снять апелляцию / разбан", "Вернуть доступ к каналам (по ID)", "unban"),
-    ("clear", "Очистка сообщений", "Снести N последних сообщений в канале", "clear"),
+    ("timeout", "Таймаут (чат + войс)", "Нативный таймаут Discord: одним действием закрыты и текст, и голос (до 28 дней)", "mute"),
+    ("mute_chat", "Мут (только чат)", "Закрывает только чат через мут-роль; голос работает", "mute"),
+    ("vmute", "Мут (только войс)", "Глушит микрофон; чат не трогается", "mute"),
     ("untimeout", "Размут (чат + войс)", "Снять таймаут — снова можно всё", "unmute"),
     ("vunmute", "Размут (войс)", "Вернуть участнику голос", "unmute"),
+    ("clear", "Очистка сообщений", "Снести N последних сообщений в канале", "clear"),
+    ("ban", "Бан (апелляция)", "Не выгоняет: закроет каналы, оставит только канал апелляции", "ban"),
+    ("unban", "Снять апелляцию / разбан", "Вернуть доступ к каналам (по ID)", "unban"),
 ]
 
 # Эмодзи действий: меню панели живое, а не текстовое
@@ -1054,6 +1202,12 @@ MODPANEL_EMOJI = {
 # не дал модератору «Бан» → у него в /modpanel нет ни «Бан», ни «Разбан»;
 # не дал «Мут» → нет мута чата/войса и снятий; «Таймаут» → нет таймаута
 # и снятия; «Очистка» → нет чистки. Правило не задано — действие доступно.
+# Каждый пункт панели — ОТДЕЛЬНОЕ «классическое» разрешение, которое владелец
+# включает роли в панели (Доступ → Права команд → Классические разрешения).
+# Чат-мут и войс-мут разделены: «Мут чата» не даёт войс и наоборот. Снятие
+# мута следует за выдачей (нет права мутить — нечего и снимать), разблокировка
+# следует за баном. По умолчанию действие ЗАПРЕЩЕНО (check_action default-deny),
+# Discord-права не учитываются — система прав полностью своя.
 MODPANEL_ACL_KEYS = {
     "warn": "warn",
     "ban": "ban",
@@ -1061,8 +1215,8 @@ MODPANEL_ACL_KEYS = {
     "timeout": "timeout",
     "untimeout": "timeout",
     "mute_chat": "mute",
-    "vmute": "mute",
-    "vunmute": "mute",
+    "vmute": "vmute",
+    "vunmute": "vmute",
     "clear": "purge",
 }
 
@@ -1070,42 +1224,42 @@ MODPANEL_ACL_KEYS = {
 def _action_acl_allows(guild_id, member, action_name):
     """Разрешено ли модератору действие action_name «классическим» ACL.
 
-    Панель → Доступ → Права команд → «Классические разрешения»: если для
-    действия заданы роли, у модератора должна быть одна из них. Правила
-    нет — можно (как и везде в permission_acl). Сбой чтения БД не ломает
-    панель модератора: пункт скрывается только при явном отказе.
+    Строгая модель: check_action возвращает True только если у модератора есть
+    роль, которой это действие явно разрешено в панели. Нет правила → скрываем
+    (default-deny). Сбой чтения БД — тоже скрываем (fail-close): лучше не
+    показать пункт, чем дать невыданное право.
     """
     key = MODPANEL_ACL_KEYS.get(action_name)
     if not key:
-        return True
+        return False
     try:
         from services.permission_acl import check_action as _acl_check
-        return _acl_check(guild_id, member, key)
+        return bool(_acl_check(guild_id, member, key))
     except Exception:
-        log.debug('actions_for_member: ACL-проверка %s пропущена (сбой БД)', action_name)
-        return True
+        log.debug('actions_for_member: ACL-проверка %s — сбой, пункт скрыт', action_name)
+        return False
 
 
 def actions_for_member(guild, member):
     """Какие действия панели показывать модератору.
 
-    По умолчанию — все. Фильтры (оба работают вместе):
-    1) «Лимиты команды» (Щит сервера → Лимиты → роль): если у ролей
-       модератора есть свои лимиты/потолки — только настроенные действия;
-    2) «Классические разрешения» (Доступ → Права команд → действия):
-       не дал роли «Бан»/«Мут»/«Таймаут»/«Варн»/«Очистку» — пункт не
-       показывается, даже если пункт позволяет команда.
-    Владелец бота и владелец сервера видят всё.
+    СТРОГАЯ МОДЕЛЬ (своя система, Discord-права не учитываются):
+      • владелец БОТА (OWNER_ID/OWNER_IDS) — видит всё;
+      • владелец СЕРВЕРА в Discord и админ — НЕ дают прав;
+      • по умолчанию модератор не видит НИЧЕГО — пункт показывается, только
+        если его роль явно разрешена в панели (Доступ → Права команд →
+        Классические разрешения).
+    Дополнительно работают «Лимиты команды» (Щит сервера → Лимиты → роль):
+    если у ролей модератора заданы лимиты только на часть действий, видит
+    только их (пересечение с разрешениями).
     """
     try:
         uid = getattr(member, "id", 0)
-        if getattr(guild, "owner_id", None) == uid:
-            return list(MODPANEL_ACTIONS)
         from config import Config as _Cfg
         if uid in _Cfg.all_owner_ids():
             return list(MODPANEL_ACTIONS)
     except Exception:
-        log.debug('actions_for_member: без лимитов — показываем всё')
+        log.debug('actions_for_member: owner-проверка не удалась')
     role_ids = []
     try:
         role_ids = [r.id for r in (getattr(member, "roles", None) or [])
@@ -1127,7 +1281,7 @@ def actions_for_member(guild, member):
 class ModActionSelect(discord.ui.Select):
     """Выбор действия модерации — только то, что доступно этому модератору."""
 
-    def __init__(self, cog, member=None, allowed=None):
+    def __init__(self, cog, member=None, allowed=None, target_select=None):
         acts = allowed if allowed is not None else MODPANEL_ACTIONS
         options = [discord.SelectOption(
                        label=label, value=value, description=desc,
@@ -1140,13 +1294,28 @@ class ModActionSelect(discord.ui.Select):
             max_values=1,
         )
         self.cog = cog
+        # ссылка на соседний селект участника (выбор мышкой) — не через
+        # read-only Item.view, а явным полем
+        self.target_select = target_select
 
     async def callback(self, interaction: discord.Interaction):
         action = self.values[0]
         # Защита на границе: доступ могли снять, пока меню было на экране
         if not await self.cog._ensure_action_acl(interaction, action):
             return
-        modal = ModActionModal(self.cog, action, guild=interaction.guild)
+        # Цель, выбранная мышкой в соседнем селекте участников (если есть) —
+        # подставляем в модалку заранее; модератор может и поправить руками.
+        prefill = ""
+        if action != "clear":
+            try:
+                _sel = getattr(self, "target_select", None)
+                _vals = list(getattr(_sel, "values", []) or [])
+                if _vals:
+                    prefill = str(_vals[0].id)
+            except Exception as _pe:
+                log.debug("modpanel prefill цели: %s", _pe)
+        modal = ModActionModal(self.cog, action, guild=interaction.guild,
+                               prefill_target=prefill)
         await interaction.response.send_modal(modal)
 
 
@@ -1163,7 +1332,7 @@ class ModActionModal(discord.ui.Modal):
     требование включено в панели.
     """
 
-    def __init__(self, cog, action, guild=None):
+    def __init__(self, cog, action, guild=None, prefill_target=""):
         self.cog = cog
         self.action = action
         titles = {
@@ -1180,9 +1349,11 @@ class ModActionModal(discord.ui.Modal):
         super().__init__(title=titles.get(action, "Модерация"))
 
         if action != "clear":
+            # prefill_target — ID участника, выбранного мышкой в селекте панели
             self.target = discord.ui.TextInput(
                 label="Цель (@ник, точное имя или ID)", required=True,
                 placeholder="@упоминание, ник или 15-22 цифры ID",
+                default=str(prefill_target or "") or None,
             )
             self.add_item(self.target)
         if action in ("timeout", "mute_chat", "vmute", "clear"):
@@ -1256,7 +1427,9 @@ class ModHelpButton(discord.ui.Button):
             color=0x5865F2)
         embed.add_field(
             name='🎯 Цель',
-            value='@упоминание, точное имя или ID — бот поймёт любой вариант.\n'
+            value='Проще всего — выбрать участника МЫШКОЙ в меню «Кого наказать?» '
+                  'вверху (цель подставится сама). Можно и вручную: @упоминание, '
+                  'точное имя или ID — бот поймёт любой вариант.\n'
                   'Не нашли участника? Скорее всего, он ушёл с сервера: ID работает и так.',
             inline=False)
         embed.add_field(
@@ -1276,21 +1449,78 @@ class ModHelpButton(discord.ui.Button):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
+class ModTargetSelect(discord.ui.UserSelect):
+    """Выбор участника МЫШКОЙ (вместо ручного ввода @ника/ID).
+
+    Discord не даёт класть селекты внутрь модалки, поэтому участник выбирается
+    здесь, в сообщении панели; выбранный ID подставляется в модалку действия
+    автоматически (руками можно поправить или оставить). Для «Очистки» цель
+    не нужна — селект можно игнорировать.
+    """
+
+    def __init__(self, cog):
+        super().__init__(
+            placeholder="🎯 Кого наказать? Выберите участника мышкой…",
+            min_values=1, max_values=1,
+        )
+        self.cog = cog
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            user = self.values[0] if self.values else None
+            name = getattr(user, "display_name", None) or str(getattr(user, "id", "?"))
+            await interaction.response.send_message(
+                f"🎯 Цель выбрана: **{name}** — теперь выберите действие в меню ниже "
+                f"(цель подставится сама). Можно и вписать вручную.",
+                ephemeral=True)
+        except Exception as _te:
+            log.debug("ModTargetSelect: %s", _te)
+            try:
+                await interaction.response.send_message("🎯 Цель выбрана.", ephemeral=True)
+            except Exception as _te2:
+                log.debug("ModTargetSelect fallback-ответ: %s", _te2)
+
+
 class ModPanelView(discord.ui.View):
-    """View панели: меню действий + кнопка-шпаргалка."""
+    """View панели: селект участника мышкой + меню действий + шпаргалка."""
 
     def __init__(self, cog, member=None, allowed=None):
         super().__init__(timeout=300)
-        self.add_item(ModActionSelect(cog, member, allowed))
-        self.add_item(ModHelpButton())
+        # Сначала выбор участника мышкой, затем действие
+        self.target_select = ModTargetSelect(cog)
+        self.action_select = ModActionSelect(cog, member, allowed,
+                                             target_select=self.target_select)
+        self.add_item(self.target_select)
+        self.add_item(self.action_select)
+        # Кнопку-шпаргалку «Как это работает» убрали (заказ владельца — и так
+        # понятно; подсказка про выбор мышкой есть в тексте карточки).
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Панель модерации — только для модераторов (сообщение публичное)."""
-        if not interaction.user.guild_permissions.moderate_members:
-            await interaction.response.send_message(
-                embed=error_embed("Недостаточно прав: нужно право «Модерация участников»."),
-                ephemeral=True)
-            return False
+        """Меню действий /modpanel — доступ решает владелец через панель ролей.
+
+        Раньше тут жёстко требовалось Discord-право «Модерация участников» —
+        роль, которой владелец выдал /modpanel в панели (Доступ → Права
+        команд), всё равно упиралась в этот запрет. Теперь проверяем тот же
+        ролевой ACL, что и саму команду (has_access), а конкретные действия
+        дополнительно фильтруются (actions_for_member / _ensure_action_acl).
+        """
+        user = interaction.user
+        # Строгая модель: Discord-админ прав в боте НЕ даёт (своя система).
+        # Владелец бота (OWNER_ID) — всегда может (его has_access пропускает).
+        try:
+            from services.permission_acl import has_access
+            guild = interaction.guild
+            if guild and not has_access(guild.id, 'modpanel', user):
+                await interaction.response.send_message(
+                    embed=error_embed("Недостаточно прав: доступ к /modpanel "
+                                      "настраивает владелец (панель → Доступ → "
+                                      "Права команд)."),
+                    ephemeral=True)
+                return False
+        except Exception as _ex:
+            # Сбой чтения БД — не открываем панель молча (fail-close):
+            # конкретные действия всё равно перепроверяются при нажатии.
+            log.debug('ModPanelView.interaction_check: ACL не прочитан (%s)', _ex)
         return True
 
 

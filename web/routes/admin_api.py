@@ -3,13 +3,12 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log, viewer_member, acl_action_allowed,
+    _notify_discord_sender, _fire_panel_notification,
+    _process_action, _log, _live_publish, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -98,7 +97,7 @@ def register(ctx):
         for filename in os .listdir ('cogs'):
             if filename .endswith ('.py')and filename !='__init__.py':
                 cog_name =filename [:-3 ]
-                if cog_name in ('embed_utils',):continue 
+                if cog_name in ('embed_utils'):continue 
                 filepath =f'cogs/{filename}'
                 with open (filepath ,'rb')as f :
                     h =hashlib .md5 (f .read ()).hexdigest ()
@@ -199,6 +198,7 @@ def register(ctx):
         'mod_id':session .get ('username',''),'created_at':time .time (),'duration':sec ,
         }
         cog ._save ('_mutes',cog ._mutes_file ())
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
 
@@ -238,6 +238,7 @@ def register(ctx):
         'user_name':str (member ),
         }
         cog ._save ('_bans',cog ._bans_file ())
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
 
@@ -277,6 +278,7 @@ def register(ctx):
         'user_name':str (member ),
         }
         cog ._save ('_kicks',cog ._kicks_file ())
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
 
@@ -305,6 +307,7 @@ def register(ctx):
                 _log.debug("api_temp_mod_unmute(): подавлено: %s", _ex)
         cog ._mutes .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_mutes',cog ._mutes_file ())
+        _live_publish (str (guild .id ),'moderation')
         return jsonify ({'ok':True })
 
 
@@ -332,6 +335,7 @@ def register(ctx):
             return jsonify ({'error':str (e )}),400 
         cog ._bans .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_bans',cog ._bans_file ())
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
 
@@ -350,6 +354,7 @@ def register(ctx):
         eid =d .get ('id','')
         cog ._scheduled =[s for s in cog ._scheduled if s ['id']!=eid ]
         cog ._save ('_scheduled',cog ._scheduled_file ())
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
 

@@ -35,18 +35,70 @@ PANEL_ACTIONS = [
 _VALUE_SET = {a[0] for a in PANEL_ACTIONS}
 
 # Привязка действий панели к ACL «Права команд» (services/permission_acl.ACTIONS):
-# владелец может ограничить действие конкретными Discord-ролями. Пустое правило
-# в ACL = действие разрешено всем (поведение бота 1:1, см. check_action).
+# действие доступно роли, только если владелец ЯВНО разрешил его в панели.
+# Строгая модель (default-deny, Discord-права игнорируются) — 1:1 с ботом.
+# Чат-мут и войс-мут — РАЗНЫЕ разрешения.
 _ACTION_ACL = {
     'warn': 'warn',
     'timeout': 'timeout',
     'mute_chat': 'mute',
-    'vmute': 'mute',
+    'vmute': 'vmute',
     'ban': 'ban',
     'unban': 'ban',
     'untimeout': 'timeout',
-    'vunmute': 'mute',
+    'vunmute': 'vmute',
 }
+
+# Действие панели → ключ счётчика «Лимитов команды» (services/staff_limits):
+# таймаут/чат-мут/войс-мут — ОДИН потолок «mute»; их снятия — «unmute»;
+# бан и разбан — отдельные ключи (та же раскладка, что в cogs/moderation).
+_PANEL_LIMIT_KEY = {
+    'warn': 'warn',
+    'timeout': 'mute',
+    'mute_chat': 'mute',
+    'vmute': 'mute',
+    'untimeout': 'unmute',
+    'vunmute': 'unmute',
+    'ban': 'ban',
+    'unban': 'unban',
+}
+
+# Действия с длительностью — им проверяем ещё и «потолок мута» (Щит → Лимиты).
+_DURATION_ACTIONS = ('timeout', 'mute_chat', 'vmute')
+
+
+def _member_role_ids(member):
+    """ID Discord-ролей модератора (без @everyone) — как в staff_limits.check_action."""
+    if member is None:
+        return []
+    try:
+        gid = getattr(member.guild, 'id', None)
+        return [r.id for r in (getattr(member, 'roles', None) or [])
+                if getattr(r, 'id', None) != gid]
+    except Exception:
+        return []
+
+
+def _limit_exempt(guild, member):
+    """True — лимиты не считаем: владелец сервера/бота не ограничен никогда.
+
+    Статический вход и роль owner панели сюда не доходят: viewer_member()
+    для них уже вернул None (доверенный вход).
+    """
+    if member is None:
+        return True
+    try:
+        from config import Config as _Cfg
+        if int(getattr(member, 'id', 0) or 0) in _Cfg.all_owner_ids():
+            return True
+    except Exception as _ex:
+        _log.debug('limit_exempt: владелец бота не проверен: %s', _ex)
+    try:
+        if int(getattr(member, 'id', 0) or 0) == int(getattr(guild, 'owner_id', 0) or 0):
+            return True
+    except Exception as _ex:
+        _log.debug('limit_exempt: владелец сервера не проверен: %s', _ex)
+    return False
 
 
 def _punish_cog(bot):
@@ -101,14 +153,52 @@ def register(ctx):
             _log.debug('punish/options ban: %s', _ex)
         # ACL «Права команд»: каждому — только его действия.
         member = _viewer_member(bot, gid)
-        actions = [a for a in PANEL_ACTIONS if _acl_allows(gid, member, a[0])]
+        actions_acl = [a for a in PANEL_ACTIONS if _acl_allows(gid, member, a[0])]
+        hidden_by_acl = len(PANEL_ACTIONS) - len(actions_acl)
+        # «Лимиты команды» (Щит сервера → Лимиты) для входа через
+        # Discord-аккаунт: сколько у модератора осталось по каждому действию
+        # и какие действия ему доступны (если для его ролей заданы свои
+        # лимиты — видит только их, как в меню /modpanel).
+        actions = actions_acl
+        limits = {}
+        limit_exempt = True
+        if member is not None and bot is not None:
+            try:
+                guild = bot.get_guild(int(gid))
+                if guild is not None and not _limit_exempt(guild, member):
+                    from services import staff_limits as _SL
+                    role_ids = _member_role_ids(member)
+                    scope = _SL.role_scoped_actions(gid, role_ids)
+                    if scope is not None:
+                        actions = [a for a in actions_acl
+                                   if _PANEL_LIMIT_KEY.get(a[0]) in scope]
+                    windows = _SL.get_windows(gid)
+                    for a in actions:
+                        key = _PANEL_LIMIT_KEY.get(a[0])
+                        if not key:
+                            continue
+                        _ok, used, lim = _SL.check_limit(
+                            int(gid), member.id, key, 1, role_ids=role_ids)
+                        if lim > 0:
+                            limits[a[0]] = {
+                                'limit': lim,
+                                'used': used,
+                                'left': max(0, lim - used),
+                                'window': _SL.human_window(windows.get(key, 86400)),
+                            }
+                    limit_exempt = False
+            except Exception as _lex:
+                _log.debug('punish/options limits: %s', _lex)
         return jsonify({
             'success': True,
             'bot_online': bot is not None,
             'proof_required': proof_required,
             'ban_ready': ban_ready,
             # сколько действий скрыто правами ролей — для подсказки в форме
-            'hidden_by_acl': len(PANEL_ACTIONS) - len(actions),
+            'hidden_by_acl': hidden_by_acl,
+            # счётные лимиты текущего модератора (если вход не доверенный)
+            'limit_exempt': limit_exempt,
+            'limits': limits,
             'actions': [
                 {'value': v, 'label': lbl, 'duration': dur, 'proof': prf}
                 for v, lbl, dur, prf in actions
@@ -163,6 +253,43 @@ def register(ctx):
         proof = str(d.get('proof') or '').strip()[:500] or None
         actor = str(session.get('username') or 'Панель')
 
+        # «Лимиты команды» (Щит сервера → Лимиты) применяются и в карточке
+        # участника: модератор, вошедший через Discord-аккаунт, НЕ может
+        # выдавать наказания бесконечно — для него действуют те же счётные
+        # лимиты и потолок длительности мута, что и в командах бота.
+        # Доверенный вход (владелец панели / статический логин) не режется.
+        lim_key = _PANEL_LIMIT_KEY.get(action)
+        quota_actor = None
+        if lim_key and member_viewer is not None:
+            try:
+                if not _limit_exempt(guild, member_viewer):
+                    quota_actor = member_viewer
+            except Exception as _qex:
+                _log.debug('punish quota actor: %s', _qex)
+        if quota_actor is not None:
+            try:
+                from services import staff_limits as _SL
+                role_ids = _member_role_ids(quota_actor)
+                _okl, _deny = _SL.check_action(guild, quota_actor, lim_key)
+                if not _okl:
+                    return jsonify({'success': False,
+                                    'error': _deny or 'Лимит исчерпан'}), 429
+                # потолок длительности мута (0/не задан — без ограничения)
+                if action in _DURATION_ACTIONS:
+                    _cap = _SL.effective_max_duration(guild.id, 'mute', role_ids)
+                    if _cap:
+                        from cogs.moderation import parse_duration_minutes as _pd
+                        from cogs.moderation import human_duration as _hd
+                        _mins = _pd(duration, 5)
+                        if _mins * 60 > _cap:
+                            return jsonify({'success': False, 'error': (
+                                'Мут дольше разрешённого: потолок для вашей '
+                                f'роли — {_hd(max(1, _cap // 60))}, а вы просите '
+                                f'{_hd(_mins)}. Потолок настраивается: панель → '
+                                'Щит сервера → Лимиты.')}), 429
+            except Exception as _slx:
+                _log.debug('punish quota gate: %s', _slx)
+
         try:
             ok, text = _run_async(cog.apply_panel_action(
                 guild, target, action, reason=reason,
@@ -173,6 +300,13 @@ def register(ctx):
                             'error': f'Не получилось: {_ex}'}), 200
         if not text:
             text = 'Готово' if ok else 'Не получилось'
+        # успешное действие — в счётчик модератора (если лимиты для него есть)
+        if ok and quota_actor is not None:
+            try:
+                from services import staff_limits as _SL2
+                _SL2.record_hit(guild.id, quota_actor.id, lim_key, 1)
+            except Exception as _rex:
+                _log.debug('punish record_hit: %s', _rex)
         try:
             _fire_panel_notification(
                 'mod_action' if ok else 'mod_action_failed',

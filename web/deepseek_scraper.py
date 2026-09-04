@@ -71,11 +71,11 @@ async def _ensure_login ():
         pass_input =_page .locator ('input[type="password"]').first 
         await pass_input .fill (DEEPSEEK_PASSWORD ,timeout =5000 )
 
-        # Вход yap butonu
+        # Кнопка входа
         submit =_page .locator ('button[type="submit"]').first 
         await submit .click (timeout =5000 )
 
-        # Вход заверш kadar badd
+        # Ждём завершения входа
         await _page .wait_for_url ('**/chat**',timeout =20000 )
         await _page .wait_for_timeout (2000 )
 
@@ -118,7 +118,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
         # Отправить (Enter или кнопка)
         await textarea .press ('Enter')
 
-        # Cevabыn gelmesini badd — "dюшюnюyor" animasyonu bitene kadar
+        # Ждём ответа — пока не закончится анимация «думает»
         await _page .wait_for_timeout (2000 )
 
         # Ждём появления элемента ответа

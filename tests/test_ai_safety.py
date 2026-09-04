@@ -80,13 +80,17 @@ check('временный мут (timeout)' not in src, 'советов «при
 check('НЕ выдумывай' in src, 'в системном промпте запрет выдумывать факты')
 
 print('== 3. Тикетный поток не наказывает ==')
-tsrc = open(os.path.join(ROOT, 'cogs', 'ticket.py'), encoding='utf-8').read()
-check("actions .get ('jail')" not in tsrc, 'тикет не применяет тюрьму по команде ИИ')
-check("actions .get ('warn')" not in tsrc, 'тикет не применяет варн по команде ИИ')
-check('AI рекомендация' not in tsrc, 'кнопок «наказать по рекомендации ИИ» нет')
-check("_assign_role (message .guild ,actions" not in tsrc, 'ИИ не выдаёт роли')
+# Тикет-система удалена целиком (решение владельца: cogs/ticket.py, страницы
+# /ai-tickets и /ai_ticket_stats, «Про-аналитика»). Проверять нечего —
+# защита «ИИ не наказывает» покрыта секциями 1, 2 и 4.
+check(not os.path.exists(os.path.join(ROOT, 'cogs', 'ticket.py')),
+      'cogs/ticket.py физически удалён — тикетный поток ИИ исчез вместе с ним')
 
-print('== 4. Отчёт модерации: только реальный журнал ==')
+
+print('== 4. Отчёт модерации убран вместе с модулем отчётов ==')
+# Модуль mod_report (и страница «Отчёты») удалён при чистке выключенных
+# модулей — AI-отчёт строился только на нём, поэтому endpoint снят целиком,
+# а не оставлен мёртвой заглушкой. Защита «ИИ не наказывает» покрыта секциями 1-3.
 appmod = importlib.import_module('web.app')
 appmod.app.config['TESTING'] = True
 client = appmod.app.test_client()
@@ -97,11 +101,7 @@ with client.session_transaction() as s:
     s['role'] = 'owner'
 
 resp = client.post('/api/ai/mod-report')
-body = resp.get_json()
-check(resp.status_code == 200 and body.get('ok'), 'endpoint отвечает')
-rep = body.get('report') or ''
-check('нет ни одного действия' in rep, 'пустой журнал → честный «нет данных»')
-check('17' not in rep, 'выдуманных цифр («17 случаев») больше нет')
+check(resp.status_code == 404, 'мёртвый /api/ai/mod-report снят (404), а не висит заглушкой')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

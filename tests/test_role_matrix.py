@@ -72,14 +72,16 @@ PUBLIC = {
     'index', 'welcome_page', 'login', 'logout', 'register',
     'api_forgot_password', 'api_reset_password', 'api_discord_login',
     'api_discord_check', 'api_check_member', 'api_login_suggest',
+    'api_login_probe',
     'api_public_apply', 'api_public_guilds', 'public_apply',
     'api_status_public', 'status_public_page', 'api_voice_command',
     'favicon', 'health_check', 'static',
-    # Discord Activity: публичный OAuth/Bearer-флоу встроенного приложения
-    'activity_music_config', 'activity_music_token',
-    'activity_music_state', 'activity_music_control',
+    # Discord Activity музыки снесена вместе с фичей музыки (2026-09-01)
     # PagerDuty → Discord: сервер-сервер вебхук с токеном в URL (без сессии)
     'hook_pagerduty',
+    # RFC 9116: security.txt обязан быть доступен без авторизации — его ищут
+    # исследователи, у которых по определению нет доступа в панель.
+    'security_txt',
 }
 public_actual = {k for k, v in DECOS.items() if not v['login']} | {'static'}
 check(public_actual == PUBLIC,
@@ -186,9 +188,9 @@ guest_public_viol = []  # публичные должны открываться
 denied_viol = {r: [] for r in ROLES}    # роль ниже порога, но впустило
 allowed_viol = {r: [] for r in ROLES}   # роль ≥ порога, но не впустило
 
-# Discord Activity: авторизация — Bearer-токен OAuth2 (не сессия панели),
-# поэтому их не гоняем через сессионную матрицу ролей.
-BEARER_GET = {'/api/activity/music/config', '/api/activity/music/state'}
+# Discord Activity музыки удалена вместе с фичей (2026-09-01) — Bearer-эндпойнтов
+# не осталось; гоняем через сессионную матрицу все GET-правила.
+BEARER_GET = set()
 
 for path, ep in GET_RULES:
     info = DECOS.get(ep, {'login': False, 'role': None})
@@ -231,7 +233,7 @@ for role in ('uye', 'mod', 'admin', 'owner'):
 # ═══ 4. Отказ API — JSON, а не HTML ═════════════════════════════════════
 print('== API-отказы — JSON ==')
 c = make_client('mod')
-r = c.get('/api/role-permissions/1')  # owner-level API (по AST: role_required('owner'))
+r = c.get('/api/role-permissions/777')  # owner-level API (role_required('owner'))
 d = r.get_json(silent=True)
 check(r.status_code == 403 and isinstance(d, dict) and 'error' in d,
       'недостаточный уровень: API → 403 с {"error"} в JSON')

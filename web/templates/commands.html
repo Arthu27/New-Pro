@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Команды - Hakumo{% endblock %}
+{% block title %}Команды — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-terminal"></i> Команды{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Бот <span class="sep">·</span> Команды</div>
+    <div class="eyebrow"> Бот </div>
     <h1>Команды</h1>
-    <p class="lead">Весь арсенал бота одним каталогом: каждая команда с описанием, разбивка по разделам, поиск и быстрые действия.</p>
+    <p class="lead">Каталог команд бота: описания, разделы, поиск и быстрые действия.</p>
   </div>
 </div>
 
@@ -200,7 +200,7 @@
 
   var CAN_EDIT = {% if role in ('admin', 'owner') %}true{% else %}false{% endif %};
   var CAT_COLORS = {
-    mod: '#f87171', tickets: '#60a5fa', logs: '#94a3b8', music: '#a78bfa',
+    mod: '#f87171', tickets: '#60a5fa', logs: '#94a3b8',
     voice: '#2dd4bf', economy: '#fbbf24', levels: '#4ade80', fun: '#f472b6',
     profile: '#c084fc', info: '#38bdf8', automation: '#fb923c', ai: '#818cf8',
     events: '#facc15', welcome: '#34d399', system: '#94a3b8', misc: '#cbd5e1'

@@ -150,7 +150,10 @@ for f in cogs:
             check(key not in seen, f'«{full}» ({ns}): путь команды уникален ({name})',
                   f'конфликт с {origin}')
             seen.setdefault(key, f'{name}:{node.name}')
-check(total_cmds > 60, f'обнаружено команд: {total_cmds} (ожидаем 60+)')
+# 2026-09-01: сетап-команды (verify-setup/report-setup/settings) и afk-remove
+# удалены из Discord — настройка переехала в панель, AFK спадает авто.
+# Команд в коде стало меньше; следим, чтобы реестр не схлопнулся в ноль.
+check(total_cmds >= 50, f'обнаружено команд: {total_cmds} (ожидаем 50+)')
 check(not bad_desc, f'у всех slash-команд есть описание (пустые: {bad_desc[:8]})')
 
 print('== 5. Вежлые ошибки вместо traceback ==')

@@ -503,7 +503,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 }
 .nav-link:hover i { color: var(--ac); }
 @media (prefers-reduced-motion: reduce) { .nav-link i { transition: color 0.12s; } }
-.nav-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-link span { overflow-wrap: anywhere; white-space: normal; line-height: 1.3; }
 .nav-link.active {
   background: linear-gradient(90deg, var(--ac-soft), color-mix(in srgb, var(--ac-soft) 30%, transparent));
   color: var(--ac);
@@ -572,16 +572,16 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   font-weight: 600;
 }
 .nav-subgroup-caret { font-size: 9px; transition: transform 0.18s var(--ease); color: var(--text-3); }
-.nav-subgroup.open .nav-subgroup-caret { transform: rotate(90deg); }
+.nav-subgroup.closed .nav-subgroup-caret { transform: rotate(-90deg); }
 .nav-subgroup-items {
   display: flex; flex-direction: column; gap: 1px;
   padding-left: 24px;
-  max-height: 0;
+  max-height: 700px;
+  opacity: 1;
   overflow: hidden;
   transition: max-height 0.28s var(--ease), opacity 0.2s var(--ease);
-  opacity: 0;
 }
-.nav-subgroup.open .nav-subgroup-items { max-height: 700px; opacity: 1; }
+.nav-subgroup.closed .nav-subgroup-items { max-height: 0; opacity: 0; }
 .nav-subgroup.has-active > .nav-subgroup-title { color: var(--ac); }
 .nav-subgroup.has-active .nav-subgroup-title .nav-subgroup-icon { color: var(--ac); }
 
@@ -591,7 +591,8 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .nav-subgroup.nav-hide,
 .nav-favs.nav-hide { display: none !important; }
 .sidebar-nav.filtering .nav-group.collapsed .nav-group-items { max-height: 2400px; opacity: 1; }
-.sidebar-nav.filtering .nav-subgroup-items { max-height: 700px; opacity: 1; }
+.sidebar-nav.filtering .nav-subgroup-items,
+.sidebar-nav.filtering .nav-subgroup.closed .nav-subgroup-items { max-height: 700px; opacity: 1; }
 .sidebar-nav.filtering .nav-group-title { opacity: 0.6; pointer-events: none; }
 .sidebar-nav.filtering .nav-subgroup-title { pointer-events: none; }
 .sidebar-nav.filtering .nav-caret,
@@ -797,16 +798,31 @@ code, .mono, .num, kbd { font-family: var(--mono); }
    дублирующий тайтл-бар не нужен. */
 .main-content:has(> .page-head) .navbar { display: none; }
 .page-head { margin-bottom: 20px; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+/* Базовый видимый цвет: если градиентный background-clip ниже не сработает
+   (старый движок, сломанная переменная темы и т.п.) — заголовок всё равно
+   читается сплошным цветом, а не «не виден, пока не выделишь мышью». */
+.page-head h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text, #16181d);
+  -webkit-text-fill-color: var(--text, #16181d);
+}
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .page-head h1 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    letter-spacing: -0.015em;
-    background: linear-gradient(105deg, var(--text) 20%, var(--text) 38%, color-mix(in srgb, var(--ac) 82%, var(--text)) 50%, var(--text) 62%, var(--text) 90%);
+    /* Все стопы градиента НЕпрозрачные (var(--ac) подмешан к var(--text) с
+       запасным сплошным цветом) — заголовок виден всегда, даже если тема/
+       переменная не подгрузились: раньше в редком случае пустого --ac текст
+       становился прозрачным «до выделения мышью». */
+    background: linear-gradient(105deg,
+      var(--text, #16181d) 0%, var(--text, #16181d) 42%,
+      color-mix(in srgb, var(--ac, #5b8cff) 78%, var(--text, #16181d)) 50%,
+      var(--text, #16181d) 58%, var(--text, #16181d) 100%);
     background-size: 220% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    -webkit-text-fill-color: transparent;
   }
   .page-head h1:hover { animation: titleSheen 7s linear infinite; }
 }
@@ -1545,6 +1561,18 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   top: auto !important;
   bottom: calc(100% + 6px);
 }
+/* Попап участника, прибитый к полю через position:fixed в body
+   (не обрезается flex/overflow-контейнером формы) */
+.mpd[hidden] { display: none; }
+.mpd.mpd-floating {
+  position: fixed;
+  top: 0; left: 0;
+  right: auto;
+  z-index: 3000;   /* выше модалок (1500–2000), чтобы список не прятался */
+}
+.mpd.mpd-floating.up {
+  top: auto;
+}
 .mpd-head {
   padding: 8px 12px; font-size: 11.5px; color: var(--text-3);
   border-bottom: 1px solid var(--line); font-weight: 600;
@@ -1627,7 +1655,7 @@ video.pf-lb-media { background: #000; }
 .pf-lb-cap {
   flex: 1; min-width: 0;
   font-size: 13px; font-weight: 600;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.3;
 }
 .pf-lb-close {
   flex: none; width: 34px; height: 34px;
@@ -1660,11 +1688,17 @@ video.pf-lb-media { background: #000; }
   transition: border-color .18s, box-shadow .18s, background .18s;
 }
 .sshd-btn:hover { border-color: var(--line-2, var(--line)); background: var(--surface-2); }
+.sshd-btn:disabled, .sshd-btn.sshd-btn-disabled {
+  opacity: .55; cursor: not-allowed; background: var(--surface);
+}
+.sshd-btn:disabled:hover, .sshd-btn.sshd-btn-disabled:hover {
+  border-color: var(--line); background: var(--surface); box-shadow: none;
+}
 .sshd.open .sshd-btn {
   border-color: var(--ac);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 18%, transparent);
 }
-.sshd-lbl { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sshd-lbl { flex: 1 1 auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .sshd.empty .sshd-lbl { color: var(--text-3); }
 .sshd-caret {
   font-size: 11px; color: var(--text-3);
@@ -1685,6 +1719,19 @@ video.pf-lb-media { background: #000; }
 .sshd.open .sshd-pop.up {
   top: auto;
   bottom: calc(100% + 6px);
+  animation-name: sshdInUp;
+}
+/* Попап, смонтированный в <body> (fixed): не обрезается .panel{overflow:hidden}.
+   Координаты задаёт JS по позиции кнопки. */
+.sshd-pop.sshd-pop-float {
+  position: fixed;
+  z-index: 3000;
+  top: 0;
+  left: 0;
+  right: auto;
+}
+.sshd-pop.sshd-pop-float.sshd-pop-up {
+  top: auto;
   animation-name: sshdInUp;
 }
 @keyframes sshdInUp {
@@ -2271,6 +2318,14 @@ a.feed-item:hover .feed-item-title { color: var(--ac); }
 @media (max-width: 860px) {
   .stat-grid,.donut-grid,.quick-grid{grid-template-columns:1fr !important}
   .topbar .nav-icon-btn, .mobile-menu { min-width:42px; min-height:42px; }
+  /* Крупные тач-кнопки (42px) в одну строку уже не влезают: без переноса
+     топбар вылезал за экран и у всей панели появлялся горизонтальный скролл
+     (проверено на 768px — все страницы модерации). Переносим строки вместо
+     скролла: высота топбара становится автоматической. */
+  .topbar { height: auto; min-height: var(--topbar-h); flex-wrap: wrap;
+            padding-top: 8px; padding-bottom: 8px; }
+  .topbar .crumbs { min-width: 0; }
+  .navbar-right { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
   .shift-edit-row{grid-template-columns:auto 1fr auto !important}
 }
 @media (max-width: 720px) {
@@ -2583,7 +2638,7 @@ a.feed-item:hover .feed-item-title { color: var(--ac); }
   box-shadow: var(--shadow-1);
 }
 .g-info { flex: 1; min-width: 0; }
-.g-name { font-weight: 700; color: var(--text); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-name { font-weight: 700; color: var(--text); font-size: 16px; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .g-meta { display: flex; align-items: center; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
 .gm { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-3); }
 .gm i { font-size: 11px; }
@@ -2616,8 +2671,8 @@ a.feed-item:hover .feed-item-title { color: var(--ac); }
 .member-card:hover { border-color: var(--ac-line); box-shadow: var(--shadow-2); }
 .av-wrap { position: relative; flex-shrink: 0; }
 .av-wrap .av { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--line-2); object-fit: cover; background: var(--surface-3); }
-.member-name { font-weight: 600; color: var(--text); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.member-username { font-size: 12px; color: var(--text-3); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member-name { font-weight: 600; color: var(--text); font-size: 14px; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+.member-username { font-size: 12px; color: var(--text-3); font-family: var(--mono); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .member-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 
 /* Статус-точки присутствия */
@@ -5537,7 +5592,7 @@ img[src*="emblem-dragon"] {
 .bd-card { background: var(--glass); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px; box-shadow: var(--shadow-1); }
 .bd-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--line-2); }
 .bd-item:last-child { border-bottom: none; }
-.bd-item-name { font-size: 13px; font-weight: 600; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.bd-item-name { font-size: 13px; font-weight: 600; color: var(--text); min-width: 0; flex: 1; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .bd-item-time { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
 .bd-empty { font-size: 12.5px; color: var(--text-3); padding: 10px 2px; }
 .bd-current { border: 1px solid var(--ac-line); background: color-mix(in srgb, var(--ac) 5%, var(--glass)); }

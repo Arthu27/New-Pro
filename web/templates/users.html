@@ -43,6 +43,8 @@
   .pn-act[data-kind=danger] > i { color: var(--err); }
   .pn-act.sel { border-color: var(--ac); box-shadow: 0 0 0 2px var(--ac-soft); background: var(--surface-3); }
   .pn-act.sel[data-kind=danger] { border-color: var(--err); box-shadow: 0 0 0 2px var(--err-soft); }
+  .pn-act:disabled { opacity: .5; cursor: not-allowed; }
+  .pn-act:disabled:hover { border-color: var(--line); transform: none; box-shadow: none; }
   .pn-lbl { display: flex; justify-content: space-between; align-items: baseline;
             font-size: var(--fs-sm); color: var(--text-3); font-weight: var(--fw-medium); margin: 12px 0 6px; }
   .pn-cnt { font-size: var(--fs-xs); color: var(--text-4); font-weight: 400; }
@@ -57,13 +59,96 @@
   #pnGo.armed { background: var(--err); border-color: var(--err); color: #fff; }
   .pn-empty { padding: 14px; border: 1px dashed var(--line-2); border-radius: var(--r-md);
               color: var(--text-3); font-size: var(--fs-sm); text-align: center; margin-top: 8px; }
+  /* ── KPI-карточки вместо плоских чипов ── */
+  .u-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 10px; padding: 12px 14px 0; }
+  .u-kpi { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border: 1px solid var(--line);
+           border-radius: var(--r-lg); background: var(--surface-2); transition: border-color .15s, transform .15s; }
+  .u-kpi:hover { border-color: var(--ac-line); transform: translateY(-1px); }
+  .u-kpi-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none;
+               background: var(--ac-soft); color: var(--ac); font-size: 15px; }
+  .u-kpi[data-tone=ok] .u-kpi-ico { background: var(--ok-soft); color: var(--ok); }
+  .u-kpi[data-tone=info] .u-kpi-ico { background: var(--info-soft); color: var(--info); }
+  .u-kpi[data-tone=warn] .u-kpi-ico { background: var(--warn-soft); color: var(--warn); }
+  .u-kpi-txt { min-width: 0; }
+  .u-kpi-txt b { display: block; font-size: 17px; line-height: 1.15; color: var(--text-1); font-weight: var(--fw-semibold); }
+  .u-kpi-txt span { display: block; font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap;
+                    overflow: hidden; text-overflow: ellipsis; }
+  /* ── быстрые действия на карточке участника ──
+     Кнопки — ОВЕРЛЕЙ (position:absolute): раньше они встраивались в поток
+     (display:none → inline-flex) и отнимали ~55px у текста — теги (роль +
+     дата) переносились на лишнюю строку, карточка росла в высоту, и весь
+     ряд сетки «выдвигался» вниз. Теперь появление кнопок ничего не
+     сдвигает: геометрия карточки при наведении не меняется. */
+  .members-grid .member-card { position: relative; }
+  .member-card:hover .u-go, .member-card:focus-within .u-go { opacity: 0; }
+  .u-mini {
+    position: absolute; right: 8px; top: 50%;
+    transform: translateY(-50%);
+    display: flex; gap: 3px; padding: 3px;
+    background: var(--surface);            /* непрозрачная подложка — текст не просвечивает */
+    border: 1px solid var(--line-2);
+    border-radius: 10px;
+    box-shadow: var(--shadow-2);
+    visibility: hidden; opacity: 0;
+    transition: opacity .15s, visibility .15s;
+    z-index: 2;
+  }
+  .member-card:hover .u-mini, .member-card:focus-within .u-mini { visibility: visible; opacity: 1; }
+  .u-mini button { border: 0; background: none; color: var(--text-3); width: 22px; height: 22px;
+                   border-radius: 7px; cursor: pointer; font-size: 11px; display: grid; place-items: center; transition: .15s; }
+  .u-mini button:hover { background: var(--surface-3); color: var(--ac); }
+  /* ── вкладки окна участника ── */
+  .mcf-tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--line);
+              background: var(--surface-2); overflow-x: auto; scrollbar-width: thin; }
+  .mcf-tab { border: 0; background: none; color: var(--text-3); font-family: inherit; font-size: var(--fs-sm);
+             padding: 10px 13px; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent;
+             display: inline-flex; align-items: center; gap: 7px; }
+  .mcf-tab:hover { color: var(--text-1); }
+  .mcf-tab.active { color: var(--ac); border-bottom-color: var(--ac); font-weight: var(--fw-semibold); }
+  .mcf-tab .cnt { font-size: 10px; padding: 1px 6px; border-radius: 999px; background: var(--surface-3); color: var(--text-3); }
+  .mcf-tab.active .cnt { background: var(--ac-soft); color: var(--ac); }
+  .mcf-pane { display: none; }
+  .mcf-pane.active { display: block; }
+  /* ── строки профиля ── */
+  .mf-rows { display: grid; gap: 7px; }
+  .mf-row { display: flex; gap: 9px; align-items: baseline; font-size: var(--fs-sm); }
+  .mf-row > span { color: var(--text-3); min-width: 112px; flex: none; }
+  .mf-row > div, .mf-row > b { color: var(--text-1); font-weight: var(--fw-medium); min-width: 0; }
+  .mf-roles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mf-role { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); padding: 3px 9px;
+             border-radius: 999px; border: 1px solid var(--line); color: var(--text-2); background: var(--surface-2); }
+  .mf-role .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--text-4); }
+  .mf-watch { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); padding: 3px 10px;
+              border-radius: 999px; background: var(--warn-soft); color: var(--warn); border: 1px solid var(--line); }
+  .mf-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .mf-act { border: 1px solid var(--line); background: var(--surface-2); color: var(--text-2); border-radius: 8px;
+            font-family: inherit; font-size: var(--fs-xs); padding: 6px 10px; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px; transition: .15s; }
+  .mf-act:hover { border-color: var(--ac); color: var(--ac); }
+  .mf-copy { border: 0; background: none; color: var(--text-4); cursor: pointer; font-size: 11px; padding: 0 3px; }
+  .mf-copy:hover { color: var(--ac); }
+  /* ── заметки и записи истории ── */
+  .mn-item, .mf-case { display: flex; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+  .mn-item:last-child, .mf-case:last-child { border-bottom: 0; }
+  .mn-txt { flex: 1; min-width: 0; font-size: var(--fs-md); color: var(--text-1); overflow-wrap: anywhere; }
+  .mn-meta { font-size: var(--fs-xs); color: var(--text-3); margin-top: 3px; }
+  .mn-del { border: 0; background: none; color: var(--text-4); cursor: pointer; font-size: 12px; padding: 2px 4px; flex: none; }
+  .mn-del:hover { color: var(--err); }
+  .mn-add { display: flex; gap: 8px; margin-top: 10px; }
+  .mn-add input { flex: 1; min-width: 0; }
+  .mn-add button { flex: none; }
+  .mf-case-ico { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; flex: none;
+                 font-size: 11px; background: var(--surface-3); color: var(--text-3); }
+  .mf-case[data-kind=danger] .mf-case-ico { background: var(--err-soft); color: var(--err); }
+  .mf-case[data-kind=neg] .mf-case-ico { background: var(--warn-soft); color: var(--warn); }
+  .mf-case[data-kind=pos] .mf-case-ico { background: var(--ok-soft); color: var(--ok); }
 </style>
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Участники <span class="sep">·</span> Пользователи</div>
+    <div class="eyebrow"> Участники </div>
     <h1>Пользователи</h1>
-    <p class="lead">Все участники сервера: поиск, фильтры по ролям и статусу, сортировка. Клик по участнику — карточка 360° в перетаскиваемом окне.</p>
+    <p class="lead">Состав сервера: поиск, фильтры и сортировка. Клик по человеку — карточка с ролями, предупреждениями, историей модерации, заметками, апелляциями и наказаниями.</p>
   </div>
 </div>
 
@@ -73,12 +158,13 @@
       <select id="guild-select" aria-label="Выбор сервера"><option value="">Выберите сервер...</option></select>
     </label>
     <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
-      <input type="search" id="search" placeholder="Поиск участника..." aria-label="Поиск участника...">
+      <input type="search" id="search" placeholder="Имя, ник или ID..." aria-label="Поиск участника по имени, нику или ID">
     </label>
     <span class="spacer"></span>
+    <button type="button" class="btn ghost" id="uReset" hidden><i class="fas fa-rotate-left"></i> Сбросить фильтры</button>
     <span class="badge neutral" id="member-count">0</span>
   </div>
-  <div class="u-stats" id="uStats" aria-live="polite"></div>
+  <div class="u-kpis" id="uStats" aria-live="polite"></div>
   <div class="u-filters">
     <label class="field"><span class="u-lbl">Роль</span>
       <select id="uRole" aria-label="Фильтр по роли"><option value="">Все роли</option></select>
@@ -97,104 +183,108 @@
       <button type="button" class="active" data-st="all">Все</button>
       <button type="button" data-st="on">В сети</button>
       <button type="button" data-st="off">Не в сети</button>
+      <button type="button" data-st="new">Новички</button>
+      <button type="button" data-st="bot">Боты</button>
     </div>
   </div>
   <div class="panel-body">
     <div id="members-list"><div class="empty"><i class="fas fa-user-friends"></i><span>Выберите сервер для просмотра участников</span></div></div>
   </div>
   <div class="panel-foot">
-    <span class="empty-tip" style="padding:6px 0 0"><i class="fas fa-arrows-up-down-left-right"></i>
-      Клик по участнику открывает «Карточку 360°» — тащите окно за верхнюю панель, ставьте куда удобно.</span>
+    <span class="empty-tip" style="padding:6px 0 0"><i class="fas fa-circle-info"></i>
+      Клик по участнику — карточка: роли, предупреждения, история модерации, заметки, апелляции и наказания. Окно тащится за верхнюю панель. <kbd>/</kbd> — поиск, <kbd>Esc</kbd> — закрыть.</span>
   </div>
 </div>
 
-<!-- Перетаскиваемое окно «Карточка 360°» -->
+<!-- Перетаскиваемое окно карточки участника: апелляции и наказания -->
 <link rel="stylesheet" href="/static/member_card.css?v={{ static_v('member_card.css') }}">
-<div class="mcf-win" id="mcWin" style="display:none" role="dialog" aria-label="Карточка участника 360°">
+<div class="mcf-win" id="mcWin" style="display:none" role="dialog" aria-label="Карточка участника">
   <div class="mcf-head" id="mcWinHead">
     <i class="fas fa-grip-vertical mcf-grip" aria-hidden="true"></i>
     <div class="mcf-ava" id="mcWinAva"><i class="fas fa-user"></i></div>
     <div class="mcf-title">
       <b id="mcWinName">Участник</b>
-      <small id="mcWinHint">Карточка 360° · тащите за шапку, чтобы двигать</small>
+      <small id="mcWinHint">тащите за шапку, чтобы двигать</small>
     </div>
     <div class="mcf-head-tools">
-      <a class="mcf-btn" id="mcWinCsv" href="#" title="Выгрузить досье в CSV" aria-label="Выгрузить досье в CSV"><i class="fas fa-file-csv"></i></a>
       <button type="button" class="mcf-btn" id="mcWinClose" title="Закрыть" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
     </div>
   </div>
+  <!-- Разделы карточки. Все данные берутся из живых эндпоинтов:
+       /api/member-profile (роли, предупреждения, дела), /api/member-notes,
+       /api/watchlist, /api/guild/<gid>/appeals/user, /punish/options.
+       Прежнее «досье 360» звало эндпоинт карточки, которого в бэкенде не
+       было никогда, — отсюда и вечное «Сеть моргнула». Здесь только то,
+       что реально существует: список маршрутов держит tests/test_users_panel.py. -->
+  <div class="mcf-tabs" id="mcTabs" role="tablist" aria-label="Разделы карточки участника">
+    <button type="button" class="mcf-tab active" role="tab" data-pane="overview"><i class="fas fa-id-card"></i> Обзор</button>
+    <button type="button" class="mcf-tab" role="tab" data-pane="warns"><i class="fas fa-triangle-exclamation"></i> Предупреждения <span class="cnt" id="mcCntWarns" hidden>0</span></button>
+    <button type="button" class="mcf-tab" role="tab" data-pane="history"><i class="fas fa-clock-rotate-left"></i> История <span class="cnt" id="mcCntHist" hidden>0</span></button>
+    <button type="button" class="mcf-tab" role="tab" data-pane="notes"><i class="fas fa-sticky-note"></i> Заметки <span class="cnt" id="mcCntNotes" hidden>0</span></button>
+    <button type="button" class="mcf-tab" role="tab" data-pane="appeals"><i class="fas fa-scale-balanced"></i> Апелляции <span class="cnt" id="mcCntAp" hidden>0</span></button>
+    <button type="button" class="mcf-tab" role="tab" data-pane="punish"><i class="fas fa-gavel"></i> Наказание</button>
+  </div>
   <div class="mcf-body">
-    <div class="mcf-load" id="mcWinLoad" style="display:none"><i class="fas fa-circle-notch fa-spin"></i> Собираем досье...</div>
-    <div class="mcf-err" id="mcWinErr" style="display:none"></div>
+    <!-- Быстрые чипы из данных списка: статус, даты, роли. -->
     <div class="mcf-extras" id="mcWinExtras"></div>
-    <div id="mcWinCard" style="display:none">
-      <div class="mc-kpis" id="mcKpis"></div>
-      <div class="mc-grid">
-        <div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-id-card-clip"></i> Профиль</h3>
-            <div class="mc-sub">Уровень и опыт — те же числа, что рисует /profile бота.</div>
-            <div id="mcProfile"></div>
-          </div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-chart-line"></i> Активность и ранги</h3>
-            <div class="mc-sub">Места в топах — по формуле бота: вне списка = позиция за последним.</div>
-            <div id="mcActivity"></div>
-          </div>
-        </div>
-        <div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-hand-holding-heart"></i> Репутация</h3>
-            <div class="mc-sub">Карма и журнал благодарностей (бот хранит последние 200 записей).</div>
-            <div id="mcKarma"></div>
-          </div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-triangle-exclamation"></i> Предупреждения</h3>
-            <div class="mc-sub">Свежие варны из зеркала модерации (новые сверху).</div>
-            <div id="mcWarns"></div>
-          </div>
-          <div class="mc-panel" id="mcAppealsPanel" hidden>
-            <h3><i class="fas fa-scale-balanced"></i> Апелляции</h3>
-            <div class="mc-sub" id="mcAppealsSub">Обжалования этого участника.</div>
-            <div id="mcAppeals"></div>
-          </div>
-          <div class="mc-panel" id="mcPunishPanel">
-            <h3><i class="fas fa-gavel"></i> Наказание</h3>
-            <div class="mc-sub">Показаны только действия, разрешённые вашей роли в «Правах команд». Пишется в дела и логи от «Панель: ваш логин».</div>
-            <div id="mcPunish">
-              <div class="pn-empty" id="pnEmpty" hidden></div>
-              <div id="pnForm">
-                <div class="pn-grid" id="pnGrid" role="radiogroup" aria-label="Действие наказания"></div>
-                <div id="pnDurBlock" hidden>
-                  <div class="pn-lbl"><span>Срок</span><span class="pn-cnt">мин · часы · дни</span></div>
-                  <div class="pn-presets" id="pnPresets" aria-label="Быстрый выбор срока"></div>
-                  <input id="pnDur" placeholder="или своё: 45м, 2ч, 1д…" maxlength="40" aria-label="Срок наказания">
-                </div>
-                <div class="pn-lbl"><span>Причина</span><span class="pn-cnt" id="pnReasonCnt">0/500</span></div>
-                <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500" aria-label="Причина наказания">
-                <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:10px" disabled><i class="fas fa-bolt"></i> Применить</button>
-                <div class="pn-hint" id="pnHint" hidden><i class="fas fa-circle-info"></i><span id="pnHintText"></span></div>
-                <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
-              </div>
-            </div>
-          </div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-cake-candles"></i> События</h3>
-            <div class="mc-sub">День рождения по грубой формуле бота и дата входа, если бот онлайн.</div>
-            <div id="mcEvents"></div>
-          </div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-arrow-up-right-from-square"></i> Быстрые переходы</h3>
-            <div class="mc-sub">Профильные разделы панели для этого участника.</div>
-            <div class="mc-links" id="mcLinks"></div>
-          </div>
-        </div>
+
+    <div class="mcf-pane active" data-pane="overview" role="tabpanel">
+      <div class="mf-rows" id="mcOverview"></div>
+      <div class="mf-quick" id="mcQuick"></div>
+    </div>
+
+    <div class="mcf-pane" data-pane="warns" role="tabpanel">
+      <div class="mc-sub">Предупреждения из <code>data/warnings.json</code> — их видит и бот при авто-наказаниях.</div>
+      <div id="mcWarns"></div>
+    </div>
+
+    <div class="mcf-pane" data-pane="history" role="tabpanel">
+      <div class="mc-sub">Дела модерации: кто, что и когда применил.</div>
+      <div id="mcHistory"></div>
+    </div>
+
+    <div class="mcf-pane" data-pane="notes" role="tabpanel">
+      <div class="mc-sub">Заметки видны всей команде и хранятся в <code>data/member_notes.json</code>.</div>
+      <div id="mcNotes"></div>
+      <div class="mn-add">
+        <input id="mnText" maxlength="500" placeholder="Заметка для команды..." aria-label="Текст заметки">
+        <button type="button" class="btn" id="mnAdd"><i class="fas fa-plus"></i> Добавить</button>
       </div>
+    </div>
+
+    <div class="mcf-pane" data-pane="appeals" role="tabpanel">
+      <div class="mc-panel" id="mcAppealsPanel">
+      <h3><i class="fas fa-scale-balanced"></i> Апелляции</h3>
+      <div class="mc-sub" id="mcAppealsSub">Обжалования этого участника.</div>
+      <div id="mcAppeals"></div>
+      </div>
+    </div>
+
+    <div class="mcf-pane" data-pane="punish" role="tabpanel">
+    <div class="mc-panel" id="mcPunishPanel">
+    <h3><i class="fas fa-gavel"></i> Наказание</h3>
+    <div class="mc-sub">Показаны только действия, разрешённые вашей роли в «Правах команд». Пишется в дела и логи от «Панель: ваш логин».</div>
+    <div id="mcPunish">
+    <div class="pn-empty" id="pnEmpty" hidden></div>
+    <div id="pnForm">
+    <div class="pn-grid" id="pnGrid" role="radiogroup" aria-label="Действие наказания"></div>
+    <div id="pnDurBlock" hidden>
+    <div class="pn-lbl"><span>Срок</span><span class="pn-cnt">мин · часы · дни</span></div>
+    <div class="pn-presets" id="pnPresets" aria-label="Быстрый выбор срока"></div>
+    <input id="pnDur" placeholder="или своё: 45м, 2ч, 1д…" maxlength="40" aria-label="Срок наказания">
+    </div>
+    <div class="pn-lbl"><span>Причина</span><span class="pn-cnt" id="pnReasonCnt">0/500</span></div>
+    <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500" aria-label="Причина наказания">
+    <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:10px" disabled><i class="fas fa-bolt"></i> Применить</button>
+    <div class="pn-hint" id="pnHint" hidden><i class="fas fa-circle-info"></i><span id="pnHintText"></span></div>
+    <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
+    </div>
+    </div>
+    </div>
     </div>
   </div>
 </div>
 
-<script src="/static/member_card.js?v={{ static_v('member_card.js') }}"></script>
 <script>
 (function () {
   'use strict';
@@ -228,17 +318,58 @@
   }
 
   var _membersFp = '';
+  var _loadToken = 0;      /* гонка: старый цикл не дописывает список нового сервера */
+  var _guildTotal = 0;     /* сколько людей на сервере по Discord */
+  var _membersLoading = false;
+
+  function fmtN(n) { return Number(n || 0).toLocaleString('ru-RU'); }
+
+  /* Добираем участников пачками: первая рисуется сразу (список виден
+     мгновенно), остальные подтягиваются фоном — на 20 000+ людей один
+     ответ на всех был бы и долгим, и неподъёмным для вкладки. */
   async function loadMembers(live) {
     var guildId = $('guild-select').value;
     if (!guildId) {
+      _loadToken++;
       $('members-list').innerHTML = '<div class="empty"><i class="fas fa-user-friends"></i><span>Выберите сервер для просмотра участников</span></div>';
       return;
     }
-    if (!live) $('members-list').innerHTML = '<div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div>';
+    var token = ++_loadToken;
+    if (!live) {
+      $('members-list').innerHTML = '<div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div>';
+    }
+    var PAGE = 2000;
     try {
-      var res = await fetch('/api/guild/' + guildId + '/members?limit=500');
-      var data = await res.json();
-      allMembers = Array.isArray(data) ? data : (data.members || []);
+      var acc = [], offset = 0, total = 0, first = true;
+      for (;;) {
+        var res = await fetch('/api/guild/' + guildId + '/members?limit=' + PAGE + '&offset=' + offset);
+        if (token !== _loadToken) return;   /* выбрали другой сервер — бросаем */
+        var data = await res.json();
+        var batch = Array.isArray(data) ? data : (data.members || []);
+        total = parseInt(res.headers.get('X-Total-Count') || '0', 10) || 0;
+        _guildTotal = parseInt(res.headers.get('X-Guild-Count') || '0', 10) || total;
+        _membersLoading = offset + batch.length < total;
+        if (batch.length) {
+          acc = acc.concat(batch);
+          offset += batch.length;
+          allMembers = acc;
+          renderStats();
+          /* Полный фильтр+сортировка на КАЖДОЙ пачке — это O(n²): на 20 000
+             людей список загружался десятки секунд. Во время добора только
+             рисуем первую пачку и обновляем счётчики; финальный проход —
+             один, когда список целиком на руках. */
+          if (first) {
+            first = false;
+            rebuildRoleFilter();
+            applyView();
+          } else {
+            $('member-count').textContent = fmtN(acc.length) + ' чел. (загрузка…)';
+          }
+        }
+        if (!batch.length || offset >= total) break;
+      }
+      if (token !== _loadToken) return;
+      _membersLoading = false;
       var fp = allMembers.length + '|' + (allMembers[0] ? String(allMembers[0].id || allMembers[0].name || '').slice(0, 60) : '');
       if (live && fp === _membersFp) return;   /* данные не изменились — список не трогаем */
       _membersFp = fp;
@@ -246,13 +377,16 @@
       rebuildRoleFilter();
       applyView();
     } catch (e) {
+      if (token !== _loadToken) return;
       $('members-list').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить: ' + esc(e.message) + '</span></div>';
     }
   }
 
-  /* ── статистика над списком ── */
-  function statChip(icon, label, val) {
-    return '<span class="u-stat"><i class="fas ' + icon + '"></i> ' + esc(label) + ' <b>' + esc(val) + '</b></span>';
+  /* ── статистика над списком: KPI-карточки ── */
+  function statChip(icon, tone, label, val) {
+    return '<div class="u-kpi" data-tone="' + tone + '">' +
+      '<span class="u-kpi-ico"><i class="fas ' + icon + '"></i></span>' +
+      '<span class="u-kpi-txt"><b>' + esc(val) + '</b><span>' + esc(label) + '</span></span></div>';
   }
 
   function renderStats() {
@@ -263,11 +397,16 @@
       if (m.bot) bots++;
       if (m.joined_at && Date.parse(m.joined_at) >= weekAgo) fresh++;
     });
+    /* «Всего» — честное число с сервера: пока список добирается пачками,
+       видно, сколько уже загружено и сколько ещё впереди. */
+    var totalLabel = (_guildTotal && _guildTotal > total)
+      ? fmtN(total) + ' / ' + fmtN(_guildTotal) + (_membersLoading ? '…' : '')
+      : fmtN(_guildTotal || total);
     $('uStats').innerHTML =
-      statChip('fa-users', 'Всего:', total) +
-      statChip('fa-signal', 'В сети:', on) +
-      statChip('fa-user-plus', 'Новые за 7 дн:', fresh) +
-      (bots ? statChip('fa-robot', 'Ботов:', bots) : '');
+      statChip('fa-users', 'ac', 'Всего участников', totalLabel) +
+      statChip('fa-signal', 'ok', 'Сейчас в сети', on) +
+      statChip('fa-user-plus', 'info', 'Пришли за 7 дней', fresh) +
+      (bots ? statChip('fa-robot', 'warn', 'Ботов', bots) : '');
   }
 
   /* ── фильтр по ролям: опции собираем из самих данных ── */
@@ -299,6 +438,8 @@
     var list = allMembers.filter(function (m) {
       if (statusFilter === 'on' && !(m.status === 'online' || m.status === 'idle' || m.status === 'dnd')) return false;
       if (statusFilter === 'off' && m.status && m.status !== 'offline') return false;
+      if (statusFilter === 'new' && !(m.joined_at && Date.parse(m.joined_at) >= Date.now() - 7 * 86400000)) return false;
+      if (statusFilter === 'bot' && !m.bot) return false;
       if (role && !(m.roles || []).some(function (r) { return r && r.name === role; })) return false;
       if (q) {
         return (m.name || '').toLowerCase().indexOf(q) !== -1 ||
@@ -322,52 +463,95 @@
         return sortKey === 'created_new' ? d : -d;
       });
     }
-    $('member-count').textContent = list.length === allMembers.length
-      ? allMembers.length + ' чел.'
-      : list.length + ' из ' + allMembers.length;
+    $('member-count').textContent = (list.length === allMembers.length
+      ? fmtN(allMembers.length) + ' чел.'
+      : fmtN(list.length) + ' из ' + fmtN(allMembers.length)) +
+      (_membersLoading ? ' (загрузка…)' : '');
+    /* кнопка сброса видна только когда действительно есть что сбрасывать */
+    var rst = $('uReset');
+    if (rst) rst.hidden = !(q || role || sortKey || (statusFilter && statusFilter !== 'all'));
     renderMembers(list);
   }
 
+  /* ── Дозированный рендер: на сервере 20 000+ людей, и 20 000 карточек
+     в DOM — это мертвая вкладка. Рисуем окном по WINDOW_STEP и добираем
+     по мере прокрутки; поиск/фильтры работают по всему загруженному списку. ── */
+  var _view = [];
+  var _rendered = 0;
+  var WINDOW_STEP = 240;
+
+  function cardHtml(m) {
+    var sc = statusClass[m.status] || 'offline';
+    var tags = '';
+    var top = m.top_role;
+    if (top) {
+      var color = '';
+      var rr = (m.roles || []).filter(function (r) { return r && r.name === top; })[0];
+      if (rr && rr.color && String(rr.color).charAt(0) === '#') color = String(rr.color);
+      tags += '<span class="u-tag"><span class="dot"' + (color ? ' style="background:' + esc(color) + '"' : '') + '></span>' + esc(top) + '</span>';
+    }
+    if (m.joined_at) {
+      tags += '<span class="u-tag"><i class="fas fa-right-to-bracket"></i>' + esc(new Date(m.joined_at).toLocaleDateString('ru-RU')) + '</span>';
+    }
+    return '<div class="member-card" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Карточка участника: ' + esc(m.display_name || m.name) + '">' +
+      '<div class="av-wrap">' +
+        '<img alt="" loading="lazy" class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+        '<span class="status-dot ' + sc + '"></span>' +
+      '</div>' +
+      '<div class="member-meta">' +
+        '<div class="member-name">' + esc(m.display_name || m.name) +
+          (m.bot ? ' <span class="badge neutral u-bot">BOT</span>' : '') + '</div>' +
+        '<div class="member-username">@' + esc(m.name) + '</div>' +
+        (tags ? '<div class="u-tags">' + tags + '</div>' : '') +
+      '</div>' +
+      '<span class="u-mini">' +
+        '<button type="button" data-copy="&lt;@' + esc(m.id) + '&gt;" title="Скопировать упоминание" aria-label="Скопировать упоминание"><i class="fas fa-at"></i></button>' +
+        '<button type="button" data-copy="' + esc(m.id) + '" title="Скопировать ID" aria-label="Скопировать ID"><i class="fas fa-fingerprint"></i></button>' +
+      '</span>' +
+      '<i class="fas fa-chevron-right u-go" aria-hidden="true"></i>' +
+    '</div>';
+  }
+
+  function moreNote(on, text) {
+    var el = document.getElementById('members-more');
+    if (!el) return;
+    el.hidden = !on;
+    if (on && text) el.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>' + esc(text) + '</span>';
+  }
+
+  function appendMembers() {
+    var grid = document.getElementById('members-grid');
+    if (!grid) return;
+    if (_rendered >= _view.length) { moreNote(false); return; }
+    var slice = _view.slice(_rendered, _rendered + WINDOW_STEP);
+    grid.insertAdjacentHTML('beforeend', slice.map(cardHtml).join(''));
+    _rendered += slice.length;
+    moreNote(_rendered < _view.length,
+             'Показано ' + _rendered.toLocaleString('ru-RU') + ' из ' + _view.length.toLocaleString('ru-RU') + ' — прокрутите вниз');
+  }
+
   function renderMembers(members) {
-    if (!members.length) {
+    _view = members || [];
+    _rendered = 0;
+    if (!_view.length) {
       $('members-list').innerHTML = '<div class="empty"><i class="fas fa-user-slash"></i><span>Участники не найдены</span></div>';
       return;
     }
-    var html = '';
-    members.forEach(function (m) {
-      var sc = statusClass[m.status] || 'offline';
-      var tags = '';
-      var top = m.top_role;
-      if (top) {
-        var color = '';
-        var rr = (m.roles || []).filter(function (r) { return r && r.name === top; })[0];
-        if (rr && rr.color && String(rr.color).charAt(0) === '#') color = String(rr.color);
-        tags += '<span class="u-tag"><span class="dot"' + (color ? ' style="background:' + esc(color) + '"' : '') + '></span>' + esc(top) + '</span>';
-      }
-      if (m.joined_at) {
-        tags += '<span class="u-tag"><i class="fas fa-right-to-bracket"></i>' + esc(new Date(m.joined_at).toLocaleDateString('ru-RU')) + '</span>';
-      }
-      html += '<div class="member-card" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Карточка 360°: ' + esc(m.display_name || m.name) + '">' +
-        '<div class="av-wrap">' +
-          '<img alt="" class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-          '<span class="status-dot ' + sc + '"></span>' +
-        '</div>' +
-        '<div class="member-meta">' +
-          '<div class="member-name">' + esc(m.display_name || m.name) +
-            (m.bot ? ' <span class="badge neutral u-bot">BOT</span>' : '') + '</div>' +
-          '<div class="member-username">@' + esc(m.name) + '</div>' +
-          (tags ? '<div class="u-tags">' + tags + '</div>' : '') +
-        '</div>' +
-        '<i class="fas fa-chevron-right u-go" aria-hidden="true"></i>' +
-      '</div>';
-    });
-    $('members-list').innerHTML = '<div class="members-grid">' + html + '</div>';
+    $('members-list').innerHTML = '<div class="members-grid" id="members-grid"></div>' +
+      '<div class="empty" id="members-more" hidden></div>';
+    appendMembers();
   }
 
-  /* ── Перетаскиваемое окно «Карточка 360°» ────────────────────────
-     Клик по участнику открывает досье из /api/guild/<gid>/member-card/lookup
-     (та же сборка, что и на странице /member-card). Окно тащится за шапку. */
-  var winReq = 0;   /* защита от гонок: старый ответ не затирает новый клик */
+  /* Добираем карточки у нижнего края экрана (страница скроллится целиком). */
+  window.addEventListener('scroll', function () {
+    if (_rendered >= _view.length) return;
+    if (window.innerHeight + window.scrollY < document.body.offsetHeight - 900) return;
+    appendMembers();
+  }, { passive: true });
+
+  /* ── Перетаскиваемое окно карточки участника ─────────────────────
+     Клик по участнику открывает окно с его апелляциями и наказаниями.
+     Окно тащится за шапку. */
 
   function placeWin() {
     var win = $('mcWin');
@@ -388,7 +572,6 @@
 
   function closeWin() {
     $('mcWin').style.display = 'none';
-    winReq++;
   }
 
   function chip(icon, label, val) {
@@ -413,7 +596,6 @@
     $('mcWinAva').innerHTML = ava;
     $('mcWinName').textContent = m.display_name || m.name;
     $('mcWinHint').textContent = '@' + (m.name || '') + ' · ' + st + ' · ID ' + m.id;
-    $('mcWinCsv').href = '/api/guild/' + $('guild-select').value + '/member-card/export?user=' + encodeURIComponent(String(m.id));
 
     /* наказания: привязка к открытому участнику */
     pnUid = String(m.id);
@@ -431,32 +613,18 @@
       (m.top_role ? chip('fa-crown', 'Высшая:', m.top_role) : '');
     $('mcWinExtras').innerHTML = extras;
 
-    /* досье 360° — тот же API и тот же рендер, что на странице /member-card */
-    var req = ++winReq;
-    $('mcWinLoad').style.display = 'flex';
-    $('mcWinErr').style.display = 'none';
-    $('mcWinCard').style.display = 'none';
+    /* Разделы: «Обзор» строится сразу из данных списка, остальное
+       добирается фоном из живых эндпоинтов. */
+    mcUid = String(m.id);
+    mcMember = m;
+    _watchNote = '';
+    switchPane('overview');
+    renderOverview(m);
+    loadProfile(m);
+    loadNotes();
+    loadWatchFlag();
+
     openWin();
-    var gid = $('guild-select').value;
-    fetch('/api/guild/' + gid + '/member-card/lookup?user=' + encodeURIComponent(String(m.id))).then(function (r) {
-      return r.json().then(function (d) { return { status: r.status, d: d }; });
-    }).then(function (res) {
-      if (req !== winReq) return;   /* пользователь уже кликнул другого */
-      $('mcWinLoad').style.display = 'none';
-      if (!res.d.success || !res.d.card) {
-        $('mcWinErr').textContent = res.d.error || 'Не удалось собрать досье';
-        $('mcWinErr').style.display = '';
-        return;
-      }
-      $('mcWinErr').style.display = 'none';
-      $('mcWinCard').style.display = '';
-      window.MemberCard.renderCard(res.d.card);
-    }).catch(function () {
-      if (req !== winReq) return;
-      $('mcWinLoad').style.display = 'none';
-      $('mcWinErr').textContent = 'Сеть моргнула — попробуйте кликнуть ещё раз';
-      $('mcWinErr').style.display = '';
-    });
   }
 
   /* ── Наказания из карточки (тот же путь, что /modpanel) ──
@@ -468,6 +636,11 @@
   var pnSel = '';
   var pnUid = '';
   var pnArm = 0;   /* до какого момента «взведён» бан (двойной клик) */
+  /* «Лимиты команды» (Щит сервера → Лимиты) для вошедшего модератора:
+     options отдаёт pnLimits {действие: {limit, used, left, window}} и
+     pnLimitExempt (true — владелец/доверенный вход, лимитов нет). */
+  var pnLimits = {};
+  var pnLimitExempt = true;
 
   var PN_META = {
     warn:      { icon: 'fa-triangle-exclamation', kind: 'neg',    sub: 'запись в дело' },
@@ -499,9 +672,7 @@
   var _apReq = 0;
 
   function loadUserAppeals(uid) {
-    var panel = $('mcAppealsPanel');
-    if (!panel) return;
-    panel.hidden = true;
+    if (!$('mcAppealsPanel')) return;
     var req = ++_apReq;
     var gid = $('guild-select').value;
     if (!gid) return;
@@ -509,9 +680,12 @@
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (req !== _apReq) return;   /* кликнули другого участника */
-        if (!d || !d.success || !d.total) { panel.hidden = true; return; }
-        var items = d.items || [];
-        panel.hidden = false;
+        var items = (d && d.items) || [];
+        setCount('mcCntAp', d && d.total ? d.total : items.length);
+        if (!d || !d.success || !items.length) {
+          $('mcAppeals').innerHTML = '<div class="empty"><i class="fas fa-scale-balanced"></i><span>Апелляций нет</span></div>';
+          return;
+        }
         $('mcAppealsSub').textContent = 'Всего подано: ' + d.total +
           (d.total > items.length ? ' · показаны последние ' + items.length : '');
         $('mcAppeals').innerHTML = items.map(function (it) {
@@ -526,17 +700,23 @@
         }).join('');
         var link = '<div style="margin-top:8px"><a href="/appeals" style="color:var(--ac);font-size:var(--fs-sm)"><i class="fas fa-arrow-up-right-from-square"></i> Открыть очередь апелляций</a></div>';
         $('mcAppeals').innerHTML += link;
-      }).catch(function () {});
+      }).catch(function () {
+        if (req !== _apReq) return;
+        $('mcAppeals').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить апелляции</span></div>';
+        setCount('mcCntAp', 0);
+      });
   }
 
   function pnLoad() {
     var gid = $('guild-select').value;
-    if (!gid) return;
-    fetch('/api/guild/' + gid + '/punish/options', { credentials: 'same-origin' })
+    if (!gid) return Promise.resolve();
+    return fetch('/api/guild/' + gid + '/punish/options', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         pnOpts = d && d.success ? d : null;
         pnActions = pnOpts ? (pnOpts.actions || []) : [];
+        pnLimits = (pnOpts && pnOpts.limits) || {};
+        pnLimitExempt = !!(pnOpts && pnOpts.limit_exempt);
         pnRenderForm();
       }).catch(function () {});
   }
@@ -555,10 +735,28 @@
     $('pnEmpty').hidden = true;
     grid.innerHTML = pnActions.map(function (a) {
       var meta = pnActionMeta(a.value);
-      return '<button type="button" class="pn-act" role="radio" aria-checked="false" data-v="' + esc(a.value) + '" data-kind="' + meta.kind + '">' +
+      /* остаток по «Лимитам команды» — виден на кнопке; исчерпанное
+         действие отключается (сервер всё равно отклонит — это подсказка) */
+      var sub = meta.sub;
+      var lim = pnLimits[a.value];
+      var atLimit = false;
+      if (lim && !pnLimitExempt) {
+        if (typeof lim.left === 'number' && lim.left <= 0) {
+          atLimit = true;
+          sub = sub + ' · лимит исчерпан';
+        } else if (lim.left < lim.limit) {
+          sub = sub + ' · осталось ' + lim.left;
+        } else {
+          sub = sub + ' · лимит ' + lim.limit + ' за ' + lim.window;
+        }
+      }
+      return '<button type="button" class="pn-act" role="radio" aria-checked="false"' +
+        (atLimit ? ' disabled' : '') +
+        ' data-v="' + esc(a.value) + '" data-kind="' + meta.kind + '"' +
+        (atLimit ? ' title="Лимит исчерпан — действие недоступно до обновления окна"' : '') + '>' +
         '<i class="fas ' + meta.icon + '" aria-hidden="true"></i>' +
         '<span><span class="t">' + esc(a.label) + '</span>' +
-        '<span class="s">' + esc(meta.sub) + '</span></span></button>';
+        '<span class="s">' + esc(sub) + '</span></span></button>';
     }).join('');
     /* быстрые пресеты срока */
     $('pnPresets').innerHTML = PN_PRESETS.map(function (p) {
@@ -581,12 +779,18 @@
     var meta = {};
     pnActions.forEach(function (a) { if (a.value === pnSel) meta = a; });
     $('pnDurBlock').hidden = !meta.duration;
+    var limSel = pnLimits[pnSel];
+    var limOut = limSel && !pnLimitExempt &&
+                 typeof limSel.left === 'number' && limSel.left <= 0;
     var btn = $('pnGo');
-    btn.disabled = !pnSel || (pnOpts && !pnOpts.bot_online);
+    btn.disabled = !pnSel || (pnOpts && !pnOpts.bot_online) || !!limOut;
     btn.classList.remove('armed');
     btn.innerHTML = '<i class="fas fa-bolt"></i> Применить';
     var msg = '';
-    if (pnSel === 'ban' && pnOpts && !pnOpts.ban_ready) {
+    if (limOut) {
+      msg = 'Лимит исчерпан: ' + limSel.limit + ' за ' + limSel.window +
+            ' — действие снова станет доступно после обновления окна.';
+    } else if (pnSel === 'ban' && pnOpts && !pnOpts.ban_ready) {
       msg = '«Бан» пока не работает: не выбран канал апелляции. Панель → Каналы и маршруты → «Канал апелляции (бан)».';
     }
     $('pnMsg').textContent = msg;
@@ -634,14 +838,262 @@
     }).then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false;
       var t = d.message || d.error || 'Готово';
-      $('pnMsg').textContent = t;
-      $('pnMsg').style.color = d.success ? '' : 'var(--err)';
-      if (d.success) { pnSelect(''); pnResetForm(); }
+      if (d.success) {
+        /* действие ушло в счётчик — сначала обновим остатки лимитов,
+           потом покажем результат (иначе перерисовка его сотрёт) */
+        pnSelect('');
+        pnResetForm();
+        pnLoad().then(function () {
+          $('pnMsg').textContent = t;
+          $('pnMsg').style.color = '';
+        });
+      } else {
+        $('pnMsg').textContent = t;
+        $('pnMsg').style.color = 'var(--err)';
+      }
     }).catch(function () {
       btn.disabled = false;
       $('pnMsg').textContent = 'Сеть моргнула — попробуйте ещё раз';
       $('pnMsg').style.color = 'var(--err)';
     });
+  }
+
+  /* ── Разделы карточки участника ─────────────────────────────────────
+     Вкладки, живые данные профиля, заметки, статус наблюдения и быстрые
+     действия. Все источники — существующие эндпоинты панели. ── */
+  var mcUid = '';
+  var mcMember = null;
+  var _watchNote = '';
+
+  function switchPane(name) {
+    document.querySelectorAll('#mcTabs .mcf-tab').forEach(function (b) {
+      var on = b.getAttribute('data-pane') === name;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('#mcWin .mcf-pane').forEach(function (p) {
+      p.classList.toggle('active', p.getAttribute('data-pane') === name);
+    });
+  }
+
+  function setCount(id, n) {
+    var el = $(id);
+    if (!el) return;
+    el.hidden = !n;
+    el.textContent = String(n);
+  }
+
+  function copyText(text, btn) {
+    var mark = function () {
+      if (!btn) return;
+      var old = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      setTimeout(function () { btn.innerHTML = old; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(mark, function () {});
+      return;
+    }
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); mark(); } catch (e) { /* тихо */ }
+    document.body.removeChild(ta);
+  }
+
+  function fmtWhen(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString('ru-RU') + ' · ' +
+           d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function mfRow(label, html) {
+    return '<div class="mf-row"><span>' + esc(label) + '</span><div>' + html + '</div></div>';
+  }
+
+  function rolePills(roles) {
+    if (!roles || !roles.length) return '<span style="color:var(--text-3)">ролей нет</span>';
+    return '<div class="mf-roles">' + roles.map(function (r) {
+      var c = (r && r.color && String(r.color).charAt(0) === '#') ? String(r.color) : '';
+      return '<span class="mf-role"><span class="dot"' +
+        (c ? ' style="background:' + esc(c) + '"' : '') + '></span>' + esc(r.name) + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function renderOverview(m) {
+    var roles = (m.roles || []).filter(function (r) { return r && r.name; });
+    $('mcOverview').innerHTML =
+      mfRow('Ник', '@' + esc(m.name || '')) +
+      mfRow('ID', esc(m.id) + ' <button type="button" class="mf-copy" data-copy="' + esc(m.id) +
+            '" title="Скопировать ID" aria-label="Скопировать ID"><i class="fas fa-copy"></i></button>') +
+      mfRow('Аккаунт создан', esc(fmtWhen(m.created_at))) +
+      mfRow('На сервере с', esc(fmtWhen(m.joined_at))) +
+      mfRow('Роли (' + roles.length + ')', rolePills(roles)) +
+      '<div id="mcWatchSlot">' + _watchNote + '</div>';
+    $('mcQuick').innerHTML =
+      '<button type="button" class="mf-act" data-copy="' + esc(m.id) + '"><i class="fas fa-fingerprint"></i> Скопировать ID</button>' +
+      '<button type="button" class="mf-act" data-copy="&lt;@' + esc(m.id) + '&gt;" data-raw="1"><i class="fas fa-at"></i> Упоминание</button>' +
+      '<a class="mf-act" href="/member-notes" target="_blank" rel="noopener"><i class="fas fa-sticky-note"></i> Все заметки</a>' +
+      '<a class="mf-act" href="/watchlist-panel" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Наблюдение</a>';
+  }
+
+  /* Профиль: роли с цветами, предупреждения и дела модерации. */
+  var _profReq = 0;
+  function loadProfile(m) {
+    var gid = $('guild-select').value;
+    if (!gid) return;
+    var req = ++_profReq;
+    var spin = '<div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка…</span></div>';
+    $('mcWarns').innerHTML = spin;
+    $('mcHistory').innerHTML = spin;
+    fetch('/api/member-profile/' + gid + '/' + encodeURIComponent(m.id), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (req !== _profReq) return;
+        d = d || {};
+        renderWarns(d.warnings || []);
+        renderHistory(d.case || d.cases || []);
+        /* роли из профиля свежее и с цветами — подменяем, если пришли */
+        if (d.roles && d.roles.length && mcMember && String(mcMember.id) === mcUid) {
+          mcMember.roles = d.roles;
+          renderOverview(mcMember);
+        }
+      })
+      .catch(function () {
+        if (req !== _profReq) return;
+        var bad = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить</span></div>';
+        $('mcWarns').innerHTML = bad;
+        $('mcHistory').innerHTML = bad;
+        setCount('mcCntWarns', 0);
+        setCount('mcCntHist', 0);
+      });
+  }
+
+  function renderWarns(list) {
+    setCount('mcCntWarns', list.length);
+    if (!list.length) {
+      $('mcWarns').innerHTML = '<div class="empty"><i class="fas fa-circle-check"></i><span>Предупреждений нет</span></div>';
+      return;
+    }
+    $('mcWarns').innerHTML = list.map(function (w) {
+      return '<div class="mf-case" data-kind="neg">' +
+        '<span class="mf-case-ico"><i class="fas fa-triangle-exclamation"></i></span>' +
+        '<div class="mn-txt">' + esc(w.reason || '—') +
+          '<div class="mn-meta">#' + esc(w.id) + (w.mod ? ' · выдал ' + esc(w.mod) : '') +
+          (w.timestamp ? ' · ' + esc(fmtWhen(w.timestamp)) : '') + '</div>' +
+          (w.proof ? '<div class="mn-meta"><i class="fas fa-paperclip"></i> ' + esc(w.proof) + '</div>' : '') +
+        '</div></div>';
+    }).join('');
+  }
+
+  var CASE_KIND = { ban: 'danger', unban: 'pos', kick: 'danger', warn: 'neg', timeout: 'neg',
+                    mute: 'neg', unmute: 'pos', vmute: 'neg', unvmute: 'pos', clear: 'neg' };
+  function renderHistory(list) {
+    setCount('mcCntHist', list.length);
+    if (!list.length) {
+      $('mcHistory').innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><span>Дел модерации нет</span></div>';
+      return;
+    }
+    $('mcHistory').innerHTML = list.map(function (c) {
+      var act = String(c.action || '?');
+      var kind = CASE_KIND[act.toLowerCase()] || '';
+      return '<div class="mf-case"' + (kind ? ' data-kind="' + kind + '"' : '') + '>' +
+        '<span class="mf-case-ico"><i class="fas fa-gavel"></i></span>' +
+        '<div class="mn-txt"><b>' + esc(act) + '</b> — ' + esc(c.reason || '—') +
+          '<div class="mn-meta">#' + esc(c.id) + (c.mod ? ' · ' + esc(c.mod) : '') +
+          (c.timestamp ? ' · ' + esc(fmtWhen(c.timestamp)) : '') + '</div>' +
+          (c.proof ? '<div class="mn-meta"><i class="fas fa-paperclip"></i> ' + esc(c.proof) + '</div>' : '') +
+        '</div></div>';
+    }).join('');
+  }
+
+  /* Заметки: /api/member-notes/<id> — список, /add, /<note>/delete. */
+  var _noteReq = 0;
+  function loadNotes() {
+    if (!mcUid) return;
+    var req = ++_noteReq;
+    $('mcNotes').innerHTML = '<div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка…</span></div>';
+    var t = $('mnText');
+    if (t) t.value = '';
+    fetch('/api/member-notes/' + encodeURIComponent(mcUid), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (list) {
+        if (req !== _noteReq) return;
+        renderNotes(Array.isArray(list) ? list : []);
+      })
+      .catch(function () {
+        if (req !== _noteReq) return;
+        $('mcNotes').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить заметки</span></div>';
+        setCount('mcCntNotes', 0);
+      });
+  }
+
+  function renderNotes(list) {
+    setCount('mcCntNotes', list.length);
+    if (!list.length) {
+      $('mcNotes').innerHTML = '<div class="empty"><i class="fas fa-sticky-note"></i><span>Заметок пока нет</span></div>';
+      return;
+    }
+    $('mcNotes').innerHTML = list.map(function (n) {
+      return '<div class="mn-item">' +
+        '<i class="fas fa-sticky-note" style="color:var(--text-4);margin-top:3px"></i>' +
+        '<div class="mn-txt">' + esc(n.text || '') +
+          '<div class="mn-meta">' + esc(n.author || 'неизвестно') +
+          (n.created_at ? ' · ' + esc(fmtWhen(n.created_at)) : '') + '</div></div>' +
+        '<button type="button" class="mn-del" data-note="' + esc(n.id) + '" title="Удалить заметку" aria-label="Удалить заметку"><i class="fas fa-trash"></i></button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function addNote() {
+    var t = $('mnText');
+    var text = (t.value || '').trim();
+    if (!text || !mcUid) return;
+    t.disabled = true;
+    fetch('/api/member-notes/' + encodeURIComponent(mcUid) + '/add', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text })
+    }).then(function (r) { return r.json(); }).then(function () {
+      t.disabled = false;
+      t.value = '';
+      loadNotes();
+    }).catch(function () {
+      t.disabled = false;
+      if (window.showToast) window.showToast('Не удалось сохранить заметку', false);
+    });
+  }
+
+  function delNote(noteId) {
+    if (!mcUid || !noteId) return;
+    fetch('/api/member-notes/' + encodeURIComponent(mcUid) + '/' + encodeURIComponent(noteId) + '/delete', {
+      credentials: 'same-origin', method: 'POST'
+    }).then(function () { loadNotes(); })
+      .catch(function () { if (window.showToast) window.showToast('Не удалось удалить заметку', false); });
+  }
+
+  /* Наблюдение: файл пишет бот при 2+ мьютах, панель только читает. */
+  function loadWatchFlag() {
+    var gid = $('guild-select').value;
+    if (!gid || !mcUid) return;
+    fetch('/api/watchlist/' + gid, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (list) {
+        if (!Array.isArray(list)) return;
+        var hit = list.filter(function (x) { return String(x.id) === mcUid; })[0];
+        _watchNote = hit
+          ? '<span class="mf-watch"><i class="fas fa-eye"></i> В наблюдении' +
+            (hit.reason ? ': ' + esc(hit.reason) : '') + '</span>'
+          : '';
+        var slot = $('mcWatchSlot');
+        if (slot) slot.innerHTML = _watchNote;
+      })
+      .catch(function () { /* статус наблюдения не критичен */ });
   }
 
   /* перетаскивание окна за шапку (мышь + тач) */
@@ -684,7 +1136,43 @@
       applyView();
     });
     $('mcWinClose').addEventListener('click', closeWin);
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeWin(); });
+    /* вкладки карточки */
+    $('mcTabs').addEventListener('click', function (e) {
+      var b = e.target.closest('.mcf-tab');
+      if (b) switchPane(b.getAttribute('data-pane'));
+    });
+    /* копирование и удаление заметок — делегированием по окну */
+    $('mcWin').addEventListener('click', function (e) {
+      var cp = e.target.closest('[data-copy]');
+      /* в разметке упоминание записано как &lt;@id&gt;, но HTML-парсер
+         сам раскрывает сущности — getAttribute отдаёт уже <@id> */
+      if (cp) { copyText(cp.getAttribute('data-copy'), cp); return; }
+      var del = e.target.closest('.mn-del');
+      if (del) delNote(del.getAttribute('data-note'));
+    });
+    $('mnAdd').addEventListener('click', addNote);
+    $('mnText').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addNote(); }
+    });
+    /* сброс фильтров */
+    $('uReset').addEventListener('click', function () {
+      $('search').value = '';
+      $('uRole').value = '';
+      $('uSort').value = '';
+      document.querySelectorAll('#uStatus button').forEach(function (x) {
+        x.classList.toggle('active', x.getAttribute('data-st') === 'all');
+      });
+      applyView();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { closeWin(); return; }
+      /* «/» — в поиск, как в Discord; в полях ввода не перехватываем */
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      var t = (e.target && e.target.tagName || '').toLowerCase();
+      if (t === 'input' || t === 'textarea' || t === 'select') return;
+      e.preventDefault();
+      $('search').focus();
+    });
     /* живое обновление (1.5с) пересоздаёт карточки: между нажатием и
        отпусканием кнопки «человек» мог сместиться, и открылся бы другой.
        Запоминаем того, кого нажали, — открываем именно его. */
@@ -694,11 +1182,13 @@
       pressedMemberId = card ? card.getAttribute('data-id') : null;
     });
     $('members-list').addEventListener('click', function (e) {
+      var cp = e.target.closest('[data-copy]');
+      if (cp) { e.stopPropagation(); copyText(cp.getAttribute('data-copy'), cp); return; }
       var card = e.target.closest('.member-card');
       var wantedId = card ? card.getAttribute('data-id') : pressedMemberId;
       if (wantedId) showDetail(wantedId);
     });
-    /* карточка с клавиатуры: Enter/пробел — то же окно 360° */
+    /* карточка с клавиатуры: Enter/пробел — то же окно */
     $('members-list').addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       var card = e.target.closest('.member-card');
@@ -733,13 +1223,16 @@
   function start() {
     bind(); loadGuilds();
     if (window.setLiveRefresh) {
+      /* Только по событию «изменился состав» (топик members): бот пушит его,
+         когда кто-то вошёл/вышел/сменил роль. Опрос по таймеру здесь не нужен
+         и вреден — на сервере 20 000+ людей перечитывать список каждые
+         несколько секунд значит молотить сервер вхолостую. Таймер оставлен
+         редкой страховкой на случай, если SSE не поднялся (5 минут). */
       window.setLiveRefresh(function () {
         /* во время клика список не трогаем — иначе нажатие «уезжает» */
         if (performance.now() - lastListPointerDown < 350) return;
         loadMembers(true);
-      }, 1500);
-    } else {
-      setInterval(function () { loadMembers(true); }, 30000);
+      }, 300000, ['members']);
     }
   }
   if (document.readyState === 'loading') {

@@ -440,6 +440,11 @@ class AntiFake(commands.Cog):
         punished = ""
         if cfg.get('strike_timeout') and total >= STRIKE_LIMIT:
             try:
+                try:
+                    from services import mute_state
+                    await mute_state.clear_voice_mute(message.guild, member)
+                except Exception as _mse:
+                    _log.debug('antifake timeout: очистка войс-мута: %s', _mse)
                 await member.timeout(datetime.now(timezone.utc) + timedelta(minutes=60),
                                      reason="[AntiFake] замаскированная реклама (3 страйка)")
                 punished = " · получен таймаут 60 мин"

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Роли <span class="sep">·</span> Управление ролями</div>
+    <div class="eyebrow"> Роли </div>
     <h1>Управление ролями</h1>
     <p class="lead">Все роли сервера: создание, удаление и статистика.</p>
   </div>
@@ -47,7 +47,8 @@
     <h3><i class="fas fa-plus-circle"></i> Создать роль</h3>
     <div class="form-group">
       <label>Название роли</label>
-      <input type="text" id="role-name" class="field-input" placeholder="Название роли" aria-label="Название роли">
+      <input type="text" id="role-name" class="field-input" placeholder="Название роли" maxlength="100" aria-label="Название роли"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();createRole();}">
     </div>
     <div class="form-group">
       <label>Цвет роли</label>
@@ -81,6 +82,14 @@ var MAIN_GID = '{{ main_guild_id }}';
 var selectedGuild = MAIN_GID;
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function $(id) { return document.getElementById(id); }
+/* «1 участник / 2 участника / 5 участников» — было просто «N участников» */
+function pluralRu(n, one, few, many) {
+  n = Math.abs(Number(n) || 0);
+  var m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
 
 async function loadRoles() {
   var box = $('roles-list');
@@ -91,23 +100,28 @@ async function loadRoles() {
     var fp = (roles || []).map(function (x) { return x.id + ':' + x.name + ':' + (x.members || 0); }).join('|');
     if (window.silentGuard && window.silentGuard('roles-' + selectedGuild, fp)) return;
     if (!Array.isArray(roles) || roles.length === 0) {
-      box.innerHTML = '<div class="empty-msg"><i class="fas fa-user-tag"></i>На этом сервере ролей нет</div>';
+      box.innerHTML = '<div class="empty-msg"><i class="fas fa-user-tag"></i> На этом сервере ролей нет</div>';
       $('stat-roles').textContent = '0'; $('stat-members').textContent = '0';
       return;
     }
     var totalMembers = 0;
     box.innerHTML = roles.map(function(role) {
-      totalMembers += (role.members || 0);
+      var n = role.members || 0;
+      totalMembers += n;
       var col = /^#([0-9a-f]{6})$/i.test(role.color || '') ? role.color : '#2b2b33';
       if (role.color === '#000000') col = '#2b2b33';
+      var safeName = esc(role.name).replace(/'/g, "\\'");
       return '<div class="roles-card">' +
         '<div class="roles-left">' +
           '<div class="roles-color" style="background:' + col + '"></div>' +
           '<div style="min-width:0"><div class="roles-name">' + esc(role.name) + '</div>' +
-          '<div class="roles-members"><i class="fas fa-users"></i> ' + (role.members || 0) + ' участников</div></div>' +
+          '<div class="roles-members"><i class="fas fa-users"></i> ' + n + ' ' +
+            pluralRu(n, 'участник', 'участника', 'участников') + '</div></div>' +
         '</div>' +
         '<div class="roles-actions">' +
-          '<button type="button" class="btn-sm btn-delete" onclick="deleteRole(\'' + role.id + '\',\'' + esc(role.name).replace(/'/g, "\\'") + '\')" title="Удалить"><i class="fas fa-trash"></i></button>' +
+          '<button type="button" class="btn-sm btn-delete" onclick="deleteRole(\'' + role.id + '\',\'' + safeName + '\')" ' +
+            'title="Удалить роль «' + esc(role.name) + '»" aria-label="Удалить роль «' + esc(role.name) + '»">' +
+            '<i class="fas fa-trash"></i></button>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -148,18 +162,45 @@ async function deleteRole(id, name) {
   }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
 }
 
+async function loadGuilds() {
+  /* Список серверов в селекте раньше не заполнял никто: пункт «Выберите
+     сервер...» был единственным, и переключиться на другой сервер было
+     нельзя — страница всегда показывала только главный.
+     Заглушку убираем: когда сервер уже выбран, надпись «Выберите
+     сервер...» врала бы — роли-то показаны. */
+  var sel = $('guild-select');
+  var guilds = [];
+  try {
+    var d = await fetch('/api/guilds').then(function (r) { return r.json(); });
+    guilds = Array.isArray(d) ? d : (Array.isArray(d && d.guilds) ? d.guilds : []);
+  } catch (e) { console.debug('Список серверов не загрузился:', e); }
+  guilds = guilds.filter(function (g) { return g && g.id; });
+  if (!guilds.length && MAIN_GID) guilds = [{ id: MAIN_GID, name: 'Текущий сервер' }];
+  if (!guilds.length) return;
+  sel.innerHTML = guilds.map(function (g) {
+    return '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>';
+  }).join('');
+  var main = guilds.filter(function (g) { return String(g.id) === String(MAIN_GID); })[0];
+  sel.value = String(main ? main.id : guilds[0].id);
+  selectedGuild = sel.value || MAIN_GID;
+}
+
 function start() {
   loadRoles();
-  if (window.setLiveRefresh) window.setLiveRefresh(loadRoles, 1500);
-  else setInterval(loadRoles, 2500);
+  /* Обновление по событию «изменились роли» (топик roles — его шлёт бот при
+     создании/удалении/правке роли). Опрос по таймеру убран: он молотил
+     сервер каждые полторы секунды, а список ролей сам не меняется.
+     5 минут — страховка на случай, если SSE не поднялся. */
+  if (window.setLiveRefresh) window.setLiveRefresh(loadRoles, 300000, ['roles']);
 }
 
 // Перезагружаем роли при смене сервера
-function init() {
+async function init() {
   $('guild-select').addEventListener('change', function () {
     selectedGuild = this.value || MAIN_GID;
     loadRoles();
   });
+  await loadGuilds();
   start();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

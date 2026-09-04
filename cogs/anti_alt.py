@@ -6,7 +6,8 @@
 
 - /антиальт вкл|выкл        — включить/выключить защиту
 - /антиальт порог <дней>    — минимальный возраст аккаунта (по умолчанию 7)
-- /антиальт действие alert|kick|ban — что делать с нарушителем
+- /антиальт действие alert|kick|ban|appeal — что делать с нарушителем
+  (appeal = закрыть все каналы, оставить апелляцию — как бан, но без выхода)
 - /антиальт канал [#канал]  — куда слать карточки тревоги
 - /антиальт статус          — текущие настройки
 
@@ -30,14 +31,15 @@ COLOR_OK = 0x57F287
 
 DEFAULT_SETTINGS = {
     'enabled': False,  # opt-in: владелец включает щит сам (панель/команда)
-    'min_age_days': 7,
-    'action': 'alert',          # alert | kick | ban
+    'min_age_days': 2,   # заказ владельца 2026-09-02: «если аккаунту менее 2 дней»
+    'action': 'appeal',  # alert | kick | ban | appeal — молодой аккаунт в апелляцию
     'log_channel_id': 0,
     'whitelist': [],            # user_id — доверенные, их не трогаем
 }
 
-ACTIONS = ('alert', 'kick', 'ban')
-ACTION_NAMES = {'alert': 'только тревога', 'kick': 'кик', 'ban': 'бан'}
+ACTIONS = ('alert', 'kick', 'ban', 'appeal')
+ACTION_NAMES = {'alert': 'только тревога', 'kick': 'кик', 'ban': 'бан',
+                'appeal': 'изоляция + канал апелляции (как бан, без выхода)'}
 
 
 # ─── чистые функции (покрыты тестом) ────────────────────────────────────────
@@ -128,7 +130,11 @@ class AntiAlt(commands.Cog):
         log.info('anti_alt: %s (%s) на %s — %s, действие %s',
                  member, member.id, member.guild.id, reason, action)
         await self._alert(member, age, reason, action)
-        await self._punish(member, action, reason)
+        done = await self._punish(member, action, reason, age)
+        # «Апелляция для молодого аккаунта»: доступ закрыт, открыт только
+        # канал апелляции — как при бане, но участник остаётся на сервере.
+        if action == 'appeal' and done:
+            await self._young_account_dm(member, age)
 
     async def _alert(self, member, age, reason, action):
         settings = self._settings(member.guild.id)
@@ -156,17 +162,85 @@ class AntiAlt(commands.Cog):
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.warning('anti_alt: карточка не ушла на %s: %s', member.guild.id, _ex)
 
-    async def _punish(self, member, action, reason):
+    async def _punish(self, member, action, reason, age=0.0):
+        """Применить действие. Возвращает True, если участник реально ограничен
+        (для appeal — успешно изолирован)."""
         try:
             if action == 'kick':
                 await member.kick(reason=f'Анти-альт: {reason}')
-            elif action == 'ban':
+                return True
+            if action == 'ban':
                 await member.ban(reason=f'Анти-альт: {reason}', delete_message_days=0)
+                return True
+            if action == 'appeal':
+                return await self._isolate_young(member, reason)
         except discord.Forbidden:
             log.warning('anti_alt: не хватило прав на %s (%s)', action, member.id)
         except discord.HTTPException as _ex:
             log.error('anti_alt: действие %s не удалось для %s: %s',
                       action, member.id, _ex)
+        return False
+
+    async def _isolate_young(self, member, reason):
+        """Молодой аккаунт: закрыть все каналы, оставить только апелляцию —
+        тот же механизм, что у «бана» в /modpanel (участник НЕ выгоняется)."""
+        mod = self.bot.get_cog('Moderation') or self.bot.get_cog('moderation')
+        if mod is None or not hasattr(mod, '_isolate_member'):
+            log.warning('anti_alt: ког модерации недоступен — изоляция пропущена')
+            return False
+        guild = member.guild
+        iso = await mod._isolation_channel(guild)
+        if iso is None:
+            log.warning('anti_alt: канал апелляции не настроен — изоляция %s пропущена',
+                        member.id)
+            return False
+        # роль бана (если настроена) закроет каналы сама — выдаём её тоже,
+        # поведение идентично ручному «бану» из панели.
+        try:
+            _iso_ch, _closed = await mod._isolate_member(guild, member, iso)
+            _brole = mod._punish_role(guild, 'ban')
+            if _brole is not None and _brole not in member.roles:
+                await member.add_roles(_brole, reason=f'Анти-альт (молодой аккаунт): {reason}')
+            try:
+                await iso.set_permissions(
+                    member,
+                    overwrite=discord.PermissionOverwrite(view_channel=True,
+                                                          send_messages=True))
+            except (discord.Forbidden, discord.HTTPException) as _ex:
+                log.debug('anti_alt: allow апелляции для %s: %s', member.id, _ex)
+            log.info('anti_alt: %s изолирован (закрыто каналов: %s, апелляция %s)',
+                     member.id, _closed, iso.id)
+            return True
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.error('anti_alt: изоляция %s не удалась: %s', member.id, _ex)
+            return False
+
+    async def _young_account_dm(self, member, age):
+        """ЛС молодому аккаунту: доступ ограничен из-за возраста учётки —
+        это НЕ бан за проступок, а защита; снять можно через апелляцию."""
+        age_txt = tf.fmt_seconds(int(max(0.0, age) * 86400))
+        embed = discord.Embed(
+            title='Доступ к серверу ограничен',
+            color=COLOR_ALERT,
+            timestamp=datetime.now(UTC),
+            description=(
+                f'Привет, {member.display_name}!\n\n'
+                f'Твой аккаунт Discord совсем новый (возраст — **{age_txt}**). '
+                f'Чтобы защитить сервер от твинков, рейд-ботов и рекламных '
+                f'рассыльщиков, свежие аккаунты при входе автоматически '
+                f'ограничиваются: тебе закрыты все каналы, кроме **канала '
+                f'апелляции**.\n\n'
+                f'Это **не наказание** и не бан за нарушение — доступ '
+                f'вернётся после короткой проверки. Напиши в канал апелляции, '
+                f'что ты живой участник, и модерация откроет сервер.\n\n'
+                f'Спасибо за понимание.'
+            ),
+        )
+        try:
+            await member.send(embed=embed)
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.debug('anti_alt: ЛС молодому аккаунту %s не доставлено: %s',
+                      member.id, _ex)
 
     # ---- команды ----
     @commands.hybrid_group(name='антиальт', aliases=['antialt'],
@@ -203,11 +277,12 @@ class AntiAlt(commands.Cog):
         await ctx.reply(f'Порог: **{tf.spell(дней, "день", "дня", "дней")}**.',
                         mention_author=False)
 
-    @grp.command(name='действие', description='alert | kick | ban')
+    @grp.command(name='действие', description='alert | kick | ban | appeal')
     async def cmd_action(self, ctx, действие: str):
         действие = действие.strip().lower()
         if действие not in ACTIONS:
-            await ctx.reply('Действие должно быть: `alert`, `kick` или `ban`.',
+            await ctx.reply('Действие должно быть: `alert`, `kick`, `ban` '
+                            'или `appeal` (изоляция + канал апелляции).',
                             mention_author=False)
             return
         s = self._settings(ctx.guild.id)

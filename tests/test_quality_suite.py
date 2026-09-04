@@ -64,7 +64,7 @@ for path in files:
             unlabelled_icons.append(
                 (path.name, source.count('\n', 0, match.start()) + 1))
 
-check(len(files) >= 130, f'аудит охватывает все шаблоны ({len(files)})')
+check(len(files) >= 80, f'аудит охватывает все шаблоны ({len(files)})')
 check(not missing_alt, f'каждое изображение имеет alt ({missing_alt[:5] or "OK"})')
 check(not missing_type,
       f'каждая кнопка имеет явный безопасный type ({missing_type[:5] or "OK"})')
@@ -139,8 +139,13 @@ check(asset_js.status_code == 200 and b'fetchCachedJSON' in asset_js.data,
 
 pages = [page for group in panel_groups_for('owner') for page in group['pages']]
 paths = [page['path'] for page in pages]
-check(len(paths) == 125 and len(set(paths)) == 125,
-      f'owner-меню содержит 125 уникальные страницы ({len(paths)})')
+# 2026-09-01: система музыки (/play) удалена целиком — пункта «Музыка» в
+# меню нет и самой страницы /music не существует (роут снесён).
+# 2026-09-01: дубль «Варны» (/warn-config) из «Настроек» убран — ступени
+# настраиваются в одном месте, «Лестница наказаний» (/ladder); старый роут
+# оставлен редиректом, но пункта в меню больше нет.
+check(len(paths) == 70 and len(set(paths)) == 70 and '/music' not in paths,
+      f'owner-меню: 70 уникальных страниц, музыки и тикетов нет ({len(paths)})')
 
 rendered = 0
 for route in paths:

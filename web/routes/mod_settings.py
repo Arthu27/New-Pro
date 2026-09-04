@@ -5,11 +5,15 @@
 - data/warn_config_<gid>.json, ключ 'steps' — лестница «N варнов → мера»
   (командный формат ladder-add: мут N мин/ч/дн, кик, бан); рендер подписи —
   cogs.ladder._fmt_step, так что в панели и в Discord текст одинаковый.
-- data/temp_whitelist.json, ключ str(gid) — кого временные меры (tempmute/
-  tempban/tempkick) не трогают вообще (администраторы всегда вне списка).
+- data/temp_whitelist.json, ключ str(gid) — кого временные меры (таймаут,
+  мут) не трогают вообще (администраторы всегда вне списка). Все наказания
+  выдаются через /modpanel.
 - data/punish_roles.json (services.punish_roles) — роли наказаний: мут чата,
-  войс-мут, «бан». Роль выбрана — наказание выдаётся ролью (и снимается
-  сама по сроку); не выбрана — прежнее поведение (таймаут/изоляция).
+  войс-мут, «бан», уровни варнов. Выбираются ТОЛЬКО на отдельной странице
+  «Роли наказаний» (/role-settings) — здесь их записи нет, чтобы не было
+  двух мест правки одной настройки. Роль выбрана — наказание выдаётся ролью
+  (и снимается сама по сроку); не выбрана — прежнее поведение
+  (таймаут/изоляция).
 - data/channel_routes.json, ключ appeal_menu_channel — канал, где живёт
   постоянное меню подачи апелляций (select + окно, апелляция — тредом).
 
@@ -17,6 +21,8 @@
 """
 import json
 import os
+import threading
+import time
 
 from web.routes._common import (
     _log, _fire_panel_notification,
@@ -25,11 +31,215 @@ from web.routes._common import (
 
 from cogs import ladder as LD
 from cogs.warnings import load_warn_config
-from services import punish_roles as PR
 from services.channel_routes import get_route, set_route
 
-ACTIONS = ('mute', 'kick', 'ban')
-ACTION_LABELS = {'mute': 'Мут', 'kick': 'Кик', 'ban': 'Бан'}
+# Короткий in-memory кэш ролей/каналов сервера: эти списки дёргаются на
+# каждый опрос сразу несколькими страницами настроек (Роли наказаний,
+# Настройки модерации, Каналы, Доступ), а состав меняется редко. Кэш
+# убирает повторный обход гильдии и «долгую загрузку селектов»; сбрасывается
+# при изменении состава (число ролей/каналов изменилось) и по TTL.
+_GUILD_CACHE_LOCK = threading.Lock()
+_GUILD_LIST_CACHE = {}      # (gid, kind) -> (ts, payload, sig)
+_GUILD_LIST_TTL = 15.0      # сек: роли/каналы почти не меняются
+
+
+def bot_online():
+    """Факт «бот в сети» для страниц панели. От списка ролей НЕ зависит
+    (раньше «Роли наказаний» считали офлайном по пустому/грузящемуся списку
+    ролей — отсюда ложное «Бот офлайн» при живом боте).
+
+    Два источника правды:
+    1. бот в ЭТОМ процессе (панель запущена вместе с ботом) — как раньше;
+    2. панель в ОТДЕЛЬНОМ процессе (start_panel + start_bot, gunicorn,
+       панель на VDS) — свежий пульс бота data/bot_state.json
+       (services.bot_bridge). Без него отдельная панель всегда видела
+       bot_instance=None и писала «Бот офлайн», даже когда бот работал.
+    """
+    bot = _bot()
+    if bot is not None:
+        try:
+            guilds = getattr(bot, 'guilds', None)
+        except Exception:
+            guilds = None
+        if guilds:
+            return True
+        # объект бота есть, но гильдий ещё нет (подключается) — ещё не онлайн
+        return False
+    from services import bot_bridge as _bb
+    return _bb.state_status() == 'online'
+
+
+def bot_state():
+    """'online' | 'starting' | 'offline' — правда о боте для предупреждений.
+
+    1) бот в этом процессе: готов и видит гильдии → online; объект есть,
+       но гильдий пока нет → starting (подключается);
+    2) бота в процессе нет: свежий пульс из data/bot_state.json
+       (панель работает отдельным процессом от бота).
+    """
+    bot = _bot()
+    if bot is not None:
+        try:
+            guilds = getattr(bot, 'guilds', None)
+        except Exception:
+            guilds = None
+        if guilds:
+            try:
+                ready = bool(bot.is_ready())
+            except Exception:
+                ready = True   # стабы тестов без is_ready — считаем готовым
+            return 'online' if ready else 'starting'
+        return 'starting'      # объект есть, но Discord ещё не отдал гильдии
+    from services import bot_bridge as _bb
+    return _bb.state_status()
+
+
+def bot_sees_guild(gid):
+    """Видит ли работающий бот эту гильдию (в своём процессе или по пульсу)."""
+    if live_guild(gid) is not None:
+        return True
+    from services import bot_bridge as _bb
+    st = _bb.read_state()
+    if _bb.state_status(st) == 'offline':
+        return False
+    return str(gid) in _bb.guild_ids(st)
+
+
+def live_guild(gid):
+    """Объект гильдии из бота ЭТОГО процесса (или None).
+
+    Порядок поиска тот же, что всегда был в _cached_guild_list:
+    get_guild, затем страховочный проход по bot.guilds.
+    """
+    bot = _bot()
+    if bot is None:
+        return None
+    try:
+        g = bot.get_guild(int(gid))
+    except (TypeError, ValueError):
+        g = None
+    if g is None:
+        try:
+            g = next((x for x in bot.guilds if str(x.id) == str(gid)), None)
+        except Exception:
+            g = None
+    return g
+
+
+def _demo_guild_list(gid, kind):
+    """Демо-состав ролей/каналов — тот же источник, что у /api/roles,
+    /api/channels и всех остальных пикеров (guild_channels_roles).
+
+    Без него в демо-превью селект «Ролей за наказания» оставался с одной
+    строкой «— не выдавать —», хотя рядом /api/roles честно отдавал 13 ролей.
+    В боевом режиме (бот поднят) сюда не заходим: там пустой список — сигнал
+    «сохранять нельзя», и подменять его демо-ролями опасно.
+    """
+    try:
+        import web.app as _app
+        if not _app._demo_mode():
+            return []
+        from web.routes.guild_admin import guild_channels_roles
+        channels, roles = guild_channels_roles(gid)
+    except Exception as exc:
+        _log.debug("_demo_guild_list(): подавлено: %s", exc)
+        return []
+    if kind == 'roles':
+        return [{'id': str(r.get('id') or ''), 'name': r.get('name') or '',
+                 'color': r.get('color')} for r in roles if r.get('id')]
+    return [{'id': str(c.get('id') or ''), 'name': c.get('name') or ''}
+            for c in channels if c.get('id')]
+
+
+def _remote_disk_roles(gid):
+    """Роли из снимка бота (data/bot_roles_<gid>.json) для панели, в процессе
+    которой бота нет (start_panel + start_bot / gunicorn / панель на VDS).
+
+    Требуем СВЕЖИЙ пульс 'online' и что бот реально видит эту гильдию, иначе
+    возвращаем пусто — страница честно скажет «бот офлайн/роли недоступны»,
+    а не покажет устаревший список.
+    """
+    from services import bot_bridge as _bb
+    st = _bb.read_state()
+    if _bb.state_status(st) != 'online':
+        return []
+    if str(gid) not in _bb.guild_ids(st):
+        return []
+    rows = _bb.read_roles(gid)
+    out = []
+    for r in rows or []:
+        if r.get('managed'):
+            continue                      # управляемые (бот/интеграции) — как в живом списке
+        rid = str(r.get('id') or '')
+        if not rid or rid == str(gid):    # @everyone — не роль выбора
+            continue
+        out.append({'id': rid,
+                    'name': str(r.get('name') or '?'),
+                    'color': r.get('color')})
+    return out
+
+
+def _cached_guild_list(gid, kind):
+    """kind: 'roles' | 'channels' — список с кэшем по составу (число объектов)
+    и TTL. При изменении состава сигнатура меняется → мгновенный промах."""
+    g = live_guild(gid)
+    if g is None:
+        # живой гильдии в этом процессе нет: в демо отдаём демо-состав
+        # (иначе селект мёртв), в отдельном процессе от бота — дисковый
+        # снимок ролей бота; в остальном — пустой список, save_settings его
+        # отклонит с человеческой подсказкой.
+        demo = _demo_guild_list(gid, kind)
+        if demo:
+            return demo
+        if kind == 'roles':
+            return _remote_disk_roles(gid)
+        return []
+    if kind == 'roles':
+        sig = len(getattr(g, 'roles', []) or [])
+    else:
+        sig = len(getattr(g, 'channels', []) or [])
+    key = (int(gid), kind)
+    now = time.time()
+    with _GUILD_CACHE_LOCK:
+        hit = _GUILD_LIST_CACHE.get(key)
+        if hit and hit[2] == sig and (now - hit[0]) < _GUILD_LIST_TTL:
+            return hit[1]
+    payload = _build_guild_list(g, kind)
+    with _GUILD_CACHE_LOCK:
+        _GUILD_LIST_CACHE[key] = (now, payload, sig)
+        # лёгкая уборка протухшего
+        for k in [k for k, v in _GUILD_LIST_CACHE.items() if (now - v[0]) > 120.0]:
+            _GUILD_LIST_CACHE.pop(k, None)
+    return payload
+
+
+def invalidate_guild_lists(gid=None):
+    """Сбросить кэш ролей/каналов (после изменений на сервере)."""
+    with _GUILD_CACHE_LOCK:
+        if gid is None:
+            _GUILD_LIST_CACHE.clear()
+        else:
+            for k in [k for k in _GUILD_LIST_CACHE if k[0] == int(gid)]:
+                _GUILD_LIST_CACHE.pop(k, None)
+
+
+def _build_guild_list(g, kind):
+    if kind == 'roles':
+        out = []
+        for r in sorted(g.roles, key=lambda x: -x.position):
+            if r.is_default() or getattr(r, 'managed', False):
+                continue
+            out.append({'id': str(r.id), 'name': r.name,
+                        'color': '#%06x' % r.color.value if r.color else None})
+        return out
+    out = []
+    for ch in g.text_channels:
+        out.append({'id': str(ch.id), 'name': ch.name})
+    out.sort(key=lambda x: x['name'].lstrip('#').lower())
+    return out
+
+ACTIONS = ('mute', 'vmute', 'kick', 'ban')
+ACTION_LABELS = {'mute': 'Мут чата', 'vmute': 'Войс-мут', 'kick': 'Кик', 'ban': 'Бан'}
 UNITS = (('minute', 'минут'), ('hour', 'часов'), ('day', 'дней'))
 TEMP_WHITELIST_PATH = 'data/temp_whitelist.json'
 MAX_STEPS = 20
@@ -149,14 +359,6 @@ def save_temp_whitelist(gid, ids):
     return clean
 
 
-ROLE_KINDS = (('mute', 'Мут чата'), ('vmute', 'Войс-мут'), ('ban', '«Бан»'))
-ROLE_HINTS = {
-    'mute': 'Выдаётся вместо таймаута: пока роль на участнике — писать нельзя.',
-    'vmute': 'Войс-мут ролью: работает и когда участник не в голосовом канале.',
-    'ban': 'Участник остаётся на сервере, но видит только канал апелляции.',
-}
-
-
 def _bot():
     try:
         import web.app as _app
@@ -166,84 +368,31 @@ def _bot():
 
 
 def guild_roles(gid):
-    """Роли сервера для селектов (без @everyone, управляемые бот хуже не трогаем)."""
-    bot = _bot()
-    if bot is None:
-        return []
-    try:
-        g = bot.get_guild(int(gid))
-    except (TypeError, ValueError):
-        return []
-    if g is None:
-        return []
-    out = []
-    for r in sorted(g.roles, key=lambda x: -x.position):
-        if r.is_default() or getattr(r, 'managed', False):
-            continue
-        out.append({'id': str(r.id), 'name': r.name,
-                    'color': '#%06x' % r.color.value if r.color else None})
-    return out
+    """Роли сервера для селектов (кэш 15с; без @everyone и managed)."""
+    return _cached_guild_list(gid, 'roles')
 
 
 def guild_channels(gid):
-    """Текстовые каналы сервера (для меню апелляций)."""
-    bot = _bot()
-    if bot is None:
-        return []
-    try:
-        g = bot.get_guild(int(gid))
-    except (TypeError, ValueError):
-        return []
-    if g is None:
-        return []
-    out = []
-    for ch in g.text_channels:
-        out.append({'id': str(ch.id), 'name': ch.name})
-    out.sort(key=lambda x: x['name'].lstrip('#').lower())
-    return out
-
-
-def roles_view(gid):
-    """Выбранные роли наказаний + канал меню апелляций (как их читает бот)."""
-    roles = PR.get(gid) or {}
-    return {
-        'punish_roles': {k: int(roles.get(k) or 0) for k, _l in ROLE_KINDS},
-        'kinds': [{'key': k, 'label': lbl, 'hint': ROLE_HINTS[k]}
-                  for k, lbl in ROLE_KINDS],
-        'appeal_menu_channel': int(get_route(gid, 'appeal_menu_channel') or 0),
-    }
-
-
-def save_punish_roles(gid, mapping):
-    """Записать роли наказаний; 0/пусто — снять выбор (вернётся старое поведение)."""
-    clean = {}
-    for k, _lbl in ROLE_KINDS:
-        v = (mapping or {}).get(k)
-        try:
-            v = int(v or 0)
-        except (TypeError, ValueError):
-            v = 0
-        if v < 0:
-            v = 0
-        clean[k] = v
-    PR.set_roles(gid, **clean)
-    return clean
+    """Текстовые каналы сервера (кэш 15с; для меню апелляций)."""
+    return _cached_guild_list(gid, 'channels')
 
 
 def mod_view(gid):
-    steps = steps_view(gid)
-    out = {
-        'steps': steps,
+    """Конфиг страницы /mod-settings: лестница, исключения, канал меню.
+
+    Роли наказаний сюда НЕ включены — они живут в одном месте, на
+    /role-settings (иначе две страницы правят одно хранилище и расходятся).
+    """
+    return {
+        'steps': steps_view(gid),
         'actions': [{'key': k, 'label': v} for k, v in ACTION_LABELS.items()],
         'units': [{'key': k, 'label': v} for k, v in UNITS],
         'temp_whitelist': temp_whitelist(gid),
         'max_steps': MAX_STEPS,
-        'bot_online': _bot() is not None,
-        'roles': guild_roles(gid),
-        'channels': guild_channels(gid),
+        'bot_online': bot_online(),
+        'bot_state': bot_state(),
+        'appeal_menu_channel': int(get_route(gid, 'appeal_menu_channel') or 0),
     }
-    out.update(roles_view(gid))
-    return out
 
 
 def register(ctx):
@@ -264,12 +413,14 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_mod_settings(gid):
+        # gid из URL — сервер, чьи правила и ACL применяются.
+        try:
+            acl_gid = int(str(gid))
+        except (TypeError, ValueError):
+            acl_gid = 0
         gid = _gid(ctx)
         if not gid:
-            try:
-                gid = int(gid)
-            except (TypeError, ValueError):
-                gid = 0
+            gid = acl_gid or 0
         if request.method == 'GET':
             return jsonify({'success': True, 'cfg': mod_view(gid)})
 
@@ -285,10 +436,10 @@ def register(ctx):
             import web.app as _app
             from web.routes._common import viewer_member, acl_action_allowed
             _bot = _app.bot_instance
-            _member = viewer_member(_bot, gid) if _bot is not None else None
+            _member = viewer_member(_bot, acl_gid) if _bot is not None else None
             for _st in (data.get('steps') or []):
                 _act = str(_st.get('action', 'mute') if isinstance(_st, dict) else 'mute').strip().lower()
-                if _act in ACTIONS and not acl_action_allowed(gid, _member, _act):
+                if _act in ACTIONS and not acl_action_allowed(acl_gid, _member, _act):
                     return jsonify({'success': False,
                                     'error': f'Нет права: ступень «{ACTION_LABELS.get(_act, _act)}» '
                                              'не разрешена вашей роли (настройка — '
@@ -302,13 +453,6 @@ def register(ctx):
             _fire_panel_notification(
                 'mod_settings', 'Исключения временных мер обновлены',
                 f'{who}: в списке — {len(temp_whitelist(gid))}')
-        if 'punish_roles' in data:
-            saved = save_punish_roles(gid, data.get('punish_roles'))
-            chosen = ', '.join(f'{k}={v}' for k, lbl in ROLE_KINDS
-                               for v in [saved.get(k) or 0] if v) or 'ничего (старое поведение)'
-            _fire_panel_notification(
-                'mod_settings', 'Роли наказаний обновлены',
-                f'{who}: {chosen}')
         if 'appeal_menu_channel' in data:
             try:
                 cid = int(data.get('appeal_menu_channel') or 0)

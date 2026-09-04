@@ -12,9 +12,9 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Основное <span class="sep">·</span> Статистика бота</div>
+    <div class="eyebrow"> Основное </div>
     <h1>Статистика бота</h1>
-    <p class="lead">Живая телеметрия: CPU, память, аптайм, пинг и история сессии.</p>
+    <p class="lead">Телеметрия: CPU, память, аптайм, пинг и история сессии.</p>
   </div>
   <div class="page-head-actions">
     <span class="live-chip"><span class="dot"></span> LIVE · 2.5с</span>
@@ -249,30 +249,23 @@
     window.confirmAction('Перезапустить бота?', 'Бот перезапустится на 10-15 секунд. Все системы временно отключатся.', doRestart, { danger: true, okText: 'Перезапустить' });
   });
 
-  $('syncBtn').addEventListener('click', async function () {
-    var btn = $('syncBtn');
-    window.qualitySetLoading(btn, true);
-    var r = await fetch('/api/bot/sync', { method: 'POST' });
-    var d = await r.json();
-    window.qualitySetLoading(btn, false);
-    showStatus(d.success ? 'Команды синхронизированы!' : (d.error || 'Ошибка'), d.success);
-  });
-
-  $('cmdsAuditBtn').addEventListener('click', async function () {
+  // Рендер аудита команд вынесен отдельно — кнопка «Синхронизировать»
+  // после завершения фонового прогона открывает его сама.
+  async function renderAudit() {
     var box = $('cmds-audit');
     box.style.display = 'block';
     box.innerHTML = '<span class="hint">Читаю списки команд прямо из Discord…</span>';
     try {
       var r = await fetch('/api/bot/commands-audit');
       var d = await r.json();
-      if (d.error) { box.innerHTML = '<span class="hint error">' + esc(d.error) + '</span>'; return; }
+      if (d.error) { box.innerHTML = '<span class="hint error">' + esc(d.error) + '</span>'; return d; }
       var html = '';
       if (d.duplicates && d.duplicates.length) {
         html += '<div class="hint error"><b>ДУБЛИ (имя есть и глобально, и на сервере):</b> ';
         d.duplicates.forEach(function (x) {
           html += '<div>• ' + esc(x.guild) + ': ' + x.names.map(esc).join(', ') + '</div>';
         });
-        html += 'Нажмите «Синхронизировать команды» — уберётся само.</div>';
+        html += 'Запустите синхронизацию ещё раз — уберётся само.</div>';
       } else {
         html += '<div class="hint" style="color:#16a34a"><b>Дублей нет</b> — каждая команда живёт ровно в одном месте.</div>';
       }
@@ -305,18 +298,76 @@
                   esc(ls.verify) + '</div>';
         }
       } else {
-        html += '<div class="hint error" style="margin-top:6px"><b>Нового full_sync ещё НЕ БЫЛО</b> ' +
-                '(после последнего /update синк не проходил) — нажмите «Синхронизировать команды».</div>';
+        html += '<div class="hint error" style="margin-top:6px"><b>Полного синка ещё не было.</b></div>';
       }
       if (d.targets_conf) {
         html += '<div class="hint"><b>Настроено в .env (MAIN+EXTRA):</b> ' +
                 esc((d.targets_conf || []).join(', ') || 'пусто — глобальный режим') + '</div>';
       }
       box.innerHTML = html;
+      return d;
     } catch (e) {
       box.innerHTML = '<span class="hint error">Не удалось запросить: ' + esc(e) + '</span>';
+      return null;
     }
+  }
+
+  $('syncBtn').addEventListener('click', async function () {
+    var btn = $('syncBtn');
+    if (btn.dataset.busy === '1') return;   // защита от двойного клика
+    btn.dataset.busy = '1';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Синхронизирую…';
+    showStatus('Синхронизация идёт в фоне (очистка глобального списка + серверы). Это до минуты — не закрывайте страницу.', true);
+
+    // метка «до» — дождёмся, пока фоновый full_sync перезапишет sync_last.json
+    var before = null;
+    try { before = (await (await fetch('/api/bot/commands-audit')).json()).last_sync; } catch (e) {}
+    var beforeAt = before && before.at ? before.at : '';
+
+    var started = false;
+    try {
+      var r = await fetch('/api/bot/sync', { method: 'POST' });
+      var d = await r.json();
+      started = !!(d.success || d.started);
+      if (!started) showStatus(d.error || 'Синк не запустился (бот офлайн?).', false);
+    } catch (e) {
+      showStatus('Не удалось запустить синк: ' + e, false);
+    }
+
+    if (started) {
+      // опрашиваем метку завершения, пока at не сменится и режим не финальный
+      var done = false, tries = 0;
+      while (!done && tries < 30) {   // ~90 секунд
+        await new Promise(function (res) { setTimeout(res, 3000); });
+        tries++;
+        try {
+          var a = await (await fetch('/api/bot/commands-audit')).json();
+          var ls = a.last_sync;
+          if (ls && ls.at && ls.at !== beforeAt &&
+              /guilds|global/.test(String(ls.mode || ''))) done = true;
+          if (ls && /failed|timeout/.test(String(ls.mode || ''))) done = true;
+        } catch (e) {}
+      }
+      // показываем реальный результат — аудит со счётчиком команд
+      var res = await renderAudit();
+      var dupCount = res && res.duplicates ? res.duplicates.length : 0;
+      if (done && dupCount === 0) {
+        var n = res && res.last_sync ? (res.last_sync.commands != null ? res.last_sync.commands : '') : '';
+        showStatus('Готово: команды синхронизированы, дублей нет.' + (n !== '' ? ' (' + n + ' команд)' : ''), true);
+      } else if (!done) {
+        showStatus('Синк ещё идёт в фоне (дольше обычного — возможно, rate limit Discord). Нажмите «Рентген команд» через минуту.', false);
+      } else {
+        showStatus('Синк прошёл, но остались дубли/ошибки — смотрите рентген ниже и при необходимости повторите.', false);
+      }
+    }
+
+    btn.dataset.busy = '0';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sync"></i> Синхронизировать команды';
   });
+
+  $('cmdsAuditBtn').addEventListener('click', renderAudit);
 
   loadStats();
   if (window.setLiveRefresh) window.setLiveRefresh(loadStats, 1500);

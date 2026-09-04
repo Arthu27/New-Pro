@@ -46,19 +46,24 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-# Заказ владельца 2026-08-28 «как можно меньше» + 2026-08-29 «верни тикеты»
-# и «ticket-add/remove — в меню тикета»: боевое слеш-меню — 7 команд
-# (modpanel с варном внутри, play, апелляция, update, afk/afk-remove
-# и ticket-panel; участников тикета добавляют кнопками ➕/➖).
-check(data['total'] == 7, f"lean: собрано {data['total']} живых команд (ровно 7)")
-check(data['slash'] == 7 and data['prefix'] == 0,
+# Заказ владельца: боевое слеш-меню — минимум команд. Тикет-система снята
+# 2026-08-31, её роль выполняет /report (жалоба карточкой в канал модерации).
+# Музыка (/play) снята 2026-09-01 — бот модерационный.
+# В меню: modpanel, апелляция, update, afk, report, my-violations.
+# Сетап-команды убраны в панель, /afk-remove удалён (AFK спадает авто).
+check(data['total'] == 6, f"lean: собрано {data['total']} живых команд (ровно 6)")
+check(data['slash'] == 6 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
+for gone in ('verify-setup', 'report-setup', 'report-settings', 'afk-remove'):
+    check(gone not in [c['name'] for c in data.get('commands', [])],
+          f'{gone} убран из боевого меню (настройка в панели/авто)')
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
-check(len(data['categories']) >= 3, f"lean: разделов ≥3 ({len(data['categories'])})")
 labels = [c['label'] for c in data['categories']]
-for need in ('Модерация', 'Музыка', 'Система', 'Тикеты'):
+for need in ('Модерация', 'Система'):
     check(need in labels, f'lean: раздел «{need}» в каталоге')
+check('Музыка' not in labels, 'lean: раздел «Музыка» убран (музыка снята с эксплуатации 2026-09-01)')
+check('Тикеты' not in labels, 'lean: раздел «Тикеты» убран (тикет-система снята, жалобы — /report)')
 check('Логи и аудит' not in labels,
       'логи остаются вне панельного каталога (заказ «как можно меньше»)')
 check('Голосовые' not in labels,
@@ -66,44 +71,37 @@ check('Голосовые' not in labels,
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
-check(mods.get('enabled') == 30 and mods.get('sleeping') == 75,  # +proof_cog (демки)
-      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')}")
+# 30: в лёгком профиле 30 файлов модулей. Событийные коги без команд
+# (panel_live, member_store_sync) считаются модулями наравне с остальными.
+check(mods.get('enabled') == 30 and mods.get('sleeping') == 6,
+      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')} (ожидание 30/6)")
 
-print('== 1.1. Реестр в BOT_FULL (полный состав) ==')
-os.environ['BOT_FULL'] = '1'
-full = CR.catalog(force=True)
-check(full['total'] >= 250, f"full: собрано {full['total']} команд (≥250)")
-full_labels = [c['label'] for c in full['categories']]
-for need in ('Экономика', 'Уровни и карма', 'Игры и развлечения'):
-    check(need in full_labels, f'full: раздел «{need}» вернулся')
-os.environ.pop('BOT_FULL', None)
+print('== 1.1. Выключенные разделы физически удалены ==')
+# Экономика/уровни/игры больше не «спящие» — их файлы удалены с диска,
+# поэтому их нет в каталоге ни в каком режиме.
+import glob as _glob
+for gone_cog in ('cogs/economy_cog.py', 'cogs/level_cog.py',
+                 'cogs/fun_cog.py', 'cogs/minigames.py', 'cogs/giveaway.py'):
+    check(not os.path.exists(gone_cog), f'файл {gone_cog} удалён')
 data = CR.catalog(force=True)
 
 names = [c['name'] for c in data['commands']]
 check(len(names) == len(set(names)), 'имена команд не дублируются')
-# музыка — боевой модуль: единственная команда /play в разделе Музыка
-hit = next((c for c in data['commands'] if c['name'] == 'play'
-            and c['cat'] == 'music'), None)
-check(hit is not None, 'музыкальная команда play найдена в разделе Музыка')
-for gone in ('pause', 'resume', 'skip', 'queue', 'nowplaying', 'leave',
-             'musicpanel'):
+# Музыка снята с эксплуатации (2026-09-01): /play и прочих музыкальных команд
+# в боевом каталоге больше нет (music_cog/voice_commands в RETIRED_COGS).
+for gone in ('play', 'pause', 'resume', 'skip', 'queue', 'nowplaying',
+             'leave', 'musicpanel'):
     check(next((c for c in data['commands'] if c['name'] == gone
                 and c['cat'] == 'music'), None) is None,
-          f'старая музыкальная команда {gone} удалена (управление — пульт /play)')
+          f'музыкальная команда {gone} убрана из боевого меню (музыка снята)')
 
-music = next(c for c in data['commands'] if c['name'] == 'play' and c['cat'] == 'music')
-check('игра' in music['desc'].lower() or 'трек' in music['desc'].lower()
-      or 'музык' in music['desc'].lower(),
-      f"у play русское описание ({music['desc']!r})")
-check(music['module'] == 'music_cog.py', 'модуль команды указан')
-check(music['kind'] == 'slash' and music['aliases'] == [],
-      'музыка переехала на слеш (алиасов у слеша нет)')
-
-sub = next((c for c in full['commands'] if c['kind'] == 'sub' and c['group']), None)
-check(sub is not None and ' ' in sub['name'],
-      f"подкоманды групп развёрнуты (в full: '{sub['name'] if sub else '?'}')")
-check(not any(c['kind'] == 'sub' for c in data['commands']),
+# Lean-профиль: слеш-меню курируемое и минимальное (~7 команд), групповые
+# подкоманды вычищены — в каталоге только корневые слеш-команды.
+sub = [c for c in data['commands'] if c['kind'] == 'sub' and c.get('group')]
+check(len(sub) == 0,
       'lean: групповые подкоманды вычищены из боевого меню')
+check(data['slash'] <= 12,
+      f'lean: слеш-меню курируемое и короткое ({data["slash"]} команд)')
 
 nodesc = sum(1 for c in data['commands'] if c['desc'] == 'Описание скоро появится')
 check(nodesc <= int(data['total'] * 0.15),
@@ -154,27 +152,26 @@ check(d['total'] == data['total'] and d['shown'] == d['total']
 check(d['slash'] > 0 and d['prefix'] == 0,
       'счётчики типов в ответе: слеш есть, префиксных — ноль')
 check(d.get('modules', {}).get('enabled') == 30
-      and d['modules']['sleeping'] == 75,
-      'в ответе — счётчик модулей (30 включено / 75 спит)')
+      and d['modules']['sleeping'] == 6,
+      'в ответе — счётчик модулей (30 включено / 6 спит)')
 
-r = client.get('/api/commands/catalog?q=play')
+r = client.get('/api/commands/catalog?q=report')
 d = r.get_json()
-check(all('play' in c['name'] or 'play' in c['desc'].lower()
-          or any('play' in a for a in c['aliases']) for c in d['commands']),
-      f'поиск q=play — только релевантные ({d["shown"]} шт)')
+check(all('report' in c['name'] or 'жалоб' in c['desc'].lower()
+          or any('report' in a for a in c['aliases']) for c in d['commands']),
+      f'поиск q=report — только релевантные ({d["shown"]} шт)')
 r = client.get('/api/commands/catalog?cat=music')
 d = r.get_json()
-check(d['commands'] and all(c['cat'] == 'music' for c in d['commands']),
-      'фильтр по разделу music')
+check(not d['commands'], 'фильтр по разделу music пуст — музыка снята с эксплуатации')
 r = client.get('/api/commands/catalog?kind=slash')
 d = r.get_json()
 check(all(c['kind'] in ('slash', 'sub') for c in d['commands']),
       'фильтр kind=slash включает подкоманды групп')
-r = client.get('/api/commands/catalog?kind=slash&cat=music')
+r = client.get('/api/commands/catalog?kind=slash&cat=mod')
 d = r.get_json()
-check(d['commands'] and all(c['kind'] == 'slash' and c['cat'] == 'music'
-                            for c in d['commands']),
-      'двойной фильтр kind+cat (музыка — слеш)')
+check(all(c['kind'] in ('slash', 'sub') and c['cat'] == 'mod'
+          for c in d['commands']),
+      'двойной фильтр kind=slash+cat=mod отдаёт модерацию')
 
 print('== 4. Шаблон страницы ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'commands.html'),
@@ -205,9 +202,13 @@ print('== 5. /help показывает все ЖИВЫЕ разделы ==')
 import cogs.help as HP  # noqa: E402
 ov = HP.build_help_embed()
 field_names = ' | '.join(f.name for f in ov.fields)
-for need in ('Музыка', 'Система',
-             'Модерация', 'Тикеты'):
-    check(need in field_names, f'/help overview содержит раздел «{need}»')
+from services.permission_acl import all_categories as _live_cats
+# Разделы справки = живые разделы каталога бота. «Жалобы» больше нет:
+# репорты живут в «Модерации», отдельного такого раздела не осталось.
+for need in sorted(_live_cats()):
+    check(need in field_names, f'/help overview содержит живой раздел «{need}»')
+check('Музыка' not in field_names,
+      'раздел «Музыка» убран из /help (музыка снята с эксплуатации 2026-09-01)')
 check('Голосовые' not in field_names,
       'голосовая статистика удалена из /help (команд нет — раздела нет)')
 help_src = open(os.path.join(ROOT, 'cogs', 'help.py'), encoding='utf-8').read()
@@ -219,23 +220,27 @@ check('Экономика' not in field_names and 'Уровни и карма' n
       'спящие разделы (экономика/уровни) из /help убраны')
 check('Логи и аудит' not in field_names and 'AI ' not in field_names,
       'нет дублей пересекающихся с ACL разделов (Логи и аудит / AI)')
-# в полном составе спящие разделы возвращаются
-os.environ['BOT_FULL'] = '1'
-ov_full = HP.build_help_embed()
-check('Экономика' in ' | '.join(f.name for f in ov_full.fields),
-      'BOT_FULL=1: раздел «Экономика» вернулся в /help')
-os.environ.pop('BOT_FULL', None)
+# Выключенные разделы (экономика/уровни) физически удалены: их нет
+# в /help даже в полном составе — возвращать нечего.
+check('Экономика' not in field_names and 'Уровни и карма' not in field_names
+      and 'Игры и развлечения' not in field_names,
+      '/help не показывает удалённые разделы (экономика/уровни/игры)')
 # select-меню Discord: максимум 25 опций
 n_opts = 1 + len(HP._all_category_labels())
 check(n_opts <= 25, f'select-меню умещается в лимит Discord ({n_opts} ≤ 25)')
 e_music = HP.build_help_embed(category_id='Музыка')
-check('Музыка' in e_music.title and 'команд' in (e_music.description or ''),
-      'страница раздела «Музыка» собирается')
+_mdesc = e_music.description or ''
+# Раздел присутствует в навигации, но без единой живой команды: «**0** команд»
+# и ни одной команды (`/...`) в теле.
+check('**0**' in _mdesc
+      and not any('/play' in (f.value or '') for f in e_music.fields),
+      'раздел «Музыка» в справке пуст — живых команд нет (музыка снята)')
 # ACL-фильтрация ядра не сломана
 e_mod = HP.build_help_embed(category_id='Модерация')
 mod_text = ' '.join(f.value for f in e_mod.fields)
-check('`ban`' in mod_text and '`tempban`' in mod_text,
-      'мод-ядро справки прежнее (ban/tempban на месте)')
+_mod_cmd = next(iter(_live_cats().get('Модерация', [])), 'modpanel')
+check('`%s`' % _mod_cmd in mod_text,
+      f'мод-ядро справки на месте (живая команда {_mod_cmd})')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

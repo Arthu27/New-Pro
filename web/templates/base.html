@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Панель управления Hakumo: модерация, участники, роли, каналы и настройки Discord-сервера в одном окне.">
     <title>{% block title %}Панель Hakumo{% endblock %}</title>
+    {% block styles %}{% endblock %}
     <script>
       /* П.5: тема — самым первым шагом, ДО любых стилей: фон никогда
          не «вспыхивает» белым при переходах между разделами/каналами. */
@@ -26,7 +28,16 @@
       html[data-theme="light"] { background: #f5f6f8; color-scheme: light; }
       body { background: transparent; margin: 0; }
     </style>
-    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+<!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
+         только разобрав fonts.css и all.subset.css, и они встают в конец
+         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
+         820 мс до последнего шрифта). crossorigin обязателен даже для своего
+         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
+    <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
     <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
 </head>
@@ -40,6 +51,20 @@
     (function () {
       'use strict';
       var W = window;
+      /* ── Ранний прогрев списков сервера ───────────────────────────
+         Каналы и роли начинают грузиться в момент парсинга body, а не когда
+         очередь дойдёт до страничного скрипта в конце — пикеры и селекты
+         получают данные практически к первому кадру («сразу и везде»).
+         pickers.js переиспользует эти Promise, не дёргая сеть повторно.
+         login.html не наследует base — на странице входа прогрева нет. */
+      if (!W.__warmLists && W.fetch) {
+        W.__warmLists = {
+          channels: W.fetch('/api/channels', { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); }).catch(function () { return null; }),
+          roles: W.fetch('/api/roles', { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); }).catch(function () { return null; })
+        };
+      }
       function simpleJSON(url, opts) {
         var init = opts || {};
         return W.fetch(url, init).then(function (r) {
@@ -144,7 +169,7 @@
         <div class="boot-wrap">
             <span class="boot-ring"></span>
             <span class="boot-ring"></span>
-            <div class="boot-logo"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo"></div>
+            <div class="boot-logo"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></div>
             <div class="boot-name">HAKUMO</div>
             <div class="boot-sub">загрузка панели</div>
         </div>
@@ -158,7 +183,7 @@
         <!-- ── Сайдбар ─────────────────────────────────────── -->
         <aside class="sidebar" id="sidebar">
             <a href="/" class="brand">
-                <div class="brand-icon"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>
+                <div class="brand-icon"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>
                 <div class="brand-text">
                     <div class="brand-title">Hakumo</div>
                     <div class="brand-sub">Панель управления</div>
@@ -213,6 +238,11 @@
                         <span class="sys-label">Сессия</span>
                         <span class="sys-val mono" id="sysSession">00:00:00</span>
                     </div>
+                    <div class="sys-status-row" title="Коммит панели: {{ build_sha or 'неизвестен' }}{% if build_branch %} · ветка {{ build_branch }}{% endif %}. Сверяется с последним запушенным — если не совпадает, обновление не применилось.">
+                        <i class="fas fa-code-commit sys-ico"></i>
+                        <span class="sys-label">Сборка</span>
+                        <span class="sys-val mono" id="sysBuild">{{ build_sha or '—' }}</span>
+                    </div>
                     <div class="sys-status-row">
                         <i class="fas fa-clock sys-ico"></i>
                         <span class="sys-label">Время</span>
@@ -232,7 +262,7 @@
         <div class="main-wrap">
             <header class="topbar">
                 <a class="topbar-brand" href="/" title="Hakumo — на главную" aria-label="Hakumo — на главную">
-                    <img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo">
+                    <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo">
                 </a>
                 <nav class="crumbs" aria-label="Хлебные крошки">
                     <a class="crumb-home" href="/" title="Обзор сервера"><i class="fas fa-house"></i></a>
@@ -330,7 +360,7 @@
 
     <!-- ── Плавающее меню быстрых действий ────────────────── -->
     {% if role != 'uye' %}
-    <div id="fabHost"></div>
+    <div id="fabHost" data-panel-role="{{ role }}"></div>
     {% endif %}
 
     <!-- ── Мобильная нижняя навигация ─────────────────────── -->
@@ -339,7 +369,7 @@
         <a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class="fas fa-house"></i> Главная</a>
         <a href="/warnings" class="{% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-shield-halved"></i> Варны</a>
         <a href="/logs" class="{% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> Журнал</a>
-        <a href="/tickets-ops" class="{% if request.path == '/tickets-ops' %}active{% endif %}"><i class="fas fa-ticket-alt"></i> Тикеты</a>
+        <a href="/reports-queue" class="{% if request.path == '/reports-queue' %}active{% endif %}"><i class="fas fa-flag"></i> Репорты</a>
         <a href="/team-board" class="{% if request.path == '/team-board' %}active{% endif %}"><i class="fas fa-table-columns"></i> Доска</a>
     </nav>
     {% endif %}

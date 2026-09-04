@@ -3,13 +3,13 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
+    demo_members_search, demo_member_payload,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -22,25 +22,24 @@ def register(ctx):
 
 
     @app .route ('/api/warn-config/<guild_id>',methods =['GET'])
-    @login_required 
+    @login_required
     @role_required ('admin')
     def api_warn_config_get (guild_id ):
-        f =f'data/warn_config_{guild_id}.json'
-        if not os .path .exists (f ):
-            return jsonify ({'thresholds':[{'count':3 ,'action':'timeout','duration':10 },{'count':5 ,'action':'ban','duration':0 }]})
-        with open (f ,encoding ='utf-8')as fp :
-            return jsonify (json .load (fp ))
+        # Канонический источник ступеней — «Лестница наказаний» (ladder_panel /
+        # cogs.warnings, ключ 'steps'). Старый формат 'thresholds' больше не пишем.
+        from web .routes import ladder_panel as LP
+        cfg =LP .load_cfg (str (guild_id ))
+        return jsonify ({'steps':LP .steps_of (cfg )})
 
 
     @app .route ('/api/warn-config/<guild_id>',methods =['POST'])
-    @login_required 
+    @login_required
     @role_required ('admin')
     def api_warn_config_save (guild_id ):
-        d =request .get_json (silent =True )or {}
-        os .makedirs ('data',exist_ok =True )
-        with open (f'data/warn_config_{guild_id}.json','w',encoding ='utf-8')as fp :
-            json .dump (d ,fp ,indent =2 ,ensure_ascii =False )
-        return jsonify ({'ok':True })
+        # Ступени настраиваются только на /ladder. Запись через старый эндпоинт
+        # запрещена, чтобы конфликтующий формат не перетирал 'steps'.
+        return jsonify ({'ok':False ,
+            'error':'Настройка ступеней переехала на страницу «Лестница наказаний» (/ladder)'}),409
 
 
     @app .route ('/api/duty/<guild_id>',methods =['GET'])
@@ -68,7 +67,8 @@ def register(ctx):
         if not afk_cog :return jsonify ([])
         guild_afk =afk_cog ._afk .get (str (guild_id ),{})
         result =[]
-        guild =bot .get_guild (int (guild_id ))
+        # int() на нечисловом id давал 500; остальные роуты панели так не делают.
+        guild =bot .get_guild (int (guild_id ))if str (guild_id ).isdigit ()else None 
         for uid ,data in guild_afk .items ():
             member =guild .get_member (int (uid ))if guild else None 
             result .append ({
@@ -85,11 +85,25 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def api_watchlist (guild_id ):
-        f ='data/mod_data.json'
-        if not os .path .exists (f ):return jsonify ([])
-        with open (f ,encoding ='utf-8')as fp :
-            data =json .load (fp )
-        wl =data .get ('watchlist',{}).get (guild_id ,{})
+        # Канонический файл — data/mod_advanced_data.json: туда пишет бот
+        # (cogs/moderation.py, _maybe_watchlist_after_mute при 2+ мьютах).
+        # Раньше панель читала data/mod_data.json, где ключ watchlist не
+        # создаёт никто, — страница «Наблюдение» была пуста ВСЕГДА, даже когда
+        # фигуранты реально есть. mod_data.json оставлен запасным, чтобы
+        # старые записи не потерялись.
+        wl ={}
+        for f in ('data/mod_advanced_data.json','data/mod_data.json'):
+            if not os .path .exists (f ):continue 
+            try :
+                with open (f ,encoding ='utf-8')as fp :
+                    data =json .load (fp )
+            except Exception as _ex :
+                _log .debug ('watchlist: не читается %s: %s',f ,_ex )
+                continue 
+            node =(data .get ('watchlist')or {}).get (str (guild_id ))or {}
+            if node :
+                wl =node 
+                break 
         result =[]
         try :
             from web .routes ._common import name_map_for
@@ -97,10 +111,147 @@ def register(ctx):
         except Exception as _ex :
             _nm ={}
         for uid ,info in wl .items ():
+            if not isinstance (info ,dict ):continue 
             result .append ({'id':uid ,'name':_nm .get (uid )or info .get ('name')or uid ,
             'reason':info .get ('reason',''),'added_by':info .get ('added_by',''),
-            'timestamp':info .get ('timestamp','')})
+            'timestamp':info .get ('timestamp',''),'until':info .get ('until')})
         return jsonify (result )
+
+
+    def _pick_member_item (m ):
+        """Элемент для member-picker'а панели: {user_id, name, bot, avatar}."""
+        p =ms_member_payload (m )
+        return {
+            'user_id':p .get ('id')or str (getattr (m ,'id','')),
+            'name':p .get ('display_name')or p .get ('name')or str (getattr (m ,'id','')),
+            'bot':bool (p .get ('is_bot')or getattr (m ,'bot',False )),
+            'avatar':p .get ('avatar')or '',
+        }
+
+    def _pick_demo_item (m ):
+        """Тот же формат для демо-участника (dict из DEMO_MEMBERS)."""
+        return {
+            'user_id':str (m .get ('id','')),
+            'name':m .get ('display_name')or m .get ('name',''),
+            'bot':bool (m .get ('bot',False )),
+            'avatar':m .get ('avatar',''),
+        }
+
+    def _local_suggest (gid ,q ,offset ,limit ):
+        """Локальный fallback для пикера: карта имён data/member_names_<gid>.json
+        (+ демо в демо-режиме). Используется, когда бот подключён, но сервера или
+        участников в его кэше нет (обрыв гейтвея, рестарт, нет intent) — чтобы
+        страницы панели НЕ ломались 404 и показывали известные имена."""
+        from web .routes ._common import name_map_for ,demo_members_search as _dms
+        try :
+            nm =name_map_for (str (gid ))
+        except Exception :
+            nm ={}
+        pool =[{'user_id':str (u ),'name':n ,'bot':False ,'avatar':''}
+               for u ,n in sorted (nm .items (),key =lambda kv :str (kv [1 ]).lower ())]
+        if _app_demo ():
+            pool +=[_pick_demo_item (m )for m in _dms ('',limit =500 )]
+        qq =str (q or '').strip ().lower ()
+        if qq :
+            pool =[p for p in pool
+                   if qq in p ['name'].lower ()or qq in p ['user_id']]
+        # дедуп по user_id (имя-карта и демо могут пересечься)
+        seen =set ();uniq =[]
+        for p in pool :
+            if p ['user_id']in seen :
+                continue
+            seen .add (p ['user_id']);uniq .append (p )
+        return {'items':uniq [offset :offset +limit ],
+                'has_more':len (uniq )>=offset +limit }
+
+    def _app_demo ():
+        try :
+            import web .app as _am
+            return _am ._demo_mode ()
+        except Exception :
+            return False
+
+    @app .route ('/api/guild/<guild_id>/member-card/suggest',methods =['GET'])
+    @login_required
+    @role_required ('uye')
+    def api_member_card_suggest (guild_id ):
+        """Подсказки участника для пикеров панели (antifake, ladder, proofs,
+        temp_moderation и т.д.). q — имя/ник/часть ID; offset — для «показать
+        ещё». Без q отдаём первых участников кэша. Формат: {items:[...],has_more}.
+
+        Никогда не отдаёт 404 для «своего» сервера: без бота — демо/имена,
+        с ботом, но без сервера/участников в кэше — локальная карта имён.
+        Точный ID, которого нет в кэше, догружается с Discord (fetch_member)."""
+        try :
+            limit =max (1 ,min (50 ,int (request .args .get ('limit',25 )or 25 )))
+        except (TypeError ,ValueError ):
+            limit =25
+        try :
+            offset =max (0 ,int (request .args .get ('offset',0 )or 0 ))
+        except (TypeError ,ValueError ):
+            offset =0
+        q =ms_normalize_query (request .args .get ('q',''))
+
+        import web .app as _app ;bot =_app .bot_instance
+        # Нет бота (демо/превью) — отдаём демо-участников, чтобы пикер не 404.
+        if not bot :
+            demo =demo_members_search (q ,limit =limit +offset )
+            items =[_pick_demo_item (m )for m in demo [offset :offset +limit ]]
+            return jsonify ({'items':items ,'has_more':len (demo )>=offset +limit })
+
+        gid =int (guild_id )if str (guild_id ).isdigit ()else 0
+        guild =bot .get_guild (gid )if gid else None
+
+        # Сначала — ПОЛНЫЙ состав из файла (services/member_store.py), а не
+        # живой кэш discord.py. На большом сервере кэш наполняется постепенно,
+        # и участник, которого там ещё нет, просто не находился; а при офлайн
+        # боте пикер скатывался к карте имён. Файл бот правит событийно, так
+        # что это самый полный и всегда доступный источник.
+        window =limit +offset
+        rows =[]
+        stored_total =0
+        if gid :
+            try :
+                from services import member_store as MS
+                stored_total =MS .count (gid )
+                if stored_total :
+                    rows =(MS .find (gid ,q ,limit =window )if q
+                           else MS .snapshot (gid ,offset ,limit ))
+            except Exception as _ex :
+                _log .debug ('member-card suggest: хранилище состава: %s',_ex )
+        if rows :
+            if q :
+                total =len (rows )
+                items =[_pick_demo_item (r )for r in rows [offset :offset +limit ]]
+            else :
+                total =stored_total
+                items =[_pick_demo_item (r )for r in rows ]
+            return jsonify ({'items':items ,'has_more':total >=offset +limit })
+
+        # Бот подключён, но сервера в кэше нет — не 404, а локальные имена.
+        if guild is None or not guild .members :
+            return jsonify (_local_suggest (gid ,q ,offset ,limit ))
+
+        if q :
+            window =limit +offset
+            matches =ms_search_members (guild .members ,q ,limit =window )
+            # Точный/частичный ID, но в кэше участника нет — догружаем с Discord.
+            if not matches and q .isdigit ()and offset ==0 :
+                try :
+                    fetched =_resolve_member_async (guild ,int (q ))
+                    if fetched is not None :
+                        matches =[fetched ]
+                except Exception as _ex :
+                    _log .debug ('member-card suggest fetch %s: %s',q ,_ex )
+            total =len (matches )
+            items =[_pick_member_item (m )for m in matches [offset :offset +limit ]]
+        else :
+            # Без запроса — стартовый список из кэша (по порядку).
+            all_members =list (guild .members )
+            total =len (all_members )
+            items =[_pick_member_item (m )for m in all_members [offset :offset +limit ]]
+
+        return jsonify ({'items':items ,'has_more':total >=offset +limit })
 
 
     @app .route ('/api/member-search/<guild_id>',methods =['GET'])

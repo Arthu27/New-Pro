@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Правила</div>
+    <div class="eyebrow"> Настройки </div>
     <h1>Правила сервера</h1>
     <p class="lead">Текст, до двух ссылок на правило, картинка и миниатюра. Публикация эмбедами или одним V2-сообщением от вебхука «Правила сервера».</p>
   </div>
@@ -364,7 +364,7 @@
         <div class="preview-card-bar" id="previewColorBar"></div>
         <div class="preview-card-body">
           <div class="pv-msg">
-            <span class="pv-ava"><span class="ph">A</span><img alt="" src="/static/brand/emblem-dragon.png" onerror="this.remove()"></span>
+            <span class="pv-ava"><span class="ph">A</span><img alt="" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" onerror="this.remove()"></span>
             <div style="flex:1;min-width:0">
               <div class="pv-bot-line"><span class="pv-bot-name">Hakumo</span><span class="pv-bot-badge"><i class="fas fa-robot"></i> BOT</span></div>
               <div class="pv-embed" id="pv-embed">
@@ -385,7 +385,7 @@
           <div class="preview-card-bar" id="pv2ColorBar"></div>
           <div class="preview-card-body">
             <div class="pv-msg">
-              <span class="pv-ava"><span class="ph">П</span><img alt="" src="/static/brand/emblem-dragon.png" onerror="this.remove()"></span>
+              <span class="pv-ava"><span class="ph">П</span><img alt="" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" onerror="this.remove()"></span>
               <div style="flex:1;min-width:0">
                 <div class="pv-bot-line"><span class="pv-bot-name" id="pv2HookName">Правила сервера</span><span class="pv-bot-badge"><i class="fas fa-paper-plane"></i> Вебхук</span></div>
                 <div class="v2p" id="pv2"></div>
@@ -575,9 +575,24 @@
     }, delay || 350);
   }
 
+  /* Каналы для селекта «Публикация в Discord» тянем ОДНОВРЕМЕННО со списком
+     серверов: раньше запрос уходил только после /api/guilds и ещё двух
+     запросов loadRules — селект доезжал последним. */
+  var _chansPrefetch = null;
+  function channelsFor(gid) {
+    if (!gid) return Promise.resolve([]);
+    if (_chansPrefetch && _chansPrefetch.gid === String(gid)) return _chansPrefetch.p;
+    var p = fetch('/api/guild/' + gid + '/channels')
+      .then(function (r) { return r.json(); })
+      .catch(function () { return []; });
+    _chansPrefetch = { gid: String(gid), p: p };
+    return p;
+  }
+
   /* ── Серверы ── */
   async function loadGuilds() {
     var sel = document.getElementById('guild-select');
+    channelsFor(selectedGuild);
     try {
       var r = await fetch('/api/guilds');
       var guilds = await r.json();
@@ -598,6 +613,9 @@
   /* ── Загрузка правил, меты и каналов ── */
   async function loadRules() {
     if (!selectedGuild) return;
+    /* Каналы тянем СРАЗУ, параллельно с правилами и метой: раньше запрос
+       шёл третьим по очереди, и селект канала доезжал на ~800 мс позже. */
+    var chansP = channelsFor(selectedGuild);
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/rules');
       var d = await r.json();
@@ -621,19 +639,20 @@
       syncPreviewMeta();
     } catch (e) { /* мета не критична */ }
     try {
-      var cr = await fetch('/api/guild/' + selectedGuild + '/channels');
-      var chD = await cr.json();
+      var chD = await chansP;
       var chans = Array.isArray(chD) ? chD : (chD.channels || []);
       var chSel = document.getElementById('rules-channel');
       var prev = chSel.value;
-      chSel.innerHTML = '<option value="">Выберите канал…</option>';
+      /* строку собираем целиком: += по одному option перечитывал весь список */
+      var optHtml = ['<option value="">Выберите канал…</option>'];
       chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
         .sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
         .forEach(function (c) {
           var chosen = prev || lastChannel;
           var s = String(c.id) === chosen ? ' selected' : '';
-          chSel.innerHTML += '<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>';
+          optHtml.push('<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>');
         });
+      chSel.innerHTML = optHtml.join('');
       if (!chSel.value && lastChannel) chSel.value = lastChannel;
       /* ничего не сохранено — берём первый текстовый канал:
          кнопка «Опубликовать» сразу рабочая, без тупика «выберите канал» */

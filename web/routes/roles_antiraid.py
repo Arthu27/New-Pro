@@ -3,13 +3,12 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _notify_discord_sender, _fire_panel_notification,
+    _process_action, _log, _live_publish,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -74,6 +73,11 @@ def register(ctx):
             return jsonify ({'error':'Выберите канал панели'}),400 
         if not clean :
             return jsonify ({'error':'Сначала добавьте хотя бы один цвет'}),400 
+        if not ch_id .isdigit ():
+            # int(ch_id) внутри корутины давал «invalid literal for int()»
+            return jsonify ({'error':'Неверный ID канала'}),400 
+        if not str (guild_id ).isdigit ():
+            return jsonify ({'error':'Неверный ID сервера'}),400 
         f =f'data/color_roles_{guild_id}.json'
         os .makedirs ('data',exist_ok =True )
         with open (f ,'w',encoding ='utf-8')as fp :json .dump (clean ,fp ,indent =2 ,ensure_ascii =False )
@@ -81,7 +85,9 @@ def register(ctx):
             if _app ._demo_mode ():
                 _fire_panel_notification ('color_roles',f"Цветные роли опубликованы: {len (clean )} цветов",f"Канал {ch_id } · демо-режим")
                 return jsonify ({'success':True ,'demo':True ,'message':f"Демо-режим: {len (clean )} цветов готовы — при живом боте роли создадутся в Discord"})
-            return jsonify ({'error':'Бот офлайн — публикация недоступна'})
+            return jsonify ({'error':'Бот офлайн — публикация недоступна'}),503 
+
+        failed =[]
 
         async def send ():
             guild =bot .get_guild (int (guild_id ))
@@ -100,7 +106,10 @@ def register(ctx):
                     try :
                         await guild .create_role (name =f"Цвет · {c['name']}",color =discord .Color (int (color_hex ,16 )))
                     except Exception as _ex :
+                        # раньше проглатывали молча и всё равно рапортовали
+                        # «Опубликовано цветов: N», хотя роли не создались
                         _log.debug("send(): роль %s: %s", c['name'], _ex )
+                        failed .append (c ['name'])
             desc ='\n'.join ([f"{c.get('emoji')or '🎨'} **{c['name']}** — `{c['hex']}`"for c in clean ])
             embed =discord .Embed (title ="Цветные роли",description =desc +"\n\nЧтобы получить нужный цвет, используйте команду `/color`!",color =0xdc143c )
             await ch .send (embed =embed )
@@ -113,6 +122,11 @@ def register(ctx):
                 msg ='Discord запретил отправку: у бота нет прав на этот канал'
             return jsonify ({'error':f"Не удалось опубликовать: {msg }"[:200 ]}),502 
         _fire_panel_notification ('color_roles',f"Цветные роли опубликованы: {len (clean )} цветов",f"Канал {ch_id }")
+        _live_publish (guild_id ,'roles')
+        if failed :
+            return jsonify ({'success':True ,'partial':True ,'message':
+                f"Панель отправлена, но не удалось создать роли: {', '.join (failed )}. "
+                'Проверьте право «Управлять ролями» и место моей роли в иерархии'})
         return jsonify ({'success':True ,'message':f"Опубликовано цветов: {len (clean )}"})
 
 
@@ -149,6 +163,10 @@ def register(ctx):
         data ['whitelist']=wl_clean [:500 ]
         # raid_action her zaman 'alert' — diгer deгerleri отклонить
         data ['raid_action']='alert'
+        # Канал тревоги настраивается в «Каналах и маршрутах» (тот же файл,
+        # ключ alert_channel_id): здесь его не принимаем, чтобы пустой POST
+        # со страницы анти-рейда не затёр выбранный канал.
+        data ['alert_channel_id']=existing .get ('alert_channel_id')
         # Numeric alanlarыn tipini koru
         try :
             data ['join_threshold']=max (2 ,min (50 ,int (data .get ('join_threshold',5 ))))
@@ -163,6 +181,10 @@ def register(ctx):
         'delete_protection','age_filter'):
             data [bkey ]=bool (data .get (bkey ,False ))
         with open (f ,'w')as fp :json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
+        # Живой пуш: ког antiraid в боте слушает шину и перечитает конфиг сразу,
+        # без ожидания 20-секундного watcher-тика.
+        _live_publish (guild_id ,'guardian')
+        _live_publish (guild_id ,'security')
         return jsonify ({'success':True })
 
 

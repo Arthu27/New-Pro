@@ -207,6 +207,24 @@ def register(ctx):
                         ({'id': str(c.id), 'name': c.name}
                          for c in getattr(g, 'text_channels', ())),
                         key=lambda x: x['name'].lstrip('#').lower())
+            elif bot is None:
+                # Панель отдельным процессом от бота: страница показывает
+                # правду по пульсу бота, каналы — из снимка моста.
+                try:
+                    from services import bot_bridge as _bb
+                    _st = _bb.read_state()
+                    _s = _bb.state_status(_st)
+                    if _s in ('online', 'starting'):
+                        online, bot_status = _s == 'online', _s
+                        presence = 'online' if _s == 'online' else 'offline'
+                    if _bb.bot_alive_for(gid):
+                        channels = sorted(
+                            ({'id': c['id'], 'name': c['name']}
+                             for c in (_bb.read_channels(gid) or [])
+                             if c.get('type') == 'text'),
+                            key=lambda x: x['name'].lstrip('#').lower())
+                except Exception as _pex:
+                    _log.debug('pagerduty: remote bridge: %s', _pex)
             return jsonify({
                 'success': True,
                 'enabled': st['enabled'],

@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Логи сервера</div>
+    <div class="eyebrow"> Настройки </div>
     <h1>Логи сервера</h1>
     <p class="lead">Какие события логировать, в какой канал их писать и каким категориям разрешено создавать лог-канал самостоятельно. По умолчанию каналы <b>никогда не создаются сами</b> — только если ты разрешишь здесь.</p>
   </div>
@@ -29,7 +29,7 @@
       <select id="lsApplyCh" aria-label="Канал сразу для всех категорий" style="max-width:44%;padding:6px 10px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:9px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit;cursor:pointer"></select>
       <button type="button" class="btn btn-primary" id="lsApplyAll"><i class="fas fa-arrows-to-dot"></i> Во все категории</button>
       <span class="hint" style="margin:0">один канал сразу во все категории — потом можно уточнить по одной</span>
-      <div id="lsOfflineNote" hidden class="chip" style="background:rgba(245,158,11,.14);color:#f59e0b;margin-top:6px;display:inline-block"><i class="fas fa-plug-circle-xmark"></i> Бот офлайн — список каналов из памяти: выбрать можно, обновится при подключении бота</div>
+      <div id="lsOfflineNote" hidden class="chip" style="background:rgba(245,158,11,.14);color:#f59e0b;margin-top:6px;display:inline-block"><i class="fas fa-plug-circle-xmark"></i> Бот офлайн — ниже показаны ТЕКУЩИЕ сохранённые настройки (что куда настроено). Выбранные каналы видны; полный список каналов обновится, когда бот подключится</div>
     </div>
     <div id="lsCats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px"></div>
     <div class="hint" id="lsMsg" style="margin-top:10px"></div>

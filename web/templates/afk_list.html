@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Участники <span class="sep">·</span> AFK список</div>
+    <div class="eyebrow"> Участники </div>
     <h1>Список AFK</h1>
     <p class="lead">Список участников, которые сейчас находятся в режиме «Нет на месте».</p>
   </div>
@@ -20,7 +20,7 @@
 .afk-card:hover {border-color:var(--ac-line)}
 .afk-head{display:flex;align-items:center;gap:11px;margin-bottom:10px}
 .afk-avatar{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--ac-soft);font-size:18px}
-.afk-name{font-weight:600;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.afk-name{font-weight:600;color:var(--text);font-size:14px;white-space: normal; overflow-wrap: anywhere; line-height: 1.3;}
 .afk-id{font-size:11px;color:var(--text-3);font-family:'JetBrains Mono',monospace}
 .afk-reason{font-size:13px;color:var(--text-2);line-height:1.5;background: var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:10px;word-break:break-word}
 .afk-time{font-size:12px;color:var(--text-3);display:inline-flex;align-items:center;gap:6px}
@@ -72,7 +72,10 @@ async function loadAFK(gid) {
 
 function start() {
   loadAFK(_guildId);
-  if (window.setLiveRefresh) window.setLiveRefresh(function(){ loadAFK(_guildId); }, 1500);
+  /* live: AFK-список меняется, когда кто-то заходит/выходит из войса или
+     выходит с сервера — топики voice и members. Опрос по таймеру убран:
+     5 минут остаются страховкой на случай, если SSE не поднялся. */
+  if (window.setLiveRefresh) window.setLiveRefresh(function(){ loadAFK(_guildId); }, 300000, ['voice', 'members']);
   else setInterval(function(){ loadAFK(_guildId); }, 30000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

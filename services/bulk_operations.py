@@ -405,20 +405,24 @@ class BulkExporter:
             except Exception as e:
                 operation.add_failure(ticket_id, str(e))
         
-        # Dosyaya сохранить
+        # Dosyaya сохранить — файловую запись уводим в рабочий поток
+        # (open/json.dump не блокирует event loop)
         if exported_tickets:
             os.makedirs('data/exports', exist_ok=True)
             filename = f"export_{operation.operation_id}.json"
             filepath = f"data/exports/{filename}"
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(exported_tickets, f, ensure_ascii=False, indent=2)
-            
+
+            import asyncio as _aio_e
+            def _write_json():
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(exported_tickets, f, ensure_ascii=False, indent=2)
+            await _aio_e.to_thread(_write_json)
+
             operation.parameters['export_file'] = filename
-        
+
         operation.mark_completed()
         self.operation_manager.update_operation(operation.operation_id)
-        
+
         return operation
     
     async def bulk_export_csv(self, ticket_ids: List[str], exported_by: str,
@@ -452,34 +456,38 @@ class BulkExporter:
         # CSV файлna сохранить
         if exported_tickets:
             import csv
-            
+
             os.makedirs('data/exports', exist_ok=True)
             filename = f"export_{operation.operation_id}.csv"
             filepath = f"data/exports/{filename}"
-            
+
             if exported_tickets:
-                # Заголовокlarы al
+                # Заголовки
                 headers = set()
                 for ticket in exported_tickets:
                     headers.update(ticket.keys())
-                
+
                 headers = sorted(list(headers))
-                
-                with open(filepath, 'w', newline='', encoding='utf-8') as f:
-                    writer = csv.DictWriter(f, fieldnames=headers)
-                    writer.writeheader()
-                    
-                    for ticket in exported_tickets:
-                        # Liste ve dict'leri string'e чevir
-                        row = {}
-                        for key, value in ticket.items():
-                            if isinstance(value, (list, dict)):
-                                row[key] = json.dumps(value, ensure_ascii=False)
-                            else:
-                                row[key] = value
-                        
-                        writer.writerow(row)
-                
+
+                # запись CSV — в рабочем потоке (open/writer не блокируют loop)
+                import asyncio as _aio_c
+                def _write_csv():
+                    with open(filepath, 'w', newline='', encoding='utf-8') as f:
+                        writer = csv.DictWriter(f, fieldnames=headers)
+                        writer.writeheader()
+
+                        for ticket in exported_tickets:
+                            # Списки/словари -> строка
+                            row = {}
+                            for key, value in ticket.items():
+                                if isinstance(value, (list, dict)):
+                                    row[key] = json.dumps(value, ensure_ascii=False)
+                                else:
+                                    row[key] = value
+
+                            writer.writerow(row)
+                await _aio_c.to_thread(_write_csv)
+
                 operation.parameters['export_file'] = filename
         
         operation.mark_completed()

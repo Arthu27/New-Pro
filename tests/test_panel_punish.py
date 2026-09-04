@@ -12,6 +12,7 @@ Discord-аккаунт модератора (options — фильтр, POST — 
 """
 import asyncio
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -316,20 +317,23 @@ check(r.status_code == 400 and 'Владельца' in (r.get_json().get('error'
       'владельца сервера наказать нельзя')
 wg.owner_id = 1
 
-print('== 8. ACL «Права команд»: действия по разрешённым ролям ==')
+print('== 8. ACL «Права команд»: действия по разрешённым ролям (строгая модель) ==')
 from services import permission_acl as PACL  # noqa: E402
 
-PACL.set_action_rule(777, 'ban', ['555'])   # «бан» — только роли 555
+# По умолчанию (default-deny) связанному Discord-модератору не выдано НИЧЕГО.
+# Сначала разрешаем роли 555 ВСЕ действия, чтобы проверить полный набор,
+# затем точечно снимаем бан.
+ALL_ACTS = ['warn', 'timeout', 'mute', 'vmute', 'ban', 'purge']
+for _a in ALL_ACTS:
+    PACL.set_action_rule(777, _a, ['555'])
 
-# статический вход без Discord-привязки — доверенный: весь набор
+# статический вход без Discord-привязки — доверенный (owner панели): весь набор
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 check(d.get('success') and len(d.get('actions', [])) == 8 and
       d.get('hidden_by_acl') == 0, 'статический вход: полный набор (доверенный)')
 
-# вход через Discord-аккаунт: мембер без роли 555 — «бан» отрезан.
-# (_role_checked свежий — живой пересчёт роли из Discord пропускается,
-#  имитируем только что залогинившегося модератора)
+# вход через Discord-аккаунт с ролью 555 — все действия разрешены
 import time as _t  # noqa: E402
 
 with client.session_transaction() as sess:
@@ -340,32 +344,41 @@ with client.session_transaction() as sess:
     sess['discord_id'] = str(TID)
     sess['selected_guild'] = '777'
     sess['_role_checked'] = _t.time()
+wg.members[0].roles = [_Role(555)]
+CHR.set_route(777, 'ban_appeal_channel', 301)
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 vals = [a.get('value') for a in d.get('actions', [])]
-# Правило «ban» режет оба: и сам бан, и unban — как у бота (unban → ban-ACL)
+check(d.get('success') and len(vals) == 8 and d.get('hidden_by_acl') == 0,
+      f'роль 555 со всеми разрешениями видит полный набор ({len(vals)})')
+
+# сняли «бан» у роли 555 → бан и разбан скрываются (unban → ban-ACL)
+PACL.set_action_rule(777, 'ban', [])
+r = client.get('/api/guild/777/punish/options')
+d = r.get_json()
+vals = [a.get('value') for a in d.get('actions', [])]
 check(d.get('success') and len(vals) == 6 and 'ban' not in vals and 'unban' not in vals,
-      f'связанный мод без роли: бан и разбан скрыты ({len(vals)} действий)')
+      f'без разрешения «Бан»: бан и разбан скрыты ({len(vals)} действий)')
 check(d.get('hidden_by_acl') == 2, 'hidden_by_acl честно говорит про два скрытых')
 
 r = client.post('/api/guild/777/punish', json={
     'user_id': str(TID), 'action': 'ban', 'reason': 'обход формы'})
 check(r.status_code == 403 and not r.get_json().get('success') and
       'Нет права' in (r.get_json().get('error') or ''),
-      'POST на отрезанное действие — 403 от ACL')
+      'POST на невыданное действие — 403 от ACL')
 
-# дали роль 555 — бан вернулся и выполняется
-wg.members[0].roles = [_Role(555)]
-CHR.set_route(777, 'ban_appeal_channel', 301)
+# вернули «бан» роли 555 — полный набор и бан выполняется
+PACL.set_action_rule(777, 'ban', ['555'])
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 check(len(d.get('actions', [])) == 8 and d.get('hidden_by_acl') == 0,
-      'с нужной ролью: полный набор')
+      'с разрешённой ролью: полный набор')
 r = client.post('/api/guild/777/punish', json={
     'user_id': str(TID), 'action': 'ban', 'reason': 'проверено'})
 check(r.status_code == 200 and r.get_json().get('success'),
       'POST бана с разрешённой ролью — успех')
 wg.members[0].roles = []
+PACL.clear_action_rules(777)
 
 # owner панели — всегда весь набор, хоть и без Discord-ролей
 with client.session_transaction() as sess:
@@ -382,8 +395,14 @@ check(len((r.get_json() or {}).get('actions', [])) == 8,
 
 print('== 9. Шаблон «Пользователи»: форма без доказательств, новая разметка ==')
 _utpl = open(os.path.join(ROOT, 'web', 'templates', 'users.html'), encoding='utf-8').read()
-check('pnProof' not in _utpl and 'proof' not in _utpl.lower(),
-      'в форме нет ни поля, ни логики доказательств')
+# Панель доказательств НЕ СПРАШИВАЕТ: ни поля ввода, ни id pnProof.
+# Показывать уже приложенное доказательство из варна/дела можно — это чтение
+# чужой записи, а не запрос нового файла у модератора.
+check('pnProof' not in _utpl, 'в форме наказания нет поля доказательств')
+check(not re.search(r'<(?:input|textarea|select)[^>]*proof', _utpl, re.I),
+      'панель не спрашивает доказательств ни в одном поле ввода')
+check(_utpl.lower().count('proof') == 4,
+      'proof встречается только при чтении варнов и дел (4 места, все в выводе)')
 check('id="pnGrid"' in _utpl and 'id="pnPresets"' in _utpl and 'id="pnReasonCnt"' in _utpl,
       'новая форма: сетка действий, пресеты срока, счётчик причины')
 check('id="uStats"' in _utpl and 'id="uRole"' in _utpl and 'id="uSort"' in _utpl and
@@ -396,6 +415,72 @@ with client.session_transaction() as sess:
     sess.clear()
 r = client.get('/api/guild/777/punish/options')
 check(r.status_code in (301, 302, 401, 403), 'гостю закрыто')
+
+print('== 10. «Лимиты команды» действуют и в карточке «Пользователи» ==')
+# Изолируем счётчики гильдии 777 от предыдущих секций
+for _pth in (SL._cnt_path(777), SL._cfg_path(777), SL._roles_path(777)):
+    try:
+        if os.path.exists(_pth):
+            os.remove(_pth)
+    except OSError:
+        pass
+SL.set_limits(777, ban=1)
+PACL.set_action_rule(777, 'ban', ['555'])
+
+# вход через Discord-аккаунт с ролью 555 (не владелец)
+with client.session_transaction() as sess:
+    sess.clear()
+    sess['logged_in'] = True
+    sess['username'] = 'QuotaMod'
+    sess['role'] = 'mod'
+    sess['discord_id'] = str(TID)
+    sess['selected_guild'] = '777'
+    sess['_role_checked'] = _t.time()
+wg.members[0].roles = [_Role(555)]
+
+# options честно показывает лимит и остаток (а не «для галочки»)
+r = client.get('/api/guild/777/punish/options')
+d = r.get_json()
+lim = (d.get('limits') or {}).get('ban')
+check(d.get('limit_exempt') is False,
+      'вход через Discord: limit_exempt=false — лимиты показаны')
+check(lim and lim.get('limit') == 1 and lim.get('left') == 1,
+      f'options: бан — лимит 1, осталось 1 (получено {lim})')
+check('ban' in [a.get('value') for a in d.get('actions', [])],
+      'бан доступен по правам роли')
+
+# расходуем единственную выдачу за окно — счётчик вырос
+SL.record_hit(777, TID, 'ban', 1)
+d2 = client.get('/api/guild/777/punish/options').get_json()
+lim2 = (d2.get('limits') or {}).get('ban')
+check(lim2 and lim2.get('used') == 1 and lim2.get('left') == 0,
+      f'после выдачи options показывает used=1, left=0 ({lim2})')
+
+# вторая выдача за окно — сервер отказывает, а не «даёт бесконечно»
+r = client.post('/api/guild/777/punish', json={
+    'user_id': str(TID), 'action': 'ban', 'reason': 'вторая за день'})
+d3 = r.get_json()
+check(not d3.get('success') and 'Лимит' in (d3.get('error') or ''),
+      f'вторая выдача отклонена лимитом ({d3.get("error", "")[:80]})')
+
+# доверенный вход (владелец панели) — лимиты не режут (как в Discord-командах)
+with client.session_transaction() as sess:
+    sess.clear()
+    sess['logged_in'] = True
+    sess['username'] = 'StaticBoss'
+    sess['role'] = 'owner'
+    sess['selected_guild'] = '777'
+r = client.post('/api/guild/777/punish', json={
+    'user_id': str(TID), 'action': 'ban', 'reason': 'владелец не ограничен'})
+check(bool((r.get_json() or {}).get('success')),
+      'владелец панели лимитами не режется')
+
+# шаблон понимает лимиты: остатки на кнопках, исчерпанное отключается
+_utpl10 = open(os.path.join(ROOT, 'web', 'templates', 'users.html'),
+               encoding='utf-8').read()
+check('pnLimits' in _utpl10 and 'pnLimitExempt' in _utpl10 and
+      'лимит исчерпан' in _utpl10,
+      'шаблон: лимиты и остатки в форме наказания понятны интерфейсу')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

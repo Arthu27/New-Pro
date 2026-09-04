@@ -90,8 +90,80 @@ class Diagnostics (commands .Cog ):
         self .repair_count =defaultdict (int )
         self .alert_dm_sent ={}
         self .watching =True 
+        # Кэш тяжёлой статистики psutil: open_files() на Windows делает
+        # os.stat() по каждому хэндлу и МОРОЗИТ event loop на секунды
+        # (поймали зависание шлюза 6.9с). Дёргаем не чаще раза в 5 минут.
+        self ._open_files_cache =None 
+        self ._open_files_ts =0.0 
         # Start monitoring
         self .health_monitor .start ()
+
+    # ── Системная статистика psutil (БЕЗ риска заморозить event loop) ──────
+    def _collect_sys_stats_sync (self ):
+        """Синхронно собрать метрики процесса. КАЖДОЕ поле изолировано:
+        сбой/медленный вызов одной метрики не роняет остальные и не отдаёт
+        мусор. open_files() троттлится (дорогой на Windows)."""
+        stats ={"memory_mb":0.0 ,"cpu_percent":0.0 ,"threads":0 ,"open_files":0 }
+        try :
+            proc =psutil .Process ()
+        except Exception as _ex :
+            log .debug ("sys_stats: Process(): %s" ,_ex )
+            return stats 
+        try :
+            stats ["memory_mb"]=round (proc .memory_info ().rss /1024 /1024 ,1 )
+        except Exception as _ex :
+            log .debug ("sys_stats: memory_info: %s" ,_ex )
+        try :
+            stats ["cpu_percent"]=round (proc .cpu_percent (interval =None ),1 )
+        except Exception as _ex :
+            log .debug ("sys_stats: cpu_percent: %s" ,_ex )
+        try :
+            stats ["threads"]=proc .num_threads ()
+        except Exception as _ex :
+            log .debug ("sys_stats: num_threads: %s" ,_ex )
+        # open_files — самый дорогой вызов (на Windows сканирует хэндлы и
+        # stat-ит пути): не чаще раза в 5 минут, при ошибке отдаём 0.
+        try :
+            now =time .time ()
+            if self ._open_files_cache is None or now -self ._open_files_ts >=300 :
+                self ._open_files_cache =len (proc .open_files ())
+                self ._open_files_ts =now 
+            stats ["open_files"]=self ._open_files_cache 
+        except Exception as _ex :
+            log .debug ("sys_stats: open_files: %s" ,_ex )
+            stats ["open_files"]=0 
+        return stats 
+
+    async def get_health_snapshot_async(self):
+        """Полный снимок здоровья БЕЗ блокировки event loop.
+
+        Тяжёлый psutil (особенно open_files на Windows) и сбор метрик бота
+        уходят в рабочий поток; у потока есть таймаут — даже если системный
+        вызов завис, шлюз Discord не встанет: вернём лёгкий снимок без psutil.
+        """
+        loop = asyncio.get_event_loop()
+        try:
+            fut = loop.run_in_executor(None, self.get_health_snapshot)
+            return await asyncio.wait_for(fut, timeout=4.0)
+        except Exception as _ex:
+            log.debug("get_health_snapshot_async: %s", _ex)
+            return self.get_health_snapshot_fast()
+
+    def get_health_snapshot_fast(self):
+        """Лёгкий снимок без psutil (фоллбэк, если системный сбор завис)."""
+        lat =getattr (self .bot ,"latency" ,None )
+        lat_ms =round (lat *1000 ,1 )if lat is not None and math .isfinite (lat )else 0.0 
+        return {
+        "timestamp":time .time (),"uptime_sec":time .time ()-self .start_time ,
+        "guilds":len (self .bot .guilds )if self .bot else 0 ,
+        "users":sum (g .member_count or 0 for g in self .bot .guilds )if self .bot else 0 ,
+        "cogs_loaded":len (self .bot .cogs )if self .bot else 0 ,
+        "commands":len (self .bot .commands )if self .bot else 0 ,
+        "latency_ms":lat_ms ,
+        "errors_last_min":sum (1 for e in self .error_log if time .time ()-e ["ts"]<60 ),
+        "is_ws_connected":False ,"memory_mb":0.0 ,"cpu_percent":0.0 ,
+        "threads":0 ,"open_files":0 ,
+        }
 
     def cog_unload (self ):
         self .health_monitor .cancel ()
@@ -112,39 +184,58 @@ class Diagnostics (commands .Cog ):
         "traceback":"".join (traceback .format_exception (type (error ),error ,error .__traceback__ ))[-1000 :],
         }
         self .error_log .append (entry )
-        self .cog_perf [ctx .command .cog_name if ctx .command and hasattr (ctx .command ,'cog_name')else "unknown"]["errors"]+=1 
-        # Persist
+        self .cog_perf [ctx .command .cog_name if ctx .command and hasattr (ctx .command ,'cog_name')else "unknown"]["errors"]+=1
+        # Persist — дисковый I/O уводим в поток, чтобы не морозить loop.
         try :
-            f =f"{DATA_DIR}/error_log.json"
-            log =[]
-            if os .path .exists (f ):
-                with open (f ,"r",encoding ="utf-8")as fp :
-                    log =json .load (fp )
-            log .append (entry )
-            log =log [-1000 :]
-            with open (f ,"w",encoding ="utf-8")as fp :
-                json .dump (log ,fp ,ensure_ascii =False ,indent =2 )
+            await asyncio .to_thread (self ._persist_error_sync ,entry )
         except Exception as _ex:
             _log.debug("on_command_error(): подавлено: %s", _ex)
 
-            # HEALTH MONITORING TASK 
+    def _persist_error_sync (self ,entry ):# noqa: N802
+        """Дозапись ошибки в data/error_log.json (синхронный дисковый I/O).
+
+        Вызывается только через asyncio.to_thread — файловый open/json на
+        Windows под антивирусом может дать задержку, его нельзя делать в
+        event loop'е."""
+        f =f"{DATA_DIR}/error_log.json"
+        log =[]
+        if os .path .exists (f ):
+            with open (f ,"r",encoding ="utf-8")as fp :
+                log =json .load (fp )
+        log .append (entry )
+        log =log [-1000 :]
+        with open (f ,"w",encoding ="utf-8")as fp :
+            json .dump (log ,fp ,ensure_ascii =False ,indent =2 )
+
+    def _persist_health_sync (self ,payload ):# noqa: N802
+        """Запись снимка здоровья в data/bot_health.json (синхронный I/O).
+
+        Зовётся только через asyncio.to_thread из health_monitor, чтобы
+        дисковая запись раз в минуту не блокировала event loop."""
+        with open (f"{DATA_DIR}/bot_health.json","w",encoding ="utf-8")as fp :
+            json .dump (payload ,fp ,ensure_ascii =False ,indent =2 )
+
+            # HEALTH MONITORING TASK
     @tasks .loop (minutes =1 )
     async def health_monitor (self ):
         """Run every minute, check vitals, trigger repairs if needed"""
         try :
-            health =self .get_health_snapshot ()
+            # ВАЖНО: снимок уходит в рабочий поток (psutil/open_files на
+            # Windows морозит event loop шлюза). Таймаут внутри async-версии.
+            health =await self .get_health_snapshot_async ()
             # Persist
             self .perf_history .append (health )
+            payload ={
+            "current":health ,
+            "history":list (self .perf_history ),
+            "error_log":list (self .error_log )[-50 :],
+            "cog_perf":dict (self .cog_perf ),
+            "repair_count":dict (self .repair_count ),
+            "uptime_sec":time .time ()-self .start_time ,
+            }
+            # Запись на диск — в рабочий поток (открытие/дамп не морозят loop).
             try :
-                with open (f"{DATA_DIR}/bot_health.json","w",encoding ="utf-8")as fp :
-                    json .dump ({
-                    "current":health ,
-                    "history":list (self .perf_history ),
-                    "error_log":list (self .error_log )[-50 :],
-                    "cog_perf":dict (self .cog_perf ),
-                    "repair_count":dict (self .repair_count ),
-                    "uptime_sec":time .time ()-self .start_time ,
-                    },fp ,ensure_ascii =False ,indent =2 )
+                await asyncio .to_thread (self ._persist_health_sync ,payload )
             except Exception as _ex:
                 _log.debug("health_monitor(): подавлено: %s", _ex)
                 # Auto-repair
@@ -188,16 +279,16 @@ class Diagnostics (commands .Cog ):
         "errors_last_min":sum (1 for e in self .error_log if time .time ()-e ["ts"]<60 ),
         "is_ws_connected":is_connected ,
         }
-        # System resources
+        # System resources — собираем в отдельном хелпере (каждое поле
+        # изолировано, open_files троттлится), чтобы синхронный сбой/залипание
+        # psutil не ронял снимок и не отдавал мусор.
         try :
-            process =psutil .Process ()
-            snapshot ["memory_mb"]=round (process .memory_info ().rss /1024 /1024 ,1 )
-            snapshot ["cpu_percent"]=round (process .cpu_percent (interval =None ),1 )
-            snapshot ["threads"]=process .num_threads ()
-            snapshot ["open_files"]=len (process .open_files ())
+            snapshot .update (self ._collect_sys_stats_sync ())
         except Exception :
             snapshot ["memory_mb"]=0 
             snapshot ["cpu_percent"]=0 
+            snapshot ["threads"]=0 
+            snapshot ["open_files"]=0 
         return snapshot 
 
         # AUTO-REPAIR 
@@ -269,44 +360,82 @@ class Diagnostics (commands .Cog ):
         except Exception as _ex:
             _log.debug("_notify_admin(): подавлено: %s", _ex)
 
-            # HOT-RELOAD 
+    def _scan_cogs_sync (self ,cog_name =None ):# noqa: N802
+        """Синхронная (дисковая) часть hot-reload'а: список модулей, чтение и
+        хэш файлов, сравнение с кэшем. Файловый I/O и hashlib МОРОЗЯТ event
+        loop, поэтому вызывается только через asyncio.to_thread.
+
+        Возвращает (reload_list, failed, updates):
+          reload_list — имена модулей, чьё содержимое изменилось (или
+                        указанный явно модуль — его перезагружаем всегда);
+          failed      — [(модуль, причина), ...] по ненайденным/нечитаемым;
+          updates     — [(модуль, new_hash), ...] — новые хэши для кэша.
+        """
+        if cog_name :
+            cogs_to_check =[cog_name ]
+        else :
+            try :
+                cogs_to_check =[f [:-3 ]for f in os .listdir ("cogs")
+                                if f .endswith (".py")and f !="__init__.py"]
+            except Exception as _ex :# нет каталога/нет прав — не роняем команду
+                _log .debug ("hotreload: listdir cogs: %s" ,_ex )
+                return [],[(None ,f"не удалось прочитать каталог cogs: {_ex}")],[]
+        reload_list =[]
+        failed =[]
+        updates =[]
+        for cog in cogs_to_check :
+            filepath =f"cogs/{cog}.py"
+            if not os .path .exists (filepath ):
+                failed .append ((cog ,"файл не найден"))
+                continue
+            try :
+                with open (filepath ,"rb")as f :
+                    new_hash =hashlib .md5 (f .read ()).hexdigest ()
+            except Exception as _ex :# не читается/нет прав — в ошибки, не в цикл
+                _log .debug ("hotreload: hash %s: %s" ,filepath ,_ex )
+                failed .append ((cog ,f"не удалось прочитать файл: {_ex}"))
+                continue
+            old_hash =self .cog_hash_cache .get (cog )
+            updates .append ((cog ,new_hash ))
+            # Явно указанный модуль перезагружаем всегда; иначе — только
+            # при реальном изменении содержимого.
+            if cog_name or old_hash !=new_hash :
+                reload_list .append (cog )
+        return reload_list ,failed ,updates
+
+            # HOT-RELOAD
     @app_commands .command (name ="hotreload",description ="Горячая перезагрузка модулей (владелец бота)")
     @app_commands .describe (модуль ="Имя модуля без .py — не указано, все изменённые")
     @app_commands .default_permissions (administrator =True )
     async def hotreload (self ,interaction :discord .Interaction ,модуль :str =None ):
-        """Горячая перезагрузка одного или всех модулей по времени изменения файлов"""
+        """Горячая перезагрузка одного или всех модулей по содержимому файлов.
+
+        Дисковый скан (listdir/open/hashlib) уходит в рабочий поток — шлюз
+        Discord не встаёт, даже если антивирус/диск держат файл; в корутине
+        остаётся только сама перезагрузка расширений (она async)."""
         if not await _owner_only (interaction ):
-            return 
+            return
         ctx =InterCtx (interaction )
-        cog_name =модуль 
-        if cog_name :
-            cogs_to_check =[cog_name ]
-        else :
-            cogs_to_check =[f [:-3 ]for f in os .listdir ("cogs")if f .endswith (".py")and f !="__init__.py"]
+        cog_name =модуль
+        # Весь файловый I/O и хэширование — в потоке, БЕЗ блокировки loop'а.
+        reload_list ,failed ,updates =await asyncio .to_thread (
+            self ._scan_cogs_sync ,cog_name )
+        # Кэш хэшей обновляем тем, что реально прочитали с диска.
+        for _cog ,_h in updates :
+            self .cog_hash_cache [_cog ]=_h
         reloaded =[]
-        failed =[]
-        for cog in cogs_to_check :
-            filepath =f"cogs/{cog}.py"
-            if not os .path .exists (filepath ):
-                failed .append (f"{cog}: заметок found")
-                continue 
+        failed_txt =[f"{c}: {why}"for c ,why in failed ]
+        for cog in reload_list :
+            ext =f"cogs.{cog}"
             try :
-            # Compute file hash
-                with open (filepath ,"rb")as f :
-                    new_hash =hashlib .md5 (f .read ()).hexdigest ()
-                old_hash =self .cog_hash_cache .get (cog )
-                self .cog_hash_cache [cog ]=new_hash 
-                if old_hash ==new_hash :
-                    continue # no change
-                    # File changed — reload
-                ext =f"cogs.{cog}"
                 if ext in self .bot .extensions :
                     await self .bot .reload_extension (ext )
                 else :
                     await self .bot .load_extension (ext )
                 reloaded .append (cog )
             except Exception as e :
-                failed .append (f"{cog}: {e}")
+                failed_txt .append (f"{cog}: {e}")
+        failed =failed_txt
         embed =discord .Embed (title =" Hot Reload",color =0x00FF7F if not failed else 0xFBBF24 )
         if reloaded :
             embed .add_field (name =" Перезагружены",value =", ".join (reloaded )or "—",inline =False )
@@ -321,7 +450,7 @@ class Diagnostics (commands .Cog ):
     async def health_cmd (self ,interaction :discord .Interaction ):
         """Показать текущее здоровье бота: нагрузку, память и статус"""
         ctx =InterCtx (interaction )
-        h =self .get_health_snapshot ()
+        h =await self .get_health_snapshot_async ()
         embed =discord .Embed (title =" Bot Health",color =self ._health_color (h ))
         # Status indicator
         status_emoji ="🟢"if h ["latency_ms"]<300 and h ["memory_mb"]<700 else "🟡"if h ["latency_ms"]<800 and h ["memory_mb"]<1000 else ""
@@ -363,7 +492,7 @@ class Diagnostics (commands .Cog ):
         if mode =="errors":
             await self ._diag_errors (ctx ,сколько )
             return 
-        h =self .get_health_snapshot ()
+        h =await self .get_health_snapshot_async ()
         issues =[]
         if h ["memory_mb"]>THRESHOLDS ["memory_mb"]["warn"]:
             issues .append (f" Высокая память: {h['memory_mb']}MB (порог {THRESHOLDS['memory_mb']['warn']}MB)")
@@ -452,6 +581,7 @@ class Diagnostics (commands .Cog ):
     @app_commands .command (name ="update",
                           description ="Обновить бота и перезапустить (только владелец бота, в ЛС)",
                           extras ={'keep_global':True })
+    @app_commands .default_permissions (administrator =True )
     @app_commands .allowed_contexts (guilds =False ,dms =True ,private_channels =True )
     async def update_cmd (self ,interaction :discord .Interaction ):
         """Полный цикл сам: скачать → проверить целостность → заменить файлы
@@ -460,11 +590,108 @@ class Diagnostics (commands .Cog ):
             return
         await interaction .response .defer (ephemeral =True )
         from services import self_update as SU
-        from config import Config as _Cfg
         bot_dir =os .path .dirname (os .path .dirname (os .path .abspath (__file__ )))
+        # Ветка обновления = та, на которой бот реально запущен (панель/.env
+        # могут переопределить). Раньше тут был захардкоженный main — и
+        # /update откатывал бота на старую ветку без фиксов.
+        _repo ,_branch =await asyncio .to_thread (SU ._source )
         edit =interaction .followup .edit_message
+        # ── Windows: старая консоль закрывается СРАЗУ, обновление и запуск
+        # идут в ОТДЕЛЬНОМ новом окне (update_silent.bat: гасит этот процесс,
+        # тянет код git->zip, ставит зависимости, поднимает свежую консоль).
+        if sys .platform .startswith ('win'):
+            updater =os .path .join (bot_dir ,'update_silent.bat')
+            # Заказ владельца: «не выключайся, пока не скачается новая
+            # версия». Поэтому качаем и проверяем ЗДЕСЬ, пока бот жив, и
+            # уходим на перезапуск только с готовым архивом на руках. При
+            # любой ошибке сети/архива бот ПРОДОЛЖАЕТ РАБОТАТЬ на текущем
+            # коде — раньше он гас сразу, и при неудачном скачивании
+            # владелец оставался и без бота, и без обновления.
+            pmsg =await interaction .followup .send (
+                f" Скачиваю новую версию ветки **{_branch}**. Бот остаётся "
+                "в сети, пока архив не скачается и не пройдёт проверку…",wait =True )
+            SU .clear_pending (bot_dir )
+            _sha_r =await asyncio .to_thread (SU .remote_sha )
+            _sha_l =await asyncio .to_thread (SU .local_sha ,bot_dir )
+            if _sha_r and _sha_l and _sha_r ==_sha_l :
+                await edit (message_id =pmsg .id ,
+                            content =(f" Уже самая свежая версия (`{_sha_r [:7 ]}`) — "
+                                       "качать нечего, перезапуск не делаю."))
+                return
+            _tmp =tempfile .mkdtemp (prefix ='hakumo_dl_')
+            try :
+                ok ,err ,zip_path =await asyncio .to_thread (SU .download_zip ,_tmp )
+                if not ok :
+                    await edit (message_id =pmsg .id ,
+                                content =(f" Не вышло скачать новую версию: {err }. "
+                                          "**Бот продолжает работать** на текущем коде, "
+                                          "перезапуска не было."))
+                    return
+                await edit (message_id =pmsg .id ,
+                            content =" Скачано. Проверяю целостность архива…")
+                ok ,err ,meta =await asyncio .to_thread (SU .verify_zip ,zip_path )
+                if not ok :
+                    await edit (message_id =pmsg .id ,
+                                content =(f" Архив не прошёл проверку: {err }. "
+                                          "**Бот продолжает работать**, ничего не трогал."))
+                    return
+                _pairs ,root ,rel =meta
+                ok ,err =await asyncio .to_thread (SU .verify_python ,zip_path ,root )
+                if not ok :
+                    await edit (message_id =pmsg .id ,
+                                content =(f" Новая версия не собирается: {err }. "
+                                          "**Бот продолжает работать** на старом коде."))
+                    return
+                ok ,err =await asyncio .to_thread (
+                    SU .save_pending ,bot_dir ,zip_path ,root ,rel ,
+                    _sha_r or '',_branch )
+                if not ok :
+                    await edit (message_id =pmsg .id ,
+                                content =(f" Не удалось отложить архив: {err }. "
+                                          "**Бот продолжает работать**."))
+                    return
+            finally :
+                shutil .rmtree (_tmp ,ignore_errors =True )
+            # Всё скачано и проверено — теперь можно уходить на перезапуск.
+            try :
+                import subprocess as _sp
+                # Командная строка собирается СТРОКОЙ, а не списком: Python
+                # прогоняет список через list2cmdline и экранирует кавычки
+                # заголовка в "\"Hakumo Updater\"". cmd обратное экранирование
+                # не понимает, разбирал это как заголовок \"\" плюс команду
+                # Hakumo — отсюда «Windows cannot find '...'». В .bat-файлах
+                # тот же start "Заголовок" cmd /k ... работает как раз потому,
+                # что там кавычки никто не экранирует.
+                import re as _re_br
+                _br = _re_br.sub(r'[^A-Za-z0-9._/-]', '', str(_branch or 'main')) or 'main'
+                # Метка «идёт обновление». Без неё старый start_bot.bat
+                # через 5 секунд воскрешал процесс посреди замены файлов —
+                # бот поднимался на старом коде, а обновление срывалось.
+                try :
+                    os .makedirs (os .path .join (bot_dir ,'data'),exist_ok =True )
+                    with open (os .path .join (bot_dir ,'data','.updating'),'w',encoding ='utf-8')as _uf :
+                        _uf .write ('%d %s' % (os .getpid (),_br ))
+                except OSError as _me :
+                    _log .warning ('/update: метку обновления не поставить: %s',_me )
+                _sp .Popen (
+                'cmd /c start "Hakumo Updater" cmd /k "%s" %d %s'
+                % (updater ,os .getpid (),_br ),
+                cwd =bot_dir ,close_fds =True ,
+                creationflags =getattr (_sp ,'CREATE_NEW_CONSOLE' ,0 )or 0 )
+            except Exception as _ue :
+                SU .clear_pending (bot_dir )
+                await edit (message_id =pmsg .id ,
+                            content =(f" Не удалось запустить обновлятор: {_ue }. "
+                                      "**Бот продолжает работать.** Запусти update.bat вручную."))
+                return
+            await edit (message_id =pmsg .id ,
+                        content =(" Новая версия скачана и проверена. Перезапускаюсь — "
+                                  "обновлятор применит её в отдельном окне и поднимет бота. "
+                                  "Данные и .env не трогаются."))
+            await asyncio .sleep (2 )
+            os ._exit (0 )
         msg =await interaction .followup .send (
-            f" Обновление: проверяю свежую версию ветки **{_Cfg.UPDATE_BRANCH}** из `{_Cfg.UPDATE_REPO}`…",wait =True )
+            f" Обновление: проверяю свежую версию ветки **{_branch}** из `{_repo}`…",wait =True )
         # ── 0. Уже свежий? Тогда не качаем и не перезапускаемся вообще.
         sha_remote =await asyncio .to_thread (SU .remote_sha )
         sha_local =await asyncio .to_thread (SU .local_sha ,bot_dir )
@@ -477,7 +704,7 @@ class Diagnostics (commands .Cog ):
         if git_tried :
             await edit (message_id =msg .id ,
                         content =" Обновляю через git — по сети идут только изменённые данные…")
-            ok ,err ,info =await asyncio .to_thread (SU .git_update ,bot_dir ,_Cfg .UPDATE_BRANCH )
+            ok ,err ,info =await asyncio .to_thread (SU .git_update ,bot_dir ,_branch )
             if ok :
                 if info .get ('up_to_date'):
                     await edit (message_id =msg .id ,
@@ -517,7 +744,7 @@ class Diagnostics (commands .Cog ):
                 sha =sha_remote or await asyncio .to_thread (SU .remote_sha )
                 ok ,err ,stats =await asyncio .to_thread (
                     SU .stage_update ,zip_path ,bot_dir ,root ,rel ,
-                    (interaction .channel_id or 0),(sha or ''),_Cfg .UPDATE_BRANCH )
+                    (interaction .channel_id or 0),(sha or ''),_branch )
                 if not ok :
                     await edit (message_id =msg .id ,content =f" Замена не удалась: {err }. Перезапуск не делаю.")
                     return

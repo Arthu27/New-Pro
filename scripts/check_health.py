@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Глубокий аудит «идеальности» Hakumo — нет даже мелких проблем.
+r"""Глубокий аудит «идеальности» Hakumo — нет даже мелких проблем.
 
 Запуск:  python3 scripts/check_health.py        (Linux/macOS)
          python scripts\check_health.py         (Windows VDS)
@@ -214,12 +214,19 @@ PUBLIC_EXACT = {
     '/api/public/guilds', '/api/public/apply',               # публичная анкета
     '/api/login/suggest', '/api/discord-check',              # подсказки логина и
                                                               # публичная проверка Discord
+    '/api/login-probe',                                      # пред-проверка экрана
+                                                              # «Проверяем доступ» (своя auth)
     '/api/discord-login',                                    # вход по PIN (своя auth)
     '/api/voice-command',                                    # голос: свой shared-secret
     '/api/forgot-password', '/api/reset-password',           # восстановление доступа
+    '/.well-known/security.txt',                             # RFC 9116: публичный
+                                                              # по смыслу, его ищут
+                                                              # без доступа в панель
 }
 PUBLIC_PREFIX = ('/static/', '/hooks/')                      # статика; webhook-токены
-PUBLIC_RE = re.compile(r'^/api/activity/music/(config|token|state|control)$')  # Discord OAuth
+# Discord Activity музыки снесена вместе с фичей (2026-09-01) — публичных
+# Bearer/OAuth-маршрутов не осталось.
+PUBLIC_RE = re.compile(r'(?!)')
 unprotected = []
 for p in walk_py('web'):
     src = read(p)
@@ -280,14 +287,16 @@ for rf in ('requirements.txt', 'requirements-panel.txt', 'requirements-test.txt'
             if line:
                 req_pkgs.add(re.split(r'[<>=!\[~]', line)[0].strip().lower())
 IMPORT_TO_PKG = {'discord': 'discord.py', 'PIL': 'Pillow', 'dotenv': 'python-dotenv',
-                 'yt_dlp': 'yt-dlp', 'flask_session': 'flask-session',
+                 'flask_session': 'flask-session',
                  'deep_translator': 'deep-translator', 'faster_whisper': 'faster-whisper'}
 # import-имя для проверки установки (обратное соответствие)
 PKG_TO_IMPORT = {'discord.py': 'discord', 'pillow': 'PIL', 'python-dotenv': 'dotenv',
-                 'yt-dlp': 'yt_dlp', 'flask-session': 'flask_session',
+                 'flask-session': 'flask_session',
                  'deep-translator': 'deep_translator', 'faster-whisper': 'faster_whisper',
                  'pynacl': 'nacl', 'discord-ext-voice-recv': 'discord.ext.voice_recv',
-                 'pyyaml': 'yaml', 'psutil': 'psutil'}
+                 'pyyaml': 'yaml', 'psutil': 'psutil',
+                 # pip-имя со строчной, import-имя с заглавной — как у Pillow
+                 'fonttools': 'fontTools'}
 not_installed = []
 for pkg in sorted(req_pkgs):
     top = PKG_TO_IMPORT.get(pkg, pkg.replace('-', '_'))

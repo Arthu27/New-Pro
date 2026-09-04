@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}PagerDuty — Панель Hakumo{% endblock %}
+{% block title %}PagerDuty — Hakumo{% endblock %}
 {% block page_title %}PagerDuty{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> PagerDuty</div>
+    <div class="eyebrow"> Настройки </div>
     <h1>Мост тревог PagerDuty → Discord</h1>
     <p>PagerDuty не умеет слать в Discord сам — панель принимает его тревоги и превращает
        в понятные карточки в вашем канале: что случилось, кто дежурный, ссылка на инцидент.
@@ -168,8 +168,11 @@
       <button type="button" class="pd-btn-ghost" id="pdEye" title="Показать/скрыть токен"><i class="fas fa-eye"></i></button>
     </div>
     <div class="pd-field">
-      <label for="pdChannel">Канал тревог в Discord</label>
-      <select id="pdChannel" aria-label="Канал тревог PagerDuty"></select>
+      <label>Канал тревог в Discord</label>
+      <a href="/channel-settings" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ac);text-decoration:none;padding:6px 0;">
+        <i class="fas fa-route"></i> Настраивается в разделе «Каналы и маршруты»
+      </a>
+      <input type="hidden" id="pdChannel" value="0">
     </div>
     <div class="pd-row">
       <label class="pd-switch"><input type="checkbox" id="pdEnabled" checked> Мост включён</label>
@@ -355,25 +358,8 @@ function renderHistory(list) {
   }).join('');
 }
 
-/* ── селект канала: рендерим только при изменении списка (не дёргаем открытый) ── */
-var _chansKey = '';
-function renderChannels(d) {
-  var key = (d.channels || []).map(function (c) { return c.id + ':' + c.name; }).join('|') + '#' + (d.channel_id || 0);
-  if (key === _chansKey) return;
-  _chansKey = key;
-  var sel = $('pdChannel');
-  if (!d.channels || !d.channels.length) {
-    sel.innerHTML = '<option value="0">' +
-      (STATE.bot_status === 'offline'
-        ? 'бот офлайн — список каналов недоступен, сохраните после запуска'
-        : 'нет текстовых каналов') + '</option>';
-    return;
-  }
-  sel.innerHTML = '<option value="0">— не выбран —</option>' + d.channels.map(function (c) {
-    return '<option value="' + esc(c.id) + '"' + (String(d.channel_id) === c.id ? ' selected' : '') +
-      '>#' + esc(c.name) + '</option>';
-  }).join('');
-}
+/* Канал тревог выбирается в «Каналах и маршрутах» (маршрут pagerduty_channel);
+   на этой странице — только тумблер моста и адрес webhook. */
 
 /* ── превью карточки ── */
 var PREVIEW = {
@@ -402,10 +388,10 @@ document.querySelectorAll('#pdTabs .pd-tab').forEach(function (b) {
 function applyState(d) {
   STATE.hook_path = d.hook_path || '';
   STATE.token = d.token || '';
+  STATE.channel_id = d.channel_id || 0;   // канал задаётся в «Каналах и маршрутах»
   renderHook();
   $('pdEnabled').checked = !!d.enabled;
   renderBridge(d);
-  renderChannels(d);
   renderKpis(d.history_stats);
   renderHistory(d.history);
 }
@@ -448,7 +434,7 @@ async function pdPost(body, btn) {
 
 $('pdSave').addEventListener('click', function () {
   pdPost({
-    channel_id: $('pdChannel').value || '0',
+    channel_id: String(STATE.channel_id || $('pdChannel').value || '0'),
     enabled: $('pdEnabled').checked
   }, this).then(function (d) { if (d) toast('Сохранено — мост уже работает', true); });
 });

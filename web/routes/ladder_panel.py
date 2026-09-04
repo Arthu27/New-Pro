@@ -24,9 +24,11 @@ from web.routes.mod_control import validate_user_id, load_warns_map
 from cogs import ladder as LD
 from cogs.warnings import load_warn_config
 
-ACTIONS = ('mute', 'kick', 'ban')
+# vmute — отдельное действие: глушит ТОЛЬКО микрофон (роль войс-мута /
+# нативный server-mute), чат не трогается. Не путать с mute (чат-мут).
+ACTIONS = ('mute', 'vmute', 'kick', 'ban')
 UNITS = ('minute', 'hour', 'day')
-ERR_ACTION = 'Действие: мут / кик / бан'
+ERR_ACTION = 'Действие: мут чата / войс-мут / кик / бан'
 ERR_COUNT = 'Количество варнов — целое число'
 
 

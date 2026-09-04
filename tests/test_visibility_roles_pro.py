@@ -155,50 +155,25 @@ r = client.post('/api/guild/%s/color-roles/publish' % GID, json={
     'channel_id': '', 'colors': [{'name': 'x', 'hex': '#ff0000'}]})
 check(r.status_code == 400, 'публикация без канала — 400')
 
-# ═══ 4. Роли по реакциям: демо-создание и удаление ════════════════════
-print('== роли по реакциям ==')
-r = client.post('/api/guild/%s/reaction-roles/create' % GID, json={
-    'title': 'Игры', 'channel_id': '1002', 'type': 'emoji',
-    'entries': [{'role_id': 'r-1', 'emoji': ':one:'}]})
-d = r.get_json()
-check(r.status_code == 200 and d.get('success') and d.get('demo'),
-      'демо-создание emoji-панели без бота')
-rr = client.get('/api/guild/%s/reaction-roles' % GID).get_json()
-check(len(rr) == 1 and rr[0]['title'] == 'Игры' and rr[0]['entries'][0]['role_name'] == 'r-1',
-      'панель сохранена в файл и читается')
-r = client.post('/api/guild/%s/reaction-roles/create' % GID, json={
-    'title': 'Без эмодзи', 'channel_id': '1002', 'type': 'emoji',
-    'entries': [{'role_id': 'r-2', 'emoji': ''}]})
-check(r.status_code == 400, 'emoji-панель без эмодзи — 400')
-r = client.post('/api/guild/%s/reaction-roles/create' % GID, json={
-    'title': 'Список', 'channel_id': '1002', 'type': 'select',
-    'entries': [{'role_id': 'r-3', 'emoji': ''}]})
-d = r.get_json()
-check(d.get('success') and d.get('type') is None or d.get('success'),
-      'select-панель создаётся без эмодзи')
-rr = client.get('/api/guild/%s/reaction-roles' % GID).get_json()
-check(len(rr) == 2, 'две панели в списке')
-r = client.post('/api/guild/%s/reaction-roles/%s/delete' % (GID, rr[0]['id']), json={})
-check(r.get_json().get('success'), 'удаление панели')
-check(len(client.get('/api/guild/%s/reaction-roles' % GID).get_json()) == 1,
-      'после удаления осталась одна')
+# ═══ 4. Роли по реакциям — фича удалена (модуль reaction_roles снесён) ═══
 
 # ═══ 5. Профиль BOT_SLIM ══════════════════════════════════════════════
 print('== BOT_SLIM ==')
 from cogs_policy import select_cog_files, SLIM_COGS  # noqa: E402
-files = ['moderation.py', 'ticket.py', 'sla_cog.py', 'staff_apply.py',
-         'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
-         'economy_cog.py', 'giveaway.py', 'ai_chat.py', 'help.py',
-         'logs.py', 'impersonation.py', 'minigames.py', 'level_cog.py']
+files = ['moderation.py', 'reports.py', 'staff_apply.py',
+         'voice_tracker.py',
+         'ai_chat.py', 'help.py',
+         'logs.py', 'impersonation.py']
 enabled, gone = select_cog_files(files, slim=True)
 sel = set(enabled)
-check({'moderation.py', 'ticket.py', 'sla_cog.py', 'staff_apply.py',
-       'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
+check({'moderation.py', 'reports.py', 'staff_apply.py',
+       'voice_tracker.py',
        'help.py', 'logs.py', 'impersonation.py', 'ai_chat.py'} <= sel,
-      'BOT_SLIM: модерация, тикеты, музыка, ядро и AI-чат загружены')
-check({'economy_cog.py', 'giveaway.py', 'minigames.py',
-       'level_cog.py'} <= set(gone),
-      'BOT_SLIM: веселуха (экономика/игры/левелинг) отключена')
+      'BOT_SLIM: модерация, репорты, заявки, войс-статистика, ядро и AI-чат загружены')
+import os as _os
+check(not _os.path.exists(os.path.join(ROOT, 'cogs', 'music_cog.py'))
+      and not _os.path.exists(os.path.join(ROOT, 'cogs', 'voice_commands.py')),
+      'BOT_SLIM: файлы музыки (music_cog/voice_commands) физически удалены')
 
 # ═══ 6. Шаблоны ═══════════════════════════════════════════════════════
 print('== шаблоны ==')
@@ -207,11 +182,6 @@ check('cr-card' in cr and 'cr-publish' in cr and 'alert(' not in cr,
       'цветные роли: карточки, публикация, без alert()')
 check('confirmAction' in cr and 'savePalette' in cr,
       'цветные роли: подтверждение удаления и автосохранение')
-rrt = open(os.path.join(ROOT, 'web', 'templates', 'reaction_roles.html'), encoding='utf-8').read()
-check('rr-type-btn' in rrt and 'rr-entry-row' in rrt and 'alert(' not in rrt,
-      'реакционные роли: переключатель типа, строки ролей, без alert()')
-check('askConfirm' in rrt and 'rr-modal' in rrt,
-      'реакционные роли: модалка и подтверждение удаления')
 pa = open(os.path.join(ROOT, 'web', 'templates', 'panel_access.html'), encoding='utf-8').read()
 check('pv-notif' in pa and 'pv-activity' in pa and '/api/panel/visibility' in pa,
       'доступ: настройка видимости уведомлений и ленты')
