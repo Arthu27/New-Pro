@@ -724,8 +724,8 @@ class Reports(commands.Cog):
 
     # ── команды ─────────────────────────────────────────────────────
     @app_commands.command(name='report', description='Позвать модератора')
-    @app_commands.describe(user='Из-за кого зовёте модератора',
-                           reason='Что случилось — коротко и по делу')
+    @app_commands.describe(user='На кого жалуемся',
+                           reason='Причина — что он нарушил')
     async def report_slash(self, interaction, user: discord.Member,
                            reason: str):
         if user.bot or user.id == interaction.user.id:

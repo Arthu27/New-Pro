@@ -135,6 +135,10 @@ def _action_acl_db():
     return GuildData("action_acl")
 
 
+_CATS_CACHE = {'ts': 0.0, 'data': None}
+_CATS_TTL = 10.0   # сек: каталог меняется только с профилем/файлами когов
+
+
 def command_categories():
     """ЖИВОЙ список команд по разделам — из реального каталога бота.
 
@@ -155,6 +159,25 @@ def command_categories():
         return {k: list(v) for k, v in COMMAND_CATEGORIES.items()}
 
 
+def _command_categories_cached():
+    """command_categories() с коротким TTL-кэшем.
+
+    «Права команд» дергает список при каждой сборке payload и на каждую
+    правку категории — скан AST по всем когам там не нужен (открытие
+    страницы должно быть мгновенным, жалоба владельца 2026-09-05).
+    """
+    import time as _t
+    if _CATS_CACHE['data'] is not None and _t.time() - _CATS_CACHE['ts'] < _CATS_TTL:
+        return _CATS_CACHE['data']
+    try:
+        data = command_categories()
+    except Exception:
+        data = {k: list(v) for k, v in COMMAND_CATEGORIES.items()}
+    _CATS_CACHE['data'] = data
+    _CATS_CACHE['ts'] = _t.time()
+    return data
+
+
 def all_categories():
     """Каталог для панели «Права команд» — ТОЛЬКО живые команды.
 
@@ -168,7 +191,7 @@ def all_categories():
     модули и живые команды, а при своей недоступности сам откатывается
     на COMMAND_CATEGORIES (уже урезанный до проверенных имён).
     """
-    return {k: list(v) for k, v in command_categories().items()}
+    return {k: list(v) for k, v in _command_categories_cached().items()}
 
 
 def load_acl(guild_id: int) -> dict:

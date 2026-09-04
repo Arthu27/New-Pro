@@ -22,11 +22,13 @@ from web.routes._common import (
 # «данные долго грузятся». Держим готовый payload за TTL, по ETag отдаём
 # 304 (мгновенно, без тела), а любая запись прав сбрасывает кэш и шлёт
 # точечный SSE-сигнал — данные остаются свежими.
-_ROLE_TTL = 30.0          # сек: состав ролей сервера меняется редко
-_PAYLOAD_TTL = 5.0        # сек: склейка ролей + каталог + ACL
+_ROLE_TTL = 120.0         # сек: состав ролей сервера меняется редко
+_PAYLOAD_TTL = 60.0       # сек: склейка ролей + каталог + ACL (пишущие
+                          # эндпоинты сбрасывают кэш — свежесть не страдает)
 _perm_cache_lock = threading.Lock()
 _roles_cache = {}         # gid -> (ts, [role_dict])
 _payload_cache = {}       # gid -> (ts, raw_json, etag)
+_refreshing = set()       # gid — фоновое пересобирание уже идёт (anti-stampede)
 
 
 def _guild_roles(gid, bot, guild):
@@ -89,6 +91,42 @@ def _invalidate_perm_cache(gid):
         publish(gid, 'permissions')
     except Exception as _ex:
         _log.debug("permissions SSE-сигнал не отправлен: %s", _ex)
+
+
+def _payload_build(gid, guild_id_str):
+    """Пересобрать payload «Права команд» и положить в кэш. (raw, etag)."""
+    from services.permission_acl import (all_categories, ACTIONS,
+                                        load_action_acl, effective_acl)
+    import web.app as _app
+    bot = _app.bot_instance
+    guild = None
+    if bot:
+        guild = bot.get_guild(gid)
+        if guild is None:
+            for g in bot.guilds:
+                if str(g.id) == str(guild_id_str):
+                    guild = g
+                    break
+    roles = _guild_roles(gid, bot, guild)
+    payload = {
+        'success': True,
+        'roles': roles,
+        # ПОЛНЫЙ список команд (живой каталог видимых slash + реальные
+        # префиксные/мод-команды вроде staff-stats): страница «Права
+        # команд» должна давать разрешить ЛЮБУЮ рабочую команду, а не
+        # только 6 видимых в «/» slash (заказ владельца — новая команда
+        # статистики не отображалась). Призраков удалённых тут нет —
+        # список статически сверен с реальными когами.
+        'categories': all_categories(),
+        'acl': effective_acl(gid),
+        'actions': ACTIONS,
+        'action_acl': load_action_acl(gid),
+    }
+    raw = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+    etag = '"' + hashlib.md5(raw.encode('utf-8')).hexdigest() + '"'
+    with _perm_cache_lock:
+        _payload_cache[gid] = (time.time(), raw, etag)
+    return raw, etag
 
 
 def _gid(guild_id):
@@ -202,43 +240,34 @@ def register(ctx):
 
         with _perm_cache_lock:
             hit = _payload_cache.get(gid)
-        if hit and now - hit[0] < _PAYLOAD_TTL:
+        fresh = bool(hit) and now - hit[0] < _PAYLOAD_TTL
+        if not fresh and hit:
+            # Страница открывается МГНОВЕННО: устаревший payload отдаём
+            # сейчас же, пересборка уходит в фон (жалоба владельца: ждал
+            # ~5 секунд на открытие «Права команд», 2026-09-05).
             raw, etag = hit[1], hit[2]
+            self_gid, self_raw = gid, hit[1]
+
+            def _rebuild():
+                try:
+                    _payload_build(int(self_gid), str(guild_id))
+                except Exception as _ex:
+                    _log.debug('permissions: фоновая пересборка: %s', _ex)
+                finally:
+                    with _perm_cache_lock:
+                        _refreshing.discard(self_gid)
+
+            with _perm_cache_lock:
+                if self_gid not in _refreshing:
+                    _refreshing.add(self_gid)
+                    threading.Thread(target=_rebuild, daemon=True).start()
             if etag in request.headers.get('If-None-Match', ''):
                 return Response(status=304,
                                 headers={'ETag': etag, 'Cache-Control': 'no-cache'})
             return Response(raw, mimetype='application/json',
                             headers={'ETag': etag, 'Cache-Control': 'no-cache'})
 
-        import web.app as _app
-        bot = _app.bot_instance
-        guild = None
-        if bot:
-            guild = bot.get_guild(gid)
-            if guild is None:
-                for g in bot.guilds:
-                    if str(g.id) == str(guild_id):
-                        guild = g
-                        break
-        roles = _guild_roles(gid, bot, guild)
-        payload = {
-            'success': True,
-            'roles': roles,
-            # ПОЛНЫЙ список команд (живой каталог видимых slash + реальные
-            # префиксные/мод-команды вроде staff-stats): страница «Права
-            # команд» должна давать разрешить ЛЮБУЮ рабочую команду, а не
-            # только 6 видимых в «/» slash (заказ владельца — новая команда
-            # статистики не отображалась). Призраков удалённых тут нет —
-            # список статически сверен с реальными когами.
-            'categories': all_categories(),
-            'acl': effective_acl(gid),
-            'actions': ACTIONS,
-            'action_acl': load_action_acl(gid),
-        }
-        raw = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
-        etag = '"' + hashlib.md5(raw.encode('utf-8')).hexdigest() + '"'
-        with _perm_cache_lock:
-            _payload_cache[gid] = (now, raw, etag)
+        raw, etag = _payload_build(gid, str(guild_id))
 
         if etag in request.headers.get('If-None-Match', ''):
             return Response(status=304,
@@ -409,3 +438,26 @@ def register(ctx):
         _invalidate_perm_cache(guild_id)
         return jsonify({'success': True, 'category': category,
                         'role_ids': role_ids, 'commands': len(cmds)})
+
+
+def _prewarm_payload():
+    """Прогрев payload «Права команд» в фоне при старте веб-приложения.
+
+    Первый холодный запрос платил за скан каталога команд (AST по всем
+    когам, ~0.5 c даже локально) — владелец ждал ~5 секунд на открытие
+    страницы. Прогретый кэш делает открытие мгновенным; если бот ещё не
+    поднялся — фоновая пересборка при первом заходе поправит состав.
+    """
+    try:
+        import time as _t
+        _t.sleep(3.0)
+        import web.app as _app
+        gid_s = str(getattr(_app, 'MAIN_GUILD_ID', '') or '')
+        if gid_s.isdigit():
+            _payload_build(int(gid_s), gid_s)
+            _log.info('permissions: payload прогрет заранее (%s)', gid_s)
+    except Exception as _ex:
+        _log.debug('permissions: прогрев не удался: %s', _ex)
+
+
+threading.Thread(target=_prewarm_payload, daemon=True).start()
