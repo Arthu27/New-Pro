@@ -136,6 +136,12 @@ def _demo_channels_seed ():
         {'id':'1012','name':'общий-голос-2','type':'voice','position':1,'category_id':'903','hidden':False},
         {'id':'1013','name':'афк','type':'voice','position':2,'category_id':'903','hidden':False},
         {'id':'1014','name':'сцена','type':'stage','position':0,'category_id':'903','hidden':False},
+        # Сами КАТЕГОРИИ — это тоже каналы (type category): без них на
+        # странице «Каналы» пустуют селекты «Категория» (создание/правка).
+        {'id':'900','name':'ИНФОРМАЦИЯ','type':'category','position':0,'category_id':None,'category_pos':-1,'hidden':False},
+        {'id':'901','name':'ОБЩЕНИЕ','type':'category','position':1,'category_id':None,'category_pos':-1,'hidden':False},
+        {'id':'902','name':'РАЗНОЕ','type':'category','position':2,'category_id':None,'category_pos':-1,'hidden':False},
+        {'id':'903','name':'ГОЛОСОВЫЕ','type':'category','position':3,'category_id':None,'category_pos':-1,'hidden':False},
     ]
 
 
