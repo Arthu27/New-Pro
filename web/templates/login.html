@@ -116,14 +116,14 @@
 {% else %}
         <!-- ─── Выбор способа входа ─── -->
         <div class="seg" role="tablist" aria-label="Способ входа">
-          <button type="button" id="segDiscord" class="on" role="tab" aria-selected="true" aria-controls="dsPane">
-            <i class="fab fa-discord" aria-hidden="true"></i>Через Discord</button>
-          <button type="button" id="segPass" role="tab" aria-selected="false" aria-controls="passPane">
+          <button type="button" id="segPass" class="on" role="tab" aria-selected="true" aria-controls="passPane">
             <i class="fas fa-key" aria-hidden="true"></i>По паролю</button>
+          <button type="button" id="segDiscord" role="tab" aria-selected="false" aria-controls="dsPane">
+            <i class="fab fa-discord" aria-hidden="true"></i>Через Discord</button>
         </div>
 
-        <!-- ─── Способ 1: вход через Discord (PIN в личные сообщения) ─── -->
-        <div id="dsPane" role="tabpanel" aria-label="Вход через Discord">
+        <!-- ─── Способ 2: вход через Discord (PIN в личные сообщения) ─── -->
+        <div id="dsPane" hidden role="tabpanel" aria-label="Вход через Discord">
           <div class="method-note">
             <i class="fas fa-shield-halved" aria-hidden="true"></i>
             <span>Самый надёжный способ: панель <b>живьём</b> проверит сервер и роль,
@@ -134,7 +134,9 @@
             <div class="input-wrap has-ico">
               <i class="fab fa-discord f-ico" aria-hidden="true"></i>
               <input type="text" id="dsQuery" placeholder="например @alex или Discord ID"
-                     autocomplete="off" aria-label="Discord ID или ник для входа через Discord">
+                     autocomplete="off" aria-label="Discord ID или ник для входа через Discord"
+                     oninput="showSuggest(this, 'dsPopup', '#dsCheckBtn')" onfocus="showSuggest(this, 'dsPopup', '#dsCheckBtn')">
+              <div class="autocomplete-popup" id="dsPopup"></div>
             </div>
           </div>
           <button type="button" class="btn btn-primary" id="dsCheckBtn" style="width:100%">
@@ -160,8 +162,8 @@
 
         <div class="divider-or" aria-hidden="true">или</div>
 
-        <!-- ─── Способ 2: вход по паролю ─── -->
-        <div id="passPane" hidden role="tabpanel" aria-label="Вход по паролю">
+        <!-- ─── Способ 1: вход по паролю ─── -->
+        <div id="passPane" role="tabpanel" aria-label="Вход по паролю">
           <form method="POST" action="/login" autocomplete="off" id="passForm" novalidate>
             <div class="f-group">
               <label for="passUsername">Discord ID или ник</label>
@@ -403,7 +405,11 @@
         renderChecks([{ name: 'Сеть', status: 'fail', detail: 'нет связи с панелью' }]);
       });
     });
-    $('dsQuery').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+    $('dsQuery').addEventListener('keydown', function (e) {
+      var popup = $('dsPopup');
+      if (popup && popup.classList.contains('open')) return;  // Enter = выбор подсказки
+      if (e.key === 'Enter') { e.preventDefault(); btn.click(); }
+    });
 
     var loginBtn = $('dsLoginBtn');
     if (loginBtn) {
@@ -443,7 +449,7 @@
          как фокус ушёл (гонка таймера с вводом пароля). */
   var suggestTimer = null;
   var suggestSeq = 0;
-  window.showSuggest = function (input, popupId) {
+  window.showSuggest = function (input, popupId, focusSel) {
     if (window.__lgSuggestBlock) { window.__lgSuggestBlock = false; return; }
     var popup = $(popupId);
     if (!popup) return;
@@ -482,22 +488,23 @@
               window.__lgSuggestBlock = true;
               input.value = it.dataset.user || it.dataset.id || input.value;
               popup.classList.remove('open');
-              var pw = $('passPassword');
-              if (pw) pw.focus();
+              var nf = focusSel ? document.querySelector(focusSel) : $('passPassword');
+              if (nf) nf.focus();
             });
           });
         })
         .catch(function () { popup.classList.remove('open'); });
     }, 220);
   };
-  (function () {
-    var input = $('passUsername');
+  function attachSuggest(inputId, popupId) {
+    var input = $(inputId);
     if (!input) return;
     input.addEventListener('keydown', function (e) {
-      var popup = $('passPopup');
+      var popup = $(popupId);
       if (!popup.classList.contains('open')) return;
       if (e.key === 'Tab') { popup.classList.remove('open'); suggestSeq++; return; }
       var items = Array.prototype.slice.call(popup.querySelectorAll('.item'));
+      if (!items.length) return;
       var hl = popup.querySelector('.item.hl');
       var idx = hl ? items.indexOf(hl) : -1;
       if (e.key === 'ArrowDown') {
@@ -520,20 +527,22 @@
       }
     });
     document.addEventListener('click', function (e) {
-      var popup = $('passPopup');
+      var popup = $(popupId);
       if (popup && popup.classList.contains('open') && !popup.contains(e.target) && e.target !== input) {
         popup.classList.remove('open');
       }
     });
-    // Фокус ушёл из логина (Tab, клик в пароль, в forgot-панель) — подсказка
-    // гаснет сразу и не вернётся по запоздавшему ответу сервера.
+    // Фокус ушёл из логина (Tab, клик в другое поле) — подсказка гаснет
+    // сразу и не вернётся по запоздавшему ответу сервера.
     input.addEventListener('blur', function () {
       clearTimeout(suggestTimer);
       suggestSeq++;
-      var popup = $('passPopup');
+      var popup = $(popupId);
       if (popup) popup.classList.remove('open');
     });
-  })();
+  }
+  attachSuggest('passUsername', 'passPopup');
+  attachSuggest('dsQuery', 'dsPopup');
 
   /* ── Оверлей «Проверяем доступ»: шаги + настоящая проверка (login-probe) ── */
   var accessCheck = {
