@@ -76,6 +76,36 @@ def _verdict_allowed(guild, user, kind) -> bool:
         return True
 
 
+def _verdict_limit_denied(guild, user, kind):
+    """Лимиты стаффа для вердикта: None — можно, иначе готовый текст отказа.
+
+    Тот же счётчик, что у /mute, /ban и /kick: вердикт по репорту —
+    полноценное наказание и списывает расходку модератора.
+    """
+    key = _VERDICT_ACL.get(kind)
+    if not key or guild is None or user is None:
+        return None
+    try:
+        from services import staff_limits as _SL
+        ok, deny = _SL.check_action(guild, user, key)
+        return None if ok else deny
+    except Exception as _ex:
+        _log.debug('reports: verdict limit: %s', _ex)
+        return None
+
+
+def _record_verdict(guild, user, kind):
+    """Успешный вердикт — в счётчик лимитов модератора."""
+    key = _VERDICT_ACL.get(kind)
+    if not key or guild is None or user is None:
+        return
+    try:
+        from services import staff_limits as _SL
+        _SL.record_hit(guild.id, user.id, key, 1)
+    except Exception as _ex:
+        _log.debug('reports: verdict record: %s', _ex)
+
+
 def _any_verdict_allowed(guild, user) -> bool:
     """Есть ли у модератора хоть одно действие для решения репорта."""
     return any(_verdict_allowed(guild, user, k) for k in _VERDICT_ACL)
@@ -576,10 +606,22 @@ class Reports(commands.Cog):
                 f'Действие «{RC.KIND_LABELS.get(v["kind"], v["kind"])}» тебе '
                 'не дал владелец (панель → Доступ → Права команд → '
                 'Классические разрешения).', ephemeral=True)
+        _lim = _verdict_limit_denied(guild, interaction.user, v['kind'])
+        if _lim:
+            return await interaction.response.send_message(f'🚫 {_lim}', ephemeral=True)
         applied = 'Применено.'
         try:
             if v['kind'] == 'mute' and member:
                 hours = v.get('hours') or 24
+                try:  # потолок длительности мута для этого модератора
+                    from services import staff_limits as _SL
+                    _cap = _SL.effective_max_duration(
+                        guild.id, 'mute',
+                        [r.id for r in getattr(interaction.user, 'roles', [])])
+                    if _cap and _cap > 0:
+                        hours = min(hours, max(1, int(_cap // 3600)))
+                except Exception as _ex:
+                    _log.debug('вердикт mute cap: %s', _ex)
                 until = datetime.now(timezone.utc) + timedelta(
                     minutes=1, hours=min(hours, 672))  # лимит Discord — 28 дней
                 try:  # таймаут глушит чат И голос — сначала снимаем отдельный войс-мут
@@ -612,6 +654,9 @@ class Reports(commands.Cog):
         except Exception as ex:
             return await interaction.response.send_message(
                 f'Discord не принял наказание: {ex}', ephemeral=True)
+
+        if v['kind'] in ('mute', 'kick', 'ban'):
+            _record_verdict(guild, interaction.user, v['kind'])
 
         if v['kind'] != 'none':
             RC.add_violation(guild.id, t['accused_id'], v['kind'],

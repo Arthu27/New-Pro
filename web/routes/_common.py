@@ -233,6 +233,53 @@ def acl_action_allowed(gid, member, action_key):
         return False
 
 
+def _panel_limit_deny(bot, gid, member, key, amount=1):
+    """Лимиты стаффа («Щит сервера» → Лимиты) для панельного действия.
+
+    member — viewer_member(bot, gid): реальный Discord-участник, вошедший
+    в панель; None (доверенный вход владельца) — лимиты не пишем.
+    Возвращает None — можно, либо готовый текст отказа («Лимит исчерпан…»).
+    Сбой не мешает действию (тот же fail-open, что в когах).
+    """
+    try:
+        if member is None or bot is None:
+            return None
+        guild = bot.get_guild(int(gid))
+        if guild is None:
+            return None
+        from services import staff_limits as _SL
+        ok, deny = _SL.check_action(guild, member, key, amount=amount)
+        return deny if not ok else None
+    except Exception as _ex:
+        _log.debug('_panel_limit_deny(%s): %s', key, _ex)
+        return None
+
+
+def _panel_limit_record(gid, member, key, amount=1):
+    """Успешное панельное действие — в счётчик лимитов модератора."""
+    try:
+        if member is None:
+            return
+        from services import staff_limits as _SL
+        _SL.record_hit(int(gid), member.id, key, amount)
+    except Exception as _ex:
+        _log.debug('_panel_limit_record(%s): %s', key, _ex)
+
+
+def _panel_mute_cap(bot, gid, member):
+    """Потолок длительности мута (сек) для участника; 0 — без потолка."""
+    try:
+        if member is None or bot is None:
+            return 0
+        from services import staff_limits as _SL
+        role_ids = [r.id for r in (getattr(member, 'roles', None) or [])
+                    if getattr(r, 'id', None) != int(gid)]
+        return int(_SL.effective_max_duration(int(gid), 'mute', role_ids) or 0)
+    except Exception as _ex:
+        _log.debug('_panel_mute_cap: %s', _ex)
+        return 0
+
+
 def _safe_json_obj():
     """request JSON строго как dict.
 

@@ -6,6 +6,7 @@ from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, _live_publish, viewer_member, acl_action_allowed,
+    _panel_limit_deny, _panel_limit_record, _panel_mute_cap,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -178,6 +179,14 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
             return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        # Лимиты стаффа: у вошедшего через Discord то же ограничение мутов,
+        # что и в командах (доверенный вход владельца — без лимитов).
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else int (session .get ('selected_guild')or MAIN_GUILD_ID ),_acl_m ,'mute')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
+        _mute_cap =_panel_mute_cap (bot ,guild.id if guild else 0 ,_acl_m)
+        if _mute_cap and sec >_mute_cap :
+            return jsonify ({'error':f'Мут дольше разрешённого вашей ролью (потолок {_mute_cap //60 } мин)'}),429
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
             # Resolve user
@@ -200,6 +209,7 @@ def register(ctx):
         }
         cog ._save ('_mutes',cog ._mutes_file ())
         _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
+        _panel_limit_record (guild.id ,_acl_m ,'mute',1)
         return jsonify ({'ok':True })
 
 
@@ -222,6 +232,9 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'ban'):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else 0 ,_acl_m ,'ban')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
             member =_resolve_member_async (guild ,int (user_id ))
@@ -233,6 +246,7 @@ def register(ctx):
             _run_async (guild .ban (member ,reason =f"[Panel] {session.get('username')}: {d.get('reason', '')}"))
         except Exception as e :
             return jsonify ({'error':str (e )}),400 
+        _panel_limit_record (guild.id ,_acl_m ,'ban',1)
         cog ._bans .setdefault (str (guild .id ),{})[str (member .id )]={
         'until':time .time ()+sec ,'reason':d .get ('reason',''),
         'mod_id':session .get ('username',''),'created_at':time .time (),'duration':sec ,
@@ -262,6 +276,9 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'kick'):
             return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else 0 ,_acl_m ,'kick')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
             member =_resolve_member_async (guild ,int (user_id ))
@@ -279,6 +296,7 @@ def register(ctx):
         'user_name':str (member ),
         }
         cog ._save ('_kicks',cog ._kicks_file ())
+        _panel_limit_record (guild.id ,_acl_m ,'kick',1)
         _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
@@ -300,6 +318,9 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
             return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else 0 ,_acl_m ,'unmute')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
         if not user_id .isdigit ():
             return jsonify ({'error':'Неверный ID пользователя'}),400
         member =guild .get_member (int (user_id ))
@@ -311,6 +332,7 @@ def register(ctx):
         cog ._mutes .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_mutes',cog ._mutes_file ())
         _live_publish (str (guild .id ),'moderation')
+        _panel_limit_record (guild.id ,_acl_m ,'unmute',1)
         return jsonify ({'ok':True })
 
 
@@ -331,6 +353,9 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'ban'):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else 0 ,_acl_m ,'unban')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
         try :
             user =_run_async (bot .fetch_user (int (user_id )))
             _run_async (guild .unban (user ))
@@ -339,6 +364,7 @@ def register(ctx):
         cog ._bans .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_bans',cog ._bans_file ())
         _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
+        _panel_limit_record (guild.id ,_acl_m ,'unban',1)
         return jsonify ({'ok':True })
 
 

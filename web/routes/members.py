@@ -2,6 +2,7 @@
 """Данные участников: варны, дежурства, AFK, профили, дни рождения (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _panel_limit_deny, _panel_limit_record,
     _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
@@ -352,6 +353,10 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id)
         if not acl_action_allowed(guild.id, _acl_m, 'warn'):
             return jsonify({'error': 'Нет права: «Варн» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        # Лимит варнов: явный отказ 429 (счётчик зачтёт сам ког add_warning)
+        _lim_denied =_panel_limit_deny (bot ,guild.id ,_acl_m ,'warn')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
         try :
             member =_resolve_member_async (guild ,int (user_id ))
@@ -435,6 +440,10 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id)
         if not acl_action_allowed(guild.id, _acl_m, 'ban'):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        # Лимиты стаффа — как в командах и карточке наказаний.
+        _lim_denied =_panel_limit_deny (bot ,guild.id ,_acl_m ,'ban')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
         try :
             member =_resolve_member_async (guild ,int (user_id ))
@@ -460,6 +469,7 @@ def register(ctx):
             _run_async (guild .ban (member ,reason =f"[Панель] { _uname }: { reason }"))
         except Exception as _e :
             return jsonify ({'error':str (_e )}),400 
+        _panel_limit_record (guild.id ,_acl_m ,'ban',1)
         _modcog =bot .get_cog ('Moderation')
         if _modcog :
             try :

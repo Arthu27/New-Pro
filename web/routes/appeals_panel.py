@@ -580,11 +580,21 @@ def register(ctx):
                 return jsonify({'success': False,
                                 'error': 'Нет права: «Бан» не разрешено вашей '
                                          'роли (настройка — «Права команд»)'}), 403
+            # Лимиты стаффа: принятие апелляции = расходка «unban»
+            from web.routes._common import _panel_limit_deny
+            _lim_denied = _panel_limit_deny(appmod.bot_instance, gid,
+                                            _member, 'unban')
+            if _lim_denied:
+                return jsonify({'success': False,
+                                'error': _lim_denied}), 429
         ok, err, code, payload = resolve_panel(
             appmod.bot_instance, gid, int(raw_id), accept,
             session.get('username', '?'), reply=reply)
         if not ok:
             return jsonify({'success': False, 'error': err}), code
+        if accept:  # успешное принятие — расходка «unban» в счётчик
+            from web.routes._common import _panel_limit_record
+            _panel_limit_record(gid, _member, 'unban', 1)
         payload['success'] = True
         _notify(f'Апелляция #{raw_id}: {payload["status_text"]}')
         return jsonify(payload)

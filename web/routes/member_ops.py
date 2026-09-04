@@ -2,6 +2,7 @@
 """Массовые операции и заметки по участникам (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _panel_limit_deny, _panel_limit_record,
     _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
@@ -105,6 +106,14 @@ def register(ctx):
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'purge'):
             return jsonify({'error': 'Нет права: «Очистка сообщений» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        # Лимит «чистка» (сообщений за окно) — как у /clear в Discord.
+        try :
+            _purge_amt =max (1 ,min (int ((data .get ('count')or 10 )),200 ))
+        except (TypeError ,ValueError ):
+            _purge_amt =10
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'clear',_purge_amt)
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
         _need =[k for k in ('channel_id',) if not str (data .get (k ,'')or '' ).strip ()]
         if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
@@ -131,6 +140,7 @@ def register(ctx):
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'roles'):
             return jsonify({'error': 'Нет права: «Роли» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        # mass-смена ролей не лимитируется: ключа «роли» в лимитах нет
 
         _need =[k for k in ('target_role', 'action_role', 'action') if not str (data .get (k ,'')or '' ).strip ()]
         if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
@@ -190,6 +200,9 @@ def register(ctx):
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'mute'):
             return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'mute')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
         _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
         if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
@@ -220,6 +233,9 @@ def register(ctx):
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'kick'):
             return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'kick')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
         _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
         if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
@@ -249,6 +265,9 @@ def register(ctx):
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'ban'):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'ban')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
         _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
         if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 

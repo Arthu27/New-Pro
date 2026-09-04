@@ -404,6 +404,17 @@ class AppealView(discord.ui.View):
                     return
             except Exception as _ex:
                 log.debug('appeals: acl accept: %s', _ex)
+            # Лимиты стаффа: «разбан» считается как unban (та же расходка,
+            # что у /unban в панельной карточке наказаний).
+            try:
+                from services import staff_limits as _SL
+                _guild = self.cog.bot.get_guild(gid)
+                _ok, _deny = _SL.check_action(_guild, interaction.user, 'unban')
+                if not _ok:
+                    await interaction.response.send_message(f'🚫 {_deny}', ephemeral=True)
+                    return
+            except Exception as _ex:
+                log.debug('appeals: limit accept: %s', _ex)
         state = self.cog._load(gid)
         item, err = resolve_appeal(state, self.appeal_id, accept,
                                    str(interaction.user), datetime.now(UTC))
@@ -448,6 +459,12 @@ class AppealView(discord.ui.View):
                 except (discord.Forbidden, discord.HTTPException) as _ex:
                     log.error('appeals: unban %s на %s не удался: %s',
                               item['user_id'], gid, _ex)
+            if unbanned:  # расходка «unban» — в счётчик лимитов принявшего
+                try:
+                    from services import staff_limits as _SL
+                    _SL.record_hit(gid, interaction.user.id, 'unban', 1)
+                except Exception as _ex:
+                    log.debug('appeals: record unban: %s', _ex)
         _settings = settings_of(state)
         invite_url = None
         if accept and unbanned and not member_present and guild is not None:
