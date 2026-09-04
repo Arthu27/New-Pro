@@ -238,7 +238,7 @@ r = client.post('/register', data={
     'step': '1', 'discord_id': str(UID_MALLORY), 'password': 'secret123',
     'password2': 'secret123'})
 html = r.get_data(as_text=True)
-check(r.status_code == 200 and 'не найден на основном сервере' in html,
+check(r.status_code == 200 and 'на основном сервере' in html,
       'регистрация чужого ID отклонена с понятным текстом', f'→ статус {r.status_code}')
 check(str(UID_MALLORY) not in A.PENDING_VERIFICATIONS,
       'для чужого ID не создаётся pending-проверка (PIN не уходит)',

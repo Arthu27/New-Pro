@@ -250,6 +250,55 @@ r = A.app.test_client().post('/register', data={
     'password': 'x', 'password2': 'x'})
 check('истёк' in r.get_data(as_text=True), 'код регистрации протухает (10 минут)')
 
+print('== 9б. «Создать доступ»: регистрация ПО НИКУ, без «ID не найден» ==')
+# Свежий участник (нет в members.json — только в живом кэше бота).
+_nick_member = NS(id=777888999, bot=False, display_name='FreshNick',
+                  name='fresh_nick', display_avatar=NS(url='http://a/fn'),
+                  joined_at=None)
+_nick_guild = NS(id=777, owner_id=42, name='Hakumo',
+                 get_member=lambda uid: _nick_member if int(uid) == 777888999 else None,
+                 members=[_nick_member])
+import asyncio as _aio
+import threading as _thr
+
+_orig_panel_guild = A._panel_guild
+_orig_resolve_async = A._resolve_guild_member_async
+_loop9 = _aio.new_event_loop()
+_thr.Thread(target=_loop9.run_forever, daemon=True).start()
+
+
+async def _resolve_async(g, uid):
+    return _nick_member if int(uid) == 777888999 else None
+
+
+async def _fetch_user9(uid):
+    return NS(id=int(uid), send=None)
+A._resolve_guild_member_async = _resolve_async
+A._panel_guild = lambda: _nick_guild
+A.bot_instance = NS(guilds=[_nick_guild], get_guild=lambda gid: _nick_guild,
+                    loop=_loop9, latency=0.05, fetch_user=_fetch_user9)
+save_members()
+r = A.app.test_client().post('/register', data={
+    'step': '1', 'discord_id': 'FreshNick', 'password': 'qwerty123',
+    'password2': 'qwerty123'})
+_body = r.get_data(as_text=True)
+check('name="step" value="2"' in _body,
+      'ник (полный, без регистра) → шаг 2 с кодом, а не «ID не найден»',
+      f'→ {_body[:120]}')
+check('777888999' in _body,
+      'ник разыменован в Discord ID 777888999 (в hidden-поле шага 2)')
+# ник, которого нет — понятный текст без «id ака не найдена»
+r = A.app.test_client().post('/register', data={
+    'step': '1', 'discord_id': 'nosuchnick', 'password': 'qwerty123',
+    'password2': 'qwerty123'})
+_body = r.get_data(as_text=True)
+check('Не нашёл участника' in _body and 'подсказок' in _body,
+      'несуществующий ник → подсказка выбрать из списка',
+      f'→ {[l for l in _body.split(chr(10)) if "notice err" in l][:1]}')
+# возвращаем оригинальные резолверы — следующие секции ждут старый стенд
+A._panel_guild = _orig_panel_guild
+A._resolve_guild_member_async = _orig_resolve_async
+
 print('== 10. Вход без двойной проверки: /api/login-probe удалён ==')
 A.bot_instance = NS(guilds=[guild],
                     get_guild=lambda gid: guild if gid == 777 else None,

@@ -92,7 +92,7 @@
               <input type="text" name="discord_id" id="discord_id" placeholder="например @alex или Discord ID" required aria-label="Discord ID" autocomplete="username" oninput="rgSuggest(this)" onfocus="rgSuggest(this)">
               <div class="autocomplete-popup" id="regPopup"></div>
             </div>
-            <p class="hint">Не знаешь свой Discord ID? Начни печатать <b>ник</b> и выбери себя — ID подставится сам.</p>
+            <p class="hint">Просто печатай <b>ник целиком</b> (или начни — и выбери себя из подсказок, ник подставится полностью). Можно и Discord ID.</p>
           </div>
           <div class="f-group">
             <label for="pass1">Пароль</label>
@@ -207,7 +207,7 @@
             var label = s.display_name || s.username || s.name || '';
             var uid = s.discord_id || s.id || '';
             var uname = s.username || s.name || '';
-            return '<div class="item" data-user="' + esc(label || uid) + '" data-id="' + esc(uid) + '">' +
+            return '<div class="item" data-user="' + esc(label) + '" data-id="' + esc(uid) + '">' +
               '<span class="a-ava">' + esc((label || uname || uid || '?').charAt(0).toUpperCase()) +
               (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '" onerror="this.remove()">' : '') + '</span>' +
               '<span class="a-copy"><b>' + esc(label || uname || uid || '—') + '</b>' +
@@ -219,7 +219,9 @@
               ev.preventDefault();
               ev.stopPropagation();
               __rgSuggestBlock = true;
-              input.value = it.dataset.id || it.dataset.user || input.value;
+              /* полный ник в поле (не ID): сервер сам разыменовывает ник —
+                 раньше подставлялся ID и выглядело, будто ник «не влез» */
+              input.value = it.dataset.user || it.dataset.id || input.value;
               popup.classList.remove('open');
               var btn1 = $('regBtn1');
               if (btn1) btn1.focus();
@@ -273,32 +275,23 @@
     });
   })();
 
-  /* ── Оверлей «Связываемся с Discord» ── */
+  /* ── Оверлей «Связываемся с Discord»: ЧЕСТНАЯ индикация ──
+     Заказ владельца (2026-09-04): «крутится, говорит что акк нашёл, а потом
+     ошибка — id ака не найдена». Раньше шаги крутились ПО ТАЙМЕРУ и рисовали
+     галочки «нашли аккаунт» ДО запроса — сервер после этого честно отвечал
+     «не найден». Теперь фейковых шагов нет: одна строка крутится ровно
+     столько, сколько идёт настоящая проверка, результат показывает сервер. */
   var regCheck = {
-    start: function (stepsTexts, onFinish) {
+    start: function (subText) {
       var ov = $('regCheck');
       var list = $('regSteps');
-      if (!ov || !list) { if (onFinish) onFinish(); return; }
-      list.innerHTML = stepsTexts.map(function (t) {
-        return '<li><span class="s-ico"></span><span>' + esc(t) + '</span></li>';
-      }).join('');
-      var steps = Array.prototype.slice.call(list.children);
+      var sub = $('regCheckSub');
+      if (!ov) return;
+      if (list) list.innerHTML =
+        '<li class="on"><span class="s-ico"><i class="fas fa-circle-notch spin"></i></span>' +
+        '<span>Проверяем аккаунт на сервере</span></li>';
+      if (sub && subText) sub.textContent = subText;
       ov.hidden = false;
-      var n = 0;
-      (function tick() {
-        if (n >= steps.length) { setTimeout(function () { if (onFinish) onFinish(); }, 240); return; }
-        var cur = steps[n];
-        cur.classList.add('on');
-        var ico = cur.querySelector('.s-ico');
-        ico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
-        setTimeout(function () {
-          cur.classList.remove('on');
-          cur.classList.add('done');
-          ico.innerHTML = '<i class="fas fa-check"></i>';
-          n++;
-          tick();
-        }, 440);
-      })();
     }
   };
 
@@ -328,8 +321,8 @@
       if (p1.value.length < 6) { setError('regError1', 'Пароль должен быть не короче 6 символов.'); p1.focus(); return; }
       if (p1.value !== p2.value) { setError('regError1', 'Пароли не совпадают.'); p1.focus(); return; }
       form1.dataset.sent = '1';
-      regCheck.start(['Находим аккаунт на сервере', 'Связываемся с Discord', 'Отправляем код в ЛС'],
-        function () { form1.submit(); });
+      regCheck.start('Ищем тебя на сервере и отправляем код в личные сообщения…');
+      form1.submit();          /* одна настоящая проверка — как на входе */
     });
   }
 
@@ -343,8 +336,8 @@
       if (!code || !code.value.trim()) { setError('regError2', 'Введи код из Discord.'); if (code) code.focus(); return; }
       if (code.value.trim().length !== 6) { setError('regError2', 'Код — это 6 цифр из личных сообщений.'); code.focus(); return; }
       form2.dataset.sent = '1';
-      regCheck.start(['Проверяем код', 'Подтверждаем доступ', 'Готово'],
-        function () { form2.submit(); });
+      regCheck.start('Проверяем код и открываем доступ…');
+      form2.submit();
     });
   }
 })();

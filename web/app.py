@@ -1569,13 +1569,12 @@ def register ():
             del PENDING_VERIFICATIONS [discord_id ]
             return redirect (url_for ('login')+'?success=1')
 
-            # Шаг 1: проверка формы. Discord ID обязателен, пароль — тоже:
-            # вход в панель у всех по паролю (участник — по своему Discord ID
-            # или нику + паролю, роль проверяется живьём из Discord).
+            # Шаг 1: проверка формы. Пароль обязателен; логином может быть
+            # и Discord ID, и НИК — сервер сам разыменовывает ник (заказ
+            # владельца 2026-09-04: «говорит id ака не найдена», «ник не
+            # полностью пишет» — человек печатает ник и не обязан копировать ID).
         if not discord_id or not password :
             return render_template ('register.html',error ='Заполните все поля!',step =1 )
-        if not discord_id .isdigit ()or not (17 <=len (discord_id )<=19 ):
-            return render_template ('register.html',error ='Неверный Discord ID!',step =1 )
         if password !=password2 :
             return render_template ('register.html',error ='Пароли не совпадают!',step =1 )
         if len (password )<6 :
@@ -1583,6 +1582,40 @@ def register ():
 
         if not bot_instance :
             return render_template ('register.html',error ='Бот сейчас офлайн, попробуйте позже.',step =1 )
+
+        # ── Разыменование «ID или ник» в Discord ID ──
+        # 1) цифры = ID (17–19 знаков);
+        # 2) ник: точное совпадение (без регистра, с @ или без) — сначала в
+        #    members.json (как при входе), затем в живом кэше основного сервера.
+        # Частичный ник берётся подсказкой на странице (клик — полный ник в поле).
+        if discord_id .isdigit ():
+            if not (17 <=len (discord_id )<=19 ):
+                return render_template ('register.html',error ='Неверный Discord ID!',step =1 )
+        else :
+            _nick =discord_id .lstrip ('@')
+            _resolved =None 
+            try :
+                with open ('data/members.json','r',encoding ='utf-8')as _f :
+                    _resolved =_resolve_member_key (json .load (_f ),_nick )
+            except Exception as _ex :
+                _log .debug('register nick→members.json: %s',_ex )
+            if not _resolved :
+                _pg =_panel_guild ()
+                if _pg is not None :
+                    _q =_nick .lower ()
+                    _hits =[mm for mm in _pg .members
+                            if not getattr (mm ,'bot',False )
+                            and (_q ==(str (getattr (mm ,'display_name','')or '')).lower ()
+                                 or _q ==(str (getattr (mm ,'name','')or '')).lower ())]
+                    if len (_hits )==1 :
+                        _resolved =str (_hits [0 ].id )
+                    elif len (_hits )>1 :
+                        return render_template ('register.html',
+                            error ='Таких ников на сервере несколько — начни печатать ник и выбери СЕБЯ из подсказок.',step =1 )
+            if not _resolved :
+                return render_template ('register.html',
+                    error ='Не нашёл участника «'+_nick +'» на основном сервере. Начни печатать ник и выбери себя из подсказок — или введи Discord ID.',step =1 )
+            discord_id =_resolved
 
             # Сначала ищем в кэше, если нет — тянем fetch_member через Discord API
         member_info =None 
@@ -1607,7 +1640,7 @@ def register ():
         member_info =asyncio .run_coroutine_threadsafe (find_member (),bot_instance .loop ).result (timeout =15 )
 
         if not member_info :
-            return render_template ('register.html',error ='Этот Discord ID не найден на основном сервере. Регистрация доступна только его участникам — проверьте ID и что вы на сервере.',step =1 )
+            return render_template ('register.html',error ='Тебя нет на основном сервере (или бот не видит тебя). Зайди на сервер и попробуй ещё раз — регистрация только для его участников.',step =1 )
 
         members_file ='data/members.json'
         if os .path .exists (members_file ):
