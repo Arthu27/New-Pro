@@ -91,7 +91,8 @@ check(len(tmpl_versions) >= 4 and '?v=61' not in base and '?v=117' not in base,
 # ═══ 2. /proof убран, демки — через панель ═══════════════════════════════
 print('== /proof убран ==')
 cog_src = open(os.path.join(ROOT, 'cogs', 'proof_cog.py'), encoding='utf-8').read()
-check("name='proof'" in cog_src, '/proof вернулся: демки грузятся прямо ботом')
+check("name='proof'" not in cog_src,
+      '/proof удалена окончательно (заказ владельца: демки — /report и панель)')
 check("name='proofs'" in cog_src and "name='proofdel'" in cog_src,
       '/proofs и /proofdel на месте (просмотр и удаление)')
 check('«Модерация» → «Доказательства»' in cog_src,

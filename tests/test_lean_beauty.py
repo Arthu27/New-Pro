@@ -33,11 +33,10 @@ import cogs_policy as CP  # noqa: E402
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-# Заказ владельца «как можно меньше»: боевое меню — 7 команд
-# (modpanel, апелляция, update, afk, report, my-violations + proof c
-# 2026-09-04). Сетап-команды убраны в панель, /afk-remove удалён, музыка
-# снесена.
-check(data['total'] == 7, f'lean-каталог собран ({data["total"]} команд после чистки)')
+# Заказ владельца «как можно меньше»: боевое меню — 6 команд
+# (modpanel, апелляция, update, afk, report, my-violations). /proof удалена
+# из бота 2026-09-04 (демки — /report и панель). Музыка снесена.
+check(data['total'] == 6, f'lean-каталог собран ({data["total"]} команд после чистки)')
 placeholder = [c['name'] for c in data['commands'] if c['desc'] == 'Описание скоро появится']
 check(not placeholder, f'без описания не осталось ни одной команды {placeholder[:6]}')
 non_ru = [c['name'] for c in data['commands']

@@ -49,14 +49,14 @@ data = CR.catalog(force=True)
 # Заказ владельца: боевое слеш-меню — минимум команд. Тикет-система снята
 # 2026-08-31, её роль выполняет /report (жалоба карточкой в канал модерации).
 # Музыка (/play) снята 2026-09-01 — бот модерационный.
-# В меню: modpanel, апелляция, update, afk, report, my-violations, proof
-# (/proof вернули 2026-09-04 — файловую демку грузят прямо из Discord).
+# В меню: modpanel, апелляция, update, afk, report, my-violations.
+# /proof удалена из бота 2026-09-04 (демки — через /report и панель).
 # Сетап-команды убраны в панель, /afk-remove удалён (AFK спадает авто).
-check(data['total'] == 7, f"lean: собрано {data['total']} живых команд (ровно 7)")
-check(data['slash'] == 7 and data['prefix'] == 0,
+check(data['total'] == 6, f"lean: собрано {data['total']} живых команд (ровно 6)")
+check(data['slash'] == 6 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
-check('proof' in [c['name'] for c in data.get('commands', [])],
-      'proof вернулся в боевое меню (демка файлом из Discord)')
+check('proof' not in [c['name'] for c in data.get('commands', [])],
+      'proof в боевом меню нет (демки — /report и панель)')
 for gone in ('verify-setup', 'report-setup', 'report-settings', 'afk-remove'):
     check(gone not in [c['name'] for c in data.get('commands', [])],
           f'{gone} убран из боевого меню (настройка в панели/авто)')

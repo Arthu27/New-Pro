@@ -195,13 +195,14 @@ check(_is_link('https://x') and not _is_link('просто текст'), 'link c
 # ═══ 2. ЯДРО — _create_and_post (общая точка панели, /warn и /moderate) ══
 print('== _create_and_post ==')
 cog = ProofCog(bot=object())
-check(hasattr(ProofCog, 'proof'), 'команда /proof вернулась: демки грузятся прямо ботом')
+# 2026-09-04, заказ владельца: «/proof убери вообще» — демки через /report
+# и панель. Проверяем, что команды больше НЕТ (и в коде, и в меню).
+check(not hasattr(ProofCog, 'proof'), 'команды /proof больше нет (убрана по заказу владельца)')
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _src = open(os.path.join(_root, 'cogs', 'proof_cog.py'), encoding='utf-8').read()
-check('demo: discord.Attachment' in _src and 'defer(ephemeral=True)' in _src,
-      '/proof принимает файл и отвечает сразу (defer)')
-check("name='proof'" in _src and 'app_commands.Choice' in _src,
-      'наказание выбирается из списка (варн/мут/кик/бан…)')
+check("name='proof'" not in _src, 'в коге не регистрируется слеш-команда proof')
+import slash_budget as _sb
+check('proof' not in _sb.KEEP_SLASH, '/proof нет и в белом списке меню')
 
 # без вложения и ссылки — разрешено (фото не обязательно, владелец просил)
 before0 = len(proof_list(GUILD.id))

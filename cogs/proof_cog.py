@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 """Proof — «демки» к наказаниям: доказательства в одном канале.
 
-Идея: модератор выдал наказание → одной командой прикладывает демку
-(/proof). Она падает в канал #-доказательства (создаётся автоматически в
-категории «Логи»): кто наказал, кого, за что — и сам скрин/видео прямо в
-сообщении. Админ скроллит канал — и видит все доказательства, ничего искать
-не надо.
+Идея: модератор выдал наказание → демка падает в канал
+#-доказательства (создаётся автоматически в категории «Логи»): кто наказал,
+кого, за что — и сам скрин/видео прямо в сообщении. Админ скроллит канал —
+и видит все доказательства, ничего искать не надо.
 
-Команды (mod+):
-  Демки грузятся прямо ботом — /proof файлом (или ссылкой), из
-  веб-панели («Модерация» → «Доказательства») или автоматически из
-  /warn и /moderate (вложение перезаливается).
-      Прикрепить демку. Вложение перезаливается в канал (ссылки CDN Discord
-      протухают — в канале файл живёт вечно). Большие файлы (>8 МБ) не
-      перезальются — тогда кидаем ссылку.
+Откуда грузятся демки (команды /proof больше нет — заказ владельца
+2026-09-04):
+  • /report — вложением к жалобе;
+  • веб-панель («Модерация» → «Доказательства» → загрузить напрямую);
+  • автоматически из /warn и /moderate (вложение перезаливается; ссылки
+    CDN Discord протухают — в канале файл живёт вечно).
   /proofs [юзер]   — все демки (по конкретному юзеру или последние 10).
   /proofdel <№>    — удалить демку (admin+), включая сообщение в канале.
 
@@ -453,57 +451,10 @@ class ProofCog(commands.Cog):
                                     image_inline=image_inline, note=note)
         return ok, entry, note
 
-    # ── /proof ────────────────────────────────────────────────────────────
-    @app_commands.command(name='proof', description='Загрузить демку файлом (или ссылкой)')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    @app_commands.describe(
-        user='Кого наказали',
-        action='Какое наказание',
-        reason='За что наказание',
-        demo='Файл демки: видео или скрин',
-        link='Ссылка на демку (Medal, YouTube…), если файла нет')
-    @app_commands.choices(action=[
-        app_commands.Choice(name='варн', value='варн'),
-        app_commands.Choice(name='мут', value='мут'),
-        app_commands.Choice(name='кик', value='кик'),
-        app_commands.Choice(name='бан', value='бан'),
-        app_commands.Choice(name='разбан', value='разбан'),
-    ])
-    async def proof(self, interaction: discord.Interaction,
-                    user: discord.Member, action: app_commands.Choice[str],
-                    reason: str, demo: discord.Attachment = None,
-                    link: str = None):
-        if demo is None and not (link or '').strip():
-            return await interaction.response.send_message(
-                'Приложите файл демки (demo) или укажите ссылку (link).',
-                ephemeral=True)
-        # файл может быть тяжёлым: чтение+перезалив занимают время —
-        # отвечаем сразу, докладываем по готовности
-        await interaction.response.defer(ephemeral=True)
-        try:
-            ok, entry, note = await self._create_and_post(
-                interaction.guild, interaction.user, user,
-                action.value, reason, attachment=demo, link=link)
-        except Exception as ex:
-            log.warning(f'[PROOF] /proof: {ex}')
-            return await interaction.followup.send(
-                f'Не получилось записать демку: {ex}', ephemeral=True)
-        e = discord.Embed(
-            title=f'Демка #{entry["id"]} записана' if ok else f'Демка #{entry["id"]} записана (без канала)',
-            color=GREEN if ok else 0xE67E22, timestamp=_now())
-        e.add_field(name='Нарушитель', value=f'{user} (`{user.id}`)', inline=True)
-        e.add_field(name='Наказание', value=action.value, inline=True)
-        e.add_field(name='Файл', value=(
-            f'{demo.filename} · {demo.size // 1024 // 1024 or 1} МБ'
-            if demo else 'ссылка'), inline=True)
-        if not ok:
-            e.description = ('Канал доказательств недоступен — проверьте права '
-                             'бота. Демка видна в /proofs и в панели.')
-        if note:
-            e.add_field(name='Внимание', value=note[:400], inline=False)
-        e.set_footer(text='Всё в одном канале доказательств · /proofs — список')
-        await interaction.followup.send(embed=e, ephemeral=True)
-        log.info(f'[PROOF] /proof #{entry["id"]} от {interaction.user}')
+    # Команды /proof больше НЕТ (заказ владельца 2026-09-04: «/proof убери
+    # вообще»): демки грузятся через /report (вложение) и панель
+    # («Доказательства»). Ядро _create_and_post выше осталось — им пользуются
+    # /warn, /moderate и прямая загрузка в панели.
 
     # ── /proofs ───────────────────────────────────────────────────────────
     @app_commands.command(name='proofs', description='Все демки сервера (или конкретного юзера)')
@@ -518,7 +469,7 @@ class ProofCog(commands.Cog):
             title=f'Демки — {user.display_name}' if user else 'Демки сервера',
             color=PURPLE, timestamp=_now())
         if not items:
-            e.description = 'Пока пусто. Загрузите первую: /proof файлом (или в панели, «Доказательства»).'
+            e.description = 'Пока пусто. Загрузите первую: панель «Доказательства» или вложением в /report.'
         else:
             lines = []
             ch_id = items[0].get('channel_id')

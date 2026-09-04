@@ -249,7 +249,7 @@
     var grid = $('pf-grid');
     if (!items.length) {
       grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-folder-open"></i><span>' +
-        (all.length ? 'Ничего не подходит под фильтр.' : 'Демок пока нет. Приложите доказательство командой /proof или при выдаче наказания через /modpanel.') + '</span></div>';
+        (all.length ? 'Ничего не подходит под фильтр.' : 'Демок пока нет. Загрузите напрямую формой выше, вложением в /report или при выдаче наказания через /modpanel.') + '</span></div>';
       return;
     }
     grid.innerHTML = items.map(function (it) {
