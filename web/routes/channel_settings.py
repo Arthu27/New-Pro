@@ -184,6 +184,7 @@ ADAPTERS = {
     'appeal_menu_channel': (CHR.get_route, CHR.set_route),
     'pagerduty_channel': (CHR.get_route, CHR.set_route),
     'proof_channel': (CHR.get_route, CHR.set_route),
+    'report_channel': (CHR.get_route, CHR.set_route),
     'appeals_channel': (_appeals_get, _appeals_set),
     'welcome_channel': (_welcome_get, _welcome_set),
     'guardian_channel': (CHR.get_route, CHR.set_route),

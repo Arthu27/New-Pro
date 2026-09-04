@@ -58,10 +58,10 @@ from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 13 and len(set(keys)) == 13,
-      f'13 уникальных живых маршрутов ({len(keys)})')
+check(len(keys) == 14 and len(set(keys)) == 14,
+      f'14 уникальных живых маршрутов ({len(keys)})')
 need = {'ban_appeal_channel', 'appeal_menu_channel', 'pagerduty_channel',
-        'proof_channel', 'appeals_channel', 'welcome_channel',
+        'proof_channel', 'report_channel', 'appeals_channel', 'welcome_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
         'anticrash_channel',
         'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel'}

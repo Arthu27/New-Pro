@@ -465,7 +465,7 @@ check(gE.kicked == [7002], 'а вот ЗАШЕДШИЙ чужой бот — к�
 
 print('== хаб каналов: живые маршруты ==')
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 13, f'маршрутов в спецификации (только живые системы): {len(keys)}')
+check(len(keys) == 14, f'маршрутов в спецификации (только живые системы): {len(keys)}')
 check('guardian_channel' in keys and 'antiraid_channel' in keys
       and 'security_channel' in keys and 'anticrash_channel' in keys,
       f'все маршруты защиты на хабе ({keys})')
@@ -614,7 +614,7 @@ routes = r.get_json().get('routes', [])
 # 4 лог-алерт маршрута (guardian/security/antiraid/anticrash) скрыты с хаба —
 # они дублируют категории «Логи сервера»; бот их по-прежнему читает.
 hub_keys = [x['key'] for x in routes]
-check(len(routes) == 9, f'хаб Каналов отдаёт 9 видимых маршрутов ({len(routes)})')
+check(len(routes) == 10, f'хаб Каналов отдаёт 10 видимых маршрутов ({len(routes)})')
 check('guardian_channel' not in hub_keys and 'security_channel' not in hub_keys
       and 'antiraid_channel' not in hub_keys and 'anticrash_channel' not in hub_keys,
       'лог-алерты Щита/защиты/рейда/краша убраны с хаба (дублируют «Логи сервера»)')

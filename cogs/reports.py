@@ -420,6 +420,9 @@ class CloseConfirmView(discord.ui.View):
 #  модератора»: сигнал в канале модерации, разбор там же.
 # ═══════════════════════════════════════════════════════════════════
 MOD_CHANNEL_NAME = 'модерация'
+# Заказ владельца 2026-09-05: вызовы модератора (/report) идут в ЭТОТ канал.
+# Право «Управление каналами» боту для этого НЕ нужно — канал уже существует.
+DEFAULT_REPORT_CHANNEL_ID = 1312434963941167134
 
 
 async def _ensure_mod_channel(guild, mod_role):
@@ -439,7 +442,23 @@ async def _ensure_mod_channel(guild, mod_role):
     ch = discord.utils.get(guild.text_channels, name=MOD_CHANNEL_NAME)
     if ch is not None:
         return ch, False
-    # 3) создаём закрытый канал модерации
+    # 2.5) маршрут из панели «Маршруты каналов» (заказ владельца 2026-09-05):
+    # канал уже существует, пишем туда — «Управление каналами» не требуется.
+    try:
+        from services import channel_routes as _CR
+        _rid = _CR.get_route(guild.id, 'report_channel')
+        if _rid:
+            ch = guild.get_channel(int(_rid))
+            if ch is not None:
+                return ch, False
+    except Exception as _ex:
+        _log.debug('reports: маршрут report_channel: %s', _ex)
+    # 2.6) канал репортов владельца по умолчанию (заказ 2026-09-05) —
+    # /report больше не ломается от отсутствия «Управления каналами».
+    ch = guild.get_channel(DEFAULT_REPORT_CHANNEL_ID)
+    if ch is not None:
+        return ch, False
+    # 3) создаём закрытый канал модерации (крайний случай)
     over = {
         guild.default_role: discord.PermissionOverwrite(
             view_channel=False, read_messages=False),
@@ -754,8 +773,10 @@ class Reports(commands.Cog):
         ch, created = await _ensure_mod_channel(guild, mod_role)
         if ch is None:
             return await interaction.followup.send(
-                'Не удалось подготовить канал модерации (не хватило прав '
-                '«Управление каналами»?). Сообщите администратору.',
+                'Не нашёл канал для вызовов и не смог создать свой (нет права '
+                '«Управление каналами»). Админу: укажи канал в панели → '
+                '«Маршруты каналов» → «Канал вызовов модератора (/report)» '
+                '— или проверь, что бот видит канал репортов.',
                 ephemeral=True)
 
         # Голосовой канал вызывавшего: модераторы сразу видят, куда идти.
