@@ -177,7 +177,7 @@ def register(ctx):
                         try :
                             with open (mod_file ,'r',encoding ='utf-8')as fp :
                                 md =json .load (fp )
-                            case =md .get ('case',{}).get (str (g .id ),[])
+                            case =(md .get ('cases')or md .get ('case')or {}).get (str (g .id ),[])
                             for c in case :
                                 if str (c .get ('user_id',''))==uid_str :
                                     mod_history .append (

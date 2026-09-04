@@ -1520,6 +1520,7 @@ class Logs (commands .Cog ):
                     'action':'timeout',
                     'user_id':str (after .id ),
                     'mod_id':'system',
+                    'mod_name':'Discord',
                     'reason':'С Discord',
                     'timestamp':datetime .datetime .now (datetime .timezone .utc ).isoformat ()
                     })

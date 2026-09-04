@@ -180,7 +180,7 @@ def register(ctx):
         if os .path .exists (mod_file ):
             with open (mod_file ,'r',encoding ='utf-8')as fp :
                 data =json .load (fp )
-            case =data .get ('case',{}).get (guild_id ,[])
+            case =(data .get ('cases')or data .get ('case')or {}).get (guild_id ,[])
             for c in case :
                 a =(c .get ('action')or '').lower ()
                 if 'ban'in a :ban_count +=1 

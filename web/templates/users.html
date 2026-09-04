@@ -993,6 +993,7 @@
 
   var CASE_KIND = { ban: 'danger', unban: 'pos', kick: 'danger', warn: 'neg', timeout: 'neg',
                     mute: 'neg', unmute: 'pos', vmute: 'neg', unvmute: 'pos', clear: 'neg' };
+  var CASE_DIR = { in: { lbl: 'Получил', tone: 'danger' }, out: { lbl: 'Выдал', tone: 'ok' } };
   function renderHistory(list) {
     setCount('mcCntHist', list.length);
     if (!list.length) {
@@ -1002,10 +1003,16 @@
     $('mcHistory').innerHTML = list.map(function (c) {
       var act = String(c.action || '?');
       var kind = CASE_KIND[act.toLowerCase()] || '';
+      var dir = CASE_DIR[c.dir] || null;
+      var who = c.dir === 'out'
+        ? (c.mod ? ' · участнику ' + esc(c.mod) : '')
+        : (c.mod ? ' · выдал ' + esc(c.mod) : '');
       return '<div class="mf-case"' + (kind ? ' data-kind="' + kind + '"' : '') + '>' +
         '<span class="mf-case-ico"><i class="fas fa-gavel"></i></span>' +
-        '<div class="mn-txt"><b>' + esc(act) + '</b> — ' + esc(c.reason || '—') +
-          '<div class="mn-meta">#' + esc(c.id) + (c.mod ? ' · ' + esc(c.mod) : '') +
+        '<div class="mn-txt">' +
+          (dir ? '<span class="badge ' + dir.tone + '" style="margin-right:6px">' + dir.lbl + '</span>' : '') +
+          '<b>' + esc(act) + '</b> — ' + esc(c.reason || '—') +
+          '<div class="mn-meta">#' + esc(c.id) + who +
           (c.timestamp ? ' · ' + esc(fmtWhen(c.timestamp)) : '') + '</div>' +
           (c.proof ? '<div class="mn-meta"><i class="fas fa-paperclip"></i> ' + esc(c.proof) + '</div>' : '') +
         '</div></div>';

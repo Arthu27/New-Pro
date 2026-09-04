@@ -715,6 +715,42 @@ def ms_normalize_warn(w, idx: int) -> dict:
     }
 
 
+def read_mod_cases(guild_id):
+    """Все дела модерации сервера из data/mod_data.json.
+
+    Файл пишется с ДВУМЯ ключами: 'cases' (save_case, logs.py — актуальная
+    схема) и 'case' (легаси/скрипты). Читаем ОБА и сливаем — раньше часть
+    читалок смотрела только в 'case', и история модерации у всех была
+    «пустая», хотя дела исправно писались (багрепорт владельца 2026-09-04:
+    «мне дали мут — нигде не показало»).
+    Дедуп по (id, user_id, action, timestamp) — одно дело из обоих ключей
+    не задваивается.
+    """
+    try:
+        with open('data/mod_data.json', 'r', encoding='utf-8') as f:
+            md = json.load(f)
+        if not isinstance(md, dict):
+            return []
+    except Exception:
+        return []
+    gid = str(guild_id)
+    out, seen = [], set()
+    for key in ('cases', 'case'):
+        rows = md.get(key) or {}
+        if not isinstance(rows, dict):
+            continue
+        for c in (rows.get(gid) or []):
+            if not isinstance(c, dict):
+                continue
+            fp_ = (str(c.get('id')), str(c.get('user_id')),
+                   str(c.get('action')), str(c.get('timestamp')))
+            if fp_ in seen:
+                continue
+            seen.add(fp_)
+            out.append(c)
+    return out
+
+
 def ms_normalize_case(c, idx: int) -> dict:
     """Привести запись модерационной истории к единому виду для панели."""
     if not isinstance(c, dict):

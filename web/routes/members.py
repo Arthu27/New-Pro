@@ -8,7 +8,7 @@ from web.routes._common import (
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, read_mod_cases, name_map_for, _REPO_ROOT,
     demo_members_search, demo_member_payload,
     render_template, session, redirect, url_for, request, jsonify, Response,
     os, json, time, math, discord, datetime, timezone)
@@ -313,16 +313,22 @@ def register(ctx):
         warns =[ms_normalize_warn (w ,i +1 )for i ,w in enumerate (warns )]
         result ['warnings']=warns 
         result ['warn_count']=len (warns )
-        # История модерации
+        # История модерации: оба ключа файла ('cases' — актуальный, 'case' —
+        # легаси) + дела, которые этот участник ВЫДАЛ другим (у модератора
+        # в карточке видно его работу — жалоба владельца: «у того, кто дал
+        # мут, в списке ничего нет»).
+        _names =name_map_for (str (guild_id ),bot )
         case =[]
-        mf ='data/mod_data.json'
-        if os .path .exists (mf ):
-            try :
-                with open (mf ,encoding ='utf-8')as f :mdata =json .load (f )
-                case =[c for c in mdata .get ('case',{}).get (str (guild_id ),[])if str (c .get ('user_id'))==str (user_id )]
-            except Exception :
-                case =[]
-        case =[ms_normalize_case (c ,i +1 )for i ,c in enumerate (case )]
+        for c in read_mod_cases (guild_id ):
+            uid_s =str (c .get ('user_id')or '')
+            mid_s =str (c .get ('mod_id')or '')
+            if uid_s ==str (user_id ):
+                case .append (ms_normalize_case (c ,len (case )+1 )| {'dir':'in',
+                'mod':c .get ('mod_name')or _names .get (mid_s)or mid_s})
+            elif mid_s ==str (user_id ):
+                case .append (ms_normalize_case (c ,len (case )+1 )| {'dir':'out',
+                'mod':_names .get (uid_s)or uid_s})
+        case .sort (key =lambda x :str (x .get ('timestamp')or ''),reverse =True )
         result ['case']=case 
         result ['cases']=case 
         result ['case_count']=len (case )
@@ -474,7 +480,8 @@ def register(ctx):
         if _modcog :
             try :
                 _modcog .save_case (guild .id ,'ban',str (user_id ),
-                str (session .get ('discord_id')or _uname ),reason )
+                str (session .get ('discord_id')or _uname ),reason ,
+                _uname or str (session .get ('discord_id')or ''))
             except Exception as _ex:
                 _log .debug ("api_member_profile_ban(): save_case подавлен: %s",_ex )
         # Доказательство к бану — в карточку дела (data/mod_data.json).

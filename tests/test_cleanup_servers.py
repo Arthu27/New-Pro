@@ -57,7 +57,8 @@ w('discord_audit_cache.json', {
 w('audit_seen.json', {KEEP: '123', FOREIGN: '456'})
 w('warnings.json', {KEEP: {'42': [{'reason': 'свой варн'}]},
                     FOREIGN: {'43': [{'reason': 'чужой варн'}]}})
-w('mod_data.json', {'case': {KEEP: [{'action': 'mute'}], FOREIGN: [{'action': 'ban'}]},
+w('mod_data.json', {'cases': {KEEP: [{'action': 'mute'}], FOREIGN: [{'action': 'ban'}]},
+                    'case': {KEEP: [{'action': 'mute'}], FOREIGN: [{'action': 'ban'}]},
                     'watchlist': {KEEP: ['7']}})
 w('staff_apps.json', {
     'app-1': {'app_id': 'app-1', 'guild_id': KEEP, 'display_name': 'свой'},
@@ -116,8 +117,9 @@ warn = r('warnings.json')
 check(KEEP in warn and FOREIGN not in warn and warn[KEEP]['42'],
       'warnings: чужие варны убраны, свои на месте')
 md = r('mod_data.json')
-check(KEEP in md['case'] and FOREIGN not in md['case'] and md.get('watchlist'),
-      'mod_data: вложенный case почищен, соседние секции целы')
+check(KEEP in md['case'] and FOREIGN not in md['case']
+      and KEEP in md['cases'] and FOREIGN not in md['cases'] and md.get('watchlist'),
+      'mod_data: оба журнала (case и cases) почищены, соседние секции целы')
 apps = r('staff_apps.json')
 check('app-1' in apps and 'app-2' not in apps,
       'staff_apps: чужая заявка удалена по полю guild_id, своя осталась')

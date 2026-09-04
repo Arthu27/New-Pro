@@ -172,7 +172,7 @@ class Moderation (commands .Cog ):
         except Exception as _aw_e:
             log.info(f'[MOD] auto-warn: {_aw_e}')
 
-    def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ):
+    def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ,mod_name=None ):
         os .makedirs ('data',exist_ok =True )
         filepath ='data/mod_data.json'
         try :
@@ -193,6 +193,9 @@ class Moderation (commands .Cog ):
             data ['cases'][gid ].append ({
             'id':case_id ,'action':action ,
             'user_id':str (user_id ),'mod_id':str (mod_id ),
+            # Имя модератора в момент наказания: панель показывает его,
+            # даже если имя так и не попало в карту имён сервера.
+            'mod_name':str (mod_name or ''),
             'reason':reason or 'Не указана',
             'timestamp':datetime .now (timezone .utc ).isoformat ()
             })
@@ -760,7 +763,8 @@ class Moderation (commands .Cog ):
                     import asyncio as _aio_sc
                     # запись дела (файл) — в рабочем потоке, без блокировки loop
                     case_id =await _aio_sc .to_thread (
-                        self .save_case ,guild .id ,action ,user .id ,interaction .user .id ,reason )
+                        self .save_case ,guild .id ,action ,user .id ,interaction .user .id ,reason ,
+                        getattr (interaction .user ,'display_name' ,None )or str (interaction .user ))
                 except Exception as _case_e :
                     case_id =0
                     aux_errors .append ("дело не записано")
@@ -844,7 +848,8 @@ class Moderation (commands .Cog ):
                     log .debug (f'unban: {_ub_ex}')
                 import asyncio as _aio_sc2
                 case_id =await _aio_sc2 .to_thread (
-                    self .save_case ,guild .id ,"unban",uid ,interaction .user .id ,reason )
+                    self .save_case ,guild .id ,"unban",uid ,interaction .user .id ,reason ,
+                    getattr (interaction .user ,'display_name' ,None )or str (interaction .user ))
                 try :
                     from services .staff_limits import record_hit as _sl_rec
                     _sl_rec (guild .id ,interaction .user .id ,'unban',1 )

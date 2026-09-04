@@ -398,7 +398,7 @@ def register(ctx):
             try :
                 with open (mod_file ,'r',encoding ='utf-8')as fp :
                     md =json .load (fp )
-                case =md .get ('case',{})
+                case =md .get ('cases')or md .get ('case')or {}
                 for gid ,case_list in case .items ():
                     if guild_id and gid !=guild_id :
                         continue 
@@ -558,7 +558,7 @@ def register(ctx):
         if os .path .exists (mod_file ):
             try :
                 with open (mod_file ,'r',encoding ='utf-8')as fp :md =json .load (fp )
-                cases =md .get ('case',{})if isinstance (md ,dict )else {}
+                cases =(md .get ('cases')or md .get ('case')or {})if isinstance (md ,dict )else {}
                 for cgid ,case_list in cases .items ():
                     if gid and str (cgid )!=str (gid ):continue 
                     if not isinstance (case_list ,list ):continue 

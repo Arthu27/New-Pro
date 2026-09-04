@@ -46,7 +46,7 @@ def register(ctx):
             try :
                 with open ('data/mod_data.json','r',encoding ='utf-8')as _fp :
                     _md =_json .load (_fp )
-                mod_count =len (_md .get ('case',{}).get (str (guild_id ),[]))
+                mod_count =len ((md2 :=(_md .get ('cases')or _md .get ('case')or {})).get (str (guild_id ),[]))
             except Exception as _ex:
                 _log.debug("api_threat_index(): подавлено: %s", _ex)
 

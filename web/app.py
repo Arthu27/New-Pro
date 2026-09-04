@@ -2574,7 +2574,8 @@ def api_logs ():
 
         mod_data =_store .cached_read_json (mod_file ,ttl =5.0 ,default ={})
         if isinstance (mod_data ,dict ):
-            for guild_id ,case in mod_data .get ('case',{}).items ():
+            # 'cases' — актуальная схема (save_case/logs.py), 'case' — легаси
+            for guild_id ,case in (mod_data .get ('cases')or mod_data .get ('case')or {}).items ():
                 if filter_guild and guild_id !=filter_guild :
                     continue 
                 for case in case :
@@ -2584,7 +2585,8 @@ def api_logs ():
                     'action':case .get ('action','?').capitalize (),
                     'user_id':str (case .get ('user_id','')),
                     'user_name':str (case .get ('user_id','')),
-                    'mod_name':str (case .get ('mod_id','')),
+                    # имя из дела (save_case пишет mod_name) важнее ID
+                    'mod_name':str (case .get ('mod_name')or case .get ('mod_id','')),
                     'reason':case .get ('reason',''),
                     'timestamp':case .get ('timestamp',''),
                     })
