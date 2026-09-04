@@ -82,9 +82,7 @@
         к наказанию (по участнику или по роли). Управление — Админ и выше.</span>
     </div>
     <div class="row" style="gap:8px;flex-wrap:wrap" id="pf-wl-addrow">
-      <select id="pf-wl-what" aria-label="Участник или роль" style="flex:1;min-width:260px">
-        <option value="">— выберите участника или роль —</option>
-      </select>
+      <select id="pf-wl-what" aria-label="Участник или роль" style="flex:1;min-width:260px"></select>
       <span id="pf-wl-status"></span>
       <button type="button" class="btn btn-sm" id="pf-wl-add-btn"><i class="fas fa-plus"></i> Добавить</button>
     </div>
@@ -477,17 +475,30 @@
     var users = (d && d.users) || [];
     var roles = (d && d.roles) || [];
     var xStyle = 'background:none;border:none;color:inherit;cursor:pointer;padding:0 0 0 2px;display:inline-flex';
+    wlExisting = {};
     var html = '';
+    var shown = {};
     users.forEach(function (id) {
-      html += '<span class="chip" style="gap:6px"><i class="fas fa-user" style="color:var(--ac)"></i> ' + esc(id) +
-        (CAN_DEL ? ' <button type="button" data-wldel="user:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать участника ' + esc(id) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
+      var v = 'u:' + id;
+      if (shown[v]) return;          /* без дублей в чипсах */
+      shown[v] = true;
+      wlExisting[v] = true;
+      var nm = wlNames[v] || id;
+      html += '<span class="chip" style="gap:6px"><i class="fas fa-user" style="color:var(--ac)"></i> ' + esc(nm) +
+        (CAN_DEL ? ' <button type="button" data-wldel="user:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать участника ' + esc(nm) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
     });
     roles.forEach(function (id) {
-      html += '<span class="chip" style="gap:6px"><i class="fas fa-user-tag" style="color:var(--ok)"></i> ' + esc(id) +
-        (CAN_DEL ? ' <button type="button" data-wldel="role:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать роль ' + esc(id) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
+      var v = 'r:' + id;
+      if (shown[v]) return;
+      shown[v] = true;
+      wlExisting[v] = true;
+      var nm = wlNames[v] || ('@ ' + id);
+      html += '<span class="chip" style="gap:6px"><i class="fas fa-user-tag" style="color:var(--ok)"></i> ' + esc(nm) +
+        (CAN_DEL ? ' <button type="button" data-wldel="role:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать роль ' + esc(nm) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
     });
     if (!html) html = '<span class="badge neutral">пусто — демку бот просит у всех</span>';
     box.innerHTML = html;
+    wlFill();   /* пересобрать список с метками «уже в списке» */
   }
 
   var WL_GID = '{{ main_guild_id }}';
@@ -496,6 +507,25 @@
      u:/r: говорит, кого добавили. */
   var wlSel = $('pf-wl-what');
   sshdEnhance(wlSel, { search: true, searchPlaceholder: 'Участник или роль…' });
+  /* подпись пустого выбора — на кнопке, ВНУТРИ списка заглушки нет */
+  (function () {
+    var b = wlSel._sshd && wlSel._sshd.querySelector('.sshd-lbl');
+    if (b) b.textContent = '— выберите участника или роль —';
+  })();
+
+  /* Чистый выбор БЕЗ дублей (жалоба владельца 2026-09-04):
+     • никакого пункта-заглушки внутри списка — он выглядел вторым выбором;
+     • каждый участник/роль встречается в списке ОДИН раз;
+     • уже добавленные помечены «уже в списке» и второй раз не добавятся;
+     • чипсы ниже показывают те же имена, что и список (а не голые ID) —
+       один человек больше не выглядит двумя разными записями. */
+  var wlNames = {};      /* 'u:123' -> 'Имя', 'r:45' -> '@ Роль' */
+  var wlExisting = {};   /* 'u:123' -> true — уже в белом списке */
+
+  function wlSyncLabel() {
+    var btn = wlSel._sshd ? wlSel._sshd.querySelector('.sshd-lbl') : null;
+    if (btn && !wlSel.value) btn.textContent = '— выберите участника или роль —';
+  }
 
   function wlFill() {
     var rolesP = window.pickerLoad(WL_GID).then(function (d) { return d.roles || []; })
@@ -505,19 +535,44 @@
       .then(function (d) { return (d && d.items) || []; })
       .catch(function () { return []; });
     Promise.all([rolesP, memP]).then(function (res) {
-      var roles = res[0] || [], mems = res[1] || [];
       var keep = wlSel.value;
-      var g1 = '<optgroup label="Участники">' + mems.map(function (m) {
+      wlNames = {};
+      wlExisting = {};
+      /* участники: один id — один пункт */
+      var seen = {}, mems = [];
+      (res[1] || []).forEach(function (m) {
         var uid = String(m.user_id || m.id || '');
+        if (!uid || seen[uid]) return;
+        seen[uid] = true;
         var nm = m.name || m.display_name || uid;
-        return '<option value="u:' + esc(uid) + '">' + esc(nm) + ' · ' + esc(uid) + '</option>';
+        mems.push({ uid: uid, nm: nm });
+        wlNames['u:' + uid] = nm;
+      });
+      /* роли: один id — один пункт */
+      var rseen = {}, roles = [];
+      (res[0] || []).forEach(function (r) {
+        var rid = String(r.id || '');
+        if (!rid || rseen[rid]) return;
+        rseen[rid] = true;
+        roles.push({ rid: rid, nm: r.name || rid });
+        wlNames['r:' + rid] = '@ ' + (r.name || rid);
+      });
+      var g1 = '<optgroup label="Участники">' + mems.map(function (m) {
+        var v = 'u:' + m.uid;
+        var done = wlExisting[v] ? ' · уже в списке' : '';
+        return '<option value="' + esc(v) + '">' + esc(m.nm) + done + '</option>';
       }).join('') + '</optgroup>';
       var g2 = '<optgroup label="Роли">' + roles.map(function (r) {
-        return '<option value="r:' + esc(r.id) + '">@ ' + esc(r.name) + '</option>';
+        var v = 'r:' + r.rid;
+        var done = wlExisting[v] ? ' · уже в списке' : '';
+        return '<option value="' + esc(v) + '">@ ' + esc(r.nm) + done + '</option>';
       }).join('') + '</optgroup>';
-      wlSel.innerHTML = '<option value="">— выберите участника или роль —</option>' + g1 + g2;
-      if (keep) wlSel.value = keep;
+      wlSel.innerHTML = g1 + g2;
+      if (keep && wlSel.querySelector('option[value="' + keep.replace(/"/g, '\\"') + '"]')) {
+        wlSel.value = keep;
+      }
       if (wlSel._sshdCtl) wlSel._sshdCtl.refresh();
+      wlSyncLabel();
     });
   }
   wlFill();
@@ -531,12 +586,16 @@
     var v = String(wlSel.value || '');
     var mm = /^(u|r):(\d{5,25})$/.exec(v);
     if (!mm) { window.showToast('Выберите участника или роль из списка', false); return; }
+    if (wlExisting[v]) {
+      window.showToast('Уже в белом списке — второй раз не добавляю', false);
+      return;
+    }
     var kind = mm[1] === 'u' ? 'user' : 'role';
     fetch('/api/proof-whitelist', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: kind, id: mm[2] })
     }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d && d.success) { window.showToast('Добавлено в белый список', true); wlSel.value = ''; if (wlSel._sshdCtl) wlSel._sshdCtl.refresh(); wlRender(d); }
+      if (d && d.success) { window.showToast('Добавлено в белый список', true); wlSel.value = ''; if (wlSel._sshdCtl) wlSel._sshdCtl.refresh(); wlSyncLabel(); wlRender(d); }
       else window.showToast((d && d.error) || 'Ошибка', false);
     }).catch(function () { window.showToast('Сеть не отвечает', false); });
   });
