@@ -568,11 +568,25 @@ class ReportCardView(discord.ui.View):
         if t:
             member = interaction.guild.get_member(int(t['accused_id']))
             accused_name = member.display_name if member else 'участник'
+        _perm_hint = (
+            'Не могу создать ветку разбора: у бота нет права '
+            '«Создавать публичные ветки» в этом канале. Админу: в настройках '
+            'канала → Права доступа → роль бота → включи «Создавать публичные '
+            'ветки» и «Создавать приватные ветки» (или «Управление ветками»). '
+            'Вызов уже принят — разбор можно вести прямо в канале.')
+        _p = (interaction.channel.permissions_for(interaction.guild.me)
+              if interaction.channel else None)
+        if _p is not None and not (_p.administrator
+                                   or _p.create_public_threads
+                                   or _p.manage_threads):
+            return await interaction.followup.send(_perm_hint, ephemeral=True)
         try:
             thread = await interaction.message.create_thread(
                 name=f'разбор · {accused_name[:40]}',
                 auto_archive_duration=10080,
                 reason=f'Разбор вызова модератора {interaction.user}')
+        except discord.Forbidden:
+            return await interaction.followup.send(_perm_hint, ephemeral=True)
         except Exception as ex:
             return await interaction.followup.send(
                 f'Не удалось создать ветку: {ex}', ephemeral=True)
@@ -583,7 +597,8 @@ class ReportCardView(discord.ui.View):
                     await thread.add_user(m)
                 except Exception as _sx:
                     _log.debug('rcard add_user: %s', _sx)
-            RC.ticket_set(interaction.message.id, thread_id=str(thread.id))
+            # карточка → ветка: панель в ветке ищет тикет по channel_id
+            RC.ticket_rekey(interaction.message.id, thread.id)
         await thread.send(
             f'Ветка разбора вызова. {interaction.user.mention} ведёт '
             'модерацию. Здесь доступна полная панель: режим слова, '

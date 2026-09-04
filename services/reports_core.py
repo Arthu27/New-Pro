@@ -197,6 +197,19 @@ def ticket_set(thread_id, **kv) -> None:
                   (*kv.values(), str(thread_id)))
 
 
+def ticket_rekey(old_key, new_key) -> None:
+    """Переозначить тикет (карточка вызова → её ветка разбора).
+
+    Панель внутри ветки ищет тикет по ID канала-ветки, а карточка хранит
+    его по ID сообщения — нужен именно перенос ключа, а не второй столбец.
+    """
+    if str(old_key) == str(new_key):
+        return
+    with db() as c:
+        c.execute('UPDATE tickets SET thread_id=? WHERE thread_id=?',
+                  (str(new_key), str(old_key)))
+
+
 def add_witness(thread_id, user_id) -> None:
     t = ticket_get(thread_id)
     if not t or str(user_id) in t['witnesses']:
