@@ -175,7 +175,7 @@ select option, select optgroup {
 *, *::before, *::after { box-sizing: border-box; }
 
 html { background: var(--bg); }
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; overflow-x: clip; }
 
 body {
   font-family: var(--font);
@@ -2302,18 +2302,38 @@ a.feed-item:hover .feed-item-title { color: var(--ac); }
   color: var(--text-2);
   cursor: pointer;
 }
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 105;
+  background: rgba(15, 23, 42, 0.46);
+  border: 0; padding: 0; margin: 0;
+  cursor: pointer;
+}
+.sidebar-backdrop.show { display: block; }
+body.sidebar-open { overflow: hidden; }
 @media (max-width: 1080px) {
   .sidebar {
     position: fixed; left: 0; top: 0; bottom: 0;
     transform: translateX(-100%);
     transition: transform 0.25s var(--ease);
     box-shadow: var(--shadow-3);
+    z-index: 110;
   }
   .sidebar.open { transform: none; }
-  .mobile-menu { display: grid; place-items: center; }
-  .topbar, .main-content { padding-left: 18px; padding-right: 18px; }
+  .mobile-menu {
+    display: grid; place-items: center;
+    position: fixed;
+    top: 10px; left: 10px;
+    z-index: 220;
+    width: 42px; height: 42px;
+    box-shadow: var(--shadow-2);
+  }
+  .topbar { padding-left: 58px; padding-right: 18px; }
+  .main-content { padding-left: 18px; padding-right: 18px; }
   .navbar-clock { display: none; }
-  .topbar-brand { display: grid; }
+  .topbar-brand { display: none; }
+  body.sidebar-open .sidebar-backdrop { display: block; }
 }
 @media (max-width: 860px) {
   .stat-grid,.donut-grid,.quick-grid{grid-template-columns:1fr !important}
@@ -2327,11 +2347,30 @@ a.feed-item:hover .feed-item-title { color: var(--ac); }
   .topbar .crumbs { min-width: 0; }
   .navbar-right { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
   .shift-edit-row{grid-template-columns:auto 1fr auto !important}
+  #pingPill,
+  #sidebarCollapseBtn,
+  #focusBtn,
+  #accentBtn,
+  #fullscreenBtn { display: none !important; }
+  .crumbs .crumb-group, .crumbs .crumb-sep { display: none; }
+  .page-head { gap: 10px; margin-bottom: 14px; }
+  .page-head .lead { font-size: var(--fs-sm); }
+  .page-head-actions { width: 100%; }
+  .page-head-actions .btn { min-height: 42px; }
+  .kpi-row { grid-template-columns: 1fr 1fr; }
+  .form-row { flex-direction: column; align-items: stretch; }
+  .form-row > * { min-width: 0; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar input[type="search"], .toolbar input[type="text"], .toolbar select { width: 100%; min-width: 0; }
+  .modal-overlay { padding: 8vh 12px 12px; align-items: flex-start; }
+  .modal-box { max-width: 100%; }
 }
 @media (max-width: 720px) {
   .grid-2, .grid-3, .form-row-2 { grid-template-columns: 1fr; }
   .user-info { display: none; }
   .page-head h1 { font-size: 19px; }
+  .kpi-row { grid-template-columns: 1fr; }
+  .main-content { padding: 16px 14px 96px; }
 }
 
 /* ============================================================

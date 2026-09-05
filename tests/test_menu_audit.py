@@ -40,7 +40,7 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-from services.panel_menu import MENU  # noqa: E402
+from services.panel_menu import MENU, PAGE_MIN_ROLE, panel_groups_for  # noqa: E402
 
 pages = [p for grp in MENU for p in grp.get('pages', [])]
 
@@ -63,6 +63,20 @@ import web.app as appmod  # noqa: E402
 rules = {str(r) for r in appmod.app.url_map.iter_rules()}
 _bad = [p for p in paths if p not in rules]
 check(not _bad, f'{len(paths)} путей меню найдены в url_map ({_bad[:5]})')
+
+# ─── 2b. скрытые пункты не светятся 403 ──────────────────────────────────────
+print('== 2b. Пункты с 403 не видны младшим ролям ==')
+admin_paths = {p['path'] for g in panel_groups_for('admin') for p in g['pages']}
+mod_paths = {p['path'] for g in panel_groups_for('mod') for p in g['pages']}
+owner_paths = {p['path'] for g in panel_groups_for('owner') for p in g['pages']}
+check('/panel-access' not in admin_paths and '/chat' not in admin_paths,
+      'админ не видит owner-страницы /panel-access и /chat')
+check('/users' not in mod_paths and '/channels' not in mod_paths and '/ops-center' not in mod_paths,
+      'мод не видит admin-страницы /users /channels /ops-center')
+check('/panel-access' in owner_paths and '/chat' in owner_paths,
+      'владелец видит страницы доступа и чат')
+check(PAGE_MIN_ROLE.get('/chat') == 'owner' and PAGE_MIN_ROLE.get('/send-command') == 'admin',
+      'PAGE_MIN_ROLE совпадает с @role_required')
 
 # ─── 3. словари access/tone/section ──────────────────────────────────────────
 print('== 3. access/tone/section из разрешённых словарей ==')

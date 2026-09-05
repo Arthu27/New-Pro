@@ -240,6 +240,54 @@ MODERATION_SECTIONS = (
 
 _ROLE_LEVEL = {'uye': 0, 'mod': 1, 'curator': 2, 'admin': 3, 'owner': 4}
 
+# Минимальная роль страницы, если у пункта MENU нет своего min_role.
+# Совпадает с @role_required на GET-роуте: иначе пункт виден всем,
+# а вход даёт HTTP 403 (жалоба владельца 2026-09-05).
+# Страницы без записи здесь считаются «мод+» — сайдбар uye и так пуст.
+PAGE_MIN_ROLE = {
+    '/': 'uye',
+    '/spravka': 'uye',
+    '/ai-chat': 'uye',
+    '/panel-access': 'owner',
+    '/panel-menu': 'owner',
+    '/role-permissions': 'owner',
+    '/chat': 'owner',
+    '/bot-settings': 'owner',
+    '/cog-manager': 'owner',
+    '/settings': 'owner',
+    '/todo': 'owner',
+    '/color-roles': 'owner',
+    '/backup': 'owner',
+    '/ops-center': 'admin',
+    '/users': 'admin',
+    '/rejoin-roles': 'admin',
+    '/roles': 'admin',
+    '/backups': 'admin',
+    '/konsol': 'admin',
+    '/command-switches': 'admin',
+    '/mod-settings': 'admin',
+    '/role-settings': 'admin',
+    '/welcome-editor': 'admin',
+    '/rules-editor': 'admin',
+    '/pagerduty': 'admin',
+    '/anticrash': 'admin',
+    '/log-settings': 'admin',
+    '/panel-logs': 'admin',
+    '/channels': 'admin',
+    '/ai-moderation': 'admin',
+    '/bot-diagnostics': 'admin',
+    '/bulk-actions': 'admin',
+    '/antiraid': 'admin',
+    '/guardian': 'admin',
+    '/automod-settings': 'admin',
+    '/ticket-settings': 'admin',
+    '/staff-limits': 'admin',
+    '/member-search': 'admin',
+    '/warn-config': 'admin',
+    '/send-command': 'admin',
+    '/execute-command': 'admin',
+}
+
 # Страницы, скрытые из меню выключенным модулем. После чистки выключенных
 # модулей таких страниц нет: их пункты удалены вместе с роутами и шаблонами.
 HIDDEN_PATHS = []
@@ -442,7 +490,8 @@ def _apply_layout(pages, group_key):
 
 def _role_can_open(role, page):
     """Не показывать ссылку, которая гарантированно закончится HTTP 403."""
-    required = page.get('min_role', 'uye')
+    path = page.get('path') or ''
+    required = page.get('min_role') or PAGE_MIN_ROLE.get(path, 'mod')
     return _ROLE_LEVEL.get(role, -1) >= _ROLE_LEVEL.get(required, 99)
 
 

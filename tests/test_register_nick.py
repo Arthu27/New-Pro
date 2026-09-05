@@ -79,6 +79,17 @@ try:
     check(appmod._resolve_nick_anywhere('Такого-Нет') is None,
           'несуществующее имя → None (форма покажет «выбери из подсказок»)')
 
+    print('== Тег Discord не только exact match ==')
+    sid = '987430047889637426'
+    check(appmod._extract_discord_snowflake('привет <@%s>!' % sid) == sid,
+          'упоминание в середине текста → snowflake')
+    check(appmod._extract_discord_snowflake('<@!%s>' % sid) == sid,
+          'nickname-mention <@!id>')
+    check(appmod._extract_discord_snowflake('id %s хвост' % sid) == sid,
+          'голые 17–19 цифр в строке')
+    check(appmod._resolve_nick_anywhere('тег <@%s> меня' % sid) == sid,
+          'resolve: тег себя не обязан быть единственным содержимым поля')
+
     print('== Скрытое поле resolved_id в формах ==')
     reg = open(os.path.join(ROOT, 'web', 'templates', 'register.html'),
                encoding='utf-8').read()
@@ -90,6 +101,10 @@ try:
           'клик по подсказке запоминает точный Discord ID')
     check("ridEl.value = ''" in reg and "ridEl.value = ''" in login,
           'ручной ввод имени сбрасывает запомненный ID')
+    check('mousedown' in reg and 'mousedown' in login,
+          'выбор подсказки по mousedown — blur не съедает ID')
+    check('__rgPickedNick' in reg and '__lgPickedNick' in login,
+          'после сброса ID восстанавливается, если ник всё ещё выбранный')
     asrc = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
     check("request .form .get ('resolved_id'" in asrc,
           'сервер принимает resolved_id: имя больше не единственный путь')

@@ -93,7 +93,7 @@
               <input type="text" name="discord_id" id="discord_id" placeholder="например @alex или Discord ID" required aria-label="Discord ID" autocomplete="username" oninput="rgSuggest(this)" onfocus="rgSuggest(this)">
               <div class="autocomplete-popup" id="regPopup"></div>
             </div>
-            <p class="hint">Просто печатай <b>ник целиком</b> (или начни — и выбери себя из подсказок, ник подставится полностью). Можно и Discord ID.</p>
+            <p class="hint">Просто печатай <b>ник</b> (или начни — и выбери себя из подсказок). Можно Discord ID или тег себя <@…>.</p>
           </div>
           <div class="f-group">
             <label for="pass1">Пароль</label>
@@ -183,11 +183,18 @@
   var suggestTimer = null;
   var suggestSeq = 0;
   var __rgSuggestBlock = false;
+  window.__rgPickedId = '';
+  window.__rgPickedNick = '';
   window.rgSuggest = function (input) {
     if (__rgSuggestBlock) { __rgSuggestBlock = false; return; }
     /* человек правит имя руками — ранее выбранный ID больше не действует */
     var ridEl = document.getElementById('resolved_id');
     if (ridEl && ridEl.value) ridEl.value = '';
+    var cur = (input.value || '').trim();
+    var keepNick = (window.__rgPickedNick || '').replace(/^@/, '');
+    if (ridEl && window.__rgPickedId && (cur === window.__rgPickedNick || cur === window.__rgPickedId || cur.replace(/^@/, '') === keepNick)) {
+      ridEl.value = window.__rgPickedId;
+    }
     var popup = $('regPopup');
     if (!popup) return;
     var q = (input.value || '').trim().replace(/^@/, '');
@@ -219,9 +226,7 @@
           }).join('');
           popup.classList.add('open');
           Array.prototype.forEach.call(popup.querySelectorAll('.item'), function (it) {
-            it.addEventListener('click', function (ev) {
-              ev.preventDefault();
-              ev.stopPropagation();
+            function pickItem() {
               __rgSuggestBlock = true;
               /* полный ник в поле для человека + ID в скрытом поле для
                  сервера: регистрацию нельзя сломать ни частичным именем,
@@ -229,9 +234,21 @@
               input.value = it.dataset.user || it.dataset.id || input.value;
               var rid = document.getElementById('resolved_id');
               if (rid) rid.value = it.dataset.id || '';
+              window.__rgPickedId = it.dataset.id || '';
+              window.__rgPickedNick = it.dataset.user || '';
               popup.classList.remove('open');
               var btn1 = $('regBtn1');
               if (btn1) btn1.focus();
+            }
+            it.addEventListener('mousedown', function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              pickItem();
+            });
+            it.addEventListener('click', function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              pickItem();
             });
           });
         })
@@ -275,10 +292,12 @@
       }
     });
     input.addEventListener('blur', function () {
-      clearTimeout(suggestTimer);
-      suggestSeq++;
-      var popup = $('regPopup');
-      if (popup) popup.classList.remove('open');
+      setTimeout(function () {
+        clearTimeout(suggestTimer);
+        suggestSeq++;
+        var popup = $('regPopup');
+        if (popup) popup.classList.remove('open');
+      }, 180);
     });
   })();
 
@@ -342,6 +361,16 @@
       var code = $('code');
       if (!code || !code.value.trim()) { setError('regError2', 'Введи код из Discord.'); if (code) code.focus(); return; }
       if (code.value.trim().length !== 6) { setError('regError2', 'Код — это 6 цифр из личных сообщений.'); code.focus(); return; }
+      form2.dataset.sent = '1';
+      regCheck.start('Проверяем код и открываем доступ…');
+      form2.submit();
+    });
+  }
+})();
+</script>
+</body>
+</html>
+== 6) { setError('regError2', 'Код — это 6 цифр из личных сообщений.'); code.focus(); return; }
       form2.dataset.sent = '1';
       regCheck.start('Проверяем код и открываем доступ…');
       form2.submit();

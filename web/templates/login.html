@@ -450,11 +450,20 @@
          как фокус ушёл (гонка таймера с вводом пароля). */
   var suggestTimer = null;
   var suggestSeq = 0;
+  window.__lgPickedId = '';
+  window.__lgPickedNick = '';
   window.showSuggest = function (input, popupId, focusSel) {
     if (window.__lgSuggestBlock) { window.__lgSuggestBlock = false; return; }
     /* человек правит имя руками — ранее выбранный из подсказок ID сбрасывается */
     var ridEl = document.getElementById('resolved_id');
-    if (ridEl && ridEl.value) ridEl.value = '';
+    if (input && input.id !== 'dsQuery') {
+      if (ridEl && ridEl.value) ridEl.value = '';
+      var cur = (input.value || '').trim();
+      var keepNick = (window.__lgPickedNick || '').replace(/^@/, '');
+      if (ridEl && window.__lgPickedId && (cur === window.__lgPickedNick || cur === window.__lgPickedId || cur.replace(/^@/, '') === keepNick)) {
+        ridEl.value = window.__lgPickedId;
+      }
+    }
     var popup = $(popupId);
     if (!popup) return;
     var q = (input.value || '').trim().replace(/^@/, '');
@@ -486,16 +495,28 @@
           }).join('');
           popup.classList.add('open');
           Array.prototype.forEach.call(popup.querySelectorAll('.item'), function (it) {
-            it.addEventListener('click', function (ev) {
-              ev.preventDefault();
-              ev.stopPropagation();
+            function pickItem() {
               window.__lgSuggestBlock = true;
               input.value = it.dataset.user || it.dataset.id || input.value;
               var rid = document.getElementById('resolved_id');
-              if (rid) rid.value = it.dataset.id || '';
+              if (rid && input.id !== 'dsQuery') rid.value = it.dataset.id || '';
+              if (input.id !== 'dsQuery') {
+                window.__lgPickedId = it.dataset.id || '';
+                window.__lgPickedNick = it.dataset.user || '';
+              }
               popup.classList.remove('open');
               var nf = focusSel ? document.querySelector(focusSel) : $('passPassword');
               if (nf) nf.focus();
+            }
+            it.addEventListener('mousedown', function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              pickItem();
+            });
+            it.addEventListener('click', function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              pickItem();
             });
           });
         })
@@ -541,10 +562,12 @@
     // Фокус ушёл из логина (Tab, клик в другое поле) — подсказка гаснет
     // сразу и не вернётся по запоздавшему ответу сервера.
     input.addEventListener('blur', function () {
-      clearTimeout(suggestTimer);
-      suggestSeq++;
-      var popup = $(popupId);
-      if (popup) popup.classList.remove('open');
+      setTimeout(function () {
+        clearTimeout(suggestTimer);
+        suggestSeq++;
+        var popup = $(popupId);
+        if (popup) popup.classList.remove('open');
+      }, 180);
     });
   }
   attachSuggest('passUsername', 'passPopup');

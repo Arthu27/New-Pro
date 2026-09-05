@@ -535,14 +535,54 @@
 .chat-modal-btn.red { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent); }
 .chat-modal-btn.red:hover { background: var(--err); color: #fff; border-color: var(--err); }
 
-/* ── Адаптив ── */
+/* ── Адаптив: боковые колонки становятся выезжающими ящиками ── */
+.chat-drawer-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 65;
+  background: rgba(15, 23, 42, 0.42);
+  border: 0; padding: 0; margin: 0;
+  cursor: pointer;
+}
+.chat-drawer-backdrop.show { display: block; }
+.hdr-btn.chat-mob-ch, .hdr-btn.chat-mob-mem { display: none; }
 @media (max-width: 1120px) {
   .chat-wrap { grid-template-columns: 58px 236px 1fr; }
-  .members-panel { display: none; }
+  .members-panel {
+    display: none;
+    position: fixed; right: 0; top: var(--topbar-h, 56px); bottom: 0;
+    width: min(280px, 86vw);
+    z-index: 80;
+    border-radius: 0;
+    box-shadow: var(--shadow-3);
+  }
+  .chat-wrap.members-open .members-panel { display: flex; }
+  .hdr-btn.chat-mob-mem { display: flex; }
 }
 @media (max-width: 820px) {
-  .chat-wrap { grid-template-columns: 50px 1fr; height: calc(100vh - 260px); }
-  .chat-sidebar { display: none; }
+  .chat-wrap {
+    grid-template-columns: 1fr;
+    height: calc(100dvh - 210px);
+    min-height: 320px;
+  }
+  .guild-bar {
+    display: none;
+    position: fixed; left: 0; top: var(--topbar-h, 56px); bottom: 0;
+    width: 58px; z-index: 81;
+    border-radius: 0;
+    box-shadow: var(--shadow-3);
+  }
+  .chat-sidebar {
+    display: none;
+    position: fixed; left: 58px; top: var(--topbar-h, 56px); bottom: 0;
+    width: min(280px, calc(100vw - 58px));
+    z-index: 81;
+    border-radius: 0;
+    box-shadow: var(--shadow-3);
+  }
+  .chat-wrap.channels-open .guild-bar,
+  .chat-wrap.channels-open .chat-sidebar { display: flex; }
+  .hdr-btn.chat-mob-ch { display: flex; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -694,6 +734,7 @@
 }
 </style>
 
+<button type="button" class="chat-drawer-backdrop" id="chatDrawerBackdrop" hidden aria-label="Закрыть список"></button>
 <div class="chat-wrap">
 
   <!-- Guild bar -->
@@ -726,6 +767,8 @@
       <div class="chat-header-sep" id="ch-sep"></div>
       <span class="chat-header-topic" id="ch-topic"></span>
       <div class="chat-header-actions">
+        <button type="button" class="hdr-btn chat-mob-ch" id="chatChannelsBtn" title="Каналы" aria-label="Каналы"><i class="fas fa-list"></i></button>
+        <button type="button" class="hdr-btn chat-mob-mem" id="chatMembersBtn" title="Участники" aria-label="Участники"><i class="fas fa-users"></i></button>
         <div class="chat-search" id="chat-search" style="display:none">
           <i class="fas fa-magnifying-glass"></i>
           <input id="chat-search-input" placeholder="Поиск в сообщениях…" aria-label="Поиск в сообщениях">
@@ -979,6 +1022,7 @@ async function loadMembers(gid) {
 }
 
 function selectChannel(id, name) {
+  if (typeof window.__chatCloseDrawers === 'function') window.__chatCloseDrawers();
   _channelId = id; _dmMode = false; _lastMsgId = null; _fetchSeq++;
   _seenIds = {}; _unreadNew = 0; _lastMsgData = null; _lastDmData = null;
   clearChatSearchSilently();
@@ -1370,6 +1414,7 @@ async function openDmFromInput() {
 }
 
 async function openDm(userId, userName) {
+  if (typeof window.__chatCloseDrawers === 'function') window.__chatCloseDrawers();
   _dmMode = true; _dmUserId = userId; _channelId = null; _lastMsgId = null; _fetchSeq++;
   _seenIds = {}; _unreadNew = 0; _lastDmData = null; _lastMsgData = null;
   clearChatSearchSilently();

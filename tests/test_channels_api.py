@@ -193,6 +193,17 @@ code, b = post('/api/guild/777/bulk-ban', {'role_id': 201})
 check(code == 200 and b.get('success') and b.get('count') == 1, f'bulk ban -> {code} {str(b)[:120]}')
 check(301 in guild.banned_members, 'бан применён')
 
+print('== скрытые каналы — фильтр по роли ==')
+from web.routes import guild_admin as ga  # noqa: E402
+_hid = [{'id': '1', 'name': 'secret', 'hidden': True},
+        {'id': '2', 'name': 'general', 'hidden': False}]
+check(ga._visible_channels(_hid, 'mod') == [{'id': '2', 'name': 'general', 'hidden': False}],
+      'модератор не видит hidden-каналы')
+check(len(ga._visible_channels(_hid, 'owner')) == 2,
+      'владелец видит скрытые (глазик на /channels)')
+pj = open(os.path.join(_REPO, 'web', 'static', 'pickers.js'), encoding='utf-8').read()
+check(pj.count('!c.hidden') >= 2, 'оба source() пикеров пропускают hidden')
+
 print('== устойчивость списка каналов ==')
 # один «битый» объект канала (как повреждённые данные Discord) не должен
 # ронять весь /api/guild/<gid>/channels — остальные каналы остаются в выдаче

@@ -1517,6 +1517,22 @@ def login ():
     return render_template ('login.html')
 
 
+def _extract_discord_snowflake (text ):
+    """Snowflake из упоминания или голых 17–19 цифр — не только exact match.
+
+    Жалоба владельца 2026-09-05: «тегнула себя — бот не нашёл». Раньше
+    матчился только целиком поле вида <@id>.
+    """
+    s =str (text or '')
+    m =re .search (r'<@!?(\d{17,19})>',s )
+    if m :
+        return m .group (1 )
+    m =re .search (r'(?<!\d)(\d{17,19})(?!\d)',s )
+    if m :
+        return m .group (1 )
+    return None
+
+
 def _resolve_member_key (members ,login ):
     """Найти ключ (Discord ID) в members.json по логину.
 
@@ -1527,6 +1543,9 @@ def _resolve_member_key (members ,login ):
     if not login :
         return None
     login =str (login ).strip ()
+    _sid =_extract_discord_snowflake (login )
+    if _sid :
+        login =_sid
     if login in members :
         return login
     q =login .lstrip ('@').lower ()
@@ -1549,10 +1568,11 @@ def _resolve_nick_anywhere (nick ):
     Возвращает ID строкой, список кандидатов (ник неуникален) или None.
     """
     nick =str (nick or '').strip ()
-    # Discord-тег <@id> / <@!id> → сразу ID (человек тегнул себя в поле)
-    _tag =re .match (r'^<@!?(\d{17,19})>$',nick )
+    # Discord-тег <@id> / <@!id> → сразу ID (человек тегнул себя в поле).
+    # Не только exact match: «привет <@id>» тоже считается (жалоба 2026-09-05).
+    _tag =_extract_discord_snowflake (nick )
     if _tag :
-        return _tag .group (1 )
+        return _tag
     nick =nick .lstrip ('@')
     if not nick :
         return None
@@ -1631,10 +1651,10 @@ def register ():
         # находит, но при регистрации говорит, что не нашла»).
         # Человек мог ТЕГНУТЬ себя (<@id>) прямо в поле — Discord-тег
         # превращаем в ID: жалоба владельца 2026-09-05 «тегнула — бот не
-        # поправил и сказал, что не нашёл».
-        _tag =re .match (r'^<@!?(\d{17,19})>$',discord_id )
+        # поправил и сказал, что не нашёл». Не только exact match.
+        _tag =_extract_discord_snowflake (discord_id )
         if _tag :
-            discord_id =_tag .group (1 )
+            discord_id =_tag
         _rid =request .form .get ('resolved_id','').strip ()
         if (not discord_id .isdigit ()and _rid .isdigit ()
         and 17 <=len (_rid )<=19 ):

@@ -116,6 +116,42 @@ def _annotate_hidden (guild_id ,channels ):
     return channels
 
 
+def _visible_channels (channels ,role =None ):
+    """Скрытые каналы — только владельцу (страница «Каналы» с глазиком).
+
+    Кэш/снимок хранит полный аннотированный список; фильтр — на ответе,
+    чтобы пикеры и чат модераторов не видели спрятанное.
+    """
+    if not isinstance (channels ,list ):
+        return channels or []
+    if role is None :
+        try :
+            role =session .get ('role')
+        except Exception :
+            role =None
+    if role =='owner':
+        return channels
+    return [c for c in channels if not (isinstance (c ,dict )and c .get ('hidden'))]
+
+
+def _channels_respond (channels ,sig ):
+    """JSON/ETag ответа /channels: кэш полный, тело — по роли."""
+    role =''
+    try :
+        role =str (session .get ('role')or '')
+    except Exception :
+        role =''
+    out =_visible_channels (channels ,role )
+    etag ='"ch%d-%s-%s"'%(len (channels or []),sig ,role )
+    if etag in request .headers .get ('If-None-Match',''):
+        from flask import Response as _Resp
+        return _Resp (status =304 ,headers ={'ETag':etag ,'Cache-Control':'no-cache'})
+    from flask import Response as _Resp
+    return _Resp (json .dumps (out ,ensure_ascii =False ),
+    mimetype ='application/json',
+    headers ={'ETag':etag ,'Cache-Control':'no-cache'})
+
+
 def _demo_channels_seed ():
     """Встроенная демо-структура каналов (тот же состав, что data/demo_channels.json)."""
     return [
@@ -123,7 +159,9 @@ def _demo_channels_seed ():
         {'id':'1002','name':'новости','type':'text','position':1,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
         {'id':'1003','name':'FAQ','type':'text','position':2,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
         {'id':'1015','name':'журнал-модерации','type':'forum','position':0,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'2102','name':'разбор','type':'thread','position':0,'category':'ИНФОРМАЦИЯ','category_id':'900','parent_id':'1015','hidden':False},
         {'id':'1004','name':'флудилка','type':'text','position':0,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
+        {'id':'2101','name':'ивент','type':'thread','position':0,'category':'ОБЩЕНИЕ','category_id':'901','parent_id':'1004','hidden':False},
         {'id':'1005','name':'мемы','type':'text','position':1,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
         {'id':'1006','name':'музыка-чат','type':'text','position':2,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
         {'id':'1007','name':'предложения','type':'text','position':0,'category':'РАЗНОЕ','category_id':'902','hidden':False},
@@ -233,31 +271,39 @@ def guild_channels_roles (guild_id ):
     """
     guild =resolve_guild (guild_id )
     if guild is not None :
-        channels =[{'id':str (c .id ),'name':c .name }
-                   for c in getattr (guild ,'text_channels',[])or []]
+        channels =[]
+        for c in getattr (guild ,'text_channels',[])or []:
+            cat =getattr (c ,'category',None )
+            channels .append ({'id':str (c .id ),'name':c .name ,
+            'category_id':str (cat .id )if cat else None })
         roles =[{'id':str (r .id ),'name':r .name }
                 for r in getattr (guild ,'roles',[])or []
                 if r .id !=guild .id ]
         # Общий резолвер питает пикеры многих страниц (репорты, логи и т.д.):
         # дубли id в кэше гильдии = «2 одинаковых выбора» в селектах.
-        return _dedupe_channels (channels ),_dedupe_channels (roles )
+        channels =_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (channels )))
+        return channels ,_dedupe_channels (roles )
     # Панель отдельным процессом от бота: снимки, которые бот пишет в data/
     # (services.bot_bridge) — реальные роли и текстовые каналы сервера.
     from services import bot_bridge as _bb
     if _bb .bot_alive_for (guild_id ):
-        channels =[{'id':str (c .get ('id','')),'name':c .get ('name','')}
+        channels =[{'id':str (c .get ('id','')),'name':c .get ('name',''),
+                    'category_id':c .get ('category_id')}
                   for c in (_bb .read_channels (guild_id )or [])
                   if c .get ('type')=='text']
         roles =[{'id':r ['id'],'name':r ['name']}
                 for r in (_bb .read_roles (guild_id )or [])
                 if not r .get ('managed')and str (r .get ('id',''))!=str (guild_id )]
-        return _dedupe_channels (channels ),_dedupe_channels (roles )
-    channels =[{'id':str (c .get ('id','')),'name':c .get ('name','')}
+        channels =_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (channels )))
+        return channels ,_dedupe_channels (roles )
+    channels =[{'id':str (c .get ('id','')),'name':c .get ('name',''),
+                'category_id':c .get ('category_id')}
               for c in demo_channels_list (guild_id )
               if c .get ('type')=='text']
     roles =[{'id':str (r .get ('id','')),'name':r .get ('name','')}
             for r in _demo_roles_load (guild_id )]
-    return _dedupe_channels (channels ),_dedupe_channels (roles )
+    channels =_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (channels )))
+    return channels ,_dedupe_channels (roles )
 
 
 def register(ctx):
@@ -947,17 +993,18 @@ def register(ctx):
                         with open (demo_file ,'r',encoding ='utf-8')as fp :
                             demo =json .load (fp )
                         demo =sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
-                        return jsonify (_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (demo ))))
+                        return jsonify (_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (demo )))))
                     except Exception as e :
                         print (f'[WEB][WARN] /channels: demo_channels.json ошибка: {e}')
                 # Демо-структура не засеяна — отдаём полный встроенный список
                 # (тот же состав, что жил в data/demo_channels.json), чтобы
                 # селекты каналов и чат не пустовали в превью.
-                return jsonify (_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (_demo_channels_seed ()))))
+                return jsonify (_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (_demo_channels_seed ())))))
             cached =_channels_offline_cache (guild_id )
             if cached :
                 print (f'[WEB] /channels bot offline — отдаём кэш ({len(cached)} кан.)')
-                return jsonify (_dedupe_channels (cached ))
+                cached =_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (cached )))
+                return jsonify (_visible_channels (cached ))
             print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Бот офлайн','channels':[]})
 
@@ -980,7 +1027,8 @@ def register(ctx):
         import time as _time
         _now = _time.time()
         _live = getattr(api_guild_channels, '_live_cache', {})
-        _ckey = (str(guild_id), len(getattr(guild, 'channels', []) or []))
+        _ckey = (str(guild_id), len(getattr(guild, 'channels', []) or [])
+                 + len(getattr(guild, 'threads', []) or []))
         _hit = _live.get(_ckey)
         # TTL поднят с 3 до 10с: настройки и пикеры опрашивают список часто,
         # состав каналов меняется редко (а при создании/удалении сигнатура
@@ -1077,6 +1125,44 @@ def register(ctx):
                 # один проблемный канал не должен ронять весь список панели
                 print (f'[WEB][WARN] channels: канал {getattr(c, "id", "?")} пропущен: {e}')
 
+        # Ветки (threads): в пикеры логов/апелляций — как текстовые цели.
+        # Страница «Каналы» их пропускает (type === 'thread').
+        try :
+            for tch in getattr (guild ,'threads',None ) or []:
+                try :
+                    parent =getattr (tch ,'parent',None )
+                    pname =getattr (parent ,'name',None ) or ''
+                    pcat =getattr (parent ,'category',None ) if parent is not None else None
+                    channels_data .append ({
+                    'id':str (tch .id ),
+                    'name':((pname + ' › ' + tch .name ) if pname else tch .name ),
+                    'type':'thread',
+                    'position':int (getattr (tch ,'position',0 ) or 0 ),
+                    'category':(getattr (pcat ,'name',None ) or pname or None ),
+                    'category_id':(str (pcat .id ) if pcat is not None
+                                   else (str (parent .id ) if parent is not None else None )),
+                    'category_pos':(pcat .position if pcat is not None else -1 ),
+                    'topic':'',
+                    'nsfw':False ,
+                    'slowmode':0 ,
+                    'bitrate':0 ,
+                    'user_limit':0 ,
+                    'news':False ,
+                    'stage':False ,
+                    'forum':False ,
+                    'thread':True ,
+                    'connected':0 ,
+                    'created_at':(tch .created_at .isoformat ()
+                                  if getattr (tch ,'created_at',None ) else None ),
+                    'mention':getattr (tch ,'mention',''),
+                    'parent_id':str (getattr (tch ,'parent_id','') or
+                                     (getattr (parent ,'id','') if parent is not None else '')),
+                    })
+                except Exception as e :
+                    print (f'[WEB][WARN] channels: ветка {getattr(tch, "id", "?")} пропущена: {e}')
+        except Exception as e :
+            print (f'[WEB][WARN] channels: threads: {e}')
+
         sorted_channels =sorted (channels_data ,key =lambda x :(x ['category_pos'],x ['position']))
         # Защита от дублей на источнике (см. _dedupe_channels): все пикеры
         # каналов берут список отсюда — дублей в селектах быть не должно.
@@ -1100,14 +1186,7 @@ def register(ctx):
                 json .dump ({'channels':sorted_channels },_cf ,ensure_ascii =False )
         except Exception as _ce :
             _log .debug ('channels cache save: %s',_ce )
-        _etag ='"ch%d-%d"' % (len (sorted_channels ),_ckey [1 ])
-        if _etag in request .headers .get ('If-None-Match',''):
-            from flask import Response as _Resp
-            return _Resp (status =304 ,headers ={'ETag':_etag ,'Cache-Control':'no-cache'})
-        from flask import Response as _Resp
-        return _Resp (json .dumps (sorted_channels ,ensure_ascii =False ),
-        mimetype ='application/json',
-        headers ={'ETag':_etag ,'Cache-Control':'no-cache'})
+        return _channels_respond (sorted_channels ,_ckey [1 ])
 
     def _channels_offline_cache (guild_id ):
         """Последний известный список каналов (имена + id) при офлайн-боте."""

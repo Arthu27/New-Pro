@@ -65,7 +65,13 @@
 
     function source(data) {
       if (kind === 'role') return data.roles;
-      return data.channels.filter(function (c) { return c.type === kind; });
+      var list = (data.channels || []).filter(function (c) { return !c.hidden; });
+      if (kind === 'text') {
+        return list.filter(function (c) {
+          return c.type === 'text' || c.type === 'thread' || c.forum;
+        });
+      }
+      return list.filter(function (c) { return c.type === kind; });
     }
 
     function render(data) {
@@ -477,7 +483,13 @@
 
     function source(data) {
       if (kind === 'role') return data.roles;
-      return (data.channels || []).filter(function (c) { return c.type === kind; });
+      var list = (data.channels || []).filter(function (c) { return !c.hidden; });
+      if (kind === 'text') {
+        return list.filter(function (c) {
+          return c.type === 'text' || c.type === 'thread' || c.forum;
+        });
+      }
+      return list.filter(function (c) { return c.type === kind; });
     }
 
     function refreshCtl() {
@@ -492,7 +504,7 @@
       var html = '<option value="' + esc(noneValue) + '">' + esc(noneLabel) + '</option>';
       html += list.map(function (it) {
         if (String(it.id) === keep && keep) has = true;
-        var prefix = kind === 'role' ? '@ ' : '# ';
+        var prefix = kind === 'role' ? '@ ' : (it.type === 'thread' ? '🧵 ' : '# ');
         return '<option value="' + esc(it.id) + '">' + esc(prefix + it.name) + '</option>';
       }).join('');
       if (keep && keep !== noneValue && keep !== '0' && !has) {
