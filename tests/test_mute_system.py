@@ -263,6 +263,32 @@ async def main():
     check(got_mute and got_vmute, 'выданы ОБЕ роли (мут + войс-мут)',
           f'→ {tgt.added}')
 
+    print('== 1b. Предпроверка НЕ требует «Модерацию участников» для мута ==')
+    # Владелец 2026-09-05: «он просто должен выдать роли — зачем ему права».
+    # У бота есть «Управление ролями», НЕТ «Модерации участников» —
+    # preflight_reason('timeout') должен молчать (нативный таймаут — бонус).
+    class _Me:
+        id = 998
+        top_role = None
+        guild_permissions = types.SimpleNamespace(
+            manage_roles=True, moderate_members=False,
+            kick_members=False, administrator=False)
+
+    class _GuildMe:
+        me = _Me()
+
+    class _G2(_Guild, _GuildMe):
+        pass
+
+    g2 = _G2(guild.roles)
+    ok_pre = await cog.preflight_reason(g2, tgt, 'timeout')
+    check(ok_pre is None,
+          'мут без права «Модерация участников» — предпроверка молчит',
+          f'→ {ok_pre}')
+    ok_pre2 = await cog.preflight_reason(g2, tgt, 'mute_chat')
+    check(ok_pre2 is None, 'мут чата — то же (нужно только «Управление ролями»)',
+          f'→ {ok_pre2}')
+
     print('== 2. Войс-мут: микрофон закрыт, вход в войс разрешён ==')
     tgt2 = _Member(3010000000000000301, 'Войс-нарушитель', guild=guild)
     guild.members.append(tgt2)
