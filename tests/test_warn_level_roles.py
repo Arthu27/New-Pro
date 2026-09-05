@@ -181,8 +181,8 @@ check(wcount() == 1 and user3.added == [],
 
 print('== 6. хук подключён во всех трёх потоках ==')
 src = open(os.path.join(ROOT, 'cogs', 'warnings.py'), encoding='utf-8').read()
-check(src.count('_sync_warn_level_roles') == 1 + 3,
-      'метод + 3 вызова (add_warn, add_warning, unwarn)')
+check(src.count('_sync_warn_level_roles') == 1 + 4,
+      'метод + 4 вызова (add_warn, add_warning, unwarn, remove_last_warning)')
 check('level_transition' in src, 'переход через сервис переиспользуется')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

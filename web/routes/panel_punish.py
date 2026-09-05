@@ -41,6 +41,7 @@ _VALUE_SET = {a[0] for a in PANEL_ACTIONS}
 # Чат-мут и войс-мут — РАЗНЫЕ разрешения.
 _ACTION_ACL = {
     'warn': 'warn',
+    'unwarn': 'unwarn',
     'timeout': 'timeout',
     'mute_chat': 'mute',
     'vmute': 'vmute',
@@ -54,6 +55,7 @@ _ACTION_ACL = {
 # таймаут/чат-мут/войс-мут — ОДИН потолок «mute»; их снятия — «unmute»;
 # бан и разбан — отдельные ключи (та же раскладка, что в cogs/moderation).
 _PANEL_LIMIT_KEY = {
+    'unwarn': 'unwarn',
     'warn': 'warn',
     'timeout': 'mute',
     'mute_chat': 'mute',

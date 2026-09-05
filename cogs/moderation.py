@@ -578,6 +578,25 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,embed =error_embed (text ),ephemeral =True )
             return
 
+        if action =='unwarn':
+            # «Снять варн» из /modpanel — тот же единый путь, что в панели
+            user ,uid =self ._resolve_member (guild ,target )
+            if not user :
+                await _respond (interaction ,embed =error_embed (
+                'Не нашёл участника по цели. Нужен @ник, ТОЧНОЕ имя или ID.'),
+                ephemeral =True )
+                return
+            ok ,text =await self .apply_panel_action (
+            guild ,user ,'unwarn',
+            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            if ok :
+                await _respond (interaction ,embed =success_embed (
+                'Варн снят',f'**{user .display_name }** · `{uid }`\n{text }',guild =guild ),
+                ephemeral =True )
+            else :
+                await _respond (interaction ,embed =error_embed (text ),ephemeral =True )
+            return
+
         if action in ("ban","kick","timeout","mute_chat","untimeout","vmute","vunmute"):
             user ,uid =self ._resolve_member (guild ,target )
             if not user and uid :
@@ -642,36 +661,46 @@ class Moderation (commands .Cog ):
                         await interaction .response .send_message ("🛡 Кик отключён на этом сервере — используй мут или апелляцию.",ephemeral =True )
                     return 
                 elif action == "timeout":
-                    # «Мут (чат + войс)» — это ОДНО нативное состояние Discord:
-                    # member.timeout() глушит И текст, И голос одновременно.
-                    # Роль так не умеет (роль закрывает только чат), поэтому
-                    # таймаут ВСЕГДА нативный — это и есть «за раз и чат, и войс».
-                    # Сначала снимаем любые отдельные мут-роли/серверное
-                    # заглушение, чтобы на участнике не осталось второго мута.
+                    # «Мут (чат + войс)» — ГЛАВНОЕ: СРАЗУ ОБЕ РОЛИ (мут чата +
+                    # мут войса) + серверное заглушение микрофона. Нативный
+                    # таймаут Discord требует права «Модерация участников»,
+                    # которого у бота может не быть (владелец 2026-09-05:
+                    # «требует прав — а должен просто дать обе роли и всё»),
+                    # поэтому роли — основной механизм, нативный — бонус
+                    # поверх, если право вдруг есть (молча пропускаем сбой).
                     minutes = parse_duration_minutes(amount, 5)
-                    minutes = max(1, min(minutes, 40320))  # потолок Discord — 28 дней
+                    minutes = max(1, min(minutes, 40320))  # потолок — 28 дней
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
                     except Exception as _mse:
                         log.debug(f'[MODPANEL] timeout clear all: {_mse}')
-                    until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
-                    await user.timeout(until, reason=reason)
-                    # Заказ владельца: при ТАЙМАУТЕ бот дополнительно выдаёт
-                    # СРАЗУ ДВЕ роли — мут чата и мут войса (на тот же срок).
-                    # Нативный таймаут и роли снимаются по времени согласованно.
                     _extra_roles = []
                     for _kind in ('mute', 'vmute'):
                         try:
                             _r = self._punish_role(guild, _kind)
                             if _r is not None and _r not in user.roles:
-                                await user.add_roles(_r, reason=reason or 'таймаут')
+                                await user.add_roles(_r, reason=reason or 'мут')
                                 self._remember_temp(guild, user, _r, minutes * 60)
                                 _extra_roles.append(_r.name)
                         except Exception as _tre:
-                            log.debug(f'[MODPANEL] timeout доп.роль {_kind}: {_tre}')
-                    msg = (f"🔇 таймаут на {human_duration(minutes)} "
-                           f"(~{minutes} мин) — закрыты и чат, и голос")
+                            log.debug(f'[MODPANEL] timeout роль {_kind}: {_tre}')
+                    # микрофон: закрыть сразу, если человек в голосовом канале
+                    try:
+                        if getattr(getattr(user, 'voice', None), 'channel', None) \
+                                and not getattr(user.voice, 'mute', False):
+                            await user.edit(mute=True, reason=reason or 'мут')
+                    except Exception as _ve:
+                        log.debug(f'[MODPANEL] timeout server-mute: {_ve}')
+                    # нативный таймаут — ТОЛЬКО если право есть; сбой не ломает
+                    try:
+                        until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+                        await user.timeout(until, reason=reason or 'мут')
+                    except (discord.Forbidden, discord.HTTPException, AttributeError) as _te:
+                        log.debug(f'[MODPANEL] нативный таймаут пропущен: {_te}')
+                    msg = (f"🔇 мут на {human_duration(minutes)} "
+                           f"(~{minutes} мин) — обе роли выданы: чат закрыт, "
+                           "микрофон заглушён")
                     if _extra_roles:
                         msg += " · роли: " + ", ".join(f"«{n}»" for n in _extra_roles)
                     await self._maybe_watchlist_after_mute(interaction, user, reason)
@@ -706,11 +735,22 @@ class Moderation (commands .Cog ):
                     _vrole =self ._punish_role (guild ,'vmute')
                     minutes =parse_duration_minutes (amount ,5 )
                     if _vrole is not None :
-                        # роль войс-мута: работает и вне голоса, снимется по сроку
+                        # роль + сервер-мут микрофона: в голосовые зайти МОЖНО,
+                        # микрофон закрыт (владелец 2026-09-05: «микрофон
+                        # должен закрываться, а в войсы он заходить может»)
                         await self ._clear_chat_mute (guild ,user )
                         await user .add_roles (_vrole ,reason =reason or 'войс-мут')
                         self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
-                        msg =f"🎙️ войс-мут «{_vrole .name }» на {minutes } мин"
+                        try :
+                            if getattr (getattr (user ,'voice',None ),'channel',None ) \
+                            and not getattr (user .voice ,'mute',False ) :
+                                await user .edit (mute =True ,reason =reason or 'войс-мут')
+                        except Exception as _ve :
+                            log .debug (f'[MODPANEL] vmute server-mute: {_ve}')
+                        # если роль случайно запрещает вход в голосовые — чиним:
+                        # войс-мут глушит МИКРОФОН, а не выгоняет из каналов
+                        await self ._fix_vmute_role_connect (guild ,_vrole )
+                        msg =f"🎙️ войс-мут «{_vrole .name }» на {minutes } мин — микрофон заглушён, зайти в голосовой можно"
                     else :
                         if not user .voice or not user .voice .channel :
                             await _respond (interaction ,
@@ -731,13 +771,14 @@ class Moderation (commands .Cog ):
                     _vrole =self ._punish_role (guild ,'vmute')
                     if _vrole is not None :
                         await self ._drop_roles (guild ,user ,[_vrole ])
-                        msg =f"🎙️ войс-мут снят ({_vrole .name })"
-                    else :
-                        try :
-                            await user .edit (mute =False )
-                        except Exception as _ve :
-                            log .debug (f'[MODPANEL] vunmute edit: {_ve}')
-                        msg ="🎙️ микрофон включён"
+                    # микрофон вернуть В ЛЮБОМ случае (раньше после снятия
+                    # роли микрофон оставался замьюченным)
+                    try :
+                        if getattr (getattr (user ,'voice',None ),'mute',False ) :
+                            await user .edit (mute =False ,reason ='войс-мут снят')
+                    except Exception as _ve :
+                        log .debug (f'[MODPANEL] vunmute edit: {_ve}')
+                    msg ="🎙️ войс-мут снят — микрофон открыт"
                 else :  # untimeout — снимаем ЛЮБОЙ мут (чат+войс) разом
                     try :
                         from services import mute_state
@@ -951,6 +992,36 @@ class Moderation (commands .Cog ):
                 return True ,f'Варн выдан (всего: {_total if _total is not None else "?"})'
             except Exception as _ex :
                 return False ,f'Не получилось: {_ex }'
+        if action =='unwarn':
+            # Снятие ПОСЛЕДНЕГО варна из панели (владелец 2026-09-05:
+            # «нельзя в панели снимать warn»). Право — ACL «warn»: кто
+            # умеет выдавать варн, тот умеет и снимать.
+            try :
+                from services .staff_limits import check_action as _slc
+                _okw ,_deny =_slc (guild ,_actor ,'unwarn')
+                if not _okw :
+                    return False ,_deny or 'Лимит исчерпан'
+            except Exception as _sx :
+                _log .debug ('[MODPANEL] staff_limits unwarn: %s',_sx )
+            w =self .bot .get_cog ('warnings')
+            if w is None :
+                return False ,'Модуль варнов не загружен'
+            _tm =target if isinstance (target ,discord .Member ) \
+            else guild .get_member (int (target_str )or 0 )
+            if _tm is None :
+                return False ,'Участника нет на сервере — снять варн нельзя'
+            target =_tm
+            removed ,total =await w .remove_last_warning (target ,_actor )
+            if removed is None :
+                return False ,'У участника нет предупреждений'
+            try :
+                from services .staff_limits import record_hit as _rec2
+                _rec2 (guild .id ,getattr (_actor ,'id',0 )or 0 ,'unwarn',1 )
+            except Exception as _rex :
+                _log .debug ('[MODPANEL] unwarn rec: %s',_rex)
+            return True ,(f"Снято: #{removed .get ('id')} — "
+                          f"{removed .get ('reason','Не указана')}. "
+                          f"Осталось варнов: {total}")
         _it =PanelInteraction (guild ,_actor )
         try :
             await self ._execute_mod_action (_it ,action ,target_str ,
@@ -964,6 +1035,46 @@ class Moderation (commands .Cog ):
         return ok ,text 
 
     # ── Роли наказаний (панель → «Настройки модерации») ─────────────────
+    async def _fix_vmute_role_connect (self ,guild ,vrole ):
+        """У роли войс-мута НЕ должно быть запретов «Подключаться»/«Видеть»
+        в голосовых каналах: она глушит микрофон (плюс сервер-мут), а не
+        запрещает вход. Чиним ТОЛЬКО каналы с явным запретом (локально по
+        кэшу оверрайдов), без вызовов API для остальных."""
+        if vrole is None :
+            return
+        try :
+            for ch in getattr (guild ,'voice_channels',[] )or []:
+                ow =ch .overwrites_for (vrole )
+                if ow is None :
+                    continue
+                deny =getattr (ow ,'deny',0 )
+                # соединить запреты connect(1<<20)/view_channel(1<<10)
+                if (int (deny )&(1 <<20 ))or (int (deny )&(1 <<10 )) :
+                    await ch .set_permissions (
+                        vrole ,connect =None ,view_channel =None ,
+                        speak =None ,reason ='войс-мут: микрофон, а не запрет входа')
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] fix vmute role connect: {_ex}')
+
+    @commands .Cog .listener ()
+    async def on_voice_state_update (self ,member ,before ,after ):
+        """Зашёл в голосовой с ролью войс-мута → сервер-мут микрофона.
+        Микрофон открывается только снятием мута (роль/срок/кнопка)."""
+        try :
+            if member is None or member .bot :
+                return
+            joined =after .channel is not None and before .channel is None
+            if not joined :
+                return
+            _vrole =self ._punish_role (member .guild ,'vmute')
+            if _vrole is None or _vrole not in member .roles :
+                return
+            if getattr (member .voice ,'mute',False ) :
+                return
+            await member .edit (mute =True ,reason ='активен войс-мут')
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] on_voice_state_update: {_ex}')
+
     async def _clear_voice_mute (self ,guild ,user ):
         """Снять любое голосовое заглушение (роль войс-мута или нативный
         server-mute), чтобы при чат-муте/таймауте не оставалось второго мута."""
@@ -1047,6 +1158,16 @@ class Moderation (commands .Cog ):
                         await member .remove_roles (role ,reason ='срок наказания истёк')
                     except Exception as _ex :
                         log .debug (f'[MODPANEL] авто-снятие {role .name }: {_ex}')
+                # истёк ВОЙС-мут → вернуть микрофон; истёк чат-мут при нативном
+                # таймауте → его не трогаем (native снимется сам по сроку)
+                if member is not None :
+                    try :
+                        from services import punish_roles as _PR2
+                        if rid ==_PR2 .role_for (gid ,'vmute') :
+                            from services import mute_state as _ms
+                            await _ms .clear_voice_mute (guild ,member )
+                    except Exception as _ex :
+                        log .debug (f'[MODPANEL] авто-анмьют микрофона: {_ex}')
                 PR .clear (gid ,uid ,rid )
                 if member is not None :
                     try :
@@ -1113,8 +1234,138 @@ class Moderation (commands .Cog ):
 # ── Наказания из веб-панели («Пользователи») ─────────────────────────────
 # Тот же путь исполнения, что у /modpanel, но «модератором» выступает
 # панель: действия пишутся в дела и логи от имени «Панель: <логин>».
-PANEL_ACTIONS = ('warn', 'timeout', 'mute_chat', 'vmute', 'ban',
+PANEL_ACTIONS = ('warn', 'unwarn', 'timeout', 'mute_chat', 'vmute', 'ban',
                  'unban', 'untimeout', 'vunmute')
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  ПКМ-МЕНЮ: правый клик по участнику → Приложения → мут/войс-мут/снять
+#  (владелец 2026-09-05: «чтобы через ПКМ»). Те же ACL, лимиты и дела,
+#  что у /modpanel и панели — единый путь apply_panel_action.
+# ═══════════════════════════════════════════════════════════════════════════
+class _CtxMuteModal(discord.ui.Modal):
+    """Окно мута из ПКМ: срок + причина."""
+
+    duration = discord.ui.TextInput(
+        label='Срок (например 60м / 2ч / 1д)', default='60м', max_length=16)
+    reason = discord.ui.TextInput(
+        label='Причина', style=discord.TextStyle.paragraph,
+        max_length=300, required=False)
+
+    def __init__(self, cog, member, action, acl_key, limit_key, label):
+        super().__init__(timeout=180)
+        self._cog = cog
+        self._member = member
+        self._action = action
+        self._acl_key = acl_key
+        self._limit_key = limit_key
+        self._label = label
+
+    async def on_submit(self, interaction):
+        from services.permission_acl import check_action as _acl
+        if not _acl(interaction.guild_id, interaction.user, self._acl_key):
+            await interaction.response.send_message(
+                '🚫 Действие тебе не выдано (панель → Доступ → Права команд → '
+                'Классические разрешения).', ephemeral=True)
+            return
+        # дневные лимиты персонала — как у команды из /modpanel
+        try:
+            from services.staff_limits import check_action as _slc
+            _ok, _deny = _slc(interaction.guild, interaction.user,
+                              self._limit_key)
+            if not _ok:
+                await interaction.response.send_message(_deny or 'Лимит исчерпан',
+                                                        ephemeral=True)
+                return
+        except Exception as _sx:
+            log.debug(f'[ПКМ] staff_limits: {_sx}')
+        ok, text = await self._cog.apply_panel_action(
+            interaction.guild, self._member, self._action,
+            reason=(str(self.reason.value or '').strip()
+                    or 'Причина не указана'),
+            amount=str(self.duration.value or '60м'),
+            actor=getattr(interaction.user, 'display_name', None)
+            or str(interaction.user))
+        # успех — в дневной счётчик модератора
+        if ok:
+            try:
+                from services.staff_limits import record_hit as _rec
+                _rec(interaction.guild_id, interaction.user.id,
+                     self._limit_key, 1)
+            except Exception as _rx:
+                log.debug(f'[ПКМ] record: {_rx}')
+        await interaction.response.send_message(
+            ('✅ ' if ok else '⚠️ ') + str(text or ('Готово' if ok else 'Не получилось')),
+            ephemeral=True)
+
+
+def _mod_cog_of(interaction):
+    try:
+        return interaction.client.get_cog('Moderation')
+    except Exception:
+        return None
+
+
+@app_commands.context_menu(name='🔇 Мут (чат + войс)')
+async def ctx_full_mute(interaction, member: discord.Member):
+    """Мут через ПКМ: обе роли сразу (чат + микрофон)."""
+    if member.bot or member.id == interaction.user.id:
+        return await interaction.response.send_message(
+            'Себе и ботам мут не выдать.', ephemeral=True)
+    mod = _mod_cog_of(interaction)
+    if mod is None:
+        return await interaction.response.send_message(
+            'Модуль модерации не загружен.', ephemeral=True)
+    await interaction.response.send_modal(_CtxMuteModal(
+        mod, member, 'timeout', 'timeout', 'mute', 'Мут (чат + войс)'))
+
+
+@app_commands.context_menu(name='🎙️ Войс-мут (микрофон)')
+async def ctx_voice_mute(interaction, member: discord.Member):
+    """Войс-мут через ПКМ: микрофон закрыт, зайти в войс можно."""
+    if member.bot or member.id == interaction.user.id:
+        return await interaction.response.send_message(
+            'Себе и ботам мут не выдать.', ephemeral=True)
+    mod = _mod_cog_of(interaction)
+    if mod is None:
+        return await interaction.response.send_message(
+            'Модуль модерации не загружен.', ephemeral=True)
+    await interaction.response.send_modal(_CtxMuteModal(
+        mod, member, 'vmute', 'vmute', 'mute', 'Войс-мут'))
+
+
+@app_commands.context_menu(name='🔊 Снять муты')
+async def ctx_unmute(interaction, member: discord.Member):
+    """Снять все муты через ПКМ: роли + нативные состояния."""
+    from services.permission_acl import check_action as _acl
+    if not _acl(interaction.guild_id, interaction.user, 'timeout'):
+        return await interaction.response.send_message(
+            '🚫 Действие тебе не выдано (панель → Доступ → Права команд).',
+            ephemeral=True)
+    mod = _mod_cog_of(interaction)
+    if mod is None:
+        return await interaction.response.send_message(
+            'Модуль модерации не загружен.', ephemeral=True)
+    ok, text = await mod.apply_panel_action(
+        interaction.guild, member, 'untimeout', reason='ПКМ: снятие мутов',
+        actor=getattr(interaction.user, 'display_name', None)
+        or str(interaction.user))
+    await interaction.response.send_message(
+        ('✅ ' if ok else '⚠️ ') + str(text), ephemeral=True)
+
+
+_CTX_COMMANDS = (ctx_full_mute, ctx_voice_mute, ctx_unmute)
+
+
+async def _ctx_setup(bot):
+    """Зарегистрировать ПКМ-команды (идемпотентно при перезагрузке)."""
+    for _cmd in _CTX_COMMANDS:
+        try:
+            bot.tree.add_command(_cmd)
+        except discord.app_commands.CommandAlreadyRegistered:
+            # перезагрузка кога — команда уже в дереве, это норма
+            log.debug('ПКМ-команда уже зарегистрирована: %s',
+                      getattr(_cmd, 'name', '?'))
 
 
 class PanelActor:
@@ -1183,9 +1434,10 @@ def _embed_text(e):
 # — следующим после бана).
 MODPANEL_ACTIONS = [
     ("warn", "Варн (предупреждение)", "Официальный варн: в дело, участнику в ЛС", "warn"),
-    ("timeout", "Таймаут (чат + войс)", "Нативный таймаут Discord: одним действием закрыты и текст, и голос (до 28 дней)", "mute"),
+    ("unwarn", "Снять варн", "Снять ПОСЛЕДНЕЕ предупреждение участника (роль уровня пересчитается)", "warn"),
+    ("timeout", "Мут (чат + войс)", "Сразу ОБЕ роли (мут чата + войс) и микрофон; нативный таймаут — если есть право", "mute"),
     ("mute_chat", "Мут (только чат)", "Закрывает только чат через мут-роль; голос работает", "mute"),
-    ("vmute", "Мут (только войс)", "Глушит микрофон; чат не трогается", "mute"),
+    ("vmute", "Мут (только войс)", "Глушит микрофон (роль + сервер-мут); зайти в голосовой можно", "mute"),
     ("untimeout", "Размут (чат + войс)", "Снять таймаут — снова можно всё", "unmute"),
     ("vunmute", "Размут (войс)", "Вернуть участнику голос", "unmute"),
     ("clear", "Очистка сообщений", "Снести N последних сообщений в канале", "clear"),
@@ -1196,6 +1448,7 @@ MODPANEL_ACTIONS = [
 # Эмодзи действий: меню панели живое, а не текстовое
 MODPANEL_EMOJI = {
     "warn": "⚠️",
+    "unwarn": "📵",
     "ban": "🚫",
     "timeout": "🔇",
     "mute_chat": "🤐",
@@ -1219,6 +1472,7 @@ MODPANEL_EMOJI = {
 # Discord-права не учитываются — система прав полностью своя.
 MODPANEL_ACL_KEYS = {
     "warn": "warn",
+    "unwarn": "unwarn",
     "ban": "ban",
     "unban": "ban",
     "timeout": "timeout",
@@ -1540,3 +1794,4 @@ class ModPanelView(discord.ui.View):
 
 async def setup (bot ):
     await bot .add_cog (Moderation (bot ))
+    await _ctx_setup (bot )   # ПКМ-меню: мут/войс-мут/снять муты

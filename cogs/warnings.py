@@ -544,9 +544,29 @@ class warnings(commands.Cog):
 
     # ── /unwarn ─────────────────────────────────────────────────────────
     @app_commands.command(name="unwarn", description="Снять последнее предупреждение у пользователя")
-    @app_commands.checks.has_permissions(moderate_members=True)
     async def unwarn(self, interaction, user: discord.Member):
         """Снять последнее предупреждение у пользователя"""
+        # Права решает владелец через панель (ACL «Снять варн»), а не Discord.
+        try:
+            from services.permission_acl import check_action as _acl, \
+                allowed_roles_for_action as _allowed
+            if not _acl(interaction.guild_id, interaction.user, 'unwarn'):
+                # ACL на «unwarn» ещё никто не настраивал и другие варн-права
+                # тоже пусты → не превращаем снятие в кнопку ни для кого:
+                # дублируем старое поведение (Discord-модерация).
+                _legacy = (not _allowed(interaction.guild_id, 'unwarn')
+                           and not _allowed(interaction.guild_id, 'warn'))
+                _ok = _legacy and getattr(
+                    getattr(interaction.user, 'guild_permissions', None),
+                    'moderate_members', False)
+                if not _ok:
+                    await interaction.response.send_message(
+                        '🚫 Снятие варнов тебе не выдано (панель → Доступ → '
+                        'Права команд → Классические разрешения → «Снять варн»).',
+                        ephemeral=True)
+                    return
+        except Exception as _acl_e:
+            log.debug(f"[WARNS] unwarn acl: {_acl_e}")
         warns = self._get_warns(interaction.guild.id, user.id)
         if not warns:
             e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
@@ -597,6 +617,36 @@ class warnings(commands.Cog):
         e.set_thumbnail(url=user.display_avatar.url)
         e.set_footer(text=f"{interaction.guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
+
+    async def remove_last_warning(self, user, moderator):
+        """Снять ПОСЛЕДНИЙ варн (панель/бот): роль уровня пересчитывается,
+        дело пишется в лог. Возвращает (removed, total) или (None, total)."""
+        guild = user.guild
+        warns = self._get_warns(guild.id, user.id)
+        if not warns:
+            return None, 0
+        removed = warns.pop()
+        self._save_warns(guild.id, user.id, warns)
+        total = len(warns)
+        await self._sync_warn_level_roles(guild, user, total)
+        try:
+            from cogs.logs import ensure_log_channel, _safe_send
+            _uch = await ensure_log_channel(guild, 'наказания')
+            if _uch:
+                _ue = discord.Embed(color=0x2ECC71,
+                                    timestamp=datetime.now(timezone.utc))
+                _ue.description = (
+                    "## Предупреждение снято\n"
+                    f"**{user.display_name}** · `{user.id}`\n\n"
+                    f"Снято: **#{removed.get('id')}** — "
+                    f"{removed.get('reason', 'Не указана')}\n"
+                    f"Осталось: **{total}**\n"
+                    f"Модератор: {getattr(moderator, 'mention', moderator)}")
+                _ue.set_footer(text=f"{guild.name}")
+                await _safe_send(_uch, embed=_ue)
+        except Exception as _ulog_e:
+            log.debug(f"[WARNS] лог снятия (общий): {_ulog_e}")
+        return removed, total
 
     # ── add_warning (для AI-модератора, без interaction) ─────────────────
     async def add_warning(self, user: discord.Member, moderator: discord.Member, reason: str = None):
