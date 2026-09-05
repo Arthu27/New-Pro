@@ -643,15 +643,15 @@
   var pnLimitExempt = true;
 
   var PN_META = {
-    warn:      { icon: 'fa-triangle-exclamation', kind: 'neg',    sub: 'запись в дело' },
-    unwarn:    { icon: 'fa-eraser',               kind: 'pos',    sub: 'снять последний варн' },
-    timeout:   { icon: 'fa-clock',                kind: 'neg',    sub: 'Discord-таймаут' },
+    warn:      { icon: 'fa-triangle-exclamation', kind: 'neg',    sub: 'предупреждение' },
+    unwarn:    { icon: 'fa-eraser',               kind: 'pos',    sub: 'убрать последний варн' },
+    timeout:   { icon: 'fa-clock',                kind: 'neg',    sub: 'чат и микрофон' },
     mute_chat: { icon: 'fa-comment-slash',        kind: 'neg',    sub: 'только чат' },
-    vmute:     { icon: 'fa-microphone-slash',     kind: 'neg',    sub: 'микрофон' },
-    ban:       { icon: 'fa-gavel',                kind: 'danger', sub: 'изоляция + апелляция' },
-    unban:     { icon: 'fa-rotate-left',          kind: 'pos',    sub: 'снять бан' },
-    untimeout: { icon: 'fa-clock-rotate-left',    kind: 'pos',    sub: 'снять таймаут' },
-    vunmute:   { icon: 'fa-microphone',           kind: 'pos',    sub: 'снять войс-мут' }
+    vmute:     { icon: 'fa-microphone-slash',     kind: 'neg',    sub: 'только микрофон' },
+    ban:       { icon: 'fa-gavel',                kind: 'danger', sub: 'закрыть каналы + апелляция' },
+    unban:     { icon: 'fa-rotate-left',          kind: 'pos',    sub: 'вернуть доступ' },
+    untimeout: { icon: 'fa-clock-rotate-left',    kind: 'pos',    sub: 'снять мут' },
+    vunmute:   { icon: 'fa-microphone',           kind: 'pos',    sub: 'вернуть микрофон' }
   };
   var PN_PRESETS = ['10м', '30м', '1ч', '3ч', '12ч', '1д', '3д', '7д'];
 

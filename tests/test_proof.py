@@ -367,7 +367,7 @@ mod_cog = Moderation(botx)
 _opts = ModActionSelect(mod_cog)
 _labels = {o.label for o in _opts.options}
 check('Бан (апелляция)' in _labels, 'select: «Бан (апелляция)» есть')
-check('Снять апелляцию / разбан' in _labels, 'select: «Снять апелляцию / разбан» есть')
+check('Снять бан' in _labels, 'select: «Снять бан» есть')
 check({'ban', 'unban', 'timeout', 'clear'} <= {o.value for o in _opts.options},
       'select: действия ban/unban/timeout/clear на месте')
 check('kick' not in {o.value for o in _opts.options},

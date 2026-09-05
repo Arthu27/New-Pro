@@ -79,7 +79,7 @@ for gone in ('backup', 'backup-list', 'diagnose', 'health', 'hotreload',
 
 # warn живёт ВНУТРИ /modpanel (а не отдельной командой)
 src_mod = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
-check('("warn", "Варн (предупреждение)"' in src_mod,
+check('("warn", "Варн"' in src_mod,
       'варн — пункт выпадающего меню /modpanel')
 check('allowed_contexts' in open(os.path.join(ROOT, 'cogs', 'diagnostics.py'),
                                  encoding='utf-8').read(),
