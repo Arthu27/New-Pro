@@ -29,9 +29,6 @@
     sel.innerHTML = '<option value="">— выбери канал —</option>' + list.map(function (c) {
       return '<option value="' + (c.id || '') + '">' + (c.name ? '#' + c.name : ('канал ' + (c.id || '?'))) + '</option>';
     }).join('');
-    /* по умолчанию — первый текстовый канал, чтобы «Таблица в Discord»
-       работала в один клик */
-    if (list.length && list[0] && list[0].id) sel.value = String(list[0].id);
   }).catch(function () { sel.innerHTML = '<option value="">каналы недоступны</option>'; });
   btn.addEventListener('click', function () {
     if (!sel.value) { if (window.showToast) window.showToast('Сначала выбери канал для таблицы', false); return; }
@@ -116,6 +113,29 @@
     ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral',
     timeout: 'neutral', unban: 'ok', unmute: 'ok', lock: 'security', unlock: 'ok'
   };
+  var KIND_LABEL = {
+    ban: 'Бан', kick: 'Кик', warn: 'Варн', mute: 'Мут', timeout: 'Таймаут',
+    unban: 'Разбан', unmute: 'Размут', lock: 'Лок', unlock: 'Анлок'
+  };
+  function actionKind(a) {
+    a = String(a || '').toLowerCase();
+    if (/разбан|unban|бан снят|снят бан/.test(a)) return 'unban';
+    if (/размут|unmute|мут снят|снят мут|таймаут снят|untimeout/.test(a)) return 'unmute';
+    if (/анлок|unlock|лок снят/.test(a)) return 'unlock';
+    if (/бан|ban/.test(a)) return 'ban';
+    if (/кик|kick/.test(a)) return 'kick';
+    if (/варн|warn|предупрежд/.test(a)) return 'warn';
+    if (/таймаут|timeout/.test(a)) return 'timeout';
+    if (/мут|mute/.test(a)) return 'mute';
+    if (/лок|lock/.test(a)) return 'lock';
+    return a;
+  }
+  function stampNow() {
+    var el = $('logs-stamp');
+    if (!el) return;
+    var t = new Date();
+    el.innerHTML = '<i class="fas fa-circle"></i> ' + t.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
 
   async function loadGuilds() {
     try {
@@ -142,7 +162,7 @@
     _logsFp = fp;
     allLogs = raw;
     window.renderSafe(function () { render(); updateStats(); updateFilters(); });
-    if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('logs-stamp'));
+    if (!window.__modLivePaused) stampNow();
   }
 
   function updateFilters() { buildFilters(); }
@@ -150,11 +170,11 @@
   function updateStats() {
     var bans = 0, kicks = 0, warns = 0, muts = 0;
     allLogs.forEach(function (l) {
-      var a = (l.action || '').toLowerCase();
-      if (a === 'ban') bans++;
-      else if (a === 'kick') kicks++;
-      else if (a === 'warn' || a.indexOf('warning') !== -1) warns++;
-      else if (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1) muts++;
+      var k = actionKind(l.action);
+      if (k === 'ban') bans++;
+      else if (k === 'kick') kicks++;
+      else if (k === 'warn') warns++;
+      else if (k === 'mute' || k === 'timeout') muts++;
     });
     $('stat-total').textContent = allLogs.length;
     $('stat-bans').textContent = bans;
@@ -164,8 +184,7 @@
     if (window.HakumoChart) {
       var counts = {};
       allLogs.forEach(function (l) {
-        var a = (l.action || '?').toLowerCase();
-        var k = a.indexOf('warning') !== -1 ? 'warn' : a;
+        var k = actionKind(l.action);
         counts[k] = (counts[k] || 0) + 1;
       });
       var tones = { ban: ['Баны', '#dc2626'], kick: ['Кики', '#ea580c'], warn: ['Варны', '#d97706'], mute: ['Мьюты', '#7c3aed'], timeout: ['Таймауты', '#7c3aed'], unban: ['Разбаны', '#16a34a'], unmute: ['Размуты', '#16a34a'] };
@@ -200,12 +219,12 @@
     var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
     var shown = logsShown();
     body.innerHTML = filtered.slice(0, shown).map(function (l) {
-      var a = (l.action || '?').toLowerCase();
+      var k = actionKind(l.action);
       var key = rowKey(l);
       var on = !!selected[key];
       return '<tr class="' + (on ? 'sel' : '') + '" data-row-key="' + esc(key) + '">' +
         '<td class="col-sel"><input type="checkbox" aria-label="Выбрать строку"' + (on ? ' checked' : '') + '></td>' +
-        '<td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + H(l.action || '?') + '</span></td>' +
+        '<td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[k] || 'neutral') + '">' + H(l.action || '?') + '</span></td>' +
         '<td>' + H(l.user_name || l.channel_name || l.role_name || l.user_id || '—') + '</td>' +
         '<td>' + H(l.mod_name || l.mod_id || '—') + '</td>' +
         '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + H(l.reason || '—') + '</td>' +
@@ -256,14 +275,16 @@
   function buildFilters() {
     // чипы типов действий
     var counts = {};
+    var labels = {};
     allLogs.forEach(function (l) {
-      var a = String(l.action || '?').toLowerCase();
-      counts[a] = (counts[a] || 0) + 1;
+      var k = actionKind(l.action);
+      counts[k] = (counts[k] || 0) + 1;
+      if (!labels[k]) labels[k] = KIND_LABEL[k] || (l.action || k);
     });
     var acts = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
     var html = '<button type="button" class="chip selectable' + (filterAction === '' ? ' active' : '') + '" data-act="">Все</button>';
     html += acts.map(function (a) {
-      return '<button type="button" class="chip selectable' + (filterAction === a ? ' active' : '') + '" data-act="' + esc(a) + '">' + esc(a) + ' <b style="opacity:.6">' + counts[a] + '</b></button>';
+      return '<button type="button" class="chip selectable' + (filterAction === a ? ' active' : '') + '" data-act="' + esc(a) + '">' + esc(labels[a] || a) + ' <b style="opacity:.6">' + counts[a] + '</b></button>';
     }).join('');
     $('action-chips').innerHTML = html;
     // селект модераторов
@@ -285,7 +306,7 @@
     var q = ($('search').value || '').toLowerCase();
     return allLogs.filter(function (l) {
       if (guildFilter && String(l.guild_id || '') !== guildFilter) return false;
-      if (filterAction && String(l.action || '').toLowerCase() !== filterAction) return false;
+      if (filterAction && actionKind(l.action) !== filterAction) return false;
       if (filterMod && String(l.mod_name || l.mod_id || '') !== filterMod) return false;
       if (q) {
         var hay = ((l.action || '') + ' ' + (l.user_name || '') + ' ' + (l.mod_name || '') + ' ' + (l.reason || '')).toLowerCase();
@@ -307,18 +328,21 @@
   }
 
   function bind() {
-    $('guild-filter').addEventListener('change', render);
-    $('search').addEventListener('input', render);
+    function resetPage() { LOGS_PAGE = 100; }
+    $('guild-filter').addEventListener('change', function () { resetPage(); render(); });
+    $('search').addEventListener('input', function () { resetPage(); render(); });
     $('logs-csv').addEventListener('click', exportCsv);
     $('action-chips').addEventListener('click', function (e) {
       var chip = e.target.closest('[data-act]');
       if (!chip) return;
       filterAction = chip.dataset.act;
       document.querySelectorAll('#action-chips .chip').forEach(function (c) { c.classList.toggle('active', c === chip); });
+      resetPage();
       render();
     });
     $('mod-filter').addEventListener('change', function () {
       filterMod = this.value;
+      resetPage();
       render();
     });
     // «Загрузить ещё» — клиентская пагинация

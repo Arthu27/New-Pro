@@ -331,18 +331,37 @@ def register(ctx):
     @login_required 
     @role_required ('admin')
     def api_panel_logs ():
+        try :
+            import web.app as _app
+            flusher =getattr (_app ,'_panel_log_flusher',None )
+            if flusher is not None and hasattr (flusher ,'flush_now'):
+                flusher .flush_now ()
+        except Exception as _ex :
+            _log .debug ("api_panel_logs(): flush: %s",_ex )
         f ='data/panel_logs.json'
         if not os .path .exists (f ):
             return jsonify ([])
         try :
-            with open (f ,'r',encoding ='utf-8')as fp :
-                logs =json .load (fp )
+            from web import _store
+            logs =_store .read_json (f ,default =[])
+            if not isinstance (logs ,list ):
+                logs =[]
                 # En новый до
             logs =list (reversed (logs ))
             # человеческие ярлыки: «POST /api/.../appeals/resolve» → «Решение по апелляции»
             try :
-                from web .app import _human_panel_action
+                from web .app import _human_panel_action ,ROLE_LABELS ,_ts_to_utc_iso
                 for e in logs :
+                    if not isinstance (e ,dict ):
+                        continue
+                    ts =e .get ('timestamp')
+                    if ts :
+                        try :
+                            e ['timestamp']=_ts_to_utc_iso (ts if isinstance (ts ,str )else str (ts ))
+                        except Exception :
+                            pass
+                    role =e .get ('role')or ''
+                    e ['role_label']=ROLE_LABELS .get (role ,role )
                     if e .get ('broadcast')or not e .get ('action'):
                         continue
                     label ,icon ,link =_human_panel_action (e ['action'])
@@ -350,7 +369,7 @@ def register(ctx):
             except Exception as _ex:
                 _log .debug ("api_panel_logs(): ярлыки: %s", _ex )
             return jsonify (logs )
-        except (json .JSONDecodeError ,ValueError ):
+        except (json .JSONDecodeError ,ValueError ,TypeError ,OSError ):
             return jsonify ([])
 
 
@@ -358,9 +377,19 @@ def register(ctx):
     @login_required 
     @role_required ('owner')
     def api_clear_panel_logs ():
-        f ='data/panel_logs.json'
-        with open (f ,'w',encoding ='utf-8')as fp :
-            json .dump ([],fp )
+        try :
+            import web.app as _app
+            flusher =getattr (_app ,'_panel_log_flusher',None )
+            if flusher is not None and hasattr (flusher ,'clear'):
+                flusher .clear ()
+            else :
+                from web import _store
+                os .makedirs ('data',exist_ok =True )
+                _store .atomic_write_json ('data/panel_logs.json',[])
+                _store .invalidate_path ('data/panel_logs.json')
+        except Exception as _ex :
+            _log .debug ("api_clear_panel_logs(): %s",_ex )
+            return jsonify ({'success':False ,'error':'Не удалось очистить журнал'}),500
         return jsonify ({'success':True })
 
 

@@ -151,6 +151,7 @@ class PeriodicFlush :
         self ._max =max_entries 
         self ._threshold =batch_threshold 
         self ._buf =[]
+        self ._gen =0 
         self ._lock =threading .Lock ()
         self ._cv =threading .Condition (self ._lock )
         self ._stop =False 
@@ -176,24 +177,53 @@ class PeriodicFlush :
                 if self ._stop :
                     break 
                 items ,self ._buf =self ._buf ,[]
+                gen =self ._gen 
             if items :
-                self ._flush (items )
+                self ._flush (items ,gen )
 
     def flush_now (self ):
         with self ._lock :
             items ,self ._buf =self ._buf ,[]
+            gen =self ._gen 
         if items :
-            self ._flush (items )
+            self ._flush (items ,gen )
 
-    def _flush (self ,items ):
+    def clear (self ):
+        """Сбросить буфер и файл: иначе фоновый _flush перезапишет [] старым хвостом."""
+        with self ._cv :
+            self ._buf =[]
+            self ._gen +=1 
         try :
+            atomic_write_json (self ._path ,[])
+            invalidate_path (self ._path )
+        except Exception as _ex :
+            _log .debug ("clear(): подавлено: %s",_ex )
+
+    def _flush (self ,items ,gen =None ):
+        try :
+            if gen is not None :
+                with self ._lock :
+                    if gen !=self ._gen :
+                        return 
             existing =read_json (self ._path ,default =[])
             if not isinstance (existing ,list ):
                 existing =[]
+            if gen is not None :
+                with self ._lock :
+                    if gen !=self ._gen :
+                        return 
             existing .extend (items )
             existing =existing [-self ._max :]
             atomic_write_json (self ._path ,existing )
             invalidate_path (self ._path )
+            if gen is not None :
+                with self ._lock :
+                    if gen !=self ._gen :
+                        try :
+                            atomic_write_json (self ._path ,[])
+                            invalidate_path (self ._path )
+                        except Exception as _ex :
+                            _log .debug ("_flush(): re-clear: %s",_ex )
         except Exception as _ex:
         # Молча проглотить; логгер не должен ломать панель
             _log.debug("_flush(): подавлено: %s", _ex)

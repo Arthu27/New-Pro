@@ -31,7 +31,7 @@
       <span class="hint" style="margin:0">один канал сразу во все категории — потом можно уточнить по одной</span>
       <div id="lsOfflineNote" hidden class="chip" style="background:rgba(245,158,11,.14);color:#f59e0b;margin-top:6px;display:inline-block"><i class="fas fa-plug-circle-xmark"></i> Бот офлайн — ниже показаны ТЕКУЩИЕ сохранённые настройки (что куда настроено). Выбранные каналы видны; полный список каналов обновится, когда бот подключится</div>
     </div>
-    <div id="lsCats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px"></div>
+    <div id="lsCats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:12px"></div>
     <div class="hint" id="lsMsg" style="margin-top:10px"></div>
   </div>
 </div>
@@ -43,6 +43,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   var state = { cats: [], settings: null, channels: [], looks: {} };
   var SAVING = false;
+  var pending = null;
   var _lastRaw = null;
 
   var MAIN_GID = '{{ main_guild_id }}';   /* ID гильдии из сессии — не хардкод 777 */
@@ -53,38 +54,70 @@
   }
 
   var bgTimers = {};
+  function mergePatch(a, b) {
+    var out = Object.assign({}, a || {});
+    Object.keys(b || {}).forEach(function (k) {
+      if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])
+          && out[k] && typeof out[k] === 'object' && !Array.isArray(out[k])) {
+        out[k] = Object.assign({}, out[k], b[k]);
+      } else {
+        out[k] = b[k];
+      }
+    });
+    return out;
+  }
+
   function saveBg(key, url) {
     clearTimeout(bgTimers[key]);
     bgTimers[key] = setTimeout(function () {
       var by = {};
       by[key] = url;
-      fetch('/api/guild/' + gid() + '/log-settings', {
-        credentials: 'same-origin', method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bg_url_by_cat: by })
-      }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.success && d.looks) state.looks = d.looks;
-      }).catch(function () {});
+      post({ bg_url_by_cat: by });
     }, 700);
   }
 
   function post(body) {
-    if (SAVING) return;
+    if (SAVING) {
+      pending = mergePatch(pending || {}, body);
+      return;
+    }
     SAVING = true;
     fetch('/api/guild/' + gid() + '/log-settings', {
       credentials: 'same-origin', method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(function (r) {
+      return r.json().then(function (d) { return d; }).catch(function () { return {}; });
+    }).then(function (d) {
       SAVING = false;
+      var queued = pending;
+      pending = null;
+      d = d || {};
       if (d.success) {
         state.settings = d.settings;
+        if (d.looks) state.looks = d.looks;
         render();
         _lastRaw = null;   /* следующий live-тик сравнит свежий снимок */
         $('lsMsg').textContent = 'Сохранено — действует сразу';
+        $('lsMsg').className = 'hint';
+        if (window.showToast) window.showToast('Сохранено — действует сразу', true);
         setTimeout(function () { if ($('lsMsg')) $('lsMsg').textContent = ''; }, 2600);
+      } else {
+        var err = d.error || d.message || 'Не удалось сохранить';
+        $('lsMsg').textContent = err;
+        $('lsMsg').className = 'hint error';
+        if (window.showToast) window.showToast(err, false);
       }
-    }).catch(function () { SAVING = false; });
+      if (queued) post(queued);
+    }).catch(function () {
+      SAVING = false;
+      var queued = pending;
+      pending = null;
+      $('lsMsg').textContent = 'Сеть моргнула — попробуйте ещё раз';
+      $('lsMsg').className = 'hint error';
+      if (window.showToast) window.showToast('Сеть моргнула — попробуйте ещё раз', false);
+      if (queued) post(queued);
+    });
   }
 
   function toggle(key, field, val) {
@@ -213,7 +246,6 @@
   function applyAll() {
     var v = ($('lsApplyCh').value || '').trim();
     if (!v) { if (window.showToast) window.showToast('Сначала выбери канал', false); return; }
-    if (SAVING) return;
     var patch = {};
     state.cats.forEach(function (c) { patch[c.key] = v; });
     post({ channels: patch });

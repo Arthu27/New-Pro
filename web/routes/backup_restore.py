@@ -206,16 +206,35 @@ def register(ctx):
         # Только message kategorisi
         msg_type =request .args .get ('type')# 'deleted' или 'edited'
         result =[]
+        try :
+            import web.app as _app
+            _iso =_app ._ts_to_utc_iso
+            _key =_app ._ts_sort_key
+        except Exception :
+            _iso =None
+            _key =None
         for ev in events :
+            if not isinstance (ev ,dict ):
+                continue
             if ev .get ('category')!='message':
                 continue 
-            action =ev .get ('action','').lower ()
-            if msg_type =='deleted'and 'удалить'not in action and 'delete'not in action :
+            action =(ev .get ('action')or '').lower ()
+            if msg_type =='deleted'and 'удал'not in action and 'delete'not in action :
                 continue 
-            if msg_type =='edited'and 'dюzenl'not in action and 'edit'not in action :
+            if msg_type =='edited'and 'измен'not in action and 'редакт'not in action and 'edit'not in action :
                 continue 
-            result .append (ev )
-        result .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
+            row =dict (ev )
+            if _iso is not None :
+                try :
+                    ts =row .get ('timestamp')
+                    row ['timestamp']=_iso (ts if isinstance (ts ,str )else ('' if ts is None else str (ts )))
+                except Exception :
+                    pass
+            result .append (row )
+        if _key is not None :
+            result .sort (key =_key ,reverse =True )
+        else :
+            result .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
         return jsonify (result [:300 ])
 
 
