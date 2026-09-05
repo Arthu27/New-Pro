@@ -54,6 +54,23 @@ _last_write = [0.0]
 _ROLE_FP = {}
 # gid -> сигнатура каналов (id+имя+тип+позиция+категория).
 _CHAN_FP = {}
+# data/ уже есть (Config.ensure_dirs на старте). Повторный os.makedirs
+# на Windows+антивирус в Downloads вешал event-loop: дамп 2026-09
+# (_bridge_loop → write_state → os.makedirs). После первого успеха
+# больше не трогаем диск «существует ли папка».
+_BASE_OK = False
+
+
+def _ensure_base():
+    """Создать data/ один раз — не на каждом пульсе."""
+    global _BASE_OK
+    if _BASE_OK:
+        return
+    if os.path.isdir(BASE):
+        _BASE_OK = True
+        return
+    os.makedirs(BASE, exist_ok=True)
+    _BASE_OK = True
 
 
 # ── запись (вызывается из процесса бота) ─────────────────────────────────
@@ -78,7 +95,7 @@ def write_state(status='starting', latency_ms=None, guilds=None, force=False):
         'pid': os.getpid(),
     }
     try:
-        os.makedirs(BASE, exist_ok=True)
+        _ensure_base()
         tmp = STATE_FILE + '.tmp'
         with open(tmp, 'w', encoding='utf-8') as fp:
             json.dump(payload, fp, ensure_ascii=False)
@@ -129,7 +146,7 @@ def write_roles(guild_id, role_objs):
     try:
         if _ROLE_FP.get(gid) == sig and os.path.exists(path):
             return False
-        os.makedirs(BASE, exist_ok=True)
+        _ensure_base()
         tmp = path + '.tmp'
         with open(tmp, 'w', encoding='utf-8') as fp:
             json.dump(rows, fp, ensure_ascii=False)
@@ -199,7 +216,7 @@ def write_channels(guild_id, channel_objs):
     try:
         if _CHAN_FP.get(gid) == sig and os.path.exists(path):
             return False
-        os.makedirs(BASE, exist_ok=True)
+        _ensure_base()
         tmp = path + '.tmp'
         with open(tmp, 'w', encoding='utf-8') as fp:
             json.dump({'channels': rows}, fp, ensure_ascii=False)

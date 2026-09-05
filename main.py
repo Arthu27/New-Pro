@@ -1215,55 +1215,58 @@ async def _bridge_loop(bot):
     роли реально изменились. Панель читает эти файлы из любого процесса
     (services/bot_bridge): без моста отдельная панель (start_panel, gunicorn,
     VDS) всегда видела bot_instance=None и писала «Бот офлайн», даже когда
-    бот работал. Файлы крошечные, диск не дёргается.
+    бот работал.
+
+    Запись — в рабочем потоке (asyncio.to_thread). Раньше write_state /
+    os.makedirs шли прямо в event-loop: на Windows из Downloads антивирус
+    стопорил makedirs на секунды, шлюз Discord молчал, стек-монитор снимал
+    «_bridge_loop → write_state → os.makedirs» (дамп до обновления, 2026-09).
     """
     from services import bot_bridge as _bb
+
+    def _flush(status, lat_ms=None, guild_rows=None, snaps=None):
+        _bb.write_state(status, latency_ms=lat_ms, guilds=guild_rows or [])
+        for gid, roles, chans in (snaps or []):
+            try:
+                _bb.write_roles(gid, roles)
+                _bb.write_channels(gid, chans)
+            except Exception as _r_ex:
+                log.debug('_bridge_loop: роли/каналы %s: %s', gid, _r_ex)
+
     while True:
         try:
-            if bot is None:
-                _bb.write_state('offline')
-            else:
+            status = 'offline'
+            lat_ms = None
+            guild_rows = []
+            snaps = []
+            if bot is not None:
                 try:
                     closed = bool(bot.is_closed())
                 except Exception:
                     closed = False
-                if closed:
-                    _bb.write_state('offline')
-                    await asyncio.sleep(5)
-                    continue
-                guilds = list(getattr(bot, 'guilds', None) or [])
-                if guilds and bot.is_ready():
-                    lat_ms = None
-                    try:
-                        _lat = getattr(bot, 'latency', None)
-                        if _lat is not None:
-                            lat_ms = round(float(_lat) * 1000, 1)
-                    except Exception:
-                        lat_ms = None
-                    _bb.write_state(
-                        'online', latency_ms=lat_ms,
-                        guilds=[{'id': str(g.id),
-                                 'name': str(getattr(g, 'name', '') or ''),
-                                 'member_count': int(getattr(g, 'member_count', 0) or 0)}
-                                for g in guilds])
-                    # Роли и каналы меняются редко: снимки пишутся по сигнатуре
-                    # (только реальные изменения) — диск не дёргается.
-                    for g in guilds:
+                if not closed:
+                    guilds = list(getattr(bot, 'guilds', None) or [])
+                    guild_rows = [{'id': str(g.id),
+                                   'name': str(getattr(g, 'name', '') or ''),
+                                   'member_count': int(getattr(g, 'member_count', 0) or 0)}
+                                  for g in guilds]
+                    if guilds and bot.is_ready():
+                        status = 'online'
                         try:
-                            _bb.write_roles(g.id,
-                                            getattr(g, 'roles', None) or [])
-                            _bb.write_channels(g.id,
-                                               getattr(g, 'channels', None) or [])
-                        except Exception as _r_ex:
-                            log.debug('_bridge_loop: роли/каналы %s: %s',
-                                      g.id, _r_ex)
-                else:
-                    _bb.write_state(
-                        'starting',
-                        guilds=[{'id': str(g.id),
-                                 'name': str(getattr(g, 'name', '') or ''),
-                                 'member_count': int(getattr(g, 'member_count', 0) or 0)}
-                                for g in guilds])
+                            _lat = getattr(bot, 'latency', None)
+                            if _lat is not None:
+                                lat_ms = round(float(_lat) * 1000, 1)
+                        except Exception:
+                            lat_ms = None
+                        # Списки ролей/каналов снимаем на цикле (кэш discord.py),
+                        # диск — уже в потоке.
+                        snaps = [(g.id,
+                                  list(getattr(g, 'roles', None) or []),
+                                  list(getattr(g, 'channels', None) or []))
+                                 for g in guilds]
+                    else:
+                        status = 'starting'
+            await asyncio.to_thread(_flush, status, lat_ms, guild_rows, snaps)
         except Exception as _ex:
             log.debug('_bridge_loop: %s', _ex)
         await asyncio.sleep(5)
