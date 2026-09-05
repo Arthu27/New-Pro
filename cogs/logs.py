@@ -593,54 +593,37 @@ async def _safe_send (ch ,**kw ):
             if not _th_name :
                 _m0 =getattr (_e ,'_hakumo_log_meta',None )
                 _th_name =str (_m0 .get ('title',''))if _m0 else ''
-        _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None 
-        if _m and 'file'not in kw and 'files'not in kw :
+        _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None
+        _has_file ='file'in kw or 'files'in kw
+        _has_img =False
+        if _e is not None :
             try :
-                from services .log_card import (render_log_card ,get_log_cards_cfg ,
+                _has_img =bool (getattr (_e ,'image',None )and _e .image .url )
+            except Exception :
+                _has_img =False
+        if not _has_file and not _has_img :
+            try :
+                from services .log_card import (compact_log_photo ,get_log_cards_cfg ,
                                                  get_bg_bytes_sync ,bg_url_for_cat )
-                import io as _io 
-                import asyncio as _aio 
-                # Оформление карточки настраивается в панели (Логи → оформление):
-                # тема/акцент/выключение хранятся в data/log_cards_<gid>.json.
-                _gid =getattr (getattr (ch ,'guild',None ),'id',0 )or 0 
+                import io as _io
+                import asyncio as _aio
+                # Фото лога — только то, что владелец задал (bg_url). Карточку
+                # со стеклом/текстом не рисуем: эмбед остаётся читаемым,
+                # профиль — аватар, фото — компактной полосой.
+                _gid =getattr (getattr (ch ,'guild',None ),'id',0 )or 0
                 _cfg =await _aio .to_thread (get_log_cards_cfg ,_gid )
+                _jpg =None
                 if not _cfg .get ('enabled',True ):
-                    _png =None # владелец выключил картинки — остаётся текстовый эмбед
+                    _jpg =None
                 else :
-                    # JPEG + отдельный поток: PNG-кодирование жрало ~1.2с на каждый лог
-                    # и фризило весь бот. Теперь ~30-100 мс, бот не замирает.
-                    # «Разными образами»: у каждой категории свой образ —
-                    # theme_by_cat перекрывает общую тему (panel: Логи → оформление)
-                    _theme =( (_cfg .get ('theme_by_cat')or {}) .get (_m ['cat'])
-                              or _cfg .get ('theme') )
-                    # Свой фон-фото (bg_url из оформления логов в панели):
-                    # данные рисуются ПОВЕРХ фото (кэш 5 минут, без дампа хоста).
-                    _bg_url =bg_url_for_cat (_cfg ,_m ['cat'])
-                    _bg =await _aio .to_thread (get_bg_bytes_sync ,_bg_url )if _bg_url else None 
-                    _png =await _aio .to_thread (render_log_card ,_m ['cat'],_m ['title'],_m ['rows'],
-                    color =_m ['color'],cat_name =_cat_meta (_m ['cat'])[2 ],
-                    guild_name =_m ['guild'],theme =_theme,
-                    accent =_cfg .get ('accent'),bg_bytes =_bg,
-                    form =_cfg .get ('form'),form_color =_cfg .get ('form_color'),
-                    time_str =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime ('%H:%M UTC'))
-                if _png :
-                    kw ['file']=discord .File (_io .BytesIO (_png ),filename ='hakumo_log_card.jpg')
-                    _e .set_image (url ='attachment://hakumo_log_card.jpg')
-                    # В лог-канале — ТОЛЬКО картинка: весь текст уже отрисован
-                    # внутри карточки, дублирующий markdown-текст убираем.
-                    # Если рендер карточки не удался, текстовый эмбед остаётся
-                    # как запасной вариант (ничего не теряется).
-                    # Оригинальный текст/футер сохраняем на самом объекте —
-                    # для отладки и тестов (в Discord они не видны).
-                    _e ._hakumo_log_desc =(_e .description or '')
-                    _ft =_e .footer .text if _e .footer else ''
-                    _e ._hakumo_log_footer =(_ft or '')
-                    _e .description =None
-                    _e .title =None
-                    try :
-                        _e .remove_footer ()
-                    except Exception as _ex:
-                        log.debug("_safe_send(): подавлено: %s", _ex)
+                    _cat =(_m or {}).get ('cat')or 'mod'
+                    _bg_url =bg_url_for_cat (_cfg ,_cat )
+                    _bg =await _aio .to_thread (get_bg_bytes_sync ,_bg_url )if _bg_url else None
+                    if _bg :
+                        _jpg =await _aio .to_thread (compact_log_photo ,_bg )
+                if _jpg and _e is not None :
+                    kw ['file']=discord .File (_io .BytesIO (_jpg ),filename ='hakumo_log_photo.jpg')
+                    _e .set_image (url ='attachment://hakumo_log_photo.jpg')
             except Exception as _ex:
                 log.debug("_safe_send(): подавлено: %s", _ex)
         if _is_forum_ch (ch ):
@@ -861,6 +844,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     e = _LogEmbed(color=color if color is not None else base_color,
                   timestamp=datetime.datetime.now(datetime.timezone.utc))
     desc = f"## {(icon + ' ') if icon else ''}{title}\n\n"
+    _who = ''
     for name, value in fields:
         if value in (None, ''):
             continue
@@ -868,9 +852,17 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
         # имена вместо цифр (упоминание Discord само рендерится именем).
         value = _strip_raw_id(value)
         desc += f"**{name}** — {value}\n"
+        if not _who and str(name or '').strip().lower() in (
+                'пользователь', 'участник', 'автор', 'виновник', 'кому'):
+            _who = _card_friendly(value, guild)
     if note:
         desc += f"\n{note}"
     e.description = desc
+    if thumbnail:
+        e.set_author(name=(_who or title)[:256], icon_url=thumbnail)
+        e.set_thumbnail(url=thumbnail)
+    elif _who:
+        e.set_author(name=_who[:256])
     footer_text = f"Hakumo Log · {cat_name} · {getattr(guild, 'name', '')}"
     gicon = getattr(guild, 'icon', None)
     try:
@@ -881,8 +873,6 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
         e.set_footer(text=footer_text, icon_url=gicon)
     else:
         e.set_footer(text=footer_text)
-    if thumbnail:
-        e.set_thumbnail(url=thumbnail)
     if image:
         e.set_image(url=image)
     # Метаданные для карточки лога (рисует services/log_card.py при отправке)

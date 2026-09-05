@@ -822,9 +822,65 @@ def fetch_bg_direct(url, max_bytes=8 * 1024 * 1024):
 _PHOTO_BG_CACHE = {}
 
 
+LOG_PHOTO_W = 960
+LOG_PHOTO_H = 300
+
+
+def compact_log_photo(data, width=None, height=None, fmt='jpeg'):
+    """Только фото владельца: cover-кроп в компактную полосу.
+
+    Без текста, стекла и плашек. Качество JPEG 92 / полный chroma.
+    None — нет данных или Pillow не открыл файл.
+    """
+    if not LOG_CARD_OK or not data:
+        return None
+    try:
+        w = int(width or LOG_PHOTO_W)
+        h = int(height or LOG_PHOTO_H)
+        if w < 160 or h < 80:
+            w, h = LOG_PHOTO_W, LOG_PHOTO_H
+        ph = Image.open(io.BytesIO(data)).convert('RGB')
+        scale = max(w / max(1, ph.width), h / max(1, ph.height))
+        nw = max(w, int(ph.width * scale + 0.5))
+        nh = max(h, int(ph.height * scale + 0.5))
+        ph = ph.resize((nw, nh), Image.LANCZOS)
+        left, top = (nw - w) // 2, (nh - h) // 2
+        ph = ph.crop((left, top, left + w, top + h))
+        buf = io.BytesIO()
+        if str(fmt).lower() == 'png':
+            ph.save(buf, 'PNG')
+        else:
+            ph.save(buf, 'JPEG', quality=92, optimize=False, subsampling=0)
+        return buf.getvalue()
+    except Exception as _ex:
+        _log.debug('compact_log_photo: %s', _ex)
+        return None
+
+
+def preview_log_banner(bg_bytes=None, theme=None, accent=None):
+    """Панель: полоса фото лога. Своё фото — кроп; иначе тёмный фон без текста."""
+    if bg_bytes:
+        out = compact_log_photo(bg_bytes, fmt='png')
+        if out:
+            return out
+    if not LOG_CARD_OK:
+        return None
+    try:
+        pal = _palette(theme, accent)
+        img = _load_celestial_bg(LOG_PHOTO_W, LOG_PHOTO_H, pal=pal, use_asset=True)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        buf = io.BytesIO()
+        img.save(buf, 'PNG')
+        return buf.getvalue()
+    except Exception as _ex:
+        _log.debug('preview_log_banner: %s', _ex)
+        return None
+
+
 def get_bg_bytes_sync(url, ttl=300):
-    """Фон-фото для карточек логов с кэшем 5 минут (бот качает на каждый
-    лог — без кэша дёргать хост нельзя). None — остаётся звёздный фон."""
+    """Фото лога с кэшем 5 минут (бот качает на каждый лог — без кэша
+    дёргать хост нельзя). None — фото не задано / не скачалось."""
     import time as _t
     url = str(url or '').strip()
     if not url.lower().startswith(('https://', 'http://')):

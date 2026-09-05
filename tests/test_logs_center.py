@@ -134,12 +134,7 @@ def last_embed(chname):
     return ch.sent[-1] if ch and ch.sent else None
 
 def desc_of(e):
-    """Текст лог-эмбеда для проверок.
-
-    В канале Discord логи уходят как "только картинка" (_safe_send очищает
-    description), но исходный текст сохраняется в e._hakumo_log_desc.
-    Если карточка не отрендерилась (fallback) — возвращаем description как есть.
-    """
+    """Текст лог-эмбеда для проверок."""
     if not e:
         return ''
     return getattr(e, '_hakumo_log_desc', None) or e.description or ''
@@ -153,9 +148,13 @@ e = last_embed('-модерация')
 check(e and 'Пользователь заблокирован' in desc_of(e) and 'TestMod' in desc_of(e)
       and 'Флуд и реклама' in desc_of(e) and 'Причина' in desc_of(e),
       f'бан: модератор + причина в эмбеде')
-check('Hakumo Log' in getattr(e, '_hakumo_log_footer', ''), 'футер «Hakumo Log · …» сохранён (в канале — только картинка)')
-check(e.description is None and e.image and e.image.url == 'attachment://hakumo_log_card.jpg',
-      'в канал уходит ТОЛЬКО карточка-картинка (description очищен)')
+_ft = (e.footer.text if e.footer else '') or getattr(e, '_hakumo_log_footer', '')
+check('Hakumo Log' in _ft, 'футер «Hakumo Log · …» на эмбеде')
+check(e.description and 'Пользователь заблокирован' in e.description,
+      'в канал уходит текстовый эмбед (карточка не рисуется)')
+check(e.author and e.author.icon_url, 'профиль участника — аватар в author')
+check(not e.image or 'hakumo_log_card' not in str(getattr(e.image, 'url', '') or ''),
+      'сгенерированная карточка не прикладывается')
 
 guild.audit_entries = [FakeAuditEntry(77, mod, None)]
 run(cog.on_member_unban(guild, victim))
@@ -311,7 +310,7 @@ check(tasks_after <= tasks_before + 1, 'второй on_ready НЕ плодит 
 print('== фон-фото карточек логов ==')
 from services.log_card import (get_log_cards_cfg, save_log_cards_cfg,  # noqa: E402
                                render_log_card, fetch_bg_direct,
-                               get_bg_bytes_sync)
+                               get_bg_bytes_sync, compact_log_photo)
 _saved = save_log_cards_cfg(777, {'theme': 'hakumo',
                                   'bg_url': 'https://pin.it/7jxEf3HAx'})
 check(_saved.get('bg_url') == 'https://pin.it/7jxEf3HAx',
@@ -335,6 +334,10 @@ _jpg = render_log_card('mod', 'Выдан мут (чат + войс)',
                        bg_bytes=_ph_bytes)
 check(bool(_jpg) and _jpg[:2] == b'\xff\xd8' and len(_jpg) > 20000,
       'карточка лога с фото-фоном рисуется (JPEG)')
+_ban = compact_log_photo(_ph_bytes)
+check(bool(_ban) and _ban[:2] == b'\xff\xd8', 'компактное фото лога — JPEG без стекла')
+_im = _PILImage.open(_bio.BytesIO(_ban))
+check(_im.size == (960, 300), f'фото — компактная полоса {_im.size}, не полное')
 check(render_log_card('mod', 'Т', [('A', 'b')], cat_name='модерация',
                        bg_bytes=b'garbage') is not None,
       'битый фон-фото не роняет карточку — звёздный фон')

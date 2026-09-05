@@ -150,17 +150,16 @@ os.remove(LC.log_cards_cfg_path('424243'))
 print('== 3. Склейка с ботом ==')
 logs_src = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
 flat = re.sub(r'\s+', '', logs_src)
-check('get_log_cards_cfg' in flat and '_cfg.get(\'enabled\',True)' in flat.replace('"', "'"),
+check('get_log_cards_cfg' in flat and "_cfg.get('enabled',True)" in flat.replace('"', "'"),
       '_safe_send читает cfg сервера')
-check("theme=_theme" in flat and "accent=_cfg.get('accent')" in flat
-      and "theme_by_cat" in flat,
-      'тема (с образом категории) и акцент проброшены из cfg в render')
-check("form=_cfg.get('form')" in flat and "form_color=_cfg.get('form_color')" in flat,
-      'форма и цвет плашек проброшены из cfg в render')
 check('bg_url_for_cat' in logs_src,
       '_safe_send берёт фон категории, а не только общий bg_url')
+check('compact_log_photo' in logs_src and 'hakumo_log_photo.jpg' in logs_src,
+      '_safe_send кропает только фото, без стекла и текста')
+check('hakumo_log_card.jpg' not in logs_src and 'render_log_card' not in logs_src,
+      'карточка со стеклом в канал не уходит')
 check("ifnot_cfg.get('enabled',True)" in flat.replace('"', "'")
-      and "_png=None" in flat,
+      and '_jpg=None' in flat,
       'enabled=False выключает картинку, текст остаётся')
 
 print('== 4. API панели ==')
@@ -204,8 +203,8 @@ check(r['cfg']['theme'] == 'forest' and len(r['themes']) == len(LC.LOG_CARD_THEM
       'GET отдаёт cfg и все темы реестра')
 r = client.get('/api/guild/777/log-cards/preview.png?theme=ocean&accent=22d3ee&cat=voice')
 body = r.get_data()
-check(body[:8].startswith(b'\x89PNG') and len(body) > 30000,
-      f'предпросмотр голосовой категории ({len(body)} байт)')
+check(body[:8].startswith(b'\x89PNG') and len(body) > 2000,
+      f'предпросмотр фото-полосы ({len(body)} байт)')
 r = client.get('/api/guild/777/log-cards/preview.png?theme=zzz&cat=unknown')
 check(r.status_code == 200, 'мусорные theme/cat → дефолты, не 500')
 LC.save_log_cards_cfg('777', {'enabled': True, 'theme': 'hakumo', 'accent': ''})
