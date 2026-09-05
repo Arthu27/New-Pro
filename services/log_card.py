@@ -174,10 +174,22 @@ def _valid_theme_by_cat(raw):
     return out
 
 
+def _valid_bg_url(raw):
+    """Свой фон-фото карточек: только http(s), без локальных адресов."""
+    u = str(raw or '').strip()
+    if not u.startswith(('https://', 'http://')):
+        return ''
+    if any(bad in u.lower() for bad in ('//localhost', '//127.0.0.1',
+                                        '//0.0.0.0', '//[::1]')):
+        return ''
+    return u
+
+
 def get_log_cards_cfg(gid):
-    """{'enabled': bool, 'theme': str, 'accent': '', 'theme_by_cat': {}} — с валидацией мусора."""
+    """{'enabled': bool, 'theme': str, 'accent': '', 'bg_url': '',
+    'theme_by_cat': {}} — с валидацией мусора."""
     cfg = {'enabled': True, 'theme': DEFAULT_LOG_THEME, 'accent': '',
-           'theme_by_cat': dict(DEFAULT_THEME_BY_CAT)}
+           'bg_url': '', 'theme_by_cat': dict(DEFAULT_THEME_BY_CAT)}
     try:
         path = log_cards_cfg_path(gid)
         if os.path.exists(path):
@@ -195,6 +207,7 @@ def get_log_cards_cfg(gid):
                     cfg['accent'] = acc
                 if 'theme_by_cat' in raw:
                     cfg['theme_by_cat'] = _valid_theme_by_cat(raw.get('theme_by_cat'))
+                cfg['bg_url'] = _valid_bg_url(raw.get('bg_url'))
     except Exception as _ex:
         _log.debug('get_log_cards_cfg(): %s', _ex)
     return cfg
@@ -208,6 +221,7 @@ def save_log_cards_cfg(gid, data):
         'enabled': bool(data.get('enabled', True)),
         'theme': DEFAULT_LOG_THEME,
         'accent': '',
+        'bg_url': _valid_bg_url(data.get('bg_url')),
         'theme_by_cat': _valid_theme_by_cat(data.get('theme_by_cat')
                                             if 'theme_by_cat' in data
                                             else DEFAULT_THEME_BY_CAT),
@@ -536,15 +550,84 @@ def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
     return base
 
 
+def _photo_bg(w, h, data):
+    """Фото-фон: cover-масштаб до карточки, лёгкий блюр + затемнение —
+    данные поверх остаются читаемыми (владелец: «данные в фото внутри,
+    фото как задний фон»)."""
+    ph = Image.open(io.BytesIO(data)).convert('RGB')
+    scale = max(w / ph.width, h / ph.height)
+    nw = max(w, int(ph.width * scale + 0.5))
+    nh = max(h, int(ph.height * scale + 0.5))
+    ph = ph.resize((nw, nh), Image.LANCZOS)
+    left, top = (nw - w) // 2, (nh - h) // 2
+    ph = ph.crop((left, top, left + w, top + h))
+    ph = ph.filter(ImageFilter.GaussianBlur(1.6)).convert('RGBA')
+    dark = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    dd = ImageDraw.Draw(dark)
+    dd.rectangle([0, 0, w, h], fill=(6, 10, 20, 132))
+    for yy in range(h):
+        t = yy / max(1, h - 1)
+        dd.line([(0, yy), (w, yy)], fill=(6, 10, 20, int(40 + 140 * t)))
+    ph.alpha_composite(dark)
+    return ph.convert('RGB')
+
+
+def fetch_bg_direct(url, max_bytes=8 * 1024 * 1024):
+    """Скачать фон-фото без кэша (панель-превью). None — не вышло."""
+    import requests as _rq
+    url = str(url or '').strip()
+    if not url.lower().startswith(('https://', 'http://')):
+        return None
+    try:
+        r = _rq.get(url, timeout=(6, 15), allow_redirects=True, stream=True,
+                    headers={'User-Agent': 'Mozilla/5.0 (compatible; HakumoBot)'})
+        if r.status_code >= 400:
+            _log.debug('лог-фон: хост ответил %s', r.status_code)
+            return None
+        buf = bytearray()
+        for chunk in r.iter_content(65536):
+            buf.extend(chunk)
+            if len(buf) > max_bytes:
+                _log.debug('лог-фон: файл больше 8 МБ')
+                return None
+        data = bytes(buf)
+        Image.open(io.BytesIO(data)).verify()
+        return data
+    except Exception as _ex:
+        _log.debug('лог-фон: %s', _ex)
+        return None
+
+
+_BG_CACHE = {'url': None, 'data': None, 'ts': 0.0}
+
+
+def get_bg_bytes_sync(url, ttl=300):
+    """Фон-фото для карточек логов с кэшем 5 минут (бот качает на каждый
+    лог — без кэша дёргать хост нельзя). None — остаётся звёздный фон."""
+    import time as _t
+    url = str(url or '').strip()
+    if not url.lower().startswith(('https://', 'http://')):
+        return None
+    now = _t.time()
+    if _BG_CACHE['url'] == url and _BG_CACHE['data'] \
+            and now - _BG_CACHE['ts'] < ttl:
+        return _BG_CACHE['data']
+    data = fetch_bg_direct(url)
+    if data:
+        _BG_CACHE.update(url=url, data=data, ts=now)
+    return data
+
+
 def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
                     guild_name='', time_str='', theme=None, accent=None,
-                    fmt='jpeg'):
+                    fmt='jpeg', bg_bytes=None):
     """Нарисовать премиальную карточку лога в единой стилистике HAKUMO.
 
     theme — одна из LOG_CARD_THEMES ('hakumo' — исторический фирменный вид,
     ровно как было); accent ('#rrggbb'/int) заменяет золотую гамму своим
     цветом. Оба параметра пробрасывает бот из настроек панели
-    (data/log_cards_<gid>.json, get_log_cards_cfg).
+    (data/log_cards_<gid>.json, get_log_cards_cfg). bg_bytes — своё фото
+    задним фоном (bg_url из того же конфига; качает cogs/logs.py).
     """
     if not LOG_CARD_OK:
         return None
@@ -572,7 +655,16 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
         # без своего акцента — иначе строим градиент палитры темы.
         use_asset = (str(theme or DEFAULT_LOG_THEME).strip().lower() == DEFAULT_LOG_THEME
                      and not _ui_color(accent))
-        img = _load_celestial_bg(W, H, cat_tint=cat_glow, pal=pal, use_asset=use_asset)
+        if bg_bytes:
+            try:
+                img = _photo_bg(W, H, bg_bytes)   # своё фото задним фоном
+            except Exception as _ex:
+                _log.debug('лог-карточка: свой фон не открылся: %s', _ex)
+                img = _load_celestial_bg(W, H, cat_tint=cat_glow, pal=pal,
+                                         use_asset=use_asset)
+        else:
+            img = _load_celestial_bg(W, H, cat_tint=cat_glow, pal=pal,
+                                     use_asset=use_asset)
         d = ImageDraw.Draw(img)
 
         # 4. Двойная рамка по контуру карточки

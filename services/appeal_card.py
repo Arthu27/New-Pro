@@ -376,10 +376,42 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
         return None
 
 
+URL_PHOTO_MAX_H = 560   # высота фото-зоны в композите (фото выше — центр-кроп)
+
+
+def render_url_card(photo_bytes, *, appeal_id, user_name, text, link=None,
+                    theme=DEFAULT_APPEAL_THEME):
+    """Своя картинка по URL → композит: фото СВЕРХУ, тексты апелляции ПОД ним.
+
+    Владелец (2026-09-05): «сообщения были внутри фото… надписи ниже фото,
+    а не сверху». Эмбед Discord рисует текст НАД картинкой — поэтому клеим
+    одно изображение: фото сверху, ниже — фирменная карточка с текстами
+    (та же render_appeal_card). В Discord уходит ОДИН файл, без пережатия.
+    """
+    try:
+        photo = Image.open(io.BytesIO(photo_bytes)).convert('RGB')
+        scale = W / photo.width
+        ph = photo.resize((W, max(1, int(photo.height * scale))), Image.LANCZOS)
+        if ph.height > URL_PHOTO_MAX_H:
+            top = max(0, (ph.height - URL_PHOTO_MAX_H) // 2)
+            ph = ph.crop((0, top, W, top + URL_PHOTO_MAX_H))
+        card = Image.open(io.BytesIO(render_appeal_card(
+            appeal_id=appeal_id, user_name=user_name, text=text,
+            link=link, theme=theme) or b'')).convert('RGB')
+        out = Image.new('RGB', (W, ph.height + card.height))
+        out.paste(ph, (0, 0))
+        out.paste(card, (0, ph.height))
+        buf = io.BytesIO()
+        out.save(buf, format='PNG')
+        return buf.getvalue()
+    except Exception:
+        return None
+
+
 def appeal_card_filename(appeal_id):
     return f'hakumo_appeal_{int(appeal_id):02d}.png'
 
 
 __all__ = ('APPEAL_THEMES', 'APPEAL_THEME_ORDER', 'DEFAULT_APPEAL_THEME',
            'APPEAL_MODES', 'APPEAL_MODE_LABELS', 'normalize_appearance',
-           'render_appeal_card', 'appeal_card_filename')
+           'render_appeal_card', 'render_url_card', 'appeal_card_filename')

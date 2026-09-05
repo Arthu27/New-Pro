@@ -86,6 +86,10 @@
     <span class="spacer"></span>
     <button type="button" class="btn btn-primary" id="lcSave"><i class="fas fa-save"></i> Сохранить</button>
   </div>
+  <div class="filter-row" style="margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap">
+    <input type="text" id="lcBgUrl" class="field-input" placeholder="Фон-фото карточек по URL (https://… — подойдёт и pin.it)" aria-label="Своя фоновая картинка карточек логов" style="flex:1;min-width:240px">
+    <button type="button" class="btn btn-sm" id="lcBgClear"><i class="fas fa-rotate-left"></i> Стандартный фон</button>
+  </div>
   <div class="filter-row" id="lcByCatRow" style="margin-bottom:10px;display:none;align-items:center;gap:8px;flex-wrap:wrap">
     <span style="font-size:12.5px;color:var(--text-2)">Образ по категориям:</span>
     <span id="lcByCat" style="display:flex;gap:8px;flex-wrap:wrap"></span>
@@ -94,7 +98,7 @@
   <div style="border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg)">
     <img id="lcPreview" alt="Предпросмотр карточки лога" style="width:100%;height:auto" loading="lazy">
   </div>
-  <div class="hint" style="margin-top:8px">Так выглядит карточка, которую бот прикладывает к каждому событию в лог-каналах. Отключение оставляет обычный текстовый эмбед.</div>
+  <div class="hint" style="margin-top:8px">Так выглядит карточка, которую бот прикладывает к каждому событию в лог-каналах. Своё фото-фон — данные рисуются поверх него; страницы-пины (pin.it) понимаются. Отключение карточек оставляет обычный текстовый эмбед.</div>
 </div>
 
 <!-- Фильтры -->
@@ -199,6 +203,7 @@ else start();
       themeSel = document.getElementById('lcTheme'),
       catSel = document.getElementById('lcCat'),
       accent = document.getElementById('lcAccent'),
+      bgUrl = document.getElementById('lcBgUrl'),
       msg = document.getElementById('lcMsg'),
       img = document.getElementById('lcPreview'),
       byCatBox = document.getElementById('lcByCat'),
@@ -213,6 +218,10 @@ else start();
   }
   var accentDirty = false; /* не трогаем цвет до первого касания владельца */
   accent.addEventListener('input', function () { accentDirty = true; schedulePreview(); });
+  bgUrl.addEventListener('input', schedulePreview);
+  document.getElementById('lcBgClear').addEventListener('click', function () {
+    bgUrl.value = ''; schedulePreview(); lcSave(true);
+  });
 
   var pvT = null;
   function lcPreviewUrl() {
@@ -221,6 +230,8 @@ else start();
     /* реальный образ категории: её собственный, если задан, иначе общая тема */
     q.set('theme', byCatValue(cat) || themeSel.value || 'hakumo');
     if (accentDirty) q.set('accent', accent.value.replace('#', ''));
+    var bg = (bgUrl.value || '').trim();
+    if (bg) q.set('bg', bg);
     q.set('cat', cat);
     return '/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/preview.png?' + q.toString() + '&_=' + Date.now();
   }
@@ -269,6 +280,7 @@ else start();
         themeSel.value = d.cfg.theme || 'hakumo';
         if (d.cfg.accent) { accent.value = '#' + d.cfg.accent; accentDirty = true; }
         else accentDirty = false;
+        bgUrl.value = d.cfg.bg_url || '';
         schedulePreview();
       }).catch(function () {});
   }
@@ -280,6 +292,7 @@ else start();
     });
     var body = { enabled: on.checked, theme: themeSel.value || 'hakumo',
                  accent: accentDirty ? accent.value.replace('#', '') : '',
+                 bg_url: (bgUrl.value || '').trim(),
                  theme_by_cat: tbc };
     fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)

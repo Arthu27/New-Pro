@@ -78,14 +78,15 @@ check(pal['gold'] == (255, 136, 0) and pal['bright'] != pal['gold'],
 
 print('== 2. Настройки cfg ==')
 cfg = LC.get_log_cards_cfg('424242')
-check({k: v for k, v in cfg.items() if k != 'theme_by_cat'} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
-      and cfg['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT, 'нет файла → дефолт (+образы по категориям)')
+check({k: v for k, v in cfg.items() if k not in ('theme_by_cat', 'bg_url')} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+      and cfg['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT and cfg['bg_url'] == '',
+      'нет файла → дефолт (+образы по категориям, фон пустой)')
 saved = LC.save_log_cards_cfg('424242', {'enabled': False, 'theme': 'ocean', 'accent': '#22d3ee'})
-check({k: v for k, v in saved.items() if k != 'theme_by_cat'} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'},
-      'сохранение нормализует (accent без #)')
+check({k: v for k, v in saved.items() if k not in ('theme_by_cat', 'bg_url')} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'}
+      and saved['bg_url'] == '', 'сохранение нормализует (accent без #)')
 check(LC.get_log_cards_cfg('424242') == saved, 'читается обратно один в один')
 saved2 = LC.save_log_cards_cfg('424242', {'enabled': 'yes', 'theme': 'bad', 'accent': 'bad'})
-check({k: v for k, v in saved2.items() if k != 'theme_by_cat'} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+check({k: v for k, v in saved2.items() if k not in ('theme_by_cat', 'bg_url')} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
       and saved2['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT,
       'мусор в POST не пролезает: enabled bool, тема/акцент по реестру')
 os.remove(LC.log_cards_cfg_path('424242'))

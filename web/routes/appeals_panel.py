@@ -365,6 +365,12 @@ def _csv_cell(text):
     return str(text).replace(';', ',').replace('\r', ' ').replace('\n', ' ')
 
 
+# Демо-текст карточки в предпросмотре (общий для авто-картинки и композита).
+DEMO_TEXT = ('Бан за ссылки — это был не спам, а ссылка на общий документ '
+             'с гайдом по ивенту. Прикладываю скрин переписки с согласованием.')
+DEMO_LINK = 'https://i.imgur.com/demo-appeal-proof.png'
+
+
 def register(ctx):
     app = ctx.app
     login_required = ctx.login_required
@@ -533,7 +539,24 @@ def register(ctx):
             data, info = _fetch_sync(url)
             if not data:
                 return jsonify({'success': False,
-                                'error': 'Картинка по ссылке недоступна: ' + (info or 'неизвестно')}), 502
+                                'error': 'Картинку по ссылке скачать не вышло: ' + (info or 'неизвестно')}), 502
+            # Владелец (2026-09-05): тексты апелляции — внутри картинки,
+            # фото сверху, надписи ниже. Превью собирает ТОТ ЖЕ композит,
+            # что уедет в Discord: фото + карточка с демо-текстами.
+            png = None
+            try:
+                from services.appeal_card import render_url_card
+                png = render_url_card(
+                    data, appeal_id=7, user_name='Кипарис',
+                    text=(request.args.get('text') or DEMO_TEXT)[:400],
+                    link=request.args.get('link') or DEMO_LINK,
+                    theme=request.args.get('theme') or ABC.DEFAULT_APPEAL_THEME)
+            except Exception as _ex:
+                _log.debug('card-preview: композит не собрался: %s', _ex)
+            if png:
+                resp = Response(png, mimetype='image/png')
+                resp.headers['Cache-Control'] = 'no-store'
+                return resp
             from services.appeal_card import _IMAGE_EXTS
             ext = os.path.splitext(info or '')[1].lower()
             mime = _IMAGE_EXTS.get(ext, 'image/png')
@@ -541,11 +564,8 @@ def register(ctx):
             resp.headers['Cache-Control'] = 'no-store'
             return resp
         theme = request.args.get('theme')
-        text = (request.args.get('text') or
-                'Бан за ссылки — это был не спам, а ссылка на общий документ '
-                'с гайдом по ивенту. Прикладываю скрин переписки с согласованием.'
-                )[:400]
-        link = request.args.get('link') or 'https://i.imgur.com/demo-appeal-proof.png'
+        text = (request.args.get('text') or DEMO_TEXT)[:400]
+        link = request.args.get('link') or DEMO_LINK
         png = ABC.render_appeal_card(
             appeal_id=7, user_name='Кипарис', text=text,
             link=link, theme=theme or ABC.DEFAULT_APPEAL_THEME)

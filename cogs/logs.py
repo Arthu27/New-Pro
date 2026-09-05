@@ -369,7 +369,8 @@ async def _safe_send (ch ,**kw ):
         _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None 
         if _m and 'file'not in kw and 'files'not in kw :
             try :
-                from services .log_card import render_log_card ,get_log_cards_cfg 
+                from services .log_card import (render_log_card ,get_log_cards_cfg ,
+                                                 get_bg_bytes_sync )
                 import io as _io 
                 import asyncio as _aio 
                 # Оформление карточки настраивается в панели (Логи → оформление):
@@ -385,10 +386,14 @@ async def _safe_send (ch ,**kw ):
                     # theme_by_cat перекрывает общую тему (panel: Логи → оформление)
                     _theme =( (_cfg .get ('theme_by_cat')or {}) .get (_m ['cat'])
                               or _cfg .get ('theme') )
+                    # Свой фон-фото (bg_url из оформления логов в панели):
+                    # данные рисуются ПОВЕРХ фото (кэш 5 минут, без дампа хоста).
+                    _bg_url =str (_cfg .get ('bg_url')or '')
+                    _bg =await _aio .to_thread (get_bg_bytes_sync ,_bg_url )if _bg_url else None 
                     _png =await _aio .to_thread (render_log_card ,_m ['cat'],_m ['title'],_m ['rows'],
                     color =_m ['color'],cat_name =_cat_meta (_m ['cat'])[2 ],
                     guild_name =_m ['guild'],theme =_theme,
-                    accent =_cfg .get ('accent'),
+                    accent =_cfg .get ('accent'),bg_bytes =_bg,
                     time_str =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime ('%H:%M UTC'))
                 if _png :
                     kw ['file']=discord .File (_io .BytesIO (_png ),filename ='hakumo_log_card.jpg')

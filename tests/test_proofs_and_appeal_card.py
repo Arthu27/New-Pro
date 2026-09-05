@@ -123,8 +123,10 @@ print('== 4. Отправка своей картинки — файлом (ка
 src = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
 check(src.count('fetch_remote_image(') >= 2,
       'оба пути подачи качают оригинал (ЛС и канальная подача)')
-check(src.count("attachment://{fname}") == 2,
-      'картинка едет вложением attachment:// (без пережатия Discordом)')
+check(src.count('attachment://') == 4
+      and 'attachment://{url_file[1]}' in src,
+      'картинка едет вложением attachment:// (без пережатия Discordом); '
+      'композит — как файл')
 check('не скачалась' in src,
       'если хост не отдал файл — запасной путь по ссылке + честный лог')
 
@@ -136,7 +138,8 @@ _client = webapp.app.test_client()
 # 5а. плохая ссылка → честный отказ
 r_bad = _client.get('/api/guild/777/appeals/card-preview.png'
                     '?mode=url&url=https%3A%2F%2Flocalhost%2Fx.png')
-check(r_bad.status_code == 502 and 'недоступна' in (r_bad.get_json() or {}).get('error', ''),
+check(r_bad.status_code == 502
+      and 'скачать не вышло' in (r_bad.get_json() or {}).get('error', ''),
       'битая/приватная ссылка → честная ошибка, а не пустая картинка',
       f'→ {r_bad.status_code}')
 
@@ -144,7 +147,12 @@ check(r_bad.status_code == 502 and 'недоступна' in (r_bad.get_json() o
 import threading  # noqa: E402
 from http.server import BaseHTTPRequestHandler, HTTPServer  # noqa: E402
 
-_PNG = (b'\x89PNG\r\n\x1a\n' + b'\x00' * 64)
+# настоящая маленькая PNG-картинка: превью собирает из неё композит
+import io as _pio
+from PIL import Image as _PImg
+_pbuf = _pio.BytesIO()
+_PImg.new('RGB', (640, 360), (24, 34, 68)).save(_pbuf, format='PNG')
+_PNG = _pbuf.getvalue()
 _srv_hit = {'n': 0}
 
 
@@ -177,8 +185,13 @@ try:
     r_ok = _client.get('/api/guild/777/appeals/card-preview.png'
                        '?mode=url&url=https%3A%2F%2Fexample.com%2Fx.png')
     check(r_ok.status_code == 200 and r_ok.data[:4] == b'\x89PNG',
-          'превью отдаёт байты картинки через сервер', f'→ {r_ok.status_code}')
+          'превью отдаёт композит через сервер', f'→ {r_ok.status_code}')
     check(r_ok.mimetype == 'image/png', 'content-type — image/png')
+    from PIL import Image as _Img
+    import io as _io
+    _ci = _Img.open(_io.BytesIO(r_ok.data))
+    check(_ci.size[0] == AC.W and _ci.size[1] > AC.H + 200,
+          'превью-url = композит: фото сверху + карточка с текстами ниже')
 finally:
     AC.fetch_remote_image = _orig_fetch
 
@@ -206,6 +219,24 @@ check(not ok_php and 'Pinterest' in why_php,
 r_auto = _client.get('/api/guild/777/appeals/card-preview.png?theme=hakumo')
 check(r_auto.status_code == 200 and r_auto.data[:4] == b'\x89PNG',
       'авто-превью темы рисуется как раньше')
+
+# 5в-2. композит URL-режима: фото сверху, тексты ниже — одним файлом
+import io as _io2
+from PIL import Image as _Img2
+import services.appeal_card as _AC2
+
+_ph = _Img2.new('RGB', (800, 600), (20, 30, 60))
+_b = _io2.BytesIO(); _ph.save(_b, format='JPEG')
+_comp = _AC2.render_url_card(_b.getvalue(), appeal_id=9, user_name='Тест',
+                             text='проверка композита апелляции',
+                             link='https://pin.it/xyz')
+_ci2 = _Img2.open(_io2.BytesIO(_comp))
+check(_comp[:8] == b'\x89PNG\r\n\x1a\n' and _ci2.size[0] == _AC2.W
+      and _ci2.size[1] > _AC2.H + 200,
+      'render_url_card: фото сверху + карточка ниже, ширина как у карточки')
+check(_AC2.render_url_card(b'garbage', appeal_id=1, user_name='x',
+                           text='y') is None,
+      'битое фото — композит None, бот уйдёт на сырую картинку')
 
 # 5г. в шаблоне апелляций превью url-режима идёт через прокси + честный onerror
 atpl = open(os.path.join(ROOT, 'web', 'templates', 'appeals.html'), encoding='utf-8').read()

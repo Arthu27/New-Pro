@@ -53,6 +53,7 @@ def register(ctx):
         return jsonify({'success': True, 'cfg': cfg,
                         'message': f'Оформление сохранено: {theme_lbl}' +
                                    (' · свой акцент' if cfg['accent'] else '') +
+                                   (' · свой фон-фото' if cfg.get('bg_url') else '') +
                                    (f' · образов по категориям: {per_cat}' if per_cat else '')})
 
     @app.route('/api/guild/<gid>/log-cards/preview.png')
@@ -65,6 +66,15 @@ def register(ctx):
         if cat not in LC.CATEGORY_STYLES:
             cat = 'mod'
         cfg = LC.get_log_cards_cfg(gid)
+        # Свой фон-фото: из строки превью (не сохранённая) или из конфига.
+        # Качаем без кэша — что видишь в превью, то и уедет в лог-канал.
+        bg_url = (request.args.get('bg') or '').strip() or cfg.get('bg_url') or ''
+        bg_bytes = None
+        if bg_url:
+            try:
+                bg_bytes = LC.fetch_bg_direct(bg_url)
+            except Exception as _ex:
+                _log.debug('log-cards preview: фон %s', _ex)
         # «Разными образами»: в превью показываем реальный образ категории —
         # из theme_by_cat, если владелец задал, иначе общая тема.
         if not theme:
@@ -74,7 +84,7 @@ def register(ctx):
                 cat, 'Пример: выдано предупреждение', PREVIEW_ROWS,
                 color=0xE2455A, cat_name=cat,
                 guild_name='Hakumo Demo', time_str='20:41 UTC',
-                theme=theme, accent=accent, fmt='png')
+                theme=theme, accent=accent, fmt='png', bg_bytes=bg_bytes)
         except Exception as _ex:
             _log.debug('log-cards preview: %s', _ex)
             png = None

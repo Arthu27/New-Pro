@@ -29,7 +29,8 @@ from discord.ext import commands
 from db import GuildData
 from logger import get_logger
 from services.appeal_card import (normalize_appearance, render_appeal_card,
-                                  appeal_card_filename, fetch_remote_image)
+                                  render_url_card, appeal_card_filename,
+                                  fetch_remote_image)
 
 log = get_logger("appeals")
 
@@ -1195,8 +1196,17 @@ class Appeals(commands.Cog):
                 # путь: картинка по ссылке (пережмёт, но хоть покажет).
                 data, fname = await fetch_remote_image(appearance['url'])
                 if data:
-                    url_file = (data, fname)
-                    embed.set_image(url=f'attachment://{fname}')
+                    # Владелец (2026-09-05): тексты — ВНУТРИ картинки, фото
+                    # сверху, надписи ниже (эмбед рисует текст НАД фото).
+                    # Клеим композит: фото + карточка с текстами одним файлом.
+                    # Не собрался (битое фото) — шлём сырую картинку.
+                    comp = render_url_card(
+                        data, appeal_id=item['id'],
+                        user_name=item['user_name'], text=item['text'],
+                        link=item.get('link'), theme=appearance['theme'])
+                    url_file = ((comp, appeal_card_filename(item['id'])) if comp
+                                else (data, fname))
+                    embed.set_image(url=f'attachment://{url_file[1]}')
                 else:
                     log.warning('appeals: своя картинка #%s не скачалась (%s) — '
                                 'показываю ссылкой', item['id'], fname)

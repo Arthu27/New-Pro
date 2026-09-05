@@ -306,6 +306,43 @@ run(once_cog.on_ready())
 tasks_after = len(asyncio.all_tasks(loop)) if hasattr(asyncio, 'all_tasks') else 0
 check(tasks_after <= tasks_before + 1, 'второй on_ready НЕ плодит дубли цикла')
 
+# ═══ Свой фон-фото карточек логов (владелец 2026-09-05: «данные в фото
+# внутри, а сама фото — как задний фон») ═══
+print('== фон-фото карточек логов ==')
+from services.log_card import (get_log_cards_cfg, save_log_cards_cfg,  # noqa: E402
+                               render_log_card, fetch_bg_direct,
+                               get_bg_bytes_sync)
+_saved = save_log_cards_cfg(777, {'theme': 'hakumo',
+                                  'bg_url': 'https://pin.it/7jxEf3HAx'})
+check(_saved.get('bg_url') == 'https://pin.it/7jxEf3HAx',
+      'bg_url сохраняется в оформлении логов')
+check(get_log_cards_cfg(777).get('bg_url') == 'https://pin.it/7jxEf3HAx',
+      'bg_url читается обратно')
+check(save_log_cards_cfg(778, {'bg_url': 'http://127.0.0.1/x.png'}).get('bg_url') == '',
+      'локальные адреса в bg_url отбрасываются')
+check(get_log_cards_cfg(779).get('bg_url') == '',
+      'по умолчанию фона-фото нет — звёздный фон')
+
+import io as _bio
+from PIL import Image as _PILImage
+_bbuf = _bio.BytesIO()
+_PILImage.new('RGB', (900, 600), (18, 26, 52)).save(_bbuf, format='PNG')
+_ph_bytes = _bbuf.getvalue()
+_jpg = render_log_card('mod', 'Выдан мут (чат + войс)',
+                       [('Пользователь', 'GhostBlade'),
+                        ('Модератор', 'Sonya'), ('Срок', '30 минут')],
+                       cat_name='модерация', time_str='20:41 UTC',
+                       bg_bytes=_ph_bytes)
+check(bool(_jpg) and _jpg[:2] == b'\xff\xd8' and len(_jpg) > 20000,
+      'карточка лога с фото-фоном рисуется (JPEG)')
+check(render_log_card('mod', 'Т', [('A', 'b')], cat_name='модерация',
+                       bg_bytes=b'garbage') is not None,
+      'битый фон-фото не роняет карточку — звёздный фон')
+
+check(fetch_bg_direct('') is None and fetch_bg_direct('ftp://x') is None,
+      'пустой/не-http фон не качается')
+check(get_bg_bytes_sync('') is None, 'пустой bg_url — без загрузки, кэш молчит')
+
 loop.close()
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
