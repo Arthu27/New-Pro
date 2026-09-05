@@ -97,6 +97,8 @@ _expected = {
     'unban': 'ban',
     'timeout': 'timeout',
     'untimeout': 'timeout',
+    'unmute': 'timeout',
+    'unmute_chat': 'mute',
     'mute_chat': 'mute',
     'vmute': 'vmute',
     'vunmute': 'vmute',
@@ -149,22 +151,23 @@ print('== 4. Чат-мут и войс-мут — отдельные тумбл�
 # Даём роли 602 ТОЛЬКО чат-мут: войс-мут и его снятие скрыты.
 set_action_rule(GID, 'mute', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('mute_chat' in got, f'с «Мут чата» виден чат-мут: {got}')
+check('mute_chat' in got and 'unmute' in got, f'с «Мут чата» виден чат-мут и снятие: {got}')
 check('vmute' not in got and 'vunmute' not in got,
-      f'без «Войс-мут» войс-мута и его снятия нет: {got}')
-# Даём отдельно войс-мут — появляется он и его снятие, чат-мут не нужен.
+      f'без «Войс-мут» войс-мута нет: {got}')
+# Даём отдельно войс-мут — появляется он, снятие одно на чат и войс.
 set_action_rule(GID, 'vmute', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('vmute' in got and 'vunmute' in got and 'mute_chat' in got,
-      f'с обоими разрешениями видны и чат-, и войс-мут: {got}')
-# Таймаут — отдельный тумблер: без него таймаута нет даже при мутах.
-check('timeout' not in got and 'untimeout' not in got,
-      'без «Таймаут» таймаута и его снятия нет')
+check('vmute' in got and 'unmute' in got and 'mute_chat' in got,
+      f'с обоими разрешениями видны чат-, войс-мут и снятие: {got}')
+check('vunmute' not in got and 'untimeout' not in got,
+      'размут чат/войс — один пункт меню, не два')
+# Таймаут — отдельный тумблер: без него полного мута нет даже при мутах.
+check('timeout' not in got, 'без «Таймаут» полного мута нет')
 set_action_rule(GID, 'timeout', ['602'])
 set_action_rule(GID, 'warn', ['602'])
 set_action_rule(GID, 'purge', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('timeout' in got and 'untimeout' in got and 'warn' in got and 'clear' in got,
+check('timeout' in got and 'unmute' in got and 'warn' in got and 'clear' in got,
       f'с таймаутом/варном/очисткой они появляются: {got}')
 set_action_rule(GID, 'mute', [])
 set_action_rule(GID, 'vmute', [])

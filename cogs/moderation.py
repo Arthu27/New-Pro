@@ -40,6 +40,37 @@ async def _respond (interaction ,**kw ):
             log .warning (f'[MODPANEL] Ответ не доставлен и через followup: {_e2}')
 
 
+async def _ack(interaction, ephemeral=True):
+    """Сразу закрыть 3-секундное окно Discord, чтобы не было
+    «Приложение не отвечает», пока бан/мут ещё идут."""
+    try:
+        resp = getattr(interaction, 'response', None)
+        if resp is not None and not resp.is_done():
+            await resp.defer(ephemeral=ephemeral)
+    except Exception as _e:
+        log.debug('[MODPANEL] defer: %s', _e)
+
+
+def _is_untouchable(guild, user):
+    """Владелец бота, владелец сервера и боты — наказания не выдаём."""
+    if user is None:
+        return False
+    uid = getattr(user, 'id', None)
+    if not uid:
+        return False
+    try:
+        from config import Config
+        if int(uid) in Config.all_owner_ids():
+            return True
+    except Exception:
+        pass
+    if uid == getattr(guild, 'owner_id', None):
+        return True
+    if getattr(user, 'bot', False):
+        return True
+    return False
+
+
 # ── Длительности: понятный ввод + потолок из панели ──────────────────────
 import re as _re_mod
 
@@ -329,8 +360,7 @@ class Moderation (commands .Cog ):
         # только строка-подсказка и само выпадающее меню, без простыней.
         embed =discord .Embed (
         title ="🛡 Панель модерации",
-        description ="1) Выберите участника мышкой в первом меню, "
-                      "2) выберите действие во втором — останется вписать срок и причину.",
+        description ="Участник → действие. Размут спросит: чат или войс.",
         color =0x5865F2 )
         if interaction .guild .icon :
             embed .set_footer (text =interaction .guild .name )
@@ -408,19 +438,30 @@ class Moderation (commands .Cog ):
         """
         if iso is None :
             return None ,0
+        if _is_untouchable (guild ,user ):
+            return iso ,0
+        # Роль бана сама закрывает каналы. Обход комнат по одной —
+        # минуты лагов и «приложение не отвечает».
+        if self ._punish_role (guild ,'ban') is not None :
+            return iso ,0
         deny =discord .PermissionOverwrite (view_channel =False ,send_messages =False ,
         connect =False ,speak =False )
-        closed =0
         pool = list (guild .channels )
         for th in getattr (guild ,'threads',None ) or []:
             if th not in pool :
                 pool .append (th )
-        for ch in pool :
-            try :
-                await ch .set_permissions (user ,overwrite =deny )
-                closed +=1
-            except Exception as _ex :
-                log .debug (f'_isolate_member(): {ch}: {_ex}')
+        import asyncio as _aio
+        sem =_aio .Semaphore (8 )
+        async def _one (ch ):
+            async with sem :
+                try :
+                    await ch .set_permissions (user ,overwrite =deny )
+                    return 1
+                except Exception as _ex :
+                    log .debug (f'_isolate_member(): {ch}: {_ex}')
+                    return 0
+        bits =await _aio .gather (*[_one (ch )for ch in pool ],return_exceptions =True )
+        closed =sum (x for x in bits if x ==1 )
         return iso ,closed
 
     async def _unisolate_member (self ,guild ,user ):
@@ -503,7 +544,7 @@ class Moderation (commands .Cog ):
         # САМЫЙ СТРОГИЙ лимит среди ролей модератора (пер-рольные лимиты).
         try :
             _sl_key ={'warn':'warn','timeout':'mute','mute_chat':'mute','vmute':'mute',
-            'untimeout':'unmute','vunmute':'unmute','unban':'unban',
+            'untimeout':'unmute','vunmute':'unmute','unmute_chat':'unmute','unban':'unban',
             'ban':'ban','clear':'clear','kick':'kick'}.get (action )
             _sl_uid =getattr (interaction .user ,'id',0 )
             try :
@@ -611,7 +652,7 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,embed =error_embed (text ),ephemeral =True )
             return
 
-        if action in ("ban","kick","timeout","mute_chat","untimeout","vmute","vunmute"):
+        if action in ("ban","kick","timeout","mute_chat","untimeout","vmute","vunmute","unmute_chat"):
             user ,uid =self ._resolve_member (guild ,target )
             if not user and uid :
                 try :
@@ -622,6 +663,13 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,
                 embed =error_embed ("Пользователь не найден. Укажите @упоминание, точный ник или ID — ровно как на сервере."),
                 ephemeral =True )
+                return
+
+            _lift = action in ('untimeout', 'vunmute', 'unmute_chat')
+            if not _lift and _is_untouchable(guild, user):
+                await _respond(interaction, embed=error_embed(
+                    'Это владелец бота или сервера — наказывать нельзя.'),
+                    ephemeral=True)
                 return
 
             # ИЕРАРХИЯ ПЕРСОНАЛА: не наказываем персонал своего уровня и выше
@@ -644,6 +692,8 @@ class Moderation (commands .Cog ):
                 embed =error_embed (_pre ,"У бота не хватит прав"),ephemeral =True )
                 return
 
+            await _ack (interaction )
+
             try :
                 if action =="ban":
                     # «Бан» не выкидывает с сервера: все каналы закрываются,
@@ -665,13 +715,11 @@ class Moderation (commands .Cog ):
                         # получит САМ, когда подаст апелляцию в ЛС боту
                         # (/апелляция) — не в момент бана (заказ владельца)
                         await user .add_roles (_brole ,reason =reason or 'бан')
-                        msg =(f"🚫 роль бана «{_brole .name }» — каналы закрыты. "
-                              f"Апелляция — в ЛС боту (/апелляция), после подачи "
-                              f"откроется канал {_iso .mention }")
+                        msg =(f"роль бана «{_brole .name }» — каналы закрыты. "
+                              f"Апелляция откроется после подачи в личке бота")
                     else :
-                        msg =(f"🚫 закрыто каналов {_closed }. Апелляция — в ЛС "
-                              f"боту (/апелляция): после подачи откроется "
-                              f"{_iso .mention }")
+                        msg =(f"закрыто каналов {_closed }. "
+                              f"Апелляция откроется после подачи в личке бота")
                     try :
                         from services .staff_limits import record_hit as _sl_rec
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
@@ -806,13 +854,20 @@ class Moderation (commands .Cog ):
                     except Exception as _ve :
                         log .debug (f'[MODPANEL] vunmute edit: {_ve}')
                     msg ="🎙️ войс-мут снят — микрофон открыт"
+                elif action =="unmute_chat":
+                    try :
+                        from services import mute_state
+                        await mute_state .clear_chat_mute (guild ,user )
+                    except Exception as _mse :
+                        log .debug (f'[MODPANEL] unmute_chat: {_mse}')
+                    msg ="чат-мут снят, голос не тронут"
                 else :  # untimeout — снимаем ЛЮБОЙ мут (чат+войс) разом
                     try :
                         from services import mute_state
                         await mute_state .clear_all_mutes (guild ,user )
                     except Exception as _mse :
                         log .debug (f'[MODPANEL] untimeout clear all: {_mse}')
-                    msg ="🔊 мут снят (чат и голос)"
+                    msg ="мут снят (чат и голос)"
 
                 # Вспомогательные шаги: дело, DM, лог, уведомление панели.
                 # Каждый — в своём try: сбой побочного шага НЕ должен превращать
@@ -822,7 +877,8 @@ class Moderation (commands .Cog ):
                 # (бан и чистка пишутся в своих ветках)
                 try :
                     _sl_rec_key ={'timeout':'mute','mute_chat':'mute','vmute':'mute',
-                    'untimeout':'unmute','vunmute':'unmute','kick':'kick'}.get (action )
+                    'untimeout':'unmute','vunmute':'unmute','unmute_chat':'unmute',
+                    'kick':'kick'}.get (action )
                     if _sl_rec_key and guild :
                         from services .staff_limits import record_hit as _sl_rec 
                         _sl_rec (guild .id ,interaction .user .id ,_sl_rec_key ,1 )
@@ -845,7 +901,7 @@ class Moderation (commands .Cog ):
                     aux_errors .append ("DM не доставлен")
                     log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :
-                    log_ch_embed =mod_log_embed (action ,{"ban":"🚫 Апелляция","kick":"👢 Кик","timeout":"🔇 Мут","mute_chat":"🔇 Мут чата","vmute":"🎙️ Войс-мут","vunmute":"🎙️ Войс-мут снят","untimeout":"🔊 Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
+                    log_ch_embed =mod_log_embed (action ,{"ban":"Бан","kick":"Кик","timeout":"Мут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","unmute_chat":"Чат-мут снят","untimeout":"Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
                     await self .send_log (guild ,log_ch_embed )
                 except Exception as _log_e :
                     aux_errors .append ("лог-канал недоступен")
@@ -1310,7 +1366,7 @@ class Moderation (commands .Cog ):
 # Тот же путь исполнения, что у /modpanel, но «модератором» выступает
 # панель: действия пишутся в дела и логи от имени «Панель: <логин>».
 PANEL_ACTIONS = ('warn', 'unwarn', 'timeout', 'mute_chat', 'vmute', 'ban',
-                 'unban', 'untimeout', 'vunmute')
+                 'unban', 'untimeout', 'vunmute', 'unmute_chat')
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1322,7 +1378,8 @@ class _CtxMuteModal(discord.ui.Modal):
     """Окно мута из ПКМ: срок + причина."""
 
     duration = discord.ui.TextInput(
-        label='Срок (30 мин … 2 ч)', default='60м', max_length=16)
+        label='Срок (30 мин … 2 ч)', placeholder='30, 60, 2ч',
+        required=True, max_length=16)
     reason = discord.ui.TextInput(
         label='Причина', style=discord.TextStyle.paragraph,
         max_length=300, required=False)
@@ -1366,7 +1423,7 @@ class _CtxMuteModal(discord.ui.Modal):
             interaction.guild, self._member, self._action,
             reason=(str(self.reason.value or '').strip()
                     or 'Причина не указана'),
-            amount=str(self.duration.value or '60м'),
+            amount=str(self.duration.value or '').strip(),
             actor=getattr(interaction.user, 'display_name', None)
             or str(interaction.user),
             duration_cap=_dur_cap)
@@ -1420,22 +1477,24 @@ async def ctx_voice_mute(interaction, member: discord.Member):
 
 @app_commands.context_menu(name='🔊 Снять муты')
 async def ctx_unmute(interaction, member: discord.Member):
-    """Снять все муты через ПКМ: роли + нативные состояния."""
-    from services.permission_acl import check_action as _acl
-    if not _acl(interaction.guild_id, interaction.user, 'timeout'):
+    """Снять мут через ПКМ: сначала выбор чат / войс."""
+    kinds = unmute_kinds_for(interaction.guild_id, interaction.user)
+    if not kinds:
         return await interaction.response.send_message(
-            '🚫 Действие тебе не выдано (панель → Доступ → Права команд).',
+            'Снять мут тебе не выдано (панель → Доступ → Права команд).',
             ephemeral=True)
     mod = _mod_cog_of(interaction)
     if mod is None:
         return await interaction.response.send_message(
             'Модуль модерации не загружен.', ephemeral=True)
-    ok, text = await mod.apply_panel_action(
-        interaction.guild, member, 'untimeout', reason='ПКМ: снятие мутов',
-        actor=getattr(interaction.user, 'display_name', None)
-        or str(interaction.user))
+    embed = discord.Embed(
+        title="Снять мут",
+        description=f"{member.mention}\nКак снять — чат или войс.",
+        color=0x2ECC71)
     await interaction.response.send_message(
-        ('✅ ' if ok else '⚠️ ') + str(text), ephemeral=True)
+        embed=embed,
+        view=UnmuteKindView(mod, member.id, kinds, member=interaction.user),
+        ephemeral=True)
 
 
 _CTX_COMMANDS = (ctx_full_mute, ctx_voice_mute, ctx_unmute)
@@ -1524,10 +1583,9 @@ MODPANEL_ACTIONS = [
     ("timeout", "Мут (чат + войс)", "Заглушить чат и микрофон", "mute"),
     ("mute_chat", "Мут (только чат)", "Заглушить только чат", "mute"),
     ("vmute", "Мут (только войс)", "Заглушить только микрофон", "mute"),
-    ("untimeout", "Размут (чат + войс)", "Снять мут полностью", "unmute"),
-    ("vunmute", "Размут (войс)", "Вернуть микрофон", "unmute"),
+    ("unmute", "Снять мут", "Чат или войс — следующим шагом", "unmute"),
     ("clear", "Очистка сообщений", "Удалить сообщения в канале", "clear"),
-    ("ban", "Бан (апелляция)", "Закрыть каналы, оставить апелляцию", "ban"),
+    ("ban", "Бан", "Закрыть каналы", "ban"),
     ("unban", "Снять бан", "Вернуть доступ (по ID)", "unban"),
 ]
 
@@ -1543,6 +1601,8 @@ MODPANEL_EMOJI = {
     "clear": "🧹",
     "untimeout": "🔊",
     "vunmute": "🎤",
+    "unmute": "🔊",
+    "unmute_chat": "💬",
 }
 
 # Пункт /modpanel → «классическое» разрешение (панель → Доступ → Права
@@ -1563,11 +1623,29 @@ MODPANEL_ACL_KEYS = {
     "unban": "ban",
     "timeout": "timeout",
     "untimeout": "timeout",
+    "unmute": "timeout",
+    "unmute_chat": "mute",
     "mute_chat": "mute",
     "vmute": "vmute",
     "vunmute": "vmute",
     "clear": "purge",
 }
+
+
+def unmute_kinds_for(guild_id, member):
+    """Какие виды размута доступны: чат / войс / оба."""
+    chat = _action_acl_allows(guild_id, member, 'mute_chat') \
+        or _action_acl_allows(guild_id, member, 'timeout')
+    voice = _action_acl_allows(guild_id, member, 'vmute') \
+        or _action_acl_allows(guild_id, member, 'timeout')
+    out = []
+    if chat:
+        out.append(('unmute_chat', 'Чат', 'Вернуть переписку'))
+    if voice:
+        out.append(('vunmute', 'Войс', 'Вернуть микрофон'))
+    if chat and voice:
+        out.append(('untimeout', 'Чат и войс', 'Снять оба мута'))
+    return out
 
 
 def _action_acl_allows(guild_id, member, action_name):
@@ -1578,6 +1656,8 @@ def _action_acl_allows(guild_id, member, action_name):
     (default-deny). Сбой чтения БД — тоже скрываем (fail-close): лучше не
     показать пункт, чем дать невыданное право.
     """
+    if action_name == 'unmute':
+        return bool(unmute_kinds_for(guild_id, member))
     key = MODPANEL_ACL_KEYS.get(action_name)
     if not key:
         return False
@@ -1627,6 +1707,46 @@ def actions_for_member(guild, member):
     return [a for a in base if _action_acl_allows(guild.id, member, a[0])]
 
 
+class UnmuteKindSelect(discord.ui.Select):
+    """Второй шаг размута: чат / войс / оба. Без ввода и без кнопок."""
+
+    def __init__(self, cog, target_id, kinds):
+        options = [discord.SelectOption(
+            label=label, value=value, description=desc,
+            emoji=MODPANEL_EMOJI.get(value, '🔊'))
+            for value, label, desc in kinds]
+        super().__init__(placeholder="Как снять мут?",
+                         options=options, min_values=1, max_values=1)
+        self.cog = cog
+        self.target_id = str(target_id)
+
+    async def callback(self, interaction: discord.Interaction):
+        action = self.values[0]
+        if not await self.cog._ensure_action_acl(interaction, action):
+            return
+        await _ack(interaction)
+        await self.cog._execute_mod_action(
+            interaction, action, self.target_id,
+            'Снято через панель', '', proof_link=None)
+
+
+class UnmuteKindView(discord.ui.View):
+    """Короткое меню «чат или войс» после пункта «Снять мут»."""
+
+    def __init__(self, cog, target_id, kinds, member=None):
+        super().__init__(timeout=180)
+        self.cog = cog
+        self.member = member
+        self.add_item(UnmuteKindSelect(cog, target_id, kinds))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if self.member and getattr(interaction.user, 'id', None) != getattr(self.member, 'id', None):
+            await interaction.response.send_message(
+                'Это меню другого модератора.', ephemeral=True)
+            return False
+        return True
+
+
 class ModActionSelect(discord.ui.Select):
     """Выбор действия модерации — только то, что доступно этому модератору."""
 
@@ -1652,10 +1772,15 @@ class ModActionSelect(discord.ui.Select):
         # Защита на границе: доступ могли снять, пока меню было на экране
         if not await self.cog._ensure_action_acl(interaction, action):
             return
-        # Цель, выбранная мышкой в соседнем селекте участников (если есть) —
-        # подставляем в модалку заранее; модератор может и поправить руками.
+        # Цель: сначала то, что запомнили при клике по участнику (надёжнее,
+        # чем Select.values с соседнего селекта — он часто пустой).
         prefill = ""
-        if action != "clear":
+        try:
+            view = getattr(self, 'view', None)
+            prefill = str(getattr(view, 'selected_uid', None) or '')
+        except Exception:
+            prefill = ""
+        if not prefill and action != "clear":
             try:
                 _sel = getattr(self, "target_select", None)
                 _vals = list(getattr(_sel, "values", []) or [])
@@ -1663,6 +1788,39 @@ class ModActionSelect(discord.ui.Select):
                     prefill = str(_vals[0].id)
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
+        if action == "unmute":
+            kinds = unmute_kinds_for(interaction.guild_id, interaction.user)
+            if not kinds:
+                await _respond(interaction, embed=error_embed(
+                    'Снять мут тебе не выдано.'), ephemeral=True)
+                return
+            if not prefill:
+                await _respond(interaction, embed=error_embed(
+                    'Сначала выберите участника в меню выше.'), ephemeral=True)
+                return
+            if len(kinds) == 1:
+                await _ack(interaction)
+                await self.cog._execute_mod_action(
+                    interaction, kinds[0][0], prefill,
+                    'Снято через панель', '', proof_link=None)
+                return
+            who = prefill
+            try:
+                mem = interaction.guild.get_member(int(prefill))
+                if mem is not None:
+                    who = mem.mention
+            except Exception:
+                pass
+            embed = discord.Embed(
+                title="Снять мут",
+                description=f"{who}\nКак снять — чат или войс.",
+                color=0x2ECC71)
+            await interaction.response.send_message(
+                embed=embed,
+                view=UnmuteKindView(self.cog, prefill, kinds,
+                                    member=interaction.user),
+                ephemeral=True)
+            return
         modal = ModActionModal(self.cog, action, guild=interaction.guild,
                                prefill_target=prefill, user=interaction.user)
         await interaction.response.send_modal(modal)
@@ -1686,7 +1844,7 @@ class ModActionModal(discord.ui.Modal):
         self.action = action
         titles = {
             "warn": "Варн",
-            "ban": "Бан (апелляция)",
+            "ban": "Бан",
             "timeout": "Мут (чат + войс)",
             "mute_chat": "Мут (только чат)",
             "vmute": "Мут (только войс)",
@@ -1710,12 +1868,15 @@ class ModActionModal(discord.ui.Modal):
             self.add_item(self.target)
         if action in ("timeout", "mute_chat", "vmute", "clear"):
             if action == "clear":
-                _lbl, _ph, _d = "Сколько сообщений удалить?", "1-100", "10"
+                _lbl, _ph = "Сколько сообщений удалить?", "1-100"
+                self.amount = discord.ui.TextInput(
+                    label=_lbl, required=False, placeholder=_ph, default="10",
+                )
             else:
-                _lbl, _ph, _d = "На сколько? (30 мин … 2 ч)", "30, 60, 2ч", "60"
-            self.amount = discord.ui.TextInput(
-                label=_lbl, required=False, placeholder=_ph, default=_d,
-            )
+                self.amount = discord.ui.TextInput(
+                    label="На сколько? (30 мин … 2 ч)", required=True,
+                    placeholder="30, 60, 2ч",
+                )
             self.add_item(self.amount)
         self.reason = discord.ui.TextInput(
             label="Причина", required=False, placeholder="За что? (необязательно)",
@@ -1835,9 +1996,15 @@ class ModTargetSelect(discord.ui.UserSelect):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        # Выбор участника — МОЛЧА (заказ владельца 2026-09-05: «не надо
-        # сообщений что вы выбрали этого туда сюда»). Discord требует
-        # ответа на клик — отвечаем пустым ephemeral-defer: на экране НИЧЕГО.
+        # Выбор участника — МОЛЧА. ID кладём на View: соседний селект
+        # действий читает его, а не Select.values (он часто пустой).
+        try:
+            view = getattr(self, 'view', None)
+            vals = list(self.values or [])
+            if view is not None and vals:
+                view.selected_uid = str(vals[0].id)
+        except Exception as _pe:
+            log.debug("ModTargetSelect uid: %s", _pe)
         try:
             await interaction.response.defer(ephemeral=True)
         except Exception as _te:
@@ -1849,6 +2016,7 @@ class ModPanelView(discord.ui.View):
 
     def __init__(self, cog, member=None, allowed=None):
         super().__init__(timeout=300)
+        self.selected_uid = None
         # Сначала выбор участника мышкой, затем действие
         self.target_select = ModTargetSelect(cog)
         self.action_select = ModActionSelect(cog, member, allowed,

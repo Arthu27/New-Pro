@@ -41,7 +41,7 @@ LABELS = {
 
 # Действия-«снятия»: к ним применяется та же иерархия (нельзя лезть в
 # наказания персонала своего уровня и выше).
-REMOVE_ACTIONS = ('unwarn', 'untimeout', 'vunmute', 'unban')
+REMOVE_ACTIONS = ('unwarn', 'untimeout', 'vunmute', 'unmute_chat', 'unban', 'unmute')
 
 
 def target_panel_role(guild, member, bot=None):
@@ -135,13 +135,13 @@ def check(guild, actor, target, action='', *, actor_role=None,
             try:
                 from config import Config
                 if int(getattr(target, 'id', 0) or 0) in Config.all_owner_ids() \
-                        and a_role != 'owner':
+                        and a_role != 'owner' and action not in REMOVE_ACTIONS:
                     return (False, 'Это владелец бота — его наказывать нельзя.',
                             a_role, t_role)
             except Exception as _ex:
                 _log.debug('check: bot-owner target: %s', _ex)
             if getattr(target, 'id', None) == getattr(guild, 'owner_id', None) \
-                    and a_role != 'owner':
+                    and a_role != 'owner' and action not in REMOVE_ACTIONS:
                 return (False, 'Это владелец сервера — его наказывать нельзя.',
                         a_role, t_role)
             if getattr(target, 'bot', False):
