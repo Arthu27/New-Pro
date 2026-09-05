@@ -120,7 +120,15 @@ def validate_image_url(url):
         return False, 'в ссылке нет хоста'
     ext = os.path.splitext(p.path or '')[1].lower()
     if ext and ext not in _IMAGE_EXTS:
-        return False, f'«{ext}» — не картинка (нужны png/jpg/gif/webp)'
+        # Страницы-пины (pin.it/7jxEf3HAx, pinterest.com/pin/123/) —
+        # валидны: fetch_remote_image вытащит og:image со страницы
+        # (владелец 2026-09-05: «вот вам например pin.it/…»).
+        low_host = (p.netloc or '').lower()
+        low_path = (p.path or '').lower()
+        if not ('pin.it' in low_host or 'pinterest.' in low_host
+                and '/pin/' in low_path):
+            return False, f'«{ext}» — не картинка (нужны png/jpg/gif/webp ' \
+                          'или ссылка на пин Pinterest)'
     return True, ''
 
 
@@ -155,6 +163,40 @@ def _host_check(url):
     return True, '' 
 
 
+def _og_image_of(html):
+    """Достать og:image / twitter:image из HTML страницы (или None)."""
+    import re as _re
+    html = str(html or '')
+    m = _re.search(
+        r'<meta[^>]+(?:property|name)=["\']'
+        r'(?:og:image(?::secure_url)?|twitter:image(?:src)?)["\']'
+        r'[^>]+content=["\']([^"\']+)["\']', html, _re.I)
+    if not m:
+        m = _re.search(
+            r'content=["\']([^"\']+\.(?:jpg|jpeg|png|webp)[^"\']*)["\']'
+            r'[^>]*(?:property|name)=["\']'
+            r'(?:og:image|twitter:image)["\']', html, _re.I)
+    if not m:
+        return None
+    from urllib.parse import urljoin
+    cand = m.group(1).replace('&amp;', '&').strip()
+    return urljoin(str(url), cand) if 'url' in dir() else cand
+
+
+def _sniff_image_ext(head):
+    """Расширение по магическим байтам (контент решает, не URL)."""
+    png = bytes([0x89]) + b"PNG" + bytes([0x0D, 0x0A, 0x1A, 0x0A])
+    if head[:8] == png:
+        return ".png"
+    if head[:3] == bytes([0xFF, 0xD8, 0xFF]):
+        return ".jpg"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return ".webp"
+    if head[:6] in (b"GIF87a", b"GIF89a"):
+        return ".gif"
+    return None
+
+
 async def fetch_remote_image(url, timeout=12):
     """Скачать картинку по URL. Возвращает (bytes, filename) или (None, причина).
 
@@ -179,14 +221,31 @@ async def fetch_remote_image(url, timeout=12):
                     return None, f'хост ответил {resp.status}'
                 ctype = (resp.headers.get('Content-Type') or '').split(';')[0].strip().lower()
                 if ctype and not ctype.startswith('image/'):
-                    return None, f'по ссылке не картинка ({ctype})'
-                data = await resp.read()
+                    # Страница (pin.it, соцсети, сайты)? Пробуем вытащить
+                    # og:image / twitter:image — люди копируют ссылки-СТРАНИЦЫ
+                    # (владелец 2026-09-05: «вот вам например pin.it/…»).
+                    page = await resp.text(errors='ignore')
+                    cand = _og_image_of(page)
+                    if not cand:
+                        return None, 'по ссылке страница, а не картинка'
+                    async with ses.get(cand, timeout=None) as r2:
+                        if r2.status != 200:
+                            return None, f'картинка на странице недоступна ({r2.status})'
+                        ctype = (r2.headers.get('Content-Type') or '') \
+                            .split(';')[0].strip().lower()
+                        if ctype and not ctype.startswith('image/'):
+                            return None, 'на странице не нашлось картинки'
+                        data = await r2.read()
+                        url = str(r2.url)
+                else:
+                    data = await resp.read()
                 if len(data) > MAX_REMOTE_IMAGE_BYTES:
                     return None, (f'файл больше {MAX_REMOTE_IMAGE_BYTES // (1024 * 1024)} МиБ — '
                                   'Discord вложение такого размера не примет')
                 if not data:
                     return None, 'пустой ответ'
-                ext = os.path.splitext(str(url).split('?')[0])[1].lower() or '.png'
+                ext = _sniff_image_ext(data[:32]) or \
+                    os.path.splitext(str(url).split('?')[0])[1].lower()
                 if ext not in _IMAGE_EXTS:
                     ext = '.png'
                 return data, 'appeal_image' + ext

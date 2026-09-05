@@ -182,6 +182,26 @@ try:
 finally:
     AC.fetch_remote_image = _orig_fetch
 
+# 5б-2. страницы-пины (pin.it → og:image → файл) и sniff формата
+from services.appeal_card import _og_image_of, _sniff_image_ext  # noqa: E402
+
+_html = ('<meta property="og:image" '
+         'content="https://i.pinimg.com/originals/aa/bb/cc/pic.jpg">')
+check(_og_image_of(_html) == 'https://i.pinimg.com/originals/aa/bb/cc/pic.jpg',
+      'og:image вытаскивается из страницы пина')
+check(_og_image_of('<html></html>') is None, 'без og:image — None, без падений')
+check(_sniff_image_ext(bytes([0x89]) + b'PNG' +
+                       bytes([0x0D, 0x0A, 0x1A, 0x0A]) + b'x' * 8) == '.png'
+      and _sniff_image_ext(bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b'x' * 8) == '.jpg'
+      and _sniff_image_ext(b'RIFF\x00\x00\x00\x00WEBP' + b'x' * 4) == '.webp'
+      and _sniff_image_ext(b'GIF89a123') == '.gif',
+      'формат картинки определяется по содержимому (маг. байты), не по URL')
+ok_pin, _w = validate_image_url('https://pin.it/7jxEf3HAx')
+check(ok_pin, 'ссылка-страница pin.it проходит валидацию (вытащим og:image)')
+ok_php, why_php = validate_image_url('https://example.com/pic.php')
+check(not ok_php and 'Pinterest' in why_php,
+      'не-картинка и не пин — честная причина с подсказкой')
+
 # 5в. авто-превью (тема) по-прежнему рисуется
 r_auto = _client.get('/api/guild/777/appeals/card-preview.png?theme=hakumo')
 check(r_auto.status_code == 200 and r_auto.data[:4] == b'\x89PNG',
@@ -191,8 +211,10 @@ check(r_auto.status_code == 200 and r_auto.data[:4] == b'\x89PNG',
 atpl = open(os.path.join(ROOT, 'web', 'templates', 'appeals.html'), encoding='utf-8').read()
 check('mode=url&url=' in atpl,
       'предпросмотр «своя URL» идёт через серверный загрузчик')
-check('onerror' in atpl and 'недоступна' in atpl,
+check('onerror' in atpl and 'скачать не вышло' in atpl,
       'если картинку отдать не смог хост — владелец видит честное сообщение')
+check('pin' in atpl.lower(),
+      'подсказка упоминает страницы-пины Pinterest (как у владельца)')
 
 print()
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

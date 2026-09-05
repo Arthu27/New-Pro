@@ -460,7 +460,7 @@ function refreshAppearanceUi() {
     el.pv.onerror = null;
     el.pv.removeAttribute('src');
     el.pv.style.opacity = '1';
-    if (window.showToast) window.showToast('Картинка по ссылке недоступна (хост не отдал файл, не https или больше 8 МиБ) — в Discord она тоже не поедет', false);
+    if (window.showToast) window.showToast('Картинку по этой ссылке скачать не вышло. Нужен https, публичный сайт и до 8 МиБ — или ссылка на пин Pinterest (страницы пинов понимаем). Что не так — написано под полем', false);
   };
   el.pv.onload = function () { el.pv.style.opacity = '1'; };
   el.pv.src = apLookPreviewSrc();
