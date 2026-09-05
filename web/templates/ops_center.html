@@ -65,7 +65,7 @@
     <div class="panel-head">
       <div><h2><i class="fas fa-terminal"></i> Живые логи бота</h2>
         <div class="sub">Хвост системного журнала в реальном времени.</div></div>
-      <a class="btn-link" href="/konsol" style="margin-left:auto">Консоль <i class="fas fa-arrow-right"></i></a>
+      {% if '/konsol' in panel_visible_paths %}<a class="btn-link" href="/konsol" style="margin-left:auto">Консоль <i class="fas fa-arrow-right"></i></a>{% endif %}
     </div>
     <div class="panel-body mono" id="liveLogs" style="font-size:11.5px;line-height:1.7;max-height:360px;overflow-y:auto">
       <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к логам</span></div>
@@ -79,11 +79,11 @@
     <div class="sub">Быстрые переходы к операционным разделам.</div></div></div>
   <div class="panel-body">
     <div class="cc-quick">
-      <a class="cc-tile" href="/bot-diagnostics"><span class="cc-ico"><i class="fas fa-heartbeat"></i></span><span><b>Диагностика</b><small>Проверки системы бота</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-      <a class="cc-tile tone-warn" href="/anticrash"><span class="cc-ico"><i class="fas fa-life-ring"></i></span><span><b>Анти-краш</b><small>Защита от падений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-      <a class="cc-tile tone-info" href="/backups"><span class="cc-ico"><i class="fas fa-save"></i></span><span><b>Бэкапы</b><small>Архивы данных</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-      <a class="cc-tile tone-ok" href="/server-health"><span class="cc-ico"><i class="fas fa-heart-pulse"></i></span><span><b>Состояние</b><small>Здоровье сервисов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-      <a class="cc-tile" href="/cog-manager"><span class="cc-ico"><i class="fas fa-cubes"></i></span><span><b>Модули</b><small>Включение когов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+      {% if '/bot-diagnostics' in panel_visible_paths %}<a class="cc-tile" href="/bot-diagnostics"><span class="cc-ico"><i class="fas fa-heartbeat"></i></span><span><b>Диагностика</b><small>Проверки системы бота</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+      {% if '/anticrash' in panel_visible_paths %}<a class="cc-tile tone-warn" href="/anticrash"><span class="cc-ico"><i class="fas fa-life-ring"></i></span><span><b>Анти-краш</b><small>Защита от падений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+      {% if '/backups' in panel_visible_paths %}<a class="cc-tile tone-info" href="/backups"><span class="cc-ico"><i class="fas fa-save"></i></span><span><b>Бэкапы</b><small>Архивы данных</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+      {% if '/server-health' in panel_visible_paths %}<a class="cc-tile tone-ok" href="/server-health"><span class="cc-ico"><i class="fas fa-heart-pulse"></i></span><span><b>Состояние</b><small>Здоровье сервисов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+      {% if '/cog-manager' in panel_visible_paths %}<a class="cc-tile" href="/cog-manager"><span class="cc-ico"><i class="fas fa-cubes"></i></span><span><b>Модули</b><small>Включение когов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
       <a class="cc-tile tone-info" href="/status" target="_blank" rel="noopener"><span class="cc-ico"><i class="fas fa-arrow-up-right-from-square"></i></span><span><b>Публичный статус</b><small>Страница для участников</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
     </div>
   </div>

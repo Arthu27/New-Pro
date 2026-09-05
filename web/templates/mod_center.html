@@ -148,14 +148,14 @@
 {% set _lvl = {'uye':0,'mod':1,'curator':2,'admin':3,'owner':4} %}
 {% set _role_lvl = _lvl.get(panel_role or role or 'uye', 0) %}
 <div class="cc-quick" style="margin-bottom:14px">
-  <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Новая мера</b><small>Мьют или бан с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-warn" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Выдать варн</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  {% if _role_lvl >= 3 %}
+  {% if '/temp-moderation' in panel_visible_paths %}<a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Новая мера</b><small>Мьют или бан с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/warnings' in panel_visible_paths %}<a class="cc-tile tone-warn" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Выдать варн</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if _role_lvl >= 3 and '/antiraid' in panel_visible_paths %}
   <a class="cc-tile tone-err" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Экстренная защита от волн</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   {% endif %}
-  <a class="cc-tile" href="/antifake"><span class="cc-ico"><i class="fas fa-user-secret"></i></span><span><b>Скан профиля</b><small>Проверка на подделку</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Проверить текст</b><small>Тест автофильтра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-ok" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  {% if '/antifake' in panel_visible_paths %}<a class="cc-tile" href="/antifake"><span class="cc-ico"><i class="fas fa-user-secret"></i></span><span><b>Скан профиля</b><small>Проверка на подделку</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/autofilter' in panel_visible_paths %}<a class="cc-tile tone-info" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Проверить текст</b><small>Тест автофильтра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/appeals' in panel_visible_paths %}<a class="cc-tile tone-ok" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
 </div>
 
 <!-- Аналитика -->
@@ -163,7 +163,7 @@
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-chart-area"></i> Активность за 7 дней</h2>
       <div class="sub">Все мод-действия команды.</div></div>
-      <a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a></div>
+      {% if '/mod-insights' in panel_visible_paths %}<a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
     <div class="panel-body"><div class="chart-box" id="mcArea"></div></div>
   </div>
   <div class="panel">
@@ -187,13 +187,13 @@
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-user-slash"></i> ТОП нарушителей</h2>
       <div class="sub">Больше всего мер за последние 7 дней.</div></div>
-      <a class="btn-link" href="/warnings" style="margin-left:auto">Варны <i class="fas fa-arrow-right"></i></a></div>
+      {% if '/warnings' in panel_visible_paths %}<a class="btn-link" href="/warnings" style="margin-left:auto">Варны <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
     <div class="panel-body" id="mcTopOffenders"><div class="sk-line" style="height:12px"></div></div>
   </div>
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-people-group"></i> Нагрузка команды</h2>
       <div class="sub">Кто сколько мер вынес за 7 дней.</div></div>
-      <a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a></div>
+      {% if '/mod-insights' in panel_visible_paths %}<a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
     <div class="panel-body" id="mcTeamLoad"><div class="sk-line" style="height:12px"></div></div>
   </div>
 </div>
@@ -215,7 +215,7 @@
     <div class="panel-head"><div><h2><i class="fas fa-clipboard-list"></i> Последние действия</h2>
       <div class="sub">Хвост журнала модерации: действие, цель, модератор и причина.</div></div>
       <span class="badge neutral mono" id="mcFeedCount">0</span>
-      <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a></div>
+      {% if '/logs' in panel_visible_paths %}<a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
     <div class="panel-body mc-feed-body" id="mcFeed">
       <div class="empty-tip"><i class="fas fa-circle-notch fa-spin"></i> Загружаем последние действия…</div>
     </div>
@@ -235,7 +235,7 @@
         <div class="cc-quick" style="margin-bottom:8px">
           {% for it in section.pages %}
           <a class="cc-tile tone-{{ it.tone }} tool-card" href="{{ it.path }}">
-            <span class="cc-ico"><i class="fas {{ it.icon }}"></i></span>
+            <span class="cc"><i class="fas {{ it.icon }}"></i></span>
             <span style="min-width:0"><b>{{ it.label }}</b><small style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.description }}</small></span>
             <span class="badge neutral" style="flex:0 0 auto">{{ it.access }}</span>
           </a>
@@ -251,6 +251,7 @@
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
+  var LOGS_HREF = {{ ('/logs' if '/logs' in panel_visible_paths else '')|tojson }};
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
     if (!iso) return '—';
@@ -428,7 +429,9 @@
           var target = log.user_name || log.target_name || log.user_id || '—';
           var mod = log.mod_name || log.mod_id || '—';
           var reason = log.reason || '';
-          return '<a class="mc-feed-item" href="/logs" title="Открыть журнал">' +
+          var tag = LOGS_HREF ? 'a' : 'div';
+          var href = LOGS_HREF ? ' href="' + LOGS_HREF + '" title="Открыть журнал"' : '';
+          return '<' + tag + ' class="mc-feed-item"' + href + '>' +
             '<span class="mc-feed-ico ' + tone + '"><i class="fas ' + icon + '"></i></span>' +
             '<span class="mc-feed-copy">' +
               '<span class="mc-feed-line"><b>' + esc(log.action || '?') + '</b>' +
@@ -437,7 +440,7 @@
               (reason ? '<span class="mc-feed-reason" title="' + esc(reason) + '">' + esc(reason) + '</span>' : '') +
             '</span>' +
             '<span class="mc-feed-time">' + esc(fmtDate(log.timestamp)) + '</span>' +
-          '</a>';
+          '</' + tag + '>';
         }).join('') + '</div>';
       }
     } catch (e) { /* графики опциональны */ }

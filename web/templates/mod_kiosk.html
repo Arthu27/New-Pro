@@ -350,7 +350,7 @@
 
     <button type="button" class="btn" id="kioskTheme" title="Ночной режим штаба (T)"><i class="fas fa-moon" id="kioskThemeIcon"></i></button>
     <button type="button" class="btn" id="kioskFull" title="Во весь экран (F)"><i class="fas fa-expand"></i></button>
-    <a class="btn" href="/mod-center" title="Вернуться в центр модерации (Esc)"><i class="fas fa-arrow-left"></i> В штаб</a>
+    {% if '/mod-center' in panel_visible_paths %}<a class="btn" href="/mod-center" title="Вернуться в центр модерации (Esc)"><i class="fas fa-arrow-left"></i> В штаб</a>{% elif '/' in panel_visible_paths %}<a class="btn" href="/" title="На главную (Esc)"><i class="fas fa-arrow-left"></i> На главную</a>{% endif %}
   </div>
 
   <main class="kiosk-main" id="kioskMain">
@@ -395,36 +395,48 @@
       <div class="kiosk-col">
         <div class="kiosk-panel">
           <h3><i class="fas fa-list-check"></i> Что делать дежурному <span class="right">клик — переход в раздел</span></h3>
+          {% if '/appeals' in panel_visible_paths %}
           <a class="k-task" data-tone="warn" href="/appeals">
             <span class="ico"><i class="fas fa-scale-balanced"></i></span>
             <span class="copy"><b>Апелляции в очереди</b><small>Разбери заявки участников на пересмотр</small></span>
             <span class="c" id="ktAppeals">—</span><i class="fas fa-chevron-right go"></i>
           </a>
+          {% endif %}
+          {% if '/reports-queue' in panel_visible_paths %}
           <a class="k-task" data-tone="info" href="/reports-queue">
             <span class="ico"><i class="fas fa-flag"></i></span>
             <span class="copy"><b>Репорты в очереди</b><small>Разбери жалобы участников или передай коллеге</small></span>
             <span class="c" id="ktTickets">—</span><i class="fas fa-chevron-right go"></i>
           </a>
+          {% endif %}
+          {% if '/proofs' in panel_visible_paths %}
           <a class="k-task" data-tone="ok" href="/proofs">
             <span class="ico"><i class="fas fa-folder-open"></i></span>
             <span class="copy"><b>Демки на проверку</b><small>Подтверди или отклони доказательства</small></span>
             <span class="c" id="ktProofs">—</span><i class="fas fa-chevron-right go"></i>
           </a>
+          {% endif %}
+          {% if '/temp-moderation' in panel_visible_paths %}
           <a class="k-task" data-tone="err" href="/temp-moderation">
             <span class="ico"><i class="fas fa-clock"></i></span>
             <span class="copy"><b>Активные временные меры</b><small>Мьюты и баны с таймером — следи за истечением</small></span>
             <span class="c" id="ktTemp">—</span><i class="fas fa-chevron-right go"></i>
           </a>
+          {% endif %}
+          {% if '/warnings' in panel_visible_paths %}
           <a class="k-task" data-tone="warn" href="/warnings">
             <span class="ico"><i class="fas fa-triangle-exclamation"></i></span>
             <span class="copy"><b>Варны за сегодня</b><small>Свежие предупреждения и их причины</small></span>
             <span class="c" id="ktWarnsToday">—</span><i class="fas fa-chevron-right go"></i>
           </a>
+          {% endif %}
+          {% if '/security' in panel_visible_paths %}
           <a class="k-task" data-tone="err" href="/security">
             <span class="ico"><i class="fas fa-shield-virus"></i></span>
             <span class="copy"><b>Уровень угрозы</b><small>Общий контур безопасности сервера</small></span>
             <span class="c" id="ktThreat">—</span><i class="fas fa-chevron-right go"></i>
           </a>
+          {% endif %}
         </div>
 
         <div class="kiosk-panel">
@@ -469,6 +481,10 @@
     <span><kbd>Esc</kbd> вернуться в штаб</span>
   </div>
 
+  {% if role != 'uye' %}
+  <script type="application/json" id="palette-data">{{ panel_menu|tojson }}</script>
+  <script type="application/json" id="menu-all-paths">{{ panel_all_paths|tojson }}</script>
+  {% endif %}
   <script src="/static/app.js?v={{ static_v('app.js') }}"></script>
   <script>
   (function () {
@@ -827,11 +843,15 @@
         var TONE = { mod: 'warn', warn: 'warn', ticket: 'info', auth: '', panel: '', system: '' };
         box.innerHTML = top.map(function (it) {
           var icon = /^fa-/.test(it.icon || '') ? it.icon : 'fa-bell';
-          return '<a class="k-feed-row" data-tone="' + (TONE[it.type] || '') + '" href="' + esc(it.link || '/panel-logs') + '">' +
+          var href = it.link || '/panel-logs';
+          if (window.panelPathHidden && window.panelPathHidden(href)) href = '';
+          var tag = href ? 'a' : 'div';
+          var hrefAttr = href ? ' href="' + esc(href) + '"' : '';
+          return '<' + tag + ' class="k-feed-row" data-tone="' + (TONE[it.type] || '') + '"' + hrefAttr + '>' +
             '<span class="ico"><i class="fas ' + esc(icon) + '"></i></span>' +
             '<span class="copy"><b>' + esc(it.title || '—') + '</b>' +
             '<small>' + (it.user ? esc(it.user) + ' · ' : '') + esc(it.detail || '') + '</small></span>' +
-            '<span class="tm">' + esc((it.ts ? new Date(it.ts * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '—')) + '</span></a>';
+            '<span class="tm">' + esc((it.ts ? new Date(it.ts * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '—')) + '</span></' + tag + '>';
         }).join('');
       } catch (e) {}
     }
@@ -875,7 +895,10 @@
     document.addEventListener('keydown', function (e) {
       var tag = (e.target && e.target.tagName || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-      if (e.key === 'Escape' && !document.fullscreenElement) window.location.href = '/mod-center';
+      if (e.key === 'Escape' && !document.fullscreenElement) {
+        var dest = {{ ('/mod-center' if '/mod-center' in panel_visible_paths else '/')|tojson }};
+        window.location.href = dest;
+      }
       else if (e.key === 'F' || e.key === 'f' || e.key === 'а' || e.key === 'А') $('kioskFull').click();
       else if (e.key === 'T' || e.key === 't' || e.key === 'е' || e.key === 'Е') $('kioskTheme').click();
     });

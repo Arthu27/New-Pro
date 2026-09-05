@@ -385,11 +385,11 @@
 
 <div class="gd-info">
   <h3><i class="fas fa-circle-info"></i> Как всё связано</h3>
-  <b>Куда летят тревоги:</b> настраивается в <a href="/channel-settings">Каналах и маршрутах</a>
+  <b>Куда летят тревоги:</b> настраивается{% if '/channel-settings' in panel_visible_paths %} в <a href="/channel-settings">Каналах и маршрутах</a>{% else %} в «Каналах и маршрутах»{% endif %}
   (маршрут «Канал оповещений Щита», по умолчанию — авто, лог-модерации).
-  <b>Массовые заходы и рейды</b> — это <a href="/antiraid">Анти-рейд</a>;
-  <b>спам, фейки и ссылки</b> — <a href="/security">Центр безопасности</a>;
-  <b>здоровье самого бота</b> — <a href="/anticrash">Анти-краш</a>.
+  <b>Массовые заходы и рейды</b> — это {% if '/antiraid' in panel_visible_paths %}<a href="/antiraid">Анти-рейд</a>{% else %}Анти-рейд{% endif %};
+  <b>спам, фейки и ссылки</b> — {% if '/security' in panel_visible_paths %}<a href="/security">Центр безопасности</a>{% else %}Центр безопасности{% endif %};
+  <b>здоровье самого бота</b> — {% if '/anticrash' in panel_visible_paths %}<a href="/anticrash">Анти-краш</a>{% else %}Анти-краш{% endif %}.
   Вместе они держат сервер в броне. Обзор состояния Щита виден всем модераторам в Центре безопасности.
 </div>
 
@@ -440,7 +440,8 @@ function renderHero() {
     '<span class="gd-chip"><i class="fas fa-bolt"></i>событий под защитой: <b>' + on + ' / ' + EVENTS.length + '</b></span>' +
     '<span class="gd-chip"><i class="fas fa-gavel"></i>мера: <b>' + esc(punLabel(CFG.punishment)) + '</b></span>' +
     '<span class="gd-chip"><i class="fas fa-robot"></i>боты: <b>' + esc(punLabel(CFG.bot_action)) + '</b></span>' +
-    '<span class="gd-chip"><i class="fas fa-route"></i>канал тревог: <a href="/channel-settings">настройка</a></span>';
+    ((window.panelPathHidden && window.panelPathHidden('/channel-settings')) ? '' :
+    '<span class="gd-chip"><i class="fas fa-route"></i>канал тревог: <a href="/channel-settings">настройка</a></span>');
 }
 
 function punLabel(key) {

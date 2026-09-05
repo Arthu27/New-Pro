@@ -251,12 +251,19 @@ def register(ctx):
         import web.app as _app
         bot = _app.bot_instance
         gid = ctx.active_guild_id()
+        vis = panel_menu.visible_paths_for(session.get('role'))
+        allp = panel_menu.all_menu_paths()
+
+        def _dest_ok(path):
+            # Не меню — оставляем. Пункт меню скрыт лэйаутом — не ведём туда.
+            return path not in allp or path in vis
+
         found = {
             'pages': search_pages(session.get('role'), q),
-            'members': search_members(bot, gid, q),
-            'transcripts': search_transcripts(q),
-            'triggers': search_triggers(gid, q),
-            'announcements': search_announcements(q),
+            'members': search_members(bot, gid, q) if _dest_ok('/member-search') else [],
+            'transcripts': search_transcripts(q) if _dest_ok('/transcripts') else [],
+            'triggers': search_triggers(gid, q) if _dest_ok('/antifake') else [],
+            'announcements': search_announcements(q) if _dest_ok('/announcements') else [],
         }
         groups = [{'key': k, 'title': t, 'items': found[k]}
                   for k, t in GROUPS_META if found[k]]

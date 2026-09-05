@@ -419,6 +419,21 @@ def _all_menu_paths():
     return {pg['path'] for g in MENU for pg in g['pages']}
 
 
+def all_menu_paths():
+    """Все пути MENU (для фильтрации хрома: FAB, палитра, поиск)."""
+    return _all_menu_paths()
+
+
+def visible_paths_for(role):
+    """Пути, реально видимые этой роли: роль + лэйаут + выключенные модули.
+
+    Единый источник правды для сайдбара, палитры, мобильной навигации
+    и FAB: скрытая в «Порядке и скрытии» страница не должна всплывать
+    ни одной ссылкой, которая ведёт в отказ.
+    """
+    return {p['path'] for g in panel_groups_for(role) for p in g.get('pages', [])}
+
+
 def layout_view():
     """Лэйаут из data/panel_menu.json: {hidden_pages: [...], order: {group: [...]}}."""
     lay = _load().get(LAYOUT_KEY) or {}

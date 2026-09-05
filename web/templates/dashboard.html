@@ -119,7 +119,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     <div class="mt-head">
       <div class="mt-title-row">
         <h2><i class="fas fa-shield-halved"></i> Модерация сегодня</h2>
-        <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>
+        {% if '/logs' in panel_visible_paths %}<a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>{% endif %}
       </div>
       <div class="mt-sub">Действия команды за сегодня — цифры обновляются сами.</div>
     </div>
@@ -153,7 +153,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
         <!-- п.2: индикатор угрозы — только числом, без полосы -->
         <div class="row" style="margin-top:14px">
           <button type="button" class="btn" id="btnLockdown"><i class="fas fa-house-lock"></i> <span id="btnLockdownText">Lockdown</span></button>
-          <a class="btn-link" href="/security">Центр безопасности <i class="fas fa-arrow-right"></i></a>
+          {% if '/security' in panel_visible_paths %}<a class="btn-link" href="/security">Центр безопасности <i class="fas fa-arrow-right"></i></a>{% endif %}
         </div>
       </div>
     </div>
@@ -202,15 +202,15 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 
 <!-- Быстрые действия -->
 <div class="cc-quick" data-widget="quick">
-  <a class="cc-tile" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Варны</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Временные меры</b><small>Мьюты и баны с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile" href="/logs"><span class="cc-ico"><i class="fas fa-clipboard-list"></i></span><span><b>Журнал</b><small>Лента действий команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-ok" href="/proofs"><span class="cc-ico"><i class="fas fa-folder-open"></i></span><span><b>Доказательства</b><small>Архив демок</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Автофильтр</b><small>Слова, ссылки, флуд</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-warn" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Защита от волн входов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-err" href="/mod-center"><span class="cc-ico"><i class="fas fa-shield-halved"></i></span><span><b>Центр модерации</b><small>Сводный штаб раздела</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/ladder"><span class="cc-ico"><i class="fas fa-layer-group"></i></span><span><b>Лестница наказаний</b><small>Эскалация мер</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  {% if '/warnings' in panel_visible_paths %}<a class="cc-tile" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Варны</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/temp-moderation' in panel_visible_paths %}<a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Временные меры</b><small>Мьюты и баны с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/logs' in panel_visible_paths %}<a class="cc-tile" href="/logs"><span class="cc-ico"><i class="fas fa-clipboard-list"></i></span><span><b>Журнал</b><small>Лента действий команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/proofs' in panel_visible_paths %}<a class="cc-tile tone-ok" href="/proofs"><span class="cc-ico"><i class="fas fa-folder-open"></i></span><span><b>Доказательства</b><small>Архив демок</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/appeals' in panel_visible_paths %}<a class="cc-tile tone-info" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/autofilter' in panel_visible_paths %}<a class="cc-tile" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Автофильтр</b><small>Слова, ссылки, флуд</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/antiraid' in panel_visible_paths %}<a class="cc-tile tone-warn" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Защита от волн входов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/mod-center' in panel_visible_paths %}<a class="cc-tile tone-err" href="/mod-center"><span class="cc-ico"><i class="fas fa-shield-halved"></i></span><span><b>Центр модерации</b><small>Сводный штаб раздела</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/ladder' in panel_visible_paths %}<a class="cc-tile tone-info" href="/ladder"><span class="cc-ico"><i class="fas fa-layer-group"></i></span><span><b>Лестница наказаний</b><small>Эскалация мер</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
 </div>
 
 <!-- KPI -->
@@ -328,7 +328,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   <div class="panel">
     <div class="panel-head">
       <div><h2><i class="fas fa-chart-area"></i> Активность модерации</h2><div class="sub">Действия команды за последние 7 дней.</div></div>
-      <a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a>
+      {% if '/mod-insights' in panel_visible_paths %}<a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a>{% endif %}
     </div>
     <div class="panel-body">
       <div class="chart-box" id="modArea"></div>
@@ -345,7 +345,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 <div class="panel" data-widget="calendar" style="margin-top:14px">
   <div class="panel-head"><div><h2><i class="fas fa-calendar-days"></i> Календарь активности</h2>
     <div class="sub">Интенсивность мод-действий за последние 90 дней.</div></div>
-    <a class="btn-link" href="/mod-center" style="margin-left:auto">Центр модерации <i class="fas fa-arrow-right"></i></a></div>
+    {% if '/mod-center' in panel_visible_paths %}<a class="btn-link" href="/mod-center" style="margin-left:auto">Центр модерации <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
   <div class="panel-body" id="dashCalendar"><div class="sk-line" style="height:12px"></div></div>
 </div>
 
@@ -1040,12 +1040,16 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     var tone = PULSE_TONES[it.type] || ['fa-circle', 'neutral'];
     var icon = /^fa-/.test(it.icon || '') ? it.icon : tone[0];
     var fp = (it.ts || '') + '|' + (it.title || '') + '|' + (it.user || '');
-    return '<a class="feed-item pulse-item" href="' + esc(it.link || '/panel-logs') + '" data-fp="' + esc(fp) + '">' +
+    var href = it.link || '/panel-logs';
+    if (window.panelPathHidden && window.panelPathHidden(href)) href = '';
+    var tag = href ? 'a' : 'div';
+    var hrefAttr = href ? ' href="' + esc(href) + '"' : '';
+    return '<' + tag + ' class="feed-item pulse-item"' + hrefAttr + ' data-fp="' + esc(fp) + '">' +
       '<div class="feed-item-icon"><i class="fas ' + esc(icon) + '"></i></div>' +
       '<div class="feed-item-copy"><div class="feed-item-title">' + esc(it.title || '') +
       (it.user ? ' <span class="muted" style="font-weight:500">— ' + esc(it.user) + '</span>' : '') + '</div>' +
       (it.detail ? '<div class="feed-item-sub">' + esc(it.detail) + '</div>' : '') + '</div>' +
-      '<span class="feed-item-time">' + esc(timeAgo(it.ts)) + '</span></a>';
+      '<span class="feed-item-time">' + esc(timeAgo(it.ts)) + '</span></' + tag + '>';
   }
 
   async function loadPulse() {

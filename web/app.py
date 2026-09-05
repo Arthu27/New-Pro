@@ -3691,9 +3691,10 @@ def inject_panel_menu ():
     чьи коги выключены (приглушаются в меню с чипом «выкл»).
     """
     from services .panel_menu import (panel_groups_for, module_mode_active,
-    module_off_paths)
+    module_off_paths, visible_paths_for, all_menu_paths)
     role =session .get ('role','uye')
     menu =panel_groups_for (role )if ROLES .get (role ,-1 )>=ROLES ['mod']else []
+    vis =sorted (visible_paths_for (role ))if ROLES .get (role ,-1 )>=ROLES ['mod']else []
     off_paths =module_off_paths ()
     # бейджи пунктов меню: красный счётчик «Апелляции ждут решения»
     nav_badges ={}
@@ -3711,6 +3712,8 @@ def inject_panel_menu ():
     return {'panel_menu':menu ,'panel_role':role ,
             'panel_mod_only':module_mode_active (),
             'panel_off_paths':off_paths,
+            'panel_visible_paths':vis ,
+            'panel_all_paths':sorted (all_menu_paths ()),
             'nav_badges':nav_badges}
 
 @app .route ('/api/panel/sidebar')

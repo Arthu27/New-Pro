@@ -488,7 +488,67 @@
       var node = doc.getElementById('palette-data');
       if (node) paletteData = JSON.parse(node.textContent || '[]');
     } catch (e) { paletteData = []; }
+    var vis = {};
+    paletteData.forEach(function (grp) {
+      (grp.pages || []).forEach(function (p) {
+        if (p && p.path) vis[p.path] = 1;
+      });
+    });
+    window.__panelVisiblePaths = vis;
+    var all = {};
+    try {
+      var n2 = doc.getElementById('menu-all-paths');
+      if (n2) JSON.parse(n2.textContent || '[]').forEach(function (p) { all[p] = 1; });
+    } catch (e) {}
+    window.__panelAllPaths = all;
   }
+
+  function menuPathOf(href) {
+    var p = String(href || '').split('?')[0];
+    if (p === '/logs/export') p = '/logs';
+    return p;
+  }
+
+  window.panelPathVisible = function (href) {
+    var vis = window.__panelVisiblePaths || {};
+    return !!vis[menuPathOf(href)];
+  };
+
+  /* Известный пункт MENU, спрятанный лэйаутом — не показываем ссылку. */
+  window.panelPathHidden = function (href) {
+    var p = menuPathOf(href);
+    if (p === '/lockdown') return false; /* FAB-only, не пункт меню */
+    var all = window.__panelAllPaths || {};
+    if (!all[p]) return false;
+    return !window.panelPathVisible(p);
+  };
+
+  /* Страховка: скрытый пункт не остаётся плиткой/ссылкой нигде на странице. */
+  window.stripHiddenMenuLinks = function (root) {
+    if (!window.panelPathHidden) return;
+    root = root || doc;
+    if (!root.querySelectorAll) return;
+    Array.prototype.forEach.call(root.querySelectorAll('a[href]'), function (a) {
+      var href = a.getAttribute('href') || '';
+      if (!window.panelPathHidden(href)) return;
+      var cls = ' ' + (a.className || '') + ' ';
+      var chrome = / (cc-tile|btn|btn-link|nav-link|set-link|ms-link|k-task|welcome-card|fab-item|ac-link|sp-card|mf-act|k-feed-row) /.test(cls)
+        || !!(a.closest && a.closest('.cc-quick, .mobile-nav, .user-menu, .sidebar, .ms-links, .ac-links'));
+      if (chrome) { if (a.parentNode) a.parentNode.removeChild(a); return; }
+      var s = doc.createElement('span');
+      s.innerHTML = a.innerHTML;
+      if (a.parentNode) a.parentNode.replaceChild(s, a);
+    });
+  };
+
+  doc.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    if (window.panelPathHidden && window.panelPathHidden(a.getAttribute('href'))) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
 
   function paletteBuild() {
     if (paletteEl) return paletteEl;
@@ -644,10 +704,10 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(window.location.href).then(done, function () {});
       else done();
     } },
-    { label: 'Журнал: выгрузка CSV', icon: 'fa-file-csv', sub: 'последние 7 дней', run: function () { window.open('/logs/export?days=7', '_self'); } },
+    { label: 'Журнал: выгрузка CSV', icon: 'fa-file-csv', sub: 'последние 7 дней', href: '/logs', run: function () { window.open('/logs/export?days=7', '_self'); } },
     { label: 'Отчёт модерации: CSV', icon: 'fa-file-csv', sub: 'статистика команды', run: function () { window.open('/api/mod-report.csv?days=7', '_self'); } },
-    { label: 'Досье участника', icon: 'fa-id-card', sub: 'аналитика рисков по ID', run: function () { window.location.href = '/mod-insights'; } },
-    { label: 'Центр безопасности', icon: 'fa-shield-halved', sub: 'политики и лаборатория', run: function () { window.location.href = '/security'; } },
+    { label: 'Досье участника', icon: 'fa-id-card', sub: 'аналитика рисков по ID', href: '/mod-insights', run: function () { window.location.href = '/mod-insights'; } },
+    { label: 'Центр безопасности', icon: 'fa-shield-halved', sub: 'политики и лаборатория', href: '/security', run: function () { window.location.href = '/security'; } },
     { label: 'Справка по горячим клавишам', icon: 'fa-keyboard', sub: 'все сочетания панели', run: function () { if (typeof window.openHelp === 'function') window.openHelp(); } },
     { label: 'Фокус-режим', icon: 'fa-eye', sub: 'только контент, без панелей', run: function () { document.body.classList.toggle('zen'); } },
     { label: 'Тур по панели', icon: 'fa-route', sub: 'знакомство с интерфейсом за минуту', run: function () { if (typeof window.tourStart === 'function') window.tourStart(); } },
@@ -662,6 +722,7 @@
 
   function paletteActionMatches(q) {
     return PALETTE_ACTIONS.filter(function (a) {
+      if (a.href && window.panelPathHidden && window.panelPathHidden(a.href)) return false;
       if (!q) return true;
       return (a.label + ' ' + (a.sub || '')).toLowerCase().indexOf(q.toLowerCase()) !== -1;
     }).map(function (a) {
@@ -688,6 +749,7 @@
           ((d && d.groups) || []).forEach(function (grp) {
             if (grp.key === 'pages') return; // локальные страницы уже показаны
             (grp.items || []).forEach(function (it) {
+              if (it.href && window.panelPathHidden && window.panelPathHidden(it.href)) return;
               remote.push({
                 group: grp.title || 'Результаты',
                 path: it.href || '/',
@@ -872,6 +934,7 @@
       paintPing();
       setInterval(paintPing, 2000);
       pingPill.addEventListener('click', function () {
+        if (window.panelPathHidden && window.panelPathHidden('/bot-stats')) return;
         window.location.href = '/bot-stats';
       });
     }
@@ -1075,6 +1138,9 @@
           };
         });
         var all = sysItems.concat(ownItems).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+        all.forEach(function (n) {
+          if (n.link && window.panelPathHidden && window.panelPathHidden(n.link)) n.link = '';
+        });
         var list = notifTab === 'system' ? sysItems : notifTab === 'personal' ? ownItems : all;
         if (!list.length) {
           body.innerHTML = '<div class="empty"><i class="fas fa-bell-slash"></i><span>Уведомлений нет</span></div>';
@@ -1172,6 +1238,9 @@
             body.innerHTML = '<div class="empty"><i class="fas fa-stream"></i><span>Событий пока нет</span></div>';
             return;
           }
+          items.forEach(function (it) {
+            if (it.link && window.panelPathHidden && window.panelPathHidden(it.link)) it.link = '';
+          });
           body.innerHTML = items.slice(0, 40).map(function (it) {
             var ic = /^fa-/.test(it.icon || '') ? it.icon : 'fa-circle';
             var inner =
@@ -1426,6 +1495,7 @@
   })();
   ready(function () {
     paletteInitData();
+    if (window.stripHiddenMenuLinks) window.stripHiddenMenuLinks();
     topbarInit();
     sidebarInit();
     notifInit();
@@ -2798,7 +2868,11 @@
       { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err', min: 3 },
       { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '', min: 1 },
       { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok', min: 0 }
-    ].filter(function (it) { return fabLvl >= (it.min || 0); });
+    ].filter(function (it) {
+      if (fabLvl < (it.min || 0)) return false;
+      if (window.panelPathHidden && window.panelPathHidden(it.href)) return false;
+      return true;
+    });
     wrap.innerHTML = items.map(function (it) {
       return '<a class="fab-item ' + it.tone + '" href="' + esc0(it.href) + '">' +
         '<span class="ico"><i class="fas ' + it.icon + '"></i></span>' + esc0(it.label) + '</a>';
@@ -3943,6 +4017,7 @@
           (g.items || []).forEach(function (it) {
             var href = pickHref(it);
             if (!href) return;
+            if (window.panelPathHidden && window.panelPathHidden(href)) return;
             items.push(itemHtml(it.label || it.name || it.title || '—', it.sub || it.description || '', href, it.icon || 'fa-file'));
             found++;
           });
@@ -3952,7 +4027,7 @@
     } catch (e) { /* офлайн — только каналы ниже */ }
 
     /* Каналы сервера — быстрое дополнение к поиску */
-    try {
+    if (!(window.panelPathHidden && window.panelPathHidden('/chat'))) try {
       var cr = await fetch('/api/channels', { headers: { 'Accept': 'application/json' } });
       if (cr.ok) {
         var chans = await cr.json();
@@ -3994,3 +4069,4 @@
 /* ── Флаг готовности клиентского кита (бут-шим в base.html
    перестаёт дублировать live-refresh, когда app.js загружен) ── */
 try { window.__panelKitReady = true; } catch (e) {}
+}

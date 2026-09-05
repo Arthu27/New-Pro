@@ -139,7 +139,7 @@
           (uidName ? '<b>' + esc(uidName) + '</b> <span class="id-pill" title="ID участника">' + esc(uid) + '</span>' : '<span class="id-pill">' + esc(uid) + '</span>') +
           ' <span class="badge danger">' + list.length + '</span></td>' +
           '<td colspan="2">' + reasons + more + '</td>' +
-          '<td><a class="btn btn-sm" href="/mod-insights?user=' + esc(uid) + '"><i class="fas fa-id-card"></i> Досье</a></td></tr>';
+          '<td>' + ((window.panelPathHidden && window.panelPathHidden('/mod-insights')) ? '' : '<a class="btn btn-sm" href="/mod-insights?user=' + esc(uid) + '"><i class="fas fa-id-card"></i> Досье</a>') + '</td></tr>';
       }).join('');
       return;
     }

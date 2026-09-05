@@ -699,8 +699,9 @@
             '<div style="min-width:0"><div style="font-size:var(--fs-sm)"><b>#' + esc(it.id) + '</b> — ' + esc(it.text) + '</div>' +
             '<div style="font-size:var(--fs-xs);color:var(--text-3)">' + esc(det) + '</div></div></div>';
         }).join('');
-        var link = '<div style="margin-top:8px"><a href="/appeals" style="color:var(--ac);font-size:var(--fs-sm)"><i class="fas fa-arrow-up-right-from-square"></i> Открыть очередь апелляций</a></div>';
-        $('mcAppeals').innerHTML += link;
+        if (!(window.panelPathHidden && window.panelPathHidden('/appeals'))) {
+          $('mcAppeals').innerHTML += '<div style="margin-top:8px"><a href="/appeals" style="color:var(--ac);font-size:var(--fs-sm)"><i class="fas fa-arrow-up-right-from-square"></i> Открыть очередь апелляций</a></div>';
+        }
       }).catch(function () {
         if (req !== _apReq) return;
         $('mcAppeals').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить апелляции</span></div>';
@@ -936,11 +937,14 @@
       mfRow('На сервере с', esc(fmtWhen(m.joined_at))) +
       mfRow('Роли (' + roles.length + ')', rolePills(roles)) +
       '<div id="mcWatchSlot">' + _watchNote + '</div>';
+    var notes = (window.panelPathHidden && window.panelPathHidden('/member-notes')) ? '' :
+      '<a class="mf-act" href="/member-notes" target="_blank" rel="noopener"><i class="fas fa-sticky-note"></i> Все заметки</a>';
+    var watch = (window.panelPathHidden && window.panelPathHidden('/watchlist-panel')) ? '' :
+      '<a class="mf-act" href="/watchlist-panel" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Наблюдение</a>';
     $('mcQuick').innerHTML =
       '<button type="button" class="mf-act" data-copy="' + esc(m.id) + '"><i class="fas fa-fingerprint"></i> Скопировать ID</button>' +
       '<button type="button" class="mf-act" data-copy="&lt;@' + esc(m.id) + '&gt;" data-raw="1"><i class="fas fa-at"></i> Упоминание</button>' +
-      '<a class="mf-act" href="/member-notes" target="_blank" rel="noopener"><i class="fas fa-sticky-note"></i> Все заметки</a>' +
-      '<a class="mf-act" href="/watchlist-panel" target="_blank" rel="noopener"><i class="fas fa-eye"></i> Наблюдение</a>';
+      notes + watch;
   }
 
   /* Профиль: роли с цветами, предупреждения и дела модерации. */

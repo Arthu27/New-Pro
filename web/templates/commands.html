@@ -140,7 +140,7 @@
   <i class="fas fa-puzzle-piece"></i>
   <span>Модулей в боте: <b id="stModOn">…</b> включено</span>
   <span class="cmdx-mod-sleep">· ещё <b id="stModOff">…</b> спят (вернуть: BOT_FULL=1 или EXTRA_COGS в .env)</span>
-  <a href="/cog-manager"><i class="fas fa-sliders"></i> Управление модулями</a>
+  {% if '/cog-manager' in panel_visible_paths %}<a href="/cog-manager"><i class="fas fa-sliders"></i> Управление модулями</a>{% endif %}
 </div>
 
 {% if role in ('admin', 'owner') %}

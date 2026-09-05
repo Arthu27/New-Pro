@@ -220,9 +220,9 @@
 
   <!-- быстрые связи: защита и маршруты -->
   <div class="ac-links" data-reveal="up">
-    <a class="ac-link" href="/channel-settings"><i class="fas fa-route"></i> Куда летят сводки — настроить канал</a>
-    <a class="ac-link" href="/guardian"><i class="fas fa-shield-heart"></i> Щит сервера (анти-нюк)</a>
-    <a class="ac-link" href="/settings"><i class="fas fa-cog"></i> Настройки сервера</a>
+    {% if '/channel-settings' in panel_visible_paths %}<a class="ac-link" href="/channel-settings"><i class="fas fa-route"></i> Куда летят сводки — настроить канал</a>{% endif %}
+    {% if '/guardian' in panel_visible_paths %}<a class="ac-link" href="/guardian"><i class="fas fa-shield-heart"></i> Щит сервера (анти-нюк)</a>{% endif %}
+    {% if '/settings' in panel_visible_paths %}<a class="ac-link" href="/settings"><i class="fas fa-cog"></i> Настройки сервера</a>{% endif %}
   </div>
 
   <!-- метрики: ошибки -->

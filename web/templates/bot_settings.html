@@ -140,7 +140,9 @@
       <div class="bs-info-row"><i class="fas fa-signal"></i><span class="k">Бот онлайн</span><span class="v" id="bs-online">—</span></div>
       <div class="bs-info-row"><i class="fas fa-server"></i><span class="k">Серверов</span><span class="v" id="bs-guilds">—</span></div>
       <div class="bs-info-row"><i class="fas fa-code-branch"></i><span class="k">discord.py</span><span class="v" id="bs-version">—</span></div>
+      {% if '/backups' in panel_visible_paths %}
       <div class="bs-info-row"><i class="fas fa-save"></i><span class="k">Бэкапы</span><span class="v"><a href="/backups" style="color:var(--ac);font-weight:800">Открыть страницу бэкапов →</a></span></div>
+      {% endif %}
     </div>
   </div>
 </div>

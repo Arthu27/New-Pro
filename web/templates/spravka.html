@@ -273,7 +273,7 @@
     <div class="sp-faq">
       <details>
         <summary><span class="q-ico"><i class="fas fa-robot"></i></span> Бот не отвечает на команды<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Проверьте статус бота на <a href="/bot-stats">Статистике бота</a> — зелёная точка означает «онлайн». Затем убедитесь, что у бота есть права на чтение и отправку сообщений в канале, где вы пишете команды.</div>
+        <div class="faq-body">Проверьте статус бота{% if '/bot-stats' in panel_visible_paths %} на <a href="/bot-stats">Статистике бота</a>{% endif %} — зелёная точка означает «онлайн». Затем убедитесь, что у бота есть права на чтение и отправку сообщений в канале, где вы пишете команды.</div>
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-key"></i></span> Как сменить пароль от панели?<i class="fas fa-chevron-down chev"></i></summary>
@@ -281,7 +281,7 @@
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-shield-halved"></i></span> Куда писать, если участник нарушает правила?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Модераторы работают через <a href="/mod-center">Центр модерации</a>: варны — в <a href="/warnings">Варнах</a>, мьюты и баны — в <a href="/temp-moderation">Временных мерах</a>. Решения можно обжаловать через <a href="/appeals">Апелляции</a>.</div>
+        <div class="faq-body">Модераторы работают через {% if '/mod-center' in panel_visible_paths %}<a href="/mod-center">Центр модерации</a>{% else %}Центр модерации{% endif %}: варны — {% if '/warnings' in panel_visible_paths %}в <a href="/warnings">Варнах</a>{% else %}в Варнах{% endif %}, мьюты и баны — {% if '/temp-moderation' in panel_visible_paths %}в <a href="/temp-moderation">Временных мерах</a>{% else %}во Временных мерах{% endif %}. Решения можно обжаловать{% if '/appeals' in panel_visible_paths %} через <a href="/appeals">Апелляции</a>{% endif %}.</div>
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-file-signature"></i></span> Как подать заявку в команду?<i class="fas fa-chevron-down chev"></i></summary>
@@ -289,7 +289,7 @@
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-database"></i></span> Где хранятся данные?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Все данные лежат в файлах <code>data/*.json</code> рядом с панелью. Настройте регулярные <a href="/backups">Резервные копии</a>, чтобы ничего не потерять.</div>
+        <div class="faq-body">Все данные лежат в файлах <code>data/*.json</code> рядом с панелью.{% if '/backups' in panel_visible_paths %} Настройте регулярные <a href="/backups">Резервные копии</a>, чтобы ничего не потерять.{% endif %}</div>
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-headset"></i></span> Как связаться с поддержкой?<i class="fas fa-chevron-down chev"></i></summary>
@@ -297,7 +297,7 @@
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-eye-slash"></i></span> Можно ли скрыть лишние каналы из панели?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Да! На странице <a href="/channels">Каналы</a> у каждой строки и категории есть кнопка с глазом — скрытые каналы исчезают из панели и чата, а вернуть их можно тумблером «Скрытые».</div>
+        <div class="faq-body">Да! На странице {% if '/channels' in panel_visible_paths %}<a href="/channels">Каналы</a>{% else %}Каналы{% endif %} у каждой строки и категории есть кнопка с глазом — скрытые каналы исчезают из панели и чата, а вернуть их можно тумблером «Скрытые».</div>
       </details>
     </div>
   </div>

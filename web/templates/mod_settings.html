@@ -66,9 +66,11 @@
     <div class="ms-sub">Сколько варнов — какая мера прилетит автоматически (мут, кик,
       бан по ступеням). Настраивается в одном месте — на странице «Лестница наказаний»,
       там же статистика и моделирование.</div>
+    {% if '/ladder' in panel_visible_paths %}
     <a class="ms-link" href="/ladder" style="margin-top:12px">
       <i class="fas fa-stairs"></i> Открыть лестницу наказаний
     </a>
+    {% endif %}
   </div>
 
   <div class="ms-panel">
@@ -96,13 +98,15 @@
     постоянного меню «Подать апелляцию».
     <span id="msBotWarn" class="ms-warn" style="display:none">Бот офлайн — список каналов недоступен, публикация применится после его запуска.</span>
   </div>
+  {% if '/role-settings' in panel_visible_paths %}
   <a class="ms-link" href="/role-settings" style="margin:4px 0 12px;display:inline-flex">
     <i class="fas fa-user-gear"></i> Открыть «Роли наказаний» (мут чата · войс-мут · «бан» · уровни варнов)
   </a>
+  {% endif %}
   <div class="ms-role-grid">
     <div class="ms-role" data-ms-role="menu">
       <div class="ms-role-name"><i class="fas fa-scale-balanced"></i> Меню апелляций</div>
-      <a href="/channel-settings" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ac);text-decoration:none;margin:6px 0;"><i class="fas fa-route"></i> Канал меню — в «Каналах и маршрутах»</a>
+      {% if '/channel-settings' in panel_visible_paths %}<a href="/channel-settings" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ac);text-decoration:none;margin:6px 0;"><i class="fas fa-route"></i> Канал меню — в «Каналах и маршрутах»</a>{% endif %}
       <input type="hidden" id="msMenuChannel" value="0">
       <div class="ms-role-hint">Постоянное меню «Подать апелляцию» — апелляция тредом, без ЛС боту. Кнопка ниже опубликует меню в выбранный канал.</div>
     </div>
@@ -116,12 +120,12 @@
 </div>
 
 <div class="ms-links" id="msLinks">
-  <a class="ms-link" href="/guardian"><i class="fas fa-shield-heart"></i>Щит сервера (анти-нюк)</a>
-  <a class="ms-link" href="/antiraid"><i class="fas fa-shield-virus"></i>Анти-рейд</a>
-  <a class="ms-link" href="/autofilter"><i class="fas fa-filter"></i>Автофильтр</a>
-  <a class="ms-link" href="/ladder"><i class="fas fa-stairs"></i>Лестница (красивая карточка)</a>
-  <a class="ms-link" href="/channel-settings"><i class="fas fa-route"></i>Каналы и маршруты</a>
-  <a class="ms-link" href="/security"><i class="fas fa-user-secret"></i>Центр безопасности</a>
+  {% if '/guardian' in panel_visible_paths %}<a class="ms-link" href="/guardian"><i class="fas fa-shield-heart"></i>Щит сервера (анти-нюк)</a>{% endif %}
+  {% if '/antiraid' in panel_visible_paths %}<a class="ms-link" href="/antiraid"><i class="fas fa-shield-virus"></i>Анти-рейд</a>{% endif %}
+  {% if '/autofilter' in panel_visible_paths %}<a class="ms-link" href="/autofilter"><i class="fas fa-filter"></i>Автофильтр</a>{% endif %}
+  {% if '/ladder' in panel_visible_paths %}<a class="ms-link" href="/ladder"><i class="fas fa-stairs"></i>Лестница (красивая карточка)</a>{% endif %}
+  {% if '/channel-settings' in panel_visible_paths %}<a class="ms-link" href="/channel-settings"><i class="fas fa-route"></i>Каналы и маршруты</a>{% endif %}
+  {% if '/security' in panel_visible_paths %}<a class="ms-link" href="/security"><i class="fas fa-user-secret"></i>Центр безопасности</a>{% endif %}
 </div>
 
 <script src="/static/pickers.js"></script>

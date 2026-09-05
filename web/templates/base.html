@@ -191,7 +191,7 @@
                 </div>
             </a>
 
-            {% if role != 'uye' %}
+            {% if role != 'uye' and '/guilds' in panel_visible_paths %}
             <a href="/guilds" class="sidebar-guild" id="sidebarGuild" title="Серверы бота">
                 <span class="ico"><i class="fas fa-server"></i></span>
                 <span style="min-width:0"><b>Серверы</b><small id="sidebarGuildName">Сервер</small></span>
@@ -209,7 +209,7 @@
             </script>
             {% endif %}
 
-            {% if panel_mod_only %}
+            {% if panel_mod_only and '/cog-manager' in panel_visible_paths %}
             <a href="/cog-manager" class="mode-banner" title="Режим «только модерация»: часть модулей выключена (MOD_ONLY=1). Открыть менеджер модулей">
                 <i class="fas fa-shield-halved"></i>
                 <span>Только модерация</span>
@@ -334,7 +334,9 @@
                         <i class="fas fa-chevron-down user-caret"></i>
                         <div class="user-menu">
                             <a href="/change-password"><i class="fas fa-key"></i> Сменить пароль</a>
+                            {% if '/panel-logs' in panel_visible_paths %}
                             <a href="/panel-logs"><i class="fas fa-list"></i> Логи панели</a>
+                            {% endif %}
                             <a href="#" id="helpLink"><i class="fas fa-keyboard"></i> Горячие клавиши</a>
                             <hr>
                             <a href="/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Выход</a>
@@ -365,14 +367,29 @@
     {% endif %}
 
     <!-- ── Мобильная нижняя навигация ─────────────────────── -->
+    {# Только видимые пункты: скрытые в «Порядке и скрытии» не оставляем
+       ссылкой, которая ведёт в отказ. #}
     {% if role != 'uye' %}
+    {% set _mnav = [
+        ('/', 'fa-house', 'Главная'),
+        ('/warnings', 'fa-shield-halved', 'Варны'),
+        ('/logs', 'fa-clipboard-list', 'Журнал'),
+        ('/reports-queue', 'fa-flag', 'Репорты'),
+        ('/team-board', 'fa-table-columns', 'Доска'),
+    ] %}
+    {% set ns = namespace(n=0) %}
+    {% for path, icon, label in _mnav %}
+      {% if path in panel_visible_paths %}{% set ns.n = ns.n + 1 %}{% endif %}
+    {% endfor %}
+    {% if ns.n %}
     <nav class="mobile-nav" aria-label="Мобильная навигация">
-        <a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class="fas fa-house"></i> Главная</a>
-        <a href="/warnings" class="{% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-shield-halved"></i> Варны</a>
-        <a href="/logs" class="{% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> Журнал</a>
-        <a href="/reports-queue" class="{% if request.path == '/reports-queue' %}active{% endif %}"><i class="fas fa-flag"></i> Репорты</a>
-        <a href="/team-board" class="{% if request.path == '/team-board' %}active{% endif %}"><i class="fas fa-table-columns"></i> Доска</a>
+        {% for path, icon, label in _mnav %}
+        {% if path in panel_visible_paths %}
+        <a href="{{ path }}" class="{% if request.path == path %}active{% endif %}"><i class="fas {{ icon }}"></i> {{ label }}</a>
+        {% endif %}
+        {% endfor %}
     </nav>
+    {% endif %}
     {% endif %}
 
     <!-- ── Дровер уведомлений ─────────────────────────────── -->
@@ -421,6 +438,7 @@
     <script type="application/json" id="palette-data">
     {{ panel_menu|tojson }}
     </script>
+    <script type="application/json" id="menu-all-paths">{{ panel_all_paths|tojson }}</script>
     {% endif %}
 
     <script>window.__panelUserId = '{{ session.get("user_id", "") }}';</script>

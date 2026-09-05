@@ -169,9 +169,11 @@
     </div>
     <div class="pd-field">
       <label>Канал тревог в Discord</label>
+      {% if '/channel-settings' in panel_visible_paths %}
       <a href="/channel-settings" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ac);text-decoration:none;padding:6px 0;">
         <i class="fas fa-route"></i> Настраивается в разделе «Каналы и маршруты»
       </a>
+      {% endif %}
       <input type="hidden" id="pdChannel" value="0">
     </div>
     <div class="pd-row">

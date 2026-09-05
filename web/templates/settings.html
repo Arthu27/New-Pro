@@ -58,8 +58,8 @@
       <button class="btn btn-primary" id="btn-lockdown" type="button" aria-label="Переключить локдаун" title="Экстренно закрыть/открыть сервер"><i class="fas fa-house-lock"></i> Переключить локдаун</button>
     </div>
     <div class="set-note">Детали — на страницах «Щит сервера», «Центр безопасности» и «Локдаун».</div>
-    <a class="set-link" href="/guardian"><i class="fas fa-shield-heart"></i> Открыть Щит сервера</a>
-    <a class="set-link" href="/security"><i class="fas fa-user-secret"></i> Центр безопасности</a>
+    {% if '/guardian' in panel_visible_paths %}<a class="set-link" href="/guardian"><i class="fas fa-shield-heart"></i> Открыть Щит сервера</a>{% endif %}
+    {% if '/security' in panel_visible_paths %}<a class="set-link" href="/security"><i class="fas fa-user-secret"></i> Центр безопасности</a>{% endif %}
   </div>
 
   <!-- Панель -->
