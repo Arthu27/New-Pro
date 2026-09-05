@@ -412,10 +412,17 @@ def role_scoped_actions(guild_id, role_ids=()):
     return scoped
 
 
+# Потолок длительности мута ПО УМОЛЧАНИЮ: 7 дней, если владелец не задал
+# свой (жалоба 2026-09-05: «модер дал 100000 минут» — без дефолта потолок
+# был «без ограничения»). Настраивается: панель → Щит сервера → Лимиты.
+DEFAULT_MUTE_DURATION_CAP = 7 * 86400
+
+
 def effective_max_duration(guild_id, key, role_ids=()):
     """Потолок длительности в секундах (0 = без ограничения).
 
     Свой потолок роли ГЛАВНЕЕ общего; несколько ролей — мягчайший.
+    Ничего не настроено — действует дефолт 7 дней для мутов.
     """
     overrides = get_role_overrides(guild_id)
     best = 0
@@ -426,7 +433,10 @@ def effective_max_duration(guild_id, key, role_ids=()):
             best = v
     if best:
         return best
-    return int(get_durations(guild_id).get(key) or 0)
+    _v = int(get_durations(guild_id).get(key) or 0)
+    if _v:
+        return _v
+    return DEFAULT_MUTE_DURATION_CAP if key == 'mute' else 0
 
 
 def refresh_in_text(guild_id, user_id, key):

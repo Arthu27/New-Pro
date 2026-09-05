@@ -176,6 +176,24 @@
     <div id="pa-list" class="pa-list-grid"></div>
   </div>
 
+  <div class="pa-h3"><i class="fas fa-ban"></i> Игнорируемые роли — никогда не дают прав</div>
+  <div class="pa-panel" style="display:flex; flex-direction:column; gap:10px;">
+    <div style="font-size:12.5px; opacity:.7; line-height:1.5;">
+      Роль из этого списка <b>не учитывается никак</b>: её Discord-права не делают
+      носителя модератором или админом панели. Если такую роль выдали модератору —
+      он остаётся обычным модератором, не выше других. Права такие люди получают
+      только через настройки ниже (по другим их ролям).
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <input type="text" id="ir-input" placeholder="ID роли (правый клик по роли → «Копировать ID»)"
+             style="flex:1; min-width:220px; background:var(--surface-3); color:var(--text); border:1px solid color-mix(in srgb, var(--text) 20%, transparent); border-radius:8px; padding:8px 11px; font-size:13px;">
+      <button type="button" id="ir-add" class="btn" style="border-radius:8px; padding:8px 16px;">
+        <i class="fas fa-plus"></i> Не учитывать
+      </button>
+    </div>
+    <div id="ir-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+  </div>
+
   <div class="pa-h3"><i class="fas fa-eye"></i> Видимость уведомлений и ленты</div>
 
   <div class="pv-panel">
@@ -345,6 +363,55 @@ function loadPA(){
       document.getElementById('pa-list').innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить роли сервера</div>';
     });
 }
+
+/* ── Игнорируемые роли ── */
+function irRender(roles){
+  var host = document.getElementById('ir-list');
+  if (!host) return;
+  if (!roles.length){
+    host.innerHTML = '<div style="font-size:12.5px; opacity:.55;">Пока пусто — все роли учитываются как есть.</div>';
+    return;
+  }
+  host.innerHTML = roles.map(function(r){
+    return '<div style="display:flex; align-items:center; gap:10px; background:color-mix(in srgb, var(--text) 4%, transparent); border-radius:10px; padding:8px 12px;">'
+      + '<i class="fas fa-ban" style="opacity:.6;"></i>'
+      + '<div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:700; word-break:break-word;">'
+      + String(r.name).replace(/</g,'&lt;') + '</div>'
+      + '<div style="font-size:11px; opacity:.55;">' + r.id + ' · участников: ' + r.members + '</div></div>'
+      + '<button type="button" data-rid="' + r.id + '" class="ir-del" '
+      + 'style="background:none; border:1px solid color-mix(in srgb, var(--text) 20%, transparent); border-radius:8px; padding:5px 10px; cursor:pointer; font-size:12px;">Учитывать снова</button>'
+      + '</div>';
+  }).join('');
+  host.querySelectorAll('.ir-del').forEach(function(b){
+    b.addEventListener('click', function(){ irSave(b.dataset.rid, true); });
+  });
+}
+function irLoad(){
+  fetch('/api/ignored-roles', { credentials: 'same-origin' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){ irRender(d.roles || []); })
+    .catch(function(){});
+}
+function irSave(rid, remove){
+  fetch('/api/ignored-roles', {
+    credentials: 'same-origin', method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role_id: String(rid), remove: !!remove })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (window.showToast) window.showToast(
+      d.success ? (remove ? 'Роль снова учитывается' : 'Роль добавлена в игнор')
+                : (d.error || 'Ошибка'), !d.success === false);
+    irLoad(); loadPA();
+  }).catch(function(){ if(window.showToast) window.showToast('Ошибка сети', false); });
+}
+var irBtn = document.getElementById('ir-add');
+if (irBtn) irBtn.addEventListener('click', function(){
+  var v = (document.getElementById('ir-input').value || '').trim();
+  if (!v) return;
+  irSave(v, false);
+  document.getElementById('ir-input').value = '';
+});
+irLoad();
 
 loadPA();
 

@@ -948,6 +948,17 @@ def _get_role_from_discord (discord_id :str )->str :
         member =_resolve_guild_member (guild ,int (discord_id ))
         if not member :
             return 'uye'
+        # Игнорируемые роли (владелец 2026-09-05): не участвуют НИ в карте,
+        # НИ в правах — их носитель не получает статус от этой роли
+        try :
+            from services import ignored_roles as _IR
+            _ignored =_IR .get_ignored (guild .id )
+            _roles_eff =[r for r in member .roles
+                         if int (getattr (r ,'id',0 )or 0 )not in _ignored ]
+            _perms_eff =_IR .effective_permissions (member ,guild )
+        except Exception as _iex :
+            _log .debug ('ignored roles: %s',_iex )
+            _roles_eff ,_perms_eff =member .roles ,None
 
             # 0. Создатель сервера — всегда владелец панели. Без этого
             # ловили «я разрешил все, а прав нет»: Discord-админка даёт
@@ -956,9 +967,9 @@ def _get_role_from_discord (discord_id :str )->str :
         if getattr (guild ,'owner_id',None )and int (discord_id )==int (guild .owner_id ):
             return 'owner'
 
-            # 1. Ручное сопоставление из role_map.json
+            # 1. Ручное сопоставление из role_map.json (без игнорируемых)
         best_mapped ='uye'
-        for discord_role in member .roles :
+        for discord_role in (_roles_eff or []):
             mapped =DISCORD_ROLE_MAP .get (str (discord_role .id ))
             if mapped =='owner':
                 return 'owner'
@@ -972,7 +983,7 @@ def _get_role_from_discord (discord_id :str )->str :
             return best_mapped 
 
             # 2. Автоматически как по Discord-администрации
-        perms =member .guild_permissions 
+        perms =_perms_eff if _perms_eff is not None else member .guild_permissions 
         if perms .administrator :
             return 'admin'
         if perms .ban_members or perms .kick_members or perms .manage_guild :

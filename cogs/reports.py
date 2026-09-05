@@ -522,21 +522,30 @@ def _mod_ping_roles(guild):
     except Exception as _ex:
         _log.debug('reports: resolve_mod_role: %s', _ex)
     try:
+        from services import ignored_roles as _IR
         import json as _json
         with open('data/role_map.json', encoding='utf-8') as _f:
             _rm = _json.load(_f)
         for _rid, _pr in (_rm.items() if isinstance(_rm, dict) else []):
+            if _IR.is_ignored_role(_rid, guild.id):
+                continue   # игнорируемая роль не тегается и не маппится
             if str(_pr) in ('mod', 'curator', 'admin') and str(_rid).isdigit():
                 _add(guild.get_role(int(_rid)))
     except Exception as _ex:
         _log.debug('reports: role_map: %s', _ex)
-    for role in getattr(guild, 'roles', []):
-        p = getattr(role, 'permissions', None)
-        if p is not None and (p.ban_members or p.moderate_members
-                              or p.manage_messages):
-            _add(role)
-        if len(out) >= 3:
-            break
+    try:
+        from services import ignored_roles as _IR
+        for role in getattr(guild, 'roles', []):
+            if _IR.is_ignored_role(getattr(role, 'id', 0), guild.id):
+                continue   # игнорируемая роль не пингуется как модерская
+            p = getattr(role, 'permissions', None)
+            if p is not None and (p.ban_members or p.moderate_members
+                                  or p.manage_messages):
+                _add(role)
+            if len(out) >= 3:
+                break
+    except Exception as _ex:
+        _log.debug('reports: auto roles: %s', _ex)
     return out[:3]
 
 

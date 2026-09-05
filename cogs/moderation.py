@@ -524,7 +524,7 @@ class Moderation (commands .Cog ):
                     return
                 # Потолок длительности мута (панель → Щит → Лимиты):
                 # просит дольше разрешённого — вежливый отказ, а не молчание
-                if action in ('timeout','mute_chat'):
+                if action in ('timeout','mute_chat','vmute'):
                     try :
                         from services .staff_limits import effective_max_duration as _sl_cap
                         _cap =_sl_cap (guild .id ,'mute',_sl_roles )
@@ -971,7 +971,7 @@ class Moderation (commands .Cog ):
         return True
 
     async def apply_panel_action (self ,guild ,target ,action ,reason ='' ,
-    amount =None ,proof_link =None ,actor ='Панель'):
+    amount =None ,proof_link =None ,actor ='Панель' ,duration_cap =None ):
         """Наказание из веб-панели («Пользователи») — единый путь с /modpanel.
 
         target — discord.Member (на сервере) или строка-ID (ушёл с сервера).
@@ -996,6 +996,24 @@ class Moderation (commands .Cog ):
                 return False ,_hdeny
         except Exception as _hex :
             _log .debug ('[MODPANEL] hierarchy: %s',_hex )
+        # ПОТОЛОК ДЛИТЕЛЬНОСТИ МУТА — действует ВСЕГДА, по умолчанию 7 дней
+        # (жалоба владельца 2026-09-05: «модер дал 100000 минут»). Пути
+        # панели (apply_panel_action) не проходили лимитный блок бота.
+        if action in ('timeout','mute_chat','vmute') and amount :
+            try :
+                _pc =duration_cap
+                if _pc is None :
+                    from services .staff_limits import effective_max_duration as _pcap
+                    _pc =_pcap (guild .id ,'mute')
+                _pm =parse_duration_minutes (amount ,5 )
+                if _pc and _pm *60 >_pc :
+                    return False ,(f'Мут дольше разрешённого: потолок — '
+                                   f'{human_duration (max (1,_pc //60 ))}, '
+                                   f'а запрошено {human_duration (_pm )}. '
+                                   f'Потолок настраивается: панель → Щит '
+                                   f'сервера → Лимиты.')
+            except Exception as _pex :
+                _log .debug ('[MODPANEL] panel dur cap: %s',_pex )
         target_str =str (getattr (target ,'id',target ))
         # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
         if action =='warn':
@@ -1759,19 +1777,13 @@ class ModTargetSelect(discord.ui.UserSelect):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
+        # Выбор участника — МОЛЧА (заказ владельца 2026-09-05: «не надо
+        # сообщений что вы выбрали этого туда сюда»). Discord требует
+        # ответа на клик — отвечаем пустым ephemeral-defer: на экране НИЧЕГО.
         try:
-            user = self.values[0] if self.values else None
-            name = getattr(user, "display_name", None) or str(getattr(user, "id", "?"))
-            await interaction.response.send_message(
-                f"🎯 Цель: **{name}** — теперь выберите действие в меню ниже, "
-                f"ник второй раз спрашивать не будем.",
-                ephemeral=True)
+            await interaction.response.defer(ephemeral=True)
         except Exception as _te:
             log.debug("ModTargetSelect: %s", _te)
-            try:
-                await interaction.response.send_message("🎯 Цель выбрана.", ephemeral=True)
-            except Exception as _te2:
-                log.debug("ModTargetSelect fallback-ответ: %s", _te2)
 
 
 class ModPanelView(discord.ui.View):

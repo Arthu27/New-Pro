@@ -161,6 +161,62 @@ def register(ctx):
             username=session.get('username'),
             guild_id=active_guild_id())
 
+    # ── Игнорируемые роли: никогда не дают прав (владелец 2026-09-05) ──
+    @app.route('/api/ignored-roles', methods=['GET', 'POST'])
+    @login_required
+    @role_required('owner')
+    def api_ignored_roles():
+        from services import ignored_roles as IR
+        if request.method == 'GET':
+            ids = sorted(IR.get_ignored(active_guild_id()))
+            names = {}
+            import web.app as _app
+            bot = _app.bot_instance
+            gid = active_guild_id()
+            if bot is not None and gid:
+                g = bot.get_guild(int(gid))
+                if g is not None:
+                    names = {str(r.id): {'name': r.name,
+                                         'members': len(r.members)}
+                             for r in g.roles if r.id in ids}
+            return jsonify({'success': True,
+                            'roles': [{'id': str(i),
+                                       'name': (names.get(str(i)) or {})
+                                       .get('name', f'роль {i}'),
+                                       'members': (names.get(str(i)) or {})
+                                       .get('members', '?')}
+                                      for i in ids]})
+        payload = _safe_json_obj()
+        rid = str(payload.get('role_id') or '').strip()
+        remove = bool(payload.get('remove'))
+        if not rid.isdigit():
+            return jsonify({'success': False,
+                            'error': 'ID роли — число'}), 400
+        if remove:
+            IR.remove(rid, active_guild_id())
+        else:
+            # запрет карты ролей на игнорируемую роль — снята заранее
+            import os as _os
+            if _os.path.exists('data/role_map.json'):
+                try:
+                    import json as _json
+                    with open('data/role_map.json', encoding='utf-8') as _f:
+                        _rm = _json.load(_f)
+                    if isinstance(_rm, dict) and rid in _rm:
+                        _rm.pop(rid, None)
+                        with open('data/role_map.json', 'w',
+                                  encoding='utf-8') as _f:
+                            _json.dump(_rm, _f, ensure_ascii=False, indent=2)
+                except Exception as _ex:
+                    _log.debug('ignored-roles: role_map cleanup: %s', _ex)
+            IR.add(rid, active_guild_id())
+        try:
+            from services.live_bus import publish_global
+            publish_global('role_map')
+        except Exception as _ex:
+            _log.debug('ignored-roles sse: %s', _ex)
+        return jsonify({'success': True})
+
     @app.route('/api/panel/visibility', methods=['GET', 'POST'])
     @login_required
     @role_required('owner')

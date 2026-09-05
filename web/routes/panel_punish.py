@@ -296,10 +296,20 @@ def register(ctx):
             except Exception as _slx:
                 _log.debug('punish quota gate: %s', _slx)
 
+        # потолок длительности: посчитан выше по ролям зрителя (_slx-блок)
+        _dur_cap = None
+        if action in _DURATION_ACTIONS:
+            try:
+                from services import staff_limits as _SLC
+                _rids_v = _member_role_ids(member_viewer) if member_viewer is not None else []
+                _dur_cap = _SLC.effective_max_duration(int(gid), 'mute', _rids_v)
+            except Exception as _dcex:
+                _log.debug('punish duration cap: %s', _dcex)
         try:
             ok, text = _run_async(cog.apply_panel_action(
                 guild, target, action, reason=reason,
-                amount=duration, proof_link=proof, actor=actor))
+                amount=duration, proof_link=proof, actor=actor,
+                duration_cap=_dur_cap))
         except Exception as _ex:
             _log.warning('punish: %s', _ex)
             return jsonify({'success': False,

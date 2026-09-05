@@ -151,7 +151,14 @@ def member_is_mod(member, guild=None) -> bool:
     """
     if member is None:
         return False
-    gp = getattr(member, 'guild_permissions', None)
+    # права без игнорируемых ролей (владелец 2026-09-05): «облачная» роль
+    # с правами не делает носителя модератором
+    try:
+        from services import ignored_roles as _IR
+        gp = _IR.effective_permissions(member, guild)
+    except Exception as _ex:
+        _log.debug('member_is_mod: ignored: %s', _ex)
+        gp = getattr(member, 'guild_permissions', None)
     if gp is not None and (getattr(gp, 'administrator', False)
                            or getattr(gp, 'manage_guild', False)
                            or getattr(gp, 'manage_messages', False)

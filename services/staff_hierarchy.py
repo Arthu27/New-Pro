@@ -63,7 +63,14 @@ def target_panel_role(guild, member, bot=None):
             _log.debug('target_panel_role: bot-owner: %s', _ex)
         if getattr(member, 'id', None) == getattr(guild, 'owner_id', None):
             return 'owner'
-        perms = getattr(member, 'guild_permissions', None)
+        # права считаем БЕЗ игнорируемых ролей (владелец 2026-09-05:
+        # «облачная» роль с правами не делает носителя модератором/админом)
+        try:
+            from services import ignored_roles as _IR
+            perms = _IR.effective_permissions(member, guild)
+        except Exception as _ex:
+            _log.debug('target_panel_role: ignored: %s', _ex)
+            perms = getattr(member, 'guild_permissions', None)
         if perms is not None and getattr(perms, 'administrator', False):
             return 'admin'
         # настроенная модер-роль (единый источник панели) → модератор+
