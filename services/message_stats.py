@@ -59,8 +59,14 @@ def _atomic_write(path, payload):
     os.replace(tmp, path)
 
 
-def record(guild_id, author, channel, when=None):
-    """Запомнить сообщение (метаданные). Потокобезопасно, неблокирующе."""
+def record(guild_id, author, channel, when=None, user_id=None):
+    """Запомнить сообщение (метаданные). Потокобезопасно, неблокирующе.
+
+    user_id — ЛИЧНОСТЬ автора: агрегация топов идёт по нему, поэтому смена
+    ника не дробит человека на двоих в «Аналитике» (жалоба владельца
+    2026-09-05: «это один и тот же человек, просто имя поменял»). Ник в
+    'author' — живая подпись: у записи свежее имя побеждает.
+    """
     gid = str(guild_id)
     if not gid or not author:
         return False
@@ -69,6 +75,11 @@ def record(guild_id, author, channel, when=None):
         'channel': str(channel or '?'),
         'timestamp': (when or datetime.now(timezone.utc)).isoformat(),
     }
+    try:
+        if user_id and int(user_id):
+            event['uid'] = str(int(user_id))
+    except (TypeError, ValueError) as ex:
+        _logger().debug('message_stats: uid не штампуется: %s', ex)
     with _LOCK:
         _PENDING.setdefault(gid, []).append(event)
         _DIRTY.add(gid)
@@ -108,6 +119,68 @@ def flush_all():
             with _LOCK:
                 _PENDING.setdefault(gid, []).extend(batch)
                 _DIRTY.add(gid)
+
+
+def load_full(gid):
+    """Все события сервера (для миграции/пересчётов)."""
+    return _load(gid)
+
+
+def save_full(gid, events):
+    """Атомарно перезаписать события (использует миграция имён)."""
+    data = [e for e in (events or []) if isinstance(e, dict)]
+    _atomic_write(_path(str(gid)), data[-MAX_PER_GUILD:])
+
+
+def attach_uids(events, resolver):
+    """Проставить uid старым записям (миграция «до ID»).
+
+    resolver(имя) -> user_id | None (ког даёт словарь по участникам сервера:
+    display_name/name/nick без учёта регистра). Нераспознанные остаются без
+    uid и группируются по имени — как раньше (окно скользящее, выйдут сами).
+    Возвращает число проставленных.
+    """
+    changed = 0
+    for ev in events or []:
+        if not isinstance(ev, dict) or ev.get('uid'):
+            continue
+        name = str(ev.get('author') or '').strip()
+        if not name:
+            continue
+        try:
+            uid = resolver(name)
+        except Exception:
+            uid = None
+        try:
+            uid = int(uid) if uid else 0
+        except (TypeError, ValueError):
+            uid = 0
+        if uid:
+            ev['uid'] = str(uid)
+            changed += 1
+    return changed
+
+
+def merge_members_top(msgs, limit=10):
+    """Топ участников, склеенный ПО ЛИЧНОСТИ (uid), — чистая функция.
+
+    Смена ника не дробит счёт: у одного uid записи складываются, а подпись
+    берётся из САМОЙ СВЕЖЕЙ записи (файл хронологический — просто перезапись).
+    Старые записи без uid группируются по имени (прежнее поведение).
+    """
+    counts, labels = {}, {}
+    for m in msgs or []:
+        if not isinstance(m, dict):
+            continue
+        author = str(m.get('author') or m.get('user_name') or '?')
+        uid = str(m.get('uid') or '')
+        key = ('u:' + uid) if uid else ('n:' + author)
+        counts[key] = counts.get(key, 0) + 1
+        labels[key] = author
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
+    return [{'name': labels[k], 'messages': c,
+             'uid': (k[2:] if k.startswith('u:') else None)}
+            for k, c in ranked]
 
 
 def _loop():

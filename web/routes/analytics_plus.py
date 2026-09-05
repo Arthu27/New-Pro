@@ -52,7 +52,7 @@ def _read_audit(guild_id):
 
 
 def load_message_events(guild_id):
-    """События сообщений сервера: [(автор, канал, datetime|None)].
+    """События сообщений сервера: [(автор, канал, datetime|None, uid|None)].
 
     Объединяем ОБА источника, а не выбираем один:
       • data/message_logs_<gid>.json — основной полный поток (его ведёт ког
@@ -82,15 +82,19 @@ def load_message_events(guild_id):
             author = m.get('author') or m.get('user_name') or m.get('user_id')
             if not author:
                 continue
+            # uid — личность автора: топы и «уникальные» клеятся по нему,
+            # смена ника не дробит человека (владелец 2026-09-05).
+            uid = str(m.get('uid') or '') or None
             events.append((
                 str(author),
                 str(m.get('channel') or m.get('channel_name') or '?'),
                 _parse_ts(m.get('timestamp')),
+                uid,
             ))
 
     # 2) Дополнение из audit_log (message-события). Дедуплицируем по ключу
     #    (автор, канал, дата-время до секунды), чтобы не задвоить совпадения.
-    seen = {(str(a), str(c), d.isoformat() if d else None) for a, c, d in events}
+    seen = {(str(a), str(c), d.isoformat() if d else None) for a, c, d, _u in events}
     for ev in _read_audit(gid):
         if (ev.get('category') or '').lower() != 'message':
             continue
@@ -105,7 +109,8 @@ def load_message_events(guild_id):
         if key in seen:
             continue
         seen.add(key)
-        events.append((str(author), key[1], dt))
+        events.append((str(author), key[1], dt,
+                       str(ev.get('user_id') or '') or None))
 
     return events
 
@@ -114,7 +119,7 @@ def heatmap_matrix(events):
     """7×24 (день недели × час): [[cnt]*24]*7 плюс максимум для шкалы."""
     matrix = [[0] * 24 for _ in range(7)]
     total = 0
-    for _author, _channel, dt in events:
+    for _author, _channel, dt, _uid in events:
         if dt is None:
             continue
         matrix[dt.weekday()][dt.hour] += 1
@@ -138,7 +143,7 @@ def heatmap_matrix(events):
 def daily_series(events, days=30):
     """[(iso-дата, сообщений)] за последние N дней, включая нулевые."""
     counts = Counter()
-    for _author, _channel, dt in events:
+    for _author, _channel, dt, _uid in events:
         if dt is not None:
             counts[dt.date().isoformat()] += 1
     today = date.today()
@@ -150,6 +155,32 @@ def daily_series(events, days=30):
 def top_counter(events, idx, limit=20):
     cnt = Counter(str(ev[idx]) for ev in events)
     return cnt.most_common(limit)
+
+
+def _identity_key(author, uid):
+    """Личность автора: uid, а без него — само имя (старые записи)."""
+    return ('u:' + str(uid)) if uid else ('n:' + str(author))
+
+
+def top_members_counter(events, limit=20):
+    """Топ авторов ПО ЛИЧНОСТИ (uid); подпись — из самой свежей записи.
+
+    Смена ника не дробит человека в CSV и «детализации канала»
+    (владелец 2026-09-05: «один и тот же человек, имя поменял»).
+    Список хронологический, поэтому последний ник просто побеждает.
+    """
+    counts, labels = {}, {}
+    for author, _ch, _dt, uid in events:
+        key = _identity_key(author, uid)
+        counts[key] = counts.get(key, 0) + 1
+        labels[key] = str(author)
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
+    return [(labels[k], c) for k, c in ranked]
+
+
+def unique_members(events):
+    """Сколько РАЗНЫХ людей в событиях (по uid, не по никам)."""
+    return len({_identity_key(a, u) for a, _c, _dt, u in events})
 
 
 def load_member_events(guild_id):
@@ -243,7 +274,7 @@ def analytics_full_csv(guild_id, days=30):
         w.writerow([day, cnt])
     w.writerow([])
     w.writerow(['Участник', 'Сообщений'])
-    for name, cnt in top_counter(events, 0):
+    for name, cnt in top_members_counter(events):
         w.writerow([name, cnt])
     w.writerow([])
     w.writerow(['Канал', 'Сообщений'])
@@ -324,7 +355,7 @@ def channel_drill(events, name, days=30):
     name = (name or '').strip()
     own = [ev for ev in events if str(ev[1]) == name]
     days_row = []
-    counts = Counter(dt.date().isoformat() for _a, _c, dt in own if dt is not None)
+    counts = Counter(dt.date().isoformat() for _a, _c, dt, _u in own if dt is not None)
     today = date.today()
     for i in range(days - 1, -1, -1):
         day = (today - timedelta(days=i)).isoformat()
@@ -333,14 +364,14 @@ def channel_drill(events, name, days=30):
         'name': name,
         'total': len(own),
         'days': days_row,
-        'top_authors': top_counter(own, 0, limit=5),
-        'unique_authors': len({str(a) for a, _c, _dt in own}),
+        'top_authors': top_members_counter(own, limit=5),
+        'unique_authors': unique_members(own),
     }
 
 
 def record_days(events, limit=3):
     """Рекордные дни сервера по сообщениям: [(дата, кол-во)] по убыванию."""
-    counts = Counter(dt.date().isoformat() for _a, _c, dt in events if dt is not None)
+    counts = Counter(dt.date().isoformat() for _a, _c, dt, _u in events if dt is not None)
     return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
 
 
@@ -353,15 +384,16 @@ def week_summary(events, now=None):
     prev_msgs = 0
     cur_users = set()
     prev_users = set()
-    for author, _channel, dt in events:
+    for author, _channel, dt, uid in events:
         if dt is None:
             continue
+        _key = _identity_key(author, uid)
         if dt >= week_start:
             cur_msgs += 1
-            cur_users.add(str(author))
+            cur_users.add(_key)
         elif dt >= prev_start:
             prev_msgs += 1
-            prev_users.add(str(author))
+            prev_users.add(_key)
 
     def _delta(cur, prev):
         if prev == 0:
@@ -388,7 +420,7 @@ def analytics_csv(guild_id, days=30):
         w.writerow([day, cnt])
     w.writerow([])
     w.writerow(['Участник', 'Сообщений'])
-    for name, cnt in top_counter(events, 0):
+    for name, cnt in top_members_counter(events):
         w.writerow([name, cnt])
     w.writerow([])
     w.writerow(['Канал', 'Сообщений'])
@@ -457,7 +489,7 @@ def register(ctx):
         recs = record_days(events)
         today_iso = date.today().isoformat()
         counts_ser = Counter(
-            dt.date().isoformat() for _a, _c, dt in events if dt is not None
+            dt.date().isoformat() for _a, _c, dt, _u in events if dt is not None
         )
         rank = None
         if counts_ser.get(today_iso):

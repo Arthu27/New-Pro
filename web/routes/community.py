@@ -87,10 +87,18 @@ def register(ctx):
             except Exception as ex:
                 msgs = []
                 _log.debug('analytics: не прочитать %s: %s', msg_log_file, ex)
+            # Топ участников клеится ПО ЛИЧНОСТИ (uid): смена ника не дробит
+            # человека на двоих (владелец 2026-09-05: «это один и тот же
+            # человек, просто имя поменял»). Подпись — свежий ник.
+            _member_labels = {}
             for m in msgs:
                 if not isinstance(m, dict):
                     continue
-                member_msg_counts[str(m.get('author') or m.get('user_name') or '?')] += 1
+                _author = str(m.get('author') or m.get('user_name') or '?')
+                _uid = str(m.get('uid') or '')
+                _mkey = ('u:' + _uid) if _uid else ('n:' + _author)
+                member_msg_counts[_mkey] += 1
+                _member_labels[_mkey] = _author
                 channel_msg_counts[str(m.get('channel') or '?')] += 1
                 day = _day_key(m.get('timestamp'))
                 if day:
@@ -127,8 +135,9 @@ def register(ctx):
         result['daily_messages'] = [daily_counts.get(l, 0) for l in labels]
 
         result['top_members'] = [
-            {'name': name, 'messages': count}
-            for name, count in member_msg_counts.most_common(10)
+            {'name': _member_labels.get(_k, _k), 'messages': _c,
+             'uid': (_k[2:] if _k.startswith('u:') else None)}
+            for _k, _c in member_msg_counts.most_common(10)
         ]
         result['top_channels'] = [
             {'name': ch, 'messages': count}

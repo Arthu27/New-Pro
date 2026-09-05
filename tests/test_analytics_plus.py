@@ -264,11 +264,11 @@ check(AP.member_flow(424242)['net'] == 0 and AP.member_flow(424242)['joined_tota
 
 now = _dt(2026, 8, 16, 12, 0, 0)
 events = [
-    ('Аня', 'общий', now - timedelta(days=1)),
-    ('Боря', 'общий', now - timedelta(days=2)),
-    ('Аня', 'общий', now - timedelta(days=8)),   # прошлая неделя
-    ('Аня', 'общий', now - timedelta(days=20)),  # вне окон
-    ('Ветераный', 'общий', None),                 # без метки
+    ('Аня', 'общий', now - timedelta(days=1), '101'),
+    ('Боря', 'общий', now - timedelta(days=2), '102'),
+    ('Аня', 'общий', now - timedelta(days=8), '101'),   # прошлая неделя
+    ('Аня', 'общий', now - timedelta(days=20), '101'),  # вне окон
+    ('Ветераный', 'общий', None, None),                 # без метки
 ]
 ws = AP.week_summary(events, now=now)
 check(ws['week_msgs'] == 2 and ws['prev_week_msgs'] == 1, 'окна 7+7 суток')
