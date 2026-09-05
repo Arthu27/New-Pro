@@ -660,18 +660,24 @@ def _form_radius(form, h):
     if form == 'pill':
         return max(10, int(h // 2))
     if form == 'sharp':
-        return 5
+        return 6
     if form == 'rounded':
-        return 16
-    return 24
+        return 18
+    return 26
 
 
-def _form_alpha(form):
-    return {'glass': 168, 'rounded': 182, 'pill': 192, 'sharp': 208}.get(form, 168)
+def _glass_veil(form):
+    """Белая дымка + тёмная вуаль: бесцветное стекло, фото чуть просвечивает."""
+    return {
+        'glass': (56, 96),
+        'rounded': (48, 110),
+        'pill': (42, 118),
+        'sharp': (38, 128),
+    }.get(form, (56, 96))
 
 
-def _frost_plate(img, box, radius, fill_rgb, alpha, outline=None):
-    """Матовое стекло: блюр куска фона + цвет формы. Читается на любом фото."""
+def _frost_plate(img, box, radius, fill_rgb=None, alpha=None, outline=None, form='glass'):
+    """Матовое стекло без краски: блюр фона + белая/тёмная вуаль."""
     x0, y0, x1, y1 = int(box[0]), int(box[1]), int(box[2]), int(box[3])
     x0 = max(0, min(x0, img.width - 2))
     y0 = max(0, min(y0, img.height - 2))
@@ -679,19 +685,29 @@ def _frost_plate(img, box, radius, fill_rgb, alpha, outline=None):
     y1 = max(y0 + 4, min(y1, img.height))
     w, h = x1 - x0, y1 - y0
     crop = img.crop((x0, y0, x1, y1)).convert('RGBA')
+    wa, da = _glass_veil(form)
     plate = Image.alpha_composite(
-        crop.filter(ImageFilter.GaussianBlur(12)),
-        Image.new('RGBA', (w, h), fill_rgb + (int(alpha),)),
+        crop.filter(ImageFilter.GaussianBlur(16)),
+        Image.new('RGBA', (w, h), (255, 255, 255, wa)),
     )
+    plate = Image.alpha_composite(
+        plate, Image.new('RGBA', (w, h), (8, 10, 16, da)))
     rad = max(2, min(int(radius), w // 2, h // 2))
     mask = Image.new('L', (w, h), 0)
     ImageDraw.Draw(mask).rounded_rectangle(
         (0, 0, w - 1, h - 1), radius=rad, fill=255)
     img.paste(plate, (x0, y0), mask)
     d = ImageDraw.Draw(img)
-    if outline:
-        d.rounded_rectangle((x0, y0, x1 - 1, y1 - 1), radius=rad,
-                            outline=outline, width=1)
+    rim = outline or (255, 255, 255, 64)
+    d.rounded_rectangle((x0, y0, x1 - 1, y1 - 1), radius=rad,
+                        outline=rim, width=1)
+
+
+def _put_text(d, xy, text, font, fill):
+    """Текст со слабой тенью — читается на стекле."""
+    x, y = xy
+    d.text((x, y + 1), text, font=font, fill=(0, 0, 0, 120))
+    d.text((x, y), text, font=font, fill=fill)
 
 
 def _og_image_from_html(html, base=''):
@@ -796,38 +812,37 @@ def get_bg_bytes_sync(url, ttl=300):
 def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
                     guild_name='', time_str='', theme=None, accent=None,
                     fmt='jpeg', bg_bytes=None, form=None, form_color=None):
-    """Нарисовать карточку лога: фото на весь кадр, поверх — стеклянные
-    плашки сообщений (форма и цвет задаются из панели).
+    """Карточка лога: фото на весь кадр, поверх — бесцветное стекло-сообщения.
 
-    theme / accent — палитра темы; form — glass|rounded|pill|sharp;
-    form_color — hex заливки плашек (пусто = тёмное стекло).
-    bg_bytes — своё фото задним фоном (bg_url; качает cogs/logs.py).
+    form — glass|rounded|pill|sharp. Цвет плашек больше не красит стекло:
+    читаемость даёт вуаль, а не заливка. bg_bytes — своё фото (bg_url).
     """
     if not LOG_CARD_OK:
         return None
     try:
         W = 1440
-        PAD = 48
+        PAD = 52
         pal = _palette(theme, accent)
-        gold, bright, _soft = pal['gold'], pal['bright'], pal['soft']
         cat_key = str(category or 'guild').lower().strip()
         cstyle = CATEGORY_STYLES.get(cat_key, CATEGORY_STYLES.get('guild'))
         form = _valid_form(form)
-        fill_rgb = _form_fill(form_color)
-        ink, ink_dim = _ink_on(fill_rgb)
-        alpha = _form_alpha(form)
+        ink = (252, 253, 255)
+        ink_dim = (186, 192, 204)
         has_photo = bool(bg_bytes)
 
         clean_rows = [(n, v) for n, v in (rows or []) if v not in (None, '')][:7]
-        # «Ссылка»/«Перейти» на картинке не имеет смысла — ссылку не кликнуть
         clean_rows = [(n, v) for n, v in clean_rows
                       if _clean(n).strip().lower() not in ('ссылка', 'link')]
-        header_inner = 126
-        header_top = 36
-        row_h = 70
-        footer_h = 72
-        gap = 12
-        H = header_top + header_inner + gap + max(1, len(clean_rows)) * row_h + footer_h
+        header_inner = 118
+        header_top = 32
+        row_h = 86
+        row_gap = 8
+        footer_h = 58
+        gap = 14
+        n = max(1, len(clean_rows))
+        H = (header_top + header_inner + gap
+             + n * row_h + max(0, n - 1) * row_gap
+             + gap + footer_h)
 
         cat_glow = cstyle['glow_color']
         use_asset = (str(theme or DEFAULT_LOG_THEME).strip().lower() == DEFAULT_LOG_THEME
@@ -851,85 +866,62 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
         hx0, hy0 = PAD, header_top
         hx1, hy1 = W - PAD, header_top + header_inner
         head_r = _form_radius(form, header_inner)
-        outline = gold + (90,)
-        _frost_plate(img, (hx0, hy0, hx1, hy1), head_r, fill_rgb, alpha, outline)
+        _frost_plate(img, (hx0, hy0, hx1, hy1), head_r, form=form)
         d = ImageDraw.Draw(img)
 
         time_clean = _clean(time_str)
-        t_font = _font(20, True)
+        t_font = _font(18, False)
         if time_clean:
             tw = d.textlength(time_clean, font=t_font)
-            d.text((hx1 - 22 - tw, hy0 + 18), time_clean, font=t_font, fill=ink_dim)
+            _put_text(d, (hx1 - 26 - tw, hy0 + 20), time_clean, t_font, ink_dim)
 
-        cat_badge = cstyle.get('tag') or f'HAKUMO · {str(cat_name or cat_key).upper()}'
-        badge_font = _font(20, True)
-        d.text((hx0 + 22, hy0 + 18),
-               _ellipsize(d, cat_badge, badge_font, W - PAD * 2 - 220),
-               font=badge_font, fill=bright)
+        raw_tag = cstyle.get('tag') or str(cat_name or cat_key)
+        cat_badge = raw_tag.split('·')[-1].strip() if '·' in raw_tag else raw_tag
+        cat_badge = cat_badge.replace('✦', '').strip().title()
+        badge_font = _font(17, False)
+        _put_text(d, (hx0 + 26, hy0 + 20),
+                  _ellipsize(d, cat_badge, badge_font, W - PAD * 2 - 220),
+                  badge_font, ink_dim)
 
-        title_font = _font(40, True)
-        title_txt = _ellipsize(d, _clean(title), title_font, W - PAD * 2 - 48)
-        d.text((hx0 + 22, hy0 + 58), title_txt, font=title_font, fill=ink)
+        title_font = _font(36, True)
+        title_txt = _ellipsize(d, _clean(title), title_font, W - PAD * 2 - 56)
+        _put_text(d, (hx0 + 26, hy0 + 56), title_txt, title_font, ink)
 
         y = hy1 + gap
         card_w = W - PAD * 2
-        name_col_w = 268
-        plate_r = _form_radius(form, row_h - 8)
+        plate_r = _form_radius(form, row_h)
 
-        for name, value in clean_rows:
-            clean_n = _clean(name).upper()
-            clean_v = _clean(value)
-            is_reason = clean_n in ('ПРИЧИНА', 'REASON', 'ПРИЧИНА НАКАЗАНИЯ')
-            tint = _mix(fill_rgb, (160, 30, 40), 0.38) if is_reason else fill_rgb
-            ol = ((235, 75, 85, 150) if is_reason else outline)
-            _frost_plate(img, (PAD, y + 4, PAD + card_w, y + row_h - 6),
-                         plate_r, tint, min(230, alpha + (18 if is_reason else 0)), ol)
-            d = ImageDraw.Draw(img)
-            bar = (255, 80, 90, 255) if is_reason else gold + (255,)
-            d.rounded_rectangle((PAD + 10, y + 16, PAD + 16, y + row_h - 18),
-                                radius=3, fill=bar)
-            n_font = _font(20, True)
-            n_fill = (255, 145, 155) if is_reason else bright
-            d.text((PAD + 28, y + 20),
-                   _ellipsize(d, clean_n, n_font, name_col_w - 24),
-                   font=n_font, fill=n_fill)
-            d.text((PAD + name_col_w, y + 18), '›', font=_font(24, True),
-                   fill=gold + (170,))
-            v_font = _font(24, True) if is_reason else _font(24, False)
-            val_x = PAD + name_col_w + 22
-            max_val_w = W - PAD - val_x - 20
-            val_txt = _ellipsize(d, clean_v, v_font, max_val_w)
-            val_color = (255, 235, 235) if is_reason else ink
-            d.text((val_x, y + 18), val_txt, font=v_font, fill=val_color)
+        def _bubble(yy, label, value):
+            _frost_plate(img, (PAD, yy, PAD + card_w, yy + row_h),
+                         plate_r, form=form)
+            dd = ImageDraw.Draw(img)
+            lab_f = _font(16, False)
+            val_f = _font(26, True)
+            lab = _ellipsize(dd, label, lab_f, card_w - 52)
+            val = _ellipsize(dd, value, val_f, card_w - 52)
+            _put_text(dd, (PAD + 26, yy + 14), lab, lab_f, ink_dim)
+            _put_text(dd, (PAD + 26, yy + 40), val, val_f, ink)
+
+        if clean_rows:
+            for i, (name, value) in enumerate(clean_rows):
+                _bubble(y, _clean(name), _clean(value))
+                y += row_h + (row_gap if i < len(clean_rows) - 1 else 0)
+        else:
+            _bubble(y, 'Событие', 'Нет дополнительных параметров')
             y += row_h
 
-        if not clean_rows:
-            _frost_plate(img, (PAD, y + 4, PAD + card_w, y + row_h - 6),
-                         plate_r, fill_rgb, alpha, outline)
-            d = ImageDraw.Draw(img)
-            d.text((PAD + 24, y + 20), 'Нет дополнительных параметров',
-                   font=_font(24), fill=ink_dim)
-
-        fy = H - footer_h + 10
-        foot_r = _form_radius(form, 44)
-        _frost_plate(img, (PAD, fy, W - PAD, fy + 44), foot_r, fill_rgb,
-                     max(120, alpha - 20), outline)
+        fy = H - footer_h + 8
+        foot_r = _form_radius(form, 40)
+        _frost_plate(img, (PAD, fy, W - PAD, fy + 40), foot_r, form=form)
         d = ImageDraw.Draw(img)
-        f_txt = f"HAKUMO LOG · {str(cat_name or cat_key).upper()}"
+        f_txt = str(cat_name or cat_badge or cat_key)
         if guild_name:
-            f_txt += f" · {_clean(guild_name)}"
-        d.text((PAD + 20, fy + 10),
-               _ellipsize(d, f_txt, _font(20), W - PAD * 2 - 220),
-               font=_font(20), fill=ink_dim)
-        brand = "HAKUMO"
-        bw = d.textlength(brand, font=_font(20, True))
-        d.text((W - PAD - 20 - bw, fy + 10), brand, font=_font(20, True), fill=bright)
+            f_txt = f"{_clean(guild_name)}  ·  {f_txt}"
+        _put_text(d, (PAD + 24, fy + 10),
+                  _ellipsize(d, f_txt, _font(16), W - PAD * 2 - 48),
+                  _font(16), ink_dim)
 
         buf = io.BytesIO()
-        # JPEG вместо PNG: кодирование PNG жрало ~1.2 секунды НА КАЖДЫЙ лог
-        # («логи медленные»), JPEG делает то же за ~5-20 мс и файл в 4 раза
-        # меньше — Discord быстрее грузит. Качество 90 — артефактов нет.
-        # fmt='png' остаётся для превью панели (эндпоинт .../preview.png).
         if str(fmt).lower() == 'png':
             img.convert('RGB').save(buf, 'PNG')
         else:

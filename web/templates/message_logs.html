@@ -92,11 +92,6 @@
         <option value="sharp">Прямая</option>
       </select>
     </label>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)">
-      Цвет формы
-      <input type="color" id="lcFormColor" value="#0c101c" aria-label="Цвет плашек сообщений" style="width:44px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)">
-    </label>
-    <button type="button" class="btn btn-sm" id="lcFormColorClear"><i class="fas fa-rotate-left"></i> Авто</button>
   </div>
   <div class="filter-row" style="margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap">
     <input type="text" id="lcBgUrl" class="field-input" placeholder="Фон-фото карточек по URL (https://… — подойдёт и pin.it)" aria-label="Своя фоновая картинка карточек логов" style="flex:1;min-width:240px">
@@ -274,7 +269,6 @@ else start();
       catSel = document.getElementById('lcCat'),
       accent = document.getElementById('lcAccent'),
       formSel = document.getElementById('lcForm'),
-      formColor = document.getElementById('lcFormColor'),
       bgUrl = document.getElementById('lcBgUrl'),
       msg = document.getElementById('lcMsg'),
       img = document.getElementById('lcPreview'),
@@ -289,9 +283,7 @@ else start();
     return el ? el.value : '';
   }
   var accentDirty = false; /* не трогаем цвет до первого касания владельца */
-  var formColorDirty = false;
   accent.addEventListener('input', function () { accentDirty = true; schedulePreview(); });
-  formColor.addEventListener('input', function () { formColorDirty = true; schedulePreview(); });
   bgUrl.addEventListener('input', schedulePreview);
   document.getElementById('lcBgClear').addEventListener('click', function () {
     bgUrl.value = ''; schedulePreview(); lcSave(true);
@@ -305,7 +297,6 @@ else start();
     q.set('theme', byCatValue(cat) || themeSel.value || 'hakumo');
     if (accentDirty) q.set('accent', accent.value.replace('#', ''));
     q.set('form', formSel.value || 'glass');
-    if (formColorDirty) q.set('form_color', formColor.value.replace('#', ''));
     var bg = (bgUrl.value || '').trim();
     if (bg) q.set('bg', bg);
     q.set('cat', cat);
@@ -321,9 +312,6 @@ else start();
   document.getElementById('guild-select').addEventListener('change', loadLc);
   document.getElementById('lcAccentClear').addEventListener('click', function () {
     accentDirty = false; schedulePreview(); lcSave(true);
-  });
-  document.getElementById('lcFormColorClear').addEventListener('click', function () {
-    formColorDirty = false; schedulePreview(); lcSave(true);
   });
 
   function loadLc() {
@@ -358,6 +346,7 @@ else start();
         }
         on.checked = !!d.cfg.enabled;
         themeSel.value = d.cfg.theme || 'hakumo';
+        formSel.value = d.cfg.form || 'glass';
         if (d.cfg.accent) { accent.value = '#' + d.cfg.accent; accentDirty = true; }
         else accentDirty = false;
         bgUrl.value = d.cfg.bg_url || '';
@@ -373,7 +362,7 @@ else start();
     var body = { enabled: on.checked, theme: themeSel.value || 'hakumo',
                  accent: accentDirty ? accent.value.replace('#', '') : '',
                  form: formSel.value || 'glass',
-                 form_color: formColorDirty ? formColor.value.replace('#', '') : '',
+                 form_color: '',
                  bg_url: (bgUrl.value || '').trim(),
                  theme_by_cat: tbc };
     fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings', {

@@ -217,7 +217,7 @@ print('== 5. Шаблон ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'message_logs.html'),
            encoding='utf-8').read()
 for fid in ('lcSetBox', 'lcOn', 'lcTheme', 'lcCat', 'lcAccent', 'lcSave',
-            'lcPreview', 'lcMsg', 'lcForm', 'lcFormColor'):
+            'lcPreview', 'lcMsg', 'lcForm'):
     check(f'id="{fid}"' in tpl, f'контрол {fid} на месте')
 check('/log-cards/settings\' + ' in tpl or 'log-cards/settings' in tpl,
       'API настроек подключён в шаблоне')
