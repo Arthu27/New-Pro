@@ -60,10 +60,11 @@ ok(f'тёплый рендер < 150 мс ({warm:.0f} мс; было ~1271)', wa
 
 print('== 2. Отправка: не блокирует бота ==')
 logs_src = open(os.path.join(ROOT, 'cogs/logs.py'), encoding='utf-8').read()
-ok('кроп фото в отдельном потоке (to_thread)',
-   'to_thread (compact_log_photo' in logs_src or 'to_thread(compact_log_photo' in logs_src)
-ok('фото лога шлётся .jpg', 'hakumo_log_photo.jpg' in logs_src)
-ok('сгенерированная карточка больше не шлётся', 'hakumo_log_card.jpg' not in logs_src)
+ok('карточка в отдельном потоке (to_thread)',
+   'to_thread' in logs_src and 'render_log_card' in logs_src)
+ok('лог шлётся .jpg', 'hakumo_log.jpg' in logs_src)
+ok('эмбед Discord снимается, если есть фото',
+   "pop ('embed'" in logs_src or "pop('embed'" in logs_src)
 ok('старый тяжёлый .png отправкой не остался', 'hakumo_log_card.png' not in logs_src)
 
 print('== 3. Дубль «Команды» убран из меню ==')

@@ -595,35 +595,41 @@ async def _safe_send (ch ,**kw ):
                 _th_name =str (_m0 .get ('title',''))if _m0 else ''
         _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None
         _has_file ='file'in kw or 'files'in kw
-        _has_img =False
-        if _e is not None :
+        # Владелец задал URL фото: лог = ЭТО фото с текстом события.
+        # Карточку Discord (эмбед) не шлём — в канал уходит только картинка.
+        if not _has_file and _m is not None :
             try :
-                _has_img =bool (getattr (_e ,'image',None )and _e .image .url )
-            except Exception :
-                _has_img =False
-        if not _has_file and not _has_img :
-            try :
-                from services .log_card import (compact_log_photo ,get_log_cards_cfg ,
+                from services .log_card import (render_log_card ,get_log_cards_cfg ,
                                                  get_bg_bytes_sync ,bg_url_for_cat )
                 import io as _io
                 import asyncio as _aio
-                # Фото лога — только то, что владелец задал (bg_url). Карточку
-                # со стеклом/текстом не рисуем: эмбед остаётся читаемым,
-                # профиль — аватар, фото — компактной полосой.
                 _gid =getattr (getattr (ch ,'guild',None ),'id',0 )or 0
                 _cfg =await _aio .to_thread (get_log_cards_cfg ,_gid )
-                _jpg =None
-                if not _cfg .get ('enabled',True ):
-                    _jpg =None
-                else :
-                    _cat =(_m or {}).get ('cat')or 'mod'
+                if _cfg .get ('enabled',True ):
+                    _cat =_m .get ('cat')or 'mod'
                     _bg_url =bg_url_for_cat (_cfg ,_cat )
                     _bg =await _aio .to_thread (get_bg_bytes_sync ,_bg_url )if _bg_url else None
                     if _bg :
-                        _jpg =await _aio .to_thread (compact_log_photo ,_bg )
-                if _jpg and _e is not None :
-                    kw ['file']=discord .File (_io .BytesIO (_jpg ),filename ='hakumo_log_photo.jpg')
-                    _e .set_image (url ='attachment://hakumo_log_photo.jpg')
+                        _theme =(_cfg .get ('theme_by_cat')or {}).get (_cat )or _cfg .get ('theme')
+                        _now =datetime .datetime .now (datetime .timezone .utc ).strftime ('%H:%M UTC')
+                        def _draw ():
+                            return render_log_card (
+                                _cat ,_m .get ('title')or _th_name or 'Лог',
+                                _m .get ('rows')or [],
+                                color =_m .get ('color')or 0xC8922A ,
+                                cat_name ='',
+                                guild_name =_m .get ('guild')or '',
+                                time_str =_now ,
+                                theme =_theme ,
+                                accent =_cfg .get ('accent'),
+                                fmt ='jpeg',
+                                bg_bytes =_bg ,
+                                form =_cfg .get ('form'),
+                                form_color =_cfg .get ('form_color'))
+                        _jpg =await _aio .to_thread (_draw )
+                        if _jpg :
+                            kw ['file']=discord .File (_io .BytesIO (_jpg ),filename ='hakumo_log.jpg')
+                            kw .pop ('embed',None )
             except Exception as _ex:
                 log.debug("_safe_send(): подавлено: %s", _ex)
         if _is_forum_ch (ch ):

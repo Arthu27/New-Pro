@@ -154,13 +154,82 @@ check('get_log_cards_cfg' in flat and "_cfg.get('enabled',True)" in flat.replace
       '_safe_send читает cfg сервера')
 check('bg_url_for_cat' in logs_src,
       '_safe_send берёт фон категории, а не только общий bg_url')
-check('compact_log_photo' in logs_src and 'hakumo_log_photo.jpg' in logs_src,
-      '_safe_send кропает только фото, без стекла и текста')
-check('hakumo_log_card.jpg' not in logs_src and 'render_log_card' not in logs_src,
-      'карточка со стеклом в канал не уходит')
-check("ifnot_cfg.get('enabled',True)" in flat.replace('"', "'")
-      and '_jpg=None' in flat,
+check('render_log_card' in logs_src and 'hakumo_log.jpg' in logs_src,
+      '_safe_send рисует лог на фото владельца и шлёт файл')
+check("pop ('embed'" in logs_src or "pop('embed'" in logs_src,
+      'есть URL — эмбед Discord не уходит, только фото')
+check('compact_log_photo' not in logs_src and 'hakumo_log_photo.jpg' not in logs_src,
+      'полоска без текста в канал не уходит')
+check("if_cfg.get('enabled',True)" in flat.replace('"', "'"),
       'enabled=False выключает картинку, текст остаётся')
+
+print('== 3б. Отправка: фото с текстом, без карточки Discord ==')
+import asyncio
+from cogs.logs import _safe_send, _styled_log_embed  # noqa: E402
+
+_bgbuf = __import__('io').BytesIO()
+_Im.new('RGB', (960, 540), (40, 28, 18)).save(_bgbuf, 'JPEG')
+_fake_bg = _bgbuf.getvalue()
+_orig_bg = LC.get_bg_bytes_sync
+LC.get_bg_bytes_sync = lambda url, ttl=300: _fake_bg if url else None
+
+
+class _G:
+    id = 424245
+    name = 'Hakumo'
+    icon = None
+
+    def get_member(self, *a):
+        return None
+
+    def get_role(self, *a):
+        return None
+
+    def get_channel(self, *a):
+        return None
+
+
+class _Ch:
+    def __init__(self):
+        self.guild = _G()
+        self.name = 'модерация'
+        self.sent = []
+
+    async def send(self, **kw):
+        self.sent.append(kw)
+
+
+LC.save_log_cards_cfg('424245', {'enabled': True,
+                                 'bg_url': 'https://example.com/bg.jpg'})
+_ch = _Ch()
+_e = _styled_log_embed(_G(), 'mod', 'Выдано предупреждение',
+                       fields=[('Пользователь', 'GhostBlade'),
+                               ('Причина', 'спам')])
+asyncio.run(_safe_send(_ch, embed=_e))
+_kw = _ch.sent[-1] if _ch.sent else {}
+check('file' in _kw and 'embed' not in _kw,
+      'URL задан: в канал уходит только фото, без эмбеда Discord')
+check(getattr(_kw.get('file'), 'filename', '') == 'hakumo_log.jpg',
+      'файл hakumo_log.jpg')
+
+LC.save_log_cards_cfg('424245', {'enabled': False,
+                                 'bg_url': 'https://example.com/bg.jpg'})
+_ch2 = _Ch()
+_e2 = _styled_log_embed(_G(), 'mod', 'Выдано предупреждение',
+                        fields=[('Пользователь', 'GhostBlade')])
+asyncio.run(_safe_send(_ch2, embed=_e2))
+_kw2 = _ch2.sent[-1] if _ch2.sent else {}
+check('embed' in _kw2 and 'file' not in _kw2,
+      'enabled=False: текстовый эмбед, без фото')
+
+os.remove(LC.log_cards_cfg_path('424245'))
+_ch3 = _Ch()
+_e3 = _styled_log_embed(_G(), 'mod', 'Событие', fields=[('А', 'б')])
+asyncio.run(_safe_send(_ch3, embed=_e3))
+_kw3 = _ch3.sent[-1] if _ch3.sent else {}
+check('embed' in _kw3 and 'file' not in _kw3,
+      'нет URL: текстовый эмбед, без полоски')
+LC.get_bg_bytes_sync = _orig_bg
 
 print('== 4. API панели ==')
 appmod = importlib.import_module('web.app')

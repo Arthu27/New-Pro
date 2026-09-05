@@ -114,7 +114,32 @@ def register(ctx):
         if not theme:
             theme = (cfg.get('theme_by_cat') or {}).get(cat) or cfg.get('theme')
         try:
-            png = LC.preview_log_banner(bg_bytes=bg_bytes, theme=theme, accent=accent)
+            rows = list(PREVIEW_BY_CAT.get(cat, PREVIEW_ROWS))
+            form = request.args.get('form') or cfg.get('form')
+            fc = request.args.get('form_color') or cfg.get('form_color')
+            titles = {
+                'mod': 'Выдано предупреждение',
+                'automod': 'Авто-наказание',
+                'punish': 'Наказание',
+                'message': 'Сообщение удалено',
+                'member': 'Новый участник',
+                'welcome': 'Добро пожаловать',
+                'voice': 'Зашёл в голосовой',
+                'nick': 'Псевдоним изменён',
+                'role': 'Роль выдана',
+                'channel': 'Канал создан',
+                'invite': 'Приглашение создано',
+                'ban': 'Пользователь заблокирован',
+                'mute': 'Участник замьючен',
+                'warn': 'Выдано предупреждение',
+                'staff': 'Роль стаффа снята',
+                'rest': 'Событие',
+            }
+            png = LC.render_log_card(
+                cat, titles.get(cat, 'Событие'), rows,
+                cat_name='', guild_name='Hakumo', time_str='20:41 UTC',
+                theme=theme, accent=accent or cfg.get('accent'),
+                fmt='png', bg_bytes=bg_bytes, form=form, form_color=fc)
         except Exception as _ex:
             _log.debug('log-cards preview: %s', _ex)
             png = None
