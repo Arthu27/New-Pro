@@ -405,8 +405,12 @@ class AppealView(discord.ui.View):
                 return
         except Exception as _ex:
             log.debug('appeals: acl resolve: %s', _ex)
-            # Лимиты стаффа: «разбан» считается как unban (та же расходка,
-            # что у /unban в панельной карточке наказаний).
+        if accept:
+            # Лимиты стаффа: принятие апелляции = разбан, расходка «unban»
+            # (та же, что у /unban и панели). Проверяем ДО решения и только
+            # на принятие: отклонение расходки не несёт. Раньше блок стоял
+            # внутри except ACL-проверки и в нормальном пути не работал
+            # вовсе (обход системы 2026-09-05).
             try:
                 from services import staff_limits as _SL
                 _guild = self.cog.bot.get_guild(gid)

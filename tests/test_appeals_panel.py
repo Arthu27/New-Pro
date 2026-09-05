@@ -163,7 +163,11 @@ check([p['id'] for p in ov['pending']] == [], 'очередь в JSON — пус
 r = client.get('/api/guild/777/appeals/history?status=rejected')
 check(len(r.get_json()['items']) == 2, 'история по API с фильтром')
 r = client.post('/api/guild/777/appeals/resolve', json={'appeal_id': '3', 'accept': True})
-check(r.status_code == 403, 'mod не решает')
+# С 2026-09-05 решение из панели регулирует ACL «Бан» (как кнопки под
+# карточкой), а не панельная роль: mod допущен, и честный ответ на уже
+# рассмотренную апелляцию — 409.
+check(r.status_code == 409,
+      f'mod допущен к решению (право решает ACL «Бан») [{r.status_code}]')
 login('admin')
 r = client.post('/api/guild/777/appeals/resolve', json={'appeal_id': 'ку', 'accept': True})
 check(r.status_code == 400 and r.get_json()['error'] == 'Некорректный номер апелляции', 'битый ID')

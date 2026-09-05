@@ -257,10 +257,13 @@ def apply_side_effects(bot, gid, item, accept):
                     mod = bot.get_cog('Moderation')
                     if mod is not None:
                         await mod._unisolate_member(guild, member)
-                        try:
-                            await member.timeout(None)
-                        except (discord.Forbidden, discord.HTTPException) as _e:
-                            _log.debug('appeals: таймаут при возврате: %s', _e)
+                    # муты снимаем тем же вызовом, что и кнопка кога в
+                    # AppealView._resolve: роль чат-мута, роль войс-мута,
+                    # server-mute и нативный таймаут — разом. Раньше панель
+                    # снимала только нативный таймаут, и мут-роли оставались
+                    # (расхождение путей, обход 2026-09-05).
+                    from services import mute_state
+                    await mute_state.clear_all_mutes(guild, member)
                 try:
                     _run_async(_soft_return(), timeout=15)
                 except Exception as _ex:
@@ -584,8 +587,12 @@ def register(ctx):
 
     @app.route('/api/guild/<gid>/appeals/resolve', methods=['POST'])
     @login_required
-    @role_required('admin')
+    @role_required('mod')
     def api_appeals_resolve(gid):
+        # Гейт «mod», а не «admin»: решение апелляции регулирует ACL «Бан»
+        # (панель → Доступ → Права команд), ровно как кнопки под карточкой
+        # в Discord. Раньше панель была строже кнопок: модератор, которому
+        # владелец явно выдал «Бан», в панели получал 403 (обход 2026-09-05).
         import web.app as appmod
         gid = active_guild_id()
         data = _safe_json_obj()
