@@ -1338,8 +1338,10 @@ def login ():
                 return redirect (url_for ('index'))
 
     if request .method =='POST':
-        username =request .form .get ('username')
-        password =request .form .get ('password')
+        # Поле может отсутствовать (бот/прокси/пустой POST) — None.lstrip
+        # ронял всю панель 500 (логин 2026-09-06).
+        username =(request .form .get ('username')or '').strip ()
+        password =request .form .get ('password')or ''
 
         # Шаг 2 входа: код подтверждения из ЛС Discord (участник + новое
         # устройство). Пароль уже проверён на шаге 1 — завершаем вход тем,

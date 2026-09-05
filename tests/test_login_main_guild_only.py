@@ -302,6 +302,13 @@ check(r.status_code == 200 and 'Неверное' in r.get_data(as_text=True),
 r = client.post('/login', data={'username': '', 'password': ''})
 check(r.status_code == 200 and 'Неверное' in r.get_data(as_text=True),
       'пустые поля — вход не проходит')
+r = client.post('/login', data={'password': 'x'})
+check(r.status_code == 200 and 'Неверное' in r.get_data(as_text=True)
+      and 'Internal' not in r.get_data(as_text=True),
+      'POST без поля username — форма, не 500')
+r = client.post('/login')
+check(r.status_code == 200 and 'Internal' not in r.get_data(as_text=True),
+      'пустой POST /login — не падает')
 r = client.get('/api/login-probe')
 check(r.status_code == 404, 'probe-эндпоинта больше нет', f'→ {r.status_code}')
 
