@@ -121,14 +121,18 @@ check(img is None, 'загрузчик не ходит в приватную с�
 # ═══════════════════════════════════════════════════════════════════
 print('== 4. Отправка своей картинки — файлом (качество не портится) ==')
 src = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
-check(src.count('fetch_remote_image(') >= 2,
-      'оба пути подачи качают оригинал (ЛС и канальная подача)')
-check(src.count('attachment://') == 4
-      and 'attachment://{url_file[1]}' in src,
+check('_paint_appeal_card' in src and src.count('_paint_appeal_card') >= 3,
+      'оба пути подачи рисуют карточку одним хелпером (ЛС и канал)')
+check(src.count('fetch_remote_image(') >= 1,
+      'URL-режим качает оригинал (тот же загрузчик, что превью)')
+check(src.count('attachment://') >= 2
+      and 'render_url_card' in src,
       'картинка едет вложением attachment:// (без пережатия Discordом); '
       'композит — как файл')
 check('не скачалась' in src,
       'если хост не отдал файл — запасной путь по ссылке + честный лог')
+check('_strip_appeal_embed_texts' in src,
+      'когда PNG собран, тексты эмбеда уходят внутрь картинки')
 
 # ═══════════════════════════════════════════════════════════════════
 print('== 5. Предпросмотр «как это будет выглядеть»: сервер качает картинку ==')

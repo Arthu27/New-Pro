@@ -78,18 +78,43 @@ check(pal['gold'] == (255, 136, 0) and pal['bright'] != pal['gold'],
 
 print('== 2. Настройки cfg ==')
 cfg = LC.get_log_cards_cfg('424242')
-check({k: v for k, v in cfg.items() if k not in ('theme_by_cat', 'bg_url')} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+check({k: v for k, v in cfg.items() if k not in ('theme_by_cat', 'bg_url', 'bg_url_by_cat')} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
       and cfg['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT and cfg['bg_url'] == '',
       'нет файла → дефолт (+образы по категориям, фон пустой)')
 saved = LC.save_log_cards_cfg('424242', {'enabled': False, 'theme': 'ocean', 'accent': '#22d3ee'})
-check({k: v for k, v in saved.items() if k not in ('theme_by_cat', 'bg_url')} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'}
+check({k: v for k, v in saved.items() if k not in ('theme_by_cat', 'bg_url', 'bg_url_by_cat')} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'}
       and saved['bg_url'] == '', 'сохранение нормализует (accent без #)')
 check(LC.get_log_cards_cfg('424242') == saved, 'читается обратно один в один')
 saved2 = LC.save_log_cards_cfg('424242', {'enabled': 'yes', 'theme': 'bad', 'accent': 'bad'})
-check({k: v for k, v in saved2.items() if k not in ('theme_by_cat', 'bg_url')} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+check({k: v for k, v in saved2.items() if k not in ('theme_by_cat', 'bg_url', 'bg_url_by_cat')} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
       and saved2['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT,
       'мусор в POST не пролезает: enabled bool, тема/акцент по реестру')
 os.remove(LC.log_cards_cfg_path('424242'))
+
+print('== 2б. Фон по категории (merge-on-save) ==')
+LC.save_log_cards_cfg('424243', {'enabled': True, 'theme': 'ocean',
+                                 'bg_url': 'https://example.com/all.jpg'})
+LC.save_log_cards_cfg('424243', {'bg_url_by_cat': {
+    'mod': 'https://example.com/mod.jpg',
+    'voice': 'https://pin.it/abc',
+    'junk': 'not-a-url',
+}})
+cfg3 = LC.get_log_cards_cfg('424243')
+check(cfg3['theme'] == 'ocean' and cfg3['bg_url'] == 'https://example.com/all.jpg',
+      'POST только bg_url_by_cat не затирает тему и общий фон')
+check(cfg3['bg_url_by_cat'].get('mod') == 'https://example.com/mod.jpg'
+      and cfg3['bg_url_by_cat'].get('voice') == 'https://pin.it/abc'
+      and 'junk' not in cfg3['bg_url_by_cat'],
+      'URL по категориям сохраняется, мусор отсекается')
+check(LC.bg_url_for_cat(cfg3, 'mod') == 'https://example.com/mod.jpg'
+      and LC.bg_url_for_cat(cfg3, 'member') == 'https://example.com/all.jpg',
+      'bg_url_for_cat: свой URL категории, иначе общий')
+LC.save_log_cards_cfg('424243', {'theme': 'forest'})
+cfg4 = LC.get_log_cards_cfg('424243')
+check(cfg4['theme'] == 'forest'
+      and cfg4['bg_url_by_cat'].get('mod') == 'https://example.com/mod.jpg',
+      'смена темы не стирает URL по категориям')
+os.remove(LC.log_cards_cfg_path('424243'))
 
 print('== 3. Склейка с ботом ==')
 logs_src = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
@@ -99,6 +124,8 @@ check('get_log_cards_cfg' in flat and '_cfg.get(\'enabled\',True)' in flat.repla
 check("theme=_theme" in flat and "accent=_cfg.get('accent')" in flat
       and "theme_by_cat" in flat,
       'тема (с образом категории) и акцент проброшены из cfg в render')
+check('bg_url_for_cat' in logs_src,
+      '_safe_send берёт фон категории, а не только общий bg_url')
 check("ifnot_cfg.get('enabled',True)" in flat.replace('"', "'")
       and "_png=None" in flat,
       'enabled=False выключает картинку, текст остаётся')

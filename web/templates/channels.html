@@ -486,6 +486,7 @@ textarea.field-input{resize:vertical;min-height:52px}
       case 'news':     return { icon: 'fa-bullhorn', cls: 'icon-news', label: 'Новости', badge: 'badge-news' };
       case 'stage':    return { icon: 'fa-microphone-lines', cls: 'icon-stage', label: 'Сцена', badge: 'badge-stage' };
       case 'forum':    return { icon: 'fa-comments', cls: 'icon-forum', label: 'Форум', badge: 'badge-forum' };
+      case 'thread':   return { icon: 'fa-comments', cls: 'icon-forum', label: 'Ветка', badge: 'badge-forum' };
       default:         return { icon: 'fa-hashtag', cls: 'icon-text', label: 'Канал', badge: '' };
     }
   }
@@ -585,7 +586,7 @@ textarea.field-input{resize:vertical;min-height:52px}
       return ((a.position || 0) - (b.position || 0)) ||
         String(a.name || '').localeCompare(String(b.name || ''), 'ru');
     };
-    var channels = allChannels.filter(function (c) { return c.type !== 'category'; }).sort(byPos);
+    var channels = allChannels.filter(function (c) { return c.type !== 'category' && c.type !== 'thread'; }).sort(byPos);
     if (!showHidden) channels = channels.filter(function (c) { return !hiddenChs[c.id]; });
     var hiddenCatSet = {};
     Object.keys(hiddenCats).forEach(function (k) { hiddenCatSet[k] = true; });

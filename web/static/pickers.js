@@ -504,7 +504,7 @@
       var html = '<option value="' + esc(noneValue) + '">' + esc(noneLabel) + '</option>';
       html += list.map(function (it) {
         if (String(it.id) === keep && keep) has = true;
-        var prefix = kind === 'role' ? '@ ' : (it.type === 'thread' ? '🧵 ' : '# ');
+        var prefix = kind === 'role' ? '@ ' : '# ';
         return '<option value="' + esc(it.id) + '">' + esc(prefix + it.name) + '</option>';
       }).join('');
       if (keep && keep !== noneValue && keep !== '0' && !has) {

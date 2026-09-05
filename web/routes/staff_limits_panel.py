@@ -112,8 +112,37 @@ def _guild_channels_live(bot, guild_id):
         channels = [{'id': str(c.id),
                      'name': (f'{c.name} · форум'
                               if c.type == _dc.ChannelType.forum
-                              else f'#{c.name}')}
-                    for c in sorted(pool, key=lambda x: x.position)]
+                              else f'#{c.name}'),
+                     'type': ('forum' if c.type == _dc.ChannelType.forum
+                              else 'text')}
+                    for c in sorted(pool, key=lambda x: getattr(x, 'position', 0))]
+        by_parent, leftover = {}, []
+        for th in getattr(guild, 'threads', None) or []:
+            pid = getattr(th, 'parent_id', None)
+            parent = getattr(th, 'parent', None)
+            if parent is None and pid:
+                try:
+                    parent = guild.get_channel(pid)
+                except Exception:
+                    parent = None
+            pname = getattr(parent, 'name', None) or ''
+            row = {'id': str(th.id),
+                   'name': (f'#{pname} › ветка {th.name}' if pname
+                            else f'ветка {th.name}'),
+                   'type': 'thread',
+                   'parent': pname}
+            if pid:
+                by_parent.setdefault(str(pid), []).append(row)
+            else:
+                leftover.append(row)
+        out = []
+        for ch in channels:
+            out.append(ch)
+            out.extend(by_parent.pop(ch['id'], []))
+        for rest in by_parent.values():
+            out.extend(rest)
+        out.extend(leftover)
+        channels = out
     else:
         import web.app as _app
         if _app._demo_mode():
@@ -126,26 +155,39 @@ def _guild_channels_live(bot, guild_id):
                         for c in _json.load(fh):
                             _t = c.get('type')
                             _is_forum = _t == 'forum' or bool(c.get('forum'))
-                            if _t in ('text', '') or _is_forum:
+                            _is_thread = _t == 'thread'
+                            if _t in ('text', '', 'thread') or _is_forum:
+                                _nm = str(c.get('name', ''))
+                                if _is_forum:
+                                    _label = _nm + ' · форум'
+                                elif _is_thread:
+                                    _par = str(c.get('parent') or c.get('category') or '')
+                                    _label = (f'#{_par} › ветка {_nm}' if _par
+                                              else f'ветка {_nm}')
+                                else:
+                                    _label = '#' + _nm
                                 channels.append({
                                     'id': str(c.get('id')),
-                                    'name': (str(c.get('name', '')) + ' · форум')
-                                            if _is_forum
-                                            else '#' + str(c.get('name', ''))})
+                                    'name': _label,
+                                    'type': ('forum' if _is_forum
+                                             else ('thread' if _is_thread
+                                                   else 'text'))})
             except Exception as ex:
                 _log.debug('staff_limits_panel: демо-каналы: %s', ex)
             # файла нет (пересборка/чистый data) — вшитый демо-набор, чтобы
             # селекты «куда писать логи» не пустовали в превью
             if not channels:
                 channels = [
-                    {'id': '1001', 'name': '#правила'},
-                    {'id': '1002', 'name': '#новости'},
-                    {'id': '1004', 'name': '#флудилка'},
-                    {'id': '1005', 'name': '#мемы'},
-                    {'id': '1015', 'name': 'журнал-модерации · форум'},
-                    {'id': '1010', 'name': '#варны'},
-                    {'id': '1009', 'name': '#тикет-логи'},
-                    {'id': '1016', 'name': '#анонс-бота'},
+                    {'id': '1001', 'name': '#правила', 'type': 'text'},
+                    {'id': '1002', 'name': '#новости', 'type': 'text'},
+                    {'id': '1004', 'name': '#флудилка', 'type': 'text'},
+                    {'id': '2101', 'name': '#флудилка › ветка ивент', 'type': 'thread'},
+                    {'id': '1005', 'name': '#мемы', 'type': 'text'},
+                    {'id': '1015', 'name': 'журнал-модерации · форум', 'type': 'forum'},
+                    {'id': '2102', 'name': 'журнал-модерации › ветка разбор', 'type': 'thread'},
+                    {'id': '1010', 'name': '#варны', 'type': 'text'},
+                    {'id': '1009', 'name': '#тикет-логи', 'type': 'text'},
+                    {'id': '1016', 'name': '#анонс-бота', 'type': 'text'},
                 ]
     return channels
 
@@ -376,10 +418,12 @@ def register(ctx):
     @role_required('mod')
     def api_log_settings_get(guild_id):
         channels, src = _guild_channels(_app.bot_instance, guild_id)
+        from services import log_card as LC
         return jsonify({'success': True,
                         'settings': LS.get_log_settings(guild_id),
                         'channels': channels,
                         'channels_source': src,
+                        'looks': LC.get_log_cards_cfg(guild_id),
                         'categories': [{'key': k, 'label': l, 'emoji': e}
                                        for k, l, e in LS.LOG_CATEGORIES]})
 
@@ -388,6 +432,20 @@ def register(ctx):
     @role_required('owner')
     def api_log_settings_set(guild_id):
         data = _safe_json_obj()
+        looks = None
+        if isinstance(data.get('bg_url_by_cat'), dict):
+            from services import log_card as LC
+            cur = LC.get_log_cards_cfg(guild_id)
+            by = dict(cur.get('bg_url_by_cat') or {})
+            for k, v in data['bg_url_by_cat'].items():
+                k = str(k).strip().lower()
+                u = LC._valid_bg_url(v)
+                if u:
+                    by[k] = u
+                else:
+                    by.pop(k, None)
+            cur['bg_url_by_cat'] = by
+            looks = LC.save_log_cards_cfg(guild_id, cur)
         settings = LS.set_log_settings(guild_id,
                                        enabled=data.get('enabled'),
                                        autocreate=data.get('autocreate'),
@@ -404,4 +462,7 @@ def register(ctx):
                     _LS.autocreate_forget(guild_id, cat)
         except Exception as _ex:
             _log.debug('log-settings: autocreate_forget подавлено: %s', _ex)
-        return jsonify({'success': True, 'settings': settings})
+        payload = {'success': True, 'settings': settings}
+        if looks is not None:
+            payload['looks'] = looks
+        return jsonify(payload)

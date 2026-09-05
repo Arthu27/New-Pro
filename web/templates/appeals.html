@@ -65,7 +65,7 @@
 
 <div class="panel" style="margin-top:14px" id="apLookBox" {% if not can_edit %}hidden{% endif %}>
   <div class="panel-head"><div><h2><i class="fas fa-wand-magic-sparkles"></i> Оформление карточки</h2>
-    <div class="sub">Как будет выглядеть сообщение с апелляцией в Discord: тексты карточки, картинка и кнопки решения — то, что увидят модераторы.</div></div></div>
+    <div class="sub">Карточка сверху, подписи и кнопки — внизу. То, что увидят модераторы в Discord.</div></div></div>
   <div class="panel-body">
     <div class="form-row" style="flex-wrap:wrap;max-width:900px">
       <select class="form-input" id="apLookMode" aria-label="Режим картинки карточки апелляции" style="max-width:280px">
@@ -96,14 +96,14 @@
             </div>
             <span style="font-size:14px;font-weight:600;color:var(--text-1)">Кипарис</span>
           </div>
-          <div style="font-size:15px;font-weight:600;color:var(--text-1)">Апелляция #7 — новая</div>
+          <div id="apLookPvImgWrap" style="margin-top:4px;border-radius:8px;overflow:hidden;line-height:0;background:var(--bg)">
+            <img id="apLookPv" alt="Картинка карточки апелляции" style="width:100%;height:auto" loading="lazy">
+          </div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-1);margin-top:10px">Апелляция #7 — новая</div>
           <div style="font-size:14px;line-height:1.45;color:var(--text-2);margin-top:5px">Бан за ссылки — это был не спам, а ссылка на общий документ с гайдом по ивенту. Прикладываю скрин переписки с согласованием.</div>
           <div style="margin-top:10px;font-size:13px;line-height:1.45;color:var(--text-2)"><span style="font-weight:600;color:var(--text-1)">Доказательство</span><br><span style="color:#00A8FC">https://i.imgur.com/demo-appeal-proof.png</span></div>
           <div style="margin-top:10px;font-size:13px;line-height:1.45;color:var(--text-2)"><span style="font-weight:600;color:var(--text-1)">Участник</span><br><span style="color:#00A8FC">@Кипарис</span> · 300100200300400101</div>
           <div style="margin-top:10px;font-size:13px;line-height:1.45;color:var(--text-2)"><span style="font-weight:600;color:var(--text-1)">Контекст модератора</span><br>варны: 1 · муты: 2 · отклонённые апелляции: 1</div>
-          <div id="apLookPvImgWrap" style="margin-top:12px;border-radius:8px;overflow:hidden;line-height:0;background:var(--bg)">
-            <img id="apLookPv" alt="Картинка карточки апелляции" style="width:100%;height:auto" loading="lazy">
-          </div>
           <div style="margin-top:10px;font-size:12px;color:var(--text-3)">appeal #7 · решение — меню под карточкой · сегодня в 14:20</div>
         </div>
       </div>
@@ -383,13 +383,18 @@ function loadChannels() {
     var inv = $('apInviteChan');
     if (inv) {  /* канал для разовых ссылок-возвратов — тот же список */
       var keepInv = inv.dataset.value || inv.value;
-      inv.innerHTML = '<option value="">Не выбран</option>' + raw.filter(function (c) { return c.type === 'text'; })
-        .map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('');
+      function isTextish(c) { return c.type === 'text' || c.type === 'thread'; }
+      function optLabel(c) { return (c.type === 'thread' ? 'ветка ' : '# ') + c.name; }
+      inv.innerHTML = '<option value="">Не выбран</option>' + raw.filter(isTextish)
+        .map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(optLabel(c)) + '</option>'; }).join('');
       if (keepInv) inv.value = keepInv;
     }
-    var list = raw.filter(function (c) { return c.type === 'text'; });
+    var list = raw.filter(function (c) { return c.type === 'text' || c.type === 'thread'; });
     $('apChanSel').innerHTML = list.length
-      ? list.map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('')
+      ? list.map(function (c) {
+          var p = c.type === 'thread' ? 'ветка ' : '# ';
+          return '<option value="' + esc(c.id) + '">' + esc(p + c.name) + '</option>';
+        }).join('')
       : '<option value="">бот офлайн — список недоступен</option>';
   }).catch(function () {});
 }

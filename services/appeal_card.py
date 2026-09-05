@@ -163,7 +163,7 @@ def _host_check(url):
     return True, '' 
 
 
-def _og_image_of(html):
+def _og_image_of(html, base=''):
     """Достать og:image / twitter:image из HTML страницы (или None)."""
     import re as _re
     html = str(html or '')
@@ -178,9 +178,13 @@ def _og_image_of(html):
             r'(?:og:image|twitter:image)["\']', html, _re.I)
     if not m:
         return None
-    from urllib.parse import urljoin
     cand = m.group(1).replace('&amp;', '&').strip()
-    return urljoin(str(url), cand) if 'url' in dir() else cand
+    if not cand:
+        return None
+    if base:
+        from urllib.parse import urljoin
+        return urljoin(str(base), cand)
+    return cand
 
 
 def _sniff_image_ext(head):
@@ -225,7 +229,7 @@ async def fetch_remote_image(url, timeout=12):
                     # og:image / twitter:image — люди копируют ссылки-СТРАНИЦЫ
                     # (владелец 2026-09-05: «вот вам например pin.it/…»).
                     page = await resp.text(errors='ignore')
-                    cand = _og_image_of(page)
+                    cand = _og_image_of(page, str(resp.url))
                     if not cand:
                         return None, 'по ссылке страница, а не картинка'
                     async with ses.get(cand, timeout=None) as r2:

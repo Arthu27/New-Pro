@@ -370,7 +370,7 @@ async def _safe_send (ch ,**kw ):
         if _m and 'file'not in kw and 'files'not in kw :
             try :
                 from services .log_card import (render_log_card ,get_log_cards_cfg ,
-                                                 get_bg_bytes_sync )
+                                                 get_bg_bytes_sync ,bg_url_for_cat )
                 import io as _io 
                 import asyncio as _aio 
                 # Оформление карточки настраивается в панели (Логи → оформление):
@@ -388,7 +388,7 @@ async def _safe_send (ch ,**kw ):
                               or _cfg .get ('theme') )
                     # Свой фон-фото (bg_url из оформления логов в панели):
                     # данные рисуются ПОВЕРХ фото (кэш 5 минут, без дампа хоста).
-                    _bg_url =str (_cfg .get ('bg_url')or '')
+                    _bg_url =bg_url_for_cat (_cfg ,_m ['cat'])
                     _bg =await _aio .to_thread (get_bg_bytes_sync ,_bg_url )if _bg_url else None 
                     _png =await _aio .to_thread (render_log_card ,_m ['cat'],_m ['title'],_m ['rows'],
                     color =_m ['color'],cat_name =_cat_meta (_m ['cat'])[2 ],
@@ -468,7 +468,9 @@ async def ensure_forum_log_permissions (guild ):
         for cid in ((get_log_settings (guild .id ).get ('channels')or {}).values ()):
             if not str (cid or '').strip ().isdigit ():
                 continue
-            ch =guild .get_channel (int (cid ))
+            ch =(guild .get_channel_or_thread (int (cid ))
+                 if hasattr (guild ,'get_channel_or_thread')
+                 else guild .get_channel (int (cid )))
             if ch is None or not _is_forum_ch (ch ):
                 continue
             ow =dict (ch .overwrites )
@@ -578,6 +580,10 @@ def _card_friendly(text, guild):
             name = None
             if guild is not None:
                 ch = guild.get_channel(cid)
+                if ch is None:
+                    fn = getattr(guild, 'get_channel_or_thread', None)
+                    if callable(fn):
+                        ch = fn(cid)
                 if ch is not None:
                     name = getattr(ch, 'name', None)
             return '#' + (name or 'канал')

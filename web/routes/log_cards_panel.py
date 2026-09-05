@@ -23,6 +23,26 @@ PREVIEW_ROWS = (
     ('Причина', 'Повторные провокации после предупреждения в #флудилка'),
     ('Срок', 'предупреждение 2 из 3'),
 )
+PREVIEW_BY_CAT = {
+    'mod': PREVIEW_ROWS,
+    'automod': PREVIEW_ROWS,
+    'punish': PREVIEW_ROWS,
+    'message': (('Автор', 'GhostBlade'), ('Канал', '#флудилка'),
+                ('Текст', 'удалённое сообщение')),
+    'member': (('Участник', 'GhostBlade'), ('Аккаунт', '3 года'),
+               ('Всего участников', '1247')),
+    'welcome': (('Участник', 'GhostBlade'), ('Аккаунт', '3 года'),
+                ('Всего участников', '1247')),
+    'voice': (('Участник', 'GhostBlade'), ('Канал', 'Общий голос'),
+              ('Действие', 'зашёл')),
+    'nick': (('Участник', 'GhostBlade'), ('Было', 'кип'), ('Стало', 'Кипарис')),
+    'role': (('Роль', '@Модератор'), ('Действие', 'выдана'),
+             ('Кому', 'GhostBlade')),
+    'channel': (('Канал', '#флудилка'), ('Действие', 'создан'),
+                ('Тип', 'текстовый')),
+    'invite': (('Код', 'discord.gg/hakumo'), ('Создал', 'GhostBlade'),
+               ('Канал', '#правила')),
+}
 
 
 def register(ctx):
@@ -68,7 +88,10 @@ def register(ctx):
         cfg = LC.get_log_cards_cfg(gid)
         # Свой фон-фото: из строки превью (не сохранённая) или из конфига.
         # Качаем без кэша — что видишь в превью, то и уедет в лог-канал.
-        bg_url = (request.args.get('bg') or '').strip() or cfg.get('bg_url') or ''
+        bg_url = (request.args.get('bg') or '').strip()
+        if not bg_url:
+            bg_url = ((cfg.get('bg_url_by_cat') or {}).get(cat)
+                      or cfg.get('bg_url') or '')
         bg_bytes = None
         if bg_url:
             try:
@@ -79,9 +102,10 @@ def register(ctx):
         # из theme_by_cat, если владелец задал, иначе общая тема.
         if not theme:
             theme = (cfg.get('theme_by_cat') or {}).get(cat) or cfg.get('theme')
+        rows = PREVIEW_BY_CAT.get(cat) or PREVIEW_ROWS
         try:
             png = LC.render_log_card(
-                cat, 'Пример: выдано предупреждение', PREVIEW_ROWS,
+                cat, 'Пример: выдано предупреждение', rows,
                 color=0xE2455A, cat_name=cat,
                 guild_name='Hakumo Demo', time_str='20:41 UTC',
                 theme=theme, accent=accent, fmt='png', bg_bytes=bg_bytes)

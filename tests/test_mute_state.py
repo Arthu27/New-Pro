@@ -210,7 +210,7 @@ async def panel_checks():
     check("A. timeout без роли НЕ вешает мут-роль (чат+войс одним состоянием)",
           member.added == [])
 
-    ok2, text2 = await cog.apply_panel_action(g, member, "mute_chat", reason="x", amount="10", actor="Ivan")
+    ok2, text2 = await cog.apply_panel_action(g, member, "mute_chat", reason="x", amount="30", actor="Ivan")
     check("A. mute_chat без роли → внятный отказ (а не таймаут «типа только чат»)",
           (not ok2) and ("роль" in text2))
 
@@ -233,7 +233,7 @@ async def panel_checks():
     g2.members = [m3]
     cog3 = M.Moderation.__new__(M.Moderation)
     cog3.bot = PBot(g2)
-    ok4, _ = await cog3.apply_panel_action(g2, m3, "mute_chat", reason="x", amount="10", actor="Ivan")
+    ok4, _ = await cog3.apply_panel_action(g2, m3, "mute_chat", reason="x", amount="30", actor="Ivan")
     check("B. mute_chat выдаёт мут-роль и НЕ ставит нативный таймаут (голос живёт)",
           ok4 and 101 in m3.added and m3.timed_out_until is None)
 

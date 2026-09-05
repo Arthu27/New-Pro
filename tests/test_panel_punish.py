@@ -165,10 +165,10 @@ left = [c for c in guild.channels if c.overwrites.get(TID) is not None]
 check(ok and not left, f'все пермишены сняты ({text[:60]})')
 
 print('== 4. vmute не в голосе — по-человечески ==')
-ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'vmute', amount='5м'))
+ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'vmute', amount='30м'))
 check(not ok and 'голос' in text.lower(), f'вежливый отказ ({text[:80]})')
 target.voice = _Voice(_Ch(999))
-ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'vmute', amount='5м'))
+ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'vmute', amount='30м'))
 check(ok and getattr(target, 'muted', None) is True, 'в голосе — микрофон заглушён')
 
 print('== 5. Варн из панели ==')
@@ -229,7 +229,7 @@ t2 = _Member(TID + 1)
 t2.guild = guild
 guild.members = [target, t2]
 ok, text = asyncio.run(mod.apply_panel_action(guild, t2, 'timeout',
-                                              amount='10м', actor='Ivan'))
+                                              amount='30м', actor='Ivan'))
 check(ok and 'Лимит исчерпан' not in text,
       f'панель не упёрлась в счётчик модератора ({text[:60]})')
 

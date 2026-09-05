@@ -185,11 +185,33 @@ def _valid_bg_url(raw):
     return u
 
 
+def _valid_bg_url_by_cat(raw):
+    """dict категория → URL фона. Пустые/мусорные ссылки выкидываем."""
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for k, v in raw.items():
+        k = str(k).strip().lower()
+        u = _valid_bg_url(v)
+        if k in CATEGORY_STYLES and u:
+            out[k] = u
+    return out
+
+
+def bg_url_for_cat(cfg, cat):
+    """Фон этой категории: свой URL, иначе общий bg_url сервера."""
+    cfg = cfg if isinstance(cfg, dict) else {}
+    cat = str(cat or '').strip().lower()
+    by = cfg.get('bg_url_by_cat') or {}
+    return str(by.get(cat) or cfg.get('bg_url') or '')
+
+
 def get_log_cards_cfg(gid):
     """{'enabled': bool, 'theme': str, 'accent': '', 'bg_url': '',
-    'theme_by_cat': {}} — с валидацией мусора."""
+    'theme_by_cat': {}, 'bg_url_by_cat': {}} — с валидацией мусора."""
     cfg = {'enabled': True, 'theme': DEFAULT_LOG_THEME, 'accent': '',
-           'bg_url': '', 'theme_by_cat': dict(DEFAULT_THEME_BY_CAT)}
+           'bg_url': '', 'theme_by_cat': dict(DEFAULT_THEME_BY_CAT),
+           'bg_url_by_cat': {}}
     try:
         path = log_cards_cfg_path(gid)
         if os.path.exists(path):
@@ -208,28 +230,52 @@ def get_log_cards_cfg(gid):
                 if 'theme_by_cat' in raw:
                     cfg['theme_by_cat'] = _valid_theme_by_cat(raw.get('theme_by_cat'))
                 cfg['bg_url'] = _valid_bg_url(raw.get('bg_url'))
+                cfg['bg_url_by_cat'] = _valid_bg_url_by_cat(raw.get('bg_url_by_cat'))
     except Exception as _ex:
         _log.debug('get_log_cards_cfg(): %s', _ex)
     return cfg
 
 
 def save_log_cards_cfg(gid, data):
-    """Записать настройки после валидации. Возвращает нормализованный dict."""
+    """Записать настройки после валидации. Возвращает нормализованный dict.
+
+    Поля, которых нет в data, не затираем (merge-on-save): POST оформления
+    логов без bg_url_by_cat не должен сносить URL по категориям, а POST
+    «Логи сервера» с одним URL категории не должен сносить тему.
+    """
     if not isinstance(data, dict):
         data = {}
+    prev = {}
+    try:
+        path = log_cards_cfg_path(gid)
+        if os.path.exists(path):
+            import json as _json
+            with open(path, 'r', encoding='utf-8') as fp:
+                raw = _json.load(fp)
+            if isinstance(raw, dict):
+                prev = raw
+    except Exception as _ex:
+        _log.debug('save_log_cards_cfg prev: %s', _ex)
+        prev = {}
+    _theme_src = (data.get('theme_by_cat') if 'theme_by_cat' in data
+                  else DEFAULT_THEME_BY_CAT)
+    _bg = data.get('bg_url') if 'bg_url' in data else prev.get('bg_url')
+    _by = (data.get('bg_url_by_cat') if 'bg_url_by_cat' in data
+           else prev.get('bg_url_by_cat'))
     cfg = {
-        'enabled': bool(data.get('enabled', True)),
+        'enabled': bool(data.get('enabled', True if 'enabled' not in prev
+                                 else prev.get('enabled', True))),
         'theme': DEFAULT_LOG_THEME,
         'accent': '',
-        'bg_url': _valid_bg_url(data.get('bg_url')),
-        'theme_by_cat': _valid_theme_by_cat(data.get('theme_by_cat')
-                                            if 'theme_by_cat' in data
-                                            else DEFAULT_THEME_BY_CAT),
+        'bg_url': _valid_bg_url(_bg),
+        'theme_by_cat': _valid_theme_by_cat(_theme_src),
+        'bg_url_by_cat': _valid_bg_url_by_cat(_by),
     }
-    theme = str(data.get('theme') or '').strip().lower()
+    theme = str(data.get('theme') or prev.get('theme') or '').strip().lower()
     if theme in LOG_CARD_THEMES:
         cfg['theme'] = theme
-    acc = str(data.get('accent') or '').strip().lstrip('#')
+    acc = str(data.get('accent') if 'accent' in data else prev.get('accent') or '')
+    acc = acc.strip().lstrip('#')
     if _ui_color(acc):
         cfg['accent'] = acc
     try:
@@ -572,25 +618,75 @@ def _photo_bg(w, h, data):
     return ph.convert('RGB')
 
 
+def _og_image_from_html(html, base=''):
+    """og:image / twitter:image со страницы (pin.it и т.п.)."""
+    html = str(html or '')
+    m = re.search(
+        r'<meta[^>]+(?:property|name)=["\']'
+        r'(?:og:image(?::secure_url)?|twitter:image(?:src)?)["\']'
+        r'[^>]+content=["\']([^"\']+)["\']', html, re.I)
+    if not m:
+        m = re.search(
+            r'content=["\']([^"\']+\.(?:jpg|jpeg|png|webp)[^"\']*)["\']'
+            r'[^>]*(?:property|name)=["\']'
+            r'(?:og:image|twitter:image)["\']', html, re.I)
+    if not m:
+        return None
+    cand = m.group(1).replace('&amp;', '&').strip()
+    if not cand:
+        return None
+    if base:
+        from urllib.parse import urljoin
+        return urljoin(str(base), cand)
+    return cand
+
+
+def _looks_like_image(head):
+    if not head or len(head) < 8:
+        return False
+    png = bytes([0x89]) + b'PNG' + bytes([0x0D, 0x0A, 0x1A, 0x0A])
+    if head[:8] == png:
+        return True
+    if head[:3] == bytes([0xFF, 0xD8, 0xFF]):
+        return True
+    if head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+        return True
+    if head[:6] in (b'GIF87a', b'GIF89a'):
+        return True
+    return False
+
+
 def fetch_bg_direct(url, max_bytes=8 * 1024 * 1024):
-    """Скачать фон-фото без кэша (панель-превью). None — не вышло."""
+    """Скачать фон-фото без кэша (панель-превью). None — не вышло.
+
+    Страница (pin.it / соцсеть) — вытаскиваем og:image и качаем её.
+    """
     import requests as _rq
     url = str(url or '').strip()
     if not url.lower().startswith(('https://', 'http://')):
         return None
     try:
-        r = _rq.get(url, timeout=(6, 15), allow_redirects=True, stream=True,
+        r = _rq.get(url, timeout=(6, 15), allow_redirects=True,
                     headers={'User-Agent': 'Mozilla/5.0 (compatible; HakumoBot)'})
         if r.status_code >= 400:
             _log.debug('лог-фон: хост ответил %s', r.status_code)
             return None
-        buf = bytearray()
-        for chunk in r.iter_content(65536):
-            buf.extend(chunk)
-            if len(buf) > max_bytes:
-                _log.debug('лог-фон: файл больше 8 МБ')
+        data = r.content or b''
+        if len(data) > max_bytes:
+            _log.debug('лог-фон: файл больше 8 МБ')
+            return None
+        ctype = (r.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+        if ctype.startswith('text/html') or not _looks_like_image(data):
+            og = _og_image_from_html(r.text, str(r.url or url))
+            if not og:
                 return None
-        data = bytes(buf)
+            r2 = _rq.get(og, timeout=(6, 15), allow_redirects=True,
+                         headers={'User-Agent': 'Mozilla/5.0 (compatible; HakumoBot)'})
+            if r2.status_code >= 400:
+                return None
+            data = r2.content or b''
+            if len(data) > max_bytes:
+                return None
         Image.open(io.BytesIO(data)).verify()
         return data
     except Exception as _ex:
@@ -598,7 +694,7 @@ def fetch_bg_direct(url, max_bytes=8 * 1024 * 1024):
         return None
 
 
-_BG_CACHE = {'url': None, 'data': None, 'ts': 0.0}
+_PHOTO_BG_CACHE = {}
 
 
 def get_bg_bytes_sync(url, ttl=300):
@@ -609,12 +705,15 @@ def get_bg_bytes_sync(url, ttl=300):
     if not url.lower().startswith(('https://', 'http://')):
         return None
     now = _t.time()
-    if _BG_CACHE['url'] == url and _BG_CACHE['data'] \
-            and now - _BG_CACHE['ts'] < ttl:
-        return _BG_CACHE['data']
+    hit = _PHOTO_BG_CACHE.get(url)
+    if hit and hit[0] and now - hit[1] < ttl:
+        return hit[0]
     data = fetch_bg_direct(url)
     if data:
-        _BG_CACHE.update(url=url, data=data, ts=now)
+        _PHOTO_BG_CACHE[url] = (data, now)
+        if len(_PHOTO_BG_CACHE) > 32:
+            oldest = min(_PHOTO_BG_CACHE.items(), key=lambda kv: kv[1][1])
+            _PHOTO_BG_CACHE.pop(oldest[0], None)
     return data
 
 

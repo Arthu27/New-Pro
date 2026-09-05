@@ -40,9 +40,18 @@ class FakeCh:
         self.type = _dc.ChannelType.forum
 
 
+class FakeTh:
+    def __init__(self, id, name, parent_id=None, parent_name=''):
+        self.id = id
+        self.name = name
+        self.parent_id = parent_id
+        self.parent = types.SimpleNamespace(name=parent_name, id=parent_id) if parent_id else None
+
+
 class FakeGuild:
-    def __init__(self, channels):
+    def __init__(self, channels, threads=None):
         self.channels = channels
+        self.threads = threads or []
         self.id = 555
 
 
@@ -87,6 +96,18 @@ chans4, src4 = SLP._guild_channels(FakeBot(FakeGuild([])), GID)
 check(src4 == 'cache' and chans4 and chans4[0]['name'] == '#спасённый',
       'чужой guild_id не очищает пикеры', f'→ {src4} {chans4}')
 
+print('== живой бот: ветки тоже в пикере ==')
+g_th = FakeGuild(
+    [FakeCh(1, 'общий'), FakeCh(2, 'журнал-модерации')],
+    threads=[FakeTh(9, 'ивент', parent_id=1, parent_name='общий')])
+g_th.id = 556
+bot_th = FakeBot(g_th)
+chans_t, src_t = SLP._guild_channels(bot_th, 556)
+names_t = [c['name'] for c in chans_t]
+check(src_t == 'bot' and any('ветка ивент' in n for n in names_t)
+      and any(c.get('type') == 'thread' for c in chans_t),
+      'ветки гильдии попадают в пикер логов', f'→ {names_t}')
+
 print('== страница: офлайн-пометка + селекты на месте ==')
 tpl = open(os.path.join(sys.path[0], 'web', 'templates', 'log_settings.html'),
            encoding='utf-8').read()
@@ -94,6 +115,8 @@ check('lsOfflineNote' in tpl and 'channels_source' in tpl,
       'страница честно говорит, когда бот офлайн')
 check('lsApplyCh' in tpl and 'lsCh' in tpl,
       'селекты: на каждую категорию + один канал во все сразу')
+check('lsBg' in tpl and 'preview.png?cat=' in tpl,
+      'на каждую категорию — URL фона и живой preview.png с текстами лога')
 
 src = open(os.path.join(sys.path[0], 'web', 'routes', 'staff_limits_panel.py'),
            encoding='utf-8').read()

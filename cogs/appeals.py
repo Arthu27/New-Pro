@@ -1145,6 +1145,81 @@ class Appeals(commands.Cog):
                 'управления каналом) — модераторы увидят карточку и напишут '
                 'вам. Ответ придёт в личные сообщения.')
 
+    def _guild_ch(self, guild, cid):
+        """Канал или ветка по ID (пикер логов/апелляций отдаёт оба)."""
+        if not cid or guild is None:
+            return None
+        try:
+            cid = int(cid)
+        except (TypeError, ValueError):
+            return None
+        fn = getattr(guild, 'get_channel_or_thread', None)
+        if callable(fn):
+            ch = fn(cid)
+            if ch is not None:
+                return ch
+        ch = guild.get_channel(cid)
+        if ch is not None:
+            return ch
+        getter = getattr(guild, 'get_thread', None)
+        return getter(cid) if callable(getter) else None
+
+    def _strip_appeal_embed_texts(self, embed):
+        """Тексты живут в PNG: иначе Discord рисует их НАД картинкой."""
+        embed.title = None
+        embed.description = None
+        try:
+            embed.clear_fields()
+        except Exception as _ex:
+            log.debug('appeal embed clear_fields: %s', _ex)
+        try:
+            embed.remove_author()
+        except Exception as _ex:
+            log.debug('appeal embed remove_author: %s', _ex)
+        try:
+            embed.remove_footer()
+        except Exception as _ex:
+            log.debug('appeal embed remove_footer: %s', _ex)
+
+    async def _paint_appeal_card(self, embed, item, appearance):
+        """Картинка карточки: авто / URL-композит (фото сверху, надписи ниже).
+
+        Возвращает discord.File или None. Когда PNG собран, поля эмбеда
+        очищаем — Discord всегда кладёт set_image под title/fields.
+        """
+        file = None
+        try:
+            if appearance.get('mode') == 'url' and appearance.get('url'):
+                data, fname = await fetch_remote_image(appearance['url'])
+                if data:
+                    comp = render_url_card(
+                        data, appeal_id=item['id'],
+                        user_name=item['user_name'], text=item['text'],
+                        link=item.get('link'), theme=appearance.get('theme'))
+                    payload, name = ((comp, appeal_card_filename(item['id']))
+                                     if comp else (data, fname))
+                    file = discord.File(io.BytesIO(payload), filename=name)
+                    embed.set_image(url=f'attachment://{name}')
+                    if comp:
+                        self._strip_appeal_embed_texts(embed)
+                else:
+                    log.warning('appeals: своя картинка #%s не скачалась (%s) — '
+                                'показываю ссылкой', item['id'], fname)
+                    embed.set_image(url=appearance['url'])
+            elif appearance.get('mode') == 'auto':
+                png = render_appeal_card(
+                    appeal_id=item['id'], user_name=item['user_name'],
+                    text=item['text'], link=item.get('link'),
+                    theme=appearance.get('theme'))
+                if png:
+                    fn = appeal_card_filename(item['id'])
+                    file = discord.File(io.BytesIO(png), filename=fn)
+                    embed.set_image(url=f'attachment://{fn}')
+                    self._strip_appeal_embed_texts(embed)
+        except Exception as _ex:
+            log.debug('appeals: карточка-картинка #%s: %s', item.get('id'), _ex)
+        return file
+
     async def _submit_channel_appeal(self, user, guild, text, link=None, channel=None):
         """Апелляция из меню в канале: карточка в отдельном треде."""
         guild_id = guild.id
@@ -1159,13 +1234,13 @@ class Appeals(commands.Cog):
             try:
                 from services.channel_routes import get_route
                 cid = int(get_route(guild.id, 'appeal_menu_channel') or 0)
-                channel = guild.get_channel(cid) if cid else None
+                channel = self._guild_ch(guild, cid) if cid else None
             except Exception:
                 channel = None
         if channel is None:
             menu = state.get('menu') or {}
             cid = int(menu.get('channel_id') or 0)
-            channel = guild.get_channel(cid) if cid else None
+            channel = self._guild_ch(guild, cid) if cid else None
         if channel is None:
             channel = self._log_channel(guild, state)
         embed = discord.Embed(
@@ -1183,58 +1258,24 @@ class Appeals(commands.Cog):
                         value=self._mod_context(state, guild.id, user.id),
                         inline=False)
         embed.set_footer(text=f'appeal #{item["id"]} · решение — меню под карточкой')
-        png = None
-        png_name = None
-        url_file = None
+        card_file = None
         try:
             appearance = normalize_appearance(state.get('appearance'))
-            if appearance['mode'] == 'url' and appearance['url']:
-                # Своя картинка: качаем ОРИГИНАЛ и прикладываем файлом —
-                # Discord не пережимает вложение (владелец 2026-09-05:
-                # «отправлять туда фото, чтобы качество не портилось»).
-                # Не скачалось (хост/хотлинк/размер) — честный лог и запасной
-                # путь: картинка по ссылке (пережмёт, но хоть покажет).
-                data, fname = await fetch_remote_image(appearance['url'])
-                if data:
-                    # Владелец (2026-09-05): тексты — ВНУТРИ картинки, фото
-                    # сверху, надписи ниже (эмбед рисует текст НАД фото).
-                    # Клеим композит: фото + карточка с текстами одним файлом.
-                    # Не собрался (битое фото) — шлём сырую картинку.
-                    comp = render_url_card(
-                        data, appeal_id=item['id'],
-                        user_name=item['user_name'], text=item['text'],
-                        link=item.get('link'), theme=appearance['theme'])
-                    url_file = ((comp, appeal_card_filename(item['id'])) if comp
-                                else (data, fname))
-                    embed.set_image(url=f'attachment://{url_file[1]}')
-                else:
-                    log.warning('appeals: своя картинка #%s не скачалась (%s) — '
-                                'показываю ссылкой', item['id'], fname)
-                    embed.set_image(url=appearance['url'])
-            elif appearance['mode'] == 'auto':
-                png = render_appeal_card(
-                    appeal_id=item['id'], user_name=item['user_name'],
-                    text=item['text'], link=item.get('link'),
-                    theme=appearance['theme'])
-                if png:
-                    png_name = appeal_card_filename(item['id'])
-                    embed.set_image(url=f'attachment://{png_name}')
+            card_file = await self._paint_appeal_card(embed, item, appearance)
         except Exception as _ex:
             log.debug('appeals: карточка-картинка #%s: %s', item['id'], _ex)
 
         view = AppealView(self, guild_id, item['id'])
         # Куда падает карточка: НАСТРОЕННЫЙ «Канал апелляций (карточки на
-        # разбан)» — тот же источник, что в панели; меню-канал — запасной.
+        # разбан)» — тотот же источник, что в панели; меню-канал — запасной.
         # Раньше карточка уходила тредом в меню-канал, и владелец её там
         # не находил (жалоба 2026-09-05).
         target = self._log_channel(guild, state) or channel
         if target is not None:
             name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
             send_kw = {'embed': embed, 'view': view}
-            if url_file:
-                send_kw['file'] = discord.File(io.BytesIO(url_file[0]), filename=url_file[1])
-            elif png and png_name:
-                send_kw['file'] = discord.File(io.BytesIO(png), filename=png_name)
+            if card_file is not None:
+                send_kw['file'] = card_file
             card = None
             try:
                 thread = await target.create_thread(
@@ -1304,28 +1345,9 @@ class Appeals(commands.Cog):
             # обычный эмбед без картинки.
             appearance = normalize_appearance(state.get('appearance'))
             send_kwargs = {'embed': embed, 'view': view}
-            if appearance['mode'] == 'url' and appearance['url']:
-                data, fname = await fetch_remote_image(appearance['url'])
-                if data:
-                    send_kwargs['file'] = discord.File(io.BytesIO(data), filename=fname)
-                    embed.set_image(url=f'attachment://{fname}')
-                else:
-                    log.warning('appeals: своя картинка #%s не скачалась (%s) — '
-                                'показываю ссылкой', item['id'], fname)
-                    embed.set_image(url=appearance['url'])
-            elif appearance['mode'] == 'auto':
-                try:
-                    png = render_appeal_card(
-                        appeal_id=item['id'], user_name=item['user_name'],
-                        text=item['text'], link=item.get('link'),
-                        theme=appearance['theme'])
-                    if png:
-                        fn = appeal_card_filename(item['id'])
-                        send_kwargs['file'] = discord.File(io.BytesIO(png), filename=fn)
-                        embed.set_image(url=f'attachment://{fn}')
-                except Exception as _ex:
-                    log.debug('appeals: авто-картинка #%s не отрисовалась: %s',
-                              item['id'], _ex)
+            painted = await self._paint_appeal_card(embed, item, appearance)
+            if painted is not None:
+                send_kwargs['file'] = painted
             try:
                 msg = await channel.send(**send_kwargs)
                 item['message_id'] = msg.id

@@ -31,7 +31,7 @@
       <span class="hint" style="margin:0">один канал сразу во все категории — потом можно уточнить по одной</span>
       <div id="lsOfflineNote" hidden class="chip" style="background:rgba(245,158,11,.14);color:#f59e0b;margin-top:6px;display:inline-block"><i class="fas fa-plug-circle-xmark"></i> Бот офлайн — ниже показаны ТЕКУЩИЕ сохранённые настройки (что куда настроено). Выбранные каналы видны; полный список каналов обновится, когда бот подключится</div>
     </div>
-    <div id="lsCats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px"></div>
+    <div id="lsCats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px"></div>
     <div class="hint" id="lsMsg" style="margin-top:10px"></div>
   </div>
 </div>
@@ -41,7 +41,7 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  var state = { cats: [], settings: null, channels: [] };
+  var state = { cats: [], settings: null, channels: [], looks: {} };
   var SAVING = false;
   var _lastRaw = null;
 
@@ -50,6 +50,22 @@
     var v = window.MAIN_GID || MAIN_GID || '';
     if (!v) { try { v = localStorage.getItem('selected_guild') || ''; } catch (e) { v = ''; } }
     return v;
+  }
+
+  var bgTimers = {};
+  function saveBg(key, url) {
+    clearTimeout(bgTimers[key]);
+    bgTimers[key] = setTimeout(function () {
+      var by = {};
+      by[key] = url;
+      fetch('/api/guild/' + gid() + '/log-settings', {
+        credentials: 'same-origin', method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bg_url_by_cat: by })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success && d.looks) state.looks = d.looks;
+      }).catch(function () {});
+    }, 700);
   }
 
   function post(body) {
@@ -91,11 +107,16 @@
     var chId = (state.settings.channels || {})[c.key] || '';
     var opts = ['<option value=""' + (chId ? '' : ' selected') + '>Авто — искать по имени</option>']
       .concat((state.channels || []).map(function (ch) {
-        return '<option value="' + esc(ch.id) + '"' + (chId === ch.id ? ' selected' : '') + '>' + esc(ch.name) + '</option>';
+        var lbl = ch.name;
+        return '<option value="' + esc(ch.id) + '"' + (chId === ch.id ? ' selected' : '') + '>' + esc(lbl) + '</option>';
       })).join('');
     var dest = chId
       ? '<span class="chip" style="background:rgba(52,152,219,.16);color:#5dade2"><i class="fas fa-arrow-right"></i> ' + esc(chName(chId) || ('канал ' + chId)) + '</span>'
       : '<span class="chip" style="opacity:.5">канал: авто</span>';
+    var looks = state.looks || {};
+    var byUrl = ((looks.bg_url_by_cat || {})[c.key]) || '';
+    var pv = '/api/guild/' + gid() + '/log-cards/preview.png?cat=' + encodeURIComponent(c.key);
+    if (byUrl) pv += '&bg=' + encodeURIComponent(byUrl);
     return '<div class="panel" style="margin:0">' +
       '<div class="panel-body" style="padding:14px">' +
       '<div class="row" style="justify-content:space-between;margin-bottom:10px">' +
@@ -115,6 +136,12 @@
         ? 'Пишет в выбранный канал ' + esc(chName(chId) || chId) + ' — без поиска и создания'
         : (ac ? 'Бот сам создаст канал, если его нет' : 'Канал создаст только человек')) + '</div>' +
       '<div style="margin-top:6px">' + dest + '</div>' +
+      '<label style="display:block;margin-top:12px;font-size:12px;color:var(--text-3)">Фон карточки (ссылка на фото)</label>' +
+      '<input type="url" class="lsBg" data-k="' + esc(c.key) + '" value="' + esc(byUrl) + '" placeholder="https://… или pin.it" style="width:100%;margin-top:4px;padding:7px 10px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:9px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit">' +
+      '<div class="lsPvWrap" style="margin-top:8px;border-radius:10px;overflow:hidden;border:1px solid var(--line-2);background:#0a101e;line-height:0">' +
+      '<img class="lsPv" data-k="' + esc(c.key) + '" alt="как уйдёт в канал" src="' + esc(pv) + '" style="width:100%;height:auto;display:block">' +
+      '</div>' +
+      '<div class="hint" style="margin-top:6px">Живой пример с текстами лога — то, что бот отправит в канал</div>' +
       '</div></div>';
   }
 
@@ -132,6 +159,19 @@
         var patch = {};
         patch[s.getAttribute('data-k')] = s.value || '';
         post({ channels: patch });
+      });
+    });
+    Array.prototype.forEach.call($('lsCats').querySelectorAll('.lsBg'), function (inp) {
+      inp.addEventListener('input', function () {
+        var k = inp.getAttribute('data-k');
+        var url = (inp.value || '').trim();
+        var img = $('lsCats').querySelector('.lsPv[data-k="' + k + '"]');
+        if (img) {
+          var src = '/api/guild/' + gid() + '/log-cards/preview.png?cat=' + encodeURIComponent(k);
+          if (url) src += '&bg=' + encodeURIComponent(url);
+          img.src = src;
+        }
+        saveBg(k, url);
       });
     });
     var on = state.cats.filter(function (c) { return state.settings.enabled[c.key] !== false; }).length;
@@ -163,6 +203,7 @@
         state.cats = d.categories || [];
         state.settings = d.settings;
         state.channels = d.channels || [];
+        state.looks = d.looks || {};
     var note = document.getElementById('lsOfflineNote');
     if (note) note.hidden = (d.channels_source !== 'cache' && d.channels_source !== 'settings');
         render();
