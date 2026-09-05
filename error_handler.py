@@ -416,6 +416,7 @@ class ErrorHandler:
         self._webhook_session = None
         self._disconnects = deque(maxlen=200)
         self._disconnect_alert_at = 0.0
+        self._disconnected_at = None   # когда оборвалось (для длительности простоя)
 
     # ────────────────────────────────────────────────────────────
     # Конфиг / статистика (диск)
@@ -463,6 +464,10 @@ class ErrorHandler:
             'warnings_total': 0,
             'warnings': {},
             'disconnects': 0,
+            'resumes': 0,            # восстановлений сессии (session resumed)
+            'outage_last_sec': 0.0,  # сколько висели без связи в прошлый раз
+            'outage_max_sec': 0.0,   # самый долгий простой за всё время
+            'outage_last_at': 0.0,
             'alerts_sent': 0,
             'alerts_dropped': 0,
             'webhook_sent': 0,
@@ -542,11 +547,11 @@ class ErrorHandler:
 
         @self.bot.event
         async def on_resumed():
-            log.info("Соединение с Discord восстановлено (session resumed)")
+            self._on_resumed("gateway")
 
         @self.bot.event
         async def on_shard_resumed(shard_id: int):
-            log.info(f"Shard {shard_id} восстановил сессию")
+            self._on_resumed(f"shard:{shard_id}")
 
         tree = self.bot.tree
 
@@ -661,6 +666,7 @@ class ErrorHandler:
             return
         now = time.time()
         self.stats['disconnects'] += 1
+        self._disconnected_at = now    # простой посчитается на resumed
         self._disconnects.append(now)
         log.warning(f"Соединение с Discord потеряно ({kind}) — всего обрывов: {self.stats['disconnects']}")
         window = float(self.config.get('disconnect_window_sec', 600))
@@ -672,6 +678,40 @@ class ErrorHandler:
                 "Нестабильное соединение",
                 f"**{recent}** обрывов WebSocket за {int(window // 60)} мин.\n"
                 "Discord переподключается автоматически, но проверьте сеть/хостинг.",
+            )
+
+    def _on_resumed(self, kind: str):
+        """Сессия восстановлена: считаем, СКОЛЬКО висели без связи.
+
+        Короткий простой (< мин) — сетевое моргание, норма; долгий —
+        видно и в логе (warning), и в панели «Анти-краш». События за
+        время простоя Discord доигрывает сам (session resumed).
+        """
+        now = time.time()
+        pause = None
+        if self._disconnected_at:
+            pause = max(0.0, now - self._disconnected_at)
+            self._disconnected_at = None
+        self.stats['resumes'] = self.stats.get('resumes', 0) + 1
+        if pause is not None:
+            self.stats['outage_last_sec'] = round(pause, 1)
+            self.stats['outage_last_at'] = now
+            if pause > float(self.stats.get('outage_max_sec', 0.0) or 0.0):
+                self.stats['outage_max_sec'] = round(pause, 1)
+        if pause is None:
+            log.info('Соединение с Discord восстановлено (session resumed) — события не потеряны')
+        elif pause < 60:
+            log.info(f'Соединение с Discord восстановлено за {pause:.1f} с '
+                     '(session resumed) — события не потеряны')
+        else:
+            log.warning(f'Соединение с Discord восстановлено, БЕЗ СВЯЗИ '
+                        f'{int(pause // 60)} мин {int(pause % 60)} с — '
+                        'события Discord доиграл (session resumed)')
+            self.queue_alert(
+                'Долгий простой соединения',
+                f'Бот висел без связи **{int(pause // 60)} мин {int(pause % 60)} с** '
+                'и вернулся (session resumed). Если такие паузы повторяются — '
+                'проверьте сеть/хостинг.',
             )
 
     # ────────────────────────────────────────────────────────────
@@ -1165,7 +1205,8 @@ class ErrorHandler:
                 f"ping {ov['latency_ms']}ms | errors {ov['total_errors']} "
                 f"(hour {ov['errors_last_hour']}, crit {ov['critical']}, "
                 f"filtered {ov['filtered']}, repeats {ov['repeats_hidden']}) | "
-                f"warn {ov['warnings_total']} | dc {ov['disconnects']} | "
+                f"warn {ov['warnings_total']} | dc {ov['disconnects']} "
+                f"(resume {ov['resumes']}, простой макс {ov['outage_max_sec']}с) | "
                 f"webhook {ov['webhook_sent']}/{ov['webhook_dropped']} | "
                 f"lag max {ov['loop_lag_max']}s | alerts {ov['alerts_sent']}"
             )
@@ -1222,6 +1263,9 @@ class ErrorHandler:
             'warnings': dict(sorted(self.stats.get('warnings', {}).items(), key=lambda x: -x[1])[:5]),
             'disconnects': self.stats.get('disconnects', 0),
             'disconnects_hour': dc,
+            'resumes': self.stats.get('resumes', 0),
+            'outage_last_sec': self.stats.get('outage_last_sec', 0.0),
+            'outage_max_sec': self.stats.get('outage_max_sec', 0.0),
             'webhook_sent': self.stats.get('webhook_sent', 0),
             'webhook_dropped': self.stats.get('webhook_dropped', 0),
             'webhook_on': bool(self.config.get('webhook_enabled') and (self.config.get('webhook_url') or '').strip()),

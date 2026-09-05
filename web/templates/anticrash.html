@@ -261,7 +261,7 @@
       <div class="ac-m-icon"><i class="fas fa-gauge-high"></i></div>
       <div><div class="ac-m-val" id="v-lag">—</div><div class="ac-m-lbl">Макс. лаг цикла</div></div>
     </div>
-    <div class="ac-m" id="m-dc" title="Обрывы WebSocket-соединения / за последний час">
+    <div class="ac-m" id="m-dc" title="Обрывы WebSocket / за последний час / сколько раз сессия восстановилась (resume) / самый долгий простой без связи">
       <div class="ac-m-icon"><i class="fas fa-plug-circle-xmark"></i></div>
       <div><div class="ac-m-val" id="v-disconnects">—</div><div class="ac-m-lbl">Обрывов WS</div></div>
     </div>
@@ -419,8 +419,10 @@ function renderMetrics(d){
   $('v-uptime').textContent = d.uptime_human;
   $('v-ping').innerHTML = `${fmtN(d.latency_ms)} <small>мс</small>`;
   $('v-lag').innerHTML = `${d.loop_lag_max} <small>с · сейчас ${d.loop_lag_recent}</small>`;
-  $('v-disconnects').innerHTML = `${fmtN(d.disconnects)} <small>/ час ${fmtN(d.disconnects_hour)}</small>`;
-  $('m-dc').classList.toggle('danger', (d.disconnects_hour || 0) > 2);
+  $('v-disconnects').innerHTML = `${fmtN(d.disconnects)} <small>/ час ${fmtN(d.disconnects_hour)}</small>` +
+    (d.resumes ? ` <small>· восстановлено ${fmtN(d.resumes)}</small>` : '') +
+    (d.outage_max_sec ? ` <small>· простой макс ${d.outage_max_sec}с</small>` : '');
+  $('m-dc').classList.toggle('danger', (d.disconnects_hour || 0) > 2 || (d.outage_max_sec || 0) >= 300);
   $('v-filtered').innerHTML = `${fmtN(d.filtered)} <small>/ скрыто ${fmtN(d.repeats_hidden)}</small>`;
   $('v-alerts').innerHTML = `${fmtN(d.alerts_sent)} <small>/ очередь ${fmtN(d.alerts_queued)}</small>`;
   $('m-alerts').title = d.channel_configured
