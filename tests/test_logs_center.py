@@ -134,10 +134,15 @@ def last_embed(chname):
     return ch.sent[-1] if ch and ch.sent else None
 
 def desc_of(e):
-    """Текст лог-эмбеда для проверок."""
+    """Текст лог-эмбеда: title + description + поля (нативный Discord layout)."""
     if not e:
         return ''
-    return getattr(e, '_hakumo_log_desc', None) or e.description or ''
+    parts = [getattr(e, '_hakumo_log_desc', None) or '',
+             e.title or '', e.description or '']
+    for f in getattr(e, 'fields', None) or []:
+        parts.append(getattr(f, 'name', '') or '')
+        parts.append(getattr(f, 'value', '') or '')
+    return ' '.join(parts)
 
 print('== бан / кик / разбан с модератором и причиной ==')
 mod = FakeUser(50, 'TestMod')
@@ -150,8 +155,8 @@ check(e and 'Пользователь заблокирован' in desc_of(e) an
       f'бан: модератор + причина в эмбеде')
 _ft = (e.footer.text if e.footer else '') or getattr(e, '_hakumo_log_footer', '')
 check('Hakumo Log' in _ft, 'футер «Hakumo Log · …» на эмбеде')
-check(e.description and 'Пользователь заблокирован' in e.description,
-      'в канал уходит текстовый эмбед (карточка не рисуется)')
+check(e.title and 'Пользователь заблокирован' in e.title,
+      'заголовок — нативный title Discord, не картинка')
 check(e.thumbnail and e.thumbnail.url, 'профиль участника — аватар справа')
 check(not e.image or 'hakumo_log_card' not in str(getattr(e.image, 'url', '') or ''),
       'сгенерированная карточка не прикладывается')

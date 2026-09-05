@@ -832,34 +832,53 @@ def _strip_raw_id(text):
         return text
 
 
+_LONG_FIELD = {
+    'текст', 'было', 'стало', 'причина', 'роли', 'роли стаффа',
+    'ключевые права', 'что сделал', 'упомянуты', 'инфо', 'тема',
+}
+
+
+def _polish_embed_value(value):
+    """Текст поля: без сырых ID, без рваных пробелов, тире как в русском."""
+    s = _strip_raw_id(value)
+    s = str(s if s is not None else '')
+    s = s.replace('\r\n', '\n').replace('\r', '\n')
+    lines = [re.sub(r'[ \t]+', ' ', ln).strip() for ln in s.split('\n')]
+    s = '\n'.join(ln for ln in lines if ln or len(lines) == 1).strip(' \n·-')
+    s = re.sub(r'( · ){2,}', ' · ', s)
+    s = s.replace('``', '').replace('` `', '')
+    return s or '—'
+
+
 def _styled_log_embed(guild, category, title, fields=(), color=None,
                       thumbnail=None, image=None, note=None, card_rows=None):
-    """Единый стиль лог-эмбеда: заголовок с иконкой категории, строки
-    «Имя — значение», футер «Hakumo Log · Категория · Сервер» с иконкой сервера.
+    """Лог-эмбед: нативный title Discord (крупный чёткий шрифт), поля
+    с подписями, профиль справа. Без markdown-каши в description.
 
     fields: список кортежей (имя, значение); пустые значения пропускаются.
-    note: свободный текст после полей (предупреждения и т.п.).
+    note: свободный текст под заголовком (предупреждения и т.п.).
     """
     icon, base_color, cat_name = _cat_meta(category)
     e = _LogEmbed(color=color if color is not None else base_color,
                   timestamp=datetime.datetime.now(datetime.timezone.utc))
-    desc = f"## {(icon + ' ') if icon else ''}{title}\n\n"
+    e.title = f"{(icon + ' ') if icon else ''}{title}".strip()[:256]
     _who = ''
+    rows = []
     for name, value in fields:
         if value in (None, ''):
             continue
-        # В тексте эмбеда голые ID тоже не показываем — заказ владельца:
-        # имена вместо цифр (упоминание Discord само рендерится именем).
-        value = _strip_raw_id(value)
-        desc += f"**{name}** — {value}\n"
-        if not _who and str(name or '').strip().lower() in (
+        value = _polish_embed_value(value)
+        key = str(name or '').strip()
+        rows.append((key, value))
+        if not _who and key.lower() in (
                 'пользователь', 'участник', 'автор', 'виновник', 'кому'):
             _who = _card_friendly(value, guild)
     if note:
-        desc += f"\n{note}"
-    e.description = desc
-    # Профиль — справа (thumbnail). Имя сверху без второго аватара:
-    # два одинаковых лица рядом выглядят дёшево.
+        e.description = _polish_embed_value(note)[:4096]
+    for name, value in rows[:8]:
+        long = name.lower() in _LONG_FIELD or len(value) > 78 or '\n' in value
+        e.add_field(name=name[:256], value=value[:1024], inline=not long)
+    # Профиль — справа (thumbnail). Имя сверху без второго аватара.
     if _who:
         e.set_author(name=_who[:256])
     if thumbnail:
@@ -974,11 +993,11 @@ async def _audit_actor(guild, action, target_id=None, window=20, retries=1):
 
 
 def _actor_line(who):
-    """Строка «Имя `id`» по результату _audit_actor (или тире)."""
+    """Имя модератора без сырого ID."""
     if not who:
         return '—'
-    name, uid, _reason, _bot = who
-    return f"{name} `{uid or ''}`"
+    name, _uid, _reason, _bot = who
+    return str(name or '—')
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -2232,16 +2251,13 @@ class Logs (commands .Cog ):
             return 
         e =_styled_log_embed (channel .guild ,'channel','Канал удалён',
         fields =[
-        ('Канал',f"**#{getattr(channel, 'name', '?')}** · `{channel.id}`"),
+        ('Канал',f"**#{getattr(channel, 'name', '?')}**"),
         ('Тип',_ch_type_label (getattr (channel ,'type','?'))),
         ('Категория',getattr (getattr (channel ,'category',None ),'name',None )or '—'),
-        ('Удалил',f"**{mod_name or '—'}** `{mod_id or ''}`"),
+        ('Удалил',mod_name or '—'),
         ('Через бота','⚠️ Да'if mod_is_bot else 'Нет'),
         ],
-        color =0xE74C3C )
-        if extra_warning :
-            e .description +=f"\n\n{extra_warning}"
-        e .set_footer (text =f"{channel.guild.name}")
+        color =0xE74C3C ,note =extra_warning or None )
         await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
