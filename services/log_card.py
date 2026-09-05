@@ -737,9 +737,10 @@ def _frost_plate(img, box, radius, fill_rgb=None, alpha=None, outline=None, form
 
 
 def _put_text(d, xy, text, font, fill):
-    """Текст со слабой тенью — читается на стекле."""
+    """Текст с плотной тенью — Discord сжимает фото, без тени буквы плывут."""
     x, y = xy
-    d.text((x, y + 1), text, font=font, fill=(0, 0, 0, 120))
+    d.text((x + 1, y + 2), text, font=font, fill=(0, 0, 0, 210))
+    d.text((x, y + 1), text, font=font, fill=(0, 0, 0, 160))
     d.text((x, y), text, font=font, fill=fill)
 
 
@@ -925,25 +926,27 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
     if not LOG_CARD_OK:
         return None
     try:
+        # Discord в чате жмёт картинку до ~500px по ширине. Шрифт считаем
+        # от этого: 36px на холсте 1440px → ~12px на экране (не читается).
         W = 1440
-        PAD = 52
+        PAD = 44
         pal = _palette(theme, accent)
         cat_key = str(category or 'guild').lower().strip()
         cstyle = CATEGORY_STYLES.get(cat_key, CATEGORY_STYLES.get('guild'))
         form = _valid_form(form)
-        ink = (252, 253, 255)
-        ink_dim = (186, 192, 204)
+        ink = (255, 255, 255)
+        ink_dim = (228, 232, 240)
         has_photo = bool(bg_bytes)
 
         clean_rows = [(n, v) for n, v in (rows or []) if v not in (None, '')][:7]
         clean_rows = [(n, v) for n, v in clean_rows
                       if _clean(n).strip().lower() not in ('ссылка', 'link')]
-        header_inner = 118
-        header_top = 32
-        row_h = 86
-        row_gap = 8
-        footer_h = 58
-        gap = 14
+        header_inner = 156
+        header_top = 28
+        row_h = 124
+        row_gap = 12
+        footer_h = 56
+        gap = 16
         n = max(1, len(clean_rows))
         H = (header_top + header_inner + gap
              + n * row_h + max(0, n - 1) * row_gap
@@ -975,22 +978,22 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
         d = ImageDraw.Draw(img)
 
         time_clean = _clean(time_str)
-        t_font = _font(18, False)
+        t_font = _font(28, False)
         if time_clean:
             tw = d.textlength(time_clean, font=t_font)
-            _put_text(d, (hx1 - 26 - tw, hy0 + 20), time_clean, t_font, ink_dim)
+            _put_text(d, (hx1 - 32 - tw, hy0 + 24), time_clean, t_font, ink_dim)
 
         raw_tag = cstyle.get('tag') or str(cat_name or cat_key)
         cat_badge = raw_tag.split('·')[-1].strip() if '·' in raw_tag else raw_tag
         cat_badge = cat_badge.replace('✦', '').strip().title()
-        badge_font = _font(17, False)
-        _put_text(d, (hx0 + 26, hy0 + 20),
-                  _ellipsize(d, cat_badge, badge_font, W - PAD * 2 - 220),
+        badge_font = _font(28, False)
+        _put_text(d, (hx0 + 32, hy0 + 24),
+                  _ellipsize(d, cat_badge, badge_font, W - PAD * 2 - 280),
                   badge_font, ink_dim)
 
-        title_font = _font(36, True)
-        title_txt = _ellipsize(d, _clean(title), title_font, W - PAD * 2 - 56)
-        _put_text(d, (hx0 + 26, hy0 + 56), title_txt, title_font, ink)
+        title_font = _font(58, True)
+        title_txt = _ellipsize(d, _clean(title), title_font, W - PAD * 2 - 72)
+        _put_text(d, (hx0 + 32, hy0 + 70), title_txt, title_font, ink)
 
         y = hy1 + gap
         card_w = W - PAD * 2
@@ -1000,12 +1003,12 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
             _frost_plate(img, (PAD, yy, PAD + card_w, yy + row_h),
                          plate_r, form=form)
             dd = ImageDraw.Draw(img)
-            lab_f = _font(16, False)
-            val_f = _font(26, True)
-            lab = _ellipsize(dd, label, lab_f, card_w - 52)
-            val = _ellipsize(dd, value, val_f, card_w - 52)
-            _put_text(dd, (PAD + 26, yy + 14), lab, lab_f, ink_dim)
-            _put_text(dd, (PAD + 26, yy + 40), val, val_f, ink)
+            lab_f = _font(26, False)
+            val_f = _font(44, True)
+            lab = _ellipsize(dd, label, lab_f, card_w - 64)
+            val = _ellipsize(dd, value, val_f, card_w - 64)
+            _put_text(dd, (PAD + 32, yy + 18), lab, lab_f, ink_dim)
+            _put_text(dd, (PAD + 32, yy + 56), val, val_f, ink)
 
         if clean_rows:
             for i, (name, value) in enumerate(clean_rows):
