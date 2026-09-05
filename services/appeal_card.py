@@ -84,6 +84,116 @@ def normalize_appearance(raw):
     }
 
 
+# ── Своя картинка по URL: скачивание и «медиа-план» карточки ────────────────
+# Владелец (2026-09-05): «своя url не работает и не показывает картинку» +
+# «отправлять туда фото, чтобы качество не портилось». Discord-эмбед по
+# внешней ссылке пережимает картинку и молча пустеет, если хост отдаёт
+# ошибку/банит хотлинк (imgur). Поэтому бот СКАЧИВАЕТ оригинал и
+# прикрепляет ФАЙЛОМ (attachment://) — байты едут как есть, без пережатия.
+MAX_REMOTE_IMAGE_BYTES = 8 * 1024 * 1024   # лимит вложения Discord — 8 МиБ
+_IMAGE_EXTS = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+               '.gif': 'image/gif', '.webp': 'image/webp'}
+
+
+def validate_image_url(url):
+    """Проверка ссылки на картинку. Возвращает (ok, причина).
+
+    Только https, публичный хост (без localhost/приватных адресов),
+    путь с картинным расширением ИЛИ без расширения (хост может отдать
+    image/* контентом — решит загрузка).
+    """
+    from urllib.parse import urlparse
+    u = str(url or '').strip()
+    low = u.lower()
+    if not u:
+        return False, 'пустая ссылка'
+    if not low.startswith('https://'):
+        return False, 'только https://'
+    if any(bad in low for bad in ('localhost', '127.0.0.1', '0.0.0.0',
+                                  '[::1]', '10.', '192.168.', '169.254.')):
+        return False, 'адрес должен быть публичным'
+    try:
+        p = urlparse(u)
+    except ValueError:
+        return False, 'не похоже на ссылку'
+    if not p.netloc:
+        return False, 'в ссылке нет хоста'
+    ext = os.path.splitext(p.path or '')[1].lower()
+    if ext and ext not in _IMAGE_EXTS:
+        return False, f'«{ext}» — не картинка (нужны png/jpg/gif/webp)'
+    return True, ''
+
+
+def _host_check(url):
+    """Анти-SSRF: (публичный_ли_хост, причина_отказа).
+
+    Домен не резолвится и адреса приватные — разные причины, чтобы
+    владелец понимал, что именно не так со ссылкой.
+    """
+    from urllib.parse import urlparse
+    import ipaddress as _ipa
+    import socket as _sock
+    try:
+        host = (urlparse(str(url)).hostname or '').strip()
+    except ValueError:
+        return False, 'в ссылке нет адреса'
+    if not host:
+        return False, 'в ссылке нет адреса'
+    try:
+        infos = _sock.getaddrinfo(host, 443, proto=_sock.IPPROTO_TCP)
+    except OSError:
+        return False, 'домен не найден — проверь ссылку'
+    for info in infos or ():
+        addr = info[4][0]
+        try:
+            ip = _ipa.ip_address(addr)
+        except ValueError:
+            return False, 'домен отдал странный адрес'
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            return False, 'адрес ведёт в приватную сеть'
+    return True, '' 
+
+
+async def fetch_remote_image(url, timeout=12):
+    """Скачать картинку по URL. Возвращает (bytes, filename) или (None, причина).
+
+    Никогда не бросает наружу. Проверяем размер и content-type: в файл
+    уходит только настоящая картинка в пределах лимита вложения.
+    """
+    ok, why = validate_image_url(url)
+    if not ok:
+        return None, why
+    import asyncio as _aio
+    try:
+        public, why = await _aio.to_thread(_host_check, str(url).strip())
+    except Exception:                     # noqa: BLE001
+        public, why = False, 'адрес недоступен'
+    if not public:
+        return None, why
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as ses:
+            async with ses.get(str(url).strip(), timeout=None) as resp:
+                if resp.status != 200:
+                    return None, f'хост ответил {resp.status}'
+                ctype = (resp.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+                if ctype and not ctype.startswith('image/'):
+                    return None, f'по ссылке не картинка ({ctype})'
+                data = await resp.read()
+                if len(data) > MAX_REMOTE_IMAGE_BYTES:
+                    return None, (f'файл больше {MAX_REMOTE_IMAGE_BYTES // (1024 * 1024)} МиБ — '
+                                  'Discord вложение такого размера не примет')
+                if not data:
+                    return None, 'пустой ответ'
+                ext = os.path.splitext(str(url).split('?')[0])[1].lower() or '.png'
+                if ext not in _IMAGE_EXTS:
+                    ext = '.png'
+                return data, 'appeal_image' + ext
+    except Exception as _ex:                      # noqa: BLE001
+        return None, str(_ex)[:160] or 'сеть недоступна'
+
+
 def render_appeal_card(*, appeal_id, user_name, text, link=None,
                        theme=DEFAULT_APPEAL_THEME, brand='Hakumo'):
     """Карточка поданной апелляции → PNG bytes. Никогда не бросает наружу."""

@@ -436,7 +436,12 @@ function syncAppearance(d) {
 function apLookPreviewSrc() {
   var el = apLookEls();
   if (el.mode.value === 'url') {
-    return (el.url.value || '').trim();
+    /* Превью через СЕРВЕР (тот же загрузчик, что у отправки ботом):
+       прямая ссылка в теге картинки ломалась о хотлинк-защиту/смешанный контент.
+       Что видишь тут — ровно то, что уедет в Discord файлом. */
+    var u = (el.url.value || '').trim();
+    if (!u) return '';
+    return API + '/card-preview.png?mode=url&url=' + encodeURIComponent(u) + '&_=' + Date.now();
   }
   var q = new URLSearchParams();
   q.set('theme', el.theme.value || 'violet');
@@ -450,6 +455,14 @@ function refreshAppearanceUi() {
   el.url.style.display = (m === 'url') ? '' : 'none';
   el.pvWrap.style.display = (m === 'off') ? 'none' : '';
   if (m === 'url' && !String(el.url.value || '').trim()) return; /* пустой URL — не дёргаем картинку */
+  el.pv.style.opacity = '.55';
+  el.pv.onerror = function () {
+    el.pv.onerror = null;
+    el.pv.removeAttribute('src');
+    el.pv.style.opacity = '1';
+    if (window.showToast) window.showToast('Картинка по ссылке недоступна (хост не отдал файл, не https или больше 8 МиБ) — в Discord она тоже не поедет', false);
+  };
+  el.pv.onload = function () { el.pv.style.opacity = '1'; };
   el.pv.src = apLookPreviewSrc();
 }
 ['apLookMode', 'apLookTheme', 'apLookUrl'].forEach(function (id) {

@@ -29,7 +29,7 @@ from discord.ext import commands
 from db import GuildData
 from logger import get_logger
 from services.appeal_card import (normalize_appearance, render_appeal_card,
-                                  appeal_card_filename)
+                                  appeal_card_filename, fetch_remote_image)
 
 log = get_logger("appeals")
 
@@ -1180,10 +1180,23 @@ class Appeals(commands.Cog):
         embed.set_footer(text=f'appeal #{item["id"]} · решение — меню под карточкой')
         png = None
         png_name = None
+        url_file = None
         try:
             appearance = normalize_appearance(state.get('appearance'))
             if appearance['mode'] == 'url' and appearance['url']:
-                embed.set_image(url=appearance['url'])
+                # Своя картинка: качаем ОРИГИНАЛ и прикладываем файлом —
+                # Discord не пережимает вложение (владелец 2026-09-05:
+                # «отправлять туда фото, чтобы качество не портилось»).
+                # Не скачалось (хост/хотлинк/размер) — честный лог и запасной
+                # путь: картинка по ссылке (пережмёт, но хоть покажет).
+                data, fname = await fetch_remote_image(appearance['url'])
+                if data:
+                    url_file = (data, fname)
+                    embed.set_image(url=f'attachment://{fname}')
+                else:
+                    log.warning('appeals: своя картинка #%s не скачалась (%s) — '
+                                'показываю ссылкой', item['id'], fname)
+                    embed.set_image(url=appearance['url'])
             elif appearance['mode'] == 'auto':
                 png = render_appeal_card(
                     appeal_id=item['id'], user_name=item['user_name'],
@@ -1204,7 +1217,9 @@ class Appeals(commands.Cog):
         if target is not None:
             name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
             send_kw = {'embed': embed, 'view': view}
-            if png and png_name:
+            if url_file:
+                send_kw['file'] = discord.File(io.BytesIO(url_file[0]), filename=url_file[1])
+            elif png and png_name:
                 send_kw['file'] = discord.File(io.BytesIO(png), filename=png_name)
             card = None
             try:
@@ -1271,11 +1286,19 @@ class Appeals(commands.Cog):
         if channel is not None:
             view = AppealView(self, guild_id, item['id'])
             # Оформление карточки из панели: авто-картинка в выбранной теме,
-            # своя картинка по URL или обычный эмбед без картинки.
+            # своя картинка по URL (скачиваем файлом — без пережатия) или
+            # обычный эмбед без картинки.
             appearance = normalize_appearance(state.get('appearance'))
             send_kwargs = {'embed': embed, 'view': view}
             if appearance['mode'] == 'url' and appearance['url']:
-                embed.set_image(url=appearance['url'])
+                data, fname = await fetch_remote_image(appearance['url'])
+                if data:
+                    send_kwargs['file'] = discord.File(io.BytesIO(data), filename=fname)
+                    embed.set_image(url=f'attachment://{fname}')
+                else:
+                    log.warning('appeals: своя картинка #%s не скачалась (%s) — '
+                                'показываю ссылкой', item['id'], fname)
+                    embed.set_image(url=appearance['url'])
             elif appearance['mode'] == 'auto':
                 try:
                     png = render_appeal_card(

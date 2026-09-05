@@ -1621,7 +1621,7 @@ class ModActionSelect(discord.ui.Select):
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
         modal = ModActionModal(self.cog, action, guild=interaction.guild,
-                               prefill_target=prefill)
+                               prefill_target=prefill, user=interaction.user)
         await interaction.response.send_modal(modal)
 
 
@@ -1638,7 +1638,7 @@ class ModActionModal(discord.ui.Modal):
     требование включено в панели.
     """
 
-    def __init__(self, cog, action, guild=None, prefill_target=""):
+    def __init__(self, cog, action, guild=None, prefill_target="", user=None):
         self.cog = cog
         self.action = action
         titles = {
@@ -1686,6 +1686,21 @@ class ModActionModal(discord.ui.Modal):
                 _need_proof = proof_is_required(getattr(guild, 'id', 0) or 0)
             except Exception:
                 _need_proof = True
+            # Белый список «без демки» (панель → Доказательства): доверенному
+            # модератору поле «Доказательство» не ставим ВООБЩЕ. Раньше
+            # список был, а модалка его игнорировала — обязательное поле
+            # оставалось у всех (владелец 2026-09-05).
+            if _need_proof and user is not None:
+                try:
+                    from cogs.proof_cog import proof_is_whitelisted
+                    _need_proof = not proof_is_whitelisted(
+                        getattr(guild, 'id', 0) or 0,
+                        user_id=getattr(user, 'id', 0),
+                        role_ids=[getattr(r, 'id', 0)
+                                  for r in getattr(user, 'roles', []) or []])
+                except Exception as _wlx:
+                    log.debug(f'_need_proof whitelist: {_wlx}')
+                    _need_proof = True
         if _need_proof:
             self.proof = discord.ui.TextInput(
                 label="Доказательство (ссылка на скрин/видео)", required=True,

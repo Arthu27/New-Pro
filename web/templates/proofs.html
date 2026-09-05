@@ -434,6 +434,17 @@
   /* ── Белый список «без демки» ── */
   if (!CAN_DEL) { $('pf-wl-addrow').style.display = 'none'; }
 
+  /* Единый стиль выбора на всей странице (владелец 2026-09-05: «выборы
+     select две штуки там и тут»): нативный select «Наказание» выглядел
+     чужим рядом с кастомными пикерами — теперь тот же вид, один контрол. */
+  (function () {
+    var act = $('pf-action');
+    if (act && !act._sshd && window.sshdEnhance) {
+      window.sshdEnhance(act, {});
+      if (act._sshdCtl) act._sshdCtl.refresh();
+    }
+  })();
+
   /* ── Тумблер «требовать доказательство» ── */
   var pfReqOn = true;
   function pfReqRender() {

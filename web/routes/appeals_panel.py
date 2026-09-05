@@ -24,6 +24,7 @@ fmt_card_text (строчка карточки в очереди — как в /
 проверка «Управление сервером» — админский уровень).
 """
 from datetime import datetime, timezone
+import os
 
 from web.routes._common import (
     _safe_json_obj,
@@ -502,7 +503,40 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_appeals_card_preview(gid):
-        """Живой предпросмотр авто-карточки апелляции в выбранной теме."""
+        """Живой предпросмотр карточки апелляции.
+
+        Два режима:
+        • auto — рисуем демо-карточку в выбранной теме;
+        • url  — СЕРВЕР скачивает картинку по ссылке и отдаёт байты.
+          Прямая ссылка в <img> не работала (хотлинк-защита хостов и
+          смешанный контент) — владелец видел пустое место вместо
+          картинки (2026-09-05). Превью через тот же загрузчик, что и
+          отправка ботом: что видишь тут — то и уедет в Discord файлом.
+        """
+        mode = (request.args.get('mode') or 'auto').strip()
+        if mode == 'url':
+            url = (request.args.get('url') or '').strip()
+            from services.appeal_card import fetch_remote_image as _fri
+
+            def _fetch_sync(u):
+                # превью работает и без бота — свой короткий цикл
+                import asyncio as _aio
+                loop = _aio.new_event_loop()
+                try:
+                    return loop.run_until_complete(_fri(u))
+                finally:
+                    loop.close()
+
+            data, info = _fetch_sync(url)
+            if not data:
+                return jsonify({'success': False,
+                                'error': 'Картинка по ссылке недоступна: ' + (info or 'неизвестно')}), 502
+            from services.appeal_card import _IMAGE_EXTS
+            ext = os.path.splitext(info or '')[1].lower()
+            mime = _IMAGE_EXTS.get(ext, 'image/png')
+            resp = Response(data, mimetype=mime)
+            resp.headers['Cache-Control'] = 'no-store'
+            return resp
         theme = request.args.get('theme')
         text = (request.args.get('text') or
                 'Бан за ссылки — это был не спам, а ссылка на общий документ '
