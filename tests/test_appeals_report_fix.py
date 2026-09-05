@@ -6,8 +6,9 @@
    (Принять/Отклонить/Взять в работу) даже если тред создать не дали
    (нет права «Создавать публичные ветки»); канал апелляции открывается
    подавшему, а ЛС говорит ПРАВДУ о том, открылся ли он.
-2) «/report модератора не тегает»: тег ставится даже без настроенной роли —
-   каноническая роль → role_map → авто-роли с правами модерации.
+2) «/report тегает кураторов и админов, а модеров как будто просто пишет»:
+   тег — ТОЛЬКО роль модераторов (канон + role_map ``mod``), не curator/admin
+   и не авто-роли с ban_members.
 Запуск: python3 tests/test_appeals_report_fix.py
 """
 import asyncio
@@ -222,20 +223,22 @@ async def main():
     roles = R._mod_ping_roles(guild)
     check(mod_role in roles, 'тег: каноническая роль модераторов найдена')
 
-    print('== 5. Без настроенной роли: role_map и авто-роли с правами ==')
+    print('== 5. Без канона: только role_map «mod», не admin/curator ==')
     os.remove(f'data/reports_{GID}.json')
     for legacy in (f'data/ticket_notify_{GID}.json',
                    f'data/ticket_permissions_{GID}.json',
                    'data/staff_roles.json'):
         if os.path.exists(legacy):
             os.remove(legacy)
+    curator_role = _Role(7003, 'Куратор', _Perms(manage_messages=True))
+    guild.roles.append(curator_role)
     with open('data/role_map.json', 'w', encoding='utf-8') as f:
-        json.dump({'7002': 'admin'}, f)
+        json.dump({'7001': 'mod', '7002': 'admin', '7003': 'curator'}, f)
     roles = R._mod_ping_roles(guild)
-    check(admin_role in roles, 'тег: роль из role_map.json подхвачена')
-    check(mod_role in roles, 'тег: авто-роль с ban_members подхвачена')
-    check(len(roles) <= 3 and everyone not in roles,
-          'тег: максимум 3 роли, @everyone не тегается')
+    check(mod_role in roles, 'тег: роль «mod» из role_map.json')
+    check(admin_role not in roles, 'тег: админов НЕ зовём')
+    check(curator_role not in roles, 'тег: кураторов НЕ зовём')
+    check(everyone not in roles, 'тег: @everyone не тегается')
 
     print('== 6. Совсем нет ролей модерации → карточка уходит, панель предупреждена ==')
     guild_bare = _Guild([_Channel(1312434963941167134)],

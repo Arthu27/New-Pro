@@ -183,14 +183,23 @@ class ReportPanelView(discord.ui.View):
         if not await self._mod_only(interaction):
             return
         cfg = _cfg(interaction.guild_id)
-        rid = cfg.get('mod_role_id')
-        ping = f'<@&{rid}> ' if rid else ''
+        roles = _mod_ping_roles(interaction.guild)
+        ping = ' '.join(r.mention for r in roles)
         e = discord.Embed(
-            title='Запрошен дополнительный модератор',
-            description=f'Ветку вызвал {interaction.user.mention}. '
-                        'Подключайтесь к рассмотрению.',
+            title='Нужен ещё модератор',
+            description=f'{interaction.user.mention} просит подключиться к разбору.',
             color=0x5865F2)
-        await interaction.response.send(f'{ping}', embed=e)
+        try:
+            _kw = {'embed': e}
+            if ping:
+                _kw['content'] = ping
+            await _deliver_mod_ping(interaction.channel, roles, **_kw)
+        except Exception as _ex:
+            _log.debug('rpt_call ping: %s', _ex)
+            return await interaction.response.send_message(
+                'Не удалось тегнуть модераторов.', ephemeral=True)
+        await interaction.response.send_message(
+            'Модераторов позвали.', ephemeral=True)
 
     @discord.ui.button(label='Вынести решение', style=discord.ButtonStyle.primary,
                        custom_id='rpt_verdict')
@@ -495,25 +504,29 @@ def _mod_role_from_cfg(guild):
 
 
 def _mod_ping_roles(guild):
-    """Кого тегать в карточке вызова: до 3 ролей модерации.
+    """Кого тегать в карточке /report: ТОЛЬКО модераторы.
 
-    Порядок: каноническая роль (services.mod_role, единый источник панели)
-    → роли из role_map.json (панель «Роли панели») → авто-роли с правами
-    модерации. Раньше при незаданной роли карточка уходила ВОВСЕ без тега
-    («/report модератора не тегает», владелец 2026-09-05).
+    Не кураторы и не админы (заказ владельца: «тегает кураторов и админов —
+    надо только модеров»). Источник: каноническая роль панели (единая роль
+    модераторов) + роли с меткой ``mod`` в role_map.json. Авто-подхват
+    всего, у кого ban/manage_messages, убран — оттуда как раз летели
+    админские и кураторские роли, а Discord рисовал «тег» без уведомления.
     """
     out = []
+    seen = set()
 
     def _add(role):
-        if role is None or role in out:
+        if role is None:
             return
-        # .managed/.is_default могут отсутствовать у упрощённых объектов —
-        # не даём затылкам из тестов ломать тег модераторов
+        rid = getattr(role, 'id', None)
+        if rid is None or rid in seen:
+            return
         if getattr(role, 'managed', False):
             return
         _isdef = getattr(role, 'is_default', None)
         if callable(_isdef) and _isdef():
             return
+        seen.add(rid)
         out.append(role)
 
     try:
@@ -521,32 +534,95 @@ def _mod_ping_roles(guild):
         _add(resolve_mod_role(guild))
     except Exception as _ex:
         _log.debug('reports: resolve_mod_role: %s', _ex)
+    _add(_mod_role_from_cfg(guild))
     try:
         from services import ignored_roles as _IR
         import json as _json
         with open('data/role_map.json', encoding='utf-8') as _f:
             _rm = _json.load(_f)
         for _rid, _pr in (_rm.items() if isinstance(_rm, dict) else []):
+            if str(_pr) != 'mod' or not str(_rid).isdigit():
+                continue
             if _IR.is_ignored_role(_rid, guild.id):
-                continue   # игнорируемая роль не тегается и не маппится
-            if str(_pr) in ('mod', 'curator', 'admin') and str(_rid).isdigit():
-                _add(guild.get_role(int(_rid)))
+                continue
+            _add(guild.get_role(int(_rid)))
     except Exception as _ex:
         _log.debug('reports: role_map: %s', _ex)
-    try:
-        from services import ignored_roles as _IR
-        for role in getattr(guild, 'roles', []):
-            if _IR.is_ignored_role(getattr(role, 'id', 0), guild.id):
-                continue   # игнорируемая роль не пингуется как модерская
-            p = getattr(role, 'permissions', None)
-            if p is not None and (p.ban_members or p.moderate_members
-                                  or p.manage_messages):
-                _add(role)
-            if len(out) >= 3:
+    return out
+
+
+async def _deliver_mod_ping(channel, roles, **kwargs):
+    """Отправить сообщение так, чтобы тег роли РЕАЛЬНО прилетел.
+
+    Discord рисует <@&id> цветным именем роли даже без уведомления, если
+    роль не mentionable и у бота нет «Упоминать @everyone, @here и все
+    роли». Тогда модеры видят «как будто тег», а пуш не приходит.
+
+    Делаем: явный AllowedMentions(roles=[...]); если роль нельзя упомянуть —
+    на секунду включаем mentionable; если и это нельзя — тегаем самих
+    участников с этой ролью (только моды, не кураторы/админы).
+    """
+    roles = [r for r in (roles or []) if r is not None]
+    extra_users = []
+    flipped = []
+    me = getattr(getattr(channel, 'guild', None), 'me', None)
+    perms = None
+    if me is not None:
+        try:
+            perms = channel.permissions_for(me)
+        except Exception:
+            perms = getattr(me, 'guild_permissions', None)
+    can_all = bool(perms and (getattr(perms, 'mention_everyone', False)
+                              or getattr(perms, 'administrator', False)))
+    need_users = False
+    for role in roles:
+        if can_all or getattr(role, 'mentionable', True):
+            continue
+        edited = False
+        edit = getattr(role, 'edit', None)
+        if callable(edit):
+            try:
+                await edit(mentionable=True,
+                           reason='Вызов модератора /report: живой тег')
+                flipped.append(role)
+                edited = True
+            except Exception as _ex:
+                _log.debug('reports: mentionable on: %s', _ex)
+        if not edited:
+            need_users = True
+    if need_users:
+        seen_u = set()
+        for role in roles:
+            for m in list(getattr(role, 'members', None) or []):
+                if m is None or getattr(m, 'bot', False):
+                    continue
+                uid = getattr(m, 'id', None)
+                if uid is None or uid in seen_u:
+                    continue
+                seen_u.add(uid)
+                extra_users.append(m)
+                if len(extra_users) >= 12:
+                    break
+            if len(extra_users) >= 12:
                 break
-    except Exception as _ex:
-        _log.debug('reports: auto roles: %s', _ex)
-    return out[:3]
+        if extra_users:
+            extra = ' '.join(u.mention for u in extra_users)
+            prev = (kwargs.get('content') or '').strip()
+            kwargs['content'] = (prev + ' ' + extra).strip()
+    kwargs['allowed_mentions'] = discord.AllowedMentions(
+        everyone=False,
+        users=extra_users if extra_users else False,
+        roles=roles if roles else False,
+    )
+    try:
+        return await channel.send(**kwargs)
+    finally:
+        for role in flipped:
+            try:
+                await role.edit(mentionable=False,
+                                reason='Вызов модератора /report: вернули как было')
+            except Exception as _ex:
+                _log.debug('reports: mentionable off: %s', _ex)
 
 
 class ReportCardView(discord.ui.View):
@@ -857,38 +933,49 @@ class Reports(commands.Cog):
         _voice = getattr(interaction.user, 'voice', None)
         vc = getattr(_voice, 'channel', None) if _voice is not None else None
 
+        days = cfg.get('expiry_days', 90)
         e = discord.Embed(
-            title='🔔 Вызов модератора',
+            title='Вызов модератора',
             color=0xE74C3C,
-            description=(
-                f"**Куда идти:** {interaction.channel.mention}"
-                + (f" · голосовой канал **{vc.name}**" if vc is not None else "")
-                + "\n"
-                f"**Кто вызвал:** {interaction.user.mention}\n"
-                f"**Из-за кого:** {user.mention} · `{user.id}`\n\n"
-                f"**Что случилось:**\n{reason[:1500]}\n\n"
-                f"**Прошлые нарушения ({cfg.get('expiry_days', 90)} дн):**\n"
-                + _violations_field(guild.id, user.id, cfg)),
+            description='Сигнал только модераторам. Зайдите к вызывавшему и разберите ситуацию.',
             timestamp=datetime.now(timezone.utc))
+        e.add_field(name='Куда идти',
+                    value=interaction.channel.mention, inline=True)
+        e.add_field(name='Голосовой',
+                    value=(f'**{vc.name}**' if vc is not None else 'не в войсе'),
+                    inline=True)
+        e.add_field(name='Кто вызвал',
+                    value=interaction.user.mention, inline=True)
+        e.add_field(name='Из-за кого',
+                    value=f'{user.mention}\n`{user.id}`', inline=True)
+        e.add_field(name='Что случилось',
+                    value=reason[:1500] or '—', inline=False)
+        e.add_field(name=f'Прошлые нарушения ({days} дн)',
+                    value=_violations_field(guild.id, user.id, cfg),
+                    inline=False)
+        _av = getattr(getattr(interaction.user, 'display_avatar', None), 'url', None)
+        if _av:
+            e.set_author(name=interaction.user.display_name, icon_url=_av)
+        else:
+            e.set_author(name=interaction.user.display_name)
         e.set_thumbnail(url=user.display_avatar.url)
-        e.set_footer(text=f'{guild.name} · вызов модератора')
+        e.set_footer(text=f'{guild.name} · /report')
 
-        ping = ' '.join(r.mention for r in _mod_ping_roles(guild))
-        header = f'{ping} 🔔 Вызов модератора — {interaction.channel.mention}'.strip()
-        send_kw = {'embed': e, 'view': ReportCardView(),
-                   'allowed_mentions': discord.AllowedMentions(
-                       roles=True, users=True)}
+        ping_roles = _mod_ping_roles(guild)
+        ping = ' '.join(r.mention for r in ping_roles)
+        send_kw = {'embed': e, 'view': ReportCardView()}
         if ping:
-            send_kw['content'] = header
+            # В content — только тег роли: так Discord шлёт настоящий пуш,
+            # а не «просто пишет имя роли» в эмбеде.
+            send_kw['content'] = ping
         else:
             _fire_new_event(
                 'report_new',
-                '⚠️ Модерирующая роль НЕ НАЙДЕНА — вызовы уходят без тега. '
-                'Укажи роль модераторов в панели (Настройки модерации → '
-                'роль модерации) или выдай роль с правами модерации.')
+                'Роль модераторов не найдена — вызовы уходят без тега. '
+                'Укажи её в панели → Репорты → роль модераторов.')
         try:
-            card = await ch.send(**send_kw)
-        except discord.Forbidden as _fe:
+            card = await _deliver_mod_ping(ch, ping_roles, **send_kw)
+        except discord.Forbidden:
             return await interaction.followup.send(
                 'Бот не может отправить вызов в канал модерации — не хватает '
                 'прав (просмотр/отправка/вложения). Выдайте их роли бота.',

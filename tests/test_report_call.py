@@ -141,8 +141,14 @@ card = MOD_CH.sent[0] if MOD_CH.sent else {}
 _emb = card.get('embed')
 check(_emb is not None and 'Вызов модератора' in (_emb.title or ''),
       'заголовок карточки — «Вызов модератора»', f'→ {getattr(_emb, "title", None)}')
-check((card.get('content') or '').startswith('<@&555>'),
-      'роль модераторов затегана в сообщении', f'→ {card.get("content")!r}')
+check((card.get('content') or '').strip() == '<@&555>',
+      'в content — только тег роли модераторов (живой пуш)',
+      f'→ {card.get("content")!r}')
+_am = card.get('allowed_mentions')
+check(_am is not None and getattr(_am, 'roles', None) not in (True, False, None)
+      and MOD_ROLE in list(getattr(_am, 'roles', []) or []),
+      'AllowedMentions.roles — конкретная роль модеров, не «все роли»',
+      f'→ {getattr(_am, "roles", None)!r}')
 check('rcard_accept' in [b.custom_id for b in card.get('view').children]
       and 'rcard_reject' in [b.custom_id for b in card.get('view').children]
       and 'rcard_thread' in [b.custom_id for b in card.get('view').children],
@@ -150,10 +156,18 @@ check('rcard_accept' in [b.custom_id for b in card.get('view').children]
 
 # ── 3. Карточка отвечает на вопросы модератора ──────────────────────────────
 print('== 3. Красивая карточка ==')
-desc = (_emb.description or '') if _emb else ''
+def _blob(emb):
+    if emb is None:
+        return ''
+    parts = [emb.title or '', emb.description or '']
+    for f in getattr(emb, 'fields', []) or []:
+        parts.append(getattr(f, 'name', '') or '')
+        parts.append(getattr(f, 'value', '') or '')
+    return '\n'.join(parts)
+desc = _blob(_emb)
 check('<#999>' in desc and 'Куда идти' in desc,
       'карточка говорит, куда идти (канал вызова)')
-check('Общий' in desc and 'голосовой' in desc.lower(),
+check('Общий' in desc and 'Голосовой' in desc,
       'голосовой канал вызывавшего указан (куда зайти)')
 check('<@200>' in desc and 'Кто вызвал' in desc, 'кто вызвал')
 check('<@300>' in desc and 'Из-за кого' in desc, 'из-за кого')
