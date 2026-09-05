@@ -183,6 +183,41 @@ def unique_members(events):
     return len({_identity_key(a, u) for a, _c, _dt, u in events})
 
 
+def channels_with_counts(events):
+    """Каналы, где ЕСТЬ сообщения: [{name, messages}] по убыванию.
+
+    Работает офлайн (источник — file message_logs): селект «Детализации
+    по каналу» больше не мёртв без бота.
+    """
+    cnt = Counter(str(c) for _a, c, _dt, _u in events if str(c) != '?')
+    return [{'name': n, 'messages': c} for n, c in cnt.most_common()]
+
+
+def member_activity(events, uid, limit=6):
+    """Мини-профиль из событий сообщений: по ЛИЧНОСТИ (uid).
+
+    {found, name, messages, top_channels, first_active, last_active}.
+    Смена ника не мешает: записи склеены по uid, подпись — свежайший ник.
+    """
+    uid = str(uid or '').strip()
+    own = [ev for ev in events if str(ev[3] or '') == uid and uid] \
+        if uid else []
+    if not own:
+        return {'found': False, 'name': '', 'messages': 0,
+                'top_channels': [], 'first_active': None, 'last_active': None}
+    own.sort(key=lambda ev: (ev[2] is None, ev[2]))
+    stamps = [ev[2] for ev in own if ev[2] is not None]
+    cnt = Counter(str(ev[1]) for ev in own if str(ev[1]) != '?')
+    return {
+        'found': True,
+        'name': str(own[-1][0]),
+        'messages': len(own),
+        'top_channels': cnt.most_common(limit),
+        'first_active': stamps[0].isoformat() if stamps else None,
+        'last_active': stamps[-1].isoformat() if stamps else None,
+    }
+
+
 def load_member_events(guild_id):
     """Приходы/уходы участников из audit_log: [(действие, datetime|None)]."""
     out = []
@@ -478,6 +513,25 @@ def register(ctx):
         body = channel_drill(load_message_events(guild_id), name)
         # Демо-фабрикация детализации удалена (заказ владельца 2026-08):
         # никаких выдуманных авторов и чисел — только реальные события.
+        body['success'] = True
+        return jsonify(body)
+
+    @app.route('/api/guild/<guild_id>/analytics/drill-channels')
+    @login_required
+    @role_required('mod')
+    def api_guild_drill_channels(guild_id):
+        """Каналы, где есть сообщения (офлайн-источник для «Детализации»)."""
+        body = channels_with_counts(load_message_events(guild_id))
+        return jsonify({'success': True, 'channels': body})
+
+    @app.route('/api/guild/<guild_id>/analytics/member/<uid>')
+    @login_required
+    @role_required('mod')
+    def api_guild_member_activity(guild_id, uid):
+        """Мини-профиль автора из «Самых активных» (клик по строке)."""
+        if not str(uid).isdigit():
+            return jsonify({'success': False, 'error': 'Некорректный ID'}), 400
+        body = member_activity(load_message_events(guild_id), uid)
         body['success'] = True
         return jsonify(body)
 

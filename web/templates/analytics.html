@@ -546,16 +546,138 @@
       var avatarHtml = avatarUrl
         ? '<img alt="" class="leader-avatar" src="' + esc(avatarUrl) + '" onerror="this.outerHTML=\'<div class=&quot;leader-avatar-fallback&quot;>' + esc(getInitial(name)) + '</div>\'" />'
         : '<div class="leader-avatar-fallback">' + esc(getInitial(name)) + '</div>';
-      return '<div class="leader-row"   style="animation-delay:' + (i * 0.04) + 's;">' +
+      var uid = m.uid ? String(m.uid) : '';
+      var open = uid ? (' data-uid="' + esc(uid) + '" data-name="' + esc(name) +
+        '" tabindex="0" role="button" aria-label="Профиль ' + esc(name) + '"') : '';
+      var hint = uid ? '<i class="fas fa-user-circle"></i> профиль' : 'без привязки';
+      return '<div class="leader-row"   style="animation-delay:' + (i * 0.04) + 's;"' + open + '>' +
         '<div class="leader-rank ' + rank + '">#' + (i + 1) + '</div>' +
         avatarHtml +
         '<div class="leader-info">' +
           '<div class="leader-name">' + esc(name) + '</div>' +
-          '<div class="leader-sub"><i class="fas fa-comment"></i> сообщений</div>' +
+          '<div class="leader-sub"><i class="fas fa-comment"></i> сообщений · ' + hint + '</div>' +
         '</div>' +
         '<div class="leader-count">' + fmtNum(m.messages || 0) + '</div>' +
       '</div>';
     }).join('') + '</div>';
+    box.querySelectorAll('.leader-row[data-uid]').forEach(function (row) {
+      row.addEventListener('click', function () {
+        openMemberProfile(row.getAttribute('data-uid'), row.getAttribute('data-name'));
+      });
+      row.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openMemberProfile(row.getAttribute('data-uid'), row.getAttribute('data-name'));
+        }
+      });
+    });
+  }
+
+  /* ── Профиль активного участника: клик по строке топа ──
+     Личность по uid (смена ника не мешает): активность по каналам,
+     последняя активность, предупреждения и дела модерации. */
+  var _anModalBusy = 0;
+
+  async function openMemberProfile(uid, fallbackName) {
+    if (!uid) return;
+    var stamp = ++_anModalBusy;
+    var gid = await contextGid();
+    if (!gid) return;
+    var ov = document.createElement('div');
+    ov.id = 'anMemberOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(8,10,16,.62);z-index:9990;' +
+      'display:flex;align-items:center;justify-content:center;padding:18px';
+    ov.innerHTML = '<div id="anMemberCard" style="background:var(--bg-2,#14161d);color:var(--text,#e8eaf0);' +
+      'border:1px solid var(--line,#2a2e3a);border-radius:14px;max-width:460px;width:100%;' +
+      'max-height:82vh;overflow:auto;padding:16px 18px;box-shadow:0 18px 50px rgba(0,0,0,.45)">' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:4px">' +
+      '<div class="leader-avatar-fallback" style="width:38px;height:38px;display:flex;align-items:center;' +
+      'justify-content:center;border-radius:50%;background:var(--ac,#5865F2);font-weight:800">' +
+      esc(getInitial(fallbackName || '?')) + '</div>' +
+      '<div style="min-width:0"><div style="font-weight:800;font-size:15px;word-break:break-word">' +
+      esc(fallbackName || '…') + '</div>' +
+      '<div style="font-size:11.5px;opacity:.65">ID ' + esc(uid) + '</div></div>' +
+      '<button type="button" id="anMemberX" aria-label="Закрыть" ' +
+      'style="margin-left:auto;border:0;background:transparent;color:inherit;font-size:16px;cursor:pointer">' +
+      '<i class="fas fa-xmark" aria-hidden="true"></i></button></div>' +
+      '<div id="anMemberBody" style="margin-top:10px"><div class="empty-state">' +
+      '<i class="fas fa-circle-notch fa-spin"></i><p>Загрузка профиля…</p></div></div></div>';
+    document.body.appendChild(ov);
+    var close = function () { if (ov.parentNode) ov.parentNode.removeChild(ov); };
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    var x = ov.querySelector('#anMemberX');
+    if (x) x.addEventListener('click', close);
+    var body = ov.querySelector('#anMemberBody');
+
+    var act = null, prof = null, profDenied = false;
+    try {
+      var r1 = await fetch('/api/guild/' + gid + '/analytics/member/' + encodeURIComponent(uid));
+      if (r1.ok) act = await r1.json();
+    } catch (e) { /* активность может не собираться */ }
+    try {
+      var r2 = await fetch('/api/member-profile/' + encodeURIComponent(gid) + '/' +
+                           encodeURIComponent(uid));
+      if (r2.ok) prof = await r2.json();
+      else if (r2.status === 403) profDenied = true;   /* варны/дела — админам */
+    } catch (e) { /* профиль может быть недоступен */ }
+    if (stamp !== _anModalBusy || !ov.parentNode) return;   /* уже закрыли/открыли другой */
+
+    if ((!act || !act.found) && !prof) {
+      body.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i>' +
+        '<p>Данных об этом участнике нет</p></div>';
+      return;
+    }
+    var name = (act && act.found && act.name) || fallbackName || ('ID ' + uid);
+    var title = ov.querySelector('div[style*="font-weight:800"]');
+    if (title) title.textContent = name;
+
+    var h = '';
+    if (act && act.found) {
+      h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">' +
+        '<span class="an-rechip"><i class="fas fa-comment"></i> ' + fmtNum(act.messages) + ' сообщ.</span>' +
+        (act.last_active ? '<span class="an-rechip"><i class="fas fa-clock"></i> активность: ' +
+          esc(String(act.last_active).slice(0, 10)) + '</span>' : '') +
+        '</div>';
+      if ((act.top_channels || []).length) {
+        h += '<div style="font-size:12px;opacity:.7;margin-bottom:4px">Любимые каналы</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
+          act.top_channels.map(function (c) {
+            return '<span class="an-rechip">#' + esc(c[0]) + ' · ' + fmtNum(c[1]) + '</span>';
+          }).join('') + '</div>';
+      }
+    } else {
+      h += '<div style="font-size:12px;opacity:.65;margin-bottom:10px">' +
+        'Активность за окно аналитики не набиралась' +
+        (act ? '' : ' (счётчик офлайн)') + '</div>';
+    }
+    var warns = (prof && prof.warnings) || [];
+    var cases = (prof && (prof.cases || prof.case)) || [];
+    h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">' +
+      '<span class="an-rechip"><i class="fas fa-triangle-exclamation"></i> варнов: ' +
+      (prof ? fmtNum(prof.warn_count || warns.length) : '—') + '</span>' +
+      '<span class="an-rechip"><i class="fas fa-folder-open"></i> дел: ' +
+      (prof ? fmtNum(prof.case_count || cases.length) : '—') + '</span>' +
+      ((prof && prof.member_found) ? '<span class="an-rechip"><i class="fas fa-check"></i> на сервере</span>' : '') +
+      '</div>' +
+      (profDenied ? '<div style="font-size:11.5px;opacity:.6;margin:-6px 0 10px">' +
+        'Предупреждения и дела видны входам с ролью «админ» и выше.</div>' : '');
+    if (prof && (prof.role || []).length) {
+      h += '<div style="font-size:12px;opacity:.7;margin-bottom:4px">Роли</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
+        prof.role.slice(0, 12).map(function (r) {
+          return '<span class="an-rechip">' + esc(r) + '</span>';
+        }).join('') + '</div>';
+    }
+    if (warns.length) {
+      h += '<div style="font-size:12px;opacity:.7;margin:6px 0 4px">Последние предупреждения</div>' +
+        warns.slice(0, 3).map(function (w) {
+          return '<div style="font-size:12.5px;padding:4px 0;border-top:1px solid var(--line,#2a2e3a)">' +
+            esc(w.reason || '—') + '<div style="font-size:11px;opacity:.6">#' + esc(String(w.id || '')) +
+            (w.mod ? ' · выдал ' + esc(w.mod) : '') +
+            (w.timestamp ? ' · ' + esc(String(w.timestamp).slice(0, 10)) : '') + '</div></div>';
+        }).join('');
+    }
+    body.innerHTML = h;
   }
 
   function renderChannels(list) {
@@ -982,18 +1104,48 @@ function renderCharts(d) {
     var dsel = $id('anDrillSel');
     if (!dsel) return;
     var prev = dsel.value;
+    /* Каналы С ДАННЫМИ — из статистики сообщений (работает и без бота):
+       раньше селект брал только живой список Discord и умирал целиком,
+       когда бот офлайн («Детализация по каналу не работает»). */
+    var counts = {};
+    var statChans = [];
+    try {
+      var sr = await fetch('/api/guild/' + gid + '/analytics/drill-channels');
+      if (sr.ok) {
+        var sd = await sr.json();
+        statChans = (sd && sd.channels) || [];
+        statChans.forEach(function (c) { counts[c.name] = c.messages; });
+      }
+    } catch (e) { /* статистики может не быть */ }
     try {
       var cr = await fetch('/api/guild/' + gid + '/channels');
       var cdata = await cr.json();
       if (cdata && !Array.isArray(cdata) && cdata.error) {
-        dsel.innerHTML = '<option value="" disabled>' + esc(cdata.error) + '</option>';
-        dsel.disabled = true;
-        $id('anDrillMeta').textContent = '';
+        if (!statChans.length) {
+          dsel.innerHTML = '<option value="" disabled>' + esc(cdata.error) +
+            ' — и статистики сообщений нет</option>';
+          dsel.disabled = true;
+          $id('anDrillMeta').textContent = '';
+          return;
+        }
+        dsel.disabled = false;
+        dsel.innerHTML = '<option value="">— выберите канал —</option>' + statChans.map(function (c) {
+          return '<option value="' + esc(c.name) + '">#' + esc(c.name) +
+            ' · ' + fmtNum(c.messages) + ' сообщ.</option>';
+        }).join('');
+        if (prev) dsel.value = prev;
+        loadDrill(gid, dsel.value);
         return;
       }
       var chans = Array.isArray(cdata) ? cdata : (cdata.channels || []);
       var text = chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
         .sort(function (a, b) { return (a.position || 0) - (b.position || 0); });
+      /* каналы из статистики, которых нет в живом списке (переименован/удалён) */
+      var known = {};
+      text.forEach(function (c) { known[c.name] = 1; });
+      statChans.forEach(function (c) {
+        if (!known[c.name]) text.push({ name: c.name, type: 'text', position: 9999 + c.messages });
+      });
       if (!text.length) {
         dsel.innerHTML = '<option value="" disabled>Текстовых каналов нет</option>';
         dsel.disabled = true;
@@ -1001,11 +1153,22 @@ function renderCharts(d) {
       }
       dsel.disabled = false;
       dsel.innerHTML = text.map(function (c) {
-        return '<option value="' + esc(c.name) + '">#' + esc(c.name) + '</option>';
+        return '<option value="' + esc(c.name) + '">#' + esc(c.name) +
+          (counts[c.name] ? ' · ' + fmtNum(counts[c.name]) + ' сообщ.' : '') + '</option>';
       }).join('');
       if (prev && Array.from(dsel.options).some(function (o) { return o.value === prev; })) dsel.value = prev;
       loadDrill(gid, dsel.value);
     } catch (e) {
+      if (statChans.length) {
+        dsel.disabled = false;
+        dsel.innerHTML = '<option value="">— выберите канал —</option>' + statChans.map(function (c) {
+          return '<option value="' + esc(c.name) + '">#' + esc(c.name) +
+            ' · ' + fmtNum(c.messages) + ' сообщ.</option>';
+        }).join('');
+        if (prev) dsel.value = prev;
+        loadDrill(gid, dsel.value);
+        return;
+      }
       dsel.innerHTML = '<option value="" disabled>Каналы недоступны — бот офлайн?</option>';
       dsel.disabled = true;
     }
