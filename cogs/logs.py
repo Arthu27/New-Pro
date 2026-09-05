@@ -858,11 +858,12 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     if note:
         desc += f"\n{note}"
     e.description = desc
-    if thumbnail:
-        e.set_author(name=(_who or title)[:256], icon_url=thumbnail)
-        e.set_thumbnail(url=thumbnail)
-    elif _who:
+    # Профиль — справа (thumbnail). Имя сверху без второго аватара:
+    # два одинаковых лица рядом выглядят дёшево.
+    if _who:
         e.set_author(name=_who[:256])
+    if thumbnail:
+        e.set_thumbnail(url=thumbnail)
     footer_text = f"Hakumo Log · {cat_name} · {getattr(guild, 'name', '')}"
     gicon = getattr(guild, 'icon', None)
     try:

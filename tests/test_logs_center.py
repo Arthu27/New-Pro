@@ -152,7 +152,7 @@ _ft = (e.footer.text if e.footer else '') or getattr(e, '_hakumo_log_footer', ''
 check('Hakumo Log' in _ft, 'футер «Hakumo Log · …» на эмбеде')
 check(e.description and 'Пользователь заблокирован' in e.description,
       'в канал уходит текстовый эмбед (карточка не рисуется)')
-check(e.author and e.author.icon_url, 'профиль участника — аватар в author')
+check(e.thumbnail and e.thumbnail.url, 'профиль участника — аватар справа')
 check(not e.image or 'hakumo_log_card' not in str(getattr(e.image, 'url', '') or ''),
       'сгенерированная карточка не прикладывается')
 
@@ -337,7 +337,8 @@ check(bool(_jpg) and _jpg[:2] == b'\xff\xd8' and len(_jpg) > 20000,
 _ban = compact_log_photo(_ph_bytes)
 check(bool(_ban) and _ban[:2] == b'\xff\xd8', 'компактное фото лога — JPEG без стекла')
 _im = _PILImage.open(_bio.BytesIO(_ban))
-check(_im.size == (960, 300), f'фото — компактная полоса {_im.size}, не полное')
+check(_im.size[0] <= 1200 and _im.size[1] <= 400 and _im.size[0] / _im.size[1] >= 2.5,
+      f'фото — компактная полоса {_im.size}, не полное')
 check(render_log_card('mod', 'Т', [('A', 'b')], cat_name='модерация',
                        bg_bytes=b'garbage') is not None,
       'битый фон-фото не роняет карточку — звёздный фон')

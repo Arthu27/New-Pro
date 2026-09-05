@@ -822,35 +822,51 @@ def fetch_bg_direct(url, max_bytes=8 * 1024 * 1024):
 _PHOTO_BG_CACHE = {}
 
 
-LOG_PHOTO_W = 960
-LOG_PHOTO_H = 300
+# Компактная полоса в эмбеде Discord (~400px ширина канала).
+# 3:1 — не полное фото, но не тонкая лента. Не апскейлим исходник.
+LOG_PHOTO_W = 1200
+LOG_PHOTO_H = 400
 
 
 def compact_log_photo(data, width=None, height=None, fmt='jpeg'):
     """Только фото владельца: cover-кроп в компактную полосу.
 
-    Без текста, стекла и плашек. Качество JPEG 92 / полный chroma.
+    Без текста, стекла и плашек. JPEG 95 / полный chroma.
+    Высокие кадры кропаем чуть выше центра, чтобы лица не срезались.
+    Мелкое фото не растягиваем — качество важнее пикселей.
     None — нет данных или Pillow не открыл файл.
     """
     if not LOG_CARD_OK or not data:
         return None
     try:
-        w = int(width or LOG_PHOTO_W)
-        h = int(height or LOG_PHOTO_H)
-        if w < 160 or h < 80:
-            w, h = LOG_PHOTO_W, LOG_PHOTO_H
+        tw = int(width or LOG_PHOTO_W)
+        th = int(height or LOG_PHOTO_H)
+        if tw < 160 or th < 80:
+            tw, th = LOG_PHOTO_W, LOG_PHOTO_H
+        ratio = tw / float(th)
         ph = Image.open(io.BytesIO(data)).convert('RGB')
-        scale = max(w / max(1, ph.width), h / max(1, ph.height))
-        nw = max(w, int(ph.width * scale + 0.5))
-        nh = max(h, int(ph.height * scale + 0.5))
-        ph = ph.resize((nw, nh), Image.LANCZOS)
-        left, top = (nw - w) // 2, (nh - h) // 2
-        ph = ph.crop((left, top, left + w, top + h))
+        sw, sh = ph.size
+        if sw < 2 or sh < 2:
+            return None
+        src_ratio = sw / float(sh)
+        if src_ratio > ratio:
+            # шире цели — режем бока, центр
+            new_w = max(1, int(sh * ratio + 0.5))
+            x0 = max(0, (sw - new_w) // 2)
+            ph = ph.crop((x0, 0, x0 + new_w, sh))
+        else:
+            # выше цели — режем верх/низ, смещение к лицам
+            new_h = max(1, int(sw / ratio + 0.5))
+            extra = max(0, sh - new_h)
+            y0 = int(extra * 0.28)
+            ph = ph.crop((0, y0, sw, y0 + new_h))
+        if ph.width > tw:
+            ph = ph.resize((tw, th), Image.LANCZOS)
         buf = io.BytesIO()
         if str(fmt).lower() == 'png':
             ph.save(buf, 'PNG')
         else:
-            ph.save(buf, 'JPEG', quality=92, optimize=False, subsampling=0)
+            ph.save(buf, 'JPEG', quality=95, optimize=False, subsampling=0)
         return buf.getvalue()
     except Exception as _ex:
         _log.debug('compact_log_photo: %s', _ex)
