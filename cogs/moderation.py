@@ -42,10 +42,17 @@ async def _respond (interaction ,**kw ):
 
 async def _ack(interaction, ephemeral=True):
     """Сразу закрыть 3-секундное окно Discord, чтобы не было
-    «Приложение не отвечает», пока бан/мут ещё идут."""
+    «Приложение не отвечает», пока бан/мут ещё идут.
+
+    thinking=False — без спиннера «думает…» на панели.
+    """
     try:
         resp = getattr(interaction, 'response', None)
-        if resp is not None and not resp.is_done():
+        if resp is None or resp.is_done():
+            return
+        try:
+            await resp.defer(ephemeral=ephemeral, thinking=False)
+        except TypeError:
             await resp.defer(ephemeral=ephemeral)
     except Exception as _e:
         log.debug('[MODPANEL] defer: %s', _e)
@@ -355,16 +362,9 @@ class Moderation (commands .Cog ):
             'их в панели: Щит сервера → Лимиты команды → роль.'),
             ephemeral =True )
             return 
-        _u =interaction .user 
-        # Компактная карточка: владелец просил «слишком много инфы» —
-        # только строка-подсказка и само выпадающее меню, без простыней.
-        embed =discord .Embed (
-        title ="🛡 Панель модерации",
-        description ="Участник → действие. Размут спросит: чат или войс.",
-        color =0x5865F2 )
-        if interaction .guild .icon :
-            embed .set_footer (text =interaction .guild .name )
-        await _respond (interaction ,embed =embed ,view =ModPanelView (self ,interaction .user ,allowed ),ephemeral =True )
+        view =ModPanelView (self ,interaction .user ,allowed )
+        view ._root_edit =interaction .edit_original_response
+        await _respond (interaction ,embed =view .panel_embed (interaction .guild ),view =view ,ephemeral =True )
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -1747,6 +1747,104 @@ class UnmuteKindView(discord.ui.View):
         return True
 
 
+async def _silent_reset_panel(interaction, panel):
+    """Сбросить селект наказаний, чтобы то же действие можно было выбрать снова.
+
+    Discord не шлёт callback, если кликнуть уже выбранный пункт — поэтому
+    после шага собираем меню заново и пушим в сообщение.
+
+    После send_modal ответ взаимодействия уже занят, поэтому правим
+    эфемерную панель токеном исходного /modpanel (_root_edit), а не
+    interaction.message.edit (у эфемерки он часто падает).
+    Если пуш не вышел — возвращаем старые селекты, иначе custom_id разъедутся.
+    """
+    try:
+        guild = getattr(interaction, 'guild', None)
+        old_t, old_a = panel.target_select, panel.action_select
+        panel._rebuild(guild)
+        embed = panel.panel_embed(guild)
+        pushed = False
+        root = getattr(panel, '_root_edit', None)
+        if root is not None:
+            try:
+                await root(embed=embed, view=panel)
+                pushed = True
+            except Exception as _e:
+                log.debug('modpanel reset root: %s', _e)
+        if not pushed:
+            try:
+                msg = getattr(interaction, 'message', None)
+                if msg is not None:
+                    await msg.edit(embed=embed, view=panel)
+                    pushed = True
+            except Exception as _e:
+                log.debug('modpanel reset msg.edit: %s', _e)
+        if not pushed:
+            try:
+                await interaction.edit_original_response(embed=embed, view=panel)
+                pushed = True
+            except Exception as _e:
+                log.debug('modpanel reset original: %s', _e)
+        if not pushed:
+            panel.clear_items()
+            panel.target_select, panel.action_select = old_t, old_a
+            panel.add_item(old_t)
+            panel.add_item(old_a)
+    except Exception as _e:
+        log.debug('modpanel reset: %s', _e)
+
+
+async def _launch_action(cog, interaction, action, prefill, panel=None):
+    """Открыть модалку / размут. panel — чтобы потом сбросить селект."""
+    if action == "unmute":
+        gid = getattr(interaction, 'guild_id', None) or getattr(
+            getattr(interaction, 'guild', None), 'id', None)
+        kinds = unmute_kinds_for(gid, interaction.user)
+        if not kinds:
+            await _respond(interaction, embed=error_embed(
+                'Снять мут тебе не выдано.'), ephemeral=True)
+            return
+        if not prefill:
+            await _respond(interaction, embed=error_embed(
+                'Сначала выберите участника — или выберите его сейчас в меню.'),
+                ephemeral=True)
+            return
+        if panel is not None:
+            panel.pending_action = None
+        if len(kinds) == 1:
+            await _ack(interaction)
+            await cog._execute_mod_action(
+                interaction, kinds[0][0], prefill,
+                'Снято через панель', '', proof_link=None)
+            if panel is not None:
+                await _silent_reset_panel(interaction, panel)
+            return
+        who = prefill
+        try:
+            mem = interaction.guild.get_member(int(prefill))
+            if mem is not None:
+                who = mem.mention
+        except Exception:
+            pass
+        embed = discord.Embed(
+            title="Снять мут",
+            description=f"{who}\nКак снять — чат или войс.",
+            color=0x2ECC71)
+        await interaction.response.send_message(
+            embed=embed,
+            view=UnmuteKindView(cog, prefill, kinds, member=interaction.user),
+            ephemeral=True)
+        if panel is not None:
+            await _silent_reset_panel(interaction, panel)
+        return
+    modal = ModActionModal(cog, action, guild=interaction.guild,
+                           prefill_target=prefill, user=interaction.user)
+    await interaction.response.send_modal(modal)
+    if panel is not None:
+        panel.pending_action = None
+        await _silent_reset_panel(interaction, panel)
+
+
 class ModActionSelect(discord.ui.Select):
     """Выбор действия модерации — только то, что доступно этому модератору."""
 
@@ -1757,77 +1855,41 @@ class ModActionSelect(discord.ui.Select):
                        emoji=MODPANEL_EMOJI.get(value, '⚡'))
                    for value, label, desc, _key in acts]
         super().__init__(
-            placeholder="⚡ Что сделать? Выберите действие…",
+            placeholder="Что сделать?",
             options=options,
             min_values=1,
             max_values=1,
         )
         self.cog = cog
-        # ссылка на соседний селект участника (выбор мышкой) — не через
-        # read-only Item.view, а явным полем
         self.target_select = target_select
 
     async def callback(self, interaction: discord.Interaction):
         action = self.values[0]
-        # Защита на границе: доступ могли снять, пока меню было на экране
         if not await self.cog._ensure_action_acl(interaction, action):
             return
-        # Цель: сначала то, что запомнили при клике по участнику (надёжнее,
-        # чем Select.values с соседнего селекта — он часто пустой).
+        view = self.view
         prefill = ""
-        try:
-            view = getattr(self, 'view', None)
+        if view is not None:
             prefill = str(getattr(view, 'selected_uid', None) or '')
-        except Exception:
-            prefill = ""
-        if not prefill and action != "clear":
+            view.pending_action = action
+        if not prefill:
             try:
                 _sel = getattr(self, "target_select", None)
                 _vals = list(getattr(_sel, "values", []) or [])
                 if _vals:
                     prefill = str(_vals[0].id)
+                    if view is not None:
+                        view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        if action == "unmute":
-            kinds = unmute_kinds_for(interaction.guild_id, interaction.user)
-            if not kinds:
-                await _respond(interaction, embed=error_embed(
-                    'Снять мут тебе не выдано.'), ephemeral=True)
+        # Действие без участника: запоминаем и ждём выбор человека
+        # (можно и наоборот — сначала человек, потом действие).
+        if action != "clear" and not prefill:
+            if view is not None:
+                await view.refresh(interaction)
                 return
-            if not prefill:
-                await _respond(interaction, embed=error_embed(
-                    'Сначала выберите участника в меню выше.'), ephemeral=True)
-                return
-            if len(kinds) == 1:
-                await _ack(interaction)
-                await self.cog._execute_mod_action(
-                    interaction, kinds[0][0], prefill,
-                    'Снято через панель', '', proof_link=None)
-                return
-            who = prefill
-            try:
-                mem = interaction.guild.get_member(int(prefill))
-                if mem is not None:
-                    who = mem.mention
-            except Exception:
-                pass
-            embed = discord.Embed(
-                title="Снять мут",
-                description=f"{who}\nКак снять — чат или войс.",
-                color=0x2ECC71)
-            await interaction.response.send_message(
-                embed=embed,
-                view=UnmuteKindView(self.cog, prefill, kinds,
-                                    member=interaction.user),
-                ephemeral=True)
-            return
-        modal = ModActionModal(self.cog, action, guild=interaction.guild,
-                               prefill_target=prefill, user=interaction.user)
-        await interaction.response.send_modal(modal)
+        await _launch_action(self.cog, interaction, action, prefill, panel=view)
 
-
-# Действия-наказания в мод-панели: к ним обязательна демка (пока включено
-# требование в панели: «Доказательства» → тумблер).
 _PUNISH_MODPANEL = ("ban", "timeout", "mute_chat", "vmute")
 
 
@@ -1980,64 +2042,125 @@ class ModHelpButton(discord.ui.Button):
 
 
 class ModTargetSelect(discord.ui.UserSelect):
-    """Выбор участника МЫШКОЙ (вместо ручного ввода @ника/ID).
+    """Участник мышкой. Можно выбрать ДО действия или ПОСЛЕ — порядок любой."""
 
-    Discord не даёт класть селекты внутрь модалки, поэтому участник выбирается
-    здесь, в сообщении панели; выбранный ID подставляется в модалку действия
-    автоматически (руками можно поправить или оставить). Для «Очистки» цель
-    не нужна — селект можно игнорировать.
-    """
-
-    def __init__(self, cog):
-        super().__init__(
-            placeholder="🎯 Кого наказать? Выберите участника мышкой…",
-            min_values=1, max_values=1,
-        )
+    def __init__(self, cog, default_values=None):
+        kw = dict(placeholder="Кого наказать?", min_values=1, max_values=1)
+        if default_values:
+            kw['default_values'] = list(default_values)
+        super().__init__(**kw)
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        # Выбор участника — МОЛЧА. ID кладём на View: соседний селект
-        # действий читает его, а не Select.values (он часто пустой).
+        view = self.view
         try:
-            view = getattr(self, 'view', None)
             vals = list(self.values or [])
             if view is not None and vals:
                 view.selected_uid = str(vals[0].id)
         except Exception as _pe:
             log.debug("ModTargetSelect uid: %s", _pe)
+        pending = getattr(view, 'pending_action', None) if view is not None else None
+        prefill = getattr(view, 'selected_uid', None) if view is not None else None
+        if pending and prefill:
+            await _launch_action(self.cog, interaction, pending, prefill, panel=view)
+            return
+        # Только запомнили человека — без «думает…», мгновенный апдейт меню.
+        if view is not None:
+            await view.refresh(interaction, rebuild_action=False)
+            return
         try:
-            await interaction.response.defer(ephemeral=True)
+            if not interaction.response.is_done():
+                await interaction.response.defer()
         except Exception as _te:
             log.debug("ModTargetSelect: %s", _te)
 
 
 class ModPanelView(discord.ui.View):
-    """View панели: селект участника мышкой + меню действий + шпаргалка."""
+    """Селект участника + селект действия. Порядок любой, пункт можно выбрать снова."""
 
     def __init__(self, cog, member=None, allowed=None):
         super().__init__(timeout=300)
+        self.cog = cog
+        self.allowed = allowed
+        self.owner_id = getattr(member, 'id', None)
         self.selected_uid = None
-        # Сначала выбор участника мышкой, затем действие
-        self.target_select = ModTargetSelect(cog)
-        self.action_select = ModActionSelect(cog, member, allowed,
+        self.pending_action = None
+        self._root_edit = None  # interaction.edit_original_response от /modpanel
+        self._rebuild(None)
+
+    def _action_label(self, action):
+        for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):
+            if value == action:
+                return label
+        return action
+
+    def panel_embed(self, guild):
+        bits = []
+        if self.selected_uid:
+            bits.append(f"участник <@{self.selected_uid}>")
+        if self.pending_action:
+            bits.append(f"«{self._action_label(self.pending_action)}»")
+        if bits:
+            desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
+        else:
+            desc = "Участник и действие — в любом порядке."
+        e = discord.Embed(title="🛡 Панель модерации", description=desc, color=0x5865F2)
+        icon = getattr(getattr(guild, 'icon', None), 'url', None)
+        name = getattr(guild, 'name', None) if guild is not None else None
+        if name and icon:
+            e.set_footer(text=name, icon_url=icon)
+        elif name:
+            e.set_footer(text=name)
+        return e
+
+    def _rebuild(self, guild):
+        self.clear_items()
+        defaults = []
+        if self.selected_uid and guild is not None:
+            try:
+                mem = guild.get_member(int(self.selected_uid))
+                if mem is not None:
+                    defaults = [mem]
+            except Exception:
+                defaults = []
+        self.target_select = ModTargetSelect(self.cog, default_values=defaults or None)
+        self.action_select = ModActionSelect(self.cog, None, self.allowed,
                                              target_select=self.target_select)
         self.add_item(self.target_select)
         self.add_item(self.action_select)
-        # Кнопку-шпаргалку «Как это работает» убрали (заказ владельца — и так
-        # понятно; подсказка про выбор мышкой есть в тексте карточки).
+
+    async def refresh(self, interaction, *, rebuild_action=True):
+        guild = getattr(interaction, 'guild', None)
+        if rebuild_action:
+            self._rebuild(guild)
+        embed = self.panel_embed(guild)
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.edit_message(embed=embed, view=self)
+                return
+        except Exception as _e:
+            log.debug('modpanel refresh edit_message: %s', _e)
+        msg = getattr(interaction, 'message', None)
+        if msg is not None:
+            try:
+                await msg.edit(embed=embed, view=self)
+                return
+            except Exception as _e:
+                log.debug('modpanel refresh msg.edit: %s', _e)
+        try:
+            await interaction.edit_original_response(embed=embed, view=self)
+        except Exception as _e:
+            log.debug('modpanel refresh original: %s', _e)
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.defer()
+            except Exception:
+                pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Меню действий /modpanel — доступ решает владелец через панель ролей.
-
-        Раньше тут жёстко требовалось Discord-право «Модерация участников» —
-        роль, которой владелец выдал /modpanel в панели (Доступ → Права
-        команд), всё равно упиралась в этот запрет. Теперь проверяем тот же
-        ролевой ACL, что и саму команду (has_access), а конкретные действия
-        дополнительно фильтруются (actions_for_member / _ensure_action_acl).
-        """
         user = interaction.user
-        # Строгая модель: Discord-админ прав в боте НЕ даёт (своя система).
-        # Владелец бота (OWNER_ID) — всегда может (его has_access пропускает).
+        if self.owner_id and getattr(user, 'id', None) == self.owner_id:
+            return True
         try:
             from services.permission_acl import has_access
             guild = interaction.guild
@@ -2049,8 +2172,6 @@ class ModPanelView(discord.ui.View):
                     ephemeral=True)
                 return False
         except Exception as _ex:
-            # Сбой чтения БД — не открываем панель молча (fail-close):
-            # конкретные действия всё равно перепроверяются при нажатии.
             log.debug('ModPanelView.interaction_check: ACL не прочитан (%s)', _ex)
         return True
 

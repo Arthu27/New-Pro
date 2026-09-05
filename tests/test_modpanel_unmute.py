@@ -202,6 +202,99 @@ check("placeholder='30, 60, 2ч'" in src,
 print('== 6. Бан: роль есть — комнаты не обходим по одной ==')
 check('Semaphore' in src and "_punish_role(guild,'ban')" in src.replace(' ', ''),
       'изоляция комнат: параллельно, и пропускается если есть роль бана')
+check('pending_action' in src and 'в любом порядке' in src,
+      'панель помнит действие и принимает любой порядок')
+check('thinking=False' in src, 'ack без спиннера «думает…»')
+check('_root_edit' in src, 'сброс меню через токен /modpanel — тот же пункт снова кликается')
+
+print('== 7. Порядок любой + повтор того же наказания ==')
+set_action_rule(GID, 'timeout', [601])
+set_action_rule(GID, 'mute', [601])
+set_action_rule(GID, 'vmute', [601])
+opener = Member(7, [601])
+g7 = types.SimpleNamespace(id=GID, name='G', icon=None, owner_id=1,
+                           get_member=lambda uid: None)
+
+
+class _PMsg:
+    def __init__(self):
+        self.edits = []
+
+    async def edit(self, **kw):
+        self.edits.append(kw)
+
+
+class _PResp:
+    def __init__(self):
+        self.done = False
+        self.modal = []
+        self.edits = []
+        self.sent = []
+
+    def is_done(self):
+        return self.done
+
+    async def edit_message(self, **kw):
+        self.edits.append(kw)
+        self.done = True
+
+    async def send_modal(self, modal):
+        self.modal.append(modal)
+        self.done = True
+
+    async def send_message(self, **kw):
+        self.sent.append(kw)
+        self.done = True
+
+    async def defer(self, **kw):
+        self.done = True
+
+
+class _PInter:
+    def __init__(self, user, guild):
+        self.user = user
+        self.guild = guild
+        self.guild_id = guild.id
+        self.response = _PResp()
+        self.message = _PMsg()
+
+    async def edit_original_response(self, **kw):
+        self.message.edits.append(kw)
+
+
+allowed = [a for a in M.MODPANEL_ACTIONS
+           if a[0] in ('timeout', 'unmute', 'clear')]
+view = M.ModPanelView(cog, opener, allowed=allowed)
+old_sel = view.action_select
+inter = _PInter(opener, g7)
+view.action_select._values = ['timeout']
+asyncio.run(view.action_select.callback(inter))
+check(view.pending_action == 'timeout' and not inter.response.modal,
+      'действие без участника — запомнили, модалку не открыли')
+check(inter.response.edits, 'меню обновилось без спиннера (edit_message)')
+
+# теперь человек → должна открыться модалка
+view.selected_uid = '3000000000000000300'
+inter2 = _PInter(opener, g7)
+# имитируем выбор участника, действие уже pending
+asyncio.run(view.target_select.callback(inter2))
+check(bool(inter2.response.modal),
+      'после участника (действие уже выбрано) открывается модалка')
+
+# наоборот: сначала человек, потом действие
+view2 = M.ModPanelView(cog, opener, allowed=allowed)
+view2.selected_uid = '3000000000000000300'
+inter3 = _PInter(opener, g7)
+view2.action_select._values = ['timeout']
+asyncio.run(view2.action_select.callback(inter3))
+check(bool(inter3.response.modal),
+      'сначала участник, потом действие — модалка сразу')
+
+# повтор выбора: rebuild даёт НОВЫЙ селект (Discord снова шлёт callback)
+old = id(view2.action_select)
+view2._rebuild(g7)
+check(id(view2.action_select) != old,
+      'после шага селект наказаний собирается заново — можно выбрать то же')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
