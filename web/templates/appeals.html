@@ -65,7 +65,7 @@
 
 <div class="panel" style="margin-top:14px" id="apLookBox" {% if not can_edit %}hidden{% endif %}>
   <div class="panel-head"><div><h2><i class="fas fa-wand-magic-sparkles"></i> Оформление карточки</h2>
-    <div class="sub">Как выглядит карточка апелляции в Discord: авто-картинка в теме Hakumo, своя по URL или обычный эмбед.</div></div></div>
+    <div class="sub">Как будет выглядеть сообщение с апелляцией в Discord: тексты карточки, картинка и кнопки решения — то, что увидят модераторы.</div></div></div>
   <div class="panel-body">
     <div class="form-row" style="flex-wrap:wrap;max-width:900px">
       <select class="form-input" id="apLookMode" aria-label="Режим картинки карточки апелляции" style="max-width:280px">
@@ -78,8 +78,40 @@
       <button type="button" class="btn btn-primary" id="apLookSave"><i class="fas fa-save"></i> Сохранить</button>
     </div>
     <div class="hint" id="apLookMsg"></div>
-    <div id="apLookPvWrap" style="margin-top:10px;border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg);max-width:900px">
-      <img id="apLookPv" alt="Предпросмотр карточки апелляции" style="width:100%;height:auto" loading="lazy">
+    <div id="apLookPvWrap" style="margin-top:10px;max-width:900px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:14px;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#5865F2,#7C3AED);display:flex;align-items:center;justify-content:center;flex:none">
+          <i class="fas fa-gavel" style="color:#fff;font-size:15px" aria-hidden="true"></i>
+        </div>
+        <span style="font-weight:700;color:var(--text-1)">Hakumo</span>
+        <span style="background:#5865F2;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;letter-spacing:.5px">APP</span>
+        <span style="color:var(--text-3);font-size:var(--fs-sm)">— тред «Апелляция #7 · Кипарис»</span>
+      </div>
+      <div style="display:flex;gap:12px">
+        <div style="width:4px;border-radius:2px;background:#FEE75C;flex:none" aria-hidden="true"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--bg);border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;flex:none">
+              <i class="fas fa-user" style="color:var(--text-3);font-size:11px" aria-hidden="true"></i>
+            </div>
+            <span style="font-size:14px;font-weight:600;color:var(--text-1)">Кипарис</span>
+          </div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-1)">Апелляция #7 — новая</div>
+          <div style="font-size:14px;line-height:1.45;color:var(--text-2);margin-top:5px">Бан за ссылки — это был не спам, а ссылка на общий документ с гайдом по ивенту. Прикладываю скрин переписки с согласованием.</div>
+          <div style="margin-top:10px;font-size:13px;line-height:1.45;color:var(--text-2)"><span style="font-weight:600;color:var(--text-1)">Доказательство</span><br><span style="color:#00A8FC">https://i.imgur.com/demo-appeal-proof.png</span></div>
+          <div style="margin-top:10px;font-size:13px;line-height:1.45;color:var(--text-2)"><span style="font-weight:600;color:var(--text-1)">Участник</span><br><span style="color:#00A8FC">@Кипарис</span> · 300100200300400101</div>
+          <div style="margin-top:10px;font-size:13px;line-height:1.45;color:var(--text-2)"><span style="font-weight:600;color:var(--text-1)">Контекст модератора</span><br>варны: 1 · муты: 2 · отклонённые апелляции: 1</div>
+          <div id="apLookPvImgWrap" style="margin-top:12px;border-radius:8px;overflow:hidden;line-height:0;background:var(--bg)">
+            <img id="apLookPv" alt="Картинка карточки апелляции" style="width:100%;height:auto" loading="lazy">
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:var(--text-3)">appeal #7 · решение — меню под карточкой · сегодня в 14:20</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-left:16px">
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#5865F2;color:#fff;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px"><i class="fas fa-hand" style="font-size:12px" aria-hidden="true"></i>Взять в работу</span>
+        <span style="background:#248046;color:#fff;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px">Принять</span>
+        <span style="background:#DA373C;color:#fff;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px">Отклонить</span>
+      </div>
     </div>
   </div>
 </div>
@@ -416,7 +448,8 @@ var apLookDirty = false;
 function apLookEls() {
   return {
     mode: $('apLookMode'), theme: $('apLookTheme'), url: $('apLookUrl'),
-    msg: $('apLookMsg'), pvWrap: $('apLookPvWrap'), pv: $('apLookPv')
+    msg: $('apLookMsg'), pvWrap: $('apLookPvWrap'), pv: $('apLookPv'),
+    imgWrap: $('apLookPvImgWrap')
   };
 }
 function syncAppearance(d) {
@@ -453,8 +486,11 @@ function refreshAppearanceUi() {
   var m = el.mode.value;
   el.theme.style.display = (m === 'auto') ? '' : 'none';
   el.url.style.display = (m === 'url') ? '' : 'none';
-  el.pvWrap.style.display = (m === 'off') ? 'none' : '';
-  if (m === 'url' && !String(el.url.value || '').trim()) return; /* пустой URL — не дёргаем картинку */
+  /* Макет сообщения виден всегда: без картинки остаётся эмбед с текстами
+     и кнопками — ровно как это уедет в Discord. */
+  var hasImg = (m === 'auto') || (m === 'url' && String(el.url.value || '').trim());
+  el.imgWrap.style.display = hasImg ? '' : 'none';
+  if (!hasImg) return;
   el.pv.style.opacity = '.55';
   el.pv.onerror = function () {
     el.pv.onerror = null;
