@@ -175,7 +175,7 @@ select option, select optgroup {
 *, *::before, *::after { box-sizing: border-box; }
 
 html { background: var(--bg); }
-html, body { margin: 0; padding: 0; overflow-x: clip; }
+html, body { margin: 0; padding: 0; }
 
 body {
   font-family: var(--font);
@@ -2315,10 +2315,11 @@ body.sidebar-open .mobile-menu .ico-close { display: inline-block; }
   -webkit-backdrop-filter: blur(8px);
   border: 0; padding: 0; margin: 0;
   cursor: pointer;
+  pointer-events: none;
 }
-.sidebar-backdrop.show { display: block; }
-body.sidebar-open { overflow: hidden; }
 @media (max-width: 1080px) {
+  html, body { overflow-x: clip; }
+  body.sidebar-open { overflow: hidden; }
   .sidebar {
     position: fixed; left: 0; top: 0; bottom: 0;
     width: min(320px, 88vw);
@@ -2347,7 +2348,21 @@ body.sidebar-open { overflow: hidden; }
   .main-content { padding-left: 16px; padding-right: 16px; }
   .navbar-clock { display: none; }
   .topbar-brand { display: none; }
-  body.sidebar-open .sidebar-backdrop { display: block; }
+  body.sidebar-open .sidebar-backdrop,
+  .sidebar-backdrop.show {
+    display: block;
+    pointer-events: auto;
+  }
+}
+@media (min-width: 1081px) {
+  .mobile-menu { display: none; }
+  .mobile-nav { display: none; }
+  .sidebar-backdrop,
+  .sidebar-backdrop.show {
+    display: none;
+    pointer-events: none;
+  }
+  body.sidebar-open { overflow: visible; }
 }
 @media (max-width: 860px) {
   .stat-grid,.donut-grid,.quick-grid{grid-template-columns:1fr !important}
@@ -3098,15 +3113,17 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   .mobile-nav { display: flex; }
   .main-content { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
-body.keyboard-open .mobile-nav {
-  transform: translateY(110%);
-  pointer-events: none;
-}
-body.keyboard-open .fab,
-body.keyboard-open #fx-topbtn,
-body.keyboard-open .scroll-top-btn {
-  opacity: 0;
-  pointer-events: none;
+@media (max-width: 860px) {
+  body.keyboard-open .mobile-nav {
+    transform: translateY(110%);
+    pointer-events: none;
+  }
+  body.keyboard-open .fab,
+  body.keyboard-open #fx-topbtn,
+  body.keyboard-open .scroll-top-btn {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 /* ── Чип серверов в сайдбаре ────────────────────────────── */
@@ -5838,6 +5855,15 @@ button, .btn, .control-btn { -webkit-user-select: none; user-select: none; }
 .btn:active:not(:disabled), button:active:not(:disabled) {
   transform: scale(.96);
   filter: brightness(.95);
+}
+button.sidebar-backdrop:hover:not(:disabled),
+button.sidebar-backdrop:active:not(:disabled),
+button.chat-drawer-backdrop:hover:not(:disabled),
+button.chat-drawer-backdrop:active:not(:disabled),
+button.fab.backdrop:hover:not(:disabled),
+button.fab.backdrop:active:not(:disabled) {
+  transform: none;
+  filter: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .btn, button, .chip, [data-action] { transition: none; transform: none; }

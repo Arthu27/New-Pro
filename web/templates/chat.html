@@ -543,8 +543,8 @@
   background: rgba(15, 23, 42, 0.42);
   border: 0; padding: 0; margin: 0;
   cursor: pointer;
+  pointer-events: none;
 }
-.chat-drawer-backdrop.show { display: block; }
 .hdr-btn.chat-mob-ch, .hdr-btn.chat-mob-mem { display: none; }
 @media (max-width: 1120px) {
   .chat-wrap { grid-template-columns: 58px 236px 1fr; }
@@ -558,6 +558,17 @@
   }
   .chat-wrap.members-open .members-panel { display: flex; }
   .hdr-btn.chat-mob-mem { display: flex; }
+  .chat-drawer-backdrop.show {
+    display: block;
+    pointer-events: auto;
+  }
+}
+@media (min-width: 1121px) {
+  .chat-drawer-backdrop,
+  .chat-drawer-backdrop.show {
+    display: none;
+    pointer-events: none;
+  }
 }
 @media (max-width: 860px) {
   .members-panel {
@@ -945,6 +956,56 @@ document.getElementById('chat-confirm').addEventListener('click', function(e){ i
 var _activeGuildId = '{{ guild_id }}';
 var _guilds = [];
 var _channelId = null, _dmMode = false, _dmUserId = null;
+(function chatDrawers() {
+  var wrap = document.querySelector('.chat-wrap');
+  var bd = document.getElementById('chatDrawerBackdrop');
+  var chBtn = document.getElementById('chatChannelsBtn');
+  var memBtn = document.getElementById('chatMembersBtn');
+  if (!wrap) return;
+  function phoneCh() {
+    return window.matchMedia && window.matchMedia('(max-width: 820px)').matches;
+  }
+  function phoneMem() {
+    return window.matchMedia && window.matchMedia('(max-width: 1120px)').matches;
+  }
+  function setBd(on) {
+    if (!bd) return;
+    bd.classList.toggle('show', !!on);
+    bd.hidden = !on;
+  }
+  function close() {
+    wrap.classList.remove('channels-open', 'members-open');
+    setBd(false);
+  }
+  window.__chatCloseDrawers = close;
+  if (chBtn) chBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (!phoneCh()) return;
+    var on = !wrap.classList.contains('channels-open');
+    wrap.classList.toggle('channels-open', on);
+    wrap.classList.remove('members-open');
+    setBd(on);
+  });
+  if (memBtn) memBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (!phoneMem()) return;
+    var on = !wrap.classList.contains('members-open');
+    wrap.classList.toggle('members-open', on);
+    wrap.classList.remove('channels-open');
+    setBd(on);
+  });
+  if (bd) bd.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') close();
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(min-width: 1121px)');
+    var onMq = function () { if (mq.matches) close(); };
+    if (mq.addEventListener) mq.addEventListener('change', onMq);
+    else if (mq.addListener) mq.addListener(onMq);
+    if (mq.matches) close();
+  }
+})();
 var _members = [], _mentionIdx = 0, _mentionMatches = [];
 var _lastMsgId = null, _autoRefresh = null, _replyTo = null, _fetchSeq = 0;
 

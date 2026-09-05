@@ -15,7 +15,7 @@
        по его опциям — законные клики в интерактив, а не «промах».
        Без этого гарда пробрасывала тап по опции на кнопку ПОД панелью —
        открывался чужой селект («настройки переключаются сами»). */
-    var open = document.querySelector('.modal-overlay.open, .drawer.open, .kbd-palette:not([hidden]), .aes-panel.open');
+    var open = document.querySelector('.modal-overlay.open, .drawer.open, .kbd-palette:not([hidden]), .aes-panel.open, .sidebar-backdrop.show, .fab.backdrop.show, .chat-drawer-backdrop.show, .tour-mask.show');
     if (open) return true;
     var boot = document.getElementById('bootSplash');
     return !!(boot && !boot.classList.contains('out'));

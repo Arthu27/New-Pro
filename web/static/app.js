@@ -1030,14 +1030,36 @@
         if (e.key === 'Escape' && sidebar.classList.contains('open')) setSidebarOpen(false);
       });
     }
+    /* Телефонный ящик/клавиатура не должны перекрывать кнопки на компе:
+       при ширине >1080 снимаем overlay, keyboard-open — только ≤860. */
+    if (window.matchMedia) {
+      var mqShell = window.matchMedia('(max-width: 1080px)');
+      var onShell = function () { if (!mqShell.matches) setSidebarOpen(false); };
+      if (mqShell.addEventListener) mqShell.addEventListener('change', onShell);
+      else if (mqShell.addListener) mqShell.addListener(onShell);
+      if (!mqShell.matches) setSidebarOpen(false);
+    }
     if (window.visualViewport) {
       var vv = window.visualViewport;
+      var phoneKb = function () {
+        return window.matchMedia && window.matchMedia('(max-width: 860px)').matches;
+      };
       var syncKb = function () {
+        if (!phoneKb()) {
+          doc.body.classList.remove('keyboard-open');
+          return;
+        }
         var covered = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
         doc.body.classList.toggle('keyboard-open', covered > 90);
       };
       vv.addEventListener('resize', syncKb);
       vv.addEventListener('scroll', syncKb);
+      if (window.matchMedia) {
+        var mqKb = window.matchMedia('(max-width: 860px)');
+        var onKb = function () { if (!mqKb.matches) doc.body.classList.remove('keyboard-open'); };
+        if (mqKb.addEventListener) mqKb.addEventListener('change', onKb);
+        else if (mqKb.addListener) mqKb.addListener(onKb);
+      }
     }
     var searchBtn = doc.getElementById('globalSearchBtn');
     if (searchBtn) searchBtn.addEventListener('click', paletteOpen);
