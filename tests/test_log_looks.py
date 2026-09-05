@@ -80,8 +80,14 @@ check(loaded['theme_by_cat'] == {'message': 'ocean'}, 'сохранённые о
 saved2 = LC.save_log_cards_cfg('777', {'theme': 'hakumo'})
 check(saved2['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT, 'пустой theme_by_cat → снова дефолтные образы')
 
-# ── 3b. Категория «Наказания»: варны и авто-наказания — отдельный канал ─────
-check('punish' in [k for k, _, _ in LS.LOG_CATEGORIES], 'log_settings: категория punish')
+# ── 3b. Наказания разделены: баны / муты / варны / стафф ─────────────────────
+check('warn' in cats, 'log_settings: категория warn в панели')
+check('ban' in cats, 'log_settings: категория ban в панели')
+check('mute' in cats, 'log_settings: категория mute в панели')
+check('staff' in cats, 'log_settings: категория staff в панели')
+check('rest' in cats, 'log_settings: категория rest в панели')
+check(LS.dest_category('punish') == 'warn', 'старые наказания → ветка варнов')
+check(LS.dest_category('channel') == 'rest', 'каналы → остальное')
 check('punish' in LC.CATEGORY_STYLES, 'карточки: стиль НАКАЗАНИЯ')
 check(LC.DEFAULT_THEME_BY_CAT.get('punish') == 'crimson', 'образ наказаний — Багровый неон')
 png = LC.render_log_card('punish', 'Авто-наказание',

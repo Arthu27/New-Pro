@@ -79,27 +79,34 @@ def register(ctx):
         # Основной источник: message_logs_<gid>.json — его наполняет ког
         # activity_stats -> services.message_stats (КАЖДОЕ сообщение, кроме
         # ботов/вебхуков/ЛС). Полные и достоверные данные.
-        msg_log_file = f'data/message_logs_{guild_id}.json'
-        if os.path.exists(msg_log_file):
+        msgs = []
+        for _msg_path in (f'data/message_logs_{guild_id}.json',
+                          f'data/message_log_{guild_id}.json'):
+            if not os.path.exists(_msg_path):
+                continue
             try:
-                with open(msg_log_file, 'r', encoding='utf-8') as fp:
-                    msgs = json.load(fp)
+                with open(_msg_path, 'r', encoding='utf-8') as fp:
+                    _loaded = json.load(fp)
             except Exception as ex:
-                msgs = []
-                _log.debug('analytics: не прочитать %s: %s', msg_log_file, ex)
-            # Топ участников клеится ПО ЛИЧНОСТИ (uid): смена ника не дробит
-            # человека на двоих (владелец 2026-09-05: «это один и тот же
-            # человек, просто имя поменял»). Подпись — свежий ник.
-            _member_labels = {}
-            for m in msgs:
+                _loaded = []
+                _log.debug('analytics: не прочитать %s: %s', _msg_path, ex)
+            if isinstance(_loaded, list) and _loaded:
+                msgs = _loaded
+                break
+        # Топ участников клеится ПО ЛИЧНОСТИ (uid): смена ника не дробит
+        # человека на двоих (владелец 2026-09-05: «это один и тот же
+        # человек, просто имя поменял»). Подпись — свежий ник.
+        _member_labels = {}
+        for m in msgs:
                 if not isinstance(m, dict):
                     continue
-                _author = str(m.get('author') or m.get('user_name') or '?')
-                _uid = str(m.get('uid') or '')
+                _author = str(m.get('author') or m.get('author_name')
+                              or m.get('user_name') or '?')
+                _uid = str(m.get('uid') or m.get('author_id') or '')
                 _mkey = ('u:' + _uid) if _uid else ('n:' + _author)
                 member_msg_counts[_mkey] += 1
                 _member_labels[_mkey] = _author
-                channel_msg_counts[str(m.get('channel') or '?')] += 1
+                channel_msg_counts[str(m.get('channel') or m.get('channel_name') or '?')] += 1
                 day = _day_key(m.get('timestamp'))
                 if day:
                     daily_counts[day] += 1

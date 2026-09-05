@@ -425,7 +425,11 @@ def register(ctx):
                         'channels_source': src,
                         'looks': LC.get_log_cards_cfg(guild_id),
                         'categories': [{'key': k, 'label': l, 'emoji': e}
-                                       for k, l, e in LS.LOG_CATEGORIES]})
+                                       for k, l, e in LS.LOG_CATEGORIES],
+                        'groups': [{'id': gid, 'label': gl, 'emoji': ge,
+                                    'hint': gh,
+                                    'keys': [k for k, _l, _e in cats]}
+                                   for gid, gl, ge, gh, cats in LS.LOG_GROUPS]})
 
     @app.route('/api/guild/<guild_id>/log-settings', methods=['POST'])
     @login_required

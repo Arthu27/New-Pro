@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow"> Настройки </div>
     <h1>Логи сервера</h1>
-    <p class="lead">Какие события логировать, в какой канал их писать и каким категориям разрешено создавать лог-канал самостоятельно. По умолчанию каналы <b>никогда не создаются сами</b> — только если ты разрешишь здесь.</p>
+    <p class="lead">Каждая ветка — своя категория: в <b>#・логи</b> сообщения, войсы, никнеймы, зашёл/вышел и остальное; в <b>#・отчеты</b> баны, муты войс/чат, снятие/ЧС стаффа и варны. Выбери готовую ветку в «Куда писать» — бот туда и пишет. Каналы <b>сами не создаются</b>.</p>
   </div>
   <div class="page-head-actions">
     <button type="button" class="btn" id="lsReload"><i class="fas fa-arrows-rotate"></i> Обновить</button>
@@ -22,7 +22,7 @@
 
 <div class="panel">
   <div class="panel-head"><div><h2><i class="fas fa-list-check"></i> Категории</h2>
-    <div class="sub">«Логировать» — события уходят в канал. «Куда писать» — выбери готовый канал сервера (Авто — бот найдёт канал по имени). «Создавать канал самому» — бот сам создаст недостающий лог-канал этой категории. Изменения применяются сразу, без рестарта.</div></div></div>
+    <div class="sub">«Логировать» — события уходят в выбранную ветку. «Куда писать» — готовый канал или ветка (Авто — поиск по имени: «сообщения», «баны»…). «Создавать канал самому» выключено по умолчанию. Изменения сразу, без рестарта.</div></div></div>
   <div class="panel-body">
     <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
       <b style="font-size:13px"><i class="fas fa-bolt"></i> Быстро:</b>
@@ -41,7 +41,7 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  var state = { cats: [], settings: null, channels: [], looks: {} };
+  var state = { cats: [], groups: [], settings: null, channels: [], looks: {} };
   var SAVING = false;
   var pending = null;
   var _lastRaw = null;
@@ -180,7 +180,23 @@
 
   function render() {
     if (!state.settings) return;
-    $('lsCats').innerHTML = state.cats.map(card).join('');
+    var groups = state.groups || [];
+    if (!groups.length) {
+      $('lsCats').innerHTML = state.cats.map(card).join('');
+    } else {
+      var byKey = {};
+      (state.cats || []).forEach(function (c) { byKey[c.key] = c; });
+      $('lsCats').innerHTML = groups.map(function (g) {
+        var cards = (g.keys || []).map(function (k) { return byKey[k]; })
+          .filter(Boolean).map(card).join('');
+        return '<div style="grid-column:1/-1;margin:4px 0 2px">' +
+          '<div class="row" style="gap:8px;align-items:center">' +
+          '<span style="font-size:18px">' + (g.emoji || '') + '</span>' +
+          '<b style="font-size:15px">' + esc(g.label || '') + '</b></div>' +
+          '<div class="hint" style="margin:4px 0 8px">' + esc(g.hint || '') + '</div></div>' +
+          cards;
+      }).join('');
+    }
     Array.prototype.forEach.call($('lsCats').querySelectorAll('.lsEn'), function (t) {
       t.addEventListener('change', function () { toggle(t.getAttribute('data-k'), 'enabled', t.checked); });
     });

@@ -109,6 +109,8 @@ DEFAULT_THEME_BY_CAT = {
     'role': 'aurora', 'channel': 'steel', 'invite': 'aurora',
     'сервер': 'hakumo', 'guild': 'hakumo', 'ticket': 'ocean',
     'proof': 'steel', 'welcome': 'sakura',
+    'ban': 'crimson', 'mute': 'night', 'warn': 'crimson',
+    'staff': 'violet', 'rest': 'steel',
 }
 LOG_CARD_THEME_ORDER = tuple(LOG_CARD_THEMES)
 DEFAULT_LOG_THEME = 'hakumo'
@@ -379,6 +381,12 @@ def _load_icon(category, size=156):
         'сервер': 'guild',
         'welcome': 'welcome',
         'ai': 'ai',
+        'ban': 'mod',
+        'mute': 'mod',
+        'warn': 'mod',
+        'punish': 'mod',
+        'staff': 'role',
+        'rest': 'guild',
     }
     key = aliases.get(category, category)
     path = os.path.join(ICONS_DIR, f'log_{key}_256.png')
@@ -421,6 +429,31 @@ CATEGORY_STYLES = {
         'tag': '✦ HAKUMO · ДОКАЗАТЕЛЬСТВА',
         'glow_color': (200, 120, 255),
         'type': 'member',
+    },
+    'ban': {
+        'tag': '✦ HAKUMO · БАНЫ',
+        'glow_color': (192, 57, 43),
+        'type': 'mod',
+    },
+    'mute': {
+        'tag': '✦ HAKUMO · МУТЫ',
+        'glow_color': (230, 126, 34),
+        'type': 'mod',
+    },
+    'warn': {
+        'tag': '✦ HAKUMO · ВАРНЫ',
+        'glow_color': (231, 76, 60),
+        'type': 'mod',
+    },
+    'staff': {
+        'tag': '✦ HAKUMO · СТАФФ',
+        'glow_color': (142, 68, 173),
+        'type': 'role',
+    },
+    'rest': {
+        'tag': '✦ HAKUMO · ОСТАЛЬНОЕ',
+        'glow_color': (149, 165, 166),
+        'type': 'guild',
     },
     'punish': {
         'tag': '✦ HAKUMO · НАКАЗАНИЯ',

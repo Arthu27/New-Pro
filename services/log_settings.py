@@ -26,22 +26,156 @@ from logger import get_logger
 
 _log = get_logger('log_settings')
 
-# Канонический список категорий (зеркалит CATEGORIES из cogs/logs.py,
-# чтобы панель не зависела от импорта дискорд-когов).
-LOG_CATEGORIES = (
-    ('mod',      'Модерация',    '🛡'),
-    ('member',   'Участники',    '👋'),
-    ('nick',     'Никнеймы',     '🏷'),
-    ('punish',   'Наказания',    '⚖'),
-    ('message',  'Сообщения',    '💬'),
-    ('voice',    'Голос',        '🔊'),
-    ('channel',  'Каналы',       '🗂'),
-    ('role',     'Роли',         '🎭'),
-    ('invite',   'Приглашения',  '🔗'),
-    ('сервер',   'Сервер',       '🏠'),
-    ('automod',  'Автомодерация', '⚔'),
-    ('proof',    'Доказательства', '📸'),
+# Две группы панели «Логи сервера» — по веткам Discord:
+#   #・логи   → сообщения / войсы / никнеймы / зашёл-вышел / остальное
+#   #・отчеты → баны / муты войс+чат / снятие·ЧС стаффа / варны
+# Наказания специально разделены: не одна «модерация».
+LOG_GROUPS = (
+    ('logs', 'Логи', '🧵',
+     'Ветки канала «логи»: сообщения, войсы, никнеймы, зашёл/вышел, остальное.',
+     (
+         ('message', 'Сообщения', '💬'),
+         ('voice',   'Войсы', '🔊'),
+         ('nick',    'Никнеймы', '🏷'),
+         ('member',  'Зашёл / вышел', '👋'),
+         ('rest',    'Остальное', '📋'),
+     )),
+    ('reports', 'Отчёты', '📑',
+     'Ветки канала «отчёты»: баны, муты войс/чат, снятие/ЧС стаффа, варны.',
+     (
+         ('ban',   'Баны', '🔨'),
+         ('mute',  'Муты войс / чат', '🔇'),
+         ('staff', 'Снятие / ЧС стаффа', '🚷'),
+         ('warn',  'Варны', '⚠'),
+     )),
 )
+
+LOG_CATEGORIES = tuple(
+    cat for _g, _gl, _ge, _gh, cats in LOG_GROUPS for cat in cats
+)
+
+# Старые ключи журнала/настроек — свёртка и миграция, в панели не показываем.
+_LEGACY_CANONICAL = {
+    'mod', 'punish', 'channel', 'role', 'invite', 'сервер', 'automod', 'proof',
+}
+
+# Канонические ключи панели. Слушатели Discord часто передают русское имя
+# канала («модерация») или старый ключ («guild») — без свёртки enabled
+# смотрит в неизвестный ключ и по умолчанию остаётся True, а autocreate
+# (дефолт False) никогда не срабатывает для той же категории.
+_CANONICAL = {key for key, _l, _e in LOG_CATEGORIES} | _LEGACY_CANONICAL
+_CATEGORY_ALIASES = {
+    'модерация': 'mod',
+    'moderasyon': 'mod',
+    'moderation': 'mod',
+    'mod-log': 'mod',
+    'участники': 'member',
+    'members': 'member',
+    'member-log': 'member',
+    'никнеймы': 'nick',
+    'ник': 'nick',
+    'nickname': 'nick',
+    'nicknames': 'nick',
+    'наказания': 'punish',
+    'punishment': 'punish',
+    'punishments': 'punish',
+    'сообщения': 'message',
+    'messages': 'message',
+    'message-log': 'message',
+    'голос': 'voice',
+    'войсы': 'voice',
+    'ses': 'voice',
+    'voice-log': 'voice',
+    'каналы': 'channel',
+    'channels': 'channel',
+    'роли': 'role',
+    'roles': 'role',
+    'приглашения': 'invite',
+    'invites': 'invite',
+    'guild': 'сервер',
+    'server': 'сервер',
+    'автоматически': 'automod',
+    'автомод': 'automod',
+    'доказательства': 'proof',
+    'demki': 'proof',
+    'демки': 'proof',
+    'баны': 'ban',
+    'бан': 'ban',
+    'bans': 'ban',
+    'муты': 'mute',
+    'мут': 'mute',
+    'mutes': 'mute',
+    'варны': 'warn',
+    'варн': 'warn',
+    'warns': 'warn',
+    'стафф': 'staff',
+    'чс': 'staff',
+    'остальное': 'rest',
+    'прочее': 'rest',
+}
+
+# Куда писать в Discord: старые смешанные категории → новые ветки.
+# «mod» нарочно не трогаем: журнал и тесты ждут ключ mod.
+_DEST = {
+    'channel': 'rest',
+    'role': 'rest',
+    'invite': 'rest',
+    'сервер': 'rest',
+    'automod': 'rest',
+    'proof': 'rest',
+    'punish': 'warn',
+}
+
+
+def canonical_category(category):
+    """Русское/legacy имя категории → ключ панели (mod, member, …).
+
+    Неизвестные ключи (ticket-log, ai-alerts) оставляем как есть —
+    у них нет тумблера в «Логах сервера».
+    """
+    raw = str(category or '').strip()
+    if not raw:
+        return raw
+    if raw in _CANONICAL:
+        return raw
+    low = raw.lower()
+    if low in _CANONICAL:
+        return low
+    return _CATEGORY_ALIASES.get(raw) or _CATEGORY_ALIASES.get(low) or raw
+
+
+def dest_category(category):
+    """Куда писать в Discord: старые смешанные ключи → ветка панели."""
+    cat = canonical_category(category)
+    return _DEST.get(cat, cat)
+
+
+def _fold_bool_map(src):
+    """Слить alias-ключи в канонические; точный канон побеждает alias."""
+    folded, exact = {}, {}
+    for key, val in (src or {}).items():
+        ck = canonical_category(str(key))
+        if str(key) == ck:
+            exact[ck] = bool(val)
+        else:
+            folded[ck] = bool(val)
+    folded.update(exact)
+    return folded
+
+
+def _fold_channel_map(src):
+    folded, exact = {}, {}
+    for key, val in (src or {}).items():
+        cid = str(val or '').strip()
+        if not cid.isdigit():
+            continue
+        ck = canonical_category(str(key))
+        if str(key) == ck:
+            exact[ck] = cid
+        else:
+            folded[ck] = cid
+    folded.update(exact)
+    return folded
 
 
 def _path(gid):
@@ -68,35 +202,81 @@ def _save(gid, data):
     os.replace(tmp, _path(gid))
 
 
+def _inherit_split(enabled, autocreate, channels, saved):
+    """Старая «модерация/наказания/сервер» → новые ветки, если те ещё пустые.
+
+    ID не выдумываем: копируем только то, что уже выбрано в панели.
+    """
+    saved_en = {canonical_category(k) for k in (saved.get('enabled') or {})}
+    saved_ac = {canonical_category(k) for k in (saved.get('autocreate') or {})}
+    saved_ch = {canonical_category(k) for k in (saved.get('channels') or {})}
+    if 'ban' not in saved_en and 'mod' in enabled:
+        enabled['ban'] = bool(enabled.get('mod', True))
+        enabled['mute'] = bool(enabled.get('mod', True))
+    if 'warn' not in saved_en:
+        if 'punish' in enabled:
+            enabled['warn'] = bool(enabled.get('punish', True))
+        elif 'mod' in enabled:
+            enabled['warn'] = bool(enabled.get('mod', True))
+    if 'rest' not in saved_en:
+        leftovers = [enabled[k] for k in (
+            'channel', 'role', 'invite', 'сервер', 'automod', 'proof'
+        ) if k in enabled]
+        if leftovers and not any(leftovers):
+            enabled['rest'] = False
+    if 'ban' not in saved_ac and 'mod' in autocreate:
+        autocreate['ban'] = bool(autocreate.get('mod'))
+        autocreate['mute'] = bool(autocreate.get('mod'))
+    if 'warn' not in saved_ac:
+        if 'punish' in autocreate:
+            autocreate['warn'] = bool(autocreate.get('punish'))
+        elif 'mod' in autocreate:
+            autocreate['warn'] = bool(autocreate.get('mod'))
+    if 'ban' not in saved_ch and channels.get('mod'):
+        channels['ban'] = channels['mod']
+        channels['mute'] = channels.get('mute') or channels['mod']
+    if 'mute' not in saved_ch and not channels.get('mute') and channels.get('mod'):
+        channels['mute'] = channels['mod']
+    if 'warn' not in saved_ch and not channels.get('warn'):
+        channels['warn'] = channels.get('punish') or ''
+    if 'rest' not in saved_ch and not channels.get('rest'):
+        for k in ('channel', 'role', 'invite', 'сервер', 'automod', 'proof'):
+            if channels.get(k):
+                channels['rest'] = channels[k]
+                break
+    return enabled, autocreate, channels
+
+
 def get_log_settings(gid):
     """Настройки категории по умолчанию + сохранённые переопределения."""
     saved = _load(gid)
     enabled = {key: True for key, _l, _e in LOG_CATEGORIES}
     autocreate = {key: False for key, _l, _e in LOG_CATEGORIES}  # ничего само не создаётся
     channels = {key: '' for key, _l, _e in LOG_CATEGORIES}       # '' = авто (поиск по имени)
-    for key, val in (saved.get('enabled') or {}).items():
-        enabled[str(key)] = bool(val)
-    for key, val in (saved.get('autocreate') or {}).items():
-        autocreate[str(key)] = bool(val)
-    for key, val in (saved.get('channels') or {}).items():
-        if str(val or '').strip().isdigit():
-            channels[str(key)] = str(val).strip()
+    enabled.update(_fold_bool_map(saved.get('enabled')))
+    autocreate.update(_fold_bool_map(saved.get('autocreate')))
+    channels.update(_fold_channel_map(saved.get('channels')))
+    enabled, autocreate, channels = _inherit_split(
+        enabled, autocreate, channels, saved)
     return {'enabled': enabled, 'autocreate': autocreate, 'channels': channels}
 
 
 def target_channel_id(gid, category):
     """ID канала, выбранного для категории ('' — авто)."""
-    return get_log_settings(gid)['channels'].get(str(category), '') or ''
+    cat = canonical_category(category)
+    return get_log_settings(gid)['channels'].get(cat, '') or ''
 
 
 def category_enabled(gid, category):
     """Логируется ли категория (нет файла — да, прежнее поведение)."""
-    return bool(get_log_settings(gid)['enabled'].get(str(category), True))
+    cat = canonical_category(category)
+    return bool(get_log_settings(gid)['enabled'].get(cat, True))
 
 
 def autocreate_allowed(gid, category):
     """Разрешено ли СОЗДАНИЕ недостающего канала (нет файла — НЕТ)."""
-    return bool(get_log_settings(gid)['autocreate'].get(str(category), False))
+    cat = canonical_category(category)
+    return bool(get_log_settings(gid)['autocreate'].get(cat, False))
 
 
 def set_log_settings(gid, enabled=None, autocreate=None, channels=None):
@@ -107,14 +287,22 @@ def set_log_settings(gid, enabled=None, autocreate=None, channels=None):
     cur_ch = dict(saved.get('channels') or {})
     if isinstance(enabled, dict):
         for key, val in enabled.items():
-            cur_en[str(key)] = bool(val)
+            cur_en[canonical_category(key)] = bool(val)
     if isinstance(autocreate, dict):
         for key, val in autocreate.items():
-            cur_ac[str(key)] = bool(val)
+            cur_ac[canonical_category(key)] = bool(val)
     if isinstance(channels, dict):
         for key, val in channels.items():
-            cur_ch[str(key)] = str(val or '').strip() if str(val or '').strip().isdigit() else ''
-    _save(gid, {'enabled': cur_en, 'autocreate': cur_ac, 'channels': cur_ch})
+            cid = str(val or '').strip()
+            cur_ch[canonical_category(key)] = cid if cid.isdigit() else ''
+    extra = {k: v for k, v in saved.items()
+             if k not in ('enabled', 'autocreate', 'channels')}
+    _save(gid, {
+        **extra,
+        'enabled': _fold_bool_map(cur_en),
+        'autocreate': _fold_bool_map(cur_ac),
+        'channels': _fold_channel_map(cur_ch),
+    })
     return get_log_settings(gid)
 
 

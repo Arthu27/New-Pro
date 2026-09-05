@@ -79,18 +79,44 @@ def load_message_events(guild_id):
         for m in msgs or []:
             if not isinstance(m, dict):
                 continue
-            author = m.get('author') or m.get('user_name') or m.get('user_id')
+            author = m.get('author') or m.get('author_name') or m.get('user_name') or m.get('user_id')
             if not author:
                 continue
             # uid — личность автора: топы и «уникальные» клеятся по нему,
             # смена ника не дробит человека (владелец 2026-09-05).
-            uid = str(m.get('uid') or '') or None
+            uid = str(m.get('uid') or m.get('author_id') or '') or None
             events.append((
                 str(author),
                 str(m.get('channel') or m.get('channel_name') or '?'),
                 _parse_ts(m.get('timestamp')),
                 uid,
             ))
+
+    # 1b) Если activity_stats ещё не писал message_logs_ — берём AI-журнал
+    #     (message_log_ без s): те же метаданные, без текста в агрегатах.
+    if not events:
+        ai_file = f'data/message_log_{gid}.json'
+        if os.path.exists(ai_file):
+            try:
+                with open(ai_file, 'r', encoding='utf-8') as fh:
+                    msgs = json.load(fh)
+            except (OSError, json.JSONDecodeError) as _ex:
+                _log.debug("analytics_plus: message_log не прочитан: %s", _ex)
+                msgs = []
+            for m in msgs or []:
+                if not isinstance(m, dict):
+                    continue
+                author = (m.get('author') or m.get('author_name')
+                          or m.get('user_name') or m.get('user_id'))
+                if not author:
+                    continue
+                uid = str(m.get('uid') or m.get('author_id') or '') or None
+                events.append((
+                    str(author),
+                    str(m.get('channel') or m.get('channel_name') or '?'),
+                    _parse_ts(m.get('timestamp')),
+                    uid,
+                ))
 
     # 2) Дополнение из audit_log (message-события). Дедуплицируем по ключу
     #    (автор, канал, дата-время до секунды), чтобы не задвоить совпадения.

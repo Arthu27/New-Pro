@@ -20,17 +20,22 @@ AUDIT_FILE ="data/audit_log.json"
 
 CATEGORIES ={
 'mod':{'label':'Модерация','emoji':'🛡','color':0xE74C3C ,'channel':'модерация'},
-'member':{'label':'Участники','emoji':'👋','color':0x2ECC71 ,'channel':'участники'},
-'nick':{'label':'Никнеймы','emoji':'🏷','color':0x9B59B6 ,'channel':'участники'},
+'member':{'label':'Зашёл / вышел','emoji':'👋','color':0x2ECC71 ,'channel':'участники'},
+'nick':{'label':'Никнеймы','emoji':'🏷','color':0x9B59B6 ,'channel':'никнеймы'},
 'punish':{'label':'Наказания','emoji':'⚖','color':0xE67E22 ,'channel':'наказания'},
 'message':{'label':'Сообщения','emoji':'💬','color':0x3498DB ,'channel':'сообщения'},
 'role':{'label':'Роли','emoji':'🎭','color':0x9B59B6 ,'channel':'сервер'},
 'channel':{'label':'Каналы','emoji':'🗂','color':0xF39C12 ,'channel':'сервер'},
-'voice':{'label':'Голос','emoji':'🔊','color':0x1ABC9C ,'channel':'голос'},
+'voice':{'label':'Войсы','emoji':'🔊','color':0x1ABC9C ,'channel':'голос'},
 'сервер':{'label':'Сервер','emoji':'🏠','color':0xE67E22 ,'channel':'сервер'},
 'automod':{'label':'Автоматически','emoji':'⚔','color':0xE74C3C ,'channel':'модерация'},
 'invite':{'label':'Приглашения','emoji':'🔗','color':0x95A5A6 ,'channel':'сервер'},
 'proof':{'label':'Доказательства','emoji':'📸','color':0x9B59B6 ,'channel':'доказательства'},
+'ban':{'label':'Баны','emoji':'🔨','color':0xC0392B ,'channel':'баны'},
+'mute':{'label':'Муты войс / чат','emoji':'🔇','color':0xE67E22 ,'channel':'муты'},
+'warn':{'label':'Варны','emoji':'⚠','color':0xE74C3C ,'channel':'варны'},
+'staff':{'label':'Снятие / ЧС стаффа','emoji':'🚷','color':0x8E44AD ,'channel':'стафф'},
+'rest':{'label':'Остальное','emoji':'📋','color':0x95A5A6 ,'channel':'остальное'},
 }
 
 DIV =" \u2022 "
@@ -120,6 +125,10 @@ def _ensure_worker ():
 # консоль (/konsol) показывает любые события и должна обновляться пушем.
 _CAT_TOPICS = {
     'mod': ('moderation', 'security', 'modcenter', 'logs'),
+    'ban': ('moderation', 'security', 'modcenter', 'logs'),
+    'mute': ('moderation', 'logs'),
+    'warn': ('moderation', 'logs'),
+    'staff': ('moderation', 'members', 'logs'),
     'member': ('members', 'analytics', 'logs'),
     'nick': ('members', 'logs'),
     'punish': ('moderation', 'logs'),
@@ -128,12 +137,24 @@ _CAT_TOPICS = {
     'message': ('logs',),
     'role': ('roles', 'members', 'logs'),
     'channel': ('channels', 'logs'),
+    'rest': ('channels', 'roles', 'logs'),
 }
 
 
 def save_event (guild_id ,category ,action ,details :dict ):
     if action =='Сообщение отправлено':
         return
+    details =dict (details or {})
+    try :
+        from services .log_settings import canonical_category
+        category =canonical_category (category )
+    except Exception as _ex :
+        log .debug ('save_event canonical_category: %s',_ex )
+    # Журнал сообщений в панели ждёт channel_name; слушатели часто пишут channel.
+    if not details .get ('channel_name')and details .get ('channel'):
+        _ch =details .get ('channel')
+        if isinstance (_ch ,str )and not _ch .isdigit ():
+            details ['channel_name']=_ch
     # Живой пуш в панель: страницы обновятся сразу при событии, а не по таймеру.
     try :
         from services .live_bus import publish as _lp
@@ -150,6 +171,15 @@ def save_event (guild_id ,category ,action ,details :dict ):
     })
 
 
+def flush_audit (timeout =5.0 ):
+    """Дождаться, пока очередь аудита опустеет (тесты, выключение)."""
+    _ensure_worker ()
+    try :
+        _audit_queue .join ()
+    except Exception as _ex :
+        log .debug ('flush_audit: %s',_ex )
+
+
     # Имена лог-каналов — красиво и по-русски (эмодзи + ・ + слово).
     # Ключ 'голос' должен совпадать с CATEGORIES[voice]['channel'] — раньше
     # его не было ('ses'), и войс-логи улетали в канал «сервер» (древняя бага).
@@ -159,10 +189,16 @@ LOG_CHANNELS ={
 'участники':'👋・участники',
 'наказания':'⚖・наказания',
 'сообщения':'💬・сообщения',
+'никнеймы':'никнеймы',
 'голос':'🔊・голос',
 'ses':'🔊・голос',  # legacy alias
 'сервер':'📋・сервер',
 'доказательства':'📸・доказательства',
+'баны':'баны',
+'муты':'муты войс/чат',
+'варны':'варны',
+'стафф':'снятие/чс стаффа',
+'остальное':'остальное',
 }
 LOG_CATEGORY_NAME ='📚 Логи'
 # Старые имена категории (до переименования) — находим и мягко обновляем
@@ -173,19 +209,27 @@ LOG_CATEGORY_LEGACY =[' Логи','Логи',' Logs','Logs','logs']
 LEGACY_CHANNEL_NAMES ={
 '🛡・модерация':['-модерация','mod-log','moderasyon','-moderasyon','modlog'],
 '💬・сообщения':['-сообщения','message-log','сообщения-лог'],
-'👋・участники':['-участники','member-log','участники-лог'],
-'🔊・голос':['-ses','voice-log','ses-log','-голос'],
+'👋・участники':['-участники','member-log','участники-лог','зашел/вышел','зашёл/вышел'],
+'🔊・голос':['-ses','voice-log','ses-log','-голос','войсы'],
 '⚖・наказания':['-наказания','punish-log','варны','варны-лог'],
-'📋・сервер':['-сервер','server-log','hakumo-logs','сервер-лог'],
+'📋・сервер':['-сервер','server-log','hakumo-logs','сервер-лог','остальное'],
 '📸・доказательства':['-доказательства','proof-log','proofs','demki','демки'],
+'баны':['🛡・модерация','-модерация','mod-log','бан'],
+'муты войс/чат':['🛡・модерация','-модерация','мут'],
+'варны':['⚖・наказания','-наказания','punish-log'],
+'снятие/чс стаффа':['чс стаффа','снятие стаффа','staff'],
+'остальное':['📋・сервер','-сервер','server-log'],
+'никнеймы':['👋・участники','-участники'],
 }
 
 
 def log_category_display (category :str ='сервер'):
     """Красивое имя лог-канала категории (то, что видят участники)."""
-    category ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick','наказания':'punish',
-    'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
-    'каналы':'channel'}.get (category ,category )
+    try :
+        from services .log_settings import canonical_category
+        category =canonical_category (category )
+    except Exception as _ex :
+        log .debug ('log_category_display: %s',_ex )
     ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
     return LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
 
@@ -195,14 +239,15 @@ def _configured_log_channel (guild ,category ):
 
     Приоритет выше поиска по имени: владелец выбрал — туда и пишем.
     Канал исчез/удалён — тихо возвращаемся к прежнему поиску.
+    ID не выдумываем: только то, что лежит в настройках.
     """
     try :
-        from services .log_settings import target_channel_id
-        _cat ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick','наказания':'punish',
-        'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
-        'каналы':'channel'}.get (category ,category )
-        _cid =target_channel_id (guild .id ,_cat )
-        if _cid :
+        from services .log_settings import target_channel_id ,dest_category
+        dest =dest_category (category )
+        for key in (dest ,category ):
+            _cid =target_channel_id (guild .id ,key )
+            if not _cid :
+                continue
             _ch =(guild .get_channel_or_thread (int (_cid ))
                    if hasattr (guild ,"get_channel_or_thread")
                    else guild .get_channel (int (_cid )))
@@ -216,14 +261,21 @@ def _configured_log_channel (guild ,category ):
 def find_log_channel (guild ,category :str ='сервер'):
     """Единый поиск лог-канала для категории.
 
-    Порядок: канал из панели («Логи сервера») → каноническое имя
-    (-модерация …) → legacy-имена (mod-log, moderasyon …) → общие старые
-    каналы (server-log, hakumo-logs). None, если ничего нет.
-    Используется ВСЕМИ когами — иначе логи уходят в несуществующие каналы.
+    Порядок: канал/ветка из панели («Логи сервера») → ветка по имени
+    (под #・логи / #・отчеты) → каноническое имя → legacy-имена.
+    Ничего не создаём. None, если ничего нет.
     """
+    try :
+        from services .log_settings import dest_category
+        category =dest_category (category )
+    except Exception as _ex :
+        log .debug ('find_log_channel dest: %s',_ex )
     _panel_ch =_configured_log_channel (guild ,category )
     if _panel_ch is not None :
         return _panel_ch
+    _th =_find_named_thread (guild ,category )
+    if _th is not None :
+        return _th
     target =log_category_display (category )
 
     candidates =[target ]+LEGACY_CHANNEL_NAMES .get (target ,[])+['server-log','hakumo-logs']
@@ -255,6 +307,168 @@ def _norm_ch_name (name ):
         return str (name or '').lower ()
 
 
+# Ветки под #・логи / #・отчеты — ищем по имени, ID не хардкодим.
+_THREAD_HINTS = {
+    'message': ['сообщен', 'message'],
+    'voice': ['войс', 'голос', 'voice', 'ses'],
+    'nick': ['ник'],
+    'member': ['зашел', 'зашёл', 'вышел', 'участник'],
+    'rest': ['остальн', 'проч'],
+    'ban': ['бан'],
+    'mute': ['мут', 'таймаут', 'timeout'],
+    'staff': ['стафф', 'staff', 'снят', 'чс'],
+    'warn': ['варн', 'warn', 'наказан'],
+}
+_CAT_PARENT_GROUP = {
+    'message': 'logs', 'voice': 'logs', 'nick': 'logs',
+    'member': 'logs', 'rest': 'logs',
+    'ban': 'reports', 'mute': 'reports', 'staff': 'reports', 'warn': 'reports',
+}
+
+
+def _is_thread_dest (ch ):
+    try :
+        if isinstance (ch ,discord .Thread ):
+            return True
+    except Exception :
+        pass
+    tname =getattr (getattr (ch ,'type',None ),'name','')
+    return tname in ('public_thread','private_thread','news_thread')
+
+
+def _parent_group (ch ):
+    parent =getattr (ch ,'parent',None )
+    pname =_norm_ch_name (getattr (parent ,'name','')if parent is not None else '')
+    if 'отчет'in pname or 'отчёт'in pname or 'otchet'in pname :
+        return 'reports'
+    if 'логи'in pname or pname in ('logs','log'):
+        return 'logs'
+    return ''
+
+
+def _iter_log_dests (guild ):
+    seen =set ()
+    for th in list (getattr (guild ,'threads',None )or []):
+        i =getattr (th ,'id',None )
+        if i in seen :
+            continue
+        seen .add (i )
+        yield th
+    pool =list (getattr (guild ,'text_channels',None )or [])
+    pool +=list (getattr (guild ,'forums',None )or [])
+    for ch in pool :
+        for th in list (getattr (ch ,'threads',None )or []):
+            i =getattr (th ,'id',None )
+            if i in seen :
+                continue
+            seen .add (i )
+            yield th
+        i =getattr (ch ,'id',None )
+        if i in seen :
+            continue
+        seen .add (i )
+        yield ch
+
+
+def _find_named_thread (guild ,category ):
+    """Найти ветку по имени (сообщения, баны, …) под логи/отчёты."""
+    hints =[_norm_ch_name (h )for h in (_THREAD_HINTS .get (str (category or ''))or [])]
+    hints =[h for h in hints if h ]
+    if not hints :
+        return None
+    want =_CAT_PARENT_GROUP .get (str (category or ''))
+    scored =[]
+    for ch in _iter_log_dests (guild ):
+        n =_norm_ch_name (getattr (ch ,'name',''))
+        if not any (h in n for h in hints ):
+            continue
+        group =_parent_group (ch )
+        if want and group and group !=want :
+            continue
+        is_th =_is_thread_dest (ch )
+        score =0
+        if want and group ==want :
+            score +=3
+        else :
+            score +=1
+        if is_th :
+            score +=2
+        scored .append ((score ,ch ))
+    if not scored :
+        return None
+    scored .sort (key =lambda x :(-x [0 ]))
+    best_score ,best =scored [0 ]
+    if best_score <=0 :
+        return None
+    return best
+
+
+def _staff_role_ids (guild ):
+    """ID ролей персонала: карта панели + заявки + имена хелпер/модератор."""
+    ids =set ()
+    try :
+        import json as _json
+        path ='data/role_map.json'
+        if os .path .exists (path ):
+            with open (path ,'r',encoding ='utf-8')as fh :
+                data =_json .load (fh )
+            if isinstance (data ,dict ):
+                for rid ,panel in data .items ():
+                    if str (panel )in ('mod','curator','admin','owner','helper'):
+                        try :
+                            ids .add (int (rid ))
+                        except (TypeError ,ValueError ):
+                            pass
+    except Exception as _ex :
+        log .debug ('_staff_role_ids role_map: %s',_ex )
+    try :
+        from services .staff_roles import load_settings ,resolve_staff_role
+        st =load_settings (getattr (guild ,'id',0 ))
+        for key in ('helper_role','moderator_role','curator_role'):
+            try :
+                rid =int (st .get (key )or 0 )
+            except (TypeError ,ValueError ):
+                rid =0
+            if rid :
+                ids .add (rid )
+        for kind in ('helper','moderator'):
+            role ,_ =resolve_staff_role (guild ,kind )
+            if role is not None and getattr (role ,'id',None ):
+                ids .add (int (role .id ))
+    except Exception as _ex :
+        log .debug ('_staff_role_ids staff_roles: %s',_ex )
+    return ids
+
+
+def _punish_role_map (guild ):
+    try :
+        from services import punish_roles as PR
+        return PR .get (getattr (guild ,'id',0 ))or {}
+    except Exception as _ex :
+        log .debug ('_punish_role_map: %s',_ex )
+        return {}
+
+
+def _role_log_dest (role ,staff_ids ,punish_map ):
+    def _rid (v ):
+        try :
+            return int (v or 0 )
+        except (TypeError ,ValueError ):
+            return 0
+    rid =_rid (getattr (role ,'id',None ))
+    if rid and rid in staff_ids :
+        return 'staff'
+    if rid and rid ==_rid ((punish_map or {}).get ('ban')):
+        return 'ban'
+    mute_ids ={_rid ((punish_map or {}).get ('mute')),_rid ((punish_map or {}).get ('vmute'))}
+    if rid and rid in mute_ids :
+        return 'mute'
+    for k ,v in (punish_map or {}).items ():
+        if str (k ).startswith ('warn_')and _rid (v )==rid :
+            return 'warn'
+    return 'rest'
+
+
 # Автосоздание: не давим на API — одна попытка на канал за 10 минут
 _auto_create_state :dict ={}
 
@@ -263,12 +477,21 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
     # Раньше отсутствующий канал означал тихую потерю логов навсегда.
     # Канал и скрытая категория (с правами бота) создаются на лету; троттлинг
     # 10 минут на случай отсутствия прав Manage Channels. None = не удалось.
+    # Ветки под логи/отчёты не переименовываем и не создаём сами.
+    try :
+        from services .log_settings import dest_category
+        category =dest_category (category )
+    except Exception as _ex :
+        log .debug ('ensure_log_channel dest: %s',_ex )
     ch =find_log_channel (guild ,category )
     if ch :
         # Мягкая миграция внешнего вида: канал со старым уродливым именем
         # (-модерация, -ses …) переименовываем в красивое (🛡・модерация …)
+        # Существующие ветки («баны», «сообщения») — не трогаем.
         _pretty =log_category_display (category )
-        if _pretty and ch .name !=_pretty :
+        _hints =_THREAD_HINTS .get (str (category or ''))or []
+        _already =any (h in _norm_ch_name (ch .name )for h in _hints )if _hints else False
+        if _pretty and ch .name !=_pretty and not _is_thread_dest (ch )and not _already :
             try :
                 import asyncio as _asyncio
                 _cor =ch .edit (name =_pretty ,reason ='Hakumo: красивое русское название лог-канала')
@@ -278,9 +501,11 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
             except Exception as _rn:
                 log .debug (f'[LOGS] переименование пропущено: {_rn}')
         return ch
-    category ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick','наказания':'punish',
-    'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
-    'каналы':'channel'}.get (category ,category )
+    try :
+        from services .log_settings import canonical_category
+        category =canonical_category (category )
+    except Exception as _ex :
+        log .debug ('ensure_log_channel canonical: %s',_ex )
     ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
     target =LOG_CHANNELS .get (ch_name ,None )
     # Сервисные каналы других модулей задаются напрямую по имени
@@ -290,9 +515,11 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
         return None
     # Автосоздание каналов — ТОЛЬКО с явного разрешения из панели
     # (заказ владельца 2026-08: «логи не создаются сами по себе»).
+    # Ключ — каноническая категория (mod), не русское имя канала («модерация»):
+    # иначе тумблер autocreate.mod никогда не доходил до создания.
     try :
         from services .log_settings import autocreate_allowed ,autocreate_is_dead 
-        if not autocreate_allowed (guild .id ,ch_name ):
+        if not autocreate_allowed (guild .id ,category ):
             return None
         # «Удалил канал — значит, не нужен»: категория, чей автосозданный
         # канал владелец снёс, больше никогда не воссоздаётся (2026-08-25).
@@ -512,11 +739,11 @@ def _find_log_category (guild ):
 # ═══════════════════════════════════════════════════════════════════════
 _LOG_META = {
     'mod':     ('🛡️', 0xE74C3C, 'Модерация'),
-    'member':  ('👋', 0xC8922A, 'Участники'),
+    'member':  ('👋', 0xC8922A, 'Зашёл / вышел'),
     'nick':    ('🏷️', 0x9B59B6, 'Никнеймы'),
     'punish':  ('⚖️', 0xE67E22, 'Наказания'),
     'message': ('💬', 0x3498DB, 'Сообщения'),
-    'voice':   ('🔊', 0x1ABC9C, 'Войс'),
+    'voice':   ('🔊', 0x1ABC9C, 'Войсы'),
     'channel': ('🗂️', 0xE67E22, 'Каналы'),
     'role':    ('🎭', 0x9B59B6, 'Роли'),
     'invite':  ('🔗', 0x16A085, 'Приглашения'),
@@ -525,6 +752,11 @@ _LOG_META = {
     'ai':      ('🤖', 0xE91E63, 'AI-алерты'),
     'welcome': ('🎉', 0x2ECC71, 'Приветствие'),
     'proof':   ('📸', 0x9B59B6, 'Доказательства'),
+    'ban':     ('🔨', 0xC0392B, 'Баны'),
+    'mute':    ('🔇', 0xE67E22, 'Муты'),
+    'warn':    ('⚠️', 0xE74C3C, 'Варны'),
+    'staff':   ('🚷', 0x8E44AD, 'Стафф'),
+    'rest':    ('📋', 0x95A5A6, 'Остальное'),
 }
 
 
@@ -1028,12 +1260,19 @@ class Logs (commands .Cog ):
         # тогда события в канал не уходят вовсе (файл читается каждый раз,
         # применение мгновенное, без рестарта).
         try :
-            from services .log_settings import category_enabled 
-            if not category_enabled (guild .id ,category ):
+            from services .log_settings import (
+                category_enabled ,canonical_category ,dest_category )
+            raw =canonical_category (category )
+            if not category_enabled (guild .id ,raw ):
                 return None 
+            dest =dest_category (raw )
+            if dest !=raw and not category_enabled (guild .id ,dest ):
+                return None 
+            category =dest 
         except Exception as _ex :
             log .debug("get_log_channel(): log_settings подавлено: %s", _ex)
-        # Найти канал категории логов; отсутствующий — создать автоматически
+        # Найти канал/ветку категории; отсутствующий — создать только если
+        # в панели явно разрешено автосоздание.
         return await ensure_log_channel (guild ,category )
 
         # КОМАНДА: СОЗДАТЬ LOG-КАНАЛЫ 
@@ -1389,9 +1628,9 @@ class Logs (commands .Cog ):
                 'mod_name':_actor_line (kwho ),
                 'reason':kreason ,
                 })
-                kch =await self .get_log_channel (member .guild ,'модерация')
+                kch =await self .get_log_channel (member .guild ,'ban')
                 if kch :
-                    ke =_styled_log_embed (member .guild ,'mod','Участник кикнут',
+                    ke =_styled_log_embed (member .guild ,'ban','Участник кикнут',
                     fields =[
                     ('Пользователь',f"**{member.display_name}** · {member.mention} · `{member.id}`"),
                     ('Модератор',_actor_line (kwho )),
@@ -1399,6 +1638,21 @@ class Logs (commands .Cog ):
                     ],
                     color =0xE67E22 ,thumbnail =str (member .display_avatar .url ))
                     await _safe_send (kch ,embed =ke )
+                _sids =_staff_role_ids (member .guild )
+                _had =[r .name for r in (member .roles or [])[1 :]
+                       if getattr (r ,'id',None )in _sids ]
+                if _had :
+                    sch =await self .get_log_channel (member .guild ,'staff')
+                    if sch :
+                        se =_styled_log_embed (member .guild ,'staff','Стафф кикнут',
+                        fields =[
+                        ('Пользователь',f"**{member.display_name}** · `{member.id}`"),
+                        ('Модератор',_actor_line (kwho )),
+                        ('Роли стаффа',", ".join (_had )),
+                        ('Причина',kreason ),
+                        ],
+                        color =0x8E44AD ,thumbnail =str (member .display_avatar .url ))
+                        await _safe_send (sch ,embed =se )
         except Exception as _kick_err :
             log .info (f'[LOGS] kick-detect: {_kick_err}')
 
@@ -1414,14 +1668,14 @@ class Logs (commands .Cog ):
         'mod_name':_actor_line (who ),
         'reason':reason ,
         })
-        ch =await self .get_log_channel (guild ,'модерация')
+        ch =await self .get_log_channel (guild ,'ban')
         if not ch :
             return
         try :
             av =str (user .display_avatar .url )
         except Exception :
             av =None
-        e =_styled_log_embed (guild ,'mod','Пользователь заблокирован',
+        e =_styled_log_embed (guild ,'ban','Пользователь заблокирован',
         fields =[
         ('Пользователь',f"**{getattr(user,'display_name',str(user))}** · {user.mention} · `{user.id}`"),
         ('Модератор',_actor_line (who )),
@@ -1438,14 +1692,14 @@ class Logs (commands .Cog ):
         'user_name':str (user ),
         'mod_name':_actor_line (who ),
         })
-        ch =await self .get_log_channel (guild ,'модерация')
+        ch =await self .get_log_channel (guild ,'ban')
         if not ch :
             return
         try :
             av =str (user .display_avatar .url )
         except Exception :
             av =None
-        e =_styled_log_embed (guild ,'mod','Блокировка снята',
+        e =_styled_log_embed (guild ,'ban','Блокировка снята',
         fields =[
         ('Пользователь',f"**{getattr(user,'display_name',str(user))}** · {user.mention} · `{user.id}`"),
         ('Модератор',_actor_line (who )),
@@ -1470,37 +1724,58 @@ class Logs (commands .Cog ):
                 })
                 # Пачкуем вывод: массовая раздача ролей уходит ОДНОЙ сводной
                 # карточкой, а не десятком одинаковых (канал не «портится»).
-                _item ={
-                'user_name':str (before .display_name ),
-                'added':[r .name for r in added ],
-                'removed':[r .name for r in removed ],
-                'mod':_actor_line (who ),
-                }
-                async def _flush_roles (items ,_g =before .guild ):
-                    _ch =await self .get_log_channel (_g ,'role')
-                    if not _ch :
-                        return
-                    _rows =[]
-                    _cap =7
-                    for _it in items [:_cap ]:
-                        _bits =[]
-                        if _it .get ('added'):
-                            _bits .append ("Добавлена роль: "+", ".join (_it ['added']))
-                        if _it .get ('removed'):
-                            _bits .append ("Убрана роль: "+", ".join (_it ['removed']))
-                        _txt =" · ".join (_bits )or '—'
-                        if _it .get ('mod'):
-                            _txt +=f"  ({_it ['mod']})"
-                        _rows .append ((_it ['user_name'],_txt ))
-                    if len (items )>_cap :
-                        _rows .append (('Итого',f'{len (items )} участников · выше {_cap} последних'))
-                    _title ='Изменение ролей участника'if len (items )==1 else f'Изменение ролей · {len (items )} участников'
-                    _e =_styled_log_embed (_g ,'role',_title ,
-                    fields =_rows ,card_rows =_rows )
-                    await _safe_send (_ch ,embed =_e )
+                _staff_ids =_staff_role_ids (before .guild )
+                _pmap =_punish_role_map (before .guild )
+                _buckets ={}
+                for _r in added :
+                    _buckets .setdefault (_role_log_dest (_r ,_staff_ids ,_pmap ),
+                                          {'added':[],'removed':[]})['added'].append (_r .name )
+                for _r in removed :
+                    _buckets .setdefault (_role_log_dest (_r ,_staff_ids ,_pmap ),
+                                          {'added':[],'removed':[]})['removed'].append (_r .name )
                 try :
                     from services .log_throttle import member_updates as _mu
-                    _mu .feed ((before .guild .id ,'roles'),_item ,_flush_roles )
+                    for _dest ,_chg in _buckets .items ():
+                        _item ={
+                        'user_name':str (before .display_name ),
+                        'added':_chg ['added'],
+                        'removed':_chg ['removed'],
+                        'mod':_actor_line (who ),
+                        'dest':_dest ,
+                        }
+                        def _make_flush (_d ):
+                            async def _flush_roles (items ,_g =before .guild ,_dest =_d ):
+                                _ch =await self .get_log_channel (_g ,_dest )
+                                if not _ch :
+                                    return
+                                _rows =[]
+                                _cap =7
+                                for _it in items [:_cap ]:
+                                    _bits =[]
+                                    if _it .get ('added'):
+                                        _bits .append ("Добавлена роль: "+", ".join (_it ['added']))
+                                    if _it .get ('removed'):
+                                        _bits .append ("Убрана роль: "+", ".join (_it ['removed']))
+                                    _txt =" · ".join (_bits )or '—'
+                                    if _it .get ('mod'):
+                                        _txt +=f"  ({_it ['mod']})"
+                                    _rows .append ((_it ['user_name'],_txt ))
+                                if len (items )>_cap :
+                                    _rows .append (('Итого',f'{len (items )} участников · выше {_cap} последних'))
+                                _titles ={
+                                'staff':'Снятие / роли стаффа',
+                                'ban':'Роль бана',
+                                'mute':'Роль мута',
+                                'warn':'Роль варна',
+                                'rest':'Изменение ролей участника',
+                                }
+                                _one =_titles .get (_dest ,'Изменение ролей участника')
+                                _title =_one if len (items )==1 else f'{_one} · {len (items )} участников'
+                                _e =_styled_log_embed (_g ,_dest ,_title ,
+                                fields =_rows ,card_rows =_rows )
+                                await _safe_send (_ch ,embed =_e )
+                            return _flush_roles
+                        _mu .feed ((before .guild .id ,'roles:'+_dest ),_item ,_make_flush (_dest ))
                 except Exception as _te :
                     log .debug (f'[LOGS] throttle roles: {_te}')
 
@@ -1543,10 +1818,10 @@ class Logs (commands .Cog ):
                 try :
                     _to_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
                     _to_reason =(_to_mod [2 ]if _to_mod else None )or '—'
-                    _tch =await self .get_log_channel (before .guild ,'модерация')
+                    _tch =await self .get_log_channel (before .guild ,'mute')
                     if _tch :
                         _until_ts =int (after_to .timestamp ())if after_to else None
-                        _te =_styled_log_embed (before .guild ,'mod','Участник замьючен (таймаут)',
+                        _te =_styled_log_embed (before .guild ,'mute','Участник замьючен (таймаут)',
                         fields =[
                         ('Пользователь',f"**{after.display_name}** · {after.mention} · `{after.id}`"),
                         ('Модератор',_actor_line (_to_mod )),
@@ -1565,9 +1840,9 @@ class Logs (commands .Cog ):
                 })
                 try :
                     _uto_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
-                    _utch =await self .get_log_channel (before .guild ,'модерация')
+                    _utch =await self .get_log_channel (before .guild ,'mute')
                     if _utch :
-                        _ue =_styled_log_embed (before .guild ,'mod','Таймаут снят',
+                        _ue =_styled_log_embed (before .guild ,'mute','Таймаут снят',
                         fields =[
                         ('Пользователь',f"**{after.display_name}** · {after.mention} · `{after.id}`"),
                         ('Модератор',_actor_line (_uto_mod )),
@@ -1782,6 +2057,40 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_voice_state_update (self ,member ,before ,after ):
+        # Серверный войс-мут/деф — в ветку «муты», не в «войсы» (вход/выход).
+        if bool (getattr (before ,'mute',False ))!=bool (getattr (after ,'mute',False ))\
+                or bool (getattr (before ,'deaf',False ))!=bool (getattr (after ,'deaf',False )):
+            try :
+                _vm_on =bool (getattr (after ,'mute',False ))
+                _vd_on =bool (getattr (after ,'deaf',False ))
+                _who =await _audit_actor (member .guild ,discord .AuditLogAction .member_update ,
+                target_id =member .id ,window =15 ,retries =1 )
+                _bits =[]
+                if bool (getattr (before ,'mute',False ))!=_vm_on :
+                    _bits .append ('войс-мут включён'if _vm_on else 'войс-мут снят')
+                if bool (getattr (before ,'deaf',False ))!=_vd_on :
+                    _bits .append ('деф включён'if _vd_on else 'деф снят')
+                _action =' · '.join (_bits )or 'Войс-ограничение'
+                save_event (member .guild .id ,'mute',_action ,{
+                'user_id':str (member .id ),
+                'user_name':str (member ),
+                'mute':_vm_on ,
+                'deaf':_vd_on ,
+                'mod_name':_actor_line (_who ),
+                })
+                _mch =await self .get_log_channel (member .guild ,'mute')
+                if _mch :
+                    _me =_styled_log_embed (member .guild ,'mute',_action ,
+                    fields =[
+                    ('Участник',f"**{member.display_name}** · `{member.id}`"),
+                    ('Модератор',_actor_line (_who )),
+                    ('Канал',getattr (getattr (after ,'channel',None )or getattr (before ,'channel',None ),'name',None )or '—'),
+                    ],
+                    color =0xE67E22 if (_vm_on or _vd_on )else 0x2ECC71 ,
+                    thumbnail =str (member .display_avatar .url ))
+                    await _safe_send (_mch ,embed =_me )
+            except Exception as _vm_err :
+                log .debug ('[LOGS] voice-mute: %s',_vm_err )
         if before .channel ==after .channel :
             return 
         b ,a =before .channel ,after .channel

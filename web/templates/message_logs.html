@@ -144,7 +144,7 @@ function fmtTime(ts) {
   return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 function hay(l) {
-  return ((l.user_name||'')+' '+(l.user_id||'')+' '+(l.content||'')+' '+(l.before||'')+' '+(l.after||'')+' '+(l.channel_name||'')+' '+(l.channel_id||'')+' '+(l.action||'')).toLowerCase();
+  return ((l.user_name||'')+' '+(l.user_id||'')+' '+(l.content||'')+' '+(l.before||'')+' '+(l.after||'')+' '+(l.channel_name||'')+' '+(l.channel||'')+' '+(l.channel_id||'')+' '+(l.action||'')).toLowerCase();
 }
 function stampNow() {
   var el = document.getElementById('ml-stamp');
@@ -207,7 +207,7 @@ function renderLogs(logs) {
       '<div class="log-header">' +
         '<div class="log-user-wrap">' + badge +
           '<span class="log-user">' + esc(l.user_name || l.user_id || '?') + '</span>' +
-          '<span class="log-channel">#' + esc(l.channel_name || l.channel_id || '?') + '</span>' +
+          '<span class="log-channel">#' + esc(l.channel_name || l.channel || l.channel_id || '?') + '</span>' +
         '</div>' +
         '<span class="log-time">' + esc(fmtTime(l.timestamp)) + '</span>' +
       '</div>' + content +
@@ -226,7 +226,7 @@ function exportCsv() {
     rows.push([
       isDeleted(l) ? 'удалено' : 'изменено',
       l.user_name || l.user_id || '',
-      l.channel_name || l.channel_id || '',
+      l.channel_name || l.channel || l.channel_id || '',
       l.content || l.before || '',
       l.after || '',
       l.timestamp || ''

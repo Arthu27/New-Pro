@@ -72,7 +72,18 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def message_logs_page ():
-        return render_template ('message_logs.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID ,can_edit =session .get ('role')in ('admin','owner'))
+        # Пустой MAIN_GUILD_ID из замыкания перекрывал context processor
+        # и шаблон строил /api/guild//message-logs (лента всегда пустая).
+        import web .app as _app
+        _gid =(session .get ('main_guild_id')
+               or session .get ('selected_guild')
+               or active_guild_id ()
+               or getattr (_app ,'MAIN_GUILD_ID','')or '')
+        _kw =dict (role =session .get ('role'),username =session .get ('username'),
+                   can_edit =session .get ('role')in ('admin','owner'))
+        if _gid :
+            _kw ['main_guild_id']=str (_gid )
+        return render_template ('message_logs.html',**_kw )
 
 
     @app .route ('/voice-stats')

@@ -224,6 +224,8 @@ def register(ctx):
             if msg_type =='edited'and 'измен'not in action and 'редакт'not in action and 'edit'not in action :
                 continue 
             row =dict (ev )
+            if not row .get ('channel_name')and row .get ('channel'):
+                row ['channel_name']=row ['channel']
             if _iso is not None :
                 try :
                     ts =row .get ('timestamp')
