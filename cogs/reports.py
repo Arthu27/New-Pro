@@ -494,6 +494,52 @@ def _mod_role_from_cfg(guild):
     return None
 
 
+def _mod_ping_roles(guild):
+    """Кого тегать в карточке вызова: до 3 ролей модерации.
+
+    Порядок: каноническая роль (services.mod_role, единый источник панели)
+    → роли из role_map.json (панель «Роли панели») → авто-роли с правами
+    модерации. Раньше при незаданной роли карточка уходила ВОВСЕ без тега
+    («/report модератора не тегает», владелец 2026-09-05).
+    """
+    out = []
+
+    def _add(role):
+        if role is None or role in out:
+            return
+        # .managed/.is_default могут отсутствовать у упрощённых объектов —
+        # не даём затылкам из тестов ломать тег модераторов
+        if getattr(role, 'managed', False):
+            return
+        _isdef = getattr(role, 'is_default', None)
+        if callable(_isdef) and _isdef():
+            return
+        out.append(role)
+
+    try:
+        from services.mod_role import resolve_mod_role
+        _add(resolve_mod_role(guild))
+    except Exception as _ex:
+        _log.debug('reports: resolve_mod_role: %s', _ex)
+    try:
+        import json as _json
+        with open('data/role_map.json', encoding='utf-8') as _f:
+            _rm = _json.load(_f)
+        for _rid, _pr in (_rm.items() if isinstance(_rm, dict) else []):
+            if str(_pr) in ('mod', 'curator', 'admin') and str(_rid).isdigit():
+                _add(guild.get_role(int(_rid)))
+    except Exception as _ex:
+        _log.debug('reports: role_map: %s', _ex)
+    for role in getattr(guild, 'roles', []):
+        p = getattr(role, 'permissions', None)
+        if p is not None and (p.ban_members or p.moderate_members
+                              or p.manage_messages):
+            _add(role)
+        if len(out) >= 3:
+            break
+    return out[:3]
+
+
 class ReportCardView(discord.ui.View):
     """Кнопки под карточкой вызова в канале модерации (персистентные)."""
 
@@ -814,13 +860,19 @@ class Reports(commands.Cog):
         e.set_thumbnail(url=user.display_avatar.url)
         e.set_footer(text=f'{guild.name} · вызов модератора')
 
-        ping = mod_role.mention if mod_role else ''
+        ping = ' '.join(r.mention for r in _mod_ping_roles(guild))
         header = f'{ping} 🔔 Вызов модератора — {interaction.channel.mention}'.strip()
         send_kw = {'embed': e, 'view': ReportCardView(),
                    'allowed_mentions': discord.AllowedMentions(
                        roles=True, users=True)}
         if ping:
             send_kw['content'] = header
+        else:
+            _fire_new_event(
+                'report_new',
+                '⚠️ Модерирующая роль НЕ НАЙДЕНА — вызовы уходят без тега. '
+                'Укажи роль модераторов в панели (Настройки модерации → '
+                'роль модерации) или выдай роль с правами модерации.')
         try:
             card = await ch.send(**send_kw)
         except discord.Forbidden as _fe:

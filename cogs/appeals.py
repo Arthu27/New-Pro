@@ -1075,6 +1075,28 @@ class Appeals(commands.Cog):
         how = 'вебхуком' if used_hook is not None else 'от бота'
         return True, f'Меню опубликовано в {channel.mention} ({how})'
 
+    async def _open_appeal_channel(self, guild, user) -> bool:
+        """Открыть канал апелляции подавшему (до подачи он скрыт — владелец).
+
+        Возвращает, ПОЛУЧИЛОСЬ ли: человек в ЛС получает честный ответ,
+        а не обещание «канал открыт», которого может не быть (нет прав
+        «Управление правами каналов» — жалоба владельца 2026-09-05).
+        """
+        try:
+            from services.channel_routes import get_route as _route_of
+            _cid = int(_route_of(guild.id, 'ban_appeal_channel') or 0)
+            _iso = guild.get_channel(_cid) if _cid else None
+            if _iso is None:
+                return False
+            await _iso.set_permissions(
+                user, overwrite=discord.PermissionOverwrite(
+                    view_channel=True, send_messages=True))
+            return True
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.error('appeals: открыть канал апелляции для %s: %s',
+                      getattr(user, 'id', '?'), _ex)
+            return False
+
     async def _submit_channel_appeal(self, user, guild, text, link=None, channel=None):
         """Апелляция из меню в канале: карточка в отдельном треде."""
         guild_id = guild.id
@@ -1131,56 +1153,55 @@ class Appeals(commands.Cog):
             log.debug('appeals: карточка-картинка #%s: %s', item['id'], _ex)
 
         view = AppealView(self, guild_id, item['id'])
-        try:
-            if channel is not None:
-                name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
-                send_kw = {'embed': embed, 'view': view}
-                if png and png_name:
-                    send_kw['file'] = discord.File(io.BytesIO(png), filename=png_name)
-                thread = await channel.create_thread(
+        # Куда падает карточка: НАСТРОЕННЫЙ «Канал апелляций (карточки на
+        # разбан)» — тот же источник, что в панели; меню-канал — запасной.
+        # Раньше карточка уходила тредом в меню-канал, и владелец её там
+        # не находил (жалоба 2026-09-05).
+        target = self._log_channel(guild, state) or channel
+        if target is not None:
+            name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
+            send_kw = {'embed': embed, 'view': view}
+            if png and png_name:
+                send_kw['file'] = discord.File(io.BytesIO(png), filename=png_name)
+            card = None
+            try:
+                thread = await target.create_thread(
                     name=name, type=discord.ChannelType.public_thread)
-                # карточку — вебхуком «⚖ Апелляции», фолбэк — от бота
-                card = None
-                hook = await _channel_webhook(channel)
-                if hook is not None:
-                    try:
-                        card = await hook.send(
-                            thread=thread, wait=True,
-                            username=f'{HOOK_USERNAME} · {item["id"]}',
-                            avatar_url=_hook_avatar(guild), **send_kw)
-                    except Exception as _ex:
-                        log.debug('appeals: карточка #%s вебхуком: %s',
-                                  item['id'], _ex)
-                        card = None
-                if card is None:
-                    card = await thread.send(**send_kw)
-                item['message_id'] = card.id
+                card = await thread.send(**send_kw)
                 item['thread_id'] = thread.id
+            except (discord.Forbidden, discord.HTTPException) as _ex:
+                # Нет права «Создавать публичные ветки» — НЕ теряем апелляцию:
+                # карточка с кнопками ложится прямо в канал.
+                log.warning('appeals: тред #%s не создан (%s) — карточка в канал',
+                            item['id'], _ex)
+                try:
+                    card = await target.send(**send_kw)
+                except (discord.Forbidden, discord.HTTPException) as _ex2:
+                    log.error('appeals: карточка #%s не ушла и в канал: %s',
+                              item['id'], _ex2)
+            if card is not None:
+                item['message_id'] = card.id
                 item['thread_url'] = card.jump_url
-                await self._ping_mod_role(thread, settings_of(state), item)
+                await self._ping_mod_role(target, settings_of(state), item)
                 await self._fire_panel_event(item)
-        except (discord.Forbidden, discord.HTTPException) as _ex:
-            log.error('appeals: тред #%s не создан: %s', item['id'], _ex)
         # Канал апелляции открываем автору ТОЛЬКО теперь: владелец просил,
         # чтобы канал был виден не в момент бана, а после подачи апелляции
-        # в ЛС боту (2026-09-05). До подачи у человека все каналы закрыты.
-        try:
-            from services.channel_routes import get_route as _route_of
-            _cid = int(_route_of(guild_id, 'ban_appeal_channel') or 0)
-            _iso = guild.get_channel(_cid) if _cid else None
-            if _iso is not None:
-                await _iso.set_permissions(
-                    user, overwrite=discord.PermissionOverwrite(
-                        view_channel=True, send_messages=True))
-        except (discord.Forbidden, discord.HTTPException) as _ex:
-            log.debug('appeals: открыть канал апелляции #%s: %s', item['id'], _ex)
+        # (2026-09-05). До подачи у человека все каналы закрыты.
+        ch_opened = await self._open_appeal_channel(guild, user)
         self._save(guild_id, state)
         try:
             embed = _dm_embed('submitted', item, str(guild.name))
-            embed.description = (
-                f'Модераторы сервера **{guild.name}** уже получили её. '
-                'Канал апелляции на сервере открыт для вас — карточка видна '
-                'там. Ответ придёт в личные сообщения — обычно в течение суток.')
+            if ch_opened:
+                embed.description = (
+                    f'Модераторы сервера **{guild.name}** уже получили её. '
+                    'Канал апелляции на сервере открыт для вас — карточка видна '
+                    'там. Ответ придёт в личные сообщения — обычно в течение суток.')
+            else:
+                embed.description = (
+                    f'Модераторы сервера **{guild.name}** уже получили её. '
+                    'Канал апелляции открыть не получилось (боту нужны права '
+                    'управления каналом) — модераторы увидят карточку и '
+                    'напишут вам. Ответ придёт в личные сообщения.')
             await user.send(embed=embed)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС подтверждения #%s не дошло: %s', item['id'], _ex)
@@ -1240,6 +1261,10 @@ class Appeals(commands.Cog):
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 log.error('appeals: карточка #%s на %s не ушла: %s',
                           item['id'], guild_id, _ex)
+        # Канал апелляции открывается после подачи при ЛЮБОМ пути подачи
+        # (скрыт до подачи — заказ владельца 2026-09-05); честный флаг в item.
+        item['_channel_opened'] = await self._open_appeal_channel(guild, user)
+        self._save(guild_id, state)
         return item, None
 
     def _main_guild(self):
@@ -1299,9 +1324,16 @@ class Appeals(commands.Cog):
                 f'Не получилось: {err}.', ephemeral=True)
             return
         from cogs.embed_utils import hakumo_embed
+        if item.pop('_channel_opened', False):
+            _extra = ('Канал апелляции на сервере открыт для вас — карточка '
+                      'видна там. Ответ придёт в личку.')
+        else:
+            _extra = ('Ответ придёт в личку. Канал апелляции открыть не '
+                      'получилось (боту нужны права) — модераторы напишут '
+                      'вам сами.')
         e = hakumo_embed('appeal', f'Апелляция #{item["id"]} отправлена',
-                         f'Модераторы сервера **{guild.name}** уже получили её. '
-                         'Ответ придёт в личку.')
+                         f'Модераторы сервера **{guild.name}** уже получили '
+                         f'её. {_extra}')
         await interaction.response.send_message(embed=e)
 
 

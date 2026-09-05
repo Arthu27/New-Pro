@@ -17,6 +17,8 @@ import types
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(tempfile.mkdtemp(prefix='rep_th_'))
 os.makedirs('data', exist_ok=True)
+# изолируем SQLite (reports_core): иначе пишем в боевой data/bot.db
+os.environ['DB_PATH'] = os.path.abspath(os.path.join('data', 'bot.db'))
 sys.path.insert(0, ROOT)
 
 PASS = FAIL = 0
