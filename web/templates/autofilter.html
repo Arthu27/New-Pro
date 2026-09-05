@@ -160,7 +160,7 @@
 
   function loadPicks() {
     fetch('/api/channels').then(function (r) { return r.json(); }).then(function (d) {
-      var items = (Array.isArray(d) ? d : (d && d.channels) || []).map(function (c) { return { id: String(c.id), name: '#' + (c.name || c.id) }; });
+      var items = (Array.isArray(d) ? d : (d && d.channels) || []).filter(function (c) { return c && !c.hidden; }).map(function (c) { return { id: String(c.id), name: '#' + (c.name || c.id) }; });
       window._afChannels = items;
       paintPick('af-channels', items, CFG.ignore_channels);
     }).catch(function () {});

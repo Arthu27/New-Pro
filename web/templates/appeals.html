@@ -383,13 +383,13 @@ function loadChannels() {
     var inv = $('apInviteChan');
     if (inv) {  /* канал для разовых ссылок-возвратов — тот же список */
       var keepInv = inv.dataset.value || inv.value;
-      function isTextish(c) { return c.type === 'text' || c.type === 'thread'; }
+      function isTextish(c) { return !c.hidden && (c.type === 'text' || c.type === 'thread'); }
       function optLabel(c) { return (c.type === 'thread' ? 'ветка ' : '# ') + c.name; }
       inv.innerHTML = '<option value="">Не выбран</option>' + raw.filter(isTextish)
         .map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(optLabel(c)) + '</option>'; }).join('');
       if (keepInv) inv.value = keepInv;
     }
-    var list = raw.filter(function (c) { return c.type === 'text' || c.type === 'thread'; });
+    var list = raw.filter(function (c) { return !c.hidden && (c.type === 'text' || c.type === 'thread'); });
     $('apChanSel').innerHTML = list.length
       ? list.map(function (c) {
           var p = c.type === 'thread' ? 'ветка ' : '# ';

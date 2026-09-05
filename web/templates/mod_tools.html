@@ -87,6 +87,7 @@
       var channels = d.channels || d || [];
       sel.innerHTML = '';
       (Array.isArray(channels) ? channels : []).forEach(function (c) {
+        if (c.hidden) return;
         if (c.type !== undefined && c.type !== 0 && c.type !== 'text') return;
         var o = document.createElement('option');
         o.value = c.id; o.textContent = '#' + (c.name || c.id);

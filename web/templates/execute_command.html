@@ -50,7 +50,7 @@ async function loadChannels(selId) {
   var data = await r.json();
   var chs = Array.isArray(data) ? data : (data.channels || []);
   var sel = document.getElementById(selId);
-  sel.innerHTML = chs.filter(function(c){return c.type==='text';}).map(function(c){
+  sel.innerHTML = chs.filter(function(c){return c.type==='text' && !c.hidden;}).map(function(c){
     var nm = c.name || c.id;   /* без имени показываем хотя бы ID */
     return '<option value="'+String(c.id).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')+'">#'
       + String(nm).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')+'</option>';

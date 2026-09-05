@@ -554,7 +554,8 @@
       tx.textContent = level === 'ok' ? 'Обстановка спокойная'
         : (level === 'warn' ? 'Требует внимания дежурного' : 'Критическая обстановка');
       el.title = 'Баны: ' + STATE.bans + ' · на грани: ' + STATE.edge + ' · апелляций: ' + STATE.appeals
-        + ' · угроза: ' + STATE.threat + ' · варнов сегодня: ' + STATE.warnsToday + ' · действий: ' + STATE.today;
+        + ($('ktThreat') ? (' · угроза: ' + STATE.threat) : '')
+        + ' · варнов сегодня: ' + STATE.warnsToday + ' · действий: ' + STATE.today;
     }
 
     /* ── часы + таймеры ── */
@@ -675,11 +676,14 @@
         } catch (e) {}
       }
       try {
-        var s = await fetch('/api/security/threat-index').then(function (r) { return r.ok ? r.json() : null; });
-        if (s) {
-          STATE.threat = Number(s.threat_score) || 0;
-          var el = $('ktThreat');
-          if (el) { el.textContent = s.threat_score != null ? s.threat_score : '—'; el.title = 'Уровень: ' + (s.threat_level || '—'); }
+        var threatEl = $('ktThreat');
+        if (threatEl) {
+          var s = await fetch('/api/security/threat-index').then(function (r) { return r.ok ? r.json() : null; });
+          if (s) {
+            STATE.threat = Number(s.threat_score) || 0;
+            threatEl.textContent = s.threat_score != null ? s.threat_score : '—';
+            threatEl.title = 'Уровень: ' + (s.threat_level || '—');
+          }
         }
       } catch (e) {}
       renderSituation();

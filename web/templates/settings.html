@@ -43,12 +43,16 @@
     <div class="set-note">«Синхронизировать» нужно, если новые команды не появляются в Discord. Перезапуск используйте, только если бот завис.</div>
   </div>
 
-  <!-- Защита сервера -->
+  {% set _sec = '/security' in panel_visible_paths %}
+  {% set _grd = '/guardian' in panel_visible_paths %}
+  {% if _sec or _grd %}
+  <!-- Защита сервера: индекс угроз / локдаун только при видимом Центре безопасности -->
   <div class="set-card">
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-shield-halved"></i></div>
       <div class="set-title">Защита сервера</div>
     </div>
+    {% if _sec %}
     <div class="status-row">
       <span class="dot status-on" id="threat-dot"></span>
       <span>Индекс угрозы: <strong id="threat-val">-</strong>/100</span>
@@ -58,9 +62,11 @@
       <button class="btn btn-primary" id="btn-lockdown" type="button" aria-label="Переключить локдаун" title="Экстренно закрыть/открыть сервер"><i class="fas fa-house-lock"></i> Переключить локдаун</button>
     </div>
     <div class="set-note">Детали — на страницах «Щит сервера», «Центр безопасности» и «Локдаун».</div>
-    {% if '/guardian' in panel_visible_paths %}<a class="set-link" href="/guardian"><i class="fas fa-shield-heart"></i> Открыть Щит сервера</a>{% endif %}
-    {% if '/security' in panel_visible_paths %}<a class="set-link" href="/security"><i class="fas fa-user-secret"></i> Центр безопасности</a>{% endif %}
+    {% endif %}
+    {% if _grd %}<a class="set-link" href="/guardian"><i class="fas fa-shield-heart"></i> Открыть Щит сервера</a>{% endif %}
+    {% if _sec %}<a class="set-link" href="/security"><i class="fas fa-user-secret"></i> Центр безопасности</a>{% endif %}
   </div>
+  {% endif %}
 
   <!-- Панель -->
   <div class="set-card">
@@ -120,6 +126,7 @@
   }
 
   async function loadThreat() {
+    if (!$('threat-val')) return;
     try {
       var d = await fetch('/api/security/threat-index').then(function (r) { return r.json(); });
       if (!d || !d.success) return;
@@ -186,7 +193,8 @@
   function bind() {
     $('btn-sync').addEventListener('click', doSync);
     $('btn-restart').addEventListener('click', doRestart);
-    $('btn-lockdown').addEventListener('click', doLockdown);
+    var ld = $('btn-lockdown');
+    if (ld) ld.addEventListener('click', doLockdown);
     $('btn-logout').addEventListener('click', doLogout);
   }
 

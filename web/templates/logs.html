@@ -25,6 +25,7 @@
   if (!sel || !btn) return;
   fetch('/api/channels').then(function (r) { return r.json(); }).then(function (list) {
     if (!Array.isArray(list)) list = (list && list.channels) || [];
+    list = list.filter(function (c) { return c && !c.hidden && c.id && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5 || !c.type); });
     sel.innerHTML = '<option value="">— выбери канал —</option>' + list.map(function (c) {
       return '<option value="' + (c.id || '') + '">' + (c.name ? '#' + c.name : ('канал ' + (c.id || '?'))) + '</option>';
     }).join('');

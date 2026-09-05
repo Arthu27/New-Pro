@@ -363,7 +363,7 @@ function chsLoadChannels() {
   return fetch('/api/channels').then(function (r) { return r.json(); })
     .then(function (chans) {
       CHS_CHANNELS = (Array.isArray(chans) ? chans : (chans.channels || [])).filter(function (c) {
-        return c && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5);
+        return c && !c.hidden && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5);
       });
       if (window.renderSafe) window.renderSafe(render); else render();
     })

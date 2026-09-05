@@ -81,7 +81,7 @@ async function loadChannels() {
     var data = await r.json();
     channels = Array.isArray(data) ? data : (data.channels || []);
   } catch (e) { channels = []; }
-  var texts = channels.filter(function (c) { return c.type === 'text'; });
+  var texts = channels.filter(function (c) { return c.type === 'text' && !c.hidden; });
   if (!texts.length) {
     cs.innerHTML = '<option value="">Текстовых каналов не найдено</option>';
     refreshSendState();

@@ -204,6 +204,62 @@ check(len(ga._visible_channels(_hid, 'owner')) == 2,
 pj = open(os.path.join(_REPO, 'web', 'static', 'pickers.js'), encoding='utf-8').read()
 check(pj.count('!c.hidden') >= 2, 'оба source() пикеров пропускают hidden')
 
+print('== cache-hit /channels через _channels_respond ==')
+ga_src = open(os.path.join(_REPO, 'web', 'routes', 'guild_admin.py'), encoding='utf-8').read()
+hit = ga_src.find('if _hit and (_now - _hit[0]) < 10.0:')
+miss = ga_src.find('type_map', hit)
+block = ga_src[hit:miss] if hit >= 0 and miss > hit else ''
+check('_annotate_hidden' in block and '_channels_respond' in block,
+      'cache-hit переаннотирует hidden и отдаёт через _channels_respond')
+check('json.dumps(_payload' not in block,
+      'cache-hit не отдаёт сырой _payload в обход фильтра роли')
+vis = ga_src.find('def api_channels_visibility')
+vis_block = ga_src[vis:vis + 1800] if vis >= 0 else ''
+check('_live_cache' in vis_block and 'live.pop' in vis_block.replace(' ', ''),
+      'visibility POST сбрасывает _live_cache гильдии')
+
+# Живой cache-hit: мод не видит hidden даже со второго запроса
+import time as _t
+_fn = app.view_functions.get('api_guild_channels')
+_hid_path = os.path.join(_REPO, 'data', 'hidden_channels.json')
+os.makedirs(os.path.join(_REPO, 'data'), exist_ok=True)
+with open(_hid_path, 'w', encoding='utf-8') as fp:
+    json.dump({'777': {'channels': ['101'], 'categories': []}}, fp)
+nchan = len(guild.channels) + len(getattr(guild, 'threads', []) or [])
+seed = [{'id': '101', 'name': 'secret', 'type': 'text', 'hidden': True},
+        {'id': '102', 'name': 'general', 'type': 'text', 'hidden': False}]
+if _fn is not None:
+    _fn._live_cache = {('777', nchan): (_t.time(), seed)}
+with client.session_transaction() as s:
+    s['role'] = 'mod'
+r = client.get('/api/guild/777/channels')
+try:
+    body = r.get_json()
+except Exception:
+    body = None
+ids = [str(c.get('id')) for c in body] if isinstance(body, list) else []
+check(_fn is not None and r.status_code == 200 and isinstance(body, list),
+      f'cache-hit GET ок: fn={_fn is not None} {r.status_code} {str(body)[:80]}')
+check('101' not in ids, 'cache-hit: модератор не видит hidden')
+check('102' in ids, 'cache-hit: модератор видит открытый')
+with client.session_transaction() as s:
+    s['role'] = 'owner'
+r = client.get('/api/guild/777/channels')
+try:
+    body = r.get_json()
+except Exception:
+    body = None
+ids = [str(c.get('id')) for c in body] if isinstance(body, list) else []
+check('101' in ids and '102' in ids, 'cache-hit: владелец видит скрытые')
+try:
+    os.remove(_hid_path)
+except OSError:
+    pass
+if _fn is not None:
+    _fn._live_cache = {}
+with client.session_transaction() as s:
+    s['role'] = 'owner'
+
 print('== устойчивость списка каналов ==')
 # один «битый» объект канала (как повреждённые данные Discord) не должен
 # ронять весь /api/guild/<gid>/channels — остальные каналы остаются в выдаче

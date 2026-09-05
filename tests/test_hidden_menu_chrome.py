@@ -101,6 +101,41 @@ for fn, needle in need.items():
     txt = open(os.path.join(tpl_dir, fn), encoding='utf-8').read()
     check(needle in txt, f'{fn} гейтит {needle.split()[0]}')
 
+print('== 5. Индекс угроз / lockdown не светятся без /security в vis ==')
+dash = open(os.path.join(tpl_dir, 'dashboard.html'), encoding='utf-8').read()
+settings = open(os.path.join(tpl_dir, 'settings.html'), encoding='utf-8').read()
+check("{% if '/security' in panel_visible_paths %}<span class=\"live-chip\" id=\"chipThreat\"" in dash,
+      'dashboard: chipThreat только при /security в vis')
+check("{% if '/security' in panel_visible_paths %}" in dash and 'id="threatScoreVal"' in dash
+      and dash.find("{% if '/security' in panel_visible_paths %}") < dash.find('id="threatScoreVal"'),
+      'dashboard: панель «Безопасность» / threatScoreVal за vis')
+check("if (!$('threatScoreVal') && !$('chipThreat')) return" in dash,
+      'dashboard: loadThreatIndex no-op без DOM')
+check("{% set _sec = '/security' in panel_visible_paths %}" in settings
+      and "id=\"threat-val\"" in settings
+      and settings.find("{% if _sec %}") < settings.find('id="threat-val"'),
+      'settings: индекс угрозы / lockdown только при /security')
+check("if (!$('threat-val')) return" in settings, 'settings: loadThreat не fetch без DOM')
+check("if (ld) ld.addEventListener('click', doLockdown)" in settings,
+      'settings: bind lockdown только если кнопка есть')
+check("var threatEl = $('ktThreat')" in kiosk and "if (threatEl)" in kiosk,
+      'киоск: threat-index не fetch без #ktThreat')
+check("$('ktThreat') ? (' · угроза: ' + STATE.threat) : ''" in kiosk,
+      'киоск: sit title без «угроза: N», если нет виджета')
+
+print('== 6. Пикеры режут закрытые каналы ==')
+pickers = {
+    'dashboard.html': 'c.type === \'text\' && !c.hidden',
+    'channel_settings.html': '!c.hidden && (c.type === \'text\'',
+    'announcements.html': '!channel.hidden && (channel.type === \'text\'',
+    'appeals.html': '!c.hidden && (c.type === \'text\' || c.type === \'thread\')',
+    'mod_tools.html': 'if (c.hidden) return',
+    'logs.html': 'c && !c.hidden && c.id',
+}
+for fn, needle in pickers.items():
+    txt = open(os.path.join(tpl_dir, fn), encoding='utf-8').read()
+    check(needle in txt, f'{fn} фильтрует hidden')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

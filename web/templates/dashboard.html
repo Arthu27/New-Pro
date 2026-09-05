@@ -107,7 +107,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     <div class="cc-date" id="ccDate"></div>
     <div class="cc-chips">
       <span class="live-chip" id="chipBot"><span class="dot"></span> бот: проверка…</span>
-      <span class="live-chip" id="chipThreat"><i class="fas fa-shield-halved"></i> угрозы: —</span>
+      {% if '/security' in panel_visible_paths %}<span class="live-chip" id="chipThreat"><i class="fas fa-shield-halved"></i> угрозы: —</span>{% endif %}
       <span class="live-chip" id="chipMod"><i class="fas fa-gavel"></i> действий за 7 дн: —</span>
     </div>
   </div>
@@ -137,7 +137,8 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   </div>
 
   <div class="grid-2" style="align-items:start">
-    <!-- Безопасность -->
+    {% if '/security' in panel_visible_paths %}
+    <!-- Безопасность: весь виджет только если Центр безопасности не скрыт в меню -->
     <div class="panel">
       <div class="panel-head"><div><h2><i class="fas fa-shield-halved"></i> Безопасность</h2>
         <div class="sub">Индекс угроз сервера.</div></div></div>
@@ -153,10 +154,11 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
         <!-- п.2: индикатор угрозы — только числом, без полосы -->
         <div class="row" style="margin-top:14px">
           <button type="button" class="btn" id="btnLockdown"><i class="fas fa-house-lock"></i> <span id="btnLockdownText">Lockdown</span></button>
-          {% if '/security' in panel_visible_paths %}<a class="btn-link" href="/security">Центр безопасности <i class="fas fa-arrow-right"></i></a>{% endif %}
+          <a class="btn-link" href="/security">Центр безопасности <i class="fas fa-arrow-right"></i></a>
         </div>
       </div>
     </div>
+    {% endif %}
 
     <!-- Здоровье -->
     <div class="panel">
@@ -844,8 +846,9 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     } catch (e) { /* пропускаем */ }
   }
 
-  /* Индекс угроз */
+  /* Индекс угроз — только если виджет на странице (страница /security в vis) */
   async function loadThreatIndex() {
+    if (!$('threatScoreVal') && !$('chipThreat')) return;
     try {
       var res = await fetch('/api/security/threat-index');
       var d = await res.json();
@@ -857,14 +860,17 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       var _tfp = score + '|' + level + '|' + active;
       if (_tfp === (loadThreatIndex._fp || '')) return;
       loadThreatIndex._fp = _tfp;
-      $('threatScoreVal').textContent = score + '/100';
+      var scoreEl = $('threatScoreVal');
+      if (scoreEl) scoreEl.textContent = score + '/100';
       var badge = $('threatLevelBadge');
-      badge.textContent = level;
-      badge.style.color = color;
-      badge.style.borderColor = color;
-      badge.style.background = color + '22';
-      $('threatIconWrap').style.background = color + '22';
-      $('threatIconWrap').style.color = color;
+      if (badge) {
+        badge.textContent = level;
+        badge.style.color = color;
+        badge.style.borderColor = color;
+        badge.style.background = color + '22';
+      }
+      var wrap = $('threatIconWrap');
+      if (wrap) { wrap.style.background = color + '22'; wrap.style.color = color; }
       // п.2: полосы угрозы нет — число живёт в threatScoreVal
       var chip = $('chipThreat');
       if (chip) { chip.innerHTML = '<i class="fas fa-shield-halved"></i> угрозы: ' + level.toLowerCase() + ' · ' + score + '/100'; }
@@ -973,7 +979,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       var phText = sel.options[0] ? sel.options[0].text : '';
       sel.innerHTML = '<option value="">' + esc(phText) + '</option>';
       var seen = {}, byCat = {};
-      channels.filter(function (c) { return c.type === 'text' && !seen[c.id]; })
+      channels.filter(function (c) { return c.type === 'text' && !c.hidden && !seen[c.id]; })
         .forEach(function (c) {
           seen[c.id] = true;
           var cat = (c.category || '').trim() || 'Без категории';

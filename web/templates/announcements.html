@@ -902,7 +902,7 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
       var data = await fetchJSON('/api/guild/' + encodeURIComponent(guildId) + '/channels');
       var channels = Array.isArray(data) ? data : (data.channels || []);
       channels = channels.filter(function (channel) {
-        return channel.type === 'text' || channel.type === 'news' || channel.news;
+        return !channel.hidden && (channel.type === 'text' || channel.type === 'news' || channel.news);
       });
       /* Дублей быть не должно: один канал — один пункт (защита от повторов
          id), а чтобы похожие имена из разных категорий не путались —

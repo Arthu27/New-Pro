@@ -145,9 +145,9 @@ async function loadSettings() {
     // Проверяем формат данных, пришедших от API
     var channels = [];
     if (Array.isArray(chData)) {
-      channels = chData.filter(function(c) { return c.type === 'text'; });
+      channels = chData.filter(function(c) { return c.type === 'text' && !c.hidden; });
     } else if (chData.channels && Array.isArray(chData.channels)) {
-      channels = chData.channels.filter(function(c) { return c.type === 'text'; });
+      channels = chData.channels.filter(function(c) { return c.type === 'text' && !c.hidden; });
     } else if (chData.error) {
       console.error('Channels API returned error:', chData.error);
       alert('Не удалось получить список каналов: ' + chData.error);

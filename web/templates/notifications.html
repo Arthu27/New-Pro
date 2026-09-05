@@ -229,7 +229,7 @@ async function loadDiscordChannels() {
     const cResp = await fetch('/api/guild/' + gid + '/channels');
     const cData = await cResp.json();
     const channels = Array.isArray(cData) ? cData : (cData.channels || []);
-    const textChans = channels.filter(c => c.type === 'text');
+    const textChans = channels.filter(c => c.type === 'text' && !c.hidden);
     if (!textChans.length) throw new Error('нет каналов');
     select.innerHTML = '<option value="">— Не выбран —</option>' +
       textChans.map(c => '<option value="' + escNotif(c.id) + '">#' + escNotif(c.name) + '</option>').join('');

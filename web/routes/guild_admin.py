@@ -1035,17 +1035,11 @@ def register(ctx):
         # с числом каналов меняется → промах мгновенно, без ожидания TTL).
         if _hit and (_now - _hit[0]) < 10.0:
             _payload = _hit[1]
-            # ETag/304: повторный опрос с тем же составом отдаём без тела —
-            # селекты на страницах настроек не пересобирают ответ вхолостую.
-            _etag = '"ch%d-%d"' % (len(_payload), _ckey[1])
-            if _etag in request.headers.get('If-None-Match', ''):
-                from flask import Response as _Resp
-                return _Resp(status=304, headers={'ETag': _etag,
-                                                   'Cache-Control': 'no-cache'})
-            from flask import Response as _Resp
-            return _Resp(json.dumps(_payload, ensure_ascii=False),
-                         mimetype='application/json',
-                         headers={'ETag': _etag, 'Cache-Control': 'no-cache'})
+            # Скрытые каналы могли смениться, пока жил кэш — переаннотируем
+            # и отдаём через _channels_respond: модератор не видит закрытое
+            # даже на втором запросе (кэш хранит полный список для владельца).
+            _annotate_hidden (guild_id ,_payload )
+            return _channels_respond (_payload ,_ckey [1 ])
 
         type_map ={
         _discord .ChannelType .text :'text',
@@ -1226,6 +1220,13 @@ def register(ctx):
             lst .remove (target )
         g [key ]=lst
         _hidden_save (store )
+        try :
+            live =getattr (api_guild_channels ,'_live_cache',None )
+            if isinstance (live ,dict ):
+                for k in [k for k in live if str (k [0 ])==str (guild_id )]:
+                    live .pop (k ,None )
+        except Exception as _cex :
+            _log .debug ('channels live-cache drop: %s',_cex )
         try :
             from services .live_bus import publish as _lpub
             _lpub (str (guild_id ),'channels')
