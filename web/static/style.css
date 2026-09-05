@@ -288,7 +288,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 }
 
 /* ── 3. Каркас ─────────────────────────────────────────────── */
-.app-shell { display: flex; min-height: 100vh; }
+.app-shell { display: flex; min-height: 100vh; min-height: 100dvh; }
 
 .main-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
@@ -326,6 +326,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   z-index: 100;
 }
 
@@ -2298,15 +2299,20 @@ a.feed-item:hover .feed-item-title { color: var(--ac); }
   width: 38px; height: 38px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
+  border-radius: 14px;
   color: var(--text-2);
   cursor: pointer;
 }
+.mobile-menu .ico-close { display: none; }
+body.sidebar-open .mobile-menu .ico-open { display: none; }
+body.sidebar-open .mobile-menu .ico-close { display: inline-block; }
 .sidebar-backdrop {
   display: none;
   position: fixed; inset: 0;
   z-index: 105;
-  background: rgba(15, 23, 42, 0.46);
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 0; padding: 0; margin: 0;
   cursor: pointer;
 }
@@ -2315,35 +2321,43 @@ body.sidebar-open { overflow: hidden; }
 @media (max-width: 1080px) {
   .sidebar {
     position: fixed; left: 0; top: 0; bottom: 0;
-    transform: translateX(-100%);
-    transition: transform 0.25s var(--ease);
-    box-shadow: var(--shadow-3);
+    width: min(320px, 88vw);
+    flex-basis: min(320px, 88vw);
+    transform: translateX(-110%);
+    transition: transform 0.28s var(--ease);
+    box-shadow: 16px 0 48px -18px rgba(15, 23, 42, .48);
     z-index: 110;
+    border-right: none;
+    border-radius: 0 22px 22px 0;
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .sidebar.open { transform: none; }
   .mobile-menu {
     display: grid; place-items: center;
     position: fixed;
-    top: 10px; left: 10px;
+    top: calc(10px + env(safe-area-inset-top, 0px)); left: 10px;
     z-index: 220;
-    width: 42px; height: 42px;
+    width: 44px; height: 44px;
     box-shadow: var(--shadow-2);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
-  .topbar { padding-left: 58px; padding-right: 18px; }
-  .main-content { padding-left: 18px; padding-right: 18px; }
+  .topbar { padding-left: 62px; padding-right: 14px; padding-top: env(safe-area-inset-top, 0px); }
+  .main-content { padding-left: 16px; padding-right: 16px; }
   .navbar-clock { display: none; }
   .topbar-brand { display: none; }
   body.sidebar-open .sidebar-backdrop { display: block; }
 }
 @media (max-width: 860px) {
   .stat-grid,.donut-grid,.quick-grid{grid-template-columns:1fr !important}
-  .topbar .nav-icon-btn, .mobile-menu { min-width:42px; min-height:42px; }
+  .topbar .nav-icon-btn, .mobile-menu { min-width:44px; min-height:44px; }
   /* Крупные тач-кнопки (42px) в одну строку уже не влезают: без переноса
      топбар вылезал за экран и у всей панели появлялся горизонтальный скролл
      (проверено на 768px — все страницы модерации). Переносим строки вместо
      скролла: высота топбара становится автоматической. */
   .topbar { height: auto; min-height: var(--topbar-h); flex-wrap: wrap;
-            padding-top: 8px; padding-bottom: 8px; }
+            padding-top: calc(8px + env(safe-area-inset-top, 0px)); padding-bottom: 8px; }
   .topbar .crumbs { min-width: 0; }
   .navbar-right { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
   .shift-edit-row{grid-template-columns:auto 1fr auto !important}
@@ -2356,7 +2370,7 @@ body.sidebar-open { overflow: hidden; }
   .page-head { gap: 10px; margin-bottom: 14px; }
   .page-head .lead { font-size: var(--fs-sm); }
   .page-head-actions { width: 100%; }
-  .page-head-actions .btn { min-height: 42px; }
+  .page-head-actions .btn { min-height: 44px; }
   .kpi-row { grid-template-columns: 1fr 1fr; }
   .form-row { flex-direction: column; align-items: stretch; }
   .form-row > * { min-width: 0; }
@@ -2364,13 +2378,49 @@ body.sidebar-open { overflow: hidden; }
   .toolbar input[type="search"], .toolbar input[type="text"], .toolbar select { width: 100%; min-width: 0; }
   .modal-overlay { padding: 8vh 12px 12px; align-items: flex-start; }
   .modal-box { max-width: 100%; }
+  .main-content:has(.page-head) > .navbar { display: none; }
+  #toastHost {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    left: 12px; right: 12px; max-width: none;
+  }
+  .fab { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); right: 14px; }
+  #fx-topbtn, .scroll-top-btn { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); right: 14px; }
+  .drawer { padding-top: env(safe-area-inset-top, 0px); }
 }
 @media (max-width: 720px) {
-  .grid-2, .grid-3, .form-row-2 { grid-template-columns: 1fr; }
-  .user-info { display: none; }
+  .grid-2, .grid-3, .grid-4, .form-row-2 { grid-template-columns: 1fr; }
+  .user-info, .user-caret { display: none; }
+  .user-pill { padding: 3px; gap: 0; }
+  .page-head { flex-direction: column; }
   .page-head h1 { font-size: 19px; }
   .kpi-row { grid-template-columns: 1fr; }
-  .main-content { padding: 16px 14px 96px; }
+  .main-content { padding: 14px 12px calc(96px + env(safe-area-inset-bottom, 0px)); }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-box {
+    max-width: 100%; width: 100%;
+    border-radius: 22px 22px 0 0;
+    max-height: min(92vh, 100dvh);
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .user-menu {
+    position: fixed; top: auto; right: 0; left: 0; bottom: 0;
+    min-width: 0; width: 100%;
+    border-radius: 22px 22px 0 0;
+    padding: 10px 10px calc(12px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -18px 50px -18px rgba(15, 23, 42, .4);
+    z-index: 240;
+  }
+  .user-menu a { min-height: 46px; font-size: 15px; border-radius: 12px; }
+  .user-menu { animation: fadeUp 0.2s var(--ease) both; }
+  .drawer { width: min(420px, 100vw); max-width: 100vw; border-radius: 20px 0 0 20px; }
+  .cmd-grid, .members-grid, .cc-quick { grid-template-columns: 1fr; }
+  .kbd-palette { padding: 8px 8px 12px; align-items: flex-end; }
+  .kbd-palette-panel { max-width: 100%; border-radius: 20px 20px 0 0; }
+}
+@media (max-width: 480px) {
+  .wgrid { grid-template-columns: 1fr; }
+  .page-head .lead { display: none; }
+  .kpi-row { gap: 8px; }
 }
 
 /* ============================================================
@@ -3012,35 +3062,51 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   display: none;
   position: fixed; left: 0; right: 0; bottom: 0;
   z-index: 500;
-  background: var(--glass);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
   border-top: 1px solid var(--line);
-  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  padding: 6px 6px calc(8px + env(safe-area-inset-bottom, 0px));
   justify-content: space-around;
+  gap: 2px;
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 -12px 32px -18px rgba(15, 23, 42, .35);
 }
 .mobile-nav a {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  font-size: 10px; font-weight: 700;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 6px 4px;
+  border-radius: 14px;
+  font-size: 10.5px; font-weight: 700;
   color: var(--text-3);
-  min-width: 56px;
+  min-width: 0;
+  flex: 1;
+  min-height: 48px;
+  touch-action: manipulation;
 }
-.mobile-nav a i { font-size: 16px; }
+.mobile-nav a i { font-size: 18px; }
 .mobile-nav a { position: relative; }
 .mobile-nav a.active { color: var(--ac); background: var(--ac-soft); }
 .mobile-nav a.active::after {
   content: '';
-  position: absolute; bottom: -4px; left: 50%;
+  position: absolute; bottom: 4px; left: 50%;
   width: 4px; height: 4px;
   margin-left: -2px;
   border-radius: 50%;
   background: var(--ac);
   box-shadow: 0 0 8px color-mix(in srgb, var(--ac) 70%, transparent);
-  animation: badgePulse 2.2s ease-in-out infinite;
 }
 @media (max-width: 860px) {
   .mobile-nav { display: flex; }
-  .main-content { padding-bottom: 96px; }
+  .main-content { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+}
+body.keyboard-open .mobile-nav {
+  transform: translateY(110%);
+  pointer-events: none;
+}
+body.keyboard-open .fab,
+body.keyboard-open #fx-topbtn,
+body.keyboard-open .scroll-top-btn {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ── Чип серверов в сайдбаре ────────────────────────────── */
@@ -3566,6 +3632,13 @@ body.dense .kpi { padding: 10px 13px; }
   from { opacity: 0; transform: scale(0.94) translateY(-4px); }
   to { opacity: 1; transform: none; }
 }
+@media (max-width: 720px) {
+  .user-menu {
+    animation: fadeUp 0.2s var(--ease) both;
+    transform-origin: bottom center;
+  }
+}
+
 
 /* ── Дроверы и модалки: глубже стекло ────────────────────── */
 .drawer { background: var(--glass); }
@@ -3745,7 +3818,7 @@ body.dense .kpi { padding: 10px 13px; }
   transition: opacity 0.2s;
 }
 .fab.backdrop.show { opacity: 1; pointer-events: auto; }
-@media (max-width: 860px) { .fab { bottom: 84px; } }
+@media (max-width: 860px) { .fab { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); } }
 @media (prefers-reduced-motion: reduce) {
   .fab-item { transition: none; }
 }
@@ -5741,8 +5814,9 @@ a, button, .btn, [role="button"], label, select, summary {
 button, .btn, .control-btn { -webkit-user-select: none; user-select: none; }
 
 @media (hover: none) and (pointer: coarse) {
-  .btn { min-height: 42px; padding-top: 10px; padding-bottom: 10px; }
-  .btn-sm { min-height: 36px; }
+  .btn, .nav-icon-btn, .mobile-nav a, .mobile-menu { touch-action: manipulation; }
+  .btn { min-height: 44px; padding-top: 10px; padding-bottom: 10px; }
+  .btn-sm { min-height: 38px; }
   .btn-icon { width: 44px; height: 44px; }
   .mobile-menu { width: 44px; height: 44px; }
   .cmd-modal-close { width: 40px; height: 40px; }

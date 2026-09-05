@@ -559,6 +559,11 @@
   .chat-wrap.members-open .members-panel { display: flex; }
   .hdr-btn.chat-mob-mem { display: flex; }
 }
+@media (max-width: 860px) {
+  .members-panel {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+}
 @media (max-width: 820px) {
   .chat-wrap {
     grid-template-columns: 1fr;
@@ -730,7 +735,48 @@
 /* ── Микро-адаптив: на узких экранах композер не сжимается ── */
 @media (max-width: 820px) {
   .chat-header-topic { display: none; }
-  .chat-messages { padding: 14px; }
+  .chat-messages { padding: 12px; }
+  .input-hint { display: none; }
+  .chat-search input { width: 108px; }
+  .chat-wrap {
+    height: calc(100dvh - var(--topbar-h, 56px) - 92px - env(safe-area-inset-bottom, 0px));
+    min-height: 280px;
+    gap: 8px;
+  }
+  .guild-bar, .chat-sidebar, .chat-main, .members-panel { border-radius: 16px; }
+  .guild-bar, .chat-sidebar {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+  .members-panel {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    width: min(300px, 88vw);
+  }
+  .chat-empty::after { content: 'Нажмите список каналов в шапке'; }
+  .chat-toast { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+  .chat-modal { align-items: flex-end; padding: 0; }
+  .chat-modal-box {
+    max-width: 100%;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  }
+  .send-btn, .dm-btn { min-width: 48px; height: 48px; }
+  .chat-input { font-size: 16px; min-height: 48px; }
+}
+@media (max-width: 820px) {
+  .main-content:has(.chat-wrap) > .navbar,
+  .main-content:has(.chat-wrap) > .page-head { display: none; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .msg-actions {
+    display: flex;
+    position: static;
+    margin-top: 6px;
+    box-shadow: none;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .msg-act-btn { width: 36px; height: 36px; }
 }
 </style>
 

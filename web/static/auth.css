@@ -582,10 +582,20 @@ body {
 
 /* ── Адаптив и снижение движения ── */
 @media (max-width: 520px) {
-  body { padding: 26px 12px 20px; }
-  .card-body { padding: 16px 18px 18px; }
-  .card-foot { padding: 11px 18px 13px; }
-  .brand { margin-bottom: 16px; }
+  body {
+    padding: calc(18px + env(safe-area-inset-top, 0px)) 12px calc(16px + env(safe-area-inset-bottom, 0px));
+    justify-content: flex-start;
+    min-height: 100dvh;
+  }
+  .auth-wrap { width: 100%; }
+  .card { border-radius: 18px; }
+  .card-body { padding: 16px 16px 18px; }
+  .card-foot { padding: 11px 16px 13px; }
+  .brand { margin-bottom: 14px; }
+  .brand .logo { width: 64px; height: 64px; border-radius: 18px; }
+  .input-wrap input { height: 50px; font-size: 16px; }
+  .btn { height: 52px; font-size: 15px; }
+  .tab { padding: 13px 8px; min-height: 46px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

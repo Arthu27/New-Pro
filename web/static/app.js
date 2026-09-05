@@ -941,7 +941,10 @@
         backdrop.classList.toggle('show', !!on);
         backdrop.hidden = !on;
       }
-      if (mobile) mobile.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (mobile) {
+        mobile.setAttribute('aria-expanded', on ? 'true' : 'false');
+        mobile.setAttribute('aria-label', on ? 'Закрыть меню' : 'Открыть меню');
+      }
     }
     if (mobile && sidebar) {
       mobile.addEventListener('click', function (e) {
@@ -963,6 +966,15 @@
       doc.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && sidebar.classList.contains('open')) setSidebarOpen(false);
       });
+    }
+    if (window.visualViewport) {
+      var vv = window.visualViewport;
+      var syncKb = function () {
+        var covered = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
+        doc.body.classList.toggle('keyboard-open', covered > 90);
+      };
+      vv.addEventListener('resize', syncKb);
+      vv.addEventListener('scroll', syncKb);
     }
     var searchBtn = doc.getElementById('globalSearchBtn');
     if (searchBtn) searchBtn.addEventListener('click', paletteOpen);

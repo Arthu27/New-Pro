@@ -2,7 +2,7 @@
 <html lang="ru" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Панель управления Hakumo: модерация, участники, роли, каналы и настройки Discord-сервера в одном окне.">
     <title>{% block title %}Панель Hakumo{% endblock %}</title>
     {% block styles %}{% endblock %}
@@ -178,7 +178,7 @@
     <div class="bg-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
     <div class="app-shell">
-        <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="sidebar"><i class="fas fa-bars"></i></button>
+        <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="sidebar"><i class="fas fa-bars ico-open" aria-hidden="true"></i><i class="fas fa-xmark ico-close" aria-hidden="true"></i></button>
         <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" hidden aria-label="Закрыть меню"></button>
 
         <!-- ── Сайдбар ─────────────────────────────────────── -->
