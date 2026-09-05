@@ -2316,7 +2316,13 @@ class Logs (commands .Cog ):
                 wait =min (30 *(2 ** min (fail_streak ,5 )),900 )
                 gname ,err =errs [0 ]
                 if fail_streak ==1 or fail_streak %10 ==0 :
-                    log .info (f'[LOGS] Аудит API Discord недоступен ({fail_streak} подряд; {gname}): {err} — пауза {wait}с')
+                    # Тело 5xx от Discord бывает простынёй (Envoy: «upstream
+                    # connect error…») — в лог режем до сути, цикл и так
+                    # пишет одну строку на сбой (первый/десятый).
+                    _err_txt =str (err )
+                    if len (_err_txt )>200 :
+                        _err_txt =_err_txt [:200 ]+'…'
+                    log .info (f'[LOGS] Аудит API Discord недоступен ({fail_streak} подряд; {gname}): {_err_txt} — пауза {wait}с')
                 await asyncio .sleep (wait )
             else :
                 if fail_streak :
