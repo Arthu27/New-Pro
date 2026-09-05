@@ -595,8 +595,8 @@ async def _safe_send (ch ,**kw ):
                 _th_name =str (_m0 .get ('title',''))if _m0 else ''
         _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None
         _has_file ='file'in kw or 'files'in kw
-        # Владелец задал URL фото: лог = ЭТО фото с текстом события.
-        # Карточку Discord (эмбед) не шлём — в канал уходит только картинка.
+        # Лог = одно фото. URL владельца — задний фон, поверх стеклянные
+        # письма с текстом события. Бот ничего не пишет (ни эмбед, ни текст).
         if not _has_file and _m is not None :
             try :
                 from services .log_card import (render_log_card ,get_log_cards_cfg ,
@@ -609,27 +609,29 @@ async def _safe_send (ch ,**kw ):
                     _cat =_m .get ('cat')or 'mod'
                     _bg_url =bg_url_for_cat (_cfg ,_cat )
                     _bg =await _aio .to_thread (get_bg_bytes_sync ,_bg_url )if _bg_url else None
-                    if _bg :
-                        _theme =(_cfg .get ('theme_by_cat')or {}).get (_cat )or _cfg .get ('theme')
-                        _now =datetime .datetime .now (datetime .timezone .utc ).strftime ('%H:%M UTC')
-                        def _draw ():
-                            return render_log_card (
-                                _cat ,_m .get ('title')or _th_name or 'Лог',
-                                _m .get ('rows')or [],
-                                color =_m .get ('color')or 0xC8922A ,
-                                cat_name ='',
-                                guild_name =_m .get ('guild')or '',
-                                time_str =_now ,
-                                theme =_theme ,
-                                accent =_cfg .get ('accent'),
-                                fmt ='jpeg',
-                                bg_bytes =_bg ,
-                                form =_cfg .get ('form'),
-                                form_color =_cfg .get ('form_color'))
-                        _jpg =await _aio .to_thread (_draw )
-                        if _jpg :
-                            kw ['file']=discord .File (_io .BytesIO (_jpg ),filename ='hakumo_log.jpg')
-                            kw .pop ('embed',None )
+                    _theme =(_cfg .get ('theme_by_cat')or {}).get (_cat )or _cfg .get ('theme')
+                    _now =datetime .datetime .now (datetime .timezone .utc ).strftime ('%H:%M UTC')
+                    def _draw ():
+                        return render_log_card (
+                            _cat ,_m .get ('title')or _th_name or 'Лог',
+                            _m .get ('rows')or [],
+                            color =_m .get ('color')or 0xC8922A ,
+                            cat_name ='',
+                            guild_name =_m .get ('guild')or '',
+                            time_str =_now ,
+                            theme =_theme ,
+                            accent =_cfg .get ('accent'),
+                            fmt ='jpeg',
+                            bg_bytes =_bg ,
+                            form =_cfg .get ('form'),
+                            form_color =_cfg .get ('form_color'))
+                    _jpg =await _aio .to_thread (_draw )
+                    if _jpg :
+                        _buf =_io .BytesIO (_jpg )
+                        _buf ._log_embed =_e
+                        kw ['file']=discord .File (_buf ,filename ='hakumo_log.jpg')
+                        kw .pop ('embed',None )
+                        kw .pop ('content',None )
             except Exception as _ex:
                 log.debug("_safe_send(): подавлено: %s", _ex)
         if _is_forum_ch (ch ):

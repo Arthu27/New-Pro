@@ -227,8 +227,8 @@ _ch3 = _Ch()
 _e3 = _styled_log_embed(_G(), 'mod', 'Событие', fields=[('А', 'б')])
 asyncio.run(_safe_send(_ch3, embed=_e3))
 _kw3 = _ch3.sent[-1] if _ch3.sent else {}
-check('embed' in _kw3 and 'file' not in _kw3,
-      'нет URL: текстовый эмбед, без полоски')
+check('file' in _kw3 and 'embed' not in _kw3 and 'content' not in _kw3,
+      'нет URL: всё равно фото со стеклом, бот ничего не пишет')
 LC.get_bg_bytes_sync = _orig_bg
 
 print('== 4. API панели ==')

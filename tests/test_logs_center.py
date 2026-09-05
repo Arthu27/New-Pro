@@ -40,7 +40,11 @@ class FakeChannel:
         self.mention = f'<#{cid}>'; self.topic = None; self.category = None
         self.members = []; self.sent = []
     async def send(self, content=None, embed=None, **kw):
-        self.sent.append(embed or content); return object()
+        f = kw.get('file')
+        e = embed
+        if e is None and f is not None:
+            e = getattr(getattr(f, 'fp', None), '_log_embed', None)
+        self.sent.append(e or content); return object()
 class FakeRole:
     def __init__(self, rid, name, perms=None, color=0x9B59B6):
         self.id = rid; self.name = name; self.mention = f'<@&{rid}>'
