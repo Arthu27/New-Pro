@@ -595,8 +595,7 @@ async def _safe_send (ch ,**kw ):
                 _th_name =str (_m0 .get ('title',''))if _m0 else ''
         _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None
         _has_file ='file'in kw or 'files'in kw
-        # Лог = одно фото. URL владельца — задний фон, поверх стеклянные
-        # письма с текстом события. Бот ничего не пишет (ни эмбед, ни текст).
+        # Вид лога: «photo» — одно фото со стеклом; иначе эмбед Discord.
         if not _has_file and _m is not None :
             try :
                 from services .log_card import (render_log_card ,get_log_cards_cfg ,
@@ -605,7 +604,8 @@ async def _safe_send (ch ,**kw ):
                 import asyncio as _aio
                 _gid =getattr (getattr (ch ,'guild',None ),'id',0 )or 0
                 _cfg =await _aio .to_thread (get_log_cards_cfg ,_gid )
-                if _cfg .get ('enabled',True ):
+                _deliv =str (_cfg .get ('delivery')or 'embed').strip ().lower ()
+                if _cfg .get ('enabled',True )and _deliv =='photo':
                     _cat =_m .get ('cat')or 'mod'
                     _bg_url =bg_url_for_cat (_cfg ,_cat )
                     _bg =await _aio .to_thread (get_bg_bytes_sync ,_bg_url )if _bg_url else None
@@ -843,12 +843,16 @@ def _strip_raw_id(text):
 _LONG_FIELD = {
     'текст', 'было', 'стало', 'причина', 'роли', 'роли стаффа',
     'ключевые права', 'что сделал', 'упомянуты', 'инфо', 'тема',
+    'сообщение',
 }
 
 
 def _polish_embed_value(value):
     """Текст поля: без сырых ID, без рваных пробелов, тире как в русском."""
-    s = _strip_raw_id(value)
+    s = str(value if value is not None else '')
+    if s.startswith('```'):
+        return s
+    s = _strip_raw_id(s)
     s = str(s if s is not None else '')
     s = s.replace('\r\n', '\n').replace('\r', '\n')
     lines = [re.sub(r'[ \t]+', ' ', ln).strip() for ln in s.split('\n')]
@@ -856,6 +860,35 @@ def _polish_embed_value(value):
     s = re.sub(r'( · ){2,}', ' · ', s)
     s = s.replace('``', '').replace('` `', '')
     return s or '—'
+
+
+def _who_line(user, fallback=None):
+    """Человек в эмбеде: кликабельное упоминание, без сырого ID."""
+    if user is None:
+        return fallback or '—'
+    mention = getattr(user, "mention", None)
+    if mention:
+        return str(mention)
+    nick = (getattr(user, "display_name", None)
+            or getattr(user, "global_name", None)
+            or getattr(user, "name", None)
+            or fallback or "участник")
+    return f"**{nick}**"
+
+
+def _ch_line(ch):
+    """Канал в эмбеде: кликабельное упоминание, без ID."""
+    if ch is None:
+        return '—'
+    return getattr(ch, "mention", None) or ("#" + str(getattr(ch, "name", None) or "канал"))
+
+
+def _quote_msg(text):
+    """Текст сообщения: блок, который в Discord можно скопировать."""
+    s = str(text or '').replace('```', "'''").strip()
+    if not s:
+        return '*пусто*'
+    return '```\n' + s[:900] + '\n```'
 
 
 def _styled_log_embed(guild, category, title, fields=(), color=None,
@@ -886,9 +919,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     for name, value in rows[:8]:
         long = name.lower() in _LONG_FIELD or len(value) > 78 or '\n' in value
         e.add_field(name=name[:256], value=value[:1024], inline=not long)
-    # Профиль — справа (thumbnail). Имя сверху без второго аватара.
-    if _who:
-        e.set_author(name=_who[:256])
+    # Профиль — аватар справа. Имя не дублируем сверху: оно уже в поле.
     if thumbnail:
         e.set_thumbnail(url=thumbnail)
     footer_text = f"Hakumo Log · {cat_name} · {getattr(guild, 'name', '')}"
@@ -1992,16 +2023,16 @@ class Logs (commands .Cog ):
             return 
         _atts =getattr (message ,'attachments',None )or []
         _fields =[
-        ('Автор',f"**{author_name}** · `{author_id}`"),
-        ('Канал',message .channel .mention ),
-        ('Текст',f"> {content[:450] or '[Вложение]'}"),
+        ('Автор',_who_line (author ,author_name )),
+        ('Канал',_ch_line (message .channel )),
+        ('Сообщение',_quote_msg (content )if (content and content !='[Содержимое не найдено]')else ('*вложение*'if _atts else '*пусто*')),
         ]
         try :
-            _fields .append (('Отправлено',f"<t:{int(message.created_at.timestamp())}:R>"))
+            _fields .append (('Когда',f"<t:{int(message.created_at.timestamp())}:R>"))
         except Exception as _ex:
             log.debug("on_message_delete(): подавлено: %s", _ex)
         if _atts :
-            _fields .append (('Вложений удалено',f"**{len(_atts)}**"))
+            _fields .append (('Вложений',f"**{len(_atts)}**"))
         _th =None
         try :
             _th =str (message .author .display_avatar .url )if message .author else None
@@ -2018,13 +2049,13 @@ class Logs (commands .Cog ):
         _mentioned =[m for m in message .mentions if not m .bot ]+list (message .role_mentions or [])
         if _mentioned :
             _targets =", ".join (m .mention for m in _mentioned [:8 ])
-            ge =_styled_log_embed (message .guild ,'message','👻 Ghost Ping',
+            ge =_styled_log_embed (message .guild ,'message','Ghost Ping',
             fields =[
-            ('Виновник',f"**{author_name}** · `{author_id}`"),
+            ('Виновник',_who_line (author ,author_name )),
             ('Что сделал','тегнул и сразу удалил сообщение'),
             ('Упомянуты',_targets ),
-            ('Канал',message .channel .mention ),
-            ('Текст',f"> {content[:300] or '[Вложение]'}"),
+            ('Канал',_ch_line (message .channel )),
+            ('Сообщение',_quote_msg (content [:300])),
             ],
             color =0x9B59B6 ,thumbnail =_th )
             await _safe_send (ch ,embed =ge )
@@ -2063,10 +2094,11 @@ class Logs (commands .Cog ):
             log.debug("on_message_edit(): подавлено: %s", _ex)
         e =_styled_log_embed (before .guild ,'message','Сообщение изменено',
         fields =[
-        ('Автор',f"**{_ename}** · `{_eid}`"),
-        ('Канал',f"{before.channel.mention} · [Перейти к сообщению]({after.jump_url})"),
-        ('Было',f"> {before.content[:400] or '[Пусто]'}"),
-        ('Стало',f"> {after.content[:400] or '[Пусто]'}"),
+        ('Автор',_who_line (_eauthor ,_ename )),
+        ('Канал',_ch_line (before .channel )),
+        ('Было',_quote_msg (before .content [:400])),
+        ('Стало',_quote_msg (after .content [:400])),
+        ('Перейти',f"[Перейти к сообщению]({after.jump_url})"),
         ],
         color =0x3498DB ,thumbnail =_eth )
         await _safe_send (ch ,embed =e )

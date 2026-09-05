@@ -77,12 +77,13 @@ check(pal['gold'] == (255, 136, 0) and pal['bright'] != pal['gold'],
       'акцент заменяет золотую гамму (основную и светлую)')
 
 print('== 2. Настройки cfg ==')
-_CFG_SKIP = ('theme_by_cat', 'bg_url', 'bg_url_by_cat', 'form', 'form_color')
+_CFG_SKIP = ('theme_by_cat', 'bg_url', 'bg_url_by_cat', 'form', 'form_color', 'delivery')
 cfg = LC.get_log_cards_cfg('424242')
 check({k: v for k, v in cfg.items() if k not in _CFG_SKIP} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
       and cfg['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT and cfg['bg_url'] == ''
-      and cfg['form'] == 'glass' and cfg['form_color'] == '',
-      'нет файла → дефолт (+образы по категориям, фон пустой, форма стекло)')
+      and cfg['form'] == 'glass' and cfg['form_color'] == ''
+      and cfg['delivery'] == 'embed',
+      'нет файла → дефолт (эмбед Discord, образы по категориям, фон пустой, форма стекло)')
 saved = LC.save_log_cards_cfg('424242', {'enabled': False, 'theme': 'ocean', 'accent': '#22d3ee'})
 check({k: v for k, v in saved.items() if k not in _CFG_SKIP} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'}
       and saved['bg_url'] == '', 'сохранение нормализует (accent без #)')
@@ -92,6 +93,17 @@ check({k: v for k, v in saved2.items() if k not in _CFG_SKIP} == {'enabled': Tru
       and saved2['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT,
       'мусор в POST не пролезает: enabled bool, тема/акцент по реестру')
 os.remove(LC.log_cards_cfg_path('424242'))
+check(LC._valid_delivery('PHOTO') == 'photo' and LC._valid_delivery('nope') == 'embed',
+      'delivery: photo/embed, мусор → эмбед')
+ph = LC.save_log_cards_cfg('424246', {'delivery': 'photo'})
+check(ph['delivery'] == 'photo', 'delivery=photo сохраняется')
+LC.save_log_cards_cfg('424246', {'theme': 'ocean'})
+check(LC.get_log_cards_cfg('424246')['delivery'] == 'photo'
+      and LC.get_log_cards_cfg('424246')['theme'] == 'ocean',
+      'смена темы не сносит вид лога')
+junk_d = LC.save_log_cards_cfg('424246', {'delivery': 'postcard'})
+check(junk_d['delivery'] == 'embed', 'мусорный delivery → эмбед')
+os.remove(LC.log_cards_cfg_path('424246'))
 
 print('== 2в. Форма и цвет плашек ==')
 check(set(LC.CARD_FORMS) == {'glass', 'rounded', 'pill', 'sharp'},
@@ -157,13 +169,14 @@ check('bg_url_for_cat' in logs_src,
 check('render_log_card' in logs_src and 'hakumo_log.jpg' in logs_src,
       '_safe_send рисует лог на фото владельца и шлёт файл')
 check("pop ('embed'" in logs_src or "pop('embed'" in logs_src,
-      'есть URL — эмбед Discord не уходит, только фото')
+      'фото-режим прячет эмбед Discord, в канал уходит файл')
 check('compact_log_photo' not in logs_src and 'hakumo_log_photo.jpg' not in logs_src,
       'полоска без текста в канал не уходит')
-check("if_cfg.get('enabled',True)" in flat.replace('"', "'"),
-      'enabled=False выключает картинку, текст остаётся')
+check("if_cfg.get('enabled',True)and_deliv=='photo'" in flat.replace('"', "'")
+      or "if_cfg.get('enabled',True)and_deliv==\"photo\"" in flat,
+      'фото только если delivery=photo; иначе эмбед')
 
-print('== 3б. Отправка: фото с текстом, без карточки Discord ==')
+print('== 3б. Отправка: эмбед по умолчанию, фото — по выбору ==')
 import asyncio
 from cogs.logs import _safe_send, _styled_log_embed  # noqa: E402
 
@@ -207,12 +220,20 @@ _e = _styled_log_embed(_G(), 'mod', 'Выдано предупреждение',
                                ('Причина', 'спам')])
 asyncio.run(_safe_send(_ch, embed=_e))
 _kw = _ch.sent[-1] if _ch.sent else {}
-check('file' in _kw and 'embed' not in _kw,
-      'URL задан: в канал уходит только фото, без эмбеда Discord')
-check(getattr(_kw.get('file'), 'filename', '') == 'hakumo_log.jpg',
+check('embed' in _kw and 'file' not in _kw,
+      'по умолчанию в канал уходит эмбед Discord, без фото')
+
+LC.save_log_cards_cfg('424245', {'enabled': True, 'delivery': 'photo',
+                                 'bg_url': 'https://example.com/bg.jpg'})
+_chp = _Ch()
+asyncio.run(_safe_send(_chp, embed=_e))
+_kwp = _chp.sent[-1] if _chp.sent else {}
+check('file' in _kwp and 'embed' not in _kwp,
+      'delivery=photo: в канал уходит только фото')
+check(getattr(_kwp.get('file'), 'filename', '') == 'hakumo_log.jpg',
       'файл hakumo_log.jpg')
 
-LC.save_log_cards_cfg('424245', {'enabled': False,
+LC.save_log_cards_cfg('424245', {'enabled': False, 'delivery': 'photo',
                                  'bg_url': 'https://example.com/bg.jpg'})
 _ch2 = _Ch()
 _e2 = _styled_log_embed(_G(), 'mod', 'Выдано предупреждение',
@@ -227,8 +248,14 @@ _ch3 = _Ch()
 _e3 = _styled_log_embed(_G(), 'mod', 'Событие', fields=[('А', 'б')])
 asyncio.run(_safe_send(_ch3, embed=_e3))
 _kw3 = _ch3.sent[-1] if _ch3.sent else {}
-check('file' in _kw3 and 'embed' not in _kw3 and 'content' not in _kw3,
-      'нет URL: всё равно фото со стеклом, бот ничего не пишет')
+check('embed' in _kw3 and 'file' not in _kw3,
+      'нет файла настроек: эмбед Discord')
+LC.save_log_cards_cfg('424245', {'delivery': 'photo'})
+_ch4 = _Ch()
+asyncio.run(_safe_send(_ch4, embed=_e3))
+_kw4 = _ch4.sent[-1] if _ch4.sent else {}
+check('file' in _kw4 and 'embed' not in _kw4,
+      'photo без URL: фото со стеклом на стандартном фоне')
 LC.get_bg_bytes_sync = _orig_bg
 
 print('== 4. API панели ==')
@@ -284,7 +311,7 @@ for f in ('data/log_cards_777.json',):
 print('== 5. Шаблон ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'message_logs.html'),
            encoding='utf-8').read()
-for fid in ('lcSetBox', 'lcOn', 'lcTheme', 'lcCat', 'lcAccent', 'lcSave',
+for fid in ('lcSetBox', 'lcDelivery', 'lcTheme', 'lcCat', 'lcAccent', 'lcSave',
             'lcPreview', 'lcMsg', 'lcForm'):
     check(f'id="{fid}"' in tpl, f'контрол {fid} на месте')
 check('/log-cards/settings\' + ' in tpl or 'log-cards/settings' in tpl,

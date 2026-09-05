@@ -124,6 +124,8 @@ CARD_FORMS = {
 }
 DEFAULT_FORM = 'glass'
 DEFAULT_FORM_RGB = (12, 16, 28)
+LOG_DELIVERIES = ('embed', 'photo')
+DEFAULT_DELIVERY = 'embed'
 
 
 def _clamp(v):
@@ -223,12 +225,19 @@ def _valid_form(raw):
     return s if s in CARD_FORMS else DEFAULT_FORM
 
 
+def _valid_delivery(raw):
+    s = str(raw or '').strip().lower()
+    return s if s in LOG_DELIVERIES else DEFAULT_DELIVERY
+
+
 def get_log_cards_cfg(gid):
     """{'enabled': bool, 'theme': str, 'accent': '', 'bg_url': '',
-    'theme_by_cat': {}, 'bg_url_by_cat': {}, 'form': str, 'form_color': ''}."""
+    'theme_by_cat': {}, 'bg_url_by_cat': {}, 'form': str, 'form_color': '',
+    'delivery': 'embed'|'photo'}."""
     cfg = {'enabled': True, 'theme': DEFAULT_LOG_THEME, 'accent': '',
            'bg_url': '', 'theme_by_cat': dict(DEFAULT_THEME_BY_CAT),
-           'bg_url_by_cat': {}, 'form': DEFAULT_FORM, 'form_color': ''}
+           'bg_url_by_cat': {}, 'form': DEFAULT_FORM, 'form_color': '',
+           'delivery': DEFAULT_DELIVERY}
     try:
         path = log_cards_cfg_path(gid)
         if os.path.exists(path):
@@ -253,6 +262,8 @@ def get_log_cards_cfg(gid):
                 acc_f = str(raw.get('form_color') or '').strip().lstrip('#')
                 if not acc_f or _ui_color(acc_f):
                     cfg['form_color'] = acc_f
+                if 'delivery' in raw:
+                    cfg['delivery'] = _valid_delivery(raw.get('delivery'))
     except Exception as _ex:
         _log.debug('get_log_cards_cfg(): %s', _ex)
     return cfg
@@ -286,6 +297,7 @@ def save_log_cards_cfg(gid, data):
            else prev.get('bg_url_by_cat'))
     _form = data.get('form') if 'form' in data else prev.get('form')
     _fc = data.get('form_color') if 'form_color' in data else prev.get('form_color')
+    _deliv = data.get('delivery') if 'delivery' in data else prev.get('delivery')
     cfg = {
         'enabled': bool(data.get('enabled', True if 'enabled' not in prev
                                  else prev.get('enabled', True))),
@@ -296,6 +308,7 @@ def save_log_cards_cfg(gid, data):
         'bg_url_by_cat': _valid_bg_url_by_cat(_by),
         'form': _valid_form(_form),
         'form_color': '',
+        'delivery': _valid_delivery(_deliv),
     }
     theme = str(data.get('theme') or prev.get('theme') or '').strip().lower()
     if theme in LOG_CARD_THEMES:

@@ -57,10 +57,14 @@
 
 <!-- Оформление карточек логов (то, что бот шлёт в лог-каналы Discord) -->
 <div class="ml-filter-box" id="lcSetBox" {% if not can_edit %}hidden{% endif %} data-reveal="up">
-  <div class="box-title"><i class="fas fa-wand-magic-sparkles"></i> Фото логов в Discord</div>
+  <div class="box-title"><i class="fas fa-wand-magic-sparkles"></i> Вид логов в Discord</div>
   <div class="filter-row" style="margin-bottom:10px">
-    <label class="field-input" style="display:flex;align-items:center;gap:9px;flex:0 0 auto;cursor:pointer">
-      <input type="checkbox" id="lcOn" checked aria-label="Прикладывать фото к логам в Discord"> Прикладывать фото
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)">
+      Как слать
+      <select id="lcDelivery" class="field-input" aria-label="Вид логов в Discord">
+        <option value="embed">Эмбед Discord</option>
+        <option value="photo">Фото со стеклом</option>
+      </select>
     </label>
     <select id="lcTheme" class="field-input" aria-label="Тема оформления карточек"></select>
     <select id="lcCat" class="field-input" aria-label="Категория для предпросмотра">
@@ -105,7 +109,7 @@
   <div style="border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg)">
     <img id="lcPreview" alt="Предпросмотр карточки лога" style="width:100%;height:auto" loading="lazy">
   </div>
-  <div class="hint" style="margin-top:8px">Так выглядит карточка, которую бот прикладывает к каждому событию в лог-каналах. Своё фото-фон — данные рисуются поверх него; страницы-пины (pin.it) понимаются. Отключение карточек оставляет обычный текстовый эмбед.</div>
+  <div class="hint" style="margin-top:8px">Эмбед — обычная карточка Discord: можно копировать текст и перейти в канал. Фото — стеклянные письма на вашем фоне. Ниже — как выглядит фото-режим.</div>
 </div>
 
 <!-- Фильтры -->
@@ -264,7 +268,7 @@ else start();
   var box = document.getElementById('lcSetBox');
   if (!box) return;
   function lcGid() { return document.getElementById('guild-select').value; }
-  var on = document.getElementById('lcOn'),
+  var deliverySel = document.getElementById('lcDelivery'),
       themeSel = document.getElementById('lcTheme'),
       catSel = document.getElementById('lcCat'),
       accent = document.getElementById('lcAccent'),
@@ -344,7 +348,7 @@ else start();
             sel.value = v;
           });
         }
-        on.checked = !!d.cfg.enabled;
+        deliverySel.value = (d.cfg.delivery === 'photo') ? 'photo' : 'embed';
         themeSel.value = d.cfg.theme || 'hakumo';
         formSel.value = d.cfg.form || 'glass';
         if (d.cfg.accent) { accent.value = '#' + d.cfg.accent; accentDirty = true; }
@@ -359,7 +363,9 @@ else start();
     Array.prototype.forEach.call(byCatBox.querySelectorAll('select'), function (sel) {
       if (sel.value) tbc[sel.getAttribute('data-cat')] = sel.value;
     });
-    var body = { enabled: on.checked, theme: themeSel.value || 'hakumo',
+    var body = { enabled: true,
+                 delivery: deliverySel.value || 'embed',
+                 theme: themeSel.value || 'hakumo',
                  accent: accentDirty ? accent.value.replace('#', '') : '',
                  form: formSel.value || 'glass',
                  form_color: '',

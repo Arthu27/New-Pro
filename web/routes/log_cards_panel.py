@@ -81,8 +81,9 @@ def register(ctx):
                   session.get('username', '?'), gid, cfg)
         theme_lbl = LC.LOG_CARD_THEMES.get(cfg['theme'], {}).get('label', cfg['theme'])
         per_cat = len(cfg.get('theme_by_cat') or {})
+        how = 'фото со стеклом' if cfg.get('delivery') == 'photo' else 'эмбед Discord'
         return jsonify({'success': True, 'cfg': cfg,
-                        'message': f'Оформление сохранено: {theme_lbl}' +
+                        'message': f'Оформление сохранено: {how} · {theme_lbl}' +
                                    (' · свой акцент' if cfg['accent'] else '') +
                                    (' · свой фон-фото' if cfg.get('bg_url') else '') +
                                    (f' · образов по категориям: {per_cat}' if per_cat else '')})

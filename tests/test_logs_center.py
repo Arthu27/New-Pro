@@ -186,9 +186,13 @@ msg.attachments = [object(), object()]
 run(cog.on_message_delete(msg))
 e = last_embed('-сообщения')
 check(e and 'Сообщение удалено' in desc_of(e) and 'удалённый текст' in desc_of(e)
-      and 'Вложений удалено' in desc_of(e) and 'Отправлено' in desc_of(e),
+      and 'Вложений' in desc_of(e) and 'Когда' in desc_of(e),
       'удаление: текст + вложения + дата')
 check(e.thumbnail and e.thumbnail.url, 'удаление: аватарка автора')
+_ids = [getattr(f, 'value', '') or '' for f in (e.fields or [])]
+check(any('<#' in v for v in _ids) and not any(
+    __import__('re').search(r'`\d{15,25}`', v) for v in _ids),
+      'удаление: канал кликабельный, без сырого ID')
 
 before = FakeMessage(1002, 'было это', author, guild.channels[108], guild)
 after = FakeMessage(1002, 'стало другое', author, guild.channels[108], guild)
