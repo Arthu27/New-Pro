@@ -1037,8 +1037,8 @@ class Moderation (commands .Cog ):
                 return False ,f'Не получилось: {_ex }'
         if action =='unwarn':
             # Снятие ПОСЛЕДНЕГО варна из панели (владелец 2026-09-05:
-            # «нельзя в панели снимать warn»). Право — ACL «warn»: кто
-            # умеет выдавать варн, тот умеет и снимать.
+            # «не вижу в панели снять warn»). Право — ОТДЕЛЬНОЕ:
+            # ACL «Снять варн» (ключ unwarn), как в /modpanel и /unwarn.
             try :
                 from services .staff_limits import check_action as _slc
                 _okw ,_deny =_slc (guild ,_actor ,'unwarn')

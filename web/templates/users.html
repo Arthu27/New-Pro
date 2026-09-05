@@ -644,6 +644,7 @@
 
   var PN_META = {
     warn:      { icon: 'fa-triangle-exclamation', kind: 'neg',    sub: 'запись в дело' },
+    unwarn:    { icon: 'fa-eraser',               kind: 'pos',    sub: 'снять последний варн' },
     timeout:   { icon: 'fa-clock',                kind: 'neg',    sub: 'Discord-таймаут' },
     mute_chat: { icon: 'fa-comment-slash',        kind: 'neg',    sub: 'только чат' },
     vmute:     { icon: 'fa-microphone-slash',     kind: 'neg',    sub: 'микрофон' },
@@ -991,8 +992,9 @@
     }).join('');
   }
 
-  var CASE_KIND = { ban: 'danger', unban: 'pos', kick: 'danger', warn: 'neg', timeout: 'neg',
-                    mute: 'neg', unmute: 'pos', vmute: 'neg', unvmute: 'pos', clear: 'neg' };
+  var CASE_KIND = { ban: 'danger', unban: 'pos', kick: 'danger', warn: 'neg', unwarn: 'pos',
+                    timeout: 'neg', mute: 'neg', unmute: 'pos', vmute: 'neg', unvmute: 'pos',
+                    clear: 'neg' };
   var CASE_DIR = { in: { lbl: 'Получил', tone: 'danger' }, out: { lbl: 'Выдал', tone: 'ok' } };
   function renderHistory(list) {
     setCount('mcCntHist', list.length);

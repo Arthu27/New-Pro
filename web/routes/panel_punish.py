@@ -26,6 +26,13 @@ from web.routes._common import (
 # (value, label, нужна_длительность, нужно_доказательство_если_тумблер)
 PANEL_ACTIONS = [
     ('warn', 'Варн', False, False),
+    # «Снять варн» — тот же единый путь apply_panel_action('unwarn'),
+    # что и у /modpanel. Раньше действия не было В ЭТОМ списке (в боте
+    # панель PANEL_ACTIONS из cogs/moderation.py — другая, с тем же
+    # именем) — поэтому на странице «Пользователи» снятия варна не было,
+    # а POST с unwarn отклонялся «Неизвестное действие» (владелец
+    # 2026-09-05: «не вижу в пользователях снять warn»).
+    ('unwarn', 'Снять варн', False, False),
     ('timeout', 'Мут (чат + войс)', True, True),
     ('mute_chat', 'Мут чата', True, True),
     ('vmute', 'Войс-мут', True, True),
@@ -174,8 +181,13 @@ def register(ctx):
                     role_ids = _member_role_ids(member)
                     scope = _SL.role_scoped_actions(gid, role_ids)
                     if scope is not None:
+                        # «Снять варн» — как в /modpanel: там его лимит-группа
+                        # «warn» (4-е поле MODPANEL_ACTIONS); роль с настроенным
+                        # лимитом варна видит и снятие. Ключ «unwarn» в
+                        # _PANEL_LIMIT_KEY — только для собственного счётчика.
                         actions = [a for a in actions_acl
-                                   if _PANEL_LIMIT_KEY.get(a[0]) in scope]
+                                   if _PANEL_LIMIT_KEY.get(a[0]) in scope
+                                   or (a[0] == 'unwarn' and 'warn' in scope)]
                     windows = _SL.get_windows(gid)
                     for a in actions:
                         key = _PANEL_LIMIT_KEY.get(a[0])

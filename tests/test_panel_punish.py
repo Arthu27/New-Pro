@@ -289,8 +289,8 @@ with client.session_transaction() as sess:
 
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
-check(r.status_code == 200 and d.get('success') and len(d.get('actions', [])) == 8,
-      'options: 8 действий + состояние настроек')
+check(r.status_code == 200 and d.get('success') and len(d.get('actions', [])) == 9,
+      'options: 9 действий (+ «Снять варн») + состояние настроек')
 check('proof_required' in d and 'ban_ready' in d and 'bot_online' in d,
       'options честно показывает proof/ban/bot')
 
@@ -299,6 +299,45 @@ r = client.post('/api/guild/777/punish', json={
     'reason': 'спам'})
 d = r.get_json()
 check(r.status_code == 200 and d.get('success'), f'punish: мут выдан ({str(d)[:80]})')
+
+# «Снять варн» через POST — владелец 2026-09-05: «не вижу в пользователях
+# снять warn». Действие должно и приходить в options, и выполняться.
+_wc2 = WC.warnings.__new__(WC.warnings)
+_store5 = {TID: [{'id': 5, 'reason': 'спам'}]}
+_wc2._get_warns = lambda gid, uid: _store5.setdefault(uid, [])
+_wc2._save_warns = lambda gid, uid, warns: _store5.__setitem__(uid, warns)
+
+
+async def _sync5(g, u, total):
+    pass
+
+
+_wc2._sync_warn_level_roles = _sync5
+wbot._w = _wc2
+import cogs.logs as _logs2  # noqa: E402
+_ens5 = _logs2.ensure_log_channel
+
+
+async def _no_ch5(g, n):
+    return None
+
+
+_logs2.ensure_log_channel = _no_ch5
+try:
+    r = client.post('/api/guild/777/punish', json={
+        'user_id': str(TID), 'action': 'unwarn', 'reason': 'ошибка модератора'})
+    d = r.get_json()
+    check(r.status_code == 200 and d.get('success') and
+          'Снято' in (d.get('message') or ''),
+          f'punish: «Снять варн» выполняется через POST ({str(d)[:90]})')
+    r = client.post('/api/guild/777/punish', json={
+        'user_id': str(TID), 'action': 'unwarn', 'reason': 'ещё раз'})
+    d = r.get_json()
+    check(r.status_code == 200 and not d.get('success') and
+          'нет предупреждений' in (d.get('error') or ''),
+          f'без варнов — честный отказ ({str(d)[:80]})')
+finally:
+    _logs2.ensure_log_channel = _ens5
 
 r = client.post('/api/guild/777/punish', json={
     'user_id': str(TID), 'action': 'explode'})
@@ -358,14 +397,15 @@ from services import permission_acl as PACL  # noqa: E402
 # По умолчанию (default-deny) связанному Discord-модератору не выдано НИЧЕГО.
 # Сначала разрешаем роли 555 ВСЕ действия, чтобы проверить полный набор,
 # затем точечно снимаем бан.
-ALL_ACTS = ['warn', 'timeout', 'mute', 'vmute', 'ban', 'purge']
+ALL_ACTS = ['warn', 'unwarn', 'timeout', 'mute', 'vmute', 'ban', 'purge']
+# unwarn — ОТДЕЛЬНОЕ право «Снять варн» (как в /modpanel и /unwarn)
 for _a in ALL_ACTS:
     PACL.set_action_rule(777, _a, ['555'])
 
 # статический вход без Discord-привязки — доверенный (owner панели): весь набор
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
-check(d.get('success') and len(d.get('actions', [])) == 8 and
+check(d.get('success') and len(d.get('actions', [])) == 9 and
       d.get('hidden_by_acl') == 0, 'статический вход: полный набор (доверенный)')
 
 # вход через Discord-аккаунт с ролью 555 — все действия разрешены
@@ -384,7 +424,7 @@ CHR.set_route(777, 'ban_appeal_channel', 301)
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 vals = [a.get('value') for a in d.get('actions', [])]
-check(d.get('success') and len(vals) == 8 and d.get('hidden_by_acl') == 0,
+check(d.get('success') and len(vals) == 9 and d.get('hidden_by_acl') == 0,
       f'роль 555 со всеми разрешениями видит полный набор ({len(vals)})')
 
 # сняли «бан» у роли 555 → бан и разбан скрываются (unban → ban-ACL)
@@ -392,7 +432,7 @@ PACL.set_action_rule(777, 'ban', [])
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 vals = [a.get('value') for a in d.get('actions', [])]
-check(d.get('success') and len(vals) == 6 and 'ban' not in vals and 'unban' not in vals,
+check(d.get('success') and len(vals) == 7 and 'ban' not in vals and 'unban' not in vals,
       f'без разрешения «Бан»: бан и разбан скрыты ({len(vals)} действий)')
 check(d.get('hidden_by_acl') == 2, 'hidden_by_acl честно говорит про два скрытых')
 
@@ -406,7 +446,7 @@ check(r.status_code == 403 and not r.get_json().get('success') and
 PACL.set_action_rule(777, 'ban', ['555'])
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
-check(len(d.get('actions', [])) == 8 and d.get('hidden_by_acl') == 0,
+check(len(d.get('actions', [])) == 9 and d.get('hidden_by_acl') == 0,
       'с разрешённой ролью: полный набор')
 # иерархия: модератор не банит сам себя — бан второго участника
 _other = '222000000000000222'
@@ -441,7 +481,7 @@ with client.session_transaction() as sess:
     sess['selected_guild'] = '777'
     sess['_role_checked'] = _t.time()
 r = client.get('/api/guild/777/punish/options')
-check(len((r.get_json() or {}).get('actions', [])) == 8,
+check(len((r.get_json() or {}).get('actions', [])) == 9,
       'owner панели: ACL его не режет')
 
 print('== 9. Шаблон «Пользователи»: форма без доказательств, новая разметка ==')
