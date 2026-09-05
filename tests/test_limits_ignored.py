@@ -2,8 +2,8 @@
 """Лимиты длительности + игнорируемые роли (владелец, 2026-09-05).
 
 1) «Модер дал 100000 минут мута» — теперь потолок действует ВСЕГДА:
-   по умолчанию 7 дней, настраивается в Щите сервера → Лимиты; работает
-   в боте (/modpanel, ПКМ) и в панели (карточка участника).
+   у всех 30 мин … 2 часа (Sabotash 2026-09-02), настраивается
+   в Щите сервера → Лимиты; работает в боте (/modpanel, ПКМ) и в панели.
 2) «Облачная» роль 1192970051821772890 НЕ учитывается никак: с правами
    на ней человек не становится модератором/админом; модератор с ней —
    обычный модератор. Список настраивается в панели (Доступ).
@@ -44,10 +44,10 @@ from services import staff_hierarchy as SH  # noqa: E402
 GID = 1484574976580391004
 CLOUD_ROLE = 1192970051821772890
 
-print('== 1. Потолок длительности: дефолт 7 дней ==')
+print('== 1. Потолок длительности: дефолт 2 часа у всех ==')
 cap = SL.effective_max_duration(GID, 'mute', [])
-check(cap == 7 * 86400,
-      f'без настройки потолок = 7 дней ({cap // 86400} дн)', f'→ {cap}')
+check(cap == 7200,
+      f'без настройки потолок = 2 часа ({cap} сек)', f'→ {cap}')
 check(SL.effective_max_duration(GID, 'warn', []) == 0,
       'у варнов потолка длительности нет (не мут)')
 
@@ -158,12 +158,26 @@ async def cap_test():
         guild, target, 'timeout', reason='тест', amount='100000',
         actor='Модер', duration_cap=None)
     check(not ok and 'дольше разрешённого' in text,
-          '100000 минут — отказ с потолком (7 дней)', f'→ {text[:90]}')
+          '100000 минут — отказ с потолком (2 часа у всех)', f'→ {text[:90]}')
     check(not target.added, 'роли не выданы')
     ok, text = await cog.apply_panel_action(
         guild, target, 'timeout', reason='тест', amount='3д',
         actor='Модер', duration_cap=None)
-    check(ok, '3 дня — в пределах потолка, мут выдан', f'→ {text[:80]}')
+    check(not ok and 'дольше разрешённого' in text,
+          '3 дня при потолке 2 часа — отказ', f'→ {text[:80]}')
+    ok, text = await cog.apply_panel_action(
+        guild, target, 'timeout', reason='тест', amount='15м',
+        actor='Модер', duration_cap=None)
+    check(not ok and 'короче' in text,
+          '15 минут — отказ (минимум 30 мин)', f'→ {text[:80]}')
+    ok, text = await cog.apply_panel_action(
+        guild, target, 'timeout', reason='тест', amount='2ч',
+        actor='Модер', duration_cap=None)
+    check(ok, '2 часа — в пределах потолка, мут выдан', f'→ {text[:80]}')
+    ok, text = await cog.apply_panel_action(
+        guild, target, 'timeout', reason='тест', amount='30м',
+        actor='Модер', duration_cap=None)
+    check(ok, '30 минут — минимум, мут выдан', f'→ {text[:80]}')
     check(7001 in target.added and 7002 in target.added,
           'выданы обе мут-роли')
     # потолок от панели (с ролями зрителя): админ-роли разрешили 28 дней

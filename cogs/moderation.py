@@ -385,7 +385,16 @@ class Moderation (commands .Cog ):
             return None 
         if not cid :
             return None 
-        return guild .get_channel (cid )
+        ch = guild .get_channel (cid )
+        if ch is None :
+            fn = getattr (guild ,'get_channel_or_thread',None )
+            if callable (fn ):
+                ch = fn (cid )
+        if ch is None :
+            getter = getattr (guild ,'get_thread',None )
+            if callable (getter ):
+                ch = getter (cid )
+        return ch
 
     async def _isolate_member (self ,guild ,user ,iso ):
         """Закрыть участнику ВСЕ каналы — включая канал апелляции.
@@ -402,7 +411,11 @@ class Moderation (commands .Cog ):
         deny =discord .PermissionOverwrite (view_channel =False ,send_messages =False ,
         connect =False ,speak =False )
         closed =0
-        for ch in guild .channels :
+        pool = list (guild .channels )
+        for th in getattr (guild ,'threads',None ) or []:
+            if th not in pool :
+                pool .append (th )
+        for ch in pool :
             try :
                 await ch .set_permissions (user ,overwrite =deny )
                 closed +=1
@@ -412,7 +425,11 @@ class Moderation (commands .Cog ):
 
     async def _unisolate_member (self ,guild ,user ):
         """Снять апелляцию: вернуть участнику обычный доступ ко всем каналам."""
-        for ch in guild .channels :
+        pool = list (guild .channels )
+        for th in getattr (guild ,'threads',None ) or []:
+            if th not in pool :
+                pool .append (th )
+        for ch in pool :
             try :
                 await ch .set_permissions (user ,overwrite =None )
             except Exception as _ex :
@@ -526,23 +543,20 @@ class Moderation (commands .Cog ):
                     embed =error_embed (_txt),
                     ephemeral =True )
                     return
-                # Потолок длительности мута (панель → Щит → Лимиты):
-                # просит дольше разрешённого — вежливый отказ, а не молчание
+                # Срок мута: 30 мин … 2 ч у всех (Sabotash 2026-09-02)
                 if action in ('timeout','mute_chat','vmute'):
                     try :
-                        from services .staff_limits import effective_max_duration as _sl_cap
+                        from services .staff_limits import (
+                            effective_max_duration as _sl_cap,
+                            mute_duration_error as _sl_derr)
                         _cap =_sl_cap (guild .id ,'mute',_sl_roles )
-                        if _cap :
-                            _minutes_req =parse_duration_minutes (amount ,5 )
-                            if _minutes_req *60 >_cap :
-                                await _respond (interaction ,
-                                embed =error_embed (
-                                f'Мут дольше разрешённого: тебе можно давать мут '
-                                f'только до {human_duration (max (1,_cap //60 ))}, а ты просишь '
-                                f'{human_duration (_minutes_req )}. '
-                                f'Потолок настраивается: панель → Щит сервера → Лимиты.'),
-                                ephemeral =True )
-                                return
+                        _minutes_req =parse_duration_minutes (amount ,30 )
+                        _derr =_sl_derr (_minutes_req *60 ,cap_sec =_cap )
+                        if _derr :
+                            await _respond (interaction ,
+                            embed =error_embed (_derr ),
+                            ephemeral =True )
+                            return
                     except Exception as _cex :
                         log .debug (f'[STAFF_LIMIT][dur] {_cex}')
         except Exception as _le :
@@ -648,7 +662,7 @@ class Moderation (commands .Cog ):
                         'Пока канал не выбран, «бан» из панели не работает.'),
                         ephemeral =True )
                         return 
-                    _closed =await self ._isolate_member (guild ,user ,_iso )
+                    _iso_ch ,_closed =await self ._isolate_member (guild ,user ,_iso )
                     _brole =self ._punish_role (guild ,'ban')
                     if _brole is not None :
                         # роль бана закрывает каналы; канал апелляции человек
@@ -659,7 +673,6 @@ class Moderation (commands .Cog ):
                               f"Апелляция — в ЛС боту (/апелляция), после подачи "
                               f"откроется канал {_iso .mention }")
                     else :
-                        _closed =await self ._isolate_member (guild ,user ,_iso )
                         msg =(f"🚫 закрыто каналов {_closed }. Апелляция — в ЛС "
                               f"боту (/апелляция): после подачи откроется "
                               f"{_iso .mention }")
@@ -684,8 +697,8 @@ class Moderation (commands .Cog ):
                     # «требует прав — а должен просто дать обе роли и всё»),
                     # поэтому роли — основной механизм, нативный — бонус
                     # поверх, если право вдруг есть (молча пропускаем сбой).
-                    minutes = parse_duration_minutes(amount, 5)
-                    minutes = max(1, min(minutes, 40320))  # потолок — 28 дней
+                    minutes = parse_duration_minutes(amount, 30)
+                    minutes = max(1, min(minutes, 40320))  # Discord — до 28 дней
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
@@ -733,7 +746,8 @@ class Moderation (commands .Cog ):
                             "Если нужно заглушить и чат, и голос сразу — выберите «Мут (чат + войс)»."),
                             ephemeral=True)
                         return
-                    minutes = parse_duration_minutes(amount, 5)
+                    minutes = parse_duration_minutes(amount, 30)
+                    minutes = max(1, min(minutes, 40320))
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
@@ -749,7 +763,8 @@ class Moderation (commands .Cog ):
                     # нативный таймаут/чат-мут, если он стоял, чтобы не было
                     # «двойного мута»: роль войс-мута глушит голос сама.
                     _vrole =self ._punish_role (guild ,'vmute')
-                    minutes =parse_duration_minutes (amount ,5 )
+                    minutes =parse_duration_minutes (amount ,30 )
+                    minutes =max (1 ,min (minutes ,40320 ))
                     if _vrole is not None :
                         # роль + сервер-мут микрофона: в голосовые зайти МОЖНО,
                         # микрофон закрыт (владелец 2026-09-05: «микрофон
@@ -987,6 +1002,7 @@ class Moderation (commands .Cog ):
         if guild is None :
             return False ,'Сервер не найден'
         _actor =PanelActor (actor )
+        target_str =str (getattr (target ,'id',target ))
         # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05: «модер наказывает модера
         # и куратора — беспредел»): персонал не наказывает персонал своего
         # уровня и выше; владелец бота/сервера/боты — вне юрисдикции.
@@ -1000,25 +1016,22 @@ class Moderation (commands .Cog ):
                 return False ,_hdeny
         except Exception as _hex :
             _log .debug ('[MODPANEL] hierarchy: %s',_hex )
-        # ПОТОЛОК ДЛИТЕЛЬНОСТИ МУТА — действует ВСЕГДА, по умолчанию 7 дней
-        # (жалоба владельца 2026-09-05: «модер дал 100000 минут»). Пути
-        # панели (apply_panel_action) не проходили лимитный блок бота.
+        # Срок мута: 30 мин … 2 ч у всех (Sabotash 2026-09-02).
         if action in ('timeout','mute_chat','vmute') and amount :
             try :
+                from services .staff_limits import mute_duration_error as _pderr
                 _pc =duration_cap
                 if _pc is None :
                     from services .staff_limits import effective_max_duration as _pcap
                     _pc =_pcap (guild .id ,'mute')
-                _pm =parse_duration_minutes (amount ,5 )
-                if _pc and _pm *60 >_pc :
-                    return False ,(f'Мут дольше разрешённого: потолок — '
-                                   f'{human_duration (max (1,_pc //60 ))}, '
-                                   f'а запрошено {human_duration (_pm )}. '
-                                   f'Потолок настраивается: панель → Щит '
-                                   f'сервера → Лимиты.')
+                # 0 = без ограничения (владелец / явный skip) — срок не режем
+                if _pc :
+                    _pm =parse_duration_minutes (amount ,30 )
+                    _derr =_pderr (_pm *60 ,cap_sec =_pc )
+                    if _derr :
+                        return False ,_derr
             except Exception as _pex :
                 _log .debug ('[MODPANEL] panel dur cap: %s',_pex )
-        target_str =str (getattr (target ,'id',target ))
         # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
         if action =='warn':
             try :
@@ -1294,7 +1307,7 @@ class _CtxMuteModal(discord.ui.Modal):
     """Окно мута из ПКМ: срок + причина."""
 
     duration = discord.ui.TextInput(
-        label='Срок (например 60м / 2ч / 1д)', default='60м', max_length=16)
+        label='Срок (30 мин … 2 ч)', default='60м', max_length=16)
     reason = discord.ui.TextInput(
         label='Причина', style=discord.TextStyle.paragraph,
         max_length=300, required=False)
@@ -1326,13 +1339,22 @@ class _CtxMuteModal(discord.ui.Modal):
                 return
         except Exception as _sx:
             log.debug(f'[ПКМ] staff_limits: {_sx}')
+        _dur_cap = None
+        try:
+            from services.staff_limits import effective_max_duration as _pcap
+            _roles = [r.id for r in (getattr(interaction.user, 'roles', None) or [])
+                      if getattr(r, 'id', None) != getattr(interaction.guild, 'id', None)]
+            _dur_cap = _pcap(interaction.guild.id, 'mute', _roles)
+        except Exception as _cx:
+            log.debug(f'[ПКМ] duration cap: {_cx}')
         ok, text = await self._cog.apply_panel_action(
             interaction.guild, self._member, self._action,
             reason=(str(self.reason.value or '').strip()
                     or 'Причина не указана'),
             amount=str(self.duration.value or '60м'),
             actor=getattr(interaction.user, 'display_name', None)
-            or str(interaction.user))
+            or str(interaction.user),
+            duration_cap=_dur_cap)
         # успех — в дневной счётчик модератора
         if ok:
             try:
@@ -1675,7 +1697,7 @@ class ModActionModal(discord.ui.Modal):
             if action == "clear":
                 _lbl, _ph, _d = "Сколько сообщений удалить?", "например: 25", "10"
             else:
-                _lbl, _ph, _d = "На сколько? (мин/час/дни)", "60, 1ч, 3ч, 1д…", "60"
+                _lbl, _ph, _d = "На сколько? (30 мин … 2 ч)", "30, 60, 2ч", "60"
             self.amount = discord.ui.TextInput(
                 label=_lbl, required=False, placeholder=_ph, default=_d,
             )
@@ -1764,7 +1786,7 @@ class ModHelpButton(discord.ui.Button):
             inline=False)
         embed.add_field(
             name='⏱ Срок',
-            value='«60» — минуты, «1ч», «3ч», «1д» — час/день. Просто число = минуты.',
+            value='Муты: от 30 минут до 2 часов. «30», «60», «2ч». Просто число = минуты.',
             inline=False)
         embed.add_field(
             name='🚫 Бан — это апелляция',

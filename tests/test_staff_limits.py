@@ -33,11 +33,11 @@ G, MOD, OTHER = 777001, 111, 222
 print('== 1. Дефолты: безопасные цифры включены (заказ владельца) ==')
 lim = SL.get_limits(G)
 # Защитные дефолты на опасные действия; 0 = «без лимита» для остального.
-check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 3
+check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 5
       and lim['clear'] == 10,
-      'из коробки: бан 1/день, мут/размут 3/день, очистка 10 сообщ./день')
-check(lim['warn'] == 1 and lim['kick'] == 0,
-      'варн 1/день у всех (владелец 2026-09-05); кик — 0 = не ограничено')
+      'из коробки: бан 1/день, мут 5, размут 3, очистка 10 сообщ./день')
+check(lim['warn'] == 3 and lim['kick'] == 0,
+      'варн 3/день у модеров (Sabotash 2026-09-02); кик — 0 = не ограничено')
 check('nuke' not in lim,
       'nuke из лимитов убран (владелец: «нету такого»)')
 # Дефолтный бан-лимит (1/день) срабатывает, пока владелец не поднял цифру.
@@ -83,7 +83,7 @@ check('баны 8/3' in st and 'чистка 480/100 сообщ.' in st,
 # варн теперь лимитирован «у всех» (владелец 2026-09-05) — показывается;
 # кик/нюк остались без лимитов — в статусе их нет
 check('варны' in st and 'кики' not in st and 'nuke' not in st,
-      'варны показываются (лимит 1/день у всех), кик/нюк — нет')
+      'варны показываются (лимит 3/день у модеров), кик/нюк — нет')
 
 print('== 7. Битые файлы не роняют сервис ==')
 import json
@@ -182,11 +182,36 @@ check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 3 and _lm_adm['ban'] == 5,
       f'бан по тирам: модер {_lm_mod["ban"]} / куратор {_lm_cur["ban"]} / админ {_lm_adm["ban"]}')
 check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 5 and _lm_adm['unmute'] == 5,
       'размут по тирам: модер 3 / куратор 5 / админ 5')
+check(_lm_mod['warn'] == 3 and _lm_cur['warn'] == 5 and _lm_adm['warn'] == 5,
+      'варны по тирам: модер 3 / куратор 5 / админ 5')
+check(_lm_mod['mute'] == 5 and _lm_cur['mute'] == 10 and _lm_adm['mute'] == 10,
+      'муты по тирам: модер 5 / куратор 10 / админ 10')
 check(_lm_own.get('ban', 0) == 0, 'владелец — без лимита на бан')
 # Пер-рольный оверрайд важнее тирового дефолта.
 SL.set_role_limits(GT, 1002, who='Куратор', ban=9)
 _lm_cur2, _ = SL.effective_limits(GT, [1002])
 check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (3)')
+
+# Потолок длительности мута: 2 часа у всех (Sabotash 2026-09-02).
+check(SL.effective_max_duration(GT, 'mute', [1001]) == 2 * 3600,
+      'модер: мут максимум 2 часа')
+check(SL.effective_max_duration(GT, 'mute', [1002]) == 2 * 3600,
+      'куратор: мут максимум 2 часа')
+check(SL.effective_max_duration(GT, 'mute', [1003]) == 2 * 3600,
+      'админ: мут максимум 2 часа')
+check(SL.effective_max_duration(GT, 'mute', [1004]) == 0,
+      'владелец тира — без потолка длительности')
+check(SL.effective_max_duration(GT, 'mute', []) == 2 * 3600,
+      'без стафф-роли — дефолт 2 часа')
+SL.set_role_durations(GT, 1001, who='t', role_name='Мод', mute=3 * 3600)
+check(SL.effective_max_duration(GT, 'mute', [1001]) == 3 * 3600,
+      'свой потолок роли (3 ч) перебивает тировые 2 часа')
+err_short = SL.mute_duration_error(15 * 60, cap_sec=2 * 3600)
+err_ok = SL.mute_duration_error(30 * 60, cap_sec=2 * 3600)
+err_long = SL.mute_duration_error(3 * 3600, cap_sec=2 * 3600)
+check(err_short and 'короче' in err_short, '15 мин — отказ (минимум 30)')
+check(err_ok is None, '30 мин при потолке 2 ч — можно')
+check(err_long and 'дольше' in err_long, '3 ч при потолке 2 ч — отказ')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

@@ -153,15 +153,15 @@ save_action_acl(777, {'mute': [555], 'unmute': [555], 'ban': [555],
 SL.set_role_limits(777, 555, mute=2, ban=1, unmute=1, clear=5)
 
 # ── 1. temp-mod/mute: 2 ок, 3-й → 429 ──────────────────────────────────────
-r1 = mod.post('/api/temp-mod/mute', json={'user_id': '300', 'duration': '10мин'})
-r2 = mod.post('/api/temp-mod/mute', json={'user_id': '300', 'duration': '10мин'})
-r3 = mod.post('/api/temp-mod/mute', json={'user_id': '300', 'duration': '10мин'})
+r1 = mod.post('/api/temp-mod/mute', json={'user_id': '300', 'duration': '1h'})
+r2 = mod.post('/api/temp-mod/mute', json={'user_id': '300', 'duration': '1h'})
+r3 = mod.post('/api/temp-mod/mute', json={'user_id': '300', 'duration': '1h'})
 check(r1.status_code == 200 and r2.status_code == 200, 'мут 1-2 из 2 → ок', f'{r1.status_code},{r2.status_code}')
 check(r3.status_code == 429 and 'Лимит' in r3.get_json().get('error', ''),
       'мут 3-й сверх лимита → 429 «Лимит исчерпан»', f'{r3.status_code} {r3.get_data(as_text=True)[:90]}')
 
 # владелец панели (доверенный вход) тем же эндпоинтом не ограничен
-ro = owner.post('/api/temp-mod/mute', json={'user_id': '300', 'duration': '10мин'})
+ro = owner.post('/api/temp-mod/mute', json={'user_id': '300', 'duration': '30мин'})
 check(ro.status_code == 200, 'доверенный вход (owner) не ограничен', str(ro.status_code))
 
 # потолок длительности: 6ч при капе 2ч

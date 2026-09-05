@@ -332,7 +332,7 @@
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-2,color-mix(in srgb, var(--text) 12%, transparent))">
       <span style="font-size:12.5px;font-weight:800"><i class="fas fa-stopwatch" style="color:var(--ac)"></i> Макс. длительность мута</span>
       <select id="gdDurMute" aria-label="Максимальная длительность мута" style="min-width:180px"></select>
-      <span class="dim" style="font-size:11px">Модератор попросит дольше — бот откажет и подскажет потолок. Роль может задать свой.</span>
+      <span class="dim" style="font-size:11px">По умолчанию у всех — от 30 минут до 2 часов. Модератор попросит короче или дольше — бот откажет. Роль может задать свой потолок.</span>
       <span class="hint" id="gdDurMsg" style="flex-basis:100%"></span>
     </div>
   </div>
@@ -948,8 +948,8 @@ gdLoad();
   function gid() { return String(GUILD_ID || '777'); }
   var DUR_OPTS = [
     [0, '— Без потолка —'],
-    [300, '5 минут'], [900, '15 минут'], [1800, '30 минут'],
-    [3600, '1 час'], [10800, '3 часа'], [21600, '6 часов'], [43200, '12 часов'],
+    [1800, '30 минут'], [3600, '1 час'], [7200, '2 часа'],
+    [10800, '3 часа'], [21600, '6 часов'], [43200, '12 часов'],
     [86400, '1 день'], [259200, '3 дня'], [604800, '7 дней'], [2419200, '28 дней']
   ];
   function durOptions(val) {

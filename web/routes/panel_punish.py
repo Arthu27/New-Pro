@@ -295,16 +295,12 @@ def register(ctx):
                 # потолок длительности мута (0/не задан — без ограничения)
                 if action in _DURATION_ACTIONS:
                     _cap = _SL.effective_max_duration(guild.id, 'mute', role_ids)
-                    if _cap:
-                        from cogs.moderation import parse_duration_minutes as _pd
-                        from cogs.moderation import human_duration as _hd
-                        _mins = _pd(duration, 5)
-                        if _mins * 60 > _cap:
-                            return jsonify({'success': False, 'error': (
-                                'Мут дольше разрешённого: потолок для вашей '
-                                f'роли — {_hd(max(1, _cap // 60))}, а вы просите '
-                                f'{_hd(_mins)}. Потолок настраивается: панель → '
-                                'Щит сервера → Лимиты.')}), 429
+                    from cogs.moderation import parse_duration_minutes as _pd
+                    from services.staff_limits import mute_duration_error as _mde
+                    _mins = _pd(duration, 30)
+                    _derr = _mde(_mins * 60, cap_sec=_cap)
+                    if _derr:
+                        return jsonify({'success': False, 'error': _derr}), 429
             except Exception as _slx:
                 _log.debug('punish quota gate: %s', _slx)
 
@@ -312,9 +308,12 @@ def register(ctx):
         _dur_cap = None
         if action in _DURATION_ACTIONS:
             try:
-                from services import staff_limits as _SLC
-                _rids_v = _member_role_ids(member_viewer) if member_viewer is not None else []
-                _dur_cap = _SLC.effective_max_duration(int(gid), 'mute', _rids_v)
+                if member_viewer is None or _limit_exempt(guild, member_viewer):
+                    _dur_cap = 0  # владелец — без потолка
+                else:
+                    from services import staff_limits as _SLC
+                    _rids_v = _member_role_ids(member_viewer)
+                    _dur_cap = _SLC.effective_max_duration(int(gid), 'mute', _rids_v)
             except Exception as _dcex:
                 _log.debug('punish duration cap: %s', _dcex)
         try:

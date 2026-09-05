@@ -184,9 +184,17 @@ def register(ctx):
         _lim_denied =_panel_limit_deny (bot ,guild.id if guild else int (session .get ('selected_guild')or MAIN_GUILD_ID ),_acl_m ,'mute')
         if _lim_denied :
             return jsonify ({'error':_lim_denied }),429
-        _mute_cap =_panel_mute_cap (bot ,guild.id if guild else 0 ,_acl_m)
-        if _mute_cap and sec >_mute_cap :
-            return jsonify ({'error':f'Мут дольше разрешённого вашей ролью (потолок {_mute_cap //60 } мин)'}),429
+        if _acl_m is not None :
+            _mute_cap =_panel_mute_cap (bot ,guild.id if guild else 0 ,_acl_m)
+            try :
+                from services .staff_limits import mute_duration_error as _mde
+                _derr =_mde (sec ,cap_sec =_mute_cap )
+                if _derr :
+                    return jsonify ({'error':_derr }),429
+            except Exception as _dex :
+                _log .debug ('api_temp_mod_mute duration: %s',_dex )
+                if _mute_cap and sec >_mute_cap :
+                    return jsonify ({'error':f'Мут дольше разрешённого вашей ролью (потолок {_mute_cap //60 } мин)'}),429
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
             # Resolve user

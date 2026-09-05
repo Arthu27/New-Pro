@@ -71,12 +71,12 @@ with open('data/role_map.json', 'w') as f:
 
 from services import staff_limits as SL  # noqa: E402
 
-print('== 1. Новые единые лимиты «у всех» ==')
-for rid, label in ((MOD_ROLE, 'Модер'), (CUR_ROLE, 'Куратор'),
-                   (ADM_ROLE, 'Админ')):
+print('== 1. Лимиты по тирам (Sabotash 2026-09-02) ==')
+for rid, label, want in ((MOD_ROLE, 'Модер', 3), (CUR_ROLE, 'Куратор', 5),
+                         (ADM_ROLE, 'Админ', 5)):
     lim, _win = SL.effective_limits(GID, [rid])
-    check(lim['warn'] == 1 and lim['clear'] == 10,
-          f'{label}: варн 1/день, чистка 10 сообщений/день',
+    check(lim['warn'] == want and lim['clear'] == 10,
+          f'{label}: варн {want}/день, чистка 10 сообщений/день',
           f'→ warn={lim["warn"]} clear={lim["clear"]}')
 lim, _ = SL.effective_limits(GID, [OWN_ROLE])
 check(all(lim[k] == 0 for k in ('warn', 'mute', 'unmute', 'ban',
@@ -85,13 +85,14 @@ check(all(lim[k] == 0 for k in ('warn', 'mute', 'unmute', 'ban',
       '(владелец 2026-09-05: «у владельца без лимит надо сделать все»)',
       f'→ {lim}')
 
-print('== 2. Наберём расходку: 1 варн + 10 чисток (куратор) ==')
+print('== 2. Наберём расходку: 5 варнов + 10 чисток (куратор) ==')
 ok, _ = SL.check_action(_G(), _M(UID, CUR_ROLE), 'warn')
 assert ok
-SL.record_hit(GID, UID, 'warn', 1)
+for _i in range(5):
+    SL.record_hit(GID, UID, 'warn', 1)
 ok, deny = SL.check_action(_G(), _M(UID, CUR_ROLE), 'warn')
 check(not ok and 'Лимит исчерпан' in deny,
-      'второй варн в тот же день уже запрещён', f'→ {deny}')
+      'шестой варн куратора в тот же день уже запрещён', f'→ {deny}')
 for i in range(10):
     SL.record_hit(GID, UID, 'clear', 1)
 ok, deny = SL.check_action(_G(), _M(UID, CUR_ROLE), 'clear', 1)
@@ -126,7 +127,7 @@ class _G:
 
 import json
 out = {}
-# варн: метка прошлого процесса жива — второй варн запрещён
+# варн: метки прошлого процесса живы — 6-й варн куратора запрещён
 ok, deny = SL.check_action(_G(), _M(%d, %r), 'warn')
 out['warn_denied'] = (not ok)
 out['warn_txt'] = (deny or '')
@@ -154,15 +155,15 @@ except Exception as _ex:
     check(False, f'ответ перезапущенного процесса прочитан: {_ex}')
 
 check(out.get('warn_denied') is True,
-      'после рестарта второй варн по-прежнему запрещён (метка жива)',
+      'после рестарта 6-й варн куратора по-прежнему запрещён (метки живы)',
       f'→ {out}')
 check(out.get('clear_denied') is True,
       'после рестарта чистка сверх 10 по-прежнему запрещена')
 check(out.get('clear_used') == 10,
       f'в новом процессе видно все 10 потраченных чисток',
       f'→ {out.get("clear_used")}')
-check(out.get('warn_limit') == 1 and out.get('clear_limit') == 10,
-      'лимиты warn=1/clear=10 в новом процессе те же (конфиг с диска)')
+check(out.get('warn_limit') == 5 and out.get('clear_limit') == 10,
+      'лимиты warn=5/clear=10 (куратор) в новом процессе те же (конфиг с диска)')
 
 after = open(cnt_file, encoding='utf-8').read()
 check(json.loads(after) == json.loads(before),

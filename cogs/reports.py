@@ -705,14 +705,18 @@ class Reports(commands.Cog):
         applied = 'Применено.'
         try:
             if v['kind'] == 'mute' and member:
-                hours = v.get('hours') or 24
-                try:  # потолок длительности мута для этого модератора
+                hours = v.get('hours') or 2
+                try:
                     from services import staff_limits as _SL
                     _cap = _SL.effective_max_duration(
                         guild.id, 'mute',
-                        [r.id for r in getattr(interaction.user, 'roles', [])])
-                    if _cap and _cap > 0:
-                        hours = min(hours, max(1, int(_cap // 3600)))
+                        [r.id for r in getattr(interaction.user, 'roles', [])
+                         if getattr(r, 'id', None) != getattr(guild, 'id', None)])
+                    _sec = int(float(hours) * 3600)
+                    _derr = _SL.mute_duration_error(_sec, cap_sec=_cap)
+                    if _derr:
+                        return await interaction.response.send_message(
+                            _derr, ephemeral=True)
                 except Exception as _ex:
                     _log.debug('вердикт mute cap: %s', _ex)
                 until = datetime.now(timezone.utc) + timedelta(
