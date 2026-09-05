@@ -54,8 +54,9 @@ def _guild_roles(gid, bot, guild):
             for r in guild.roles
         ]
         roles.sort(key=lambda x: x['position'], reverse=True)
-    else:
-        # демо-превью без бота: роли из демо-набора (тот же источник, что
+
+    if not roles:
+        # Демо-превью без бота: роли из демо-набора (тот же источник, что
         # /api/role-map) — страница «Права команд» живая в превью.
         import web.app as _app
         if _app._demo_mode():
@@ -71,6 +72,28 @@ def _guild_roles(gid, bot, guild):
                 roles.sort(key=lambda x: x['position'])
             except Exception as _ex:
                 _log.debug("роли: демо-набор недоступен: %s", _ex)
+        elif gid:
+            # Боевой режим без живого бота В ЭТОМ процессе (панель отдельным
+            # процессом или бот перезапускается): роли — из дискового снимка
+            # бота (data/bot_roles_<gid>.json, services.bot_bridge). Раньше
+            # здесь был тупик: ролей 0 навсегда — «роли не загружаются» на
+            # «Правах команд», настраивать доступ было нечем (жалоба
+            # владельца 2026-09-05). Тот же источник, что /api/guild/<id>/roles.
+            try:
+                from services import bot_bridge as _bb
+                for r in (_bb.read_roles(gid) or []):
+                    rid = str(r.get('id') or '')
+                    if not rid:
+                        continue
+                    roles.append({
+                        'id': rid, 'name': str(r.get('name') or ''),
+                        'color': str(r.get('color') or ''),
+                        'position': int(r.get('position') or 0),
+                        'hoist': False, 'permissions': 0, 'members': 0,
+                    })
+                roles.sort(key=lambda x: x['position'], reverse=True)
+            except Exception as _ex:
+                _log.debug("роли: снимок моста недоступен: %s", _ex)
 
     with _perm_cache_lock:
         _roles_cache[gid] = (now, list(roles))

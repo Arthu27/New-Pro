@@ -235,12 +235,16 @@ function renderLayout(){
     var open = !!openGroups[g.key];
     var itemsHtml = items.map(function(it){
       var hid = !!LAY.hidden[it.path];
+      var prot = PROTECTED_PATHS.indexOf(it.path) !== -1;
+      var eye = prot
+        ? '<span class="pm-ico-btn" style="opacity:.4;cursor:not-allowed" title="Эту страницу скрыть нельзя — пульт управления «Доступом»"><i class="fas fa-lock"></i></span>'
+        : '<button type="button" class="pm-ico-btn'+(hid?' pm-off':'')+'" title="'+(hid?'Показать':'Скрыть')+'" aria-label="'+(hid?'Показать страницу':'Скрыть страницу')+'" onclick="layoutHide(\''+it.path+'\')"><i class="fas '+(hid?'fa-eye-slash':'fa-eye')+'"></i></button>';
       return '<div class="pm-item'+(hid?' pm-hidden':'')+'">'
         + '<button type="button" class="pm-ico-btn" title="Выше" aria-label="Поднять выше" onclick="layoutMove(\''+g.key+'\',\''+it.path+'\',-1)"><i class="fas fa-arrow-up"></i></button>'
         + '<button type="button" class="pm-ico-btn" title="Ниже" aria-label="Опустить ниже" onclick="layoutMove(\''+g.key+'\',\''+it.path+'\',1)"><i class="fas fa-arrow-down"></i></button>'
         + '<span class="pname"><i class="fas '+it.icon+'"></i>'+it.label+'</span>'
         + '<span class="ppath">'+it.path+'</span>'
-        + '<button type="button" class="pm-ico-btn'+(hid?' pm-off':'')+'" title="'+(hid?'Показать':'Скрыть')+'" aria-label="'+(hid?'Показать страницу':'Скрыть страницу')+'" onclick="layoutHide(\''+it.path+'\')"><i class="fas '+(hid?'fa-eye-slash':'fa-eye')+'"></i></button>'
+        + eye
         + '</div>';
     }).join('');
     html += '<div class="pm-group '+(open?'open':'')+(catHidden?' pm-cathidden':'')+'" id="pmg-'+g.key+'">'
@@ -268,8 +272,13 @@ function layoutMove(gkey, path, dir){
   render();
 }
 
+/* Страницы, скрыть которые нельзя: это пульт управления самим меню и
+   правами («Доступ»). Иначе одним глазиком владелец отрезал бы себе
+   управление ролями/командами и не мог вернуть всё обратно. */
+var PROTECTED_PATHS = ['/panel-menu', '/panel-access', '/role-permissions'];
+
 function layoutHide(path){
-  if(path === '/panel-menu'){ toast('Эту страницу скрыть нельзя', false); return; }
+  if(PROTECTED_PATHS.indexOf(path) !== -1){ toast('Эту страницу скрыть нельзя', false); return; }
   if(LAY.hidden[path]) delete LAY.hidden[path]; else LAY.hidden[path] = true;
   render();
 }
@@ -279,9 +288,9 @@ function layoutHideGroup(gkey){
   var g = MENU.find(function(x){ return x.key === gkey; });
   if(!g) return;
   var pages = layoutOrdered(g);
-  var allHidden = pages.length > 0 && pages.every(function(it){ return LAY.hidden[it.path] || it.path === '/panel-menu'; });
+  var allHidden = pages.length > 0 && pages.every(function(it){ return LAY.hidden[it.path] || PROTECTED_PATHS.indexOf(it.path) !== -1; });
   pages.forEach(function(it){
-    if(it.path === '/panel-menu') return;      // эту страницу прятать нельзя
+    if(PROTECTED_PATHS.indexOf(it.path) !== -1) return;   // «Доступ» не прячем
     if(allHidden) delete LAY.hidden[it.path];  // всё скрыто → показываем
     else LAY.hidden[it.path] = true;           // иначе прячем всё разом
   });

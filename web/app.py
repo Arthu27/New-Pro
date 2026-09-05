@@ -4021,6 +4021,27 @@ def _role_map_guild_roles():
                 })
         except Exception as _ex:
             _log.debug("api_get_role_map(): демо: %s", _ex)
+    elif MAIN_GUILD_ID:
+        # Боевой режим без живого бота в этом процессе (панель отдельно /
+        # бот перезапускается): роли — из дискового снимка бота
+        # (services.bot_bridge). Пустой список навсегда = «роли не
+        # загружаются» на «Панелях и ролях» (жалоба владельца 2026-09-05).
+        try:
+            from services import bot_bridge as _bb
+            for r in (_bb.read_roles(MAIN_GUILD_ID) or []):
+                rid = str(r.get('id') or '')
+                if not rid:
+                    continue
+                guild_roles.append({
+                    'id': rid,
+                    'name': str(r.get('name') or ''),
+                    'color': str(r.get('color') or ''),
+                    'position': int(r.get('position') or 0),
+                    'members': 0,          # снимок не считает участников
+                })
+            guild_roles.sort(key=lambda x: x['position'], reverse=True)
+        except Exception as _ex:
+            _log.debug("api_get_role_map(): снимок моста: %s", _ex)
     with _ROLE_MAP_LOCK:
         _ROLE_MAP_ROLES['ts'] = now
         _ROLE_MAP_ROLES['roles'] = list(guild_roles)
