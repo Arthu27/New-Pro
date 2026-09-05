@@ -77,19 +77,50 @@ check(pal['gold'] == (255, 136, 0) and pal['bright'] != pal['gold'],
       'акцент заменяет золотую гамму (основную и светлую)')
 
 print('== 2. Настройки cfg ==')
+_CFG_SKIP = ('theme_by_cat', 'bg_url', 'bg_url_by_cat', 'form', 'form_color')
 cfg = LC.get_log_cards_cfg('424242')
-check({k: v for k, v in cfg.items() if k not in ('theme_by_cat', 'bg_url', 'bg_url_by_cat')} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
-      and cfg['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT and cfg['bg_url'] == '',
-      'нет файла → дефолт (+образы по категориям, фон пустой)')
+check({k: v for k, v in cfg.items() if k not in _CFG_SKIP} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+      and cfg['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT and cfg['bg_url'] == ''
+      and cfg['form'] == 'glass' and cfg['form_color'] == '',
+      'нет файла → дефолт (+образы по категориям, фон пустой, форма стекло)')
 saved = LC.save_log_cards_cfg('424242', {'enabled': False, 'theme': 'ocean', 'accent': '#22d3ee'})
-check({k: v for k, v in saved.items() if k not in ('theme_by_cat', 'bg_url', 'bg_url_by_cat')} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'}
+check({k: v for k, v in saved.items() if k not in _CFG_SKIP} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'}
       and saved['bg_url'] == '', 'сохранение нормализует (accent без #)')
 check(LC.get_log_cards_cfg('424242') == saved, 'читается обратно один в один')
 saved2 = LC.save_log_cards_cfg('424242', {'enabled': 'yes', 'theme': 'bad', 'accent': 'bad'})
-check({k: v for k, v in saved2.items() if k not in ('theme_by_cat', 'bg_url', 'bg_url_by_cat')} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+check({k: v for k, v in saved2.items() if k not in _CFG_SKIP} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
       and saved2['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT,
       'мусор в POST не пролезает: enabled bool, тема/акцент по реестру')
 os.remove(LC.log_cards_cfg_path('424242'))
+
+print('== 2в. Форма и цвет плашек ==')
+check(set(LC.CARD_FORMS) == {'glass', 'rounded', 'pill', 'sharp'},
+      'четыре формы плашек')
+check(LC._valid_form('nope') == 'glass' and LC._valid_form('PILL') == 'pill',
+      'мусорная форма → стекло, регистр не мешает')
+pill = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', form='pill',
+                          form_color='112233')
+glass = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', form='glass')
+check(pill and glass and pill != glass, 'форма и цвет меняют карточку')
+from PIL import Image as _Im
+_bg = __import__('io').BytesIO()
+_Im.new('RGB', (960, 540), (220, 160, 70)).save(_bg, 'JPEG')
+on_photo = LC.render_log_card('mod', 'Выдано предупреждение', rows,
+                              cat_name='модерация', bg_bytes=_bg.getvalue(),
+                              form='glass', form_color='0c101c')
+check(on_photo and on_photo[:2] == b'\xff\xd8' and len(on_photo) > 20000,
+      'плашки рисуются поверх фото-фона без падения')
+saved_f = LC.save_log_cards_cfg('424244', {'form': 'pill', 'form_color': '#aabbcc'})
+check(saved_f['form'] == 'pill' and saved_f['form_color'] == 'aabbcc',
+      'форма и цвет сохраняются')
+LC.save_log_cards_cfg('424244', {'theme': 'ocean'})
+check(LC.get_log_cards_cfg('424244')['form'] == 'pill'
+      and LC.get_log_cards_cfg('424244')['form_color'] == 'aabbcc',
+      'смена темы не сносит форму и цвет')
+junk_f = LC.save_log_cards_cfg('424244', {'form': 'blob', 'form_color': 'zz'})
+check(junk_f['form'] == 'glass' and junk_f['form_color'] == '',
+      'мусорная форма/цвет → дефолт')
+os.remove(LC.log_cards_cfg_path('424244'))
 
 print('== 2б. Фон по категории (merge-on-save) ==')
 LC.save_log_cards_cfg('424243', {'enabled': True, 'theme': 'ocean',
@@ -124,6 +155,8 @@ check('get_log_cards_cfg' in flat and '_cfg.get(\'enabled\',True)' in flat.repla
 check("theme=_theme" in flat and "accent=_cfg.get('accent')" in flat
       and "theme_by_cat" in flat,
       'тема (с образом категории) и акцент проброшены из cfg в render')
+check("form=_cfg.get('form')" in flat and "form_color=_cfg.get('form_color')" in flat,
+      'форма и цвет плашек проброшены из cfg в render')
 check('bg_url_for_cat' in logs_src,
       '_safe_send берёт фон категории, а не только общий bg_url')
 check("ifnot_cfg.get('enabled',True)" in flat.replace('"', "'")
@@ -184,7 +217,7 @@ print('== 5. Шаблон ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'message_logs.html'),
            encoding='utf-8').read()
 for fid in ('lcSetBox', 'lcOn', 'lcTheme', 'lcCat', 'lcAccent', 'lcSave',
-            'lcPreview', 'lcMsg'):
+            'lcPreview', 'lcMsg', 'lcForm', 'lcFormColor'):
     check(f'id="{fid}"' in tpl, f'контрол {fid} на месте')
 check('/log-cards/settings\' + ' in tpl or 'log-cards/settings' in tpl,
       'API настроек подключён в шаблоне')

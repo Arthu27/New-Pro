@@ -394,6 +394,7 @@ async def _safe_send (ch ,**kw ):
                     color =_m ['color'],cat_name =_cat_meta (_m ['cat'])[2 ],
                     guild_name =_m ['guild'],theme =_theme,
                     accent =_cfg .get ('accent'),bg_bytes =_bg,
+                    form =_cfg .get ('form'),form_color =_cfg .get ('form_color'),
                     time_str =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime ('%H:%M UTC'))
                 if _png :
                     kw ['file']=discord .File (_io .BytesIO (_png ),filename ='hakumo_log_card.jpg')

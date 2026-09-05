@@ -113,6 +113,16 @@ DEFAULT_THEME_BY_CAT = {
 LOG_CARD_THEME_ORDER = tuple(LOG_CARD_THEMES)
 DEFAULT_LOG_THEME = 'hakumo'
 
+# Форма плашек поверх фото: стекло читается на любом фоне.
+CARD_FORMS = {
+    'glass': 'Стекло',
+    'rounded': 'Мягкая',
+    'pill': 'Пилюля',
+    'sharp': 'Прямая',
+}
+DEFAULT_FORM = 'glass'
+DEFAULT_FORM_RGB = (12, 16, 28)
+
 
 def _clamp(v):
     return max(0, min(255, int(v)))
@@ -206,12 +216,17 @@ def bg_url_for_cat(cfg, cat):
     return str(by.get(cat) or cfg.get('bg_url') or '')
 
 
+def _valid_form(raw):
+    s = str(raw or '').strip().lower()
+    return s if s in CARD_FORMS else DEFAULT_FORM
+
+
 def get_log_cards_cfg(gid):
     """{'enabled': bool, 'theme': str, 'accent': '', 'bg_url': '',
-    'theme_by_cat': {}, 'bg_url_by_cat': {}} — с валидацией мусора."""
+    'theme_by_cat': {}, 'bg_url_by_cat': {}, 'form': str, 'form_color': ''}."""
     cfg = {'enabled': True, 'theme': DEFAULT_LOG_THEME, 'accent': '',
            'bg_url': '', 'theme_by_cat': dict(DEFAULT_THEME_BY_CAT),
-           'bg_url_by_cat': {}}
+           'bg_url_by_cat': {}, 'form': DEFAULT_FORM, 'form_color': ''}
     try:
         path = log_cards_cfg_path(gid)
         if os.path.exists(path):
@@ -231,6 +246,11 @@ def get_log_cards_cfg(gid):
                     cfg['theme_by_cat'] = _valid_theme_by_cat(raw.get('theme_by_cat'))
                 cfg['bg_url'] = _valid_bg_url(raw.get('bg_url'))
                 cfg['bg_url_by_cat'] = _valid_bg_url_by_cat(raw.get('bg_url_by_cat'))
+                if 'form' in raw:
+                    cfg['form'] = _valid_form(raw.get('form'))
+                acc_f = str(raw.get('form_color') or '').strip().lstrip('#')
+                if not acc_f or _ui_color(acc_f):
+                    cfg['form_color'] = acc_f
     except Exception as _ex:
         _log.debug('get_log_cards_cfg(): %s', _ex)
     return cfg
@@ -262,6 +282,8 @@ def save_log_cards_cfg(gid, data):
     _bg = data.get('bg_url') if 'bg_url' in data else prev.get('bg_url')
     _by = (data.get('bg_url_by_cat') if 'bg_url_by_cat' in data
            else prev.get('bg_url_by_cat'))
+    _form = data.get('form') if 'form' in data else prev.get('form')
+    _fc = data.get('form_color') if 'form_color' in data else prev.get('form_color')
     cfg = {
         'enabled': bool(data.get('enabled', True if 'enabled' not in prev
                                  else prev.get('enabled', True))),
@@ -270,6 +292,8 @@ def save_log_cards_cfg(gid, data):
         'bg_url': _valid_bg_url(_bg),
         'theme_by_cat': _valid_theme_by_cat(_theme_src),
         'bg_url_by_cat': _valid_bg_url_by_cat(_by),
+        'form': _valid_form(_form),
+        'form_color': '',
     }
     theme = str(data.get('theme') or prev.get('theme') or '').strip().lower()
     if theme in LOG_CARD_THEMES:
@@ -278,6 +302,9 @@ def save_log_cards_cfg(gid, data):
     acc = acc.strip().lstrip('#')
     if _ui_color(acc):
         cfg['accent'] = acc
+    fc = str(_fc or '').strip().lstrip('#')
+    if _ui_color(fc):
+        cfg['form_color'] = fc
     try:
         os.makedirs(os.path.dirname(log_cards_cfg_path(gid)), exist_ok=True)
         import json as _json
@@ -597,25 +624,74 @@ def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
 
 
 def _photo_bg(w, h, data):
-    """Фото-фон: cover-масштаб до карточки, лёгкий блюр + затемнение —
-    данные поверх остаются читаемыми (владелец: «данные в фото внутри,
-    фото как задний фон»)."""
+    """Фото как фон: cover-масштаб, почти без затемнения —
+    читаемость на плашках, не на мытье всего кадра."""
     ph = Image.open(io.BytesIO(data)).convert('RGB')
     scale = max(w / ph.width, h / ph.height)
     nw = max(w, int(ph.width * scale + 0.5))
     nh = max(h, int(ph.height * scale + 0.5))
     ph = ph.resize((nw, nh), Image.LANCZOS)
     left, top = (nw - w) // 2, (nh - h) // 2
-    ph = ph.crop((left, top, left + w, top + h))
-    ph = ph.filter(ImageFilter.GaussianBlur(1.6)).convert('RGBA')
-    dark = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-    dd = ImageDraw.Draw(dark)
-    dd.rectangle([0, 0, w, h], fill=(6, 10, 20, 132))
-    for yy in range(h):
-        t = yy / max(1, h - 1)
-        dd.line([(0, yy), (w, yy)], fill=(6, 10, 20, int(40 + 140 * t)))
-    ph.alpha_composite(dark)
-    return ph.convert('RGB')
+    ph = ph.crop((left, top, left + w, top + h)).convert('RGBA')
+    vig = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    vd = ImageDraw.Draw(vig)
+    vd.rectangle([0, 0, w, h], fill=(6, 8, 14, 28))
+    band = max(24, h // 16)
+    for i in range(band):
+        a = int(64 * (1 - i / band))
+        vd.line([(0, i), (w, i)], fill=(0, 0, 0, a))
+        vd.line([(0, h - 1 - i), (w, h - 1 - i)], fill=(0, 0, 0, a))
+    ph.alpha_composite(vig)
+    return ph
+
+
+def _form_fill(raw):
+    return _ui_color(raw) or DEFAULT_FORM_RGB
+
+
+def _ink_on(rgb):
+    y = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+    if y < 155:
+        return (250, 252, 255), (168, 178, 196)
+    return (18, 22, 30), (78, 86, 98)
+
+
+def _form_radius(form, h):
+    if form == 'pill':
+        return max(10, int(h // 2))
+    if form == 'sharp':
+        return 5
+    if form == 'rounded':
+        return 16
+    return 24
+
+
+def _form_alpha(form):
+    return {'glass': 168, 'rounded': 182, 'pill': 192, 'sharp': 208}.get(form, 168)
+
+
+def _frost_plate(img, box, radius, fill_rgb, alpha, outline=None):
+    """Матовое стекло: блюр куска фона + цвет формы. Читается на любом фото."""
+    x0, y0, x1, y1 = int(box[0]), int(box[1]), int(box[2]), int(box[3])
+    x0 = max(0, min(x0, img.width - 2))
+    y0 = max(0, min(y0, img.height - 2))
+    x1 = max(x0 + 4, min(x1, img.width))
+    y1 = max(y0 + 4, min(y1, img.height))
+    w, h = x1 - x0, y1 - y0
+    crop = img.crop((x0, y0, x1, y1)).convert('RGBA')
+    plate = Image.alpha_composite(
+        crop.filter(ImageFilter.GaussianBlur(12)),
+        Image.new('RGBA', (w, h), fill_rgb + (int(alpha),)),
+    )
+    rad = max(2, min(int(radius), w // 2, h // 2))
+    mask = Image.new('L', (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (0, 0, w - 1, h - 1), radius=rad, fill=255)
+    img.paste(plate, (x0, y0), mask)
+    d = ImageDraw.Draw(img)
+    if outline:
+        d.rounded_rectangle((x0, y0, x1 - 1, y1 - 1), radius=rad,
+                            outline=outline, width=1)
 
 
 def _og_image_from_html(html, base=''):
@@ -719,165 +795,135 @@ def get_bg_bytes_sync(url, ttl=300):
 
 def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
                     guild_name='', time_str='', theme=None, accent=None,
-                    fmt='jpeg', bg_bytes=None):
-    """Нарисовать премиальную карточку лога в единой стилистике HAKUMO.
+                    fmt='jpeg', bg_bytes=None, form=None, form_color=None):
+    """Нарисовать карточку лога: фото на весь кадр, поверх — стеклянные
+    плашки сообщений (форма и цвет задаются из панели).
 
-    theme — одна из LOG_CARD_THEMES ('hakumo' — исторический фирменный вид,
-    ровно как было); accent ('#rrggbb'/int) заменяет золотую гамму своим
-    цветом. Оба параметра пробрасывает бот из настроек панели
-    (data/log_cards_<gid>.json, get_log_cards_cfg). bg_bytes — своё фото
-    задним фоном (bg_url из того же конфига; качает cogs/logs.py).
+    theme / accent — палитра темы; form — glass|rounded|pill|sharp;
+    form_color — hex заливки плашек (пусто = тёмное стекло).
+    bg_bytes — своё фото задним фоном (bg_url; качает cogs/logs.py).
     """
     if not LOG_CARD_OK:
         return None
     try:
         W = 1440
-        PAD = 52
+        PAD = 48
         pal = _palette(theme, accent)
-        gold, bright, soft = pal['gold'], pal['bright'], pal['soft']
-        cell_border = gold + (65,)
+        gold, bright, _soft = pal['gold'], pal['bright'], pal['soft']
         cat_key = str(category or 'guild').lower().strip()
         cstyle = CATEGORY_STYLES.get(cat_key, CATEGORY_STYLES.get('guild'))
+        form = _valid_form(form)
+        fill_rgb = _form_fill(form_color)
+        ink, ink_dim = _ink_on(fill_rgb)
+        alpha = _form_alpha(form)
+        has_photo = bool(bg_bytes)
 
         clean_rows = [(n, v) for n, v in (rows or []) if v not in (None, '')][:7]
         # «Ссылка»/«Перейти» на картинке не имеет смысла — ссылку не кликнуть
         clean_rows = [(n, v) for n, v in clean_rows
                       if _clean(n).strip().lower() not in ('ссылка', 'link')]
-        header_h = 248
-        row_h = 72
-        footer_h = 82
-        H = header_h + max(1, len(clean_rows)) * row_h + footer_h
+        header_inner = 126
+        header_top = 36
+        row_h = 70
+        footer_h = 72
+        gap = 12
+        H = header_top + header_inner + gap + max(1, len(clean_rows)) * row_h + footer_h
 
-        # 1. Полноценная фоновая звёздная иллюстрация с неоновым свечением
         cat_glow = cstyle['glow_color']
-        # Фирменный PNG-фон золотой: берём его только для родной темы
-        # без своего акцента — иначе строим градиент палитры темы.
         use_asset = (str(theme or DEFAULT_LOG_THEME).strip().lower() == DEFAULT_LOG_THEME
                      and not _ui_color(accent))
         if bg_bytes:
             try:
-                img = _photo_bg(W, H, bg_bytes)   # своё фото задним фоном
+                img = _photo_bg(W, H, bg_bytes)
             except Exception as _ex:
                 _log.debug('лог-карточка: свой фон не открылся: %s', _ex)
                 img = _load_celestial_bg(W, H, cat_tint=cat_glow, pal=pal,
                                          use_asset=use_asset)
+                has_photo = False
         else:
             img = _load_celestial_bg(W, H, cat_tint=cat_glow, pal=pal,
                                      use_asset=use_asset)
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        if not has_photo:
+            img = _draw_stardust(img, W, H, pal)
+
+        hx0, hy0 = PAD, header_top
+        hx1, hy1 = W - PAD, header_top + header_inner
+        head_r = _form_radius(form, header_inner)
+        outline = gold + (90,)
+        _frost_plate(img, (hx0, hy0, hx1, hy1), head_r, fill_rgb, alpha, outline)
         d = ImageDraw.Draw(img)
 
-        # 4. Двойная рамка по контуру карточки
-        d.rectangle((10, 10, W - 10, H - 10), outline=gold + (90,), width=2)
-        d.rectangle((16, 16, W - 16, H - 16), outline=soft + (40,), width=1)
-
-        # Левая неоновая полоса
-        d.rectangle((0, 0, 10, H), fill=gold + (255,))
-        d.rectangle((10, 0, 14, H), fill=bright + (140,))
-
-        # 5. Время (в правом верхнем углу шапки)
         time_clean = _clean(time_str)
-        t_font = _font(22, True)
-        time_w = d.textlength(time_clean, font=t_font) if time_clean else 0
-        right_limit = W - PAD
-
+        t_font = _font(20, True)
         if time_clean:
-            t_pad_w = time_w + 24
-            t_box_x = W - PAD - t_pad_w
-            d.rounded_rectangle((t_box_x, 48, W - PAD, 48 + 36), radius=10,
-                                fill=(20, 28, 48, 220), outline=gold + (100,), width=1)
-            d.text((t_box_x + 12, 54), time_clean, font=t_font, fill=bright)
-            right_limit = t_box_x - 18
+            tw = d.textlength(time_clean, font=t_font)
+            d.text((hx1 - 22 - tw, hy0 + 18), time_clean, font=t_font, fill=ink_dim)
 
-        # 6. Графический виджет категории в шапке (слева от плашки времени)
-        _draw_category_widget(d, cstyle['type'], W, H, PAD, right_limit, pal)
+        cat_badge = cstyle.get('tag') or f'HAKUMO · {str(cat_name or cat_key).upper()}'
+        badge_font = _font(20, True)
+        d.text((hx0 + 22, hy0 + 18),
+               _ellipsize(d, cat_badge, badge_font, W - PAD * 2 - 220),
+               font=badge_font, fill=bright)
 
-        # 7. Фирменная иконка категории
-        icon = _load_icon(cat_key, size=154)
-        tx = PAD
-        if icon is not None:
-            # Тень под иконкой
-            d.rounded_rectangle((PAD + 4, 46 + 4, PAD + 154 + 4, 46 + 154 + 4), radius=26,
-                                fill=(0, 0, 0, 110))
-            img.paste(icon, (PAD, 46), icon)
-            d.rounded_rectangle((PAD, 46, PAD + 154, 46 + 154), radius=26,
-                                outline=gold + (210,), width=3)
-            tx = PAD + 154 + 32
+        title_font = _font(40, True)
+        title_txt = _ellipsize(d, _clean(title), title_font, W - PAD * 2 - 48)
+        d.text((hx0 + 22, hy0 + 58), title_txt, font=title_font, fill=ink)
 
-        # 8. Бейдж категории в шапке (акцент + мягкий фон)
-        cat_badge = cstyle.get('tag') or f'✦ HAKUMO · {str(cat_name or cat_key).upper()}'
-        badge_font = _font(22, True)
-        bw = d.textlength(cat_badge, font=badge_font) + 28
-        bh = 38
-        d.rounded_rectangle((tx, 48, tx + bw, 48 + bh), radius=12,
-                            fill=(20, 28, 48, 220), outline=gold + (120,), width=1)
-        d.text((tx + 14, 55), cat_badge, font=badge_font, fill=bright)
-
-        # Заголовок события (крупный акцентный / белый)
-        title_font = _font(44, True)
-        title_txt = _ellipsize(d, _clean(title), title_font, W - tx - PAD - 20)
-        d.text((tx, 98), title_txt, font=title_font, fill=C_TEXT_WHITE)
-
-        # Разделитель шапки с градиентным акцентным штрихом
-        sep_y = header_h - 22
-        d.line([(PAD, sep_y), (W - PAD, sep_y)], fill=gold + (80,), width=1)
-        d.line([(PAD, sep_y), (PAD + 240, sep_y)], fill=bright + (230,), width=2)
-
-        # 9. Строки данных — полупрозрачные плашки в золотых рамках
-        y = header_h
+        y = hy1 + gap
         card_w = W - PAD * 2
-        name_col_w = 280
+        name_col_w = 268
+        plate_r = _form_radius(form, row_h - 8)
 
         for name, value in clean_rows:
             clean_n = _clean(name).upper()
             clean_v = _clean(value)
             is_reason = clean_n in ('ПРИЧИНА', 'REASON', 'ПРИЧИНА НАКАЗАНИЯ')
-
-            # Плашка строки
-            box_fill = (45, 22, 28, 220) if is_reason else (18, 26, 44, 210)
-            box_outline = (235, 75, 85, 160) if is_reason else cell_border
-
-            d.rounded_rectangle((PAD, y + 4, PAD + card_w, y + row_h - 8), radius=14,
-                                fill=box_fill, outline=box_outline, width=1)
-
-            # Левый акцентный штрих плашки (тема или рубин для причины)
-            bar_color = (255, 80, 90, 255) if is_reason else gold + (255,)
-            d.rounded_rectangle((PAD + 3, y + 10, PAD + 8, y + row_h - 14), radius=3,
-                                fill=bar_color)
-
-            # Название поля
-            n_font = _font(22, True)
-            d.text((PAD + 24, y + 20), _ellipsize(d, clean_n, n_font, name_col_w - 30),
-                   font=n_font, fill=bright if not is_reason else (255, 145, 155, 255))
-
-            # Разделитель
-            d.text((PAD + name_col_w, y + 18), '›', font=_font(26, True), fill=gold + (170,))
-
-            # Значение поля
-            v_font = _font(26, False) if not is_reason else _font(26, True)
-            val_x = PAD + name_col_w + 24
+            tint = _mix(fill_rgb, (160, 30, 40), 0.38) if is_reason else fill_rgb
+            ol = ((235, 75, 85, 150) if is_reason else outline)
+            _frost_plate(img, (PAD, y + 4, PAD + card_w, y + row_h - 6),
+                         plate_r, tint, min(230, alpha + (18 if is_reason else 0)), ol)
+            d = ImageDraw.Draw(img)
+            bar = (255, 80, 90, 255) if is_reason else gold + (255,)
+            d.rounded_rectangle((PAD + 10, y + 16, PAD + 16, y + row_h - 18),
+                                radius=3, fill=bar)
+            n_font = _font(20, True)
+            n_fill = (255, 145, 155) if is_reason else bright
+            d.text((PAD + 28, y + 20),
+                   _ellipsize(d, clean_n, n_font, name_col_w - 24),
+                   font=n_font, fill=n_fill)
+            d.text((PAD + name_col_w, y + 18), '›', font=_font(24, True),
+                   fill=gold + (170,))
+            v_font = _font(24, True) if is_reason else _font(24, False)
+            val_x = PAD + name_col_w + 22
             max_val_w = W - PAD - val_x - 20
             val_txt = _ellipsize(d, clean_v, v_font, max_val_w)
-            val_color = C_TEXT_WHITE if not is_reason else (255, 235, 235, 255)
-            d.text((val_x, y + 19), val_txt, font=v_font, fill=val_color)
-
+            val_color = (255, 235, 235) if is_reason else ink
+            d.text((val_x, y + 18), val_txt, font=v_font, fill=val_color)
             y += row_h
 
         if not clean_rows:
-            d.text((PAD + 24, y + 18), 'Нет дополнительных параметров', font=_font(26), fill=C_TEXT_DIM)
+            _frost_plate(img, (PAD, y + 4, PAD + card_w, y + row_h - 6),
+                         plate_r, fill_rgb, alpha, outline)
+            d = ImageDraw.Draw(img)
+            d.text((PAD + 24, y + 20), 'Нет дополнительных параметров',
+                   font=_font(24), fill=ink_dim)
 
-        # 10. Фирменный футер с акцентным разделителем
-        fy = H - footer_h + 16
-        d.line([(PAD, fy), (W - PAD, fy)], fill=gold + (80,), width=1)
-
+        fy = H - footer_h + 10
+        foot_r = _form_radius(form, 44)
+        _frost_plate(img, (PAD, fy, W - PAD, fy + 44), foot_r, fill_rgb,
+                     max(120, alpha - 20), outline)
+        d = ImageDraw.Draw(img)
         f_txt = f"HAKUMO LOG · {str(cat_name or cat_key).upper()}"
         if guild_name:
             f_txt += f" · {_clean(guild_name)}"
-        d.text((PAD, fy + 18), _ellipsize(d, f_txt, _font(22), W - PAD * 2 - 200),
-               font=_font(22), fill=C_TEXT_DIM)
-
-        brand = "✦ HAKUMO"
-        bw = d.textlength(brand, font=_font(24, True))
-        d.text((W - PAD - bw, fy + 16), brand, font=_font(24, True), fill=bright)
+        d.text((PAD + 20, fy + 10),
+               _ellipsize(d, f_txt, _font(20), W - PAD * 2 - 220),
+               font=_font(20), fill=ink_dim)
+        brand = "HAKUMO"
+        bw = d.textlength(brand, font=_font(20, True))
+        d.text((W - PAD - 20 - bw, fy + 10), brand, font=_font(20, True), fill=bright)
 
         buf = io.BytesIO()
         # JPEG вместо PNG: кодирование PNG жрало ~1.2 секунды НА КАЖДЫЙ лог

@@ -58,6 +58,7 @@ def register(ctx):
         return jsonify({'success': True, 'cfg': cfg,
                         'themes': [{'id': t, 'label': LC.LOG_CARD_THEMES[t]['label']}
                                    for t in LC.LOG_CARD_THEME_ORDER],
+                        'forms': [{'id': k, 'label': v} for k, v in LC.CARD_FORMS.items()],
                         'cats': [{'id': k, 'label': v.get('tag', '').split('· ')[-1].title()}
                                  for k, v in LC.CATEGORY_STYLES.items()]})
 
@@ -102,13 +103,18 @@ def register(ctx):
         # из theme_by_cat, если владелец задал, иначе общая тема.
         if not theme:
             theme = (cfg.get('theme_by_cat') or {}).get(cat) or cfg.get('theme')
+        form = request.args.get('form') or cfg.get('form')
+        form_color = request.args.get('form_color')
+        if not form_color:
+            form_color = cfg.get('form_color')
         rows = PREVIEW_BY_CAT.get(cat) or PREVIEW_ROWS
         try:
             png = LC.render_log_card(
                 cat, 'Пример: выдано предупреждение', rows,
                 color=0xE2455A, cat_name=cat,
                 guild_name='Hakumo Demo', time_str='20:41 UTC',
-                theme=theme, accent=accent, fmt='png', bg_bytes=bg_bytes)
+                theme=theme, accent=accent, fmt='png', bg_bytes=bg_bytes,
+                form=form, form_color=form_color)
         except Exception as _ex:
             _log.debug('log-cards preview: %s', _ex)
             png = None
