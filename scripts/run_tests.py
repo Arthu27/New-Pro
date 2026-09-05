@@ -16,7 +16,13 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LINE_RE = re.compile(r'=== PASS (\d+) / FAIL (\d+) ===')
+# Два формата сводки в наборе:
+#   «=== PASS 12 / FAIL 0 ===»          — классический;
+#   «════ МАТРИЦА ДОСТУПА: PASS 63 / FAIL 0 ════» — с заголовком набора.
+# Раньше второй формат не распознавался, и исправные наборы падали в отчёте
+# как «нет итоговой строки» (шум в регрессии, 2026-09-05).
+LINE_RE = re.compile(
+    r'[=═]{2,}[^\n=]*?PASS (\d+) / FAIL (\d+)[^\n=]*?[=═]{2,}')
 
 
 def find_tests():

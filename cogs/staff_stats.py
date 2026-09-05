@@ -248,6 +248,100 @@ class StaffProfileView(discord.ui.View):
         self.add_item(StaffProfileSelect(guild, days))
 
 
+def build_staff_stats_embed(guild, days: int = 30, модератор=None, actions=None):
+    """Единая сборка таблицы активности (embed) для слеш-команды И панели.
+
+    Панель не может вызвать interaction-команду, а дублировать верстку
+    таблицы во втором месте — получить два разных «staff-stats»
+    (жалоба владельца 2026-09-05: «таблица опять не отправляется»).
+    Один источник — одинаковая таблица и в Discord, и из панели.
+    """
+    days = max(1, min(int(days or 30), 365))
+    e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
+
+    if модератор is not None:
+        if actions is None:
+            actions = collect_actions(getattr(guild, 'id', 0))
+        per = summarize(actions, days).get(str(getattr(модератор, 'id', '')),
+                                           {'total': 0, 'by': {}, 'last_ts': 0})
+        try:
+            e.set_author(name=f"Активность: {модератор.display_name}",
+                         icon_url=модератор.display_avatar.url)
+            e.set_thumbnail(url=модератор.display_avatar.url)
+            mention = модератор.mention
+        except Exception:
+            e.set_author(name=f"Активность: {getattr(модератор, 'name', модератор)}")
+            mention = f"`{getattr(модератор, 'id', модератор)}`"
+        last = f"<t:{int(per['last_ts'])}:R>" if per['last_ts'] else "—"
+        e.description = (
+            f"**{mention}** · период **{days} дн.**\n{DIVIDER}\n"
+            f"Всего действий: **{per['total']}**\n"
+            f"Последнее действие: {last}\n\n"
+            f"Разбивка:\n{_breakdown(per['by'])}"
+        )
+        mine = [a for a in actions if a[0] == str(getattr(модератор, 'id', ''))]
+        mine.sort(key=lambda a: -a[2])
+        if mine:
+            lines = []
+            for _, act, ts in mine[:5]:
+                lbl = ACTION_LABEL.get(act, f'▪ {act}')
+                lines.append(f"{lbl} — <t:{int(ts)}:R>")
+            e.add_field(name="Последние 5 действий", value="\n".join(lines), inline=False)
+    else:
+        if actions is None:
+            actions = collect_actions(getattr(guild, 'id', 0))
+        per = summarize(actions, days)
+        if not per:
+            e.description = (
+                "## 📊 Staff Stats\n"
+                f"За последние **{days} дн.** действий не найдено.\n"
+                "(Читаются: mod_data.json, temp_history.json, варны из базы)"
+            )
+        else:
+            top = sorted(per.items(), key=lambda x: -x[1]['total'])[:10]
+            lines = []
+            for i, (mod_id, ent) in enumerate(top):
+                medal = MEDALS[i] if i < 3 else f"`{i+1}.`"
+                member = guild.get_member(int(mod_id)) if mod_id.isdigit() else None
+                name = member.display_name if member else f"ID {mod_id}"
+                lines.append(
+                    f"{medal} **{name}** — **{ent['total']}**\n"
+                    f"⠀{_breakdown(ent['by'])[:90]}"
+                )
+            e.description = (
+                "## 📊 Staff Stats — Топ модераторов\n"
+                f"Период: **{days} дн.** · действий всего: **{sum(e2['total'] for e2 in per.values())}**\n"
+                f"{DIVIDER}\n\n" + "\n\n".join(lines)
+            )
+    e.set_footer(text=str(getattr(guild, 'name', 'сервер')))
+    return e
+
+
+async def post_staff_stats(bot, guild, channel, days: int = 30):
+    """Отправить таблицу активности персонала в канал (точка отправки из панели).
+
+    Слеш-команда /staff-stats существует только в ПОЛНОМ меню: в кураторском
+    составе (6 команд) она вырезается бюджетом slash_budget и «таблица не
+    отправляется» (жалоба владельца 2026-09-05). Панель (Контроль команды →
+    «Таблица активности в Discord») шлёт ту же таблицу через bot_instance —
+    независимо от режима меню.
+
+    Возвращает (message, error): ровно одно из двух не None.
+    """
+    if bot is None or guild is None or channel is None:
+        return None, 'Бот офлайн или канал не найден'
+    try:
+        actions = await bot.loop.run_in_executor(None, collect_actions, guild.id)
+        e = await bot.loop.run_in_executor(
+            None, build_staff_stats_embed, guild, days, None, actions)
+        msg = await channel.send(embed=e)
+        return msg, None
+    except discord.Forbidden:
+        return None, 'Боту не хватает прав писать в этот канал'
+    except discord.HTTPException as _ex:
+        return None, f'Discord отклонил отправку: {_ex}'
+
+
 class StaffStats(commands.Cog):
     """Активность команды модераторов."""
 
@@ -267,53 +361,8 @@ class StaffStats(commands.Cog):
         import asyncio as _aio_s
         actions = await _aio_s.to_thread(collect_actions, guild.id)
 
-        e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
+        e = build_staff_stats_embed(guild, дней, модератор=модератор, actions=actions)
 
-        if модератор:
-            per = summarize(actions, дней).get(str(модератор.id), {'total': 0, 'by': {}, 'last_ts': 0})
-            e.set_author(name=f"Активность: {модератор.display_name}", icon_url=модератор.display_avatar.url)
-            e.set_thumbnail(url=модератор.display_avatar.url)
-            last = f"<t:{int(per['last_ts'])}:R>" if per['last_ts'] else "—"
-            e.description = (
-                f"**{модератор.mention}** · период **{дней} дн.**\n{DIVIDER}\n"
-                f"Всего действий: **{per['total']}**\n"
-                f"Последнее действие: {last}\n\n"
-                f"Разбивка:\n{_breakdown(per['by'])}"
-            )
-            # Недавние действия этого мода
-            mine = [a for a in actions if a[0] == str(модератор.id)]
-            mine.sort(key=lambda a: -a[2])
-            if mine:
-                lines = []
-                for _, act, ts in mine[:5]:
-                    lbl = ACTION_LABEL.get(act, f'▪ {act}')
-                    lines.append(f"{lbl} — <t:{int(ts)}:R>")
-                e.add_field(name="Последние 5 действий", value="\n".join(lines), inline=False)
-        else:
-            per = summarize(actions, дней)
-            if not per:
-                e.description = (
-                    "## 📊 Staff Stats\n"
-                    f"За последние **{дней} дн.** действий не найдено.\n"
-                    "(Читаются: mod_data.json, temp_history.json, варны из базы)"
-                )
-            else:
-                top = sorted(per.items(), key=lambda x: -x[1]['total'])[:10]
-                lines = []
-                for i, (mod_id, ent) in enumerate(top):
-                    medal = MEDALS[i] if i < 3 else f"`{i+1}.`"
-                    member = guild.get_member(int(mod_id)) if mod_id.isdigit() else None
-                    name = member.display_name if member else f"ID {mod_id}"
-                    lines.append(
-                        f"{medal} **{name}** — **{ent['total']}**\n"
-                        f"⠀{_breakdown(ent['by'])[:90]}"
-                    )
-                e.description = (
-                    "## 📊 Staff Stats — Топ модераторов\n"
-                    f"Период: **{дней} дн.** · действий всего: **{sum(e2['total'] for e2 in per.values())}**\n"
-                    f"{DIVIDER}\n\n" + "\n\n".join(lines)
-                )
-        e.set_footer(text=f"{guild.name}")
         if модератор is None:
             # Таблица команды + select-меню: выбрать любого участника и
             # открыть его полный профиль (варны/сообщения/войс/наказания).

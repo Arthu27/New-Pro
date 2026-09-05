@@ -10,10 +10,41 @@
     <p class="lead">Единая лента действий команды: каждый шаг оставляет проверяемый след.</p>
   </div>
   <div class="page-head-actions">
+    <select id="lt-channel" aria-label="Канал для таблицы логов" style="background:var(--surface-3);color:var(--text);border:1px solid color-mix(in srgb, var(--text) 20%, transparent);border-radius:8px;padding:7px 10px;font-size:12.5px;cursor:pointer;font-family:inherit;max-width:210px;"></select>
+    <button type="button" class="btn btn-primary" id="logs-table-send" title="Отправить графическую таблицу логов в выбранный канал Discord"><i class="fas fa-table"></i> Таблица в Discord</button>
     <a class="btn" href="/logs/export?days=7"><i class="fas fa-file-arrow-down"></i> 7 дней</a>
     <a class="btn" href="/logs/export?days=30"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
   </div>
 </div>
+<script>
+/* Точка отправки графической таблицы логов (жалоба владельца 2026-09-05:
+   «таблица опять не отправляется» — раньше отправить таблицу было нечем). */
+(function () {
+  var sel = document.getElementById('lt-channel');
+  var btn = document.getElementById('logs-table-send');
+  if (!sel || !btn) return;
+  fetch('/api/channels').then(function (r) { return r.json(); }).then(function (list) {
+    if (!Array.isArray(list)) list = (list && list.channels) || [];
+    sel.innerHTML = '<option value="">— выбери канал —</option>' + list.map(function (c) {
+      return '<option value="' + (c.id || '') + '">' + (c.name ? '#' + c.name : ('канал ' + (c.id || '?'))) + '</option>';
+    }).join('');
+    /* по умолчанию — первый текстовый канал, чтобы «Таблица в Discord»
+       работала в один клик */
+    if (list.length && list[0] && list[0].id) sel.value = String(list[0].id);
+  }).catch(function () { sel.innerHTML = '<option value="">каналы недоступны</option>'; });
+  btn.addEventListener('click', function () {
+    if (!sel.value) { if (window.showToast) window.showToast('Сначала выбери канал для таблицы', false); return; }
+    btn.disabled = true;
+    fetch('/api/logs/table/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: sel.value })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      if (window.showToast) window.showToast(d.success ? ('Таблица отправлена в #' + (d.channel || 'канал')) : (d.error || 'Не получилось отправить'), !!d.success);
+    }).catch(function () { btn.disabled = false; if (window.showToast) window.showToast('Ошибка сети', false); });
+  });
+})();
+</script>
 
 <div class="kpi-row">
   <div class="kpi"><div class="kpi-icon"><i class="fas fa-infinity"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Всего событий</div></div></div>

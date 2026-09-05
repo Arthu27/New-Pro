@@ -9,7 +9,39 @@
     <h1>Контроль команды</h1>
     <p class="lead">Управление очередью: риск эскалации, сроки, единые причины и амнистии.</p>
   </div>
+  <div class="page-head-actions">
+    <select id="ss-channel" aria-label="Канал для таблицы активности" style="background:var(--surface-3);color:var(--text);border:1px solid color-mix(in srgb, var(--text) 20%, transparent);border-radius:8px;padding:7px 10px;font-size:12.5px;cursor:pointer;font-family:inherit;max-width:210px;"></select>
+    <button type="button" class="btn btn-primary" id="ss-send" title="Отправить таблицу активности персонала (та же, что /staff-stats) в канал Discord"><i class="fas fa-table"></i> Таблица активности в Discord</button>
+  </div>
 </div>
+<script>
+/* Отправка таблицы активности персонала в Discord: слеш-вариант /staff-stats
+   доступен только в полном меню, панели нужна своя точка отправки (та же
+   верстка — build_staff_stats_embed). Жалоба владельца 2026-09-05. */
+(function () {
+  var sel = document.getElementById('ss-channel');
+  var btn = document.getElementById('ss-send');
+  if (!sel || !btn) return;
+  fetch('/api/channels').then(function (r) { return r.json(); }).then(function (list) {
+    if (!Array.isArray(list)) list = (list && list.channels) || [];
+    sel.innerHTML = '<option value="">— выбери канал —</option>' + list.map(function (c) {
+      return '<option value="' + (c.id || '') + '">' + (c.name ? '#' + c.name : ('канал ' + (c.id || '?'))) + '</option>';
+    }).join('');
+    if (list.length && list[0] && list[0].id) sel.value = String(list[0].id);
+  }).catch(function () { sel.innerHTML = '<option value="">каналы недоступны</option>'; });
+  btn.addEventListener('click', function () {
+    if (!sel.value) { if (window.showToast) window.showToast('Сначала выбери канал для таблицы', false); return; }
+    btn.disabled = true;
+    fetch('/api/staff-stats/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: sel.value, days: 30 })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      if (window.showToast) window.showToast(d.success ? ('Таблица отправлена в #' + (d.channel || 'канал')) : (d.error || 'Не получилось отправить'), !!d.success);
+    }).catch(function () { btn.disabled = false; if (window.showToast) window.showToast('Ошибка сети', false); });
+  });
+})();
+</script>
 
 <div class="kpi-row" id="mcKpis">
   <div class="skeleton-card" style="height:68px"></div><div class="skeleton-card" style="height:68px"></div>

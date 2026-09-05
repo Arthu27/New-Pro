@@ -15,6 +15,7 @@ from services.audit_labels import human_action
 _log = get_logger("log_menu")
 
 import io
+import math   # ceil для постраничной навигации таблицы (был пропущен — NameError)
 import os
 import re
 import json
@@ -337,10 +338,17 @@ class LogCategorySelect(discord.ui.Select):
 
 
 class LogBrowserView(discord.ui.View):
-    """Интерактивное меню-дашборд для просмотра логов сервера."""
+    """Интерактивное меню-дашборд для просмотра логов сервера.
+
+    timeout=None + стабильные custom_id (log_menu:*) — таблица должна
+    отвечать кнопками и ПОСЛЕ рестарта бота (жалоба владельца 2026-09-05:
+    «таблица опять не отправляется» — отправленная однажды карточка
+    отмирала, а заново отправить было нечем). Регистрация на рестарте —
+    LogMenu.on_ready (один общий экземпляр на сервер).
+    """
 
     def __init__(self, guild: discord.Guild, user_id: int, category: str = "all", query: str = ""):
-        super().__init__(timeout=600)
+        super().__init__(timeout=None)
         self.guild = guild
         self.user_id = user_id
         self.category = category
@@ -438,6 +446,54 @@ class LogMenu(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Оживить кнопки уже отправленных таблиц после рестарта.
+
+        Без этого кнопки под отправленной ранее таблицей молчат («бот
+        не отвечает»), а новую таблицу отправить было нельзя вовсе —
+        у кога не было ни одной точки отправки (жалоба 2026-09-05).
+        """
+        if getattr(self, '_views_restored', False):
+            return
+        self._views_restored = True
+        restored = 0
+        for guild in list(self.bot.guilds):
+            try:
+                self.bot.add_view(LogBrowserView(guild, user_id=0))
+                restored += 1
+            except Exception as _ex:
+                _log.debug('log_menu: view %s: %s', getattr(guild, 'id', '?'), _ex)
+        if restored:
+            _log.info('log_menu: таблицы логов оживлены на %s серверах', restored)
+
+
+async def post_log_table(bot, guild: discord.Guild, channel):
+    """Отправить графическую таблицу логов в канал (точка отправки).
+
+    Раньше таблицу было НЕЧЕМ отправить: у кога не было ни команды
+    (слеш-меню кураторское, 6 команд), ни вызова из панели — класс
+    LogBrowserView существовал, но никто его не публиковал
+    (жалоба владельца 2026-09-05 «таблица опять не отправляется»).
+    Теперь панель (Журнал модерации → «Таблица в Discord») вызывает
+    этот хелпер через bot_instance.
+
+    Возвращает (message, error): ровно одно из двух не None.
+    """
+    if bot is None or guild is None or channel is None:
+        return None, 'Бот офлайн или канал не найден'
+    view = LogBrowserView(guild, user_id=0)
+    try:
+        buf = await bot.loop.run_in_executor(
+            None, generate_log_browser_bytes, guild.name,
+            view.category, view.get_current_page_data()[0], 1, 1, '')
+        msg = await channel.send(file=discord.File(buf, filename='hakumo_log_table.png'), view=view)
+        return msg, None
+    except discord.Forbidden:
+        return None, 'Боту не хватает прав писать в этот канал'
+    except discord.HTTPException as _ex:
+        return None, f'Discord отклонил отправку: {_ex}'
 
 
 async def setup(bot):

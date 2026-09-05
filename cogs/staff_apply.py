@@ -272,6 +272,7 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 
         # Уведомление в ветку заявки: хелперы — кураторам хелперов,
         # модераторы — кураторам модераторов (свой канал + пинг роли)
+        delivered = False
         if interaction.guild:
             ch, ping = apply_target(self.role_name, interaction.guild)
             if ch:
@@ -289,12 +290,32 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                 notify.add_field(name="Опыт", value=str(self.experience)[:500], inline=False)
                 notify.add_field(name="Причина", value=str(self.reason)[:500], inline=False)
                 notify.set_footer(text=f"ID заявителя: {user_id}")
-                msg = await ch.send(content=ping or None, embed=notify, view=StaffReviewView())
-                apps[user_id]["message_id"] = str(msg.id)
-                save_apps(apps)
+                try:
+                    msg = await ch.send(content=ping or None, embed=notify, view=StaffReviewView())
+                    apps[user_id]["message_id"] = str(msg.id)
+                    delivered = True
+                except (discord.Forbidden, discord.HTTPException) as _ex:
+                    log.warning("STAFF: карточка заявки %s не ушла в %s: %s",
+                                user_id, getattr(ch, 'name', '?'), _ex)
+                    apps[user_id]["delivery"] = "failed"
+            else:
+                # ТИХАЯ ПОТЕРЯ ЗАЯВКИ — запрещена (жалоба владельца 2026-09-05
+                # «таблица опять не отправляется»): раньше канал не находился
+                # и карточка просто не отправлялась, заявитель ничего не знал.
+                apps[user_id]["delivery"] = "no_channel"
+                log.warning("STAFF: заявка %s сохранена, но канал заявок не "
+                            "настроен (панель → Каналы и маршруты)", user_id)
 
         save_apps(apps)
-        log.info(f"Заявка от {interaction.user} на роль {self.role_name}")
+        if not delivered:
+            # Честное сообщение: заявка сохранена, но персонал уведомить не вышло
+            embed.description += (
+                "\n\n⚠️ Заявка сохранена и видна администрации в панели "
+                "«Заявки в команду», но уведомление персоналу не доставлено "
+                "(не настроен канал заявок). Сообщи о себе администрации лично."
+            )
+        log.info(f"Заявка от {interaction.user} на роль {self.role_name}"
+                 + ("" if delivered else " (без уведомления персонала)"))
 
 
 # ═══════════════════════════════════════════════════════════════════

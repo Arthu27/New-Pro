@@ -1075,27 +1075,70 @@ class Appeals(commands.Cog):
         how = 'вебхуком' if used_hook is not None else 'от бота'
         return True, f'Меню опубликовано в {channel.mention} ({how})'
 
-    async def _open_appeal_channel(self, guild, user) -> bool:
-        """Открыть канал апелляции подавшему (до подачи он скрыт — владелец).
+    async def _appeal_channel(self, guild):
+        """Канал апелляции: маршрут владельца → fetch_channel как запас.
 
-        Возвращает, ПОЛУЧИЛОСЬ ли: человек в ЛС получает честный ответ,
-        а не обещание «канал открыт», которого может не быть (нет прав
-        «Управление правами каналов» — жалоба владельца 2026-09-05).
+        guild.get_channel ищет только в кэше: после рестарта, пока каналы
+        не долились в кэш (или если маршрут ведёт в канал, которого нет
+        в кэше), get_channel даёт None и «канал не включается после
+        заявки» (жалоба владельца 2026-09-05). fetch_channel идёт в API.
         """
         try:
             from services.channel_routes import get_route as _route_of
             _cid = int(_route_of(guild.id, 'ban_appeal_channel') or 0)
-            _iso = guild.get_channel(_cid) if _cid else None
-            if _iso is None:
-                return False
+        except Exception as _ex:
+            log.debug('appeals: маршрут канала апелляции: %s', _ex)
+            _cid = 0
+        if not _cid:
+            return None
+        ch = guild.get_channel(_cid)
+        if ch is not None:
+            return ch
+        try:
+            return await guild.fetch_channel(_cid)
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
+            log.debug('appeals: fetch_channel %s: %s', _cid, _ex)
+            return None
+
+    async def _open_appeal_channel(self, guild, user, fallback_channel=None):
+        """Открыть канал апелляции подавшему (до подачи он скрыт — владелец).
+
+        Порядок канала: маршрут «Канал апелляции (бан)» → fallback_channel
+        (канал, куда реально ушла карточка апелляции). Раньше пустой маршрут
+        означал честное «не получилось», хотя карточка уже лежала в другом
+        канале — теперь открываем именно его.
+
+        Возвращает (opening_result, channel|None): человек в ЛС получает
+        честный ответ с ИМЕНЕМ канала, а не обещание «канал открыт»,
+        которого может не быть (нет прав «Управление правами каналов» —
+        жалоба владельца 2026-09-05).
+        """
+        _iso = await self._appeal_channel(guild)
+        if _iso is None:
+            _iso = fallback_channel
+        if _iso is None:
+            log.error('appeals: канал апелляции не задан — некому открывать доступ (guild %s)', getattr(guild, 'id', '?'))
+            return False, None
+        try:
             await _iso.set_permissions(
                 user, overwrite=discord.PermissionOverwrite(
                     view_channel=True, send_messages=True))
-            return True
+            return True, _iso
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.error('appeals: открыть канал апелляции для %s: %s',
                       getattr(user, 'id', '?'), _ex)
-            return False
+            return False, _iso
+
+    def _dm_channel_line(self, opened, channel):
+        """Строка про канал для ЛС-подтверждения: имя канала, не абстракция."""
+        if opened:
+            name = getattr(channel, 'name', '') or 'канал апелляции'
+            return (f'Канал **#{name}** на сервере открыт для вас — карточка '
+                    'видна там. Ответ придёт в личные сообщения — обычно в '
+                    'течение суток.')
+        return ('Канал апелляции открыть не получилось (боту нужны права '
+                'управления каналом) — модераторы увидят карточку и напишут '
+                'вам. Ответ придёт в личные сообщения.')
 
     async def _submit_channel_appeal(self, user, guild, text, link=None, channel=None):
         """Апелляция из меню в канале: карточка в отдельном треде."""
@@ -1186,22 +1229,16 @@ class Appeals(commands.Cog):
                 await self._fire_panel_event(item)
         # Канал апелляции открываем автору ТОЛЬКО теперь: владелец просил,
         # чтобы канал был виден не в момент бана, а после подачи апелляции
-        # (2026-09-05). До подачи у человека все каналы закрыты.
-        ch_opened = await self._open_appeal_channel(guild, user)
+        # (2026-09-05). До подачи у человека все каналы закрыты. Если маршрут
+        # пуст — открываем канал, куда реально легла карточка (target).
+        ch_opened, ch_ref = await self._open_appeal_channel(guild, user,
+                                                            fallback_channel=target)
         self._save(guild_id, state)
         try:
             embed = _dm_embed('submitted', item, str(guild.name))
-            if ch_opened:
-                embed.description = (
-                    f'Модераторы сервера **{guild.name}** уже получили её. '
-                    'Канал апелляции на сервере открыт для вас — карточка видна '
-                    'там. Ответ придёт в личные сообщения — обычно в течение суток.')
-            else:
-                embed.description = (
-                    f'Модераторы сервера **{guild.name}** уже получили её. '
-                    'Канал апелляции открыть не получилось (боту нужны права '
-                    'управления каналом) — модераторы увидят карточку и '
-                    'напишут вам. Ответ придёт в личные сообщения.')
+            embed.description = (
+                f'Модераторы сервера **{guild.name}** уже получили её. '
+                + self._dm_channel_line(ch_opened, ch_ref))
             await user.send(embed=embed)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС подтверждения #%s не дошло: %s', item['id'], _ex)
@@ -1262,9 +1299,13 @@ class Appeals(commands.Cog):
                 log.error('appeals: карточка #%s на %s не ушла: %s',
                           item['id'], guild_id, _ex)
         # Канал апелляции открывается после подачи при ЛЮБОМ пути подачи
-        # (скрыт до подачи — заказ владельца 2026-09-05); честный флаг в item.
-        item['_channel_opened'] = await self._open_appeal_channel(guild, user)
+        # (скрыт до подачи — заказ владельца 2026-09-05). Сначала СОХРАНЯЕМ
+        # state, потом вешаем на локальный item временные поля для ответа:
+        # item уезжает в JSON — канал и имя канала в БД хранить нельзя.
+        _opened, _ch_ref = await self._open_appeal_channel(guild, user)
         self._save(guild_id, state)
+        item['_channel_opened'] = bool(_opened)      # временно, только для ответа
+        item['_channel_name'] = getattr(_ch_ref, 'name', '') if _opened else ''
         return item, None
 
     def _main_guild(self):
@@ -1325,9 +1366,11 @@ class Appeals(commands.Cog):
             return
         from cogs.embed_utils import hakumo_embed
         if item.pop('_channel_opened', False):
-            _extra = ('Канал апелляции на сервере открыт для вас — карточка '
-                      'видна там. Ответ придёт в личку.')
+            _ch_name = str(item.pop('_channel_name', '') or 'канал апелляции')
+            _extra = (f'Канал **#{_ch_name}** на сервере открыт для вас — '
+                      'карточка видна там. Ответ придёт в личку.')
         else:
+            item.pop('_channel_name', None)
             _extra = ('Ответ придёт в личку. Канал апелляции открыть не '
                       'получилось (боту нужны права) — модераторы напишут '
                       'вам сами.')

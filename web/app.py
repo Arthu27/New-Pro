@@ -2211,6 +2211,98 @@ def logs_export_download ():
     }
     return html_doc ,200 ,headers 
 
+
+def _send_via_bot(coro, timeout=20):
+    """Выполнить корутину на цикле бота и ДОЖДАТЬСЯ результата.
+
+    Панель и бот живут в одном процессе (main.py: _start_web_server),
+    поэтому отправить в Discord из маршрута можно только через
+    run_coroutine_threadsafe. Возвращает (result, error) — честный ответ
+    маршруту, без «тихо проглотили и притворились, что отправили».
+    """
+    import asyncio as _aio
+    try:
+        fut =_aio .run_coroutine_threadsafe (coro ,bot_instance .loop )
+        return fut .result (timeout =timeout ),None
+    except Exception as _ex:
+        return None ,str (_ex )[:200 ]
+
+
+def _guild_for_send (gid_str ):
+    """Гильдия для отправки из панели: MAIN_GUILD_ID (демо 777 — честный отказ)."""
+    if bot_instance is None :
+        return None ,'Бот офлайн — панель не может отправить сообщение в Discord'
+    try :
+        gid =int (gid_str or MAIN_GUILD_ID or 0 )
+    except (TypeError ,ValueError ):
+        gid =0
+    if not gid :
+        return None ,'Сервер не выбран'
+    g =bot_instance .get_guild (gid )
+    if g is None :
+        return None ,'Бот не состоит на этом сервере'
+    return g ,None
+
+
+@app .route ('/api/logs/table/send',methods =['POST'])
+@login_required 
+@role_required ('mod')
+def api_logs_table_send ():
+    """Отправить ГРАФИЧЕСКУЮ таблицу логов в канал Discord.
+
+    Точка отправки, которой не было (жалоба владельца 2026-09-05 «таблица
+    опять не отправляется»): класс таблицы существовал, но публиковать его
+    было нечем. channel_id пустой → канал из маршрута «Канал вызовов
+    модератора»... нет — канал модерации/системный, как у прочих логов.
+    """
+    from cogs .log_menu import post_log_table
+    data =_safe_json_obj ()
+    g ,err =_guild_for_send (data .get ('guild_id')or MAIN_GUILD_ID )
+    if err :
+        return jsonify ({'success':False ,'error':err }),503 if bot_instance is None else 400
+    cid =str (data .get ('channel_id')or '').strip ()
+    channel =g .get_channel (int (cid ))if cid .isdigit ()else None
+    if channel is None :
+        channel =g .system_channel
+    if channel is None :
+        return jsonify ({'success':False ,'error':'Канал не найден — выбери канал вручную'}),400
+    msg ,serr =_send_via_bot (post_log_table (bot_instance ,g ,channel ))
+    if serr or msg is None :
+        return jsonify ({'success':False ,'error':serr or 'Отправка не удалась'}),502
+    _log_panel_action ('LOGS_TABLE_SEND',f'{g.name} → #{getattr(channel,"name","?")} (msg {msg.id})')
+    return jsonify ({'success':True ,'channel':getattr (channel ,'name','?'),'jump_url':msg .jump_url })
+
+@app .route ('/api/staff-stats/send',methods =['POST'])
+@login_required 
+@role_required ('mod')
+def api_staff_stats_send ():
+    """Отправить таблицу активности персонала (та же, что /staff-stats) в канал.
+
+    Слеш-вариант доступен только в полном меню (slash_budget), поэтому
+    панели нужна собственная точка отправки — та же верстка из
+    build_staff_stats_embed, ничего не дублируем.
+    """
+    from cogs .staff_stats import post_staff_stats
+    data =_safe_json_obj ()
+    g ,err =_guild_for_send (data .get ('guild_id')or MAIN_GUILD_ID )
+    if err :
+        return jsonify ({'success':False ,'error':err }),503 if bot_instance is None else 400
+    try :
+        days =int (data .get ('days')or 30 )
+    except (TypeError ,ValueError ):
+        days =30
+    cid =str (data .get ('channel_id')or '').strip ()
+    channel =g .get_channel (int (cid ))if cid .isdigit ()else None
+    if channel is None :
+        channel =g .system_channel
+    if channel is None :
+        return jsonify ({'success':False ,'error':'Канал не найден — выбери канал вручную'}),400
+    msg ,serr =_send_via_bot (post_staff_stats (bot_instance ,g ,channel ,days ))
+    if serr or msg is None :
+        return jsonify ({'success':False ,'error':serr or 'Отправка не удалась'}),502
+    _log_panel_action ('STAFF_STATS_SEND',f'{g.name} → #{getattr(channel,"name","?")} ({days} дн.)')
+    return jsonify ({'success':True ,'channel':getattr (channel ,'name','?'),'jump_url':msg .jump_url })
+
 @app .route ('/warnings')
 @login_required 
 @role_required ('mod')
