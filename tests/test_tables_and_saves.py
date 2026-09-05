@@ -21,6 +21,7 @@ import json
 import os
 import sys
 import tempfile
+import threading
 import time
 import types
 
@@ -61,6 +62,7 @@ class _FakeChannel:
 
         class _Msg:
             id = 4242
+            jump_url = 'https://discord.com/channels/777/555/4242'
 
         return _Msg()
 
@@ -314,6 +316,77 @@ r2 = _client.post('/api/staff-stats/send', json={'channel_id': '555', 'days': 30
 check(r2.status_code in (400, 502, 503),
       'staff-таблица: без бота — честный отказ (не «отправлено»)',
       f'→ {r2.status_code}')
+
+# ═══════════════════════════════════════════════════════════════════
+print('== 8. Счастливый путь: панель + живой бот → таблица в канале ==')
+# «Живой бот»: цикл КРУТИТСЯ в фоновом потоке (как боевой бот) — иначе
+# run_coroutine_threadsafe честно виснет по таймауту.
+_loop8 = asyncio.new_event_loop()
+_thread8 = threading.Thread(target=_loop8.run_forever, daemon=True)
+_thread8.start()
+_bot.loop = _loop8
+webapp.bot_instance = _bot                      # «бот поднялся»
+_gsend_ch = _FakeChannel()
+
+
+class _FakeGuildSend:
+    id = 777
+    name = 'Тестовый сервер'
+    system_channel = None
+
+    def __init__(self, channels):
+        self.channels = channels
+        self._by_id = {c.id: c for c in channels}
+
+    def get_channel(self, cid):
+        return self._by_id.get(cid)
+
+
+_bot.get_guild = lambda gid: _FakeGuildSend([_gsend_ch]) if gid == 777 else None
+
+r3 = _client.post('/api/logs/table/send', json={'channel_id': str(_gsend_ch.id)})
+_d3 = r3.get_json() or {}
+check(r3.status_code == 200 and _d3.get('success') is True,
+      'лог-таблица через панель ушла при живом боте', f'→ {r3.status_code} {_d3}')
+check(bool(_gsend_ch.sent) and 'view' in _gsend_ch.sent[0] and 'file' in _gsend_ch.sent[0],
+      'в канал легли картинка-таблица и живые кнопки')
+check(_d3.get('channel') == _gsend_ch.name,
+      'в ответе панели имя канала (не пустышка)')
+
+_gstaff_ch = _FakeChannel()
+_bot.get_guild = lambda gid: _FakeGuildSend([_gstaff_ch]) if gid == 777 else None
+r4 = _client.post('/api/staff-stats/send', json={'channel_id': str(_gstaff_ch.id), 'days': 30})
+_d4 = r4.get_json() or {}
+check(r4.status_code == 200 and _d4.get('success') is True,
+      'staff-таблица через панель ушла при живом боте', f'→ {r4.status_code} {_d4}')
+check(bool(_gstaff_ch.sent) and 'embed' in _gstaff_ch.sent[0],
+      'в канал лёг embed-таблицы активности')
+
+# аудит: записи о отправках попали в panel_logs.json
+webapp._panel_log_flusher.shutdown()
+_audit = json.load(open('data/panel_logs.json', encoding='utf-8'))
+_acts = [e.get('action') for e in _audit if isinstance(e, dict)]
+check('LOGS_TABLE_SEND' in _acts and 'STAFF_STATS_SEND' in _acts,
+      'аудит панели помнит обе отправки (LOGS_TABLE_SEND / STAFF_STATS_SEND)',
+      f'→ {[_a for _a in _acts if "SEND" in str(_a)]}')
+
+# без канала и без system_channel — честный 400
+r5 = _client.post('/api/logs/table/send', json={'channel_id': ''})
+check(r5.status_code == 400 and 'Канал не найден' in (r5.get_json() or {}).get('error', ''),
+      'нет канала и системного → честный отказ, не «успех»')
+
+# бот «умер»: цикл остановлен → мгновенный честный отказ (не 20-секундное висение)
+_loop8.call_soon_threadsafe(_loop8.stop)
+_thread8.join(timeout=2)
+_dead_ch = _FakeChannel()
+_bot.get_guild = lambda gid: _FakeGuildSend([_dead_ch]) if gid == 777 else None
+_t0 = time.time()
+r6 = _client.post('/api/logs/table/send', json={'channel_id': str(_dead_ch.id)})
+_waited = time.time() - _t0
+check(r6.status_code in (400, 502, 503) and _waited < 5,
+      f'мертвый цикл бота → быстрый честный отказ ({_waited:.1f} с, не 20)')
+check(not _dead_ch.sent, 'в мертвый цикл ничего не улетело')
+webapp.bot_instance = None                      # вернуть как было
 
 print()
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

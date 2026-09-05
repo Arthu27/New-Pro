@@ -2219,10 +2219,20 @@ def _send_via_bot(coro, timeout=20):
     поэтому отправить в Discord из маршрута можно только через
     run_coroutine_threadsafe. Возвращает (result, error) — честный ответ
     маршруту, без «тихо проглотили и притворились, что отправили».
+    Цикл не крутится (бот ещё стартует / уже умер) — мгновенный честный
+    отказ и закрытие корутины: раньше маршрут висел весь timeout, а
+    корутина утекала «never awaited» (поймано проверкой 2026-09-05).
     """
     import asyncio as _aio
+    _loop =getattr (bot_instance ,'loop',None )
+    if _loop is None or getattr (_loop ,'is_closed',lambda :False )()or not _loop .is_running ():
+        try :
+            coro .close ()   # корутина не должна утекать «never awaited»
+        except Exception as _close_ex:
+            _log .debug ('_send_via_bot(): coro.close(): %s', _close_ex)
+        return None ,'Бот офлайн — панель не может отправить сообщение в Discord'
     try:
-        fut =_aio .run_coroutine_threadsafe (coro ,bot_instance .loop )
+        fut =_aio .run_coroutine_threadsafe (coro ,_loop )
         return fut .result (timeout =timeout ),None
     except Exception as _ex:
         return None ,str (_ex )[:200 ]
@@ -2266,9 +2276,13 @@ def api_logs_table_send ():
         channel =g .system_channel
     if channel is None :
         return jsonify ({'success':False ,'error':'Канал не найден — выбери канал вручную'}),400
-    msg ,serr =_send_via_bot (post_log_table (bot_instance ,g ,channel ))
-    if serr or msg is None :
-        return jsonify ({'success':False ,'error':serr or 'Отправка не удалась'}),502
+    # post_* возвращает (msg, err); _send_via_bot оборачивает результат
+    # ещё раз: (pair, err). Разворачиваем оба уровня — иначе «tuple has
+    # no attribute id» на живом боте (поймано проверкой 2026-09-05).
+    _pair ,serr =_send_via_bot (post_log_table (bot_instance ,g ,channel ))
+    msg ,perr =_pair if _pair is not None else (None ,None )
+    if serr or perr or msg is None :
+        return jsonify ({'success':False ,'error':serr or perr or 'Отправка не удалась'}),502
     _log_panel_action ('LOGS_TABLE_SEND',f'{g.name} → #{getattr(channel,"name","?")} (msg {msg.id})')
     return jsonify ({'success':True ,'channel':getattr (channel ,'name','?'),'jump_url':msg .jump_url })
 
@@ -2297,9 +2311,11 @@ def api_staff_stats_send ():
         channel =g .system_channel
     if channel is None :
         return jsonify ({'success':False ,'error':'Канал не найден — выбери канал вручную'}),400
-    msg ,serr =_send_via_bot (post_staff_stats (bot_instance ,g ,channel ,days ))
-    if serr or msg is None :
-        return jsonify ({'success':False ,'error':serr or 'Отправка не удалась'}),502
+    # двойная распаковка: (msg, err) внутри (pair, err) — как в лог-таблице
+    _pair ,serr =_send_via_bot (post_staff_stats (bot_instance ,g ,channel ,days ))
+    msg ,perr =_pair if _pair is not None else (None ,None )
+    if serr or perr or msg is None :
+        return jsonify ({'success':False ,'error':serr or perr or 'Отправка не удалась'}),502
     _log_panel_action ('STAFF_STATS_SEND',f'{g.name} → #{getattr(channel,"name","?")} ({days} дн.)')
     return jsonify ({'success':True ,'channel':getattr (channel ,'name','?'),'jump_url':msg .jump_url })
 
