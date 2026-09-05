@@ -35,7 +35,7 @@ lim = SL.get_limits(G)
 # Защитные дефолты на опасные действия; 0 = «без лимита» для остального.
 check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 5
       and lim['clear'] == 10,
-      'из коробки: бан 1/день, мут 5, размут 3, очистка 10 сообщ./день')
+      'из коробки: бан 1/день, мут 5, размут 3, очистка 10 чисток/день')
 check(lim['warn'] == 3 and lim['kick'] == 0,
       'варн 3/день у модеров (Sabotash 2026-09-02); кик — 0 = не ограничено')
 check('nuke' not in lim,
@@ -61,12 +61,28 @@ check(used3 == 8 and not ok3, f'9-й бан запрещён (потрачено
 ok4, used4, _l = SL.check_limit(G, OTHER, 'ban', 1)
 check(ok4 and used4 == 0, 'другой модератор не affected — счётчики личные')
 
-print('== 4. Чистка считает СООБЩЕНИЯ, не вызовы ==')
+print('== 4. API amount — произвольные единицы (движок) ==')
 SL.record_hit(G, MOD, 'clear', 480)
 ok5, used5, lim5 = SL.check_limit(G, MOD, 'clear', 25)
 check(used5 == 480 and not ok5, 'чистка +25 сверх 480/500 запрещена')
 ok6, _u, _l = SL.check_limit(G, MOD, 'clear', 20)
 check(ok6, 'чистка +20 ровно до 500 разрешена')
+
+print('== 4b. /modpanel считает ОПЕРАЦИИ; отказ не врёт «исчерпан» ==')
+# как /modpanel: amount=1 при нулевом счётчике и лимите 10 — можно
+G3, U3 = G + 3, 4242
+ok_op, u_op, l_op = SL.check_limit(G3, U3, 'clear', 1)
+check(ok_op and u_op == 0 and l_op == 10,
+      'первая чистка (amount=1) при нуле и лимите 10 — можно')
+ok_big, u_big, _ = SL.check_limit(G3, U3, 'clear', 25)
+check((not ok_big) and u_big == 0,
+      'amount=25 при лимите 10 — отказ API, used по-прежнему 0')
+txt_left = SL.limit_deny_text('clear', 0, 10, amount=25)
+check('исчерпан' not in txt_left.lower() and 'осталось 10' in txt_left,
+      f'used=0: не «исчерпан», а «осталось»: {txt_left}')
+txt_out = SL.limit_deny_text('clear', 10, 10, amount=1)
+check('исчерпан' in txt_out.lower(),
+      f'остаток 0 — «исчерпан»: {txt_out}')
 
 print('== 5. Переопределение лимитов живёт на диске ==')
 new_lim = SL.set_limits(G, ban=3, clear=100)
@@ -78,7 +94,7 @@ check(not ok7 and lim7 == 3, 'под новый лимит 3: уже потра�
 
 print('== 6. status_text для модератора ==')
 st = SL.status_text(G, MOD)
-check('баны 8/3' in st and 'чистка 480/100 сообщ.' in st,
+check('баны 8/3' in st and 'чистки 480/100' in st,
       f'status_text показывает только заданное: {st}')
 # варн теперь лимитирован «у всех» (владелец 2026-09-05) — показывается;
 # кик/нюк остались без лимитов — в статусе их нет

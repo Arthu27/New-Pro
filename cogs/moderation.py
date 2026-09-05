@@ -514,14 +514,12 @@ class Moderation (commands .Cog ):
             _sl_panel =getattr (interaction .user ,'is_panel',False )
             if _sl_key and guild and not _sl_bot_owner and not _sl_panel \
             and _sl_uid !=getattr (guild ,'owner_id',0 ):
-                from services .staff_limits import check_limit as _sl_check ,ACTION_TITLES 
-                if action =='clear':
-                    try :
-                        _sl_amt =max (1 ,min (int (amount )or 10 ,200 ))
-                    except Exception :
-                        _sl_amt =10
-                else :
-                    _sl_amt =1
+                from services .staff_limits import (
+                    check_limit as _sl_check ,limit_deny_text as _sl_deny )
+                # Одна операция = 1 хит. Чистка раньше писала ЧИСЛО сообщений
+                # в квоту «10 чисток/день» — первая попытка на 25 сразу
+                # врала «Лимит исчерпан … использовано 0, осталось 10».
+                _sl_amt =1
                 _sl_roles =[]
                 try :
                     _sl_roles =[r .id for r in (getattr (interaction .user ,'roles',None )or [])
@@ -530,14 +528,12 @@ class Moderation (commands .Cog ):
                     _sl_roles =[]
                 _sl_ok ,_sl_used ,_sl_lim =_sl_check (guild .id ,interaction .user .id ,_sl_key ,_sl_amt ,role_ids =_sl_roles )
                 if not _sl_ok :
-                    _what =ACTION_TITLES .get (_sl_key ,'действий' )
-                    _left =max (0 ,_sl_lim -_sl_used )
-                    _txt =f'Лимит исчерпан: {_sl_lim} {_what} (использовано {_sl_used}, осталось {_left}).'
+                    _when =None
                     try :
                         from services .staff_limits import refresh_in_text as _sl_refresh
                         _when =_sl_refresh (guild .id ,interaction .user .id ,_sl_key )
-                        if _when :_txt +=f' Обновится через {_when}.'
                     except Exception as _sx :_log .debug ('[MODPANEL] staff_limits refresh: %s',_sx )
+                    _txt =_sl_deny (_sl_key ,_sl_used ,_sl_lim ,amount =_sl_amt ,refresh =_when )
                     _txt +=' Настраивается: панель → Щит сервера → Лимиты.'
                     await _respond (interaction ,
                     embed =error_embed (_txt),
@@ -949,19 +945,38 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
 
         elif action =="clear":
+            ch =getattr (interaction ,'channel',None )
+            if ch is None or not hasattr (ch ,'purge'):
+                await _respond (interaction ,embed =error_embed (
+                'Очистка работает только в текстовом канале, где вызвана /modpanel.'),
+                ephemeral =True )
+                return
             try :
                 count =max (1 ,min (int (amount )or 10 ,200 ))
             except Exception :
                 count =10
-            deleted =await interaction .channel .purge (limit =count )
+            try :
+                deleted =await ch .purge (limit =count )
+            except discord .Forbidden :
+                await _respond (interaction ,embed =error_embed (
+                'У бота нет права «Управление сообщениями» в этом канале. '
+                'Настройки сервера → Роли → роль бота.'),
+                ephemeral =True )
+                return
+            except discord .HTTPException as ex :
+                await _respond (interaction ,embed =error_embed (
+                f'Не удалось удалить сообщения: {ex}'),
+                ephemeral =True )
+                return
             try :
                 from services .staff_limits import record_hit as _sl_rec
-                _sl_rec (guild .id ,interaction .user .id ,'clear',len (deleted ))
+                _sl_rec (guild .id ,interaction .user .id ,'clear',1 )
             except Exception as _re :
                 log .debug (f'[STAFF_LIMIT] clear rec: {_re}')
+            _where =getattr (ch ,'mention',None )or 'канале'
             confirm =success_embed (
             "Сообщения удалены",
-            f"Удалено **{len(deleted)}** сообщений в {interaction.channel.mention}",
+            f"Удалено **{len(deleted)}** сообщений в {_where}",
             guild =guild )
             await _respond (interaction ,embed =confirm ,ephemeral =True )
 
@@ -1695,7 +1710,7 @@ class ModActionModal(discord.ui.Modal):
             self.add_item(self.target)
         if action in ("timeout", "mute_chat", "vmute", "clear"):
             if action == "clear":
-                _lbl, _ph, _d = "Сколько сообщений удалить?", "например: 25", "10"
+                _lbl, _ph, _d = "Сколько сообщений удалить?", "1-100", "10"
             else:
                 _lbl, _ph, _d = "На сколько? (30 мин … 2 ч)", "30, 60, 2ч", "60"
             self.amount = discord.ui.TextInput(

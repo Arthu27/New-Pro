@@ -149,7 +149,7 @@ save_action_acl(777, {'mute': [555], 'unmute': [555], 'ban': [555],
                       'purge': [555]})
 
 # лимиты РОЛИ 555 (перебивают и общие, и тировые дефолты админа):
-# мут 2, бан 1, unmute 1, чистка 5 сообщений за окно
+# мут 2, бан 1, unmute 1, чистка 5 ОПЕРАЦИЙ за окно
 SL.set_role_limits(777, 555, mute=2, ban=1, unmute=1, clear=5)
 
 # ── 1. temp-mod/mute: 2 ок, 3-й → 429 ──────────────────────────────────────
@@ -194,12 +194,23 @@ check(r1.status_code == 200 and r2.status_code == 429,
 r = mod.post('/api/member-profile/777/300/ban', json={'reason': 'тест'})
 check(r.status_code == 429, 'профиль→бан видит тот же счётчик → 429', f'{r.status_code} {r.get_data(as_text=True)[:90]}')
 
-# ── 5. purge: лимит «чистка» по количеству сообщений ───────────────────────
-r = mod.post('/api/guild/777/purge', json={'channel_id': '1001', 'count': 10})
-check(r.status_code == 429 and 'Лимит' in r.get_json().get('error', ''),
-      'purge 10 при остатке 5 → 429', f'{r.status_code} {r.get_data(as_text=True)[:90]}')
+# ── 5. purge: 1 хит за чистку, не за каждое сообщение ──────────────────────
+async def _fake_purge(limit=10):
+    return list(range(min(int(limit or 1), 4)))
+
+A.bot_instance.get_channel = lambda cid: NS(
+    id=cid, name=f'chan{cid}', members=[], mention='<#1>',
+    purge=_fake_purge)
+
+codes = []
+for _i in range(5):
+    r = mod.post('/api/guild/777/purge', json={'channel_id': '1001', 'count': 10})
+    codes.append(r.status_code)
+check(all(c != 429 for c in codes),
+      f'5 чисток по 10 сообщений при лимите 5 операций — ок ({codes})')
 r = mod.post('/api/guild/777/purge', json={'channel_id': '1001', 'count': 3})
-check(r.status_code != 429, 'purge 3 в остаток 5 → выполняется', f'{r.status_code}')
+check(r.status_code == 429 and 'Лимит' in (r.get_json() or {}).get('error', ''),
+      '6-я чистка сверх 5 операций → 429', f'{r.status_code} {r.get_data(as_text=True)[:90]}')
 
 # ── 6. bulk-*: гейты отвечают 429 при исчерпанном лимите ───────────────────
 SL.set_role_limits(777, 555, kick=1)  # kick: 1 на окно

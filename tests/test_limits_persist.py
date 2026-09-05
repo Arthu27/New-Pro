@@ -76,7 +76,7 @@ for rid, label, want in ((MOD_ROLE, 'Модер', 3), (CUR_ROLE, 'Куратор
                          (ADM_ROLE, 'Админ', 5)):
     lim, _win = SL.effective_limits(GID, [rid])
     check(lim['warn'] == want and lim['clear'] == 10,
-          f'{label}: варн {want}/день, чистка 10 сообщений/день',
+          f'{label}: варн {want}/день, чистка 10/день',
           f'→ warn={lim["warn"]} clear={lim["clear"]}')
 lim, _ = SL.effective_limits(GID, [OWN_ROLE])
 check(all(lim[k] == 0 for k in ('warn', 'mute', 'unmute', 'ban',
@@ -97,7 +97,7 @@ for i in range(10):
     SL.record_hit(GID, UID, 'clear', 1)
 ok, deny = SL.check_action(_G(), _M(UID, CUR_ROLE), 'clear', 1)
 check(not ok and '10' in deny,
-      '11-я чистка (сверх 10 сообщений) запрещена', f'→ {deny[:60]}')
+      '11-я чистка (сверх 10 операций) запрещена', f'→ {deny[:60]}')
 
 cnt_file = SL._cnt_path(GID)
 check(os.path.exists(cnt_file),

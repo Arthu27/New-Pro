@@ -106,12 +106,14 @@ def register(ctx):
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'purge'):
             return jsonify({'error': 'Нет права: «Очистка сообщений» не разрешено вашей роли (настройка — «Права команд»)'}), 403
-        # Лимит «чистка» (сообщений за окно) — как у /clear в Discord.
+        # Лимит «чистка»: 1 хит за операцию, не за каждое сообщение.
+        # Раньше в квоту писали count — первая чистка 25 сообщений при
+        # лимите 10 сразу давала «Лимит исчерпан … использовано 0».
         try :
             _purge_amt =max (1 ,min (int ((data .get ('count')or 10 )),200 ))
         except (TypeError ,ValueError ):
             _purge_amt =10
-        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'clear',_purge_amt)
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'clear',1)
         if _lim_denied :
             return jsonify ({'error':_lim_denied }),429
 
@@ -120,9 +122,14 @@ def register(ctx):
         async def do ():
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
-                deleted =await (ch .purge (limit =int (data .get ('count',10 ))))
+                deleted =await (ch .purge (limit =_purge_amt ))
                 result ['count']=len (deleted )
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =30 )
+        try :
+            if int (result .get ('count')or 0 )>0 :
+                _panel_limit_record (int (guild_id ),_acl_m ,'clear',1)
+        except Exception as _rex :
+            _log .debug ('purge record: %s',_rex )
         return jsonify ({'success':True ,'count':result ['count']})
 
 

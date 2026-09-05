@@ -51,7 +51,7 @@ _MAX_TS = 1000                  # сколько меток держать на 
 #   • размут — модеры 3/день, кураторы/админы 5 (Sabotash 2026-09-02)
 #   • мут/таймаут — модеры 5/день, кураторы/админы 10 (тот же КД, что у тайма)
 #   • варн — модеры 3/день, кураторы/админы 5
-#   • очистка — 10 сообщений/день
+#   • очистка — 10 чисток/день (одна операция = один хит)
 # Владелец всё это меняет в панели; 0 по-прежнему означает «без лимита».
 DEFAULT_LIMITS = {
     # ── наказания ──
@@ -63,8 +63,7 @@ DEFAULT_LIMITS = {
     'ban': 1,        # банов/апелляций — 1/день (кураторы 3, админы 5 — панель)
     'unban': 0,      # разбанов / снятий апелляции — без жёсткого дефолта
     # ── опасные операции ──
-    'clear': 10,     # сообщений, удалённых очисткой — 10/день у персонала
-                     # (владелец 2026-09-05); владелец сервера/бота — без лимита
+    'clear': 10,     # чисток (операций) /день у персонала; владелец — без лимита
 }
 
 # Человеческие названия для сообщений и панели.
@@ -77,7 +76,7 @@ ACTION_TITLES = {
     'vkick': 'киков из войса',
     'ban': 'банов',
     'unban': 'разбанов',
-    'clear': 'сообщений чисткой',
+    'clear': 'чисток',
 }
 
 # Подсказки к полям в панели (что именно считается).
@@ -89,7 +88,7 @@ ACTION_HINTS = {
     'vkick': 'выгонок из голоса',
     'ban': 'банов/апелляций',
     'unban': 'разбанов',
-    'clear': 'сообщений чисткой',
+    'clear': 'чисток (за раз — сколько угодно сообщений)',
 }
 
 # Порядок и группировка полей в панели.
@@ -598,11 +597,40 @@ def status_text(guild_id, user_id):
     if lim.get('clear'):
         hits, _d = _hits(guild_id, user_id, 'clear')
         used = _count_within(hits, win.get('clear', DEFAULT_WINDOW))
-        parts.append(f'чистка {used}/{lim["clear"]} сообщ.')
+        parts.append(f'чистки {used}/{lim["clear"]}')
     return ' · '.join(parts) if parts else 'без лимитов'
 
 
 # ─── Гейт для когов ─────────────────────────────────────────────────────
+
+def limit_deny_text(key, used, limit, amount=1, window=None, refresh=None):
+    """Текст отказа по лимиту.
+
+    «Лимит исчерпан» — только когда остатка нет (used >= limit).
+    Если запросили больше, чем осталось, но квота ещё жива — говорим
+    прямо: «запросили N, осталось M». Иначе модератор видит
+    «исчерпан … использовано 0, осталось 10» на первой же чистке
+    (жалоба 2026-09-05: очистка «не работает», хотя не пользовались).
+    """
+    what = ACTION_TITLES.get(key, 'действий')
+    try:
+        used_n = int(used or 0)
+        limit_n = int(limit or 0)
+        amount_n = max(1, int(amount or 1))
+    except (TypeError, ValueError):
+        used_n, limit_n, amount_n = 0, 0, 1
+    left = max(0, limit_n - used_n)
+    win = f' за {human_window(window)}' if window else ''
+    if left <= 0:
+        txt = (f'Лимит исчерпан: {limit_n} {what}{win} '
+               f'(использовано {used_n}).')
+    else:
+        txt = (f'Запросили {amount_n} {what}, а осталось {left} из {limit_n}{win}. '
+               'Уменьшите число.')
+    if refresh:
+        txt += f' Обновится через {refresh}.'
+    return txt
+
 
 def check_action(guild, actor, key, amount=1):
     """(allowed, deny_text). deny_text готов для показа модератору.
@@ -636,13 +664,9 @@ def check_action(guild, actor, key, amount=1):
         used = _count_within(hits, window)
         if used + amount <= limit:
             return True, None
-        what = ACTION_TITLES.get(key, 'действий')
-        left = max(0, limit - used)
-        txt = (f'Лимит исчерпан: {limit} {what} за {human_window(window)} '
-               f'(использовано {used}, осталось {left}).')
         when = refresh_in_text(guild.id, actor.id, key)
-        if when:
-            txt += f' Обновится через {when}.'
+        txt = limit_deny_text(key, used, limit, amount=amount,
+                              window=window, refresh=when)
         return False, txt
     except Exception as ex:
         _log.debug('check_action(%s): %s', key, ex)
