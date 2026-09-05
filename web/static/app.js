@@ -3585,10 +3585,11 @@
     var head = doc.createElement('div');
     head.className = 'page-head fx-built';
     head.setAttribute('data-fx-head', (grp && grp.key) || 'auto');
+    /* eyebrow — только раздел; название живёт в <h1>, без дубля через «·» */
     head.innerHTML =
       '<div class="page-head-icon"><i class="fas ' + icon + '"></i></div>' +
       '<div class="page-head-copy">' +
-        '<div class="eyebrow">' + esc((grp && grp.group) || 'Панель') + ' <span class="sep">·</span> ' + esc(found.label) + '</div>' +
+        '<div class="eyebrow">' + esc((grp && grp.group) || 'Панель') + '</div>' +
         '<h1>' + esc(title) + '</h1>' +
         '<p class="lead">' + esc(lead) + '</p>' +
       '</div>';
@@ -3944,8 +3945,8 @@
     overlay.className = 'modal-overlay at-finder';
     overlay.innerHTML =
       '<div class="modal-box" style="max-width:580px">' +
-        '<div class="modal-head"><b><i class="fas fa-magnifying-glass"></i> Поиск по панели</b>' +
-        '<button type="button" class="icon-btn" id="atFinderClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>' +
+        '<div class="modal-head"><div><h3><i class="fas fa-magnifying-glass"></i> Поиск по панели</h3></div>' +
+        '<button type="button" class="close" id="atFinderClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>' +
         '<div class="modal-body">' +
           '<input type="text" id="atFinderInput" class="form-input" placeholder="@ страница, участник, канал…" style="font-size:15px;padding:12px 14px" autocomplete="off" aria-label="Быстрый поиск">' +
           '<div id="atFinderList" style="margin-top:10px;max-height:46vh;overflow:auto"></div>' +
@@ -4091,4 +4092,3 @@
 /* ── Флаг готовности клиентского кита (бут-шим в base.html
    перестаёт дублировать live-refresh, когда app.js загружен) ── */
 try { window.__panelKitReady = true; } catch (e) {}
-}

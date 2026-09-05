@@ -1103,11 +1103,10 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     var overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'ccSettingsModal';
-    overlay.hidden = true;
     overlay.innerHTML =
       '<div class="modal-box" style="max-width:420px">' +
-        '<div class="modal-head"><b><i class="fas fa-sliders"></i> Виджеты главной</b>' +
-        '<button type="button" class="icon-btn" id="ccSettingsClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>' +
+        '<div class="modal-head"><div><h3><i class="fas fa-sliders"></i> Виджеты главной</h3></div>' +
+        '<button type="button" class="close" id="ccSettingsClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>' +
         '<div class="modal-body" id="ccSettingsBody"></div>' +
       '</div>';
     document.body.appendChild(overlay);

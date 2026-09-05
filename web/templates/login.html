@@ -160,7 +160,7 @@
           </div>
         </div>
 
-        <div class="divider-or" aria-hidden="true">или</div>
+        <div class="divider-or" hidden aria-hidden="true">или</div>
 
         <!-- ─── Способ 1: вход по паролю ─── -->
         <div id="passPane" role="tabpanel" aria-label="Вход по паролю">
@@ -276,7 +276,7 @@
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   function showError(boxId, text) {
     var el = $(boxId);
@@ -636,13 +636,13 @@
   var forgotPane = $('forgotPane');
   var passPane = $('passPane');
   var forgotToggle = $('forgotToggle');
+  function pane(showForgot) {
+    var form = $('passForm');
+    if (form) form.style.display = showForgot ? 'none' : '';
+    if (forgotPane) forgotPane.hidden = !showForgot;
+    if (showForgot) { var f = $('frQuery'); if (f) f.focus(); }
+  }
   if (forgotToggle && forgotPane && passPane) {
-    function pane(showForgot) {
-      var form = $('passForm');
-      if (form) form.style.display = showForgot ? 'none' : '';
-      forgotPane.hidden = !showForgot;
-      if (showForgot) { var f = $('frQuery'); if (f) f.focus(); }
-    }
     forgotToggle.addEventListener('click', function () { pane(true); });
     var frBack = $('frBackBtn');
     if (frBack) frBack.addEventListener('click', function () { pane(false); });

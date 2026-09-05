@@ -1867,6 +1867,7 @@ video.pf-lb-media { background: #000; }
 
 /* ── 17. Модальные окна ────────────────────────────────────── */
 .modal-overlay:not(.open) { display: none; }
+.modal-overlay.open { display: flex !important; }
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(17, 19, 24, 0.44);
@@ -5325,6 +5326,9 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--ac) 45%, transparent);
   animation: navDotPulse 2.4s var(--ease) infinite;
 }
+/* звезда избранного и пульс делят правый край — пульс гасим, когда звезда видна */
+.nav-link:hover.active::after,
+.nav-link.faved.active::after { opacity: 0; }
 @keyframes navDotPulse {
   0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ac) 45%, transparent); }
   55%  { box-shadow: 0 0 0 5px transparent; }
