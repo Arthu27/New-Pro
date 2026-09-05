@@ -211,7 +211,15 @@ def register(ctx):
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
             duration =int (data .get ('duration',60 ))
+            # ИЕРАРХИЯ: персонал не мутит персонал своего уровня и выше —
+            # таких молча пропускаем (bulk по роли, а не по человеку)
+            from services .staff_hierarchy import check as _hchk
+            _sess_role =session .get ('role')
             for member in role .members :
+                _hok ,_hdeny ,_ ,_ =_hchk (guild ,_acl_m ,member ,'mute',
+                session_role =_sess_role )
+                if not _hok :
+                    continue
                 try :
                     await (member .timeout (datetime.now(timezone.utc)+timedelta (minutes =duration ),reason ='Bulk mute'))
                     result ['count']+=1 
@@ -243,7 +251,14 @@ def register(ctx):
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
+            # ИЕРАРХИЯ: не кикаем персонал своего уровня и выше
+            from services .staff_hierarchy import check as _hchk
+            _sess_role =session .get ('role')
             for member in role .members :
+                _hok ,_hdeny ,_ ,_ =_hchk (guild ,_acl_m ,member ,'kick',
+                session_role =_sess_role )
+                if not _hok :
+                    continue
                 try :
                     await (member .kick (reason ='Bulk kick'))
                     result ['count']+=1 
@@ -275,7 +290,14 @@ def register(ctx):
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
+            # ИЕРАРХИЯ: не банрим персонал своего уровня и выше
+            from services .staff_hierarchy import check as _hchk
+            _sess_role =session .get ('role')
             for member in role .members :
+                _hok ,_hdeny ,_ ,_ =_hchk (guild ,_acl_m ,member ,'ban',
+                session_role =_sess_role )
+                if not _hok :
+                    continue
                 try :
                     await (guild .ban (member ,reason ='Bulk ban'))
                     result ['count']+=1 

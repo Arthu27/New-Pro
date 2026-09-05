@@ -610,6 +610,18 @@ class Moderation (commands .Cog ):
                 ephemeral =True )
                 return
 
+            # ИЕРАРХИЯ ПЕРСОНАЛА: не наказываем персонал своего уровня и выше
+            # (владелец 2026-09-05: «модер наказывает модера/куратора — беспредел»)
+            try :
+                from services .staff_hierarchy import check as _hchk
+                _hok ,_hdeny ,_ar ,_tr =_hchk (guild ,interaction .user ,user ,action )
+                if not _hok :
+                    await _respond (interaction ,
+                    embed =error_embed (_hdeny ),ephemeral =True )
+                    return
+            except Exception as _hex :
+                log .debug (f'[MODPANEL] hierarchy: {_hex}')
+
             # Предпроверка прав бота: знаем ЗАРАНЕЕ, получится ли действие,
             # и дело в базу не пишется зря
             _pre =await self .preflight_reason (guild ,user ,action )
@@ -971,6 +983,19 @@ class Moderation (commands .Cog ):
         if guild is None :
             return False ,'Сервер не найден'
         _actor =PanelActor (actor )
+        # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05: «модер наказывает модера
+        # и куратора — беспредел»): персонал не наказывает персонал своего
+        # уровня и выше; владелец бота/сервера/боты — вне юрисдикции.
+        # Веб-панель шлёт PanelInteraction-путь (target=Member/ID) и сюда.
+        try :
+            from services .staff_hierarchy import check as _hcheck
+            _hm =target if isinstance (target ,discord .Member ) \
+            else guild .get_member (int (target_str )or 0 )
+            _hok ,_hdeny ,_ ,_ =_hcheck (guild ,_actor ,_hm ,action )
+            if not _hok :
+                return False ,_hdeny
+        except Exception as _hex :
+            _log .debug ('[MODPANEL] hierarchy: %s',_hex )
         target_str =str (getattr (target ,'id',target ))
         # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
         if action =='warn':

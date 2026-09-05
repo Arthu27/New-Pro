@@ -414,6 +414,19 @@ class warnings(commands.Cog):
         """
         guild = interaction.guild
 
+        # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05): не варним персонал своего
+        # уровня и выше — модеры не варят модеров/кураторов/админов.
+        try:
+            from services.staff_hierarchy import check as _hchk
+            _hok, _hdeny, _a, _t = _hchk(guild, interaction.user, user, 'warn')
+            if not _hok:
+                from cogs.embed_utils import error_embed as _err
+                await interaction.followup.send(embed=_err(_hdeny),
+                                                ephemeral=True)
+                return (0, len(self._get_warns(guild.id, user.id)), None)
+        except Exception as _hex:
+            log.debug(f"[WARNS] warn hierarchy: {_hex}")
+
         # Лимиты стаффа (владельца не трогаем): пер-рольные лимиты на варны
         try:
             _sl_uid = getattr(interaction.user, 'id', 0)
@@ -567,6 +580,16 @@ class warnings(commands.Cog):
                     return
         except Exception as _acl_e:
             log.debug(f"[WARNS] unwarn acl: {_acl_e}")
+        # ИЕРАРХИЯ: персонал не снимает варны персоналу своего уровня и выше
+        try:
+            from services.staff_hierarchy import check as _hchk
+            _hok, _hdeny, _a, _t = _hchk(interaction.guild,
+                                         interaction.user, user, 'unwarn')
+            if not _hok:
+                await interaction.response.send_message(_hdeny, ephemeral=True)
+                return
+        except Exception as _hex:
+            log.debug(f"[WARNS] unwarn hierarchy: {_hex}")
         warns = self._get_warns(interaction.guild.id, user.id)
         if not warns:
             e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))

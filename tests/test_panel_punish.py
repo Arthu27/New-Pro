@@ -309,12 +309,47 @@ r = client.post('/api/guild/777/punish', json={
     'user_id': 'abc', 'action': 'warn'})
 check(r.status_code == 400, 'мусорный ID отклонён')
 
-# владелец сервера — цель запретна
-wg.owner_id = TID
+# владелец сервера — цель запретна (модератор-Discord пытается варн)
+wg.owner_id = 333000000000000333
+class _OS:
+    id = 333000000000000333
+    bot = False
+    roles = []
+    mention = '<@333>'
+    display_name = 'Хозяин'
+    guild_permissions = type('P', (), {'administrator': False,
+                                       'ban_members': False,
+                                       'manage_messages': False,
+                                       'manage_guild': False})()
+wg.members = [m for m in wg.members if getattr(m, 'id', 0) != 333000000000000333]
+wg.members.append(_OS())
+import time as _time_h  # noqa: E402
+class _M222:
+    id = 222000000000000222
+    bot = False
+    roles = [type('R555', (), {'id': 555})()]
+    mention = '<@222>'
+    display_name = 'ЛинкМод'
+    guild_permissions = type('P', (), {'administrator': False,
+                                       'ban_members': False,
+                                       'manage_messages': False,
+                                       'manage_guild': False})()
+wg.members.append(_M222())
+from services import permission_acl as _PACL_h
+_PACL_h.set_action_rule(777, 'warn', ['555'])
+with client.session_transaction() as sess:
+    sess['discord_id'] = '222000000000000222'   # вход через Discord-аккаунт
+    sess['_role_checked'] = _time_h.time()
 r = client.post('/api/guild/777/punish', json={
-    'user_id': str(TID), 'action': 'warn'})
-check(r.status_code == 400 and 'Владельца' in (r.get_json().get('error') or ''),
-      'владельца сервера наказать нельзя')
+    'user_id': '333000000000000333', 'action': 'warn'})
+_PACL_h.clear_action_rules(777)
+check(r.status_code in (400, 403)
+      and 'владелец сервера' in (r.get_json().get('error') or '').lower(),
+      f'владельца сервера наказать нельзя (иерархия): {str(r.get_json())[:90]}')
+with client.session_transaction() as sess:
+    sess.pop('discord_id', None)   # вернуть доверенный вход
+    sess['_role_checked'] = _time_h.time()
+wg.members = [m for m in wg.members if getattr(m, 'id', 0) != 333000000000000333]
 wg.owner_id = 1
 
 print('== 8. ACL «Права команд»: действия по разрешённым ролям (строгая модель) ==')
@@ -373,10 +408,26 @@ r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 check(len(d.get('actions', [])) == 8 and d.get('hidden_by_acl') == 0,
       'с разрешённой ролью: полный набор')
+# иерархия: модератор не банит сам себя — бан второго участника
+_other = '222000000000000222'
+if _other not in [str(getattr(m, 'id', 0)) for m in wg.members]:
+    class _M2:
+        id = int(_other)
+        bot = False
+        roles = []
+        mention = '<@222>'
+        display_name = 'Другой'
+
+        class guild_permissions:
+            administrator = False
+            ban_members = False
+            manage_messages = False
+            manage_guild = False
+    wg.members.append(_M2())
 r = client.post('/api/guild/777/punish', json={
-    'user_id': str(TID), 'action': 'ban', 'reason': 'проверено'})
+    'user_id': _other, 'action': 'ban', 'reason': 'проверено'})
 check(r.status_code == 200 and r.get_json().get('success'),
-      'POST бана с разрешённой ролью — успех')
+      f'POST бана с разрешённой ролью — успех ({str(r.get_json())[:80]})')
 wg.members[0].roles = []
 PACL.clear_action_rules(777)
 
@@ -458,7 +509,7 @@ check(lim2 and lim2.get('used') == 1 and lim2.get('left') == 0,
 
 # вторая выдача за окно — сервер отказывает, а не «даёт бесконечно»
 r = client.post('/api/guild/777/punish', json={
-    'user_id': str(TID), 'action': 'ban', 'reason': 'вторая за день'})
+    'user_id': _other, 'action': 'ban', 'reason': 'вторая за день'})
 d3 = r.get_json()
 check(not d3.get('success') and 'Лимит' in (d3.get('error') or ''),
       f'вторая выдача отклонена лимитом ({d3.get("error", "")[:80]})')

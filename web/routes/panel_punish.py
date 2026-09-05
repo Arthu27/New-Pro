@@ -15,6 +15,7 @@ Discord-ролям, то входящему через Discord-аккаунт м
 из .env и роль owner — доверенные: им доступен весь набор. Плюс состояние
 готовности «бана» (канал апелляции) и «бот онлайн».
 """
+from services import staff_hierarchy as SH
 from web.routes._common import (
     _safe_json_obj,
     _log, _run_async, _fire_panel_notification,
@@ -244,12 +245,14 @@ def register(ctx):
                             'error': 'ID участника — число'}), 400
         member = guild.get_member(int(raw_uid))
         target = member if member is not None else raw_uid
-        if member is not None and getattr(member, 'bot', False):
-            return jsonify({'success': False,
-                            'error': 'Ботов наказывать нельзя'}), 400
-        if member is not None and member.id == guild.owner_id:
-            return jsonify({'success': False,
-                            'error': 'Владельца сервера наказать нельзя'}), 400
+        # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05: «модер наказывает модера
+        # и куратора — беспредел»): персонал не наказывает персонал своего
+        # уровня и выше; владелец бота/сервера — вне юрисдикции.
+        _h_ok, _h_deny, _a_role, _t_role = SH.check(
+            guild, member_viewer, member, action,
+            session_role=session.get('role'))
+        if not _h_ok:
+            return jsonify({'success': False, 'error': _h_deny}), 403
 
         reason = str(d.get('reason') or '').strip()[:500]
         duration = str(d.get('duration') or '').strip()[:40] or None
