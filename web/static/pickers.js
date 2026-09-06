@@ -162,6 +162,10 @@
 
   function sshdEnhance(sel, opts) {
     if (!sel || sel._sshd) return sel && (sel._sshd ? sel._sshd._sshdCtl : null);
+    /* HakumoSelect (app.js) уже обернул поле — не строим вторую кнопку.
+       data-no-aes запрещает только aes: sshd как раз должен остаться один. */
+    if (sel.classList && sel.classList.contains('aes-native')) return null;
+    if (sel.closest && sel.closest('.aes')) return null;
     opts = opts || {};
     var host = sel.parentNode;
     if (!host) return null;
@@ -441,9 +445,10 @@
     if (!scope.querySelectorAll) return;
     sshdPruneOrphans(scope === document ? document : scope);
     Array.prototype.forEach.call(
-      scope.querySelectorAll('select:not([multiple]):not([data-sshd-no]):not(.sshd-src)'),
+      scope.querySelectorAll('select:not([multiple]):not([data-sshd-no]):not(.sshd-src):not(.aes-native)'),
       function (sel) {
         if (sel._sshd) return;
+        if (sel.closest && sel.closest('.aes')) return;
         var needsSearch = (sel.options || []).length > 8 || sel.hasAttribute('data-sshd-search');
         sshdEnhance(sel, { search: needsSearch });
       });

@@ -100,6 +100,23 @@ check('if (seen[channel.id]) return;' in ann,
 check('<optgroup label="' in ann and 'title="#' in ann,
       'группировка по категориям + полное имя в title у пунктов')
 
+print('== mod_tools.html: Sticky — один выбор канала ==')
+mt = _tpl('mod_tools.html')
+i = mt.find('Sticky-сообщения')
+j = mt.find('Тихий мут')
+seg = mt[i:j] if i >= 0 and j > i else ''
+check(i >= 0 and j > i, 'карточка Sticky есть на странице инструментов')
+check(seg.count('<select') == 1 and 'id="sticky-channel"' in seg,
+      'карточка Sticky: ровно один select канала (не два виджета)')
+check('data-no-aes' in seg,
+      'Sticky: data-no-aes — HakumoSelect не строит вторую кнопку рядом с sshd')
+check("var seen = {}" in mt and 'seen[id]' in mt,
+      'дубли id канала отбрасываются при заполнении')
+check('sshdEnhance' in mt and 'sel._sshdCtl' in mt,
+      'один кастомный контрол sshd, ярлык обновляется после загрузки')
+check(mt.count('id="sticky-channel"') == 1,
+      'id sticky-channel встречается один раз')
+
 # ─── 3. channels.html: длинные имена видны целиком ──────────────────────────
 print('== channels.html: имена каналов не обрезаются ==')
 ch = _tpl('channels.html')

@@ -48,6 +48,8 @@ check(bool(m), 'порядок: замена в исходном родител�
 m = re.search(r'shell\.appendChild\(orig\).*?orig\.parentNode\.replaceChild\(shell, orig\)', APP_JS, re.S)
 check(m is None, 'запрещённый порядок (replaceChild по предку) отсутствует')
 check('tryEnhance' in APP_JS, 'сбой одного селекта не ломает остальные')
+check('sshd-src' in APP_JS and "closest('.sshd')" in APP_JS,
+      'HakumoSelect не оборачивает sshd повторно (два виджета = дубликаты выборов)')
 
 print('== Node-харнесс: реальное исполнение движка ==')
 node_script = r"""

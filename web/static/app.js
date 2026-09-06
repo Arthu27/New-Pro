@@ -3802,6 +3802,9 @@
     if (orig.getAttribute('data-aes') === '1') return;
     if (orig.matches('[multiple], [size], [data-no-aes]')) return;
     if (orig.closest('.aes')) return;
+    /* pickers.js (sshd) уже построил кастомный контрол — второй виджет
+       (aes-кнопка + sshd-кнопка) = «дубликаты выборов» у Sticky и других. */
+    if (orig.classList.contains('sshd-src') || orig.closest('.sshd')) return;
     var inline = !!orig.closest('.analytics-server-control');
     var cs = getComputedStyle(orig);
     var full = cs.display === 'block';
@@ -3842,7 +3845,9 @@
   }
   function scan(root) {
     (root || doc).querySelectorAll('select').forEach(function (el) {
-      if (!el.closest('.aes') && !el.matches('[multiple], [size], [data-no-aes]')) tryEnhance(el);
+      if (el.closest('.aes') || el.closest('.sshd')) return;
+      if (el.matches('[multiple], [size], [data-no-aes], .sshd-src')) return;
+      tryEnhance(el);
     });
   }
 

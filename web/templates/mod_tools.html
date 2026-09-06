@@ -39,7 +39,7 @@
       <div class="sub">Маяк возвращается в конец канала и не теряется в потоке.</div></div>
     </div>
     <div class="panel-body">
-      <label class="form-group"><span class="form-label">Канал</span><select class="form-input" id="sticky-channel"></select></label>
+      <label class="form-group"><span class="form-label">Канал</span><select class="form-input" id="sticky-channel" data-no-aes data-sshd-search aria-label="Канал sticky-сообщения"></select></label>
       <label class="form-group"><span class="form-label">Текст маяка</span><textarea class="form-input" id="sticky-text" maxlength="1900" rows="3" placeholder="Важная инструкция для участников"></textarea></label>
       <button type="button" class="btn btn-primary" id="sticky-save"><i class="fas fa-satellite-dish"></i> Установить маяк</button>
       <div class="hint" id="sticky-msg" style="margin-top:8px"></div>
@@ -80,21 +80,36 @@
     el.style.display = text ? '' : 'none';
   }
 
-  /* ── Каналы ── */
+  /* ── Каналы ──
+     Один выбор (владелец: «дубликаты выборов» у Sticky): data-no-aes, чтобы
+     HakumoSelect не строил вторую кнопку рядом с sshd; id канала — один раз. */
   function loadChannels() {
     var sel = $('sticky-channel');
+    if (!sel) return;
+    if (window.sshdEnhance && !sel._sshd) {
+      window.sshdEnhance(sel, { search: true, searchPlaceholder: 'Канал…' });
+    }
     fetch('/api/channels').then(function (r) { return r.json(); }).then(function (d) {
       var channels = d.channels || d || [];
-      sel.innerHTML = '';
+      var keep = String(sel.value || '');
+      var seen = {};
+      var html = '<option value="">— не выбрано —</option>';
       (Array.isArray(channels) ? channels : []).forEach(function (c) {
-        if (c.hidden) return;
+        if (!c || c.hidden) return;
         if (c.type !== undefined && c.type !== 0 && c.type !== 'text') return;
-        var o = document.createElement('option');
-        o.value = c.id; o.textContent = '#' + (c.name || c.id);
-        sel.appendChild(o);
+        var id = String(c.id || '');
+        if (!id || seen[id]) return;
+        seen[id] = true;
+        html += '<option value="' + esc(id) + '">#' + esc(c.name || id) + '</option>';
       });
-      if (!sel.options.length) sel.innerHTML = '<option value="">— каналы недоступны —</option>';
-    }).catch(function () { sel.innerHTML = '<option value="">— ошибка загрузки —</option>'; });
+      sel.innerHTML = html;
+      if (keep && sel.querySelector('option[value="' + keep.replace(/"/g, '') + '"]')) sel.value = keep;
+      else sel.value = '';
+      if (sel._sshdCtl) sel._sshdCtl.refresh();
+    }).catch(function () {
+      sel.innerHTML = '<option value="">— каналы недоступны —</option>';
+      if (sel._sshdCtl) sel._sshdCtl.refresh();
+    });
   }
 
   /* ── Sticky ── */

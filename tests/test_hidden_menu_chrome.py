@@ -129,7 +129,7 @@ pickers = {
     'channel_settings.html': '!c.hidden && (c.type === \'text\'',
     'announcements.html': '!channel.hidden && (channel.type === \'text\'',
     'appeals.html': '!c.hidden && (c.type === \'text\' || c.type === \'thread\')',
-    'mod_tools.html': 'if (c.hidden) return',
+    'mod_tools.html': 'if (!c || c.hidden) return',
     'logs.html': 'c && !c.hidden && c.id',
 }
 for fn, needle in pickers.items():
