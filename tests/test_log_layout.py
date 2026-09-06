@@ -224,8 +224,10 @@ reason = action_log_embed(g, 'ban', user, mod, reason='флуд')
 rval = next((f.value for f in reason.fields if f.name == 'Причина'), '')
 check('"' in rval and 'флуд' in rval, 'причина в кавычках')
 asrc = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
-check('_styled_log_embed' in asrc and 'Оценка рассмотрения' in asrc,
-      'отзыв по апелляции — карточка, не сырая строка')
+check('_styled_log_embed' in asrc and 'Оценка рассмотрения' in asrc
+      and '_rate_log_embed' in asrc and '_rate_prompt_embed' in asrc
+      and 'class AppealRateSelect' in asrc,
+      'отзыв по апелляции — селект-меню + таблица, не сырая строка')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

@@ -200,10 +200,36 @@ check(ok0 is not None, '0 в настройке — авто-блок не ме�
 
 print('== 5.6 rate-view оценки рассмотрения ==')
 rv = ap.AppealRateView(object(), 42, 7)
-rids = sorted(c.custom_id for c in rv.children)
-check(rids == ['app_rate:down:42:7', 'app_rate:up:42:7'],
-      f'custom_id оценки несут gid и номер: {rids}')
+rids = [c.custom_id for c in rv.children]
+check(rids == ['app_rate:42:7'],
+      f'custom_id селекта оценки несёт gid и номер: {rids}')
 check(rv.timeout is None, 'rate-view persistent (переживает рестарт)')
+check(len(rv.children) == 1 and isinstance(rv.children[0], discord.ui.Select),
+      'оценка — одно меню-селект, не две голые кнопки')
+opts = {o.value: o.label for o in rv.children[0].options}
+check(opts == {'up': 'Помогли разобраться', 'down': 'Не помогли'},
+      f'пункты меню оценки: {opts}')
+pe = ap._rate_prompt_embed({'id': 7, 'status': 'accepted'}, 'Сервер')
+check(pe.title == 'Оценка рассмотрения' and pe.fields,
+      'ЛС оценки — карточка-таблица, не сырой текст')
+fnames = [f.name for f in pe.fields]
+check(fnames == ['Апелляция', 'Решение', 'Как оценить'],
+      f'столбцы меню оценки: {fnames}')
+check('> ' in pe.fields[0].value and '"' in pe.fields[0].value,
+      'ячейки меню — цитата с кавычками')
+le = ap._rate_log_embed(
+    type('G', (), {'id': 1, 'name': 'G', 'icon': None,
+                   'get_member': lambda self, x: None})(),
+    {'id': 7, 'status': 'accepted', 'reviewed_by': 'Мод'},
+    type('U', (), {'mention': '<@9>', 'display_name': 'Автор',
+                   'id': 9, 'display_avatar': type('A', (), {'url': ''})()})(),
+    'up', 'всё ясно')
+check(le.title and 'Оценка рассмотрения' in (le.title or ''),
+      'лог оценки — карточка, не сырая строка')
+ln = [f.name for f in le.fields]
+check('Апелляция' in ln and 'Оценка' in ln and 'Комментарий' in ln
+      and 'Решение' in ln and 'Рассмотрел' in ln,
+      f'таблица лога оценки: {ln}')
 
 print('== 5.7 эскалация, «в работе», комментарий к оценке ==')
 s_esc = ap.empty_state()
@@ -235,6 +261,11 @@ silent = [n.lineno for n in ast.walk(tree)
                          (ast.Pass, ast.Continue))]
 check('_dm_embed' in src and 'COLOR_CLOSED' in src,
       'ЛС апелляций — единые embed-карточки')
+check('class AppealRateSelect' in src and '_rate_prompt_embed' in src
+      and '_rate_log_embed' in src,
+      'оценка — селект + карточка в ЛС + таблица в канал')
+check("Как прошло рассмотрение? Одна оценка" not in src,
+      'сырой текст оценки в ЛС убран')
 check('ответят в треде' not in src,
       'старая неверная фраза «ответят в треде» убрана из ЛС пользователя')
 check(not silent, f'ни одного молчаливого except {silent or "ок"}')

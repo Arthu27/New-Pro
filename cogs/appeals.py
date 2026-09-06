@@ -497,51 +497,143 @@ class AppealView(discord.ui.View):
             await interaction.response.edit_message(view=self)
 
 
-class AppealRateView(discord.ui.View):
-    """Оценка рассмотрения от автора апелляции (шлётся в ЛС после решения).
 
-    custom_id несёт gid и номер апелляции → persistent после рестарта
-    (регистрируется в on_ready для решённых, но неоценённых апелляций).
-    Оценить может только сам автор — чужие клики отклоняются.
-    """
+def _rate_cell(*lines):
+    """Столбик оценки: полоска цитаты + кавычки — как таблица логов."""
+    out, seen = [], set()
+    for ln in lines:
+        t = str(ln or '').strip()
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        if not t.startswith(('<@', '<#', '<t:', '>', '"', 'http', '[')):
+            t = '"' + t.replace('"', "'") + '"'
+        if not t.startswith('>'):
+            t = '> ' + t
+        out.append(t)
+    return '\n'.join(out) or '> —'
+
+
+def _rate_outcome(item):
+    return {'accepted': 'принята', 'rejected': 'отклонена'}.get(
+        item.get('status'), item.get('status') or '—')
+
+
+def _rate_verdict(verb):
+    return 'помогли разобраться' if verb == 'up' else 'не помогли'
+
+
+def _rate_prompt_embed(item, guild_name=''):
+    """Карточка-меню в ЛС: таблица + селект «помогли / нет»."""
+    e = discord.Embed(
+        title='Оценка рассмотрения',
+        color=COLOR_PENDING,
+        timestamp=datetime.now(UTC))
+    e.add_field(name='Апелляция', value=_rate_cell(f'#{item.get("id")}'),
+                inline=False)
+    e.add_field(name='Решение', value=_rate_cell(_rate_outcome(item)),
+                inline=False)
+    e.add_field(name='Как оценить',
+                value='> Выберите в меню ниже — помогли или нет.',
+                inline=False)
+    e.set_footer(text=f'{guild_name} · {DM_FOOTER}' if guild_name else DM_FOOTER)
+    return e
+
+
+def _rate_thanks_embed(item, verb, comment=None):
+    """После оценки: та же таблица, уже с вердиктом."""
+    good = verb == 'up'
+    e = discord.Embed(
+        title='Спасибо за оценку',
+        color=COLOR_YES if good else COLOR_NO,
+        timestamp=datetime.now(UTC))
+    e.add_field(name='Апелляция', value=_rate_cell(f'#{item.get("id")}'),
+                inline=False)
+    e.add_field(name='Оценка', value=_rate_cell(_rate_verdict(verb)),
+                inline=False)
+    if comment:
+        e.add_field(name='Комментарий', value=_rate_cell(comment), inline=False)
+    e.set_footer(text=DM_FOOTER)
+    return e
+
+
+def _rate_log_embed(guild, item, author, verb, comment=None):
+    """Таблица в канал модеров: апелляция / автор / оценка / комментарий."""
+    from cogs.logs import _styled_log_embed, _person_block
+    fields = [
+        ('Апелляция', _rate_cell(f'#{item.get("id")}')),
+        ('Автор', _person_block(author)),
+        ('Решение', _rate_cell(_rate_outcome(item))),
+        ('Оценка', _rate_cell(_rate_verdict(verb))),
+    ]
+    who = item.get('reviewed_by')
+    if who:
+        fields.append(('Рассмотрел', _rate_cell(who)))
+    if comment:
+        fields.append(('Комментарий', _rate_cell(comment)))
+    av = None
+    try:
+        av = str(author.display_avatar.url)
+    except Exception:
+        av = None
+    return _styled_log_embed(
+        guild, 'mod', 'Оценка рассмотрения',
+        fields=fields, thumbnail=av,
+        color=COLOR_YES if verb == 'up' else COLOR_NO)
+
+
+class AppealRateSelect(discord.ui.Select):
+    """Меню оценки: помогли / не помогли. Как размут — один селект, не кнопки."""
+
+    def __init__(self, cog, guild_id, appeal_id):
+        options = [
+            discord.SelectOption(
+                label='Помогли разобраться', value='up',
+                description='Рассмотрели честно, стало понятно',
+                emoji='👍'),
+            discord.SelectOption(
+                label='Не помогли', value='down',
+                description='Остались вопросы или обида',
+                emoji='👎'),
+        ]
+        super().__init__(
+            placeholder='Как прошло рассмотрение?',
+            options=options, min_values=1, max_values=1,
+            custom_id=f'app_rate:{guild_id}:{appeal_id}')
+        self.cog = cog
+        self.guild_id = guild_id
+        self.appeal_id = appeal_id
+
+    async def callback(self, interaction):
+        state = self.cog._load(self.guild_id)
+        item = get_appeal(state, self.appeal_id)
+        if item is None or item['status'] not in ('accepted', 'rejected'):
+            await interaction.response.send_message(
+                'Эта апелляция ещё не решена — оценивать рано.',
+                ephemeral=True)
+            return
+        if int(interaction.user.id) != int(item['user_id']):
+            await interaction.response.send_message(
+                'Оценить может только автор апелляции.', ephemeral=True)
+            return
+        if item.get('rating'):
+            await interaction.response.send_message(
+                'Оценка уже сохранена — спасибо.', ephemeral=True)
+            return
+        await interaction.response.send_modal(
+            AppealRateModal(self.cog, self.guild_id, self.appeal_id,
+                            self.values[0], self.view))
+
+
+class AppealRateView(discord.ui.View):
+    """Оценка рассмотрения: селект в ЛС, persistent после рестарта."""
 
     def __init__(self, cog, guild_id, appeal_id):
         super().__init__(timeout=None)
         self.cog = cog
         self.guild_id = guild_id
         self.appeal_id = appeal_id
-        for label, style, verb in (
-                ('Помогли разобраться', discord.ButtonStyle.success, 'up'),
-                ('Не помогли', discord.ButtonStyle.secondary, 'down')):
-            btn = discord.ui.Button(
-                label=label, style=style,
-                custom_id=f'app_rate:{verb}:{guild_id}:{appeal_id}')
-            btn.callback = self._make_cb(verb)
-            self.add_item(btn)
-
-    def _make_cb(self, verb):
-        async def _cb(interaction):
-            state = self.cog._load(self.guild_id)
-            item = get_appeal(state, self.appeal_id)
-            if item is None or item['status'] not in ('accepted', 'rejected'):
-                await interaction.response.send_message(
-                    'Эта апелляция ещё не решена — оценивать рано.',
-                    ephemeral=True)
-                return
-            if int(interaction.user.id) != int(item['user_id']):
-                await interaction.response.send_message(
-                    'Оценить может только автор апелляции.', ephemeral=True)
-                return
-            if item.get('rating'):
-                await interaction.response.send_message(
-                    'Оценка уже сохранена — спасибо.', ephemeral=True)
-                return
-            # модалка с необязательным комментарием — это и есть ответ на
-            # клик, поэтому гонки «успели нажать дважды» не бывает
-            await interaction.response.send_modal(
-                AppealRateModal(self.cog, self.guild_id, self.appeal_id,
-                                verb, self))
-        return _cb
+        self.add_item(AppealRateSelect(cog, guild_id, appeal_id))
 
 
 class AppealRateModal(discord.ui.Modal):
@@ -595,50 +687,29 @@ class AppealRateModal(discord.ui.Modal):
                 _target = self.cog._log_channel(
                     _guild, self.cog._load(self.guild_id))
             if _target is not None:
-                _verdict = ('помогли разобраться' if self.verb == 'up'
-                            else 'не помогли')
                 try:
-                    from cogs.logs import (_styled_log_embed, _person_block,
-                                           _bullet)
-                    _av = None
-                    try:
-                        _av = str(interaction.user.display_avatar.url)
-                    except Exception:
-                        _av = None
-                    _fields = [
-                        ('Апелляция', _bullet(f'#{item["id"]}')),
-                        ('Автор', _person_block(interaction.user)),
-                        ('Оценка', _bullet(_verdict)),
-                    ]
-                    if cm:
-                        _fields.append(('Комментарий', _bullet(cm)))
-                    _re = _styled_log_embed(
-                        _guild, 'mod', 'Оценка рассмотрения',
-                        fields=_fields,
-                        color=0x2ECC71 if self.verb == 'up' else 0xE67E22,
-                        thumbnail=_av)
+                    _re = _rate_log_embed(
+                        _guild, item, interaction.user, self.verb, cm)
                     await _target.send(embed=_re)
                 except Exception:
-                    _note = (f'Автор апелляции #{item["id"]} оценил '
-                             f'рассмотрение: "{_verdict}"')
+                    _verdict = _rate_verdict(self.verb)
+                    _note = (f'Апелляция #{item["id"]}\n'
+                             f'Оценка: "{_verdict}"')
                     if cm:
-                        _note += f'\n"{cm}"'
+                        _note += f'\nКомментарий: "{cm}"'
                     await _target.send(_note[:500])
         except Exception as _ex:
             log.debug('appeals: отзыв #%s в канал: %s', self.appeal_id, _ex)
+        thanks = _rate_thanks_embed(item, self.verb, cm)
         try:
             for child in self.src_view.children:
                 child.disabled = True
             if interaction.message is not None:
-                await interaction.message.edit(view=self.src_view)
+                await interaction.message.edit(embed=thanks, view=self.src_view)
         except (discord.Forbidden, discord.HTTPException) as _ex:
-            log.debug('appeals: скрыть кнопки оценки #%s: %s',
+            log.debug('appeals: скрыть меню оценки #%s: %s',
                       self.appeal_id, _ex)
-        await interaction.response.send_message(
-            'Спасибо! Оценка' + (' и комментарий' if cm else '')
-            + ' сохранены: модерация видит её в канале апелляций '
-            'и в панели (Апелляции → оценки рассмотрения).',
-            ephemeral=True)
+        await interaction.response.send_message(embed=thanks, ephemeral=True)
 
 
 class AppealModal(discord.ui.Modal):
@@ -1572,14 +1643,12 @@ class Appeals(commands.Cog):
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС %s закрыты: %s', item['user_id'], _ex)
             return
-        # после решения — одна кнопочная оценка рассмотрения (рейтинг
-        # справедливости сводится в панели «Апелляции»)
+        # после решения — меню-оценка (селект), как размут
         if guild_id and not item.get('rating'):
             try:
                 view = AppealRateView(self, guild_id, item.get('id'))
                 await user.send(
-                    'Как прошло рассмотрение? Одна оценка — и модерация '
-                    'становится лучше:', view=view)
+                    embed=_rate_prompt_embed(item, guild_name), view=view)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 log.debug('appeals: ЛС-оценка #%s: %s', item.get('id'), _ex)
 
