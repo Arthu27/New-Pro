@@ -1402,6 +1402,21 @@ class ErrorHandler:
             await self._respond(interaction, embed=embed)
             return
 
+        if isinstance(error, app_commands.CommandNotFound):
+            # Инцидент 2026-09-05 23:50: глобальный PUT парковал /modpanel,
+            # Discord ещё предлагал её, дерево — CommandNotFound. interaction.command
+            # is None → раньше «unknown» + critical traceback. Отвечаем сразу,
+            # чтобы клиент не писал «приложение не отвечает».
+            name = getattr(error, 'name', None) or 'команда'
+            log.warning('slash: команда «%s» не в дереве (синк?) — отвечаю, без traceback',
+                        name)
+            embed = self._error_embed(
+                'Команда обновляется',
+                f'`/{name}` сейчас синхронизируется с Discord. '
+                'Подожди пару секунд и вызови её ещё раз.')
+            await self._respond(interaction, embed=embed)
+            return
+
         cmd_name = interaction.command.name if interaction.command else "unknown"
         module = None
         try:

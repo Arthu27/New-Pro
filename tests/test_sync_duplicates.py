@@ -314,6 +314,42 @@ async def main():
                   encoding='utf-8').read()
     check('перепубликуем только keep_global' in src_sf,
           'sync_filtered: откат после сбоя публикует только keep_global')
+    check('_copy_globals_to_targets' in src_sf
+          and src_sf.index('_copy_globals_to_targets(tree, targets, kept)')
+          < src_sf.index('await _put_global_keep_only'),
+          'sync_filtered: copy_global_to раньше глобального PUT')
+
+    # ═══ H. /modpanel глобальная (как cogs/moderation.py) жива на сервере ══
+    print('== H. /modpanel не пропадает из дерева на время глобальной очистки ==')
+    bot_h = Bot()
+    rec_h = bot_h.http
+    tree_h = bot_h.tree
+    tree_h.add_command(mk('апелляция', keep_global=True))
+    tree_h.add_command(mk('update', keep_global=True))
+    tree_h.add_command(mk('modpanel'))   # прод: add_cog без guilds=
+    seen_h = {'guild_has': False, 'global_parked': False}
+    orig_sync = tree_h.sync
+
+    async def _probe_sync(*, guild=None):
+        if guild is None:
+            gcmds = tree_h.get_commands(guild=Object(777))
+            seen_h['guild_has'] = any(c.name == 'modpanel' for c in gcmds)
+            seen_h['global_parked'] = not any(
+                c.name == 'modpanel' for c in tree_h.get_commands())
+        return await orig_sync(guild=guild)
+
+    tree_h.sync = _probe_sync
+    await SF.full_sync(bot_h)
+    check(seen_h['guild_has'],
+          'во время глобального PUT /modpanel уже в гильдовом дереве')
+    check(seen_h['global_parked'],
+          'во время PUT /modpanel снята глобально (не keep_global)')
+    check('modpanel' in rec_h.last('GUILD', 777),
+          '/modpanel опубликована гильдово')
+    check('modpanel' not in rec_h.last('GLOBAL'),
+          '/modpanel не осталась глобальной — дублей нет')
+    check(any(c.name == 'modpanel' for c in tree_h.get_commands()),
+          'после синка /modpanel снова в глобальном дереве')
 
 
 asyncio.run(main())

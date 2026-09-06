@@ -259,6 +259,8 @@ synced_again = dict(b.tree.synced)
 check(dict(b.tree.synced).get('global') == synced.get('global')
       and dict(b.tree.synced).get(777) == g777,
       'повторный синк идемпотентен — пейлоады не растут и не меняются')
+check(len(b.tree.synced) == synced_len1,
+      'повторный синк не шлёт PUT, если Discord уже keep_global (GET до парковки)')
 
 CSW.set_disabled('report', False)        # включили обратно
 b2 = Bot()
@@ -368,6 +370,47 @@ check(not any(x[0] == 777 for x in b5.tree.synced),
       'guild-синк не тронут — старое глобальное меню осталось, дублей нет')
 check(any(c.name == 'modpanel' for c in b5.tree.get_commands(guild=None)),
       'локальное дерево собрано обратно после bail-out')
+
+# Инцидент 2026-09-05 23:50: парковка /modpanel ДО GET+PUT на 25с давала
+# CommandNotFound. copy_global_to первым + парковка только на PUT.
+print('== /modpanel жива во время глобальной очистки ==')
+
+
+class TreeParkProbe(Tree):
+    """Во время глобального PUT /modpanel уже должна быть на сервере."""
+
+    def __init__(self):
+        super().__init__()
+        self.modpanel_during_global_put = False
+        self.modpanel_parked_global = False
+
+    async def sync(self, guild=None):
+        if guild is None:
+            g777 = self.guilds.get(777, [])
+            self.modpanel_during_global_put = any(
+                c.name == 'modpanel' for c in g777)
+            self.modpanel_parked_global = not any(
+                c.name == 'modpanel' for c in self.glob)
+        return await super().sync(guild)
+
+
+b6 = Bot()
+b6.tree = TreeParkProbe()
+asyncio.new_event_loop().run_until_complete(SF.full_sync(b6))
+check(b6.tree.modpanel_during_global_put,
+      'во время глобального PUT /modpanel уже скопирована на сервер')
+check(b6.tree.modpanel_parked_global,
+      'во время PUT /modpanel снята глобально (не keep_global)')
+check(any(c.name == 'modpanel' for c in b6.tree.get_commands(guild=None)),
+      'после синка /modpanel снова в глобальном дереве (dispatch)')
+check('_copy_globals_to_targets' in src_sf and '_put_global_keep_only' in src_sf,
+      'copy_global_to раньше PUT, парковка только вокруг PUT')
+check(src_sf.index('_copy_globals_to_targets(tree, targets, kept)')
+      < src_sf.index('await _put_global_keep_only'),
+      'в _full_sync_inner копии на серверы идут до глобального PUT')
+check('CommandNotFound' in open(os.path.join(ROOT, 'error_handler.py'),
+                                encoding='utf-8').read(),
+      'error_handler отвечает на CommandNotFound, не critical traceback')
 
 # ═══ 3. Демки: имя вместо ID ══════════════════════════════════════════════
 print('== /proofs: загрузка без ID участника ==')

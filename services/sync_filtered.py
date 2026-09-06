@@ -457,6 +457,119 @@ def note_sync_error(bot, error, mode='error'):
         _log.debug('note_sync_error(): %s', e)
 
 
+def _is_keep_global(cmd):
+    try:
+        return bool((getattr(cmd, 'extras', None) or {}).get('keep_global'))
+    except Exception:
+        return False
+
+
+def _collect_global_by_keep(tree):
+    """Глобальное дерево: (parked, kept, desired_sigs) без мутации.
+
+    parked — [(cmd, type)] не-keep_global: снимем только на время PUT.
+    kept — [(name, type)] keep_global: не копировать в гильдию.
+    desired — сигнатуры того, что должно лежать глобально в Discord.
+    """
+    from discord import AppCommandType
+    parked, kept = [], []
+    desired = set()
+    for _t in (AppCommandType.chat_input, AppCommandType.user,
+               AppCommandType.message):
+        try:
+            _cmds = list(tree.get_commands(type=_t))
+        except TypeError:
+            if _t is not AppCommandType.chat_input:
+                continue
+            _cmds = list(tree.get_commands())
+        for cmd in _cmds:
+            if _is_keep_global(cmd):
+                kept.append((cmd.name, _t))
+                desired |= _sig(cmd)
+            else:
+                parked.append((cmd, _t))
+    return parked, kept, desired
+
+
+def _park_global(tree, parked):
+    for cmd, _t in parked:
+        try:
+            tree.remove_command(cmd.name, type=_t)
+        except Exception as e:
+            _log.debug('снять глобально %s: %s', cmd.name, e)
+
+
+def _restore_parked(tree, parked):
+    for cmd, _t in parked:
+        try:
+            tree.add_command(cmd)
+        except Exception as e:
+            _log.debug('вернуть %s в дерево: %s', cmd.name, e)
+
+
+def _copy_globals_to_targets(tree, targets, kept):
+    """Локальные гильдовые копии ДО глобального PUT.
+
+    Иначе на время очистки /modpanel нет ни глобально, ни на сервере —
+    Discord шлёт вызов, дерево отвечает CommandNotFound
+    (инцидент 2026-09-05 23:50).
+    """
+    for g in targets:
+        try:
+            tree.copy_global_to(guild=g)
+            for _kname, _kt in kept:
+                try:
+                    tree.remove_command(_kname, guild=g, type=_kt)
+                except Exception as _e:
+                    _log.debug('выкинуть keep_global %s из %s: %s',
+                               _kname, getattr(g, 'id', g), _e)
+        except Exception as e:
+            _log.debug('copy_global_to(%s): %s', getattr(g, 'id', g), e)
+
+
+async def _put_global_keep_only(tree, parked, desired):
+    """Опубликовать глобально только keep_global.
+
+    GET — при полном дереве (без парковки). Парковка только на PUT,
+    в finally сразу возвращаем команды: ретраи и sleep не держат
+    /modpanel снятой 25×3 секунд.
+    Возвращает (ok, error).
+    """
+    remote = await _remote_sigs(tree, None)
+    if remote is not None and remote == desired:
+        _log.info('sync: глобально уже совпадает с Discord (%d команд) — PUT пропущен',
+                  len(desired))
+        return True, None
+    last_err = None
+    for _attempt in (1, 2, 3):
+        _park_global(tree, parked)
+        try:
+            await asyncio.wait_for(tree.sync(), timeout=SCOPE_TIMEOUT_SEC)
+            return True, None
+        except TypeError as e:
+            _log.debug('tree.sync(): %s', e)
+            return True, None
+        except asyncio.TimeoutError as e:
+            last_err = e
+        except Exception as e:
+            last_err = e
+        finally:
+            # Сначала вернуть /modpanel, потом sleep: иначе ретраи держат
+            # команду снятой 25×3с (инцидент 2026-09-05 23:50).
+            _restore_parked(tree, parked)
+        if _attempt >= 3:
+            break
+        if isinstance(last_err, asyncio.TimeoutError):
+            _log.warning('глобальная очистка: попытка %d/3 зависла '
+                         '(>%sс — rate limit/сеть) — повтор через 2с',
+                         _attempt, SCOPE_TIMEOUT_SEC)
+        else:
+            _log.warning('глобальная очистка: попытка %d/3 не удалась (%s) '
+                         '— повтор через 2с', _attempt, last_err)
+        await asyncio.sleep(2)
+    return False, last_err
+
+
 async def full_sync(bot):
     """Полный синк с защитой от параллельного входа (двойной клик кнопки)."""
     lk = _current_lock()
@@ -470,7 +583,6 @@ async def full_sync(bot):
 
 async def _full_sync_inner(bot):
     """Полный синк: гильдовые команды (мгновенно) + чистка глобальных."""
-    from discord import AppCommandType
     tree = getattr(bot, 'tree', None)
     if tree is None:
         return []
@@ -495,106 +607,28 @@ async def _full_sync_inner(bot):
         _note_sync_done(bot, 'global', (), cleaned, commands=len(synced))
         return synced
 
-    # 1) глобальный список в Discord очищаем (чтобы не было дублей).
-    #    Исключение — команды с extras['keep_global'] (напр. /апелляция):
-    #    они обязаны остаться глобальными, чтобы работали в ЛС бота.
-    #    ВАЖНО: паркуем не только слэш-команды, но и контекстные меню
-    #    (user/message). copy_global_to тащит глобальные контекстные меню
-    #    в каждую гильдию — если оставить их ещё и глобальными, Discord
-    #    показывает их ДВАЖДЫ (дубли «Варн за сообщение», «Войс-мут» …).
-    parked = []   # (cmd, type)
-    kept = []     # keep_global: (имя, type) — их из гильдовых копий выкинуть
-    for _t in (AppCommandType.chat_input, AppCommandType.user,
-               AppCommandType.message):
-        try:
-            _cmds = list(tree.get_commands(type=_t))
-        except TypeError:          # минималистичные деревья без type=
-            if _t is not AppCommandType.chat_input:
-                continue
-            _cmds = list(tree.get_commands())
-        for cmd in _cmds:
-            keep_it = False
-            try:
-                keep_it = bool((getattr(cmd, 'extras', None) or {}).get('keep_global'))
-            except Exception:
-                keep_it = False
-            if keep_it:
-                kept.append((cmd.name, _t))
-                continue
-            try:
-                tree.remove_command(cmd.name, type=_t)
-                parked.append((cmd, _t))
-            except Exception as e:
-                _log.debug('снять глобально %s: %s', cmd.name, e)
-    # С РЕТРАЯМИ (как guild-синки, жалоба 30.08 «опять так же — команды
-    # не удалились»): разовый обрыв сети/замерзание loop убивал очистку
-    # ОДНОЙ попыткой — старое глобальное меню жило в Discord вечно.
-    _global_cleared = False
-    _global_err = None
-    for _attempt in (1, 2, 3):
-        try:
-            # _push_sync сам сходит GET и пропустит PUT, если глобально уже
-            # ровно keep_global — это не тратит суточный лимит и не виснет.
-            await _push_sync(tree, None)
-            _global_cleared = True
-            break
-        except TypeError as e:      # дерево без параметров — уже очищено выше
-            _log.debug('tree.sync(): %s', e)
-            _global_cleared = True
-            break
-        except asyncio.TimeoutError as e:
-            _global_err = e
-            if _attempt < 3:
-                _log.warning('глобальная очистка: попытка %d/3 зависла '
-                             '(>%sс — rate limit/сеть) — повтор через 2с',
-                             _attempt, SCOPE_TIMEOUT_SEC)
-                await asyncio.sleep(2)
-        except Exception as e:
-            _global_err = e
-            if _attempt < 3:
-                _log.warning('глобальная очистка: попытка %d/3 не удалась (%s) '
-                             '— повтор через 2с', _attempt, e)
-                await asyncio.sleep(2)
+    # 1) Сначала локальные копии на серверы — /modpanel должна находиться
+    #    в гильдовом дереве, пока глобальный PUT паркует её.
+    #    Потом глобальный список в Discord = только keep_global (/апелляция,
+    #    /update). Парковка не-keep_global — только на время PUT.
+    parked, kept, desired = _collect_global_by_keep(tree)
+    _copy_globals_to_targets(tree, targets, kept)
+    _global_cleared, _global_err = await _put_global_keep_only(
+        tree, parked, desired)
     if not _global_cleared:
         # Очистка глобального списка НЕ прошла — старое глобальное меню
-        # осталось в Discord. Копировать те же команды в гильдию = ДУБЛИ
-        # в клиенте (именно «много дубликатов» из жалоб). Останавливаемся:
-        # локальное дерево собираем обратно, до следующего рестарта
-        # бот работает на старом глобальном меню — безопасно.
+        # осталось в Discord. Копировать те же команды гильдовым sync = ДУБЛИ.
+        # Локальное дерево уже собрано (finally парковки).
         _log.warning('глобальная очистка не удалась за 3 попытки (%s) — '
                      'guild-синк пропущен, чтобы не задублировать меню',
                      _global_err)
-        for cmd, _t in parked:
-            try:
-                tree.add_command(cmd)
-            except Exception as _e:
-                _log.debug('вернуть %s в дерево: %s', cmd.name, _e)
         _note_sync_done(bot, 'failed-global-clear',
                         [int(getattr(g, 'id', 0) or 0) for g in targets], (),
                         error=str(_global_err))
         return []
 
-    for cmd, _t in parked:        # локально возвращаем — источник для копий
-        try:
-            tree.add_command(cmd)
-        except Exception as e:
-            _log.debug('вернуть %s в дерево: %s', cmd.name, e)
-
-    # 2) копируем глобальное дерево в каждый разрешённый сервер.
-    #    ИСКЛЮЧАЯ keep_global (/апелляция): она уже опубликована ГЛОБАЛЬНО
-    #    (Discord показывает глобальные команды во всех гильдиях и в ЛС) —
-    #    гильдовая копия = вторая строчка с тем же именем в меню. Плюс это
-    #    самолечит сервер: ранее скопированные keep_global-остатки стираются.
-    for g in targets:
-        try:
-            tree.copy_global_to(guild=g)
-            for _kname, _kt in kept:
-                try:
-                    tree.remove_command(_kname, guild=g, type=_kt)
-                except Exception as _e:
-                    _log.debug('выкинуть keep_global %s из %s: %s', _kname, g.id, _e)
-        except Exception as e:
-            _log.debug('copy_global_to(%s): %s', g.id, e)
+    # 2) копии на серверы ещё раз после restore (идемпотентно с шагом 1).
+    _copy_globals_to_targets(tree, targets, kept)
 
     # 3) по каждому серверу — синк без выключенных. С РЕТРАЯМИ: разовый
     #    сбой сети/замерзание event-loop не должен оставлять сервер со
