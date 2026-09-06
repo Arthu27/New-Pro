@@ -876,8 +876,9 @@ _LONG_FIELD = {
 # в одну строку и лог выглядит как каша.
 _STACK_FIELD = {
     'пользователь', 'участник', 'автор', 'виновник', 'кому',
-    'модератор', 'канал', 'голосовой канал', 'удалил', 'создал',
-    'изменил', 'проверяющий',
+    'модератор', 'выдал', 'канал', 'голосовой канал', 'удалил', 'создал',
+    'изменил', 'проверяющий', 'выданы', 'сняты', 'срок', 'профиль',
+    'история', 'дело', 'причина', 'было', 'стало',
 }
 
 # Наказания: тегаем роль модераторов в content, чтобы пришёл пуш.
@@ -899,18 +900,46 @@ def _polish_embed_value(value):
     return s or '—'
 
 
+_NO_QUOTE = {
+    '—', '-', 'система', 'не указана', 'да', 'нет', '∞',
+    '*пусто*', '*вложение*', 'изменён', 'набор прав изменён',
+    'менее дня', 'сегодня', 'обычные', 'неизвестно',
+}
+
+
 def _is_plain_name(txt):
-    """Обычное имя/слово — его можно взять в кавычки."""
+    """Кавычки у имён и причин — не у сроков, счётчиков и цветов."""
     t = str(txt or '').strip()
-    if not t or t in ('—',):
+    if not t or t in _NO_QUOTE or t.lower() in _NO_QUOTE:
         return False
     if t.startswith(('<@', '<#', '<t:', 'http', '```', '>', '[')):
         return False
-    if re.fullmatch(r'\d{15,25}', t.strip('`')):
+    if re.fullmatch(r'\d+', t.strip('`')):
         return False
     if t.startswith('"') and t.endswith('"') and len(t) >= 2:
         return False
+    low = t.lower()
+    if low.startswith(('аккаунт ', 'на сервере ', 'мутов ', 'варнов ',
+                       'банов ', 'киков ')):
+        return False
+    if re.match(r'^\d+\s*(мин|ч|час|дн|д|мес|г\.?|чел|с)\b', low):
+        return False
+    if re.fullmatch(r'#\d+', t) or re.fullmatch(r'#[0-9a-fA-F]{6}', t):
+        return False
+    if t.startswith('discord.gg/'):
+        return False
     return True
+
+
+def _clean_reason(text):
+    """Причина без заглушек «—» / «Не указана»."""
+    t = str(text or '').strip()
+    if not t:
+        return ''
+    low = t.lower().rstrip('.')
+    if low in ('—', '-', 'не указана', 'причина не указана', 'без причины'):
+        return ''
+    return t
 
 
 def _q(text):
@@ -939,6 +968,33 @@ def _bullet(*lines):
             txt = '> ' + txt
         out.append(txt)
     return '\n'.join(out) or '> —'
+
+
+def _yn(flag):
+    return 'да' if flag else 'нет'
+
+
+def _change_cell(old, new):
+    """Было и стало столбиком — без стрелки в одну строку."""
+    a = str(old if old not in (None, '') else '—')
+    b = str(new if new not in (None, '') else '—')
+    if a == b:
+        return _bullet(a)
+    return _bullet(a, b)
+
+
+_VERIFY_RU = {
+    'none': 'нет',
+    'low': 'низкая',
+    'medium': 'средняя',
+    'high': 'высокая',
+    'highest': 'самая высокая',
+}
+
+
+def _verify_ru(v):
+    name = getattr(v, 'name', None) or str(v or '—')
+    return _VERIFY_RU.get(str(name).lower(), str(name))
 
 
 def _person_block(user, fallback=None):
@@ -986,6 +1042,76 @@ def _channel_block(ch):
     return _bullet(*lines)
 
 
+def _avatar_url(user):
+    """Аватарка справа в эмбеде — тихо, если нет."""
+    if user is None:
+        return None
+    try:
+        return str(user.display_avatar.url)
+    except Exception:
+        return None
+
+
+def _role_block(role):
+    """Роль столбиком: @упоминание, имя, id — как человек."""
+    if role is None:
+        return '—'
+    if isinstance(role, str):
+        return _bullet(role)
+    mention = getattr(role, 'mention', None)
+    name = getattr(role, 'name', None)
+    rid = getattr(role, 'id', None)
+    lines = []
+    if mention:
+        lines.append(str(mention))
+    if name and str(name) not in (str(mention or ''),):
+        lines.append(str(name))
+    try:
+        rid = int(rid or 0)
+    except (TypeError, ValueError):
+        rid = 0
+    if rid:
+        lines.append(str(rid))
+    return _bullet(*lines) if lines else '—'
+
+
+def _role_label(role):
+    """Коротко: упоминание роли или имя."""
+    if role is None:
+        return ''
+    if isinstance(role, str):
+        return role
+    return (getattr(role, 'mention', None)
+            or getattr(role, 'name', None)
+            or '')
+
+
+def _roles_cell(roles):
+    """Несколько ролей столбиком. Одна — полный блок, много — упоминания."""
+    items = [r for r in (roles or []) if r not in (None, '', '@everyone')]
+    if not items:
+        return None
+    if len(items) == 1:
+        return _role_block(items[0])
+    lines = []
+    seen = set()
+    for r in items:
+        if isinstance(r, str):
+            lab = r
+        else:
+            mention = getattr(r, 'mention', None)
+            name = getattr(r, 'name', None)
+            if mention and name:
+                lab = f'{mention} | {name}'
+            else:
+                lab = mention or name or ''
+        if not lab or lab in seen:
+            continue
+        seen.add(lab)
+        lines.append(lab)
+    return _bullet(*lines) if lines else None
+
+
 def _who_line(user, fallback=None):
     """Человек в эмбеде: столбик mention / ник / id."""
     return _person_block(user, fallback)
@@ -1012,8 +1138,8 @@ def _is_our_bot(guild, who):
     return bool(me and uid and uid == getattr(me, 'id', None))
 
 
-def _case_moderator(guild, user_id, actions=None, window=45):
-    """Кто недавно наказал user_id из /modpanel (data/mod_data.json)."""
+def _latest_case(guild, user_id, actions=None, window=90):
+    """Последнее дело по человеку из data/mod_data.json (причина, кто, когда)."""
     if guild is None or not user_id:
         return None
     try:
@@ -1040,28 +1166,39 @@ def _case_moderator(guild, user_id, actions=None, window=45):
                 continue
             if age < 0 or age > window:
                 continue
-            mid = int(c.get('mod_id') or 0)
-            if not mid:
-                return None
-            mem = guild.get_member(mid) if hasattr(guild, 'get_member') else None
-            if mem is not None and not getattr(mem, 'bot', False):
-                return mem
-            name = str(c.get('mod_name') or '').strip()
-            if not name:
-                return None
-
-            class _CaseMod:
-                bot = False
-
-            _CaseMod.id = mid
-            _CaseMod.name = name
-            _CaseMod.display_name = name
-            _CaseMod.mention = f'<@{mid}>'
-            return _CaseMod()
+            return c
         return None
     except Exception as _ex:
-        log.debug('_case_moderator: %s', _ex)
+        log.debug('_latest_case: %s', _ex)
         return None
+
+
+def _case_moderator(guild, user_id, actions=None, window=45):
+    """Кто недавно наказал user_id из /modpanel (data/mod_data.json)."""
+    c = _latest_case(guild, user_id, actions=actions, window=window)
+    if not c:
+        return None
+    try:
+        mid = int(c.get('mod_id') or 0)
+    except (TypeError, ValueError):
+        mid = 0
+    if not mid:
+        return None
+    mem = guild.get_member(mid) if hasattr(guild, 'get_member') else None
+    if mem is not None and not getattr(mem, 'bot', False):
+        return mem
+    name = str(c.get('mod_name') or '').strip()
+    if not name:
+        return None
+
+    class _CaseMod:
+        bot = False
+
+    _CaseMod.id = mid
+    _CaseMod.name = name
+    _CaseMod.display_name = name
+    _CaseMod.mention = f'<@{mid}>'
+    return _CaseMod()
 
 
 def _actor_person(who, guild=None, target_id=None, actions=None):
@@ -1156,7 +1293,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     icon, base_color, cat_name = _cat_meta(category)
     e = _LogEmbed(color=color if color is not None else base_color,
                   timestamp=datetime.datetime.now(datetime.timezone.utc))
-    e.title = f"{(icon + ' ') if icon else ''}{title}".strip()[:256]
+    e.title = str(title or '').strip()[:256]
     _who = ''
     rows = []
     for name, value in fields:
@@ -1174,7 +1311,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
             _who = _card_friendly(value, guild)
     if note:
         e.description = _polish_embed_value(note)[:4096]
-    for name, value in rows[:12]:
+    for name, value in rows[:20]:
         e.add_field(name=name[:256], value=value[:1024], inline=False)
     # Профиль цели справа; кто выдал — сверху, с аватаркой.
     if thumbnail:
@@ -1193,10 +1330,14 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
                 except Exception:
                     ai = None
             if an and str(an) not in ('—', 'система', '?'):
+                _pre = 'Выдал ' if category in (
+                    'ban', 'mute', 'warn', 'punish', 'staff',
+                    'nick', 'rest', 'role') else ''
+                _an = f'{_pre}{an}'[:256]
                 if ai:
-                    e.set_author(name=f'Выдал {an}'[:256], icon_url=ai)
+                    e.set_author(name=_an, icon_url=ai)
                 else:
-                    e.set_author(name=f'Выдал {an}'[:256])
+                    e.set_author(name=_an)
         except Exception as _ax:
             log.debug('_styled_log_embed author: %s', _ax)
     footer_text = f"Hakumo Log · {cat_name} · {getattr(guild, 'name', '')}"
@@ -1823,8 +1964,9 @@ def action_log_embed(guild, action, user, moderator, reason=None, case_id=None,
     if extra_rest:
         bits = [ln.strip() for ln in str(extra_rest).split('\n') if ln.strip()]
         fields.append(('Детали', _bullet(*bits) if bits else _bullet(extra_rest)))
-    if reason:
-        fields.append(('Причина', _bullet(reason)))
+    why = _clean_reason(reason)
+    if why:
+        fields.append(('Причина', _bullet(why)))
     pcell = _proof_cell(proof)
     if pcell:
         fields.append(('Доказательство', pcell))
@@ -1845,6 +1987,195 @@ def action_log_embed(guild, action, user, moderator, reason=None, case_id=None,
         color = 0x2ECC71 if action in _ACTION_GREEN else None
     return _styled_log_embed(guild, cat, title, fields=fields,
                              thumbnail=av, color=color, author=moderator)
+
+
+_ROLE_TITLES = {
+    'staff': 'Роли стаффа изменены',
+    'ban': 'Роль бана изменена',
+    'mute': 'Роль мута изменена',
+    'warn': 'Роль варна изменена',
+    'rest': 'Роли пользователя изменены',
+    'role': 'Роли пользователя изменены',
+}
+# Роль наказания — это само наказание: в заголовке «заблокирован», не «роль ban».
+_PUNISH_ROLE_TITLES = {
+    'ban':  {'add': 'Пользователь заблокирован',
+             'rem': 'Блокировка снята',
+             'mix': 'Роль бана изменена',
+             'add_actions': ('ban',),
+             'rem_actions': ('unban',)},
+    'mute': {'add': 'Пользователю выдали мут',
+             'rem': 'С пользователя сняли мут',
+             'mix': 'Роль мута изменена',
+             'add_actions': ('timeout', 'mute_chat', 'vmute'),
+             'rem_actions': ('untimeout', 'unmute_chat', 'vunmute')},
+    'warn': {'add': 'Пользователю выдали предупреждение',
+             'rem': 'Предупреждение снято',
+             'mix': 'Роль варна изменена',
+             'add_actions': ('warn',),
+             'rem_actions': ('unwarn',)},
+}
+
+
+def _mute_role_title(guild, added, removed):
+    """Чат / войс / оба — по тому, какая роль мута сдвинулась."""
+    pmap = _punish_role_map(guild) or {}
+    def _rid(k):
+        try:
+            return int(pmap.get(k) or 0)
+        except (TypeError, ValueError):
+            return 0
+    mute_id, vmute_id = _rid('mute'), _rid('vmute')
+    ids_a = {getattr(r, 'id', 0) for r in (added or [])}
+    ids_r = {getattr(r, 'id', 0) for r in (removed or [])}
+    has_m = bool(mute_id and mute_id in ids_a)
+    has_v = bool(vmute_id and vmute_id in ids_a)
+    rem_m = bool(mute_id and mute_id in ids_r)
+    rem_v = bool(vmute_id and vmute_id in ids_r)
+    if has_m and has_v:
+        return 'Пользователю выдали мут (чат и голос)'
+    if has_m:
+        return 'Пользователю закрыли чат'
+    if has_v:
+        return 'Пользователю выключили микрофон'
+    if rem_m and rem_v:
+        return 'С пользователя сняли мут'
+    if rem_m:
+        return 'Пользователю открыли чат'
+    if rem_v:
+        return 'Пользователю включили микрофон'
+    return None
+
+
+def _dedupe_roles(roles):
+    out, seen = [], set()
+    for r in roles or []:
+        if r is None:
+            continue
+        key = getattr(r, 'id', None)
+        if key is None:
+            key = str(r)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(r)
+    return out
+
+
+def role_change_log_embed(guild, user, added=None, removed=None,
+                          moderator=None, dest='rest', extras=None,
+                          reason=None):
+    """Карточка смены ролей: Выдал / Пользователь / Выданы / Сняты / Профиль.
+
+    Роль бана/мута/варна — это наказание: в заголовке «заблокирован»,
+    в карточке причина (за что), а не «добавлена роль: ban».
+    """
+    dest = dest or 'rest'
+    added = _dedupe_roles(added)
+    removed = _dedupe_roles(removed)
+    spec = _PUNISH_ROLE_TITLES.get(dest)
+    if spec:
+        if added and not removed:
+            title = spec['add']
+        elif removed and not added:
+            title = spec['rem']
+        else:
+            title = spec['mix']
+        if dest == 'mute':
+            title = _mute_role_title(guild, added, removed) or title
+        acts = spec['add_actions'] if added else spec['rem_actions']
+    else:
+        title = _ROLE_TITLES.get(dest, 'Роли пользователя изменены')
+        acts = None
+    fields = []
+    uid = getattr(user, 'id', None)
+    if moderator:
+        fields.append(('Выдал', _actor_line(moderator, guild=guild,
+                                            target_id=uid, actions=acts)))
+    if user is not None:
+        fields.append(('Пользователь', _person_block(user)))
+    why = _clean_reason(reason)
+    _c = _latest_case(guild, uid, actions=acts, window=120) if spec else None
+    if not why and _c:
+        why = _clean_reason(_c.get('reason'))
+    if spec:
+        # наказание: «за что» важнее имени роли
+        fields.append(('Причина', _bullet(why or 'не указана')))
+    else:
+        if added:
+            fields.append(('Выданы', _roles_cell(added)))
+        if removed:
+            fields.append(('Сняты', _roles_cell(removed)))
+    if spec and _c and _c.get('id'):
+        fields.append(('Дело', _bullet(f"#{_c.get('id')}")))
+    prof = _profile_cell(user)
+    if prof:
+        fields.append(('Профиль', prof))
+    if spec:
+        hist = _history_cell(guild, uid)
+        if hist:
+            fields.append(('История', hist))
+    for name, value in (extras or []):
+        if value not in (None, ''):
+            fields.append((name, value))
+    color = 0x9B59B6
+    if added and not removed:
+        color = 0xC0392B if dest == 'ban' else 0x2ECC71
+        if dest == 'mute':
+            color = 0xE67E22
+        if dest == 'warn':
+            color = 0xE74C3C
+    elif removed and not added:
+        color = 0x2ECC71
+    return _styled_log_embed(guild, dest, title, fields=fields,
+                             thumbnail=_avatar_url(user), color=color,
+                             author=moderator)
+
+
+def nick_change_log_embed(guild, user, old_nick, new_nick, moderator=None):
+    """Карточка смены ника: кто, было, стало, профиль."""
+    fields = []
+    uid = getattr(user, 'id', None)
+    if moderator:
+        fields.append(('Выдал', _actor_line(moderator, guild=guild,
+                                            target_id=uid)))
+    fields.append(('Пользователь', _person_block(user)))
+    fields.append(('Было', _bullet(old_nick or '—')))
+    fields.append(('Стало', _bullet(new_nick or '—')))
+    prof = _profile_cell(user)
+    if prof:
+        fields.append(('Профиль', prof))
+    return _styled_log_embed(guild, 'nick', 'Псевдоним изменён',
+                             fields=fields, thumbnail=_avatar_url(user),
+                             color=0x3498DB, author=moderator)
+
+
+def role_batch_log_embed(guild, items, dest='rest', moderator=None):
+    """Сводная карточка, если ролей коснулись сразу много людей."""
+    dest = dest or 'rest'
+    title = _ROLE_TITLES.get(dest, 'Роли пользователя изменены')
+    title = f'{title} · {len(items)} участников'
+    fields = []
+    if moderator:
+        fields.append(('Выдал', _actor_line(moderator, guild=guild)))
+    cap = 8
+    for it in items[:cap]:
+        u = it.get('user')
+        name = (getattr(u, 'display_name', None)
+                or it.get('user_name') or 'участник')
+        bits = []
+        if it.get('added'):
+            labs = [_role_label(r) for r in it['added'] if _role_label(r)]
+            if labs:
+                bits.append('выданы: ' + ', '.join(labs[:8]))
+        if it.get('removed'):
+            labs = [_role_label(r) for r in it['removed'] if _role_label(r)]
+            if labs:
+                bits.append('сняты: ' + ', '.join(labs[:8]))
+        fields.append((str(name)[:256], _bullet(*bits) if bits else _bullet('—')))
+    if len(items) > cap:
+        fields.append(('Итого', _bullet(f'{len(items)} участников · выше {cap} последних')))
+    return _styled_log_embed(guild, dest, title, fields=fields, author=moderator)
 
 
 async def send_action_log(guild, action, user, moderator, reason=None,
@@ -2154,10 +2485,14 @@ class Logs (commands .Cog ):
 
         fields = [
             ('Пользователь', _person_block(member)),
-            ('Аккаунт создан', age_text),
-            ('Участник на сервере', f"#{member_count}"),
-            ('Присоединился', f"<t:{join_ts}:R>"),
         ]
+        _jp = _profile_cell(member)
+        if _jp:
+            fields.append(('Профиль', _jp))
+        else:
+            fields.append(('Аккаунт', _bullet(age_text)))
+        fields.append(('Присоединился', _bullet(f"<t:{join_ts}:f>", f"<t:{join_ts}:R>")))
+        fields.append(('На сервере сейчас', _bullet(f'{member_count} чел.')))
         card_rows = [
             ('Участник', f"{member.display_name} ({member.id})"),
             ('Аккаунт', age_text),
@@ -2220,10 +2555,13 @@ class Logs (commands .Cog ):
 
         fields = [
             ('Пользователь', _person_block(member)),
-            ('Был на сервере', joined_ago or "менее дня"),
-            ('Роли', roles_str[:200]),
-            ('Осталось участников', str(member_count)),
+            ('Был на сервере', _bullet(joined_ago or "менее дня")),
+            ('Роли', _roles_cell(list(member.roles[1:])) or _bullet(roles_str[:200])),
+            ('На сервере сейчас', _bullet(f'{member_count} чел.')),
         ]
+        _lp = _profile_cell(member)
+        if _lp:
+            fields.append(('Профиль', _lp))
         card_rows = [
             ('Участник', f"{member.display_name} ({member.id})"),
             ('Был на сервере', joined_ago or "менее дня"),
@@ -2239,7 +2577,7 @@ class Logs (commands .Cog ):
         try :
             kwho =await _audit_actor (member .guild ,discord .AuditLogAction .kick ,target_id =member .id ,window =12 ,retries =1 )
             if kwho :
-                kreason =(kwho [2 ]or '—')
+                kreason =(_clean_reason (kwho [2 ]if kwho else None )or 'не указана')
                 save_event (member .guild .id ,'mod','Кик',{
                 'user_id':str (member .id ),
                 'user_name':str (member ),
@@ -2269,10 +2607,10 @@ class Logs (commands .Cog ):
                         fields =[
                         ('Пользователь',_person_block (member )),
                         ('Модератор',_actor_line (kwho )),
-                        ('Роли стаффа',", ".join (_had )),
-                        ('Причина',kreason ),
+                        ('Роли стаффа',_bullet (*_had )),
+                        ('Причина',_bullet (kreason )if _clean_reason (kreason )else None ),
                         ],
-                        color =0x8E44AD ,thumbnail =str (member .display_avatar .url ))
+                        color =0x8E44AD ,thumbnail =str (member .display_avatar .url ),author =kwho )
                         await _safe_send (sch ,embed =se )
         except Exception as _kick_err :
             log .info (f'[LOGS] kick-detect: {_kick_err}')
@@ -2281,7 +2619,7 @@ class Logs (commands .Cog ):
     async def on_member_ban (self ,guild ,user ):
         # Кто забанил и почему — из журнала аудита
         who =await _audit_actor (guild ,discord .AuditLogAction .ban ,target_id =user .id ,window =25 ,retries =1 )
-        reason =(who [2 ]if who else None )or '—'
+        reason =_clean_reason (who [2 ]if who else None )or 'не указана'
         save_event (guild .id ,'mod','Бан',{
         'user_id':str (user .id ),
         'user_name':str (user ),
@@ -2362,18 +2700,21 @@ class Logs (commands .Cog ):
                 _buckets ={}
                 for _r in added :
                     _buckets .setdefault (_role_log_dest (_r ,_staff_ids ,_pmap ),
-                                          {'added':[],'removed':[]})['added'].append (_r .name )
+                                          {'added':[],'removed':[]})['added'].append (_r )
                 for _r in removed :
                     _buckets .setdefault (_role_log_dest (_r ,_staff_ids ,_pmap ),
-                                          {'added':[],'removed':[]})['removed'].append (_r .name )
+                                          {'added':[],'removed':[]})['removed'].append (_r )
                 try :
                     from services .log_throttle import member_updates as _mu
                     for _dest ,_chg in _buckets .items ():
                         _item ={
+                        'user':before ,
+                        'user_id':before .id ,
                         'user_name':str (before .display_name ),
                         'added':_chg ['added'],
                         'removed':_chg ['removed'],
-                        'mod':_actor_short (who ),
+                        'who':who ,
+                        'reason':(who [2 ]if who and isinstance (who ,(tuple ,list ))and len (who )>2 else None ),
                         'dest':_dest ,
                         }
                         def _make_flush (_d ):
@@ -2381,31 +2722,55 @@ class Logs (commands .Cog ):
                                 _ch =await self .get_log_channel (_g ,_dest )
                                 if not _ch :
                                     return
-                                _rows =[]
-                                _cap =7
-                                for _it in items [:_cap ]:
-                                    _bits =[]
-                                    if _it .get ('added'):
-                                        _bits .append ("Добавлена роль: "+", ".join (_it ['added']))
-                                    if _it .get ('removed'):
-                                        _bits .append ("Убрана роль: "+", ".join (_it ['removed']))
-                                    _txt =" · ".join (_bits )or '—'
-                                    if _it .get ('mod'):
-                                        _txt +=f"  ({_it ['mod']})"
-                                    _rows .append ((_it ['user_name'],_txt ))
-                                if len (items )>_cap :
-                                    _rows .append (('Итого',f'{len (items )} участников · выше {_cap} последних'))
-                                _titles ={
-                                'staff':'Снятие / роли стаффа',
-                                'ban':'Роль бана',
-                                'mute':'Роль мута',
-                                'warn':'Роль варна',
-                                'rest':'Изменение ролей участника',
-                                }
-                                _one =_titles .get (_dest ,'Изменение ролей участника')
-                                _title =_one if len (items )==1 else f'{_one} · {len (items )} участников'
-                                _e =_styled_log_embed (_g ,_dest ,_title ,
-                                fields =_rows ,card_rows =_rows )
+                                _by ={}
+                                for _it in items :
+                                    _uid =_it .get ('user_id')
+                                    _slot =_by .setdefault (_uid ,{
+                                    'user':_it .get ('user'),
+                                    'user_id':_uid ,
+                                    'user_name':_it .get ('user_name'),
+                                    'added':[],
+                                    'removed':[],
+                                    'who':_it .get ('who'),
+                                    'reason':_it .get ('reason'),
+                                    })
+                                    _slot ['added'].extend (_it .get ('added')or [])
+                                    _slot ['removed'].extend (_it .get ('removed')or [])
+                                    if _it .get ('who')and not _slot .get ('who'):
+                                        _slot ['who']=_it .get ('who')
+                                    if _it .get ('reason')and not _slot .get ('reason'):
+                                        _slot ['reason']=_it .get ('reason')
+                                _merged =list (_by .values ())
+                                _who =(_merged [0 ].get ('who')if _merged else None )
+                                # Роль бана/мута/варна, которую выдал НАШ бот из
+                                # /modpanel, уже ушла карточкой send_action_log
+                                # (с причиной). Второй лог «добавлена роль: ban
+                                # (Hakumo)» без «за что» — мусор, не шлём.
+                                if _dest in _PUNISH_ROLE_TITLES :
+                                    if _is_our_bot (_g ,_who ):
+                                        return
+                                    # аудит иногда пуст — дело панели только что
+                                    if not _who and _merged :
+                                        _one0 =_merged [0 ]
+                                        _spec =_PUNISH_ROLE_TITLES [_dest ]
+                                        _acts =_spec ['add_actions']if _one0 .get ('added')else _spec ['rem_actions']
+                                        if _latest_case (_g ,_one0 .get ('user_id'),actions =_acts ,window =45 ):
+                                            return
+                                if len (_merged )==1 :
+                                    _one =_merged [0 ]
+                                    _why =_one .get ('reason')
+                                    if not _why and isinstance (_one .get ('who'),(tuple ,list ))and len (_one .get ('who'))>2 :
+                                        _why =_one .get ('who')[2 ]
+                                    _e =role_change_log_embed (
+                                    _g ,_one .get ('user'),
+                                    added =_one .get ('added'),
+                                    removed =_one .get ('removed'),
+                                    moderator =_one .get ('who'),
+                                    dest =_dest ,
+                                    reason =_why )
+                                else :
+                                    _e =role_batch_log_embed (
+                                    _g ,_merged ,dest =_dest ,moderator =_who )
                                 await _safe_send (_ch ,embed =_e )
                             return _flush_roles
                         _mu .feed ((before .guild .id ,'roles:'+_dest ),_item ,_make_flush (_dest ))
@@ -2450,7 +2815,7 @@ class Logs (commands .Cog ):
                 # Эмбед мута в -модерация: кто, причина, до какого времени
                 try :
                     _to_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
-                    _to_reason =(_to_mod [2 ]if _to_mod else None )or '—'
+                    _to_reason =_clean_reason (_to_mod [2 ]if _to_mod else None )
                     if not _is_our_bot (before .guild ,_to_mod ):
                         _tch =await self .get_log_channel (before .guild ,'mute')
                         if _tch :
@@ -2490,7 +2855,7 @@ class Logs (commands .Cog ):
                             ('Пользователь',_person_block (after )),
                             ('Модератор',_actor_line (_uto_mod ,guild =before .guild ,target_id =after .id ,actions =('untimeout','unmute_chat'))),
                             ],
-                            color =0x2ECC71 ,thumbnail =str (after .display_avatar .url ))
+                            color =0x2ECC71 ,thumbnail =str (after .display_avatar .url ),author =_uto_mod )
                             await _safe_send (_utch ,embed =_ue )
                 except Exception as _uto_err :
                     log .info (f'[LOGS] untimeout-embed: {_uto_err}')
@@ -2504,10 +2869,17 @@ class Logs (commands .Cog ):
             'new_nick':after .nick or after .name ,
             })
             # Ники тоже пачкуем за 12с — «переименовал всех» не завалит канал
+            _nwho =None
+            try :
+                _nwho =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =before .id ,window =15 ,retries =1 )
+            except Exception as _nx :
+                log .debug ('[LOGS] nick actor: %s',_nx )
             _item ={
+            'user':after ,
             'user_name':str (before .display_name ),
             'old_nick':before .nick or before .name ,
             'new_nick':after .nick or after .name ,
+            'who':_nwho ,
             }
             async def _flush_nicks (items ,_g =before .guild ):
                 # Своя категория «Никнеймы»: владелец выбирает канал в панели
@@ -2515,15 +2887,23 @@ class Logs (commands .Cog ):
                 _ch =await self .get_log_channel (_g ,'nick')
                 if not _ch :
                     return
-                _rows =[]
-                _cap =7
-                for _it in items [:_cap ]:
-                    _rows .append ((_it ['user_name'],f"`{_it ['old_nick']}` → `{_it ['new_nick']}`"))
-                if len (items )>_cap :
-                    _rows .append (('Итого',f'{len (items )} смен ника · выше {_cap} последних'))
-                _title ='Псевдоним изменён'if len (items )==1 else f'Псевдонимы · {len (items )} смен'
-                _e =_styled_log_embed (_g ,'member',_title ,
-                fields =_rows ,card_rows =_rows ,color =0x3498DB )
+                if len (items )==1 :
+                    _it =items [0 ]
+                    _e =nick_change_log_embed (
+                    _g ,_it .get ('user'),
+                    _it .get ('old_nick'),_it .get ('new_nick'),
+                    moderator =_it .get ('who'))
+                else :
+                    _rows =[]
+                    _cap =8
+                    for _it in items [:_cap ]:
+                        _rows .append ((_it ['user_name'],
+                        _change_cell (_it .get ('old_nick'),_it .get ('new_nick'))))
+                    if len (items )>_cap :
+                        _rows .append (('Итого',_bullet (f'{len (items )} смен ника')))
+                    _e =_styled_log_embed (_g ,'nick',
+                    f'Псевдонимы · {len (items )} смен',
+                    fields =_rows ,color =0x3498DB )
                 await _safe_send (_ch ,embed =_e )
             try :
                 from services .log_throttle import member_updates as _mu
@@ -2622,11 +3002,18 @@ class Logs (commands .Cog ):
         ('Сообщение',_quote_msg (content )if (content and content !='[Содержимое не найдено]')else ('*вложение*'if _atts else '*пусто*')),
         ]
         try :
-            _fields .append (('Когда',f"<t:{int(message.created_at.timestamp())}:R>"))
+            _del =await _audit_actor (message .guild ,discord .AuditLogAction .message_delete ,target_id =author_id or None ,window =20 ,retries =1 )
+            if _del :
+                _fields .append (('Удалил',_actor_line (_del ,guild =message .guild )))
+        except Exception as _ex:
+            log.debug("on_message_delete actor: %s", _ex)
+        try :
+            _fields .append (('Когда',_bullet (f"<t:{int(message.created_at.timestamp())}:f>",
+            f"<t:{int(message.created_at.timestamp())}:R>")))
         except Exception as _ex:
             log.debug("on_message_delete(): подавлено: %s", _ex)
         if _atts :
-            _fields .append (('Вложений',f"**{len(_atts)}**"))
+            _fields .append (('Вложений',_bullet (str (len (_atts )))))
         _th =None
         try :
             _th =str (message .author .display_avatar .url )if message .author else None
@@ -2642,12 +3029,12 @@ class Logs (commands .Cog ):
         # 👻 GHOST PING: тегнули и сразу удалили — отдельный алерт модераторам
         _mentioned =[m for m in message .mentions if not m .bot ]+list (message .role_mentions or [])
         if _mentioned :
-            _targets =", ".join (m .mention for m in _mentioned [:8 ])
-            ge =_styled_log_embed (message .guild ,'message','Ghost Ping',
+            _tlines =[getattr (m ,'mention',None )or str (m )for m in _mentioned [:8 ]]
+            ge =_styled_log_embed (message .guild ,'message','Скрытый пинг',
             fields =[
             ('Виновник',_who_line (author ,author_name )),
-            ('Что сделал','тегнул и сразу удалил сообщение'),
-            ('Упомянуты',_targets ),
+            ('Что сделал',_bullet ('тегнул и сразу удалил сообщение')),
+            ('Упомянуты',_bullet (*_tlines )if _tlines else None ),
             ('Канал',_ch_line (message .channel )),
             ('Сообщение',_quote_msg (content [:300])),
             ],
@@ -2692,7 +3079,7 @@ class Logs (commands .Cog ):
         ('Канал',_ch_line (before .channel )),
         ('Было',_quote_msg (before .content [:400])),
         ('Стало',_quote_msg (after .content [:400])),
-        ('Перейти',f"[Перейти к сообщению]({after.jump_url})"),
+        ('Перейти',_bullet (f"[Перейти к сообщению]({after.jump_url})")),
         ],
         color =0x3498DB ,thumbnail =_eth )
         await _safe_send (ch ,embed =e )
@@ -2733,7 +3120,7 @@ class Logs (commands .Cog ):
                         ('Голосовой канал',_channel_block (_vch )if _vch is not None else '—'),
                         ],
                         color =0xE67E22 if (_vm_on or _vd_on )else 0x2ECC71 ,
-                        thumbnail =str (member .display_avatar .url ))
+                        thumbnail =str (member .display_avatar .url ),author =_who )
                         await _safe_send (_mch ,embed =_me )
             except Exception as _vm_err :
                 log .debug ('[LOGS] voice-mute: %s',_vm_err )
@@ -2742,19 +3129,19 @@ class Logs (commands .Cog ):
         b ,a =before .channel ,after .channel
         if b is None and a is not None :
             # Зашёл в голосовой канал
-            action ='Зашёл в голосовой'
+            action ='Зашёл в голосовой канал'
             color =0x1ABC9C
             detail ={'channel':a .name }
-            line =f"Канал: **{a.name}**"
+            line =a .name
         elif b is not None and a is None :
             # Вышел из голосового
-            action ='Вышел из голосового'
+            action ='Вышел из голосового канала'
             color =0x95A5A6
             detail ={'channel':b .name }
-            line =f"Канал: **{b.name}**"
+            line =b .name
         else :
             # Переключился на другой канал
-            action ='Переключился в другой канал'
+            action ='Перешёл в другой канал'
             color =0x3498DB
             detail ={'channel':f'{b.name} → {a.name}','from':b .name ,'to':a .name }
             line =f"**{b.name}** ➜ **{a.name}**"
@@ -2770,12 +3157,16 @@ class Logs (commands .Cog ):
         _vch = a if a is not None else b
         _vfields =[
         ('Участник',_person_block (member )),
-        ('Канал',_channel_block (_vch )if _vch is not None else _bullet (line )),
         ]
+        if b is not None and a is not None :
+            _vfields .append (('Было',_channel_block (b )))
+            _vfields .append (('Стало',_channel_block (a )))
+        else :
+            _vfields .append (('Канал',_channel_block (_vch )if _vch is not None else _bullet (line )))
         try :
             _in =a if a is not None else b
             if _in is not None :
-                _vfields .append (('В канале сейчас',f"**{len(_in.members)}** чел."))
+                _vfields .append (('В канале сейчас',_bullet (f"{len(_in.members)} чел.")))
         except Exception as _ex:
             log.debug("on_voice_state_update(): подавлено: %s", _ex)
         _vth =None
@@ -2799,13 +3190,16 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (channel .guild ,'channel')
         if not ch :
             return 
-        e =_styled_log_embed (channel .guild ,'channel','Канал создан',
-        fields =[
+        _cwho =await _audit_actor (channel .guild ,discord .AuditLogAction .channel_create ,target_id =channel .id ,window =20 ,retries =1 )
+        _cf =[
         ('Канал',_channel_block (channel )),
-        ('Тип',_ch_type_label (getattr (channel ,'type','?'))),
-        ('Категория',getattr (getattr (channel ,'category',None ),'name',None )or '—'),
-        ],
-        color =0x2ECC71 )
+        ('Тип',_bullet (_ch_type_label (getattr (channel ,'type','?')))),
+        ('Категория',_bullet (getattr (getattr (channel ,'category',None ),'name',None )or '—')),
+        ]
+        if _cwho :
+            _cf .append (('Создал',_actor_line (_cwho )))
+        e =_styled_log_embed (channel .guild ,'channel','Канал создан',
+        fields =_cf ,color =0x2ECC71 ,author =_cwho )
         await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
@@ -2835,15 +3229,14 @@ class Logs (commands .Cog ):
                 })
                 ch =await self .get_log_channel (guild ,'channel')
                 if ch :
-                    e =discord .Embed (color =0xE74C3C ,timestamp =datetime.datetime.now(datetime.timezone.utc))
-                    e .description =(
-                    "## Канал удален\n"
-                    f"**{getattr(channel, 'name', '?')}** · `{channel.id}`\n\n"
-                    "⚠️ **Боту не выдано право `Просмотр журнала аудита` (View Audit Log).**\n"
-                    "Невозможно определить, кто удалил канал.\n\n"
-                    "Дайте боту это право в настройках сервера."
-                    )
-                    e .set_footer (text =f"{guild.name}")
+                    e =_styled_log_embed (guild ,'channel','Канал удалён',
+                    fields =[
+                    ('Канал',_channel_block (channel )if getattr (channel ,'mention',None )else _bullet ('#'+str (getattr (channel ,'name','?')),str (getattr (channel ,'id','')))),
+                    ('Тип',_bullet (_ch_type_label (getattr (channel ,'type','?')))),
+                    ('Удалил',_bullet ('неизвестно')),
+                    ],
+                    color =0xE74C3C ,
+                    note ='Боту не выдано право «Просмотр журнала аудита» — кто удалил, не видно.')
                     await _safe_send (ch ,embed =e )
                 return
             # Retry-цикл: audit log может прийти с задержкой
@@ -2886,15 +3279,16 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (channel .guild ,'channel')
         if not ch :
             return 
+        _dwho =(mod_name ,mod_id ,None ,mod_is_bot )if mod_id else None
         e =_styled_log_embed (channel .guild ,'channel','Канал удалён',
         fields =[
-        ('Канал',f"**#{getattr(channel, 'name', '?')}**"),
-        ('Тип',_ch_type_label (getattr (channel ,'type','?'))),
-        ('Категория',getattr (getattr (channel ,'category',None ),'name',None )or '—'),
-        ('Удалил',mod_name or '—'),
-        ('Через бота','⚠️ Да'if mod_is_bot else 'Нет'),
+        ('Канал',_channel_block (channel )if getattr (channel ,'mention',None )else _bullet ('#'+str (getattr (channel ,'name','?')),str (getattr (channel ,'id','')))),
+        ('Тип',_bullet (_ch_type_label (getattr (channel ,'type','?')))),
+        ('Категория',_bullet (getattr (getattr (channel ,'category',None ),'name',None )or '—')),
+        ('Удалил',_actor_line (_dwho )if _dwho else _bullet (mod_name or '—')),
+        ('Через бота',_bullet ('да'if mod_is_bot else 'нет')),
         ],
-        color =0xE74C3C ,note =extra_warning or None )
+        color =0xE74C3C ,note =extra_warning or None ,author =_dwho )
         await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
@@ -2902,15 +3296,15 @@ class Logs (commands .Cog ):
         # Собираем diff изменений: имя, тема, слоумод, NSFW
         diffs =[]
         if before .name !=after .name :
-            diffs .append (('Название',f"`{before.name}` → `{after.name}`"))
+            diffs .append (('Название',_change_cell (before .name ,after .name )))
         if getattr (before ,'topic',None )!=getattr (after ,'topic',None ):
             bt =(getattr (before ,'topic',None )or '—')[:80 ]
             at =(getattr (after ,'topic',None )or '—')[:80 ]
-            diffs .append (('Тема',f"`{bt}` → `{at}`"))
+            diffs .append (('Тема',_change_cell (bt ,at )))
         if getattr (before ,'slowmode_delay',0 )!=getattr (after ,'slowmode_delay',0 ):
-            diffs .append (('Слоумод',f"{getattr(before,'slowmode_delay',0)}с → {getattr(after,'slowmode_delay',0)}с"))
+            diffs .append (('Слоумод',_change_cell (f"{getattr(before,'slowmode_delay',0)}с",f"{getattr(after,'slowmode_delay',0)}с")))
         if getattr (before ,'nsfw',False )!=getattr (after ,'nsfw',False ):
-            diffs .append (('NSFW',f"{getattr(before,'nsfw',False)} → {getattr(after,'nsfw',False)}"))
+            diffs .append (('NSFW',_bullet ('да'if getattr (after ,'nsfw',False )else 'нет')))
         if not diffs :
             return
         save_event (before .guild .id ,'channel','Канал изменён',{
@@ -2925,7 +3319,7 @@ class Logs (commands .Cog ):
         if who :
             fields .append (('Изменил',_actor_line (who )))
         e =_styled_log_embed (before .guild ,'channel','Канал изменён',
-        fields =fields )
+        fields =fields ,author =who )
         await _safe_send (ch ,embed =e )
 
             # ROLES 
@@ -2952,15 +3346,19 @@ class Logs (commands .Cog ):
         if _perms .kick_members :_key_perms .append ('Кик')
         if _perms .ban_members :_key_perms .append ('Бан')
         if _perms .moderate_members :_key_perms .append ('Таймаут')
+        _rwho =await _audit_actor (role .guild ,discord .AuditLogAction .role_create ,target_id =role .id ,window =20 ,retries =1 )
+        _rf =[
+        ('Роль',_role_block (role )),
+        ('Цвет',_bullet (color_hex )),
+        ('Отдельный список',_bullet ('да'if role .hoist else 'нет')),
+        ('Упоминаемая',_bullet ('да'if role .mentionable else 'нет')),
+        ('Ключевые права',_bullet (*(_key_perms or ['обычные']))),
+        ]
+        if _rwho :
+            _rf .insert (1 ,('Создал',_actor_line (_rwho )))
         e =_styled_log_embed (role .guild ,'role','Роль создана',
-        fields =[
-        ('Роль',_bullet (role .mention ,role .name ,str (role .id ))),
-        ('Цвет',f"`{color_hex}`"),
-        ('Отдельный список','Да'if role .hoist else 'Нет'),
-        ('Упоминаемая','Да'if role .mentionable else 'Нет'),
-        ('Ключевые права',", ".join (_key_perms )if _key_perms else 'обычные'),
-        ],
-        color =getattr (role .color ,'value',0 )or 0x9B59B6 )
+        fields =_rf ,
+        color =getattr (role .color ,'value',0 )or 0x9B59B6 ,author =_rwho )
         await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
@@ -2979,30 +3377,30 @@ class Logs (commands .Cog ):
         who =await _audit_actor (role .guild ,discord .AuditLogAction .role_delete ,target_id =role .id ,window =20 ,retries =1 )
         e =_styled_log_embed (role .guild ,'role','Роль удалена',
         fields =[
-        ('Роль',f"**{role.name}** · `{role.id}`"),
-        ('Участников с ролью было',f"**{_mcount}**"),
+        ('Роль',_role_block (role )),
+        ('Участников с ролью было',_bullet (str (_mcount ))),
         ('Удалил',_actor_line (who )),
         ],
-        color =0xE74C3C )
+        color =0xE74C3C ,author =who )
         await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
     async def on_guild_role_update (self ,before ,after ):
         diffs =[]
         if before .name !=after .name :
-            diffs .append (('Название',f"`{before.name}` → `{after.name}`"))
+            diffs .append (('Название',_change_cell (before .name ,after .name )))
         try :
             if before .color !=after .color :
-                diffs .append (('Цвет',f"`#{before.color.value:06x}` → `#{after.color.value:06x}`"))
+                diffs .append (('Цвет',_change_cell (f"#{before.color.value:06x}",f"#{after.color.value:06x}")))
         except Exception as _ex:
             log.debug("on_guild_role_update(): подавлено: %s", _ex)
         if getattr (before ,'hoist',None )!=getattr (after ,'hoist',None ):
-            diffs .append (('Отдельный список',f"{getattr(before,'hoist',False)} → {getattr(after,'hoist',False)}"))
+            diffs .append (('Отдельный список',_change_cell (_yn (getattr (before ,'hoist',False )),_yn (getattr (after ,'hoist',False )))))
         if getattr (before ,'mentionable',None )!=getattr (after ,'mentionable',None ):
-            diffs .append (('Упоминаемая',f"{getattr(before,'mentionable',False)} → {getattr(after,'mentionable',False)}"))
+            diffs .append (('Упоминаемая',_change_cell (_yn (getattr (before ,'mentionable',False )),_yn (getattr (after ,'mentionable',False )))))
         try :
             if before .permissions .value !=after .permissions .value :
-                diffs .append (('Права','набор прав изменён'))
+                diffs .append (('Права',_bullet ('набор прав изменён')))
         except Exception as _ex:
             log.debug("on_guild_role_update(): подавлено: %s", _ex)
         if not diffs :
@@ -3016,8 +3414,12 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (before .guild ,'role')
         if not ch :
             return
+        _uwho =await _audit_actor (before .guild ,discord .AuditLogAction .role_update ,target_id =before .id ,window =15 ,retries =1 )
+        _uf =[('Роль',_role_block (after ))]+diffs
+        if _uwho :
+            _uf .append (('Изменил',_actor_line (_uwho )))
         e =_styled_log_embed (before .guild ,'role','Роль изменена',
-        fields =[('Роль',_bullet (after .mention ,after .name ,str (after .id )))]+diffs )
+        fields =_uf ,author =_uwho )
         await _safe_send (ch ,embed =e )
 
             # PRIGLASENIYa 
@@ -3042,12 +3444,12 @@ class Logs (commands .Cog ):
             _age_txt ='—'
         e =_styled_log_embed (invite .guild ,'invite','Приглашение создано',
         fields =[
-        ('Код',f"`discord.gg/{invite.code}`"),
+        ('Код',_bullet (f'[discord.gg/{invite.code}](https://discord.gg/{invite.code})')),
         ('Создал',_person_block (_inv )if _inv else '—'),
         ('Канал',_channel_block (invite .channel )if invite .channel else '—'),
-        ('Лимит использований',invite .max_uses or '∞'),
-        ('Действует',_age_txt ),
-        ('Временное','Да'if getattr (invite ,'temporary',False )else 'Нет'),
+        ('Лимит использований',_bullet (str (invite .max_uses or '∞'))),
+        ('Действует',_bullet (_age_txt )),
+        ('Временное',_bullet ('да'if getattr (invite ,'temporary',False )else 'нет')),
         ],
         color =0x16A085 ,thumbnail =(str (_inv .display_avatar .url )if _inv else None ))
         await _safe_send (ch ,embed =e )
@@ -3063,9 +3465,9 @@ class Logs (commands .Cog ):
             return
         e =_styled_log_embed (invite .guild ,'invite','Приглашение удалено',
         fields =[
-        ('Код',f"`discord.gg/{invite.code}`"),
+        ('Код',_bullet (f'[discord.gg/{invite.code}](https://discord.gg/{invite.code})')),
         ('Канал',_channel_block (invite .channel )if invite .channel else '—'),
-        ('Использований было',getattr (invite ,'uses',0 )or 0 ),
+        ('Использований было',_bullet (str (getattr (invite ,'uses',0 )or 0 ))),
         ],
         color =0x95A5A6 )
         await _safe_send (ch ,embed =e )
@@ -3076,17 +3478,17 @@ class Logs (commands .Cog ):
     async def on_guild_update (self ,before ,after ):
         diffs =[]
         if before .name !=after .name :
-            diffs .append (('Название',f"`{before.name}` → `{after.name}`"))
+            diffs .append (('Название',_change_cell (before .name ,after .name )))
         if getattr (before ,'afk_channel',None )!=getattr (after ,'afk_channel',None ):
             bc =getattr (getattr (before ,'afk_channel',None ),'name',None )or '—'
             ac =getattr (getattr (after ,'afk_channel',None ),'name',None )or '—'
-            diffs .append (('AFK-канал',f"`{bc}` → `{ac}`"))
+            diffs .append (('AFK-канал',_change_cell (bc ,ac )))
         if getattr (before ,'afk_timeout',None )!=getattr (after ,'afk_timeout',None ):
-            diffs .append (('AFK-таймаут',f"{getattr(before,'afk_timeout','?')}с → {getattr(after,'afk_timeout','?')}с"))
+            diffs .append (('AFK-таймаут',_change_cell (f"{getattr(before,'afk_timeout','?')}с",f"{getattr(after,'afk_timeout','?')}с")))
         if getattr (before ,'verification_level',None )!=getattr (after ,'verification_level',None ):
-            diffs .append (('Проверка участников',f"`{getattr(before,'verification_level','?')}` → `{getattr(after,'verification_level','?')}`"))
+            diffs .append (('Проверка участников',_change_cell (_verify_ru (getattr (before ,'verification_level',None )),_verify_ru (getattr (after ,'verification_level',None )))))
         if getattr (getattr (before ,'icon',None ),'key',None )!=getattr (getattr (after ,'icon',None ),'key',None ):
-            diffs .append (('Аватар сервера','изменён'))
+            diffs .append (('Аватар сервера',_bullet ('изменён')))
         if not diffs :
             return
         save_event (before .id ,'сервер','Сервер изменён',{

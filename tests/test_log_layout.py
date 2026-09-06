@@ -39,8 +39,9 @@ def check(ok, msg):
 from cogs import logs as LOGS  # noqa: E402
 from cogs.logs import (  # noqa: E402
     _actor_person, _card_friendly, _channel_block, _is_our_bot,
-    _person_block, _ping_mod_roles, _safe_send, _strip_raw_id,
-    _styled_log_embed, action_log_embed,
+    _person_block, _ping_mod_roles, _role_block, _roles_cell,
+    _safe_send, _strip_raw_id, _styled_log_embed, action_log_embed,
+    nick_change_log_embed, role_batch_log_embed, role_change_log_embed,
 )
 
 
@@ -243,7 +244,7 @@ check('Доказательство' in pnames and 'открыть запись'
 hist_e = action_log_embed(g, 'vmute', user, mod, duration='30 мин')
 check(any(f.name == 'История' and 'мутов' in f.value for f in hist_e.fields),
       'история: сколько мутов уже было')
-check('rows[:12]' in src or 'rows[:12]' in open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read(),
+check('rows[:20]' in src or 'rows[:20]' in open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read(),
       'в эмбед влезает больше 8 столбцов')
 lsrc = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
 check('def _duration_cell' in lsrc and 'def _profile_cell' in lsrc
@@ -257,6 +258,86 @@ check('_styled_log_embed' in asrc and 'Оценка рассмотрения' in
       and '_rate_log_embed' in asrc and '_rate_prompt_embed' in asrc
       and 'class AppealRateSelect' in asrc,
       'отзыв по апелляции — селект-меню + таблица, не сырая строка')
+
+print('== роли пользователя: Выдал / Пользователь / Выданы ==')
+dota = _Role(823456789012345670, 'Dota 2')
+g._roles[dota.id] = dota
+rc = role_change_log_embed(g, user, added=[dota], moderator=mod, dest='rest')
+names = [f.name for f in rc.fields]
+check('Роли пользователя изменены' in (rc.title or ''),
+      'заголовок: «Роли пользователя изменены»')
+check(names[:3] == ['Выдал', 'Пользователь', 'Выданы'],
+      f'поля как в образце: Выдал / Пользователь / Выданы ({names[:3]})')
+check('Профиль' in names, 'профиль тоже в карточке роли')
+vals = ' '.join(f.value for f in rc.fields)
+check(user.mention in vals and 'GhostBlade' in vals and str(UID) in vals,
+      'пользователь столбиком: тег + ник + id')
+check(mod.mention in vals and 'sonya.staff' in vals,
+      'выдал — человек, не бот')
+check(dota.mention in vals and 'Dota 2' in vals,
+      'выданная роль — упоминание и имя')
+check(all(not f.inline for f in rc.fields), 'роль-лог столбиком, не в кашу')
+check(getattr(rc, 'author', None) and 'sonya.staff' in str(getattr(rc.author, 'name', '')),
+      'сверху — Выдал с именем человека')
+gone = role_change_log_embed(g, user, removed=[dota], moderator=mod)
+check('Сняты' in [f.name for f in gone.fields] and 'Выданы' not in [f.name for f in gone.fields],
+      'снятие роли — поле «Сняты», без «Выданы»')
+ban_e = role_change_log_embed(g, user, added=[dota], moderator=mod,
+                             dest='ban', reason='флуд в общем')
+bn = [f.name for f in ban_e.fields]
+check('заблокирован' in (ban_e.title or ''),
+      'роль бана: заголовок «Пользователь заблокирован», не «роль ban»')
+check('Причина' in bn and 'Выданы' not in bn,
+      'роль бана: причина на виду, без «Выданы: ban»')
+check('флуд в общем' in next(f.value for f in ban_e.fields if f.name == 'Причина'),
+      'за что забанили — в карточке')
+unban_e = role_change_log_embed(g, user, removed=[dota], moderator=mod, dest='ban')
+check('снята' in (unban_e.title or '').lower() or 'Блокировка' in (unban_e.title or ''),
+      'снятие роли бана: «Блокировка снята»')
+lsrc2 = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
+check('_PUNISH_ROLE_TITLES' in lsrc2 and '_is_our_bot' in lsrc2
+      and 'за что' in lsrc2,
+      'роль бана от бота не дублирует карточку панели')
+empty_ban = role_change_log_embed(g, user, added=[dota], moderator=mod, dest='ban')
+eval_ = next(f.value for f in empty_ban.fields if f.name == 'Причина')
+check('не указана' in eval_ and '"не указана"' not in eval_,
+      'пустая причина бана — без кавычек, не «роль ban»')
+check('send_action_log' in open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+      and 'срок наказания истёк' in open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read(),
+      'снятие бана и истечение роли — той же карточкой, не тонкой строкой')
+check('_clean_reason' in lsrc2 and 'На сервере сейчас' in lsrc2,
+      'вход без «#N», причина чистится от заглушек')
+tval2 = next(f.value for f in to.fields if f.name == 'Срок')
+check('30 мин' in tval2 and '"30 мин"' not in tval2,
+      'срок без кавычек — это не имя')
+pval = next(f.value for f in to.fields if f.name == 'Профиль')
+check('аккаунт' in pval and '"аккаунт' not in pval,
+      'профиль без кавычек')
+check('def _change_cell' in lsrc2 and 'def _verify_ru' in lsrc2
+      and 'Скрытый пинг' in lsrc2,
+      'диффы столбиком, пинг по-русски, без True/False')
+batch = role_batch_log_embed(g, [
+    {'user': user, 'added': [dota], 'removed': [], 'user_name': 'GhostBlade'},
+    {'user': mod, 'added': [], 'removed': [dota], 'user_name': 'sonya.staff'},
+], dest='rest', moderator=mod)
+check('2 участников' in (batch.title or ''), 'пачка ролей — сводка, не спам')
+nick = nick_change_log_embed(g, user, 'кип', 'Кипарис', moderator=mod)
+nn = [f.name for f in nick.fields]
+check(nn[:4] == ['Выдал', 'Пользователь', 'Было', 'Стало'],
+      f'ник: выдал / пользователь / было / стало ({nn[:4]})')
+check('кип' in ' '.join(f.value for f in nick.fields)
+      and 'Кипарис' in ' '.join(f.value for f in nick.fields),
+      'старый и новый ник видны')
+rb = _role_block(dota)
+check(dota.mention in rb and 'Dota 2' in rb and str(dota.id) in rb,
+      'роль столбиком как человек: тег + имя + id')
+check(_roles_cell([dota, dota]).count(dota.mention) == 1,
+      'дубль одной роли не рисуем дважды')
+lsrc = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
+check('def role_change_log_embed' in lsrc and 'Выданы' in lsrc
+      and 'Роли пользователя изменены' in lsrc,
+      'карточка ролей: Выдал / Пользователь / Выданы')
+check('rows[:20]' in lsrc, 'в эмбед влезает больше полей — карточка полная')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

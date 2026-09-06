@@ -989,8 +989,18 @@ class Moderation (commands .Cog ):
                         ("Апелляция снята." if member is not None else \
                          ("Разбан выполнен." if unban_done else "Ничего не изменилось (не изолирован и не забанен)."))
                 _desc +=f"\n**Дело:** #{case_id}"
+                try :
+                    from cogs .logs import send_action_log
+                    _uobj =member
+                    if _uobj is None and unban_done :
+                        _uobj =fetched
+                    if _uobj is not None :
+                        await send_action_log (
+                        guild ,'unban',_uobj ,interaction .user ,
+                        reason =reason ,case_id =case_id )
+                except Exception as _ulog :
+                    log .debug (f'[MODPANEL] unban log: {_ulog}')
                 confirm =success_embed ("Снятие апелляции / разбан",_desc ,guild =guild )
-                await self .send_log (guild ,confirm )
                 # Уведомление панели (веб/Discord/email — в фоне)
                 try :
                     from services .panel_notify import notify_panel_event as _np
@@ -1315,9 +1325,19 @@ class Moderation (commands .Cog ):
                 PR .clear (gid ,uid ,rid )
                 if member is not None :
                     try :
-                        await self .send_log (guild ,discord .Embed (
-                        description =f"⏳ Срок наказания истёк: роль {getattr (role ,'mention ',rid )} "
-                        f"снята с {member .mention }",color =0x2ECC71 ))
+                        from cogs .logs import send_action_log
+                        from services import punish_roles as _PR3
+                        if rid ==_PR3 .role_for (gid ,'ban'):
+                            _act ='unban'
+                        elif rid ==_PR3 .role_for (gid ,'mute'):
+                            _act ='unmute_chat'
+                        elif rid ==_PR3 .role_for (gid ,'vmute'):
+                            _act ='vunmute'
+                        else :
+                            _act ='untimeout'
+                        await send_action_log (
+                        guild ,_act ,member ,None ,
+                        reason ='срок наказания истёк')
                     except Exception as _lex :
                         log .debug (f'[MODPANEL] лог авто-снятия: {_lex}') 
         except Exception as _ex :

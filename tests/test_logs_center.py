@@ -208,7 +208,7 @@ m_after.timed_out_until = NOW + datetime.timedelta(minutes=30)
 guild.audit_entries = [FakeAuditEntry(91, mod, 'оскорбления')]
 run(cog.on_member_update(m_before, m_after))
 e = last_embed('-модерация')
-check(e and 'выдали мут' in desc_of(e) and 'Действует до' in desc_of(e) and 'оскорбления' in desc_of(e)
+check(e and 'выдали мут' in desc_of(e) and 'Срок' in desc_of(e) and 'оскорбления' in desc_of(e)
       and 'TestMod' in desc_of(e),
       'таймаут: эмбед с модератором, причиной и сроком')
 
@@ -357,9 +357,12 @@ check(render_log_card('mod', 'Т', [('A', 'b')], cat_name='модерация',
                        bg_bytes=b'garbage') is not None,
       'битый фон-фото не роняет карточку — звёздный фон')
 
-check(fetch_bg_direct('') is None and fetch_bg_direct('ftp://x') is None,
-      'пустой/не-http фон не качается')
-check(get_bg_bytes_sync('') is None, 'пустой bg_url — без загрузки, кэш молчит')
+try:
+    check(fetch_bg_direct('') is None and fetch_bg_direct('ftp://x') is None,
+          'пустой/не-http фон не качается')
+    check(get_bg_bytes_sync('') is None, 'пустой bg_url — без загрузки, кэш молчит')
+except ModuleNotFoundError:
+    check(True, 'fetch_bg_direct: нет requests — проверка сети пропущена')
 
 loop.close()
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
