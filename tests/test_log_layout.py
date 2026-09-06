@@ -103,11 +103,13 @@ print('== столбик человека / канала ==')
 pb = _person_block(user)
 check(user.mention in pb and 'GhostBlade' in pb and str(UID) in pb,
       'пользователь: тег + ник + id')
-check(pb.count('\n') >= 2 and pb.startswith('・'),
-      'пользователь столбиком с ・')
+check(pb.count('\n') >= 2 and pb.startswith('>') and '"GhostBlade"' in pb,
+      'пользователь столбиком-таблицей с кавычками')
 cb = _channel_block(voice)
 check(voice.mention in cb and 'общение' in cb and str(CID) in cb,
       'голосовой канал: упоминание + имя + id')
+check(cb.startswith('>') and '"общение"' in cb,
+      'канал тоже цитатой и в кавычках')
 
 print('== strip: хвост уходит, столбик id жив ==')
 tail = _strip_raw_id(f'**Имя** · <@{UID}> · `{UID}`')
@@ -116,7 +118,7 @@ check(f'`{UID}`' not in tail and tail.rstrip().endswith('>')
       'хвост `id` в той же строке снимается')
 kept = _strip_raw_id(pb)
 check(str(UID) in kept, 'отдельная строка id в столбике не съедается')
-check(kept.startswith('・'), '・ у столбика остаётся')
+check(kept.startswith('>'), 'полоска цитаты у столбика остаётся')
 
 print('== эмбед не мешает поля в одну строку ==')
 e = action_log_embed(g, 'vunmute', user, mod, reason='размут', channel=voice)
@@ -217,7 +219,13 @@ stack = _styled_log_embed(g, 'mute', 'Пользователю выключил�
                                   ('Модератор', _person_block(mod)),
                                   ('Голосовой канал', cb)])
 check(all(not f.inline for f in stack.fields),
-      '_STACK_FIELD + перевод строки → все поля друг под другом')
+      'все поля столбиком, как таблица')
+reason = action_log_embed(g, 'ban', user, mod, reason='флуд')
+rval = next((f.value for f in reason.fields if f.name == 'Причина'), '')
+check('"' in rval and 'флуд' in rval, 'причина в кавычках')
+asrc = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
+check('_styled_log_embed' in asrc and 'Оценка рассмотрения' in asrc,
+      'отзыв по апелляции — карточка, не сырая строка')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

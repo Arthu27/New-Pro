@@ -1050,6 +1050,16 @@ class Moderation (commands .Cog ):
         ходит — у неё свои проверки авторизации (apply_panel_action).
         """
         try:
+            if action in ('mute', 'unmute'):
+                gid = getattr(interaction, 'guild_id', None) or getattr(
+                    getattr(interaction, 'guild', None), 'id', None)
+                kinds = (mute_kinds_for if action == 'mute' else unmute_kinds_for)(
+                    gid, interaction.user)
+                if not kinds:
+                    await _respond(interaction, embed=error_embed(
+                        'Это действие тебе не выдано.'), ephemeral=True)
+                    return False
+                return True
             from services.permission_acl import check_action as _acl_check
             key = MODPANEL_ACL_KEYS.get(action)
             guild = getattr(interaction, 'guild', None)
@@ -1583,11 +1593,10 @@ def _embed_text(e):
 MODPANEL_ACTIONS = [
     # Описания — КОРОТКИЕ и по-человечески (владелец 2026-09-05: «не надо
     # такое подробное и тупое»): селект — выбор действия, не инструкция.
+    # Мут/размут — ОДИН пункт, вид (чат/войс/оба) прячется во второй селект.
     ("warn", "Варн", "Предупреждение за нарушение", "warn"),
     ("unwarn", "Снять варн", "Убрать последний варн", "warn"),
-    ("timeout", "Мут (чат + войс)", "Заглушить чат и микрофон", "mute"),
-    ("mute_chat", "Мут (только чат)", "Заглушить только чат", "mute"),
-    ("vmute", "Мут (только войс)", "Заглушить только микрофон", "mute"),
+    ("mute", "Мут", "Чат, войс или оба — следующим шагом", "mute"),
     ("unmute", "Снять мут", "Чат или войс — следующим шагом", "unmute"),
     ("clear", "Очистка сообщений", "Удалить сообщения в канале", "clear"),
     ("ban", "Бан", "Закрыть каналы", "ban"),
@@ -1599,6 +1608,7 @@ MODPANEL_EMOJI = {
     "warn": "⚠️",
     "unwarn": "📵",
     "ban": "🚫",
+    "mute": "🔇",
     "timeout": "🔇",
     "mute_chat": "🤐",
     "vmute": "🎙️",
@@ -1626,6 +1636,7 @@ MODPANEL_ACL_KEYS = {
     "unwarn": "unwarn",
     "ban": "ban",
     "unban": "ban",
+    "mute": "mute",
     "timeout": "timeout",
     "untimeout": "timeout",
     "unmute": "timeout",
@@ -1635,6 +1646,21 @@ MODPANEL_ACL_KEYS = {
     "vunmute": "vmute",
     "clear": "purge",
 }
+
+
+def mute_kinds_for(guild_id, member):
+    """Какие виды мута доступны: чат / войс / оба."""
+    chat = _action_acl_allows(guild_id, member, 'mute_chat')
+    voice = _action_acl_allows(guild_id, member, 'vmute')
+    both = _action_acl_allows(guild_id, member, 'timeout')
+    out = []
+    if chat:
+        out.append(('mute_chat', 'Чат', 'Закрыть переписку'))
+    if voice:
+        out.append(('vmute', 'Войс', 'Выключить микрофон'))
+    if both:
+        out.append(('timeout', 'Чат и войс', 'Заглушить оба'))
+    return out
 
 
 def unmute_kinds_for(guild_id, member):
@@ -1663,6 +1689,8 @@ def _action_acl_allows(guild_id, member, action_name):
     """
     if action_name == 'unmute':
         return bool(unmute_kinds_for(guild_id, member))
+    if action_name == 'mute':
+        return bool(mute_kinds_for(guild_id, member))
     key = MODPANEL_ACL_KEYS.get(action_name)
     if not key:
         return False
@@ -1710,6 +1738,46 @@ def actions_for_member(guild, member):
     else:
         base = [a for a in MODPANEL_ACTIONS if a[3] in scoped]
     return [a for a in base if _action_acl_allows(guild.id, member, a[0])]
+
+
+class MuteKindSelect(discord.ui.Select):
+    """Второй шаг мута: чат / войс / оба. Дальше — модалка срока."""
+
+    def __init__(self, cog, target_id, kinds):
+        options = [discord.SelectOption(
+            label=label, value=value, description=desc,
+            emoji=MODPANEL_EMOJI.get(value, '🔇'))
+            for value, label, desc in kinds]
+        super().__init__(placeholder="Какой мут?",
+                         options=options, min_values=1, max_values=1)
+        self.cog = cog
+        self.target_id = str(target_id)
+
+    async def callback(self, interaction: discord.Interaction):
+        action = self.values[0]
+        if not await self.cog._ensure_action_acl(interaction, action):
+            return
+        modal = ModActionModal(self.cog, action, guild=interaction.guild,
+                               prefill_target=self.target_id,
+                               user=interaction.user)
+        await interaction.response.send_modal(modal)
+
+
+class MuteKindView(discord.ui.View):
+    """Короткое меню «чат / войс / оба» после пункта «Мут»."""
+
+    def __init__(self, cog, target_id, kinds, member=None):
+        super().__init__(timeout=180)
+        self.cog = cog
+        self.member = member
+        self.add_item(MuteKindSelect(cog, target_id, kinds))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if self.member and getattr(interaction.user, 'id', None) != getattr(self.member, 'id', None):
+            await interaction.response.send_message(
+                'Это меню другого модератора.', ephemeral=True)
+            return False
+        return True
 
 
 class UnmuteKindSelect(discord.ui.Select):
@@ -1801,6 +1869,46 @@ async def _silent_reset_panel(interaction, panel):
 
 async def _launch_action(cog, interaction, action, prefill, panel=None):
     """Открыть модалку / размут. panel — чтобы потом сбросить селект."""
+    if action == "mute":
+        gid = getattr(interaction, 'guild_id', None) or getattr(
+            getattr(interaction, 'guild', None), 'id', None)
+        kinds = mute_kinds_for(gid, interaction.user)
+        if not kinds:
+            await _respond(interaction, embed=error_embed(
+                'Мут тебе не выдан.'), ephemeral=True)
+            return
+        if not prefill:
+            await _respond(interaction, embed=error_embed(
+                'Сначала выберите участника — или выберите его сейчас в меню.'),
+                ephemeral=True)
+            return
+        if panel is not None:
+            panel.pending_action = None
+        if len(kinds) == 1:
+            modal = ModActionModal(cog, kinds[0][0], guild=interaction.guild,
+                                   prefill_target=prefill, user=interaction.user)
+            await interaction.response.send_modal(modal)
+            if panel is not None:
+                await _silent_reset_panel(interaction, panel)
+            return
+        who = prefill
+        try:
+            mem = interaction.guild.get_member(int(prefill))
+            if mem is not None:
+                who = mem.mention
+        except Exception:
+            pass
+        embed = discord.Embed(
+            title="Мут",
+            description=f"{who}\nКакой — чат, войс или оба.",
+            color=0xE67E22)
+        await interaction.response.send_message(
+            embed=embed,
+            view=MuteKindView(cog, prefill, kinds, member=interaction.user),
+            ephemeral=True)
+        if panel is not None:
+            await _silent_reset_panel(interaction, panel)
+        return
     if action == "unmute":
         gid = getattr(interaction, 'guild_id', None) or getattr(
             getattr(interaction, 'guild', None), 'id', None)

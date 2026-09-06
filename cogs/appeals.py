@@ -597,11 +597,33 @@ class AppealRateModal(discord.ui.Modal):
             if _target is not None:
                 _verdict = ('помогли разобраться' if self.verb == 'up'
                             else 'не помогли')
-                _note = (f'📣 Автор апелляции **#{item["id"]}** оценил '
-                         f'рассмотрение: **{_verdict}**')
-                if cm:
-                    _note += f' — {cm}'
-                await _target.send(_note[:500])
+                try:
+                    from cogs.logs import (_styled_log_embed, _person_block,
+                                           _bullet)
+                    _av = None
+                    try:
+                        _av = str(interaction.user.display_avatar.url)
+                    except Exception:
+                        _av = None
+                    _fields = [
+                        ('Апелляция', _bullet(f'#{item["id"]}')),
+                        ('Автор', _person_block(interaction.user)),
+                        ('Оценка', _bullet(_verdict)),
+                    ]
+                    if cm:
+                        _fields.append(('Комментарий', _bullet(cm)))
+                    _re = _styled_log_embed(
+                        _guild, 'mod', 'Оценка рассмотрения',
+                        fields=_fields,
+                        color=0x2ECC71 if self.verb == 'up' else 0xE67E22,
+                        thumbnail=_av)
+                    await _target.send(embed=_re)
+                except Exception:
+                    _note = (f'Автор апелляции #{item["id"]} оценил '
+                             f'рассмотрение: "{_verdict}"')
+                    if cm:
+                        _note += f'\n"{cm}"'
+                    await _target.send(_note[:500])
         except Exception as _ex:
             log.debug('appeals: отзыв #%s в канал: %s', self.appeal_id, _ex)
         try:

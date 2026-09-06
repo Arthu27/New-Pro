@@ -176,8 +176,9 @@ try:
                           'mute': [999], 'vmute': [999]})
     allowed = actions_for_member(_Guild(), member)
     actions = {a[0] for a in allowed}   # имена пунктов меню (value)
-    check('mute_chat' not in actions and 'vmute' not in actions
-          and 'unmute' not in actions and 'timeout' not in actions,
+    check('mute' not in actions and 'unmute' not in actions
+          and 'mute_chat' not in actions and 'vmute' not in actions
+          and 'timeout' not in actions,
           '/modpanel: без права «Мут/Войс-мут» карточки мута и снятия не видны')
     check('ban' in actions and 'unban' in actions and 'warn' in actions
           and 'clear' in actions,

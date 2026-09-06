@@ -151,23 +151,22 @@ print('== 4. Чат-мут и войс-мут — отдельные тумбл�
 # Даём роли 602 ТОЛЬКО чат-мут: войс-мут и его снятие скрыты.
 set_action_rule(GID, 'mute', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('mute_chat' in got and 'unmute' in got, f'с «Мут чата» виден чат-мут и снятие: {got}')
-check('vmute' not in got and 'vunmute' not in got,
-      f'без «Войс-мут» войс-мута нет: {got}')
-# Даём отдельно войс-мут — появляется он, снятие одно на чат и войс.
+check('mute' in got and 'unmute' in got, f'с «Мут чата» виден мут и снятие: {got}')
+check('vmute' not in got and 'mute_chat' not in got and 'timeout' not in got,
+      f'виды мута спрятаны во второй селект: {got}')
+# Даём отдельно войс-мут — пункт всё тот же «Мут», виды внутри.
 set_action_rule(GID, 'vmute', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('vmute' in got and 'unmute' in got and 'mute_chat' in got,
-      f'с обоими разрешениями видны чат-, войс-мут и снятие: {got}')
-check('vunmute' not in got and 'untimeout' not in got,
-      'размут чат/войс — один пункт меню, не два')
-# Таймаут — отдельный тумблер: без него полного мута нет даже при мутах.
-check('timeout' not in got, 'без «Таймаут» полного мута нет')
+check('mute' in got and 'unmute' in got,
+      f'с обоими разрешениями видны мут и снятие: {got}')
+check('vunmute' not in got and 'untimeout' not in got and 'vmute' not in got,
+      'размут/виды мута — не отдельные пункты меню')
+check('timeout' not in got, 'полный мут тоже спрятан во второй селект')
 set_action_rule(GID, 'timeout', ['602'])
 set_action_rule(GID, 'warn', ['602'])
 set_action_rule(GID, 'purge', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('timeout' in got and 'unmute' in got and 'warn' in got and 'clear' in got,
+check('mute' in got and 'unmute' in got and 'warn' in got and 'clear' in got,
       f'с таймаутом/варном/очисткой они появляются: {got}')
 set_action_rule(GID, 'mute', [])
 set_action_rule(GID, 'vmute', [])
@@ -189,8 +188,8 @@ set_action_rule(GID, 'vmute', ['602'])
 set_action_rule(GID, 'timeout', ['602'])
 set_action_rule(GID, 'ban', ['602'])   # лимит мута бан НЕ пропустит
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check(set(got) == {'timeout', 'mute_chat', 'vmute'},
-      f'лимит мута ∩ разрешения = только мут-семейство (бан срезан лимитом): {got}')
+check(set(got) == {'mute'},
+      f'лимит мута ∩ разрешения = только пункт «Мут» (бан срезан лимитом): {got}')
 set_action_rule(GID, 'ban', [])
 set_action_rule(GID, 'mute', [])
 set_action_rule(GID, 'vmute', [])

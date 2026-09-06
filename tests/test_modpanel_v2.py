@@ -168,8 +168,8 @@ set_action_rule(G, 'timeout', [601, 604])
 set_action_rule(G, 'ban', [601, 602])
 set_action_rule(G, 'purge', [603])
 m_mute = actions_for_member(g, _Member(7, [_Role(G), _Role(601)]))
-check([a[0] for a in m_mute] == ['timeout', 'mute_chat', 'vmute'],
-      f'мут-роль: лимит мута ∩ разрешения = только муты: {[a[0] for a in m_mute]}')
+check([a[0] for a in m_mute] == ['mute'],
+      f'мут-роль: лимит мута ∩ разрешения = только пункт «Мут»: {[a[0] for a in m_mute]}')
 m_ban = actions_for_member(g, _Member(8, [_Role(602)]))
 check([a[0] for a in m_ban] == ['ban'], f'бан-роль видит только бан: {[a[0] for a in m_ban]}')
 m_none = actions_for_member(g, _Member(9, [_Role(603)]))

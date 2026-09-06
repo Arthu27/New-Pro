@@ -38,14 +38,16 @@ from cogs import moderation as M  # noqa: E402
 from services.permission_acl import set_action_rule, save_action_acl  # noqa: E402
 from services import punish_roles as PR  # noqa: E402
 
-print('== 1. В меню один пункт «Снять мут», не два размута ==')
+print('== 1. В меню один пункт «Снять мут» и один «Мут» ==')
 names = [a[0] for a in M.MODPANEL_ACTIONS]
-check('unmute' in names, 'пункт unmute в меню')
-check('untimeout' not in names and 'vunmute' not in names,
-      'отдельные размут чат/войс из главного меню убраны')
-check('class UnmuteKindSelect' in open(os.path.join(ROOT, 'cogs/moderation.py'),
-                                       encoding='utf-8').read(),
-      'второй селект чат/войс на месте')
+src = open(os.path.join(ROOT, 'cogs/moderation.py'), encoding='utf-8').read()
+check('unmute' in names and 'mute' in names, 'пункты mute и unmute в меню')
+check('untimeout' not in names and 'vunmute' not in names
+      and 'mute_chat' not in names and 'vmute' not in names
+      and 'timeout' not in names,
+      'виды мута/размута спрятаны из главного меню')
+check('class UnmuteKindSelect' in src and 'class MuteKindSelect' in src,
+      'второй селект чат/войс на месте и для мута, и для размута')
 
 print('== 2. Виды размута по разрешениям ==')
 
@@ -263,32 +265,31 @@ class _PInter:
 
 
 allowed = [a for a in M.MODPANEL_ACTIONS
-           if a[0] in ('timeout', 'unmute', 'clear')]
+           if a[0] in ('mute', 'unmute', 'clear')]
 view = M.ModPanelView(cog, opener, allowed=allowed)
 old_sel = view.action_select
 inter = _PInter(opener, g7)
-view.action_select._values = ['timeout']
+view.action_select._values = ['mute']
 asyncio.run(view.action_select.callback(inter))
-check(view.pending_action == 'timeout' and not inter.response.modal,
+check(view.pending_action == 'mute' and not inter.response.modal,
       'действие без участника — запомнили, модалку не открыли')
 check(inter.response.edits, 'меню обновилось без спиннера (edit_message)')
 
-# теперь человек → должна открыться модалка
+# теперь человек → выбор вида мута или модалка
 view.selected_uid = '3000000000000000300'
 inter2 = _PInter(opener, g7)
-# имитируем выбор участника, действие уже pending
 asyncio.run(view.target_select.callback(inter2))
-check(bool(inter2.response.modal),
-      'после участника (действие уже выбрано) открывается модалка')
+check(bool(inter2.response.modal) or bool(inter2.response.sent),
+      'после участника (действие уже выбрано) — вид мута или модалка')
 
 # наоборот: сначала человек, потом действие
 view2 = M.ModPanelView(cog, opener, allowed=allowed)
 view2.selected_uid = '3000000000000000300'
 inter3 = _PInter(opener, g7)
-view2.action_select._values = ['timeout']
+view2.action_select._values = ['mute']
 asyncio.run(view2.action_select.callback(inter3))
-check(bool(inter3.response.modal),
-      'сначала участник, потом действие — модалка сразу')
+check(bool(inter3.response.modal) or bool(inter3.response.sent),
+      'сначала участник, потом действие — вид мута или модалка сразу')
 
 # повтор выбора: rebuild даёт НОВЫЙ селект (Discord снова шлёт callback)
 old = id(view2.action_select)

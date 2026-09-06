@@ -828,10 +828,12 @@ def _card_friendly(text, guild):
         s = s.replace('**', '').replace('`', '')
         kept = []
         for ln in s.split('\n'):
-            core = ln.strip().lstrip('・•').strip()
+            core = ln.strip().lstrip('>・•').strip().strip('"')
             if re.fullmatch(r'\d{15,25}', core or ''):
                 continue
-            kept.append(ln)
+            if not core:
+                continue
+            kept.append(core)
         s = '\n'.join(kept)
         s = _RE_ID_PARENS.sub('', s)       # «Имя (123…)» -> «Имя»
         s = _RE_ID_TAIL.sub('', s)         # «Имя · 123…» -> «Имя»
@@ -852,7 +854,7 @@ def _strip_raw_id(text):
         raw = str(text)
         out = []
         for ln in raw.split('\n'):
-            core = ln.strip().lstrip('・•').strip().strip('`')
+            core = ln.strip().lstrip('>・•').strip().strip('`"')
             if re.fullmatch(r'\d{15,25}', core or ''):
                 out.append(ln)
                 continue
@@ -897,19 +899,46 @@ def _polish_embed_value(value):
     return s or '—'
 
 
+def _is_plain_name(txt):
+    """Обычное имя/слово — его можно взять в кавычки."""
+    t = str(txt or '').strip()
+    if not t or t in ('—',):
+        return False
+    if t.startswith(('<@', '<#', '<t:', 'http', '```', '>', '[')):
+        return False
+    if re.fullmatch(r'\d{15,25}', t.strip('`')):
+        return False
+    if t.startswith('"') and t.endswith('"') and len(t) >= 2:
+        return False
+    return True
+
+
+def _q(text):
+    """Кавычки вокруг имени: «GhostBlade» → "GhostBlade". Упоминания не трогаем."""
+    t = str(text or '').strip()
+    if not t:
+        return '—'
+    if t.startswith('>'):
+        t = t.lstrip('>').strip()
+    if _is_plain_name(t):
+        t = t.replace('"', "'")
+        return f'"{t}"'
+    return t
+
+
 def _bullet(*lines):
-    """Столбик лога: ・ строка — поля не смешиваются в одну кашу."""
+    """Столбик-таблица: цитата Discord (полоска слева) + кавычки у имён."""
     out = []
     seen = set()
     for ln in lines:
-        txt = str(ln or '').strip()
+        txt = _q(ln)
         if not txt or txt in seen:
             continue
         seen.add(txt)
-        if not txt.startswith('・'):
-            txt = '・ ' + txt
+        if not txt.startswith('>'):
+            txt = '> ' + txt
         out.append(txt)
-    return '\n'.join(out) or '—'
+    return '\n'.join(out) or '> —'
 
 
 def _person_block(user, fallback=None):
@@ -1133,7 +1162,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
         if value in (None, ''):
             continue
         raw_v = str(value)
-        if '\n' in raw_v or raw_v.startswith('・'):
+        if ('\n' in raw_v or raw_v.startswith(('・', '>', '"', '```'))):
             value = raw_v.strip()
         else:
             value = _polish_embed_value(value)
@@ -1145,10 +1174,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     if note:
         e.description = _polish_embed_value(note)[:4096]
     for name, value in rows[:8]:
-        key_l = name.lower()
-        long = (key_l in _LONG_FIELD or key_l in _STACK_FIELD
-                or len(value) > 78 or '\n' in value)
-        e.add_field(name=name[:256], value=value[:1024], inline=not long)
+        e.add_field(name=name[:256], value=value[:1024], inline=False)
     # Профиль — аватар справа. Имя не дублируем сверху: оно уже в поле.
     if thumbnail:
         e.set_thumbnail(url=thumbnail)
@@ -1498,7 +1524,7 @@ class LogsCenterView(discord.ui.View):
             te = _styled_log_embed(
                 self.guild, cat_map.get(self.selected, 'guild'),
                 'Тест доставки логов',
-                fields=[('Проверяющий', f"{interaction.user.mention} · `{interaction.user.id}`"),
+                fields=[('Проверяющий', _person_block(interaction.user)),
                         ('Категория', self.selected)],
                 note='✅ Если вы видите это сообщение — логи в этот канал доставляются.')
             ok = await _safe_send(ch, embed=te)
@@ -1595,11 +1621,11 @@ def action_log_embed(guild, action, user, moderator, reason=None, case_id=None,
             'vmute', 'vunmute', 'timeout', 'untimeout') else 'Канал'
         fields.append((label, _channel_block(ch)))
     if extra:
-        fields.append(('Детали', extra))
+        fields.append(('Детали', _bullet(extra)))
     if reason:
-        fields.append(('Причина', reason))
+        fields.append(('Причина', _bullet(reason)))
     if case_id:
-        fields.append(('Дело', f'#{case_id}'))
+        fields.append(('Дело', _bullet(f'#{case_id}')))
     av = None
     try:
         av = str(user.display_avatar.url)
@@ -1915,7 +1941,7 @@ class Logs (commands .Cog ):
         join_ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
         fields = [
-            ('Пользователь', f"**{member.display_name}** · {member.mention} · `{member.id}`"),
+            ('Пользователь', _person_block(member)),
             ('Аккаунт создан', age_text),
             ('Участник на сервере', f"#{member_count}"),
             ('Присоединился', f"<t:{join_ts}:R>"),
@@ -1981,7 +2007,7 @@ class Logs (commands .Cog ):
                 joined_ago =f"{days_on_server // 365} г. {days_on_server % 365 // 30} мес."
 
         fields = [
-            ('Пользователь', f"**{member.display_name}** · `{member.id}`"),
+            ('Пользователь', _person_block(member)),
             ('Был на сервере', joined_ago or "менее дня"),
             ('Роли', roles_str[:200]),
             ('Осталось участников', str(member_count)),
@@ -2027,7 +2053,7 @@ class Logs (commands .Cog ):
                     if sch :
                         se =_styled_log_embed (member .guild ,'staff','Стафф кикнут',
                         fields =[
-                        ('Пользователь',f"**{member.display_name}** · `{member.id}`"),
+                        ('Пользователь',_person_block (member )),
                         ('Модератор',_actor_line (kwho )),
                         ('Роли стаффа',", ".join (_had )),
                         ('Причина',kreason ),
@@ -2515,9 +2541,10 @@ class Logs (commands .Cog ):
         ch =await self .get_log_channel (member .guild ,'voice')
         if not ch :
             return
+        _vch = a if a is not None else b
         _vfields =[
-        ('Участник',f"**{member.display_name}** · `{member.id}`"),
-        ('Канал',line .replace ('**','')if False else line ),
+        ('Участник',_person_block (member )),
+        ('Канал',_channel_block (_vch )if _vch is not None else _bullet (line )),
         ]
         try :
             _in =a if a is not None else b
@@ -2548,7 +2575,7 @@ class Logs (commands .Cog ):
             return 
         e =_styled_log_embed (channel .guild ,'channel','Канал создан',
         fields =[
-        ('Канал',f"{getattr(channel,'mention','#'+channel.name)} · `{channel.id}`"),
+        ('Канал',_channel_block (channel )),
         ('Тип',_ch_type_label (getattr (channel ,'type','?'))),
         ('Категория',getattr (getattr (channel ,'category',None ),'name',None )or '—'),
         ],
@@ -2668,7 +2695,7 @@ class Logs (commands .Cog ):
         if not ch :
             return
         who =await _audit_actor (before .guild ,discord .AuditLogAction .channel_update ,target_id =before .id ,window =15 ,retries =1 )
-        fields =[('Канал',f"{getattr(after,'mention','#'+after.name)} · `{before.id}`")]+diffs
+        fields =[('Канал',_channel_block (after ))]+diffs
         if who :
             fields .append (('Изменил',_actor_line (who )))
         e =_styled_log_embed (before .guild ,'channel','Канал изменён',
@@ -2701,7 +2728,7 @@ class Logs (commands .Cog ):
         if _perms .moderate_members :_key_perms .append ('Таймаут')
         e =_styled_log_embed (role .guild ,'role','Роль создана',
         fields =[
-        ('Роль',f"{role.mention} **{role.name}** · `{role.id}`"),
+        ('Роль',_bullet (role .mention ,role .name ,str (role .id ))),
         ('Цвет',f"`{color_hex}`"),
         ('Отдельный список','Да'if role .hoist else 'Нет'),
         ('Упоминаемая','Да'if role .mentionable else 'Нет'),
@@ -2764,7 +2791,7 @@ class Logs (commands .Cog ):
         if not ch :
             return
         e =_styled_log_embed (before .guild ,'role','Роль изменена',
-        fields =[('Роль',f"{after.mention} **{after.name}** · `{after.id}`")]+diffs )
+        fields =[('Роль',_bullet (after .mention ,after .name ,str (after .id )))]+diffs )
         await _safe_send (ch ,embed =e )
 
             # PRIGLASENIYa 
@@ -2790,8 +2817,8 @@ class Logs (commands .Cog ):
         e =_styled_log_embed (invite .guild ,'invite','Приглашение создано',
         fields =[
         ('Код',f"`discord.gg/{invite.code}`"),
-        ('Создал',f"**{getattr(_inv,'display_name',_inv)}** · `{getattr(_inv,'id','?')}`"if _inv else '—'),
-        ('Канал',invite .channel .mention if invite .channel else '—'),
+        ('Создал',_person_block (_inv )if _inv else '—'),
+        ('Канал',_channel_block (invite .channel )if invite .channel else '—'),
         ('Лимит использований',invite .max_uses or '∞'),
         ('Действует',_age_txt ),
         ('Временное','Да'if getattr (invite ,'temporary',False )else 'Нет'),
@@ -2811,7 +2838,7 @@ class Logs (commands .Cog ):
         e =_styled_log_embed (invite .guild ,'invite','Приглашение удалено',
         fields =[
         ('Код',f"`discord.gg/{invite.code}`"),
-        ('Канал',invite .channel .mention if invite .channel else '—'),
+        ('Канал',_channel_block (invite .channel )if invite .channel else '—'),
         ('Использований было',getattr (invite ,'uses',0 )or 0 ),
         ],
         color =0x95A5A6 )
