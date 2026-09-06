@@ -1089,8 +1089,8 @@ class Appeals(commands.Cog):
         заявки» (жалоба владельца 2026-09-05). fetch_channel идёт в API.
         """
         try:
-            from services.channel_routes import get_route as _route_of
-            _cid = int(_route_of(guild.id, 'ban_appeal_channel') or 0)
+            from services.channel_routes import resolve_route as _route_of
+            _cid = int(_route_of(guild.id, 'ban_appeal_channel', guild) or 0)
         except Exception as _ex:
             log.debug('appeals: маршрут канала апелляции: %s', _ex)
             _cid = 0
@@ -1108,10 +1108,9 @@ class Appeals(commands.Cog):
     async def _open_appeal_channel(self, guild, user, fallback_channel=None):
         """Открыть канал апелляции подавшему (до подачи он скрыт — владелец).
 
-        Порядок канала: маршрут «Канал апелляции (бан)» → fallback_channel
-        (канал, куда реально ушла карточка апелляции). Раньше пустой маршрут
-        означал честное «не получилось», хотя карточка уже лежала в другом
-        канале — теперь открываем именно его.
+        Порядок канала: маршрут «Комната апелляции» (известный ID, если
+        комната есть на сервере). Канал карточек сюда не подмешиваем —
+        туда забаненного не пускаем.
 
         Возвращает (opening_result, channel|None): человек в ЛС получает
         честный ответ с ИМЕНЕМ канала, а не обещание «канал открыт»,
@@ -1119,8 +1118,8 @@ class Appeals(commands.Cog):
         жалоба владельца 2026-09-05).
         """
         _iso = await self._appeal_channel(guild)
-        if _iso is None:
-            _iso = fallback_channel
+        # Комната апелляции ≠ канал карточек. В канал модеров забаненного
+        # не пускаем, даже если карточка ушла туда.
         if _iso is None:
             log.error('appeals: канал апелляции не задан — некому открывать доступ (guild %s)', getattr(guild, 'id', '?'))
             return False, None
@@ -1474,25 +1473,25 @@ class Appeals(commands.Cog):
 
     # ---- утилиты ----
     def _log_channel(self, guild, state):
-        """Куда класть карточки апелляций.
+        """Куда класть карточки апелляций — канал модеров, не комната бана.
 
-        Порядок: канал из «/апелляции настройка» → маршрут владельца
-        «Канал апелляции (бан)» (Панель → Каналы и маршруты) → системный.
-        Раньше маршрут панели не читался вовсе, и карточка улетала не в тот
-        канал, который указал владелец (жалоба 2026-09-05).
+        Порядок: Каналы и маршруты → «Карточки апелляций» → известный канал
+        модеров, если он есть на сервере → старый log_channel_id (наследие)
+        → системный. Комната апелляции сюда не подмешивается: туда ходит
+        забаненный, карточки — команде.
         """
-        cid = state.get('log_channel_id')
-        ch = guild.get_channel(cid) if cid else None
-        if ch is not None:
-            return ch
         try:
-            from services.channel_routes import get_route
-            rcid = int(get_route(guild.id, 'ban_appeal_channel') or 0)
-            rch = guild.get_channel(rcid) if rcid else None
+            from services.channel_routes import resolve_route, channel_on_guild
+            rcid = int(resolve_route(guild.id, 'appeals_channel', guild) or 0)
+            rch = channel_on_guild(guild, rcid) if rcid else None
             if rch is not None:
                 return rch
         except Exception as _ex:
-            log.debug('appeals: маршрут канала апелляции: %s', _ex)
+            log.debug('appeals: маршрут карточек: %s', _ex)
+        cid = (state or {}).get('log_channel_id')
+        ch = self._guild_ch(guild, cid) if cid else None
+        if ch is not None:
+            return ch
         return guild.system_channel
 
     async def _notify_user(self, item, accept, unbanned, cooldown_hours=0,

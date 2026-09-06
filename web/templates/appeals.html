@@ -48,18 +48,9 @@
   </div>
 </div>
 
-<div class="panel" style="margin-top:14px" id="apSetBox" {% if not can_edit %}hidden{% endif %}>
-  <div class="panel-head"><div><h2><i class="fas fa-gear"></i> Канал карточек</h2>
-    <div class="sub">Куда приходят карточки апелляций. Статус: <span id="apReady">проверяем…</span></div></div></div>
-  <div class="panel-body" style="padding-top:0;padding-bottom:0">
-    <div class="hint" style="margin-bottom:12px"><i class="fas fa-circle-info"></i> Подаются из Discord: слэш-команда <b>/апелляция</b> (для забаненных — сообщение боту в ЛС). Здесь модератор выносит вердикт: при живом боте принятая апелляция сама снимает бан и пишет человеку в ЛС.</div>
-  </div>
-  <div class="panel-body">
-    <div class="form-row" style="max-width:560px">
-      <select class="form-input" id="apChanSel" aria-label="Канал для карточек апелляций"></select>
-      <button type="button" class="btn btn-primary" id="apChanSave"><i class="fas fa-save"></i> Сохранить</button>
-    </div>
-    <div class="hint" id="apChanMsg"></div>
+<div class="panel" style="margin-top:14px">
+  <div class="panel-body" style="padding-top:14px;padding-bottom:14px">
+    <div class="hint" style="margin:0"><i class="fas fa-circle-info"></i> Подаются из Discord: слэш-команда <b>/апелляция</b> (для забаненных — в ЛС боту). Карточки падают модерам, комната апелляции открывается человеку после подачи. Каналы — только в <a href="/channel-settings">Каналах и маршрутах</a>.</div>
   </div>
 </div>
 
@@ -247,17 +238,7 @@ function loadOverview() {
       }).join('');
     }
 
-    var rd = d.readiness;
-    var rb = $('apReady');
-    if (rd.channel_name) {
-      rb.innerHTML = '<span class="badge ok">#' + esc(rd.channel_name) + '</span>' +
-        (rd.falls_to === 'system' ? ' (системный — свой не задан)' : '');
-    } else if (rd.log_channel_id) {
-      rb.innerHTML = '<span class="badge neutral">задан канал ID ' + esc(rd.log_channel_id) + ' — бот офлайн, имя проверится при старте</span>';
-    } else {
-      rb.innerHTML = '<span class="badge tone-warning">свой канал не задан — при живом боте карточки уйдут в системный</span>';
-    }
-    if (CAN_EDIT) { $('apSetBox').hidden = false; loadChannels(); loadRoles(); syncAppearance(d); }
+    if (CAN_EDIT) { loadChannels(); loadRoles(); syncAppearance(d); }
     syncSettings(d);
 
     var q = $('apQueue');
@@ -389,13 +370,6 @@ function loadChannels() {
         .map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(optLabel(c)) + '</option>'; }).join('');
       if (keepInv) inv.value = keepInv;
     }
-    var list = raw.filter(function (c) { return !c.hidden && (c.type === 'text' || c.type === 'thread'); });
-    $('apChanSel').innerHTML = list.length
-      ? list.map(function (c) {
-          var p = c.type === 'thread' ? 'ветка ' : '# ';
-          return '<option value="' + esc(c.id) + '">' + esc(p + c.name) + '</option>';
-        }).join('')
-      : '<option value="">бот офлайн — список недоступен</option>';
   }).catch(function () {});
 }
 
@@ -421,21 +395,6 @@ document.addEventListener('click', function (e) {
     STATUS = chipBtn.dataset.st;
     loadHistory();
   }
-});
-
-$('apChanSave').addEventListener('click', function () {
-  var msg = $('apChanMsg');
-  fetch(API + '/channel', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ channel_id: $('apChanSel').value })
-  }).then(function (r) { return r.json(); }).then(function (d) {
-    msg.className = 'hint ' + (d.success ? '' : 'error');
-    msg.textContent = d.message || d.error || 'Ошибка';
-    if (d.success) loadOverview();
-  }).catch(function () {
-    msg.className = 'hint error';
-    msg.textContent = 'Сеть моргнула';
-  });
 });
 
 var apQT = null;

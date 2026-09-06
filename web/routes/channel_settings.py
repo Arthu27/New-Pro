@@ -4,7 +4,8 @@
 Маршруты (см. ROUTE_SPECS в services/channel_routes.py):
   • proof_channel     — канал доказательств (native: data/channel_routes.json,
                         бот читает через cogs/proof_cog._proof_channel);
-  • appeals_channel   — карточки апелляций (GuildData('appeals').state);
+  • appeals_channel   — карточки апелляций в канал модеров (native);
+  • ban_appeal_channel — комната для забаненного (native);
   • welcome_channel   — приветствия PRO (GuildData('welcome_pro').settings);
   • antiraid/security/anticrash — логи живых систем защиты (их же конфиги).
 
@@ -45,21 +46,6 @@ def _active_gid(ctx):
 # ─────────────────────────────────────────────────────────────────────
 # Адаптеры: читаем/пишем ровно те хранилища, что использует бот.
 # ─────────────────────────────────────────────────────────────────────
-def _appeals_get(gid):
-    state = GuildData('appeals').get(gid, 'state', {}) or {}
-    return int(state.get('log_channel_id') or 0)
-
-
-def _appeals_set(gid, cid):
-    db = GuildData('appeals')
-    state = db.get(gid, 'state', {}) or {}
-    state.setdefault('next_id', 1)
-    state.setdefault('items', [])
-    state['log_channel_id'] = int(cid)
-    db.set(gid, 'state', state)
-    return True
-
-
 # Канал приветствий: бот (cogs/welcome_cog._panel_section) и редактор
 # приветствий (/welcome-editor → /welcome-settings) читают и пишут ОДИН файл
 # data/welcome_<gid>.json, секция 'welcome' → 'channel_id'. Раньше адаптер
@@ -185,7 +171,7 @@ ADAPTERS = {
     'pagerduty_channel': (CHR.get_route, CHR.set_route),
     'proof_channel': (CHR.get_route, CHR.set_route),
     'report_channel': (CHR.get_route, CHR.set_route),
-    'appeals_channel': (_appeals_get, _appeals_set),
+    'appeals_channel': (CHR.get_route, CHR.set_route),
     'welcome_channel': (_welcome_get, _welcome_set),
     'guardian_channel': (CHR.get_route, CHR.set_route),
     'antiraid_channel': (_antiraid_get, _antiraid_set),
@@ -243,6 +229,14 @@ def register(ctx):
             except Exception as _ex:
                 _log.debug('channel-routes get %s: %s', spec['key'], _ex)
                 cid = 0
+            if not cid and spec.get('kind') == 'native':
+                try:
+                    import web.app as _app
+                    bot = _app.bot_instance
+                    g = bot.get_guild(int(gid)) if (bot and gid) else None
+                    cid = int(CHR.resolve_route(gid, spec['key'], g) or 0)
+                except Exception as _ex:
+                    _log.debug('channel-routes resolve %s: %s', spec['key'], _ex)
             out.append({
                 'key': spec['key'],
                 'label': spec['label'],

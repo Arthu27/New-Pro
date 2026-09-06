@@ -408,8 +408,8 @@ class Moderation (commands .Cog ):
         «бан» из панели не работает (об этом прямо говорит модератору).
         """
         try :
-            from services .channel_routes import get_route as _gr 
-            cid =int (_gr (guild .id ,'ban_appeal_channel')or 0)
+            from services .channel_routes import resolve_route as _gr 
+            cid =int (_gr (guild .id ,'ban_appeal_channel',guild )or 0)
         except Exception as _ex :
             log .debug (f'[MODPANEL] канал апелляции: {_ex}')
             return None 
@@ -901,8 +901,13 @@ class Moderation (commands .Cog ):
                     aux_errors .append ("DM не доставлен")
                     log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :
-                    log_ch_embed =mod_log_embed (action ,{"ban":"Бан","kick":"Кик","timeout":"Мут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","unmute_chat":"Чат-мут снят","untimeout":"Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
-                    await self .send_log (guild ,log_ch_embed )
+                    from cogs.logs import send_action_log
+                    _extra = None
+                    if amount:
+                        _extra = f'Срок: {amount}'
+                    await send_action_log(
+                        guild, action, user, interaction.user,
+                        reason=reason, case_id=case_id, extra=_extra)
                 except Exception as _log_e :
                     aux_errors .append ("лог-канал недоступен")
                     log .warning (f'[MODPANEL] send_log: {_log_e}')

@@ -86,12 +86,11 @@ check(ar_data.get('alert_channel_id') == 3007,
 ar_set(GID, 0)
 
 ap_get, ap_set = ADAPTERS['appeals_channel']
-check(ap_set(GID, 3008) and ap_get(GID) == 3008,
-      'апелляции: запись/чтение адаптера')
-ap = GuildData('appeals').get(GID, 'state', {}) or {}
-check(int(ap.get('log_channel_id') or 0) == 3008,
-      'апелляции: GuildData(appeals).state.log_channel_id')
-ap_set(GID, 0)
+check(ap_set(GID, 'appeals_channel', 3008) and ap_get(GID, 'appeals_channel') == 3008,
+      'апелляции: запись/чтение native-маршрута')
+check(CHR.get_route(GID, 'appeals_channel') == 3008,
+      'апелляции: data/channel_routes.json — то же хранилище, что читает бот')
+ap_set(GID, 'appeals_channel', 0)
 
 # ═══ 2. Меню: категория «Настройки» ══════════════════════════════════════
 print('== меню: категория «Настройки» ==')

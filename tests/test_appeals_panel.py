@@ -450,9 +450,12 @@ tpl = open(os.path.join(ROOT, 'web/templates/appeals.html'), encoding='utf-8').r
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
 base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
 check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
-for fid in ('apQueue', 'apHistory', 'apReady', 'apCsv', 'apChanSave', 'apKpis'):
+for fid in ('apQueue', 'apHistory', 'apCsv', 'apKpis'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check("'/overview'" in tpl and "'/resolve'" in tpl and "'/channel'" in tpl
+check('apChanSave' not in tpl and 'apChanSel' not in tpl,
+      'на странице апелляций нет выбора каналов')
+check('/channel-settings' in tpl, 'ссылка на «Каналы и маршруты»')
+check("'/overview'" in tpl and "'/resolve'" in tpl
       and '/export.csv' in tpl, 'API-пути в шаблоне')
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 import services.panel_menu as PM

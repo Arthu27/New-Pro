@@ -94,6 +94,22 @@ check('tagjail_channel' not in keys and 'ticket_notify_channel' not in keys
       and 'counting_channel' not in keys and 'starboard_channel' not in keys,
       'маршруты вырезанных фич убраны из хаба')
 check(CHR.get_route(GID, 'proof_channel') == 0, 'по умолчанию маршрут пуст (авто)')
+check(CHR.get_route(GID, 'appeals_channel') == 0
+      and CHR.get_route(GID, 'ban_appeal_channel') == 0,
+      'известные ID не утекают в get_route без сохранения')
+
+
+class _KnownG:
+    def get_channel(self, cid):
+        return type('C', (), {'id': cid})() if cid == CHR.BAN_APPEAL_ROOM_ID else None
+
+
+check(CHR.resolve_route(GID, 'ban_appeal_channel', None) == 0,
+      'без guild известный ID не подставляется')
+check(CHR.resolve_route(GID, 'ban_appeal_channel', _KnownG()) == CHR.BAN_APPEAL_ROOM_ID,
+      'комната апелляции подставляется, только если есть на сервере')
+check(CHR.resolve_route(GID, 'appeals_channel', _KnownG()) == 0,
+      'карточки не падают в комнату бана по умолчанию')
 check(CHR.set_route(GID, 'proof_channel', 456789), 'маршрут записан')
 check(CHR.get_route(GID, 'proof_channel') == 456789, 'маршрут читается')
 check(CHR.set_route(GID, 'proof_channel', 0) and CHR.get_route(GID, 'proof_channel') == 0,
@@ -180,10 +196,8 @@ check(r.status_code == 404, 'маршрут tag jail удалён — запис
 
 r = client.post('/api/channel-routes/appeals_channel',
                 data=json.dumps({'channel_id': '999333'}), content_type='application/json')
-from db import GuildData  # noqa: E402
-ap = GuildData('appeals').get(int(GID), 'state', {}) or {}
-check(r.status_code == 200 and int(ap.get('log_channel_id') or 0) == 999333,
-      'маршрут апелляций пишется в их state (то же хранилище, что читает бот)')
+check(r.status_code == 200 and CHR.get_route(GID, 'appeals_channel') == 999333,
+      'маршрут карточек апелляций пишется в channel_routes (канал модеров)')
 
 r = client.post('/api/channel-routes/nope',
                 data=json.dumps({'channel_id': '1'}), content_type='application/json')

@@ -18,6 +18,18 @@ log = get_logger('channel_routes')
 
 ROUTES_FILE = 'data/channel_routes.json'
 
+# Каналы боевого сервера (владелец 2026-09-06). Бот сам их не создаёт:
+# если на сервере есть такой канал — используем, иначе молчим.
+# Карточки апелляций / репорты — канал модеров.
+# Комната после бана — отдельный канал, туда карточки НЕ идут.
+MODS_CHANNEL_ID = 1312434963941167134
+BAN_APPEAL_ROOM_ID = 1544483947705008188
+KNOWN_CHANNELS = {
+    'appeals_channel': MODS_CHANNEL_ID,
+    'report_channel': MODS_CHANNEL_ID,
+    'ban_appeal_channel': BAN_APPEAL_ROOM_ID,
+}
+
 # Спецификация маршрутов (панель строит из неё страницу настроек).
 # kind: 'native' — канал живёт в этом файле; остальные — адаптеры к конфигам
 # других систем (их редактирует панель через их же хранилища).
@@ -35,18 +47,17 @@ ROUTES_FILE = 'data/channel_routes.json'
 ROUTE_SPECS = [
     {
         'key': 'ban_appeal_channel',
-        'label': 'Канал апелляции после бана',
+        'label': 'Комната апелляции (для забаненного)',
         'icon': 'fa-user-lock',
         'kind': 'native',
         'access': 'Админ',
         'step': 1,
         'required': True,
-        'create_hint': 'Заведи ОДИН канал для разбора наказаний (например #апелляции) — и «бан», и апелляции ведут сюда, плодить отдельные не надо.',
-        'what': 'Куда попадает участник после «бана» из /modpanel: с сервера '
-                'его не выкидывает — все каналы закрываются, открыт только '
-                'этот. Разговор с модераторами идёт здесь. Нужно, только если '
-                'пользуешься функцией «бан» в панели.',
-        'empty': 'Не задан — при «бане» бот попросит выбрать канал (остальное работает и без него).',
+        'create_hint': 'Отдельная комната для человека после бана. Карточки модерам сюда не кладём — у них свой канал.',
+        'what': 'Комната, которую забаненный видит ПОСЛЕ подачи апелляции '
+                'в личке боту. В момент бана она закрыта. Карточки '
+                '«Принять / Отклонить» сюда не идут.',
+        'empty': 'Не задан — при «бане» из /modpanel бот попросит выбрать канал. На боевом сервере комната уже есть.',
     },
     {
         'key': 'report_channel',
@@ -75,16 +86,16 @@ ROUTE_SPECS = [
     },
     {
         'key': 'appeals_channel',
-        'label': 'Канал апелляций (карточки на разбан)',
+        'label': 'Карточки апелляций (канал модеров)',
         'icon': 'fa-scale-balanced',
-        'kind': 'appeals',
+        'kind': 'native',
         'access': 'Админ',
         'step': 4,
         'required': False,
-        'create_hint': 'Отдельный канал не нужен — можно указать тот же #апелляции, что и выше. Не укажешь — карточки идут в системный канал.',
-        'what': 'Карточки апелляций на разбан с кнопками «Принять / Отклонить». '
-                'Обычно это тот же канал, что и «апелляция после бана».',
-        'empty': 'Не задан — карточки идут в системный канал сервера.',
+        'create_hint': 'Куда падают карточки с кнопками. Это канал КОМАНДЫ, не комната забаненного.',
+        'what': 'Карточки апелляций с кнопками «Принять / Отклонить» — '
+                'в канал модеров. Забаненный этот канал не видит.',
+        'empty': 'Не задан — на боевом сервере карточки идут в канал модеров.',
     },
     {
         'key': 'guardian_channel',
@@ -274,6 +285,44 @@ def set_route(gid, key, channel_id):
         return False
     _save(data)
     return True
+
+
+def channel_on_guild(guild, cid):
+    """Канал/ветка по ID, если он реально есть на этом сервере."""
+    if not cid or guild is None:
+        return None
+    try:
+        cid = int(cid)
+    except (TypeError, ValueError):
+        return None
+    fn = getattr(guild, 'get_channel_or_thread', None)
+    if callable(fn):
+        ch = fn(cid)
+        if ch is not None:
+            return ch
+    ch = guild.get_channel(cid) if hasattr(guild, 'get_channel') else None
+    if ch is not None:
+        return ch
+    getter = getattr(guild, 'get_thread', None)
+    return getter(cid) if callable(getter) else None
+
+
+def resolve_route(gid, key, guild=None):
+    """ID маршрута: сохранённый в панели, иначе известный канал если он есть.
+
+    Известные ID (канал модеров / комната апелляции) подставляются ТОЛЬКО
+    когда такой канал реально есть на guild. На тестовых гильдиях без этих
+    комнат остаётся 0 — бан по-прежнему требует явной настройки.
+    """
+    stored = get_route(gid, key)
+    if stored:
+        return stored
+    guess = int(KNOWN_CHANNELS.get(key) or 0)
+    if not guess:
+        return 0
+    if guild is not None and channel_on_guild(guild, guess) is not None:
+        return guess
+    return 0
 
 
 def all_routes(gid):

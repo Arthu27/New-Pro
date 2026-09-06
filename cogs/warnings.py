@@ -173,21 +173,13 @@ async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total ,
     Fail-safe: любые ошибки глушим, варн уже сохранён.
     """
     try :
-        from cogs .logs import ensure_log_channel ,_safe_send
-        ch =await ensure_log_channel (guild ,'наказания')
-        if not ch :
-            return
-        e =discord .Embed (color =0xE74C3C ,timestamp =datetime .now (timezone .utc ))
-        e .description =(
-        "## Предупреждение\n"
-        f"**{user.display_name}** · `{user.id}`\n\n"
-        f"Варн: **#{warn_id}** · Всего: **{total}**\n"
-        f"Модератор: **{moderator.display_name}**\n"
-        f"Причина: {reason or 'Не указана'}"
-        + (f"\n\n⚖️ Авто-наказание: **{punishment_result}**" if punishment_result else "")
-        )
-        e .set_footer (text =f"{guild.name}")
-        await _safe_send (ch ,embed =e )
+        from cogs.logs import send_action_log
+        extra = f'Варн #{warn_id} · всего {total}'
+        if punishment_result:
+            extra += f'\nАвто-наказание: {punishment_result}'
+        await send_action_log(
+            guild, 'warn', user, moderator,
+            reason=reason or 'Не указана', extra=extra)
     except Exception as _ex:
         _log.debug("_log_warn_to_channel(): подавлено: %s", _ex)
 
@@ -202,19 +194,10 @@ async def _log_punish_to_channel (guild ,user ,punishment_result ,total ):
     if not punishment_result :
         return
     try :
-        from cogs .logs import ensure_log_channel ,_safe_send
-        ch =await ensure_log_channel (guild ,'наказания')
-        if not ch :
-            return
-        e =discord .Embed (color =0xE67E22 ,timestamp =datetime .now (timezone .utc ))
-        e .description =(
-        "## Авто-наказание\n"
-        f"**{user.display_name}** · `{user.id}`\n\n"
-        f"Варнов всего: **{total}**\n"
-        f"Применено: **{punishment_result}**"
-        )
-        e .set_footer (text =f"{guild.name}")
-        await _safe_send (ch ,embed =e )
+        from cogs.logs import send_action_log
+        await send_action_log(
+            guild, 'warn', user, None,
+            extra=f'Авто-наказание: {punishment_result}\nВарнов всего: {total}')
     except Exception as _ex:
         _log.debug("_log_punish_to_channel(): подавлено: %s", _ex)
 
@@ -612,19 +595,11 @@ class warnings(commands.Cog):
 
         # Канал «Наказания»: снятие варна тоже туда (полная картина по варнам)
         try:
-            from cogs.logs import ensure_log_channel, _safe_send
-            _uch = await ensure_log_channel(interaction.guild, 'наказания')
-            if _uch:
-                _ue = discord.Embed(color=0x2ECC71, timestamp=datetime.now(timezone.utc))
-                _ue.description = (
-                    "## Предупреждение снято\n"
-                    f"**{user.display_name}** · `{user.id}`\n\n"
-                    f"Снято: **#{removed.get('id')}** — {removed.get('reason', 'Не указана')}\n"
-                    f"Осталось: **{total}**\n"
-                    f"Модератор: {interaction.user.mention}"
-                )
-                _ue.set_footer(text=f"{interaction.guild.name}")
-                await _safe_send(_uch, embed=_ue)
+            from cogs.logs import send_action_log
+            await send_action_log(
+                interaction.guild, 'unwarn', user, interaction.user,
+                reason=removed.get('reason', 'Не указана'),
+                extra=f"Снято #{removed.get('id')} · осталось {total}")
         except Exception as _ulog_e:
             log.debug(f"[WARNS] лог снятия: {_ulog_e}")
 
@@ -653,20 +628,11 @@ class warnings(commands.Cog):
         total = len(warns)
         await self._sync_warn_level_roles(guild, user, total)
         try:
-            from cogs.logs import ensure_log_channel, _safe_send
-            _uch = await ensure_log_channel(guild, 'наказания')
-            if _uch:
-                _ue = discord.Embed(color=0x2ECC71,
-                                    timestamp=datetime.now(timezone.utc))
-                _ue.description = (
-                    "## Предупреждение снято\n"
-                    f"**{user.display_name}** · `{user.id}`\n\n"
-                    f"Снято: **#{removed.get('id')}** — "
-                    f"{removed.get('reason', 'Не указана')}\n"
-                    f"Осталось: **{total}**\n"
-                    f"Модератор: {getattr(moderator, 'mention', moderator)}")
-                _ue.set_footer(text=f"{guild.name}")
-                await _safe_send(_uch, embed=_ue)
+            from cogs.logs import send_action_log
+            await send_action_log(
+                guild, 'unwarn', user, moderator,
+                reason=removed.get('reason', 'Не указана'),
+                extra=f"Снято #{removed.get('id')} · осталось {total}")
         except Exception as _ulog_e:
             log.debug(f"[WARNS] лог снятия (общий): {_ulog_e}")
         return removed, total

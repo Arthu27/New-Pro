@@ -97,7 +97,7 @@ png = LC.render_log_card('punish', 'Авто-наказание',
 check(bool(png) and len(png) > 20000, 'карточка наказания рендерится в crimson', len(png or ''))
 # warnings.py: варны и авто-наказания идут в канал «наказания»
 _ws = open(os.path.join(ROOT, 'cogs', 'warnings.py'), encoding='utf-8').read()
-check("ensure_log_channel(guild,'наказания')" in _ws.replace(' ', ''),
+check('send_action_log' in _ws and "'warn'" in _ws,
       'варны логируются в канал «наказания»')
 check('_log_punish_to_channel' in _ws, 'авто-наказание логируется отдельно в «наказания»')
 

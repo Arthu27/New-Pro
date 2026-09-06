@@ -208,7 +208,8 @@ m_after.timed_out_until = NOW + datetime.timedelta(minutes=30)
 guild.audit_entries = [FakeAuditEntry(91, mod, 'оскорбления')]
 run(cog.on_member_update(m_before, m_after))
 e = last_embed('-модерация')
-check(e and 'замьючен' in desc_of(e) and 'Действует до' in desc_of(e) and 'оскорбления' in desc_of(e),
+check(e and 'выдали мут' in desc_of(e) and 'Действует до' in desc_of(e) and 'оскорбления' in desc_of(e)
+      and 'TestMod' in desc_of(e),
       'таймаут: эмбед с модератором, причиной и сроком')
 
 print('== каналы / роли / инвайты / сервер ==')
