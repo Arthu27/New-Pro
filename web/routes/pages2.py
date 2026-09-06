@@ -80,7 +80,7 @@ def register(ctx):
                or active_guild_id ()
                or getattr (_app ,'MAIN_GUILD_ID','')or '')
         _kw =dict (role =session .get ('role'),username =session .get ('username'),
-                   can_edit =session .get ('role')in ('admin','owner'))
+                   can_edit =session .get ('role')=='owner')
         if _gid :
             _kw ['main_guild_id']=str (_gid )
         return render_template ('message_logs.html',**_kw )

@@ -155,9 +155,11 @@ class _PermChannel:
         self.id = cid
         self.name = 'апелляции'
         self.overwrites = {}
+        self.targets = {}
 
     async def set_permissions(self, target, overwrite=None):
         self.overwrites[target.id] = overwrite
+        self.targets[target.id] = target
 
 
 class _G2:
@@ -207,14 +209,14 @@ opened3, ch3 = asyncio.new_event_loop().run_until_complete(
 check(opened3 and ch3 is _pc2,
       'канала нет в кэше → fetch_channel: канал всё равно открывается')
 
-# 3в. Маршрут пуст, но карточка ушла в fallback → открываем его
+# 3в. Маршрут пуст, комнаты нет — карточки забаненному не открываем
 CR.set_route(_G2.id, 'ban_appeal_channel', 0)
 _pc3 = _PermChannel(cid=999)
 _g4 = _G2([_pc3])
 opened4, ch4 = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g4, _User(), fallback_channel=_pc3))
-check(opened4 and ch4 is _pc3,
-      'пустой маршрут → открываем канал, куда легла карточка')
+check(opened4 is False and ch4 is None and _pc3.overwrites == {},
+      'пустой маршрут без комнаты → карточки не открываем')
 
 # 3г. Ни маршрута, ни fallback — честный отказ (False), без фейка «открыто»
 opened5, ch5 = asyncio.new_event_loop().run_until_complete(
@@ -227,6 +229,88 @@ check('#апелляции' in line, 'в ЛС видно имя открытог
       f'→ {line[:60]}')
 line_bad = _cog._dm_channel_line(False, None)
 check('не получилось' in line_bad, 'не открылся → честная строка без обещаний')
+
+# 3е. Пустой маршрут, известная комната на сервере — открываем её, не карточки
+CR.set_route(_G2.id, 'ban_appeal_channel', 0)
+_pc_known = _PermChannel(cid=APPEAL_CH_ID)
+_g_known = _G2([_pc_known])
+opened_k, ch_k = asyncio.new_event_loop().run_until_complete(
+    _cog._open_appeal_channel(_g_known, _User(), fallback_channel=_pc3))
+check(opened_k and ch_k is _pc_known and 2002 in _pc_known.overwrites,
+      'пустой маршрут → известная комната апелляции')
+check(_pc3.overwrites == {}, 'канал карточек при этом не трогаем')
+
+# 3ж. После рестарта кэш пуст — fetch известного ID
+_pc_fk = _PermChannel(cid=APPEAL_CH_ID)
+_g_fk = _G3([_pc_fk])
+opened_fk, ch_fk = asyncio.new_event_loop().run_until_complete(
+    _cog._open_appeal_channel(_g_fk, _User()))
+check(opened_fk and ch_fk is _pc_fk,
+      'пустой маршрут + fetch известного ID после рестарта')
+
+# 3з. overwrite — Member с сервера, не User из ЛС
+class _Mem:
+    id = 2002
+
+
+class _GMem(_G2):
+    def get_member(self, uid):
+        return _Mem() if int(uid) == 2002 else None
+
+
+_pc_m = _PermChannel()
+_g_m = _GMem([_pc_m])
+CR.set_route(_G2.id, 'ban_appeal_channel', APPEAL_CH_ID)
+opened_m, ch_m = asyncio.new_event_loop().run_until_complete(
+    _cog._open_appeal_channel(_g_m, _User()))
+check(opened_m and type(_pc_m.targets.get(2002)).__name__ == '_Mem',
+      'set_permissions на Member, не на User из лички')
+
+# 3и. Ветка: add_user + права
+class _ThreadCh(_PermChannel):
+    def __init__(self, cid=APPEAL_CH_ID):
+        super().__init__(cid)
+        self.added = []
+
+    async def add_user(self, user):
+        self.added.append(user)
+
+
+_th = _ThreadCh()
+_g_th = _G2([_th])
+opened_th, ch_th = asyncio.new_event_loop().run_until_complete(
+    _cog._open_appeal_channel(_g_th, _User()))
+check(opened_th and _th.added and _th.added[0].id == 2002,
+      'ветка апелляции: add_user подавшего')
+
+# 3к. Оценка рассмотрения — канал владельца (не карточки, не комната)
+RATING_ID = 1518751543329951904
+check(CR.APPEAL_RATING_CHANNEL_ID == RATING_ID,
+      'ID канала оценки совпадает с каналом владельца')
+
+
+class _RateCh:
+    def __init__(self):
+        self.id = RATING_ID
+        self.name = 'оценки'
+
+
+_rc = _RateCh()
+_g_rate = _G2([_rc])
+ch_rate = asyncio.new_event_loop().run_until_complete(
+    _cog._rating_channel(_g_rate))
+check(ch_rate is _rc, 'оценка: канал из кэша по фиксированному ID')
+_rc_f = _RateCh()
+_g_rate_f = _G3([_rc_f])
+ch_rate_f = asyncio.new_event_loop().run_until_complete(
+    _cog._rating_channel(_g_rate_f))
+check(ch_rate_f is _rc_f, 'оценка: fetch, если канала нет в кэше')
+asrc = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
+check('_rating_channel' in asrc and 'APPEAL_RATING_CHANNEL_ID' in asrc,
+      'модалка оценки пишет в _rating_channel')
+check("'appeals_channel'" not in asrc.split('async def on_submit')[1][:2500]
+      or '_rating_channel' in asrc.split('class AppealRateModal')[1][:1800],
+      'оценка не уходит в канал карточек')
 
 # ═══════════════════════════════════════════════════════════════════
 print('== 4. Заявка в персонал не теряется тихо ==')

@@ -62,6 +62,9 @@ check(m is not None, 'скрипт страницы найден для харн
 if m:
     script = m.group(1)
     script = script.replace(
+        "{% if role == 'owner' %}true{% else %}false{% endif %}",
+        'true')
+    script = script.replace(
         "{% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %}",
         'true')
     # Каркас маршрутов рендерится сервером через {{ route_specs | tojson }} —

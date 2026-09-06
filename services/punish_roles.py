@@ -19,7 +19,11 @@
 Хранилище: data/punish_roles.json
     {"<gid>": {"roles": {"mute": id, "vmute": id, "ban": id, "warn_3": id},
                "warn_levels": [1, 3, 7],
-               "temps": {"<uid>": {"<role_id>": until_ts}}}}
+               "temps": {"<uid>": {"<role_id>": until_ts}},
+               "held_roles": {"<uid>": [role_id, ...]}}}
+
+held_roles — снимок ролей на момент бана: бан забирает все (кроме
+@everyone / managed / роли бана), разбан отдаёт обратно.
 """
 import json
 import os
@@ -253,7 +257,10 @@ def add_temp(gid, uid, role_id, until_ts):
 
 
 def clear(gid, uid, role_id=None):
-    """Снять запись о временной роли (одну или все роли пользователя)."""
+    """Снять запись о временной роли (одну или все роли пользователя).
+
+    Снимок held_roles не трогаем: разбан читает его отдельно.
+    """
     with _lock:
         data = _load()
         row = data.get(str(gid)) or {}
@@ -302,3 +309,65 @@ def temps_for(gid, uid):
             log.debug('temps_for: битая запись %s=%r: %s', role_id, until, _ex)
             continue
     return out
+
+
+def _clean_role_ids(role_ids):
+    """Уникальные положительные id, порядок как пришёл."""
+    ids, seen = [], set()
+    for raw in role_ids or ():
+        try:
+            rid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if rid <= 0 or rid in seen:
+            continue
+        seen.add(rid)
+        ids.append(rid)
+    return ids
+
+
+def save_held_roles(gid, uid, role_ids):
+    """Снимок ролей, снятых при бане. Пустой список не затирает уже сохранённое."""
+    ids = _clean_role_ids(role_ids)
+    with _lock:
+        data = _load()
+        row = data.setdefault(str(gid), {})
+        held = row.setdefault('held_roles', {})
+        key = str(uid)
+        if not ids:
+            if held.get(key):
+                return
+            held.pop(key, None)
+            if not held:
+                row.pop('held_roles', None)
+            if not row:
+                data.pop(str(gid), None)
+            _save(data)
+            return
+        held[key] = ids
+        _save(data)
+
+
+def held_roles(gid, uid):
+    """Роли, которые вернём после разбана (копия списка)."""
+    with _lock:
+        row = _load().get(str(gid)) or {}
+        raw = (row.get('held_roles') or {}).get(str(uid)) or []
+        return _clean_role_ids(raw)
+
+
+def take_held_roles(gid, uid):
+    """Забрать снимок (разбан). clear() сроки не трогает этот ключ."""
+    with _lock:
+        data = _load()
+        row = data.get(str(gid)) or {}
+        held = row.get('held_roles') or {}
+        raw = held.pop(str(uid), None) or []
+        if not held:
+            row.pop('held_roles', None)
+        if row:
+            data[str(gid)] = row
+        elif str(gid) in data:
+            data.pop(str(gid), None)
+        _save(data)
+        return _clean_role_ids(raw)

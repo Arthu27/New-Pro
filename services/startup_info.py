@@ -42,6 +42,11 @@ _TUNNEL_KEEP = (
 # (dial timeout, connection refused, 5xx от origin) остаются видны.
 _TUNNEL_DROP = (
     'context canceled',
+    # Cloudflare рвёт control stream, когда вкладка/SSE закрылись или
+    # край fra перерегистрировал соединение. Сразу следом идёт
+    # «Registered tunnel connection» — панель жива. Пугало владельца
+    # так же, как context canceled.
+    'shutting down control stream',
 )
 
 

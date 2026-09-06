@@ -40,21 +40,35 @@ async def _respond (interaction ,**kw ):
             log .warning (f'[MODPANEL] Ответ не доставлен и через followup: {_e2}')
 
 
-async def _ack(interaction, ephemeral=True):
-    """Сразу закрыть 3-секундное окно Discord, чтобы не было
-    «Приложение не отвечает», пока бан/мут ещё идут.
+async def _ack(interaction, ephemeral=True, thinking=True):
+    """Сразу закрыть 3-секундное окно Discord.
 
-    thinking=False — без спиннера «думает…» на панели.
+    thinking=True  — «думает…» + followup (модалка / наказание).
+    thinking=False — без спиннера «думает…» на панели (селект).
+    Модалка с thinking=False шлёт type 6 (обновить сообщение) — Discord
+    часто отклоняет, наказание уже выдано, а клиент пишет
+    «приложение не ответило».
     """
     try:
         resp = getattr(interaction, 'response', None)
-        if resp is None or resp.is_done():
+        if resp is None:
+            return
+        done = getattr(resp, 'is_done', None)
+        if callable(done) and done():
             return
         try:
-            await resp.defer(ephemeral=ephemeral, thinking=False)
+            await resp.defer(ephemeral=ephemeral, thinking=thinking)
+            return
         except TypeError:
             await resp.defer(ephemeral=ephemeral)
+            return
     except Exception as _e:
+        if not thinking:
+            try:
+                await resp.defer(ephemeral=ephemeral, thinking=True)
+                return
+            except Exception:
+                pass
         log.debug('[MODPANEL] defer: %s', _e)
 
 
@@ -352,6 +366,9 @@ class Moderation (commands .Cog ):
     # — из-за него выданные роли «не включались».
     @app_commands.default_permissions(moderate_members=True)
     async def modpanel (self ,interaction ):
+        # Сразу закрыть 3с-окно Discord: сбор меню/ACL не должен давать
+        # «Приложение не отвечает», если цикл чуть занят.
+        await _ack (interaction ,thinking =False )
         # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
         # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -466,15 +483,23 @@ class Moderation (commands .Cog ):
 
     async def _unisolate_member (self ,guild ,user ):
         """Снять апелляцию: вернуть участнику обычный доступ ко всем каналам."""
+        # Роль бана сама закрывала каналы — обход всех комнат снова
+        # вешает цикл на минуты и «приложение не отвечает».
+        if self ._punish_role (guild ,'ban') is not None :
+            return
         pool = list (guild .channels )
         for th in getattr (guild ,'threads',None ) or []:
             if th not in pool :
                 pool .append (th )
-        for ch in pool :
-            try :
-                await ch .set_permissions (user ,overwrite =None )
-            except Exception as _ex :
-                log .debug (f'_unisolate_member(): {ch}: {_ex}')
+        import asyncio as _aio
+        sem =_aio .Semaphore (8 )
+        async def _one (ch ):
+            async with sem :
+                try :
+                    await ch .set_permissions (user ,overwrite =None )
+                except Exception as _ex :
+                    log .debug (f'_unisolate_member(): {ch}: {_ex}')
+        await _aio .gather (*[_one (ch )for ch in pool ],return_exceptions =True )
 
     # ── Почему Forbidden: иерархия ролей / владелец сервера / право бота ──
     # «ban» здесь НЕ Discord-бан: участник остаётся на сервере, бот выдаёт
@@ -537,6 +562,9 @@ class Moderation (commands .Cog ):
 
     async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ,proof_link =None ):
         """Выполнить выбранное действие модерации."""
+        # 3с-окно Discord закрываем ДО ролей/DM/логов: иначе наказание
+        # уже выдано, а клиент рисует «приложение не ответило».
+        await _ack (interaction )
         guild =interaction .guild
 
         # Лимиты стаффа — защита от «плохих» модераторов (владельца не трогаем).
@@ -692,8 +720,6 @@ class Moderation (commands .Cog ):
                 embed =error_embed (_pre ,"У бота не хватит прав"),ephemeral =True )
                 return
 
-            await _ack (interaction )
-
             try :
                 if action =="ban":
                     # «Бан» не выкидывает с сервера: все каналы закрываются,
@@ -720,6 +746,10 @@ class Moderation (commands .Cog ):
                     else :
                         msg =(f"закрыто каналов {_closed }. "
                               f"Апелляция откроется после подачи в личке бота")
+                    try :
+                        await self ._strip_roles_for_ban (guild ,user )
+                    except Exception as _se :
+                        log .debug (f'[MODPANEL] strip roles: {_se}')
                     try :
                         from services .staff_limits import record_hit as _sl_rec
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
@@ -894,11 +924,18 @@ class Moderation (commands .Cog ):
                     case_id =0
                     aux_errors .append ("дело не записано")
                     log .warning (f'[MODPANEL] save_case: {_case_e}')
+                confirm =success_embed (
+                "Действие выполнено",
+                f"**{user.display_name}** · `{user.id}`\n{msg}\n**Причина:** {reason}\n**Дело:** #{case_id}",
+                guild =guild )
+                if aux_errors :
+                    confirm .description +=f"\n\n⚠️ {' · '.join (aux_errors )}"
+                # Сначала ответ модератору — логи/ЛС/демка могут идти секундами.
+                await _respond (interaction ,embed =confirm ,ephemeral =True )
                 try :
                     dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
                     await self .send_dm (user ,dm )
                 except Exception as _dm_e :
-                    aux_errors .append ("DM не доставлен")
                     log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :
                     from cogs.logs import send_action_log
@@ -907,17 +944,14 @@ class Moderation (commands .Cog ):
                         reason=reason, case_id=case_id,
                         duration=amount, proof=proof_link)
                 except Exception as _log_e :
-                    aux_errors .append ("лог-канал недоступен")
                     log .warning (f'[MODPANEL] send_log: {_log_e}')
 
-                # Авто-варн за серию мутов (3 за 48 ч) — выдаёт сам бот.
                 if action in ('timeout', 'mute_chat', 'vmute'):
                     try :
                         await self ._maybe_auto_warn (guild ,user )
                     except Exception as _aw_e :
                         log .info (f'[MODPANEL] auto-warn: {_aw_e}')
 
-                # Уведомление панели о действии модерации (веб/Discord/email — в фоне)
                 try :
                     from services .panel_notify import notify_panel_event as _np
                     _label ={"ban":"Апелляция","kick":"Кик","timeout":"Таймаут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","untimeout":"Мут снят"}.get (action ,action )
@@ -927,25 +961,13 @@ class Moderation (commands .Cog ):
                 except Exception as _ex:
                     _log.debug("_execute_mod_action(): подавлено: %s", _ex)
 
-                # Доказательство (ссылка) — в канал доказательств.
-                proof_note =None
                 try :
                     if action in _punish_actions and (proof_link or '').strip ():
                         from cogs .proof_cog import try_deliver_proof
                         _p_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
-                        proof_note =await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
+                        await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
                 except Exception as _pe :
                     log .warning (f'[MODPANEL] демка: {_pe}')
-
-                confirm =success_embed (
-                "Действие выполнено",
-                f"**{user.display_name}** · `{user.id}`\n{msg}\n**Причина:** {reason}\n**Дело:** #{case_id}",
-                guild =guild )
-                if aux_errors :
-                    confirm .description +=f"\n\n⚠️ {' · '.join (aux_errors )}"
-                if proof_note :
-                    confirm .description +=f"\n{proof_note }"
-                await _respond (interaction ,embed =confirm ,ephemeral =True )
             except discord .Forbidden :
                 await _respond (interaction ,
                 embed =error_embed (await _forbidden_reason (guild ,user ,action ),"Не хватило прав у бота"),ephemeral =True )
@@ -966,6 +988,10 @@ class Moderation (commands .Cog ):
                 if member is not None :
                     await self ._unisolate_member (guild ,member )
                     await self ._unban_role (guild ,member )
+                    try :
+                        await self ._restore_roles_after_unban (guild ,member )
+                    except Exception as _re :
+                        log .debug (f'[MODPANEL] restore roles: {_re}')
                 # Настоящий разбан (для легаси-банов, если пользователь вне сервера)
                 unban_done =False
                 try :
@@ -1293,6 +1319,90 @@ class Moderation (commands .Cog ):
         if _brole is not None :
             await self ._drop_roles (guild ,member ,[_brole ])
 
+    def _keep_role_on_ban (self ,guild ,role ,ban_role ):
+        """@everyone, managed и роль бана при бане не снимаем."""
+        if role is None :
+            return True
+        if getattr (role ,'managed',False ):
+            return True
+        isdef =getattr (role ,'is_default',None )
+        if callable (isdef )and isdef ():
+            return True
+        rid =getattr (role ,'id',None )
+        if rid is not None and rid ==getattr (guild ,'id',None ):
+            return True
+        if ban_role is not None and rid ==getattr (ban_role ,'id',None ):
+            return True
+        return False
+
+    async def _strip_roles_for_ban (self ,guild ,user ):
+        """Бан: забрать все роли (снимок на диск). Разбан отдаст обратно.
+
+        Не трогаем @everyone, managed (буст/бот/интеграция) и саму роль бана.
+        Владельца бота сюда не пускаем — бан до этого уже отсечён.
+        """
+        if user is None or guild is None :
+            return
+        if _is_untouchable (guild ,user ):
+            return
+        roles =list (getattr (user ,'roles',None )or [])
+        ban_role =self ._punish_role (guild ,'ban')
+        take =[r for r in roles if not self ._keep_role_on_ban (guild ,r ,ban_role )]
+        try :
+            from services import punish_roles as PR
+            PR .save_held_roles (guild .id ,user .id ,[getattr (r ,'id',0)for r in take ])
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] save_held_roles: {_ex}')
+        if not take :
+            return
+        reason ='бан: роли сняты до разбана'
+        for i in range (0 ,len (take ),10 ):
+            chunk =take [i :i +10 ]
+            try :
+                await user .remove_roles (*chunk ,reason =reason )
+            except Exception as _ex :
+                log .debug (f'[MODPANEL] strip chunk: {_ex}')
+                for r in chunk :
+                    try :
+                        await user .remove_roles (r ,reason =reason )
+                    except Exception as _ex2 :
+                        log .debug (f'[MODPANEL] strip {getattr (r ,"name","?")}: {_ex2}')
+
+    async def _restore_roles_after_unban (self ,guild ,member ):
+        """Разбан: вернуть роли, снятые при бане."""
+        if member is None or guild is None :
+            return
+        try :
+            from services import punish_roles as PR
+            ids =PR .take_held_roles (guild .id ,member .id )
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] take_held_roles: {_ex}')
+            return
+        if not ids :
+            return
+        ban_role =self ._punish_role (guild ,'ban')
+        give =[]
+        getter =getattr (guild ,'get_role',None )
+        for rid in ids :
+            role =getter (rid )if callable (getter )else None
+            if role is None or self ._keep_role_on_ban (guild ,role ,ban_role ):
+                continue
+            give .append (role )
+        if not give :
+            return
+        reason ='разбан: роли возвращены'
+        for i in range (0 ,len (give ),10 ):
+            chunk =give [i :i +10 ]
+            try :
+                await member .add_roles (*chunk ,reason =reason )
+            except Exception as _ex :
+                log .debug (f'[MODPANEL] restore chunk: {_ex}')
+                for r in chunk :
+                    try :
+                        await member .add_roles (r ,reason =reason )
+                    except Exception as _ex2 :
+                        log .debug (f'[MODPANEL] restore {getattr (r ,"name","?")}: {_ex2}')
+
     @tasks .loop (seconds =60 )
     async def punish_roles_loop (self ):
         """Раз в минуту снимает просроченные роли наказаний."""
@@ -1323,6 +1433,13 @@ class Moderation (commands .Cog ):
                     except Exception as _ex :
                         log .debug (f'[MODPANEL] авто-анмьют микрофона: {_ex}')
                 PR .clear (gid ,uid ,rid )
+                if member is not None :
+                    try :
+                        from services import punish_roles as _PRban
+                        if rid ==_PRban .role_for (gid ,'ban'):
+                            await self ._restore_roles_after_unban (guild ,member )
+                    except Exception as _rex :
+                        log .debug (f'[MODPANEL] авто-восстановление ролей: {_rex}')
                 if member is not None :
                     try :
                         from cogs .logs import send_action_log
@@ -1427,9 +1544,10 @@ class _CtxMuteModal(discord.ui.Modal):
         self._label = label
 
     async def on_submit(self, interaction):
+        await _ack(interaction, thinking=True)
         from services.permission_acl import check_action as _acl
         if not _acl(interaction.guild_id, interaction.user, self._acl_key):
-            await interaction.response.send_message(
+            await _respond(interaction, content=
                 '🚫 Действие тебе не выдано (панель → Доступ → Права команд → '
                 'Классические разрешения).', ephemeral=True)
             return
@@ -1439,8 +1557,8 @@ class _CtxMuteModal(discord.ui.Modal):
             _ok, _deny = _slc(interaction.guild, interaction.user,
                               self._limit_key)
             if not _ok:
-                await interaction.response.send_message(_deny or 'Лимит исчерпан',
-                                                        ephemeral=True)
+                await _respond(interaction, content=_deny or 'Лимит исчерпан',
+                               ephemeral=True)
                 return
         except Exception as _sx:
             log.debug(f'[ПКМ] staff_limits: {_sx}')
@@ -1468,8 +1586,9 @@ class _CtxMuteModal(discord.ui.Modal):
                      self._limit_key, 1)
             except Exception as _rx:
                 log.debug(f'[ПКМ] record: {_rx}')
-        await interaction.response.send_message(
-            ('✅ ' if ok else '⚠️ ') + str(text or ('Готово' if ok else 'Не получилось')),
+        await _respond(
+            interaction,
+            content=('✅ ' if ok else '⚠️ ') + str(text or ('Готово' if ok else 'Не получилось')),
             ephemeral=True)
 
 
@@ -1578,12 +1697,19 @@ class PanelInteraction:
         self.msgs = []
 
         class _Resp:
+            def __init__(s):
+                s._done = False
+
             def is_done(s):
-                return False
+                return s._done
+
+            async def defer(s, ephemeral=False, thinking=False, **kw):
+                s._done = True
 
             async def send_message(s, embed=None, ephemeral=False, **kw):
                 if embed is not None:
                     self.msgs.append(embed)
+                s._done = True
 
         class _Follow:
             async def send(s, embed=None, ephemeral=False, **kw):
@@ -1815,7 +1941,7 @@ class UnmuteKindSelect(discord.ui.Select):
         action = self.values[0]
         if not await self.cog._ensure_action_acl(interaction, action):
             return
-        await _ack(interaction)
+        await _ack(interaction, thinking=False)
         await self.cog._execute_mod_action(
             interaction, action, self.target_id,
             'Снято через панель', '', proof_link=None)
@@ -1943,7 +2069,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
         if panel is not None:
             panel.pending_action = None
         if len(kinds) == 1:
-            await _ack(interaction)
+            await _ack(interaction, thinking=False)
             await cog._execute_mod_action(
                 interaction, kinds[0][0], prefill,
                 'Снято через панель', '', proof_link=None)
@@ -2111,13 +2237,9 @@ class ModActionModal(discord.ui.Modal):
         # роль могли снять — без «классического» разрешения не исполняем.
         if not await self.cog._ensure_action_acl(interaction, self.action):
             return
-        # Быстрый ack — дальше цепочка (таймаут → дело → DM → лог) может
-        # занять больше 3 секунд, без defer токен умирал и Discord рисовал
-        # «Приложение не отвечает», хотя наказание уже применено.
-        try:
-            await interaction.response.defer(ephemeral=True)
-        except Exception as _ex:
-            _log.debug("on_submit(): подавлено: %s", _ex)
+        # thinking=True: модалка должна получить type 5, иначе Discord
+        # пишет «приложение не ответило», хотя наказание уже выдано.
+        await _ack(interaction, thinking=True)
         _t = getattr(self, 'target', None)
         _a = getattr(self, 'amount', None)
         _p = getattr(self, 'proof', None)

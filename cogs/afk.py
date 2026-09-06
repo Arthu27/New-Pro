@@ -122,6 +122,12 @@ class AFK (commands .Cog ):
 
     @app_commands .command (name ="afk",description ="Войти в режим AFK")
     async def afk (self ,interaction :discord .Interaction ,причина :str ="AFK"):
+        if not interaction .guild_id :
+            await interaction .response .send_message (
+            'AFK включается на сервере, не в личке.',ephemeral =True )
+            return
+        # Ник — HTTP: закрыть 3с-окно Discord до edit, иначе «не отвечает».
+        await interaction .response .defer (ephemeral =True )
         self ._set (interaction .guild_id ,interaction .user .id ,причина )
 
         ts =int (datetime .now (timezone .utc ).timestamp ())
@@ -156,9 +162,9 @@ class AFK (commands .Cog ):
         e .set_footer (text ="💤 AFK спадёт сам, как только напишешь в чат")
         # Ответ видит только сам пользователь — чат не засоряется
         if icon :
-            await interaction .response .send_message (embed =e ,file =icon ,ephemeral =True )
+            await interaction .followup .send (embed =e ,file =icon ,ephemeral =True )
         else :
-            await interaction .response .send_message (embed =e ,ephemeral =True )
+            await interaction .followup .send (embed =e ,ephemeral =True )
 
     # Команды /afk-remove больше нет (2026-09-01): AFK снимается
     # автоматически при первом же сообщении участника в чат — см. on_message.

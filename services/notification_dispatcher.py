@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Диспетчер уведомлений панели Hakumo.
 
-Доставляет события (тикеты и др.) по каналам из data/notification_settings.json:
+Доставляет события персонала (варн, бан, апелляция, репорт) по каналам из data/notification_settings.json:
 
   • web     — broadcast-запись в data/panel_logs.json; её подхватывает опрос
               /api/notifications/poll → бейдж и тост у всего онлайн-персонала;
@@ -82,6 +82,7 @@ DEFAULT_SETTINGS = {
     'event_gamification': True,
     'event_appeal_new': True,
     'event_report_new': True,
+    'event_backup': True,
     'discord_channel': '',
     'webhook_url': '',
     'smtp_server': '',

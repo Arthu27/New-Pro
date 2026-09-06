@@ -79,6 +79,10 @@ _drop = [
     '2026-09-03T16:38:01Z ERR failed to serve incoming request error="Failed '
     'to proxy HTTP: context canceled"',
     '2026-09-03T16:38:02Z ERR Failed to proxy HTTP: context canceled',
+    '2026-09-06T03:55:54Z ERR failed to serve incoming request error="Error '
+    'shutting down control stream: client disconnected"',
+    '2026-09-06T03:55:54Z WRN Connection terminated error="Error shutting '
+    'down control stream: client disconnected" connIndex=2',
 ]
 _noise = 0
 for ln in _drop:

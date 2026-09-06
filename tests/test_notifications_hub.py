@@ -4,7 +4,7 @@
 События панелей (karma/birthdays/social/anime_daily) в EVENTS/EVENT_LINKS/
 DEFAULT_SETTINGS диспетчера + e2e-доставка, валидация настроек
 (bool-строгость, порт, лимиты строк, чужие ключи целы), фильтры истории,
-сводка доставки, права mod+/admin+, тумблеры и фильтры в шаблоне,
+сводка доставки, права только владелец, тумблеры живых событий и фильтры в шаблоне,
 пункт меню. Шаблон легаси-эмодзи содержит — проверяем новые якоря.
 
 Запуск: python3 tests/test_notifications_hub.py
@@ -176,25 +176,37 @@ check(client.get(ST).status_code == 403 and client.get(HI).status_code == 403,
       'uye не читает')
 login('mod')
 page = client.get('/notifications')
+check(page.status_code == 302, f'мод не открывает пинг-панель ({page.status_code})')
+check(client.get(ST).status_code == 403 and client.get(HI).status_code == 403,
+      'мод не читает настройки и историю')
+check(client.post(ST, json={'web_enabled': False}).status_code == 403,
+      'мод не сохраняет настройки')
+
+login('admin')
+check(client.get('/notifications').status_code == 302, 'админ не видит пинг-панель')
+check(client.post(ST, json={'web_enabled': False}).status_code == 403,
+      'админ не сохраняет пинги')
+
+login('owner')
+page = client.get('/notifications')
 check(page.status_code == 200 and 'notify-web' in page.get_data(as_text=True),
-      'mod открывает страницу')
+      'владелец открывает страницу')
 st = client.get(ST).get_json()
 check(st['success'] and st['settings']['event_karma'] is True,
-      'дефолт нового события смержился в ответ')
+      'дефолт старого события смержился в ответ')
 check(st['settings']['custom_key'] == 7 and st['settings']['smtp_port'] == 465
       and st['settings']['event_warn'] is False,
       'файл поверх дефолтов, чужой ключ виден')
-check(client.post(ST, json={'web_enabled': False}).status_code == 403,
-      'mod не сохраняет настройки')
-
-login('admin')
+check(st['settings'].get('smtp_password') in ('', None)
+      and st['settings'].get('smtp_password_set') in (True, False),
+      'пароль SMTP не отдаётся в GET')
 r = client.post(ST, json={'web_enabled': 'да'})
 check(r.status_code == 400 and
       r.get_json()['error'] == 'Переключатель web_enabled — true или false',
-      'admin получил 400 словами валидатора')
+      'владелец получил 400 словами валидатора')
 r = client.post(ST, json={'web_enabled': False, 'smtp_port': '2525',
                           'event_karma': False})
-check(r.status_code == 200, 'admin сохранил')
+check(r.status_code == 200, 'владелец сохранил')
 disk = json.load(open('data/notification_settings.json', encoding='utf-8'))
 check(disk['custom_key'] == 7 and disk['event_warn'] is False
       and disk['web_enabled'] is False and disk['smtp_port'] == 2525
@@ -203,10 +215,9 @@ check(disk['custom_key'] == 7 and disk['event_warn'] is False
 check(client.get(ST).get_json()['settings']['web_enabled'] is False,
       'GET отдаёт свежее')
 
-login('mod')
 r = client.get(HI).get_json()
 check(r['success'] and r['total'] == 4 and len(r['notifications']) == 4,
-      'вся история модам')
+      'вся история владельцу')
 check(r['notifications'][0]['title'] == 'Варн', 'новые первыми после сортировки')
 check(r['delivery'] == {'web': {'ok': 2, 'fail': 1},
                         'discord': {'ok': 0, 'fail': 2},
@@ -229,26 +240,27 @@ check(len(r['notifications']) == 4 and r['filters']['outcome'] is None,
 r = client.get(HI + '?event=zzz').get_json()
 check(r['notifications'] == [] and r['total'] == 4, 'пустой фильтр — пусто')
 
-login('admin')
 r = client.post(ST, json={'web_enabled': True})
 check(r.status_code == 200 and r.get_json()['settings']['web_enabled'] is True,
-      'admin вернул веб-канал')
-login('mod')
+      'владелец вернул веб-канал')
+check(r.get_json()['settings'].get('smtp_password') in ('', None),
+      'POST тоже не отдаёт пароль SMTP')
 r = client.post('/api/notifications/test')
 check(r.status_code == 200 and r.get_json()['channels'].get('web') is True,
-      'mod шлёт тестовое уведомление')
+      'владелец шлёт тестовое уведомление')
 r = client.get(HI).get_json()
 check(r['total'] == 5 and r['notifications'][0]['event'] == 'test',
       'тест записался в историю')
 
 print('== 6. Шаблон и меню ==')
 tpl = open(os.path.join(ROOT, 'web/templates/notifications.html'), encoding='utf-8').read()
-for fid in ('event-karma', 'event-birthdays', 'event-social', 'event-anime-daily',
+for fid in ('event-warn', 'event-backup', 'event-appeal-new', 'event-report-new',
             'notifDelivery', 'notifFilterEvent', 'notifFilterOutcome', 'notifTotal'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check(tpl.count('event_karma') >= 2, 'тумблер кармы и в загрузке, и в сохранении')
-check("role in ('admin', 'owner')" in tpl,
-      'кнопка «Сохранить» скрыта от модов (POST — admin+)')
+check('event-karma' not in tpl and 'event-j2c' not in tpl,
+      'мёртвые тумблеры (карма/j2c) убраны')
+check(tpl.count('event_backup') >= 2, 'тумблер бэкапа и в загрузке, и в сохранении')
+check('/api/channels' in tpl, 'пинги берут каналы из /api/channels')
 check("'?'" not in tpl.split('loadNotificationHistory()')[0][-200:] or True,
       'история грузится с фильтрами (запрос с query)')
 check('notifFilterEvent' in tpl.split('async function loadNotificationHistory')[1].split('const data')[0],

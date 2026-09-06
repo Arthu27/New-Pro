@@ -3,7 +3,7 @@
 
 Проверяем: определение типа медиа, безопасные имена, локальное хранилище
 (сохранение/чтение/удаление), потолок размера, страницу «Каналы и маршруты»
-(view=mod+, edit=admin+), API маршрутов (4 системы) и отдачу файла
+(только владелец), API маршрутов (4 системы) и отдачу файла
 /proof-media/<id> прямо в панель.
 
 Запуск: python3 tests/test_proof_media.py
@@ -160,8 +160,8 @@ body = r.get_data(as_text=True)
 check('Каналы и маршруты' in body and '/api/channel-routes' in body
       and '/api/channels' in body,
       'страница собирает маршруты и список каналов')
-check('Просмотр: Мод+' in body and 'Изменение: Админ' in body,
-      'категории доступа подписаны на странице')
+check('Только владелец' in body,
+      'страница подписана: только владелец')
 
 r = client.get('/api/channel-routes')
 d = r.get_json()
@@ -210,13 +210,15 @@ CHR.set_route(GID, 'proof_channel', 0)
 print('== доступ по категориям ==')
 login_as('mod')
 r = client.get('/channel-settings')
-check(r.status_code == 200, 'мод видит страницу маршрутов')
-check('disabled' in r.get_data(as_text=True), 'моду селекты показаны выключенными')
+check(r.status_code == 302, f'мод не видит настройки каналов ({r.status_code})')
 r = client.post('/api/channel-routes/proof_channel',
                 data=json.dumps({'channel_id': '1'}), content_type='application/json')
 check(r.status_code in (401, 403), f'мод НЕ может менять маршруты ({r.status_code})')
 r = client.get('/api/channel-routes')
-check(r.status_code == 200, 'мод читает маршруты')
+check(r.status_code in (401, 403), f'мод не читает маршруты ({r.status_code})')
+login_as('admin')
+r = client.get('/channel-settings')
+check(r.status_code == 302, f'админ тоже не видит настройки каналов ({r.status_code})')
 
 print('== медиа в панели ==')
 media2 = proof_save_media(GID, 42, 'proof.png', b'\x89PNG\r\n\x1a\nfakeimg', 'image/png')
@@ -266,6 +268,12 @@ from services.panel_menu import panel_groups_for  # noqa: E402
 paths = [p['path'] for g in panel_groups_for('owner') for p in g['pages']]
 check('/channel-settings' in paths, 'пункт «Каналы» в меню')
 check(len(paths) == 70, f'в меню 70 страниц ({len(paths)}); музыка/тикеты/варны/дубль бэкапов убраны')
+from services.panel_menu import panel_groups_for as _pgf
+for _role in ('mod', 'curator', 'admin'):
+    _ps = [p['path'] for g in _pgf(_role) for p in g['pages']]
+    check('/channel-settings' not in _ps and '/log-settings' not in _ps
+          and '/notifications' not in _ps,
+          f'{_role}: нет каналов/логов/пингов в меню')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

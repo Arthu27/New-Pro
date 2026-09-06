@@ -141,6 +141,36 @@ got = PR.get('999')
 check(got == {'warn_2': 5}, f'нечисловые/отрицательные отсекаются: {got}')
 check(PR.levels('999') == [2], 'старые warn-роли видны как уровни (совместимость)')
 
+print('== 8. снимок ролей при бане (held_roles) ==')
+PR.save_held_roles('555', '42', [10, 20, 10, 0, 'abc', -3, '30'])
+check(PR.held_roles('555', '42') == [10, 20, 30],
+      'save: уникальные положительные id, порядок сохранён')
+PR.add_temp('555', '42', 111, 100.0)
+PR.clear('555', '42', 111)
+check(PR.held_roles('555', '42') == [10, 20, 30],
+      'clear() сроков не стирает снимок')
+PR.set_roles('555', mute='111')
+check(PR.held_roles('555', '42') == [10, 20, 30],
+      'set_roles не трогает снимок')
+PR.save_held_roles('555', '42', [])
+check(PR.held_roles('555', '42') == [10, 20, 30],
+      'пустой повторный бан не затирает снимок')
+got = PR.take_held_roles('555', '42')
+check(got == [10, 20, 30] and PR.held_roles('555', '42') == [],
+      'take отдаёт снимок и очищает')
+check(PR.take_held_roles('555', '42') == [], 'повторный take — пусто')
+PR.save_held_roles('555', '42', [7])
+PR.save_held_roles('555', '42', [8, 9])
+check(PR.held_roles('555', '42') == [8, 9], 'новый снимок заменяет старый')
+msrc = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+check('save_held_roles' in msrc and '_strip_roles_for_ban' in msrc,
+      'бан снимает роли через save_held_roles')
+check('take_held_roles' in msrc and '_restore_roles_after_unban' in msrc,
+      'разбан возвращает роли через take_held_roles')
+asrc = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
+check('_restore_roles_after_unban' in asrc,
+      'принятие апелляции возвращает снятые роли')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

@@ -9,7 +9,8 @@
 Идеи #71-75: события новых панелей в переключателях, фильтры истории,
 сводка доставки по каналам, строгая валидация настроек.
 
-Чтение, история и тестовый пинг — mod+, сохранение настроек — admin+.
+Страница, настройки, история и тест — только владелец
+(секреты webhook/SMTP и список каналов не светятся команде).
 """
 import json
 import os
@@ -37,22 +38,24 @@ def _read_dict(path):
 
 def register(ctx):
     app = ctx.app
-    ROLES = ctx.ROLES
     login_required = ctx.login_required
     role_required = ctx.role_required
 
     # ── NOTIFICATIONS API ────────────────────────────────────────────
     @app.route('/api/notifications/settings', methods=['GET'])
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_notifications_settings_get():
         """Настройки уведомлений — дефолты диспетчера поверх файла."""
         from services.notification_dispatcher import load_settings
-        return jsonify({'success': True, 'settings': load_settings()})
+        settings = dict(load_settings())
+        settings['smtp_password_set'] = bool(settings.get('smtp_password'))
+        settings['smtp_password'] = ''
+        return jsonify({'success': True, 'settings': settings})
 
     @app.route('/api/notifications/settings', methods=['POST'])
     @login_required
-    @role_required('admin')
+    @role_required('owner')
     def api_notifications_settings_post():
         """Сохранить настройки: строгая валидация, чужие ключи целы."""
         from services.notification_dispatcher import validate_settings
@@ -68,11 +71,14 @@ def register(ctx):
             _log.debug('notifications: %s не пишется: %s', SETTINGS_FILE, _ex)
             return jsonify({'success': False,
                             'error': 'Файл настроек не записался'}), 500
-        return jsonify({'success': True, 'settings': settings})
+        out = dict(settings)
+        out['smtp_password_set'] = bool(out.get('smtp_password'))
+        out['smtp_password'] = ''
+        return jsonify({'success': True, 'settings': out})
 
     @app.route('/api/notifications/test', methods=['POST'])
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_notifications_test():
         """Тестовое уведомление по всем настроенным каналам."""
         try:
@@ -86,7 +92,7 @@ def register(ctx):
 
     @app.route('/api/notifications/history', methods=['GET'])
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_notifications_history():
         """История уведомлений: фильтры ?event=/?outcome=, сводка доставки."""
         from services.notification_dispatcher import (
@@ -131,10 +137,9 @@ def register(ctx):
 
     @app.route('/notifications')
     @login_required
+    @role_required('owner')
     def notifications_page():
-        """Страница настроек уведомлений (только персонал)"""
-        if ROLES.get(session.get('role'), -1) < ROLES.get('mod', 999):
-            return redirect(url_for('index'))
+        """Пинги персонала: куда слать и о чём. Только владелец."""
         return render_template('notifications.html',
                                role=session.get('role'),
                                username=session.get('username'))

@@ -24,6 +24,8 @@ ROUTES_FILE = 'data/channel_routes.json'
 # Комната после бана — отдельный канал, туда карточки НЕ идут.
 MODS_CHANNEL_ID = 1312434963941167134
 BAN_APPEAL_ROOM_ID = 1544483947705008188
+# Оценка рассмотрения апелляции (владелец 2026-09-06). Не выдуман.
+APPEAL_RATING_CHANNEL_ID = 1518751543329951904
 KNOWN_CHANNELS = {
     'appeals_channel': MODS_CHANNEL_ID,
     'report_channel': MODS_CHANNEL_ID,

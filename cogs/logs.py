@@ -407,18 +407,14 @@ def _staff_role_ids (guild ):
     """ID ролей персонала: карта панели + заявки + имена хелпер/модератор."""
     ids =set ()
     try :
-        import json as _json
-        path ='data/role_map.json'
-        if os .path .exists (path ):
-            with open (path ,'r',encoding ='utf-8')as fh :
-                data =_json .load (fh )
-            if isinstance (data ,dict ):
-                for rid ,panel in data .items ():
-                    if str (panel )in ('mod','curator','admin','owner','helper'):
-                        try :
-                            ids .add (int (rid ))
-                        except (TypeError ,ValueError ):
-                            pass
+        data =_json_file_cached ('data/role_map.json')
+        if isinstance (data ,dict ):
+            for rid ,panel in data .items ():
+                if str (panel )in ('mod','curator','admin','owner','helper'):
+                    try :
+                        ids .add (int (rid ))
+                    except (TypeError ,ValueError ):
+                        pass
     except Exception as _ex :
         log .debug ('_staff_role_ids role_map: %s',_ex )
     try :
@@ -1022,24 +1018,18 @@ def _person_block(user, fallback=None):
 
 
 def _channel_block(ch):
-    """Канал столбиком: #упоминание, имя, id."""
+    """Канал: только #упоминание (оно уже показывает имя).
+
+    Раньше столбик был mention + «имя» + id — в Discord это одно и то же
+    дважды (владелец 2026-09-06: «2 раз написать не обязательно»).
+    """
     if ch is None:
         return '—'
     mention = getattr(ch, 'mention', None)
-    name = getattr(ch, 'name', None) or 'канал'
-    cid = getattr(ch, 'id', None)
-    lines = []
     if mention:
-        lines.append(str(mention))
-    if name:
-        lines.append(str(name))
-    try:
-        cid = int(cid or 0)
-    except (TypeError, ValueError):
-        cid = 0
-    if cid:
-        lines.append(str(cid))
-    return _bullet(*lines)
+        return _bullet(str(mention))
+    name = getattr(ch, 'name', None)
+    return _bullet('#' + str(name or 'канал'))
 
 
 def _avatar_url(user):
@@ -1138,16 +1128,43 @@ def _is_our_bot(guild, who):
     return bool(me and uid and uid == getattr(me, 'id', None))
 
 
+_JSON_FILE_CACHE = {}
+
+
+def _json_file_cached(path):
+    """json.load только если файл сменился (mtime). Цикл не встаёт на каждом эмбеде."""
+    slot = _JSON_FILE_CACHE.setdefault(path, {'mtime': None, 'data': None})
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        slot['mtime'] = None
+        slot['data'] = {}
+        return slot['data']
+    if slot['data'] is not None and slot['mtime'] == mtime:
+        return slot['data']
+    data = {}
+    try:
+        with open(path, 'r', encoding='utf-8') as fh:
+            data = json.load(fh) or {}
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    slot['mtime'] = mtime
+    slot['data'] = data
+    return data
+
+
+def _mod_data_cached():
+    return _json_file_cached('data/mod_data.json')
+
+
 def _latest_case(guild, user_id, actions=None, window=90):
     """Последнее дело по человеку из data/mod_data.json (причина, кто, когда)."""
     if guild is None or not user_id:
         return None
     try:
-        path = 'data/mod_data.json'
-        if not os.path.exists(path):
-            return None
-        with open(path, 'r', encoding='utf-8') as fh:
-            data = json.load(fh) or {}
+        data = _mod_data_cached()
         cases = (data.get('cases') or {}).get(str(guild.id)) or []
         want = set(actions or ())
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -1261,8 +1278,7 @@ def _ping_mod_roles(guild):
     except Exception as _ex:
         log.debug('_ping_mod_roles resolve: %s', _ex)
     try:
-        with open('data/role_map.json', encoding='utf-8') as fh:
-            rm = json.load(fh)
+        rm = _json_file_cached('data/role_map.json')
         getter = getattr(guild, 'get_role', None)
         for rid, panel in (rm.items() if isinstance(rm, dict) else []):
             if str(panel) != 'mod' or not str(rid).isdigit():
@@ -1861,11 +1877,7 @@ def _history_cell(guild, user_id):
     if guild is None or not user_id:
         return None
     try:
-        path = 'data/mod_data.json'
-        if not os.path.exists(path):
-            return None
-        with open(path, 'r', encoding='utf-8') as fh:
-            data = json.load(fh) or {}
+        data = _mod_data_cached()
         cases = (data.get('cases') or {}).get(str(guild.id)) or []
         n_mute = n_warn = n_ban = n_kick = 0
         for c in cases:
@@ -1936,16 +1948,8 @@ def action_log_embed(guild, action, user, moderator, reason=None, case_id=None,
         ('Пользователь', _person_block(user)),
         ('Модератор', _person_block(moderator) if moderator is not None else _bullet('система')),
     ]
-    ch = channel
-    if ch is None and action in ('vmute', 'vunmute', 'timeout', 'untimeout'):
-        try:
-            ch = getattr(getattr(user, 'voice', None), 'channel', None)
-        except Exception:
-            ch = None
-    if ch is not None:
-        label = 'Голосовой канал' if action in (
-            'vmute', 'vunmute', 'timeout', 'untimeout') else 'Канал'
-        fields.append((label, _channel_block(ch)))
+    # Канал в карточках команд/наказаний/апелляции не пишем: упоминание
+    # уже имя, дубль «Канал» / id не нужен (владелец 2026-09-06).
     extra_rest = extra
     dur = duration
     if dur in (None, '') and extra:
@@ -3551,17 +3555,16 @@ class Logs (commands .Cog ):
             last_id =seen .get (gid )
             new_entries =[]
             try :
-                if not last_id :
-                    cutoff =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)-datetime .timedelta (days =7 )
-                    async for entry in guild .audit_logs (limit =None ,oldest_first =False ):
-                        if entry .created_at .replace (tzinfo =None )<cutoff :
+                # Никогда limit=None: 7 дней аудита — сотни страниц HTTP,
+                # цикл не отвечает, Discord рисует «приложение не отвечает».
+                async for entry in guild .audit_logs (limit =100 ,oldest_first =False ):
+                    if last_id :
+                        try :
+                            if entry .id <=int (last_id ):
+                                break 
+                        except (TypeError ,ValueError ):
                             break 
-                        new_entries .append (entry )
-                else :
-                    async for entry in guild .audit_logs (limit =100 ,oldest_first =False ):
-                        if entry .id <=int (last_id ):
-                            break 
-                        new_entries .append (entry )
+                    new_entries .append (entry )
             except discord .Forbidden :
                 if gid not in self ._audit_forbidden_notified :
                     self ._audit_forbidden_notified .add (gid )

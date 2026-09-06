@@ -110,10 +110,10 @@ check(user.mention in pb and 'GhostBlade' in pb and str(UID) in pb,
 check(pb.count('\n') >= 2 and pb.startswith('>') and '"GhostBlade"' in pb,
       'пользователь столбиком-таблицей с кавычками')
 cb = _channel_block(voice)
-check(voice.mention in cb and 'общение' in cb and str(CID) in cb,
-      'голосовой канал: упоминание + имя + id')
-check(cb.startswith('>') and '"общение"' in cb,
-      'канал тоже цитатой и в кавычках')
+check(voice.mention in cb, 'голосовой канал: упоминание')
+check('общение' not in cb, 'имя канала не дублируется — mention уже имя')
+check(cb.startswith('>') and cb.count('\n') == 0,
+      'канал одной строкой-цитатой')
 
 print('== strip: хвост уходит, столбик id жив ==')
 tail = _strip_raw_id(f'**Имя** · <@{UID}> · `{UID}`')
@@ -131,10 +131,9 @@ check('включили микрофон' in (e.title or ''),
 names = [f.name for f in e.fields]
 inlines = {f.name: bool(f.inline) for f in e.fields}
 check('Пользователь' in names and 'Модератор' in names
-      and 'Голосовой канал' in names,
-      'поля пользователь / модератор / канал')
-check(not inlines.get('Пользователь') and not inlines.get('Модератор')
-      and not inlines.get('Голосовой канал'),
+      and 'Голосовой канал' not in names and 'Канал' not in names,
+      'поля пользователь / модератор, без канала')
+check(not inlines.get('Пользователь') and not inlines.get('Модератор'),
       'поля столбиком, не «Участник | Модератор»')
 vals = ' '.join(f.value for f in e.fields)
 check('sonya.staff' in vals and 'Moderation' not in vals

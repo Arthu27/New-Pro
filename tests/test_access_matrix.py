@@ -80,9 +80,9 @@ def login_as(did, pw):
 CASES = [
     # (описание, метод+путь, {role: allowed})
     ('страница Цветные роли',        ('GET', '/color-roles'),           {'owner': True, 'admin': False, 'curator': False, 'mod': False, 'uye': False}),
-    ('страница Настройки каналов',   ('GET', '/channel-settings'),      {'owner': True, 'admin': True, 'curator': True, 'mod': True, 'uye': False}),
+    ('страница Настройки каналов',   ('GET', '/channel-settings'),      {'owner': True, 'admin': False, 'curator': False, 'mod': False, 'uye': False}),
     ('страница Приветствия',         ('GET', '/welcome-editor'),        {'owner': True, 'admin': True, 'curator': False, 'mod': False, 'uye': False}),
-    ('страница Уведомления',         ('GET', '/notifications'),         {'owner': True, 'admin': True, 'curator': True, 'mod': True, 'uye': False}),
+    ('страница Уведомления',         ('GET', '/notifications'),         {'owner': True, 'admin': False, 'curator': False, 'mod': False, 'uye': False}),
     ('страница Апелляции',           ('GET', '/appeals'),               {'owner': True, 'admin': True, 'curator': True, 'mod': True, 'uye': False}),
     ('страница Участники (/users)',  ('GET', '/users'),                 {'owner': True, 'admin': True, 'curator': False, 'mod': False, 'uye': False}),
     ('страница Обзор',               ('GET', '/'),                      {'owner': True, 'admin': True, 'curator': True, 'mod': True, 'uye': 'member'}),
@@ -138,7 +138,7 @@ check('запрет-страница: /users куратору → 302 /?denied='
 _r2 = sessions['curator'].post('/api/ai-mod/test', json={'text': 'привет'})
 check('запрет-API: /api/ai-mod/test куратору → 403 JSON', _r2.status_code == 403 and _r2.is_json, f'got {_r2.status_code}')
 _r3 = sessions['curator'].get('/notifications')
-check('допуск-страница: /notifications куратору → 200', _r3.status_code == 200, f'got {_r3.status_code}')
+check('запрет-страница: /notifications куратору → 302', _r3.status_code == 302, f'got {_r3.status_code}')
 
 print(f'\n════ МАТРИЦА ДОСТУПА: PASS {PASS} / FAIL {FAIL} ════')
 sys.exit(1 if FAIL else 0)

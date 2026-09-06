@@ -281,17 +281,22 @@ check(guest.status_code in (302, 401, 403), 'гостю настройки за�
 
 login('mod')
 r = client.post('/api/guild/777/log-cards/settings', json={'theme': 'night'})
-check(r.status_code == 403, 'мод не меняет оформление (admin+)')
+check(r.status_code == 403, 'мод не меняет оформление')
 r = client.get('/api/guild/777/log-cards/preview.png')
-check(r.status_code == 200 and r.mimetype == 'image/png', 'мод смотрит предпросмотр')
-check(r.headers.get('Cache-Control') == 'no-store', 'предпросмотр не кэшируется')
+check(r.status_code == 403, 'мод не смотрит предпросмотр оформления')
+r = client.get('/api/guild/777/log-cards/settings')
+check(r.status_code == 403, 'мод не читает оформление карточек')
 
 login('admin')
+r = client.post('/api/guild/777/log-cards/settings', json={'theme': 'forest'})
+check(r.status_code == 403, 'админ не меняет оформление — только владелец')
+
+login('owner')
 r = client.post('/api/guild/777/log-cards/settings',
                 json={'enabled': True, 'theme': 'forest', 'accent': '#22ff88'})
 d = r.get_json()
 check(r.status_code == 200 and d['success'] and d['cfg']['theme'] == 'forest',
-      'админ сохранил forest + акцент')
+      'владелец сохранил forest + акцент')
 check(d['cfg']['accent'] == '22ff88', 'акцент сохранён без решётки')
 check(LC.get_log_cards_cfg('777')['theme'] == 'forest', 'файл на диске — forest')
 r = client.get('/api/guild/777/log-cards/settings').get_json()

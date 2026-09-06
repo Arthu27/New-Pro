@@ -12,8 +12,8 @@
 Настройки вырезанных/спящих систем (тикеты, считалка, starboard, ночные
 сводки, смены, tag jail) на странице не показываются — маршрутов нет.
 
-Просмотр — mod+ (чтобы у команды не было вопросов «почему улетело туда»),
-изменение — admin+ (остальные просто видят, как настроено).
+Страница и API — только владелец: маршруты и список каналов
+не светятся модераторам и админам (заказ 2026-09-06).
 """
 from web.routes._common import (
     _safe_json_obj,
@@ -190,7 +190,7 @@ def register(ctx):
 
     @app.route('/channel-settings')
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def channel_settings_page():
         # Метки/описания маршрутов отдаём сразу с сервера: каркас страницы
         # (строки и селекты) рисуется мгновенно, до любых fetch — каналы и
@@ -213,7 +213,7 @@ def register(ctx):
 
     @app.route('/api/channel-routes', methods=['GET'])
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_channel_routes_list():
         gid = _active_gid(ctx)
         out = []
@@ -253,7 +253,7 @@ def register(ctx):
 
     @app.route('/api/channel-routes/<key>', methods=['POST'])
     @login_required
-    @role_required('admin')
+    @role_required('owner')
     def api_channel_routes_set(key):
         spec = CHR.spec_for(key)
         if spec is None:
@@ -299,7 +299,7 @@ def register(ctx):
 
     @app.route('/api/staff-role-routes', methods=['GET'])
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_staff_role_routes_get():
         """Роли заявок: настройки + список ролей сервера для селектов."""
         gid = _active_gid(ctx)
@@ -336,7 +336,7 @@ def register(ctx):
 
     @app.route('/api/staff-role-routes/<key>', methods=['POST'])
     @login_required
-    @role_required('admin')
+    @role_required('owner')
     def api_staff_role_routes_set(key):
         spec = next((sp for sp in _SR.ROLE_SPECS if sp['key'] == key), None)
         if spec is None:

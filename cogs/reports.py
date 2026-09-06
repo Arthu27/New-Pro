@@ -118,6 +118,14 @@ def _cfg(guild_id) -> dict:
     return RC.load_cfg(guild_id)
 
 
+def _fill_select(view, options):
+    """Опции у @ui.select живут на children, не на self.select."""
+    for child in view.children:
+        if isinstance(child, discord.ui.Select):
+            child.options = list(options)[:25]
+            return
+
+
 async def _dm(user, embed) -> bool:
     try:
         await user.send(embed=embed)
@@ -279,7 +287,7 @@ class WordSelectView(discord.ui.View):
             opts.append(discord.SelectOption(label=label, value=str(uid)))
         for uid in ticket.get('witnesses', [])[:3]:
             opts.append(discord.SelectOption(label=f'Свидетель {uid}', value=str(uid)))
-        self.select.options = opts[:25]
+        _fill_select(self, opts[:25])
 
     @discord.ui.select(cls=discord.ui.Select, placeholder='Кому дать слово')
     async def choose(self, interaction, select):
@@ -364,17 +372,17 @@ class DurationSelectView(discord.ui.View):
     def __init__(self, kind):
         super().__init__(timeout=180)
         self.kind = kind
-        self.select.options = [
+        _fill_select(self, [
             discord.SelectOption(label=name,
-                                 value=str(int(hours)) if hours else '0',
+                                 value=str(hours),
                                  description='До развотда' if not hours else '')
-            for name, hours in RC.DURATIONS]
+            for name, hours in RC.DURATIONS])
 
     @discord.ui.select(cls=discord.ui.Select, placeholder='Срок')
     async def choose(self, interaction, select):
         hours = float(select.values[0])
         name = next((n for n, h in RC.DURATIONS
-                     if int(h) == int(hours)), 'срок')
+                     if abs(float(h) - hours) < 1e-9), 'срок')
         label = f"{RC.KIND_LABELS[self.kind]} · {name}"
         pending = {'kind': self.kind, 'hours': hours, 'label': label,
                    'source': 'custom'}
@@ -808,8 +816,8 @@ class Reports(commands.Cog):
                 await member.kick(reason=reason)
                 applied = 'Кик выполнен.'
             elif v['kind'] == 'ban':
-                await guild.ban(int(t['accused_id']), reason=reason,
-                                delete_message_seconds=0)
+                await guild.ban(discord.Object(id=int(t['accused_id'])),
+                                reason=reason, delete_message_seconds=0)
                 applied = 'Бан выдан.'
                 if v.get('hours'):
                     async def _unban_later():
@@ -1023,6 +1031,9 @@ class Reports(commands.Cog):
 
     @app_commands.command(name='my-violations', description='Мои нарушения')
     async def my_violations_slash(self, interaction):
+        if interaction.guild_id is None:
+            return await interaction.response.send_message(
+                'Команда работает на сервере.', ephemeral=True)
         cfg = _cfg(interaction.guild_id)
         field = _violations_field(interaction.guild_id, interaction.user.id, cfg)
         has = field != 'Нарушений не было'
@@ -1058,7 +1069,7 @@ class Reports(commands.Cog):
         allowed = {'free': None, 'wait': t['reporter_id'],
                    'turn': t.get('word_id'), 'manual': t.get('word_id')}
         uid = str(message.author.id)
-        if mode == 'free' or allowed.get(mode) == uid:
+        if mode == 'free' or str(allowed.get(mode) or '') == uid:
             return
         try:
             await message.delete()

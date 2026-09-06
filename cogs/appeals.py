@@ -451,6 +451,9 @@ class AppealView(discord.ui.View):
                         mod = self.cog.bot.get_cog('Moderation')
                         if mod is not None:
                             await mod._unisolate_member(guild, member)
+                            rest = getattr(mod, '_restore_roles_after_unban', None)
+                            if callable(rest):
+                                await rest(guild, member)
                         # снимаем ЛЮБОЙ мут (нативный таймаут + роли чат/войс-мута)
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, member)
@@ -688,19 +691,11 @@ class AppealRateModal(discord.ui.Modal):
         item['rating'] = self.verb
         item['rating_comment'] = cm or None
         self.cog._save(self.guild_id, state)
-        # Отзыв летит модерации В КАНАЛ апелляции (тред карточки, иначе —
-        # канал карточек): раньше он сохранялся только в панель, и владелец
-        # не видел, куда уходит «помогли / не помогли» (жалоба 2026-09-05).
+        # Оценка рассмотрения — в канал владельца 1518751543329951904,
+        # не в тред карточки и не в комнату апелляции (2026-09-06).
         try:
             _guild = self.cog.bot.get_guild(self.guild_id)
-            _target = None
-            _tid = int(item.get('thread_id') or 0)
-            if _guild is not None and _tid:
-                _target = (_guild.get_thread(_tid)
-                           or _guild.get_channel(_tid))
-            if _target is None and _guild is not None:
-                _target = self.cog._log_channel(
-                    _guild, self.cog._load(self.guild_id))
+            _target = await self.cog._rating_channel(_guild) if _guild else None
             if _target is not None:
                 try:
                     _re = _rate_log_embed(
@@ -1189,57 +1184,135 @@ class Appeals(commands.Cog):
         return True, f'Меню опубликовано в {channel.mention} ({how})'
 
     async def _appeal_channel(self, guild):
-        """Канал апелляции: маршрут владельца → fetch_channel как запас.
+        """Канал апелляции: сохранённый маршрут → известный ID → fetch.
 
-        guild.get_channel ищет только в кэше: после рестарта, пока каналы
-        не долились в кэш (или если маршрут ведёт в канал, которого нет
-        в кэше), get_channel даёт None и «канал не включается после
-        заявки» (жалоба владельца 2026-09-05). fetch_channel идёт в API.
+        resolve_route подставляет известный ID только если канал уже в
+        кэше. После рестарта кэш пуст — тогда fetch_channel по известному
+        ID всё равно находит комнату (владелец 2026-09-06: канал не
+        открывался забаненному).
         """
         try:
-            from services.channel_routes import resolve_route as _route_of
-            _cid = int(_route_of(guild.id, 'ban_appeal_channel', guild) or 0)
+            from services.channel_routes import (
+                get_route as _get_route, KNOWN_CHANNELS as _KNOWN,
+                channel_on_guild as _on_g)
+            _cid = int(_get_route(guild.id, 'ban_appeal_channel') or 0)
+            if not _cid:
+                _cid = int(_KNOWN.get('ban_appeal_channel') or 0)
         except Exception as _ex:
             log.debug('appeals: маршрут канала апелляции: %s', _ex)
             _cid = 0
+            _on_g = None
         if not _cid:
             return None
-        ch = guild.get_channel(_cid)
+        ch = None
+        if callable(_on_g):
+            ch = _on_g(guild, _cid)
+        if ch is None:
+            getter = getattr(guild, 'get_channel', None)
+            ch = getter(_cid) if callable(getter) else None
         if ch is not None:
             return ch
+        fetch = getattr(guild, 'fetch_channel', None)
+        if callable(fetch):
+            try:
+                return await fetch(_cid)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
+                log.debug('appeals: fetch_channel %s: %s', _cid, _ex)
+        return None
+
+    async def _rating_channel(self, guild):
+        """Куда писать оценку рассмотрения — канал владельца, не карточки."""
         try:
-            return await guild.fetch_channel(_cid)
-        except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
-            log.debug('appeals: fetch_channel %s: %s', _cid, _ex)
+            from services.channel_routes import (
+                APPEAL_RATING_CHANNEL_ID as _RID, channel_on_guild as _on_g)
+        except Exception as _ex:
+            log.debug('appeals: rating channel import: %s', _ex)
             return None
+        if guild is None or not _RID:
+            return None
+        ch = _on_g(guild, _RID) if callable(_on_g) else None
+        if ch is not None:
+            return ch
+        fetch = getattr(guild, 'fetch_channel', None)
+        if callable(fetch):
+            try:
+                return await fetch(int(_RID))
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException,
+                    TypeError, ValueError) as _ex:
+                log.debug('appeals: rating fetch_channel: %s', _ex)
+        return None
+
+    async def _as_member(self, guild, user):
+        """Участник сервера: из ЛС приходит User, set_permissions хочет Member."""
+        uid = getattr(user, 'id', None)
+        getter = getattr(guild, 'get_member', None)
+        if callable(getter) and uid:
+            mem = getter(uid)
+            if mem is not None:
+                return mem
+        fetch = getattr(guild, 'fetch_member', None)
+        if callable(fetch) and uid:
+            try:
+                return await fetch(int(uid))
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException,
+                    TypeError, ValueError) as _ex:
+                log.debug('appeals: fetch_member %s: %s', uid, _ex)
+        return user
 
     async def _open_appeal_channel(self, guild, user, fallback_channel=None):
         """Открыть канал апелляции подавшему (до подачи он скрыт — владелец).
 
-        Порядок канала: маршрут «Комната апелляции» (известный ID, если
-        комната есть на сервере). Канал карточек сюда не подмешиваем —
-        туда забаненного не пускаем.
+        Порядок канала: маршрут «Комната апелляции» / известный ID.
+        Канал карточек сюда не подмешиваем — туда забаненного не пускаем
+        (fallback_channel игнорируется нарочно).
 
-        Возвращает (opening_result, channel|None): человек в ЛС получает
-        честный ответ с ИМЕНЕМ канала, а не обещание «канал открыт»,
-        которого может не быть (нет прав «Управление правами каналов» —
-        жалоба владельца 2026-09-05).
+        Цель overwrite — Member, не User из ЛС: иначе Discord отвечает
+        NotFound и комната не открывается (владелец 2026-09-06).
+        Ветка: add_user + права на родителе.
         """
         _iso = await self._appeal_channel(guild)
-        # Комната апелляции ≠ канал карточек. В канал модеров забаненного
-        # не пускаем, даже если карточка ушла туда.
         if _iso is None:
             log.error('appeals: канал апелляции не задан — некому открывать доступ (guild %s)', getattr(guild, 'id', '?'))
             return False, None
-        try:
-            await _iso.set_permissions(
-                user, overwrite=discord.PermissionOverwrite(
-                    view_channel=True, send_messages=True))
-            return True, _iso
-        except (discord.Forbidden, discord.HTTPException) as _ex:
-            log.error('appeals: открыть канал апелляции для %s: %s',
-                      getattr(user, 'id', '?'), _ex)
-            return False, _iso
+        member = await self._as_member(guild, user)
+        ow = discord.PermissionOverwrite(
+            view_channel=True, send_messages=True,
+            read_message_history=True, attach_files=True,
+            embed_links=True, add_reactions=True)
+        opened = False
+        add_user = getattr(_iso, 'add_user', None)
+        if callable(add_user):
+            try:
+                await add_user(member)
+                opened = True
+            except (discord.Forbidden, discord.HTTPException, TypeError) as _ex:
+                log.debug('appeals: add_user %s: %s', getattr(member, 'id', '?'), _ex)
+        set_perm = getattr(_iso, 'set_permissions', None)
+        if callable(set_perm):
+            try:
+                await set_perm(member, overwrite=ow)
+                return True, _iso
+            except (discord.Forbidden, discord.HTTPException) as _ex:
+                log.error('appeals: открыть канал апелляции для %s: %s',
+                          getattr(member, 'id', '?'), _ex)
+                parent = getattr(_iso, 'parent', None)
+                pset = getattr(parent, 'set_permissions', None)
+                if callable(pset):
+                    try:
+                        await pset(member, overwrite=ow)
+                        return True, _iso
+                    except (discord.Forbidden, discord.HTTPException) as _ex2:
+                        log.debug('appeals: parent set_permissions: %s', _ex2)
+                return opened, _iso
+        parent = getattr(_iso, 'parent', None)
+        pset = getattr(parent, 'set_permissions', None)
+        if callable(pset):
+            try:
+                await pset(member, overwrite=ow)
+                return True, _iso
+            except (discord.Forbidden, discord.HTTPException) as _ex:
+                log.debug('appeals: parent set_permissions: %s', _ex)
+        return opened, (_iso if opened else None)
 
     def _dm_channel_line(self, opened, channel):
         """Строка про канал для ЛС-подтверждения: имя канала, не абстракция."""
@@ -1406,8 +1479,8 @@ class Appeals(commands.Cog):
                 await self._fire_panel_event(item)
         # Канал апелляции открываем автору ТОЛЬКО теперь: владелец просил,
         # чтобы канал был виден не в момент бана, а после подачи апелляции
-        # (2026-09-05). До подачи у человека все каналы закрыты. Если маршрут
-        # пуст — открываем канал, куда реально легла карточка (target).
+        # (2026-09-05). До подачи у человека все каналы закрыты. Канал
+        # карточек не открываем — туда забаненного не пускаем.
         ch_opened, ch_ref = await self._open_appeal_channel(guild, user,
                                                             fallback_channel=target)
         self._save(guild_id, state)
@@ -1525,9 +1598,11 @@ class Appeals(commands.Cog):
             # удобная форма: текст + ссылка-доказательство (необязательно)
             await interaction.response.send_modal(AppealModal(self, guild))
             return
+        # Карточка + открытие канала легко занимают больше 3с Discord.
+        await interaction.response.defer(ephemeral=True)
         item, err = await self._submit_appeal(interaction.user, guild, текст)
         if err:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f'Не получилось: {err}.', ephemeral=True)
             return
         from cogs.embed_utils import hakumo_embed
@@ -1543,7 +1618,7 @@ class Appeals(commands.Cog):
         e = hakumo_embed('appeal', f'Апелляция #{item["id"]} отправлена',
                          f'Модераторы сервера **{guild.name}** уже получили '
                          f'её. {_extra}')
-        await interaction.response.send_message(embed=e)
+        await interaction.followup.send(embed=e)
 
 
     async def _is_banned(self, guild, user):

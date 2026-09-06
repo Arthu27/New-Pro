@@ -11,8 +11,8 @@
        на страницах самих функций дублирующих настроек нет.</p>
   </div>
   <div class="page-head-side">
-    <span class="chs-access" title="Смотреть эту страницу могут все модераторы, менять маршруты — только администраторы">
-      <i class="fas fa-user-shield"></i> Просмотр: Мод+ · Изменение: Админ
+    <span class="chs-access" title="Маршруты каналов видит и меняет только владелец">
+      <i class="fas fa-user-shield"></i> Только владелец
     </span>
   </div>
 </div>
@@ -151,7 +151,7 @@
 </div>
 
 <script>
-var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+var CAN_EDIT = {% if role == 'owner' %}true{% else %}false{% endif %};
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 

@@ -6,7 +6,7 @@ data/log_cards_<gid>.json через services/log_card.get_log_cards_cfg).
 Здесь — только панельная сторона: прочитать/сохранить настройки и отдать
 PNG-пример, чтобы владелец видел результат до того, как «поедет» в канал.
 
-Чтение — mod+, запись — admin+ (как канал апелляций и редактор правил).
+Только владелец: оформление карточек логов не светится команде.
 """
 from web.routes._common import (
     _safe_json_obj,
@@ -62,7 +62,7 @@ def register(ctx):
 
     @app.route('/api/guild/<gid>/log-cards/settings', methods=['GET'])
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_log_cards_settings_get(gid):
         cfg = LC.get_log_cards_cfg(gid)
         return jsonify({'success': True, 'cfg': cfg,
@@ -74,7 +74,7 @@ def register(ctx):
 
     @app.route('/api/guild/<gid>/log-cards/settings', methods=['POST'])
     @login_required
-    @role_required('admin')
+    @role_required('owner')
     def api_log_cards_settings_post(gid):
         cfg = LC.save_log_cards_cfg(gid, _safe_json_obj())
         _log.info('log-cards: %s обновил оформление на %s: %s',
@@ -90,7 +90,7 @@ def register(ctx):
 
     @app.route('/api/guild/<gid>/log-cards/preview.png')
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_log_cards_preview(gid):
         theme = request.args.get('theme')
         accent = request.args.get('accent')

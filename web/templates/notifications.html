@@ -2,11 +2,17 @@
 {% block title %}Уведомления — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-bell"></i> Уведомления{% endblock %}
 {% block content %}
+<style>
+@media (max-width:720px){
+  .section [style*="grid-template-columns"]{grid-template-columns:1fr !important}
+}
+</style>
 <div class="page-head">
   <div class="page-head-copy">
     <div class="eyebrow"> Настройки </div>
     <h1>Уведомления</h1>
-    <p class="lead">Настройка уведомлений о событиях системы тикетов.</p>
+    <p class="lead">Пинги владельцу: варн, бан, апелляция, репорт, заявка в команду.
+       Куда слать — в панель, в Discord или на почту. Каналы и секреты видит только владелец.</p>
   </div>
 </div>
 
@@ -41,20 +47,19 @@
       </div>
     </div>
     <div>
-      <h3 style="margin-top: 0;">События для уведомлений</h3>
+      <h3 style="margin-top: 0;">О чём пинговать</h3>
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">Модерация и заявки</div>
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
           <input type="checkbox" id="event-warn" checked style="width: 20px; height: 20px;">
-          <span>Выдано предупреждение (варн)</span>
+          <span>Выдано предупреждение</span>
         </label>
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
           <input type="checkbox" id="event-mod-action" checked style="width: 20px; height: 20px;">
-          <span>Действие модерации (бан/кик/мут)</span>
+          <span>Бан, кик, мут</span>
         </label>
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
           <input type="checkbox" id="event-staff-apply" checked style="width: 20px; height: 20px;">
-          <span>Новая заявка в персонал</span>
+          <span>Новая заявка в команду</span>
         </label>
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
           <input type="checkbox" id="event-appeal-new" checked style="width: 20px; height: 20px;">
@@ -62,32 +67,11 @@
         </label>
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
           <input type="checkbox" id="event-report-new" checked style="width: 20px; height: 20px;">
-          <span>Новый репорт от участника</span>
-        </label>
-        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">Панельные правки</div>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-karma" checked style="width: 20px; height: 20px;">
-          <span>Карма: корректировка очков</span>
+          <span>Новый репорт</span>
         </label>
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-birthdays" checked style="width: 20px; height: 20px;">
-          <span>Дни рождения: записи и настройки</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-social" checked style="width: 20px; height: 20px;">
-          <span>События и поиски: уборка из панели</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-anime-daily" checked style="width: 20px; height: 20px;">
-          <span>Аниме дня: настройки рассылки</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-j2c" checked style="width: 20px; height: 20px;">
-          <span>Комнаты J2C: настройки и уборка</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-gamification" checked style="width: 20px; height: 20px;">
-          <span>Геймификация: корректировка очков</span>
+          <input type="checkbox" id="event-backup" checked style="width: 20px; height: 20px;">
+          <span>Создан бэкап</span>
         </label>
       </div>
     </div>
@@ -194,12 +178,7 @@ async function loadNotificationSettings() {
       document.getElementById('event-staff-apply').checked = settings.event_staff_apply !== false;
       document.getElementById('event-appeal-new').checked = settings.event_appeal_new !== false;
       document.getElementById('event-report-new').checked = settings.event_report_new !== false;
-      document.getElementById('event-karma').checked = settings.event_karma !== false;
-      document.getElementById('event-birthdays').checked = settings.event_birthdays !== false;
-      document.getElementById('event-social').checked = settings.event_social !== false;
-      document.getElementById('event-anime-daily').checked = settings.event_anime_daily !== false;
-      document.getElementById('event-j2c').checked = settings.event_j2c !== false;
-  document.getElementById('event-gamification').checked = settings.event_gamification !== false;
+      document.getElementById('event-backup').checked = settings.event_backup !== false;
 
       // Discord
       window._savedNotifChannel = settings.discord_channel || '';
@@ -222,14 +201,10 @@ async function loadNotificationSettings() {
 async function loadDiscordChannels() {
   const select = document.getElementById('discord-channel');
   try {
-    const gResp = await fetch('/api/guilds');
-    const guilds = await gResp.json();
-    if (!Array.isArray(guilds) || !guilds.length) throw new Error('нет серверов');
-    const gid = guilds[0].id;
-    const cResp = await fetch('/api/guild/' + gid + '/channels');
+    const cResp = await fetch('/api/channels');
     const cData = await cResp.json();
     const channels = Array.isArray(cData) ? cData : (cData.channels || []);
-    const textChans = channels.filter(c => c.type === 'text' && !c.hidden);
+    const textChans = channels.filter(c => c && !c.hidden && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5));
     if (!textChans.length) throw new Error('нет каналов');
     select.innerHTML = '<option value="">— Не выбран —</option>' +
       textChans.map(c => '<option value="' + escNotif(c.id) + '">#' + escNotif(c.name) + '</option>').join('');
@@ -334,19 +309,15 @@ async function saveNotificationSettings() {
     event_staff_apply: document.getElementById('event-staff-apply').checked,
     event_appeal_new: document.getElementById('event-appeal-new').checked,
     event_report_new: document.getElementById('event-report-new').checked,
-    event_karma: document.getElementById('event-karma').checked,
-    event_birthdays: document.getElementById('event-birthdays').checked,
-    event_social: document.getElementById('event-social').checked,
-    event_anime_daily: document.getElementById('event-anime-daily').checked,
-    event_j2c: document.getElementById('event-j2c').checked,
-    event_gamification: document.getElementById('event-gamification').checked,
+    event_backup: document.getElementById('event-backup').checked,
     discord_channel: document.getElementById('discord-channel').value,
     webhook_url: document.getElementById('webhook-url').value,
     smtp_server: document.getElementById('smtp-server').value,
     smtp_port: parseInt(document.getElementById('smtp-port').value) || 587,
-    smtp_email: document.getElementById('smtp-email').value,
-    smtp_password: document.getElementById('smtp-password').value
+    smtp_email: document.getElementById('smtp-email').value
   };
+  var pw = (document.getElementById('smtp-password').value || '').trim();
+  if (pw) settings.smtp_password = pw;
 
   try {
     const response = await fetch('/api/notifications/settings', {

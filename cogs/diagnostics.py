@@ -415,6 +415,8 @@ class Diagnostics (commands .Cog ):
         остаётся только сама перезагрузка расширений (она async)."""
         if not await _owner_only (interaction ):
             return
+        if not interaction .response .is_done ():
+            await interaction .response .defer (ephemeral =True )
         ctx =InterCtx (interaction )
         cog_name =модуль
         # Весь файловый I/O и хэширование — в потоке, БЕЗ блокировки loop'а.
@@ -449,6 +451,8 @@ class Diagnostics (commands .Cog ):
     @app_commands .command (name ="health",description ="Здоровье бота: нагрузка, память, задержка")
     async def health_cmd (self ,interaction :discord .Interaction ):
         """Показать текущее здоровье бота: нагрузку, память и статус"""
+        if not interaction .response .is_done ():
+            await interaction .response .defer ()
         ctx =InterCtx (interaction )
         h =await self .get_health_snapshot_async ()
         embed =discord .Embed (title =" Bot Health",color =self ._health_color (h ))
@@ -484,6 +488,8 @@ class Diagnostics (commands .Cog ):
         """Полная диагностика бота с автопочиной найденных проблем"""
         if not await _owner_only (interaction ):
             return 
+        if not interaction .response .is_done ():
+            await interaction .response .defer (ephemeral =True )
         ctx =InterCtx (interaction )
         mode =(что .value if что else "summary")
         if mode =="perf":

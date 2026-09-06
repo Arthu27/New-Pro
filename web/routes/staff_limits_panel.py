@@ -85,11 +85,21 @@ def _guild_channels(bot, guild_id):
     live = _guild_channels_live(bot, guild_id)
     if live:
         _channels_cache_save(guild_id, live)
-        return live, 'bot'
+        return _hide_staff_channels(guild_id, live), 'bot'
     cached = _channels_cache_load(guild_id)
     if cached:
-        return cached, 'cache'
-    return _guild_channels_fallback(guild_id), 'settings'
+        return _hide_staff_channels(guild_id, cached), 'cache'
+    return _hide_staff_channels(guild_id, _guild_channels_fallback(guild_id)), 'settings'
+
+
+def _hide_staff_channels(guild_id, channels):
+    """Спрятанные владельцем каналы — только ему, не модерам в пикере."""
+    try:
+        from web.routes.guild_admin import _annotate_hidden, _visible_channels
+        return _visible_channels(_annotate_hidden(guild_id, list(channels or [])))
+    except Exception as ex:
+        _log.debug('hide_staff_channels: %s', ex)
+        return channels or []
 
 
 def _guild_channels_live(bot, guild_id):
@@ -114,7 +124,8 @@ def _guild_channels_live(bot, guild_id):
                               if c.type == _dc.ChannelType.forum
                               else f'#{c.name}'),
                      'type': ('forum' if c.type == _dc.ChannelType.forum
-                              else 'text')}
+                              else 'text'),
+                     'category_id': str(getattr(c, 'category_id', None) or '') or None}
                     for c in sorted(pool, key=lambda x: getattr(x, 'position', 0))]
         by_parent, leftover = {}, []
         for th in getattr(guild, 'threads', None) or []:
@@ -254,7 +265,7 @@ def register(ctx):
 
     @app.route('/log-settings')
     @login_required
-    @role_required('admin')
+    @role_required('owner')
     def log_settings_page():
         # main_guild_id мог не сохраниться в старых сессиях (до 2026-09-05):
         # страница тогда дёргала /api/guild//log-settings и ловила 404 —
@@ -415,7 +426,7 @@ def register(ctx):
     # ── API: настройки логов ───────────────────────────────────────────
     @app.route('/api/guild/<guild_id>/log-settings')
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_log_settings_get(guild_id):
         channels, src = _guild_channels(_app.bot_instance, guild_id)
         from services import log_card as LC
