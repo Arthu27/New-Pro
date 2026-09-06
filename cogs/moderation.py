@@ -902,12 +902,10 @@ class Moderation (commands .Cog ):
                     log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :
                     from cogs.logs import send_action_log
-                    _extra = None
-                    if amount:
-                        _extra = f'Срок: {amount}'
                     await send_action_log(
                         guild, action, user, interaction.user,
-                        reason=reason, case_id=case_id, extra=_extra)
+                        reason=reason, case_id=case_id,
+                        duration=amount, proof=proof_link)
                 except Exception as _log_e :
                     aux_errors .append ("лог-канал недоступен")
                     log .warning (f'[MODPANEL] send_log: {_log_e}')

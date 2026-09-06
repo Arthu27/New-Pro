@@ -220,7 +220,12 @@ check('> ' in pe.fields[0].value and '"' in pe.fields[0].value,
 le = ap._rate_log_embed(
     type('G', (), {'id': 1, 'name': 'G', 'icon': None,
                    'get_member': lambda self, x: None})(),
-    {'id': 7, 'status': 'accepted', 'reviewed_by': 'Мод'},
+    {'id': 7, 'status': 'accepted', 'reviewed_by': 'Мод',
+     'text': 'прошу снять бан, это был брат',
+     'reply': 'ок, снимаем',
+     'created_at': '2026-09-01T12:00:00+00:00',
+     'reviewed_at': '2026-09-01T13:00:00+00:00',
+     'link': 'https://imgur.com/abc'},
     type('U', (), {'mention': '<@9>', 'display_name': 'Автор',
                    'id': 9, 'display_avatar': type('A', (), {'url': ''})()})(),
     'up', 'всё ясно')
@@ -228,7 +233,9 @@ check(le.title and 'Оценка рассмотрения' in (le.title or ''),
       'лог оценки — карточка, не сырая строка')
 ln = [f.name for f in le.fields]
 check('Апелляция' in ln and 'Оценка' in ln and 'Комментарий' in ln
-      and 'Решение' in ln and 'Рассмотрел' in ln,
+      and 'Решение' in ln and 'Рассмотрел' in ln
+      and 'Текст' in ln and 'Подана' in ln and 'Рассмотрена' in ln
+      and 'Ответ модерации' in ln,
       f'таблица лога оценки: {ln}')
 
 print('== 5.7 эскалация, «в работе», комментарий к оценке ==')

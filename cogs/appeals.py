@@ -558,19 +558,34 @@ def _rate_thanks_embed(item, verb, comment=None):
 
 
 def _rate_log_embed(guild, item, author, verb, comment=None):
-    """Таблица в канал модеров: апелляция / автор / оценка / комментарий."""
-    from cogs.logs import _styled_log_embed, _person_block
+    """Таблица в канал модеров: апелляция, текст, оценка, сроки."""
+    from cogs.logs import _styled_log_embed, _person_block, _bullet, _ts_lines
     fields = [
         ('Апелляция', _rate_cell(f'#{item.get("id")}')),
         ('Автор', _person_block(author)),
         ('Решение', _rate_cell(_rate_outcome(item))),
         ('Оценка', _rate_cell(_rate_verdict(verb))),
     ]
+    txt = str(item.get('text') or '').strip()
+    if txt:
+        fields.append(('Текст', _rate_cell(txt[:220])))
+    reply = str(item.get('reply') or '').strip()
+    if reply:
+        fields.append(('Ответ модерации', _rate_cell(reply[:220])))
     who = item.get('reviewed_by')
     if who:
         fields.append(('Рассмотрел', _rate_cell(who)))
     if comment:
         fields.append(('Комментарий', _rate_cell(comment)))
+    link = str(item.get('link') or '').strip()
+    if link.startswith('http://') or link.startswith('https://'):
+        fields.append(('Доказательство', _bullet(f'[открыть]({link})')))
+    _c = _ts_lines(item.get('created_at'))
+    if _c:
+        fields.append(('Подана', _bullet(*_c)))
+    _r = _ts_lines(item.get('reviewed_at'))
+    if _r:
+        fields.append(('Рассмотрена', _bullet(*_r)))
     av = None
     try:
         av = str(author.display_avatar.url)

@@ -1145,7 +1145,8 @@ def _quote_msg(text):
 
 
 def _styled_log_embed(guild, category, title, fields=(), color=None,
-                      thumbnail=None, image=None, note=None, card_rows=None):
+                      thumbnail=None, image=None, note=None, card_rows=None,
+                      author=None):
     """Лог-эмбед: нативный title Discord (крупный чёткий шрифт), поля
     с подписями, профиль справа. Без markdown-каши в description.
 
@@ -1173,11 +1174,31 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
             _who = _card_friendly(value, guild)
     if note:
         e.description = _polish_embed_value(note)[:4096]
-    for name, value in rows[:8]:
+    for name, value in rows[:12]:
         e.add_field(name=name[:256], value=value[:1024], inline=False)
-    # Профиль — аватар справа. Имя не дублируем сверху: оно уже в поле.
+    # Профиль цели справа; кто выдал — сверху, с аватаркой.
     if thumbnail:
         e.set_thumbnail(url=thumbnail)
+    if author is not None and not _is_our_bot(guild, author):
+        try:
+            if isinstance(author, (tuple, list)):
+                an = author[0] if author else None
+                ai = None
+            else:
+                an = (getattr(author, 'display_name', None)
+                      or getattr(author, 'name', None))
+                ai = None
+                try:
+                    ai = str(author.display_avatar.url)
+                except Exception:
+                    ai = None
+            if an and str(an) not in ('—', 'система', '?'):
+                if ai:
+                    e.set_author(name=f'Выдал {an}'[:256], icon_url=ai)
+                else:
+                    e.set_author(name=f'Выдал {an}'[:256])
+        except Exception as _ax:
+            log.debug('_styled_log_embed author: %s', _ax)
     footer_text = f"Hakumo Log · {cat_name} · {getattr(guild, 'name', '')}"
     gicon = getattr(guild, 'icon', None)
     try:
@@ -1579,6 +1600,169 @@ class LogsCenterView(discord.ui.View):
 
 
 
+
+def _minutes_from_amount(amount):
+    """'30', '30 мин', '1ч', 'Срок: 2 ч' → минуты. Не понял — None."""
+    t = str(amount or '').strip().lower().replace(' ', '')
+    if not t:
+        return None
+    if t.startswith('срок'):
+        t = t.split(':', 1)[-1].strip()
+    m = re.match(r'^(\d+(?:[.,]\d+)?)(м|мин|min|minute|h|ч|час|д|день|дня|дней|day)?', t)
+    if not m:
+        return None
+    try:
+        num = float(m.group(1).replace(',', '.'))
+    except (TypeError, ValueError):
+        return None
+    unit = m.group(2) or 'м'
+    if unit.startswith(('ч', 'h')):
+        return max(1, int(num * 60))
+    if unit.startswith(('д', 'd')):
+        return max(1, int(num * 1440))
+    return max(1, int(num))
+
+
+def _fmt_minutes(mins):
+    try:
+        mins = int(mins)
+    except (TypeError, ValueError):
+        return str(mins)
+    if mins >= 1440 and mins % 1440 == 0:
+        return f'{mins // 1440} дн'
+    if mins >= 60 and mins % 60 == 0:
+        return f'{mins // 60} ч'
+    if mins >= 60:
+        h, m = divmod(mins, 60)
+        return f'{h} ч {m} мин' if m else f'{h} ч'
+    return f'{mins} мин'
+
+
+def _human_age(days):
+    try:
+        days = int(days)
+    except (TypeError, ValueError):
+        return '—'
+    if days <= 0:
+        return 'сегодня'
+    if days < 30:
+        return f'{days} дн.'
+    if days < 365:
+        return f'{days // 30} мес.'
+    y, m = days // 365, (days % 365) // 30
+    return f'{y} г.' + (f' {m} мес.' if m else '')
+
+
+def _ts_lines(value):
+    """datetime/ISO → дата и «назад» для столбика."""
+    dt = None
+    if hasattr(value, 'timestamp') and not isinstance(value, (int, float, str)):
+        dt = value
+    else:
+        try:
+            dt = datetime.datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        except Exception:
+            try:
+                dt = datetime.datetime.fromtimestamp(int(value), datetime.timezone.utc)
+            except Exception:
+                return []
+    if dt is None:
+        return []
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    ts = int(dt.timestamp())
+    return [f'<t:{ts}:f>', f'<t:{ts}:R>']
+
+
+def _duration_cell(duration=None, until=None):
+    """Срок столбиком: «30 мин», дата окончания, относительное время."""
+    lines = []
+    if duration not in (None, ''):
+        mins = _minutes_from_amount(duration)
+        if mins:
+            lines.append(_fmt_minutes(mins))
+        else:
+            d = str(duration).replace('Срок:', '').replace('срок:', '').strip()
+            if d:
+                lines.append(d)
+    if until is not None:
+        lines.extend(_ts_lines(until))
+    return _bullet(*lines) if lines else None
+
+
+def _profile_cell(user):
+    """Аккаунт и сколько на сервере — без сырых id."""
+    if user is None:
+        return None
+    now = datetime.datetime.now(datetime.timezone.utc)
+    lines = []
+    created = getattr(user, 'created_at', None)
+    if created is not None:
+        try:
+            if getattr(created, 'tzinfo', None) is None:
+                created = created.replace(tzinfo=datetime.timezone.utc)
+            lines.append('аккаунт ' + _human_age((now - created).days))
+        except Exception:
+            pass
+    joined = getattr(user, 'joined_at', None)
+    if joined is not None:
+        try:
+            if getattr(joined, 'tzinfo', None) is None:
+                joined = joined.replace(tzinfo=datetime.timezone.utc)
+            lines.append('на сервере ' + _human_age((now - joined).days))
+        except Exception:
+            pass
+    return _bullet(*lines) if lines else None
+
+
+def _history_cell(guild, user_id):
+    """Сколько мутов / варнов / банов уже было у человека."""
+    if guild is None or not user_id:
+        return None
+    try:
+        path = 'data/mod_data.json'
+        if not os.path.exists(path):
+            return None
+        with open(path, 'r', encoding='utf-8') as fh:
+            data = json.load(fh) or {}
+        cases = (data.get('cases') or {}).get(str(guild.id)) or []
+        n_mute = n_warn = n_ban = n_kick = 0
+        for c in cases:
+            if str(c.get('user_id')) != str(user_id):
+                continue
+            act = str(c.get('action') or '')
+            if act in ('timeout', 'mute_chat', 'vmute'):
+                n_mute += 1
+            elif act in ('warn',):
+                n_warn += 1
+            elif act in ('ban',):
+                n_ban += 1
+            elif act in ('kick',):
+                n_kick += 1
+        lines = []
+        if n_mute:
+            lines.append(f'мутов {n_mute}')
+        if n_warn:
+            lines.append(f'варнов {n_warn}')
+        if n_ban:
+            lines.append(f'банов {n_ban}')
+        if n_kick:
+            lines.append(f'киков {n_kick}')
+        return _bullet(*lines) if lines else None
+    except Exception as _ex:
+        log.debug('_history_cell: %s', _ex)
+        return None
+
+
+def _proof_cell(proof):
+    pl = str(proof or '').strip()
+    if not pl:
+        return None
+    if pl.startswith('http://') or pl.startswith('https://'):
+        return _bullet(f'[открыть запись]({pl})')
+    return _bullet(pl)
+
+
 _ACTION_TITLES = {
     'ban': 'Пользователь заблокирован',
     'unban': 'Блокировка снята',
@@ -1602,8 +1786,9 @@ _ACTION_GREEN = {'vunmute', 'untimeout', 'unmute_chat', 'unban', 'unwarn'}
 
 
 def action_log_embed(guild, action, user, moderator, reason=None, case_id=None,
-                     extra=None, channel=None, color=None):
-    """Единая карточка наказания: столбики, кто выдал, канал."""
+                     extra=None, channel=None, color=None,
+                     duration=None, until=None, proof=None):
+    """Единая карточка наказания: столбики, кто выдал, срок, профиль, история."""
     cat = _ACTION_CATS.get(action, 'mod')
     title = _ACTION_TITLES.get(action, action)
     fields = [
@@ -1620,12 +1805,37 @@ def action_log_embed(guild, action, user, moderator, reason=None, case_id=None,
         label = 'Голосовой канал' if action in (
             'vmute', 'vunmute', 'timeout', 'untimeout') else 'Канал'
         fields.append((label, _channel_block(ch)))
-    if extra:
-        fields.append(('Детали', _bullet(extra)))
+    extra_rest = extra
+    dur = duration
+    if dur in (None, '') and extra:
+        ex0 = str(extra).strip()
+        if ex0.lower().startswith('срок'):
+            dur = ex0.split(':', 1)[-1].strip()
+            extra_rest = None
+    until_dt = until
+    if until_dt is None and dur:
+        mins = _minutes_from_amount(dur)
+        if mins:
+            until_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=mins)
+    dcell = _duration_cell(dur, until_dt)
+    if dcell:
+        fields.append(('Срок', dcell))
+    if extra_rest:
+        bits = [ln.strip() for ln in str(extra_rest).split('\n') if ln.strip()]
+        fields.append(('Детали', _bullet(*bits) if bits else _bullet(extra_rest)))
     if reason:
         fields.append(('Причина', _bullet(reason)))
+    pcell = _proof_cell(proof)
+    if pcell:
+        fields.append(('Доказательство', pcell))
     if case_id:
         fields.append(('Дело', _bullet(f'#{case_id}')))
+    prof = _profile_cell(user)
+    if prof:
+        fields.append(('Профиль', prof))
+    hist = _history_cell(guild, getattr(user, 'id', None))
+    if hist:
+        fields.append(('История', hist))
     av = None
     try:
         av = str(user.display_avatar.url)
@@ -1634,17 +1844,19 @@ def action_log_embed(guild, action, user, moderator, reason=None, case_id=None,
     if color is None:
         color = 0x2ECC71 if action in _ACTION_GREEN else None
     return _styled_log_embed(guild, cat, title, fields=fields,
-                             thumbnail=av, color=color)
+                             thumbnail=av, color=color, author=moderator)
 
 
 async def send_action_log(guild, action, user, moderator, reason=None,
-                          case_id=None, extra=None, channel=None):
+                          case_id=None, extra=None, channel=None,
+                          duration=None, until=None, proof=None):
     """Отправить карточку наказания в нужную ветку логов + тег модеров."""
     if guild is None:
         return False
     try:
         e = action_log_embed(guild, action, user, moderator, reason=reason,
-                             case_id=case_id, extra=extra, channel=channel)
+                             case_id=case_id, extra=extra, channel=channel,
+                             duration=duration, until=until, proof=proof)
         cat = _ACTION_CATS.get(action, 'mod')
         ch = await ensure_log_channel(guild, cat)
         if ch is None:
@@ -2037,13 +2249,15 @@ class Logs (commands .Cog ):
                 if not _is_our_bot (member .guild ,kwho ):
                     kch =await self .get_log_channel (member .guild ,'ban')
                     if kch :
-                        ke =_styled_log_embed (member .guild ,'ban','Участник кикнут',
-                        fields =[
+                        _kf =[
                         ('Пользователь',_person_block (member )),
                         ('Модератор',_actor_line (kwho ,guild =member .guild ,target_id =member .id ,actions =('kick',))),
-                        ('Причина',kreason ),
-                        ],
-                        color =0xE67E22 ,thumbnail =str (member .display_avatar .url ))
+                        ('Причина',_bullet (kreason )if kreason else None ),
+                        ]
+                        _kp =_profile_cell (member )
+                        if _kp :_kf .append (('Профиль',_kp ))
+                        ke =_styled_log_embed (member .guild ,'ban','Участник кикнут',
+                        fields =_kf ,color =0xE67E22 ,thumbnail =str (member .display_avatar .url ),author =kwho )
                         await _safe_send (kch ,embed =ke )
                 _sids =_staff_role_ids (member .guild )
                 _had =[r .name for r in (member .roles or [])[1 :]
@@ -2084,13 +2298,17 @@ class Logs (commands .Cog ):
             av =str (user .display_avatar .url )
         except Exception :
             av =None
-        e =_styled_log_embed (guild ,'ban','Пользователь заблокирован',
-        fields =[
+        _bf =[
         ('Пользователь',_person_block (user )),
         ('Модератор',_actor_line (who ,guild =guild ,target_id =user .id ,actions =('ban',))),
-        ('Причина',reason ),
-        ],
-        color =0xC0392B ,thumbnail =av )
+        ('Причина',_bullet (reason )if reason else None ),
+        ]
+        _bp =_profile_cell (user )
+        if _bp :_bf .append (('Профиль',_bp ))
+        _bh =_history_cell (guild ,user .id )
+        if _bh :_bf .append (('История',_bh ))
+        e =_styled_log_embed (guild ,'ban','Пользователь заблокирован',
+        fields =_bf ,color =0xC0392B ,thumbnail =av ,author =who )
         await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
@@ -2110,12 +2328,16 @@ class Logs (commands .Cog ):
             av =str (user .display_avatar .url )
         except Exception :
             av =None
-        e =_styled_log_embed (guild ,'ban','Блокировка снята',
-        fields =[
+        _uf =[
         ('Пользователь',_person_block (user )),
         ('Модератор',_actor_line (who ,guild =guild ,target_id =user .id ,actions =('unban',))),
-        ],
-        color =0x2ECC71 ,thumbnail =av )
+        ]
+        _ur =(who [2 ]if who else None )
+        if _ur :_uf .append (('Причина',_bullet (_ur )))
+        _up =_profile_cell (user )
+        if _up :_uf .append (('Профиль',_up ))
+        e =_styled_log_embed (guild ,'ban','Блокировка снята',
+        fields =_uf ,color =0x2ECC71 ,thumbnail =av ,author =who )
         await _safe_send (ch ,embed =e )
 
     @commands .Cog .listener ()
@@ -2232,7 +2454,6 @@ class Logs (commands .Cog ):
                     if not _is_our_bot (before .guild ,_to_mod ):
                         _tch =await self .get_log_channel (before .guild ,'mute')
                         if _tch :
-                            _until_ts =int (after_to .timestamp ())if after_to else None
                             _vch =getattr (getattr (after ,'voice',None ),'channel',None )
                             _tf =[
                             ('Пользователь',_person_block (after )),
@@ -2240,11 +2461,16 @@ class Logs (commands .Cog ):
                             ]
                             if _vch is not None :
                                 _tf .append (('Голосовой канал',_channel_block (_vch )))
-                            _tf .append (('Причина',_to_reason ))
-                            _tf .append (('Действует до',f"<t:{_until_ts}:f> · <t:{_until_ts}:R>"if _until_ts else '—'))
+                            _tf .append (('Причина',_bullet (_to_reason )if _to_reason else None ))
+                            _td =_duration_cell (None ,after_to )
+                            if _td :_tf .append (('Срок',_td ))
+                            _tp =_profile_cell (after )
+                            if _tp :_tf .append (('Профиль',_tp ))
+                            _thist =_history_cell (before .guild ,after .id )
+                            if _thist :_tf .append (('История',_thist ))
                             _te =_styled_log_embed (before .guild ,'mute','Пользователю выдали мут (чат и голос)',
                             fields =_tf ,
-                            color =0xE67E22 ,thumbnail =str (after .display_avatar .url ))
+                            color =0xE67E22 ,thumbnail =str (after .display_avatar .url ),author =_to_mod )
                             await _safe_send (_tch ,embed =_te )
                 except Exception as _to_err :
                     log .info (f'[LOGS] timeout-embed: {_to_err}')

@@ -53,6 +53,9 @@ class _Mem:
         self.mention = f'<@{uid}>'
         self.bot = bot
         self.display_avatar = SimpleNamespace(url='http://x/av.png')
+        from datetime import datetime, timezone, timedelta
+        self.created_at = datetime.now(timezone.utc) - timedelta(days=800)
+        self.joined_at = datetime.now(timezone.utc) - timedelta(days=90)
 
 
 class _Ch:
@@ -146,6 +149,14 @@ check(any(f.name == 'Дело' for f in ban.fields), 'номер дела в к�
 
 to = action_log_embed(g, 'timeout', user, mod, extra='Срок: 30 мин')
 check('чат и голос' in (to.title or ''), 'таймаут: мут чат и голос')
+tnames = [f.name for f in to.fields]
+check('Срок' in tnames, f'срок отдельным столбцом: {tnames}')
+tval = next(f.value for f in to.fields if f.name == 'Срок')
+check('30 мин' in tval and '<t:' in tval, 'срок: человечески + до какого времени')
+check('Профиль' in tnames and 'аккаунт' in next(f.value for f in to.fields if f.name == 'Профиль'),
+      'профиль: возраст аккаунта и сколько на сервере')
+check(getattr(to, 'author', None) and 'sonya.staff' in str(getattr(to.author, 'name', '')),
+      'сверху — кто выдал, с именем человека')
 
 print('== бот в аудите не считается модератором ==')
 check(_is_our_bot(g, (g.me.display_name, g.me.id, None, True)),
@@ -223,6 +234,24 @@ check(all(not f.inline for f in stack.fields),
 reason = action_log_embed(g, 'ban', user, mod, reason='флуд')
 rval = next((f.value for f in reason.fields if f.name == 'Причина'), '')
 check('"' in rval and 'флуд' in rval, 'причина в кавычках')
+proofed = action_log_embed(g, 'ban', user, mod, reason='флуд',
+                           proof='https://example.com/a.png', case_id=4)
+pnames = [f.name for f in proofed.fields]
+check('Доказательство' in pnames and 'открыть запись' in
+      next(f.value for f in proofed.fields if f.name == 'Доказательство'),
+      'ссылка на доказательство в карточке')
+hist_e = action_log_embed(g, 'vmute', user, mod, duration='30 мин')
+check(any(f.name == 'История' and 'мутов' in f.value for f in hist_e.fields),
+      'история: сколько мутов уже было')
+check('rows[:12]' in src or 'rows[:12]' in open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read(),
+      'в эмбед влезает больше 8 столбцов')
+lsrc = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
+check('def _duration_cell' in lsrc and 'def _profile_cell' in lsrc
+      and 'def _history_cell' in lsrc,
+      'срок / профиль / история собраны в столбик')
+check('duration=amount' in open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+      and 'proof=proof_link' in open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read(),
+      '/modpanel передаёт срок и доказательство в лог')
 asrc = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
 check('_styled_log_embed' in asrc and 'Оценка рассмотрения' in asrc
       and '_rate_log_embed' in asrc and '_rate_prompt_embed' in asrc
