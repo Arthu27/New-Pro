@@ -212,10 +212,15 @@ def user_pending(state, user_id):
     return [i for i in pending_items(state) if i['user_id'] == user_id]
 
 
-def create_appeal(state, user_id, user_name, text, now, link=None):
-    """Создать апелляцию. Возвращает (item, ошибка)."""
+def create_appeal(state, user_id, user_name, text, now):
+    """Создать апелляцию. Возвращает (item, ошибка).
+
+    Поля-доказательства нет (владелец 2026-09-07: «добавлять
+    доказательство не нужно — убери его везде, мы пока это не
+    используем»). В старых записях link мог остаться — его нигде
+    не показываем.
+    """
     text = str(text or '').strip()
-    link = _clean_link(link)
     if len(text) < 10:
         return None, f'слишком коротко — напишите подробнее (минимум 10 символов)'
     if len(text) > MAX_TEXT:
@@ -246,7 +251,6 @@ def create_appeal(state, user_id, user_name, text, now, link=None):
         'user_id': int(user_id),
         'user_name': str(user_name),
         'text': text,
-        'link': link,
         'status': 'pending',           # pending | accepted | rejected
         'created_at': now.isoformat(),
         'reviewed_by': None,
@@ -260,18 +264,6 @@ def create_appeal(state, user_id, user_name, text, now, link=None):
     state['next_id'] += 1
     state['items'].append(item)
     return item, None
-
-
-def _clean_link(link):
-    """Ссылка-доказательство: без протокола — https://, опасные схемы — None."""
-    v = str(link or '').strip()
-    if not v:
-        return None
-    if re.match(r'^(javascript|data|vbscript):', v, re.I):
-        return None
-    if not re.match(r'^https?://', v, re.I):
-        v = 'https://' + v
-    return v[:500]
 
 
 def resolve_appeal(state, appeal_id, accept, reviewer_name, now, reply=None):
@@ -298,9 +290,6 @@ def get_appeal(state, appeal_id):
 def fmt_card_text(item):
     """Текст карточки для мод-канала (экран логики, покрыт тестом)."""
     body = f"**Апелляция #{item['id']}** от {item['user_name']} (`{item['user_id']}`)\n{item['text'][:400]}"
-    link = (item.get('link') or '').strip()
-    if link:
-        body += f"\n🔗 Доказательство: {link}"
     return body
 
 
@@ -402,7 +391,9 @@ class AppealView(discord.ui.View):
                     log.debug('appeals: канал по «взять в работу» #%s: %s',
                               item['id'], _ex)
             note += ('\n🚪 Канал апелляции открыт участнику — он уже видит '
-                     'его на сервере.' if _opened else
+                     'его на сервере.' if _opened == 'opened' else
+                     '\n🚪 Участник забанен жёстко: доступ к каналу '
+                     'апелляции включится сразу после разбана.' if _opened == 'deferred' else
                      '\n⚠ Канал апелляции не открылся: участник вне сервера '
                      'или у бота нет прав на канал.')
         embed = (interaction.message.embeds[0]
@@ -621,9 +612,6 @@ def _rate_log_embed(guild, item, author, verb, comment=None):
         fields.append(('Рассмотрел', _rate_cell(who)))
     if comment:
         fields.append(('Комментарий', _rate_cell(comment)))
-    link = str(item.get('link') or '').strip()
-    if link.startswith('http://') or link.startswith('https://'):
-        fields.append(('Доказательство', _bullet(f'[открыть]({link})')))
     _c = _ts_lines(item.get('created_at'))
     if _c:
         fields.append(('Подана', _bullet(*_c)))
@@ -774,12 +762,7 @@ class AppealModal(discord.ui.Modal):
             label='Текст апелляции',
             placeholder='Расскажите, что произошло (минимум 10 символов)',
             required=True, max_length=500, style=discord.TextStyle.paragraph)
-        self.link = discord.ui.TextInput(
-            label='Ссылка-доказательство (необязательно)',
-            placeholder='https://… — скрин, видео или сообщение',
-            required=False, max_length=500)
         self.add_item(self.text)
-        self.add_item(self.link)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
@@ -788,8 +771,7 @@ class AppealModal(discord.ui.Modal):
                 ' Вы не забанены на этом сервере — апелляция не нужна.', ephemeral=True)
             return
         item, err = await self.cog._submit_appeal(
-            interaction.user, self.guild, self.text.value,
-            link=self.link.value)
+            interaction.user, self.guild, self.text.value)
         if err:
             await interaction.followup.send(f' Не получилось: {err}.', ephemeral=True)
             return
@@ -819,18 +801,13 @@ class AppealChannelModal(discord.ui.Modal):
             label='Что произошло?', style=discord.TextStyle.paragraph,
             placeholder='Расскажите свою версию — спокойно и по делу (от 10 символов)',
             required=True, max_length=500)
-        self.link = discord.ui.TextInput(
-            label='Ссылка-доказательство (необязательно)',
-            placeholder='https://… — скрин, видео или сообщение',
-            required=False, max_length=500)
         self.add_item(self.text)
-        self.add_item(self.link)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         item, err = await self.cog._submit_channel_appeal(
             interaction.user, self.guild, self.text.value,
-            link=self.link.value, channel=interaction.channel)
+            channel=interaction.channel)
         if err:
             await interaction.followup.send(f'Не получилось: {err}.', ephemeral=True)
             return
@@ -849,7 +826,7 @@ class AppealMenuSelect(discord.ui.Select):
             min_values=1, max_values=1,
             options=[discord.SelectOption(
                 label='Подать апелляцию', value='submit',
-                description='Откроется окно: что произошло и ссылка-доказательство',
+                description='Откроется окно: расскажите, что произошло',
                 emoji='⚖️')])
 
     async def callback(self, interaction: discord.Interaction):
@@ -1229,8 +1206,7 @@ class Appeals(commands.Cog):
             description=(
                 'Несогласны с наказанием — варном, мутом или баном?\n'
                 'Выберите ниже **«Подать апелляцию»**: откроется окно — '
-                'расскажите свою версию и, если есть, приложите ссылку '
-                'на скрин или видео.\n\n'
+                'расскажите свою версию.\n\n'
                 'Для вашей апелляции создастся отдельный тред — '
                 'модераторы ответят прямо в нём.'),
             color=0xF1C40F,
@@ -1359,53 +1335,92 @@ class Appeals(commands.Cog):
         Канал карточек сюда не подмешиваем — туда забаненного не пускаем
         (fallback_channel игнорируется нарочно).
 
-        Цель overwrite — Member, не User из ЛС: иначе Discord отвечает
-        NotFound и комната не открывается (владелец 2026-09-06).
-        Ветка: add_user + права на родителе.
+        Два случая (владелец 2026-09-07: «заявка подается, но канал для
+        участника не открывается»):
+        1) Участник НА сервере (роль-«бан»/изоляция) — цель overwrite
+           Member: доступ появляется сразу.
+        2) Жёсткий бан — Member НЕ существует (get/fetch_member → нет),
+           overwrite по User из ЛС Discord отвергает (NotFound, фикс
+           2026-09-06). Ставим overwrite по discord.Object(user.id):
+           Discord разрешает member-overwrite для тех, кто не на сервере —
+           доступ «включится» сам, как только человека разбанят и он
+           вернётся. До этого забаненный сервер не видит вовсе — это
+           ограничение Discord, честно говорим об этом в ЛС.
+
+        Возвращает (статус, канал): 'opened' — доступ уже виден,
+        'deferred' — overwrite стоит, откроется после разбана,
+        'failed' — не получилось (нет комнаты/прав).
         """
         _iso = await self._appeal_channel(guild)
         if _iso is None:
             log.error('appeals: канал апелляции не задан — некому открывать доступ (guild %s)', getattr(guild, 'id', '?'))
-            return False, None
-        member = await self._as_member(guild, user)
+            return 'failed', None
+        uid = getattr(user, 'id', None)
+        member = None
+        if uid:
+            getter = getattr(guild, 'get_member', None)
+            member = getter(uid) if callable(getter) else None
+        if member is None:
+            fetch = getattr(guild, 'fetch_member', None)
+            if callable(fetch) and uid:
+                try:
+                    member = await fetch(int(uid))
+                except (discord.NotFound, discord.Forbidden,
+                        discord.HTTPException, TypeError, ValueError) as _ex:
+                    log.debug('appeals: fetch_member %s: %s', uid, _ex)
+        on_guild = member is not None
+        if not on_guild:
+            # жёсткий бан: Member нет и не будет — цель overwrite по ID
+            member = user if uid is not None else None
         ow = discord.PermissionOverwrite(
             view_channel=True, send_messages=True,
             read_message_history=True, attach_files=True,
             embed_links=True, add_reactions=True)
-        opened = False
+        status = 'failed'
+
+        async def _apply(target):
+            """Один overwrite; цель — Member (на сервере) или Object(id)."""
+            nonlocal status
+            set_perm = getattr(target, 'set_permissions', None)
+            if callable(set_perm):
+                try:
+                    if on_guild:
+                        await set_perm(member, overwrite=ow)
+                    else:
+                        await set_perm(
+                            discord.Object(id=int(uid)), overwrite=ow)
+                    status = 'opened' if on_guild else 'deferred'
+                    return True
+                except (discord.Forbidden, discord.HTTPException,
+                        TypeError) as _ex:
+                    log.debug('appeals: set_permissions %s на %s: %s',
+                              uid, getattr(target, 'id', '?'), _ex)
+            return False
+
+        # тред: add_user работает только для тех, кто УЖЕ на сервере;
+        # забаненному добавление в тред невозможно — overwrite на родителя
         add_user = getattr(_iso, 'add_user', None)
-        if callable(add_user):
+        if callable(add_user) and on_guild:
             try:
                 await add_user(member)
-                opened = True
-            except (discord.Forbidden, discord.HTTPException, TypeError) as _ex:
-                log.debug('appeals: add_user %s: %s', getattr(member, 'id', '?'), _ex)
-        set_perm = getattr(_iso, 'set_permissions', None)
-        if callable(set_perm):
-            try:
-                await set_perm(member, overwrite=ow)
-                return True, _iso
-            except (discord.Forbidden, discord.HTTPException) as _ex:
-                log.error('appeals: открыть канал апелляции для %s: %s',
-                          getattr(member, 'id', '?'), _ex)
+                status = 'opened'
+            except (discord.Forbidden, discord.HTTPException,
+                    TypeError) as _ex:
+                log.debug('appeals: add_user %s: %s', uid, _ex)
+        if await _apply(_iso):
+            if status == 'deferred':
+                # overwrite на самом треде для не-участника бессмысленен —
+                # доступ решает родитель: дублируем туда
                 parent = getattr(_iso, 'parent', None)
-                pset = getattr(parent, 'set_permissions', None)
-                if callable(pset):
-                    try:
-                        await pset(member, overwrite=ow)
-                        return True, _iso
-                    except (discord.Forbidden, discord.HTTPException) as _ex2:
-                        log.debug('appeals: parent set_permissions: %s', _ex2)
-                return opened, _iso
+                if parent is not None:
+                    await _apply(parent)
+            return status, _iso
         parent = getattr(_iso, 'parent', None)
-        pset = getattr(parent, 'set_permissions', None)
-        if callable(pset):
-            try:
-                await pset(member, overwrite=ow)
-                return True, _iso
-            except (discord.Forbidden, discord.HTTPException) as _ex:
-                log.debug('appeals: parent set_permissions: %s', _ex)
-        return opened, (_iso if opened else None)
+        if parent is not None and await _apply(parent):
+            return status, _iso
+        if status == 'opened':
+            return status, _iso
+        return 'failed', None
 
     async def _log_unban_decision(self, guild, item, mod_id, mod_name):
         """Дело «unban» + карточка «Блокировка снята» с автором решения.
@@ -1531,12 +1546,21 @@ class Appeals(commands.Cog):
         return deleted
 
     def _dm_channel_line(self, opened, channel):
-        """Строка про канал для ЛС-подтверждения: имя канала, не абстракция."""
-        if opened:
+        """Строка про канал для ЛС-подтверждения: имя канала, не абстракция.
+
+        opened: 'opened' | 'deferred' | 'failed' (см. _open_appeal_channel).
+        """
+        if opened == 'opened':
             name = getattr(channel, 'name', '') or 'канал апелляции'
             return (f'Канал **#{name}** на сервере открыт для вас — карточка '
                     'видна там. Ответ придёт в личные сообщения — обычно в '
                     'течение суток.')
+        if opened == 'deferred':
+            name = getattr(channel, 'name', '') or 'канал апелляции'
+            return (f'Вы забанены, поэтому сервер пока не виден. Канал '
+                    f'**#{name}** откроется для вас автоматически — сразу, '
+                    'как только модераторы примут апелляцию и снимут бан. '
+                    'Ответ придёт в личные сообщения.')
         return ('Канал апелляции открыть не получилось (боту нужны права '
                 'управления каналом) — модераторы увидят карточку и напишут '
                 'вам. Ответ придёт в личные сообщения.')
@@ -1591,7 +1615,7 @@ class Appeals(commands.Cog):
                     comp = render_url_card(
                         data, appeal_id=item['id'],
                         user_name=item['user_name'], text=item['text'],
-                        link=item.get('link'), theme=appearance.get('theme'))
+                        theme=appearance.get('theme'))
                     payload, name = ((comp, appeal_card_filename(item['id']))
                                      if comp else (data, fname))
                     file = discord.File(io.BytesIO(payload), filename=name)
@@ -1605,7 +1629,7 @@ class Appeals(commands.Cog):
             elif appearance.get('mode') == 'auto':
                 png = render_appeal_card(
                     appeal_id=item['id'], user_name=item['user_name'],
-                    text=item['text'], link=item.get('link'),
+                    text=item['text'],
                     theme=appearance.get('theme'))
                 if png:
                     fn = appeal_card_filename(item['id'])
@@ -1616,12 +1640,12 @@ class Appeals(commands.Cog):
             log.debug('appeals: карточка-картинка #%s: %s', item.get('id'), _ex)
         return file
 
-    async def _submit_channel_appeal(self, user, guild, text, link=None, channel=None):
+    async def _submit_channel_appeal(self, user, guild, text, channel=None):
         """Апелляция из меню в канале: карточка в отдельном треде."""
         guild_id = guild.id
         state = self._load(guild_id)
         item, err = create_appeal(state, user.id, str(user), text,
-                                  datetime.now(UTC), link=link)
+                                  datetime.now(UTC))
         if err:
             return None, err
         self._save(guild_id, state)
@@ -1643,8 +1667,6 @@ class Appeals(commands.Cog):
             title=f'Апелляция #{item["id"]} — новая',
             description=item['text'],
             color=COLOR_PENDING, timestamp=datetime.now(UTC))
-        if item.get('link'):
-            embed.add_field(name='Доказательство', value=item['link'], inline=False)
         embed.set_author(name=str(user),
                          icon_url=user.display_avatar.url
                          if getattr(user, 'display_avatar', None) else None)
@@ -1725,12 +1747,12 @@ class Appeals(commands.Cog):
         return item, None
 
     # ---- подача (ЛС боту) ----
-    async def _submit_appeal(self, user, guild, text, link=None):
+    async def _submit_appeal(self, user, guild, text):
         """Общая точка создания апелляции: проверка бана, лимит, карточка."""
         guild_id = guild.id
         state = self._load(guild_id)
         item, err = create_appeal(state, user.id, str(user), text,
-                                  datetime.now(UTC), link=link)
+                                  datetime.now(UTC))
         if err:
             return None, err
         self._save(guild_id, state)
@@ -1739,8 +1761,6 @@ class Appeals(commands.Cog):
                               description=item['text'],
                               color=COLOR_PENDING,
                               timestamp=datetime.now(UTC))
-        if item.get('link'):
-            embed.add_field(name='Доказательство', value=item['link'], inline=False)
         embed.set_author(name=str(user), icon_url=user.display_avatar.url
                          if getattr(user, 'display_avatar', None) else None)
         embed.add_field(name='Контекст модератора',
@@ -1778,8 +1798,8 @@ class Appeals(commands.Cog):
         # item уезжает в JSON — канал и имя канала в БД хранить нельзя.
         _opened, _ch_ref = await self._open_appeal_channel(guild, user)
         self._save(guild_id, state)
-        item['_channel_opened'] = bool(_opened)      # временно, только для ответа
-        item['_channel_name'] = getattr(_ch_ref, 'name', '') if _opened else ''
+        item['_channel_status'] = _opened           # временно, только для ответа
+        item['_channel_name'] = getattr(_ch_ref, 'name', '') or ''
         return item, None
 
     def _main_guild(self):
@@ -1810,7 +1830,7 @@ class Appeals(commands.Cog):
         """Обжаловать наказание: /апелляция [текст] в ЛС боту.
 
         Сервер никогда не спрашиваем — он из конфигурации. Без текста
-        открываем форму с полем-доказательством.
+        открываем форму.
         """
         if interaction.guild is not None:
             await interaction.response.send_message(
@@ -1841,12 +1861,16 @@ class Appeals(commands.Cog):
                 f'Не получилось: {err}.', ephemeral=True)
             return
         from cogs.embed_utils import hakumo_embed
-        if item.pop('_channel_opened', False):
-            _ch_name = str(item.pop('_channel_name', '') or 'канал апелляции')
+        _st = item.pop('_channel_status', 'failed')
+        _ch_name = str(item.pop('_channel_name', '') or 'канал апелляции')
+        if _st == 'opened':
             _extra = (f'Канал **#{_ch_name}** на сервере открыт для вас — '
                       'карточка видна там. Ответ придёт в личку.')
+        elif _st == 'deferred':
+            _extra = (f'Вы забанены, поэтому сервер пока не виден. Канал '
+                      f'**#{_ch_name}** откроется автоматически — сразу '
+                      'после разбана. Ответ придёт в личку.')
         else:
-            item.pop('_channel_name', None)
             _extra = ('Ответ придёт в личку. Канал апелляции открыть не '
                       'получилось (боту нужны права) — модераторы напишут '
                       'вам сами.')

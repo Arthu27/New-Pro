@@ -1053,10 +1053,10 @@ try:
 
     _ap = _AP.empty_state()
 
-    def _mk(days_ago, hour, uid, name, text, link=None):
+    def _mk(days_ago, hour, uid, name, text):
         _dt = (NOW - timedelta(days=days_ago)).replace(hour=hour, minute=0,
                                                       second=0, microsecond=0)
-        _item, _err = _AP.create_appeal(_ap, uid, name, text, _dt, link=link)
+        _item, _err = _AP.create_appeal(_ap, uid, name, text, _dt)
         return _item
 
     def _res(days_ago, hour, uid, name, text, accept, who, reply):
@@ -1065,7 +1065,7 @@ try:
                                                       second=0, microsecond=0)
         _AP.resolve_appeal(_ap, _it['id'], accept, who, _rv, reply=reply)
 
-    # очередь: три свежих, одна с ссылкой-доказательством
+    # очередь: три свежих
     _mk(0, 11, '523456789012345678', 'NightHawk_77',
         'Меня замутили на сутки за «флуд», но я просто отвечал троим подряд '
         'в приветственном канале — в логах видно, что сообщения были по делу. '
@@ -1073,8 +1073,7 @@ try:
     _mk(1, 19, '723456789012345679', 'Кипарис',
         'Бан за ссылки — это был не спам, а ссылка на наш общий документ '
         'с гайдом по ивенту, модератор мог принять за рекламу. '
-        'Прикладываю скрин переписки с согласованием.',
-        link='https://i.imgur.com/demo-appeal-proof.png')
+        'Могу пояснить, что именно за документ.')
     _mk(2, 14, '823456789012345670', 'turbo.fox',
         'Сняли роль ивентёра без объяснений, хотя нарушений я не допускал. '
         'Если решение не изменится — прошу хотя бы комментарий, за что именно.')

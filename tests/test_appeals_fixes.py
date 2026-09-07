@@ -187,7 +187,8 @@ opened_calls = []
 
 async def _fake_open(g, user, fallback_channel=None):
     opened_calls.append((getattr(g, 'id', None), getattr(user, 'id', None)))
-    return True, 'канал-апелляций'
+    # статус-контракт 2026-09-07: 'opened' | 'deferred' | 'failed'
+    return 'opened', 'канал-апелляций'
 
 
 cog._open_appeal_channel = _fake_open
@@ -391,7 +392,7 @@ class _StubAppeals:
 
     async def _open_appeal_channel(s, g, user, fallback_channel=None):
         s.opened.append(getattr(user, 'id', None))
-        return True, 'канал'
+        return 'opened', 'канал'
 
     async def _delete_appeal_card(s, g, state, item, message=None):
         s.deleted.append(item.get('id'))

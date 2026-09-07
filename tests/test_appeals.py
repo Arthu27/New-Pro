@@ -35,16 +35,13 @@ from db import GuildData  # noqa: E402
 
 NOW = datetime(2026, 8, 13, 12, 0, 0, tzinfo=UTC)
 
-print('== 0. ссылка-доказательство ==')
+print('== 0. поля-доказательства больше нет ==')
 st0 = ap.empty_state()
-it0, err0 = ap.create_appeal(st0, 555, 'Zhulik', 'прошу разбанить, вот пруф', NOW,
-                             link='imgur.com/abc')
-check(it0 is not None and it0.get('link') == 'https://imgur.com/abc',
-      'ссылка без протокола -> https://')
-it0b, _ = ap.create_appeal(st0, 556, 'X', 'вторая ссылка с javascript', NOW,
-                           link='javascript:alert(1)')
-check(it0b.get('link') is None, 'опасная схема отбрасывается')
-check('Доказательство' in ap.fmt_card_text(it0), 'fmt_card_text включает ссылку')
+it0, err0 = ap.create_appeal(st0, 555, 'Zhulik', 'прошу разбанить, вот пруф', NOW)
+check(it0 is not None and 'link' not in it0,
+      'в новой апелляции поля link нет (владелец 2026-09-07)')
+check('Доказательство' not in ap.fmt_card_text(it0),
+      'fmt_card_text без строки доказательства')
 
 print('== 1. create_appeal: валидация и лимиты ==')
 st = ap.empty_state()
@@ -232,7 +229,7 @@ le = ap._rate_log_embed(
      'reply': 'ок, снимаем',
      'created_at': '2026-09-01T12:00:00+00:00',
      'reviewed_at': '2026-09-01T13:00:00+00:00',
-     'link': 'https://imgur.com/abc'},
+     },
     type('U', (), {'mention': '<@9>', 'display_name': 'Автор',
                    'id': 9, 'display_avatar': type('A', (), {'url': ''})()})(),
     'up', 'всё ясно')

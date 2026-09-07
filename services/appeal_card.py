@@ -257,7 +257,7 @@ async def fetch_remote_image(url, timeout=12):
         return None, str(_ex)[:160] or 'сеть недоступна'
 
 
-def render_appeal_card(*, appeal_id, user_name, text, link=None,
+def render_appeal_card(*, appeal_id, user_name, text,
                        theme=DEFAULT_APPEAL_THEME, brand='Hakumo'):
     """Карточка поданной апелляции → PNG bytes. Никогда не бросает наружу."""
     try:
@@ -335,7 +335,7 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
         # шрифт уменьшаем, пока блок не влезет целиком (иначе — многоточие)
         text_w = int((W * SS - 2 * pad) * 0.60)
         zone_top = S(214)
-        zone_bottom = (H * SS - S(100)) if link else (H * SS - S(84))
+        zone_bottom = H * SS - S(84)
         f_text, lines = None, None
         for size in range(28 * SS, 18 * SS - 1, -2 * SS):
             f_try = _font(False, size)
@@ -359,14 +359,6 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
             bb = d.textbbox((0, 0), ln or 'Ag', font=f_text)
             yy += (bb[3] - bb[1]) + S(12)
 
-        # ссылка-доказательство — на собственной строке над футером,
-        # футер — на дне; текстовый блок ограничен зоной выше них
-        if link:
-            f_link = _font(False, 18 * SS)
-            hosted = str(link)[:64]
-            d.text((pad, H * SS - S(92)), f'доказательство: {hosted}',
-                   font=f_link, fill=acc + (220,))
-
         # футер
         f_foot = _font(True, 20 * SS)
         d.text((pad, H * SS - S(56)), f'Апелляция #{int(appeal_id)}  ·  {brand}',
@@ -383,7 +375,7 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
 URL_PHOTO_MAX_H = 560   # высота фото-зоны в композите (фото выше — центр-кроп)
 
 
-def render_url_card(photo_bytes, *, appeal_id, user_name, text, link=None,
+def render_url_card(photo_bytes, *, appeal_id, user_name, text,
                     theme=DEFAULT_APPEAL_THEME):
     """Своя картинка по URL → композит: фото СВЕРХУ, тексты апелляции ПОД ним.
 
@@ -401,7 +393,7 @@ def render_url_card(photo_bytes, *, appeal_id, user_name, text, link=None,
             ph = ph.crop((0, top, W, top + URL_PHOTO_MAX_H))
         card = Image.open(io.BytesIO(render_appeal_card(
             appeal_id=appeal_id, user_name=user_name, text=text,
-            link=link, theme=theme) or b'')).convert('RGB')
+            theme=theme) or b'')).convert('RGB')
         out = Image.new('RGB', (W, ph.height + card.height))
         out.paste(ph, (0, 0))
         out.paste(card, (0, ph.height))

@@ -107,6 +107,11 @@ class _Guild:
         self._channels = {c.id: c for c in channels}
         self.roles = roles
         self.system_channel = None
+        self._members = {}          # uid → участник (для открытия канала)
+
+    def get_member(self, uid):
+        # подавший из канала — участник сервера (роль-«бан»/изоляция)
+        return self._members.get(int(uid))
 
     def get_channel(self, cid):
         return self._channels.get(int(cid))
@@ -211,6 +216,7 @@ async def main():
     cards_ch3 = _Channel(CARDS_CH, name='карточки', fail_threads=True)
     guild3 = _Guild([appeal_ch3, cards_ch3], [everyone, mod_role])
     cog3 = A.Appeals(_Bot(guild3))
+    guild3._members[du.id] = du     # участник на сервере → доступ сразу
     await cog3._submit_channel_appeal(du, guild3, 'Прошу разбан, всё было не так')
     check(len(du.dms) == 1 and 'открыт для вас' in (du.dms[0].description or ''),
           'канал открылся — ЛС говорит «открыт»')

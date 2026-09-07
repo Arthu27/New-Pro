@@ -134,7 +134,6 @@ def pending_view(state, gid=None):
             'user_name': str(item.get('user_name') or ''),
             'text': str(item.get('text') or ''),
             'created_at': str(item.get('created_at') or '')[:16].replace('T', ' '),
-            'link': str(item.get('link') or ''),
             'context': context,
             'card_text': AP.fmt_card_text(item),
             'claimed_by': (str(claim.get('name') or '') if claim else ''),
@@ -251,8 +250,10 @@ def _open_channel_for_claim(bot, gid, item):
         except Exception as _ex:
             _log.debug('appeals: fetch_user на claim: %s', _ex)
             return False
+        # 'opened' — доступ уже виден; 'deferred' — overwrite стоит, канал
+        # откроется участнику сразу после разбана (жёсткий бан)
         opened, _ch = await cog._open_appeal_channel(guild, user)
-        return bool(opened)
+        return opened in ('opened', 'deferred')
 
     try:
         return bool(_run_async(_do(), timeout=15))
@@ -390,7 +391,6 @@ def history_view(state, status=None, query=None, limit=HISTORY_LIMIT):
             'user_id': str(item.get('user_id') or ''),
             'user_name': str(item.get('user_name') or ''),
             'text': str(item.get('text') or ''),
-            'link': str(item.get('link') or ''),
             'status': item.get('status'),
             'status_label': STATUS_LABELS.get(item.get('status'), '?'),
             'created_at': str(item.get('created_at') or '')[:16].replace('T', ' '),
@@ -446,8 +446,7 @@ def _csv_cell(text):
 
 # Демо-текст карточки в предпросмотре (общий для авто-картинки и композита).
 DEMO_TEXT = ('Бан за ссылки — это был не спам, а ссылка на общий документ '
-             'с гайдом по ивенту. Прикладываю скрин переписки с согласованием.')
-DEMO_LINK = 'https://i.imgur.com/demo-appeal-proof.png'
+             'с гайдом по ивенту. Могу пояснить, что произошло.')
 
 
 def register(ctx):
@@ -628,7 +627,6 @@ def register(ctx):
                 png = render_url_card(
                     data, appeal_id=7, user_name='Кипарис',
                     text=(request.args.get('text') or DEMO_TEXT)[:400],
-                    link=request.args.get('link') or DEMO_LINK,
                     theme=request.args.get('theme') or ABC.DEFAULT_APPEAL_THEME)
             except Exception as _ex:
                 _log.debug('card-preview: композит не собрался: %s', _ex)
@@ -644,10 +642,9 @@ def register(ctx):
             return resp
         theme = request.args.get('theme')
         text = (request.args.get('text') or DEMO_TEXT)[:400]
-        link = request.args.get('link') or DEMO_LINK
         png = ABC.render_appeal_card(
             appeal_id=7, user_name='Кипарис', text=text,
-            link=link, theme=theme or ABC.DEFAULT_APPEAL_THEME)
+            theme=theme or ABC.DEFAULT_APPEAL_THEME)
         if not png:
             return jsonify({'success': False, 'error': 'Не удалось отрисовать пример'}), 500
         resp = Response(png, mimetype='image/png')

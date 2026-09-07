@@ -244,7 +244,7 @@ client.post('/api/guild/777/appeals/appearance',
 from services import appeal_card as ABC  # noqa: E402
 png = ABC.render_appeal_card(appeal_id=7, user_name='Кипарис',
                              text='Меня забанили по ошибке: ссылку на гайд приняли за рекламу.',
-                             link='https://i.imgur.com/demo.png', theme='violet')
+                             theme='violet')
 check(png and png[:8].startswith(b'\x89PNG'), 'карточка апелляции рисуется')
 seen = {ABC.render_appeal_card(appeal_id=1, user_name='u', text='текст', theme=t)
         for t in ABC.APPEAL_THEME_ORDER}
