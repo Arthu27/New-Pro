@@ -105,6 +105,22 @@
       if (!W.hlEsc) W.hlEsc = function (s) {
         return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       };
+      /* ── Шим-очередь пикеров (pickers.js грузится в конце body) ───
+         Страничные скрипты зовут attachMemberPicker/attachIdPicker/…
+         на верхнем уровне — раньше pickers.js. Без шима ReferenceError
+         убивал ВЕСЬ страничный скрипт: например, на главной не выполнялся
+         loadAnnChannels и в «Куда публиковать» не было ни одного канала.
+         Шим записывает вызовы в очередь; pickers.js после загрузки
+         повторяет их настоящими функциями (см. конец pickers.js). */
+      W.__pickerQueue = [];
+      ['attachMemberPicker', 'attachIdPicker', 'attachSelectSearch',
+       'attachSelectPicker', 'attachListFilter', 'sshdEnhance',
+       'bindCopyId', 'bindCtrlS', 'bindSlashFocus', 'dirtyTrack'
+      ].forEach(function (name) {
+        if (!W[name]) W[name] = function () {
+          W.__pickerQueue.push({ name: name, args: arguments });
+        };
+      });
       if (!W.silentGuard) W.silentGuard = function (key, sig) {
         if (W.__silentFp && W.__silentFp[key] === sig) return true;
         (W.__silentFp = W.__silentFp || {})[key] = sig;

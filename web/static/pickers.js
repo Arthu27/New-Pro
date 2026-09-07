@@ -887,3 +887,20 @@
     paint();
   });
 })();
+
+/* ── Отложенные пикеры ──────────────────────────────────────────────
+   Страничные скрипты выполняются РАНЬШЕ pickers.js (он в конце body) и
+   зовут attachMemberPicker/attachIdPicker/… на верхнем уровне. Бут-шим
+   base.html записал те вызовы в __pickerQueue — повторяем их здесь
+   настоящими функциями. Иначе ReferenceError убивал страничный скрипт
+   целиком (на главной из-за этого «Куда публиковать» оставался без
+   каналов — loadAnnChannels просто не выполнялся). */
+(function () {
+  var q = window.__pickerQueue;
+  if (!q || !q.length) return;
+  window.__pickerQueue = [];
+  q.forEach(function (c) {
+    try { (window[c.name] || function () {}).apply(null, c.args); }
+    catch (e) { /* один пикер не должен ронять остальные */ }
+  });
+})();
