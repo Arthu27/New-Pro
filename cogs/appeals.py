@@ -396,6 +396,47 @@ class AppealView(discord.ui.View):
                      'апелляции включится сразу после разбана.' if _opened == 'deferred' else
                      '\n⚠ Канал апелляции не открылся: участник вне сервера '
                      'или у бота нет прав на канал.')
+            # Владелец 2026-09-08: как только модератор взял апелляцию в
+            # работу — в комнату приходит сообщение, КТО будет вести дело:
+            # «вас будет обслуживать вот этот человек». Человек сразу
+            # понимает, к кому обращаться с вопросами.
+            if _opened == 'opened' and _ch is not None:
+                try:
+                    await _ch.send(
+                        f"🤝 **Вас будет обслуживать:** "
+                        f"{interaction.user.mention} "
+                        f"({interaction.user.display_name}) — ваша апелляция "
+                        f"у него в работе. Общайтесь здесь.")
+                except Exception as _ann_ex:
+                    log.debug('appeals: объявление в комнату #%s: %s',
+                              item['id'], _ann_ex)
+            elif _opened == 'deferred' and _ch is not None:
+                # Жёстко забаненный: сообщение ляжет в комнату и будет
+                # ждать его возвращения после разбана.
+                try:
+                    await _ch.send(
+                        f"🤝 **Вас будет обслуживать:** "
+                        f"{interaction.user.mention} "
+                        f"({interaction.user.display_name}) — ваша апелляция "
+                        f"у него в работе.")
+                except Exception as _ann_ex:
+                    log.debug('appeals: объявление (deferred) #%s: %s',
+                              item['id'], _ann_ex)
+        else:
+            # Снятие с работы — честно сказать в комнате, что ведущий
+            # сменился: человек не будет ждать ответа от ушедшего модера.
+            try:
+                _guild = self.cog.bot.get_guild(gid)
+                if _guild is not None:
+                    _room = await self.cog._appeal_channel(_guild)
+                    if _room is not None:
+                        await _room.send(
+                            f"🌀 {interaction.user.display_name} больше не "
+                            f"ведёт вашу апелляцию — она снова в общей "
+                            f"очереди модерации.")
+            except Exception as _uncl_ex:
+                log.debug('appeals: снятие с работы, комната #%s: %s',
+                          item['id'], _uncl_ex)
         embed = (interaction.message.embeds[0]
                  if interaction.message and interaction.message.embeds else None)
         if embed is not None:

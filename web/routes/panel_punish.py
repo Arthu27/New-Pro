@@ -3,9 +3,9 @@
 
 POST /api/guild/<gid>/punish — выдать наказание (варн, муты, бан-апелляция,
 снятия). Исполняет тот же код, что и /modpanel: длительности «60, 1ч, 3ч, 1д»,
-«бан» — настоящий серверный бан (человек исключается с сервера, сообщения
-не удаляются; роли сохраняются и возвращаются после разбана). Доказательство
-панель не спрашивает:
+«бан» — роль бана: бот каналы поштучно не закрывает, доступ закрывает сама
+роль (владелец 2026-09-08); нужна выбранная роль в «Ролях наказаний».
+Доказательство панель не спрашивает:
 форма упрощена, поле убрано.
 
 GET /api/guild/<gid>/punish/options — что доступно именно ЭТОМУ
@@ -37,7 +37,7 @@ PANEL_ACTIONS = [
     ('timeout', 'Мут (чат + войс)', True, True),
     ('mute_chat', 'Мут чата', True, True),
     ('vmute', 'Войс-мут', True, True),
-    ('ban', 'Бан (серверный, с апелляцией)', False, True),
+    ('ban', 'Бан (роль бана, с апелляцией)', False, True),
     ('unban', 'Снять апелляцию / разбан', False, False),
     ('untimeout', 'Снять мут', False, False),
     ('vunmute', 'Снять войс-мут', False, False),
@@ -157,9 +157,14 @@ def register(ctx):
                     proof_required = bool(proof_is_required(g.id))
         except Exception as _ex:
             _log.debug('punish/options proof: %s', _ex)
-        # «Бан» — настоящий серверный бан (владелец 2026-09-07): работает
-        # без настроенного канала апелляции, блокировки больше нет.
-        ban_ready = True
+        # «Бан» — роль бана (владелец 2026-09-08: «достаточно просто дать
+        # роль бана»): готовность = роль выбрана в «Ролях наказаний».
+        ban_ready = False
+        try:
+            from services.punish_roles import role_for as _role_for
+            ban_ready = bool(_role_for(int(gid), 'ban'))
+        except Exception as _ex:
+            _log.debug('punish/options ban role: %s', _ex)
         # ACL «Права команд»: каждому — только его действия.
         member = _viewer_member(bot, gid)
         actions_acl = [a for a in PANEL_ACTIONS if _acl_allows(gid, member, a[0])]

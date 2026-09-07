@@ -792,6 +792,8 @@
     if (limOut) {
       msg = 'Лимит исчерпан: ' + limSel.limit + ' за ' + limSel.window +
             ' — действие снова станет доступно после обновления окна.';
+    } else if (pnSel === 'ban' && pnOpts && !pnOpts.ban_ready) {
+      msg = '«Бан» пока не работает: не выбрана роль бана. Панель → Роли наказаний → «Бан».';
     }
     $('pnMsg').textContent = msg;
     $('pnMsg').style.color = msg ? 'var(--warn)' : '';

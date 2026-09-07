@@ -516,12 +516,11 @@ class Moderation (commands .Cog ):
         await _aio .gather (*[_one (ch )for ch in pool ],return_exceptions =True )
 
     # ── Почему Forbidden: иерархия ролей / владелец сервера / право бота ──
-    # «ban» — НАСТОЯЩИЙ Discord-бан (владелец 2026-09-07: «зачем он должен
-    # быть на сервере? просто в бане самого сервера»): бот выкидывает
-    # участника guild.ban'ом, поэтому нужно право «Бан участников».
-    # Роль бана и изоляция каналов больше не используются.
+    # «ban» — роль бана (владелец 2026-09-08: «не нужно закрывать каналы
+    # самому, достаточно просто дать роль бана»): канал бот не обходит,
+    # нужно только «Управление ролями». Право «Бан участников» боту не нужно.
     _NEED_PERMS = {
-        'ban': ('ban_members', 'Бан участников (серверный бан из панели)'),
+        'ban': ('manage_roles', 'Управление ролями (выдать роль бана)'),
         'kick': ('kick_members', 'Выгонять участников'),
         # Мут (чат + войс) работает МУТ-РОЛЯМИ (владелец 2026-09-05:
         # «он просто должен выдать роли — зачем ему права»). Право
@@ -738,52 +737,38 @@ class Moderation (commands .Cog ):
             # Срок наказания для дела (минуты): заполняют мут-ветки ниже,
             # «История решений» панели показывает его в колонке «Длительность»
             _case_minutes =None
-            _ban_dm_sent =False    # ЛС о бане уходит ДО исключения (см. ветку ban)
 
             try :
                 if action =="ban":
-                    # Владелец 2026-09-07: «жёстко банить не нужно — зачем
-                    # он должен быть на сервере? Просто в бане самого
-                    # сервера». Бан — НАСТОЯЩИЙ: человек вылетает с
-                    # сервера и попадает в список банов. Изоляцию (роль,
-                    # закрытые каналы, человека на сервере) не делаем.
-                    # Сообщения не стираем (delete_message_seconds=0).
-                    # Роли сохраняем в снапшот ДО бана: когда после
-                    # разбана человек вернётся по инвайту, бот вернёт
-                    # их сам (on_member_join → _restore_roles_after_unban).
-                    try :
-                        from services import punish_roles as PR
-                        _keep ={getattr (guild ,'default_role',None ).id }if getattr (guild ,'default_role',None )else set ()
-                        _role_ids =[
-                            r .id for r in (getattr (user ,'roles',None )or [])
-                            if r .id not in _keep and not getattr (r ,'managed',False )
-                        ]
-                        PR .save_held_roles (guild .id ,user .id ,_role_ids )
-                    except Exception as _se :
-                        log .debug (f'[MODPANEL] снапшот ролей до бана: {_se}')
-                    # ЛС с кнопкой «Подать апелляцию» — ДО бана: после
-                    # исключения бот может не разделять сервер с юзером,
-                    # и карточка с кнопкой не дойдёт.
-                    _ban_dm_sent =False
-                    try :
-                        from cogs .appeals import AppealDMView
-                        _bdm =mod_dm_embed ('ban',guild ,interaction .user ,reason )
-                        await self .send_dm (user ,_bdm ,view =AppealDMView ())
-                        _ban_dm_sent =True
-                    except Exception as _bdm_e :
-                        log .info (f'[MODPANEL] ДМ до бана: {_bdm_e}')
-                    await guild .ban (
-                        user ,reason =reason or 'бан',
-                        delete_message_seconds =0 )
+                    # Владелец 2026-09-08: бот НЕ закрывает каналы поштучно —
+                    # «достаточно просто дать роль бана»: доступ закрывает
+                    # сама роль (её настраивает владелец). Человек остаётся
+                    # на сервере; апелляцию подаёт кнопкой в ЛС, комната
+                    # апелляции откроется после подачи заявки.
+                    _brole =self ._punish_role (guild ,'ban')
+                    if _brole is None :
+                        await _respond (interaction ,embed =error_embed (
+                        'Не выбрана роль бана — она закрывает каналы. '
+                        'Панель → «Роли наказаний» → «Бан». '
+                        'Пока роль не выбрана, «бан» из панели не работает.'),
+                        ephemeral =True )
+                        return
+                    if not hasattr (user ,'add_roles'):
+                        await _respond (interaction ,embed =error_embed (
+                        'Человек не на сервере — роль бана выдать нельзя. '
+                        'Бан из панели работает только с участниками сервера.'),
+                        ephemeral =True )
+                        return
+                    await user .add_roles (_brole ,reason =reason or 'бан')
                     try :
                         from services .staff_limits import record_hit as _sl_rec
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
                     except Exception as _re :
                         log .debug (f'[STAFF_LIMIT] ban rec: {_re}')
-                    msg =("забанен на сервере (в списке банов), сообщения не тронуты. "
-                          "Апелляция — кнопкой в ЛС бота; канал апелляции "
-                          "откроется после подачи, а после разбана человек "
-                          "вернётся по инвайту и получит свои роли обратно")
+                    msg =(f"роль бана «{_brole .name }» выдана — доступ закрыт "
+                          "самой ролью, каналы бот не трогает. Апелляция — "
+                          "кнопкой в ЛС бота; комната апелляции откроется "
+                          "после подачи заявки")
                 elif action =="kick":
                     # Система kick полностью отключена решением владельца (2026-08):
                     # опция убрана из меню, ручные вызовы — вежливый отказ.
@@ -965,21 +950,20 @@ class Moderation (commands .Cog ):
                     confirm .description +=f"\n\n⚠️ {' · '.join (aux_errors )}"
                 # Сначала ответ модератору — логи/ЛС/демка могут идти секундами.
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
-                # Бану ЛС уже отправлено ДО guild.ban — там же кнопка
-                # «Подать апелляцию» (после исключения оно могло бы не дойти)
-                if action !='ban' or not _ban_dm_sent :
-                    try :
-                        dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
-                        _dm_view =None
-                        if action =='ban':
-                            try :
-                                from cogs .appeals import AppealDMView
-                                _dm_view =AppealDMView ()
-                            except Exception as _imp_e :
-                                log .debug (f'[MODPANEL] dm view: {_imp_e}')
-                        await self .send_dm (user ,dm ,view =_dm_view )
-                    except Exception as _dm_e :
-                        log .info (f'[MODPANEL] DM: {_dm_e}')
+                try :
+                    dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
+                    # ЛС о бане — с кнопкой «Подать апелляцию» внизу:
+                    # та же форма, что /апелляция (владелец 2026-09-06)
+                    _dm_view =None
+                    if action =='ban':
+                        try :
+                            from cogs .appeals import AppealDMView
+                            _dm_view =AppealDMView ()
+                        except Exception as _imp_e :
+                            log .debug (f'[MODPANEL] dm view: {_imp_e}')
+                    await self .send_dm (user ,dm ,view =_dm_view )
+                except Exception as _dm_e :
+                    log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :
                     from cogs.logs import send_action_log
                     await send_action_log(
@@ -1301,11 +1285,11 @@ class Moderation (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_join (self ,member ):
-        """Вернулся после разбана — вернуть роли из снапшота, снятого при бане.
+        """Вернулся — вернуть роли из снапшота, если он остался.
 
-        Бан теперь настоящий (владелец 2026-09-07: «просто в бане самого
-        сервера»): при бане бот сохранил роли человека, а когда после
-        разбана он заходит по инвайту — возвращаем их автоматически."""
+        Бан из панели — роль бана (владелец 2026-09-08), роли не снимает.
+        Снапшоты остались от серверных банов (2026-09-07) и старой изоляции:
+        если человек с таким снимком заходит на сервер — возвращаем их."""
         try :
             from services import punish_roles as PR
             ids =PR .take_held_roles (member .guild .id ,member .id )
@@ -1830,8 +1814,8 @@ MODPANEL_ACTIONS = [
     ("mute", "Мут", "Чат, войс или оба — следующим шагом", "mute"),
     ("unmute", "Снять мут", "Чат или войс — следующим шагом", "unmute"),
     ("clear", "Очистка сообщений", "Удалить сообщения в канале", "clear"),
-    ("ban", "Бан", "Исключить с сервера (с апелляцией)", "ban"),
-    ("unban", "Снять бан", "Разбан по ID, ссылка-возврат", "unban"),
+    ("ban", "Бан", "Роль бана: доступ закрыт (с апелляцией)", "ban"),
+    ("unban", "Снять бан", "Снять роль бана (по ID)", "unban"),
 ]
 
 # Эмодзи действий: меню панели живое, а не текстовое

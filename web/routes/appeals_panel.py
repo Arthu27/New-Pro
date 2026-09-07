@@ -223,12 +223,36 @@ def _notify_user(bot, gid, item, accept, unbanned, member_present=False):
         return False
 
 
-def _open_channel_for_claim(bot, gid, item):
+def _post_room_note(bot, gid, text):
+    """Сообщение в комнату апелляции — объявление о ведущем и т.п."""
+    if not bot:
+        return False
+    try:
+        cog = bot.get_cog('Appeals')
+        guild = bot.get_guild(int(gid))
+        if cog is None or guild is None:
+            return False
+
+        async def _do():
+            ch = await cog._appeal_channel(guild)
+            if ch is None:
+                return False
+            await ch.send(text)
+            return True
+
+        return bool(_run_async(_do(), timeout=10))
+    except Exception as _ex:
+        _log.debug('appeals: сообщение в комнату: %s', _ex)
+        return False
+
+
+def _open_channel_for_claim(bot, gid, item, reviewer=''):
     """«Взять в работу» из панели — открыть канал апелляции забаненному.
 
     Тот же маршрут, что у кнопки под карточкой в Discord (AppealView
     ._claim): комнату апелляции делаем видимой участнику — модератор взял
-    дело, человек сразу может диалог (владелец 2026-09-06)."""
+    дело, человек сразу может диалог (владелец 2026-09-06). Плюс объявление
+    в комнату «вас будет обслуживать …» (владелец 2026-09-08)."""
     if not bot:
         return False
     try:
@@ -253,7 +277,20 @@ def _open_channel_for_claim(bot, gid, item):
         # 'opened' — доступ уже виден; 'deferred' — overwrite стоит, канал
         # откроется участнику сразу после разбана (жёсткий бан)
         opened, _ch = await cog._open_appeal_channel(guild, user)
-        return opened in ('opened', 'deferred')
+        ok = opened in ('opened', 'deferred')
+        # Объявление, кто ведёт дело: человек сразу понимает, к кому
+        # обращаться (владелец 2026-09-08: «вас будет обслуживать
+        # вот этот человек»). При deferred сообщение ляжет в комнату
+        # и дождётся возвращения после разбана.
+        if ok and _ch is not None and reviewer:
+            try:
+                await _ch.send(
+                    f"🤝 **Вас будет обслуживать:** {reviewer} — "
+                    f"ваша апелляция у него в работе. Общайтесь здесь.")
+            except Exception as _ann_ex:
+                _log.debug('appeals: объявление в комнату (панель): %s',
+                           _ann_ex)
+        return ok
 
     try:
         return bool(_run_async(_do(), timeout=15))
@@ -759,19 +796,25 @@ def register(ctx):
         if claim and str(claim.get('id')) != uid:
             return jsonify({'success': False,
                             'error': f'Уже в работе у {claim.get("name")}'}), 409
+        import web.app as appmod
         if claim:
             item['claimed_by'] = None
             claimed_by = ''
+            # снятие с работы — честно сказать в комнате, что ведущий ушёл
+            _post_room_note(
+                appmod.bot_instance, gid,
+                f'🌀 {uname} больше не ведёт вашу апелляцию — она снова '
+                f'в общей очереди модерации.')
         else:
             item['claimed_by'] = {'id': uid, 'name': uname,
                                   'at': datetime.now(UTC).isoformat()}
             claimed_by = uname
         _save(gid, state)
         # взяли в работу → канал апелляции открывается забаненному (тот же
-        # маршрут, что кнопка в Discord; владелец 2026-09-06)
-        import web.app as appmod
+        # маршрут, что кнопка в Discord; владелец 2026-09-06) + объявление
+        # «вас будет обслуживать …» (владелец 2026-09-08)
         chan_opened = bool(claimed_by) and _open_channel_for_claim(
-            appmod.bot_instance, gid, item)
+            appmod.bot_instance, gid, item, reviewer=uname)
         _notify(f'Апелляция #{raw_id}: ' +
                 ('в работе у ' + uname if claimed_by else 'снята с работы'))
         return jsonify({'success': True, 'claimed': bool(claimed_by),

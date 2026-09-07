@@ -53,8 +53,9 @@ class _Ch:
 
 
 class _Role:
-    def __init__(s, i):
+    def __init__(s, i, name=None):
         s.id = i
+        s.name = name or f'Роль{i}'
 
 
 class _Voice:
@@ -88,6 +89,13 @@ class _Member:
     async def send(s, embed=None, **kw):
         s.dm = embed
 
+    async def add_roles(s, *roles, reason=None):
+        s.given = list(getattr(s, 'given', [])) + list(roles)
+        s.given_reason = reason
+
+    async def remove_roles(s, *roles, reason=None):
+        s.removed = list(getattr(s, 'removed', [])) + list(roles)
+
 
 class _Guild:
     def __init__(s, i):
@@ -100,7 +108,7 @@ class _Guild:
         s.members = []
         s.channels = [_Ch(300 + k) for k in range(4)]
         s.text_channels = s.channels
-        s.ban_calls = []      # настоящий серверный бан (владелец 2026-09-07)
+        s.ban_role = _Role(606, 'Бан')   # роль бана (владелец 2026-09-08)
 
     def get_channel(s, cid):
         return next((c for c in s.channels if c.id == cid), None)
@@ -108,9 +116,8 @@ class _Guild:
     def get_member(s, uid):
         return next((m for m in s.members if m.id == uid), None)
 
-    async def ban(s, user, reason=None, delete_message_seconds=None, **kw):
-        s.ban_calls.append({'uid': getattr(user, 'id', user), 'reason': reason,
-                            'delete_message_seconds': delete_message_seconds})
+    def get_role(s, rid):
+        return s.ban_role if rid == 606 else None
 
     async def unban(s, user, reason=None):
         s.unban_calls = getattr(s, 'unban_calls', []) + [getattr(user, 'id', user)]
@@ -155,28 +162,35 @@ import datetime as _dt  # noqa: E402
 _left = (target.timed_out_until.replace(tzinfo=None) - _dt.datetime.utcnow()).total_seconds() / 60
 check(115 <= _left <= 125, f'длительность «2ч» ≈ 120 мин ({_left:.0f})')
 
-print('== 2. «Бан» из панели: настоящий серверный бан ==')
+print('== 2. «Бан» из панели: роль бана, каналы не трогаем ==')
 from services import channel_routes as CHR  # noqa: E402
 from services import punish_roles as _PR  # noqa: E402
 
+_PR.set_roles(G, ban=606)
 ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'ban', reason='тест'))
-check(ok and len(guild.ban_calls) == 1,
-      f'бан выполняется даже без канала апелляции — сразу серверный ({text[:70]})')
-check(guild.ban_calls and guild.ban_calls[0]['delete_message_seconds'] == 0,
-      'сообщения НЕ удаляются (delete_message_seconds=0)')
+check(ok and [r.id for r in getattr(target, 'given', [])] == [606],
+      f'бан = выдать роль бана ({text[:70]})')
 closed = sum(1 for c in guild.channels if TID in c.overwrites)
-check(closed == 0, f'изоляция не делается — каналы не закрываются ({closed})')
-check(_PR.take_held_roles(G, TID) == [55, 66],
-      f'роли цели сохранены в снапшот до бана ({_PR.take_held_roles(G, TID)})')
+check(closed == 0, f'каналы бот сам не закрывает ({closed} закрыто)')
+
+# без роли бана — вежливый отказ
+_PR.set_roles(G, ban=0)
+target.given = []
+ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'ban', reason='тест'))
+check(not ok and 'Не выбрана роль бана' in text and 'Роли наказаний' in text,
+      f'без роли — отказ с подсказкой ({text[:70]})')
+check(getattr(target, 'given', []) == [], 'роль при отказе не выдана')
+_PR.set_roles(G, ban=606)
 
 CHR.set_route(G, 'ban_appeal_channel', 301)
-print('== 3. Разбан из панели: настоящий бан снимается ==')
-guild.members = []            # после настоящего бана человека на сервере нет
+print('== 3. Разбан из панели: роль снимается ==')
+target.given = [guild.ban_role]
+guild.members = [target]
+mod.bot._mod = mod          # get_cog('Moderation') для unban-ветки
 ok, text = asyncio.run(mod.apply_panel_action(
-    guild, str(TID), 'unban', reason='одумался'))
-check(ok and TID in getattr(guild, 'unban_calls', []),
-      f'guild.unban вызван, человек может вернуться ({text[:60]})')
-guild.members = [target]        # вернуть цель для следующих секций
+    guild, target, 'unban', reason='одумался'))
+check(ok and getattr(target, 'removed', []) and target.removed[0].id == 606,
+      f'разбан снимает роль бана ({text[:60]})')
 
 print('== 4. vmute не в голосе — по-человечески ==')
 ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'vmute', amount='30м'))
@@ -387,6 +401,9 @@ class _M222:
                                        'ban_members': False,
                                        'manage_messages': False,
                                        'manage_guild': False})()
+
+    async def add_roles(self, *r, reason=None):
+        self.given = list(getattr(self, 'given', [])) + list(r)
 wg.members.append(_M222())
 from services import permission_acl as _PACL_h
 _PACL_h.set_action_rule(777, 'warn', ['555'])
@@ -458,6 +475,7 @@ check(r.status_code == 403 and not r.get_json().get('success') and
 
 # вернули «бан» роли 555 — полный набор и бан выполняется
 PACL.set_action_rule(777, 'ban', ['555'])
+_PR.set_roles(777, ban=606)      # роль бана выбрана — бан работает
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 check(len(d.get('actions', [])) == 9 and d.get('hidden_by_acl') == 0,
@@ -471,6 +489,9 @@ if _other not in [str(getattr(m, 'id', 0)) for m in wg.members]:
         roles = []
         mention = '<@222>'
         display_name = 'Другой'
+
+        async def add_roles(self, *r, reason=None):
+            self.given = list(getattr(self, 'given', [])) + list(r)
 
         class guild_permissions:
             administrator = False

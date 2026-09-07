@@ -279,5 +279,115 @@ check('AppealDMView' in m_src and 'send_dm' in m_src,
 check('«Подать апелляцию»' in e_src and '/апелляция' in e_src,
       'текст ЛС о бане зовёт нажать кнопку (и команду оставили)')
 
+
+print('== 3. «Взять в работу» → в комнату: «Вас будет обслуживать» ==')
+# Владелец 2026-09-08: модератор взял апелляцию в работу — в комнату
+# приходит сообщение, кто будет вести дело. Снятие с работы — тоже
+# честно сообщается (человек не ждёт ушедшего модера).
+from services import permission_acl as PACL  # noqa: E402
+
+PACL.set_action_rule(GID, 'ban', ['9001'])
+
+mod_user = _User(MOD, 'Лина.Мод')
+mod_user.roles = [types.SimpleNamespace(id=9001)]
+
+
+async def _fu(uid):
+    return vasya
+
+
+cog.bot.fetch_user = _fu
+
+
+class _Resp:
+    async def edit_message(s, **kw):
+        pass
+
+
+class _Fup:
+    def __init__(s):
+        s.sent = []
+
+    async def send(s, *a, **kw):
+        s.sent.append(kw)
+
+
+class _Inter:
+    def __init__(s, user):
+        s.user = user
+        s.message = types.SimpleNamespace(embeds=[])
+        s.response = _Resp()
+        s.followup = _Fup()
+
+
+room.sent.clear()
+view = A.AppealView(cog, GID, item['id'])
+inter = _Inter(mod_user)
+asyncio.new_event_loop().run_until_complete(view._claim(inter))
+ann = [m for m in room.sent
+       if 'Вас будет обслуживать' in str(m.get('content') or '')]
+check(len(ann) == 1, 'в комнату пришло «Вас будет обслуживать: …»',
+      f'{len(ann)} сообщений')
+check(bool(ann) and mod_user.mention in str(ann[0].get('content') or ''),
+      'в объявлении — упоминание модератора')
+_st = cog._load(GID)
+_it = A.get_appeal(_st, item['id'])
+check(_it.get('claimed_by', {}).get('id') == str(MOD),
+      'апелляция числится в работе у модера')
+# доступ к комнате включился подавшему (overwrite по ID)
+_room_ows = [u for u, _o in room.overwrites if int(u) == BANNED]
+check(bool(_room_ows), 'overwrite доступа к комнате стоит для подавшего')
+
+# снятие с работы — честное сообщение в комнату
+room.sent.clear()
+inter2 = _Inter(mod_user)
+asyncio.new_event_loop().run_until_complete(view._claim(inter2))
+gone = [m for m in room.sent if 'больше не ведёт' in str(m.get('content') or '')]
+check(len(gone) == 1, 'снятие с работы — сообщение в комнату')
+_st2 = cog._load(GID)
+_it2 = A.get_appeal(_st2, item['id'])
+check(not _it2.get('claimed_by'), 'очередь снова общая')
+
+
+print('== 4. «Взять в работу» из веб-панели — объявление тоже уходит ==')
+import threading
+import asyncio as _aio
+import web.app as _wapp
+from web.routes import appeals_panel as WP
+
+_loop = _aio.new_event_loop()
+threading.Thread(target=_loop.run_forever, daemon=True).start()
+
+
+class _BotPanel(_Bot):
+    loop = _loop
+
+    def get_cog(s, name):
+        return cog if name == 'Appeals' else None
+
+    async def fetch_user(s, uid):
+        return vasya
+
+
+_fake = _BotPanel(guild)
+_wapp.bot_instance = _fake
+room.sent.clear()
+_ok = WP._open_channel_for_claim(_fake, GID, item, reviewer='Лина.Мод')
+check(_ok, 'комната открыта подавшему из панели')
+_ann = [m for m in room.sent
+        if 'Вас будет обслуживать' in str(m.get('content') or '')]
+check(len(_ann) == 1 and 'Лина.Мод' in str(_ann[0].get('content') or ''),
+      'объявление из панели: «Вас будет обслуживать: Лина.Мод»')
+
+# снятие с работы из панели — честное сообщение в комнату
+room.sent.clear()
+_ok2 = WP._post_room_note(
+    _fake, GID, '🌀 Лина.Мод больше не ведёт вашу апелляцию — она снова '
+                'в общей очереди модерации.')
+check(_ok2 and any('больше не ведёт' in str(m.get('content') or '')
+                   for m in room.sent),
+      'снятие с работы из панели — сообщение в комнату')
+_wapp.bot_instance = None
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

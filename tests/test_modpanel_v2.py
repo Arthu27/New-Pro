@@ -125,8 +125,9 @@ from cogs.moderation import actions_for_member, MODPANEL_ACTIONS  # noqa: E402
 
 
 class _Role:
-    def __init__(self, i):
+    def __init__(self, i, name=None):
         self.id = i
+        self.name = name or f'Роль{i}'
 
 
 class _Guild:
@@ -180,7 +181,7 @@ check(m_free == [], 'роль без настроек и без разрешен
 save_action_acl(G, {})
 _os.environ.pop('OWNER_ID', None)
 
-print('== 4. «Бан» живьём: настоящий серверный бан, без изоляции ==')
+print('== 4. «Бан» живьём: роль бана, каналы не трогаем ==')
 
 
 class _Ch:
@@ -204,7 +205,11 @@ class _Target:
     display_name = 'BadGuy'
     bot = False
     mention = f'<@{TID}>'
-    roles = [_Role(7)]           # роль для снапшота при бане
+    roles = [_Role(7)]
+    given = []                   # сюда падает выданная роль бана
+
+    async def add_roles(self, *roles, reason=None):
+        self.given.extend(roles)
 
     def __str__(self):
         return 'BadGuy'
@@ -216,19 +221,18 @@ class _GuildBig(_Guild):
         self.channels = [_Ch(100 + k) for k in range(5)]
         self.text_channels = self.channels
         self.members = [_Target()]
-        self.ban_calls = []          # настоящий серверный бан (владелец 2026-09-07)
         self.default_role = _Role(1)
+        self.ban_role = _Role(606, 'Бан')   # роль бана (владелец 2026-09-08)
 
     def get_channel(self, cid):
         return next((c for c in self.channels if c.id == cid), None)
 
     def get_role(self, rid):
-        return _Role(rid) if rid != 1 else self.default_role
-
-    async def ban(self, user, reason=None, delete_message_seconds=None, **kw):
-        self.ban_calls.append({'uid': getattr(user, 'id', user),
-                               'reason': reason,
-                               'delete_message_seconds': delete_message_seconds})
+        if rid == 1:
+            return self.default_role
+        if rid == 606:
+            return self.ban_role
+        return _Role(rid)
 
 
 SENT = {}
@@ -294,30 +298,27 @@ async def _run(action, amount, proof='https://proof'):
 
 from services import punish_roles as _PR  # noqa: E402
 
+# роль бана для тестового сервера
+_PR.set_roles(G, ban=606)
+_tg = gb.members[0]
 ok, txt = asyncio.run(_run('ban', None))
-check(ok is True and len(gb.ban_calls) == 1,
-      f'«бан» выполняется даже без настроенного канала — сразу серверный бан '
-      f'({len(gb.ban_calls)} вызовов)')
-_b = gb.ban_calls[0] if gb.ban_calls else {}
-check(_b.get('delete_message_seconds') == 0,
-      f'сообщения НЕ удаляются (delete_message_seconds=0) → {_b.get("delete_message_seconds")}')
-check('списке банов' in (txt or ''), f'модератору прямо сказано: в списке банов ({txt[:60]}…)')
+check(ok is True and [r.id for r in _tg.given] == [606],
+      f'«бан» выдаёт роль бана, каналы не трогает → {[r.id for r in _tg.given]}')
+check('роль бана' in (txt or '') and 'Апелляция' in (txt or ''),
+      f'модератору сказано: роль бана + апелляция в ЛС ({txt[:60]}…)')
 closed = sum(1 for c in gb.channels if TID in c.overwrites)
-check(closed == 0, f'изоляция больше не делается — ни один канал не закрывается ({closed})')
-_held = _PR.take_held_roles(G, TID)
-check(_held == [7], f'роли цели сохранены в снапшот до бана → {_held}')
+check(closed == 0, f'каналы бот не закрывает сам ({closed} закрыто)')
+check('доступ закрыт' in (txt or ''), 'в сообщении: доступ закрыт самой ролью')
 
-CHR.set_route(G, 'ban_appeal_channel', 102)     # канал №102 — уже существует
-gb.channels = [_Ch(100), _Ch(101), _Ch(102), _Ch(103), _Ch(104)]
-gb.ban_calls.clear()
+# без роли бана — вежливый отказ с подсказкой
+_PR.set_roles(G, ban=0)
+_tg.given.clear()
 _inter = _Inter(_User(43, ()), gb)      # другой модератор: лимит штаба не мешает
 ok, txt = asyncio.run(_run('ban', None))
-check(ok in (True, 'API') and len(gb.ban_calls) == 1,
-      'с настроенным каналом «бан» так же выполняется серверным баном',
-      f'ok={ok} txt={str(txt)[:120]} calls={len(gb.ban_calls)}')
-iso_ch = gb.get_channel(102)
-check(TID not in iso_ch.overwrites,
-      'канал апелляции не открывается при бане — только после подачи заявки в ЛС')
+check(ok is True and 'Не выбрана роль бана' in (txt or '') and 'Роли наказаний' in (txt or ''),
+      f'без роли — отказ с подсказкой, где настроить ({str(txt)[:70]}…)')
+check([r.id for r in _tg.given] == [], 'роль при отказе не выдаётся')
+_PR.set_roles(G, ban=606)
 
 print('== 5. /апелляция — слеш-команда, ЛС ==')
 import cogs.appeals as AP  # noqa: E402
