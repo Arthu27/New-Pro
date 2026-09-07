@@ -240,7 +240,7 @@ function $(id) { return document.getElementById(id); }
   }
 
   function cancelAction(type, userId) {
-    var endpoint = type === 'mut' ? 'unmut' : type === 'ban' ? 'unban' : 'unkick';
+    var endpoint = type === 'mut' ? 'unmute' : type === 'ban' ? 'unban' : 'unkick';
     window.confirmAction('Снять досрочно?', 'Мера завершится сейчас, запись останется в журнале.', function () {
       fetch('/api/temp-mod/' + endpoint, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

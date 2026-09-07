@@ -7,35 +7,26 @@
   <div class="page-head-copy">
     <div class="eyebrow"> Модерация </div>
     <h1>Журнал модерации</h1>
-    <p class="lead">Единая лента действий команды: каждый шаг оставляет проверяемый след.</p>
+    <p class="lead">Наказания одним списком: кто выдал, кому, за что и на какой срок.</p>
   </div>
   <div class="page-head-actions">
-    <select id="lt-channel" aria-label="Канал для таблицы логов" style="background:var(--surface-3);color:var(--text);border:1px solid color-mix(in srgb, var(--text) 20%, transparent);border-radius:8px;padding:7px 10px;font-size:12.5px;cursor:pointer;font-family:inherit;max-width:210px;"></select>
-    <button type="button" class="btn btn-primary" id="logs-table-send" title="Отправить графическую таблицу логов в выбранный канал Discord"><i class="fas fa-table"></i> Таблица в Discord</button>
-    <a class="btn" href="/logs/export?days=7"><i class="fas fa-file-arrow-down"></i> 7 дней</a>
-    <a class="btn" href="/logs/export?days=30"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
+    <button type="button" class="btn btn-primary" id="logs-table-send" title="Отправить графическую таблицу логов в канал Discord"><i class="fas fa-table"></i> Таблица в Discord</button>
+    <a class="btn" href="/logs/export?days=7" title="Выгрузить журнал за 7 дней"><i class="fas fa-file-arrow-down"></i> 7 дней</a>
+    <a class="btn" href="/logs/export?days=30" title="Выгрузить журнал за 30 дней"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
   </div>
 </div>
 <script>
 /* Точка отправки графической таблицы логов (жалоба владельца 2026-09-05:
-   «таблица опять не отправляется» — раньше отправить таблицу было нечем). */
+   «таблица опять не отправляется»; 2026-09-06: канал уже уточкён —
+   пикер канала не нужен, таблица идёт в канал вызовов/системный). */
 (function () {
-  var sel = document.getElementById('lt-channel');
   var btn = document.getElementById('logs-table-send');
-  if (!sel || !btn) return;
-  fetch('/api/channels').then(function (r) { return r.json(); }).then(function (list) {
-    if (!Array.isArray(list)) list = (list && list.channels) || [];
-    list = list.filter(function (c) { return c && !c.hidden && c.id && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5 || !c.type); });
-    sel.innerHTML = '<option value="">— выбери канал —</option>' + list.map(function (c) {
-      return '<option value="' + (c.id || '') + '">' + (c.name ? '#' + c.name : ('канал ' + (c.id || '?'))) + '</option>';
-    }).join('');
-  }).catch(function () { sel.innerHTML = '<option value="">каналы недоступны</option>'; });
+  if (!btn) return;
   btn.addEventListener('click', function () {
-    if (!sel.value) { if (window.showToast) window.showToast('Сначала выбери канал для таблицы', false); return; }
     btn.disabled = true;
     fetch('/api/logs/table/send', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channel_id: sel.value })
+      body: JSON.stringify({})
     }).then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false;
       if (window.showToast) window.showToast(d.success ? ('Таблица отправлена в #' + (d.channel || 'канал')) : (d.error || 'Не получилось отправить'), !!d.success);
@@ -44,57 +35,208 @@
 })();
 </script>
 
+<style>
+/* ── Журнал модерации: компактные графики + лента карточек ── */
+[hidden] { display: none !important; }
+.jl-charts { margin-bottom: 14px; }
+.jl-charts .panel { margin-bottom: 0; }
+.jl-charts .panel-head { padding: 12px 16px; }
+.jl-charts .panel-body { padding: 10px 16px 12px; }
+.jl-charts h2 { font-size: 13.5px; }
+.jl-charts .sub { font-size: 11px; }
+
+/* выпуск «Таблица в Discord»: одним щелчком в канал вызовов/системный —
+   канал уточнён в панели, пикер не нужен (2026-09-06) */
+
+.jl-view-toggle { display: inline-flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 10px; padding: 3px; }
+.jl-view-toggle button {
+  border: none; background: transparent; color: var(--text-3);
+  font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px;
+  cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap;
+}
+.jl-view-toggle button.active { background: var(--ac); color: #fff; box-shadow: 0 3px 10px -3px var(--ac-glow); }
+.jl-shape button { padding: 5px 8px; }
+.jl-shape button i { font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .jl-view-toggle button { transition: none; } }
+
+/* ── Лента записей ── */
+.jl-feed { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 14px; }
+.jl-day {
+  display: flex; align-items: center; gap: 10px; margin: 10px 2px 2px;
+  color: var(--text-3); font-size: 10.5px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .7px;
+}
+.jl-day:first-child { margin-top: 0; }
+.jl-day::before, .jl-day::after { content: ''; height: 1px; background: var(--line); flex: 1; }
+
+.jl-card {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 11px 14px 11px 13px;
+  position: relative; overflow: hidden;
+  transition: border-color .15s, box-shadow .15s;
+}
+.jl-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--tone, var(--text-4));
+}
+.jl-card:hover {
+  border-color: color-mix(in srgb, var(--tone, var(--ac)) 38%, var(--line));
+  box-shadow: var(--shadow-2);
+}
+@media (prefers-reduced-motion: reduce) { .jl-card { transition: none; } }
+
+.jl-cico {
+  width: 38px; height: 38px; border-radius: 10px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--tone, var(--text-2));
+  background: var(--tone-soft, var(--surface-3));
+  margin-top: 1px;
+}
+.jl-cbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.jl-ctop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.jl-ctype { font-weight: 800; font-size: 13px; color: var(--text); }
+.jl-dur {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 700; color: var(--text-3);
+  background: var(--surface-2); border: 1px solid var(--line);
+  padding: 1px 7px; border-radius: 99px; white-space: nowrap;
+}
+.jl-dur i { font-size: 8.5px; }
+
+.jl-cwho { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
+.jl-ava {
+  width: 22px; height: 22px; border-radius: 7px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff;
+}
+.jl-cname {
+  font-weight: 700; font-size: 12.5px; color: var(--text);
+  max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.jl-from { color: var(--text-4); font-size: 11px; flex: none; }
+.jl-cmod {
+  color: var(--text-3); font-size: 12px;
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0;
+}
+.jl-cmod i { font-size: 10px; color: var(--text-4); }
+
+.jl-reason {
+  margin-top: 1px; padding: 6px 10px;
+  border-left: 2px solid color-mix(in srgb, var(--tone, var(--text-4)) 45%, transparent);
+  background: var(--surface-2);
+  border-radius: 0 8px 8px 0;
+  color: var(--text-2); font-size: 12px; line-height: 1.45;
+  max-width: 560px; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.jl-cmeta { text-align: right; flex: none; display: flex; flex-direction: column; gap: 2px; padding-left: 6px; }
+.jl-cmeta b { font-size: 12.5px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.jl-cmeta span { font-size: 10.5px; color: var(--text-4); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* имя не известно — в записи только голый ID: показываем аккуратным
+   моноширинным чипом, а не 18-значным числом как будто это ник */
+.id-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px; font-weight: 600; color: var(--text-3);
+  background: var(--surface-3); border: 1px solid var(--line);
+  border-radius: 6px; padding: 1px 7px; letter-spacing: .3px;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.id-chip::before { content: 'ID'; font-size: 9px; font-weight: 800; color: var(--text-4); letter-spacing: .5px; }
+
+/* компактный режим — та же лента, но плотнее */
+body.dense .jl-feed { gap: 5px; padding: 8px 10px 10px; }
+body.dense .jl-card { padding: 7px 12px 7px 11px; border-radius: 10px; }
+body.dense .jl-cico { width: 30px; height: 30px; border-radius: 8px; font-size: 12px; }
+body.dense .jl-reason { -webkit-line-clamp: 1; padding: 4px 8px; }
+body.dense .jl-cbody { gap: 3px; }
+
+/* таблица (запасной вид) — прежние стили */
+.jl-act { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; min-width: 92px; }
+.jl-time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.jl-reason.tbl {
+  max-width: 380px; white-space: normal; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.35;
+  border: none; background: none; padding: 0; border-radius: 0;
+}
+
+@media (max-width: 640px) {
+  .jl-card { padding: 10px 10px 10px 11px; gap: 9px; }
+  .jl-cname { max-width: 150px; }
+  .jl-reason { max-width: none; }
+  .jl-cmeta { padding-left: 2px; }
+}
+</style>
+
 <div class="kpi-row">
-  <div class="kpi"><div class="kpi-icon"><i class="fas fa-infinity"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Всего событий</div></div></div>
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-gavel"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label" id="stat-total-label">Наказаний</div></div></div>
   <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-bans">—</div><div class="kpi-label">Баны</div></div></div>
-  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-kicks">—</div><div class="kpi-label">Кики</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-volume-xmark"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-muts">—</div><div class="kpi-label">Мьюты</div></div></div>
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-kicks">—</div><div class="kpi-label">Кики</div></div></div>
   <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-warns">—</div><div class="kpi-label">Варны</div></div></div>
-  <div class="kpi"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-muts">—</div><div class="kpi-label">Мьюты</div></div></div>
 </div>
 
-<div class="grid-2" style="align-items:start">
-<div>
-  <div class="panel" style="margin-bottom:14px">
+<div class="grid-2 jl-charts">
+  <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-chart-simple"></i> Типы действий</h2>
-      <div class="sub">Распределение событий в журнале.</div></div></div>
+      <div class="sub">Распределение по текущему виду журнала.</div></div></div>
     <div class="panel-body" id="logs-types"><div class="sk-line" style="height:12px"></div></div>
   </div>
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-fire"></i> Часы активности</h2>
-      <div class="sub">Распределение событий по часам.</div></div></div>
+      <div class="sub">Когда происходят события.</div></div></div>
     <div class="panel-body" id="logs-heat"><div class="sk-line" style="height:12px"></div></div>
   </div>
 </div>
 
 <div class="panel">
   <div class="toolbar">
-    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
-      <select id="guild-filter"><option value="">Все серверы</option></select>
-    </label>
+    <div class="jl-view-toggle" role="group" aria-label="Что показывать в журнале">
+      <button type="button" id="jl-view-pun" class="active">Только наказания</button>
+      <button type="button" id="jl-view-all">Все события</button>
+    </div>
     <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
       <input type="search" id="search" placeholder="Участник / причина / действие" aria-label="Поиск по журналу">
     </label>
     <span class="spacer"></span>
     <span class="fresh-stamp" id="logs-stamp"></span>
     <button type="button" class="btn" id="logs-pause" title="Пауза live"></button>
-    <button type="button" class="btn" id="logs-density" title="Плотность таблицы"></button>
+    <button type="button" class="btn" id="logs-density" title="Плотность: ленты и таблицы"></button>
+    <div class="jl-view-toggle jl-shape" role="group" aria-label="Вид журнала">
+      <button type="button" id="jl-shape-feed" class="active" title="Лента — красивые карточки"><i class="fas fa-list-ul"></i></button>
+      <button type="button" id="jl-shape-table" title="Таблица — компактные строки"><i class="fas fa-table"></i></button>
+    </div>
     <button type="button" class="btn" id="logs-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
     <span class="badge neutral" id="logs-count">0 событий</span>
   </div>
   <div class="toolbar" style="border-top:1px solid var(--line)">
     <div class="chip-row" id="action-chips"></div>
     <span class="spacer"></span>
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
+      <select id="guild-filter"><option value="">Все серверы</option></select>
+    </label>
     <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Модератор</span>
       <select id="mod-filter"><option value="">Все модераторы</option></select>
     </label>
   </div>
-  <div class="table-wrap" style="min-height:120px">
+
+  <div class="jl-feed" id="logs-feed">
+    <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div>
+  </div>
+
+  <div class="table-wrap" id="logs-table-wrap" hidden style="min-height:120px">
     <table class="data-table" data-sortable>
-      <thead><tr><th class="col-sel"><input type="checkbox" id="sel-all" aria-label="Выбрать все строки"></th><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
-      <tbody id="logs-body"><tr><td colspan="6"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div></td></tr></tbody>
+      <thead><tr><th class="sortable">Действие</th><th class="sortable">Участник</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
+      <tbody id="logs-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div></td></tr></tbody>
     </table>
   </div>
-</div>
+
+  <div id="logs-more" hidden></div>
 </div>
 
 <script>
@@ -107,16 +249,105 @@
     try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
     catch (e) { return '—'; }
   }
+  function fmtFull(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+    catch (e) { return ''; }
+  }
+  /* срок мута в минутах → «2 ч 30 мин» */
+  function fmtDur(min) {
+    min = Math.max(0, Number(min) || 0);
+    if (!min) return '';
+    var d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60;
+    var out = [];
+    if (d) out.push(d + ' д');
+    if (h) out.push(h + ' ч');
+    if (m || !out.length) out.push(m + ' мин');
+    return out.join(' ');
+  }
+  /* «только что» / «5 мин назад» / «2 ч назад» — живое время карточки */
+  function relTime(iso) {
+    try {
+      var t = new Date(iso).getTime();
+      if (isNaN(t)) return '';
+      var d = Date.now() - t;
+      if (d < 45e3) return 'только что';
+      if (d < 3600e3) return Math.max(1, Math.round(d / 60e3)) + ' мин назад';
+      if (d < 86400e3) return Math.round(d / 3600e3) + ' ч назад';
+      if (d < 172800e3) return 'вчера';
+      if (d < 604800e3) return Math.round(d / 86400e3) + ' дн назад';
+    } catch (e) { /* метка без времени */ }
+    return '';
+  }
+  var MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  function dayKey(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? '' : (d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate());
+  }
+  function dayLabel(iso) {
+    var d = new Date(iso), now = new Date();
+    if (isNaN(d)) return '';
+    var diff = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400e3);
+    if (diff === 0) return 'Сегодня';
+    if (diff === 1) return 'Вчера';
+    return d.getDate() + ' ' + MONTHS_RU[d.getMonth()] + (d.getFullYear() !== now.getFullYear() ? ' ' + d.getFullYear() : '');
+  }
+  /* монограмма участника: цвет стабильный, от имени */
+  function initialOf(name) {
+    var s = String(name || '').trim();
+    return s ? s[0].toUpperCase() : '?';
+  }
+  function hueOf(name) {
+    var s = String(name || ''), h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+    return h;
+  }
+  /* голый снежок вместо имени: 15–25 цифр — Discord ID, не ник */
+  function isRawId(s) { return /^\d{15,25}$/.test(String(s == null ? '' : s).trim()); }
+  /* имя участника: ник — жирным, голый ID — моноширинным чипом «ID …» */
+  function whoCell(who, H) {
+    who = String(who == null ? '' : who);
+    if (isRawId(who)) {
+      return '<span class="id-chip" title="Имя неизвестно — в записи только ID">' + H(who) + '</span>';
+    }
+    return '<b class="jl-cname" title="' + H(who) + '">' + H(who) + '</b>';
+  }
 
   var allLogs = [];
   var TONE = {
     ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral',
     timeout: 'neutral', unban: 'ok', unmute: 'ok', lock: 'security', unlock: 'ok'
   };
+  /* тон карточки ленты: класс задаёт --tone/--tone-soft (левый барьер, плитка) */
+  var TONE_CLASS = {
+    ban: 'tone-critical', kick: 'tone-warning', warn: 'tone-warning',
+    mute: 'tone-security', timeout: 'tone-security',
+    unban: 'tone-ok', unmute: 'tone-ok', unlock: 'tone-ok',
+    lock: 'tone-analytics'
+  };
+  var KIND_ICON = {
+    ban: 'fa-gavel', kick: 'fa-door-open', warn: 'fa-triangle-exclamation',
+    mute: 'fa-volume-xmark', timeout: 'fa-hourglass-half',
+    unban: 'fa-lock-open', unmute: 'fa-volume-high',
+    lock: 'fa-lock', unlock: 'fa-lock-open'
+  };
   var KIND_LABEL = {
-    ban: 'Бан', kick: 'Кик', warn: 'Варн', mute: 'Мут', timeout: 'Таймаут',
+    ban: 'Бан', kick: 'Кик', warn: 'Варн', mute: 'Мьют', timeout: 'Таймаут',
     unban: 'Разбан', unmute: 'Размут', lock: 'Лок', unlock: 'Анлок'
   };
+  /* только наказания — вид журнала по умолчанию (жалоба владельца:
+     «сделай не все действия» — входы/роли/каналы журналу не нужны) */
+  var PUNISH_KINDS = { ban: 1, unban: 1, kick: 1, warn: 1, mute: 1, timeout: 1, unmute: 1 };
+  var viewMode = 'punish';
+  var shapeMode = 'feed';   /* лента — красивый вид по умолчанию, таблица — запасной */
+  try {
+    var saved = localStorage.getItem('jlViewMode');
+    if (saved === 'all' || saved === 'punish') viewMode = saved;
+    var savedShape = localStorage.getItem('jlShape');
+    if (savedShape === 'feed' || savedShape === 'table') shapeMode = savedShape;
+  } catch (e) { /* приватный режим — просто дефолт */ }
+
   function actionKind(a) {
     a = String(a || '').toLowerCase();
     if (/разбан|unban|бан снят|снят бан/.test(a)) return 'unban';
@@ -150,14 +381,16 @@
   }
 
   var _logsFp = '';
+  var _logsLoaded = false;
   async function loadLogs() {
     var raw = [];
     try {
       raw = await window.fetchCachedJSON('/api/logs');
     } catch (e) { raw = []; }
     if (!Array.isArray(raw)) raw = [];
+    _logsLoaded = true;
     /* данные не изменились — не перерисовываем (стабильность, без мерцания) */
-    var fp = raw.length + ':' + (raw.length ? ((raw[0].timestamp || '') + '|' + (raw[0].action || '')) : '');
+    var fp = raw.length + ':' + (raw.length ? ((raw[0].timestamp || '') + '|' + (raw[0].action || '') + '|' + (raw[0].mod_name || '')) : '');
     if (fp === _logsFp) return;
     _logsFp = fp;
     allLogs = raw;
@@ -167,23 +400,30 @@
 
   function updateFilters() { buildFilters(); }
 
+  function baseList() {
+    if (viewMode === 'all') return allLogs;
+    return allLogs.filter(function (l) { return !!PUNISH_KINDS[actionKind(l.action)]; });
+  }
+
   function updateStats() {
+    var base = baseList();
     var bans = 0, kicks = 0, warns = 0, muts = 0;
-    allLogs.forEach(function (l) {
+    base.forEach(function (l) {
       var k = actionKind(l.action);
       if (k === 'ban') bans++;
       else if (k === 'kick') kicks++;
       else if (k === 'warn') warns++;
       else if (k === 'mute' || k === 'timeout') muts++;
     });
-    $('stat-total').textContent = allLogs.length;
+    $('stat-total').textContent = base.length;
+    $('stat-total-label').textContent = viewMode === 'all' ? 'Событий' : 'Наказаний';
     $('stat-bans').textContent = bans;
     $('stat-kicks').textContent = kicks;
     $('stat-warns').textContent = warns;
     $('stat-muts').textContent = muts;
     if (window.HakumoChart) {
       var counts = {};
-      allLogs.forEach(function (l) {
+      base.forEach(function (l) {
         var k = actionKind(l.action);
         counts[k] = (counts[k] || 0) + 1;
       });
@@ -195,7 +435,7 @@
       window.HakumoChart.vbars($('logs-types'), items);
       if (window.HakumoHeat) {
         var hours = new Array(24).fill(0);
-        allLogs.forEach(function (l) {
+        base.forEach(function (l) {
           try {
             var h = new Date(l.timestamp).getHours();
             if (!isNaN(h)) hours[h]++;
@@ -206,36 +446,116 @@
     }
   }
 
+  /* чип срока мута («насколько дали») — общий для карточки и таблицы */
+  function durChip(l) {
+    var d = Number(l.duration) || 0;
+    if (!d) return '';
+    var title = '';
+    var until = l.until ? new Date(l.until) : null;
+    if (until && !isNaN(until.getTime())) {
+      var u = '';
+      try { u = until.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+      title = until.getTime() > Date.now() ? ('Мут до ' + u) : 'Мут истёк';
+    }
+    return '<span class="jl-dur"' + (title ? ' title="' + esc(title) + '"' : '') + '><i class="fas fa-clock"></i> ' + esc(fmtDur(d)) + '</span>';
+  }
+
+  /* ── карточка ленты ── */
+  function feedCard(l, k, H) {
+    var who = l.user_name || l.channel_name || l.role_name || l.user_id || '—';
+    var whoRaw = isRawId(who);
+    var mod = l.mod_name || l.mod_id || '';
+    var t = new Date(l.timestamp || '');
+    var hhmm = isNaN(t) ? '—' : t.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    var sub = relTime(l.timestamp) || (isNaN(t) ? '' : t.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }));
+    return '<article class="jl-card ' + (TONE_CLASS[k] || 'tone-analytics') + '">' +
+      '<div class="jl-cico"><i class="fas ' + (KIND_ICON[k] || 'fa-circle-info') + '"></i></div>' +
+      '<div class="jl-cbody">' +
+        '<div class="jl-ctop"><span class="jl-ctype">' + H(l.action || '?') + '</span>' + durChip(l) + '</div>' +
+        '<div class="jl-cwho">' +
+          '<span class="jl-ava" style="background:hsl(' + hueOf(who) + ' 62% 52%)" aria-hidden="true">' + (whoRaw ? '#' : esc(initialOf(who))) + '</span>' +
+          whoCell(who, H) +
+          (mod
+            ? '<span class="jl-from" title="Наказание выдал"><i class="fas fa-arrow-left"></i></span>' +
+              '<span class="jl-cmod"><i class="fas fa-user-shield"></i>' + H(mod) + '</span>'
+            : '') +
+        '</div>' +
+        (l.reason ? '<div class="jl-reason" title="' + esc(l.reason) + '">' + H(l.reason) + '</div>' : '') +
+      '</div>' +
+      '<div class="jl-cmeta" title="' + esc(fmtFull(l.timestamp)) + '"><b>' + esc(hhmm) + '</b><span>' + esc(sub) + '</span></div>' +
+    '</article>';
+  }
+
+  /* лента: карточки по дням — «Сегодня», «Вчера», дата */
+  function renderFeed(list, H) {
+    var out = [], lastDay = null;
+    list.forEach(function (l) {
+      var k = actionKind(l.action);
+      var dk = dayKey(l.timestamp);
+      if (dk && dk !== lastDay) {
+        lastDay = dk;
+        out.push('<div class="jl-day" role="separator"><span>' + esc(dayLabel(l.timestamp)) + '</span></div>');
+      }
+      out.push(feedCard(l, k, H));
+    });
+    return out.join('');
+  }
+
+  /* ── строка таблицы (запасной вид) ── */
+  function actCell(l, k, H) {
+    return '<td data-sort="' + esc(k) + '"><span class="jl-act">' +
+      '<span class="badge ' + (TONE[k] || 'neutral') + '">' + H(l.action || '?') + '</span>' + durChip(l) +
+      '</span></td>';
+  }
+  function tableRow(l, k, H) {
+    var who = l.user_name || l.channel_name || l.role_name || l.user_id || '—';
+    return '<tr>' +
+      actCell(l, k, H) +
+      '<td>' + whoCell(who, H) + '</td>' +
+      '<td>' + H(l.mod_name || l.mod_id || '—') + '</td>' +
+      '<td class="jl-reason tbl" title="' + esc(l.reason || '') + '">' + H(l.reason || '—') + '</td>' +
+      '<td data-sort="' + esc(l.timestamp || '') + '" class="muted jl-time" title="' + esc(fmtFull(l.timestamp)) + '">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
+  }
+
   function render() {
     var filtered = currentFiltered();
     $('logs-count').textContent = filtered.length + ' из ' + allLogs.length;
-    var body = $('logs-body');
-    if (!filtered.length) {
-      body.innerHTML = '<tr><td colspan="6"><div class="empty"><i class="fas fa-inbox"></i><span>Логи не найдены</span>' +
-        '<span class="empty-hint-chip" data-focus="#search"><i class="fas fa-keyboard"></i> Enter — поиск</span></div></td></tr>';
-      return;
-    }
+    var shown = logsShown();
+    var slice = filtered.slice(0, shown);
     var q = ($('search').value || '');
     var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
-    var shown = logsShown();
-    body.innerHTML = filtered.slice(0, shown).map(function (l) {
-      var k = actionKind(l.action);
-      var key = rowKey(l);
-      var on = !!selected[key];
-      return '<tr class="' + (on ? 'sel' : '') + '" data-row-key="' + esc(key) + '">' +
-        '<td class="col-sel"><input type="checkbox" aria-label="Выбрать строку"' + (on ? ' checked' : '') + '></td>' +
-        '<td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[k] || 'neutral') + '">' + H(l.action || '?') + '</span></td>' +
-        '<td>' + H(l.user_name || l.channel_name || l.role_name || l.user_id || '—') + '</td>' +
-        '<td>' + H(l.mod_name || l.mod_id || '—') + '</td>' +
-        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + H(l.reason || '—') + '</td>' +
-        '<td data-sort="' + esc(l.timestamp || '') + '" class="muted">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
+
+    /* лента — основной вид */
+    $('logs-feed').innerHTML = slice.length ? renderFeed(slice, H) :
+      '<div class="empty">' +
+        (!_logsLoaded
+          ? '<i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span>'
+          : '<i class="fas fa-inbox"></i><span>' +
+            (viewMode === 'punish' ? 'Наказаний не найдено' : 'Событий не найдено') + '</span>' +
+            '<span class="empty-hint-chip" data-focus="#search"><i class="fas fa-keyboard"></i> Enter — поиск</span>') +
+      '</div>';
+
+    /* таблица — компактный вид */
+    $('logs-body').innerHTML = slice.map(function (l) {
+      return tableRow(l, actionKind(l.action), H);
     }).join('');
+
+    /* активный вид */
+    var feedOn = shapeMode === 'feed';
+    $('logs-feed').hidden = !feedOn;
+    $('logs-table-wrap').hidden = feedOn;
+
+    /* «показать ещё» — общий для обоих видов */
+    var more = $('logs-more');
     if (filtered.length > shown) {
-      body.innerHTML += '<tr><td colspan="6"><button type="button" class="load-more-btn" id="logsMore">' +
+      more.hidden = false;
+      more.innerHTML = '<button type="button" class="load-more-btn" id="logsMore">' +
         '<i class="fas fa-chevron-down"></i> Показать ещё ' + Math.min(100, filtered.length - shown) +
-        ' из ' + (filtered.length - shown) + '</button></td></tr>';
+        ' из ' + (filtered.length - shown) + '</button>';
+    } else {
+      more.hidden = true;
+      more.innerHTML = '';
     }
-    paintSelectAll();
     if (window.attachTableSort && !window._logsSortReady) {
       window._logsSortReady = true;
       window.attachTableSort(document.querySelector('#logs-body').closest('table'));
@@ -245,38 +565,15 @@
   var LOGS_PAGE = 100;
   function logsShown() { return LOGS_PAGE; }
 
-  function selectedCount() {
-    return Object.keys(selected).filter(function (k) { return selected[k]; }).length;
-  }
-
-  function paintSelectAll() {
-    var all = $('sel-all');
-    if (!all) return;
-    var rows = document.querySelectorAll('#logs-body tr[data-row-key]');
-    var checked = 0;
-    rows.forEach(function (r) { if (selected[r.dataset.rowKey]) checked++; });
-    all.checked = rows.length > 0 && checked === rows.length;
-    all.indeterminate = checked > 0 && checked < rows.length;
-    var btn = $('logs-csv');
-    var n = selectedCount();
-    if (btn) btn.innerHTML = n > 0
-      ? '<i class="fas fa-file-csv"></i> CSV: выбранные (' + n + ')'
-      : '<i class="fas fa-file-csv"></i> CSV';
-  }
-
   var filterAction = '';
   var filterMod = '';
-  var selected = {};
-
-  function rowKey(l) {
-    return (l.timestamp || '') + '|' + (l.user_id || l.user_name || '') + '|' + (l.action || '') + '|' + (l.mod_name || l.mod_id || '');
-  }
 
   function buildFilters() {
-    // чипы типов действий
+    // чипы типов действий — по текущему виду журнала
+    var base = baseList();
     var counts = {};
     var labels = {};
-    allLogs.forEach(function (l) {
+    base.forEach(function (l) {
       var k = actionKind(l.action);
       counts[k] = (counts[k] || 0) + 1;
       if (!labels[k]) labels[k] = KIND_LABEL[k] || (l.action || k);
@@ -289,7 +586,7 @@
     $('action-chips').innerHTML = html;
     // селект модераторов
     var mods = {};
-    allLogs.forEach(function (l) {
+    base.forEach(function (l) {
       var m = l.mod_name || l.mod_id;
       if (m) mods[m] = true;
     });
@@ -304,7 +601,7 @@
   function currentFiltered() {
     var guildFilter = $('guild-filter').value;
     var q = ($('search').value || '').toLowerCase();
-    return allLogs.filter(function (l) {
+    return baseList().filter(function (l) {
       if (guildFilter && String(l.guild_id || '') !== guildFilter) return false;
       if (filterAction && actionKind(l.action) !== filterAction) return false;
       if (filterMod && String(l.mod_name || l.mod_id || '') !== filterMod) return false;
@@ -317,18 +614,43 @@
   }
 
   function exportCsv() {
-    var n = selectedCount();
-    var list = n > 0 ? allLogs.filter(function (l) { return selected[rowKey(l)]; }) : currentFiltered();
-    var rows = [['Действие', 'Цель', 'Модератор', 'Причина', 'Время', 'Сервер']];
+    var list = currentFiltered();
+    var rows = [['Действие', 'Участник', 'Модератор', 'Причина', 'Срок (мин)', 'Время', 'Сервер']];
     list.forEach(function (l) {
-      rows.push([l.action || '', l.user_name || l.channel_name || l.role_name || l.user_id || '', l.mod_name || l.mod_id || '', l.reason || '', l.timestamp || '', l.guild_id || '']);
+      rows.push([l.action || '', l.user_name || l.channel_name || l.role_name || l.user_id || '', l.mod_name || l.mod_id || '', l.reason || '', l.duration || '', l.timestamp || '', l.guild_id || '']);
     });
     var ok = window.csvDownload ? window.csvDownload('moderation_log.csv', rows) : false;
-    window.showToast(ok ? (n > 0 ? 'Выгружено строк: ' + list.length : 'Выборка выгружена') : 'Не удалось выгрузить', ok);
+    window.showToast(ok ? ('Выгружено строк: ' + list.length) : 'Не удалось выгрузить', ok);
+  }
+
+  function setView(mode) {
+    viewMode = mode;
+    try { localStorage.setItem('jlViewMode', mode); } catch (e) { /* приватный режим */ }
+    var p = $('jl-view-pun'), a = $('jl-view-all');
+    if (p) p.classList.toggle('active', mode === 'punish');
+    if (a) a.classList.toggle('active', mode === 'all');
+    filterAction = '';
+    LOGS_PAGE = 100;
+    render(); updateStats(); updateFilters();
+  }
+
+  /* лента ↔ таблица — выбор вида журнала */
+  function setShape(mode) {
+    shapeMode = mode;
+    try { localStorage.setItem('jlShape', mode); } catch (e) { /* приватный режим */ }
+    $('jl-shape-feed').classList.toggle('active', mode === 'feed');
+    $('jl-shape-table').classList.toggle('active', mode === 'table');
+    $('jl-shape-feed').setAttribute('aria-pressed', mode === 'feed' ? 'true' : 'false');
+    $('jl-shape-table').setAttribute('aria-pressed', mode === 'table' ? 'true' : 'false');
+    render();
   }
 
   function bind() {
     function resetPage() { LOGS_PAGE = 100; }
+    $('jl-view-pun').addEventListener('click', function () { setView('punish'); });
+    $('jl-view-all').addEventListener('click', function () { setView('all'); });
+    $('jl-shape-feed').addEventListener('click', function () { setShape('feed'); });
+    $('jl-shape-table').addEventListener('click', function () { setShape('table'); });
     $('guild-filter').addEventListener('change', function () { resetPage(); render(); });
     $('search').addEventListener('input', function () { resetPage(); render(); });
     $('logs-csv').addEventListener('click', exportCsv);
@@ -337,41 +659,17 @@
       if (!chip) return;
       filterAction = chip.dataset.act;
       document.querySelectorAll('#action-chips .chip').forEach(function (c) { c.classList.toggle('active', c === chip); });
-      resetPage();
-      render();
+      resetPage(); render();
     });
     $('mod-filter').addEventListener('change', function () {
       filterMod = this.value;
-      resetPage();
-      render();
+      resetPage(); render();
     });
-    // «Загрузить ещё» — клиентская пагинация
-    $('logs-body').addEventListener('click', function (e) {
+    // «Загрузить ещё» — клиентская пагинация (общая для ленты и таблицы)
+    $('logs-more').addEventListener('click', function (e) {
       if (e.target.closest('#logsMore')) {
         LOGS_PAGE += 100;
         render();
-      }
-    });
-    // выбор строк
-    $('sel-all').addEventListener('change', function () {
-      var on = this.checked;
-      document.querySelectorAll('#logs-body tr[data-row-key]').forEach(function (r) {
-        if (on) selected[r.dataset.rowKey] = true; else delete selected[r.dataset.rowKey];
-      });
-      render();
-    });
-    $('logs-body').addEventListener('change', function (e) {
-      if (e.target && e.target.type === 'checkbox') {
-        var row = e.target.closest('tr[data-row-key]');
-        if (!row) return;
-        if (e.target.checked) selected[row.dataset.rowKey] = true;
-        else delete selected[row.dataset.rowKey];
-        paintSelectAll();
-        var btn = $('logs-csv');
-        var n = selectedCount();
-        if (btn) btn.innerHTML = n > 0
-          ? '<i class="fas fa-file-csv"></i> CSV: выбранные (' + n + ')'
-          : '<i class="fas fa-file-csv"></i> CSV';
       }
     });
     if (window.livePauseButton) window.livePauseButton($('logs-pause'));
@@ -379,7 +677,10 @@
   }
 
   function start() {
-    bind(); loadGuilds(); loadLogs();
+    bind(); loadGuilds();
+    setView(viewMode);   /* применит сохранённый вид и нарисует первый кадр */
+    setShape(shapeMode);
+    loadLogs();
     if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 1500);
   }
 

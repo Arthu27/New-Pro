@@ -436,7 +436,7 @@ class CloseConfirmView(discord.ui.View):
 #  Карточка сразу тегает роль модераторов — это и есть «позвать
 #  модератора»: сигнал в канале модерации, разбор там же.
 # ═══════════════════════════════════════════════════════════════════
-MOD_CHANNEL_NAME = 'модерация'
+MOD_CHANNEL_NAME = '🛡・модерация'
 # Заказ владельца 2026-09-05: вызовы модератора (/report) идут в ЭТОТ канал.
 # Право «Управление каналами» боту для этого НЕ нужно — канал уже существует.
 DEFAULT_REPORT_CHANNEL_ID = 1312434963941167134
@@ -455,8 +455,8 @@ async def _ensure_mod_channel(guild, mod_role):
         ch = guild.get_channel(int(cid))
         if ch is not None:
             return ch, False
-    # 2) канал с известным именем
-    ch = discord.utils.get(guild.text_channels, name=MOD_CHANNEL_NAME)
+    # 2) канал со старым прямым именем «модерация» (exact, как раньше)
+    ch = discord.utils.get(guild.text_channels, name='модерация')
     if ch is not None:
         return ch, False
     # 2.5) маршрут из панели «Маршруты каналов» (заказ владельца 2026-09-05):
@@ -475,6 +475,16 @@ async def _ensure_mod_channel(guild, mod_role):
     ch = guild.get_channel(DEFAULT_REPORT_CHANNEL_ID)
     if ch is not None:
         return ch, False
+    # 2.7) канонический лог-канал 🛡・модерация (или старые -модерация,
+    # mod-log …) — раньше exact-поиск по голому «модерация» его не видел
+    # и на таких серверах плодился канал-дубликат.
+    try:
+        from cogs.logs import find_log_channel as _find_mod_log
+        ch = _find_mod_log(guild, 'mod')
+        if ch is not None:
+            return ch, False
+    except Exception as _ex:
+        _log.debug('reports: поиск канала модерации: %s', _ex)
     # 3) создаём закрытый канал модерации (крайний случай)
     over = {
         guild.default_role: discord.PermissionOverwrite(

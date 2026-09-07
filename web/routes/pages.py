@@ -29,10 +29,21 @@ def register(ctx):
 
 
     @app .route ('/channels')
-    @login_required 
+    @login_required
     @role_required ('admin')
     def channels_page ():
-        return render_template ('channels.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
+        # Первый рендер — каналы вшиваем прямо в HTML из того же источника,
+        # что и /api/guild/<gid>/channels: список виден сразу, даже если
+        # JS-цепочка загрузки (api/guilds → loadChannels) не добежала.
+        initial =[]
+        try :
+            _fn =app .view_functions .get ('api_guild_channels')
+            if _fn and MAIN_GUILD_ID :
+                _data =_fn (str (MAIN_GUILD_ID )).get_json ()
+                initial =_data if isinstance (_data ,list )else ((_data or {}).get ('channels')or [])
+        except Exception as _ex :
+            _log .debug ('channels_page: первый рендер каналов: %s',_ex )
+        return render_template ('channels.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID ,initial_channels =initial )
 
 
     @app .route ('/mod-history')

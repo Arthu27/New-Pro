@@ -47,12 +47,29 @@ def register(ctx):
         cfg = _bot_cfg_load()
         online = False
         guilds_n = 0
+        # Имя бота (жалоба: «настройки бота — имя не видно»). Порядок:
+        # живой процесс → пульс data/bot_state.json (панель отдельным
+        # процессом) → демо-заглушка для превью.
+        ident = {}
         if bot is not None:
             try:
                 online = not bot.is_closed()
             except Exception:
                 online = False
             guilds_n = len(getattr(bot, 'guilds', []) or [])
+            _bu = getattr(bot, 'user', None)
+            if _bu is not None:
+                try:
+                    ident = {
+                        'id': str(_bu.id),
+                        'name': str(getattr(_bu, 'name', '') or ''),
+                        'display_name': str(getattr(_bu, 'display_name', '')
+                                            or getattr(_bu, 'name', '') or ''),
+                        'avatar': str(getattr(getattr(_bu, 'display_avatar', None),
+                                              'url', '') or ''),
+                    }
+                except Exception:
+                    ident = {}
         else:
             # Панель отдельным процессом от бота — правда по пульсу
             # (data/bot_state.json), иначе страница вечно показывает «офлайн».
@@ -62,12 +79,23 @@ def register(ctx):
                 if _bb.state_status(_st) == 'online':
                     online = True
                     guilds_n = len(_bb.guild_ids(_st))
+                # имя — последнее известное, даже если бот сейчас офлайн
+                ident = _bb.state_identity(_st)
             except Exception:
                 online = False
+        if not ident.get('name') and getattr(_app, '_demo_mode', lambda: False)():
+            ident = {'id': '987654321098765432', 'name': 'Hakumo',
+                     'display_name': 'Hakumo (демо)', 'avatar': ''}
+            online = True
+            guilds_n = guilds_n or 1
         return jsonify({'ok': True, 'bot_online': online,
                         'guilds': guilds_n,
                         'discord_version': _discord.__version__,
                         'prefix': Config.COMMAND_PREFIX,
+                        'bot_name': ident.get('display_name') or ident.get('name') or '',
+                        'bot_username': ident.get('name') or '',
+                        'bot_id': ident.get('id') or '',
+                        'bot_avatar': ident.get('avatar') or '',
                         'presence': {'status': cfg.get('status', 'online'),
                                      'activity_type': cfg.get('activity_type', 'watching'),
                                      'activity_text': cfg.get('activity_text', 'Hakumo') or 'Hakumo'}})

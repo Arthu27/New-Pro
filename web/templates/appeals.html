@@ -50,7 +50,7 @@
 
 <div class="panel" style="margin-top:14px">
   <div class="panel-body" style="padding-top:14px;padding-bottom:14px">
-    <div class="hint" style="margin:0"><i class="fas fa-circle-info"></i> Подаются из Discord: слэш-команда <b>/апелляция</b> (для забаненных — в ЛС боту). Карточки падают модерам, комната апелляции открывается человеку после подачи. Каналы — только в <a href="/channel-settings">Каналах и маршрутах</a>.</div>
+    <div class="hint" style="margin:0"><i class="fas fa-circle-info"></i> Подаются из Discord: слэш-команда <b>/апелляция</b>, кнопка в ЛС о бане или меню в канале. Карточки падают прямо в <b>комнату апелляции</b> («всё сюда, кроме логов»), человеку комната открывается после подачи. Каналы — только в <a href="/channel-settings">Каналах и маршрутах</a>.</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
     <div class="hint" style="margin-top:2px"><i class="fas fa-circle-info"></i>
       Для панельного «бана» (изоляции) ссылка не нужна — человек и так на сервере, доступ возвращается сам. Ссылка отправляется только если бан был настоящим Discord-баном.</div>
     <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
-      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Пинг роли при новой апелляции (в канал карточек)</span>
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Пинг роли при новой апелляции (в комнату апелляции)</span>
         <select class="form-input" id="apPingRole" aria-label="Роль для пинга при новой апелляции"><option value="0">Без пинга</option></select></label>
       <label class="field" style="min-width:230px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Авто-блок подачи после N отказов (0 — выкл)</span>
         <input type="number" class="form-input" id="apBlockAfter" min="0" max="10" aria-label="Авто-блок подачи после N отказов"></label>
@@ -138,7 +138,7 @@
     <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
       <label class="field" style="min-width:230px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Эскалация: ждёт дольше N часов (0 — выкл)</span>
         <input type="number" class="form-input" id="apEscHours" min="0" max="336" aria-label="Эскалация после N часов ожидания"></label>
-      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Старшая роль для эскалации (пинг в канал карточек)</span>
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Старшая роль для эскалации (пинг в комнату апелляции)</span>
         <select class="form-input" id="apEscRole" aria-label="Роль для эскалации"><option value="0">Без пинга</option></select></label>
     </div>
     <div class="hint" style="margin-top:2px"><i class="fas fa-circle-info"></i>
@@ -316,7 +316,11 @@ function apClaim(id) {
     body: JSON.stringify({ appeal_id: String(id) })
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { window.showToast(d.error || 'Ошибка', false); return; }
-    window.showToast(d.claimed ? 'Апелляция #' + id + ' у вас в работе' : 'Апелляция #' + id + ' снова в общей очереди', true);
+    if (d.claimed) {
+      window.showToast('Апелляция #' + id + ' у вас в работе' + (d.channel_opened ? ' — канал апелляции открыт участнику' : ' — канал участнику не открылся (бот офлайн или нет прав)'), true);
+    } else {
+      window.showToast('Апелляция #' + id + ' снова в общей очереди', true);
+    }
     loadOverview();
   }).catch(function () { window.showToast('Сеть моргнула — попробуйте ещё раз', false); });
 }

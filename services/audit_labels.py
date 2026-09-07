@@ -102,6 +102,13 @@ LEGACY_ACTION_LABELS = {
     'unjail': 'Освобождён',
     'vmute': 'Войс-мут',
     'note': 'Заметка',
+    # дела из /modpanel (save_case пишет коды как есть): без перевода
+    # «Журнал модерации» показывал сырые Mute_chat / Vunmute
+    'mute_chat': 'Мут чата',
+    'unmute_chat': 'Мут чата снят',
+    'vunmute': 'Войс-мут снят',
+    'unwarn': 'Варн снят',
+    'ghostmute': 'Тихий мут',
 }
 
 

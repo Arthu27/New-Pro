@@ -55,6 +55,14 @@ class FakeResp:
         pass
 
 
+class FakeFollowup:
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, *a, **kw):
+        self.sent.append({'args': a, **kw})
+
+
 class FakeUser:
     display_name = 'Тест'
     id = 42
@@ -74,6 +82,7 @@ class FakeInter:
 
     def __init__(self):
         self.response = FakeResp()
+        self.followup = FakeFollowup()
 
 
 cog = AFK(bot=None)
@@ -86,10 +95,10 @@ async def _call_afk(icog, iinter, reason='AFK'):
 
 inter = FakeInter()
 loop.run_until_complete(_call_afk(cog, inter, 'обед'))
-kw = inter.response.kw
-check(kw is not None and kw.get('ephemeral') is True,
+fs = inter.followup.sent
+check(fs and fs[0].get('ephemeral') is True,
       '/afk отвечает ephemeral — видит только сам пользователь')
-check('обед' in str(kw.get('embed').description) if kw.get('embed') else True,
+check(any('обед' in str(s.get('embed').description) for s in fs if s.get('embed')),
       '/afk карточка с причиной на месте')
 
 # /afk-remove удалена (2026-09-01): AFK снимается АВТОМАТИЧЕСКИ при первом
@@ -242,13 +251,25 @@ class FakeChan:
     def __init__(self, cid): self.id = cid
 
 
+class FakeRoleCh:
+    def __init__(self, rid): self.id = rid
+
+
 class FakeGuildCh:
     id = 555  # сервер без настроек панели — работают .env и общий канал
 
-    def __init__(self, chans): self._ch = {c.id: c for c in chans}
+    def __init__(self, chans, roles=()):
+        self._ch = {c.id: c for c in chans}
+        self._roles = {int(r.id): r for r in roles}
 
     def get_channel(self, cid):
         return self._ch.get(cid)
+
+    def get_role(self, rid):
+        try:
+            return self._roles.get(int(rid))
+        except (TypeError, ValueError):
+            return None
 
 
 _p = (Config.STAFF_HELPER_CHANNEL_ID, Config.STAFF_MODERATOR_CHANNEL_ID,
@@ -259,7 +280,8 @@ try:
     Config.STAFF_MODERATOR_CHANNEL_ID = 502
     Config.STAFF_HELPER_CURATOR_ROLE_ID = 601
     Config.STAFF_MODERATOR_CURATOR_ROLE_ID = 602
-    gch = FakeGuildCh([FakeChan(501), FakeChan(502), FakeChan(500)])
+    gch = FakeGuildCh([FakeChan(501), FakeChan(502), FakeChan(500)],
+                       roles=[FakeRoleCh(601), FakeRoleCh(602)])
 
     ch, ping = apply_target('Хелпер', gch)
     check(ch is not None and ch.id == 501 and ping == '<@&601>',
@@ -483,7 +505,19 @@ class _GCh:
     id = 777
 
     def get_channel(self, cid):
-        return FakeRole(cid, f'ch{cid}') if cid else None
+        if not cid:
+            return None
+        # комнаты заявок на этом сервере нет — проверяем запасной путь
+        from services.channel_routes import KNOWN_CHANNELS
+        try:
+            if int(cid) == int(KNOWN_CHANNELS.get('ban_appeal_channel') or 0):
+                return None
+        except (TypeError, ValueError):
+            pass
+        return FakeRole(cid, f'ch{cid}')
+
+    def get_role(self, rid):
+        return FakeRole(607, 'куратор') if int(rid) == 607 else None
 
 
 _ch, _ping = apply_target('Хелпер', _GCh())

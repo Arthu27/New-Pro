@@ -36,6 +36,16 @@
 .bs-staff-row{display:flex;align-items:center;gap:10px;margin-top:9px}
 .bs-staff-row label{font-size:11.5px;font-weight:700;color:var(--text-3);min-width:110px}
 .bs-staff-row select{flex:1;min-width:0}
+/* ── Кто такой бот: аватар + имя + статус ── */
+.bs-bot{display:flex;align-items:center;gap:12px;padding:11px 13px;margin-bottom:10px;border:1px solid var(--ac-line);background:var(--ac-soft);border-radius:13px}
+.bs-bot[hidden]{display:none}
+.bs-bot-av{width:46px;height:46px;flex:none;border-radius:50%;border:2px solid var(--ac-line);object-fit:cover;background:var(--surface-2)}
+.bs-bot-copy{min-width:0}
+.bs-bot-name{font-weight:800;font-size:15px;color:var(--text);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bs-bot-sub{font-size:11px;color:var(--text-3);font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bs-bot-dot{margin-left:auto;flex:none;width:10px;height:10px;border-radius:50%;background:var(--text-3);transition:.2s}
+.bs-bot-dot.on{background:var(--ok);box-shadow:0 0 9px color-mix(in srgb, var(--ok) 65%, transparent)}
+.bs-bot-dot.off{background:var(--err)}
 .bs-toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:.3s;z-index:99}
 .bs-toast.show{opacity:1;transform:translateY(0)}
 .bs-toast.ok{background:rgba(46,204,113,.95);color:#08130c}
@@ -136,6 +146,14 @@
         <div class="bs-sub">Живое состояние (только чтение)</div></div>
     </div>
     <div class="bs-info">
+      <div class="bs-bot" id="bs-bot" hidden>
+        <img class="bs-bot-av" id="bs-bot-avatar" src="/static/brand/emblem-dragon.webp" alt="Аватар бота">
+        <div class="bs-bot-copy">
+          <div class="bs-bot-name" id="bs-bot-name">—</div>
+          <div class="bs-bot-sub" id="bs-bot-sub"></div>
+        </div>
+        <span class="bs-bot-dot" id="bs-bot-dot" title="Бот офлайн"></span>
+      </div>
       <div class="bs-info-row"><i class="fas fa-terminal"></i><span class="k">Префикс</span><span class="v"><span class="bs-chip" id="bs-prefix">?</span> <span class="bs-sub">меняется в .env (COMMAND_PREFIX)</span></span></div>
       <div class="bs-info-row"><i class="fas fa-signal"></i><span class="k">Бот онлайн</span><span class="v" id="bs-online">—</span></div>
       <div class="bs-info-row"><i class="fas fa-server"></i><span class="k">Серверов</span><span class="v" id="bs-guilds">—</span></div>
@@ -169,6 +187,34 @@
       $('bs-activity').value = d.presence.activity_type;
       $('bs-text').value = d.presence.activity_text;
       $('bs-prefix').textContent = d.prefix;
+      /* ── Кто такой бот: аватар + имя + ID + статус ── */
+      var box = $('bs-bot');
+      if (box) {
+        var name = d.bot_name || d.bot_username || '';
+        box.hidden = false;
+        if (name) {
+          $('bs-bot-name').textContent = name;
+          var sub = [];
+          if (d.bot_username && d.bot_username !== name) sub.push('@' + d.bot_username);
+          if (d.bot_id) sub.push('ID: ' + d.bot_id);
+          $('bs-bot-sub').textContent = sub.join(' · ');
+          /* подсказка «Слушает/Играет…» — по имени бота, не по захардкоду */
+          $('bs-text').placeholder = name;
+          var av = $('bs-bot-avatar');
+          if (d.bot_avatar) {
+            av.onerror = function () { av.onerror = null; av.src = '/static/brand/emblem-dragon.webp'; };
+            av.src = d.bot_avatar;
+          }
+          var dot = $('bs-bot-dot');
+          dot.className = 'bs-bot-dot ' + (d.bot_online ? 'on' : 'off');
+          dot.title = d.bot_online ? 'Бот в сети' : 'Бот офлайн';
+        } else {
+          $('bs-bot-name').textContent = 'Имя бота пока неизвестно';
+          $('bs-bot-sub').textContent = 'появится, когда бот выйдет в сеть';
+          $('bs-bot-dot').className = 'bs-bot-dot off';
+          $('bs-bot-dot').title = 'Бот офлайн';
+        }
+      }
       $('bs-online').innerHTML = d.bot_online ? '<i class="fas fa-circle" style="color:var(--ok);font-size:9px"></i> да' : '<i class="fas fa-circle" style="color:var(--err);font-size:9px"></i> офлайн';
       $('bs-guilds').textContent = d.guilds;
       $('bs-version').textContent = d.discord_version;

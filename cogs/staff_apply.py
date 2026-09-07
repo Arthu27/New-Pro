@@ -155,34 +155,90 @@ def generate_staff_panel_bytes() -> io.BytesIO:
     return buf
 
 
-def apply_target(role_name: str, guild):
-    """Куда отправить новую заявку: своя ветка на должность + кого позвать.
+def _apply_room(guild):
+    """Комната, куда идёт ВСЁ: апелляции и заявки в команду.
 
-    Хелперам и модераторам — отдельные каналы (панель: «Каналы и
-    маршруты»), куратор ОДИН на обе ветки (панель: «Бот»), бот пингует
-    его роль. Запасной канал — общий APPLY_CHANNEL_ID.
-    Возвращает (channel, content) или (None, '')."""
-    from services.staff_roles import curator_role_id, normalize_position, setting
+    Маршрут «Комната апелляции» (1544483947705008188) — единая точка
+    «всё сюда, кроме логов» (владелец 2026-09-06). Синхронная: каналы
+    берём из кэша, без fetch — не нашли, значит комнаты нет на сервере.
+    """
+    try:
+        from services.channel_routes import (
+            get_route as _get_route, KNOWN_CHANNELS as _KNOWN,
+            channel_on_guild as _on_g)
+        cid = int(_get_route(guild.id, 'ban_appeal_channel') or 0)
+        if not cid:
+            cid = int(_KNOWN.get('ban_appeal_channel') or 0)
+    except Exception as _ex:
+        log.debug('staff_apply: маршрут комнаты заявок: %s', _ex)
+        cid = 0
+    if not cid:
+        return None
+    try:
+        ch = _on_g(guild, cid)
+        if ch is not None:
+            return ch
+    except Exception:
+        pass
+    getter = getattr(guild, 'get_channel', None)
+    return getter(cid) if callable(getter) else None
+
+
+def _curator_ping(guild):
+    """Тег роли куратора для карточки заявки.
+
+    Порядок: настройка панели/.env → известная роль куратора сервера
+    (владелец 2026-09-06). Тег ставим только если роль реально есть на
+    сервере — @несуществующая-роль в карточке не нужна."""
+    from services.staff_roles import (
+        curator_role_id, KNOWN_CURATOR_ROLE_ID)
+    if not guild:
+        return ''
+    cur = curator_role_id(
+        guild.id,
+        Config.STAFF_CURATOR_ROLE_ID
+        or Config.STAFF_HELPER_CURATOR_ROLE_ID
+        or Config.STAFF_MODERATOR_CURATOR_ROLE_ID)
+    get_role = getattr(guild, 'get_role', None)
+    if not callable(get_role):
+        return ''
+    for rid in (cur, KNOWN_CURATOR_ROLE_ID):
+        try:
+            rid = int(rid or 0)
+        except (TypeError, ValueError):
+            continue
+        if rid and get_role(rid) is not None:
+            return f'<@&{rid}>'
+    return ''
+
+
+def apply_target(role_name: str, guild):
+    """Куда отправить новую заявку: «всё сюда» — комната заявок и апелляций.
+
+    Владелец 2026-09-06: заявки в команду идут в ту же комнату
+    (1544483947705008188), что и апелляции — «всё сюда, кроме логов».
+    Куратора тегаем в самой карточке. Комнаты нет на сервере — запасной
+    путь прежний: своя ветка на должность → общий канал заявок.
+    Возвращает (channel, тег_куратора) или (None, '')."""
+    from services.staff_roles import normalize_position, setting
     if not guild:
         return None, ''
+    # главный адресат — единая комната заявок и апелляций
+    room = _apply_room(guild)
+    if room is not None:
+        return room, _curator_ping(guild)
     kind = normalize_position(role_name) or 'moderator'
     if kind == 'helper':
         cid = setting(guild.id, 'helper_channel', Config.STAFF_HELPER_CHANNEL_ID)
     else:
         cid = setting(guild.id, 'moderator_channel',
                       Config.STAFF_MODERATOR_CHANNEL_ID)
-    cur = curator_role_id(
-        guild.id,
-        Config.STAFF_CURATOR_ROLE_ID
-        or Config.STAFF_HELPER_CURATOR_ROLE_ID
-        or Config.STAFF_MODERATOR_CURATOR_ROLE_ID)
     ch = guild.get_channel(cid) if cid else None
     if ch is None:
         # общий канал: настройка панели главнее .env
         common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
         ch = guild.get_channel(common) if common else None
-    content = f'<@&{cur}>' if cur else ''
-    return ch, content
+    return ch, _curator_ping(guild)
 
 
 def load_apps():
@@ -271,28 +327,51 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
         # Уведомление в ветку заявки: хелперы — кураторам хелперов,
-        # модераторы — кураторам модераторов (свой канал + пинг роли)
+        # модераторы — кураторам модераторов (свой канал + тег в карточке)
         delivered = False
         if interaction.guild:
-            ch, ping = apply_target(self.role_name, interaction.guild)
+            ch, tag = apply_target(self.role_name, interaction.guild)
             if ch:
+                # Карточка заявки: тег куратора — В САМОЙ АНКЕТЕ (владелец
+                # 2026-09-06), заявитель столбиком, ответы формы по полям.
                 notify = discord.Embed(
-                    title="Новая заявка",
-                    description=(
-                        f"**Пользователь:** {interaction.user.mention}\n"
-                        f"**Роль:** {self.role_name}\n"
-                        f"**Возраст:** {self.age}\n"
-                        f"**Активность:** {self.activity}"
-                    ),
-                    color=discord.Color.dark_grey(),
-                    timestamp=datetime.now()
+                    title=f"Новая заявка — {self.role_name}",
+                    color=0xC8922A,
+                    timestamp=datetime.now(timezone.utc)
                 )
-                notify.add_field(name="Опыт", value=str(self.experience)[:500], inline=False)
-                notify.add_field(name="Причина", value=str(self.reason)[:500], inline=False)
-                notify.set_footer(text=f"ID заявителя: {user_id}")
                 try:
-                    msg = await ch.send(content=ping or None, embed=notify, view=StaffReviewView())
+                    _av = (str(interaction.user.display_avatar.url)
+                           if interaction.user.display_avatar else None)
+                except Exception:
+                    _av = None
+                notify.set_author(
+                    name=f"{interaction.user} — заявка в команду",
+                    icon_url=_av)
+                notify.description = (
+                    (f"{tag} — заявка ждёт вашего взгляда\n" if tag else "")
+                    + f"Заявитель: {interaction.user.mention} · `{user_id}`"
+                )
+                notify.add_field(name="Возраст",
+                                 value=str(self.age)[:200] or "—", inline=True)
+                notify.add_field(name="Активность",
+                                 value=str(self.activity)[:200] or "—", inline=True)
+                notify.add_field(name="Опыт модерации",
+                                 value=str(self.experience)[:1000] or "—",
+                                 inline=False)
+                notify.add_field(name="Почему выбирает нас",
+                                 value=str(self.reason)[:1000] or "—",
+                                 inline=False)
+                notify.set_footer(
+                    text=f"ID заявителя: {user_id} · решение — меню под карточкой")
+                try:
+                    # content с тем же тегом — чтобы Discord реально прислал
+                    # уведомление роли (упоминание внутри embed не пингует)
+                    msg = await ch.send(content=tag or None, embed=notify,
+                                        view=StaffReviewView(),
+                                        allowed_mentions=discord.AllowedMentions(
+                                            roles=True))
                     apps[user_id]["message_id"] = str(msg.id)
+                    apps[user_id]["curator_tag"] = tag or None
                     delivered = True
                 except (discord.Forbidden, discord.HTTPException) as _ex:
                     log.warning("STAFF: карточка заявки %s не ушла в %s: %s",

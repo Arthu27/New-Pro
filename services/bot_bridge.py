@@ -74,11 +74,17 @@ def _ensure_base():
 
 
 # ── запись (вызывается из процесса бота) ─────────────────────────────────
-def write_state(status='starting', latency_ms=None, guilds=None, force=False):
+def write_state(status='starting', latency_ms=None, guilds=None, force=False,
+                identity=None):
     """Записать пульс бота. status: 'starting' | 'online' | 'offline'.
 
     force=True — писать сразу (первый тик/старт); иначе не чаще
     WRITE_EVERY_SEC, чтобы цикл бота не дёргал диск каждую секунду.
+
+    identity — кто такой бот: {id, name, display_name, avatar}. Панель
+    показывает имя на «Настройках бота»; без пульса отдельный процесс
+    панели имени не знает вовсе. Если логин ещё не дошёл до user (старт),
+    сохраняем ПОСЛЕДНЕЕ известное имя из файла — не теряем его.
     """
     if status not in ('starting', 'online', 'offline'):
         status = 'starting'
@@ -87,6 +93,16 @@ def write_state(status='starting', latency_ms=None, guilds=None, force=False):
         if not force and now - _last_write[0] < WRITE_EVERY_SEC:
             return False
         _last_write[0] = now
+    ident = identity if isinstance(identity, dict) else None
+    if not (ident and ident.get('name')):
+        try:
+            with open(STATE_FILE, 'r', encoding='utf-8') as fp:
+                prev = json.load(fp)
+            if isinstance(prev, dict) and isinstance(prev.get('identity'), dict) \
+                    and prev['identity'].get('name'):
+                ident = prev['identity']
+        except (OSError, ValueError):
+            ident = None
     payload = {
         'status': status,
         'latency_ms': latency_ms,
@@ -94,6 +110,13 @@ def write_state(status='starting', latency_ms=None, guilds=None, force=False):
         'ts': now,
         'pid': os.getpid(),
     }
+    if ident and ident.get('name'):
+        payload['identity'] = {
+            'id': str(ident.get('id') or ''),
+            'name': str(ident.get('name') or ''),
+            'display_name': str(ident.get('display_name') or ident.get('name') or ''),
+            'avatar': str(ident.get('avatar') or ''),
+        }
     try:
         _ensure_base()
         tmp = STATE_FILE + '.tmp'
@@ -273,6 +296,26 @@ def guild_ids(state=None):
         if isinstance(g, dict) and str(g.get('id') or ''):
             out.append(str(g['id']))
     return out
+
+
+def state_identity(state=None):
+    """Кто такой бот: {id, name, display_name, avatar} из пульса или {}.
+
+    Имя — последнее известное: не зависит от свежести пульса (бот может
+    быть офлайн, а «как его зовут» панель всё равно должна показать).
+    """
+    st = state if state is not None else read_state()
+    if not st:
+        return {}
+    ident = st.get('identity')
+    if not isinstance(ident, dict) or not ident.get('name'):
+        return {}
+    return {
+        'id': str(ident.get('id') or ''),
+        'name': str(ident.get('name') or ''),
+        'display_name': str(ident.get('display_name') or ident.get('name') or ''),
+        'avatar': str(ident.get('avatar') or ''),
+    }
 
 
 def read_roles(guild_id):

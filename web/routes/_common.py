@@ -119,6 +119,24 @@ def name_map_for (gid ,bot =None ):
                         out [str (k )]=str (v )
     except Exception as _ex :
         _log.debug("name_map_for(%s): файл имён: %s", gid ,_ex )
+    # Кэш участников панели (member_store, data/members_<gid>.json): бот
+    # засеивает его при старте и поддерживает на входах/выходах. Спасает,
+    # когда живого кэша бота у панели нет (рестарт, обрыв гейтвея) —
+    # иначе журнал и история вместо имён показывают голые ID.
+    try :
+        _fm ='data/members_%s.json' %str (gid )
+        if os .path .exists (_fm ):
+            with open (_fm ,encoding ='utf-8')as _fp :
+                _dm =json .load (_fp )
+            if isinstance (_dm ,dict ):
+                for _k ,_row in (_dm .get ('members')or {}).items ():
+                    if not isinstance (_row ,dict ):
+                        continue 
+                    _dn =str (_row .get ('display_name')or _row .get ('name')or '').strip ()
+                    if _dn :
+                        out .setdefault (str (_k ),_dn )
+    except Exception as _ex :
+        _log.debug("name_map_for(%s): кэш участников: %s", gid ,_ex )
     try :
         import web .app as _appm
         if _appm ._demo_mode ():

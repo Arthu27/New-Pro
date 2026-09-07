@@ -2288,12 +2288,20 @@ def api_logs_table_send ():
     модератора»... нет — канал модерации/системный, как у прочих логов.
     """
     from cogs .log_menu import post_log_table
+    # локальный импорт (стиль cog'ов): избегаем кругов на старте
+    from services .channel_routes import resolve_route ,channel_on_guild
     data =_safe_json_obj ()
     g ,err =_guild_for_send (data .get ('guild_id')or MAIN_GUILD_ID )
     if err :
         return jsonify ({'success':False ,'error':err }),503 if bot_instance is None else 400
     cid =str (data .get ('channel_id')or '').strip ()
     channel =g .get_channel (int (cid ))if cid .isdigit ()else None
+    if channel is None :
+        # канал уточнён (владелец 2026-09-06 «я уже уточнил по этому —
+        # выбирать канал вручную не нужно»): пустой channel_id →
+        # маршрут «Канал вызовов модератора», если такой канал есть на сервере
+        _rid =resolve_route (str (getattr (g ,'id','')or ''), 'report_channel',guild =g )
+        channel =channel_on_guild (g ,_rid )if _rid else None
     if channel is None :
         channel =g .system_channel
     if channel is None :
@@ -2807,6 +2815,161 @@ def _guild_name_map (gid ):
         _log.debug("_guild_name_map(%s): подавлено: %s", gid ,_ex )
         return {}
 
+# ── Журнал модерации: склейка дублей одного наказания ─────────────────────
+# Одно наказание приходит в /api/logs из нескольких мест: дело панели
+# (mod_data.json), запись слушателя (save_event → audit_log.json) и аудит
+# Discord (discord_audit_cache.json). Без склейки один мут светился в
+# журнале 2-3 строками, часто без причины/модератора. Склеиваем записи
+# одного наказания (тот же человек, тот же тип, время ≤2 минут), оставляя
+# лучшую версию: настоящий модератор, причина и срок мута.
+_LOG_JUNK_REASONS ={'','не указана','причина не указана','без причины',
+'belirtilmedi','с discord','мут','мьют','—','-','?','.'}
+_LOG_JUNK_MODS =('discord','система','system')
+
+
+def _bot_exec_identity ():
+    """Имя/ID самого бота: в аудите Discord исполнитель-робот носит его имя.
+
+    На сервере владельца бот называется «Moderation» — журнал показывал
+    «Размьют: Moderation» вместо настоящего модератора (жалоба 2026-09-07).
+    """
+    names ,ids =set (),set ()
+    try :
+        _u =getattr (bot_instance ,'user',None )
+        if _u is not None :
+            for _n in (getattr (_u ,'name',''),getattr (_u ,'display_name',''),
+            getattr (_u ,'global_name','')):
+                _n =str (_n or '').strip ().lower ()
+                if _n :
+                    names .add (_n )
+            _bid =str (getattr (_u ,'id','')or '').strip ()
+            if _bid :
+                ids .add (_bid )
+    except Exception :
+        pass 
+    return names ,ids 
+
+
+def _log_act_class (a ):
+    """Действие → класс наказания (ban/mute/…). '' — не наказание, не склеиваем."""
+    a =str (a or '').lower ()
+    if not a :
+        return ''
+    if 'разбан' in a or 'бан снят' in a or 'unban' in a :return 'unban'
+    if ('размут' in a or 'мут снят' in a or 'мьют снят' in a or 'таймаут снят' in a
+    or 'unmute' in a or 'untimeout' in a ):return 'unmute'
+    if 'бан' in a or 'ban' in a :return 'ban'
+    if 'кик' in a or 'kick' in a :return 'kick'
+    if 'варн' in a or 'warn' in a or 'предупрежд' in a :return 'warn'
+    if ('мут' in a or 'мьют' in a or 'mute' in a or 'таймаут' in a
+    or 'timeout' in a ):return 'mute'
+    return ''
+
+
+def _log_merge_duplicates (events ):
+    """Слить копии одного наказания: возвращает список без дублей."""
+    _bot_names ,_bot_ids =_bot_exec_identity ()
+
+    def _is_bot_exec (ev ):
+        """Копия из аудита, где исполнитель — сам бот («Moderation»)."""
+        if str (ev .get ('mod_id')or '').strip ()in _bot_ids :
+            return True 
+        _mn =str (ev .get ('mod_name')or '').strip ().lower ()
+        return bool (_mn )and _mn in _bot_names 
+
+    def _pt (v ):
+        try :
+            d =datetime .fromisoformat (str (v or '').replace ('Z','+00:00'))
+        except (TypeError ,ValueError ):
+            return None 
+        if d .tzinfo is None :
+            d =d .replace (tzinfo =timezone .utc )
+        return d .astimezone (timezone .utc )
+
+    def _score (ev ):
+        s =0 
+        if str (ev .get ('reason')or '').strip ().lower ()not in _LOG_JUNK_REASONS :s +=4 
+        if (str (ev .get ('mod_name')or '').strip ()
+        and str (ev .get ('mod_name')).strip ().lower ()not in _LOG_JUNK_MODS
+        and not _is_bot_exec (ev )):
+            s +=2 
+        if (str (ev .get ('mod_id')or '')not in ('','0','?','system','None')
+        and str (ev .get ('mod_id')).strip ()not in _bot_ids ):
+            s +=1 
+        if ev .get ('duration'):s +=2 
+        if ev .get ('until'):s +=1 
+        return s
+
+    buckets ={}
+    for ev in events :
+        cls =_log_act_class (ev .get ('action'))
+        if not cls :
+            continue
+        buckets .setdefault ((str (ev .get ('guild_id')or ''),
+        str (ev .get ('user_id')or ev .get ('target_id')or ''),cls),[]).append (ev )
+
+    drop =set ()
+    for group in buckets .values ():
+        if len (group )<2 :
+            continue
+        group .sort (key =lambda e :_pt (e .get ('timestamp'))or datetime .min .replace (tzinfo =timezone .utc ))
+        clusters =[]
+        for ev in group :
+            t =_pt (ev .get ('timestamp'))
+            if clusters and t is not None and clusters [-1]['last']is not None \
+            and (t -clusters [-1]['last']).total_seconds ()<=120 :
+                clusters [-1]['events'].append (ev )
+                clusters [-1]['last']=max (clusters [-1]['last'],t )
+            else :
+                clusters .append ({'events':[ev ],'last':t })
+        for cl in clusters :
+            evs =cl ['events']
+            if len (evs )<2 :
+                continue
+            # разные причины = разные дела; записи «без причины» липнут
+            # к самой большой группе с причиной
+            by_reason ={}
+            junk =[]
+            for e in evs :
+                r =str (e .get ('reason')or '').strip ().lower ()
+                if r in _LOG_JUNK_REASONS :
+                    junk .append (e )
+                else :
+                    by_reason .setdefault (r ,[]).append (e )
+            if junk :
+                if by_reason :
+                    max (by_reason .values (),key =len ).extend (junk )
+                else :
+                    by_reason ['*']=junk
+            for sub in by_reason .values ():
+                if len (sub )<2 :
+                    continue
+                sub .sort (key =_score ,reverse =True )
+                base =sub [0 ]
+                for other in sub [1 :]:
+                    for k in ('duration','until','reason','mod_name','mod_id',
+                    'user_name','user_id'):
+                        bv =base .get (k )
+                        ov =other .get (k )
+                        if not ov or bv ==ov :
+                            continue
+                        if k =='reason'and str (ov ).strip ().lower ()in _LOG_JUNK_REASONS :
+                            continue
+                        if bv in (None ,''):
+                            base [k ]=ov
+                        elif k =='reason'and str (bv ).strip ().lower ()in _LOG_JUNK_REASONS :
+                            base [k ]=ov
+                        elif k =='user_name'and str (bv ).isdigit ():
+                            base [k ]=ov
+                        elif k in ('mod_name','mod_id')and (
+                        str (bv ).strip ().lower ()in ('discord','система','system','0','?')
+                        or (k =='mod_name'and str (bv ).strip ().lower ()in _bot_names )
+                        or (k =='mod_id'and str (bv ).strip ()in _bot_ids )):
+                            base [k ]=ov 
+                    drop .add (id (other ))
+    return [e for e in events if id (e )not in drop ]
+
+
 @app .route ('/api/logs')
 @login_required 
 @role_required ('mod')
@@ -2842,33 +3005,79 @@ def api_logs ():
                 if filter_guild and guild_id !=filter_guild :
                     continue 
                 for case in case :
-                    all_events .append ({
+                    # Дело панели: настоящий модератор (mod_name пишет
+                    # save_case), причина и срок мута (duration_minutes)
+                    _case_ev ={
                     'guild_id':guild_id ,
                     'category':'mod',
-                    'action':case .get ('action','?').capitalize (),
+                    'action':case .get ('action','?'),
                     'user_id':str (case .get ('user_id','')),
                     'user_name':str (case .get ('user_id','')),
-                    # имя из дела (save_case пишет mod_name) важнее ID
                     'mod_name':str (case .get ('mod_name')or case .get ('mod_id','')),
+                    'mod_id':str (case .get ('mod_id','')or ''),
                     'reason':case .get ('reason',''),
                     'timestamp':case .get ('timestamp',''),
-                    })
+                    'source':'case',
+                    }
+                    try :
+                        _dmin =int (case .get ('duration_minutes',case .get ('duration'))or 0)
+                    except (TypeError ,ValueError ):
+                        _dmin =0
+                    if _dmin >0 :
+                        _case_ev ['duration']=_dmin 
+                    if case .get ('until'):
+                        _case_ev ['until']=case ['until']
+                    all_events .append (_case_ev)
 
-                    # Читаем кэш Discord-аудита (бот обновляет его раз в 30 сек — данные свежие)
+        # ── 3. warnings.json — варны: причина, модератор, время ──────────
+        # Раньше варны в журнал не попадали вовсе (warnings.py не пишет
+        # save_event) — «Варны» в шапке страницы всегда стояли нулём.
+        warn_data =_store .cached_read_json ('data/warnings.json',ttl =5.0 ,default ={})
+        if isinstance (warn_data ,dict ):
+            for guild_id ,users in warn_data .items ():
+                if filter_guild and guild_id !=filter_guild :
+                    continue 
+                if not isinstance (users ,dict ):
+                    continue 
+                for uid ,wlist in users .items ():
+                    if not isinstance (wlist ,list ):
+                        continue 
+                    for w in wlist :
+                        if not isinstance (w ,dict ):
+                            continue 
+                        all_events .append ({
+                        'guild_id':guild_id ,
+                        'category':'mod',
+                        'action':'warn',
+                        'user_id':str (uid ),
+                        'user_name':str (uid ),
+                        'mod_name':str (w .get ('mod')or w .get ('moderator')or ''),
+                        'mod_id':str (w .get ('mod_id')or ''),
+                        'reason':w .get ('reason')or '',
+                        'timestamp':w .get ('timestamp')or '',
+                        'source':'warnings',
+                        })
+
+        # Читаем кэш Discord-аудита (бот обновляет его раз в 30 сек — данные свежие)
         cache_file ='data/discord_audit_cache.json'
         cache =_store .cached_read_json (cache_file ,ttl =3.0 ,default ={})
         if isinstance (cache ,dict )and cache :
-            existing_ts ={e .get ('timestamp','')for e in all_events }
             for gid ,events in cache .items ():
                 if filter_guild and gid !=filter_guild :
                     continue 
                 for ev in events :
-                    ev_copy =dict (ev )
-                    ev_copy ['guild_id']=gid 
-                    if not ev_copy .get ('timestamp'):
+                    _evc =dict (ev )
+                    _evc ['guild_id']=gid 
+                    if not _evc .get ('timestamp'):
                         continue 
-                    if ev_copy ['timestamp']not in existing_ts :
-                        all_events .append (ev_copy )
+                    # срок мута из аудита → единое поле duration (минуты)
+                    _dmin =_evc .pop ('duration_minutes',None )
+                    if _dmin and not _evc .get ('duration'):
+                        try :
+                            _evc ['duration']=max (0 ,int (_dmin ))
+                        except (TypeError ,ValueError ):
+                            pass 
+                    all_events .append (_evc )
 
         # Нормализуем метки к UTC со смещением — иначе браузер считает
         # naive-метку локальным временем и сдвигает на размер пояса (+4 ч).
@@ -2878,6 +3087,16 @@ def api_logs ():
             _clean_md_fields (_ev )
 
         # Имена вместо ID: цель и модератор резолвятся из карты имён гильдии.
+        # Журнал — история: участник мог уже выйти, но его имя осталось в
+        # старых записях. Собираем uid → имя из самих событий, чтобы дедлайн
+        # карты имён не превращал старые наказания в голые ID.
+        _ev_names ={}
+        for _ev in all_events :
+            for _idk ,_nk in (('user_id','user_name'),('mod_id','mod_name')):
+                _i =str (_ev .get (_idk )or '').strip ()
+                _n =str (_ev .get (_nk )or '').strip ()
+                if _i and _n and _n !=_i and not _n .isdigit ():
+                    _ev_names .setdefault (_i ,_n )
         _nm ={}
         for _ev in all_events :
             _gid =str (_ev .get ('guild_id')or '')
@@ -2887,10 +3106,31 @@ def api_logs ():
             _uid =str (_ev .get ('user_id')or '').strip ()
             _un =str (_ev .get ('user_name')or '').strip ()
             if _uid and (not _un or _un ==_uid or _un .isdigit ()):
-                _ev ['user_name']=_map .get (_uid )or _uid
+                _ev ['user_name']=_map .get (_uid )or _ev_names .get (_uid )or _uid
             _mid =str (_ev .get ('mod_id')or '').strip ()
             if _mid and not str (_ev .get ('mod_name')or '').strip ():
-                _ev ['mod_name']=_map .get (_mid )or _mid
+                _ev ['mod_name']=_map .get (_mid )or _ev_names .get (_mid )or _mid
+        # Старые панельные дела: настоящий модератор спрятан в причине
+        # («[Panel] username: причина» — так писали temp-мут/бан в аудит
+        # Discord). Вытаскиваем его из имени бота-исполнителя («Moderation»),
+        # чтобы журнал показывал человека, а не название бота.
+        try :
+            _pn ,_pi =_bot_exec_identity ()
+            if _pn :
+                import re as _re_panel 
+                for _ev in all_events :
+                    if str (_ev .get ('mod_name')or '').strip ().lower ()not in _pn :
+                        continue 
+                    _m =_re_panel .match (r'^\[Panel\]\s*(.+?)\s*:\s*(.*)$',
+                    str (_ev .get ('reason')or ''),_re_panel .S )
+                    if _m :
+                        _ev ['mod_name']='Панель: '+_m .group (1 )
+                        if _m .group (2 ).strip ():
+                            _ev ['reason']=_m .group (2 ).strip ()
+        except Exception as _pex :
+            _log .debug ("logs panel-actor: %s",_pex )
+        # Один мут/бан = одна строка: дела + журнал + аудит склеены
+        all_events =_log_merge_duplicates (all_events )
         all_events .sort (key =_ts_sort_key ,reverse =True )
         return jsonify (all_events [:1000 ])
     except Exception as e :
@@ -3365,28 +3605,32 @@ def api_execute_command ():
                         _store .invalidate_path (warns_file )
             elif command in ('текст','zar','rastgele'):
                 pass # Развлекательные команды выполняются в Discord, панель только запускает
-                # Jail kategorisi, канал ve роль создать
-                jail_cat =discord .utils .get (guild .categories ,name ='Наказание Комната')
-                if not jail_cat :
-                    jail_cat =await guild .create_category ('Наказание Комната')
-                jail_role =discord .utils .get (guild .roles ,name ='Jail')
-                if not jail_role :
-                    jail_role =await guild .create_role (name ='Jail',color =discord .Color (0x2c2c2c ))
+                # Jail: изоляция ролями. Каналы в общем стиле «эмодзи・слово»;
+                # старые имена («Наказание Комната», jail) тоже находятся.
+                jail_cat = (discord.utils.get(guild.categories, name='🔒 Изоляция')
+                            or discord.utils.get(guild.categories, name='Наказание Комната'))
+                if not jail_cat:
+                    jail_cat = await guild.create_category('🔒 Изоляция')
+                jail_role = (discord.utils.get(guild.roles, name='Изоляция')
+                             or discord.utils.get(guild.roles, name='Jail'))
+                if not jail_role:
+                    jail_role = await guild.create_role(name='Изоляция', color=discord.Color(0x2c2c2c))
                     # Запретить jail-роль во всех каналах
-                for ch in guild .channels :
-                    try :
-                        await ch .set_permissions (jail_role ,send_messages =False ,read_messages =False )
+                for ch in guild.channels:
+                    try:
+                        await ch.set_permissions(jail_role, send_messages=False, read_messages=False)
                     except Exception as _ex:
                         _log.debug("execute(): подавлено: %s", _ex)
-                        # Jail канал создать
-                jail_ch =discord .utils .get (guild .text_channels ,name ='jail')
-                if not jail_ch :
-                    overwrites ={
-                    guild .default_role :discord .PermissionOverwrite (read_messages =False ),
-                    jail_role :discord .PermissionOverwrite (read_messages =True ,send_messages =False ),
-                    guild .me :discord .PermissionOverwrite (read_messages =True ,send_messages =True )
+                # Jail канал создать
+                jail_ch = (discord.utils.get(guild.text_channels, name='🔒・изоляция')
+                           or discord.utils.get(guild.text_channels, name='jail'))
+                if not jail_ch:
+                    overwrites = {
+                    guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                    jail_role: discord.PermissionOverwrite(read_messages=True, send_messages=False),
+                    guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True)
                     }
-                    jail_ch =await guild .create_text_channel ('jail',category =jail_cat ,overwrites =overwrites )
+                    jail_ch = await guild.create_text_channel('🔒・изоляция', category=jail_cat, overwrites=overwrites)
                 return 'setup_done'
             elif command =='clear':
                 channel =guild .get_channel (int (data .get ('channel_id')))
@@ -3957,22 +4201,29 @@ def api_public_apply ():
                 channel ,ping =apply_target (data .get ('role'),guild )
                 if not channel :
                     return 
+                # Карточка заявки с сайта — тот же вид, что из Discord:
+                # тег куратора В САМОЙ АНКЕТЕ (владелец 2026-09-06)
                 embed =discord .Embed (
-                title =" НОВАЯ ЗАЯВКА В ПЕРСОНАЛ • Web",
+                title =f"Новая заявка — {data ['role']}",
                 color =0xC8922A ,
                 timestamp =datetime.now(timezone.utc)
                 )
-                embed .add_field (name =" Пользователь",value =f"`{data['discord_name']}` (ID: `{uid}`)",inline =True )
-                embed .add_field (name =" Должность",value =data ['role'],inline =True )
-                embed .add_field (name =" Возраст",value =data ['yas'],inline =True )
-                embed .add_field (name =" Активность",value =data ['активен'],inline =True )
-                embed .add_field (name =" Опыт",value =f"```{data['tecrube']}```",inline =False )
-                embed .add_field (name =" Почему именно мы?",value =f"```{data['почему']}```",inline =False )
+                embed .description =(
+                (f"{ping } — заявка ждёт вашего взгляда\n" if ping else "")
+                +f"Заявитель: `{data ['discord_name']}` · `{uid}` · подана с сайта"
+                )
+                embed .add_field (name ="Должность",value =data ['role'],inline =True )
+                embed .add_field (name ="Возраст",value =data ['yas'],inline =True )
+                embed .add_field (name ="Активность",value =data ['активен'],inline =True )
+                embed .add_field (name ="Опыт модерации",value =str (data ['tecrube'])[:1000] or "—",inline =False )
+                embed .add_field (name ="Почему выбирает нас",value =str (data ['почему'])[:1000] or "—",inline =False )
                 if data .get ('ekstra'):
-                    embed .add_field (name =" Дополнительно",value =f"```{data['ekstra']}```",inline =False )
-                embed .set_footer (text =f"Заявка ID: {app_id} • {guild.name}")
+                    embed .add_field (name ="Дополнительно",value =str (data ['ekstra'])[:1000],inline =False )
+                embed .set_footer (text =f"Заявка ID: {app_id} • решение — меню под карточкой")
                 view =StaffReviewView ()
-                msg =await channel .send (content =ping or None ,embed =embed ,view =view )
+                # content с тем же тегом — чтобы роль реально получила пинг
+                msg =await channel .send (content =ping or None ,embed =embed ,view =view ,
+                allowed_mentions =discord .AllowedMentions (roles =True ))
                 apps [app_id ]['message_id']=str (msg .id )
                 with open (apps_file ,'w',encoding ='utf-8')as f :
                     json .dump (apps ,f ,indent =2 ,ensure_ascii =False )

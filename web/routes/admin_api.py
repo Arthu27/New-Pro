@@ -12,6 +12,30 @@ from web.routes._common import (
     render_template, session, redirect, url_for, request, jsonify, Response,
     os, json, time, math, discord, datetime, timezone)
 
+
+def _journal_panel_action(guild_id, action_title, action_code, user_id,
+                          user_name, mod_name, reason='', **extra):
+    """Запись действия из панели в журнал — с НАСТОЯЩИМ модератором.
+
+    Мут/размьют/бан из панели исполняет бот: аудит Discord показывает
+    исполнителем самого бота (его имя на сервере — «Moderation»), а владелец
+    спрашивает «кто выдал» (жалоба 2026-09-07). Панель знает пользователя —
+    пишем его; склейка дублей отдаст эту копию приоритетом боту.
+    """
+    try:
+        from cogs.logs import save_event as _se
+        _se(guild_id, 'mod', action_title, dict({
+            'user_id': str(user_id or ''),
+            'user_name': str(user_name or ''),
+            'action': action_code,
+            'mod_id': '',
+            'mod_name': ('Панель: ' + str(mod_name)) if mod_name else '',
+            'reason': str(reason or ''),
+        }, **extra))
+    except Exception as _ex:
+        _log.debug('journal_panel_action: %s', _ex)
+
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -216,6 +240,11 @@ def register(ctx):
         'mod_id':session .get ('username',''),'created_at':time .time (),'duration':sec ,
         }
         cog ._save ('_mutes',cog ._mutes_file ())
+        # журнал: настоящий модератор — пользователь панели, не бот
+        _journal_panel_action (guild .id ,'Мут','timeout',member .id ,
+        member .display_name ,session .get ('username'),d .get ('reason',''),
+        until =until .replace (tzinfo =timezone .utc ).isoformat (),
+        duration_minutes =max (1 ,sec //60 ))
         _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         _panel_limit_record (guild.id ,_acl_m ,'mute',1)
         return jsonify ({'ok':True })
@@ -261,6 +290,9 @@ def register(ctx):
         'user_name':str (member ),
         }
         cog ._save ('_bans',cog ._bans_file ())
+        # журнал: настоящий модератор — пользователь панели, не бот
+        _journal_panel_action (guild .id ,'Бан','ban',member .id ,
+        member .display_name ,session .get ('username'),d .get ('reason',''))
         _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
@@ -304,6 +336,9 @@ def register(ctx):
         'user_name':str (member ),
         }
         cog ._save ('_kicks',cog ._kicks_file ())
+        # журнал: настоящий модератор — пользователь панели, не бот
+        _journal_panel_action (guild .id ,'Кик','kick',member .id ,
+        member .display_name ,session .get ('username'),d .get ('reason',''))
         _panel_limit_record (guild.id ,_acl_m ,'kick',1)
         _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
@@ -339,6 +374,11 @@ def register(ctx):
                 _log.debug("api_temp_mod_unmute(): подавлено: %s", _ex)
         cog ._mutes .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_mutes',cog ._mutes_file ())
+        # журнал: кто снял мут — пользователь панели (жалоба 2026-09-07:
+        # «Размьют: Moderation — не надо название бота, нужно кто выдал»)
+        _journal_panel_action (guild .id ,'Мут снят','untimeout',user_id ,
+        getattr (member ,'display_name',''),session .get ('username'),
+        'Снят через панель (временные меры)')
         _live_publish (str (guild .id ),'moderation')
         _panel_limit_record (guild.id ,_acl_m ,'unmute',1)
         return jsonify ({'ok':True })
@@ -371,6 +411,10 @@ def register(ctx):
             return jsonify ({'error':str (e )}),400 
         cog ._bans .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_bans',cog ._bans_file ())
+        # журнал: кто снял бан — пользователь панели, не бот
+        _journal_panel_action (guild .id ,'Бан снят','unban',user_id ,
+        getattr (user ,'name',''),session .get ('username'),
+        'Снят через панель (временные меры)')
         _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         _panel_limit_record (guild.id ,_acl_m ,'unban',1)
         return jsonify ({'ok':True })

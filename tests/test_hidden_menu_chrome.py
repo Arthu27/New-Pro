@@ -130,11 +130,17 @@ pickers = {
     'announcements.html': '!channel.hidden && (channel.type === \'text\'',
     'appeals.html': '!c.hidden && (c.type === \'text\' || c.type === \'thread\')',
     'mod_tools.html': 'if (!c || c.hidden) return',
-    'logs.html': 'c && !c.hidden && c.id',
 }
 for fn, needle in pickers.items():
     txt = open(os.path.join(tpl_dir, fn), encoding='utf-8').read()
     check(needle in txt, f'{fn} фильтрует hidden')
+# Журнал (2026-09-06): пикер каналов не нужен вовсе — канал уточкён
+# в панели, таблица идёт в канал вызовов/системный.
+logs = open(os.path.join(tpl_dir, 'logs.html'), encoding='utf-8').read()
+check('lt-channel' not in logs and 'выбери канал' not in logs,
+      'журнал: пикер «выбери канал» убран — канал уже уточкён')
+check("fetch('/api/logs/table/send'" in logs,
+      'журнал: точка отправки таблицы на месте')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

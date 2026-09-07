@@ -483,8 +483,20 @@
       var icon = TICKER_ICON[k] || 'fa-circle';
       var when = '';
       try { when = new Date(ev.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) {}
-      return '<span class="mod-ticker-chip ' + tone + '"><i class="fas ' + icon + '"></i><b>' + esc(ev.action || '?') + '</b> ' +
-        esc(ev.target || '—') + ' <span class="t-time">' + esc(when) + '</span></span>';
+      /* причина и срок — из полей /api/mod-history (duration в минутах) */
+      var tail = '';
+      var d = Number(ev.duration) || 0;
+      if (d) {
+        var dTxt = d + ' мин';
+        if (d % 1440 === 0) dTxt = (d / 1440) + ' д';
+        else if (d % 60 === 0) dTxt = (d / 60) + ' ч';
+        tail += ' · ' + dTxt;
+      }
+      var reason = String(ev.reason || '').trim();
+      var tip = (ev.target || '—') + (reason ? ' — ' + reason : '');
+      if (reason) tail += ' · ' + esc(reason.length > 34 ? reason.slice(0, 33) + '…' : reason);
+      return '<span class="mod-ticker-chip ' + tone + '" title="' + esc(tip) + '"><i class="fas ' + icon + '"></i><b>' + esc(ev.action || '?') + '</b> ' +
+        esc(ev.target || '—') + tail + ' <span class="t-time">' + esc(when) + '</span></span>';
     }).join('');
     /* живая лента: если чипов больше ширины — плавный дрейф с паузой при наведении */
     box.innerHTML = '<div class="mod-ticker-inner">' + chips + '</div>';
@@ -511,21 +523,25 @@
         });
       } catch (e) {}
     }
-    var fp = events.length + ':' + (events.length ? events[0].at : '');
+    var fp = events.length + ':' + (events.length ? (events[0].created_at || events[0].at || '') : '');
     if (fp === _peopleFp) return;
     _peopleFp = fp;
     var since = Date.now() - 7 * 86400000;
-    var offenders = {}, mods = {};
-    var ticker = [];
+    var offenders = {}, mods = {}, ticker = [];
     events.forEach(function (ev) {
-      if (ev.at) {
-        var t = new Date(ev.at).getTime();
+      /* /api/mod-history отдаёт target_name/mod_name/created_at (старые
+         поля target/mod/at — легаси /api/logs, оставляем как запасные) */
+      var who = ev.target_name || ev.target || '—';
+      var mod = ev.mod_name || ev.mod || '—';
+      var at = ev.created_at || ev.at;
+      if (at) {
+        var t = new Date(at).getTime();
         if (!isNaN(t)) {
           if (t >= since) {
-            offenders[String(ev.target || '—')] = (offenders[String(ev.target || '—')] || 0) + 1;
-            mods[String(ev.mod || '—')] = (mods[String(ev.mod || '—')] || 0) + 1;
+            offenders[String(who)] = (offenders[String(who)] || 0) + 1;
+            mods[String(mod)] = (mods[String(mod)] || 0) + 1;
           }
-          ticker.push({ action: ev.action, target: ev.target, at: ev.at });
+          ticker.push({ action: ev.action, target: who, at: at });
         }
       }
     });

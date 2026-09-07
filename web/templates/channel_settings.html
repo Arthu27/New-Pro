@@ -102,14 +102,14 @@
     <p><b>Отдельные каналы плодить не нужно</b> — в каждой строке выбирай уже существующий канал из списка.</p>
     <p style="margin-bottom:4px"><b style="color:#f0b26b"><i class="fas fa-triangle-exclamation"></i> Надо задать (1 шаг):</b></p>
     <ol class="chs-guide-steps">
-      <li><span class="g-num">1</span><span><b>Канал апелляции после бана</b> — сюда попадает «забаненный» (с сервера его не выкидывает, просто закрываются каналы). Заведи один канал <code>#апелляции</code>. Без него «бан» из панели не сработает и сам об этом попросит — остальное работает и без настройки.</span></li>
+      <li><span class="g-num">1</span><span><b>Канал апелляции после бана</b> — сюда попадает «забаненный» (с сервера его не выкидывает, просто закрываются каналы). Заведи один канал <code>#{{ room_appeals }}</code>. Без него «бан» из панели не сработает и сам об этом попросит — остальное работает и без настройки.</span></li>
     </ol>
     <p style="margin:12px 0 4px"><b style="color:var(--ac)"><i class="fas fa-clock"></i> Можно потом — работает и по умолчанию:</b></p>
     <ol class="chs-guide-steps chs-optional">
-      <li><span class="g-num g-later">2</span><span><b>Доказательства</b> — не задашь, бот создаст <code>#-доказательства</code> сам.</span></li>
-      <li><span class="g-num g-later">3</span><span><b>Апелляции (карточки)</b> — можно тот же <code>#апелляции</code>; иначе идут в системный канал.</span></li>
-      <li><span class="g-num g-later">4</span><span><b>Тревоги Щита</b> (анти-нюк) — уходят в лог-канал <code>-модерация</code>, бот создаёт его сам.</span></li>
-      <li><span class="g-num g-later">5</span><span><b>Лог авто-защиты</b> (ссылки/спам/фейки) — тоже пишет в <code>-модерация</code> автоматически.</span></li>
+      <li><span class="g-num g-later">2</span><span><b>Доказательства</b> — не задашь, бот создаст <code>#{{ room_proof }}</code> сам.</span></li>
+      <li><span class="g-num g-later">3</span><span><b>Апелляции (карточки)</b> — можно тот же <code>#{{ room_appeals }}</code>; иначе идут в системный канал.</span></li>
+      <li><span class="g-num g-later">4</span><span><b>Тревоги Щита</b> (анти-нюк) — уходят в лог-канал <code>{{ room_mod }}</code>, бот создаёт его сам.</span></li>
+      <li><span class="g-num g-later">5</span><span><b>Лог авто-защиты</b> (ссылки/спам/фейки) — тоже пишет в <code>{{ room_mod }}</code> автоматически.</span></li>
       <li><span class="g-num g-later">6</span><span><b>Приветствия</b> — без настройки идут в системный канал.</span></li>
       <li><span class="g-num g-later">7</span><span><b>Заявки в команду</b> — нужны, только когда откроешь набор.</span></li>
     </ol>
@@ -137,7 +137,7 @@
 
 <div class="chs-info">
   <h3><i class="fas fa-circle-info"></i> Логи создаются сами</h3>
-  Системные каналы логов (<code>-модерация</code>, <code>-сообщения</code>, <code>-участники</code>, <code>-сервер</code>)
+  Системные каналы логов (<code>{{ room_mod }}</code>, <code>{{ room_message }}</code>, <code>{{ room_member }}</code>, <code>{{ room_server }}</code>)
   бот <b>создаёт и чинит автоматически</b> в категории «Логи» — их не нужно (и нельзя) переназначать:
   лента всегда найдёт их по имени. Здесь настраиваются только <b>особые маршруты</b> — страницы этих
   систем дублируют те же настройки (Апелляции, Приветствие, Tag Jail), расхождений не будет.

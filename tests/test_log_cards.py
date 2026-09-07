@@ -45,6 +45,15 @@ def check(ok, msg):
 print('== 1. Палитры и рендер ==')
 from services import log_card as LC  # noqa: E402
 
+# cfg лог-карточек лежит в data/ репозитория (не в TMP): сбрасываем свои
+# gid-файлы, чтобы прогон не зависел от прошлого запуска — иначе
+# delivery='photo' из секции 3 прилипает к «дефолтному» чеку ниже
+for _gid in ('424242', '424243', '424244', '424245', '424246'):
+    try:
+        os.remove(LC.log_cards_cfg_path(_gid))
+    except OSError:
+        pass
+
 check(set(LC.LOG_CARD_THEME_ORDER) == set(LC.LOG_CARD_THEMES),
       'порядок тем = реестру')
 check(LC.DEFAULT_LOG_THEME == 'hakumo', 'дефолт — фирменное золото (как было)')
@@ -256,6 +265,11 @@ asyncio.run(_safe_send(_ch4, embed=_e3))
 _kw4 = _ch4.sent[-1] if _ch4.sent else {}
 check('file' in _kw4 and 'embed' not in _kw4,
       'photo без URL: фото со стеклом на стандартном фоне')
+# не оставляем delivery='photo' следующим прогонам (файл общий на репозиторий)
+try:
+    os.remove(LC.log_cards_cfg_path('424245'))
+except OSError:
+    pass
 LC.get_bg_bytes_sync = _orig_bg
 
 print('== 4. API панели ==')

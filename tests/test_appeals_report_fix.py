@@ -163,42 +163,45 @@ cog = A.Appeals(bot)
 async def main():
     user = _User(555, 'Обвинённый Вася')
 
-    print('== 1. Апелляция из канала: карточка модерам, комната — подавшему ==')
-    # треды создать не дали (нет «Создавать публичные ветки») — как у владельца
-    cards_ch.fail_threads = True
+    print('== 1. Апелляция из канала: карточка — в саму комнату апелляции ==')
+    # «всё сюда, кроме логов» (владелец 2026-09-06): заявка, кнопки и
+    # обсуждение живут в комнате; запасной канал карточек не трогаем
     item, err = await cog._submit_channel_appeal(user, guild, 'Прошу разбан')
     check(err is None, 'апелляция создана без ошибок', f'→ {err}')
-    check(len(cards_ch.sent) == 1 and not cards_ch.threads,
-          'карточка легла в канал модеров (тред создать не дали)')
-    check(not appeal_ch.sent, 'в комнату забаненного карточку не кладём')
-    view = (cards_ch.sent[0] or {}).get('view')
+    check(len(appeal_ch.sent) == 1 and not appeal_ch.threads,
+          'карточка легла прямо в комнату апелляции')
+    check(not cards_ch.sent, 'запасной канал модеров не тронут')
+    view = (appeal_ch.sent[0] or {}).get('view')
     ids = [b.custom_id for b in view.children] if view else []
     check(any(str(i).startswith('appeal:accept:') for i in ids)
           and any(str(i).startswith('appeal:reject:') for i in ids)
           and any(str(i).startswith('appeal:claim:') for i in ids),
           'на карточке есть Принять / Отклонить / Взять в работу', f'→ {ids}')
-    check(item.get('message_id'), 'запись апелляции знает ID карточки')
+    check(item.get('message_id') and item.get('card_channel_id') == APPEAL_CH,
+          'запись апелляции знает ID карточки и канал')
     check(len(appeal_ch.overwrites) == 1
           and appeal_ch.overwrites[0][0] == 555,
           'комната апелляции ОТКРЫТА подавшему после подачи')
 
-    print('== 2. Треды разрешены → карточка в треде канала модеров ==')
-    appeal_ch2 = _Channel(APPEAL_CH)
+    print('== 2. Комнаты нет → запасной канал карточек, заявка в своей ветке ==')
+    CR.set_route(GID, 'ban_appeal_channel', 0)
     cards_ch2 = _Channel(CARDS_CH, name='карточки')
-    guild2 = _Guild([appeal_ch2, cards_ch2], [everyone, mod_role])
+    guild2 = _Guild([cards_ch2], [everyone, mod_role])
     cog2 = A.Appeals(_Bot(guild2))
     item2, err2 = await cog2._submit_channel_appeal(
         _User(556, 'Петя'), guild2, 'Верните доступ')
     check(err2 is None and len(cards_ch2.threads) == 1,
-          'тред в канале карточек создан')
+          'без комнаты карточка ушла в канал модеров веткой')
     t0 = cards_ch2.threads[0]
     check(len(t0.sent) == 1 and t0.sent[0].get('view') is not None,
           'кнопки есть и в треде')
+    check(item2.get('thread_id') == t0.id, 'ветка запомнена в апелляции')
+    CR.set_route(GID, 'ban_appeal_channel', APPEAL_CH)
 
     print('== 3. ЛС подавшему говорит ПРАВДУ про канал ==')
     class _DmUser(_User):
-        def __init__(self):
-            super().__init__(557, 'Сява')
+        def __init__(self, uid=557, name='Сява'):
+            super().__init__(uid, name)
             self.dms = []
 
         async def send(self, embed=None, **kw):
@@ -212,8 +215,9 @@ async def main():
     check(len(du.dms) == 1 and 'открыт для вас' in (du.dms[0].description or ''),
           'канал открылся — ЛС говорит «открыт»')
     # комнаты на сервере нет — открыть нечего → честный текст
+    # (другой человек: у первого уже есть pending — дубликаты не принимаем)
     CR.set_route(GID, 'ban_appeal_channel', 0)
-    du2 = _DmUser()
+    du2 = _DmUser(559, 'СяваДва')
     cards_ch4 = _Channel(CARDS_CH, name='карточки', fail_threads=True)
     guild4 = _Guild([cards_ch4], [everyone, mod_role])
     cog4 = A.Appeals(_Bot(guild4))

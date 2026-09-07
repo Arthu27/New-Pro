@@ -452,6 +452,9 @@ textarea.field-input{resize:vertical;min-height:52px}
   var MAIN_GID = '{{ main_guild_id }}';
   var _canHide = {{ 'true' if role == 'owner' else 'false' }};
   var hiddenChs = {}, hiddenCats = {}, showHidden = false, _catIds = {};
+  /* какие категории владелец свернул (по имени, на сервер): по умолчанию
+     ВСЕ категории открыты — каналы видны сразу, без кликов по заголовкам */
+  var collapsedCats = {};
   var selectedGuild = MAIN_GID;
   var allChannels = [];
   /* канал, который нажали (и момент нажатия): между mousedown и click
@@ -558,8 +561,8 @@ textarea.field-input{resize:vertical;min-height:52px}
     return 'каналов';
   }
 
-  function categoryBlock(key, name, icon, children, activeKey) {
-    var isOpen = key === activeKey;
+  function categoryBlock(key, name, icon, children) {
+    var isOpen = !collapsedCats[key];
     var catId = _catIds[key] || '';
     var catHidden = !!(catId && hiddenCats[catId]);
     var html = '<section class="cat-group' + (isOpen ? '' : ' collapsed') + (catHidden ? ' is-hidden-cat' : '') + '" data-cat-name="' + esc(key) + '">';
@@ -623,12 +626,11 @@ textarea.field-input{resize:vertical;min-height:52px}
       });
       if (orphaned.length) groups.push({ key: '__orphaned__', name: 'Вне структуры', icon: 'fa-triangle-exclamation', children: orphaned });
 
-      var activeKey = '';
-      try { activeKey = localStorage.getItem('ch_active_cat_' + selectedGuild) || ''; } catch (e) {}
-      if (!groups.some(function (group) { return group.key === activeKey; })) activeKey = groups.length ? groups[0].key : '';
-      try { if (activeKey) localStorage.setItem('ch_active_cat_' + selectedGuild, activeKey); } catch (e) {}
+      /* свёрнутые категории — выбор владельца, хранится на сервер;
+         по умолчанию (нет записи) открыто ВСЁ: каждый канал сразу виден */
+      try { collapsedCats = JSON.parse(localStorage.getItem('ch_collapsed_cats_' + selectedGuild) || '{}') || {}; } catch (e) { collapsedCats = {}; }
       groups.forEach(function (group) {
-        html += categoryBlock(group.key, group.name, group.icon, group.children, activeKey);
+        html += categoryBlock(group.key, group.name, group.icon, group.children);
       });
     }
 
@@ -744,7 +746,8 @@ textarea.field-input{resize:vertical;min-height:52px}
   function loadChannels(live) {
     if (!selectedGuild) return;
     if (live && document.querySelector('.modal-overlay.open')) return;
-    if (!live) setLoading();
+    /* список уже отрисован из вшитых данных — спиннер не мигает */
+    if (!live && !allChannels.length) setLoading();
     return fetch('/api/guild/' + selectedGuild + '/channels')
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1081,19 +1084,13 @@ textarea.field-input{resize:vertical;min-height:52px}
       if (hdr) {
         var group = hdr.closest('.cat-group');
         if (!group) return;
-        // В рабочей области открыта ровно одна категория — длинного полотна нет.
-        var anchorTop = hdr.getBoundingClientRect().top;
-        list.querySelectorAll('.cat-group').forEach(function (item) {
-          var active = item === group;
-          item.classList.toggle('collapsed', !active);
-          var itemHeader = item.querySelector('[data-toggle-cat]');
-          if (itemHeader) itemHeader.setAttribute('aria-expanded', active ? 'true' : 'false');
-        });
-        /* сворачивание других категорий меняет высоту — возвращаем
-           заголовок на прежнее место, чтобы список не прыгал вверх */
-        var delta = hdr.getBoundingClientRect().top - anchorTop;
-        if (delta) window.scrollBy(0, delta);
-        try { localStorage.setItem('ch_active_cat_' + selectedGuild, group.getAttribute('data-cat-name')); } catch (err) {}
+        /* каждая категория сворачивается САМОСТОЯТЕЛЬНО: остальные
+           остаются как были — все каналы можно держать открытыми */
+        var catName = group.getAttribute('data-cat-name');
+        var nowCollapsed = group.classList.toggle('collapsed');
+        hdr.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
+        collapsedCats[catName] = nowCollapsed;
+        try { localStorage.setItem('ch_collapsed_cats_' + selectedGuild, JSON.stringify(collapsedCats)); } catch (err) {}
         return;
       }
       var row = e.target.closest('.ch-row');
@@ -1183,6 +1180,20 @@ textarea.field-input{resize:vertical;min-height:52px}
         else loadChannels(true);
       }, 1500);
     }
+  }
+
+  /* Первый рендер — данные, вшитые сервером прямо в страницу: каналы и
+     категории видны СРАЗУ (в самом HTML), до любых fetch. Дальше обычный
+     поток (api/guilds → loadChannels) просто подтверждает/обновляет список. */
+  var CH_INITIAL = {{ initial_channels|tojson }};
+  if (Array.isArray(CH_INITIAL) && CH_INITIAL.length) {
+    allChannels = CH_INITIAL;
+    hiddenChs = {}; hiddenCats = {};
+    CH_INITIAL.forEach(function (c) {
+      if (c.type === 'category') { if (c.hidden) hiddenCats[String(c.id)] = true; }
+      else if (c.hidden) hiddenChs[String(c.id)] = true;
+    });
+    try { paintHiddenCount(); renderStats(); populateCategorySelects(); renderList(''); } catch (e) { /* первый рендер не должен ронять страницу */ }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

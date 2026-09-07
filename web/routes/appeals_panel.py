@@ -224,8 +224,50 @@ def _notify_user(bot, gid, item, accept, unbanned, member_present=False):
         return False
 
 
-def apply_side_effects(bot, gid, item, accept):
-    """Разбан/снятие изоляции (при принятии) + ЛС — как в AppealView._resolve."""
+def _open_channel_for_claim(bot, gid, item):
+    """«Взять в работу» из панели — открыть канал апелляции забаненному.
+
+    Тот же маршрут, что у кнопки под карточкой в Discord (AppealView
+    ._claim): комнату апелляции делаем видимой участнику — модератор взял
+    дело, человек сразу может диалог (владелец 2026-09-06)."""
+    if not bot:
+        return False
+    try:
+        cog = bot.get_cog('Appeals')
+    except Exception as _ex:
+        _log.debug('appeals: get_cog на claim: %s', _ex)
+        cog = None
+    guild = None
+    try:
+        guild = bot.get_guild(int(gid))
+    except Exception as _ex:
+        _log.debug('appeals: guild на claim: %s', _ex)
+    if cog is None or guild is None:
+        return False
+
+    async def _do():
+        try:
+            user = await bot.fetch_user(int(item['user_id']))
+        except Exception as _ex:
+            _log.debug('appeals: fetch_user на claim: %s', _ex)
+            return False
+        opened, _ch = await cog._open_appeal_channel(guild, user)
+        return bool(opened)
+
+    try:
+        return bool(_run_async(_do(), timeout=15))
+    except Exception as _ex:
+        _log.debug('appeals: канал по claim из панели: %s', _ex)
+        return False
+
+
+def apply_side_effects(bot, gid, item, accept, state=None, reviewer=None,
+                       reviewer_id=None):
+    """Разбан/снятие изоляции (при принятии) + ЛС — как в AppealView._resolve.
+
+    Плюс то, что раньше панель пропускала: дело «unban» и карточку
+    «Блокировка снята» с автором решения при принятии, и удаление
+    карточки апелляции при любом решении (владелец 2026-09-06)."""
     if not bot:
         return {'offline': True, 'unbanned': None, 'dm_attempted': False}
     unbanned = None
@@ -269,11 +311,47 @@ def apply_side_effects(bot, gid, item, accept):
                 except Exception as _ex:
                     _log.debug('appeals: снятие изоляции из панели: %s', _ex)
             unbanned = _unban(guild, item['user_id'], item['id'])
+    # карточка «Блокировка снята» с автором решения — тот же маршрут, что
+    # кнопка «Принять» под карточкой в Discord
+    if accept:
+        try:
+            cog = bot.get_cog('Appeals')
+        except Exception as _ex:
+            _log.debug('appeals: get_cog: %s', _ex)
+            cog = None
+        if cog is not None and guild is not None:
+            try:
+                _run_async(cog._log_unban_decision(
+                    guild, item, reviewer_id or 0,
+                    reviewer or 'панель'), timeout=10)
+            except Exception as _ex:
+                _log.debug('appeals: карточка разбана из панели: %s', _ex)
     dm = _notify_user(bot, gid, item, accept, bool(unbanned), member_present)
-    return {'offline': False, 'unbanned': unbanned, 'dm_attempted': dm}
+    # решение вынесено — карточку апелляции в канале удаляем (панель и
+    # кнопки в Discord теперь ведут себя одинаково)
+    card_deleted = False
+    try:
+        cog = bot.get_cog('Appeals')
+    except Exception as _ex:
+        _log.debug('appeals: get_cog: %s', _ex)
+        cog = None
+    if cog is not None:
+        _g = None
+        try:
+            _g = bot.get_guild(int(gid))
+        except Exception as _ex:
+            _log.debug('appeals: guild на удалении карточки: %s', _ex)
+        try:
+            card_deleted = bool(_run_async(
+                cog._delete_appeal_card(_g, state, item), timeout=10))
+        except Exception as _ex:
+            _log.debug('appeals: удаление карточки из панели: %s', _ex)
+    return {'offline': False, 'unbanned': unbanned, 'dm_attempted': dm,
+            'card_deleted': card_deleted}
 
 
-def resolve_panel(bot, gid, appeal_id, accept, reviewer, reply=None, now=None):
+def resolve_panel(bot, gid, appeal_id, accept, reviewer, reply=None, now=None,
+                  reviewer_id=None):
     """Решение по апелляции. (ok, err, http_code, payload)."""
     state = _state(gid)
     item, err = AP.resolve_appeal(state, int(appeal_id), bool(accept), reviewer,
@@ -281,7 +359,8 @@ def resolve_panel(bot, gid, appeal_id, accept, reviewer, reply=None, now=None):
     if err:
         return False, err, (404 if 'не найдена' in err else 409), None
     _save(gid, state)
-    effects = apply_side_effects(bot, gid, item, bool(accept))
+    effects = apply_side_effects(bot, gid, item, bool(accept), state=state,
+                                 reviewer=reviewer, reviewer_id=reviewer_id)
     status_text = ('принята (разбанен)' if (accept and effects.get('unbanned'))
                    else ('принята' if accept else 'отклонена'))
     return True, '', 200, {'item': item, 'effects': effects,
@@ -650,7 +729,8 @@ def register(ctx):
                                 'error': _lim_denied}), 429
         ok, err, code, payload = resolve_panel(
             appmod.bot_instance, gid, int(raw_id), accept,
-            session.get('username', '?'), reply=reply)
+            session.get('username', '?'), reply=reply,
+            reviewer_id=session.get('discord_id') or 0)
         if not ok:
             return jsonify({'success': False, 'error': err}), code
         if accept:  # успешное принятие — расходка «unban» в счётчик
@@ -690,10 +770,16 @@ def register(ctx):
                                   'at': datetime.now(UTC).isoformat()}
             claimed_by = uname
         _save(gid, state)
+        # взяли в работу → канал апелляции открывается забаненному (тот же
+        # маршрут, что кнопка в Discord; владелец 2026-09-06)
+        import web.app as appmod
+        chan_opened = bool(claimed_by) and _open_channel_for_claim(
+            appmod.bot_instance, gid, item)
         _notify(f'Апелляция #{raw_id}: ' +
                 ('в работе у ' + uname if claimed_by else 'снята с работы'))
         return jsonify({'success': True, 'claimed': bool(claimed_by),
-                        'claimed_by': claimed_by})
+                        'claimed_by': claimed_by,
+                        'channel_opened': chan_opened})
 
     @app.route('/api/guild/<gid>/appeals/channel', methods=['POST'])
     @login_required

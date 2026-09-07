@@ -1224,8 +1224,9 @@ async def _bridge_loop(bot):
     """
     from services import bot_bridge as _bb
 
-    def _flush(status, lat_ms=None, guild_rows=None, snaps=None):
-        _bb.write_state(status, latency_ms=lat_ms, guilds=guild_rows or [])
+    def _flush(status, lat_ms=None, guild_rows=None, snaps=None, identity=None):
+        _bb.write_state(status, latency_ms=lat_ms, guilds=guild_rows or [],
+                        identity=identity)
         for gid, roles, chans in (snaps or []):
             try:
                 _bb.write_roles(gid, roles)
@@ -1239,7 +1240,23 @@ async def _bridge_loop(bot):
             lat_ms = None
             guild_rows = []
             snaps = []
+            # Кто такой бот (имя/ID/аватар) — панель показывает это на
+            # «Настройках бота»; отдельный процесс панели знает только пульс
+            identity = {}
             if bot is not None:
+                _bu = getattr(bot, 'user', None)
+                if _bu is not None:
+                    try:
+                        identity = {
+                            'id': str(_bu.id),
+                            'name': str(getattr(_bu, 'name', '') or ''),
+                            'display_name': str(getattr(_bu, 'display_name', '')
+                                                or getattr(_bu, 'name', '') or ''),
+                            'avatar': str(getattr(getattr(_bu, 'display_avatar', None),
+                                                  'url', '') or ''),
+                        }
+                    except Exception:
+                        identity = {}
                 try:
                     closed = bool(bot.is_closed())
                 except Exception:
@@ -1266,7 +1283,8 @@ async def _bridge_loop(bot):
                                  for g in guilds]
                     else:
                         status = 'starting'
-            await asyncio.to_thread(_flush, status, lat_ms, guild_rows, snaps)
+            await asyncio.to_thread(_flush, status, lat_ms, guild_rows, snaps,
+                                    identity or None)
         except Exception as _ex:
             log.debug('_bridge_loop: %s', _ex)
         await asyncio.sleep(5)

@@ -438,6 +438,21 @@ def register(ctx):
         if _mg :guild_id =_mg 
         all_events =[]
 
+        # Срок наказания → минуты: 120, '120', '2h', '1д6ч', '45м'.
+        # Бот пишет в дела int-минуты, но понимаем и строки на случай
+        # легаси-записей.
+        def _dur_min (v ):
+            import re as _re 
+            if v is None or isinstance (v ,bool ):return 0 
+            if isinstance (v ,(int ,float )):return max (0 ,int (v ))
+            sv =str (v ).strip ().lower ().replace (' ','')
+            if not sv :return 0 
+            if sv .isdigit ():return max (0 ,int (sv ))
+            mm =_re .match (r'^(?:(\d+)[дd])?(?:(\d+)[чh])?(?:(\d+)(?:[мm]|мин)?)?$',sv )
+            if not mm or not any (mm .groups ()):return 0 
+            d ,h ,mi =(int (x or 0 )for x in mm .groups ())
+            return d *1440 +h *60 +mi 
+
         # ── 1. mod_data.json — bot'un сохран case'ler ────────────────────
         mod_file ='data/mod_data.json'
         if os .path .exists (mod_file ):
@@ -453,17 +468,29 @@ def register(ctx):
                     for case in case_list :
                         uid =str (case .get ('user_id',''))
                         mid =str (case .get ('mod_id',''))
-                        all_events .append ({
+                        _reason =str (case .get ('reason','')or '').strip ()
+                        if _reason .lower ()in ('','belirtilmedi'):  # турецкий легаси-дефолт
+                            _reason ='Не указана'
+                        _ev ={
                         'guild_id':gid ,
                         'category':'mod',
                         'action':case .get ('action','warn'),
                         'target_name':uid ,
                         'target_id':uid ,
-                        'mod_name':mid ,
-                        'reason':case .get ('reason','Belirtilmedi'),
+                        # Имя модератора — из дела (его пишет save_case),
+                        # иначе резолвер ниже подставит имя по ID
+                        'mod_name':str (case .get ('mod_name')or ''),
+                        'mod_id':mid ,
+                        'reason':_reason ,
                         'created_at':case .get ('timestamp',''),
                         'source':'bot',
-                        })
+                        }
+                        # Срок наказания («насколько дали мут») и «до какого
+                        # времени» — их пишет /modpanel и слушатель мутов
+                        _dmin =_dur_min (case .get ('duration_minutes')if 'duration_minutes'in case else case .get ('duration'))
+                        if _dmin >0 :_ev ['duration']=_dmin 
+                        if case .get ('until'):_ev ['until']=case .get ('until')
+                        all_events .append (_ev)
             except Exception as _e :
                 print (f'[MOD-HISTORY] Ошибка данных модерации: {_e}')
 
@@ -480,9 +507,15 @@ def register(ctx):
                         continue 
                     for ev in events :
                         if ev .get ('action')in mod_cats :
-                            ev ['guild_id']=gid 
-                            ev ['created_at']=ev .get ('timestamp','')
-                            all_events .append (ev )
+                            _ev =dict (ev )
+                            _ev ['guild_id']=gid 
+                            _ev ['created_at']=ev .get ('timestamp','')
+                            # срок мута из аудита («до какого» + минуты)
+                            _dmin =_dur_min (_ev .get ('duration_minutes')if 'duration_minutes'in _ev else _ev .get ('duration'))
+                            _ev .pop ('duration_minutes',None )
+                            _ev .pop ('duration',None )
+                            if _dmin >0 :_ev ['duration']=_dmin 
+                            all_events .append (_ev)
             except Exception as _e :
                 print (f'[MOD-HISTORY] Cache okuma Ошибки: {_e}')
 
@@ -513,6 +546,7 @@ def register(ctx):
                             'target_name':name ,
                             'target_id':uid ,
                             'mod_name':w .get ('mod',w .get ('moderator','?')),
+                            'mod_id':str (w .get ('mod_id','')or ''),
                             'reason':w .get ('reason',''),
                             'created_at':w .get ('timestamp',''),
                             'source':'bot',
@@ -527,6 +561,16 @@ def register(ctx):
         # имя gid вообще не определено, и весь блок падал с
         # «cannot access local variable 'gid'» → имена не резолвились,
         # в истории модерации вместо ников торчали голые ID.
+        # Дополнительно: uid → имя собирается из самих событий — участник мог
+        # уже выйти, но его имя осталось в старых записях аудита.
+        _ev_names ={}
+        for _ev in all_events :
+            for _idk ,_nk in (('target_id','target_name'),('user_id','user_name'),
+            ('mod_id','mod_name')):
+                _i =str (_ev .get (_idk )or '').strip ()
+                _n =str (_ev .get (_nk )or '').strip ()
+                if _i and _n and _n !=_i and not _n .isdigit ():
+                    _ev_names .setdefault (_i ,_n )
         _target_gid = str(guild_id or '')
         try :
             import web .app as _appm
@@ -538,12 +582,128 @@ def register(ctx):
                 _map =_nm
                 _uid =str (_ev .get ('target_id')or _ev .get ('user_id')or '').strip ()
                 if _uid and (not str (_ev .get ('target_name')or '').strip ()or str (_ev .get ('target_name'))==_uid ):
-                    _ev ['target_name']=_map .get (_uid )or _uid
+                    _ev ['target_name']=_map .get (_uid )or _ev_names .get (_uid )or _uid
                 _mid =str (_ev .get ('mod_id')or '').strip ()
                 if _mid and not str (_ev .get ('mod_name')or '').strip ():
-                    _ev ['mod_name']=_map .get (_mid )or _mid
+                    _ev ['mod_name']=_map .get (_mid )or _ev_names .get (_mid )or _mid
         except Exception as _ex :
             print (f'[MOD-HISTORY] Имена: {_ex }')
+
+        # Старые панельные дела: модератор спрятан в причине
+        # («[Panel] username: причина») — вытаскиваем из бота-исполнителя.
+        try :
+            _pn ,_pi =_app ._bot_exec_identity ()
+            if _pn :
+                import re as _re_p 
+                for _ev in all_events :
+                    if str (_ev .get ('mod_name')or '').strip ().lower ()not in _pn :
+                        continue 
+                    _m =_re_p .match (r'^\[Panel\]\s*(.+?)\s*:\s*(.*)$',
+                    str (_ev .get ('reason')or ''),_re_p .S )
+                    if _m :
+                        _ev ['mod_name']='Панель: '+_m .group (1 )
+                        if _m .group (2 ).strip ():
+                            _ev ['reason']=_m .group (2 ).strip ()
+        except Exception as _pex2 :
+            print (f'[MOD-HISTORY] Panel-актор: {_pex2 }')
+
+        # ── Склейка дублей: одно наказание — одна строка ──────────────────
+        # Мут из /modpanel попадает в историю дважды: делом из mod_data.json
+        # и записью аудита Discord (исполнителем там сам бот). Ручной мут из
+        # интерфейса Discord раньше вдобавок порождал дело-заглушку
+        # «С Discord» без причины и срока. Склеиваем записи одного наказания
+        # (тот же человек, тот же тип, время в пределах 3 минут), оставляя
+        # лучшую версию: настоящий модератор и причина из дела панели,
+        # срок добираем из аудита, если дела его не знают.
+        def _act_class (a ):
+            a =str (a or '').lower ()
+            if 'unban' in a or 'бан снят' in a or 'разбан' in a :return 'unban'
+            if 'unmute' in a or 'мут снят' in a or 'мьют снят' in a or 'размут' in a :return 'unmute'
+            if 'ban' in a or 'бан' in a :return 'ban'
+            if 'kick' in a or 'кик' in a :return 'kick'
+            if 'warn' in a or 'варн' in a or 'предупреж' in a :return 'warn'
+            if 'mute' in a or 'timeout' in a or 'мут' in a or 'мьют' in a or 'таймаут' in a :return 'mute'
+            return a 
+
+        _junk_reasons ={'','не указана','причина не указана','без причины',
+        'belirtilmedi','с discord','—','-'}
+
+        def _parse_ts (v ):
+            try :
+                _dt =datetime .fromisoformat (str (v or '').replace ('Z','+00:00'))
+            except Exception :
+                return None 
+            if _dt .tzinfo is None :_dt =_dt .replace (tzinfo =timezone .utc )
+            return _dt .astimezone (timezone .utc )
+
+        def _ev_score (ev ):
+            s =0 
+            if str (ev .get ('reason')or '').strip ().lower ()not in _junk_reasons :s +=4 
+            # исполнитель-робот (сам бот, «Moderation») — не выигрывает у
+            # настоящего модератора (жалоба 2026-09-07 «кто выдал»)
+            _b_names ,_b_ids =_app ._bot_exec_identity ()
+            _bot_exec =(str (ev .get ('mod_id')or '').strip ()in _b_ids
+            or str (ev .get ('mod_name')or '').strip ().lower ()in _b_names )
+            if ev .get ('source')=='bot'and str (ev .get ('mod_id')or '')not in ('','system','discord','0','?')and not _bot_exec :s +=2 
+            if ev .get ('duration'):s +=2 
+            if ev .get ('until'):s +=1 
+            return s 
+
+        try :
+            _buckets ={}
+            for _ev in all_events :
+                _buckets .setdefault ((str (_ev .get ('guild_id')or ''),
+                str (_ev .get ('target_id')or ''),_act_class (_ev .get ('action'))),[]).append (_ev )
+            _merged =[]
+            for _group in _buckets .values ():
+                if len (_group )==1 :
+                    _merged .extend (_group )
+                    continue 
+                _group .sort (key =lambda e :_parse_ts (e .get ('created_at'))or datetime .min .replace (tzinfo =timezone .utc ))
+                _clusters =[]
+                for _ev in _group :
+                    _ts =_parse_ts (_ev .get ('created_at'))
+                    _placed =False 
+                    for _cl in _clusters :
+                        if _ts is not None and _cl ['last_ts']is not None \
+                        and abs ((_ts -_cl ['last_ts']).total_seconds ())<=180 :
+                            _cl ['events'].append (_ev )
+                            _cl ['last_ts']=max (_cl ['last_ts'],_ts )
+                            _placed =True 
+                            break 
+                    if not _placed :
+                        _clusters .append ({'events':[_ev ],'last_ts':_ts })
+                for _cl in _clusters :
+                    _evs =_cl ['events']
+                    if len (_evs )==1 :
+                        _merged .extend (_evs )
+                        continue 
+                    # Склейка — только для дублей: разные источники (дело
+                    # панели + аудит) или запись-заглушка без причины.
+                    # Два настоящих варна/мута одним модом подряд не трогаем.
+                    _sources ={e .get ('source')for e in _evs }
+                    _poor =any (str (e .get ('reason')or '').strip ().lower ()in _junk_reasons for e in _evs )
+                    if len (_sources )==1 and not _poor :
+                        _merged .extend (_evs )
+                        continue 
+                    _evs .sort (key =_ev_score ,reverse =True )
+                    _base =dict (_evs [0 ])
+                    _b_names2 ,_b_ids2 =_app ._bot_exec_identity ()
+                    for _other in _evs [1 :]:
+                        for _k in ('duration','until','reason','mod_name','mod_id','target_name'):
+                            if _base .get (_k )in (None ,'')and _other .get (_k ):
+                                if _k =='reason'and str (_other .get ('reason')or '').strip ().lower ()in _junk_reasons :
+                                    continue 
+                                _base [_k ]=_other .get (_k )
+                        # исполнитель-робот уступает настоящему модератору
+                        if _base .get ('mod_name')and str (_base ['mod_name']).strip ().lower ()in _b_names2 \
+                        and _other .get ('mod_name')and str (_other ['mod_name']).strip ().lower ()not in _b_names2 :
+                            _base ['mod_name']=_other ['mod_name']
+                    _merged .append (_base )
+            all_events =_merged 
+        except Exception as _ex :
+            print (f'[MOD-HISTORY] Склейка дублей: {_ex }')
+
         all_events .sort (key =lambda x :x .get ('created_at',''),reverse =True )
         return jsonify (all_events [:500 ])
 

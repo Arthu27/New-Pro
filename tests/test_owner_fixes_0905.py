@@ -174,7 +174,7 @@ try:
     ch = st._log_channel(_Guild2(), {'log_channel_id': 0})
     check(getattr(ch, 'id', None) == 1545468739221327942
           and (777, 'appeals_channel') in _RouteFake.calls,
-          'карточки идут в канал модеров (appeals_channel), не в комнату бана')
+          'запасной канал карточек (appeals_channel) работает, когда комнаты нет')
     _RouteFake.calls.clear()
     real_rr.get_route = lambda gid, key: 0
     ch2 = st._log_channel(_Guild2(), {'log_channel_id': 42})

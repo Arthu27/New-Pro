@@ -275,10 +275,15 @@ def register(ctx):
         _gid = (session.get('main_guild_id')
                 or session.get('selected_guild')
                 or getattr(_app, 'MAIN_GUILD_ID', '') or '')
+        # Канонические имена родительских каналов — из сервиса (в шаблонах
+        # эмодзи-литералы запрещены, имена приходят переменными)
+        _parents = getattr(LS, 'LOG_PARENT_CHANNELS', {})
         return render_template('log_settings.html',
                                role=session.get('role'),
                                username=session.get('username'),
-                               main_guild_id=str(_gid))
+                               main_guild_id=str(_gid),
+                               parent_logs=_parents.get('logs', 'логи'),
+                               parent_reports=_parents.get('reports', 'отчеты'))
 
     # ── API: лимиты ────────────────────────────────────────────────────
     @app.route('/api/guild/<guild_id>/staff-limits')

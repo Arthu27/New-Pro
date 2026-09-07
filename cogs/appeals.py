@@ -220,6 +220,12 @@ def create_appeal(state, user_id, user_name, text, now, link=None):
         return None, f'слишком коротко — напишите подробнее (минимум 10 символов)'
     if len(text) > MAX_TEXT:
         return None, f'максимум {MAX_TEXT} символов'
+    # Дубликаты: пока апелляция на рассмотрении, новую не принимаем —
+    # одна заявка, одна карточка (жалоба владельца на дубли 2026-09-06).
+    pend = user_pending(state, user_id)
+    if pend:
+        return None, (f'апелляция #{pend[0]["id"]} уже на рассмотрении — '
+                      'дождитесь по ней решения')
     if len(user_pending(state, user_id)) >= MAX_PER_USER:
         return None, f'уже есть {MAX_PER_USER} открытых — дождитесь решения'
     blocked = cooldown_block(state, user_id, now)
@@ -376,6 +382,29 @@ class AppealView(discord.ui.View):
                 btn.label = f'В работе: {interaction.user.display_name}'
                 btn.style = discord.ButtonStyle.secondary
         self.cog._save(gid, state)
+        # «Взять в работу» = открыть канал апелляции забаненному: модератор
+        # забрал дело — человек сразу видит комнату и может диалог (владелец
+        # 2026-09-06). Снятие с работы канал не трогает.
+        if not claim:
+            _opened, _ch = False, None
+            _guild = None
+            try:
+                _guild = self.cog.bot.get_guild(gid)
+            except Exception as _ex:
+                log.debug('appeals: guild на «взять в работу» #%s: %s',
+                          item['id'], _ex)
+            if _guild is not None:
+                try:
+                    _user = await self.cog.bot.fetch_user(int(item['user_id']))
+                    _opened, _ch = await self.cog._open_appeal_channel(
+                        _guild, _user)
+                except Exception as _ex:
+                    log.debug('appeals: канал по «взять в работу» #%s: %s',
+                              item['id'], _ex)
+            note += ('\n🚪 Канал апелляции открыт участнику — он уже видит '
+                     'его на сервере.' if _opened else
+                     '\n⚠ Канал апелляции не открылся: участник вне сервера '
+                     'или у бота нет прав на канал.')
         embed = (interaction.message.embeds[0]
                  if interaction.message and interaction.message.embeds else None)
         if embed is not None:
@@ -431,6 +460,13 @@ class AppealView(discord.ui.View):
         unbanned = False
         member_present = False
         guild = self.cog.bot.get_guild(gid)
+        if accept and guild is not None:
+            # Дело «unban» + карточка «Блокировка снята» с автором решения —
+            # ДО снятия роли: тогда слушатели логов видят свежее дело и не
+            # рисуют дубль карточки без автора (владелец 2026-09-06).
+            await self.cog._log_unban_decision(
+                guild, item, interaction.user.id,
+                interaction.user.display_name or str(interaction.user))
         if accept:
             if guild is not None:
                 member = guild.get_member(item['user_id'])
@@ -485,19 +521,24 @@ class AppealView(discord.ui.View):
             member_present=member_present, invite_url=invite_url,
             guild_id=gid)
 
-        for child in self.children:
-            child.disabled = True
-        embed = interaction.message.embeds[0] if interaction.message.embeds else None
-        if embed:
-            embed.color = COLOR_YES if accept else COLOR_NO
-            status = ('принята (разбанен)' if (accept and unbanned)
-                      else ('принята' if accept else 'отклонена'))
-            embed.title = f'Апелляция #{item["id"]} — {status}'
-            embed.set_footer(text=f'Решение: {interaction.user}')
-        if embed:
-            await interaction.response.edit_message(embed=embed, view=self)
-        else:
-            await interaction.response.edit_message(view=self)
+        # Карточка сделала своё дело: решение вынесено — сообщение с кнопками
+        # удаляем, чтобы канал апелляций не замусоривался (владелец
+        # 2026-09-06). Модератору — короткий ephemeral-ответ, полная история
+        # живёт в панели («Апелляции → История решений»).
+        status = ('принята (разбанен)' if (accept and unbanned)
+                  else ('принята' if accept else 'отклонена'))
+        _done_note = (f'Апелляция #{item["id"]} — {status}. Карточка удалена; '
+                      'история — в панели «Апелляции».')
+        try:
+            await interaction.response.send_message(_done_note, ephemeral=True)
+        except Exception as _ex:
+            log.debug('appeals: ответ решения: %s', _ex)
+            try:
+                await interaction.followup.send(_done_note, ephemeral=True)
+            except Exception as _ex2:
+                log.debug('appeals: followup решения: %s', _ex2)
+        await self.cog._delete_appeal_card(
+            guild, state, item, message=interaction.message)
 
 
 
@@ -877,6 +918,57 @@ class AppealMenuView(discord.ui.View):
         self.add_item(AppealMenuSelect())
 
 
+DM_APPEAL_CUSTOM_ID = 'appeal:dm:open'
+
+
+class AppealDMView(discord.ui.View):
+    """Кнопка «Подать апелляцию» в ЛС о бане (persistent).
+
+    Живёт в личке бота под карточкой «Вам выдан бан» и переживает
+    рестарт: ког достаём из interaction на клике, ссылку не держим.
+    Открывает ту же форму, что /апелляция (владелец 2026-09-06:
+    «внизу кнопка для апелляции — чтобы типо разбан»).
+    """
+
+    def __init__(self):
+        super().__init__(timeout=None)
+        btn = discord.ui.Button(
+            label='Подать апелляцию', style=discord.ButtonStyle.success,
+            emoji='⚖', custom_id=DM_APPEAL_CUSTOM_ID)
+        btn.callback = self._open
+        self.add_item(btn)
+
+    async def _open(self, interaction):
+        cog = None
+        try:
+            cog = interaction.client.get_cog('Appeals')
+        except Exception as _ex:
+            log.debug('appeals dm: cog: %s', _ex)
+        if cog is None:
+            await interaction.response.send_message(
+                'Бот только что перезапускался — нажмите кнопку ещё раз.',
+                ephemeral=True)
+            return
+        guild = cog._main_guild()
+        if guild is None:
+            await interaction.response.send_message(
+                'Бот ещё не настроен: владелец не указал главный сервер. '
+                'Напишите администрации сервера другим способом.',
+                ephemeral=True)
+            return
+        try:
+            banned = await cog._is_banned(guild, interaction.user)
+        except Exception as _ex:
+            log.debug('appeals dm: бан-чек: %s', _ex)
+            banned = True   # не отпугнуть человека сбоем проверки
+        if not banned:
+            await interaction.response.send_message(
+                f'Вы не забанены на сервере **{guild.name}** — '
+                'апелляция не нужна.', ephemeral=True)
+            return
+        await interaction.response.send_modal(AppealModal(cog, guild))
+
+
 # ─── ког ────────────────────────────────────────────────────────────────────
 
 class Appeals(commands.Cog):
@@ -906,6 +998,11 @@ class Appeals(commands.Cog):
             self.bot.add_view(AppealMenuView())
         except Exception as _ex:
             log.debug('appeals: меню-view: %s', _ex)
+        # кнопка «Подать апелляцию» в ЛС о бане — глобальная регистрация
+        try:
+            self.bot.add_view(AppealDMView())
+        except Exception as _ex:
+            log.debug('appeals: dm-view: %s', _ex)
         rated = 0
         for guild in list(self.bot.guilds):
             state = self._load(guild.id)
@@ -960,16 +1057,20 @@ class Appeals(commands.Cog):
             log.debug('appeals: событие колокольчика: %s', _ex)
 
     async def _ping_mod_role(self, target_channel, settings, item):
-        """Пинг роли модерации при новой апелляции (0 в настройках = без пинга)."""
+        """Пинг роли модерации при новой апелляции (0 в настройках = без пинга).
+
+        Возвращает отправленное сообщение: его id запоминаем в карточке,
+        чтобы после решения удалить и пинг — канал остаётся чистым."""
         rid = int(settings.get('ping_role_id') or 0)
         if not rid or target_channel is None:
-            return
+            return None
         try:
-            await target_channel.send(
+            return await target_channel.send(
                 f'<@&{rid}> — новая апелляция **#{item["id"]}** ожидает решения.',
                 allowed_mentions=discord.AllowedMentions(roles=True))
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: пинг роли #%s: %s', item.get('id'), _ex)
+            return None
 
     async def _escalate_overdue(self, guild, state, now):
         """Просроченные прямо в канал старшей роли (0 ч в настройках = выкл).
@@ -992,7 +1093,7 @@ class Appeals(commands.Cog):
                 due.append(item)
         if not due:
             return 0
-        channel = self._log_channel(guild, state)
+        channel, _ = await self._card_channel(guild, state)
         rid = int(settings.get('escalate_role_id') or 0)
         mention = f'<@&{rid}> ' if rid else ''
         n = 0
@@ -1052,7 +1153,7 @@ class Appeals(commands.Cog):
                     stale = stale_pending(state, now)
                     if not stale:
                         continue
-                    channel = self._log_channel(guild, state)
+                    channel, _ = await self._card_channel(guild, state)
                     for item in stale:
                         age_h = 0
                         created = _parse_ts(item.get('created_at'))
@@ -1094,20 +1195,12 @@ class Appeals(commands.Cog):
             if not closed:
                 return
             self._save(guild.id, state)
-            channel = self._log_channel(guild, state)
             for item in closed:
-                # карточка в канале: перекрасить и убрать кнопки
+                # карточка в канале: вопрос закрыт — сообщение удаляем,
+                # канал не замусоривается (владелец 2026-09-06)
                 try:
-                    mid = int(item.get('message_id') or 0)
-                    if channel is not None and mid:
-                        msg = await channel.fetch_message(mid)
-                        embed = msg.embeds[0] if msg.embeds else None
-                        if embed:
-                            embed.color = COLOR_CLOSED
-                            embed.title = f'Апелляция #{item["id"]} — закрыта автоматически'
-                            embed.set_footer(text='Разбанен вручную в Discord')
-                        await msg.edit(embed=embed, view=None)
-                except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
+                    await self._delete_appeal_card(guild, state, item)
+                except Exception as _ex:
                     log.debug('appeals: автозакрытие карточки #%s: %s', item['id'], _ex)
                 try:
                     dm = _dm_embed('closed', item, str(guild.name))
@@ -1314,6 +1407,129 @@ class Appeals(commands.Cog):
                 log.debug('appeals: parent set_permissions: %s', _ex)
         return opened, (_iso if opened else None)
 
+    async def _log_unban_decision(self, guild, item, mod_id, mod_name):
+        """Дело «unban» + карточка «Блокировка снята» с автором решения.
+
+        Раньше разбан по апелляции уходил в логи «системой» или вовсе без
+        автора: аудита могло не быть, а дело не писалось никогда. Теперь
+        пишем дело от имени принявшего модератора и даём единую карточку
+        со столбиком автора (владелец 2026-09-06).
+        """
+        if guild is None:
+            return None
+        case_id = None
+        try:
+            mod_cog = self.bot.get_cog('Moderation')
+            save = getattr(mod_cog, 'save_case', None)
+            if callable(save):
+                import asyncio as _aio
+                case_id = await _aio.to_thread(
+                    save, guild.id, 'unban', int(item['user_id']),
+                    int(mod_id or 0), f'Апелляция #{item["id"]} принята',
+                    str(mod_name or 'модератор'))
+        except Exception as _ex:
+            log.debug('appeals: дело разбана #%s: %s', item.get('id'), _ex)
+        try:
+            from cogs.logs import send_action_log
+
+            class _Mod:
+                bot = False
+                id = int(mod_id or 0)
+                name = str(mod_name or 'модератор')
+                display_name = name
+                mention = f'<@{id}>' if id else name
+
+            user_obj = None
+            try:
+                user_obj = guild.get_member(int(item['user_id']))
+            except Exception:
+                user_obj = None
+            if user_obj is None:
+                try:
+                    user_obj = await self.bot.fetch_user(int(item['user_id']))
+                except (discord.NotFound, discord.Forbidden,
+                        discord.HTTPException) as _ex:
+                    log.debug('appeals: fetch автора #%s: %s', item.get('id'), _ex)
+            if user_obj is not None:
+                await send_action_log(
+                    guild, 'unban', user_obj, _Mod(),
+                    reason=f'Апелляция #{item["id"]} принята',
+                    case_id=case_id)
+        except Exception as _ex:
+            log.debug('appeals: карточка разбана #%s: %s', item.get('id'), _ex)
+        return case_id
+
+    async def _delete_appeal_card(self, guild, state, item, message=None):
+        """Удалить карточку решённой апелляции — вместе с пингом роли.
+
+        Решение вынесено — сообщение с кнопками больше не нужно: канал
+        апелляций остаётся чистым, история живёт в панели («Апелляции →
+        История решений»). Карточку в собственной ветке убираем вместе
+        с веткой; тихо переживаем ошибки — удаление не главное.
+        """
+        guild = guild or getattr(message, 'guild', None)
+        state = state or {}
+
+        async def _del_in(ch, mid):
+            if ch is None or not mid:
+                return False
+            try:
+                msg = await ch.fetch_message(int(mid))
+                await msg.delete()
+                return True
+            except Exception as _ex:
+                log.debug('appeals: удалить сообщение #%s: %s', mid, _ex)
+                return False
+
+        # 1) ветка, созданная под карточку, — уходит целиком
+        try:
+            tid = int(item.get('thread_id') or 0)
+        except (TypeError, ValueError):
+            tid = 0
+        if tid:
+            th = None
+            msg_ch = getattr(message, 'channel', None) if message is not None else None
+            if msg_ch is not None and getattr(msg_ch, 'id', 0) == tid:
+                th = msg_ch
+            elif guild is not None:
+                th = self._guild_ch(guild, tid)
+            if th is not None:
+                try:
+                    await th.delete()
+                    if item.get('ping_message_id'):
+                        await _del_in(self._guild_ch(guild, item.get('card_channel_id'))
+                                      if guild is not None else None,
+                                      item.get('ping_message_id'))
+                    return True
+                except Exception as _ex:
+                    log.debug('appeals: удалить ветку #%s: %s', tid, _ex)
+        # 2) само сообщение карточки — из клика или по сохранённым id
+        deleted = False
+        if message is not None:
+            _del = getattr(message, 'delete', None)
+            if callable(_del):
+                try:
+                    await _del()
+                    deleted = True
+                except Exception as _ex:
+                    log.debug('appeals: удалить карточку по клику: %s', _ex)
+        if not deleted and guild is not None:
+            try:
+                cid = int(item.get('card_channel_id') or 0)
+            except (TypeError, ValueError):
+                cid = 0
+            ch = self._guild_ch(guild, cid) if cid else self._log_channel(guild, state)
+            deleted = await _del_in(ch, item.get('message_id'))
+        # 3) пинг роли под карточкой — тоже мусор после решения
+        if guild is not None and item.get('ping_message_id'):
+            try:
+                cid = int(item.get('card_channel_id') or 0)
+            except (TypeError, ValueError):
+                cid = 0
+            ch = self._guild_ch(guild, cid) if cid else self._log_channel(guild, state)
+            await _del_in(ch, item.get('ping_message_id'))
+        return deleted
+
     def _dm_channel_line(self, opened, channel):
         """Строка про канал для ЛС-подтверждения: имя канала, не абстракция."""
         if opened:
@@ -1422,7 +1638,7 @@ class Appeals(commands.Cog):
             cid = int(menu.get('channel_id') or 0)
             channel = self._guild_ch(guild, cid) if cid else None
         if channel is None:
-            channel = self._log_channel(guild, state)
+            channel, _ = await self._card_channel(guild, state)
         embed = discord.Embed(
             title=f'Апелляция #{item["id"]} — новая',
             description=item['text'],
@@ -1446,36 +1662,50 @@ class Appeals(commands.Cog):
             log.debug('appeals: карточка-картинка #%s: %s', item['id'], _ex)
 
         view = AppealView(self, guild_id, item['id'])
-        # Куда падает карточка: НАСТРОЕННЫЙ «Канал апелляций (карточки на
-        # разбан)» — тотот же источник, что в панели; меню-канал — запасной.
-        # Раньше карточка уходила тредом в меню-канал, и владелец её там
-        # не находил (жалоба 2026-09-05).
-        target = self._log_channel(guild, state) or channel
+        # Куда падает карточка: «всё сюда, кроме логов» — сама комната
+        # апелляции, где и кнопки, и обсуждение (владелец 2026-09-06).
+        # Нет комнаты — запасной путь прежний: канал карточек, заявка
+        # уходит в собственную ветку; меню-канал — последний запасной.
+        target, use_thread = await self._card_channel(guild, state)
+        if target is None:
+            target = channel
+            use_thread = True
         if target is not None:
             name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
             send_kw = {'embed': embed, 'view': view}
             if card_file is not None:
                 send_kw['file'] = card_file
             card = None
-            try:
-                thread = await target.create_thread(
-                    name=name, type=discord.ChannelType.public_thread)
-                card = await thread.send(**send_kw)
-                item['thread_id'] = thread.id
-            except (discord.Forbidden, discord.HTTPException) as _ex:
-                # Нет права «Создавать публичные ветки» — НЕ теряем апелляцию:
-                # карточка с кнопками ложится прямо в канал.
-                log.warning('appeals: тред #%s не создан (%s) — карточка в канал',
-                            item['id'], _ex)
+            if use_thread:
+                try:
+                    thread = await target.create_thread(
+                        name=name, type=discord.ChannelType.public_thread)
+                    card = await thread.send(**send_kw)
+                    item['thread_id'] = thread.id
+                except (discord.Forbidden, discord.HTTPException) as _ex:
+                    # Нет права «Создавать публичные ветки» — НЕ теряем
+                    # апелляцию: карточка с кнопками ложится прямо в канал.
+                    log.warning('appeals: тред #%s не создан (%s) — карточка в канал',
+                                item['id'], _ex)
+                    try:
+                        card = await target.send(**send_kw)
+                    except (discord.Forbidden, discord.HTTPException) as _ex2:
+                        log.error('appeals: карточка #%s не ушла и в канал: %s',
+                                  item['id'], _ex2)
+            else:
+                # комната апелляции: карточка прямо в канал — это дом заявки
                 try:
                     card = await target.send(**send_kw)
-                except (discord.Forbidden, discord.HTTPException) as _ex2:
-                    log.error('appeals: карточка #%s не ушла и в канал: %s',
-                              item['id'], _ex2)
+                except (discord.Forbidden, discord.HTTPException) as _ex:
+                    log.error('appeals: карточка #%s не ушла в комнату: %s',
+                              item['id'], _ex)
             if card is not None:
                 item['message_id'] = card.id
                 item['thread_url'] = card.jump_url
-                await self._ping_mod_role(target, settings_of(state), item)
+                # где лежит карточка (для удаления после решения) + пинг
+                item['card_channel_id'] = getattr(target, 'id', None)
+                ping = await self._ping_mod_role(target, settings_of(state), item)
+                item['ping_message_id'] = getattr(ping, 'id', None)
                 await self._fire_panel_event(item)
         # Канал апелляции открываем автору ТОЛЬКО теперь: владелец просил,
         # чтобы канал был виден не в момент бана, а после подачи апелляции
@@ -1517,7 +1747,9 @@ class Appeals(commands.Cog):
                         value=self._mod_context(state, guild.id, user.id),
                         inline=False)
         embed.set_footer(text=f'user_id: {item["user_id"]} · appeal #{item["id"]}')
-        channel = self._log_channel(guild, state)
+        # «всё сюда, кроме логов»: карточка живёт в комнате апелляции;
+        # нет комнаты — запасной канал карточек (владелец 2026-09-06)
+        channel, _use_thread = await self._card_channel(guild, state)
         if channel is not None:
             view = AppealView(self, guild_id, item['id'])
             # Оформление карточки из панели: авто-картинка в выбранной теме,
@@ -1531,8 +1763,11 @@ class Appeals(commands.Cog):
             try:
                 msg = await channel.send(**send_kwargs)
                 item['message_id'] = msg.id
+                # где лежит карточка (для удаления после решения) + пинг
+                item['card_channel_id'] = getattr(channel, 'id', None)
                 self._save(guild_id, state)
-                await self._ping_mod_role(channel, settings_of(state), item)
+                ping = await self._ping_mod_role(channel, settings_of(state), item)
+                item['ping_message_id'] = getattr(ping, 'id', None)
                 await self._fire_panel_event(item)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 log.error('appeals: карточка #%s на %s не ушла: %s',
@@ -1656,12 +1891,12 @@ class Appeals(commands.Cog):
 
     # ---- утилиты ----
     def _log_channel(self, guild, state):
-        """Куда класть карточки апелляций — канал модеров, не комната бана.
+        """Запасной канал карточек, если комната апелляции не задана.
 
         Порядок: Каналы и маршруты → «Карточки апелляций» → известный канал
         модеров, если он есть на сервере → старый log_channel_id (наследие)
-        → системный. Комната апелляции сюда не подмешивается: туда ходит
-        забаненный, карточки — команде.
+        → системный. Главный канал карточек теперь сама комната апелляции —
+        см. _card_channel («всё сюда, кроме логов», владелец 2026-09-06).
         """
         try:
             from services.channel_routes import resolve_route, channel_on_guild
@@ -1676,6 +1911,21 @@ class Appeals(commands.Cog):
         if ch is not None:
             return ch
         return guild.system_channel
+
+    async def _card_channel(self, guild, state):
+        """Куда класть карточку апелляции — «всё сюда, кроме логов».
+
+        Главная точка — сама комната апелляции (маршрут «Комната
+        апелляции»): заявка, кнопки модераторов и обсуждение живут в одном
+        канале, забаненный видит свою карточку (владелец 2026-09-06).
+        Комнаты нет — запасной путь прежний: канал карточек, и там
+        заявка уходит в собственную ветку, чтобы канал не замусоривался.
+        Возвращает (канал | None, создавать_ли_ветку).
+        """
+        room = await self._appeal_channel(guild)
+        if room is not None:
+            return room, False
+        return self._log_channel(guild, state), True
 
     async def _notify_user(self, item, accept, unbanned, cooldown_hours=0,
                            guild_name='', member_present=False, invite_url=None,

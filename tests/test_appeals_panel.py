@@ -54,12 +54,11 @@ check(item is None and err == 'слишком коротко — напишит�
 item, err = AP.create_appeal(st, 1, 'Длинный', 'х' * 501, T)
 check(item is None and err == 'максимум 500 символов', 'перебор — слова кога')
 st = AP.empty_state()
-for i in range(3):
-    AP.create_appeal(st, 1, 'Настырный', f'апелляция номер {i} прошу разбана', T)
+AP.create_appeal(st, 1, 'Настырный', 'апелляция номер один прошу разбана', T)
 item, err = AP.create_appeal(st, 1, 'Настырный', 'ещё одна просьба о разбане', T)
-check(item is None and err == 'уже есть 3 открытых — дождитесь решения',
-      'не больше трёх открытых')
-check(st['next_id'] == 4 and len(AP.pending_items(st)) == 3, 'конвейер цел')
+check(item is None and err == 'апелляция #1 уже на рассмотрении — дождитесь по ней решения',
+      'дубль заявки не проходит: одна на рассмотрении')
+check(st['next_id'] == 2 and len(AP.pending_items(st)) == 1, 'конвейер цел')
 
 print('== 2. Фикстура журнала ==')
 st = AP.empty_state()

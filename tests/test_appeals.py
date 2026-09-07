@@ -59,20 +59,21 @@ check(bad is None and 'подробнее' in err, 'слишком коротк�
 bad, err = ap.create_appeal(st, 555, 'Zhulik', 'у' * 600, NOW)
 check(bad is None and '500' in err, 'слишком длинный текст отклонён')
 
-# лимит открытых: создаём до потолка, дальше — отказ
-ap.create_appeal(st, 555, 'Zhulik', 'вторая попытка, подробно и честно', NOW)
-ap.create_appeal(st, 555, 'Zhulik', 'третья попытка, очень подробно', NOW)
-bad, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая попытка лимита', NOW)
-check(bad is None and 'дождитесь' in err, f'лимит {ap.MAX_PER_USER} открытых')
+# дубликаты: пока апелляция на рассмотрении, новую не принимаем —
+# одна заявка, одна карточка (владелец 2026-09-06)
+dup, err = ap.create_appeal(st, 555, 'Zhulik', 'вторая попытка, дубликат', NOW)
+check(dup is None and '#1' in err and 'рассмотрении' in err,
+      'дубль не проходит: одна заявка на рассмотрении')
+check(len(ap.user_pending(st, 555)) == 1, 'в очереди осталась одна заявка')
 # решённая освобождает место — но сразу после отказа работает кулдаун,
 # а по его истечении слот честно свободен
 ap.resolve_appeal(st, 1, False, 'Arthur', NOW, reply='нет')
-bad, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая после отказа', NOW)
+bad, err = ap.create_appeal(st, 555, 'Zhulik', 'вторая после отказа', NOW)
 check(bad is None and 'повторная подача' in err,
       'мгновенный репост после отказа удерживает кулдаун')
-freed, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая после кулдауна',
+freed, err = ap.create_appeal(st, 555, 'Zhulik', 'вторая после кулдауна',
                               NOW + timedelta(hours=ap.DEFAULT_COOLDOWN_HOURS + 1))
-check(freed is not None, 'после кулдауна решённая освобождает слот лимита')
+check(freed is not None, 'после кулдауна решённая освобождает слот')
 
 print('== 2. resolve_appeal ==')
 st2 = ap.empty_state()
@@ -92,7 +93,7 @@ check(item2['status'] == 'rejected' and item2['reply'].startswith('Доказа�
 
 print('== 3. списки и карточки ==')
 check([i['id'] for i in ap.pending_items(st2)] == [], 'после решений pending пуст')
-check(len(ap.user_pending(st, 555)) == 3, 'user_pending считает только открытые')
+check(len(ap.user_pending(st, 555)) == 1, 'user_pending считает только открытые')
 check(ap.get_appeal(st2, a1['id'])['user_name'] == 'Griever', 'get_appeal находит запись')
 card = ap.fmt_card_text(a1)
 check('#1' in card and 'Griever' in card and 'клянусь' in card, 'карточка читаемая')
@@ -157,9 +158,15 @@ check(ap.cooldown_block(stc, 777, NOW + timedelta(hours=ap.DEFAULT_COOLDOWN_HOUR
 print('== 5.3 автозакрытие при ручном разбане ==')
 sta = ap.empty_state()
 pa1, _ = ap.create_appeal(sta, 900, 'Mira', 'прошу разбанить первый раз честно', NOW)
-pa2, _ = ap.create_appeal(sta, 900, 'Mira', 'вторая апелляция от того же человека', NOW)
+# вторая открытая той же Mira — легаси-дубль из старой базы: новые дубли
+# create_appeal не пропускает, автозакрытие должно чистить и такие
+pa2 = dict(pa1)
+pa2['id'] = sta['next_id']
+pa2['text'] = 'вторая апелляция от того же человека'
+sta['next_id'] += 1
+sta['items'].append(pa2)
 pb, _ = ap.create_appeal(sta, 901, 'Chuk', 'а я просто мимо проходил тут', NOW)
-rj, _ = ap.create_appeal(sta, 900, 'Mira', 'третья старая уже решённая', NOW)
+rj, _ = ap.create_appeal(sta, 902, 'Rita', 'третья старая уже решённая', NOW)
 ap.resolve_appeal(sta, rj['id'], False, 'Arthur', NOW, reply='нет')
 closed = ap.auto_close_unbanned(sta, 900, NOW + timedelta(hours=2))
 check(len(closed) == 2 and {c['id'] for c in closed} == {pa1['id'], pa2['id']},

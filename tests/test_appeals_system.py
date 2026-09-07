@@ -90,6 +90,10 @@ class _Embed:
 class _Msg:
     def __init__(s):
         s.embeds = [_Embed()]
+        s.deleted = False
+
+    async def delete(s):
+        s.deleted = True
 
 
 class _Inter:
@@ -170,9 +174,10 @@ check(item['status'] == 'pending', 'исчерпавший лимит НЕ ре�
 print('== 2. «Отклонить»: лимит unban расходки не несёт ==')
 it2 = _Inter(mod_ok)
 asyncio.new_event_loop().run_until_complete(view._resolve(it2, False))
-check(it2.response.edited == 1 and 'Лимит' not in (it2.response.msg or ''),
+check('отклонена' in (it2.response.msg or '') and 'Лимит' not in (it2.response.msg or ''),
       'отклонение прошло без вопроса о лимите', (it2.response.msg or '')[:60])
 check(item['status'] == 'rejected', 'апелляция отклонена')
+check(it2.message.deleted, 'карточка после отклонения удалена')
 
 print('== 3. Принятие без лимита: решение + расходка «unban» в счётчик ==')
 state2 = {'items': [], 'next_id': 1, 'settings': {}}
@@ -185,8 +190,9 @@ view2 = AppealView(cog2, GID, item2['id'])
 mod_ok2 = _User(777000000000000732, [_Role(ROLE_ID)])
 it3 = _Inter(mod_ok2)
 asyncio.new_event_loop().run_until_complete(view2._resolve(it3, True))
-check(it3.response.edited == 1 and item2['status'] == 'accepted',
-      'принятие выполнилось')
+check('принята' in (it3.response.msg or '') and item2['status'] == 'accepted',
+      'принятие выполнилось', (it3.response.msg or '')[:60])
+check(it3.message.deleted, 'карточка после принятия удалена')
 check(guild2.unbans == [UID], 'настоящий разбан вызван')
 _ok, used, lim = SL.check_limit(GID, mod_ok2.id, 'unban', 1)
 check(used == 1, f'расходка «unban» записана (used={used})')

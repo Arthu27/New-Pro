@@ -36,6 +36,8 @@ CATEGORIES ={
 'warn':{'label':'Варны','emoji':'⚠','color':0xE74C3C ,'channel':'варны'},
 'staff':{'label':'Снятие / ЧС стаффа','emoji':'🚷','color':0x8E44AD ,'channel':'стафф'},
 'rest':{'label':'Остальное','emoji':'📋','color':0x95A5A6 ,'channel':'остальное'},
+'ticket-log':{'label':'Тикеты','emoji':'🎫','color':0x9B59B6 ,'channel':'тикеты'},
+'ai-alerts':{'label':'AI-алерты','emoji':'🤖','color':0x9B59B6 ,'channel':'ai-алерты'},
 }
 
 DIV =" \u2022 "
@@ -194,6 +196,8 @@ LOG_CHANNELS ={
 'ses':'🔊・голос',  # legacy alias
 'сервер':'📋・сервер',
 'доказательства':'📸・доказательства',
+'тикеты':'🎫・тикеты',
+'ai-алерты':'🤖・ai-алерты',
 'баны':'баны',
 'муты':'муты войс/чат',
 'варны':'варны',
@@ -220,6 +224,9 @@ LEGACY_CHANNEL_NAMES ={
 'снятие/чс стаффа':['чс стаффа','снятие стаффа','staff'],
 'остальное':['📋・сервер','-сервер','server-log'],
 'никнеймы':['👋・участники','-участники'],
+'🎫・тикеты':['ticket-log','тикет-лог','тикеты-лог'],
+'🤖・ai-алерты':['ai-alerts','ai-лог','ai-alert'],
+'🎉・приветствие':['-приветствие','welcome','приветствия'],
 }
 
 
@@ -262,7 +269,7 @@ def find_log_channel (guild ,category :str ='сервер'):
     """Единый поиск лог-канала для категории.
 
     Порядок: канал/ветка из панели («Логи сервера») → ветка по имени
-    (под #・логи / #・отчеты) → каноническое имя → legacy-имена.
+    (под #🧵・логи / #📑・отчеты) → каноническое имя → legacy-имена.
     Ничего не создаём. None, если ничего нет.
     """
     try :
@@ -307,7 +314,7 @@ def _norm_ch_name (name ):
         return str (name or '').lower ()
 
 
-# Ветки под #・логи / #・отчеты — ищем по имени, ID не хардкодим.
+# Ветки под #🧵・логи / #📑・отчеты — ищем по имени, ID не хардкодим.
 _THREAD_HINTS = {
     'message': ['сообщен', 'message'],
     'voice': ['войс', 'голос', 'voice', 'ses'],
@@ -504,9 +511,9 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
         log .debug ('ensure_log_channel canonical: %s',_ex )
     ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
     target =LOG_CHANNELS .get (ch_name ,None )
-    # Сервисные каналы других модулей задаются напрямую по имени
-    if target is None and category in ('ticket-log','ai-alerts'):
-        target =category
+    # 'ticket-log'/'ai-alerts' — полноценные категории (🎫・тикеты /
+    # 🤖・ai-алерты): создаются и находятся по общим правилам, включая
+    # миграцию старых имён (ticket-log, ai-alerts) из LEGACY_CHANNEL_NAMES.
     if target is None :
         return None
     # Автосоздание каналов — ТОЛЬКО с явного разрешения из панели
@@ -1226,6 +1233,12 @@ def _actor_person(who, guild=None, target_id=None, actions=None):
             return _person_block(real)
         return _bullet('система')
     if not who:
+        # Аудит промолчал (лимит/не нашлось записи) — автора всё равно
+        # называем: берём из свежего дела по этому человеку
+        if guild is not None and target_id:
+            real = _case_moderator(guild, target_id, actions)
+            if real is not None:
+                return _person_block(real)
         return '—'
     if not isinstance(who, (tuple, list)):
         if getattr(who, 'bot', False) and guild is not None:
@@ -1489,6 +1502,13 @@ def _actor_short(who, guild=None, target_id=None, actions=None):
                         or 'модератор')
             return 'система'
     if not who:
+        # Аудит не нашёл автора — до последнего называем человека из дела:
+        # «Блокировка снята» без «кто» больше не уходит (владелец 2026-09-06)
+        if guild is not None and target_id:
+            real = _case_moderator(guild, target_id, actions)
+            if real is not None:
+                return (getattr(real, 'display_name', None)
+                        or getattr(real, 'name', None) or '—')
         return '—'
     if not isinstance(who, (tuple, list)):
         return (getattr(who, 'display_name', None)
@@ -1514,31 +1534,38 @@ LOG_CENTER_ITEMS = [
     ('welcome',    '🎉', 'Приветствие', 'приветствия и прощания (публичный)'),
 ]
 
-# Канал, где живут логи каждой категории центра
+# Канал, где живут логи каждой категории центра. Имена — канонические
+# «эмодзи・слово» (как LOG_CHANNELS); старые '-модерация'/'-ses' и
+# сервисные 'ticket-log'/'ai-alerts' находятся через LEGACY_CHANNEL_NAMES.
 LOG_CENTER_CHANNELS = {
-    'mod': '-модерация',
-    'member': '-участники',
-    'message': '-сообщения',
-    'voice': '-ses',
-    'channel': '-сервер',
-    'role': '-сервер',
-    'invite': '-сервер',
-    'guild': '-сервер',
-    'ticket-log': 'ticket-log',
-    'ai-alerts': 'ai-alerts',
-    'welcome': '-приветствие',
+    'mod': '🛡・модерация',
+    'member': '👋・участники',
+    'message': '💬・сообщения',
+    'voice': '🔊・голос',
+    'channel': '📋・сервер',
+    'role': '📋・сервер',
+    'invite': '📋・сервер',
+    'guild': '📋・сервер',
+    'ticket-log': '🎫・тикеты',
+    'ai-alerts': '🤖・ai-алерты',
+    'welcome': '🎉・приветствие',
 }
 
 
 def _lc_find_channel(guild, key):
-    """Найти канал категории центра логов (без создания)."""
+    """Найти канал категории центра логов (без создания).
+
+    Ищет каноническое имя и его legacy-варианты нормализованным
+    сравнением (🛡・модерация = -модерация = модерация = mod-log).
+    """
     name = LOG_CENTER_CHANNELS.get(key)
     if not name:
         return None
-    want = _norm_ch_name(name)
-    for c in guild.text_channels:
-        if _norm_ch_name(c.name) == want:
-            return c
+    for want_name in [name] + LEGACY_CHANNEL_NAMES.get(name, []):
+        want = _norm_ch_name(want_name)
+        for c in guild.text_channels:
+            if _norm_ch_name(c.name) == want:
+                return c
     return discord.utils.get(guild.text_channels, name=name)
 
 
@@ -1550,7 +1577,7 @@ async def _lc_ensure_channel(guild, key):
             return ch
         try:
             return await guild.create_text_channel(
-                '-приветствие', reason='Hakumo: канал приветствий',
+                '🎉・приветствие', reason='Hakumo: канал приветствий',
                 topic='Приветствие и прощание участников')
         except Exception:
             return None
@@ -2316,37 +2343,37 @@ class Logs (commands .Cog ):
                     await ch .edit (category =existing_cat )
                 already .append (ch_name )
 
-        # 3) Сервисные каналы других модулей (тикеты и AI-алерты тоже пишут логи)
-        extra_channels ={
-        'ticket-log':'Логи тикетов — открытие и закрытие обращений',
-        'ai-alerts':'AI-алерты проактивной модерации',
-        }
-        for extra ,topic in extra_channels .items ():
-            ch =discord .utils .get (guild .text_channels ,name =extra )
-            if ch :
-                if ch .category !=existing_cat :
-                    await ch .edit (category =existing_cat )
-                already .append (extra )
-            else :
-                await guild .create_text_channel (extra ,category =existing_cat ,reason ="Hakumo: сервисный канал логов",topic =topic )
-                created .append (extra )
+        # 3) Сервисные каналы тикетов и AI-алертов — обычные канонические
+        # каналы (🎫・тикеты / 🤖・ai-алерты): их создаёт и мигрирует общий
+        # цикл выше через LEGACY_CHANNEL_NAMES (ticket-log → 🎫・тикеты …).
 
         # 4) Публичный канал приветствий — НЕ в скрытой категории (его видят все)
-        welcome_ch =discord .utils .get (guild .text_channels ,name ="-приветствие")
+        welcome_pretty ="🎉・приветствие"
+        welcome_ch =None
+        for _wname in [welcome_pretty ]+LEGACY_CHANNEL_NAMES .get (welcome_pretty ,[]):
+            welcome_ch =discord .utils .get (guild .text_channels ,name =_wname )
+            if welcome_ch :
+                break
         if not welcome_ch :
             welcome_ch =await guild .create_text_channel (
-            "-приветствие",
+            welcome_pretty ,
             reason ="Hakumo: канал приветствий",
             topic ="Приветствие и прощание участников"
             )
-            created .append ("-приветствие (публичный)")
+            created .append (welcome_pretty +" (публичный)")
         else :
+            if welcome_ch .name !=welcome_pretty :
+                try :
+                    await welcome_ch .edit (name =welcome_pretty ,reason ="Hakumo: красивое название канала приветствий")
+                    migrated .append (f"#{welcome_ch.name} → #{welcome_pretty}")
+                except Exception as _we :
+                    log .debug (f'[SETUP-LOGS] переименование приветствий: {_we}')
             # Старый баг: канал приветствий был спрятан в закрытой категории логов
             if welcome_ch .category ==existing_cat :
                 await welcome_ch .edit (category =None ,reason ="Hakumo: канал приветствий должен быть публичным")
                 await welcome_ch .set_permissions (guild .default_role ,read_messages =True ,send_messages =False ,reason ="Hakumo: публичный канал приветствий")
-                migrated .append ("-приветствие → вынесен из скрытой категории")
-            already .append ("-приветствие")
+                migrated .append ("🎉・приветствие → вынесен из скрытой категории")
+            already .append (welcome_pretty )
 
         # 4б) Авто-настройка welcome-конфига, если каналы ещё не заданы
         try :
@@ -2406,8 +2433,8 @@ class Logs (commands .Cog ):
         " **-сообщения** — удаление, редактирование\n"
         " **-ses** — вход/выход из войса\n"
         " **-сервер** — каналы, роли, инвайты, сервер\n"
-        " **ticket-log** — тикеты ·  **ai-alerts** — AI алерты\n"
-        " **-приветствие** — приветствия и прощания (публичный)"
+        " **🎫・тикеты** — тикеты ·  **🤖・ai-алерты** — AI алерты\n"
+        " **🎉・приветствие** — приветствия и прощания (публичный)"
         ),
         inline =False
         )
@@ -2659,9 +2686,18 @@ class Logs (commands .Cog ):
         save_event (guild .id ,'mod','Бан снят',{
         'user_id':str (user .id ),
         'user_name':str (user ),
+        'mod_id':str (who [1 ])if who else '',
         'mod_name':_actor_short (who ,guild =guild ,target_id =user .id ,actions =('unban',)),
+        # причина разбана из аудита: раньше «Бан снят» шёл без «за что»
+        'reason':(_clean_reason (who [2 ])if who else '')or '',
         })
         if _is_our_bot (guild ,who ):
+            return
+        # Наша кнопка/панель уже отправила свою карточку «Блокировка снята»
+        # с автором решения (дело «unban» пишется ДО разбана). Аудит иногда
+        # молчит (лимит запросов) — тогда раньше вылетал дубль карточки.
+        # Свежее дело по этому человеку = разбаняли мы — молчим (2026-09-06).
+        if not who and _latest_case (guild ,user .id ,actions =('unban',),window =120 )is not None :
             return
         ch =await self .get_log_channel (guild ,'ban')
         if not ch :
@@ -2786,40 +2822,78 @@ class Logs (commands .Cog ):
         after_to =getattr (after ,'timed_out_until',None )
         if before_to !=after_to :
             if after_to :
+                # Кто выдал мут и за что — из аудита Discord. Раньше здесь
+                # писали причину «С Discord»: в «Истории решений» панели мут
+                # был без причины и без срока, хотя сам Discord их знает.
+                _to_mod =None
+                try :
+                    _to_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
+                except Exception as _aa_e :
+                    log .debug (f'[LOGS] mute audit actor: {_aa_e }')
+                _to_reason =_clean_reason (_to_mod [2 ]if _to_mod else None )
+                # Мут только что выдан нашим ботОм из /modpanel — дело уже
+                # записано save_case с настоящим модератором, причиной и
+                # сроком. Вторая запись «С Discord» дублировала бы мут.
+                _panel_case =_latest_case (before .guild ,after .id ,
+                actions =('timeout','mute_chat','vmute'),window =90 )
+                if _panel_case :
+                    _to_reason =_clean_reason (_panel_case .get ('reason'))or _to_reason
+                _mut_reason =_to_reason or 'Не указана'
+                _mut_mod_id =str ((_panel_case or {}).get ('mod_id')or (_to_mod [1 ]if _to_mod else '')or 'system')
+                _mut_mod_name =str ((_panel_case or {}).get ('mod_name')or '')or \
+                    (str (_to_mod [0 ])if _to_mod and _to_mod [0 ]else '')or 'Discord'
+                # Срок: до какого времени и сколько минут осталось от «сейчас»
+                _mut_until =after_to .isoformat ()if after_to else ''
+                _mut_dmin =0
+                try :
+                    _mut_dmin =int (round ((after_to -datetime .datetime .now (datetime .timezone .utc )).total_seconds ()/60 ))
+                    if _mut_dmin <0 :_mut_dmin =0
+                except Exception :
+                    _mut_dmin =0
                 save_event (before .guild .id ,'mod','Мут',{
                 'user_id':str (after .id ),
                 'user_name':after .display_name ,
                 'action':'timeout',
-                'reason':'С Discord',
-                'until':after_to .isoformat ()if after_to else '',
+                'reason':_mut_reason ,
+                # кто выдал мут: из дела панели, иначе из аудита Discord —
+                # раньше в журнале модерации мут висел без модератора
+                'mod_id':_mut_mod_id if _mut_mod_id not in ('','system')else '',
+                'mod_name':_mut_mod_name if _mut_mod_name not in ('','Discord')else '',
+                'until':_mut_until ,
+                'duration_minutes':_mut_dmin ,
                 })
-                # Сохран в mod_data.json
-                try :
-                    from services.async_io import load_json_async ,save_json_async
-                    _f ='data/mod_data.json'
-                    # чтение/запись файла — в рабочем потоке (event loop не встаёт)
-                    _d =await load_json_async (_f ,{'cases':{}},log =log )or {'cases':{}}
-                    if not isinstance (_d ,dict ):
-                        _d ={'cases':{}}
-                    _d .setdefault ('cases',{})
-                    _gid =str (before .guild .id )
-                    _d ['cases'].setdefault (_gid ,[])
-                    _d ['cases'][_gid ].append ({
-                    'id':len (_d ['cases'][_gid ])+1 ,
-                    'action':'timeout',
-                    'user_id':str (after .id ),
-                    'mod_id':'system',
-                    'mod_name':'Discord',
-                    'reason':'С Discord',
-                    'timestamp':datetime .datetime .now (datetime .timezone .utc ).isoformat ()
-                    })
-                    await save_json_async (_f ,_d ,log =log )
-                except Exception as _e :
-                    log .debug ('[LOGS] запись mute: %s',_e )
+                # Сохран в mod_data.json — только если дело панели не записано
+                if not _panel_case :
+                    try :
+                        from services.async_io import load_json_async ,save_json_async
+                        _f ='data/mod_data.json'
+                        # чтение/запись файла — в рабочем потоке (event loop не встаёт)
+                        _d =await load_json_async (_f ,{'cases':{}},log =log )or {'cases':{}}
+                        if not isinstance (_d ,dict ):
+                            _d ={'cases':{}}
+                        _d .setdefault ('cases',{})
+                        _gid =str (before .guild .id )
+                        _d ['cases'].setdefault (_gid ,[])
+                        _mut_case = {
+                        'id':len (_d ['cases'][_gid ])+1 ,
+                        'action':'timeout',
+                        'user_id':str (after .id ),
+                        'mod_id':_mut_mod_id ,
+                        'mod_name':_mut_mod_name ,
+                        'reason':_mut_reason ,
+                        'timestamp':datetime .datetime .now (datetime .timezone .utc ).isoformat ()
+                        }
+                        # срок мута: «История решений» показывает его колонкой
+                        if _mut_until :
+                            _mut_case ['until']=_mut_until
+                        if _mut_dmin >0 :
+                            _mut_case ['duration_minutes']=_mut_dmin
+                        _d ['cases'][_gid ].append (_mut_case)
+                        await save_json_async (_f ,_d ,log =log )
+                    except Exception as _e :
+                        log .debug ('[LOGS] запись mute: %s',_e )
                 # Эмбед мута в -модерация: кто, причина, до какого времени
                 try :
-                    _to_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
-                    _to_reason =_clean_reason (_to_mod [2 ]if _to_mod else None )
                     if not _is_our_bot (before .guild ,_to_mod ):
                         _tch =await self .get_log_channel (before .guild ,'mute')
                         if _tch :
@@ -2844,13 +2918,23 @@ class Logs (commands .Cog ):
                 except Exception as _to_err :
                     log .info (f'[LOGS] timeout-embed: {_to_err}')
             else :
+                # кто снял мут и почему — из аудита Discord (жалоба: в журнале
+                # «Мут снят» висел без модератора и причины)
+                try :
+                    _uto_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
+                except Exception as _ua_e :
+                    log .debug (f'[LOGS] unmute audit actor: {_ua_e }')
+                    _uto_mod =None
+                _uto_reason =_clean_reason (_uto_mod [2 ]if _uto_mod else None )
                 save_event (before .guild .id ,'mod','Мут снят',{
                 'user_id':str (after .id ),
                 'user_name':after .display_name ,
                 'action':'untimeout',
+                'mod_id':str (_uto_mod [1 ])if _uto_mod else '',
+                'mod_name':(str (_uto_mod [0 ])if _uto_mod and _uto_mod [0 ]else ''),
+                'reason':_uto_reason or '',
                 })
                 try :
-                    _uto_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
                     if not _is_our_bot (before .guild ,_uto_mod ):
                         _utch =await self .get_log_channel (before .guild ,'mute')
                         if _utch :
@@ -3592,10 +3676,25 @@ class Logs (commands .Cog ):
                 user =entry .user 
 
                 # Opredelenie mute
+                _mute_until =''
+                _mute_dmin =0
                 if entry .action ==discord .AuditLogAction .member_update :
                     after_attr =entry .changes .after 
                     if hasattr (after_attr ,'timed_out_until'):
-                        action_name ='Мут'if getattr (after_attr ,'timed_out_until',None )else 'Мут снят'
+                        _mute_until_dt =getattr (after_attr ,'timed_out_until',None )
+                        action_name ='Мут'if _mute_until_dt else 'Мут снят'
+                        # Срок мута из аудита: «до какого времени» и сколько
+                        # минут вышло — «История решений» панели показывает
+                        # это колонкой «Длительность».
+                        if _mute_until_dt is not None :
+                            try :
+                                _mute_until =_mute_until_dt .isoformat ()
+                                _mute_dmin =int (round ((_mute_until_dt -entry .created_at ).total_seconds ()/60 ))
+                                if _mute_dmin <0 :_mute_dmin =0
+                            except Exception as _md_e :
+                                log .debug (f'[LOGS] mute duration: {_md_e }')
+                                _mute_until =''
+                                _mute_dmin =0
                     else :
                         continue 
 
@@ -3617,8 +3716,12 @@ class Logs (commands .Cog ):
                 'audit_id':str (entry .id ),
                 'source':'discord_audit',
                 }
+                if _mute_until :
+                    ev ['until']=_mute_until
+                    if _mute_dmin >0 :
+                        ev ['duration_minutes']=_mute_dmin
 
-                save_event (guild .id ,cat ,action_name ,{
+                _ev_details ={
                 'target_name':tname ,
                 'target_id':str (getattr (target ,'id','?')),
                 'mod_name':mname ,
@@ -3626,7 +3729,12 @@ class Logs (commands .Cog ):
                 'reason':entry .reason or '',
                 'audit_id':str (entry .id ),
                 'source':'discord_audit',
-                })
+                }
+                if _mute_until :
+                    _ev_details ['until']=_mute_until
+                    if _mute_dmin >0 :
+                        _ev_details ['duration_minutes']=_mute_dmin
+                save_event (guild .id ,cat ,action_name ,_ev_details )
 
                 cache [gid ].append (ev )
 

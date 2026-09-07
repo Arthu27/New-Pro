@@ -343,15 +343,24 @@ audit = {
 }
 
 # ── 3. История решений (mod_data) ───────────────────────────────────────
+# Дела несут срок (duration_minutes, минуты) и «до какого времени» (until):
+# страница «История решений» показывает это колонкой «Длительность».
+# Варнов тут НЕТ: как и в бою, варны живут только в warnings.json (их пишет
+# warnings-модуль), mod_data — дела наказаний из /modpanel.
 mod_data = {'case': {GID: [
-    {'user_id': '823456789012345680', 'mod_id': 'lina.mod', 'action': 'mute',
-     'reason': 'Обход мьюта вторым аккаунтом', 'duration_minutes': 720, 'timestamp': iso(1, 22, 45)},
-    {'user_id': '523456789012345678', 'mod_id': 'sonya.staff', 'action': 'warn',
-     'reason': 'Разжигание конфликта после предупреждения', 'timestamp': iso(2, 21, 15)},
-    {'user_id': '723456789012345679', 'mod_id': 'artem.mods', 'action': 'mute',
-     'reason': 'Спам ссылками на сторонний сервер', 'duration_minutes': 120, 'timestamp': iso(5, 15, 5)},
-    {'user_id': '823456789012345680', 'mod_id': 'artem.mods', 'action': 'warn',
-     'reason': 'Оскорбления в адрес модерации', 'timestamp': iso(8, 19, 50)},
+    {'user_id': '923456789012345681', 'mod_id': 'lina.mod', 'mod_name': 'Lina',
+     'action': 'timeout', 'reason': 'Флуд стикерами после предупреждения',
+     'duration_minutes': 120, 'until': (NOW + timedelta(minutes=74)).isoformat(),
+     'timestamp': iso_recent(46)},
+    {'user_id': '823456789012345680', 'mod_id': 'lina.mod', 'mod_name': 'Lina',
+     'action': 'mute', 'reason': 'Обход мьюта вторым аккаунтом',
+     'duration_minutes': 720, 'timestamp': iso(1, 22, 45)},
+    {'user_id': '723456789012345679', 'mod_id': 'artem.mods', 'mod_name': 'Artem',
+     'action': 'mute', 'reason': 'Спам ссылками на сторонний сервер',
+     'duration_minutes': 120, 'timestamp': iso(5, 15, 5)},
+    {'user_id': '723456789012345679', 'mod_id': 'sonya.staff', 'mod_name': 'Sonya',
+     'action': 'ban', 'reason': 'Реклама сторонних серверов повторно',
+     'timestamp': iso(9, 12, 30)},
 ]}}
 
 # ── 3b. Исторические события за 90 дней (для календаря активности) ───────

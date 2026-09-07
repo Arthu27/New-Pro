@@ -224,7 +224,14 @@ class Moderation (commands .Cog ):
         except Exception as _aw_e:
             log.info(f'[MOD] auto-warn: {_aw_e}')
 
-    def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ,mod_name=None ):
+    def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ,mod_name=None ,
+    duration=None ):
+        """Записать дело наказания в data/mod_data.json.
+
+        duration — срок в МИНУТАХ (муты из /modpanel). Пишем отдельным ключом
+        duration_minutes: его уже читают /api/mod-stats и посев демо-панели,
+        а «История решений» показывает срок мута прямо в таблице.
+        """
         os .makedirs ('data',exist_ok =True )
         filepath ='data/mod_data.json'
         try :
@@ -241,8 +248,8 @@ class Moderation (commands .Cog ):
             gid =str (guild_id )
             if gid not in data ['cases']:
                 data ['cases'][gid ]=[]
-            case_id =len (data ['cases'][gid ])+1 
-            data ['cases'][gid ].append ({
+            case_id =len (data ['cases'][gid ])+1
+            _case = {
             'id':case_id ,'action':action ,
             'user_id':str (user_id ),'mod_id':str (mod_id ),
             # Имя модератора в момент наказания: панель показывает его,
@@ -250,7 +257,14 @@ class Moderation (commands .Cog ):
             'mod_name':str (mod_name or ''),
             'reason':reason or 'Не указана',
             'timestamp':datetime .now (timezone .utc ).isoformat ()
-            })
+            }
+            try :
+                _dmin =int (duration )
+            except (TypeError ,ValueError ):
+                _dmin =0
+            if _dmin >0 :
+                _case ['duration_minutes']=_dmin
+            data ['cases'][gid ].append (_case)
             with open (filepath ,'w',encoding ='utf-8')as f :
                 json .dump (data ,f ,indent =2 ,ensure_ascii =False )
             return case_id 
@@ -300,11 +314,11 @@ class Moderation (commands .Cog ):
         except Exception as _ex:
             _log.debug("_notify_owner(): подавлено: %s", _ex)
 
-    async def send_dm (self ,user ,embed ):
+    async def send_dm (self ,user ,embed ,view =None ):
         # DM — шаг best-effort: закрытые ЛС/сетевые сбои НЕ должны
         # отменять наказание или превращать его в «ошибку» для модератора
         try :
-            await user .send (embed =embed )
+            await user .send (embed =embed ,view =view )
         except Exception as _ex:
             _log.debug("send_dm(): подавлено: %s", _ex)
 
@@ -720,6 +734,10 @@ class Moderation (commands .Cog ):
                 embed =error_embed (_pre ,"У бота не хватит прав"),ephemeral =True )
                 return
 
+            # Срок наказания для дела (минуты): заполняют мут-ветки ниже,
+            # «История решений» панели показывает его в колонке «Длительность»
+            _case_minutes =None
+
             try :
                 if action =="ban":
                     # «Бан» не выкидывает с сервера: все каналы закрываются,
@@ -773,6 +791,7 @@ class Moderation (commands .Cog ):
                     # поверх, если право вдруг есть (молча пропускаем сбой).
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))  # Discord — до 28 дней
+                    _case_minutes = minutes
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
@@ -822,6 +841,7 @@ class Moderation (commands .Cog ):
                         return
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))
+                    _case_minutes = minutes
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
@@ -839,6 +859,7 @@ class Moderation (commands .Cog ):
                     _vrole =self ._punish_role (guild ,'vmute')
                     minutes =parse_duration_minutes (amount ,30 )
                     minutes =max (1 ,min (minutes ,40320 ))
+                    _case_minutes =minutes
                     if _vrole is not None :
                         # роль + сервер-мут микрофона: в голосовые зайти МОЖНО,
                         # микрофон закрыт (владелец 2026-09-05: «микрофон
@@ -919,7 +940,8 @@ class Moderation (commands .Cog ):
                     # запись дела (файл) — в рабочем потоке, без блокировки loop
                     case_id =await _aio_sc .to_thread (
                         self .save_case ,guild .id ,action ,user .id ,interaction .user .id ,reason ,
-                        getattr (interaction .user ,'display_name' ,None )or str (interaction .user ))
+                        getattr (interaction .user ,'display_name' ,None )or str (interaction .user ),
+                        _case_minutes )
                 except Exception as _case_e :
                     case_id =0
                     aux_errors .append ("дело не записано")
@@ -934,7 +956,16 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
                 try :
                     dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
-                    await self .send_dm (user ,dm )
+                    # ЛС о бане — с кнопкой «Подать апелляцию» внизу:
+                    # та же форма, что /апелляция (владелец 2026-09-06)
+                    _dm_view =None
+                    if action =='ban':
+                        try :
+                            from cogs .appeals import AppealDMView
+                            _dm_view =AppealDMView ()
+                        except Exception as _imp_e :
+                            log .debug (f'[MODPANEL] dm view: {_imp_e}')
+                    await self .send_dm (user ,dm ,view =_dm_view )
                 except Exception as _dm_e :
                     log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :

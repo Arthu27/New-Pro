@@ -14,7 +14,8 @@
 <div class="kpi-row">
   <div class="kpi"><div class="kpi-icon"><i class="fas fa-clock-rotate-left"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Все события</div></div></div>
   <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-bans">—</div><div class="kpi-label">Баны</div></div></div>
-  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-kicks">—</div><div class="kpi-label">Кики</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-volume-xmark"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-mutes">—</div><div class="kpi-label">Мьюты</div></div></div>
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-kicks">—</div><div class="kpi-label">Кики</div></div></div>
   <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-warns">—</div><div class="kpi-label">Варны</div></div></div>
 </div>
 
@@ -76,6 +77,28 @@
 @media (prefers-reduced-motion: reduce) {
   .mst-toggle button { transition: none; }
 }
+/* ── Таблица дел: причина целиком (до 2 строк) и срок мута ── */
+/* голый ID вместо имени — аккуратный моноширинный чип, как в журнале */
+.id-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px; font-weight: 600; color: var(--text-3);
+  background: var(--surface-3); border: 1px solid var(--line);
+  border-radius: 6px; padding: 1px 7px; letter-spacing: .3px;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.id-chip::before { content: 'ID'; font-size: 9px; font-weight: 800; color: var(--text-4); letter-spacing: .5px; }
+.mh-reason {
+  max-width: 340px; white-space: normal; word-break: break-word;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.35;
+}
+.mh-dur { white-space: nowrap; }
+.mh-dur .mh-until {
+  display: block; font-size: 10.5px; color: var(--text-3);
+  font-weight: 700; margin-top: 2px; letter-spacing: .02em;
+}
+.mh-dur .mh-until.is-active { color: var(--warn); }
 </style>
 
 <div class="mst-panel">
@@ -118,6 +141,8 @@
         <option value="kick">Кик</option>
         <option value="warn">Варн</option>
         <option value="mute">Мьют</option>
+        <option value="unmute">Размут</option>
+        <option value="unban">Разбан</option>
       </select>
     </label>
     <span class="spacer"></span>
@@ -127,8 +152,8 @@
   </div>
   <div class="table-wrap" style="min-height:120px">
     <table class="data-table" data-sortable>
-      <thead><tr><th class="sortable">Действие</th><th class="sortable">Пользователь</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
-      <tbody id="mh-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Восстанавливаем историю</span></div></td></tr></tbody>
+      <thead><tr><th class="sortable">Действие</th><th class="sortable">Пользователь</th><th class="sortable">Модератор</th><th class="sortable">Длительность</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
+      <tbody id="mh-body"><tr><td colspan="6"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Восстанавливаем историю</span></div></td></tr></tbody>
     </table>
   </div>
 </div>
@@ -160,6 +185,25 @@
   }
   var RU = { ban: 'Бан', kick: 'Кик', warn: 'Варн', mute: 'Мьют', timeout: 'Мьют', unban: 'Разбан', unmute: 'Размут' };
 
+  /* Срок наказания: «2 ч 30 мин» + подстрока «до 06.09, 18:40» / «истёк» */
+  function durCell(c, cat) {
+    var d = Number(c.duration) || 0;
+    if (cat === 'ban' && !d) return '<td data-sort="99999999" class="mh-dur"><span class="muted">навсегда</span></td>';
+    if (!d) return '<td data-sort="0" class="mh-dur"><span class="muted">—</span></td>';
+    var html = '<td data-sort="' + d + '" class="mh-dur"><b>' + fmtDur(d) + '</b>';
+    var until = c.until ? new Date(c.until) : null;
+    if (until && !isNaN(until.getTime())) {
+      var active = until.getTime() > Date.now();
+      var uTxt;
+      try {
+        uTxt = until.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      } catch (e) { uTxt = until.toISOString().slice(0, 16).replace('T', ' '); }
+      html += '<span class="mh-until' + (active ? ' is-active' : '') + '">' +
+        (active ? 'до ' + uTxt : 'истёк') + '</span>';
+    }
+    return html + '</td>';
+  }
+
   function render() {
     var q = ($('search').value || '').toLowerCase();
     var f = $('filter').value;
@@ -175,22 +219,32 @@
     $('mh-count').textContent = list.length + ' из ' + allCases.length;
     $('stat-total').textContent = allCases.length;
     $('stat-bans').textContent = allCases.filter(function (c) { return normalize(c.action) === 'ban'; }).length;
+    $('mh-mutes').textContent = allCases.filter(function (c) { return normalize(c.action) === 'mute'; }).length;
     $('mh-kicks').textContent = allCases.filter(function (c) { return normalize(c.action) === 'kick'; }).length;
     $('mh-warns').textContent = allCases.filter(function (c) { return normalize(c.action) === 'warn'; }).length;
     var body = $('mh-body');
     if (!list.length) {
-      body.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><span>Записей нет</span></div></td></tr>';
+      body.innerHTML = '<tr><td colspan="6"><div class="empty"><i class="fas fa-inbox"></i><span>Записей нет</span></div></td></tr>';
       return;
     }
     var q = ($('search').value || '');
     var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
+    /* голый снежок вместо имени: 15–25 цифр — Discord ID, не ник */
+    var whoCell = function (who) {
+      who = String(who == null ? '' : who);
+      if (/^\d{15,25}$/.test(who.trim())) {
+        return '<span class="id-chip" title="Имя неизвестно — в записи только ID">' + H(who) + '</span>';
+      }
+      return H(who || '—');
+    };
     body.innerHTML = list.slice(0, 300).map(function (c) {
       var cat = normalize(c.action);
       var label = RU[cat] || esc(c.action || '?');
       return '<tr><td data-sort="' + esc(cat) + '"><span class="badge ' + (TONE[cat] || 'neutral') + '">' + label + '</span></td>' +
-        '<td>' + H(c.target_name || c.target_id || '—') + '</td>' +
+        '<td>' + whoCell(c.target_name || c.target_id) + '</td>' +
         '<td>' + H(c.mod_name || c.mod_id || '—') + '</td>' +
-        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(c.reason || '') + '">' + H(c.reason || '—') + '</td>' +
+        durCell(c, cat) +
+        '<td class="mh-reason" title="' + esc(c.reason || '') + '">' + H(c.reason || '—') + '</td>' +
         '<td data-sort="' + esc(c.created_at || '') + '" class="muted">' + esc(fmtDate(c.created_at)) + '</td></tr>';
     }).join('');
     if (window.attachTableSort && !window._mhSortReady) {

@@ -183,6 +183,32 @@ ADAPTERS = {
 }
 
 
+def _pretty_room_names():
+    """Канонические имена лог-комнат для гида страницы.
+
+    Единственный источник правды — LOG_CHANNELS из cogs/logs.py (в шаблонах
+    эмодзи-литералы запрещены аудитами, имена приходят переменными).
+    """
+    try:
+        from cogs.logs import LOG_CHANNELS as _LC
+    except Exception:
+        return {}
+    keys = {
+        'room_mod': 'модерация',
+        'room_message': 'сообщения',
+        'room_member': 'участники',
+        'room_server': 'сервер',
+        'room_proof': 'доказательства',
+    }
+    out = {}
+    for var, k in keys.items():
+        try:
+            out[var] = _LC[k]
+        except Exception:
+            pass
+    return out
+
+
 def register(ctx):
     app = ctx.app
     login_required = ctx.login_required
@@ -209,7 +235,9 @@ def register(ctx):
         return render_template('channel_settings.html',
                                role=session.get('role'),
                                username=session.get('username'),
-                               route_specs=specs)
+                               route_specs=specs,
+                               room_appeals=getattr(CHR, 'APPEALS_ROOM_HINT', 'апелляции'),
+                               **_pretty_room_names())
 
     @app.route('/api/channel-routes', methods=['GET'])
     @login_required
