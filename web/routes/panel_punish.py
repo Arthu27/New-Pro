@@ -3,8 +3,9 @@
 
 POST /api/guild/<gid>/punish — выдать наказание (варн, муты, бан-апелляция,
 снятия). Исполняет тот же код, что и /modpanel: длительности «60, 1ч, 3ч, 1д»,
-«бан» не выкидывает с сервера (изоляция + канал апелляции), без настроенного
-канала — «настройки не завершены». Доказательство панель не спрашивает:
+«бан» — настоящий серверный бан (человек исключается с сервера, сообщения
+не удаляются; роли сохраняются и возвращаются после разбана). Доказательство
+панель не спрашивает:
 форма упрощена, поле убрано.
 
 GET /api/guild/<gid>/punish/options — что доступно именно ЭТОМУ
@@ -13,7 +14,7 @@ GET /api/guild/<gid>/punish/options — что доступно именно Э�
 Discord-ролям, то входящему через Discord-аккаунт модератору без этих ролей
 действие не показывается и на POST не принимается (403). Статический вход
 из .env и роль owner — доверенные: им доступен весь набор. Плюс состояние
-готовности «бана» (канал апелляции) и «бот онлайн».
+«бот онлайн».
 """
 from services import staff_hierarchy as SH
 from web.routes._common import (
@@ -36,7 +37,7 @@ PANEL_ACTIONS = [
     ('timeout', 'Мут (чат + войс)', True, True),
     ('mute_chat', 'Мут чата', True, True),
     ('vmute', 'Войс-мут', True, True),
-    ('ban', 'Бан (апелляция)', False, True),
+    ('ban', 'Бан (серверный, с апелляцией)', False, True),
     ('unban', 'Снять апелляцию / разбан', False, False),
     ('untimeout', 'Снять мут', False, False),
     ('vunmute', 'Снять войс-мут', False, False),
@@ -156,12 +157,9 @@ def register(ctx):
                     proof_required = bool(proof_is_required(g.id))
         except Exception as _ex:
             _log.debug('punish/options proof: %s', _ex)
-        ban_ready = False
-        try:
-            from services.channel_routes import get_route
-            ban_ready = int(get_route(gid, 'ban_appeal_channel') or 0) > 0
-        except Exception as _ex:
-            _log.debug('punish/options ban: %s', _ex)
+        # «Бан» — настоящий серверный бан (владелец 2026-09-07): работает
+        # без настроенного канала апелляции, блокировки больше нет.
+        ban_ready = True
         # ACL «Права команд»: каждому — только его действия.
         member = _viewer_member(bot, gid)
         actions_acl = [a for a in PANEL_ACTIONS if _acl_allows(gid, member, a[0])]

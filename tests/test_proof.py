@@ -366,10 +366,13 @@ mod_cog = Moderation(botx)
 # /modpanel — единственный пункт наказаний; select содержит изоляцию
 _opts = ModActionSelect(mod_cog)
 _labels = {o.label for o in _opts.options}
-check('Бан (апелляция)' in _labels, 'select: «Бан (апелляция)» есть')
+_ban_opt = next(o for o in _opts.options if o.value == 'ban')
+check('Бан' in _labels, 'select: пункт «Бан» есть')
+check('сервер' in (_ban_opt.description or ''),
+      'select: «Бан» — настоящий серверный бан, а не «закрыть каналы»')
 check('Снять бан' in _labels, 'select: «Снять бан» есть')
-check({'ban', 'unban', 'timeout', 'clear'} <= {o.value for o in _opts.options},
-      'select: действия ban/unban/timeout/clear на месте')
+check({'ban', 'unban', 'mute', 'clear'} <= {o.value for o in _opts.options},
+      'select: действия ban/unban/mute/clear на месте')
 check('kick' not in {o.value for o in _opts.options},
       'select: система kick убрана из меню (решение владельца)')
 

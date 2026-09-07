@@ -73,6 +73,7 @@ class _Member:
         s.voice = voice
         s.guild = None
         s.timed_out_until = None
+        s.roles = [_Role(55), _Role(66)]      # роли для снапшота при бане
 
     def __str__(s):
         return 'BadGuy'
@@ -99,12 +100,21 @@ class _Guild:
         s.members = []
         s.channels = [_Ch(300 + k) for k in range(4)]
         s.text_channels = s.channels
+        s.ban_calls = []      # настоящий серверный бан (владелец 2026-09-07)
 
     def get_channel(s, cid):
         return next((c for c in s.channels if c.id == cid), None)
 
     def get_member(s, uid):
         return next((m for m in s.members if m.id == uid), None)
+
+    async def ban(s, user, reason=None, delete_message_seconds=None, **kw):
+        s.ban_calls.append({'uid': getattr(user, 'id', user), 'reason': reason,
+                            'delete_message_seconds': delete_message_seconds})
+
+    async def unban(s, user, reason=None):
+        s.unban_calls = getattr(s, 'unban_calls', []) + [getattr(user, 'id', user)]
+        return True
 
 
 class _Bot:
@@ -123,7 +133,7 @@ class _Bot:
             return s._w
 
     async def fetch_user(s, uid):
-        raise RuntimeError('офлайн')
+        return _Member(uid)      # разбан настоящего бана: юзер вне сервера
 
 
 print('== 1. apply_panel_action: мут с длительностью ==')
@@ -145,24 +155,28 @@ import datetime as _dt  # noqa: E402
 _left = (target.timed_out_until.replace(tzinfo=None) - _dt.datetime.utcnow()).total_seconds() / 60
 check(115 <= _left <= 125, f'длительность «2ч» ≈ 120 мин ({_left:.0f})')
 
-print('== 2. «Бан» из панели: без канала — «настройки не завершены» ==')
+print('== 2. «Бан» из панели: настоящий серверный бан ==')
 from services import channel_routes as CHR  # noqa: E402
+from services import punish_roles as _PR  # noqa: E402
 
 ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'ban', reason='тест'))
-check(not ok and 'Настройки не завершены' in text and 'канал апелляции' in text,
-      f'отказ с перечислением незавершённого ({text[:80]})')
+check(ok and len(guild.ban_calls) == 1,
+      f'бан выполняется даже без канала апелляции — сразу серверный ({text[:70]})')
+check(guild.ban_calls and guild.ban_calls[0]['delete_message_seconds'] == 0,
+      'сообщения НЕ удаляются (delete_message_seconds=0)')
+closed = sum(1 for c in guild.channels if TID in c.overwrites)
+check(closed == 0, f'изоляция не делается — каналы не закрываются ({closed})')
+check(_PR.take_held_roles(G, TID) == [55, 66],
+      f'роли цели сохранены в снапшот до бана ({_PR.take_held_roles(G, TID)})')
 
 CHR.set_route(G, 'ban_appeal_channel', 301)
-ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'ban', reason='тест'))
-closed = sum(1 for c in guild.channels if TID in c.overwrites and c.id != 301)
-check(ok, f'с каналом бан выполняется ({text[:70]})')
-check(closed == 3, f'закрыты все каналы кроме апелляции ({closed} из 3)')
-check(TID in guild.get_channel(301).overwrites, 'в канале апелляции доступ открыт')
-
-print('== 3. Снятие апелляции из панели ==')
-ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'unban', reason='одумался'))
-left = [c for c in guild.channels if c.overwrites.get(TID) is not None]
-check(ok and not left, f'все пермишены сняты ({text[:60]})')
+print('== 3. Разбан из панели: настоящий бан снимается ==')
+guild.members = []            # после настоящего бана человека на сервере нет
+ok, text = asyncio.run(mod.apply_panel_action(
+    guild, str(TID), 'unban', reason='одумался'))
+check(ok and TID in getattr(guild, 'unban_calls', []),
+      f'guild.unban вызван, человек может вернуться ({text[:60]})')
+guild.members = [target]        # вернуть цель для следующих секций
 
 print('== 4. vmute не в голосе — по-человечески ==')
 ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'vmute', amount='30м'))

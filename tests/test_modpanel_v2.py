@@ -29,14 +29,14 @@ PASS = 0
 FAIL = 0
 
 
-def check(ok, msg):
+def check(ok, msg, extra=''):
     global PASS, FAIL
     if ok:
         PASS += 1
         print(f'  PASS: {msg}')
     else:
         FAIL += 1
-        print(f'  FAIL: {msg}')
+        print(f'  FAIL: {msg} {extra}')
 
 
 print('== 1. Слеш-переезд: в боевом составе нет префиксных команд ==')
@@ -180,7 +180,7 @@ check(m_free == [], 'роль без настроек и без разрешен
 save_action_acl(G, {})
 _os.environ.pop('OWNER_ID', None)
 
-print('== 4. «Бан» живьём: без канала — отказ, с каналом — изоляция ==')
+print('== 4. «Бан» живьём: настоящий серверный бан, без изоляции ==')
 
 
 class _Ch:
@@ -204,6 +204,7 @@ class _Target:
     display_name = 'BadGuy'
     bot = False
     mention = f'<@{TID}>'
+    roles = [_Role(7)]           # роль для снапшота при бане
 
     def __str__(self):
         return 'BadGuy'
@@ -215,9 +216,19 @@ class _GuildBig(_Guild):
         self.channels = [_Ch(100 + k) for k in range(5)]
         self.text_channels = self.channels
         self.members = [_Target()]
+        self.ban_calls = []          # настоящий серверный бан (владелец 2026-09-07)
+        self.default_role = _Role(1)
 
     def get_channel(self, cid):
         return next((c for c in self.channels if c.id == cid), None)
+
+    def get_role(self, rid):
+        return _Role(rid) if rid != 1 else self.default_role
+
+    async def ban(self, user, reason=None, delete_message_seconds=None, **kw):
+        self.ban_calls.append({'uid': getattr(user, 'id', user),
+                               'reason': reason,
+                               'delete_message_seconds': delete_message_seconds})
 
 
 SENT = {}
@@ -281,21 +292,32 @@ async def _run(action, amount, proof='https://proof'):
         return 'API', type(ex).__name__
 
 
+from services import punish_roles as _PR  # noqa: E402
+
 ok, txt = asyncio.run(_run('ban', None))
-check(ok is True and 'Настройки не завершены' in txt and 'канал апелляции' in txt,
-      f'без канала — отказ с перечислением незавершённого ({txt[:80]}…)')
-check('мут' not in txt.lower() or 'мут' not in txt.split('.')[0],
-      'в отказе только НЕЗАВЕРШЁННОЕ, лишнего нет')
+check(ok is True and len(gb.ban_calls) == 1,
+      f'«бан» выполняется даже без настроенного канала — сразу серверный бан '
+      f'({len(gb.ban_calls)} вызовов)')
+_b = gb.ban_calls[0] if gb.ban_calls else {}
+check(_b.get('delete_message_seconds') == 0,
+      f'сообщения НЕ удаляются (delete_message_seconds=0) → {_b.get("delete_message_seconds")}')
+check('списке банов' in (txt or ''), f'модератору прямо сказано: в списке банов ({txt[:60]}…)')
+closed = sum(1 for c in gb.channels if TID in c.overwrites)
+check(closed == 0, f'изоляция больше не делается — ни один канал не закрывается ({closed})')
+_held = _PR.take_held_roles(G, TID)
+check(_held == [7], f'роли цели сохранены в снапшот до бана → {_held}')
 
 CHR.set_route(G, 'ban_appeal_channel', 102)     # канал №102 — уже существует
 gb.channels = [_Ch(100), _Ch(101), _Ch(102), _Ch(103), _Ch(104)]
+gb.ban_calls.clear()
+_inter = _Inter(_User(43, ()), gb)      # другой модератор: лимит штаба не мешает
 ok, txt = asyncio.run(_run('ban', None))
-closed = sum(1 for c in gb.channels if TID in c.overwrites and c.id != 102)
+check(ok in (True, 'API') and len(gb.ban_calls) == 1,
+      'с настроенным каналом «бан» так же выполняется серверным баном',
+      f'ok={ok} txt={str(txt)[:120]} calls={len(gb.ban_calls)}')
 iso_ch = gb.get_channel(102)
-iso_open = TID in iso_ch.overwrites
-check(ok in (True, 'API'), 'с настроенным каналом «бан» выполняется')
-check(closed == 4, f'все каналы, кроме апелляции, закрыты ({closed} из 4)')
-check(iso_open, 'в канале апелляции доступ открыт')
+check(TID not in iso_ch.overwrites,
+      'канал апелляции не открывается при бане — только после подачи заявки в ЛС')
 
 print('== 5. /апелляция — слеш-команда, ЛС ==')
 import cogs.appeals as AP  # noqa: E402
