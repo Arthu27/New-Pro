@@ -76,8 +76,14 @@ TIME_RE = re.compile(
     r'\d{4}-\d{2}-\d{2}[T ][\d:\.]+(?:Z|\+\d{2}:\d{2})?|\d{2}:\d{2}:\d{2}|\d{13}')
 
 
+# CSP-nonce публичных страниц свежий на каждый запрос — это задумано
+# (защита от повторного использования), в сравнении детерминизма
+# выравниваем его значение.
+NONCE_RE = re.compile(r'nonce="[A-Za-z0-9_-]+"')
+
+
 def norm(txt):
-    return TIME_RE.sub('<TIME>', txt)
+    return NONCE_RE.sub('nonce="<NONCE>"', TIME_RE.sub('<TIME>', txt))
 
 
 _bad = []

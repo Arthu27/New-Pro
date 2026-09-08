@@ -16,6 +16,7 @@
 Запуск: python3 tests/test_welcome_speed.py
 """
 import os
+import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,19 +44,23 @@ check('<meta name="description"' in src and len(
     'на витрине есть содержательное метаописание')
 
 print('== 2. Неблокирующие CSS ==')
-check('all.subset.css" media="print" onload="this.media=\'all\'"' in src,
-      'иконки (all.subset.css) не блокируют первую отрисовку')
-check('fonts.css" media="print" onload="this.media=\'all\'"' in src,
-      'шрифты (fonts.css) не блокируют первую отрисовку')
+# CSS подключается динамически из nonce-скрипта: динамический <link>
+# не блокирует отрисовку и не требует инлайн-onload (строгий CSP).
+check("['/static/vendor/fontawesome/css/all.subset.css'," in src
+      and "'/static/vendor/fonts/fonts.css'].forEach" in src,
+      'иконки и шрифты вставляются скриптом (не блокируют отрисовку)')
 check(src.count('<noscript><link rel="stylesheet"') == 2,
-      'обa noscript-фолбэка на месте (без JS стили всё равно грузятся)')
+      'оба noscript-фолбэка на месте (без JS стили всё равно грузятся)')
+check('media="print" onload=' not in src,
+      'инлайн-onload обработчики ушли (строгий CSP публичной страницы)')
 
 print('== 3. Композитные анимации ==')
 gloss = src.split('@keyframes wGloss', 1)[1].split('}', 2)[1]
 check('left' not in gloss and 'transform' in gloss,
       'блик дракона бежит transform-ом, а не left (layout)')
-check('transform: scaleX(0); transform-origin: 0 50%;' in src
-      and "style.transform = 'scaleX('" in src
+_css_flat = re.sub(r'\s+', '', src)
+check('transform:scaleX(0);transform-origin:050%;' in _css_flat
+      and "style.transform='scaleX('" in _css_flat
       and 'bar.style.width' not in src,
       'скролл-прогресс — scaleX без layout на каждый кадр')
 check('@keyframes wFloat' in src,

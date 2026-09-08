@@ -90,7 +90,7 @@
             <label for="discord_id">Discord ID или ник</label>
             <div class="input-wrap has-ico">
               <i class="fab fa-discord f-ico" aria-hidden="true"></i>
-              <input type="text" name="discord_id" id="discord_id" placeholder="например @alex или Discord ID" required aria-label="Discord ID" autocomplete="username" oninput="rgSuggest(this)" onfocus="rgSuggest(this)">
+              <input type="text" name="discord_id" id="discord_id" placeholder="например @alex или Discord ID" required aria-label="Discord ID" autocomplete="username">
               <div class="autocomplete-popup" id="regPopup"></div>
             </div>
             <p class="hint">Просто печатай <b>ник</b> (или начни — и выбери себя из подсказок). Можно Discord ID или тег себя <@…>.</p>
@@ -138,7 +138,7 @@
     </div>
   </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
@@ -220,7 +220,7 @@
             var uname = s.username || s.name || '';
             return '<div class="item" data-user="' + esc(label) + '" data-id="' + esc(uid) + '">' +
               '<span class="a-ava">' + esc((label || uname || uid || '?').charAt(0).toUpperCase()) +
-              (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '" onerror="this.remove()">' : '') + '</span>' +
+              (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '">' : '') + '</span>' +
               '<span class="a-copy"><b>' + esc(label || uname || uid || '—') + '</b>' +
               (uid ? '<small>' + esc(uid) + '</small>' : '') + '</span></div>';
           }).join('');
@@ -367,6 +367,19 @@
     });
   }
 })();
+  /* Подсказки и битые аватарки — слушателями, не инлайн-атрибутами
+     (строгий CSP публичной страницы без инлайн-обработчиков). */
+  (function () {
+    var inp = document.getElementById('discord_id');
+    if (inp) {
+      inp.addEventListener('input', function () { rgSuggest(inp); });
+      inp.addEventListener('focus', function () { rgSuggest(inp); });
+    }
+    document.addEventListener('error', function (e) {
+      var t = e.target;
+      if (t && t.tagName === 'IMG' && t.closest && t.closest('.autocomplete-popup')) t.remove();
+    }, true);
+  })();
 </script>
 </body>
 </html>

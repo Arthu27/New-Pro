@@ -49,6 +49,20 @@ client = appmod.app.test_client()
 print('== 1. CSP: всё локальное, CDN-доменов нет ==')
 r = client.get('/welcome')
 csp = r.headers.get('Content-Security-Policy', '')
+# Публичная страница — строгий режим: nonce вместо unsafe-inline
+# (владелец 2026-09-08, PageSpeed «CSP против XSS»).
+import re as _re
+_m = _re.search(r"'nonce-([A-Za-z0-9_-]+)'", csp)
+check(_m is not None, 'публичная страница: CSP с nonce')
+check(_m is not None and 'unsafe-inline' not in csp.split('script-src')[1].split(';')[0],
+      'публичная страница: script-src по nonce, без unsafe-inline')
+check("'unsafe-eval'" not in csp, 'нигде нет unsafe-eval')
+# Панель за логином — прежняя рабочая политика
+client.post('/login', data={'username': os.environ.get('PANEL_USER', 'admin'),
+                            'password': os.environ.get('PANEL_PASSWORD', '')})
+csp = client.get('/welcome').headers.get('Content-Security-Policy', '')
+# после входа /welcome остаётся публичной страницей: проверяем панельную
+csp = client.get('/settings').headers.get('Content-Security-Policy', '')
 _bad = []
 for host in ('cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'fonts.googleapis.com',
              'fonts.gstatic.com', 'unpkg.com', 'ajax.googleapis.com'):
@@ -141,6 +155,10 @@ check(total <= 12_000_000, f'вся статика {count} файлов: {total}
 print('== CSP: beacon Cloudflare Insights разрешён ==')
 _r = client.get('/welcome')
 _csp = _r.headers.get('Content-Security-Policy', '')
+check('https://static.cloudflareinsights.com' in _csp,
+      'публичная страница пускает static.cloudflareinsights.com (nonce-CSP)')
+# полный состав проверяем на панельной странице (клиент уже вошёл выше)
+_csp = client.get('/settings').headers.get('Content-Security-Policy', '')
 check('https://static.cloudflareinsights.com' in _csp,
       'script-src пускает static.cloudflareinsights.com (иначе консоль краснеет)')
 check("script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com" in _csp

@@ -134,8 +134,7 @@
             <div class="input-wrap has-ico">
               <i class="fab fa-discord f-ico" aria-hidden="true"></i>
               <input type="text" id="dsQuery" placeholder="например @alex или Discord ID"
-                     autocomplete="off" aria-label="Discord ID или ник для входа через Discord"
-                     oninput="showSuggest(this, 'dsPopup', '#dsCheckBtn')" onfocus="showSuggest(this, 'dsPopup', '#dsCheckBtn')">
+                     autocomplete="off" aria-label="Discord ID или ник для входа через Discord">
               <div class="autocomplete-popup" id="dsPopup"></div>
             </div>
           </div>
@@ -170,7 +169,7 @@
               <label for="passUsername">Discord ID или ник</label>
               <div class="input-wrap has-ico">
                 <i class="fab fa-discord f-ico" aria-hidden="true"></i>
-                <input type="text" name="username" id="passUsername" placeholder="например @alex или Discord ID" required autocomplete="username" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Discord ID или ник">
+                <input type="text" name="username" id="passUsername" placeholder="например @alex или Discord ID" required autocomplete="username" aria-label="Discord ID или ник">
                 <div class="autocomplete-popup" id="passPopup"></div>
               </div>
             </div>
@@ -272,7 +271,7 @@
     </div>
   </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
@@ -489,7 +488,7 @@
             var uname = s.username || s.name || '';
             return '<div class="item" data-user="' + esc(label || uid) + '" data-id="' + esc(uid) + '">' +
               '<span class="a-ava">' + esc((label || uname || uid || '?').charAt(0).toUpperCase()) +
-              (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '" onerror="this.remove()">' : '') + '</span>' +
+              (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '">' : '') + '</span>' +
               '<span class="a-copy"><b>' + esc(label || uname || uid || '—') + '</b>' +
               (uid ? '<small>' + esc(uid) + '</small>' : '') + '</span></div>';
           }).join('');
@@ -523,9 +522,13 @@
         .catch(function () { popup.classList.remove('open'); });
     }, 220);
   };
-  function attachSuggest(inputId, popupId) {
+  function attachSuggest(inputId, popupId, btn) {
     var input = $(inputId);
     if (!input) return;
+    /* Подсказки по вводу и фокусу — раньше висели инлайн-oninput/onfocus
+       на <input>; строгий CSP публичной страницы их не исполняет. */
+    input.addEventListener('input', function () { showSuggest(input, popupId, btn); });
+    input.addEventListener('focus', function () { showSuggest(input, popupId, btn); });
     input.addEventListener('keydown', function (e) {
       var popup = $(popupId);
       if (!popup.classList.contains('open')) return;
@@ -571,7 +574,14 @@
     });
   }
   attachSuggest('passUsername', 'passPopup');
-  attachSuggest('dsQuery', 'dsPopup');
+  attachSuggest('dsQuery', 'dsPopup', '#dsCheckBtn');
+  /* Битые аватарки в подсказках исчезают без инлайн-onerror (строгий
+     CSP): слушаем ошибку загрузки на фазе перехвата — работает и для
+     картинок, вставленных позже через innerHTML. */
+  document.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t.tagName === 'IMG' && t.closest && t.closest('.autocomplete-popup')) t.remove();
+  }, true);
 
   /* ── Оверлей «Проверяем доступ»: ЧЕСТНАЯ индикация ОДНОЙ проверки ──
      Заказ владельца (2026-09-04): «чтобы проверки просто так не кружились».

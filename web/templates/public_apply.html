@@ -443,7 +443,7 @@
           <label>Discord ID</label>
           <div style="position: relative;">
             <input type="text" id="discord_id" placeholder="например: 123456789012345678"
-              oninput="onIdInput()" aria-label="например: 123456789012345678">
+              aria-label="например: 123456789012345678">
             <span id="id-status" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%);"></span>
           </div>
           <span class="hint">Включите режим разработчика → правый клик → скопировать ID</span>
@@ -490,7 +490,7 @@
         </div>
       </div>
 
-      <button type="button" class="submit-btn" id="submit-btn" onclick="submitForm()">
+      <button type="button" class="submit-btn" id="submit-btn">
         <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ЗАЯВКУ
       </button>
     </div>
@@ -506,7 +506,7 @@
   </div>
 </main>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var selectedGuild = '{{ main_guild_id }}';
 var memberVerified = false;
 var idCheckTimer = null;
@@ -572,8 +572,10 @@ async function loadServers() {
     }
     grid.innerHTML = guilds.map(function(g) {
       var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
-      return '<div class="server-card" onclick="selectGuild(\''+g.id+'\',\''+g.name.replace(/'/g,"\\'")+'\')" id="sc-'+g.id+'" role="button" tabindex="0">' +
-        '<img alt="" src="'+icon+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+      /* Клик и фолбэк-аватар — через data-атрибуты и делегирование:
+         строгий CSP публичной страницы не исполняет инлайн-обработчики. */
+      return '<div class="server-card" data-gid="'+g.id+'" data-gname="'+g.name.replace(/"/g,'&quot;')+'" id="sc-'+g.id+'" role="button" tabindex="0">' +
+        '<img alt="" src="'+icon+'" data-fallback="https://cdn.discordapp.com/embed/avatars/0.png">' +
         '<div><div class="sname">'+g.name+'</div><div class="smembers">'+g.members+' участников</div></div>' +
         '</div>';
     }).join('');
@@ -670,6 +672,31 @@ function hideAlert() {
 }
 
 loadServers();
+
+/* ── Слушатели вместо инлайн-обработчиков (строгий CSP) ────────────── */
+(function () {
+  var idInput = document.getElementById('discord_id');
+  if (idInput) idInput.addEventListener('input', onIdInput);
+  var submitBtn = document.getElementById('submit-btn');
+  if (submitBtn) submitBtn.addEventListener('click', submitForm);
+  /* выбор сервера: один слушатель на сетку — работает и для карточек,
+     вставленных позже через innerHTML */
+  var grid = document.getElementById('server-grid');
+  if (grid) {
+    grid.addEventListener('click', function (e) {
+      var card = e.target.closest && e.target.closest('.server-card');
+      if (card) selectGuild(card.getAttribute('data-gid'), card.getAttribute('data-gname') || '');
+    });
+  }
+  /* битая иконка сервера → дефолтная аватарка (без инлайн-onerror) */
+  document.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t.tagName === 'IMG' && t.getAttribute('data-fallback')
+        && t.src !== t.getAttribute('data-fallback')) {
+      t.src = t.getAttribute('data-fallback');
+    }
+  }, true);
+})();
 </script>
 </body>
 </html>

@@ -334,6 +334,11 @@ def before_request ():
     # Замер длительности запроса: медленные видны в логе сразу, с путём и
     # временем. Без этого «панель тормозит» невозможно разобрать по фактам.
     g ._req_started =_time .time ()
+    # CSP-nonce: свежий на каждый запрос. Публичные страницы (без логина)
+    # получают строгий script-src с nonce вместо unsafe-inline — инлайн-
+    # скрипты без nonce браузер не исполняет вообще (XSS-инъекция мертва).
+    import secrets as _secrets
+    g .csp_nonce =_secrets .token_urlsafe (16 )
     # БЕЗОПАСНОСТЬ (владелец 2026-09-08: «обычные участники заходят в панель
     # владельца — именно меню владельца»): демо-режим БОЛЬШЕ не входит в
     # панель автоматически. Раньше любой, открывший демо-URL, получал сессию
@@ -617,6 +622,30 @@ def after_request (response ):
         )
         response .headers ['Content-Security-Policy']=csp 
 
+    # ── Строгий CSP для ПУБЛИЧНЫХ страниц (XSS-поверхность без логина) ──────
+    # Lighthouse «политика CSP эффективна против XSS»: на страницах, которые
+    # видит весь интернет (витрина, вход, регистрация, анкета), script-src
+    # работает по nonce — инлайн-скрипты без nonce и ВСЕ инлайн-обработчики
+    # (onclick=...) браузер отбрасывает. Внедрённый в HTML скрипт мёртв.
+    # Панель за логином пока оставлена на 'unsafe-inline' (80+ шаблонов с
+    # инлайн-JS; nonce-миграция — поэтапно, эти страницы не публичны).
+    _PUBLIC_PAGES =('/','/login','/register','/apply','/welcome')
+    if (request .path in _PUBLIC_PAGES
+    and str (response .headers .get ('Content-Type','')or '').startswith ('text/html')):
+        _nonce =getattr (g ,'csp_nonce','')
+        if _nonce :
+            response .headers ['Content-Security-Policy']=(
+            "default-src 'self'; "
+            "script-src 'self' 'nonce-"+_nonce +"' https://static.cloudflareinsights.com; "
+            "style-src 'self' 'unsafe-inline'; "
+            "font-src 'self' data:; "
+            "img-src "+_img +"; "
+            "connect-src "+_connect +"; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "frame-ancestors 'self'"
+            )
+
     # Discord Embedded App (Activity): страница музыкальной панели открывается
     # внутри клиента Discord (iframe), поэтому разрешаем Discord встраивать её.
     # X-Frame-Options убираем (он не умеет списка доменов), управление — через
@@ -767,6 +796,11 @@ def _vis_allowed (kind ):
         min_role ='mod'
     role =str (session .get ('role','uye')or 'uye')
     return ROLES .get (role ,-1 )>=ROLES .get (min_role ,1 )
+
+@app .context_processor
+def inject_csp_nonce ():
+    """CSP-nonce для инлайн-скриптов публичных страниц (см. after_request)."""
+    return {'csp_nonce':getattr (g ,'csp_nonce','')}
 
 @app .context_processor
 def inject_visibility ():
