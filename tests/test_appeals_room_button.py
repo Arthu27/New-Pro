@@ -239,6 +239,41 @@ async def _ping_on(ch, rid):
         ch, {'ping_role_id': rid}, {'id': 42})
 
 
+print('== 2c. ЛС-путь без комнаты: заявка — в собственную ветке канала карточек ==')
+# дизайн _card_channel: «комнаты нет → канал карточек, заявка уходит в
+# собственную ветку, чтобы канал не замусоривался» — так делал только
+# путь «меню в канале»; из ЛС ветку не создавали (баг 2026-09-08).
+# Гильда БЕЗ известной комнаты (ROOM = известный ID — фоллбэк бы нашёл её)
+CR.set_route(GID, 'ban_appeal_channel', 0)
+CR.set_route(GID, 'appeals_channel', CARDS)
+cards2 = _Chan(CARDS, 'карточки')
+guild2 = _Guild([cards2])
+cog2 = A.Appeals(_Bot(guild2))
+
+
+async def _t2d():
+    return await cog2._submit_appeal(_DMedUser(333444555666777888, 'Четвёртый'),
+                                     guild2, 'Прошу разбана, вот объяснение')
+
+
+item4, err4 = asyncio.new_event_loop().run_until_complete(_t2d())
+check(err4 is None and item4 is not None, 'апелляция из ЛС создана', err4 or '')
+check(len(cards2.threads) == 1 and cards2.threads[0].sent,
+      'карточка ушла в СОБСТВЕННУЮ ветку канала карточек (не голым сообщением)',
+      f'веток: {len(cards2.threads)}')
+check(cards2.threads[0].name.startswith('Апелляция #'),
+      'ветка названа «Апелляция #N · юзер»', cards2.threads[0].name)
+check(item4.get('thread_id') == cards2.threads[0].id,
+      'id ветки запомнен в карточке (для решения/удаления)')
+check(not cards2.sent or all(
+    '<@&807030012301541377>' in str(m.get('content') or '')
+    for m in cards2.sent),
+    'в самом канале карточек — только тег куратора, карточка в ветке')
+
+# откат маршрута для следующих секций
+CR.set_route(GID, 'ban_appeal_channel', ROOM)
+
+
 # роль есть на сервере → тег уходит
 ch_ok = _chan_with_guild(True)
 msg = asyncio.new_event_loop().run_until_complete(

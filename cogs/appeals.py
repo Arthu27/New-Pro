@@ -1833,7 +1833,7 @@ class Appeals(commands.Cog):
         embed.set_footer(text=f'user_id: {item["user_id"]} · appeal #{item["id"]}')
         # «всё сюда, кроме логов»: карточка живёт в комнате апелляции;
         # нет комнаты — запасной канал карточек (владелец 2026-09-06)
-        channel, _use_thread = await self._card_channel(guild, state)
+        channel, use_thread = await self._card_channel(guild, state)
         if channel is not None:
             view = AppealView(self, guild_id, item['id'])
             # Оформление карточки из панели: авто-картинка в выбранной теме,
@@ -1844,18 +1844,38 @@ class Appeals(commands.Cog):
             painted = await self._paint_appeal_card(embed, item, appearance)
             if painted is not None:
                 send_kwargs['file'] = painted
-            try:
-                msg = await channel.send(**send_kwargs)
+            msg = None
+            if use_thread:
+                # запасной путь без комнаты: заявка — в собственную ветку,
+                # чтобы канал карточек не замусоривался. Раньше это делал
+                # только путь «меню в канале», а из ЛС карточка падала
+                # голым сообщением в общий канал (несостыковка 2026-09-08).
+                try:
+                    thread = await channel.create_thread(
+                        name=f'Апелляция #{item["id"]} · {str(user)[:40]}',
+                        type=discord.ChannelType.public_thread)
+                    msg = await thread.send(**send_kwargs)
+                    item['thread_id'] = thread.id
+                except (discord.Forbidden, discord.HTTPException) as _ex:
+                    # нет права «Создавать публичные ветки» — НЕ теряем
+                    # заявку: карточка ложится прямо в канал (как в меню-пути)
+                    log.warning('appeals: тред #%s не создан (%s) — карточка в канал',
+                                item['id'], _ex)
+            if msg is None:
+                try:
+                    msg = await channel.send(**send_kwargs)
+                except (discord.Forbidden, discord.HTTPException) as _ex:
+                    log.error('appeals: карточка #%s на %s не ушла: %s',
+                              item['id'], guild_id, _ex)
+            if msg is not None:
                 item['message_id'] = msg.id
+                item['thread_url'] = msg.jump_url
                 # где лежит карточка (для удаления после решения) + пинг
                 item['card_channel_id'] = getattr(channel, 'id', None)
                 self._save(guild_id, state)
                 ping = await self._ping_mod_role(channel, settings_of(state), item)
                 item['ping_message_id'] = getattr(ping, 'id', None)
                 await self._fire_panel_event(item)
-            except (discord.Forbidden, discord.HTTPException) as _ex:
-                log.error('appeals: карточка #%s на %s не ушла: %s',
-                          item['id'], guild_id, _ex)
         # Канал апелляции открывается после подачи при ЛЮБОМ пути подачи
         # (скрыт до подачи — заказ владельца 2026-09-05). Сначала СОХРАНЯЕМ
         # state, потом вешаем на локальный item временные поля для ответа:
