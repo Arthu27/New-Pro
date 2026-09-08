@@ -85,6 +85,14 @@ def settings_of(state):
     tpl = raw.get('reject_templates')
     if not isinstance(tpl, list) or not tpl:
         tpl = list(DEFAULT_REJECT_TEMPLATES)
+    # тег при новой апелляции: 0/мусор/отсутствие — это НИЧЕЙ выбор
+    # (прежний дефолт «без пинга»), а владелец 2026-09-08 велел тегать
+    # куратора всегда → мигрируем на роль куратора. Строки тоже гасим:
+    # '0' — truthy, простой `or None` её пропускал бы.
+    try:
+        _pid = int(raw.get('ping_role_id'))
+    except (TypeError, ValueError):
+        _pid = 0
     return {
         'cooldown_hours': _clamp_hours(raw.get('cooldown_hours'),
                                        DEFAULT_COOLDOWN_HOURS, 0, 720),
@@ -101,8 +109,8 @@ def settings_of(state):
         # тег роли при новой апелляции (в комнату апелляции): по умолчанию —
         # роль куратора (владелец 2026-09-08), из панели можно выбрать другую;
         # авто-блок подачи после N отклонённых (0 = выключен)
-        'ping_role_id': _clamp_hours(raw.get('ping_role_id') or None,
-                                     CURATOR_PING_ROLE_ID, 0, 10 ** 25),
+        'ping_role_id': (min(_pid, 10 ** 25) if _pid > 0
+                         else CURATOR_PING_ROLE_ID),
         'block_after_rejects': _clamp_hours(raw.get('block_after_rejects'),
                                             0, 0, 10),
         # эскалация: pending старше N часов → пинг старшей роли в канал

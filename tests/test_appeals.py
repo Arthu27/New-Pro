@@ -143,6 +143,9 @@ check(sdef['ping_role_id'] == ap.CURATOR_PING_ROLE_ID
 s_leg = ap.settings_of({'settings': {'ping_role_id': 0}})
 check(s_leg['ping_role_id'] == ap.CURATOR_PING_ROLE_ID,
       'старый сохранённый 0 (ничей выбор) мигрирует на куратора')
+s_str = ap.settings_of({'settings': {'ping_role_id': '0'}})
+check(s_str['ping_role_id'] == ap.CURATOR_PING_ROLE_ID,
+      "строка '0' тоже мигрирует (truthy — простой or None её пропускал)")
 spb = ap.settings_of({'settings': {'ping_role_id': 555, 'block_after_rejects': 3}})
 check(spb['ping_role_id'] == 555 and spb['block_after_rejects'] == 3,
       'своя роль из настроек и авто-блок подхватываются из state')
