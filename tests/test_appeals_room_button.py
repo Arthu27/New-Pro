@@ -199,6 +199,60 @@ _ping = [m for m in room.sent if '<@&7001>' in str(m.get('content') or '')]
 check(len(_ping) == 1, 'пинг роли уведомляет про новую заявку в комнате')
 
 
+print('== 2b. Тег куратора при новой апелляции (владелец 2026-09-08) ==')
+# «807030012301541377 это роль куратора… он будет тегать эту роль»:
+# без настроек (и со старым 0) — тегаем куратора, свою роль не потеряли.
+st = cog._load(GID)
+st['settings'] = dict(st.get('settings') or {})
+st['settings']['ping_role_id'] = 0          # старый сохранённый дефолт
+cog._save(GID, st)
+room.sent.clear()
+
+
+async def _t2c():
+    return await cog._submit_appeal(_DMedUser(222333444555666777, 'Третий'),
+                                    guild, 'Прошу разбана, больше не буду')
+
+
+item3, err3 = asyncio.new_event_loop().run_until_complete(_t2c())
+check(err3 is None and item3 is not None, 'апелляция создана', err3 or '')
+_cur = [m for m in room.sent
+        if '<@&807030012301541377>' in str(m.get('content') or '')]
+check(len(_cur) == 1,
+      'новая апелляция тегает роль куратора 807030012301541377 (дефолт)')
+
+
+class _RoleGuild(types.SimpleNamespace):
+    pass
+
+
+def _chan_with_guild(has_role):
+    ch = _Chan(777001, 'комната-с-гильдой')
+    g = _RoleGuild(id=GID, get_role=lambda rid: (
+        types.SimpleNamespace(id=rid, mention=f'<@&{rid}>') if has_role else None))
+    ch.guild = g
+    return ch
+
+
+async def _ping_on(ch, rid):
+    return await cog._ping_mod_role(
+        ch, {'ping_role_id': rid}, {'id': 42})
+
+
+# роль есть на сервере → тег уходит
+ch_ok = _chan_with_guild(True)
+msg = asyncio.new_event_loop().run_until_complete(
+    _ping_on(ch_ok, 807030012301541377))
+check(msg is not None and '<@&807030012301541377>' in str(ch_ok.sent[-1].get('content')),
+      'роль куратора есть на сервере → тег уходит в комнату')
+# роли нет на «чужом» сервере → молча без @invalid-role
+ch_no = _chan_with_guild(False)
+msg2 = asyncio.new_event_loop().run_until_complete(
+    _ping_on(ch_no, 807030012301541377))
+check(msg2 is None and not ch_no.sent,
+      'роли нет на этом сервере → без пинга (не рисуем @invalid-role)')
+
+
 print('== 3. Кнопка «Подать апелляцию» в ЛС о бане ==')
 v = A.AppealDMView()
 btn = v.children[0]

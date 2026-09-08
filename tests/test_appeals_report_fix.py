@@ -91,7 +91,11 @@ class _Channel:
         self.threads.append(t)
         return t
 
-    async def send(self, **kw):
+    async def send(self, *args, **kw):
+        # контент бывает позиционным (пинг роли куратора при новой
+        # апелляции — как в настоящем discord.py)
+        if args:
+            kw['content'] = args[0]
         self.sent.append(kw)
         return types.SimpleNamespace(id=1000 + len(self.sent),
                                      jump_url=f'http://j/{len(self.sent)}')
@@ -173,8 +177,14 @@ async def main():
     # обсуждение живут в комнате; запасной канал карточек не трогаем
     item, err = await cog._submit_channel_appeal(user, guild, 'Прошу разбан')
     check(err is None, 'апелляция создана без ошибок', f'→ {err}')
-    check(len(appeal_ch.sent) == 1 and not appeal_ch.threads,
-          'карточка легла прямо в комнату апелляции')
+    # 2026-09-08: в комнате теперь ДВА сообщения — карточка и тег роли
+    # куратора (дефолт, заказ владельца: «он будет тегать эту роль»)
+    check(len(appeal_ch.sent) == 2 and not appeal_ch.threads,
+          'карточка + тег куратора легли прямо в комнату апелляции',
+          f'{len(appeal_ch.sent)} сообщений')
+    check(any('<@&807030012301541377>' in str(m.get('content') or '')
+              for m in appeal_ch.sent),
+          'тег куратора 807030012301541377 ушёл в комнату при подаче')
     check(not cards_ch.sent, 'запасной канал модеров не тронут')
     view = (appeal_ch.sent[0] or {}).get('view')
     ids = [b.custom_id for b in view.children] if view else []

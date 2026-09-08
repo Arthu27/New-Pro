@@ -132,11 +132,20 @@ check(sdef['invite_on_unban'] is False and sdef['invite_channel_id'] == 0,
 sinv = ap.settings_of({'settings': {'invite_on_unban': True, 'invite_channel_id': 555}})
 check(sinv['invite_on_unban'] is True and sinv['invite_channel_id'] == 555,
       'ссылка-возврат подхватывается из state')
-check(sdef['ping_role_id'] == 0 and sdef['block_after_rejects'] == 0,
-      'пинг роли и авто-блок по умолчанию выключены')
+# Заказ владельца 2026-09-08: «807030012301541377 это роль куратора…
+# он будет тегать эту роль» — тег при новой апелляции ВСЕГДА, дефолт =
+# роль куратора. Прежний дефолт 0 никто не выбирал руками — мигрирует.
+check(ap.CURATOR_PING_ROLE_ID == 807030012301541377,
+      'роль куратора зафиксирована константой')
+check(sdef['ping_role_id'] == ap.CURATOR_PING_ROLE_ID
+      and sdef['block_after_rejects'] == 0,
+      'тег при новой апелляции — куратор по умолчанию; авто-блок выкл')
+s_leg = ap.settings_of({'settings': {'ping_role_id': 0}})
+check(s_leg['ping_role_id'] == ap.CURATOR_PING_ROLE_ID,
+      'старый сохранённый 0 (ничей выбор) мигрирует на куратора')
 spb = ap.settings_of({'settings': {'ping_role_id': 555, 'block_after_rejects': 3}})
 check(spb['ping_role_id'] == 555 and spb['block_after_rejects'] == 3,
-      'пинг роли и авто-блок подхватываются из state')
+      'своя роль из настроек и авто-блок подхватываются из state')
 
 print('== 5.2 кулдаун после отказа ==')
 stc = ap.empty_state()

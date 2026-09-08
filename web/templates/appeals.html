@@ -129,8 +129,8 @@
     <div class="hint" style="margin-top:2px"><i class="fas fa-circle-info"></i>
       Панельный «бан» — роль бана, человек остаётся на сервере: ссылка ему не нужна, доступ вернётся снятием роли. Ссылка отправляется только после настоящего Discord-бана (анти-альт, страж), когда человек вне сервера.</div>
     <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
-      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Пинг роли при новой апелляции (в комнату апелляции)</span>
-        <select class="form-input" id="apPingRole" aria-label="Роль для пинга при новой апелляции"><option value="0">Без пинга</option></select></label>
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Тег роли при новой апелляции (в комнату апелляции) — по умолчанию куратор</span>
+        <select class="form-input" id="apPingRole" aria-label="Роль для пинга при новой апелляции"><option value="0">Куратор — по умолчанию</option></select></label>
       <label class="field" style="min-width:230px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Авто-блок подачи после N отказов (0 — выкл)</span>
         <input type="number" class="form-input" id="apBlockAfter" min="0" max="10" aria-label="Авто-блок подачи после N отказов"></label>
     </div>
@@ -350,7 +350,12 @@ function loadRoles() {
       var sel = $(sid);
       if (!sel) return;
       var keep = sel.dataset.value || sel.value;
-      sel.innerHTML = '<option value="0">Без пинга</option>' + raw.map(function (r) {
+      /* пинг при новой апелляции: 0 = роль куратора (дефолт, заказ
+         2026-09-08); эскалация: 0 = отметить без упоминания */
+      var zero = sid === 'apPingRole'
+        ? '<option value="0">Куратор — по умолчанию</option>'
+        : '<option value="0">Без пинга</option>';
+      sel.innerHTML = zero + raw.map(function (r) {
         return '<option value="' + esc(r.id) + '">@ ' + esc(r.name) + '</option>';
       }).join('');
       if (keep) sel.value = keep;
