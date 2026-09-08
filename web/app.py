@@ -491,12 +491,24 @@ def after_request (response ):
                                request .method ,request .path ,_dt ,response .status_code )
     except Exception as _ex :
         _log .debug ('after_request(): замер времени подавлен: %s',_ex )
-    # HSTS за туннелем: браузер запоминает, что домен — только https.
+    # HSTS (Lighthouse «Использование строгого механизма HSTS»): браузер
+    # запоминает, что домен — только https. Условие раньше требовало
+    # WEB_BEHIND_PROXY/CF-RAY, и при другом прокси заголовок молча не
+    # ставился — теперь достаточно самого факта https (прямой или через
+    # X-Forwarded-Proto). max-age 2 года — порог аудита 6 месяцев.
     try :
-        if _behind_proxy ()and request .headers .get ('X-Forwarded-Proto','')=='https':
-            response .headers .setdefault ('Strict-Transport-Security','max-age=31536000; includeSubDomains')
+        _https =(request .is_secure
+        or str (request .headers .get ('X-Forwarded-Proto','')or '').strip ().lower ()=='https')
+        if _https :
+            response .headers .setdefault ('Strict-Transport-Security','max-age=63036000; includeSubDomains')
     except Exception as _ex :
         _log .debug ("after_request(): HSTS подавлен: %s",_ex )
+    # COOP (Lighthouse «надлежащая изоляция источников»): окно панели не
+    # открывается попутными вкладками — защита от подмены window.opener.
+    try :
+        response .headers .setdefault ('Cross-Origin-Opener-Policy','same-origin')
+    except Exception as _ex :
+        _log .debug ("after_request(): COOP подавлен: %s",_ex )
     # «Бот офлайн» из ~40 эндпоинтов подменяем на человеческую подсказку —
     # сухое «Ошибка: Бот офлайн» в тосте владелец читает как «кнопки сломаны».
     # Меняем ТОЛЬКО голый литерал (хвост-варианты вида «Бот офлайн — ...» не трогаем).
@@ -550,8 +562,13 @@ def after_request (response ):
         except Exception as _ex :
             print (f"[ETAG] error on {request.path}: {_ex!r}",flush =True )
 
-            # Обход кэша браузера — критично для админ-панели (на время разработки)
-    if request .path .startswith ('/static/'):
+            # Обход кэша браузера — критично для админ-панели (на время разработки).
+    # Исключение — vendor-библиотеки (шрифты, иконки): они весят больше
+    # сотни КиБ и меняются только при обновлении версии, поэтому живые
+    # сутки в кэше (PageSpeed: шрифты не должны качаться на каждый вход).
+    if request .path .startswith ('/static/vendor/'):
+        response .headers ['Cache-Control']='public, max-age=86400'
+    elif request .path .startswith ('/static/'):
         response .headers ['Cache-Control']='no-cache, no-store, must-revalidate'
         response .headers ['Pragma']='no-cache'
         response .headers ['Expires']='0'
@@ -586,7 +603,10 @@ def after_request (response ):
         "default-src 'self'; "
         # Cloudflare Web Analytics подставляет beacon.min.js со своего
         # домена — без него в консоли ошибка CSP, а статистика не собирается.
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
+        # unsafe-inline остаётся, пока инлайн-скрипты живут в 80+ шаблонах
+        # (nonce-рефакторинг — отдельная задача); unsafe-eval убран: eval
+        # и new Function нигде не используются (Lighthouse: CSP и XSS).
+        "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
         "img-src " +_img +"; "
@@ -607,7 +627,7 @@ def after_request (response ):
         "default-src 'self'; "
         # Cloudflare Web Analytics подставляет beacon.min.js со своего
         # домена — без него в консоли ошибка CSP, а статистика не собирается.
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
+        "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
         "img-src " +_img +"; "

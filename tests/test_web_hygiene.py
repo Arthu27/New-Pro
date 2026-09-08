@@ -56,8 +56,10 @@ for host in ('cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'fonts.googleapis.com',
         _bad.append(host)
 check(not _bad, f'CSP чист от CDN-доменов ({_bad})')
 check("default-src 'self'" in csp, "default-src 'self' на месте")
-check("script-src 'self' 'unsafe-inline' 'unsafe-eval'" in csp,
-      'script-src: только self + inline/eval (админ-панель)')
+# unsafe-eval убран (2026-09-08, PageSpeed «CSP против XSS»): eval и
+# new Function нигде не используются — флаг был мёртвым грузом.
+check("script-src 'self' 'unsafe-inline'" in csp and "'unsafe-eval'" not in csp,
+      'script-src: self + inline, БЕЗ eval (админ-панель)')
 check("frame-ancestors 'self'" in csp, "frame-ancestors 'self' (антикликджекинг)")
 check("img-src 'self' data: https:" in csp, 'img-src: self + data + https (аватарки Discord)')
 
@@ -141,8 +143,9 @@ _r = client.get('/welcome')
 _csp = _r.headers.get('Content-Security-Policy', '')
 check('https://static.cloudflareinsights.com' in _csp,
       'script-src пускает static.cloudflareinsights.com (иначе консоль краснеет)')
-check("script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com" in _csp,
-      'script-src собран целиком: self + inline/eval + beacon')
+check("script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com" in _csp
+      and "'unsafe-eval'" not in _csp,
+      'script-src собран целиком: self + inline + beacon, без eval')
 
 # ─── Версия сборки видна в панели ────────────────────────────────────────────
 # Заказ владельца: после обновления непонятно, применилось ли оно. Номер

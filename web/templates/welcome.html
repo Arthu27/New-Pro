@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Hakumo — панель твоего сервера</title>
+  <meta name="description" content="Hakumo — панель управления Discord-сервером: модерация, апелляции, предупреждения, статистика и защита. Живые данные, быстрые решения, всё под контролем владельца.">
+  <meta name="theme-color" content="#05060a">
   <link rel="icon" href="/static/favicon.ico">
       <style>
       /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
@@ -11,7 +13,12 @@
       html { background: #0f1013; color-scheme: dark; }
       body { background: transparent; margin: 0; }
     </style>
-<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+<!-- Lighthouse: all.subset.css и fonts.css не блокируют первую отрисовку.
+     Иконки и шрифты подгружаются параллельно HTML (font-display: swap в
+     fonts.css уже даёт системный фолбэк), страница рисуется сразу.
+     noscript-фолбэк вернёт блокирующую загрузку без JS. -->
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css"></noscript>
 <!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
          только разобрав fonts.css и all.subset.css, и они встают в конец
          цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
@@ -21,7 +28,8 @@
   <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
+  <link rel="stylesheet" href="/static/vendor/fonts/fonts.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/static/vendor/fonts/fonts.css"></noscript>
   <style>
     :root {
       --bg: #05060a;
@@ -162,6 +170,9 @@
                   inset 0 1px 0 rgba(255, 255, 255, .35);
       animation: wFloat 5s ease-in-out infinite;
     }
+    /* Композитная левитация дракона: только transform (Lighthouse —
+       «избегайте некомбинированных анимаций»). */
+    @keyframes wFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
     .w-dragon::before {
       content: ''; position: absolute; inset: 0;
       background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, .26), transparent 55%);
@@ -170,10 +181,15 @@
       content: ''; position: absolute; top: -35%; bottom: -35%; left: -65%;
       width: 36%;
       background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .32), transparent);
-      transform: skewX(-18deg);
       animation: wGloss 3.6s ease-in-out infinite;
     }
-    @keyframes wGloss { 0%, 55% { left: -65%; } 85%, 100% { left: 135%; } }
+    /* Блик бежит transform-ом (композитно), а не left (принудительная
+       компоновка каждый кадр): старт фиксируется в left:-65%, проход
+       200% ширины родителя = 556% собственной ширины элемента. */
+    @keyframes wGloss {
+      0%, 55%  { transform: skewX(-18deg) translateX(0); }
+      85%, 100% { transform: skewX(-18deg) translateX(556%); }
+    }
     .w-dragon img {
       position: relative; z-index: 1;
       width: 112px; height: 112px; object-fit: contain;
@@ -781,11 +797,13 @@
 
     /* ── Скролл-прогресс: тонкая градиентная полоса сверху ── */
     .w-progress {
-      position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+      position: fixed; top: 0; left: 0; height: 3px; width: 100%;
       background: linear-gradient(90deg, #4f46e5, #7c3aed, #22d3ee);
       box-shadow: 0 0 12px rgba(124, 58, 237, .55);
       border-radius: 0 3px 3px 0;
       z-index: 130; pointer-events: none;
+      transform: scaleX(0); transform-origin: 0 50%;
+      will-change: transform;
     }
 
     /* ── Стат-карточки: глянцевый блик и свечение числа при hover ── */
@@ -915,7 +933,7 @@
   <!-- Навигация -->
   <nav class="w-nav" aria-label="Навигация">
     <a class="brand" href="/">
-      <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo">
+      <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="38" height="38" decoding="async" alt="Hakumo">
       <span><b>HAKUMO</b><small>панель сервера</small></span>
     </a>
     <div class="w-nav-links">
@@ -937,7 +955,7 @@
       <div class="w-dragon-par" id="wDragonPar">
         <div class="w-dragon-ring" aria-hidden="true"></div>
         <div class="w-dragon-halo" aria-hidden="true"></div>
-        <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Белый дракон Hakumo"></div>
+        <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="112" height="112" fetchpriority="high" decoding="async" alt="Белый дракон Hakumo"></div>
       </div>
       <div class="w-dragon-floor" aria-hidden="true"></div>
     </div>
@@ -1025,7 +1043,7 @@
       </div>
       <div class="w-showcase-grid">
         <div class="w-showcase-side">
-          <div class="s-brand"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="">HAKUMO</div>
+          <div class="s-brand"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" loading="lazy" decoding="async" alt="">HAKUMO</div>
           <span class="s-item on"><i class="fas fa-home"></i> Обзор</span>
           <span class="s-item"><i class="fas fa-shield-halved"></i> Модерация</span>
           <span class="s-item"><i class="fas fa-users"></i> Участники</span>
@@ -1184,7 +1202,7 @@
   </main>
 
   <footer class="w-foot">
-    <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="">HAKUMO · панель твоего сервера · сделано с душой
+    <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" loading="lazy" decoding="async" alt="">HAKUMO · панель твоего сервера · сделано с душой
   </footer>
 
   <script>
@@ -1304,7 +1322,12 @@
         if (en[0].isIntersecting) { run(); io.disconnect(); }
       }, { threshold: 0.4 });
       io.observe(el);
-      if (el.getBoundingClientRect().top < window.innerHeight) run();
+      /* Геометрию читаем ПОСЛЕ первого кадра (rAF): иначе это первый
+         синхронный layout всей страницы до отрисовки (Lighthouse:
+         принудительная компоновка, 680 мс). */
+      requestAnimationFrame(function () {
+        if (el.getBoundingClientRect().top < window.innerHeight) run();
+      });
     })();
 
     /* ── 4. Живые счётчики ── */
@@ -1462,9 +1485,13 @@
         var barsIo = new IntersectionObserver(function (en) {
           if (en[0].isIntersecting && !barsShown) {
             barsShown = true;
-            barsBox.querySelectorAll('.b').forEach(function (b, i) {
-              b.style.animation = 'none';
-              void b.offsetWidth;
+            var bs = barsBox.querySelectorAll('.b');
+            /* Сначала ВСЕ записи, потом ОДНО чтение (reflow), потом все
+               записи заново — один layout на перезапуск вместо шести
+               (Lighthouse: принудительная компоновка). */
+            bs.forEach(function (b) { b.style.animation = 'none'; });
+            void barsBox.offsetWidth;
+            bs.forEach(function (b, i) {
               b.style.animation = '';
               b.style.animationDelay = (i * 90) + 'ms';
             });
@@ -1507,7 +1534,9 @@
         }, { threshold: 0.3 });
         io.observe(feedBox);
       }
-      if (feedBox.getBoundingClientRect().top < window.innerHeight) paint();
+      requestAnimationFrame(function () {
+        if (feedBox.getBoundingClientRect().top < window.innerHeight) paint();
+      });
     })();
 
     /* ── 9a. Живое обновление KPI витрины ── */
@@ -1523,10 +1552,12 @@
           var next = Math.max(0, cur + drift);
           el.dataset.live = next;
           el.textContent = next.toLocaleString('ru-RU');
-          el.classList.remove('tick');
-          void el.offsetWidth;
-          el.classList.add('tick');
         });
+        /* Перезапуск мерцания — пакетно: все classList, ОДНО чтение
+           (reflow), затем tick (было чтение offsetWidth на каждый KPI). */
+        kpis.forEach(function (el) { el.classList.remove('tick'); });
+        void document.documentElement.offsetWidth;
+        kpis.forEach(function (el) { el.classList.add('tick'); });
       }, 4000);
     })();
 
@@ -1562,7 +1593,9 @@
         }, { threshold: 0.3 });
         io.observe(nums[0]);
       }
-      if (nums[0].getBoundingClientRect().top < window.innerHeight) run();
+      requestAnimationFrame(function () {
+        if (nums[0].getBoundingClientRect().top < window.innerHeight) run();
+      });
     })();
 
     /* ── 10. Лёгкий 3D-tilt карточек ── */
@@ -1571,15 +1604,25 @@
       if (!window.matchMedia('(pointer: fine)').matches) return;
       var SEL = '.w-card, .w-step, .w-stat';
       var tick = false, lastE = null, lastT = null;
+      /* Прямоугольник кэшируем: чтение геометрии на каждом движении после
+         собственной записи transform = принудительная компоновка каждый
+         кадр (Lighthouse). Кэш сбрасывается при скролле/resize/смене цели.
+         Бонус: rect больше не «плывёт» от наклона самой карточки. */
+      var rectOf = null;
+      function dropRect() { rectOf = null; }
+      window.addEventListener('scroll', dropRect, { passive: true });
+      window.addEventListener('resize', dropRect, { passive: true });
       function apply(e) {
         tick = false;
         var t = e.target.closest(SEL);
         if (t !== lastT) {
           if (lastT) lastT.style.transform = '';
           lastT = t;
+          rectOf = null;
         }
         if (!t) return;
-        var r = t.getBoundingClientRect();
+        if (!rectOf || rectOf.el !== t) rectOf = { el: t, r: t.getBoundingClientRect() };
+        var r = rectOf.r;
         var dx = (e.clientX - r.left) / r.width - 0.5;
         var dy = (e.clientY - r.top) / r.height - 0.5;
         t.style.transform = 'perspective(700px) rotateY(' + (dx * 5).toFixed(1) + 'deg) rotateX(' + (-dy * 5).toFixed(1) + 'deg)';
@@ -1598,11 +1641,16 @@
       var btn = document.getElementById('wTop');
       if (!btn) return;
       var ticking = false;
-      var lastRing = 0;
+      var lastRing = 0, max = -1, lastMeasure = 0;
+      /* Высоту документа перечитываем не чаще раза в секунду — на каждом
+         кадре скролла это принудительная компоновка (Lighthouse). */
       function paint(now) {
         ticking = false;
         now = now || performance.now();
-        var max = document.documentElement.scrollHeight - window.innerHeight;
+        if (max < 0 || now - lastMeasure >= 1000) {
+          lastMeasure = now;
+          max = document.documentElement.scrollHeight - window.innerHeight;
+        }
         var p = max > 0 ? window.scrollY / max : 0;
         btn.classList.toggle('show', window.scrollY > 500);
         if (now - lastRing >= 120) {
@@ -1770,17 +1818,24 @@
   (function progress() {
     var bar = document.getElementById('wProgress');
     if (!bar) return;
-    var raf = null;
+    var raf = null, max = -1, lastMeasure = 0;
+    /* Геометрию документа перечитываем не чаще раза в секунду (на скролле
+       хватает scrollY — Lighthouse: принудительная компоновка), а пишем
+       transform: scaleX — композитор, без layout вообще. */
     function upd() {
       raf = null;
-      var h = document.documentElement;
-      var max = h.scrollHeight - h.clientHeight;
-      bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+      var now = performance.now();
+      if (max < 0 || now - lastMeasure >= 1000) {
+        lastMeasure = now;
+        max = document.documentElement.scrollHeight - window.innerHeight;
+      }
+      var p = max > 0 ? (window.scrollY / max) : 0;
+      bar.style.transform = 'scaleX(' + Math.min(1, Math.max(0, p)) + ')';
     }
     window.addEventListener('scroll', function () {
       if (!raf) raf = requestAnimationFrame(upd);
     }, { passive: true });
-    upd();
+    requestAnimationFrame(upd);
   })();
   </script>
 </body>
