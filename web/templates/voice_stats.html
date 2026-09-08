@@ -47,7 +47,7 @@
   <div id="vc-leaderboard"><div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Выберите сервер...</p></div></div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var MAIN_GID = '{{ main_guild_id }}';
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 

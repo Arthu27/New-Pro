@@ -138,7 +138,7 @@
   <div id="recent-notifs"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div></div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 async function loadNotifs() {

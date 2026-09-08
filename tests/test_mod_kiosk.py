@@ -114,7 +114,10 @@ for marker in ('kiosk-sit', 'kiosk-pulse', 'kioskHisto', 'kioskTop',
 
 print('\n== Node-харнесс: живое исполнение логики экрана ==')
 # извлекаем inline-скрипты (шим + главный), подменяем Jinja-вставки
-scripts = re.findall(r'<script>(.*?)</script>', TPL, re.S)
+# только ИСПОЛНЯЕМЫЕ скрипты: src=-внешние и type="application/json"
+# блоки данных не считаем (nonce на тегах появился 2026-09-08).
+_all = re.findall(r'<script([^>]*)>(.*?)</script>', TPL, re.S)
+scripts = [b for a, b in _all if 'src=' not in a and 'application/json' not in a]
 check(len(scripts) >= 2, f'inline-скриптов: {len(scripts)} (шим + главный)')
 page_js = '\n;\n'.join(scripts).replace("{{ main_guild_id }}", "777")
 # Jinja-выражение адреса Esc-выхода (штаб виден — ведём в него).

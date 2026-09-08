@@ -142,6 +142,13 @@
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
+  /* DOM-узел без innerHTML (Trusted Types, 2026-09-08). */
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   /* ── Глазики паролей ── */
@@ -214,16 +221,28 @@
           }
           var items = Array.isArray(d) ? d : (d.suggestions || []);
           if (!items.length) { popup.classList.remove('open'); return; }
-          popup.innerHTML = items.slice(0, 6).map(function (s) {
+          popup.textContent = '';
+          items.slice(0, 6).forEach(function (s) {
             var label = s.display_name || s.username || s.name || '';
             var uid = s.discord_id || s.id || '';
             var uname = s.username || s.name || '';
-            return '<div class="item" data-user="' + esc(label) + '" data-id="' + esc(uid) + '">' +
-              '<span class="a-ava">' + esc((label || uname || uid || '?').charAt(0).toUpperCase()) +
-              (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '">' : '') + '</span>' +
-              '<span class="a-copy"><b>' + esc(label || uname || uid || '—') + '</b>' +
-              (uid ? '<small>' + esc(uid) + '</small>' : '') + '</span></div>';
-          }).join('');
+            var item = el('div', 'item');
+            item.setAttribute('data-user', label);
+            item.setAttribute('data-id', uid);
+            var ava = el('span', 'a-ava', (label || uname || uid || '?').charAt(0).toUpperCase());
+            if (s.avatar) {
+              var img = el('img');
+              img.alt = '';
+              img.src = s.avatar;
+              ava.appendChild(img);
+            }
+            item.appendChild(ava);
+            var copy = el('span', 'a-copy');
+            copy.appendChild(el('b', null, label || uname || uid || '—'));
+            if (uid) copy.appendChild(el('small', null, uid));
+            item.appendChild(copy);
+            popup.appendChild(item);
+          });
           popup.classList.add('open');
           Array.prototype.forEach.call(popup.querySelectorAll('.item'), function (it) {
             function pickItem() {
@@ -313,9 +332,15 @@
       var list = $('regSteps');
       var sub = $('regCheckSub');
       if (!ov) return;
-      if (list) list.innerHTML =
-        '<li class="on"><span class="s-ico"><i class="fas fa-circle-notch spin"></i></span>' +
-        '<span>Проверяем аккаунт на сервере</span></li>';
+      if (list) {
+        list.textContent = '';
+        var li = el('li', 'on');
+        var sico = el('span', 's-ico');
+        sico.appendChild(el('i', 'fas fa-circle-notch spin'));
+        li.appendChild(sico);
+        li.appendChild(el('span', null, 'Проверяем аккаунт на сервере'));
+        list.appendChild(li);
+      }
       if (sub && subText) sub.textContent = subText;
       ov.hidden = false;
     }

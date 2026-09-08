@@ -297,7 +297,7 @@
   </style>
 </head>
 <body class="kiosk">
-  <script>
+  <script nonce="{{ csp_nonce }}">
   /* Бут-шим: страничные скрипты выполняются раньше app.js (в конце body).
      Без шима init-вызовы fetchCachedJSON падали бы, и данные не грузились. */
   (function () {
@@ -486,7 +486,7 @@
   <script type="application/json" id="menu-all-paths">{{ panel_all_paths|tojson }}</script>
   {% endif %}
   <script src="/static/app.js?v={{ static_v('app.js') }}"></script>
-  <script>
+  <script nonce="{{ csp_nonce }}">
   (function () {
     'use strict';
     function $(id) { return document.getElementById(id); }

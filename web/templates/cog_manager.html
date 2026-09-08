@@ -88,7 +88,7 @@
   <div class="cm-grid" id="cm-grid"></div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var _cogs = [];
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -108,9 +108,9 @@ function render(){
       + '</div>'
       + '<div class="cm-path">cogs.' + esc(c.name) + '</div>'
       + '<div class="cm-actions">'
-      + (loaded ? '<button type="button" class="cm-act reload" onclick="reloadCog(\''+esc(c.name)+'\')"><i class="fas fa-redo"></i> Перезагрузить</button>' : '')
-      + (loaded ? '<button type="button" class="cm-act unload" onclick="toggleCog(\''+esc(c.name)+'\',true)"><i class="fas fa-power-off"></i> Выкл.</button>'
-                 : '<button type="button" class="cm-act load" onclick="toggleCog(\''+esc(c.name)+'\',false)"><i class="fas fa-play"></i> Вкл.</button>')
+      + (loaded ? '<button type="button" class="cm-act reload" data-act="reloadCog" data-a1="'+esc(c.name)+'"><i class="fas fa-redo"></i> Перезагрузить</button>' : '')
+      + (loaded ? '<button type="button" class="cm-act unload" data-act="toggleCog" data-a1="'+esc(c.name)+'" data-a2="true"><i class="fas fa-power-off"></i> Выкл.</button>'
+                 : '<button type="button" class="cm-act load" data-act="toggleCog" data-a1="'+esc(c.name)+'" data-a2="false"><i class="fas fa-play"></i> Вкл.</button>')
       + '</div>'
       + '</div>';
   }).join('');

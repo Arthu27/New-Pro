@@ -15,7 +15,7 @@
     <a class="btn" href="/logs/export?days=30" title="Выгрузить журнал за 30 дней"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
   </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 /* Точка отправки графической таблицы логов (жалоба владельца 2026-09-05:
    «таблица опять не отправляется»; 2026-09-06: канал уже уточкён —
    пикер канала не нужен, таблица идёт в канал вызовов/системный). */
@@ -239,7 +239,7 @@ body.dense .jl-cbody { gap: 3px; }
   <div id="logs-more" hidden></div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }

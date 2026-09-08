@@ -14,7 +14,7 @@
     <button type="button" class="btn btn-primary" id="ss-send" title="Отправить таблицу активности персонала (та же, что /staff-stats) в канал Discord"><i class="fas fa-table"></i> Таблица активности в Discord</button>
   </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 /* Отправка таблицы активности персонала в Discord: слеш-вариант /staff-stats
    доступен только в полном меню, панели нужна своя точка отправки (та же
    верстка — build_staff_stats_embed). Жалоба владельца 2026-09-05. */
@@ -93,7 +93,7 @@
 </div>
 
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 attachMemberPicker(document.getElementById('mcAmnestyId'), { gid: GID, statusEl: document.getElementById('mcAmnestyStatus') });
 var API = '/api/guild/' + GID + '/mod-control';

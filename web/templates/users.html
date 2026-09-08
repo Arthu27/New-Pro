@@ -285,7 +285,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
@@ -591,7 +591,7 @@
     /* шапка окна */
     var st = statusLabel[m.status] || 'Не в сети';
     var ava = m.avatar
-      ? '<img alt="" src="' + esc(m.avatar) + '" onerror="this.onerror=null;this.parentNode.innerHTML=\'' + esc((m.display_name || m.name || '?').charAt(0).toUpperCase()) + '\'">'
+      ? '<img alt="" src="' + esc(m.avatar) + '" data-av-parent-letter="' + esc((m.display_name || m.name || '?').charAt(0).toUpperCase()) + '">'
       : esc((m.display_name || m.name || '?').charAt(0).toUpperCase());
     $('mcWinAva').innerHTML = ava;
     $('mcWinName').textContent = m.display_name || m.name;

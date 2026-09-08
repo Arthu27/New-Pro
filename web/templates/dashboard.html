@@ -84,7 +84,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 .feed-item-time{flex:0 0 auto}
 </style>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 /* Порядок виджетов: сброс устаревшего ключа (поломанная раскладка) до загрузки app.js */
 (function () {
   'use strict';
@@ -271,7 +271,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     </div>
   </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   var TONE_COLOR = { ok: 'var(--ok)', info: 'var(--info)', warn: 'var(--warn, #f59e0b)', err: 'var(--err)' };
   function $(id) { return document.getElementById(id); }
@@ -396,7 +396,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 {% endif %}
 
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }

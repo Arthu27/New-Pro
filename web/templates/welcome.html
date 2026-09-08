@@ -433,7 +433,12 @@
         if (chars >= text.length) {
           var last = words[words.length - 1];
           var rest = words.slice(0, -1).join(' ');
-          el.innerHTML = (rest ? rest + ' ' : '') + '<span class="grad">' + last + '</span>';
+          el.textContent = '';
+          if (rest) el.appendChild(document.createTextNode(rest + ' '));
+          var grad = document.createElement('span');
+          grad.className = 'grad';
+          grad.textContent = last;
+          el.appendChild(grad);
         } else if (chars >= lastStart) {
           var shownRest = words.slice(0, -1).join(' ');
           var lastPart = words[words.length - 1].slice(0, chars - lastStart);
@@ -523,10 +528,23 @@
           if (d && d.guilds != null && !d.error) {
             var stats = document.querySelector('.w-stats');
             if (stats) {
-              stats.innerHTML =
-                '<div class="w-stat"><div class="n" data-count="' + (d.guilds || 0) + '">0</div><div class="l">Серверов на панели</div></div>' +
-                '<div class="w-stat"><div class="n" data-count="' + (d.users || 0) + '">0</div><div class="l">Участников сообществ</div></div>' +
-                '<div class="w-stat"><div class="n" data-count="' + (Math.round(d.latency || 0)) + '">0</div><div class="l">Пинг, мс</div></div>';
+              stats.textContent = '';
+              [[d.guilds || 0, 'Серверов на панели'],
+               [d.users || 0, 'Участников сообществ'],
+               [Math.round(d.latency || 0), 'Пинг, мс']].forEach(function (pair) {
+                var w = document.createElement('div');
+                w.className = 'w-stat';
+                var n = document.createElement('div');
+                n.className = 'n';
+                n.setAttribute('data-count', pair[0]);
+                n.textContent = '0';
+                var l = document.createElement('div');
+                l.className = 'l';
+                l.textContent = pair[1];
+                w.appendChild(n);
+                w.appendChild(l);
+                stats.appendChild(w);
+              });
               nums = stats.querySelectorAll('[data-count]');
             }
           }
@@ -543,7 +561,10 @@
     (function marquee() {
       var track = document.getElementById('wMarqueeTrack');
       if (!track || reduced) return;
-      track.innerHTML += track.innerHTML;
+      /* копия детей вместо innerHTML += innerHTML (Trusted Types) */
+      Array.prototype.forEach.call(track.childNodes, function (n) {
+        track.appendChild(n.cloneNode(true));
+      });
     })();
 
     /* ── 6. Живой терминал-демо ── */
@@ -576,7 +597,12 @@
         div.className = 'w-term-line';
         body.appendChild(div);
         if (line.type === 'cmd') {
-          div.innerHTML = '<span class="prompt">&gt;</span><span class="cmd"></span><span class="w-term-caret"></span>';
+          var pr = document.createElement('span');
+          pr.className = 'prompt';
+          pr.textContent = '>';
+          div.appendChild(pr);
+          div.appendChild(document.createElement('span')).className = 'cmd';
+          div.appendChild(document.createElement('span')).className = 'w-term-caret';
           var target = div.querySelector('.cmd');
           var i = 0;
           var iv = setInterval(function () {
@@ -590,8 +616,15 @@
             }
           }, 22);
         } else {
-          div.innerHTML = (line.icon ? '<i class="fas ' + line.icon + '"></i>' : '') +
-                         '<span class="' + (line.type === 'ok' ? 'ok-ico' : 'out') + '">' + line.text + '</span>';
+          if (line.icon) {
+            var li = document.createElement('i');
+            li.className = 'fas ' + line.icon;
+            div.appendChild(li);
+          }
+          var lo = document.createElement('span');
+          lo.className = line.type === 'ok' ? 'ok-ico' : 'out';
+          lo.textContent = line.text;
+          div.appendChild(lo);
           setTimeout(done, line.type === 'out' ? 500 : 900);
         }
       }
@@ -603,7 +636,7 @@
         (function next() {
           var lines = SCENES[scene % SCENES.length];
           scene++;
-          body.innerHTML = '';
+          body.textContent = '';
           var li = 0;
           (function step() {
             if (li >= lines.length) {
@@ -640,9 +673,13 @@
       if (!barsBox || !feedBox) return;
       /* бары: вставляем сразу (без ожидания скролла) */
       var vals = [42, 68, 55, 90, 74, 96, 60];
-      barsBox.innerHTML = vals.map(function (v, i) {
-        return '<span class="b" style="height:' + v + '%;animation-delay:' + (i * 90) + 'ms"></span>';
-      }).join('');
+      vals.forEach(function (v, i) {
+        var b = document.createElement('span');
+        b.className = 'b';
+        b.style.height = v + '%';
+        b.style.animationDelay = (i * 90) + 'ms';
+        barsBox.appendChild(b);
+      });
       /* если бары вне экрана — анимация проигралась впустую: при показе
          перезапустим рост */
       var barsShown = false;
@@ -677,7 +714,7 @@
         if (started) return;
         started = true;
         var li = 0;
-        feedBox.innerHTML = '';
+        feedBox.textContent = '';
         (function step() {
           if (li >= FEED.length) {
             /* цикл: перезапускаем мягко */
@@ -687,7 +724,15 @@
           var f = FEED[li];
           var div = document.createElement('div');
           div.className = 'w-feed-line';
-          div.innerHTML = '<span class="tag ' + f.cls + '">' + f.tag + '</span><span>' + f.text + '</span><span class="when">' + f.when + '</span>';
+          var tg = document.createElement('span');
+          tg.className = 'tag ' + f.cls;
+          tg.textContent = f.tag;
+          div.appendChild(tg);
+          div.appendChild(document.createElement('span')).textContent = f.text;
+          var wh = document.createElement('span');
+          wh.className = 'when';
+          wh.textContent = f.when;
+          div.appendChild(wh);
           feedBox.appendChild(div);
           li++;
           setTimeout(step, 900);
@@ -889,13 +934,29 @@
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+    /* Trusted Types: строки разметки не строим — row() отдаёт узел */
     function row(href, icon, label, sub) {
-      return '<a href="' + esc(href) + '"><i class="fas ' + esc(icon) + '"></i><span><b>' + esc(label) + '</b>' +
-        (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></a>';
+      var a = document.createElement('a');
+      a.setAttribute('href', href);
+      var ic = document.createElement('i');
+      ic.className = 'fas ' + icon;
+      a.appendChild(ic);
+      var sp = document.createElement('span');
+      var b = document.createElement('b');
+      b.textContent = label;
+      sp.appendChild(b);
+      if (sub) {
+        var sm = document.createElement('small');
+        sm.textContent = sub;
+        sp.appendChild(sm);
+      }
+      a.appendChild(sp);
+      return a;
     }
     function show(list) {
       if (!list.length) { box.classList.remove('show'); return; }
-      box.innerHTML = list.join('');
+      box.textContent = '';
+      list.forEach(function (n) { box.appendChild(n); });
       box.classList.add('show');
     }
     function wSearchHide() { box.classList.remove('show'); }
@@ -928,13 +989,11 @@
             /* локальные не дублируем */
             var hrefs = {};
             box.querySelectorAll('a').forEach(function (a) { hrefs[a.getAttribute('href')] = 1; });
-            var fresh = items.filter(function (a, i) {
-              var m = /href="([^"]*)"/.exec(a);
-              return m && !hrefs[m[1]] && i < 8;
-            });
+            var fresh = items.filter(function (a) {
+              return !hrefs[a.getAttribute('href')];
+            }).slice(0, 8);
             if (fresh.length) {
-              var cur = box.innerHTML;
-              box.innerHTML = cur + fresh.join('');
+              fresh.forEach(function (n) { box.appendChild(n); });
               box.classList.add('show');
             }
           }).catch(function () {});

@@ -79,7 +79,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
 var STATE = null;
 
@@ -115,7 +115,7 @@ function renderList(d) {
   }
   box.innerHTML = d.flags.map(function (f) {
     var sw = CAN_EDIT
-      ? '<button type="button" class="ff-switch' + (f.enabled ? ' on' : '') + '" onclick="ffToggle(\x27' + esc(f.key) + '\x27)" role="switch" aria-checked="' + f.enabled + '" title="' + (f.enabled ? 'Выключить' : 'Включить') + '"><i></i></button>'
+      ? '<button type="button" class="ff-switch' + (f.enabled ? ' on' : '') + '" data-act="ffToggle" data-a1="' + esc(f.key) + '" role="switch" aria-checked="' + f.enabled + '" title="' + (f.enabled ? 'Выключить' : 'Включить') + '"><i></i></button>'
       : '<span class="ff-switch' + (f.enabled ? ' on' : '') + '" style="cursor:default" aria-hidden="true"><i></i></span>';
     var meta = [];
     if (f.created_at) meta.push(String(f.created_at).slice(0, 10));
@@ -123,10 +123,10 @@ function renderList(d) {
     var roll = CAN_EDIT
       ? '<div class="ff-roll"><b>' + f.rollout + '%</b>' +
         '<input type="number" class="ff-input" min="0" max="100" value="' + f.rollout + '" id="ffr-' + esc(f.key) + '" aria-label="Процент выкатки">' +
-        '<button type="button" class="ff-mini" onclick="ffRollout(\x27' + esc(f.key) + '\x27)">OK</button></div>'
+        '<button type="button" class="ff-mini" data-act="ffRollout" data-a1="' + esc(f.key) + '">OK</button></div>'
       : '<div class="ff-roll"><b>' + f.rollout + '%</b></div>';
     var del = CAN_EDIT
-      ? '<button type="button" class="ff-del" onclick="ffDelete(\x27' + esc(f.key) + '\x27,\x27' + esc(f.name) + '\x27)" title="Удалить" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>'
+      ? '<button type="button" class="ff-del" data-act="ffDelete" data-a1="' + esc(f.key) + '" data-a2="' + esc(f.name) + '" title="Удалить" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>'
       : '';
     return '<div class="ff-row">' + sw +
       '<div><div class="ff-name">' + esc(f.name) + ' <span class="ff-key">' + esc(f.key) + '</span></div>' +

@@ -131,7 +131,7 @@
 
 <div class="pm-toast" id="pm-toast"></div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var MENU = [];
 var CFG = {};
 var curRole = 'mod';
@@ -238,10 +238,10 @@ function renderLayout(){
       var prot = PROTECTED_PATHS.indexOf(it.path) !== -1;
       var eye = prot
         ? '<span class="pm-ico-btn" style="opacity:.4;cursor:not-allowed" title="Эту страницу скрыть нельзя — пульт управления «Доступом»"><i class="fas fa-lock"></i></span>'
-        : '<button type="button" class="pm-ico-btn'+(hid?' pm-off':'')+'" title="'+(hid?'Показать':'Скрыть')+'" aria-label="'+(hid?'Показать страницу':'Скрыть страницу')+'" onclick="layoutHide(\''+it.path+'\')"><i class="fas '+(hid?'fa-eye-slash':'fa-eye')+'"></i></button>';
+        : '<button type="button" class="pm-ico-btn'+(hid?' pm-off':'')+'" title="'+(hid?'Показать':'Скрыть')+'" aria-label="'+(hid?'Показать страницу':'Скрыть страницу')+'" data-act="layoutHide" data-a1="'+it.path+'"><i class="fas '+(hid?'fa-eye-slash':'fa-eye')+'"></i></button>';
       return '<div class="pm-item'+(hid?' pm-hidden':'')+'">'
-        + '<button type="button" class="pm-ico-btn" title="Выше" aria-label="Поднять выше" onclick="layoutMove(\''+g.key+'\',\''+it.path+'\',-1)"><i class="fas fa-arrow-up"></i></button>'
-        + '<button type="button" class="pm-ico-btn" title="Ниже" aria-label="Опустить ниже" onclick="layoutMove(\''+g.key+'\',\''+it.path+'\',1)"><i class="fas fa-arrow-down"></i></button>'
+        + '<button type="button" class="pm-ico-btn" title="Выше" aria-label="Поднять выше" data-act="layoutMove" data-a1="'+g.key+'" data-a2="'+it.path+'" data-a3="-1"><i class="fas fa-arrow-up"></i></button>'
+        + '<button type="button" class="pm-ico-btn" title="Ниже" aria-label="Опустить ниже" data-act="layoutMove" data-a1="'+g.key+'" data-a2="'+it.path+'" data-a3="1"><i class="fas fa-arrow-down"></i></button>'
         + '<span class="pname"><i class="fas '+it.icon+'"></i>'+it.label+'</span>'
         + '<span class="ppath">'+it.path+'</span>'
         + eye
@@ -250,12 +250,12 @@ function renderLayout(){
     html += '<div class="pm-group '+(open?'open':'')+(catHidden?' pm-cathidden':'')+'" id="pmg-'+g.key+'">'
       + '<div class="pm-group-head">'
       + '<span class="gio"><i class="fas '+g.icon+'"></i></span>'
-      + '<span class="gname" onclick="toggleGroupOpen(\''+g.key+'\')">'+g.group+'</span>'
-      + '<span class="gcount" onclick="toggleGroupOpen(\''+g.key+'\')">'+(catHidden?'категория скрыта':(hiddenCount?hiddenCount+' скрыто':'порядок'))+'</span>'
-      + '<button type="button" class="pm-ico-btn" title="Категорию выше" aria-label="Сдвинуть категорию выше" onclick="groupMove(\''+g.key+'\',-1)"><i class="fas fa-arrow-up-wide-short" style="transform:rotate(180deg)"></i></button>'
-      + '<button type="button" class="pm-ico-btn" title="Категорию ниже" aria-label="Сдвинуть категорию ниже" onclick="groupMove(\''+g.key+'\',1)"><i class="fas fa-arrow-up-wide-short"></i></button>'
-      + '<button type="button" class="pm-ico-btn'+(catHidden?' pm-off':'')+'" title="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию сразу')+'" aria-label="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию')+'" onclick="layoutHideGroup(\''+g.key+'\')"><i class="fas '+(catHidden?'fa-eye':'fa-eye-slash')+'"></i></button>'
-      + '<span class="gcaret" onclick="toggleGroupOpen(\''+g.key+'\')"><i class="fas fa-chevron-down"></i></span>'
+      + '<span class="gname" data-act="toggleGroupOpen" data-a1="'+g.key+'">'+g.group+'</span>'
+      + '<span class="gcount" data-act="toggleGroupOpen" data-a1="'+g.key+'">'+(catHidden?'категория скрыта':(hiddenCount?hiddenCount+' скрыто':'порядок'))+'</span>'
+      + '<button type="button" class="pm-ico-btn" title="Категорию выше" aria-label="Сдвинуть категорию выше" data-act="groupMove" data-a1="'+g.key+'" data-a2="-1"><i class="fas fa-arrow-up-wide-short" style="transform:rotate(180deg)"></i></button>'
+      + '<button type="button" class="pm-ico-btn" title="Категорию ниже" aria-label="Сдвинуть категорию ниже" data-act="groupMove" data-a1="'+g.key+'" data-a2="1"><i class="fas fa-arrow-up-wide-short"></i></button>'
+      + '<button type="button" class="pm-ico-btn'+(catHidden?' pm-off':'')+'" title="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию сразу')+'" aria-label="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию')+'" data-act="layoutHideGroup" data-a1="'+g.key+'"><i class="fas '+(catHidden?'fa-eye':'fa-eye-slash')+'"></i></button>'
+      + '<span class="gcaret" data-act="toggleGroupOpen" data-a1="'+g.key+'"><i class="fas fa-chevron-down"></i></span>'
       + '</div>'
       + '<div class="pm-group-body">'+itemsHtml+'</div>'
       + '</div>';
@@ -349,9 +349,9 @@ function render(){
     }).join('');
     var groupOn = !!checkedGroups[g.key];
     html += '<div class="pm-group '+(open?'open':'')+'" id="pmg-'+g.key+'">'
-      + '<div class="pm-group-head" onclick="toggleGroupOpen(\''+g.key+'\')">'
+      + '<div class="pm-group-head" data-act="toggleGroupOpen" data-a1="'+g.key+'">'
       + '<label class="switch pm-cat-switch" title="'+(groupOn?'Категория включена целиком':'Категория выключена — щёлкни, чтобы включить всю')+'" onclick="event.stopPropagation()">'
-      + '<input type="checkbox" '+(groupOn?'checked':'')+' onchange="toggleGroupAll(\''+g.key+'\', this.checked)"><span class="sl"></span></label>'
+      + '<input type="checkbox" '+(groupOn?'checked':'')+' data-tga="'+g.key+'"><span class="sl"></span></label>'
       + '<span class="gio"><i class="fas '+g.icon+'"></i></span>'
       + '<span class="gname">'+g.group+'</span>'
       + '<span class="gcount">'+(groupOn?'вкл ':'')+onCount+'/'+items.length+'</span>'
@@ -470,5 +470,12 @@ function load(){
 }
 
 load();
+
+  /* Чекбокс «вся категория»: строгий CSP — слушателем вместо инлайн-
+     onchange; передаём (ключ, отмеченность), как функция и ждёт. */
+  document.addEventListener('change', function (e) {
+    var el = e.target.closest ? e.target.closest('[data-tga]') : null;
+    if (el) toggleGroupAll(el.getAttribute('data-tga'), el.checked);
+  });
 </script>
 {% endblock %}

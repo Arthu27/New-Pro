@@ -83,7 +83,7 @@
   <div id="msSchedList" style="margin-top:10px"><div class="empty"><i class="fas fa-hourglass-start"></i><span>Загрузка…</span></div></div>
 </div>
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 attachMemberPicker(document.getElementById('msUserId'), { gid: GID, statusEl: document.getElementById('msUserIdStatus') });
 var API = '/api/guild/' + GID + '/mod-schedule';

@@ -150,7 +150,7 @@
   присутствие и синхронизация команд. Куратор один на обе ветки.
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var CAN_EDIT = {% if role == 'owner' %}true{% else %}false{% endif %};
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -267,8 +267,8 @@ function render() {
         '<div class="chs-empty">' + esc(r.empty || '') + '</div></div>' +
       '<div class="chs-edit">' +
         '<select id="chs-' + esc(r.key) + '" aria-label="' + esc(r.label) + '"' + (CAN_EDIT ? '' : ' disabled') +
-        ' onchange="chsPending(\'' + esc(r.key) + '\')">' + opts + '</select>' +
-        (CAN_EDIT ? '<button type="button" class="btn btn-primary chs-save" aria-label="Сохранить маршрут" title="Сохранить" onclick="chsSave(\'' + esc(r.key) + '\')"><i class="fas fa-check"></i></button>' : '') +
+         ' data-act="chsPending" data-a1="' + esc(r.key) + '">' + opts + '</select>' +
+         (CAN_EDIT ? '<button type="button" class="btn btn-primary chs-save" aria-label="Сохранить маршрут" title="Сохранить" data-act="chsSave" data-a1="' + esc(r.key) + '"><i class="fas fa-check"></i></button>' : '') +
       '</div></div>';
   }).join('');
   updatePendingBar();

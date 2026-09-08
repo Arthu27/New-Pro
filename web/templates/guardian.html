@@ -393,7 +393,7 @@
   Вместе они держат сервер в броне. Обзор состояния Щита виден всем модераторам в Центре безопасности.
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
 var GUILD_ID = {{ (guild_id|string)|tojson }};
 
@@ -932,7 +932,7 @@ document.addEventListener('change', function (e) {
 gdLoad();
 </script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 /* ── Лимиты команды внутри Щита: глобальные + по ролям + журнал изменений.
    Пишет в те же файлы бота (services/staff_limits.py) — применяется сразу. */
 (function () {

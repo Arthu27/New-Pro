@@ -133,7 +133,7 @@
   <div id="log-list"><div class="log-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var allLogs = [];
 var ML_PAGE = 80;
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;'); }
@@ -262,7 +262,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else start();
 </script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 /* ── Оформление карточек логов (admin/owner): тема, акцент, вкл/выкл ── */
 (function () {
   var box = document.getElementById('lcSetBox');

@@ -34,7 +34,7 @@
 <div id="ms-results" class="ms-results"></div>
 <div id="ms-profile" class="ms-profile"></div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var GUILD_ID = '{{ guild_id }}';
 var SEARCH_SEQ = 0;
 var SEARCH_TIMER = null;
@@ -93,7 +93,7 @@ async function searchNow() {
         : '<div class="ms-av-fb" style="width:46px;height:46px;font-size:19px;"><i class="fas fa-user"></i></div>';
       var sc = statusCls[m.status] || 'offline';
       var sub = m.nickname ? ('@' + m.name + ' · ник: ' + m.nickname) : ('@' + m.name);
-      return '<div class="feed-item ms-result-card" id="msrc-' + esc(m.id) + '" onclick="selectMember(\'' + esc(m.id) + '\')" style="cursor:pointer">' +
+      return '<div class="feed-item ms-result-card" id="msrc-' + esc(m.id) + '" data-act="selectMember" data-a1="' + esc(m.id) + '" style="cursor:pointer">' +
         '<div class="av-wrap"><span class="av" style="display:inline-flex;width:46px;height:46px;border-radius:50%;overflow:hidden;background:var(--surface-3)">' + av + '</span><span class="status-dot ' + sc + '"></span></div>' +
         '<div style="min-width:0;flex:1">' +
           '<div class="feed-item-title">' + esc(m.display_name) + (m.is_bot ? ' <span class="badge neutral">БОТ</span>' : '') + '</div>' +
@@ -147,7 +147,7 @@ async function selectMember(userId) {
           '<div class="member-detail-name">' + esc(d.display_name || d.name || userId) + '</div>' +
           '<div class="member-detail-sub">' + statusRu(statusKey) + '</div>' +
         '</div>' +
-        '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id copyable" title="Клик — скопировать ID" onclick="copyId(this, \'' + esc(d.id || userId) + '\')">' + esc(d.id || userId) + '</span></div>' +
+        '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id copyable" title="Клик — скопировать ID" data-act="copyId" data-el data-a1="' + esc(d.id || userId) + '">' + esc(d.id || userId) + '</span></div>' +
         (d.nickname ? '<div class="ms-row"><span class="ms-key">Никнейм</span><span class="ms-val">' + esc(d.nickname) + '</span></div>' : '') +
         (d.joined_at ? '<div class="ms-row"><span class="ms-key">Дата входа</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + '</span></div>' : '') +
         (d.created_at ? '<div class="ms-row"><span class="ms-key">Аккаунт создан</span><span class="ms-val">' + new Date(d.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + '</span></div>' : '') +

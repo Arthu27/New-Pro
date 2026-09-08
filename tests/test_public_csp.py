@@ -2,13 +2,18 @@
 """Строгий CSP публичных страниц (владелец 2026-09-08 «давай» после отчёта
 PageSpeed «политика CSP не эффективна против XSS»).
 
-Публичные страницы (витрина, вход, регистрация, анкета) — XSS-поверхность,
-которую видит весь интернет. Их script-src работает по nonce:
-  1. заголовок CSP содержит свежий nonce и НЕ содержит unsafe-inline;
+Публичные страницы (витрина, вход, регистрация, анкета, статус) —
+XSS-поверхность, которую видит весь интернет:
+  1. script-src по свежему nonce, БЕЗ unsafe-inline;
   2. nonce из заголовка совпадает с nonce в <script> самой страницы;
-  3. в шаблонах нет инлайн-обработчиков (onclick= и пр.) — строгий CSP
-     их не исполняет, значит они не нужны и вводить в заблуждение не могут;
-  4. панель за логином остаётся на прежней политике с unsafe-inline.
+  3. в шаблонах нет инлайн-обработчиков (onclick= и пр.) и НЕТ innerHTML-
+     записей — страница живёт под require-trusted-types-for 'script'
+     (Trusted Types), DOM строится createElement/textContent;
+  4. панель за логином — тоже строго: nonce + 'unsafe-hashes' +
+     sha256-хэши статичных обработчиков, unsafe-inline убран;
+  5. хэши в заголовке панели совпадают с хэшами, которые браузер
+     вычислит по значениям on*-атрибутов отрендеренной страницы
+     (html-парсер → значение атрибута → sha256 → base64).
 
 Запуск: python3 tests/test_public_csp.py
 """
@@ -46,7 +51,7 @@ def check(ok, msg):
 
 
 print('== 1. Шаблоны: инлайн-обработчики и nonce ==')
-for name in ('welcome', 'login', 'register', 'public_apply'):
+for name in ('welcome', 'login', 'register', 'public_apply', 'status_public'):
     tpl = open(os.path.join(ROOT, 'web', 'templates', f'{name}.html'),
                encoding='utf-8').read()
     handlers = [h for h in re.findall(r'\son[a-z]+\s*=\s*["\']', tpl)
@@ -62,7 +67,7 @@ appmod = importlib.import_module('web.app')
 appmod.app.config['TESTING'] = True
 client = appmod.app.test_client()
 
-PUBLIC = ('/', '/login', '/register', '/apply')
+PUBLIC = ('/', '/login', '/register', '/apply', '/status')
 for path in PUBLIC:
     r = client.get(path)
     csp = r.headers.get('Content-Security-Policy', '')
@@ -77,14 +82,60 @@ for path in PUBLIC:
         nonces = set(re.findall(r'<script nonce="([^"]+)"', html))
         check(nonces == {m.group(1)},
               f'{path}: nonce заголовка совпадает с nonce скриптов ({len(nonces)} шт.)')
+    check("require-trusted-types-for 'script'" in csp,
+          f'{path}: CSP требует Trusted Types')
+    # TT-синк — это ПРИСВАИВАНИЕ (.innerHTML = / +=); упоминание слова
+    # в комментарии — не санкция, ищем именно запись.
+    check(not re.search(r'\.(?:inner|outer)HTML\s*\+?=', html),
+          f'{path}: нет записей в innerHTML/outerHTML (TT-синков)')
 
-print('== 3. Панель за логином: прежняя политика ==')
+print('== 3. Панель за логином: nonce + sha256-хэши ==')
 client.post('/login', data={'username': 'owner', 'password': 'test-pass-123'})
 r = client.get('/settings')
 csp = r.headers.get('Content-Security-Policy', '')
+html = r.get_data(as_text=True)
 check(r.status_code == 200, 'вход владельцем работает')
-check("'unsafe-inline'" in csp and 'nonce-' not in csp,
-      'панель остаётся на unsafe-inline (миграция поэтапная)')
+ssrc = csp.split('script-src')[1].split(';')[0]
+check('unsafe-inline' not in ssrc, 'панель: script-src без unsafe-inline')
+m = re.search(r"'nonce-([A-Za-z0-9_-]+)'", ssrc)
+check(m is not None, 'панель: script-src содержит nonce')
+check("'unsafe-hashes'" in ssrc, 'панель: unsafe-hashes (хэши on*-атрибутов)')
+hashes_in_csp = set(re.findall(r"'sha256-[A-Za-z0-9+/=]+'", ssrc))
+check(len(hashes_in_csp) >= 100, f'панель: хэшей в заголовке ≥ 100 ({len(hashes_in_csp)})')
+if m:
+    nonces = set(re.findall(r'<script nonce="([^"]+)"', html))
+    check(nonces == {m.group(1)},
+          f'панель: nonce заголовка совпадает с nonce скриптов ({len(nonces)} шт.)')
+
+# Хэш-совместимость с браузером: парсим отрендеренный HTML как браузер,
+# берём ЗНАЧЕНИЯ on*-атрибутов и считаем их sha256 — обязаны совпасть
+# с хэшами в CSP. Если не совпало — обработчик в панели мёртв.
+from html.parser import HTMLParser
+
+
+class _OnAttr(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.handlers = []
+
+    def handle_starttag(self, tag, attrs):
+        for k, v in attrs:
+            if k.startswith('on') and v is not None:
+                self.handlers.append(v)
+
+
+import base64 as _b64
+import hashlib as _hl
+_p = _OnAttr()
+_p.feed(html)
+_broken = []
+for code in _p.handlers:
+    h = "'sha256-" + _b64.b64encode(_hl.sha256(code.encode('utf-8')).digest()).decode('ascii') + "'"
+    if h not in hashes_in_csp:
+        _broken.append(code[:60])
+check(not _broken, f'панель: все on*-обработчики страницы покрыты хэшами ({len(_p.handlers)} шт.)')
+for b in _broken[:3]:
+    print('     не покрыт:', b)
 
 print('== 4. Nonce свежий на каждый запрос ==')
 n1 = re.search(r"'nonce-([A-Za-z0-9_-]+)'",

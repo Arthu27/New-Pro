@@ -206,7 +206,8 @@ check(not _bad, f'у самостоятельных шаблонов charset/lan
 print('== 8. Дубликаты id в разметке ==')
 _bad = []
 for f, src in TPL.items():
-    markup = re.sub(r'<script>.*?</script>', '', src, flags=re.S)
+    # 2026-09-08: у инлайн-скриптов появился nonce — срезаем по тегу с атрибутами
+    markup = re.sub(r'<script[^>]*>.*?</script>', '', src, flags=re.S)
     markup = re.sub(r'<style>.*?</style>', '', markup, flags=re.S)
     ids = re.findall(r'id\s*=\s*"([^"]+)"', markup)
     dups = sorted({i for i in ids if ids.count(i) > 1})

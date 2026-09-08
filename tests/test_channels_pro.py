@@ -92,7 +92,10 @@ except Exception as exc:
     print('  JINJA:', exc)
 check(jinja_ok, 'channels.html проходит Jinja parse')
 
-scripts = re.findall(r'<script>(.*?)</script>', source, re.S)
+# 2026-09-08: инлайн-скрипты несут nonce — берём тег с атрибутами,
+# но только исполняемые (без src= и json-блоков данных)
+_all = re.findall(r'<script([^>]*)>(.*?)</script>', source, re.S)
+scripts = [b for a, b in _all if 'src=' not in a and 'application/json' not in a]
 js = scripts[-1] if scripts else ''
 js = re.sub(r'\{\{.*?\}\}', 'TEST_VALUE', js, flags=re.S)
 js_path = os.path.join(_TMP, 'channels-inline.js')

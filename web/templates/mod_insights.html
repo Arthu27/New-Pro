@@ -57,7 +57,7 @@
 </div>
 
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 attachMemberPicker(document.getElementById('miDossierId'), { gid: GID, statusEl: document.getElementById('miDossierStatus') });
 var API = '/api/guild/' + GID + '/mod-insights';

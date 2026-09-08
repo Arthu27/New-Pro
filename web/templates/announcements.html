@@ -498,7 +498,7 @@ body.ann-modal-open{overflow:hidden}
 </div>
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
 
 (function () {

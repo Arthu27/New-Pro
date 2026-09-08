@@ -124,7 +124,7 @@
   {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var selectedGuild = '{{ main_guild_id }}';
 
 async function loadSettings() {

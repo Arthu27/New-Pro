@@ -242,7 +242,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var GUILD_ID = {{ (guild_id|string)|tojson }};
 var STATE = { hook_path: '', channels: [], token: '', bot_status: 'offline', bot_presence: 'offline' };
 

@@ -42,7 +42,7 @@
   </table>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var _guildId = '{{ guild_id }}';
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

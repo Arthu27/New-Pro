@@ -86,7 +86,7 @@
 </div>
 
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/verify';
 var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};

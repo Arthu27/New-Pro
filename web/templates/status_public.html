@@ -147,7 +147,7 @@
     <div class="st-foot"><span class="dot"></span>обновлено <span id="st-upd">—</span> · обновление каждые 5 сек · <a href="/login">вход в панель</a></div>
   </main>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 /* Звёздный фон статуса */
 (function () {
   var cv = document.getElementById('st-stars');
@@ -188,7 +188,7 @@
   requestAnimationFrame(step);
 })();
 </script>
-<script>
+<script nonce="{{ csp_nonce }}">
 const $ = id => document.getElementById(id);
 function pingWord(ms){
   if (ms <= 0) return ['', ''];

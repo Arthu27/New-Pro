@@ -85,7 +85,7 @@ for ghost in ('member-card/lookup', 'member-card/export', 'MemberCard.renderCard
 
 # каждый путь, который страница просит fetch'ем, должен начинаться с живого
 # префикса — иначе снова появится кнопка, которая «моргает сетью»
-_js = '\n'.join(re.findall(r'<script>(.*?)</script>', SRC, re.S))
+_js = '\n'.join(re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', SRC, re.S))
 _calls = sorted(set(re.findall(r"fetch\('(/[a-zA-Z0-9_\-/]+)", _js)))
 check(_js.count('fetch(') >= 8, f"fetch-вызовов на странице: {_js.count('fetch(')}")
 for call in _calls:

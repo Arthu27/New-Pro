@@ -42,7 +42,7 @@
   </div>
   <div id="rqList" style="margin-top:10px"><div class="empty"><i class="fas fa-mug-hot"></i><span>Загрузка…</span></div></div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/reports-queue';
 var STATUS = 'open';

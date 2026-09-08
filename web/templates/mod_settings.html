@@ -129,7 +129,7 @@
 </div>
 
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 var CAN_EDIT = true;
 var GUILD_ID = {{ (guild_id|string)|tojson }};
 

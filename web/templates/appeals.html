@@ -154,7 +154,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/appeals';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};

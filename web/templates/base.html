@@ -6,7 +6,7 @@
     <meta name="description" content="Панель управления Hakumo: модерация, участники, роли, каналы и настройки Discord-сервера в одном окне.">
     <title>{% block title %}Панель Hakumo{% endblock %}</title>
     {% block styles %}{% endblock %}
-    <script>
+    <script nonce="{{ csp_nonce }}">
       /* П.5: тема — самым первым шагом, ДО любых стилей: фон никогда
          не «вспыхивает» белым при переходах между разделами/каналами. */
       (function () {
@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
 </head>
 <body>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     /* ── Бут-шим панели ────────────────────────────────────────────
        Страничные скрипты выполняются РАНЬШЕ app.js (он в конце body).
        Без шима init-вызовы fetchCachedJSON/renderSafe/… падали бы
@@ -145,7 +145,7 @@
       }
     })();
     </script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     /* Живой сайдбар: изменения «Доступа»/видимости категорий появляются на
        ЛЮБОЙ открытой странице за 1.5с — без перезагрузки (заказ владельца).
        HTML сравнивается целиком: не изменился — DOM не трогаем. */
@@ -173,7 +173,7 @@
     <a class="skip-link" href="#main-content">Перейти к содержимому</a>
 
     <!-- Загрузочный сплэш -->
-    <script>
+    <script nonce="{{ csp_nonce }}">
     /* Страховка: сплэш не удерживает панель заложником — гасим его сами,
        даже если app.js не загрузился/упал (иначе — «кнопки не работают»). */
     setTimeout(function () {
@@ -213,7 +213,7 @@
                 <span style="min-width:0"><b>Серверы</b><small id="sidebarGuildName">Сервер</small></span>
                 <span class="cnt" id="sidebarGuildCount">—</span>
             </a>
-            <script>
+            <script nonce="{{ csp_nonce }}">
             (function () {
               var nn = document.getElementById('sidebarGuildName'), cc = document.getElementById('sidebarGuildCount');
               fetch('/api/guilds', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (g) {
@@ -457,8 +457,8 @@
     <script type="application/json" id="menu-all-paths">{{ panel_all_paths|tojson }}</script>
     {% endif %}
 
-    <script>window.__panelUserId = '{{ session.get("user_id", "") }}';</script>
-    <script>window.PANEL_WS_URL = {{ panel_ws_url|tojson if panel_ws_url else 'null' }};</script>
+    <script nonce="{{ csp_nonce }}">window.__panelUserId = '{{ session.get("user_id", "") }}';</script>
+    <script nonce="{{ csp_nonce }}">window.PANEL_WS_URL = {{ panel_ws_url|tojson if panel_ws_url else 'null' }};</script>
     <script src="/static/websocket-client.js?v={{ static_v('websocket-client.js') }}"></script>
     <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
     <script src="/static/api-guard.js?v={{ static_v('api-guard.js') }}"></script>
@@ -467,7 +467,7 @@
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
     <script src="/static/app.js?v={{ static_v('app.js') }}"></script>
     {%- if not standalone|default(False) %}
-    <script>
+    <script nonce="{{ csp_nonce }}">
     /* Отказ в доступе (redirect c ?denied=...): объясняем по-человечески,
        а не голым «Нет доступа». Создателю сервера роль даётся автоматически. */
     (function () {
@@ -485,5 +485,68 @@
     })();
     </script>
     {%- endif %}
+<script nonce="{{ csp_nonce }}">
+  /* ── Единый диспетчер действий (строгий CSP, 2026-09-08) ──────────────
+     Раньше кнопки, созданные скриптом, несли инлайн-onclick/onchange с
+     интерполированными аргументами — строгий CSP такие обработчики не
+     исполняет. Теперь элемент несёт data-act="имяФункции" и аргументы
+     data-a1..a3; диспетчер сам вызывает функцию, приводя типы
+     ('true'/'false' → булевы, числа → числа).
+     · data-evt — функции передаётся событие первым аргументом;
+     · data-el  — функции передаётся сам элемент первым аргументом. */
+  (function () {
+    function arg(el, n) {
+      var v = el.getAttribute('data-a' + n);
+      if (v === null) return undefined;
+      if (v === 'true') return true;
+      if (v === 'false') return false;
+      if (/^-?\d+$/.test(v)) return parseInt(v, 10);
+      return v;
+    }
+    function run(el, e) {
+      var fn = window[el.getAttribute('data-act')];
+      if (typeof fn !== 'function') return;
+      if (el.hasAttribute('data-evt')) { fn(e, arg(el, 1), arg(el, 2), arg(el, 3)); return; }
+      if (el.hasAttribute('data-el')) { fn(el, arg(el, 1), arg(el, 2), arg(el, 3)); return; }
+      fn(arg(el, 1), arg(el, 2), arg(el, 3));
+    }
+    document.addEventListener('click', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+      if (el) run(el, e);
+    });
+    document.addEventListener('change', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+      if (el) run(el, e);
+    });
+    /* ── Аватарки без инлайн-onerror ────────────────────────────────────
+       data-av-fallback="URL" — подставить запасную картинку (один раз);
+       data-av-hide           — скрыть сломанную;
+       data-av-letter="X" (+ data-av-cls, data-av-tag) — заменить буквой;
+       data-av-parent-letter  — буква вместо содержимого родителя;
+       data-av-icon (+ data-av-cls) — заменить иконкой. */
+    document.addEventListener('error', function (e) {
+      var t = e.target;
+      if (!t || t.tagName !== 'IMG') return;
+      var fb = t.getAttribute('data-av-fallback');
+      if (fb && t.getAttribute('src') !== fb) { t.setAttribute('src', fb); return; }
+      if (t.hasAttribute('data-av-hide')) { t.style.display = 'none'; return; }
+      var letter = t.getAttribute('data-av-letter');
+      if (letter !== null) {
+        var tag = document.createElement(t.getAttribute('data-av-tag') || 'span');
+        tag.className = t.getAttribute('data-av-cls') || '';
+        tag.textContent = letter;
+        if (t.parentNode) t.parentNode.replaceChild(tag, t);
+        return;
+      }
+      var pl = t.getAttribute('data-av-parent-letter');
+      if (pl !== null && t.parentNode) { t.parentNode.textContent = pl; return; }
+      if (t.hasAttribute('data-av-icon')) {
+        var ico = document.createElement('i');
+        ico.className = t.getAttribute('data-av-cls') || '';
+        if (t.parentNode) t.parentNode.replaceChild(ico, t);
+      }
+    }, true);
+  })();
+</script>
 </body>
 </html>

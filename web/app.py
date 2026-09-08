@@ -603,15 +603,22 @@ def after_request (response ):
     _connect =("'self' wss:" if _strict else "'self' https: wss: ws: http:")
     _img =("'self' data: https://*.discordapp.com https://*.discordapp.net "
            "https://discord.com" if _strict else "'self' data: https:")
+    # script-src панели: nonce + хэши статичных on*-обработчиков
+    # (services/csp_hashes.py, кэш по mtime шаблонов).
+    from services .csp_hashes import panel_script_src as _pss
+    _panel_script_src =_pss (getattr (g ,'csp_nonce',''))
     if not response .headers .get ('Content-Security-Policy'):
         csp =(
         "default-src 'self'; "
         # Cloudflare Web Analytics подставляет beacon.min.js со своего
         # домена — без него в консоли ошибка CSP, а статистика не собирается.
-        # unsafe-inline остаётся, пока инлайн-скрипты живут в 80+ шаблонах
-        # (nonce-рефакторинг — отдельная задача); unsafe-eval убран: eval
-        # и new Function нигде не используются (Lighthouse: CSP и XSS).
-        "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; "
+        # 2026-09-08: 'unsafe-inline' УБРАН. Инлайн-скрипты панели несут
+        # nonce (свежий на каждый запрос), динамические обработчики
+        # переписаны на data-act-делегирование (base.html), статичные
+        # разрешены точечными sha256-хэшами ('unsafe-hashes' — без него
+        # хэши на on*-атрибуты не действуют). unsafe-eval убран давно:
+        # eval и new Function нигде не используются.
+        +_panel_script_src +"; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
         "img-src " +_img +"; "
@@ -629,7 +636,7 @@ def after_request (response ):
     # (onclick=...) браузер отбрасывает. Внедрённый в HTML скрипт мёртв.
     # Панель за логином пока оставлена на 'unsafe-inline' (80+ шаблонов с
     # инлайн-JS; nonce-миграция — поэтапно, эти страницы не публичны).
-    _PUBLIC_PAGES =('/','/login','/register','/apply','/welcome')
+    _PUBLIC_PAGES =('/','/login','/register','/apply','/welcome','/status')
     if (request .path in _PUBLIC_PAGES
     and str (response .headers .get ('Content-Type','')or '').startswith ('text/html')):
         _nonce =getattr (g ,'csp_nonce','')
@@ -637,6 +644,10 @@ def after_request (response ):
             response .headers ['Content-Security-Policy']=(
             "default-src 'self'; "
             "script-src 'self' 'nonce-"+_nonce +"' https://static.cloudflareinsights.com; "
+            # Trusted Types: DOM-синки публичных страниц (innerHTML и родня)
+            # принимают только TrustedHTML — прямая запись строки мёртва,
+            # живые записи переписаны на createElement/textContent.
+            "require-trusted-types-for 'script'; "
             "style-src 'self' 'unsafe-inline'; "
             "font-src 'self' data:; "
             "img-src "+_img +"; "
@@ -654,9 +665,10 @@ def after_request (response ):
         response .headers .pop ('X-Frame-Options',None )
         response .headers ['Content-Security-Policy']=(
         "default-src 'self'; "
-        # Cloudflare Web Analytics подставляет beacon.min.js со своего
-        # домена — без него в консоли ошибка CSP, а статистика не собирается.
-        "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; "
+        # Та же политика панели (nonce + хэши, без unsafe-inline):
+        # страница открывается в iframe клиента Discord; beacon Cloudflare
+        # Web Analytics по-прежнему разрешён (входит в _panel_script_src).
+        +_panel_script_src +"; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
         "img-src " +_img +"; "

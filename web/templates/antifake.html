@@ -127,7 +127,7 @@
 </style>
 
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = "{{ guild_id }}";
 attachMemberPicker(document.getElementById('afTestUid'), { gid: GID, statusEl: document.getElementById('afTestUidStatus') });
 var API = '/api/guild/' + GID + '/antifake';

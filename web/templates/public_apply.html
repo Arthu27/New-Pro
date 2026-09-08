@@ -511,6 +511,24 @@ var selectedGuild = '{{ main_guild_id }}';
 var memberVerified = false;
 var idCheckTimer = null;
 
+/* Trusted Types (2026-09-08): innerHTML на этой странице больше не
+   пишется нигде — только createElement + textContent. */
+function el(tag, cls, text) {
+  var n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+/* Иконка статуса ID (иконка + цвет) без записи разметки строкой. */
+function statusIco(cls, colorVar) {
+  var s = document.getElementById('id-status');
+  s.textContent = '';
+  var i = el('i', cls);
+  i.style.color = colorVar;
+  s.appendChild(i);
+  return s;
+}
+
 // Проверка участника при вводе ID
 function onIdInput() {
   var id = document.getElementById('discord_id').value.trim();
@@ -521,16 +539,17 @@ function onIdInput() {
   document.getElementById('discord_name').value = '';
 
   if (!/^\d{17,19}$/.test(id)) {
-    status.innerHTML = id.length > 0 ? '<i class="fas fa-circle-xmark" style="color:var(--err)"></i>' : '';
+    status.textContent = '';
+    if (id.length > 0) statusIco('fas fa-circle-xmark', 'var(--err)');
     return;
   }
   if (!selectedGuild) {
-    status.innerHTML = '<i class="fas fa-triangle-exclamation" style="color:var(--warn)"></i>';
+    statusIco('fas fa-triangle-exclamation', 'var(--warn)');
     showAlert('error', 'Сначала выберите сервер!');
     return;
   }
 
-  status.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="color:var(--warn)"></i>';
+  statusIco('fas fa-circle-notch fa-spin', 'var(--warn)');
   clearTimeout(idCheckTimer);
   idCheckTimer = setTimeout(async function() {
     try {
@@ -541,7 +560,7 @@ function onIdInput() {
       });
       var res = await r.json();
       if (res.found) {
-        status.innerHTML = '<i class="fas fa-circle-check" style="color:var(--ok)"></i>';
+        statusIco('fas fa-circle-check', 'var(--ok)');
         document.getElementById('discord_name').value = res.name;
         document.getElementById('member-avatar').src = res.avatar;
         document.getElementById('member-name').textContent = res.display_name + ' (' + res.name + ')';
@@ -549,13 +568,13 @@ function onIdInput() {
         memberVerified = true;
         hideAlert();
       } else {
-        status.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--err)"></i>';
+        statusIco('fas fa-circle-xmark', 'var(--err)');
         card.style.display = 'none';
         memberVerified = false;
         showAlert('error', '' + (res.error || 'На этом сервере участник не найден.'));
       }
     } catch(e) {
-      status.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--err)"></i>';
+      statusIco('fas fa-circle-xmark', 'var(--err)');
     }
   }, 600);
 }
@@ -567,20 +586,36 @@ async function loadServers() {
     var guilds = await r.json();
     var grid = document.getElementById('server-grid');
     if (!guilds.length) {
-      grid.innerHTML = '<div class="server-loading">Сервер не найден.</div>';
+      grid.textContent = '';
+      grid.appendChild(el('div', 'server-loading', 'Сервер не найден.'));
       return;
     }
-    grid.innerHTML = guilds.map(function(g) {
+    grid.textContent = '';
+    guilds.forEach(function(g) {
       var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
       /* Клик и фолбэк-аватар — через data-атрибуты и делегирование:
          строгий CSP публичной страницы не исполняет инлайн-обработчики. */
-      return '<div class="server-card" data-gid="'+g.id+'" data-gname="'+g.name.replace(/"/g,'&quot;')+'" id="sc-'+g.id+'" role="button" tabindex="0">' +
-        '<img alt="" src="'+icon+'" data-fallback="https://cdn.discordapp.com/embed/avatars/0.png">' +
-        '<div><div class="sname">'+g.name+'</div><div class="smembers">'+g.members+' участников</div></div>' +
-        '</div>';
-    }).join('');
+      var card = el('div', 'server-card');
+      card.setAttribute('data-gid', g.id);
+      card.setAttribute('data-gname', g.name);
+      card.id = 'sc-' + g.id;
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
+      var img = el('img');
+      img.alt = '';
+      img.src = icon;
+      img.setAttribute('data-fallback', 'https://cdn.discordapp.com/embed/avatars/0.png');
+      card.appendChild(img);
+      var txt = el('div');
+      txt.appendChild(el('div', 'sname', g.name));
+      txt.appendChild(el('div', 'smembers', g.members + ' участников'));
+      card.appendChild(txt);
+      grid.appendChild(card);
+    });
   } catch(e) {
-    document.getElementById('server-grid').innerHTML = '<div class="server-loading">Загрузка серверов.</div>';
+    var g = document.getElementById('server-grid');
+    g.textContent = '';
+    g.appendChild(el('div', 'server-loading', 'Загрузка серверов.'));
   }
 }
 
@@ -594,7 +629,7 @@ function selectGuild(id, name) {
     document.getElementById('step1').style.display = 'none';
     document.getElementById('step2').style.display = 'block';
     document.getElementById('step1-ind').className = 'step done';
-    document.getElementById('step1-ind').querySelector('.step-num').innerHTML = '<i class="fas fa-check"></i>';
+    document.getElementById('step1-ind').querySelector('.step-num').appendChild(el('i', 'fas fa-check'));
     document.getElementById('step2-ind').className = 'step active';
     window.scrollTo({top:0,behavior:'smooth'});
   }, 300);
@@ -622,7 +657,9 @@ async function submitForm() {
   }
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ОТПРАВКА...';
+  btn.textContent = '';
+  btn.appendChild(el('i', 'fas fa-spinner fa-spin'));
+  btn.appendChild(document.createTextNode(' ОТПРАВКА...'));
 
   try {
     var r = await fetch('/api/public/apply', {
@@ -641,20 +678,24 @@ async function submitForm() {
       document.getElementById('step2').style.display = 'none';
       document.getElementById('success-screen').style.display = 'block';
       document.getElementById('step2-ind').className = 'step done';
-      document.getElementById('step2-ind').querySelector('.step-num').innerHTML = '<i class="fas fa-check"></i>';
+      document.getElementById('step2-ind').querySelector('.step-num').appendChild(el('i', 'fas fa-check'));
       document.getElementById('step3-ind').className = 'step done';
-      document.getElementById('step3-ind').querySelector('.step-num').innerHTML = '<i class="fas fa-check"></i>';
+      document.getElementById('step3-ind').querySelector('.step-num').appendChild(el('i', 'fas fa-check'));
       document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
       window.scrollTo({top:0,behavior:'smooth'});
     } else {
       showAlert('error', '' + (res.error || 'Произошла ошибка.'));
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ЗАЯВКУ';
+      btn.textContent = '';
+      btn.appendChild(el('i', 'fas fa-paper-plane'));
+      btn.appendChild(document.createTextNode(' ОТПРАВИТЬ ЗАЯВКУ'));
     }
   } catch(e) {
     showAlert('error', 'Ошибка соединения: ' + e.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ЗАЯВКУ';
+    btn.textContent = '';
+    btn.appendChild(el('i', 'fas fa-paper-plane'));
+    btn.appendChild(document.createTextNode(' ОТПРАВИТЬ ЗАЯВКУ'));
   }
 }
 
@@ -662,7 +703,7 @@ function showAlert(type, msg) {
   var a = document.getElementById('alert-box');
   a.className = 'alert ' + type;
   a.style.display = 'block';
-  a.innerHTML = msg;
+  a.textContent = msg;
   a.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 

@@ -278,7 +278,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var selectedGuild = '{{ main_guild_id }}';
 var memberVerified = false;
 var idCheckTimer = null;
@@ -306,7 +306,7 @@ async function loadServers() {
   if (!guilds.length) { grid.innerHTML = '<p style="color:var(--text-3)">Серверы не найдены.</p>'; return; }
   grid.innerHTML = guilds.map(function(g) {
     var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
-    return '<div class="server-card" onclick="selectGuild(\'' + g.id + '\',\'' + String(g.name).replace(/'/g, "\\'") + '\',\'' + icon + '\')" id="sc-' + g.id + '" role="button" tabindex="0" aria-label="Выбрать сервер ' + String(g.name).replace(/"/g, '') + '">' +
+    return '<div class="server-card" data-act="selectGuild" data-a1="' + g.id + '" data-a2="' + String(g.name).replace(/"/g, '&quot;') + '" data-a3="' + icon + '" id="sc-' + g.id + '" role="button" tabindex="0" aria-label="Выбрать сервер ' + String(g.name).replace(/"/g, '') + '">' +
       '<img alt="" src="' + icon + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
       '<div style="min-width:0"><div class="sname">' + g.name + '</div><div class="smem">' + g.members + ' участников</div></div></div>';
   }).join('');

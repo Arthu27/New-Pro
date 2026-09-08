@@ -45,8 +45,10 @@ TPL = open(os.path.join(ROOT, 'web', 'templates', 'channel_settings.html'),
 print('== статические проверки шаблона ==')
 check('var PENDING = {};' in TPL,
       'карта несохранённых изменений (PENDING) на месте')
-check('onchange="chsPending(' in TPL,
-      'смена канала в строке фиксируется как несохранённая')
+# 2026-09-08: инлайн-onchange убран (строгий CSP панели) — смена канала
+# фиксируется через data-act-делегирование (диспетчер в base.html).
+check('data-act="chsPending"' in TPL,
+      'смена канала в строке фиксируется как несохранённая (data-act)')
 check('chsSaveAll' in TPL and 'Сохранить всё' in TPL,
       'кнопка «Сохранить всё» — настраиваем много, сохраняем разом')
 check('chsResetPending' in TPL and 'Сбросить' in TPL,
@@ -56,7 +58,7 @@ check("beforeunload" in TPL,
 check(TPL.find('delete PENDING[key]') != -1 and 'render()' in TPL,
       'структура сохранения/перерисовки на месте')
 
-m = re.search(r'<script>(.*?)</script>', TPL, re.S)
+m = re.search(r'<script(?:\s[^>]*)?>(.*?)</script>', TPL, re.S)
 check(m is not None, 'скрипт страницы найден для харнесса')
 
 if m:

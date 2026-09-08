@@ -392,7 +392,7 @@
 [data-theme="light"] .an-select option{background:#fff;color:#2a2d35}
 </style>
 <script src="/static/numchart.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $id(id) { return document.getElementById(id); }
@@ -544,7 +544,7 @@
       var name = String(m.name || m.username || m.id || '?');
       var avatarUrl = m.avatar || '';
       var avatarHtml = avatarUrl
-        ? '<img alt="" class="leader-avatar" src="' + esc(avatarUrl) + '" onerror="this.outerHTML=\'<div class=&quot;leader-avatar-fallback&quot;>' + esc(getInitial(name)) + '</div>\'" />'
+        ? '<img alt="" class="leader-avatar" src="' + esc(avatarUrl) + '" data-av-letter="' + esc(getInitial(name)) + '" data-av-cls="leader-avatar-fallback" data-av-tag="div" />'
         : '<div class="leader-avatar-fallback">' + esc(getInitial(name)) + '</div>';
       var uid = m.uid ? String(m.uid) : '';
       var open = uid ? (' data-uid="' + esc(uid) + '" data-name="' + esc(name) +

@@ -129,7 +129,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/reports';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
@@ -193,8 +193,8 @@ function renderLib(list) {
     return '<div class="rep-item"><div class="head"><div class="nm">' + esc(r.name) +
       '<small>' + esc(r.report_id) + (r.last_generated ? ' · последний прогон: ' + esc(String(r.last_generated).slice(0, 16).replace('T', ' ')) : ' · ещё не генерировался') + '</small></div>' +
       (CAN_EDIT ? '<select class="rep-sel" id="repGenDays-' + esc(r.report_id) + '"><option value="7">за 7 дней</option><option value="30" selected>за 30 дней</option><option value="90">за 90 дней</option></select>' +
-        '<button type="button" class="rep-btn ghost" onclick="repGenerate(\'' + esc(r.report_id) + '\')" aria-label="Сформировать"><i class="fas fa-play"></i></button>' +
-        '<button type="button" class="rep-del" title="Удалить" onclick="repDelete(\'' + esc(r.report_id) + '\', \'' + esc(r.name) + '\')"><i class="fas fa-trash"></i></button>' : '') +
+        '<button type="button" class="rep-btn ghost" data-act="repGenerate" data-a1="' + esc(r.report_id) + '" aria-label="Сформировать"><i class="fas fa-play"></i></button>' +
+        '<button type="button" class="rep-del" title="Удалить" data-act="repDelete" data-a1="' + esc(r.report_id) + '" data-a2="' + esc(r.name) + '"><i class="fas fa-trash"></i></button>' : '') +
       '</div><div class="rep-sub" style="margin:6px 0 0">' + esc((r.metrics || []).map(function (m) { return METRIC_LABELS[m] || m; }).join(', ')) + (filters ? ' · ' + esc(filters) : '') + '</div></div>';
   }).join('');
 }

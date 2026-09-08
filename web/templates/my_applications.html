@@ -60,7 +60,7 @@
 
 <div class="apps-list" id="apps-container"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка…</p></div></div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function timeAgo(iso) {
   var d = new Date(iso);
   var diff = Math.floor((Date.now()-d.getTime())/1000);
