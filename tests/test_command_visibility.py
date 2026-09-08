@@ -187,23 +187,37 @@ try:
 except Exception as ex:
     check(False, f'ACL карточек /modpanel: {ex}')
 
-# ── /update: владелец + только ЛС ──────────────────────────────────────
-print('== /update и /апелляция: контекст ЛС ==')
+# ── /update: гильдовая, админам; /апелляции больше нет ──────────────────
+print('== /update: только сервер и админы; /апелляция удалена ==')
 fn = find_cog_callback('cogs.diagnostics', 'update_cmd')
 check(fn is not None, '/update определён')
 if fn:
     ctx = contexts_of(fn)
-    check(ctx is not None and not ctx['guild'] and ctx['dm'],
-          '/update: вызывается только в ЛС (в меню сервера не показывается)')
+    check(ctx is not None and ctx['guild'] and not ctx['dm'],
+          '/update: гильдовая — в ЛС её не видит НИКТО (владелец 2026-09-08: '
+          '«почему команда update у всех» — раньше была глобальной и жила в ЛС)')
     check(bool(perms_of(fn) & ADMINISTRATOR),
-          '/update: по умолчанию скрыт от не-админов')
+          '/update: по умолчанию видна только админам сервера')
+_src_upd = open(os.path.join(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))), 'cogs', 'diagnostics.py'), encoding='utf-8').read()
+check('keep_global' not in _src_upd,
+      '/update больше не keep_global — глобальной копии в ЛС нет')
 
+# /апелляция удалена вовсе (владелец 2026-09-08: «она у нас в кнопке»):
+# единственные пути подачи — кнопка в ЛС о бане, меню в канале и кнопка
+# в «своих наказаниях».
 fn = find_cog_callback('cogs.appeals', 'cmd_appeal')
-check(fn is not None, '/апелляция определена')
-if fn:
-    ctx = contexts_of(fn)
-    check(ctx is not None and not ctx['guild'] and ctx['dm'],
-          '/апелляция: на сервере в подсказке не видна, работает только в ЛС')
+check(fn is None, '/апелляция удалена из когов — команды больше нет')
+_src_ap = open(os.path.join(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))), 'cogs', 'appeals.py'), encoding='utf-8').read()
+check("name='апелляция'" not in _src_ap and 'name="апелляция"' not in _src_ap,
+      'в appeals не осталось слеш-команды «апелляция»')
+check('Подать апелляцию' in _src_ap,
+      'кнопка «Подать апелляцию» — единственный путь подачи')
+_src_rp = open(os.path.join(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))), 'cogs', 'reports.py'), encoding='utf-8').read()
+check('AppealModal' in _src_rp,
+      'кнопка в «своих наказаниях» открывает ту же форму апелляции')
 
 shutil_ok = True
 try:

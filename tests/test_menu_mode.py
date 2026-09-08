@@ -171,13 +171,15 @@ def mk(name, keep_global=False):
 
 
 def build_bot():
-    """Как боевой LEAN-профиль: 4 глобальных keep_global + 3 гильдовых
-    + мусор, который должен исчезнуть из меню (но остаться на префиксе)."""
+    """Как боевой LEAN-профиль (владелец 2026-09-08): глобальных команд нет,
+    /апелляция удалена, /update гилидовая; механика keep_global проверяется
+    на белой команде + мусор, который должен исчезнуть из меню."""
     bot = Bot()
     tree = bot.tree
-    tree.add_command(mk('modpanel', keep_global=True))
+    # механика keep_global на белой команде: живёт глобально, без гильдовых
+    # копий (реальных keep_global-команд в боте сейчас нет)
     tree.add_command(mk('update', keep_global=True))
-    tree.add_command(mk('апелляция', keep_global=True))
+    tree.add_command(mk('modpanel'))
     tree.add_command(mk('warnings'))                       # мусор: глобальный
     tree.add_command(mk('report'))                        # жалобы — в белом списке
     tree.add_command(mk('my-violations'))                 # мои нарушения — в белом
@@ -194,9 +196,9 @@ MM.set_full(False)
 
 bot1 = build_bot()
 kept, pruned = slash_budget.apply_slash_budget(bot1.tree)
-check(set(kept) == {'modpanel', 'update', 'апелляция',
+check(set(kept) == {'modpanel', 'update',
                     'report', 'my-violations', 'afk'},
-      f'в дереве остались ровно кураторские 6 ({len(kept)})')
+      f'в дереве остались ровно боевые 5 — апелляции больше нет ({len(kept)})')
 check(set(pruned) == {'warnings', 'backup', 'afk-remove', 'verify-setup'},
       f'мусор убран из меню, но жив на префиксе ({sorted(pruned)})')
 
@@ -205,10 +207,10 @@ from services import sync_filtered as SF  # noqa: E402
 async def _run_b():
     await SF.full_sync(bot1)
     glob, guild = bot1.http.last('GLOBAL'), bot1.http.last('GUILD', 777)
-    check(set(glob) == {'modpanel', 'update', 'апелляция'},
-          f'глобальный список = 3 keep_global ({sorted(glob)})')
-    check(set(guild) == {'afk', 'report', 'my-violations'},
-          f'сервер 777 = гильдовые + глобальные НЕ-keep ({sorted(guild)})')
+    check(set(glob) == {'update'},
+          f'глобальный список = только keep_global из белого списка ({sorted(glob)})')
+    check(set(guild) == {'modpanel', 'afk', 'report', 'my-violations'},
+          f'сервер 777 = гильдовые, keep_global без дублей ({sorted(guild)})')
     check(set(glob) & set(guild) == set(), 'глобаль∩гильдия пусто — дублей нет')
     check(bot1.http.last('GUILD', 888) == [], 'чужой сервер 888 очищен')
     check('warnings' not in glob + guild and 'backup' not in glob + guild,
@@ -224,14 +226,14 @@ bot2 = build_bot()          # свежий бот с мусором, режим 
 async def _run_c():
     ok, kept2, pruned2 = await MM.apply_to_bot(bot2)
     check(ok is True, 'apply_to_bot отработал')
-    check(set(kept2) == {'modpanel', 'update', 'апелляция',
+    check(set(kept2) == {'modpanel', 'update',
                           'report', 'my-violations', 'afk'},
-          'бюджет внутри apply_to_bot сжал дерево до 6')
+          'бюджет внутри apply_to_bot сжал дерево до 5 (апелляции нет)')
     check(set(pruned2) == {'warnings', 'backup', 'afk-remove', 'verify-setup'},
           'мусор вынесен из меню')
     glob2, guild2 = bot2.http.last('GLOBAL'), bot2.http.last('GUILD', 777)
-    check(set(glob2) == {'modpanel', 'update', 'апелляция'}
-          and set(guild2) == {'afk', 'report', 'my-violations'},
+    check(set(glob2) == {'update'}
+          and set(guild2) == {'modpanel', 'afk', 'report', 'my-violations'},
           'синк внутри apply_to_bot доставил те же списки в Discord')
     with open('data/sync_last.json', encoding='utf-8') as fh:
         verdict = json.load(fh).get('verify', '')
@@ -246,7 +248,7 @@ bot3 = build_bot()
 
 async def _run_c2():
     bot3.http.fetch_override[777] = ['afk', 'afk-remove',
-                                     'backup', 'warnings', 'апелляция']
+                                     'backup', 'warnings', 'update']
     await MM.apply_to_bot(bot3)
     with open('data/sync_last.json', encoding='utf-8') as fh:
         verdict2 = json.load(fh).get('verify', '')
@@ -254,7 +256,7 @@ async def _run_c2():
           f'застаревший мусор пойман сверкой ({verdict2[:80]}…)')
     check('лишние' in verdict2 and 'backup' in verdict2,
           'сверка называет ЛИШНИЕ команды по именам')
-    check('дубли глобальных' in verdict2 and 'апелляция' in verdict2,
+    check('дубли глобальных' in verdict2 and 'update' in verdict2,
           'сверка называет гильдейские КОПИИ глобальных (источник дублей)')
     syncs = sum(1 for s_, g_, n_ in bot3.http.calls if s_ == 'GUILD' and n_)
     check(syncs >= 2, f'при расхождении сделан ПОВТОРНЫЙ синк ({syncs} guild-вызовов)')

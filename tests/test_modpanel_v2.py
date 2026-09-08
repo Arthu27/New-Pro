@@ -47,10 +47,13 @@ pref = [c['name'] for c in cat['commands'] if c['kind'] == 'prefix']
 check(cat.get('prefix', 1) == 0 and not pref,
       f'боевой состав без «!»-команд (осталось: {pref})')
 for name, kind in (('modpanel', 'slash'), ('report', 'slash'),
-                   ('апелляция', 'slash'), ('update', 'slash')):
+                   ('update', 'slash')):
     hit = next((c for c in cat['commands'] if c['name'] == name), None)
     check(hit is not None and hit['kind'] == kind,
           f'{name} — слеш-команда')
+# /апелляция удалена (владелец 2026-09-08: «она у нас в кнопке»)
+check(not next((c for c in cat['commands'] if c['name'] == 'апелляция'), None),
+      '/апелляции в боевом составе больше нет — только кнопки')
 # Музыка снята 2026-09-01 — /play больше нет в боевом составе
 check(not next((c for c in cat['commands'] if c['name'] == 'play'), None),
       '/play снят — музыкальная система выведена из боевого состава')
@@ -58,14 +61,15 @@ check(not next((c for c in cat['commands'] if c['name'] == 'play'), None),
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
 # Сетап-команды (verify-setup, report-setup/settings) убраны в панель,
-# /afk-remove удалён (AFK спадает авто) — в меню 6 команд. /proof удалена
-# из бота 2026-09-04: демки грузятся через /report и панель.
-check(set(keep) == {'modpanel', 'апелляция', 'update',
+# /afk-remove удалён (AFK спадает авто) — в меню 5 команд: /апелляция
+# убрана 2026-09-08 («она у нас в кнопке»). /proof удалена из бота
+# 2026-09-04: демки грузятся через /report и панель.
+check(set(keep) == {'modpanel', 'update',
                     'afk', 'report', 'my-violations'},
-      f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'апелляция', 'update', 'afk',
-             'report', 'my-violations'):
+      f'белый список слеш-меню = 5 команд (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'update', 'afk', 'report', 'my-violations'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
+check('апелляция' not in keep, '/апелляция убрана из KEEP_SLASH (кнопка вместо команды)')
 for gone in ('afk-remove', 'verify-setup', 'report-setup', 'report-settings'):
     check(gone not in keep, f'{gone} убран из слеш-меню (настройка в панели/авто)')
 check('play' not in keep, '/play снят — музыка выведена из боевого состава')
@@ -81,12 +85,12 @@ for gone in ('backup', 'backup-list', 'diagnose', 'health', 'hotreload',
 src_mod = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
 check('("warn", "Варн"' in src_mod,
       'варн — пункт выпадающего меню /modpanel')
-check('allowed_contexts' in open(os.path.join(ROOT, 'cogs', 'diagnostics.py'),
-                                 encoding='utf-8').read(),
-      '/update спрятан в ЛС — на сервере его не видит никто, кроме владельца')
-
+src_diag = open(os.path.join(ROOT, 'cogs', 'diagnostics.py'), encoding='utf-8').read()
+check('keep_global' not in src_diag,
+      '/update не keep_global — гильдовая копия админам, в ЛС её нет ни у кого')
 src_appeals = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
-check("keep_global" in src_appeals, '/апелляция помечена keep_global (работает в ЛС)')
+check('keep_global' not in src_appeals,
+      'в appeals нет keep_global-команд — глобальных команд в боте не осталось')
 src_sync = open(os.path.join(ROOT, 'services', 'sync_filtered.py'), encoding='utf-8').read()
 check('keep_global' in src_sync, 'sync не вычищает глобальные ЛС-команды')
 
@@ -320,13 +324,16 @@ check(ok is True and 'Не выбрана роль бана' in (txt or '') and 
 check([r.id for r in _tg.given] == [], 'роль при отказе не выдаётся')
 _PR.set_roles(G, ban=606)
 
-print('== 5. /апелляция — слеш-команда, ЛС ==')
+print('== 5. /апелляция удалена — кнопка вместо команды ==')
 import cogs.appeals as AP  # noqa: E402
 
-check(hasattr(AP.Appeals, 'cmd_appeal'), 'метод команды на месте')
+check(not hasattr(AP.Appeals, 'cmd_appeal'),
+      'метода команды в коге больше нет (владелец 2026-09-08: «она у нас в кнопке»)')
 src = src_appeals
-check("@commands.command" not in src and 'app_commands.command' in src,
-      'в appeals больше нет префиксной команды')
+check("@commands.command" not in src and "name='апелляция'" not in src,
+      'в appeals нет ни префиксной, ни слеш-команды апелляции')
+check('DM_APPEAL_CUSTOM_ID' in src and 'MENU_CUSTOM_ID' in src,
+      'пути подачи: кнопка в ЛС и меню в канале — обе живы')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

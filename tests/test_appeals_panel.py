@@ -463,8 +463,8 @@ check('/appeals' in mod_pages, 'пункт меню «Апелляции» в «
 check(PM.PAGE_COGS.get('/appeals') == ('appeals',), 'appeals-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('appeals_panel') >= 1, 'модуль зарегистрирован в routes_extra')
-check('/апелляция' in tpl and 'fa-circle-info' in tpl,
-      'подсказка «как подать апелляцию» видна на странице')
+check('кнопка в ЛС о бане' in tpl and 'fa-circle-info' in tpl,
+      'подсказка «как подать апелляцию» видна на странице (без команды)')
 for fid in ('apLookBox', 'apLookMode', 'apLookTheme', 'apLookUrl', 'apLookSave',
             'apLookMsg', 'apLookPv'):
     check(('id="' + fid + '"') in tpl, f'панель оформления: {fid} на месте')

@@ -48,7 +48,7 @@ def check(ok, msg):
 import discord  # noqa: E402
 
 import cogs.appeals as A  # noqa: E402
-from cogs.appeals import Appeals, AppealModal  # noqa: E402
+from cogs.appeals import Appeals, AppealModal, AppealDMView  # noqa: E402
 from services import punish_roles as PR  # noqa: E402
 
 PR.set_roles(777, ban=888)
@@ -121,59 +121,62 @@ async def _run():
     finally:
         C.Config.MAIN_GUILD_ID = keep
 
-    # ── cmd_appeal: поведение команды ────────────────────────────────────
+    # ── кнопка «Подать апелляцию» в ЛС: поведение (команды больше нет —
+    #    владелец 2026-09-08: «она у нас в кнопке») ────────────────────────
     cog2 = Appeals.__new__(Appeals)
-
-    resp = _Resp()
-    inter = NS(guild=NS(id=1), response=resp)
-    await Appeals.cmd_appeal.callback(cog2, inter, текст='')
-    check(resp.sent and resp.sent[0][0] == 'msg' and resp.sent[0][2] is True,
-          'в канале сервера — вежливая подсказка про ЛС (ephemeral)')
-    check('сервер' not in resp.sent[0][1].lower() or 'ID' not in resp.sent[0][1],
-          'подсказка не просит никакой ID сервера')
+    view = AppealDMView()
 
     g4 = NS(get_member=lambda uid: banned_member, id=777, name='Тест')
     g4.fetch_ban = AsyncMock(side_effect=_not_found())
     cog2.bot = NS(get_guild=lambda gid: g4 if gid == 777 else None, guilds=[g4])
     resp = _Resp()
-    inter = NS(guild=None, user=banned_member, response=resp, client=NS())
-    await Appeals.cmd_appeal.callback(cog2, inter, текст='')
+    inter = NS(guild=None, user=banned_member, response=resp,
+               client=NS(get_cog=lambda n: cog2 if n == 'Appeals' else None))
+    await view._open(inter)
     check(resp.sent == [('modal', 'AppealModal')],
-          'ЛС забаненного без текста — сразу форма (ни одного вопроса)')
+          'кнопка в ЛС забаненного — сразу форма (ни одного вопроса)')
 
     g5 = NS(get_member=lambda uid: clean_member, id=777, name='Тест')
     g5.fetch_ban = AsyncMock(side_effect=_not_found())
     cog2.bot = NS(get_guild=lambda gid: g5 if gid == 777 else None, guilds=[g5])
     resp = _Resp()
-    inter = NS(guild=None, user=clean_member, response=resp, client=NS())
-    await Appeals.cmd_appeal.callback(cog2, inter, текст='любой текст')
-    check(resp.sent and 'не забанены' in resp.sent[0][1],
-          'ЛС чистого участника — честное «апелляция не нужна», без шума')
+    inter = NS(guild=None, user=clean_member, response=resp,
+               client=NS(get_cog=lambda n: cog2 if n == 'Appeals' else None))
+    await view._open(inter)
+    check(resp.sent and resp.sent[0][0] == 'msg' and 'не забанены' in resp.sent[0][1],
+          'кнопка в ЛС чистого участника — честное «апелляция не нужна», без шума')
 
     # без конфига и при >1 сервере — вежливый отказ
     try:
         C.Config.MAIN_GUILD_ID = 0
         cog2.bot = NS(get_guild=lambda gid: None, guilds=[NS(id=1), NS(id=2)])
         resp = _Resp()
-        inter = NS(guild=None, user=banned_member, response=resp, client=NS())
-        await Appeals.cmd_appeal.callback(cog2, inter, текст='текст апелляции 123')
+        inter = NS(guild=None, user=banned_member, response=resp,
+                   client=NS(get_cog=lambda n: cog2 if n == 'Appeals' else None))
+        await view._open(inter)
         check(resp.sent and 'не настроен' in resp.sent[0][1],
               'бот не настроен — вежливый отказ вместо ошибки')
     finally:
         C.Config.MAIN_GUILD_ID = keep
 
+    # бот перезапускался (кога нет) — вежливая подсказка нажать ещё раз
+    resp = _Resp()
+    inter = NS(guild=None, user=banned_member, response=resp,
+               client=NS(get_cog=lambda n: None))
+    await view._open(inter)
+    check(resp.sent and 'ещё раз' in resp.sent[0][1],
+          'ког не найден — «нажмите кнопку ещё раз», не ошибка')
 
-print('== 1. Параметры команды ==')
-cmd = Appeals.cmd_appeal
-params = list(getattr(cmd, 'parameters', []) or [])
-names = [getattr(p, 'name', '') for p in params]
-check('сервер' not in names, 'параметра «сервер» больше нет вообще')
-check(names == ['текст'], 'единственный параметр — необязательный текст')
-check(params and getattr(params[0], 'required', True) is False
-      and getattr(params[0], 'default', None) == '',
-      'текст необязателен (default "") → без аргументов откроется форма')
-check('__discord_app_commands_base_description__' not in cmd.__dict__,
-      'список описаний параметров не провис с «сервер»')
+
+print('== 1. Команды нет — только кнопки ==')
+check(not hasattr(Appeals, 'cmd_appeal'),
+      '/апелляция удалена (владелец 2026-09-08) — команды больше нет')
+rsrc_g = open(os.path.join(ROOT, 'cogs/reports.py'), encoding='utf-8').read()
+check('AppealModal' in rsrc_g and 'send_modal' in rsrc_g,
+      'кнопка в «своих наказаниях» открывает ту же форму апелляции')
+check('DM_APPEAL_CUSTOM_ID' in open(os.path.join(ROOT, 'cogs/appeals.py'),
+                                    encoding='utf-8').read(),
+      'кнопка в ЛС о бане — постоянная (переживает рестарт)')
 
 print('== 2. Код: поведение ==')
 asyncio.run(_run())
@@ -191,13 +194,13 @@ check('active_guild_id()' in panel, 'API панели замкнут на гла
 tpl = open(os.path.join(ROOT, 'web/templates/appeals.html'), encoding='utf-8').read()
 check('ID сервера' not in tpl and 'guild-select' not in tpl,
       'в панели апелляций нет поля выбора/ввода сервера')
-# Заказ 2026-08-29 «две апелляции»: серверная /appeal удалена — осталась
-# одна глобальная /апелляция (работает в ЛС, сервер берётся из конфигурации).
+# Заказ 2026-08-29 «две апелляции»: серверная /appeal удалена.
+# 2026-09-08: и /апелляция убрана — «она у нас в кнопке» (владелец).
 rsrc = open(os.path.join(ROOT, 'cogs/reports.py'), encoding='utf-8').read()
 check("name='appeal'" not in rsrc,
       'второй команды /appeal больше нет — апелляция одна')
-check("name='апелляция'" in open(os.path.join(ROOT, 'cogs/appeals.py'),
-                                  encoding='utf-8').read(),
+check("name='апелляция'" not in open(os.path.join(ROOT, 'cogs/appeals.py'),
+                                      encoding='utf-8').read(),
       'глобальная /апелляция на месте (ЛС, сервер — из конфигурации)')
 check('AppealModal' in dir(A), 'форма модального окна на месте')
 

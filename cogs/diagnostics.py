@@ -584,11 +584,15 @@ class Diagnostics (commands .Cog ):
         return f"{m}м {s}с"
 
 
+    # Владелец 2026-09-08: «почему команда update у всех» — раньше команда
+    # была ГЛОБАЛЬНОЙ и жила в ЛС у каждого, кто делит с ботом сервер.
+    # Теперь это гильдовая команда с правом «Администратор» по умолчанию:
+    # в списке «/» её видят только админы сервера, в ЛС её нет ни у кого.
+    # Запуск по-прежнему доступен только владельцу бота (_owner_only).
     @app_commands .command (name ="update",
-                          description ="Обновить бота и перезапустить (только владелец бота, в ЛС)",
-                          extras ={'keep_global':True })
+                          description ="Обновить бота и перезапустить (только владелец бота)")
     @app_commands .default_permissions (administrator =True )
-    @app_commands .allowed_contexts (guilds =False ,dms =True ,private_channels =True )
+    @app_commands .allowed_contexts (guilds =True ,dms =False ,private_channels =False )
     async def update_cmd (self ,interaction :discord .Interaction ):
         """Полный цикл сам: скачать → проверить целостность → заменить файлы
         (данные и .env не трогает) → перезапустить → отчитаться после вкл."""

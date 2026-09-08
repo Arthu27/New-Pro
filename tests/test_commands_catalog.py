@@ -49,12 +49,15 @@ data = CR.catalog(force=True)
 # Заказ владельца: боевое слеш-меню — минимум команд. Тикет-система снята
 # 2026-08-31, её роль выполняет /report (жалоба карточкой в канал модерации).
 # Музыка (/play) снята 2026-09-01 — бот модерационный.
-# В меню: modpanel, апелляция, update, afk, report, my-violations.
+# В меню: modpanel, update, afk, report, my-violations — 5 команд:
+# /апелляция убрана 2026-09-08 («она у нас в кнопке»).
 # /proof удалена из бота 2026-09-04 (демки — через /report и панель).
 # Сетап-команды убраны в панель, /afk-remove удалён (AFK спадает авто).
-check(data['total'] == 6, f"lean: собрано {data['total']} живых команд (ровно 6)")
-check(data['slash'] == 6 and data['prefix'] == 0,
+check(data['total'] == 5, f"lean: собрано {data['total']} живых команд (ровно 5)")
+check(data['slash'] == 5 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
+check('апелляция' not in [c['name'] for c in data.get('commands', [])],
+      'апелляции в боевом меню нет — подача кнопкой')
 check('proof' not in [c['name'] for c in data.get('commands', [])],
       'proof в боевом меню нет (демки — /report и панель)')
 for gone in ('verify-setup', 'report-setup', 'report-settings', 'afk-remove'):

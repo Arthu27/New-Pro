@@ -77,10 +77,10 @@ csub = mod_src[mod_src.index('class _CtxMuteModal'):
 check(csub.find('await _ack') < csub.find('apply_panel_action')
       and 'thinking=True' in csub,
       'ПКМ-мут: ack до применения, ответ через _respond')
-ap = appeal_src[appeal_src.index('async def cmd_appeal'):
-                appeal_src.index('async def cmd_appeal') + 2200]
+ap = appeal_src[appeal_src.index('class AppealModal'):
+                appeal_src.index('class AppealChannelModal')]
 check(ap.find('response.defer') < ap.find('_submit_appeal'),
-      '/апелляция+текст: defer до карточки (окно 3с)')
+      'модалка апелляции (кнопка в ЛС): defer до карточки (окно 3с)')
 af = afk_src[afk_src.index('async def afk'):
              afk_src.index('async def afk') + 1200]
 check(af.find('response .defer') < af.find('user .edit')

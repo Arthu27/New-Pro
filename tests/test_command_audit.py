@@ -49,15 +49,20 @@ def _fn(src, name):
 
 
 print('== 1. KEEP: первый ответ Discord до тяжёлой работы ==')
-appeal = _fn(_src('cogs/appeals.py'), 'cmd_appeal')
-# «не забанены» / модалка — send_message/send_modal; submit — после defer.
-check(appeal.find('response.defer') < appeal.find('_submit_appeal'),
-      '/апелляция: defer до карточки и открытия канала')
-check("if not текст:" in appeal and 'send_modal' in appeal,
-      '/апелляция без текста — форма, не defer')
-check("не забанены" in appeal
-      and appeal.find('_is_banned') < appeal.find('response.defer'),
-      '/апелляция: «не забанены» до defer (send_message, тесты живы)')
+# /апелляции больше нет (владелец 2026-09-08: «она у нас в кнопке»):
+# путь — кнопка в ЛС → модалка. Дисциплина ответов та же.
+_ap_src = _src('cogs/appeals.py')
+_modal = _ap_src[_ap_src.index('class AppealModal'):
+                 _ap_src.index('class AppealChannelModal')]
+check(_modal.find('response.defer') < _modal.find('_submit_appeal'),
+      'модалка апелляции: defer до карточки и открытия канала')
+_o = _ap_src.index('async def _open')
+_open = _ap_src[_o:_o + 2000]
+check('send_modal' in _open and '_is_banned' in _open,
+      'кнопка в ЛС: бан-чек и сразу форма — ни одного лишнего вопроса')
+check("не забанены" in _open
+      and _open.find('_is_banned') < _open.find('send_modal'),
+      'кнопка в ЛС: «не забанены» ДО открытия формы')
 
 afk = _fn(_src('cogs/afk.py'), 'afk')
 check(afk.find('response .defer') < afk.find('user .edit')
@@ -106,7 +111,7 @@ check('value=str(hours)' in dur_cls and 'int(hours)' not in dur_cls,
 
 print('== 3. Живой вызов KEEP-команд ==')
 import discord  # noqa: E402
-from cogs.appeals import Appeals  # noqa: E402
+from cogs.appeals import Appeals, AppealModal  # noqa: E402
 from cogs.reports import Reports, DurationSelectView  # noqa: E402
 from cogs.afk import AFK  # noqa: E402
 
@@ -143,7 +148,7 @@ class _Follow:
 
 
 async def _run():
-    # /апелляция + текст: defer, затем followup (не send_message)
+    # модалка апелляции (кнопка в ЛС): defer, затем followup
     cog = Appeals.__new__(Appeals)
     user = NS(id=42, roles=[NS(id=888)])
     g = NS(id=777, name='Тест', get_member=lambda uid: user)
@@ -153,21 +158,25 @@ async def _run():
     resp = _Resp()
     inter = NS(guild=None, user=user, response=resp, followup=_Follow(resp),
                client=NS())
-    await Appeals.cmd_appeal.callback(cog, inter, текст='прошу разбанить')
+    modal = AppealModal(cog, g)
+    modal.text = NS(value='прошу разбанить')
+    await modal.on_submit(inter)
     kinds = [x[0] for x in resp.sent]
-    check(kinds[0] == 'defer', f'/апелляция+текст: сначала defer ({kinds})')
-    check('followup' in kinds, f'/апелляция+текст: ответ через followup ({kinds})')
+    check(kinds[0] == 'defer', f'модалка: сначала defer ({kinds})')
+    check('followup' in kinds, f'модалка: ответ через followup ({kinds})')
     check('msg' not in kinds, 'успешная апелляция не шлёт send_message после defer')
 
-    # чистый участник + текст: send_message «не забанены», без defer
+    # чистый участник: followup «не забанены» (модалка честно сделала defer)
     cog._is_banned = AsyncMock(return_value=False)
     resp2 = _Resp()
     inter2 = NS(guild=None, user=user, response=resp2, followup=_Follow(resp2),
                 client=NS())
-    await Appeals.cmd_appeal.callback(cog, inter2, текст='любой текст')
-    check(resp2.sent and resp2.sent[0][0] == 'msg' and 'не забанены' in resp2.sent[0][1],
-          'чистый + текст — send_message, defer не трогаем')
-    check(not resp2.deferred, 'чистый + текст — без defer')
+    modal2 = AppealModal(cog, g)
+    modal2.text = NS(value='любой текст')
+    await modal2.on_submit(inter2)
+    check(resp2.sent and any(x[0] == 'followup' and 'не забанены' in str(x[1])
+                             for x in resp2.sent),
+          'чистый — честное «не забанены» через followup')
 
     # /my-violations в ЛС
     rcog = Reports.__new__(Reports)
@@ -208,7 +217,7 @@ async def _run():
 asyncio.run(_run())
 
 print('== 4. AST: у всех slash есть description, KEEP без дублей ==')
-keep = {'modpanel', 'апелляция', 'update', 'afk', 'report', 'my-violations'}
+keep = {'modpanel', 'update', 'afk', 'report', 'my-violations'}  # 5: /апелляция убрана (владелец 2026-09-08)
 seen = {}
 bad = []
 for rel in ('cogs/appeals.py', 'cogs/afk.py', 'cogs/reports.py',

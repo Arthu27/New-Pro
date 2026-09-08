@@ -139,16 +139,16 @@ def mk(name, keep_global=False):
 def build_bot(cold_cache=False):
     bot = Bot(cold_cache=cold_cache)
     tree = bot.tree
-    # глобальные (коги без guilds: appeals/diagnostics)
-    tree.add_command(mk('апелляция', keep_global=True))
-    tree.add_command(mk('update', keep_global=True))
+    # Как в боте (владелец 2026-09-08): глобальных команд НЕТ — /апелляция
+    # удалена («она у нас в кнопке»), /update стала гильдовой (админам).
     # Контекстное меню НЕ в белом списке боевых команд — в Discord не публикуется.
     tree.add_command(ContextMenu(name='Варн за сообщение', callback=_msg_cb,
                                  type=AppCommandType.message))
     # гильдовые (коги с guilds=Config.guild_objects()):
-    #   боевые (modpanel, afk, report) — публикуются;
+    #   боевые (modpanel, update, afk, report) — публикуются;
     #   служебные/вырезанные (play, afk-remove, ticket-panel) — снимаются с публикации.
-    for n in ('modpanel', 'play', 'afk', 'report', 'afk-remove', 'ticket-panel'):
+    for n in ('modpanel', 'update', 'play', 'afk', 'report',
+              'afk-remove', 'ticket-panel'):
         tree.add_command(mk(n), guild=Object(777))
     return bot
 
@@ -165,10 +165,10 @@ async def main():
     await SF.full_sync(bot)                    # кнопка «Синхронизировать»
     await asyncio.gather(SF.full_sync(bot), SF.full_sync(bot))   # двойной клик
     glob, guild = rec.last('GLOBAL'), rec.last('GUILD', 777)
-    # Глобально живут keep_global команды из белого списка (работают в ЛС):
-    # апелляция и update. Остальное — только гильдовое.
-    check(set(glob) == {'апелляция', 'update'},
-          f'глобальный список = keep_global из белого списка ({glob})')
+    # Глобальных команд больше НЕТ: /апелляция удалена, /update гильдовая —
+    # в ЛС бота у пользователей не остаётся ни одной команды (владелец
+    # 2026-09-08: «проверь все, чтобы они исчезли»).
+    check(glob == [], f'глобальный список пуст — команд в ЛС нет ({glob})')
     check(set(glob) <= set(SF.PUBLIC_COMMAND_WHITELIST),
           'глобально нет команд вне белого списка')
     check(set(glob) & set(guild) == set(),
@@ -179,8 +179,8 @@ async def main():
     _wl = set(SF.PUBLIC_COMMAND_WHITELIST)
     check(set(guild) <= _wl,
           f'в гильдии только команды белого списка, лишних нет ({sorted(set(guild) - _wl)})')
-    check({'modpanel', 'afk', 'report'} <= set(guild),
-          f'боевые гильдовые команды на месте ({guild})')
+    check({'modpanel', 'update', 'afk', 'report'} <= set(guild),
+          f'боевые гильдовые команды на месте, update — гильдовая ({guild})')
     for _hidden in ('play', 'afk-remove', 'ticket-panel', 'Варн за сообщение'):
         check(_hidden not in guild and _hidden not in glob,
               f'«{_hidden}» не публикуется в Discord (не в белом списке)')
@@ -197,8 +197,8 @@ async def main():
     rec2.calls.clear()
     await SF.full_sync(bot2)                   # владелец жмёт синк в панели
     glob2 = rec2.last('GLOBAL')
-    check(glob2 == ['апелляция', 'update'],
-          f'после сбоя глобально перепубликован ТОЛЬКО keep_global ({glob2})')
+    check(glob2 == [],
+          f'после сбоя глобальный список по-прежнему пуст ({glob2})')
     check('Варн за сообщение' not in glob2,
           'контекстное меню НЕ опубликовано глобально (иначе — дубль в меню)')
     check(set(glob2) & set(ok_guild) == set(),
@@ -210,7 +210,7 @@ async def main():
     rec2.calls.clear()
     await SF.full_sync(bot2)
     glob3, guild3 = rec2.last('GLOBAL'), rec2.last('GUILD', 777)
-    check(glob3 == ['апелляция', 'update'] and set(glob3) & set(guild3) == set(),
+    check(glob3 == [] and set(glob3) & set(guild3) == set(),
           'после успешного повтора — по-прежнему ноль дублей')
 
     # ═══ C. Холодный кэш гильдии — guild-режим, а не «глобалка» ════════════
@@ -220,8 +220,8 @@ async def main():
     await SF.full_sync(bot3)
     check(rec3.last('GUILD', 777) != [],
           'guild-синк прошёл по Object(id) даже без гильдии в кэше')
-    check(rec3.last('GLOBAL') == ['апелляция', 'update'],
-          'глобальный список не раздут гильдовыми командами')
+    check(rec3.last('GLOBAL') == [],
+          'глобальный список пуст и в холодном старте')
     check(set(rec3.last('GLOBAL')) & set(rec3.last('GUILD', 777)) == set(),
           'холодный старт не порождает дублей')
 
@@ -281,8 +281,8 @@ async def main():
     await SF.full_sync(bot6)
     check(rec6.last('GUILD', 777) != [],
           'разовый сбой глобальной очистки пережит РЕТРАЕМ — синк дошёл до серверов')
-    check(rec6.last('GLOBAL') == ['апелляция', 'update'],
-          'и глобальный список в итоге опубликован (keep_global)')
+    check(rec6.last('GLOBAL') == [],
+          'и глобальный список в итоге пуст (keep_global-команд нет)')
     check(set(rec6.last('GLOBAL')) & set(rec6.last('GUILD', 777)) == set(),
           'дублей нет')
 
@@ -324,7 +324,8 @@ async def main():
     bot_h = Bot()
     rec_h = bot_h.http
     tree_h = bot_h.tree
-    tree_h.add_command(mk('апелляция', keep_global=True))
+    # механика keep_global на примере белой команды: глобально живёт,
+    # гильдовые копии снимаются (дублей нет)
     tree_h.add_command(mk('update', keep_global=True))
     tree_h.add_command(mk('modpanel'))   # прод: add_cog без guilds=
     seen_h = {'guild_has': False, 'global_parked': False}

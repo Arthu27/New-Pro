@@ -9,7 +9,7 @@ Hakumo — Система репортов (ТЗ 2026-08-26)
 (решение владельца 2026-09-05: «/report — это позвать модератора»).
 Переписка при закрытии сжимается zlib и уходит в архив
 (services/reports_core). /my_violations — мои нарушения (обжалование
-наказаний — глобальная /апелляция в ЛС боту).
+наказаний — кнопка апелляции: в ЛС боту и в «своих наказаниях»).
 
 Хранение: SQLite data/reports.db + data/reports_<gid>.json (без Postgres —
 его на VDS нет, данных мизер). Оформление: чистые эмбеды без эмодзи.
@@ -1105,9 +1105,36 @@ class MyViolationsView(discord.ui.View):
     @discord.ui.button(label='Подать апелляцию', style=discord.ButtonStyle.primary,
                        custom_id='rpt_my_appeal')
     async def appeal(self, interaction, button):
-        await interaction.response.send_message(
-            'Апелляция подаётся через /апелляция в ЛС боту.',
-            ephemeral=True)
+        """Кнопка — единственный путь (владелец 2026-09-08: команду
+        /апелляция убрали). Открываем ту же форму, что кнопка в ЛС."""
+        cog = None
+        try:
+            cog = interaction.client.get_cog('Appeals')
+        except Exception as _ex:
+            _log.debug('my-violations appeal: cog: %s', _ex)
+        if cog is None:
+            await interaction.response.send_message(
+                'Бот только что перезапускался — нажмите кнопку ещё раз.',
+                ephemeral=True)
+            return
+        guild = cog._main_guild()
+        if guild is None:
+            await interaction.response.send_message(
+                'Бот ещё не настроен: владелец не указал главный сервер.',
+                ephemeral=True)
+            return
+        try:
+            banned = await cog._is_banned(guild, interaction.user)
+        except Exception as _ex:
+            _log.debug('my-violations appeal: бан-чек: %s', _ex)
+            banned = True   # не отпугнуть человека сбоем проверки
+        if not banned:
+            await interaction.response.send_message(
+                f'Вы не забанены на сервере **{guild.name}** — апелляция не нужна.',
+                ephemeral=True)
+            return
+        from cogs.appeals import AppealModal
+        await interaction.response.send_modal(AppealModal(cog, guild))
 
 
 async def setup(bot):

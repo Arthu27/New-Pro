@@ -208,7 +208,9 @@ b = Bot()
 asyncio.new_event_loop().run_until_complete(SF.full_sync(b))
 synced = dict(b.tree.synced)
 glob_names = {n for n, _ in synced.get('global', [])}
-check(glob_names == {'апелляция', 'update'},
+# 2026-09-08: /апелляция удалена (владелец: «она у нас в кнопке»),
+# глобально живёт только /update — и только из белого списка.
+check(glob_names == {'update'},
       f'глобально остаются только keep_global из белого списка (glob={sorted(glob_names)})')
 check(not any(t != 'chat' for _, t in synced.get('global', [])),
       'контекстные меню НЕ остаются глобальными (иначе были бы дубли)')

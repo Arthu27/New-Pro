@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 """Апелляции на баны (Appeals Cog)
 =================================
-Забаненный не может написать на сервере — но может написать боту в личку:
-
-    /апелляция [текст]                  (в ЛС боту; сервер — из конфигурации,
-                                         без текста откроется форма)
+Забаненный не может написать на сервере — но может написать боту в личку.
+Команды /апелляция больше НЕТ (владелец 2026-09-08: «она у нас в кнопке»):
+единственные пути подачи —
+  • кнопка «Подать апелляцию» под карточкой о бане в ЛС бота;
+  • меню «Подать апелляцию» в канале (публикуется из панели);
+  • кнопка «Подать апелляция» в «своих наказаниях» (/my-violations).
 
 Модераторы получают карточку с кнопками «Принять» / «Отклонить».
 Принят — пользователь разбанен и получает добрую весть в ЛС.
 Отклонён — получает отказ (с опциональным комментарием модератора).
-
-- /апелляция [текст]             — подать (в ЛС боту; сервер сам берётся из
-                                   конфигурации, без текста откроется форма)
-- /апелляции настройка #канал    — куда падать карточкам
-- /апелляции список              — ожидающие решения
 
 Хранилище — SQLite (GuildData 'appeals'). Кнопки живут в persistent view
 и переживают рестарт бота. Метки — aware UTC.
@@ -824,7 +821,7 @@ class AppealModal(discord.ui.Modal):
 
 
 # (выбора сервера больше нет: апелляция всегда идёт на главный сервер
-#  из конфигурации — см. cmd_appeal / _main_guild)
+#  из конфигурации — см. _main_guild)
 
 # ─── меню апелляций в канале (не в ЛС) ────────────────────────────────
 
@@ -944,8 +941,8 @@ class AppealDMView(discord.ui.View):
 
     Живёт в личке бота под карточкой «Вам выдан бан» и переживает
     рестарт: ког достаём из interaction на клике, ссылку не держим.
-    Открывает ту же форму, что /апелляция (владелец 2026-09-06:
-    «внизу кнопка для апелляции — чтобы типо разбан»).
+    Единственный путь подачи из ЛС (владелец 2026-09-08: команда
+    /апелляция убрана — «она у нас в кнопке»).
     """
 
     def __init__(self):
@@ -1860,66 +1857,6 @@ class Appeals(commands.Cog):
         if g is None and not gid and len(getattr(self.bot, 'guilds', [])) == 1:
             g = self.bot.guilds[0]
         return g
-
-    @app_commands.command(name='апелляция',
-                          description='Обжаловать наказание — подаётся в ЛС боту',
-                          extras={'keep_global': True})
-    @app_commands.allowed_contexts(guilds=False, dms=True, private_channels=True)
-    @app_commands.describe(текст='Что произошло — до 500 символов; без текста откроется форма')
-    async def cmd_appeal(self, interaction: discord.Interaction,
-                         текст: str = ''):
-        """Обжаловать наказание: /апелляция [текст] в ЛС боту.
-
-        Сервер никогда не спрашиваем — он из конфигурации. Без текста
-        открываем форму.
-        """
-        if interaction.guild is not None:
-            await interaction.response.send_message(
-                'Апелляция подаётся в личных сообщениях боту: открой ЛС бота '
-                'и вызови команду там.', ephemeral=True)
-            return
-        guild = self._main_guild()
-        if guild is None:
-            await interaction.response.send_message(
-                'Бот ещё не настроен: владелец не указал главный сервер. '
-                'Напишите администрации сервера другим способом.', ephemeral=True)
-            return
-        if not await self._is_banned(guild, interaction.user):
-            await interaction.response.send_message(
-                f'Вы не забанены на сервере **{guild.name}** — апелляция не нужна.',
-                ephemeral=True)
-            return
-        текст = (текст or '').strip()
-        if not текст:
-            # удобная форма: текст + ссылка-доказательство (необязательно)
-            await interaction.response.send_modal(AppealModal(self, guild))
-            return
-        # Карточка + открытие канала легко занимают больше 3с Discord.
-        await interaction.response.defer(ephemeral=True)
-        item, err = await self._submit_appeal(interaction.user, guild, текст)
-        if err:
-            await interaction.followup.send(
-                f'Не получилось: {err}.', ephemeral=True)
-            return
-        from cogs.embed_utils import hakumo_embed
-        _st = item.pop('_channel_status', 'failed')
-        _ch_name = str(item.pop('_channel_name', '') or 'канал апелляции')
-        if _st == 'opened':
-            _extra = (f'Канал **#{_ch_name}** на сервере открыт для вас — '
-                      'карточка видна там. Ответ придёт в личку.')
-        elif _st == 'deferred':
-            _extra = (f'Вы забанены, поэтому сервер пока не виден. Канал '
-                      f'**#{_ch_name}** откроется автоматически — сразу '
-                      'после разбана. Ответ придёт в личку.')
-        else:
-            _extra = ('Ответ придёт в личку. Канал апелляции открыть не '
-                      'получилось (боту нужны права) — модераторы напишут '
-                      'вам сами.')
-        e = hakumo_embed('appeal', f'Апелляция #{item["id"]} отправлена',
-                         f'Модераторы сервера **{guild.name}** уже получили '
-                         f'её. {_extra}')
-        await interaction.followup.send(embed=e)
-
 
     async def _is_banned(self, guild, user):
         """Забанен ли человек ПО ЛЮБОЙ нашей механике.
