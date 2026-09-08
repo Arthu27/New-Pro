@@ -117,6 +117,15 @@ print('\n== Node-харнесс: живое исполнение логики э
 scripts = re.findall(r'<script>(.*?)</script>', TPL, re.S)
 check(len(scripts) >= 2, f'inline-скриптов: {len(scripts)} (шим + главный)')
 page_js = '\n;\n'.join(scripts).replace("{{ main_guild_id }}", "777")
+# Jinja-выражение адреса Esc-выхода (штаб виден — ведём в него).
+# Подменяем ДО запуска в Node: сырые {{ }} для new Function — синтакс-
+# ошибка. Если выражение в шаблоне переформулируют — честно упадём тут.
+_ESC_TPL = "{{ ('/mod-center' if '/mod-center' in panel_visible_paths else '/')|tojson }}"
+if _ESC_TPL in page_js:
+    page_js = page_js.replace(_ESC_TPL, '"/mod-center"')
+import re as _re_sub
+_left = _re_sub.findall(r'{{.*?}}', page_js)
+check(not _left, f'JS киоска без Jinja-вставок (остались: {_left[:2]})')
 
 harness = r"""
 const fs = require('fs');

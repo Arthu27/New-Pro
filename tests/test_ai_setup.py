@@ -167,7 +167,11 @@ check('body { -webkit-tap-highlight-color: transparent; }' in css,
 check('@media (hover: none) and (pointer: coarse)' in css,
       'есть media-блок под тач-устройства')
 coarse = css[css.index('@media (hover: none) and (pointer: coarse)'):]
-check('.btn { min-height: 42px' in coarse, 'тач: .btn не ниже 42px')
+# «не ниже 42px» — нижняя граница тач-таргета; в CSS может быть и больше
+# (сейчас 44px — просторнее пальца), ловим значение, а не устаревший литерал
+_m42 = re.search(r'\.btn \{ min-height: (\d+)px', coarse)
+check(_m42 and int(_m42.group(1)) >= 42,
+      f'тач: .btn не ниже 42px (сейчас {_m42.group(0) if _m42 else "нет"})')
 check('.btn-icon { width: 44px; height: 44px; }' in coarse,
       'тач: иконочные кнопки 44px')
 check('.pm-ico-btn { width: 42px !important' in coarse,

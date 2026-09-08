@@ -67,8 +67,8 @@ async def _ack(interaction, ephemeral=True, thinking=True):
             try:
                 await resp.defer(ephemeral=ephemeral, thinking=True)
                 return
-            except Exception:
-                pass
+            except Exception as _e2:
+                log.debug('[MODPANEL] defer(thinking): %s', _e2)
         log.debug('[MODPANEL] defer: %s', _e)
 
 
@@ -83,8 +83,8 @@ def _is_untouchable(guild, user):
         from config import Config
         if int(uid) in Config.all_owner_ids():
             return True
-    except Exception:
-        pass
+    except Exception as _e:
+        log.debug('owner-check %r: %s (проверим owner_id гильды)', uid, _e)
     if uid == getattr(guild, 'owner_id', None):
         return True
     if getattr(user, 'bot', False):
@@ -2111,8 +2111,8 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             mem = interaction.guild.get_member(int(prefill))
             if mem is not None:
                 who = mem.mention
-        except Exception:
-            pass
+        except Exception as _e:
+            log.debug('prefill mention %r: %s', prefill, _e)
         embed = discord.Embed(
             title="Мут",
             description=f"{who}\nКакой — чат, войс или оба.",
@@ -2152,8 +2152,8 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             mem = interaction.guild.get_member(int(prefill))
             if mem is not None:
                 who = mem.mention
-        except Exception:
-            pass
+        except Exception as _e:
+            log.debug('prefill mention %r: %s', prefill, _e)
         embed = discord.Embed(
             title="Снять мут",
             description=f"{who}\nКак снять — чат или войс.",
@@ -2394,7 +2394,9 @@ class ModTargetSelect(discord.ui.UserSelect):
             return
         try:
             if not interaction.response.is_done():
-                await interaction.response.defer()
+                # ephemeral: подтверждение клика тихое — на экране ничего
+                # не появляется (всем не показывать «бот думает…»)
+                await interaction.response.defer(ephemeral=True)
         except Exception as _te:
             log.debug("ModTargetSelect: %s", _te)
 
@@ -2478,8 +2480,8 @@ class ModPanelView(discord.ui.View):
             try:
                 if not interaction.response.is_done():
                     await interaction.response.defer()
-            except Exception:
-                pass
+            except Exception as _e2:
+                log.debug('modpanel refresh defer: %s', _e2)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         user = interaction.user

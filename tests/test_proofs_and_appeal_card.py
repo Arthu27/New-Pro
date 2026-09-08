@@ -231,9 +231,10 @@ import services.appeal_card as _AC2
 
 _ph = _Img2.new('RGB', (800, 600), (20, 30, 60))
 _b = _io2.BytesIO(); _ph.save(_b, format='JPEG')
+# link= убран вместе с полем-доказательством (владелец 2026-09-05,
+# Task 16): у композита нет ссылок — фото сверху, карточка ниже
 _comp = _AC2.render_url_card(_b.getvalue(), appeal_id=9, user_name='Тест',
-                             text='проверка композита апелляции',
-                             link='https://pin.it/xyz')
+                             text='проверка композита апелляции')
 _ci2 = _Img2.open(_io2.BytesIO(_comp))
 check(_comp[:8] == b'\x89PNG\r\n\x1a\n' and _ci2.size[0] == _AC2.W
       and _ci2.size[1] > _AC2.H + 200,
@@ -256,9 +257,10 @@ check('pin' in atpl.lower(),
 # будет — это тоже хочу увидеть»)
 check('Апелляция #7 — новая' in atpl and 'решение — меню под карточкой' in atpl,
       'макет: заголовок и футер эмбеда как в Discord')
-check('Доказательство' in atpl and 'Участник' in atpl
-      and 'Контекст модератора' in atpl,
-      'макет: поля эмбеда (доказательство, участник, контекст)')
+# «Доказательство» убрано вместе с полем-ссылкой (владелец 2026-09-05,
+# Task 16) — в макете остаются участник и контекст модератора
+check('Участник' in atpl and 'Контекст модератора' in atpl,
+      'макет: поля эмбеда (участник, контекст модератора)')
 check('Взять в работу' in atpl and 'Принять' in atpl and 'Отклонить' in atpl,
       'макет: кнопки решения под сообщением')
 check('id="apLookPvImgWrap"' in atpl and 'imgWrap.style.display' in atpl,

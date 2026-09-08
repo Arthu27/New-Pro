@@ -230,8 +230,8 @@ def register(ctx):
                 try :
                     ts =row .get ('timestamp')
                     row ['timestamp']=_iso (ts if isinstance (ts ,str )else ('' if ts is None else str (ts )))
-                except Exception :
-                    pass
+                except Exception as _ex :
+                    _log .debug ('backup: метка %r: %s',ts ,_ex )
             result .append (row )
         if _key is not None :
             result .sort (key =_key ,reverse =True )

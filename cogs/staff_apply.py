@@ -178,8 +178,8 @@ def _apply_room(guild):
         ch = _on_g(guild, cid)
         if ch is not None:
             return ch
-    except Exception:
-        pass
+    except Exception as _e:
+        log.debug('staff_apply: канал #%s: %s', cid, _e)
     getter = getattr(guild, 'get_channel', None)
     return getter(cid) if callable(getter) else None
 
@@ -205,7 +205,8 @@ def _curator_ping(guild):
     for rid in (cur, KNOWN_CURATOR_ROLE_ID):
         try:
             rid = int(rid or 0)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as _e:
+            log.debug('staff_apply: id роли %r: %s', rid, _e)
             continue
         if rid and get_role(rid) is not None:
             return f'<@&{rid}>'

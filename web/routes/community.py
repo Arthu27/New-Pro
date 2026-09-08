@@ -365,8 +365,8 @@ def register(ctx):
                     if ts :
                         try :
                             e ['timestamp']=_ts_to_utc_iso (ts if isinstance (ts ,str )else str (ts ))
-                        except Exception :
-                            pass
+                        except Exception as _ex :
+                            _log .debug ('community: метка %r: %s',ts ,_ex )
                     role =e .get ('role')or ''
                     e ['role_label']=ROLE_LABELS .get (role ,role )
                     if e .get ('broadcast')or not e .get ('action'):

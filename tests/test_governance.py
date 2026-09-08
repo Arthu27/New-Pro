@@ -68,6 +68,9 @@ LEGACY_ROUTE_EMOJI = {
     '_common.py', 'ai_assist.py', 'ai_chat.py', 'backups.py', 'giveaways.py',
     'guild_features.py', 'member_ops.py', 'modplus.py', 'roles_antiraid.py',
     'security_api.py', 'tasks_rules.py', 'tickets_admin.py',
+    # апелляции: 🤝 «Вас будет обслуживать» и 🌀 «больше не ведёт» —
+    # заказы владельца 2026-09-05/07 (25836aa), тексты живут в коде
+    'appeals_panel.py',
 }
 # Публичные API без логина — осознанно (виджет статуса снаружи).
 # Discord Activity музыки снесена вместе с фичей музыки (2026-09-01).

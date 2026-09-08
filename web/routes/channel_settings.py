@@ -204,8 +204,8 @@ def _pretty_room_names():
     for var, k in keys.items():
         try:
             out[var] = _LC[k]
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug('channel_settings: строка %s: %s', var, _ex)
     return out
 
 

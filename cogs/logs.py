@@ -337,8 +337,8 @@ def _is_thread_dest (ch ):
     try :
         if isinstance (ch ,discord .Thread ):
             return True
-    except Exception :
-        pass
+    except Exception as _ex :
+        log .debug ('logs: is-thread проверка канала %s: %s',getattr (ch ,'id','?'),_ex )
     tname =getattr (getattr (ch ,'type',None ),'name','')
     return tname in ('public_thread','private_thread','news_thread')
 
@@ -420,8 +420,8 @@ def _staff_role_ids (guild ):
                 if str (panel )in ('mod','curator','admin','owner','helper'):
                     try :
                         ids .add (int (rid ))
-                    except (TypeError ,ValueError ):
-                        pass
+                    except (TypeError ,ValueError )as _ex :
+                        log .debug ('logs: role_map: id %r пропущен: %s',rid ,_ex )
     except Exception as _ex :
         log .debug ('_staff_role_ids role_map: %s',_ex )
     try :
@@ -1186,7 +1186,8 @@ def _latest_case(guild, user_id, actions=None, window=90):
                 if when.tzinfo is None:
                     when = when.replace(tzinfo=datetime.timezone.utc)
                 age = (now - when).total_seconds()
-            except Exception:
+            except Exception as _ex:
+                log.debug('logs: метка времени %r не разобрана: %s', ts, _ex)
                 continue
             if age < 0 or age > window:
                 continue
@@ -1886,16 +1887,18 @@ def _profile_cell(user):
             if getattr(created, 'tzinfo', None) is None:
                 created = created.replace(tzinfo=datetime.timezone.utc)
             lines.append('аккаунт ' + _human_age((now - created).days))
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('logs: возраст аккаунта %s: %s',
+                      getattr(user, 'id', '?'), _ex)
     joined = getattr(user, 'joined_at', None)
     if joined is not None:
         try:
             if getattr(joined, 'tzinfo', None) is None:
                 joined = joined.replace(tzinfo=datetime.timezone.utc)
             lines.append('на сервере ' + _human_age((now - joined).days))
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('logs: возраст вступления %s: %s',
+                      getattr(user, 'id', '?'), _ex)
     return _bullet(*lines) if lines else None
 
 

@@ -215,19 +215,23 @@ _pc3 = _PermChannel(cid=999)
 _g4 = _G2([_pc3])
 opened4, ch4 = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g4, _User(), fallback_channel=_pc3))
-check(opened4 is False and ch4 is None and _pc3.overwrites == {},
+# контракт статусов (2026-09-07): 'opened' | 'deferred' | 'failed'
+check(opened4 == 'failed' and ch4 is None and _pc3.overwrites == {},
       'пустой маршрут без комнаты → карточки не открываем')
 
 # 3г. Ни маршрута, ни fallback — честный отказ (False), без фейка «открыто»
 opened5, ch5 = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g4, _User()))
-check(opened5 is False and ch5 is None, 'открывать нечего → честный отказ')
+check(opened5 == 'failed' and ch5 is None, 'открывать нечего → честный отказ')
 
-# 3д. ЛС-подтверждение называет ИМЯ канала
-line = _cog._dm_channel_line(True, _pc)
+# 3д. ЛС-подтверждение называет ИМЯ канала (статусы-строки, не bool)
+line = _cog._dm_channel_line('opened', _pc)
 check('#апелляции' in line, 'в ЛС видно имя открытого канала',
       f'→ {line[:60]}')
-line_bad = _cog._dm_channel_line(False, None)
+line_def = _cog._dm_channel_line('deferred', _pc)
+check('#апелляции' in line_def and 'откроется' in line_def,
+      'жёсткий бан: честно — канал откроется после снятия бана')
+line_bad = _cog._dm_channel_line('failed', None)
 check('не получилось' in line_bad, 'не открылся → честная строка без обещаний')
 
 # 3е. Пустой маршрут, известная комната на сервере — открываем её, не карточки
@@ -276,12 +280,22 @@ class _ThreadCh(_PermChannel):
         self.added.append(user)
 
 
+# 3и. Ветка: участнику на сервере — add_user (дизайн 2026-09-07:
+# add_user работает только для тех, кто УЖЕ на сервере)
 _th = _ThreadCh()
-_g_th = _G2([_th])
+_g_th = _GMem([_th])
 opened_th, ch_th = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g_th, _User()))
-check(opened_th and _th.added and _th.added[0].id == 2002,
-      'ветка апелляции: add_user подавшего')
+check(opened_th == 'opened' and _th.added and _th.added[0].id == 2002,
+      'ветка апелляции: add_user подавшего (он на сервере)')
+# жёстко забаненный (Member нет): add_user невозможен — только overwrite,
+# доступ включится после разбана; врать «добавлен» не должны
+_th2 = _ThreadCh()
+_g_th2 = _G2([_th2])
+opened_th2, ch_th2 = asyncio.new_event_loop().run_until_complete(
+    _cog._open_appeal_channel(_g_th2, _User()))
+check(opened_th2 == 'deferred' and not _th2.added and 2002 in _th2.overwrites,
+      'ветка + жёсткий бан: без add_user, overwrite включится после разбана')
 
 # 3к. Оценка рассмотрения — канал владельца (не карточки, не комната)
 RATING_ID = 1518751543329951904

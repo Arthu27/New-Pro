@@ -74,8 +74,8 @@ client = appmod.app.test_client()
 with client.session_transaction() as sess:
     sess.clear()
     sess['logged_in'] = True
-    sess['username'] = 'admin'
-    sess['role'] = 'admin'
+    sess['username'] = 'owner'
+    sess['role'] = 'owner'   # хаб Каналов и его API — только владелец
 
 CH = str(1384282749317152878)
 r = client.get('/api/channel-routes').get_json()

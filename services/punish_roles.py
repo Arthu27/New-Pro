@@ -317,7 +317,8 @@ def _clean_role_ids(role_ids):
     for raw in role_ids or ():
         try:
             rid = int(raw)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as _e:
+            log.debug('punish_roles: id %r пропущен: %s', raw, _e)
             continue
         if rid <= 0 or rid in seen:
             continue

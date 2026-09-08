@@ -561,6 +561,28 @@ textarea.field-input{resize:vertical;min-height:52px}
     return 'каналов';
   }
 
+  /* Якорь сворачивания: заголовок категории остаётся под пальцем.
+     Свернули категорию — всё, что ниже, уезжает вверх на высоту её
+     каналов; после анимации компенсируем скролл страницы. */
+  function anchorTop(el) {
+    return el.getBoundingClientRect().top;
+  }
+  function anchorAfterCollapse(hdr, group, topBefore) {
+    var chEl = group.querySelector('.cat-channels');
+    var done = false;
+    var compensate = function () {
+      if (done) return;
+      done = true;
+      if (chEl) chEl.removeEventListener('transitionend', compensate);
+      var delta = anchorTop(hdr) - topBefore;
+      if (delta) window.scrollBy(0, delta);
+    };
+    /* пустая категория: высота не меняется — transitionend не придёт,
+       подстрахуемся таймаутом чуть длиннее анимации (.3s) */
+    if (chEl) chEl.addEventListener('transitionend', compensate);
+    setTimeout(compensate, 340);
+  }
+
   function categoryBlock(key, name, icon, children) {
     var isOpen = !collapsedCats[key];
     var catId = _catIds[key] || '';
@@ -1087,10 +1109,12 @@ textarea.field-input{resize:vertical;min-height:52px}
         /* каждая категория сворачивается САМОСТОЯТЕЛЬНО: остальные
            остаются как были — все каналы можно держать открытыми */
         var catName = group.getAttribute('data-cat-name');
+        var topBefore = anchorTop(hdr);
         var nowCollapsed = group.classList.toggle('collapsed');
         hdr.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
         collapsedCats[catName] = nowCollapsed;
         try { localStorage.setItem('ch_collapsed_cats_' + selectedGuild, JSON.stringify(collapsedCats)); } catch (err) {}
+        anchorAfterCollapse(hdr, group, topBefore);
         return;
       }
       var row = e.target.closest('.ch-row');

@@ -609,6 +609,9 @@ check(r.status_code == 200 and ov.get('success') is True
       and ov.get('guardian') and ov['guardian'].get('events_total') == 11,
       'Центр безопасности видит сводку Щита (связано)')
 
+# хаб Каналов — страница и API только владельца (согласованно);
+# читаем его владельцем: предыдущая проверка была под «mod» (403)
+login_as('owner')
 r = client.get('/api/channel-routes')
 routes = r.get_json().get('routes', [])
 # 4 лог-алерт маршрута (guardian/security/antiraid/anticrash) скрыты с хаба —

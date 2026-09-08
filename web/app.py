@@ -2845,8 +2845,8 @@ def _bot_exec_identity ():
             _bid =str (getattr (_u ,'id','')or '').strip ()
             if _bid :
                 ids .add (_bid )
-    except Exception :
-        pass 
+    except Exception as _ex :
+        _log .debug ('упомянутые имена: %s',_ex )
     return names ,ids 
 
 
@@ -3075,8 +3075,8 @@ def api_logs ():
                     if _dmin and not _evc .get ('duration'):
                         try :
                             _evc ['duration']=max (0 ,int (_dmin ))
-                        except (TypeError ,ValueError ):
-                            pass 
+                        except (TypeError ,ValueError )as _dex :
+                            _log .debug ('срок мута %r: %s',_dmin ,_dex ) 
                     all_events .append (_evc )
 
         # Нормализуем метки к UTC со смещением — иначе браузер считает
