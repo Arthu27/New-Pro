@@ -5041,8 +5041,13 @@ def api_bot_sync ():
 def api_bot_commands_audit ():
     if not bot_instance :
         if _demo_mode ():
-            return jsonify ({'demo':True ,'global':['апелляция'],
-                             'guilds':{'Hakumo Demo (777)':['help','modpanel','warn']},
+            # 2026-09-08 (Task 19): /апелляция удалена — подача кнопкой;
+            # /update гильдовая. Глобальный список ПУСТ, на сервере —
+            # ровно 5 команд белого списка (см. services/sync_filtered.py).
+            return jsonify ({'demo':True ,'global':[],
+                             'guilds':{'Hakumo Demo (777)':[
+                                 'modpanel','update','afk','report',
+                                 'my-violations']},
                              'duplicates':[]})
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
     async def do ():
