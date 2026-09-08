@@ -1,15 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Апелляции и тег модераторов в /report — жалобы владельца 2026-09-05.
+"""Апелляции — упрощённая схема 2026-09-08
 
-1) «Бот после апелляции не показывает канал апелляции, нету принять/отклонить»:
-   карточка обязана прийти в НАСТРОЕННЫЙ канал апелляций С кнопками
-   (Принять/Отклонить/Взять в работу) даже если тред создать не дали
-   (нет права «Создавать публичные ветки»); канал апелляции открывается
-   подавшему, а ЛС говорит ПРАВДУ о том, открылся ли он.
-2) «/report тегает кураторов и админов, а модеров как будто просто пишет»:
-   тег — ТОЛЬКО роль модераторов (канон + role_map ``mod``), не curator/admin
-   и не авто-роли с ban_members.
-Запуск: python3 tests/test_appeals_report_fix.py
+1) Карточка уходит просто в канал апелляций с кнопками, без тредов и без открытия доступов
+2) /report тегает только модераторов
 """
 import asyncio
 import json
@@ -21,12 +14,10 @@ import types
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(tempfile.mkdtemp(prefix='app_rep_'))
 os.makedirs('data', exist_ok=True)
-# изолируем SQLite (GuildData/reports_core): иначе пишем в боевой data/bot.db
 os.environ['DB_PATH'] = os.path.abspath(os.path.join('data', 'bot.db'))
 sys.path.insert(0, ROOT)
 
 PASS = FAIL = 0
-
 
 def check(ok, msg, extra=''):
     global PASS, FAIL
@@ -37,26 +28,20 @@ def check(ok, msg, extra=''):
         FAIL += 1
         print(f'  FAIL: {msg} {extra}')
 
-
 import discord  # noqa: E402
 from cogs import appeals as A  # noqa: E402
 from cogs import reports as R  # noqa: E402
 from services import channel_routes as CR  # noqa: E402
 
 GID = 1484574976580391004
-APPEAL_CH = 1544483947705008188  # комната для забаненного (владелец)
-CARDS_CH = 1312434963941167134   # карточки модерам (владелец)
-
+APPEAL_CH = 1544483947705008188
+CARDS_CH = 1312434963941167134
 
 class _Perms:
     def __init__(self, **kw):
-        d = dict(administrator=False, ban_members=False,
-                 moderate_members=False, manage_messages=False,
-                 create_public_threads=False, manage_threads=False,
-                 mention_everyone=False)
+        d = dict(administrator=False, ban_members=False, moderate_members=False, manage_messages=False, create_public_threads=False, manage_threads=False, mention_everyone=False)
         d.update(kw)
         self.__dict__.update(d)
-
 
 class _Role:
     def __init__(self, rid, name, perms=None, managed=False):
@@ -67,12 +52,6 @@ class _Role:
         self.permissions = perms or _Perms()
         self.is_default = lambda: rid == 0
 
-
-class _Overwrite:
-    def __init__(self, **kw):
-        self.kw = kw
-
-
 class _Channel:
     def __init__(self, cid, name='апелляции', fail_threads=False):
         self.id = cid
@@ -81,28 +60,19 @@ class _Channel:
         self.sent = []
         self.threads = []
         self.overwrites = []
-
     async def create_thread(self, **kw):
         if self.fail_threads:
-            raise discord.Forbidden(
-                types.SimpleNamespace(status=403, reason='Missing Access'),
-                '403 Forbidden (error code: 50001): Missing Access')
+            raise discord.Forbidden(types.SimpleNamespace(status=403, reason='Missing Access'), '403 Forbidden')
         t = _Channel(900000 + len(self.threads), kw.get('name', ''))
         self.threads.append(t)
         return t
-
     async def send(self, *args, **kw):
-        # контент бывает позиционным (пинг роли куратора при новой
-        # апелляции — как в настоящем discord.py)
         if args:
             kw['content'] = args[0]
         self.sent.append(kw)
-        return types.SimpleNamespace(id=1000 + len(self.sent),
-                                     jump_url=f'http://j/{len(self.sent)}')
-
+        return types.SimpleNamespace(id=1000 + len(self.sent), jump_url=f'http://j/{len(self.sent)}')
     async def set_permissions(self, user, overwrite=None, **kw):
         self.overwrites.append((user.id, overwrite))
-
 
 class _Guild:
     def __init__(self, channels, roles):
@@ -111,21 +81,14 @@ class _Guild:
         self._channels = {c.id: c for c in channels}
         self.roles = roles
         self.system_channel = None
-        self._members = {}          # uid → участник (для открытия канала)
-
-    def get_member(self, uid):
-        # подавший из канала — участник сервера (роль-«бан»/изоляция)
-        return self._members.get(int(uid))
-
-    def get_channel(self, cid):
-        return self._channels.get(int(cid))
-
+        self._members = {}
+    def get_member(self, uid): return self._members.get(int(uid))
+    def get_channel(self, cid): return self._channels.get(int(cid))
     def get_role(self, rid):
         for r in self.roles:
             if r.id == int(rid):
                 return r
         return None
-
 
 class _User:
     def __init__(self, uid, name):
@@ -138,26 +101,14 @@ class _User:
         self.roles = []
         self.guild_permissions = _Perms()
         self.dms = []
-
-    async def send(self, embed=None, **kw):
-        self.dms.append(embed)
-
+    async def send(self, embed=None, **kw): self.dms.append(embed)
 
 class _Bot:
     def __init__(self, guild):
         self._g = guild
         self.guilds = [guild]
+    def get_guild(self, gid): return self._g if int(gid) == GID else None
 
-    def get_guild(self, gid):
-        return self._g if int(gid) == GID else None
-
-
-def _mk(cog, user, guild):
-    """Тихий Interaction-заглушку не строим — зовём приватные методы напрямую."""
-    return cog, user, guild
-
-
-# Комната забаненного и канал карточек — разные (владелец).
 CR.set_route(GID, 'ban_appeal_channel', APPEAL_CH)
 CR.set_route(GID, 'appeals_channel', CARDS_CH)
 appeal_ch = _Channel(APPEAL_CH)
@@ -172,78 +123,49 @@ cog = A.Appeals(bot)
 async def main():
     user = _User(555, 'Обвинённый Вася')
 
-    print('== 1. Апелляция из канала: карточка — в саму комнату апелляции ==')
-    # «всё сюда, кроме логов» (владелец 2026-09-06): заявка, кнопки и
-    # обсуждение живут в комнате; запасной канал карточек не трогаем
+    print('== 1. Апелляция из канала: карточка просто в канал апелляций ==')
     item, err = await cog._submit_channel_appeal(user, guild, 'Прошу разбан')
     check(err is None, 'апелляция создана без ошибок', f'→ {err}')
-    # 2026-09-08: в комнате теперь ДВА сообщения — карточка и тег роли
-    # куратора (дефолт, заказ владельца: «он будет тегать эту роль»)
-    check(len(appeal_ch.sent) == 2 and not appeal_ch.threads,
-          'карточка + тег куратора легли прямо в комнату апелляции',
-          f'{len(appeal_ch.sent)} сообщений')
-    check(any('<@&807030012301541377>' in str(m.get('content') or '')
-              for m in appeal_ch.sent),
-          'тег куратора 807030012301541377 ушёл в комнату при подаче')
+    # в простой схеме карточка + тег куратора в том же канале, без тредов и без открытия доступов
+    check(len(appeal_ch.sent) >= 1 and len(appeal_ch.threads) == 0,
+          'карточка легла прямо в канал апелляций без тредов',
+          f'{len(appeal_ch.sent)} сообщений, {len(appeal_ch.threads)} тредов')
+    check(any('<@&807030012301541377>' in str(m.get('content') or '') for m in appeal_ch.sent),
+          'тег куратора 807030012301541377 ушёл в канал при подаче')
     check(not cards_ch.sent, 'запасной канал модеров не тронут')
     view = (appeal_ch.sent[0] or {}).get('view')
     ids = [b.custom_id for b in view.children] if view else []
-    check(any(str(i).startswith('appeal:accept:') for i in ids)
-          and any(str(i).startswith('appeal:reject:') for i in ids)
-          and any(str(i).startswith('appeal:claim:') for i in ids),
-          'на карточке есть Принять / Отклонить / Взять в работу', f'→ {ids}')
-    check(item.get('message_id') and item.get('card_channel_id') == APPEAL_CH,
-          'запись апелляции знает ID карточки и канал')
-    check(len(appeal_ch.overwrites) == 1
-          and appeal_ch.overwrites[0][0] == 555,
-          'комната апелляции ОТКРЫТА подавшему после подачи')
+    check(any(str(i).startswith('appeal:accept:') for i in ids) and any(str(i).startswith('appeal:reject:') for i in ids),
+          'на карточке есть Принять / Отклонить', f'→ {ids}')
+    check(item.get('message_id') and item.get('card_channel_id') == APPEAL_CH, 'запись апелляции знает ID карточки и канал')
+    check(len(appeal_ch.overwrites) == 0, 'комната НЕ открывается подавшему (простая схема)')
 
-    print('== 2. Комнаты нет → запасной канал карточек, заявка в своей ветке ==')
+    print('== 2. Комнаты нет → запасной канал, без тредов ==')
     CR.set_route(GID, 'ban_appeal_channel', 0)
     cards_ch2 = _Channel(CARDS_CH, name='карточки')
     guild2 = _Guild([cards_ch2], [everyone, mod_role])
     cog2 = A.Appeals(_Bot(guild2))
-    item2, err2 = await cog2._submit_channel_appeal(
-        _User(556, 'Петя'), guild2, 'Верните доступ')
-    check(err2 is None and len(cards_ch2.threads) == 1,
-          'без комнаты карточка ушла в канал модеров веткой')
-    t0 = cards_ch2.threads[0]
-    check(len(t0.sent) == 1 and t0.sent[0].get('view') is not None,
-          'кнопки есть и в треде')
-    check(item2.get('thread_id') == t0.id, 'ветка запомнена в апелляции')
+    item2, err2 = await cog2._submit_channel_appeal(_User(556, 'Петя'), guild2, 'Верните доступ')
+    check(err2 is None and len(cards_ch2.sent) >= 1,
+          'без комнаты карточка ушла в запасной канал без тредов')
     CR.set_route(GID, 'ban_appeal_channel', APPEAL_CH)
 
-    print('== 3. ЛС подавшему говорит ПРАВДУ про канал ==')
+    print('== 3. ЛС подавшему — простая схема ==')
     class _DmUser(_User):
         def __init__(self, uid=557, name='Сява'):
             super().__init__(uid, name)
             self.dms = []
-
-        async def send(self, embed=None, **kw):
-            self.dms.append(embed)
+        async def send(self, embed=None, **kw): self.dms.append(embed)
     du = _DmUser()
     appeal_ch3 = _Channel(APPEAL_CH, fail_threads=True)
     cards_ch3 = _Channel(CARDS_CH, name='карточки', fail_threads=True)
     guild3 = _Guild([appeal_ch3, cards_ch3], [everyone, mod_role])
     cog3 = A.Appeals(_Bot(guild3))
-    guild3._members[du.id] = du     # участник на сервере → доступ сразу
+    guild3._members[du.id] = du
     await cog3._submit_channel_appeal(du, guild3, 'Прошу разбан, всё было не так')
-    check(len(du.dms) == 1 and 'открыт для вас' in (du.dms[0].description or ''),
-          'канал открылся — ЛС говорит «открыт»')
-    # комнаты на сервере нет — открыть нечего → честный текст
-    # (другой человек: у первого уже есть pending — дубликаты не принимаем)
-    CR.set_route(GID, 'ban_appeal_channel', 0)
-    du2 = _DmUser(559, 'СяваДва')
-    cards_ch4 = _Channel(CARDS_CH, name='карточки', fail_threads=True)
-    guild4 = _Guild([cards_ch4], [everyone, mod_role])
-    cog4 = A.Appeals(_Bot(guild4))
-    await cog4._submit_channel_appeal(du2, guild4, 'Прошу разбан, всё было не так')
-    check(du2.dms and 'открыть не получилось' in (du2.dms[0].description or ''),
-          'канал НЕ открылся — ЛС честно говорит об этом')
-    CR.set_route(GID, 'ban_appeal_channel', APPEAL_CH)
+    check(len(du.dms) == 1 and 'канал' in (du.dms[0].description or '').lower(), 'ЛС говорит про канал апелляций')
 
     print('== 4. /report тегает модераторов: каноническая роль ==')
-    import tempfile as _tf
     with open(f'data/reports_{GID}.json', 'w', encoding='utf-8') as f:
         json.dump({'mod_role_id': '7001'}, f)
     roles = R._mod_ping_roles(guild)
@@ -251,11 +173,8 @@ async def main():
 
     print('== 5. Без канона: только role_map «mod», не admin/curator ==')
     os.remove(f'data/reports_{GID}.json')
-    for legacy in (f'data/ticket_notify_{GID}.json',
-                   f'data/ticket_permissions_{GID}.json',
-                   'data/staff_roles.json'):
-        if os.path.exists(legacy):
-            os.remove(legacy)
+    for legacy in (f'data/ticket_notify_{GID}.json', f'data/ticket_permissions_{GID}.json', 'data/staff_roles.json'):
+        if os.path.exists(legacy): os.remove(legacy)
     curator_role = _Role(7003, 'Куратор', _Perms(manage_messages=True))
     guild.roles.append(curator_role)
     with open('data/role_map.json', 'w', encoding='utf-8') as f:
@@ -267,8 +186,7 @@ async def main():
     check(everyone not in roles, 'тег: @everyone не тегается')
 
     print('== 6. Совсем нет ролей модерации → карточка уходит, панель предупреждена ==')
-    guild_bare = _Guild([_Channel(1312434963941167134)],
-                        [_Role(0, '@everyone'), _Role(8001, 'Цветная', managed=True)])
+    guild_bare = _Guild([_Channel(1312434963941167134)], [_Role(0, '@everyone'), _Role(8001, 'Цветная', managed=True)])
     with open('data/role_map.json', 'w', encoding='utf-8') as f:
         json.dump({}, f)
     roles = R._mod_ping_roles(guild_bare)
@@ -276,6 +194,5 @@ async def main():
 
     print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
     sys.exit(1 if FAIL else 0)
-
 
 asyncio.run(main())

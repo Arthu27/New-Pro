@@ -150,17 +150,25 @@ check('_unban_role' in _ucompact,
 check('guild.unban(' in _ucompact,
       'разбан снимает и настоящий Discord-бан (анти-альт/страж)')
 
-print('== 6. Объявление «Вас будет обслуживать» при «Взять в работу» ==')
+print('== 6. Упрощённая апелляция: «Взять в работу» НЕ открывает каналы ==')
 _appeals_src = open(os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     'cogs', 'appeals.py'), encoding='utf-8').read()
-check('Вас будет обслуживать' in _appeals_src,
-      'кнопка «Взять в работу» объявляет в комнате ведущего')
+# В простой схеме (2026-09-08): заявка просто в канал, без открытия доступов
+check('_open_appeal_channel' in _appeals_src,
+      'совместимый метод _open_appeal_channel остался для панели')
+# _open_appeal_channel должен возвращать skipped, а не делать overwrites
+check('skipped' in _appeals_src and 'PermissionOverwrite' not in _appeals_src.split('_open_appeal_channel')[1][:500],
+      '«Взять в работу» не открывает канал (skipped, без overwrites)')
+check('claimed_by' in _appeals_src,
+      'кнопка «Взять в работу» помечает кто взял (claimed_by)')
 _web_src = open(os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     'web', 'routes', 'appeals_panel.py'), encoding='utf-8').read()
-check('Вас будет обслуживать' in _web_src,
-      '«Взять в работу» из веб-панели делает то же объявление')
+check('_open_channel_for_claim' in _web_src,
+      'панель: _open_channel_for_claim остался для совместимости')
+check('skipped' in _appeals_src or 'ничего никому не открываем' in _appeals_src,
+      'простая схема: канал апелляции не открывается забаненному (заявка просто в канал)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
