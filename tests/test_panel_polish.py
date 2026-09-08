@@ -119,6 +119,10 @@ os.environ.setdefault('DEMO_MODE', '1')
 from web.app import app as flask_app
 flask_app.config['TESTING'] = True
 client = flask_app.test_client()
+# демо-автологина больше нет (2026-09-08): /channels — админская страница,
+# входим по паролю из env этого теста
+client.post('/login', data={'username': os.environ.get('PANEL_USER', 'admin'),
+                            'password': os.environ.get('PANEL_PASSWORD', '')})
 
 r = client.get('/channels')
 body = r.get_data(as_text=True)

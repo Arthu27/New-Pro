@@ -138,6 +138,10 @@ check('_strip_appeal_embed_texts' in src,
 print('== 5. Предпросмотр «как это будет выглядеть»: сервер качает картинку ==')
 import web.app as webapp  # noqa: E402
 _client = webapp.app.test_client()
+# демо-автологина больше нет (2026-09-08): предпросмотр — рабочий инструмент
+# персонала, входим владельцем по паролю из env этого теста
+_client.post('/login', data={'username': os.environ.get('PANEL_USER', 'owner'),
+                             'password': os.environ['PANEL_PASSWORD']})
 
 # 5а. плохая ссылка → честный отказ
 r_bad = _client.get('/api/guild/777/appeals/card-preview.png'

@@ -510,9 +510,11 @@ def login_as(role):
         s['role'] = role
 
 
-# demo-режим сам авторизует владельца — страница живёт сразу
+# демо-автологина больше нет (безопасность 2026-09-08) — первый заход
+# проверяем уже ВООШЕДШИМ владельцем; гость до входа видеть страницу не должен
+login_as('owner')
 r = client.get('/guardian')
-check(r.status_code == 200, f'в демо-режиме /guardian доступна ({r.status_code})')
+check(r.status_code == 200, f'вошедшему владельцу /guardian доступна ({r.status_code})')
 login_as('mod')
 r = client.get('/guardian')
 check(r.status_code == 302, f'настройка Щита — только Админ+ ({r.status_code})')

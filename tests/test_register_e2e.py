@@ -124,6 +124,14 @@ class _Bot:
 
 import web.app as appmod  # noqa: E402
 
+# E2E гоняет десятки регистраций и входов подряд — боевые rate-limits
+# (безопасность 2026-09-08) здесь сознательно раздвигаем: тестируем логику
+# регистрации, а не лимитер (его проверяет tests/test_demo_gate.py).
+appmod.AUTH_RATE_LIMITS['register'] = (10 ** 6, 300)
+appmod.AUTH_RATE_LIMITS['login'] = (10 ** 6, 300)
+appmod.AUTH_RATE_LIMITS['suggest'] = (10 ** 6, 300)
+appmod.AUTH_RATE_LIMITS['discord-check'] = (10 ** 6, 300)
+
 bot = _Bot()
 _loop = asyncio.new_event_loop()
 threading.Thread(

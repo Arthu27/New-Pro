@@ -69,7 +69,10 @@ def register(ctx):
 
 
     @app .route ('/theme-settings')
-    @login_required 
+    @login_required
+    @role_required ('mod')
     def theme_settings_page ():
-        """Страница настроек темы"""
+        """Страница настроек темы (меню показывает её персоналу mod+;
+        маршрут обязан совпадать с меню, иначе прямая ссылка пускает
+        тех, кому пункта не видно)."""
         return render_template ('theme_settings.html',role =session .get ('role'),username =session .get ('username'))

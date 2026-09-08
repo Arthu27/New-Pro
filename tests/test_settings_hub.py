@@ -213,8 +213,11 @@ def login_as(role):
         s['role'] = role
 
 
+# демо-автологина больше нет (2026-09-08): /mod-settings — админская
+# страница, сначала входим (владелец), потом проверяем хаб
+login_as('owner')
 r = client.get('/mod-settings')
-check(r.status_code == 200, f'в демо /mod-settings открыта ({r.status_code})')
+check(r.status_code == 200, f'вошедшему админу+ /mod-settings открыта ({r.status_code})')
 body = r.get_data(as_text=True)
 check('Авто-наказания' in body
       and 'Исключения временных мер' in body

@@ -93,7 +93,8 @@ def main():
     if 'ann-channel' not in dash:
         failures.append('dashboard.html: пропал селект ann-channel')
 
-    print(f'=== PICKER BOOT SHIM: PASS {4 - min(len(failures), 4)} блока(ов) / FAIL {len(failures)} ===')
+    # сводка в классическом формате, который понимает scripts/run_tests.py
+    print(f'=== PASS {4 - min(len(failures), 4)} / FAIL {len(failures)} ===')
     for f in failures:
         print('  FAIL:', f)
     return 1 if failures else 0

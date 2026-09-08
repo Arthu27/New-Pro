@@ -347,6 +347,10 @@ os.environ['PANEL_PORT'] = '5099'
 import web.app as webapp  # noqa: E402
 
 _client = webapp.app.test_client()
+# демо-автологина больше нет (2026-09-08): права команд — страница владельца,
+# входим по паролю из env этого теста
+_client.post('/login', data={'username': os.environ.get('PANEL_USER', 'owner'),
+                             'password': os.environ['PANEL_PASSWORD']})
 _demo_guild_id = '777'
 
 # 5а. Доступ к странице

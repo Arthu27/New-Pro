@@ -115,6 +115,10 @@ check(tpl.count('PROTECTED_PATHS.indexOf') >= 2,
 print('== 6. Сквозняк: payload страницы с фолбэком ==')
 import web.app as webapp  # noqa: E402
 _client = webapp.app.test_client()
+# Демо-автологина больше нет (безопасность 2026-09-08): входим честно —
+# владелец по PANEL_PASSWORD из env этого теста.
+_client.post('/login', data={'username': os.environ.get('PANEL_USER', 'owner'),
+                             'password': os.environ['PANEL_PASSWORD']})
 r = _client.get(f'/api/role-permissions/{GID}')
 d = r.get_json() or {}
 check(r.status_code == 200 and d.get('success'),

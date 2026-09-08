@@ -158,19 +158,45 @@ bot_instance =None
 from collections import defaultdict 
 import time as _time 
 
-_rate_limits =defaultdict (list )# ip: [timestamps]
-RATE_LIMIT_WINDOW =60 # секунды
-RATE_LIMIT_MAX =600 # на pencere max желание
+# ── Ограничение частоты публичных запросов ────────────────────────────────
+# БЕЗОПАСНОСТЬ (владелец 2026-09-08: «сделай систему максимально защищённой
+# от взлома»): каждый чувствительный публичный маршрут ограничен по частоте
+# на IP — перебор паролей, спам кодами сброса (каждый код = ЛС в Discord),
+# перебор PIN и вычищение списка участников через /api/discord-check
+# упираются в 429, а не в бесконечные попытки.
+# Лимиты щедрые: за Cloudflare Tunnel у всех посетителей один remote_addr,
+# поэтому жёсткие пороги выключили бы панель честным людям.
+_AUTH_RATE =defaultdict (list )# (kind, ip) -> [timestamps]
+AUTH_RATE_LIMITS ={
+'login':(60 ,300 ),        # попыток входа / 5 мин на IP (+ нарастающая пауза)
+'pin-login':(20 ,300 ),    # вход по PIN из Discord
+'forgot':(5 ,600 ),        # запрос кода сброса (шлёт ЛС) / 10 мин
+'reset':(20 ,600 ),        # проверка кода сброса
+'register':(10 ,900 ),     # регистрации / 15 мин
+'discord-check':(60 ,300 ),# «есть ли такой участник» / 5 мин
+'suggest':(90 ,300 ),      # подсказки логина
+'public':(60 ,300 ),       # открытые API (apply, check-member, guilds)
+'voice':(30 ,300 ),        # голосовые команды (защищены и секретом)
+}
 
-def _check_rate_limit (ip ):
+def _auth_rate_ok (kind ):
+    """True, если запрос укладывается в лимит; False — перебор (429)."""
+    max_n ,window_s =AUTH_RATE_LIMITS .get (kind ,(60 ,300 ))
+    key =(kind ,request .remote_addr or '?')
     now =_time .time ()
-    window =_rate_limits [ip ]
-    # Старый запись clear
-    _rate_limits [ip ]=[t for t in window if now -t <RATE_LIMIT_WINDOW ]
-    if len (_rate_limits [ip ])>=RATE_LIMIT_MAX :
-        return False 
-    _rate_limits [ip ].append (now )
-    return True 
+    hits =[t for t in _AUTH_RATE [key ]if now -t <window_s ]
+    _AUTH_RATE [key ]=hits
+    if len (hits )>=max_n :
+        return False
+    _AUTH_RATE [key ].append (now )
+    return True
+
+def _rate_limited (kind ):
+    """Готовый ответ 429, если лимит kind исчерпан (иначе None)."""
+    if _auth_rate_ok (kind ):
+        return None
+    retry =AUTH_RATE_LIMITS .get (kind ,(60 ,300 ))[1 ]
+    return jsonify ({'success':False ,'error':f'Слишком много запросов. Повторите через {retry //60} мин.'}),429
 
 # Защита от перебора паролей: нарастающая пауза после неверных попыток входа
 # (ключ: IP + логин). Полной блокировки нет намеренно — за туннелем Cloudflare
@@ -308,18 +334,12 @@ def before_request ():
     # Замер длительности запроса: медленные видны в логе сразу, с путём и
     # временем. Без этого «панель тормозит» невозможно разобрать по фактам.
     g ._req_started =_time .time ()
-    # Демо-режим: автоматический вход владельцем без логина и пароля.
-    # Авторизация при этом не удаляется — она просто не требуется, пока
-    # поднят флаг DEMO_MODE=1.
-    if _demo_mode ()and 'logged_in'not in session :
-        session .permanent =True 
-        session ['logged_in']=True 
-        session ['username']='demo'
-        session ['role']='owner'
-        # демо-сервер 777 — тот же id, что отдаёт /api/guilds в демо
-        session ['selected_guild']=str (MAIN_GUILD_ID or '777')
-        session ['main_guild_id']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else ''
-        session .modified =True 
+    # БЕЗОПАСНОСТЬ (владелец 2026-09-08: «обычные участники заходят в панель
+    # владельца — именно меню владельца»): демо-режим БОЛЬШЕ не входит в
+    # панель автоматически. Раньше любой, открывший демо-URL, получал сессию
+    # владельца со всем меню. Теперь вход один и тот же и в бою, и в витрине:
+    # страница /login и пароль панели (в демо — PANEL_PASSWORD из env).
+    # Не зная пароль, никто не видит ни меню владельца, ни одной страницы.
 
     # Панель управляет ТОЛЬКО сервером из MAIN_GUILD_ID. Если бот состоит
     # в нескольких серверах, чужой ID в адресе (/api/guild/<id>/...) или в
@@ -1338,6 +1358,8 @@ def login ():
                 return redirect (url_for ('index'))
 
     if request .method =='POST':
+        _rl =_rate_limited ('login')
+        if _rl :return _rl 
         # Поле может отсутствовать (бот/прокси/пустой POST) — None.lstrip
         # ронял всю панель 500 (логин 2026-09-06).
         username =(request .form .get ('username')or '').strip ()
@@ -1643,6 +1665,8 @@ PENDING_VERIFICATIONS ={}
 @app .route ('/register',methods =['GET','POST'])
 def register ():
     if request .method =='POST':
+        _rl =_rate_limited ('register')
+        if _rl :return _rl 
         step =request .form .get ('step','1')
         discord_id =request .form .get ('discord_id','').strip ()
         password =request .form .get ('password','').strip ()
@@ -3879,7 +3903,11 @@ def api_review_staff_app (app_id ):
 
 @app .route ('/api/tunnel-url')
 @login_required 
+@role_required ('owner')
 def api_tunnel_url ():
+    # БЕЗОПАСНОСТЬ (2026-09-08): адрес туннеля — инфраструктура владельца.
+    # Персоналу он не нужен: панель уже открыта по этому адресу, а лишним
+    # людям незачем знать, где живёт сервис.
     try :
         _tunnel_path =os .path .join (os .path .dirname (os .path .abspath (__file__ )),'..','tunnel_url.txt')
         _tunnel_path =os .path .normpath (_tunnel_path )
@@ -4071,6 +4099,8 @@ def public_apply ():
 
 @app .route ('/api/public/check-member',methods =['POST'])
 def api_check_member ():
+    _rl =_rate_limited ('public')
+    if _rl :return _rl 
     if not bot_instance :
     # Frontend не должен ломаться на 503 — отвечаем 200.
     # Пока бот не готов, показываем понятное сообщение.
@@ -4116,6 +4146,8 @@ def api_check_member ():
 
 @app .route ('/api/public/guilds')
 def api_public_guilds ():
+    _rl =_rate_limited ('public')
+    if _rl :return _rl 
     if not bot_instance :
         # демо: сервер для публичной анкеты (иначе «Сервер не найден»)
         if _demo_mode ():
@@ -4129,6 +4161,8 @@ def api_public_guilds ():
 
 @app .route ('/api/public/apply',methods =['POST'])
 def api_public_apply ():
+    _rl =_rate_limited ('public')
+    if _rl :return _rl 
     data =_safe_json_obj()
     # Принимаем ключи формы обеих версий: 'почему'/'why', 'активен'/'activity'
     if 'почему'not in data and data .get ('why'):
@@ -4491,6 +4525,8 @@ _login_pins ={}
 
 @app .route ('/api/login/suggest',methods =['GET','POST'])
 def api_login_suggest ():
+    _rl =_rate_limited ('suggest')
+    if _rl :return _rl 
     query =(request .args .get ('q')or (_safe_json_obj()).get ('q','')or '').strip ()
     query_clean =query .lstrip ('@').lower ()
 
@@ -4585,6 +4621,8 @@ def api_login_suggest ():
 
 @app .route ('/api/discord-check',methods =['POST'])
 def api_discord_check ():
+    _rl =_rate_limited ('discord-check')
+    if _rl :return _rl 
     if not bot_instance :
         return jsonify ({'success':False ,'error':'Бот Discord сейчас не в сети или не подключен.','tests':[]})
     data =_safe_json_obj()
@@ -4729,6 +4767,8 @@ def api_discord_check ():
 
 @app .route ('/api/discord-login',methods =['POST'])
 def api_discord_login ():
+    _rl =_rate_limited ('pin-login')
+    if _rl :return _rl 
     data =_safe_json_obj()
     discord_id =str (data .get ('discord_id','')).strip ()
     pin =str (data .get ('pin','')).strip ()
@@ -5170,6 +5210,8 @@ VOICE_SECRET =os .getenv ('VOICE_SECRET','Hakumo-voice-2024')
 
 @app .route ('/api/voice-command',methods =['POST'])
 def api_voice_command ():
+    _rl =_rate_limited ('voice')
+    if _rl :return _rl 
     """Обработать голосовые команды от voice_listener.py"""
     data =_safe_json_obj()
     if not data or data .get ('secret')!=VOICE_SECRET :
@@ -5218,6 +5260,8 @@ _reset_codes ={}# {discord_id: {code, expires}}
 
 @app .route ('/api/forgot-password',methods =['POST'])
 def api_forgot_password ():
+    _rl =_rate_limited ('forgot')
+    if _rl :return _rl 
     data =_safe_json_obj()
     query =str (data .get ('discord_id','')or data .get ('query','')).strip ()
     if not query :
@@ -5258,6 +5302,8 @@ def api_forgot_password ():
 
 @app .route ('/api/reset-password',methods =['POST'])
 def api_reset_password ():
+    _rl =_rate_limited ('reset')
+    if _rl :return _rl 
     import time as _time 
     data =_safe_json_obj()
     discord_id =str (data .get ('discord_id','')).strip ()
