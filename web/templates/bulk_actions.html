@@ -204,5 +204,10 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { loadGuilds(); bind(); });
   else { loadGuilds(); bind(); }
 })();
+
+  // LIVE excellent: auto-refresh when data changes
+  if(window.setLiveRefresh){
+    try{ window.setLiveRefresh(function(){ try{ if(typeof loadData==='function') loadData(); else if(typeof load==='function') load(); else location.reload(); }catch(e){} }, 2000, ['g*:bulk_actions','bulk_actions','dashboard','global']); }catch(e){}
+  }
 </script>
 {% endblock %}

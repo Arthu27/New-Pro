@@ -172,5 +172,10 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); });
   else { bind(); loadGuilds(); }
 })();
+
+  // LIVE excellent: auto-refresh when data changes
+  if(window.setLiveRefresh){
+    try{ window.setLiveRefresh(function(){ try{ if(typeof loadData==='function') loadData(); else if(typeof load==='function') load(); else location.reload(); }catch(e){} }, 2000, ['g*:member_profile','member_profile','dashboard','global']); }catch(e){}
+  }
 </script>
 {% endblock %}

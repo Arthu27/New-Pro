@@ -159,5 +159,10 @@ async function loadAllNotes() {
 }
 
 init();
+
+  // LIVE excellent: auto-refresh when data changes
+  if(window.setLiveRefresh){
+    try{ window.setLiveRefresh(function(){ try{ if(typeof loadData==='function') loadData(); else if(typeof load==='function') load(); else location.reload(); }catch(e){} }, 2000, ['g*:member_notes','member_notes','dashboard','global']); }catch(e){}
+  }
 </script>
 {% endblock %}

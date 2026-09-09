@@ -323,5 +323,10 @@ $('rsLevels').addEventListener('click', async function (e) {
 
 $('rsSave').addEventListener('click', rsSave);
 rsLoad();
+
+  // LIVE excellent: auto-refresh when data changes
+  if(window.setLiveRefresh){
+    try{ window.setLiveRefresh(function(){ try{ if(typeof loadData==='function') loadData(); else if(typeof load==='function') load(); else location.reload(); }catch(e){} }, 2000, ['g*:role_settings','role_settings','dashboard','global']); }catch(e){}
+  }
 </script>
 {% endblock %}

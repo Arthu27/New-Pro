@@ -416,5 +416,10 @@ function showAlert(type, msg) {
 function hideAlert() { document.getElementById('alert-box').style.display = 'none'; }
 
 loadServers();
+
+  // LIVE excellent: auto-refresh when data changes
+  if(window.setLiveRefresh){
+    try{ window.setLiveRefresh(function(){ try{ if(typeof loadData==='function') loadData(); else if(typeof load==='function') load(); else location.reload(); }catch(e){} }, 2000, ['g*:member_apply','member_apply','dashboard','global']); }catch(e){}
+  }
 </script>
 {% endblock %}

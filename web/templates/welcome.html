@@ -1071,6 +1071,11 @@
     }, { passive: true });
     requestAnimationFrame(upd);
   })();
-  </script>
+  
+  // LIVE excellent: auto-refresh when data changes
+  if(window.setLiveRefresh){
+    try{ window.setLiveRefresh(function(){ try{ if(typeof loadData==='function') loadData(); else if(typeof load==='function') load(); else location.reload(); }catch(e){} }, 2000, ['g*:welcome','welcome','dashboard','global']); }catch(e){}
+  }
+</script>
 </body>
 </html>
