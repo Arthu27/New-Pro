@@ -10,6 +10,8 @@
     <p class="lead">Наказания одним списком: кто выдал, кому, за что и на какой срок.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <button type="button" class="btn btn-primary" id="logs-table-send" title="Отправить графическую таблицу логов в канал Discord"><i class="fas fa-table"></i> Таблица в Discord</button>
     <a class="btn" href="/logs/export?days=7" title="Выгрузить журнал за 7 дней"><i class="fas fa-file-arrow-down"></i> 7 дней</a>
     <a class="btn" href="/logs/export?days=30" title="Выгрузить журнал за 30 дней"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
@@ -681,7 +683,7 @@ body.dense .jl-cbody { gap: 3px; }
     setView(viewMode);   /* применит сохранённый вид и нарисует первый кадр */
     setShape(shapeMode);
     loadLogs();
-    if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 1500);
+    if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 1500, ['g*:logs','logs','dashboard','global']);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

@@ -10,6 +10,8 @@
     <p class="lead">История нарушений для принятия решений: следы участников, эффект наказаний и готовность защиты.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <div class="seg" id="miDaysTabs"></div>
   </div>
 </div>
@@ -281,6 +283,7 @@ function loadReasons() {
 function load() {
   fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
+    try{ var fp=JSON.stringify(d).slice(0,800); if(window.silentGuard && window.silentGuard('mod_insights', fp)) return; }catch(e){}
     OV = d;
     var render = function () { renderKpis(d); renderSubjects(d); renderEffect(d); renderCheck(d); };
     if (window.renderIfChanged) {
@@ -304,6 +307,6 @@ try {
 } catch (e) { /* параметр опционален */ }
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(); } catch (e) {} }, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:mod_insights','mod_insights','dashboard','global']) { try { load(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

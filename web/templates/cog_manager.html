@@ -165,7 +165,7 @@ async function reloadAll(){
 }
 
 loadCogs();
-if (window.setLiveRefresh) window.setLiveRefresh(loadCogs, 1500);
+if (window.setLiveRefresh) window.setLiveRefresh(loadCogs, 1500, ['g*:cog_manager','cog_manager','dashboard','global']);
 else setInterval(loadCogs, 2500);
 </script>
 {% endblock %}

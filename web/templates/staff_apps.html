@@ -392,7 +392,7 @@
   loadApps(false);
   /* тихое живое обновление: список сам подхватит новые заявки */
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(function () { loadApps(true); }, 1500);
+    window.setLiveRefresh(function (, ['g*:staff_apps','staff_apps','dashboard','global']) { loadApps(true); }, 1500);
   } else {
     setInterval(function () { loadApps(true); }, 15000);
   }

@@ -75,7 +75,7 @@ class GuildData:
         return default
     
     def set(self, guild_id: int, key: str, value: Any) -> bool:
-        """Запись значения"""
+        """Запись значения — с live-пушем для панели (без мигания)."""
         conn = self._conn()
         try:
             conn.execute(
@@ -84,6 +84,30 @@ class GuildData:
                 (self.namespace, guild_id, str(key), json.dumps(value, ensure_ascii=False), datetime.now().isoformat())
             )
             conn.commit()
+            # live-push: любое изменение в БД → SSE топик namespace + общий
+            try:
+                from services.live_bus import publish as _live_pub
+                # публикуем и как свой namespace, и как связанный топик панели
+                _live_pub(guild_id, self.namespace)
+                # маппинг частых namespace → топики панели
+                _map = {
+                    'warnings': 'moderation', 'warns': 'moderation',
+                    'temp_moderation': 'moderation', 'temp_mod': 'moderation',
+                    'moderation': 'moderation', 'mod': 'moderation',
+                    'appeals': 'appeals', 'appeal': 'appeals',
+                    'meetings': 'meetings',
+                    'proof': 'proofs', 'proofs': 'proofs',
+                    'channels': 'channels', 'channel_routes': 'channels',
+                    'guardian': 'guardian', 'security': 'security',
+                    'antiraid': 'guardian', 'anticrash': 'guardian',
+                    'reports': 'reports', 'staff_apply': 'team',
+                    'team_board': 'team', 'voice': 'voice',
+                }
+                mapped = _map.get(self.namespace)
+                if mapped and mapped != self.namespace:
+                    _live_pub(guild_id, mapped)
+            except Exception:
+                pass
             return True
         except Exception as e:
             log.error(f"DB write error: {e}")
@@ -92,7 +116,7 @@ class GuildData:
             conn.close()
     
     def delete(self, guild_id: int, key: str) -> bool:
-        """Удаление значения"""
+        """Удаление значения — с live-пушем."""
         conn = self._conn()
         try:
             conn.execute(
@@ -100,6 +124,11 @@ class GuildData:
                 (self.namespace, guild_id, str(key))
             )
             conn.commit()
+            try:
+                from services.live_bus import publish as _live_pub
+                _live_pub(guild_id, self.namespace)
+            except Exception:
+                pass
             return True
         except Exception as e:
             log.error(f"DB delete error: {e}")

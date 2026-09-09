@@ -857,6 +857,13 @@ class Appeals(commands.Cog):
 
     def _save(self, guild_id, state):
         self.db.set(guild_id, 'state', state)
+        # db.set уже пушит live через GuildData, но продублируем явно для надёжности
+        try:
+            from services.live_bus import publish as _live_pub
+            _live_pub(guild_id, 'appeals')
+            _live_pub(guild_id, 'moderation')
+        except Exception:
+            pass
 
     def _mod_context(self, state, guild_id, user_id):
         try:

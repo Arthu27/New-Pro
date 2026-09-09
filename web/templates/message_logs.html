@@ -9,6 +9,8 @@
     <p class="lead">Журнал удалённых и изменённых сообщений на сервере.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <span class="fresh-stamp" id="ml-stamp"></span>
     <button type="button" class="btn" id="ml-pause" title="Пауза live"></button>
     <button type="button" class="btn" id="ml-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
@@ -255,7 +257,7 @@ function start() {
   if (csvBtn) csvBtn.addEventListener('click', exportCsv);
   if (window.livePauseButton) window.livePauseButton(document.getElementById('ml-pause'));
   loadLogs();
-  if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 1500, ['g*:message_logs','message_logs','dashboard','global']);
   else setInterval(loadLogs, 5000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

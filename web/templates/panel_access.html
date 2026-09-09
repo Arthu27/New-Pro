@@ -418,6 +418,6 @@ loadPA();
 /* live: обновляемся ПУШЕМ только когда доступ/маппинг ролей реально
    изменились (сохранение на любой вкладке шлёт свой топик), а не на любое
    событие сервера. Таймер — лишь редкая страховка (SSE не поднялся). */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadVisibility(); loadPA(); } catch (e) {} }, 30000, ['role_map', 'panel_visibility', 'g*:permissions']);
+if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:panel_access','panel_access','dashboard','global']) { try { loadVisibility(); loadPA(); } catch (e) {} }, 30000, ['role_map', 'panel_visibility', 'g*:permissions']);
 </script>
 {% endblock %}

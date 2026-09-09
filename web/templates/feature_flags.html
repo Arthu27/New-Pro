@@ -197,11 +197,12 @@ async function ffLoad() {
   var r = await fetch('/api/feature-flags/state');
   var d = await r.json();
   if (!d.success) return;
-  STATE = d;
+  
+    try{ var _fp=JSON.stringify(d).slice(0,1200); if(window.silentGuard && window.silentGuard('feature_flags', _fp)) return; }catch(e){}STATE = d;
   if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
 }
 
 ffLoad();
-if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(ffLoad, 1500);
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(ffLoad, 1500, ['g*:feature_flags','feature_flags','dashboard','global']);
 </script>
 {% endblock %}

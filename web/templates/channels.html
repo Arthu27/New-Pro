@@ -1218,7 +1218,7 @@ textarea.field-input{resize:vertical;min-height:52px}
     populateGuildSelect();
     // Live-обновления: пуш по SSE g*:channels + локальный silentGuard, без мигания
     if (window.setLiveRefresh) {
-      window.setLiveRefresh(function () {
+      window.setLiveRefresh(function (, ['g*:channels','channels','dashboard','global']) {
         if (document.hidden) return;
         if (document.querySelector('.modal-overlay.open')) return;
         if (performance.now() - chLastPointerDown < 350) return;

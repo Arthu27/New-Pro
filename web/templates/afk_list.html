@@ -75,7 +75,7 @@ function start() {
   /* live: AFK-список меняется, когда кто-то заходит/выходит из войса или
      выходит с сервера — топики voice и members. Опрос по таймеру убран:
      5 минут остаются страховкой на случай, если SSE не поднялся. */
-  if (window.setLiveRefresh) window.setLiveRefresh(function(){ loadAFK(_guildId); }, 300000, ['voice', 'members']);
+  if (window.setLiveRefresh) window.setLiveRefresh(function(, ['g*:afk_list','afk_list','dashboard','global']){ loadAFK(_guildId); }, 300000, ['voice', 'members']);
   else setInterval(function(){ loadAFK(_guildId); }, 30000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

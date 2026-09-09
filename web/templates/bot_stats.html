@@ -370,7 +370,7 @@
   $('cmdsAuditBtn').addEventListener('click', renderAudit);
 
   loadStats();
-  if (window.setLiveRefresh) window.setLiveRefresh(loadStats, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(loadStats, 1500, ['g*:bot_stats','bot_stats','dashboard','global']);
   else setInterval(loadStats, 2500);
 })();
 </script>

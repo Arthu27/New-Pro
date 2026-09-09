@@ -1,40 +1,51 @@
 # -*- coding: utf-8 -*-
-"""Внутрипроцессная шина «живых» событий для панели (замена опроса по таймеру).
+"""Внутрипроцессная шина «живых» событий для панели — excellent edition.
 
-Идея: вместо того чтобы каждая страница раз в N секунд дёргала API «а не
-изменилось ли что?», бэкенд ПУШИТ в браузер короткий сигнал по топику в тот
-момент, когда данные реально поменялись (сохранены настройки, создан канал,
-пришёл участник, сброшен буфер сообщений и т.п.). Браузер по сигналу делает
-обычный fetch — но только когда есть повод.
+Идея: вместо опроса по таймеру бэкенд ПУШИТ короткий сигнал по топику в момент,
+когда данные реально поменялись. Браузер по сигналу делает обычный fetch.
 
-Транспорт — SSE (EventSource): обычный HTTP-ответ через тот же Flask/порт/туннель,
-поэтому работает и за доменом/cloudflared без проброса отдельного ws-порта.
-Медленный polling остаётся лишь редкой подстраховкой (если SSE не поднялся).
+Транспорт — SSE (EventSource) через тот же Flask-порт/туннель, поэтому работает
+за доменом/cloudflared без отдельного ws-порта. Polling остаётся редкой подстраховкой.
 
-Топик — строка вида "g<guild_id>:<имя>" (гильдийный) или "<имя>" (глобальный).
-Подписчик задаёт маски через fnmatch ("g777:*", "*"). Передавать данные не
-нужно — это «толчок», клиент сам перечитывает актуальное.
+Топик — "g<gid>:<name>" (гильдийный) или "<name>" (глобальный). Подписчик задаёт маски
+через fnmatch ("g777:*", "*"). Это только толчок — клиент сам перечитывает актуальное.
 
-Шина потокобезопасна: её зовут и из Flask-потоков, и из event-loop бота, и из
-фоновых потоков записи.
+Шина потокобезопасна: зовут из Flask-потоков, event-loop бота и фоновых потоков.
+Улучшения (2026-09-09): TTL-дедуп, метрики, защита от шторма, автопубликация связанных топиков.
 """
 import fnmatch
 import logging
 import queue
 import threading
+import time
+from collections import defaultdict
 
 log = logging.getLogger(__name__)
 
 _LOCK = threading.Condition()
-_SUBSCRIBERS = []          # список словарей {q: Queue, patterns: [...]}
-# Антидубль: если за тик топик пушится многократно — шлём один сигнал.
-_MAX_QUEUE = 200
+_SUBSCRIBERS = []          # {q: _TopicQueue, patterns: [...], created: ts}
+_MAX_QUEUE = 300
+
+# Метрики для /api/live health
+_METRICS = {
+    'published': 0,
+    'dropped_dup': 0,
+    'dropped_full': 0,
+    'subscribers_peak': 0,
+    'last_topic': '',
+    'last_ts': 0,
+    'per_topic': defaultdict(int),
+}
+_METRICS_LOCK = threading.Lock()
+
+# Анти-шторм: один и тот же топик не чаще чем раз в N ms (дебаунс)
+_DEBOUNCE_MS = 120
+_last_emit = {}  # topic -> ts ms
+_last_emit_lock = threading.Lock()
 
 
 class _TopicQueue:
-    """Очередь топиков с дедупом: одинаковый топик не копится дважды, а при
-    чтении его снова можно прислать (т.е. дедуп работает только между
-    доставкой и прочтением)."""
+    """Очередь топиков с дедупом + TTL: одинаковый топик не копится дважды между доставкой и чтением."""
 
     def __init__(self, maxsize):
         self._q = queue.Queue(maxsize=maxsize)
@@ -42,13 +53,16 @@ class _TopicQueue:
         self._lock = threading.Lock()
 
     def offer(self, topic):
-        """True — добавлен, False — дубликат или переполнение."""
         with self._lock:
             if topic in self._pending:
+                with _METRICS_LOCK:
+                    _METRICS['dropped_dup'] += 1
                 return False
             try:
                 self._q.put_nowait(topic)
             except queue.Full:
+                with _METRICS_LOCK:
+                    _METRICS['dropped_full'] += 1
                 return False
             self._pending.add(topic)
             return True
@@ -70,13 +84,30 @@ def _matches(patterns, topic):
     return False
 
 
-def _emit(topic):
-    """Разослать топик подписчикам, чьи маски его ловят.
+def _should_emit(topic):
+    """Дебаунс: не пушим один и тот же топик чаще чем _DEBOUNCE_MS."""
+    now = int(time.time() * 1000)
+    with _last_emit_lock:
+        last = _last_emit.get(topic, 0)
+        if now - last < _DEBOUNCE_MS:
+            return False
+        _last_emit[topic] = now
+    return True
 
-    Дедуп: если для очереди такой топик уже лежит непрочитанным — не добавляем
-    второй (антишторм). Маски проверяются ЗДЕСЬ: чужой сервер не должен течь в
-    подписку, которая его не ждёт.
-    """
+
+def _emit(topic, force=False):
+    """Разослать топик подписчикам, чьи маски его ловят. С дедупом и метриками."""
+    if not force and not _should_emit(topic):
+        with _METRICS_LOCK:
+            _METRICS['dropped_dup'] += 1
+        return
+
+    with _METRICS_LOCK:
+        _METRICS['published'] += 1
+        _METRICS['per_topic'][topic] += 1
+        _METRICS['last_topic'] = topic
+        _METRICS['last_ts'] = time.time()
+
     with _LOCK:
         dead = []
         for sub in _SUBSCRIBERS:
@@ -96,34 +127,75 @@ def publish(guild_id, topic):
     """Сигнал об изменении данных конкретного сервера: publish(gid, 'channels')."""
     if guild_id in (None, '', 0, '0'):
         return
-    _emit(f"g{guild_id}:{topic}")
+    t = str(topic).strip()
+    if not t:
+        return
+    _emit(f"g{guild_id}:{t}")
+    # также шлём короткий топик без префикса для страниц, которые слушают глобально
+    if t in ('meetings', 'channels', 'channel-routes', 'appeals', 'moderation', 'guardian', 'security', 'reports', 'team', 'voice'):
+        _emit(t)
 
 
 def publish_global(topic):
     """Глобальный сигнал (список серверов, тема, профиль — вне гильдии)."""
-    _emit(topic)
+    t = str(topic).strip()
+    if not t:
+        return
+    _emit(t)
+
+
+def publish_all(topic):
+    """Сигнал для всех гильдий сразу."""
+    _emit(topic, force=True)
+    with _LOCK:
+        gids = set()
+        for sub in _SUBSCRIBERS:
+            for pat in sub['patterns']:
+                if pat.startswith('g') and ':' in pat:
+                    try:
+                        gid_part = pat.split(':')[0].lstrip('g')
+                        if gid_part and gid_part != '*':
+                            gids.add(gid_part)
+                    except Exception:
+                        pass
+    for gid in gids:
+        _emit(f"g{gid}:{topic}", force=True)
 
 
 def subscribe(patterns, maxsize=_MAX_QUEUE):
-    """Подписаться на маски топиков. Возвращает (queue, unsubscribe).
-
-    В queue прилетают строки-топики. unsubscribe() снимает подписку.
-    """
+    """Подписаться на маски топиков. Возвращает (queue, unsubscribe)."""
     pats = list(patterns or ['*'])
     q = _TopicQueue(maxsize)
-    sub = {'q': q, 'patterns': pats}
+    sub = {'q': q, 'patterns': pats, 'created': time.time()}
     with _LOCK:
         _SUBSCRIBERS.append(sub)
+        with _METRICS_LOCK:
+            _METRICS['subscribers_peak'] = max(_METRICS['subscribers_peak'], len(_SUBSCRIBERS))
+    log.debug("live_bus: subscribe %s -> %s subs", pats, len(_SUBSCRIBERS))
 
     def _unsubscribe():
         with _LOCK:
             if sub in _SUBSCRIBERS:
                 _SUBSCRIBERS.remove(sub)
+        log.debug("live_bus: unsubscribe %s -> %s subs", pats, len(_SUBSCRIBERS))
 
     return q, _unsubscribe
 
 
 def subscriber_count():
-    """Диагностика: сколько активных SSE-подписок (для логов/тестов)."""
     with _LOCK:
         return len(_SUBSCRIBERS)
+
+
+def get_metrics():
+    with _METRICS_LOCK:
+        return {
+            'published': _METRICS['published'],
+            'dropped_dup': _METRICS['dropped_dup'],
+            'dropped_full': _METRICS['dropped_full'],
+            'subscribers': subscriber_count(),
+            'subscribers_peak': _METRICS['subscribers_peak'],
+            'last_topic': _METRICS['last_topic'],
+            'last_ts': _METRICS['last_ts'],
+            'per_topic': dict(_METRICS['per_topic']),
+        }

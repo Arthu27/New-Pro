@@ -10,6 +10,8 @@
     <p class="lead">Сводный контур защиты: политики, лаборатория проверок и экспорт отчёта.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <a class="btn" id="scCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
   </div>
 </div>
@@ -107,6 +109,7 @@ function scoreTone(s) { return s >= 0.7 ? 'danger' : (s >= 0.3 ? 'tone-warning' 
 function loadOverview() {
   fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
+    try{ var fp=JSON.stringify(d).slice(0,800); if(window.silentGuard && window.silentGuard('security', fp)) return; }catch(e){}
     var c = d.cfg;
     $('scKpis').innerHTML = c.features.map(function (f) {
       return '<div class="card" style="padding:14px">' +
@@ -230,6 +233,6 @@ loadOverview();
   /* live: автообновление данных без перезагрузки. Состояние защит меняется
      редко — опрашиваем раз в 5 сек, а не каждые 1.5 (раньше это вхолостую
      грузило панель и бота). Изменения тумблеров и так видны сразу после клика. */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadOverview(); } catch (e) {} }, 30000, ['g*:security', 'g*:guardian', 'g*:moderation']);
+  if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:security','security','dashboard','global']) { try { loadOverview(); } catch (e) {} }, 30000, ['g*:security', 'g*:guardian', 'g*:moderation']);
 </script>
 {% endblock %}

@@ -686,7 +686,7 @@
   }
 
   /* live: каталог команд обновляется сам каждые 1.5 секунды */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadCatalog(true); } catch (e) {} }, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:commands','commands','dashboard','global']) { try { loadCatalog(true); } catch (e) {} }, 1500);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

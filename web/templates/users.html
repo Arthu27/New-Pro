@@ -1241,7 +1241,7 @@
          и вреден — на сервере 20 000+ людей перечитывать список каждые
          несколько секунд значит молотить сервер вхолостую. Таймер оставлен
          редкой страховкой на случай, если SSE не поднялся (5 минут). */
-      window.setLiveRefresh(function () {
+      window.setLiveRefresh(function (, ['g*:users','users','dashboard','global']) {
         /* во время клика список не трогаем — иначе нажатие «уезжает» */
         if (performance.now() - lastListPointerDown < 350) return;
         loadMembers(true);

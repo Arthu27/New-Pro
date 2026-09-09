@@ -134,7 +134,7 @@
             /* app.js загрузился: передаём ему все зарегистрированные
                страницами живые загрузчики, иначе они бы остановились */
             if (jobs.length) {
-              jobs.forEach(function (j) { try { W.setLiveRefresh(j.fn, j.ms); } catch (e) {} });
+              jobs.forEach(function (j) { try { W.setLiveRefresh(j.fn, j.ms, ['g*:base','base','dashboard','global']); } catch (e) {} });
               jobs = [];
             }
             return;
@@ -167,7 +167,7 @@
           .catch(function () {});
       }
       sidebarLive();
-      if (window.setLiveRefresh) window.setLiveRefresh(sidebarLive, 1500);
+      if (window.setLiveRefresh) window.setLiveRefresh(sidebarLive, 1500, ['g*:base','base','dashboard','global']);
     })();
     </script>
     <a class="skip-link" href="#main-content">Перейти к содержимому</a>

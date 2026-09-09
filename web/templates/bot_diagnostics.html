@@ -330,7 +330,7 @@
   loadErrors();
   /* п.1: телеметрия здоровья — мгновенно (2с), ошибки — 10с,
      перезагрузки страницы нет, цифры меняются на месте */
-  if (window.setLiveRefresh) { window.setLiveRefresh(load, 1500); window.setLiveRefresh(loadErrors, 1500); }
+  if (window.setLiveRefresh) { window.setLiveRefresh(load, 1500, ['g*:bot_diagnostics','bot_diagnostics','dashboard','global']); window.setLiveRefresh(loadErrors, 1500, ['g*:bot_diagnostics','bot_diagnostics','dashboard','global']); }
   else { setInterval(load, 1500); setInterval(loadErrors, 1500); }
 })();
 </script>

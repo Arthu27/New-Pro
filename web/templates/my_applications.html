@@ -10,6 +10,8 @@
     <p class="lead">Твои заявки в администрацию и их текущий статус — всё в одном месте.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <a class="btn btn-primary" href="/member-apply"><i class="fas fa-plus"></i> Подать заявку</a>
   </div>
 </div>
@@ -107,6 +109,6 @@ async function loadApps() {
 loadApps();
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadApps(); } catch (e) {} }, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:my_applications','my_applications','dashboard','global']) { try { loadApps(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

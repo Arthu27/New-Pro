@@ -633,7 +633,7 @@ loadConfig();
 loadOverview();
 /* Живые обновления: overview обновляется пушем при изменении настроек Щита
    (топик guardian), таймер 30с — лишь подстраховка (не молотим каждые 5с). */
-setLiveRefresh(function(){ if(!document.hidden) loadOverview(); }, 30000,
+setLiveRefresh(function(, ['g*:anticrash','anticrash','dashboard','global']){ if(!document.hidden) loadOverview(); }, 30000,
                ['g*:guardian', 'g*:security', 'dashboard']);
 </script>
 {% endblock %}

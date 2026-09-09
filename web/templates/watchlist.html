@@ -76,6 +76,6 @@ loadWatchlist(_guildId);
      баны/разбаны дают «moderation». Таймер 5 минут — только страховка на
      случай, если SSE не поднялся: опрашивать список каждые полторы
      секунды смысла нет, данные сами не меняются. */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadWatchlist(_guildId); } catch (e) {} }, 300000, ['watchlist', 'moderation']);
+  if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:watchlist','watchlist','dashboard','global']) { try { loadWatchlist(_guildId); } catch (e) {} }, 300000, ['watchlist', 'moderation']);
 </script>
 {% endblock %}

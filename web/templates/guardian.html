@@ -11,6 +11,8 @@
        применяются сразу, без перезапуска.</p>
   </div>
   <div class="page-head-side">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <span class="gd-access" title="Смотреть и настраивать Щит могут администраторы. Обзор безопасности видят все модераторы в Центре безопасности">
       <i class="fas fa-user-shield"></i> Настройка: Админ
     </span>
@@ -775,7 +777,7 @@ async function gdLoad(live) {
 /* live: состояние Щита обновляется ПУШЕМ (SSE) — когда настройки реально
    сохранили (панель) или бот записал инцидент. Тяжёлые роли/участники
    приходят один раз в первом (не-live) ответе; таймер 30с — лишь подстраховка. */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 30000, ['g*:guardian', 'g*:security']);
+if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:guardian','guardian','dashboard','global']) { try { gdLoad(true); } catch (e) {} }, 30000, ['g*:guardian', 'g*:security']);
 
 function collectPayload() {
   var events = {};
@@ -1264,7 +1266,8 @@ gdLoad();
         _lastRaw = raw;
         var d = JSON.parse(raw);
         if (!d.success) return;
-        L.roles = d.roles || [];
+        
+    try{ var _fp=JSON.stringify(d).slice(0,1200); if(window.silentGuard && window.silentGuard('guardian', _fp)) return; }catch(e){}L.roles = d.roles || [];
         L.titles = d.action_titles || {};
         L.meta = d.action_meta || [];
         L.defaults = d.defaults || {};
@@ -1320,7 +1323,7 @@ gdLoad();
 
   /* live: лимиты и журнал синхронизируются сами — без «перезагрузки» */
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(function () { try { load(true); } catch (e) {} }, 1500);
+    window.setLiveRefresh(function (, ['g*:guardian','guardian','dashboard','global']) { try { load(true); } catch (e) {} }, 1500);
   }
 })();
 </script>

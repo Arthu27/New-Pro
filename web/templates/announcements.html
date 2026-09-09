@@ -1173,7 +1173,7 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
   applyView();
   loadAnns(false);
   /* Лента объявлений: пуш при изменениях ленты, таймер 60с — подстраховка. */
-  setLiveRefresh(function () { if (!document.hidden) loadAnns(true); }, 60000,
+  setLiveRefresh(function (, ['g*:announcements','announcements','dashboard','global']) { if (!document.hidden) loadAnns(true); }, 60000,
                  ['announcements', 'global', 'dashboard']);
 })();
 </script>

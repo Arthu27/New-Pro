@@ -10,6 +10,8 @@
     <p class="lead">Единая мера для одинаковых нарушений: ступени эскалации с понятными сроками.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <a class="btn" id="ldCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
   </div>
 </div>
@@ -107,6 +109,7 @@ function plural(n, one, few, many) {
 function load() {
   fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
+    try{ var fp=JSON.stringify(d).slice(0,800); if(window.silentGuard && window.silentGuard('ladder', fp)) return; }catch(e){}
     if (window.renderIfChanged && !window.renderIfChanged('ladder', d, function () {})) return;
     if (d.cooldown) {
       if ($('ldWarmDays')) $('ldWarmDays').value = d.cooldown.warm_days;
@@ -217,6 +220,6 @@ if (CAN_EDIT && $('ldCoolSave')) {
 
 load();
 loadCard();
-if (window.setLiveRefresh) window.setLiveRefresh(load, 1500);
+if (window.setLiveRefresh) window.setLiveRefresh(load, 1500, ['g*:ladder','ladder','dashboard','global']);
 </script>
 {% endblock %}

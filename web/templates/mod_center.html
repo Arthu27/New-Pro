@@ -594,9 +594,9 @@
   if (window.livePauseButton) window.livePauseButton($('mc-pause'));
   refresh();
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(loadMetrics, 1500);
-    window.setLiveRefresh(loadCharts, 1500);
-    window.setLiveRefresh(loadPeople, 1500);
+    window.setLiveRefresh(loadMetrics, 1500, ['g*:mod_center','mod_center','dashboard','global']);
+    window.setLiveRefresh(loadCharts, 1500, ['g*:mod_center','mod_center','dashboard','global']);
+    window.setLiveRefresh(loadPeople, 1500, ['g*:mod_center','mod_center','dashboard','global']);
   }
   document.addEventListener('hakumo:live', refresh);
   if (window.tiltCards) window.tiltCards(document, '.cc-tile');

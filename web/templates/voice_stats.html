@@ -114,7 +114,7 @@ async function initialiseGuildSelector() {
 
 function start() {
   initialiseGuildSelector();
-  if (window.setLiveRefresh) window.setLiveRefresh(loadVoiceStats, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(loadVoiceStats, 1500, ['g*:voice_stats','voice_stats','dashboard','global']);
   else setInterval(loadVoiceStats, 30000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

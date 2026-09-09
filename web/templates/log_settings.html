@@ -10,6 +10,8 @@
     <p class="lead">Каждая ветка — своя категория: в <b>#{{ parent_logs }}</b> сообщения, войсы, никнеймы, зашёл/вышел и остальное; в <b>#{{ parent_reports }}</b> баны, муты войс/чат, снятие/ЧС стаффа и варны. Выбери готовую ветку в «Куда писать» — бот туда и пишет. Каналы <b>сами не создаются</b>.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <button type="button" class="btn" id="lsReload"><i class="fas fa-arrows-rotate"></i> Обновить</button>
   </div>
 </div>
@@ -249,7 +251,8 @@
         _lastRaw = raw;
         var d = JSON.parse(raw);
         if (!d.success) return;
-        state.cats = d.categories || [];
+        
+    try{ var _fp=JSON.stringify(d).slice(0,1200); if(window.silentGuard && window.silentGuard('log_settings', _fp)) return; }catch(e){}state.cats = d.categories || [];
         state.settings = d.settings;
         state.channels = d.channels || [];
         state.looks = d.looks || {};
@@ -277,7 +280,7 @@
 
   /* live: изменения подхватываются сами каждые 1.5 секунды,
      но без «перезагрузки» — неизменившееся не перерисовываем */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(true); } catch (e) {} }, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:log_settings','log_settings','dashboard','global']) { try { load(true); } catch (e) {} }, 1500);
 })();
 </script>
 {% endblock %}

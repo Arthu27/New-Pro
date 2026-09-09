@@ -325,7 +325,7 @@ def get_route(gid, key):
 
 
 def set_route(gid, key, channel_id):
-    """Записать маршрут (0 = очистить). Возвращает True при успехе."""
+    """Записать маршрут (0 = очистить). Возвращает True при успехе — с live-пушем."""
     if key not in native_keys():
         return False
     data = _load()
@@ -335,6 +335,16 @@ def set_route(gid, key, channel_id):
     except (TypeError, ValueError):
         return False
     _save(data)
+    try:
+        from services.live_bus import publish as _live_pub
+        _live_pub(gid, 'channels')
+        _live_pub(gid, 'channel-routes')
+        if key.startswith('meeting'):
+            _live_pub(gid, 'meetings')
+        if 'appeal' in key:
+            _live_pub(gid, 'appeals')
+    except Exception:
+        pass
     return True
 
 

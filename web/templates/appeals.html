@@ -10,6 +10,8 @@
     <p class="lead">Пересмотр наказаний без потери исходных фактов: очередь, аргументы сторон и вердикт в одном месте.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <a class="btn" id="apCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
   </div>
 </div>
@@ -544,6 +546,6 @@ if (CAN_EDIT && $('apRulesSave')) {
 
 loadOverview();
 loadHistory();
-if (window.setLiveRefresh) window.setLiveRefresh(function () { loadOverview(); }, 1500);
+if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:appeals','appeals','dashboard','global']) { loadOverview(); }, 1500);
 </script>
 {% endblock %}

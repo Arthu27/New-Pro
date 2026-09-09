@@ -10,6 +10,8 @@
     <p class="lead">Временные муты и баны с точным сроком: таймеры и автоматическое снятие.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <button type="button" class="btn" id="refreshBtn"><i class="fas fa-arrows-rotate"></i> Обновить</button>
   </div>
 </div>
@@ -293,7 +295,7 @@ function $(id) { return document.getElementById(id); }
   /* Список наказаний — пушем при модерационных событиях; таймер 60с лишь
      подстраховка (а локальные таймеры обратного отсчёта остаются 1с — это
      чистая отрисовка на клиенте, без запросов к серверу). */
-  setLiveRefresh(function () { if (!window.__modLivePaused) load(); }, 60000,
+  setLiveRefresh(function (, ['g*:temp_moderation','temp_moderation','dashboard','global']) { if (!window.__modLivePaused) load(); }, 60000,
                  ['g*:moderation', 'g*:modcenter', 'g*:logs']);
   setInterval(updateCountdowns, 1000);
 })();

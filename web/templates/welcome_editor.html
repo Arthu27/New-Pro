@@ -291,7 +291,8 @@ async function loadWelcomeCard() {
     if (!r.ok) return;
     var d = await r.json();
     if (!d.success) return;
-    var ts = document.getElementById('wCardTheme');
+    
+    try{ var _fp=JSON.stringify(d).slice(0,1000); if(window.silentGuard && window.silentGuard('welcome_editor', _fp)) return; }catch(e){}var ts = document.getElementById('wCardTheme');
     if (!ts.options.length) {
       (d.themes || []).forEach(function(t) {
         var o = document.createElement('option');

@@ -112,7 +112,7 @@
     } catch(e) { /* keep placeholders */ }
   }
   load();
-  if (window.setLiveRefresh) window.setLiveRefresh(load, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(load, 1500, ['g*:server_health','server_health','dashboard','global']);
   else setInterval(load, 2500);
 })();
 </script>

@@ -202,6 +202,7 @@ function renderLib(list) {
 function load() {
   fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
+    try{ var fp=JSON.stringify(d).slice(0,800); if(window.silentGuard && window.silentGuard('reports', fp)) return; }catch(e){}
     renderKpis(d);
     document.getElementById('repDaily').innerHTML = d.daily
       ? statGrid(d.daily, 'Дата: ' + d.daily.date) : errBox(d.daily_error || 'Ошибка');
@@ -328,6 +329,6 @@ if (CAN_EDIT) {
 load();
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(); } catch (e) {} }, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:reports','reports','dashboard','global']) { try { load(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

@@ -257,10 +257,10 @@
   loadPanelLogs();
   loadLiveLogs(true);
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(loadStatus, 1500);
-    window.setLiveRefresh(loadHealth, 1500);
-    window.setLiveRefresh(loadPanelLogs, 1500);
-    window.setLiveRefresh(function () { loadLiveLogs(false); }, 1500);
+    window.setLiveRefresh(loadStatus, 1500, ['g*:ops_center','ops_center','dashboard','global']);
+    window.setLiveRefresh(loadHealth, 1500, ['g*:ops_center','ops_center','dashboard','global']);
+    window.setLiveRefresh(loadPanelLogs, 1500, ['g*:ops_center','ops_center','dashboard','global']);
+    window.setLiveRefresh(function (, ['g*:ops_center','ops_center','dashboard','global']) { loadLiveLogs(false); }, 1500);
   } else {
     setInterval(refreshAll, 5000);
   }

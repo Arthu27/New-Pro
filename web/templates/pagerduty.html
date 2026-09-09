@@ -11,6 +11,8 @@
        Ниже — адрес моста, его живое состояние и история каждого сигнала.</p>
   </div>
   <div class="page-head-side">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <span class="pd-pill" id="pdState"><i class="fas fa-tower-broadcast"></i> проверка…</span>
   </div>
 </div>
@@ -410,7 +412,8 @@ async function pdTick() {
     var r = await fetch('/api/guild/' + GUILD_ID + '/pagerduty', { credentials: 'same-origin' });
     var d = await r.json();
     if (!d.success) return;
-    STATE.bot_status = d.bot_status || (d.bot_online ? 'online' : 'offline');
+    
+    try{ var _fp=JSON.stringify(d).slice(0,1200); if(window.silentGuard && window.silentGuard('pagerduty', _fp)) return; }catch(e){}STATE.bot_status = d.bot_status || (d.bot_online ? 'online' : 'offline');
     STATE.bot_presence = d.bot_presence || '';
     renderBridge(d);
     renderKpis(d.history_stats);
@@ -482,6 +485,6 @@ $('pdEye').addEventListener('click', function () {
 
 renderPreview('triggered');
 pdLoad();
-if (window.setLiveRefresh) window.setLiveRefresh(pdTick, 1500);
+if (window.setLiveRefresh) window.setLiveRefresh(pdTick, 1500, ['g*:pagerduty','pagerduty','dashboard','global']);
 </script>
 {% endblock %}

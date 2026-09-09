@@ -869,10 +869,10 @@
     tickClock();
     setInterval(tickClock, 1000);
     if (window.setLiveRefresh) {
-      window.setLiveRefresh(loadPulse, 1500);
-      window.setLiveRefresh(loadMetrics, 1500);
-      window.setLiveRefresh(loadLogs, 1500);
-      window.setLiveRefresh(loadActivity, 1500);
+      window.setLiveRefresh(loadPulse, 1500, ['g*:mod_kiosk','mod_kiosk','dashboard','global']);
+      window.setLiveRefresh(loadMetrics, 1500, ['g*:mod_kiosk','mod_kiosk','dashboard','global']);
+      window.setLiveRefresh(loadLogs, 1500, ['g*:mod_kiosk','mod_kiosk','dashboard','global']);
+      window.setLiveRefresh(loadActivity, 1500, ['g*:mod_kiosk','mod_kiosk','dashboard','global']);
     }
 
     /* ── тема штаба: тот же механизм, что и у всей панели ── */

@@ -9,6 +9,8 @@
     <p class="lead">История входов и действий в панели управления.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <span class="fresh-stamp" id="pl-stamp"></span>
     <button type="button" class="btn" id="pl-pause" title="Пауза live"></button>
     {% if role == 'owner' %}
@@ -220,7 +222,7 @@
   else { bind(); fetchLogs(); }
 
   /* live: логи панели обновляются сами каждые 15 секунд */
-  if (window.setLiveRefresh) window.setLiveRefresh(fetchLogs, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(fetchLogs, 1500, ['g*:panel_logs','panel_logs','dashboard','global']);
 })();
 </script>
 {% endblock %}

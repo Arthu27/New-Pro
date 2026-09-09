@@ -301,7 +301,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   }
   loadServerHealth();
   /* п.1: индекс здоровья — живой (5с), а не раз в минуту */
-  if (window.setLiveRefresh) window.setLiveRefresh(loadServerHealth, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(loadServerHealth, 1500, ['g*:dashboard','dashboard','dashboard','global']);
   else setInterval(loadServerHealth, 1500);
 })();
 </script>
@@ -1303,8 +1303,8 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   document.addEventListener('hakumo:live', function () { loadPulse(); });
   if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 1500);
-    window.setLiveRefresh(loadPulse, 1500);
+    window.setLiveRefresh(function (, ['g*:dashboard','dashboard','dashboard','global']) { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 1500);
+    window.setLiveRefresh(loadPulse, 1500, ['g*:dashboard','dashboard','dashboard','global']);
   } else {
     setInterval(loadStats, 2500);
     setInterval(loadPulse, 5000);

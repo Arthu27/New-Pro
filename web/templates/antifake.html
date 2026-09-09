@@ -10,6 +10,8 @@
     <p class="lead">Защита от подделок профилей: сканер сходства, лаборатория имён и журнал страйков.</p>
   </div>
   <div class="page-head-actions">
+    <span class="badge ok" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px"><span style="width:7px;height:7px;border-radius:50%;background:#23a55d;display:inline-block;box-shadow:0 0 0 3px rgba(35,165,93,.18)"></span> LIVE</span>
+    
     <button type="button" class="btn" id="afReload"><i class="fas fa-arrows-rotate"></i> Обновить</button>
   </div>
 </div>
@@ -336,6 +338,6 @@ loadStatus();
 loadStrikes();
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadStatus(); loadStrikes(); } catch (e) {} }, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:antifake','antifake','dashboard','global']) { try { loadStatus(); loadStrikes(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}
