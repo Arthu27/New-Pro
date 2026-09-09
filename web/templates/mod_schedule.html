@@ -3,256 +3,515 @@
 {% block page_title %}<i class="fas fa-calendar-check"></i> Расписание{% endblock %}
 {% block content %}
 <style>
-.ms-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.ms-wd { text-align: center; font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .6px; padding: 4px 0 6px; }
-.ms-day { min-height: 62px; border: 1px solid var(--line); border-radius: 10px; padding: 5px 6px; cursor: pointer; background: var(--surface-2); transition: border-color .15s, background .15s; position: relative; }
-.ms-day:hover { border-color: var(--ac-line); }
-.ms-day.sel { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
-.ms-day.today .ms-num { background: var(--ac); color: #fff; }
-.ms-day.dim { opacity: .38; cursor: default; }
-.ms-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font-size: 11.5px; font-weight: 700; }
-.ms-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
-.ms-dots .dot { width: 7px; height: 7px; border-radius: 99px; display: inline-block; }
-.ms-cnt { position: absolute; top: 5px; right: 6px; font-size: 10px; color: var(--text-3); font-weight: 700; }
-.ms-ev { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.ms-ev:last-child { border-bottom: 0; }
-.ms-ev .feed-item-icon { flex-shrink: 0; }
-.ms-leg { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
-.ms-leg span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-3); }
-.ms-leg .dot { width: 8px; height: 8px; border-radius: 99px; display: inline-block; }
-@media (max-width: 720px) { .ms-day { min-height: 46px; } .ms-cnt { display: none; } }
+/* excellent schedule */
+.ms-wrap { display:flex; flex-direction:column; gap:14px; }
+.ms-top { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+.ms-views { display:flex; gap:6px; background:var(--surface-2); padding:4px; border-radius:12px; border:1px solid var(--line); }
+.ms-views button { border:0; background:transparent; padding:7px 12px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-3); transition:.15s; }
+.ms-views button.active { background:var(--ac); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+.ms-views button:hover:not(.active){ background:var(--surface-3); color:var(--text-1); }
+.ms-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
+.ms-kpi { display:flex; gap:10px; align-items:center; padding:12px 14px; border-radius:14px; background:var(--surface-1); border:1px solid var(--line); transition:.15s; }
+.ms-kpi:hover{ border-color:var(--ac-line); transform:translateY(-1px); }
+.ms-kpi .ic { width:38px; height:38px; border-radius:11px; display:grid; place-items:center; font-size:16px; }
+.ms-kpi .ic.amber{ background:#f59e0b18; color:#f59e0b; }
+.ms-kpi .ic.cyan{ background:#22d3ee18; color:#22d3ee; }
+.ms-kpi .ic.red{ background:#ef444418; color:#ef4444; }
+.ms-kpi .ic.green{ background:#22c55e18; color:#22c55e; }
+.ms-kpi .ic.blue{ background:#3b82f618; color:#3b82f6; }
+.ms-kpi .val{ font-size:20px; font-weight:800; line-height:1; }
+.ms-kpi .lab{ font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; margin-top:3px; }
+
+.ms-main { display:grid; grid-template-columns:1.2fr .8fr; gap:14px; align-items:start; }
+@media(max-width:1100px){ .ms-main{ grid-template-columns:1fr; } }
+
+.ms-cal-card { background:var(--surface-1); border:1px solid var(--line); border-radius:16px; padding:14px; }
+.ms-cal-head { display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.ms-cal-head b{ font-size:16px; }
+.ms-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+.ms-wd{ text-align:center; font-size:10.5px; color:var(--text-3); text-transform:uppercase; letter-spacing:.6px; padding:6px 0; font-weight:700; }
+.ms-day{ min-height:72px; border:1px solid var(--line); border-radius:12px; padding:6px 7px; cursor:pointer; background:var(--surface-2); transition:.15s; position:relative; }
+.ms-day:hover{ border-color:var(--ac-line); background:var(--surface-3); transform:translateY(-1px); }
+.ms-day.sel{ border-color:var(--ac); box-shadow:0 0 0 3px var(--ac-soft); background:var(--surface-1); }
+.ms-day.today .ms-num{ background:var(--ac); color:#fff; }
+.ms-day.dim{ opacity:.35; cursor:default; background:transparent; }
+.ms-day.has{ border-style:solid; }
+.ms-num{ display:inline-grid; place-items:center; width:24px; height:24px; border-radius:8px; font-size:12px; font-weight:800; }
+.ms-cnt{ position:absolute; top:6px; right:7px; font-size:10px; font-weight:800; background:var(--ac); color:#fff; border-radius:999px; padding:1px 6px; min-width:18px; text-align:center; }
+.ms-dots{ display:flex; flex-wrap:wrap; gap:3px; margin-top:6px; }
+.ms-dots .dot{ width:7px; height:7px; border-radius:99px; display:inline-block; }
+.ms-week { display:grid; grid-template-columns:70px 1fr; gap:8px; }
+.ms-week-hours{ display:flex; flex-direction:column; gap:0; }
+.ms-week-hours div{ height:52px; font-size:11px; color:var(--text-3); text-align:right; padding-right:8px; border-top:1px dashed var(--line); }
+.ms-week-days{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.ms-week-col{ border:1px solid var(--line); border-radius:12px; background:var(--surface-2); padding:6px; min-height:400px; }
+.ms-week-col.today{ border-color:var(--ac); box-shadow:0 0 0 2px var(--ac-soft); }
+.ms-day-events{ display:flex; flex-direction:column; gap:6px; }
+
+.ms-ev{ display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:12px; background:var(--surface-2); border:1px solid var(--line); transition:.15s; }
+.ms-ev:hover{ border-color:var(--ac-line); transform:translateY(-1px); }
+.ms-ev .icon{ width:32px; height:32px; border-radius:10px; display:grid; place-items:center; font-size:13px; flex-shrink:0; }
+.ms-ev .icon.mute{ background:#f59e0b18; color:#f59e0b; }
+.ms-ev .icon.vmute{ background:#22d3ee18; color:#22d3ee; }
+.ms-ev .icon.ban{ background:#ef444418; color:#ef4444; }
+.ms-ev .icon.kick{ background:#eab30818; color:#eab308; }
+.ms-ev .icon.warn{ background:#f9731618; color:#f97316; }
+.ms-ev .icon.info{ background:#3b82f618; color:#3b82f6; }
+.ms-ev .title{ font-weight:700; font-size:13px; }
+.ms-ev .sub{ font-size:12px; color:var(--text-2); margin-top:2px; }
+.ms-ev .time{ font-size:11px; color:var(--text-3); margin-top:3px; }
+
+.ms-form{ background:var(--surface-1); border:1px solid var(--line); border-radius:16px; padding:16px; }
+.ms-form h3{ margin:0 0 12px; font-size:14px; display:flex; align-items:center; gap:8px; }
+.ms-row{ display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.ms-field{ display:flex; flex-direction:column; gap:5px; min-width:140px; flex:1; }
+.ms-field label{ font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+.ms-field .form-input, .ms-field select{ padding:9px 12px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); font-size:13px; }
+.ms-field .form-input:focus{ border-color:var(--ac); outline:none; box-shadow:0 0 0 3px var(--ac-soft); }
+.ms-presets{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.ms-presets button{ border:1px solid var(--line); background:var(--surface-2); padding:5px 10px; border-radius:999px; font-size:11px; font-weight:600; cursor:pointer; transition:.15s; }
+.ms-presets button:hover{ border-color:var(--ac); color:var(--ac); }
+.ms-presets button.active{ background:var(--ac); color:#fff; border-color:var(--ac); }
+
+.ms-list{ display:flex; flex-direction:column; gap:8px; }
+.ms-filters{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+.ms-filters select, .ms-filters input{ padding:7px 10px; border-radius:9px; border:1px solid var(--line); background:var(--surface-2); font-size:12px; }
+.ms-badge{ display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid var(--line); }
+.ms-badge.pending{ background:#f59e0b18; color:#f59e0b; border-color:#f59e0b30; }
+.ms-badge.executed{ background:#22c55e18; color:#22c55e; border-color:#22c55e30; }
+.ms-badge.cancelled{ background:#64748b18; color:#64748b; border-color:#64748b30; }
+.ms-badge.failed{ background:#ef444418; color:#ef4444; border-color:#ef444430; }
+
+.ms-templates{ display:flex; flex-wrap:wrap; gap:8px; }
+.ms-tpl{ padding:8px 12px; border-radius:10px; background:var(--surface-2); border:1px solid var(--line); font-size:12px; display:flex; align-items:center; gap:8px; cursor:pointer; transition:.15s; }
+.ms-tpl:hover{ border-color:var(--ac); }
+.ms-tpl .del{ color:var(--text-3); cursor:pointer; padding:2px 6px; border-radius:6px; }
+.ms-tpl .del:hover{ background:#ef444418; color:#ef4444; }
+
+.live-pill{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#22c55e18; color:#22c55e; font-size:11px; font-weight:800; border:1px solid #22c55e30; }
+.live-pill .dot{ width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); animation:pulse 1.6s infinite; }
+@keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(34,197,94,.4);} 70%{ box-shadow:0 0 0 6px rgba(34,197,94,0);} 100%{ box-shadow:0 0 0 0 rgba(34,197,94,0);} }
+
+.empty{ padding:30px 16px; text-align:center; color:var(--text-3); display:flex; flex-direction:column; align-items:center; gap:10px; }
+.empty i{ font-size:28px; opacity:.5; }
 </style>
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow"> Модерация </div>
-    <h1>Расписание наказаний</h1>
-    <p class="lead">Сроки наказаний и запланированные действия. Обновляется автоматически.</p>
+    <div class="eyebrow">Модерация · Live</div>
+    <h1>Расписание наказаний <span class="live-pill"><span class="dot"></span>LIVE</span></h1>
+    <p class="lead">Календарь истечений, отложенные действия, шаблоны, повторы. Обновляется мгновенно через SSE — без перезагрузки.</p>
+  </div>
+  <div class="page-head-actions">
+    <button class="btn btn-ghost btn-sm" id="msRefresh"><i class="fas fa-rotate"></i> Обновить</button>
+    <button class="btn btn-primary btn-sm" id="msNewBtn"><i class="fas fa-plus"></i> Запланировать</button>
   </div>
 </div>
 
-<div class="kpi-row" id="msKpis">
-  <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
+<div class="ms-wrap">
+  <div class="ms-kpis" id="msKpis"></div>
+
+  <div class="ms-top">
+    <div class="ms-views" id="msViews">
+      <button data-view="month" class="active">Месяц</button>
+      <button data-view="week">Неделя</button>
+      <button data-view="day">День</button>
+      <button data-view="list">Список</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div class="ms-filters" style="margin:0">
+        <select id="msFilterStatus"><option value="">Все статусы</option><option value="pending">Ожидает</option><option value="executed">Исполнено</option><option value="cancelled">Отменено</option><option value="failed">Ошибки</option></select>
+        <select id="msFilterAction"><option value="">Все действия</option></select>
+        <input id="msSearch" placeholder="Поиск: ник, ID, причина..." style="min-width:200px">
+      </div>
+    </div>
+  </div>
+
+  <div class="ms-main">
+    <div>
+      <div class="ms-cal-card">
+        <div class="ms-cal-head">
+          <button class="btn btn-ghost btn-sm" id="msPrev"><i class="fas fa-chevron-left"></i></button>
+          <b id="msTitle" style="font-size:15px"></b>
+          <button class="btn btn-ghost btn-sm" id="msNext"><i class="fas fa-chevron-right"></i></button>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm" id="msToday">Сегодня</button>
+        </div>
+        <div id="msCal"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--text-3)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><i class="dot" style="width:8px;height:8px;border-radius:99px;background:#f59e0b;display:inline-block"></i> мьют чата</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><i class="dot" style="width:8px;height:8px;border-radius:99px;background:#22d3ee;display:inline-block"></i> войс</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><i class="dot" style="width:8px;height:8px;border-radius:99px;background:#ef4444;display:inline-block"></i> бан</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><i class="dot" style="width:8px;height:8px;border-radius:99px;background:#eab308;display:inline-block"></i> кик</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><i class="dot" style="width:8px;height:8px;border-radius:99px;background:#f97316;display:inline-block"></i> варн</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><i class="dot" style="width:8px;height:8px;border-radius:99px;background:#3b82f6;display:inline-block"></i> отложенное</span>
+        </div>
+      </div>
+
+      <div class="ms-form" id="msCreateCard" style="margin-top:14px;display:none">
+        <h3><i class="fas fa-plus"></i> Новое отложенное действие</h3>
+        <div class="ms-row">
+          <div class="ms-field" style="min-width:160px"><label>Действие</label><select id="msAction" class="form-input"></select></div>
+          <div class="ms-field" style="min-width:220px;flex:2"><label>Участники (до 20, ID или выбор)</label><input id="msUserId" class="form-input" placeholder="Имя — выберите из списка, можно несколько через запятую"><span id="msUserIdStatus"></span></div>
+          <div class="ms-field" style="min-width:200px"><label>Когда исполнить</label><input type="datetime-local" id="msRunAt" class="form-input"></div>
+        </div>
+        <div class="ms-row" style="margin-top:10px">
+          <div class="ms-field"><label>Длительность</label><input id="msDur" class="form-input" placeholder="1ч 30м, 2д, 60 мин"><div class="ms-presets" id="msDurPresets"></div></div>
+          <div class="ms-field" style="flex:2"><label>Причина</label><input id="msReason" class="form-input" maxlength="300" placeholder="за что (необязательно)"></div>
+        </div>
+        <div class="ms-row" style="margin-top:10px">
+          <div class="ms-field" style="min-width:200px"><label>Повтор</label><select id="msRecType" class="form-input"><option value="">Без повтора</option><option value="daily">Каждый день</option><option value="weekly">Каждую неделю</option><option value="monthly">Каждый месяц</option></select></div>
+          <div class="ms-field" style="max-width:120px"><label>Интервал</label><input id="msRecInterval" type="number" min="1" max="30" value="1" class="form-input"></div>
+          <div class="ms-field" style="max-width:120px"><label>Кол-во повторов</label><input id="msRecCount" type="number" min="2" max="100" placeholder="до 100" class="form-input"></div>
+          <div class="ms-field"><label>Шаблон</label><select id="msTplSelect" class="form-input"><option value="">Без шаблона</option></select></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="msCreate"><i class="fas fa-check"></i> Запланировать</button>
+          <button class="btn btn-ghost" id="msCancelCreate">Отмена</button>
+          <button class="btn btn-ghost btn-sm" id="msSaveTpl"><i class="fas fa-bookmark"></i> Сохранить как шаблон</button>
+          <span id="msCreateMsg" class="hint" style="margin-left:8px"></span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-clock"></i> Отложенные действия <span id="msSchedCount" class="badge neutral" style="margin-left:8px"></span></div>
+        <div id="msSchedList"><div class="empty"><i class="fas fa-hourglass-start"></i><span>Загрузка…</span></div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-calendar-day"></i> <span id="msDayTitle">События дня</span> <span id="msDayCount" class="badge neutral" style="margin-left:6px"></span></div>
+        <div id="msDayList"><div class="empty"><i class="fas fa-calendar-day"></i><span>Выберите день</span></div></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-fire"></i> Активные наказания <span id="msActiveCount" class="badge warn" style="margin-left:6px"></span></div>
+        <div id="msActiveList"><div class="empty"><i class="fas fa-shield-halved"></i><span>Загрузка…</span></div></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-bookmark"></i> Шаблоны</div>
+        <div id="msTplList"><div class="empty"><i class="fas fa-bookmark"></i><span>Нет шаблонов</span></div></div>
+        <div class="hint" style="margin-top:8px">Сохраняйте частые комбинации (действие+длительность+причина) для быстрого планирования.</div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-clock-rotate-left"></i> История (последние 50)</div>
+        <div id="msHistList"><div class="empty"><i class="fas fa-clock-rotate-left"></i><span>Загрузка…</span></div></div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="grid-2" style="align-items:start">
-  <div class="card">
-    <div class="row" style="margin-bottom:10px">
-      <button type="button" class="btn btn-ghost btn-sm" id="msPrev" aria-label="Предыдущий месяц"><i class="fas fa-chevron-left"></i></button>
-      <b id="msTitle" style="font-size:14px"></b>
-      <button type="button" class="btn btn-ghost btn-sm" id="msNext" aria-label="Следующий месяц"><i class="fas fa-chevron-right"></i></button>
-      <span class="spacer"></span>
-      <button type="button" class="btn btn-ghost btn-sm" id="msToday">Сегодня</button>
-    </div>
-    <div class="ms-grid" id="msCal"></div>
-    <div class="ms-leg">
-      <span><i class="dot amber" style="background:var(--warn,#f59e0b)"></i> мьют чата</span>
-      <span><i class="dot cyan"></i> мьют войса</span>
-      <span><i class="dot red"></i> бан</span>
-      <span><i class="dot gold"></i> кик</span>
-      <span><i class="dot info"></i> отложенное действие</span>
-    </div>
-  </div>
-  <div class="card">
-    <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-list-check"></i> <span id="msDayTitle">События дня</span></div>
-    <div id="msDayList"><div class="empty"><i class="fas fa-calendar-day"></i><span>Выберите день на календаре</span></div></div>
-  </div>
-</div>
-
-<div class="card" style="margin-top:14px">
-  <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-clock"></i> Отложенные действия</div>
-  <div class="muted" style="font-size:12px;margin-bottom:10px">Запланируйте наказание на будущее — бот исполнит его сам (проверка каждые 30 секунд). Здесь же можно отменить.</div>
-  <div id="msCreateWrap">
-    <div class="form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
-      <label class="field" style="min-width:130px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Действие</span>
-        <select class="form-input" id="msAction" aria-label="Действие">
-          <option value="mute">Мьют</option><option value="ban">Бан</option><option value="kick">Кик</option>
-        </select></label>
-      <label class="field" style="min-width:190px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Участник</span>
-        <input class="form-input" id="msUserId" placeholder="Имя участника — выберите из списка" aria-label="Участник"><span id="msUserIdStatus"></span></label>
-      <label class="field" style="min-width:200px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Когда исполнить</span>
-        <input type="datetime-local" class="form-input" id="msRunAt" aria-label="Когда исполнить"></label>
-      <label class="field" style="min-width:130px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Длительность, мин</span>
-        <input type="number" class="form-input" id="msDur" min="1" max="129600" value="60" aria-label="Длительность в минутах"></label>
-      <label class="field" style="flex:1;min-width:200px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Причина</span>
-        <input class="form-input" id="msReason" maxlength="200" placeholder="за что (необязательно)" aria-label="Причина"></label>
-      <button type="button" class="btn btn-primary" id="msCreate"><i class="fas fa-plus"></i> Запланировать</button>
-    </div>
-    <div class="hint" id="msCreateMsg" style="margin-top:6px"></div>
-  </div>
-  <div id="msSchedList" style="margin-top:10px"><div class="empty"><i class="fas fa-hourglass-start"></i><span>Загрузка…</span></div></div>
-</div>
 <script src="/static/pickers.js"></script>
 <script nonce="{{ csp_nonce }}">
-var GID = '{{ guild_id }}';
-attachMemberPicker(document.getElementById('msUserId'), { gid: GID, statusEl: document.getElementById('msUserIdStatus') });
-var API = '/api/guild/' + GID + '/mod-schedule';
-var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
-var DATA = null;
-var CUR = new Date();          // месяц календаря
-var SEL = null;                // выбранный день (yyyy-mm-dd)
+var GID='{{ guild_id }}';
+var API='/api/guild/'+GID+'/mod-schedule';
+var CAN_EDIT={{ 'true' if can_edit else 'false' }};
+var DATA=null;
+var CUR=new Date();
+var SEL=null;
+var VIEW='month';
+var FILTERS={status:'',action:'',search:''};
 
-function $(id) { return document.getElementById(id); }
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function pad(n) { return n < 10 ? '0' + n : '' + n; }
-function dayKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
-function keyOfTs(ts) { var d = new Date(ts * 1000); return dayKey(d); }
-function fmtTime(ts) { var d = new Date(ts * 1000); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
-function fmtDay(ts) { var d = new Date(ts * 1000); return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + ' ' + fmtTime(ts); }
-function durHuman(sec) {
-  sec = Math.max(0, Math.round(sec || 0));
-  if (sec < 3600) return Math.round(sec / 60) + ' мин';
-  if (sec < 86400) return (sec / 3600).toFixed(sec % 3600 ? 1 : 0).replace(/\.0$/, '') + ' ч';
-  return Math.round(sec / 86400) + ' дн';
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function pad(n){ return n<10?'0'+n:''+n; }
+function dayKey(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function keyOfTs(ts){ var d=new Date(ts*1000); return dayKey(d); }
+function fmtTime(ts){ var d=new Date(ts*1000); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+function fmtDay(ts){ var d=new Date(ts*1000); return pad(d.getDate())+'.'+pad(d.getMonth()+1)+' '+fmtTime(ts); }
+function fmtFull(ts){ var d=new Date(ts*1000); return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear()+' '+fmtTime(ts); }
+function durHuman(sec){ sec=Math.max(0,Math.round(sec||0)); if(sec<60) return sec+'с'; if(sec<3600) return Math.round(sec/60)+'м'; if(sec<86400) return (sec/3600).toFixed(sec%3600?1:0).replace(/\.0$/,'')+'ч'; return Math.round(sec/86400)+'д'; }
+function parseDurInput(v){ v=String(v||'').trim(); if(!v) return 0; if(/^\d+$/.test(v)) return parseInt(v,10)*60; // minutes
+  var m=v.match(/(\d+)\s*(с|s|м|m|ч|h|д|d|w|мес|mo)/gi); if(!m) return 0;
+  var total=0; var re=/(\d+)\s*(с|s|м|min|минут|м|ч|час|h|д|день|d|w|нед|мес|mo)/i;
+  // simple: use backend parser via API? fallback
+  // We'll let backend parse, here just return raw string length check
+  return v; // let backend handle human
 }
-var KIND_DOT = { mute: 'amber', vmute: 'cyan', ban: 'red', kick: 'gold' };
-var KIND_ICON = { mute: 'fa-comment-slash', vmute: 'fa-microphone-slash', ban: 'fa-ban', kick: 'fa-door-open' };
-var MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+var MONTHS=['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+var MONTHS_SHORT=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
 
-function eventsByDay() {
-  var map = {};
-  function push(key, ev) { (map[key] = map[key] || []).push(ev); }
-  (DATA.expirations || []).forEach(function (e) {
-    push(keyOfTs(e.until), { t: 'exp', ts: e.until, kind: e.kind, label: e.label, name: e.user_name || e.user_id, reason: e.reason });
-  });
-  (DATA.scheduled || []).forEach(function (e) {
-    if (e.status !== 'pending') return;
-    push(keyOfTs(e.run_at), { t: 'sch', ts: e.run_at, kind: e.action, label: 'Запланировано: ' + e.action_label, name: e.user_name || e.user_id, reason: e.reason, dur: e.duration });
-  });
+function kpi(icon,num,label,tone){ return '<div class="ms-kpi"><div class="ic '+ (tone||'blue') +'"><i class="fas '+icon+'"></i></div><div><div class="val" data-count="'+esc(num)+'">'+esc(num)+'</div><div class="lab">'+esc(label)+'</div></div></div>'; }
+
+function eventsByDay(){
+  var map={};
+  function push(k,ev){ (map[k]=map[k]||[]).push(ev); }
+  (DATA.expirations||[]).forEach(function(e){ push(keyOfTs(e.until), {t:'exp', ts:e.until, kind:e.kind, label:e.label, name:e.user_name||e.user_id, reason:e.reason, color:e.color, icon:e.icon}); });
+  (DATA.scheduled||[]).forEach(function(e){ if(e.status!=='pending') return; push(keyOfTs(e.run_at), {t:'sch', ts:e.run_at, kind:e.action, label:'Запланировано: '+e.action_label, name:e.user_name||e.user_id, reason:e.reason, dur:e.duration, color:e.action_color, icon:e.action_icon, id:e.id}); });
   return map;
 }
 
-function renderCal() {
-  var y = CUR.getFullYear(), m = CUR.getMonth();
-  $('msTitle').textContent = MONTHS[m] + ' ' + y;
-  var first = new Date(y, m, 1);
-  var startDow = (first.getDay() + 6) % 7;    // понедельник первым
-  var daysIn = new Date(y, m + 1, 0).getDate();
-  var map = DATA ? eventsByDay() : {};
-  var todayKey = dayKey(new Date());
-  var html = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(function (w) { return '<div class="ms-wd">' + w + '</div>'; }).join('');
-  for (var i = 0; i < startDow; i++) html += '<div class="ms-day dim"></div>';
-  for (var d = 1; d <= daysIn; d++) {
-    var key = y + '-' + pad(m + 1) + '-' + pad(d);
-    var evs = map[key] || [];
-    var dots = evs.slice(0, 8).map(function (e) {
-      var cls = e.t === 'exp' ? (KIND_DOT[e.kind] || 'info') : 'info';
-      return '<i class="dot ' + cls + '"></i>';
+function renderKpis(){
+  if(!DATA) return;
+  var s=DATA.stats;
+  var html='';
+  html+=kpi('fa-fire', s.active, 'активных наказаний', s.active?'amber':'green');
+  html+=kpi('fa-clock', s.pending, 'отложенных', 'blue');
+  html+=kpi('fa-calendar-day', s.today, 'истекает сегодня', s.today?'amber':'green');
+  html+=kpi('fa-calendar-week', s.week||0, 'на неделе', 'cyan');
+  html+=kpi('fa-check', s.executed||0, 'исполнено', 'green');
+  html+=kpi('fa-xmark', (s.cancelled||0)+(s.failed||0), 'отменено/ошибок', (s.failed?'red':'blue'));
+  if(s.nearest) html+=kpi('fa-hourglass-half', fmtDay(s.nearest), 'ближайшее истечение', 'blue');
+  $('msKpis').innerHTML=html;
+  if(window.countUp){
+    try{ document.querySelectorAll('.ms-kpi .val').forEach(function(el){ var v=el.getAttribute('data-count'); if(!isNaN(parseInt(v))) window.countUp(el, parseInt(v)); }); }catch(e){}
+  }
+}
+
+function renderCal(){
+  var y=CUR.getFullYear(), m=CUR.getMonth();
+  $('msTitle').textContent=MONTHS[m]+' '+y;
+  var map=DATA?eventsByDay():{};
+  var todayKey=dayKey(new Date());
+  var box=$('msCal');
+  if(VIEW==='month'){
+    var first=new Date(y,m,1); var startDow=(first.getDay()+6)%7; var daysIn=new Date(y,m+1,0).getDate();
+    var html=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(function(w){ return '<div class="ms-wd">'+w+'</div>'; }).join('');
+    for(var i=0;i<startDow;i++) html+='<div class="ms-day dim"></div>';
+    for(var d=1; d<=daysIn; d++){
+      var key=y+'-'+pad(m+1)+'-'+pad(d);
+      var evs=map[key]||[];
+      var dots=evs.slice(0,10).map(function(e){ var col=e.color||'#3b82f6'; return '<i class="dot" style="background:'+col+'"></i>'; }).join('');
+      html+='<div class="ms-day'+(key===todayKey?' today':'')+(key===SEL?' sel':'')+(evs.length?' has':'')+'" data-day="'+key+'"><span class="ms-num">'+d+'</span>'+(evs.length?'<span class="ms-cnt">'+evs.length+'</span>':'')+'<div class="ms-dots">'+dots+'</div></div>';
+    }
+    box.innerHTML='<div class="ms-cal-grid">'+html+'</div>';
+  } else if(VIEW==='week'){
+    // week view: current week containing CUR
+    var curDow=(CUR.getDay()+6)%7; var weekStart=new Date(CUR); weekStart.setDate(CUR.getDate()-curDow);
+    var html='<div class="ms-week"><div class="ms-week-hours">'+Array.from({length:24},(_,h)=>'<div>'+pad(h)+':00</div>').join('')+'</div><div class="ms-week-days">';
+    for(var i=0;i<7;i++){
+      var d=new Date(weekStart); d.setDate(weekStart.getDate()+i);
+      var key=dayKey(d); var evs=map[key]||[]; var isToday=key===todayKey;
+      html+='<div class="ms-week-col'+(isToday?' today':'')+(key===SEL?' sel':'')+'" data-day="'+key+'"><b style="font-size:12px">'+pad(d.getDate())+' '+MONTHS_SHORT[d.getMonth()]+'</b><div class="ms-day-events" style="margin-top:6px">';
+      evs.sort((a,b)=>a.ts-b.ts).forEach(function(e){ html+='<div class="ms-ev" style="padding:6px 8px"><div class="icon '+esc(e.kind)+'" style="width:24px;height:24px;font-size:11px;background:'+(e.color||'#3b82f6')+'18;color:'+(e.color||'#3b82f6')+'"><i class="fas '+(e.icon||'fa-clock')+'"></i></div><div style="min-width:0"><div class="title" style="font-size:11px">'+esc(e.label)+'</div><div class="sub" style="font-size:10px">'+esc(e.name)+'</div><div class="time">'+fmtTime(e.ts)+'</div></div></div>'; });
+      html+='</div></div>';
+    }
+    html+='</div></div>';
+    box.innerHTML=html;
+  } else if(VIEW==='day'){
+    var key=SEL||dayKey(CUR);
+    var evs=map[key]||[];
+    var html='<div style="padding:8px"><b>'+key+'</b> — '+evs.length+' событий</div><div class="ms-list">';
+    evs.sort((a,b)=>a.ts-b.ts).forEach(function(e){
+      html+='<div class="ms-ev"><div class="icon '+esc(e.kind)+'" style="background:'+(e.color||'#3b82f6')+'18;color:'+(e.color||'#3b82f6')+'"><i class="fas '+(e.icon||'fa-clock')+'"></i></div><div style="flex:1"><div class="title">'+esc(e.label)+' · '+esc(e.name)+'</div><div class="sub">'+esc(e.reason||'')+'</div><div class="time">'+fmtTime(e.ts)+'</div></div></div>';
+    });
+    if(!evs.length) html+='<div class="empty"><i class="fas fa-mug-hot"></i><span>На этот день ничего</span></div>';
+    html+='</div>';
+    box.innerHTML=html;
+  } else { // list
+    var all=[]; Object.keys(map).forEach(function(k){ map[k].forEach(function(e){ all.push({key:k, ev:e}); }); });
+    all.sort((a,b)=>a.ev.ts-b.ev.ts);
+    var html='<div class="ms-list">';
+    all.slice(0,100).forEach(function(it){
+      var e=it.ev;
+      html+='<div class="ms-ev"><div class="icon '+esc(e.kind)+'" style="background:'+(e.color||'#3b82f6')+'18;color:'+(e.color||'#3b82f6')+'"><i class="fas '+(e.icon||'fa-clock')+'"></i></div><div style="flex:1"><div class="title">'+esc(e.label)+' · '+esc(e.name)+'</div><div class="sub">'+esc(it.key)+' '+fmtTime(e.ts)+' · '+(e.reason||'')+'</div></div></div>';
+    });
+    if(!all.length) html+='<div class="empty"><i class="fas fa-list"></i><span>Нет событий</span></div>';
+    html+='</div>';
+    box.innerHTML=html;
+  }
+}
+
+function renderDayList(){
+  var box=$('msDayList');
+  if(!SEL){ box.innerHTML='<div class="empty"><i class="fas fa-calendar-day"></i><span>Выберите день на календаре</span></div>'; $('msDayCount').textContent=''; return; }
+  var evs=(DATA?eventsByDay()[SEL]:null)||[];
+  var dd=SEL.split('-'); $('msDayTitle').textContent=parseInt(dd[2],10)+' '+MONTHS[parseInt(dd[1],10)-1];
+  $('msDayCount').textContent=evs.length?evs.length:'';
+  if(!evs.length){ box.innerHTML='<div class="empty"><i class="fas fa-mug-hot"></i><span>На этот день ничего</span></div>'; return; }
+  box.innerHTML=evs.sort((a,b)=>a.ts-b.ts).map(function(e){
+    var sub=e.t==='exp'?'истекает в '+fmtTime(e.ts)+(e.reason?' · '+e.reason:''):'исполнение в '+fmtTime(e.ts)+(e.dur?' · на '+durHuman(e.dur):'')+(e.reason?' · '+e.reason:'');
+    return '<div class="ms-ev"><div class="icon '+esc(e.kind)+'" style="background:'+(e.color||'#3b82f6')+'18;color:'+(e.color||'#3b82f6')+'"><i class="fas '+(e.icon||'fa-clock')+'"></i></div><div style="flex:1;min-width:0"><div class="title">'+esc(e.label)+'</div><div class="sub">'+esc(e.name)+'</div><div class="time">'+esc(sub)+'</div></div></div>';
+  }).join('');
+}
+
+function stBadge(st){ if(st==='executed') return '<span class="ms-badge executed">исполнено</span>'; if(st==='cancelled') return '<span class="ms-badge cancelled">отменено</span>'; if(st.indexOf('failed')===0) return '<span class="ms-badge failed">ошибка</span>'; return '<span class="ms-badge pending">ожидает</span>'; }
+
+function renderSched(){
+  var box=$('msSchedList');
+  var rows=DATA?DATA.scheduled||[]:[];
+  // apply filters
+  var fStatus=$('msFilterStatus').value; var fAction=$('msFilterAction').value; var q=$('msSearch').value.trim().toLowerCase();
+  var filtered=rows.filter(function(e){
+    if(fStatus && e.status!==fStatus) return false;
+    if(fAction && e.action!==fAction) return false;
+    if(q){ var hay=(e.user_id+' '+(e.user_name||'')+' '+(e.reason||'')+' '+e.action).toLowerCase(); if(hay.indexOf(q)===-1) return false; }
+    return true;
+  });
+  $('msSchedCount').textContent=filtered.length+' / '+rows.length;
+  if(!filtered.length){ box.innerHTML='<div class="empty"><i class="fas fa-hourglass-start"></i><span>Ничего не найдено — измените фильтры или запланируйте первое действие.</span></div>'; return; }
+  box.innerHTML=filtered.slice(0,120).map(function(e){
+    var left=e.status==='pending'?Math.max(0,Math.round(e.run_at-DATA.now)):0;
+    var acts='';
+    if(CAN_EDIT && e.status==='pending'){
+      acts+='<button class="btn btn-ghost btn-sm" data-act="edit" data-id="'+esc(e.id)+'" title="Редактировать"><i class="fas fa-pen"></i></button>';
+      acts+='<button class="btn btn-ghost btn-sm" data-act="now" data-id="'+esc(e.id)+'" title="Исполнить сейчас"><i class="fas fa-bolt"></i></button>';
+      acts+='<button class="btn btn-ghost btn-sm" data-act="dup" data-id="'+esc(e.id)+'" title="Дублировать"><i class="fas fa-copy"></i></button>';
+      acts+='<button class="btn btn-ghost btn-sm" data-act="cancel" data-id="'+esc(e.id)+'" title="Отменить"><i class="fas fa-xmark"></i></button>';
+    } else if(CAN_EDIT){
+      acts+='<button class="btn btn-ghost btn-sm" data-act="dup" data-id="'+esc(e.id)+'" title="Дублировать"><i class="fas fa-copy"></i></button>';
+      acts+='<button class="btn btn-ghost btn-sm" data-act="del" data-id="'+esc(e.id)+'" title="Удалить"><i class="fas fa-trash"></i></button>';
+    }
+    var rec=e.recurring?'<span class="badge info" style="margin-left:6px"><i class="fas fa-repeat"></i> '+(e.recurring.type||'')+'</span>':'';
+    return '<div class="ms-ev"><div class="icon '+esc(e.action)+'" style="background:'+esc(e.action_color||'#3b82f6')+'18;color:'+esc(e.action_color||'#3b82f6')+'"><i class="fas '+esc(e.action_icon||'fa-clock')+'"></i></div><div style="flex:1;min-width:0"><div class="title">'+esc(e.action_label)+' · '+esc(e.user_name||e.user_id)+rec+'</div><div class="sub">'+esc(fmtFull(e.run_at))+(e.duration?' · на '+esc(e.duration_human):'')+' · '+esc(e.reason||'')+'</div><div class="time">'+(e.status==='pending'?'осталось '+durHuman(left)+' · мод: '+(e.mod_name||''):'мод: '+(e.mod_name||'')+' · '+fmtFull(e.run_at))+(e.last_error?' · <span style="color:#ef4444">'+esc(e.last_error)+'</span>':'')+'</div></div><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">'+stBadge(e.status)+acts+'</div></div>';
+  }).join('');
+}
+
+function renderActive(){
+  var box=$('msActiveList');
+  var rows=DATA?DATA.expirations||[]:[];
+  $('msActiveCount').textContent=rows.length||'';
+  if(!rows.length){ box.innerHTML='<div class="empty"><i class="fas fa-shield-halved"></i><span>Активных наказаний нет</span></div>'; return; }
+  box.innerHTML=rows.slice(0,80).map(function(e){
+    var left=Math.max(0,Math.round(e.until-DATA.now));
+    return '<div class="ms-ev"><div class="icon '+esc(e.kind)+'" style="background:'+esc(e.color)+'18;color:'+esc(e.color)+'"><i class="fas '+esc(e.icon)+'"></i></div><div style="flex:1"><div class="title">'+esc(e.label)+' · '+esc(e.user_name||e.user_id)+'</div><div class="sub">'+esc(e.reason||'')+'</div><div class="time">истекает '+esc(fmtFull(e.until))+' · осталось '+durHuman(left)+' · мод: '+esc(e.mod_name||'')+'</div></div></div>';
+  }).join('');
+}
+
+function renderTpls(){
+  var box=$('msTplList');
+  var sel=$('msTplSelect');
+  var rows=DATA?DATA.templates||[]:[];
+  if(!rows.length){ box.innerHTML='<div class="empty"><i class="fas fa-bookmark"></i><span>Нет шаблонов</span></div>'; sel.innerHTML='<option value="">Без шаблона</option>'; return; }
+  box.innerHTML=rows.map(function(t){ return '<div class="ms-tpl" data-tpl="'+esc(t.id)+'"><i class="fas fa-bookmark" style="color:var(--ac)"></i><b>'+esc(t.name)+'</b> <span style="color:var(--text-3)">'+esc(t.action)+' · '+(t.duration?durHuman(t.duration):'')+'</span><span class="del" data-del-tpl="'+esc(t.id)+'"><i class="fas fa-xmark"></i></span></div>'; }).join('');
+  sel.innerHTML='<option value="">Без шаблона</option>'+rows.map(function(t){ return '<option value="'+esc(t.id)+'">'+esc(t.name)+' — '+esc(t.action)+' '+(t.duration?durHuman(t.duration):'')+'</option>'; }).join('');
+}
+
+function renderHist(){
+  var box=$('msHistList');
+  fetch(API+'/history').then(r=>r.json()).then(d=>{
+    if(!d.success || !d.history || !d.history.length){ box.innerHTML='<div class="empty"><i class="fas fa-clock-rotate-left"></i><span>История пуста</span></div>'; return; }
+    box.innerHTML=d.history.slice(0,50).map(function(h){
+      var dt=new Date(h.ts*1000); var when=pad(dt.getDate())+'.'+pad(dt.getMonth()+1)+' '+pad(dt.getHours())+':'+pad(dt.getMinutes());
+      return '<div class="ms-ev" style="padding:8px 10px"><div class="icon info"><i class="fas fa-clock-rotate-left"></i></div><div style="flex:1"><div class="title" style="font-size:12px">'+esc(h.action)+' · '+esc(h.user_id)+'</div><div class="sub" style="font-size:11px">'+esc(h.reason||'')+'</div><div class="time">'+esc(when)+' · '+esc(h.status||'active')+'</div></div></div>';
     }).join('');
-    html += '<div class="ms-day' + (key === todayKey ? ' today' : '') + (key === SEL ? ' sel' : '') + '" data-day="' + key + '">' +
-      '<span class="ms-num">' + d + '</span>' +
-      (evs.length ? '<span class="ms-cnt">' + evs.length + '</span>' : '') +
-      '<div class="ms-dots">' + dots + '</div></div>';
+  }).catch(()=>{ box.innerHTML='<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить</span></div>'; });
+}
+
+function renderAll(){
+  renderKpis(); renderCal(); renderDayList(); renderSched(); renderActive(); renderTpls();
+}
+
+function load(){
+  var q='?'; var fs=[]; if(FILTERS.status) fs.push('status='+encodeURIComponent(FILTERS.status)); if(FILTERS.action) fs.push('action='+encodeURIComponent(FILTERS.action)); if(FILTERS.search) fs.push('search='+encodeURIComponent(FILTERS.search));
+  var url=API+(fs.length?'?'+fs.join('&'):'');
+  fetch(url).then(r=>r.json()).then(d=>{
+    if(!d.success) return;
+    try{ var fp=JSON.stringify([d.expirations?.length, d.scheduled?.length, d.stats]).slice(0,800); if(window.silentGuard && window.silentGuard('mod_schedule', fp)) { /* no flicker, but still update counts */ } }catch(e){}
+    DATA=d;
+    // fill action filter
+    var af=$('msFilterAction');
+    if(af.options.length<=1 && d.actions){
+      af.innerHTML='<option value="">Все действия</option>'+d.actions.map(function(a){ return '<option value="'+esc(a.id)+'">'+esc(a.label)+'</option>'; }).join('');
+      // also fill create action select
+      $('msAction').innerHTML=d.actions.map(function(a){ return '<option value="'+esc(a.id)+'">'+esc(a.label)+'</option>'; }).join('');
+      // presets
+      if(d.presets){
+        $('msDurPresets').innerHTML=d.presets.map(function(p){ return '<button type="button" data-sec="'+p.sec+'">'+esc(p.label)+'</button>'; }).join('');
+      }
+    }
+    renderAll();
+  }).catch(()=>{});
+}
+
+// events
+document.addEventListener('click', function(e){
+  var day=e.target.closest('.ms-day[data-day], .ms-week-col[data-day]');
+  if(day){ SEL=day.dataset.day; renderCal(); renderDayList(); return; }
+  var b=e.target.closest('button[data-act]');
+  if(b){
+    var act=b.dataset.act, id=b.dataset.id;
+    if(act==='cancel'){
+      window.confirmAction('Отменить отложенное действие?', 'Бот его не выполнит. Можно указать причину отмены.', function(reason){
+        fetch(API+'/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id, reason:reason||''})}).then(r=>r.json()).then(d=>{ window.showToast(d.message||d.error||'Ошибка', !!d.success); load(); }).catch(()=>window.showToast('Сеть моргнула', false));
+      }, {danger:true, okText:'Отменить', showReason:true, reasonPlaceholder:'Причина отмены (необязательно)'});
+    } else if(act==='now'){
+      window.confirmAction('Исполнить сейчас?', 'Действие выполнится в течение 30 секунд.', function(){ fetch(API+'/execute-now',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(r=>r.json()).then(d=>{ window.showToast(d.message||d.error, !!d.success); load(); }); }, {okText:'Исполнить'});
+    } else if(act==='dup'){
+      fetch(API+'/duplicate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(r=>r.json()).then(d=>{ window.showToast(d.message||d.error, !!d.success); load(); });
+    } else if(act==='del'){
+      window.confirmAction('Удалить запись?', 'История останется в файле истории, но из расписания пропадёт.', function(){ fetch(API+'/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(r=>r.json()).then(d=>{ window.showToast(d.message||d.error, !!d.success); load(); }); }, {danger:true, okText:'Удалить'});
+    } else if(act==='edit'){
+      // load into form
+      var entry=(DATA.scheduled||[]).find(function(x){ return x.id===id; });
+      if(entry){
+        $('msCreateCard').style.display='block';
+        $('msAction').value=entry.action;
+        $('msUserId').value=entry.user_id;
+        $('msRunAt').value=new Date(entry.run_at*1000).toISOString().slice(0,16);
+        $('msDur').value=entry.duration?Math.round(entry.duration/60):'';
+        $('msReason').value=entry.reason||'';
+        window.scrollTo({top:$('msCreateCard').offsetTop-20, behavior:'smooth'});
+      }
+    }
+    return;
   }
-  $('msCal').innerHTML = html;
-}
-
-function renderDayList() {
-  var box = $('msDayList');
-  if (!SEL) { box.innerHTML = '<div class="empty"><i class="fas fa-calendar-day"></i><span>Выберите день на календаре</span></div>'; return; }
-  var evs = (DATA ? eventsByDay()[SEL] : null) || [];
-  var dd = SEL.split('-');
-  $('msDayTitle').textContent = 'События: ' + parseInt(dd[2], 10) + ' ' + MONTHS[parseInt(dd[1], 10) - 1];
-  if (!evs.length) { box.innerHTML = '<div class="empty"><i class="fas fa-mug-hot"></i><span>На этот день ничего не запланировано</span></div>'; return; }
-  box.innerHTML = evs.sort(function (a, b) { return a.ts - b.ts; }).map(function (e) {
-    var ic = e.t === 'exp' ? (KIND_ICON[e.kind] || 'fa-clock') : 'fa-clock';
-    var sub = e.t === 'exp'
-      ? 'истекает в ' + fmtTime(e.ts) + (e.reason ? ' · ' + e.reason : '')
-      : 'исполнение в ' + fmtTime(e.ts) + (e.dur ? ' · на ' + durHuman(e.dur) : '') + (e.reason ? ' · ' + e.reason : '');
-    return '<div class="ms-ev"><div class="feed-item-icon"><i class="fas ' + ic + '"></i></div>' +
-      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(e.label) + '</div>' +
-      '<div class="feed-item-sub">' + esc(e.name) + '</div>' +
-      '<div class="feed-item-time">' + esc(sub) + '</div></div></div>';
-  }).join('');
-}
-
-function stTone(st) { return st === 'executed' ? 'ok' : st === 'cancelled' ? 'neutral' : st.indexOf('failed') === 0 ? 'danger' : 'tone-warning'; }
-function stLabel(st) { return st === 'executed' ? 'исполнено' : st === 'cancelled' ? 'отменено' : st.indexOf('failed') === 0 ? 'ошибка' : 'ожидает'; }
-
-function renderSched() {
-  var box = $('msSchedList');
-  var rows = (DATA.scheduled || []);
-  if (!rows.length) { box.innerHTML = '<div class="empty"><i class="fas fa-hourglass-start"></i><span>Отложенных действий нет — запланируйте первое выше.</span></div>'; return; }
-  box.innerHTML = rows.map(function (e) {
-    var left = e.status === 'pending' ? Math.max(0, Math.round(e.run_at - DATA.now)) : 0;
-    var cancel = (CAN_EDIT && e.status === 'pending')
-      ? '<button type="button" class="btn btn-ghost btn-sm" data-cancel="' + esc(e.id) + '" title="Отменить"><i class="fas fa-xmark"></i></button>' : '';
-    return '<div class="ms-ev"><div class="feed-item-icon"><i class="fas ' + (KIND_ICON[e.action] || 'fa-clock') + '"></i></div>' +
-      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(e.action_label) + ' · ' + esc(e.user_name || e.user_id) + '</div>' +
-      '<div class="feed-item-sub">' + esc(fmtDay(e.run_at)) + (e.duration ? ' · на ' + durHuman(e.duration) : '') +
-        (e.source === 'panel' ? ' · из панели' : '') + (e.reason ? ' · ' + esc(e.reason) : '') + '</div>' +
-      '<div class="feed-item-time">' + (e.status === 'pending' ? 'осталось ' + durHuman(left) : stLabel(e.status)) + '</div></div>' +
-      '<span class="badge ' + stTone(e.status) + '">' + stLabel(e.status) + '</span>' + cancel + '</div>';
-  }).join('');
-}
-
-function kpi(icon, num, label, tone) {
-  return '<div class="kpi ' + (tone || '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
-    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
-}
-
-function load() {
-  fetch(API).then(function (r) { return r.json(); }).then(function (d) {
-    if (!d.success) return;
-    var fp = String(JSON.stringify(d || null) || '').slice(0, 600);
-    if (window.silentGuard && window.silentGuard('mod_schedule', fp)) return;
-    DATA = d;
-    var s = d.stats;
-    $('msKpis').innerHTML =
-      kpi('fa-fire', s.active, 'активных наказаний', s.active ? 'tone-warn' : 'tone-ok') +
-      kpi('fa-clock', s.pending, 'отложенных действий', 'tone-info') +
-      kpi('fa-calendar-day', s.today, 'истекает сегодня', s.today ? 'tone-warn' : 'tone-ok') +
-      (s.nearest ? kpi('fa-hourglass-half', fmtDay(s.nearest), 'ближайшее истечение', 'tone-info')
-                 : kpi('fa-hourglass-half', '—', 'истечений не видно', 'tone-info'));
-    renderCal(); renderDayList(); renderSched();
-  }).catch(function () {});
-}
-
-document.addEventListener('click', function (e) {
-  var day = e.target.closest('.ms-day[data-day]');
-  if (day) { SEL = day.dataset.day; renderCal(); renderDayList(); return; }
-  var cb = e.target.closest('[data-cancel]');
-  if (cb) {
-    var id = cb.dataset.cancel;
-    window.confirmAction('Отменить отложенное действие?', 'Бот его просто не выполнит — запись останется отменённой.', function () {
-      fetch(API + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) })
-        .then(function (r) { return r.json(); }).then(function (d) {
-          window.showToast(d.message || d.error || 'Ошибка', !!d.success); load();
-        }).catch(function () { window.showToast('Сеть моргнула — попробуйте ещё раз', false); });
-    }, { danger: true, okText: 'Отменить действие' });
+  var tpl=e.target.closest('[data-tpl]');
+  if(tpl && !e.target.closest('[data-del-tpl]')){
+    var tid=tpl.dataset.tpl; var t=(DATA.templates||[]).find(function(x){ return x.id===tid; }); if(t){ $('msAction').value=t.action; $('msDur').value=t.duration?Math.round(t.duration/60):''; $('msReason').value=t.reason||''; $('msCreateCard').style.display='block'; window.showToast('Шаблон "'+t.name+'" применён', true); }
   }
+  var delTpl=e.target.closest('[data-del-tpl]');
+  if(delTpl){
+    var dtid=delTpl.dataset.delTpl;
+    window.confirmAction('Удалить шаблон?', '', function(){ fetch(API+'/templates/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:dtid})}).then(r=>r.json()).then(d=>{ window.showToast(d.message||d.error, !!d.success); load(); }); }, {danger:true, okText:'Удалить'});
+  }
+  var preset=e.target.closest('#msDurPresets button[data-sec]');
+  if(preset){ var sec=parseInt(preset.dataset.sec,10); $('msDur').value=Math.round(sec/60); document.querySelectorAll('#msDurPresets button').forEach(function(b){ b.classList.remove('active'); }); preset.classList.add('active'); }
 });
 
-$('msPrev').addEventListener('click', function () { CUR = new Date(CUR.getFullYear(), CUR.getMonth() - 1, 1); renderCal(); });
-$('msNext').addEventListener('click', function () { CUR = new Date(CUR.getFullYear(), CUR.getMonth() + 1, 1); renderCal(); });
-$('msToday').addEventListener('click', function () { CUR = new Date(); SEL = dayKey(new Date()); renderCal(); renderDayList(); });
+$('msPrev').addEventListener('click', function(){ if(VIEW==='month'){ CUR=new Date(CUR.getFullYear(), CUR.getMonth()-1,1); } else { CUR=new Date(CUR.getTime()- (VIEW==='week'?7:1)*86400000); } renderCal(); });
+$('msNext').addEventListener('click', function(){ if(VIEW==='month'){ CUR=new Date(CUR.getFullYear(), CUR.getMonth()+1,1); } else { CUR=new Date(CUR.getTime()+ (VIEW==='week'?7:1)*86400000); } renderCal(); });
+$('msToday').addEventListener('click', function(){ CUR=new Date(); SEL=dayKey(new Date()); renderCal(); renderDayList(); });
+$('msViews').addEventListener('click', function(e){ var b=e.target.closest('button[data-view]'); if(!b) return; VIEW=b.dataset.view; document.querySelectorAll('#msViews button').forEach(function(x){ x.classList.remove('active'); }); b.classList.add('active'); renderCal(); });
+$('msFilterStatus').addEventListener('change', function(){ FILTERS.status=this.value; renderSched(); load(); });
+$('msFilterAction').addEventListener('change', function(){ FILTERS.action=this.value; renderSched(); load(); });
+var searchTimer=null;
+$('msSearch').addEventListener('input', function(){ clearTimeout(searchTimer); var v=this.value; searchTimer=setTimeout(function(){ FILTERS.search=v; renderSched(); load(); }, 300); });
+$('msRefresh').addEventListener('click', function(){ load(); renderHist(); window.showToast('Обновлено', true); });
+$('msNewBtn').addEventListener('click', function(){ var c=$('msCreateCard'); c.style.display=c.style.display==='none'?'block':'none'; if(c.style.display==='block'){ var dt=new Date(Date.now()+3600000); $('msRunAt').value=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+'T'+pad(dt.getHours())+':'+pad(dt.getMinutes()); window.scrollTo({top:c.offsetTop-20, behavior:'smooth'}); } });
+$('msCancelCreate').addEventListener('click', function(){ $('msCreateCard').style.display='none'; });
 
-if (CAN_EDIT) {
-  var dt = new Date(Date.now() + 24 * 3600 * 1000);
-  $('msRunAt').value = dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()) + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
-  $('msCreate').addEventListener('click', function () {
-    var msg = $('msCreateMsg');
-    var runAt = new Date($('msRunAt').value);
-    if (isNaN(runAt.getTime())) { msg.className = 'hint error'; msg.textContent = 'Укажите дату и время исполнения'; return; }
-    fetch(API + '/create', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: $('msAction').value, user_id: $('msUserId').value.trim(),
-        run_at: runAt.getTime() / 1000, duration: $('msDur').value, reason: $('msReason').value.trim()
-      })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      msg.className = 'hint' + (d.success ? '' : ' error');
-      msg.textContent = d.message || d.error || 'Ошибка';
-      if (d.success) { $('msUserId').value = ''; $('msReason').value = ''; load(); }
-      if (window.showToast) window.showToast(msg.textContent, !!d.success);
-    }).catch(function () { msg.className = 'hint error'; msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
+if(CAN_EDIT){
+  var dt=new Date(Date.now()+3600000); $('msRunAt').value=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+'T'+pad(dt.getHours())+':'+pad(dt.getMinutes());
+  $('msCreate').addEventListener('click', function(){
+    var msg=$('msCreateMsg');
+    var runAt=new Date($('msRunAt').value);
+    if(isNaN(runAt.getTime())){ msg.textContent='Укажите дату и время'; msg.className='hint error'; return; }
+    var payload={
+      action:$('msAction').value,
+      user_id:$('msUserId').value.trim(),
+      run_at:runAt.getTime()/1000,
+      duration:$('msDur').value.trim(),
+      reason:$('msReason').value.trim(),
+      recurring: (function(){ var t=$('msRecType').value; if(!t) return null; return {type:t, interval:parseInt($('msRecInterval').value||'1',10), count:parseInt($('msRecCount').value||'',10)||null}; })()
+    };
+    fetch(API+'/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()).then(d=>{
+      msg.textContent=d.message||d.error||'Ошибка'; msg.className='hint'+(d.success?'':' error');
+      if(d.success){ $('msUserId').value=''; $('msReason').value=''; load(); window.showToast(msg.textContent, true); }
+      else window.showToast(msg.textContent, false);
+    }).catch(()=>{ msg.textContent='Сеть моргнула'; msg.className='hint error'; });
   });
-} else if ($('msCreateWrap')) {
-  $('msCreateWrap').innerHTML = '<div class="hint"><i class="fas fa-lock"></i> Создание и отмена отложенных действий — для модераторов с правами админа.</div>';
+  $('msSaveTpl').addEventListener('click', function(){
+    var name=prompt('Название шаблона:'); if(!name) return;
+    fetch(API+'/templates/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name, action:$('msAction').value, duration:$('msDur').value.trim(), reason:$('msReason').value.trim()})}).then(r=>r.json()).then(d=>{ window.showToast(d.message||d.error, !!d.success); load(); });
+  });
+  // member picker
+  if(window.attachMemberPicker){ try{ attachMemberPicker($('msUserId'), {gid:GID, statusEl:$('msUserIdStatus')}); }catch(e){} }
+} else {
+  var cc=$('msCreateCard'); if(cc) cc.innerHTML='<div class="hint"><i class="fas fa-lock"></i> Создание — для модераторов с правами админа.</div>';
 }
 
-SEL = dayKey(new Date());
+SEL=dayKey(new Date());
 load();
-if (window.setLiveRefresh) window.setLiveRefresh(function (, ['g*:mod_schedule','mod_schedule','dashboard','global']) { DATA && (DATA.now = Math.floor(Date.now() / 1000)); renderSched(); load(); }, 1500);
+renderHist();
+if(window.setLiveRefresh){
+  window.setLiveRefresh(function(){ load(); }, 2000, ['g*:mod-schedule','mod-schedule','moderation','dashboard','global']);
+  window.setLiveRefresh(function(){ renderHist(); }, 10000, ['g*:mod-schedule','mod-schedule']);
+}
+// LIVE pulse for pill
+setInterval(function(){ var dot=document.querySelector('.live-pill .dot'); if(dot){ dot.style.opacity=dot.style.opacity==='0.4'?'1':'0.4'; } }, 800);
 </script>
 {% endblock %}

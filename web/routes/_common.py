@@ -194,24 +194,47 @@ def _fire_panel_notification (event ,title ,body ):
 
 
 def _live_publish (gid ,topic ):
-    """Толкнуть SSE-сигнал об изменении данных (живые обновления панели).
-
-    Никогда не прерывает основной обработчик — ошибка шины игнорируется.
-    """
+    """Толкнуть SSE-сигнал — excellent, с фолбэками и связанными топиками."""
     try :
-        from services .live_bus import publish as _pub
+        from services .live_bus import publish as _pub, publish_global as _pubg
         _pub (gid ,topic )
+        try:
+            _pubg (topic)
+        except Exception:
+            pass
+        _related = {
+            'channels': ['channel-routes','dashboard'],
+            'channel-routes': ['channels','dashboard'],
+            'meetings': ['channels','channel-routes'],
+            'appeals': ['moderation','dashboard'],
+            'moderation': ['warnings','appeals','reports','mod-schedule'],
+            'mod-schedule': ['moderation','dashboard'],
+            'guardian': ['security','dashboard'],
+            'security': ['guardian','dashboard'],
+            'team': ['staff','dashboard'],
+        }
+        for rt in _related.get(str(topic), []):
+            try:
+                _pub (gid, rt)
+            except Exception:
+                pass
     except Exception as _ex :
         _log .debug ('live_publish %s/%s: %s' ,gid ,topic ,_ex )
 
 
 def _live_publish_global (topic ):
-    """Глобальный SSE-сигнал (список серверов, тема и т.п.)."""
+    """Глобальный SSE-сигнал — excellent с publish_all."""
     try :
-        from services .live_bus import publish_global as _pubg
+        from services .live_bus import publish_global as _pubg, publish_all as _pub_all
         _pubg (topic )
+        if topic in ('channels','meetings','appeals','moderation','guardian','security','dashboard','mod-schedule'):
+            try:
+                _pub_all (topic)
+            except Exception:
+                pass
     except Exception as _ex :
         _log .debug ('live_publish_global %s: %s' ,topic ,_ex )
+
 
 
 # ── Классические разрешения: одна точка для всех веб-роутов ──────────────
