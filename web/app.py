@@ -567,20 +567,32 @@ def after_request (response ):
         except Exception as _ex :
             print (f"[ETAG] error on {request.path}: {_ex!r}",flush =True )
 
-            # Обход кэша браузера — критично для админ-панели (на время разработки).
-    # Исключение — vendor-библиотеки (шрифты, иконки): они весят больше
-    # сотни КиБ и меняются только при обновлении версии, поэтому живые
-    # сутки в кэше (PageSpeed: шрифты не должны качаться на каждый вход).
-    if request .path .startswith ('/static/vendor/'):
-        response .headers ['Cache-Control']='public, max-age=86400'
-    elif request .path .startswith ('/static/'):
-        response .headers ['Cache-Control']='no-cache, no-store, must-revalidate'
-        response .headers ['Pragma']='no-cache'
-        response .headers ['Expires']='0'
-    elif request .path .startswith ('/api/')or response .is_json :
-        response .headers ['Cache-Control']='no-store'
-    else :
-        response .headers ['Cache-Control']='no-cache, no-store, must-revalidate'
+            # ── Кеширование статики (Lighthouse: 121 KiB экономии) ──────────────
+            # Версионированные ассеты (?v=) + шрифты/стили/картинки/скрипты —
+            # 1 год immutable: браузер не трогает их при повторных входах.
+            # Версия меняется при каждом изменении файла (static_v по mtime),
+            # так что вечный кэш безопасен. Остальная статика — 1 день.
+            # API — no-store, HTML — no-cache (админ-панель живёт свежей).
+            if request .path .startswith ('/static/'):
+                _v = request .args .get ('v')
+                _immutable_exts = ('.woff2','.woff','.ttf','.otf','.eot',
+                                   '.css','.js','.webp','.avif','.png','.jpg','.jpeg','.svg','.ico')
+                _is_immutable = (_v is not None
+                                 or request .path .endswith (_immutable_exts)
+                                 or '/static/vendor/' in request .path
+                                 or '/static/fonts/' in request .path
+                                 or '/static/brand/' in request .path
+                                 or '/static/webfonts/' in request .path)
+                if _is_immutable:
+                    response .headers ['Cache-Control']='public, max-age=31536000, immutable'
+                    response .headers .pop ('Pragma',None)
+                    response .headers .pop ('Expires',None)
+                else:
+                    response .headers ['Cache-Control']='public, max-age=86400'
+            elif request .path .startswith ('/api/')or response .is_json :
+                response .headers ['Cache-Control']='no-store'
+            else :
+                response .headers ['Cache-Control']='no-cache, no-store, must-revalidate'
 
         # Базовые защитные заголовки на каждый ответ
     response .headers ['X-Content-Type-Options']='nosniff'

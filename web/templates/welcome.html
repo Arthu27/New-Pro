@@ -98,7 +98,7 @@
   <!-- Навигация -->
   <nav class="w-nav" aria-label="Навигация">
     <a class="brand" href="/">
-      <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="38" height="38" decoding="async" alt="Hakumo">
+      <picture><source srcset="/static/brand/emblem-dragon-64.avif 1x, /static/brand/emblem-dragon-96.avif 2x" type="image/avif"><img class="dragon-live" src="/static/brand/emblem-dragon-64.webp" srcset="/static/brand/emblem-dragon-64.webp 1x, /static/brand/emblem-dragon-96.webp 2x" width="38" height="38" decoding="async" alt="Hakumo"></picture>
       <span><b>HAKUMO</b><small>панель сервера</small></span>
     </a>
     <div class="w-nav-links">
@@ -120,7 +120,7 @@
       <div class="w-dragon-par" id="wDragonPar">
         <div class="w-dragon-ring" aria-hidden="true"></div>
         <div class="w-dragon-halo" aria-hidden="true"></div>
-        <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="112" height="112" fetchpriority="high" decoding="async" alt="Белый дракон Hakumo"></div>
+        <div class="w-dragon"><picture><source srcset="/static/brand/emblem-dragon-96.avif 1x, /static/brand/emblem-dragon-112.avif 2x" type="image/avif"><img class="dragon-live" src="/static/brand/emblem-dragon-96.webp" srcset="/static/brand/emblem-dragon-96.webp 1x, /static/brand/emblem-dragon-112.webp 2x" width="112" height="112" fetchpriority="high" decoding="async" alt="Белый дракон Hakumo"></picture></div>
       </div>
       <div class="w-dragon-floor" aria-hidden="true"></div>
     </div>
@@ -208,7 +208,7 @@
       </div>
       <div class="w-showcase-grid">
         <div class="w-showcase-side">
-          <div class="s-brand"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" loading="lazy" decoding="async" alt="">HAKUMO</div>
+          <div class="s-brand"><picture><source srcset="/static/brand/emblem-dragon-64.avif" type="image/avif"><img src="/static/brand/emblem-dragon-64.webp" loading="lazy" decoding="async" alt="" width="24" height="24"></picture>HAKUMO</div>
           <span class="s-item on"><i class="fas fa-home"></i> Обзор</span>
           <span class="s-item"><i class="fas fa-shield-halved"></i> Модерация</span>
           <span class="s-item"><i class="fas fa-users"></i> Участники</span>
@@ -367,7 +367,7 @@
   </main>
 
   <footer class="w-foot">
-    <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" loading="lazy" decoding="async" alt="">HAKUMO · панель твоего сервера · сделано с душой
+    <picture><source srcset="/static/brand/emblem-dragon-64.avif" type="image/avif"><img class="dragon-live" src="/static/brand/emblem-dragon-64.webp" loading="lazy" decoding="async" alt="" width="20" height="20"></picture>HAKUMO · панель твоего сервера · сделано с душой
   </footer>
 
   <script nonce="{{ csp_nonce }}">
@@ -692,7 +692,7 @@
                записи заново — один layout на перезапуск вместо шести
                (Lighthouse: принудительная компоновка). */
             bs.forEach(function (b) { b.style.animation = 'none'; });
-            void barsBox.offsetWidth;
+            if (window.restartAnim) window.restartAnim(barsBox, 'pulse'); else { barsBox.classList.remove('pulse'); requestAnimationFrame(function(){requestAnimationFrame(function(){barsBox.classList.add('pulse');});}); }
             bs.forEach(function (b, i) {
               b.style.animation = '';
               b.style.animationDelay = (i * 90) + 'ms';
@@ -766,7 +766,8 @@
         /* Перезапуск мерцания — пакетно: все classList, ОДНО чтение
            (reflow), затем tick (было чтение offsetWidth на каждый KPI). */
         kpis.forEach(function (el) { el.classList.remove('tick'); });
-        void document.documentElement.offsetWidth;
+        /* forced reflow убран: двойной rAF даёт тот же эффект без синхронного layout */
+        requestAnimationFrame(function(){requestAnimationFrame(function(){/* tick */});});
         kpis.forEach(function (el) { el.classList.add('tick'); });
       }, 4000);
     })();

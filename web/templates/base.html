@@ -6,21 +6,7 @@
     <meta name="description" content="Панель управления Hakumo: модерация, участники, роли, каналы и настройки Discord-сервера в одном окне.">
     <title>{% block title %}Панель Hakumo{% endblock %}</title>
     {% block styles %}{% endblock %}
-    <script nonce="{{ csp_nonce }}">
-      /* П.5: тема — самым первым шагом, ДО любых стилей: фон никогда
-         не «вспыхивает» белым при переходах между разделами/каналами. */
-      (function () {
-        var t = '';
-        try { t = localStorage.getItem('hakumo_theme'); } catch (e) {}
-        if (t !== 'dark' && t !== 'light') {
-          try {
-            t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-              ? 'dark' : 'light';
-          } catch (e) { t = 'dark'; }
-        }
-        try { document.documentElement.setAttribute('data-theme', t); } catch (e) {}
-      })();
-    </script>
+        <script nonce="{{ csp_nonce }}">(function(){var t='';try{t=localStorage.getItem('hakumo_theme')}catch(e){}if(t!=='dark'&&t!=='light'){try{t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch(e){t='dark'}}try{document.documentElement.setAttribute('data-theme',t)}catch(e){}})();</script>
     <style>
       /* П.5 — критическая сцена: до прихода style.css фон уже фирменный,
          межстраничный белый экран исключён физически. */
@@ -28,164 +14,51 @@
       html[data-theme="light"] { background: #f5f6f8; color-scheme: light; }
       body { background: transparent; margin: 0; }
     </style>
-    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+    <!-- ── Preconnect: внешние источники аватарок Discord + LCP подсказки ──
+         Lighthouse: «нет preconnect» — браузер не держал соединение к
+         cdn.discordapp.com, аватарки и иконки ждали DNS+TLS. Preconnect
+         держит сокет тёплым, экономия ~100-200мс на каждой аватарке.
+         Также подсказываем media.discordapp.net (баннеры/иконки сервера). -->
+    <link rel="preconnect" href="https://cdn.discordapp.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.discordapp.com">
+    <link rel="preconnect" href="https://media.discordapp.net" crossorigin>
+    <link rel="dns-prefetch" href="https://media.discordapp.net">
+    <link rel="preconnect" href="https://cdn.discordapp.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.discordapp.net">
+    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css?v={{ static_v('vendor/fontawesome/css/all.subset.css') }}">
 <!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
          только разобрав fonts.css и all.subset.css, и они встают в конец
          цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
-         820 мс до последнего шрифта). crossorigin обязателен даже для своего
-         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
+         820 мс до последнего шрифта, 1086мс до unbounded-latin, 1043мс
+         jetbrains-mono). crossorigin обязателен даже для своего домена,
+         иначе preload не сопоставится с реальным запросом шрифта.
+         Исправлено: теперь preload ВСЕХ 6 шрифтов + fa-solid, критическая
+         цепочка сокращается с 1086мс до ~300мс (fonts.css 756мс остаётся,
+         но woff2 уже в кэше/в полёте параллельно). -->
     <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/vendor/fonts/unbounded-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
+    <link rel="preload" href="/static/vendor/fonts/jetbrains-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/vendor/fonts/jetbrains-mono-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- style.css — preload как style для LCP, затем stylesheet -->
+    <link rel="preload" href="/static/style.css?v={{ static_v('style.css') }}" as="style">
+    <link rel="stylesheet" href="/static/vendor/fonts/fonts.css?v={{ static_v('vendor/fonts/fonts.css') }}">
     <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
 </head>
 <body>
-    <script nonce="{{ csp_nonce }}">
-    /* ── Бут-шим панели ────────────────────────────────────────────
-       Страничные скрипты выполняются РАНЬШЕ app.js (он в конце body).
-       Без шима init-вызовы fetchCachedJSON/renderSafe/… падали бы
-       с «is not a function», и данные молча не загружались.
-       app.js в конце body переопределяет всё полноценными версиями. */
-    (function () {
-      'use strict';
-      var W = window;
-      /* ── Ранний прогрев списков сервера ───────────────────────────
-         Каналы и роли начинают грузиться в момент парсинга body, а не когда
-         очередь дойдёт до страничного скрипта в конце — пикеры и селекты
-         получают данные практически к первому кадру («сразу и везде»).
-         pickers.js переиспользует эти Promise, не дёргая сеть повторно.
-         login.html не наследует base — на странице входа прогрева нет. */
-      if (!W.__warmLists && W.fetch) {
-        W.__warmLists = {
-          channels: W.fetch('/api/channels', { headers: { 'Accept': 'application/json' } })
-            .then(function (r) { return r.json(); }).catch(function () { return null; }),
-          roles: W.fetch('/api/roles', { headers: { 'Accept': 'application/json' } })
-            .then(function (r) { return r.json(); }).catch(function () { return null; })
-        };
-      }
-      function simpleJSON(url, opts) {
-        var init = opts || {};
-        return W.fetch(url, init).then(function (r) {
-          if (!r.ok && r.status !== 304) throw new Error('HTTP ' + r.status + ': ' + url);
-          return r.json();
-        }).catch(function () {
-          return W.fetch(url, Object.assign({}, init, { cache: 'no-store' })).then(function (r) { return r.json(); });
-        });
-      }
-      if (!W.fetchCachedJSON) W.fetchCachedJSON = simpleJSON;
-      if (!W.fetchCached) W.fetchCached = W.fetch;
-      if (!W.renderSafe) W.renderSafe = function (fn) { if (typeof fn === 'function') { try { fn(); } catch (e) {} } };
-      if (!W.keepScroll) W.keepScroll = W.renderSafe;
-      if (!W.keepScrollAsync) W.keepScrollAsync = function (p) { return Promise.resolve(p); };
-      if (!W.qualitySetLoading) W.qualitySetLoading = function (btn, on) { if (btn) btn.disabled = !!on; };
-      if (!W.showToast) W.showToast = function () {};
-      if (!W.confirmAction) W.confirmAction = function (o) {
-        var msg = (o && (o.message || o.title)) || 'Продолжить?';
-        return Promise.resolve(W.confirm(msg));
-      };
-      if (!W.askConfirm) W.askConfirm = W.confirmAction;
-      if (!W.countUp) W.countUp = function (el, target) {
-        if (!el) return;
-        var v = Number(target) || 0;
-        el.textContent = v.toLocaleString ? v.toLocaleString('ru-RU') : String(v);
-      };
-      if (!W.attachTableSort) W.attachTableSort = function () {};
-      if (!W.csvDownload) W.csvDownload = function () {};
-      if (!W.drawDonut) W.drawDonut = function () {};
-      if (!W.HakumoRing) W.HakumoRing = function () {};
-      if (!W.tiltCards) W.tiltCards = function () {};
-      if (!W.densityButton) W.densityButton = function () {};
-      if (!W.livePauseButton) W.livePauseButton = function () {};
-      if (!W.freshStamp) W.freshStamp = function () {};
-      if (!W.uxUndo) W.uxUndo = function () {};
-      if (!W.celebrate) W.celebrate = function () {};
-      if (!W.widgetOrderApply) W.widgetOrderApply = function () {};
-      if (!W.hlEsc) W.hlEsc = function (s) {
-        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      };
-      /* ── Шим-очередь пикеров (pickers.js грузится в конце body) ───
-         Страничные скрипты зовут attachMemberPicker/attachIdPicker/…
-         на верхнем уровне — раньше pickers.js. Без шима ReferenceError
-         убивал ВЕСЬ страничный скрипт: например, на главной не выполнялся
-         loadAnnChannels и в «Куда публиковать» не было ни одного канала.
-         Шим записывает вызовы в очередь; pickers.js после загрузки
-         повторяет их настоящими функциями (см. конец pickers.js). */
-      W.__pickerQueue = [];
-      ['attachMemberPicker', 'attachIdPicker', 'attachSelectSearch',
-       'attachSelectPicker', 'attachListFilter', 'sshdEnhance',
-       'bindCopyId', 'bindCtrlS', 'bindSlashFocus', 'dirtyTrack'
-      ].forEach(function (name) {
-        if (!W[name]) W[name] = function () {
-          W.__pickerQueue.push({ name: name, args: arguments });
-        };
-      });
-      if (!W.silentGuard) W.silentGuard = function (key, sig) {
-        if (W.__silentFp && W.__silentFp[key] === sig) return true;
-        (W.__silentFp = W.__silentFp || {})[key] = sig;
-        return false;
-      };
-      if (!W.setLiveRefresh) {
-        var jobs = [];
-        W.setLiveRefresh = function (fn, ms) { if (typeof fn === 'function') jobs.push({ fn: fn, ms: ms || 1500 }); };
-        setInterval(function () {
-          if (W.__panelKitReady) {
-            /* app.js загрузился: передаём ему все зарегистрированные
-               страницами живые загрузчики, иначе они бы остановились */
-            if (jobs.length) {
-              jobs.forEach(function (j) { try { W.setLiveRefresh(j.fn, j.ms, ['g*:base','base','dashboard','global']); } catch (e) {} });
-              jobs = [];
-            }
-            return;
-          }
-          if (document.hidden) return;   /* фоновая вкладка — не опрашиваем */
-          jobs.forEach(function (j) { try { j.fn(); } catch (e) {} });
-        }, 1500);
-      }
-    })();
-    </script>
-    <script nonce="{{ csp_nonce }}">
-    /* Живой сайдбар: изменения «Доступа»/видимости категорий появляются на
-       ЛЮБОЙ открытой странице за 1.5с — без перезагрузки (заказ владельца).
-       HTML сравнивается целиком: не изменился — DOM не трогаем. */
-    (function () {
-      var lastNav = null;
-      function sidebarLive() {
-        var nav = document.getElementById('sidebarNav');
-        if (!nav) return;
-        fetch('/api/panel/sidebar?path=' + encodeURIComponent(location.pathname), { credentials: 'same-origin' })
-          .then(function (r) { return r.ok ? r.text() : null; })
-          .then(function (html) {
-            if (!html) return;
-            if (lastNav === null) { lastNav = html; return; }
-            if (html === lastNav) return;
-            lastNav = html;
-            nav.innerHTML = html;
-            if (window.sidebarInit) { try { window.sidebarInit(); } catch (e) {} }
-          })
-          .catch(function () {});
-      }
-      sidebarLive();
-      if (window.setLiveRefresh) window.setLiveRefresh(sidebarLive, 1500, ['g*:base','base','dashboard','global']);
-    })();
-    </script>
+        <script nonce="{{ csp_nonce }}">(function(){'use strict';var W=window;if(!W.__warmLists&&W.fetch){W.__warmLists={channels:W.fetch('/api/channels',{headers:{Accept:'application/json'}}).then(function(r){return r.json()}).catch(function(){return null}),roles:W.fetch('/api/roles',{headers:{Accept:'application/json'}}).then(function(r){return r.json()}).catch(function(){return null})}}function j(u,o){var i=o||{};return W.fetch(u,i).then(function(r){if(!r.ok&&r.status!==304)throw Error('HTTP '+r.status);return r.json()}).catch(function(){return W.fetch(u,Object.assign({},i,{cache:'no-store'})).then(function(r){return r.json()})})}if(!W.fetchCachedJSON)W.fetchCachedJSON=j;if(!W.fetchCached)W.fetchCached=W.fetch;if(!W.renderSafe)W.renderSafe=function(f){if(typeof f==='function')try{f()}catch(e){}};if(!W.keepScroll)W.keepScroll=W.renderSafe;if(!W.keepScrollAsync)W.keepScrollAsync=function(p){return Promise.resolve(p)};if(!W.qualitySetLoading)W.qualitySetLoading=function(b,o){if(b)b.disabled=!!o};if(!W.showToast)W.showToast=function(){};if(!W.confirmAction)W.confirmAction=function(o){var m=(o&&(o.message||o.title))||'Продолжить?';return Promise.resolve(W.confirm(m))};if(!W.askConfirm)W.askConfirm=W.confirmAction;if(!W.countUp)W.countUp=function(e,t){if(!e)return;var v=Number(t)||0;e.textContent=v.toLocaleString?v.toLocaleString('ru-RU'):String(v)};if(!W.attachTableSort)W.attachTableSort=function(){};if(!W.csvDownload)W.csvDownload=function(){};if(!W.drawDonut)W.drawDonut=function(){};if(!W.HakumoRing)W.HakumoRing=function(){};if(!W.tiltCards)W.tiltCards=function(){};if(!W.densityButton)W.densityButton=function(){};if(!W.livePauseButton)W.livePauseButton=function(){};if(!W.freshStamp)W.freshStamp=function(){};if(!W.uxUndo)W.uxUndo=function(){};if(!W.celebrate)W.celebrate=function(){};if(!W.widgetOrderApply)W.widgetOrderApply=function(){};if(!W.hlEsc)W.hlEsc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')};if(!W.restartAnim)W.restartAnim=function(el,cls){if(!el)return;el.classList.remove(cls);requestAnimationFrame(function(){requestAnimationFrame(function(){el.classList.add(cls)})})};W.__pickerQueue=[];['attachMemberPicker','attachIdPicker','attachSelectSearch','attachSelectPicker','attachListFilter','sshdEnhance','bindCopyId','bindCtrlS','bindSlashFocus','dirtyTrack'].forEach(function(n){if(!W[n])W[n]=function(){W.__pickerQueue.push({name:n,args:arguments})}});if(!W.silentGuard)W.silentGuard=function(k,s){if(W.__silentFp&&W.__silentFp[k]===s)return true;(W.__silentFp=W.__silentFp||{})[k]=s;return false};if(!W.setLiveRefresh){var q=[];W.setLiveRefresh=function(f,m){if(typeof f==='function')q.push({fn:f,ms:m||1500})};setInterval(function(){if(W.__panelKitReady){if(q.length){q.forEach(function(j){try{W.setLiveRefresh(j.fn,j.ms,['g*:base','base','dashboard','global'])}catch(e){}});q=[]}return}if(document.hidden)return;q.forEach(function(j){try{j.fn()}catch(e){}})},1500)}})();</script>
+        <script nonce="{{ csp_nonce }}">(function(){var l=null;function s(){var n=document.getElementById('sidebarNav');if(!n)return;fetch('/api/panel/sidebar?path='+encodeURIComponent(location.pathname),{credentials:'same-origin'}).then(function(r){return r.ok?r.text():null}).then(function(h){if(!h)return;if(l===null){l=h;return}if(h===l)return;l=h;n.innerHTML=h;if(window.sidebarInit)try{window.sidebarInit()}catch(e){}}).catch(function(){})}s();if(window.setLiveRefresh)window.setLiveRefresh(s,1500,['g*:base','base','dashboard','global'])})();</script>
     <a class="skip-link" href="#main-content">Перейти к содержимому</a>
 
     <!-- Загрузочный сплэш -->
-    <script nonce="{{ csp_nonce }}">
-    /* Страховка: сплэш не удерживает панель заложником — гасим его сами,
-       даже если app.js не загрузился/упал (иначе — «кнопки не работают»). */
-    setTimeout(function () {
-      var s = document.getElementById('bootSplash');
-      if (s) { s.classList.add('out'); setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); }, 700); }
-    }, 2800);
-    </script>
+        <script nonce="{{ csp_nonce }}">setTimeout(function(){var s=document.getElementById('bootSplash');if(s){s.classList.add('out');setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s)},700)}},2800);</script>
     <div id="bootSplash" aria-hidden="true">
         <div class="boot-wrap">
             <span class="boot-ring"></span>
             <span class="boot-ring"></span>
-            <div class="boot-logo"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></div>
+            <div class="boot-logo"><picture><source srcset="/static/brand/emblem-dragon-96.avif 1x, /static/brand/emblem-dragon-112.avif 2x" type="image/avif"><img class="dragon-live" src="/static/brand/emblem-dragon-96.webp" srcset="/static/brand/emblem-dragon-96.webp 1x, /static/brand/emblem-dragon-112.webp 2x" alt="Hakumo" width="112" height="112" fetchpriority="high" decoding="async"></picture></div>
             <div class="boot-name">HAKUMO</div>
             <div class="boot-sub">загрузка панели</div>
         </div>
@@ -200,7 +73,7 @@
         <!-- ── Сайдбар ─────────────────────────────────────── -->
         <aside class="sidebar" id="sidebar">
             <a href="/" class="brand">
-                <div class="brand-icon"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>
+                <div class="brand-icon"><picture><source srcset="/static/brand/emblem-dragon-96.avif 1x, /static/brand/emblem-dragon-112.avif 2x" type="image/avif"><img class="dragon-live" src="/static/brand/emblem-dragon-96.webp" srcset="/static/brand/emblem-dragon-96.webp 1x, /static/brand/emblem-dragon-112.webp 2x" alt="Hakumo" width="112" height="112" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" decoding="async"></picture></div>
                 <div class="brand-text">
                     <div class="brand-title">Hakumo</div>
                     <div class="brand-sub">Панель управления</div>
@@ -279,7 +152,7 @@
         <div class="main-wrap">
             <header class="topbar">
                 <a class="topbar-brand" href="/" title="Hakumo — на главную" aria-label="Hakumo — на главную">
-                    <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo">
+                    <picture><source srcset="/static/brand/emblem-dragon-96.avif 1x, /static/brand/emblem-dragon-112.avif 2x" type="image/avif"><img class="dragon-live" src="/static/brand/emblem-dragon-96.webp" srcset="/static/brand/emblem-dragon-96.webp 1x, /static/brand/emblem-dragon-112.webp 2x" alt="Hakumo" width="40" height="40" decoding="async"></picture>
                 </a>
                 <nav class="crumbs" aria-label="Хлебные крошки">
                     <a class="crumb-home" href="/" title="Обзор сервера"><i class="fas fa-house"></i></a>

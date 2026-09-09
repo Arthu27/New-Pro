@@ -725,7 +725,7 @@
           var panel = $('kioskActionsPanel');
           if (panel) {
             panel.classList.remove('kiosk-flash');
-            void panel.offsetWidth; /* перезапуск анимации */
+            if (window.restartAnim) window.restartAnim(panel, 'pulse'); else { panel.classList.remove('pulse'); requestAnimationFrame(function(){requestAnimationFrame(function(){panel.classList.add('pulse');});}); } /* rAF вместо forced reflow */
             panel.classList.add('kiosk-flash');
             setTimeout(function () { panel.classList.remove('kiosk-flash'); }, 1900);
           }

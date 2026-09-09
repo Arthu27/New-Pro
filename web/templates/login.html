@@ -11,12 +11,17 @@
     html { background: #05060a; color-scheme: dark; }
     body { background: transparent; margin: 0; }
   </style>
+<link rel="preconnect" href="https://cdn.discordapp.com" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.discordapp.com">
 <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
-<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+<link rel="preload" href="/static/vendor/fonts/unbounded-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/jetbrains-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/jetbrains-mono-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/vendor/fonts/fonts.css?v={{ static_v('vendor/fonts/fonts.css') }}">
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css?v={{ static_v('vendor/fontawesome/css/all.subset.css') }}">
 <link rel="stylesheet" href="/static/auth.css?v={{ static_v('auth.css') }}">
 <style>
 /* ─── Локальные компоненты страницы входа ─────────────────────────────── */
@@ -61,7 +66,7 @@
 
   <main class="auth-wrap">
     <header class="brand">
-      <div class="logo"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></div>
+      <div class="logo"><picture><source srcset="/static/brand/emblem-dragon-96.avif 1x, /static/brand/emblem-dragon-112.avif 2x" type="image/avif"><img src="/static/brand/emblem-dragon-96.webp" srcset="/static/brand/emblem-dragon-96.webp 1x, /static/brand/emblem-dragon-112.webp 2x" alt="" width="64" height="64" fetchpriority="high" decoding="async"></picture></div>
       <h1>Hakumo</h1>
       <p>Панель управления сервером</p>
     </header>
@@ -258,7 +263,7 @@
   <!-- Экран «Проверяем доступ»: показывается на время входа -->
   <div class="auth-check" id="authCheck" hidden>
     <div class="auth-check-card" role="status" aria-live="polite">
-      <div class="logo"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></div>
+      <div class="logo"><picture><source srcset="/static/brand/emblem-dragon-96.avif 1x, /static/brand/emblem-dragon-112.avif 2x" type="image/avif"><img src="/static/brand/emblem-dragon-96.webp" srcset="/static/brand/emblem-dragon-96.webp 1x, /static/brand/emblem-dragon-112.webp 2x" alt="" width="64" height="64" fetchpriority="high" decoding="async"></picture></div>
       <h3>Проверяем доступ</h3>
       <p class="sub" id="authCheckSub">Связываемся с Discord и проверяем роль…</p>
       <ol class="auth-steps" id="authSteps">
@@ -291,9 +296,7 @@
     if (text) {
       el.textContent = text;
       el.style.display = 'flex';
-      el.classList.remove('shake');
-      void el.offsetWidth;
-      el.classList.add('shake');
+      if (window.restartAnim) window.restartAnim(el, 'shake'); else { el.classList.remove('shake'); requestAnimationFrame(function(){requestAnimationFrame(function(){el.classList.add('shake');});}); }
     } else {
       el.style.display = 'none';
     }

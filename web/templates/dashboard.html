@@ -688,9 +688,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
         var next = vals[i].toLocaleString('ru-RU');
         if (v && v.textContent !== next) {
           v.textContent = next;
-          v.classList.remove('pulse');
-          void v.offsetWidth;
-          v.classList.add('pulse');
+          if (window.restartAnim) window.restartAnim(v, 'pulse'); else { v.classList.remove('pulse'); requestAnimationFrame(function(){requestAnimationFrame(function(){v.classList.add('pulse');});}); }
         }
       });
     } catch (e) {

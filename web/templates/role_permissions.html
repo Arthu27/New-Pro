@@ -695,7 +695,7 @@ function needRolesWarn() {
   var b = document.getElementById('needRoles');
   if (b) { b.classList.add('show'); setTimeout(function () { b.classList.remove('show'); }, 6000); }
   var col = document.getElementById('role-list');
-  if (col) { col.classList.remove('roles-pulse'); void col.offsetWidth; col.classList.add('roles-pulse'); }
+  if (col) { if (window.restartAnim) window.restartAnim(col, 'roles-pulse'); else { col.classList.remove('roles-pulse'); requestAnimationFrame(function(){requestAnimationFrame(function(){col.classList.add('roles-pulse');});}); } }
   toast('Сначала отметьте роли слева', false);
 }
 
