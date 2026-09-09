@@ -87,6 +87,9 @@ MENU = [
         {'path': '/staff-apps', 'label': 'Заявки в команду', 'icon': 'fa-file-signature',
          'section': 'management', 'description': 'Анкеты кандидатов: хелперы и модераторы',
          'access': 'Мод+', 'tone': 'analytics'},
+        {'path': '/meetings', 'label': 'Собрания', 'icon': 'fa-calendar-check',
+         'section': 'management', 'description': 'Общие, модерские и хелперские — явка, ЛС, уважительные',
+         'access': 'Мод+', 'tone': 'analytics'},
     ]},
     # Защита — отдельная категория сайдбара (заказ владельца 2026-08-25).
     {'group': 'Защита', 'key': 'protection', 'icon': 'fa-shield-halved', 'pages': [
@@ -322,6 +325,7 @@ PAGE_COGS = {
     '/welcome-editor': ('welcome_cog',),
     '/staff-apps': ('staff_apply',),
     '/appeals': ('appeals',),
+    '/meetings': ('meetings',),
     '/mod-schedule': ('temp_moderation',),
     '/reports-queue': ('reports',),
     '/security': ('security',),

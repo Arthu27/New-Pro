@@ -74,6 +74,7 @@ from web.routes import (
     pagerduty_hook,
     mod_schedule,
     reports_queue,
+    meetings_panel,
     live_sse)
 
 _MODULES = tuple(

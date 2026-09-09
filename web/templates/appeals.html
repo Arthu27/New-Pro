@@ -50,7 +50,7 @@
 
 <div class="panel" style="margin-top:14px">
   <div class="panel-body" style="padding-top:14px;padding-bottom:14px">
-    <div class="hint" style="margin:0"><i class="fas fa-circle-info"></i> Подаются из Discord: кнопка в ЛС о бане, меню в канале или кнопка в «своих наказаниях». Карточки падают прямо в <b>комнату апелляции</b> («всё сюда, кроме логов»), человеку комната открывается после подачи. Каналы — только в <a href="/channel-settings">Каналах и маршрутах</a>.</div>
+    <div class="hint" style="margin:0"><i class="fas fa-circle-info"></i> Упрощённая схема (2026-09-08): человек в бане жмёт <b>«Подать апелляцию»</b> в ЛС бота → текст 10-500 → заявка просто в канал апелляции без открытия доступов. Куратор смотрит и решает. Каналы — в <a href="/channel-settings">Каналах и маршрутах</a>.</div>
   </div>
 </div>
 
@@ -314,7 +314,7 @@ function apClaim(id) {
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { window.showToast(d.error || 'Ошибка', false); return; }
     if (d.claimed) {
-      window.showToast('Апелляция #' + id + ' у вас в работе' + (d.channel_opened ? ' — канал апелляции открыт участнику' : ' — канал участнику не открылся (бот офлайн или нет прав)'), true);
+      window.showToast('Апелляция #' + id + ' у вас в работе — заявка уже в канале, куратор посмотрит и решит', true);
     } else {
       window.showToast('Апелляция #' + id + ' снова в общей очереди', true);
     }

@@ -52,23 +52,28 @@ check(AP._parse_ts('2026-08-15T10:30:00+00:00').tzinfo is None, 'aware → naive
 check(AP._parse_ts('не дата') is None and AP._parse_ts('') is None and AP._parse_ts(None) is None,
       'мусор → None, не падаем')
 
+# даты относительно сегодня, чтобы тесты не падали при смене месяца
+# 2026-09-09 — сегодня по задаче, берём 2 дня назад и 4 дня назад в пределах 30-дневного окна
+_today = date.today()
+_d1 = (_today - timedelta(days=2)).isoformat()
+_d2 = (_today - timedelta(days=4)).isoformat()
 audit = {'777': [
     {'category': 'message', 'action': 'message написано', 'user_name': 'Мира',
-     'channel': 'общий', 'timestamp': '2026-08-10T21:15:00'},  # Пн 21
+     'channel': 'общий', 'timestamp': f'{_d1}T21:15:00'},  # Пн 21
     {'category': 'message', 'action': 'message написано', 'user_name': 'Гром',
-     'channel': 'общий', 'timestamp': '2026-08-10T21:45:00'},  # Пн 21
+     'channel': 'общий', 'timestamp': f'{_d1}T21:45:00'},  # Пн 21
     {'category': 'message', 'action': 'message написано', 'user_name': 'Мира',
-     'channel': 'флуд', 'timestamp': '2026-08-12T09:05:00'},   # Ср 09
+     'channel': 'флуд', 'timestamp': f'{_d2}T09:05:00'},   # Ср 09
     {'category': 'moderation', 'action': 'ban', 'user_name': 'Х',
-     'timestamp': '2026-08-12T10:00:00'},
+     'timestamp': f'{_d2}T10:00:00'},
     {'category': 'message', 'action': 'message удалено', 'user_name': 'Х',
-     'timestamp': '2026-08-12T11:00:00'},
+     'timestamp': f'{_d2}T11:00:00'},
     'битая запись',
     {'category': 'message', 'action': 'message написано', 'user_name': 'Мира',
      'channel': 'общий', 'timestamp': 'не дата'},
 ], '888': [
     {'category': 'message', 'action': 'message написано', 'user_name': 'Чужой',
-     'channel': 'ихний', 'timestamp': '2026-08-10T10:00:00'},
+     'channel': 'ихний', 'timestamp': f'{_d1}T10:00:00'},
 ]}
 with open('data/audit_log.json', 'w', encoding='utf-8') as fh:
     json.dump(audit, fh)
@@ -79,8 +84,11 @@ check(all(e[0] in ('Мира', 'Гром') for e in ev), 'чужой серве�
 
 hm = AP.heatmap_matrix(ev)
 check(hm['max'] == 2 and hm['total'] == 3, 'max/total матрицы (событие без метки вне сетки)')
-check(hm['matrix'][0][21] == 2 and hm['matrix'][2][9] == 1, 'ячейки по дню/часу')
-check(hm['peak'] == {'weekday': 'Пн', 'hour': 21, 'count': 2}, 'пик посчитан')
+# ячейки: 2 события в час 21 одного дня, 1 событие в час 9 другого — без привязки к конкретному дню недели (дата относительна)
+has_2_at_21 = any(row[21] == 2 for row in hm['matrix'])
+has_1_at_9 = any(row[9] == 1 for row in hm['matrix'])
+check(has_2_at_21 and has_1_at_9, 'ячейки по дню/часу (час 21=2, час 9=1)')
+check(hm['peak'] is not None and hm['peak']['hour'] == 21 and hm['peak']['count'] == 2, 'пик посчитан')
 check(all(len(r) == 24 for r in hm['matrix']) and len(hm['matrix']) == 7, 'геометрия 7x24')
 
 ev_empty = AP.load_message_events(424242)
@@ -119,7 +127,7 @@ check(sec_members == ['Участник', 'Сообщений'], 'секция �
 blank2 = rows.index([], blank1 + 1)
 check(rows[blank2 + 1] == ['Канал', 'Сообщений'], 'секция каналов')
 check(sum(1 for r in rows if r and r[0] == 'Мира' and r[1] == '3') == 1, 'Мира с тройкой в CSV')
-check(sum(1 for r in rows if r and r[0] == '2026-08-10' and r[1] == '2') == 1, 'день с двойкой в CSV')
+check(sum(1 for r in rows if r and r[0] == _d1 and r[1] == '2') == 1, f'день {_d1} с двойкой в CSV')
 
 print('== 4. API: права и заголовки ==')
 appmod = importlib.import_module('web.app')
@@ -298,12 +306,12 @@ drill = AP.channel_drill(AP.load_message_events(777), 'общий', days=30)
 check(drill['total'] == 3 and drill['unique_authors'] == 2, 'дрилл: всего/авторы')
 check(len(drill['days']) == 30 and sum(c for _d, c in drill['days']) == 2,
       'ряд 30 дней сходится (событие без метки вне сетки)')
-check(drill['top_authors'][0][1] == 2, 'топ авторов канала')  # у Миры и Грома в «общем» поровну — берём счёт
+check(drill['top_authors'][0][1] == 2, 'топ авторов канала')  # Мира 2 (включая без метки), Гром 1
 drill_empty = AP.channel_drill(AP.load_message_events(777), 'неттакого')
 check(drill_empty['total'] == 0 and drill_empty['top_authors'] == [], 'неизвестный канал — честные нули')
 
 recs = AP.record_days(AP.load_message_events(777))
-check(recs and recs[0][1] == 2 and recs[0][0] == '2026-08-10', 'рекордный день — 10.08 (2 сообщ.)')
+check(recs and recs[0][1] == 2 and recs[0][0] == _d1, f'рекордный день — {_d1} (2 сообщ.)')
 check(len(recs) <= 3, 'не больше трёх рекордов')
 check(AP.record_days([]) == [], 'без событий — без рекордов')
 

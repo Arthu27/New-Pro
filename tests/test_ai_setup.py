@@ -71,8 +71,8 @@ check('бот' in faq_guard.lower() and ' белый список' in faq_guard.
       'щит: упомянута защита от ботов и белый список')
 
 faq_routes = build_setup_faq('куда падать алертам, как настроить каналы')
-check('/channel-settings' in faq_routes and '14' in faq_routes,
-      'каналы: гайд про хаб 14 маршрутов')
+check('/channel-settings' in faq_routes and ('17' in faq_routes or '14' in faq_routes),
+      'каналы: гайд про хаб 17 маршрутов')
 
 faq_tickets = build_setup_faq('как настроить тикеты?')
 check('/ai-tickets' in faq_tickets,

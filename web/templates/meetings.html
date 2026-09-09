@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Собрания · Модерация — Hakumo{% endblock %}
+{% block page_title %}Собрания стаффа{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация</div>
+    <h1>Собрания</h1>
+    <p class="lead">Общие, модерские и хелперские — авто-таблица в канал + ЛС + учёт явки и уважительных причин.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn btn-primary" id="mtCreateBtn"><i class="fas fa-plus"></i> Новое собрание</button>
+  </div>
+</div>
+
+<div class="kpi-row" id="mtKpis">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
+</div>
+
+<div class="panel" id="mtCreateBox" style="display:none;margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-calendar-plus"></i> Создать собрание</h2><div class="sub">Бот авто-отправит красивую карточку в канал собраний и разошлёт ЛС по ролям (без команды).</div></div>
+  <button type="button" class="btn btn-ghost btn-sm" id="mtCreateClose" aria-label="Закрыть форму создания"><i class="fas fa-xmark"></i></button></div>
+  <div class="panel-body">
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px">
+      <label class="field" style="min-width:180px"><span>Тип собрания</span>
+        <select class="form-input" id="mtType">
+          <option value="general">Общее — всем стафф</option>
+          <option value="helper">Хелперы — роль 948969471916249119</option>
+          <option value="mod">Модеры — только модерация</option>
+        </select>
+      </label>
+      <label class="field" style="flex:1;min-width:260px"><span>Название</span>
+        <input type="text" class="form-input" id="mtTitle" placeholder="Напр: Еженедельное собрание хелперов" maxlength="100">
+      </label>
+      <label class="field" style="min-width:220px"><span>Когда (МСК)</span>
+        <input type="datetime-local" class="form-input" id="mtWhen">
+      </label>
+    </div>
+    <div class="form-row" style="max-width:900px;margin-top:10px">
+      <label class="field" style="flex:1"><span>Описание / повестка</span>
+        <textarea class="form-input" id="mtDesc" rows="3" placeholder="Что обсудим, что подготовить, где встречаемся (войс/канал)..." maxlength="1000"></textarea>
+      </label>
+    </div>
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
+      <label class="field" style="min-width:260px"><span>Пинг роли (опционально)</span>
+        <select class="form-input" id="mtPingRole"><option value="">Авто по типу</option></select>
+      </label>
+      <span class="hint" style="flex:1"><i class="fas fa-circle-info"></i> Канал берётся из <a href="/channel-settings">Каналы и маршруты</a> → Собрания. Можно задать отдельно для хелперов/модеров, иначе — общий. ЛС уйдут всем с ролью (до 80 за раз, анти-спам 0.6с).</span>
+    </div>
+    <div class="form-row" style="margin-top:12px;align-items:center">
+      <button type="button" class="btn btn-primary" id="mtSave"><i class="fas fa-paper-plane"></i> Создать и отправить</button>
+      <span class="hint" id="mtMsg"></span>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-inbox"></i> Ближайшие собрания</h2><div class="sub">Свежие сверху, карточка авто-обновляется при отметках.</div></div></div>
+    <div class="panel-body" id="mtList">
+      <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка</span></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-clipboard-check"></i> Явка и уважительные</h2><div class="sub">Кто придёт, кто не придёт и почему — для куратора.</div></div></div>
+    <div class="panel-body" id="mtExcuses">
+      <div class="empty"><i class="fas fa-mug-hot"></i><span>Пока нет отметок</span></div>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+var GID='{{ guild_id }}';
+var API='/api/guild/'+GID+'/meetings';
+var CAN_EDIT={{ 'true' if can_edit else 'false' }};
+
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function kpi(icon,num,label,tone){return '<div class="kpi '+(tone||'')+'"><div class="kpi-icon"><i class="fas '+icon+'"></i></div><div class="kpi-copy"><div class="kpi-value">'+num+'</div><div class="kpi-label">'+esc(label)+'</div></div></div>';}
+
+function loadOverview(){
+  fetch(API+'/overview').then(r=>r.json()).then(d=>{
+    if(!d.success) return;
+    var s=d.stats;
+    $('mtKpis').innerHTML=
+      kpi('fa-calendar', s.total, 'всего собраний','')+
+      kpi('fa-clock', s.scheduled, 'запланировано','tone-warn')+
+      kpi('fa-check', s.yes, 'будут','tone-ok')+
+      kpi('fa-xmark', s.no, 'не будут','tone-err')+
+      kpi('fa-question', s.maybe, 'под вопросом','')+
+      kpi('fa-comment-dots', s.excuses, 'уважительных','tone-info');
+
+    // селект ролей для пинга
+    loadRoles();
+
+    var list=$('mtList');
+    if(!d.meetings.length){
+      list.innerHTML='<div class="empty"><i class="fas fa-mug-hot"></i><span>Собраний ещё нет — создайте первое</span></div>';
+      $('mtExcuses').innerHTML='<div class="empty"><i class="fas fa-mug-hot"></i><span>Пока нет отметок</span></div>';
+      return;
+    }
+
+    list.innerHTML=d.meetings.map(it=>{
+      var typeMeta = (d.types.find(t=>t.id===it.type)||{label:it.type, emoji:'📋'});
+      var badge = it.status==='scheduled' ? '<span class="badge ok">запланировано</span>' : it.status==='finished' ? '<span class="badge neutral">завершено</span>' : '<span class="badge danger">отменено</span>';
+      var time = it.scheduled_at ? '<span class="muted"><i class="fas fa-clock"></i> '+esc(it.scheduled_at)+' <t: time — в Discord покажет относительно</span>' : '';
+      var stats = it.stats;
+      var attHtml = '';
+      if(it.attendance && Object.keys(it.attendance).length){
+        var order={'yes':0,'maybe':1,'no':2};
+        var entries=Object.entries(it.attendance).sort((a,b)=>(order[a[1]]||9)-(order[b[1]]||9));
+        attHtml = '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">'+entries.map(([uid,st])=>{
+          var emoji = st==='yes'?'✅':st==='no'?'❌':'❓';
+          var label = st==='yes'?'Буду':st==='no'?'Не буду':'Под вопросом';
+          return '<span class="badge '+(st==='yes'?'ok':st==='no'?'danger':'')+'" title="'+uid+'">'+emoji+' <@'+uid+'> — '+label+'</span>';
+        }).join('')+'</div>';
+      }
+      var excusesHtml='';
+      if(it.excuses && Object.keys(it.excuses).length){
+        excusesHtml='<div style="margin-top:10px;padding:10px;background:var(--bg-2);border-radius:8px"><div style="font-weight:600;margin-bottom:6px"><i class="fas fa-comment-dots"></i> Уважительные причины:</div>'+
+          Object.entries(it.excuses).map(([uid,ex])=>{
+            return '<div style="font-size:13px;margin-bottom:4px">• <b>'+esc(ex.name||uid)+'</b> — '+esc(ex.reason||'')+'</div>';
+          }).join('')+'</div>';
+      }
+      var actions = CAN_EDIT && it.status==='scheduled' ? '<div class="row" style="margin-top:10px;gap:8px"><button type="button" class="btn btn-ghost btn-sm" data-finish="'+it.id+'"><i class="fas fa-check"></i> Завершить</button><button type="button" class="btn btn-danger btn-sm" data-cancel="'+it.id+'"><i class="fas fa-xmark"></i> Отменить</button></div>' : '';
+      return '<div class="card" style="margin-bottom:12px;border-left:4px solid '+(it.type==='helper'?'#57F287':it.type==='mod'?'#ED4245':'#5865F2')+'">'
+        +'<div class="row" style="margin-bottom:6px"><b>'+typeMeta.emoji+' '+esc(it.title)+'</b> <span class="id-pill">#'+it.id+'</span> '+badge+'<span class="spacer"></span><span class="muted">'+esc(typeMeta.label)+'</span></div>'
+        +'<div style="white-space:pre-wrap;font-size:14px;color:var(--text-2)">'+esc(it.description||'Без описания')+'</div>'
+        +'<div style="margin-top:8px" class="muted">'+esc(it.scheduled_at)+' · создал '+esc(it.created_by)+'</div>'
+        +'<div style="margin-top:8px;font-size:13px">📊 <b>Явка:</b> ✅ '+stats.yes+' | ❌ '+stats.no+' | ❓ '+stats.maybe+' | всего '+stats.total+' | уваж. '+stats.excuses+'</div>'
+        +attHtml+excusesHtml+actions
+        +'</div>';
+    }).join('');
+
+    // сводная таблица уважительных
+    var allExc=[];
+    d.meetings.forEach(it=>{
+      Object.entries(it.excuses||{}).forEach(([uid,ex])=>{
+        allExc.push({mid:it.id, title:it.title, uid:uid, name:ex.name, reason:ex.reason, at:ex.at});
+      });
+    });
+    var exBox=$('mtExcuses');
+    if(!allExc.length){
+      exBox.innerHTML='<div class="empty"><i class="fas fa-face-smile"></i><span>Уважительных пока нет — все идут!</span></div>';
+    } else {
+      exBox.innerHTML='<div style="display:flex;flex-direction:column;gap:8px">'+allExc.slice(0,20).map(e=>{
+        return '<div class="card" style="margin:0;padding:10px 12px"><div class="row"><b>#'+e.mid+' '+esc(e.title)+'</b><span class="spacer"></span><span class="muted" style="font-size:11px">'+esc((e.at||'').slice(0,16).replace('T',' '))+'</span></div><div style="margin-top:4px"><b>'+esc(e.name)+'</b> — '+esc(e.reason)+'</div></div>';
+      }).join('') + (allExc.length>20?'<div class="muted">... и ещё '+(allExc.length-20)+'</div>':'') + '</div>';
+    }
+  }).catch(()=>{});
+}
+
+function loadRoles(){
+  fetch('/api/guild/'+GID+'/roles').then(r=>r.json()).then(d=>{
+    var raw = Array.isArray(d)?d:(d.roles||[]);
+    var sel=$('mtPingRole');
+    if(!sel) return;
+    var keep=sel.value;
+    sel.innerHTML='<option value="">Авто по типу</option>'+raw.map(r=>'<option value="'+esc(r.id)+'">@ '+esc(r.name)+'</option>').join('');
+    if(keep) sel.value=keep;
+  }).catch(()=>{});
+}
+
+$('mtCreateBtn').addEventListener('click', ()=>{
+  $('mtCreateBox').style.display='';
+  // дефолт время — завтра 19:00
+  var dt=new Date(); dt.setDate(dt.getDate()+1); dt.setHours(19,0,0,0);
+  var local = dt.toISOString().slice(0,16);
+  if(!$('mtWhen').value) $('mtWhen').value=local;
+});
+$('mtCreateClose').addEventListener('click', ()=>{ $('mtCreateBox').style.display='none'; });
+
+$('mtSave').addEventListener('click', ()=>{
+  var msg=$('mtMsg');
+  var payload={
+    type: $('mtType').value,
+    title: $('mtTitle').value.trim(),
+    description: $('mtDesc').value.trim(),
+    scheduled_at: $('mtWhen').value,
+    ping_role_id: $('mtPingRole').value || null
+  };
+  if(!payload.title){ msg.textContent='Название обязательно'; msg.className='hint error'; return; }
+  if(!payload.scheduled_at){ msg.textContent='Время обязательно'; msg.className='hint error'; return; }
+  msg.textContent='Отправляем...'; msg.className='hint';
+  fetch(API+'/create',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+    .then(r=>r.json()).then(d=>{
+      msg.className='hint'+(d.success?'':' error');
+      msg.textContent=d.message||d.error||'Ошибка';
+      if(d.success){
+        if(window.showToast) showToast(msg.textContent,true);
+        $('mtTitle').value=''; $('mtDesc').value='';
+        $('mtCreateBox').style.display='none';
+        loadOverview();
+      }
+    }).catch(()=>{ msg.textContent='Сеть моргнула'; msg.className='hint error'; });
+});
+
+document.addEventListener('click', e=>{
+  var c=e.target.closest('[data-cancel]');
+  if(c){
+    if(!confirm('Отменить собрание #'+c.dataset.cancel+'?')) return;
+    fetch(API+'/'+c.dataset.cancel+'/cancel',{method:'POST'}).then(r=>r.json()).then(d=>{
+      if(d.success){ showToast('Собрание отменено',true); loadOverview(); } else showToast(d.error||'Ошибка',false);
+    });
+  }
+  var f=e.target.closest('[data-finish]');
+  if(f){
+    if(!confirm('Завершить собрание #'+f.dataset.finish+'?')) return;
+    fetch(API+'/'+f.dataset.finish+'/finish',{method:'POST'}).then(r=>r.json()).then(d=>{
+      if(d.success){ showToast('Собрание завершено',true); loadOverview(); } else showToast(d.error||'Ошибка',false);
+    });
+  }
+});
+
+loadOverview();
+if(window.setLiveRefresh) setLiveRefresh(loadOverview, 2000);
+</script>
+
+<style>
+#mtList .card { transition: all .15s; }
+#mtList .card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+</style>
+
+{% endblock %}

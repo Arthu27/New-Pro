@@ -79,6 +79,8 @@ MODERATION_COGS = frozenset({
     'logs.py', 'log_menu.py',
     # апелляции на баны
     'appeals.py',
+    # собрания стаффа (2026-09-09)
+    'meetings.py',
     # активность команды модерации (/staff-stats, лидерборд модеров) —
     # читает уже собранные мод-действия, своих тяжёлых зависимостей нет
     'staff_stats.py',
@@ -117,13 +119,13 @@ CORE_ONLY_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | AI_CHAT_COGS
 
 # ─── LEAN — боевой состав по умолчанию (запрос владельца: «без хлама») ────
 # Модерация-ядро: наказания (modpanel), варны, временные наказания,
-# доказательства, автомод, jail, защита и верификация, апелляции, логи.
+# доказательства, автомод, jail, защита и верификация, апелляции, логи, собрания.
 MOD_LEAN_COGS = frozenset({
     'moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
     'proof_cog.py', 'auto_filter.py',
     'antiraid.py', 'guardian.py',
     'age_verification.py',  # верификация молодых аккаунтов: карантин + анкета (заказ 31.08)
-    'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
+    'appeals.py', 'meetings.py', 'reports.py', 'logs.py', 'log_menu.py',
     'activity_stats.py',   # сбор активности для страницы «Аналитика» (без команд)
     'afk.py',              # /afk (выход авто при сообщении, /afk-remove убран)
     # Щит по максимуму (заказ владельца «добавь все возможные для защиты»):

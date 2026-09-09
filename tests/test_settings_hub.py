@@ -58,13 +58,14 @@ from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 14 and len(set(keys)) == 14,
-      f'14 уникальных живых маршрутов ({len(keys)})')
+check(len(keys) == 17 and len(set(keys)) == 17,
+      f'17 уникальных живых маршрутов ({len(keys)})')
 need = {'ban_appeal_channel', 'appeal_menu_channel', 'pagerduty_channel',
         'proof_channel', 'report_channel', 'appeals_channel', 'welcome_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
         'anticrash_channel',
-        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel'}
+        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel',
+        'meeting_channel', 'meeting_helper_channel', 'meeting_mod_channel'}
 check(set(keys) == need, f'только живые системы на хабе ({len(need)})')
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')
 
@@ -98,8 +99,8 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 70 and len(set(paths)) == 70,
-      f'в меню 70 уникальных страниц ({len(paths)}); музыка/тикеты/варны/дубль бэкапов убраны')
+check(len(paths) == 71 and len(set(paths)) == 71,
+      f'в меню 71 уникальных страниц ({len(paths)}); музыка/тикеты/варны/дубль бэкапов убраны')
 check('/warn-config' not in paths, 'дубль «Варны» (/warn-config) убран из меню')
 check('/ladder' in paths, 'каноническая «Лестница наказаний» в меню')
 groups = {g['key']: g for g in PM.MENU}

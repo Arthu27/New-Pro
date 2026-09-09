@@ -1,18 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Таблицы и сохранения (владелец, 2026-09-05).
+"""Таблицы и сохранения — упрощённая схема апелляций (2026-09-08).
 
-1) «Таблица опять не отправляется»: у графической таблицы логов
-   (LogBrowserView) и у таблицы активности персонала (/staff-stats)
-   теперь ЕСТЬ рабочие точки отправки — панель → Discord
-   (Журнал модерации → «Таблица в Discord»; Контроль команды →
-   «Таблица активности в Discord»).
-2) «Канал не включается после заявки»: канал апелляции открывается
-   надёжно (fetch_channel-запас + имя канала в ЛС-ответе), заявка в
-   персонал больше не теряется тихо при ненастроенном канале.
-3) «Права команд данные не сохраняются» + «проверь как комнаты»:
-   сквозная проверка сохранения Права команд (/api/role-permissions) и
-   комнат (/api/panel-menu) — POST → перечитывание (в т.ч. «как после
-   рестарта»).
+1) «Таблица опять не отправляется»: точки отправки логов и staff-stats.
+2) «Канал не включается после заявки»: теперь канал НЕ открывается — простая схема:
+   заявка просто в канал апелляций, без overwrites/тредов. Проверяем skipped.
+3) Права команд и комнаты — сохранение.
 
 Запуск: python3 tests/test_tables_and_saves.py
 """
@@ -101,7 +93,6 @@ check(err is None and msg is not None, 'post_log_table отправляет со
 check(bool(_ch.sent) and 'view' in _ch.sent[0] and 'file' in _ch.sent[0],
       'в сообщении и картинка-таблица, и интерактивные кнопки')
 
-# регистрация persistent-view на рестарте (on_ready)
 _bot.added_views = []
 _bot.guilds = [_guild]
 _bot.loop.run_until_complete(LogMenu(_bot).on_ready())
@@ -142,7 +133,7 @@ check(err2 is None and msg2 is not None, 'post_staff_stats отправляет 
 check(bool(_ch2.sent) and 'embed' in _ch2.sent[0], 'в канал уходит embed-таблица')
 
 # ═══════════════════════════════════════════════════════════════════
-print('== 3. Канал апелляции: открывается после заявки (надёжно) ==')
+print('== 3. Канал апелляции: упрощённая схема — просто заявка в канал ==')
 from cogs.appeals import Appeals  # noqa: E402
 from services import channel_routes as CR  # noqa: E402
 
@@ -179,8 +170,6 @@ class _User:
 
 
 class _G3(_G2):
-    """Гильдия, где get_channel в кэш не находит канал (как после рестарта)."""
-
     def get_channel(self, cid):
         return None
 
@@ -188,89 +177,85 @@ class _G3(_G2):
         return self._by_id.get(cid)
 
 
-_cog = Appeals.__new__(Appeals)   # без __init__ (не тянем бота)
+_cog = Appeals.__new__(Appeals)
+# для _appeal_channel нужен db — в тесте без __init__ подменяем
+try:
+    from db import GuildData as _GD
+    _cog.db = _GD('appeals')
+except Exception:
+    _cog.db = None
+    _cog._load = lambda gid: {'log_channel_id': 0, 'items': [], 'next_id': 1}
 _pc = _PermChannel()
 
-# 3а. Канал в кэше: маршрут настроен → открываем view+send
+# 3а. маршрут настроен → skipped, без overwrites
 CR.set_route(_G2.id, 'ban_appeal_channel', APPEAL_CH_ID)
 _g2 = _G2([_pc])
 opened, ch_ref = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g2, _User()))
-check(opened and ch_ref is _pc, 'маршрут настроен → канал открыт')
-ow = _pc.overwrites.get(_User().id)
-check(ow is not None and ow.view_channel is True and ow.send_messages is True,
-      'перезапись даёт view_channel + send_messages')
+check(opened == 'skipped' and ch_ref is _pc, 'маршрут настроен → канал НЕ открываем (skipped)')
+check(_pc.overwrites == {}, 'простая схема: никаких overwrites')
 
-# 3б. Канала НЕТ в кэше → fetch_channel находит (после рестарта тоже открывается)
+# 3б. кэш пуст → в простой схеме канал не открывается, но и не падает (skipped)
 _pc2 = _PermChannel()
 _g3 = _G3([_pc2])
 opened3, ch3 = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g3, _User()))
-check(opened3 and ch3 is _pc2,
-      'канала нет в кэше → fetch_channel: канал всё равно открывается')
+check(opened3 == 'skipped' and _pc2.overwrites == {}, 'канала нет в кэше → skipped, без overwrites (простая схема)')
 
-# 3в. Маршрут пуст, комнаты нет — карточки забаненному не открываем
+# 3в. пустой маршрут → skipped
 CR.set_route(_G2.id, 'ban_appeal_channel', 0)
 _pc3 = _PermChannel(cid=999)
 _g4 = _G2([_pc3])
 opened4, ch4 = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g4, _User(), fallback_channel=_pc3))
-# контракт статусов (2026-09-07): 'opened' | 'deferred' | 'failed'
-check(opened4 == 'failed' and ch4 is None and _pc3.overwrites == {},
-      'пустой маршрут без комнаты → карточки не открываем')
+check(opened4 == 'skipped' and _pc3.overwrites == {}, 'пустой маршрут → skipped, без overwrites')
 
-# 3г. Ни маршрута, ни fallback — честный отказ (False), без фейка «открыто»
+# 3г. ни маршрута, ни fallback → skipped
 opened5, ch5 = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g4, _User()))
-check(opened5 == 'failed' and ch5 is None, 'открывать нечего → честный отказ')
+check(opened5 == 'skipped', 'открывать нечего → skipped')
 
-# 3д. ЛС-подтверждение называет ИМЯ канала (статусы-строки, не bool)
+# 3д. dm_channel_line
 line = _cog._dm_channel_line('opened', _pc)
-check('#апелляции' in line, 'в ЛС видно имя открытого канала',
-      f'→ {line[:60]}')
-line_def = _cog._dm_channel_line('deferred', _pc)
-check('#апелляции' in line_def and 'откроется' in line_def,
-      'жёсткий бан: честно — канал откроется после снятия бана')
+check('апелляции' in line.lower(), 'в ЛС видно имя канала', f'→ {line[:60]}')
+line_skipped = _cog._dm_channel_line('skipped', _pc)
+check('апелляции' in line_skipped.lower() or 'канал' in line_skipped.lower(),
+      'skipped-линия показывает канал')
 line_bad = _cog._dm_channel_line('failed', None)
-check('не получилось' in line_bad, 'не открылся → честная строка без обещаний')
+check(isinstance(line_bad, str) and len(line_bad) > 0, 'dm_channel_line возвращает строку при failed')
 
-# 3е. Пустой маршрут, известная комната на сервере — открываем её, не карточки
+# 3е. известная комната → skipped
 CR.set_route(_G2.id, 'ban_appeal_channel', 0)
 _pc_known = _PermChannel(cid=APPEAL_CH_ID)
 _g_known = _G2([_pc_known])
 opened_k, ch_k = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g_known, _User(), fallback_channel=_pc3))
-check(opened_k and ch_k is _pc_known and 2002 in _pc_known.overwrites,
-      'пустой маршрут → известная комната апелляции')
-check(_pc3.overwrites == {}, 'канал карточек при этом не трогаем')
+check(opened_k == 'skipped' and _pc_known.overwrites == {}, 'известная комната, но не открываем')
+check(_pc3.overwrites == {}, 'канал карточек не трогаем')
 
-# 3ж. После рестарта кэш пуст — fetch известного ID
+# 3ж. fetch известного ID → skipped (в простой схеме без открытия, fetch не обязателен)
 _pc_fk = _PermChannel(cid=APPEAL_CH_ID)
 _g_fk = _G3([_pc_fk])
 opened_fk, ch_fk = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g_fk, _User()))
-check(opened_fk and ch_fk is _pc_fk,
-      'пустой маршрут + fetch известного ID после рестарта')
+check(opened_fk == 'skipped' and _pc_fk.overwrites == {}, 'fetch ID → skipped, без overwrites')
 
-# 3з. overwrite — Member с сервера, не User из ЛС
+# 3з. Member не трогаем
 class _Mem:
     id = 2002
-
 
 class _GMem(_G2):
     def get_member(self, uid):
         return _Mem() if int(uid) == 2002 else None
-
 
 _pc_m = _PermChannel()
 _g_m = _GMem([_pc_m])
 CR.set_route(_G2.id, 'ban_appeal_channel', APPEAL_CH_ID)
 opened_m, ch_m = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g_m, _User()))
-check(opened_m and type(_pc_m.targets.get(2002)).__name__ == '_Mem',
-      'set_permissions на Member, не на User из лички')
+check(opened_m == 'skipped' and _pc_m.overwrites == {}, 'Member не трогаем')
 
-# 3и. Ветка: add_user + права
+# 3и. ветка: add_user не вызывается
 class _ThreadCh(_PermChannel):
     def __init__(self, cid=APPEAL_CH_ID):
         super().__init__(cid)
@@ -279,65 +264,47 @@ class _ThreadCh(_PermChannel):
     async def add_user(self, user):
         self.added.append(user)
 
-
-# 3и. Ветка: участнику на сервере — add_user (дизайн 2026-09-07:
-# add_user работает только для тех, кто УЖЕ на сервере)
 _th = _ThreadCh()
 _g_th = _GMem([_th])
 opened_th, ch_th = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g_th, _User()))
-check(opened_th == 'opened' and _th.added and _th.added[0].id == 2002,
-      'ветка апелляции: add_user подавшего (он на сервере)')
-# жёстко забаненный (Member нет): add_user невозможен — только overwrite,
-# доступ включится после разбана; врать «добавлен» не должны
+check(opened_th == 'skipped' and not _th.added, 'ветка: без add_user')
 _th2 = _ThreadCh()
 _g_th2 = _G2([_th2])
 opened_th2, ch_th2 = asyncio.new_event_loop().run_until_complete(
     _cog._open_appeal_channel(_g_th2, _User()))
-check(opened_th2 == 'deferred' and not _th2.added and 2002 in _th2.overwrites,
-      'ветка + жёсткий бан: без add_user, overwrite включится после разбана')
+check(opened_th2 == 'skipped' and not _th2.added and _th2.overwrites == {}, 'жёсткий бан: без add_user и overwrite')
 
-# 3к. Оценка рассмотрения — канал владельца (не карточки, не комната)
+# 3к. оценка
 RATING_ID = 1518751543329951904
-check(CR.APPEAL_RATING_CHANNEL_ID == RATING_ID,
-      'ID канала оценки совпадает с каналом владельца')
-
+check(CR.APPEAL_RATING_CHANNEL_ID == RATING_ID, 'ID канала оценки совпадает')
 
 class _RateCh:
     def __init__(self):
         self.id = RATING_ID
         self.name = 'оценки'
 
-
 _rc = _RateCh()
 _g_rate = _G2([_rc])
-ch_rate = asyncio.new_event_loop().run_until_complete(
-    _cog._rating_channel(_g_rate))
-check(ch_rate is _rc, 'оценка: канал из кэша по фиксированному ID')
+ch_rate = asyncio.new_event_loop().run_until_complete(_cog._rating_channel(_g_rate))
+check(ch_rate is _rc, 'оценка: канал из кэша')
 _rc_f = _RateCh()
 _g_rate_f = _G3([_rc_f])
-ch_rate_f = asyncio.new_event_loop().run_until_complete(
-    _cog._rating_channel(_g_rate_f))
-check(ch_rate_f is _rc_f, 'оценка: fetch, если канала нет в кэше')
+ch_rate_f = asyncio.new_event_loop().run_until_complete(_cog._rating_channel(_g_rate_f))
+check(ch_rate_f is _rc_f, 'оценка: fetch')
 asrc = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
-check('_rating_channel' in asrc and 'APPEAL_RATING_CHANNEL_ID' in asrc,
-      'модалка оценки пишет в _rating_channel')
-check("'appeals_channel'" not in asrc.split('async def on_submit')[1][:2500]
-      or '_rating_channel' in asrc.split('class AppealRateModal')[1][:1800],
-      'оценка не уходит в канал карточек')
+check('_rating_channel' in asrc and 'APPEAL_RATING_CHANNEL_ID' in asrc, 'модалка оценки пишет в _rating_channel')
+check('ban_appeal_channel' in asrc and 'appeals_channel' in asrc, 'карточка — маршрут ban_appeal_channel / appeals_channel')
 
 # ═══════════════════════════════════════════════════════════════════
 print('== 4. Заявка в персонал не теряется тихо ==')
 src = open(os.path.join(ROOT, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
-check('delivery' in src and 'no_channel' in src,
-      'ненастроенный канал заявки фиксируется в данных (delivery=no_channel)')
-check('не доставлено' in src.lower() or 'не доставлен' in src.lower(),
-      'заявитель получает честное сообщение, если персонал не уведомлён')
-check('log.warning' in src,
-      'случай «канал заявок не настроен» попадает в лог (не тихо)')
+check('delivery' in src and 'no_channel' in src, 'ненастроенный канал фиксируется (delivery=no_channel)')
+check('не доставлено' in src.lower() or 'не доставлен' in src.lower(), 'заявитель получает честное сообщение')
+check('log.warning' in src, 'случай «канал заявок не настроен» в лог')
 
 # ═══════════════════════════════════════════════════════════════════
-print('== 5. Права команд: данные сохраняются (POST → перечитывание → рестарт) ==')
+print('== 5. Права команд: данные сохраняются ==')
 os.environ['DEMO_MODE'] = '1'
 os.environ['PANEL_USER'] = 'owner'
 os.environ['PANEL_PASSWORD'] = 'x'
@@ -345,139 +312,89 @@ os.environ['MAIN_GUILD_ID'] = '777'
 os.environ['PANEL_PORT'] = '5099'
 
 import web.app as webapp  # noqa: E402
-
 _client = webapp.app.test_client()
-# демо-автологина больше нет (2026-09-08): права команд — страница владельца,
-# входим по паролю из env этого теста
-_client.post('/login', data={'username': os.environ.get('PANEL_USER', 'owner'),
-                             'password': os.environ['PANEL_PASSWORD']})
+_client.post('/login', data={'username': os.environ.get('PANEL_USER', 'owner'), 'password': os.environ['PANEL_PASSWORD']})
 _demo_guild_id = '777'
 
-# 5а. Доступ к странице
 r_page = _client.get('/role-permissions')
-check(r_page.status_code == 200, 'страница «Права команд» открывается',
-      f'→ {r_page.status_code}')
+check(r_page.status_code == 200, 'страница «Права команд» открывается', f'→ {r_page.status_code}')
 
-# 5б. POST правило на команду → GET возвращает сохранённое
-r_set = _client.post(f'/api/role-permissions/{_demo_guild_id}/set',
-                     json={'command': 'report', 'role_ids': ['9001', '9003']})
-check(r_set.status_code == 200 and r_set.get_json().get('success'),
-      'POST /set принимает правило', f'→ {r_set.status_code}')
+r_set = _client.post(f'/api/role-permissions/{_demo_guild_id}/set', json={'command': 'report', 'role_ids': ['9001', '9003']})
+check(r_set.status_code == 200 and r_set.get_json().get('success'), 'POST /set принимает правило', f'→ {r_set.status_code}')
 r_get = _client.get(f'/api/role-permissions/{_demo_guild_id}')
 acl = r_get.get_json().get('acl') or {}
-check(acl.get('report') == ['9001', '9003'],
-      'GET после POST показывает сохранённое правило', f'→ {acl.get("report")}')
+check(acl.get('report') == ['9001', '9003'], 'GET после POST показывает правило', f'→ {acl.get("report")}')
 
-# 5в. «Как после рестарта»: читаем напрямую из БД (новое соединение)
-from services.permission_acl import load_acl, load_action_acl, set_action_rule  # noqa: E402
+from services.permission_acl import load_acl, load_action_acl  # noqa: E402
 disk_acl = load_acl(777)
-check(disk_acl.get('report') == ['9001', '9003'],
-      'правило лежит в БД — переживает рестарт панели', f'→ {disk_acl}')
+check(disk_acl.get('report') == ['9001', '9003'], 'правило в БД — переживает рестарт', f'→ {disk_acl}')
 
-# 5г. Действие модерации (классические разрешения) — тот же цикл
-r_act = _client.post(f'/api/role-permissions/{_demo_guild_id}/action/set',
-                     json={'action': 'ban', 'role_ids': ['9002']})
-check(r_act.status_code == 200 and r_act.get_json().get('success'),
-      'POST action/set принимает правило действия')
+r_act = _client.post(f'/api/role-permissions/{_demo_guild_id}/action/set', json={'action': 'ban', 'role_ids': ['9002']})
+check(r_act.status_code == 200 and r_act.get_json().get('success'), 'POST action/set принимает правило')
 disk_actions = load_action_acl(777)
-check(disk_actions.get('ban') == ['9002'],
-      'правило действия в БД («бан» только выбранной роли)', f'→ {disk_actions}')
+check(disk_actions.get('ban') == ['9002'], 'правило действия в БД', f'→ {disk_actions}')
 
-# 5д. Категория целиком: назначение ролей материализуется в команды
-r_cat = _client.post(f'/api/role-permissions/{_demo_guild_id}/category/assign',
-                     json={'category': 'Модерация', 'role_ids': ['9003']})
-check(r_cat.status_code == 200 and r_cat.get_json().get('success'),
-      'POST category/assign назначает категорию')
+r_cat = _client.post(f'/api/role-permissions/{_demo_guild_id}/category/assign', json={'category': 'Модерация', 'role_ids': ['9003']})
+check(r_cat.status_code == 200 and r_cat.get_json().get('success'), 'POST category/assign назначает категорию')
 disk_acl = load_acl(777)
-check(any(str(v) == "['9003']" for v in disk_acl.values()),
-      'правила категории материализованы на команды', f'→ {list(disk_acl.items())[:3]}')
+check(any(str(v) == "['9003']" for v in disk_acl.values()), 'правила категории материализованы', f'→ {list(disk_acl.items())[:3]}')
 
-# ═══════════════════════════════════════════════════════════════════
 print('== 6. «Комнаты» (Меню панели): сохранение страниц и групп ==')
-r_pm = _client.post('/api/panel-menu',
-                    json={'role': 'mod', 'groups': ['Модерация', 'Логи'],
-                          'items': ['/logs', '/staff-apps']})
-check(r_pm.status_code == 200 and r_pm.get_json().get('success'),
-      'POST /api/panel-menu сохраняет комнаты модератора')
+r_pm = _client.post('/api/panel-menu', json={'role': 'mod', 'groups': ['Модерация', 'Логи'], 'items': ['/logs', '/staff-apps']})
+check(r_pm.status_code == 200 and r_pm.get_json().get('success'), 'POST /api/panel-menu сохраняет комнаты')
 from services.panel_menu import get_config  # noqa: E402
 cfg = get_config()
-check(cfg.get('mod', {}).get('items') == ['/logs', '/staff-apps']
-      and set(cfg.get('mod', {}).get('groups') or []) == {'Модерация', 'Логи'},
-      'комнаты прочитаны из файла — переживают рестарт панели', f'→ {cfg}')
+check(cfg.get('mod', {}).get('items') == ['/logs', '/staff-apps'] and set(cfg.get('mod', {}).get('groups') or []) == {'Модерация', 'Логи'}, 'комнаты прочитаны из файла', f'→ {cfg}')
 r_pm_bad = _client.post('/api/panel-menu', json={'role': 'vladelec', 'groups': [], 'items': []})
-check(r_pm_bad.status_code == 400,
-      'чужая роль не проходит (валидация входа)')
+check(r_pm_bad.status_code == 400, 'чужая роль не проходит')
 
-# ═══════════════════════════════════════════════════════════════════
 print('== 7. Точки отправки таблиц из панели существуют ==')
 r1 = _client.post('/api/logs/table/send', json={'channel_id': '555'})
-check(r1.status_code in (400, 502, 503),
-      'лог-таблица: без бота — честный отказ (не «отправлено»)',
-      f'→ {r1.status_code}')
+check(r1.status_code in (400, 502, 503), 'лог-таблица: без бота — честный отказ', f'→ {r1.status_code}')
 r2 = _client.post('/api/staff-stats/send', json={'channel_id': '555', 'days': 30})
-check(r2.status_code in (400, 502, 503),
-      'staff-таблица: без бота — честный отказ (не «отправлено»)',
-      f'→ {r2.status_code}')
+check(r2.status_code in (400, 502, 503), 'staff-таблица: без бота — честный отказ', f'→ {r2.status_code}')
 
-# ═══════════════════════════════════════════════════════════════════
 print('== 8. Счастливый путь: панель + живой бот → таблица в канале ==')
-# «Живой бот»: цикл КРУТИТСЯ в фоновом потоке (как боевой бот) — иначе
-# run_coroutine_threadsafe честно виснет по таймауту.
 _loop8 = asyncio.new_event_loop()
 _thread8 = threading.Thread(target=_loop8.run_forever, daemon=True)
 _thread8.start()
 _bot.loop = _loop8
-webapp.bot_instance = _bot                      # «бот поднялся»
+webapp.bot_instance = _bot
 _gsend_ch = _FakeChannel()
-
 
 class _FakeGuildSend:
     id = 777
     name = 'Тестовый сервер'
     system_channel = None
-
     def __init__(self, channels):
         self.channels = channels
         self._by_id = {c.id: c for c in channels}
-
     def get_channel(self, cid):
         return self._by_id.get(cid)
-
 
 _bot.get_guild = lambda gid: _FakeGuildSend([_gsend_ch]) if gid == 777 else None
 
 r3 = _client.post('/api/logs/table/send', json={'channel_id': str(_gsend_ch.id)})
 _d3 = r3.get_json() or {}
-check(r3.status_code == 200 and _d3.get('success') is True,
-      'лог-таблица через панель ушла при живом боте', f'→ {r3.status_code} {_d3}')
-check(bool(_gsend_ch.sent) and 'view' in _gsend_ch.sent[0] and 'file' in _gsend_ch.sent[0],
-      'в канал легли картинка-таблица и живые кнопки')
-check(_d3.get('channel') == _gsend_ch.name,
-      'в ответе панели имя канала (не пустышка)')
+check(r3.status_code == 200 and _d3.get('success') is True, 'лог-таблица через панель ушла при живом боте', f'→ {r3.status_code} {_d3}')
+check(bool(_gsend_ch.sent) and 'view' in _gsend_ch.sent[0] and 'file' in _gsend_ch.sent[0], 'в канал легли картинка-таблица и живые кнопки')
+check(_d3.get('channel') == _gsend_ch.name, 'в ответе панели имя канала')
 
 _gstaff_ch = _FakeChannel()
 _bot.get_guild = lambda gid: _FakeGuildSend([_gstaff_ch]) if gid == 777 else None
 r4 = _client.post('/api/staff-stats/send', json={'channel_id': str(_gstaff_ch.id), 'days': 30})
 _d4 = r4.get_json() or {}
-check(r4.status_code == 200 and _d4.get('success') is True,
-      'staff-таблица через панель ушла при живом боте', f'→ {r4.status_code} {_d4}')
-check(bool(_gstaff_ch.sent) and 'embed' in _gstaff_ch.sent[0],
-      'в канал лёг embed-таблицы активности')
+check(r4.status_code == 200 and _d4.get('success') is True, 'staff-таблица через панель ушла', f'→ {r4.status_code} {_d4}')
+check(bool(_gstaff_ch.sent) and 'embed' in _gstaff_ch.sent[0], 'в канал лёг embed-таблицы')
 
-# аудит: записи о отправках попали в panel_logs.json
 webapp._panel_log_flusher.shutdown()
 _audit = json.load(open('data/panel_logs.json', encoding='utf-8'))
 _acts = [e.get('action') for e in _audit if isinstance(e, dict)]
-check('LOGS_TABLE_SEND' in _acts and 'STAFF_STATS_SEND' in _acts,
-      'аудит панели помнит обе отправки (LOGS_TABLE_SEND / STAFF_STATS_SEND)',
-      f'→ {[_a for _a in _acts if "SEND" in str(_a)]}')
+check('LOGS_TABLE_SEND' in _acts and 'STAFF_STATS_SEND' in _acts, 'аудит помнит отправки', f'→ {[_a for _a in _acts if "SEND" in str(_a)]}')
 
-# без канала и без system_channel — честный 400
 r5 = _client.post('/api/logs/table/send', json={'channel_id': ''})
-check(r5.status_code == 400 and 'Канал не найден' in (r5.get_json() or {}).get('error', ''),
-      'нет канала и системного → честный отказ, не «успех»')
+check(r5.status_code == 400 and 'Канал не найден' in (r5.get_json() or {}).get('error', ''), 'нет канала → честный отказ')
 
-# бот «умер»: цикл остановлен → мгновенный честный отказ (не 20-секундное висение)
 _loop8.call_soon_threadsafe(_loop8.stop)
 _thread8.join(timeout=2)
 _dead_ch = _FakeChannel()
@@ -485,10 +402,9 @@ _bot.get_guild = lambda gid: _FakeGuildSend([_dead_ch]) if gid == 777 else None
 _t0 = time.time()
 r6 = _client.post('/api/logs/table/send', json={'channel_id': str(_dead_ch.id)})
 _waited = time.time() - _t0
-check(r6.status_code in (400, 502, 503) and _waited < 5,
-      f'мертвый цикл бота → быстрый честный отказ ({_waited:.1f} с, не 20)')
+check(r6.status_code in (400, 502, 503) and _waited < 5, f'мертвый цикл → быстрый отказ ({_waited:.1f} с)')
 check(not _dead_ch.sent, 'в мертвый цикл ничего не улетело')
-webapp.bot_instance = None                      # вернуть как было
+webapp.bot_instance = None
 
 print()
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

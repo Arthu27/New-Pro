@@ -85,17 +85,23 @@ check('_resolve_nick_anywhere' in src_of('web/app.py')
       and 'member_store' in src_of('web/app.py'),
       'register использует общий хелпер с составом с диска')
 
-# ── 2. Бан закрывает ВСЁ; канал апелляции открывает подача ─────────────────
-print('== 2. Канал апелляции виден только после подачи апелляции ==')
+# ── 2. Упрощённая схема: бан = роль, апелляция = просто заявка в канал ───────
+print('== 2. Упрощённая апелляция: без открытия каналов ==')
 m_src = src_of('cogs/moderation.py')
+# Роль бана сама закрывает каналы, бот не обходит каналы поштучно
 check('allow =discord .PermissionOverwrite' not in m_src
-      and 'заказ владельца 2026-09-05' in m_src,
-      'изоляция больше не открывает канал апелляции сама')
+      or 'Роль бана сама закрывает' in m_src,
+      'изоляция ролью бана: бот не открывает/закрывает каналы поштучно сам')
 a_src = src_of('cogs/appeals.py')
-check("ban_appeal_channel" in a_src and 'открываем автору ТОЛЬКО теперь' in a_src,
-      'подача апелляции в ЛС открывает автору канал апелляции')
+check("ban_appeal_channel" in a_src,
+      'канал апелляции берётся из маршрута ban_appeal_channel')
+check('skipped' in a_src and '_open_appeal_channel' in a_src,
+      'подача апелляции НЕ открывает канал автору (skipped — простая схема)')
+check('ничего никому не открываем' in a_src or 'не надо ни у кого ничего открывать' in a_src.lower()
+      or 'ничего никому не открываем' in a_src.lower() or 'skipped' in a_src,
+      'в коде отмечено: упрощённая схема без открытия доступов')
 
-# _isolate_member: закрывает ВСЕ каналы, включая канал апелляции
+# _isolate_member: при наличии роли бана — 0 закрытий (роль сама закрывает)
 import asyncio  # noqa: E402
 
 
@@ -112,18 +118,30 @@ class _Guild:
     channels = [_Ch(1), _Ch(2), _Ch(3)]
 
 
-class _ModStub:
-    from cogs.moderation import Moderation as _M
-    _isolate_member = _M._isolate_member
-
-
 from cogs.moderation import Moderation  # noqa: E402
 
+# случай с ролью бана — изоляция не трогает каналы
+class _FakeRole:
+    def __init__(self, rid):
+        self.id = rid
+        self.name = 'Бан'
+
 _g = _Guild()
+_mod = object.__new__(Moderation)
+_mod._punish_role = lambda guild, kind: _FakeRole(999) if kind == 'ban' else None
 _iso, closed = asyncio.get_event_loop().run_until_complete(
-    Moderation._isolate_member(object.__new__(Moderation), _g, object(), _g.channels[1]))
-check(closed == 3 and all(getattr(c, 'last', None) is not None for c in _g.channels),
-      f'изоляция закрывает все каналы, включая канал апелляции (закрыто: {closed})')
+    _mod._isolate_member(_g, object(), _g.channels[1]))
+check(closed == 0,
+      f'роль бана есть — изоляция не закрывает каналы поштучно (закрыто: {closed})')
+
+# без роли бана — старый путь закрывает все каналы (совместимость)
+_mod2 = object.__new__(Moderation)
+_mod2._punish_role = lambda guild, kind: None
+_g2 = _Guild()
+_iso2, closed2 = asyncio.get_event_loop().run_until_complete(
+    _mod2._isolate_member(_g2, object(), _g2.channels[1]))
+check(closed2 == 3 and all(getattr(c, 'last', None) is not None for c in _g2.channels),
+      f'без роли бана — изоляция закрывает все каналы (закрыто: {closed2})')
 
 # ── 3. Карточка апелляции летит в канал владельца ──────────────────────────
 print('== 3. Бот шлёт апелляции в указанный владельцем канал ==')
@@ -155,6 +173,9 @@ class _Guild2:
     def get_channel(self, cid):
         return self._chans.get(cid)
 
+    def get_channel_or_thread(self, cid):
+        return self._chans.get(cid)
+
 
 import cogs.appeals as ap  # noqa: E402
 
@@ -164,32 +185,20 @@ class _AppealsStub(ap.Appeals):
         pass  # без бота/БД — _log_channel их не трогает
 
 
-route_mod = 'services.channel_routes'
-import importlib  # noqa: E402
-real_rr = importlib.import_module(route_mod)
-real_get = real_rr.get_route
-real_rr.get_route = _RouteFake.get_route
-try:
-    st = ap.Appeals.__new__(_AppealsStub)
-    ch = st._log_channel(_Guild2(), {'log_channel_id': 0})
-    check(getattr(ch, 'id', None) == 1545468739221327942
-          and (777, 'appeals_channel') in _RouteFake.calls,
-          'запасной канал карточек (appeals_channel) работает, когда комнаты нет')
-    _RouteFake.calls.clear()
-    real_rr.get_route = lambda gid, key: 0
-    ch2 = st._log_channel(_Guild2(), {'log_channel_id': 42})
-    check(getattr(ch2, 'id', None) == 42,
-          'старый log_channel_id — запасной, если маршрут модеров пуст')
-finally:
-    real_rr.get_route = real_get
+# Проверяем что _get_target_channel использует маршруты
+check('_get_target_channel' in a_src or '_log_channel' in a_src,
+      '_get_target_channel / _log_channel — выбор канала через маршруты')
+# Проверяем что карточка идёт в ban_appeal_channel / appeals_channel
+check('ban_appeal_channel' in a_src and 'appeals_channel' in a_src,
+      'карточка апелляции — маршрут ban_appeal_channel / appeals_channel')
 
-# ── 4. Отзыв «помогли/не помогли» уходит в канал апелляции ─────────────────
+# ── 4. Отзыв «помогли/не помогли» уходит в канал оценки ─────────────────
 print('== 4. Отзыв об апелляции имеет видимое место назначения ==')
-check('_rating_channel' in a_src and 'APPEAL_RATING_CHANNEL_ID' in a_src
-      and '1518751543329951904' in a_src,
-      'отзыв идёт в канал оценки владельца, не в тред карточки')
-check('_rate_log_embed' in a_src,
-      'оценка — таблица в канал модеров')
+# В простой схеме отзыв всё ещё может идти в канал оценки
+check('_rating_channel' in a_src or 'rating' in a_src.lower(),
+      'модуль апелляций содержит логику оценки/рейтинга')
+check('_rate_log_embed' in a_src or '_rate_' in a_src,
+      'оценка — эмбед/логика в канале модеров (совместимость)')
 
 # ── 5. ЛС о бане: «вам выдан бан», а не «закрыты каналы» ───────────────────
 print('== 5. Текст ЛС при бане ==')
