@@ -7,7 +7,7 @@
 from datetime import datetime, timezone
 from db import GuildData
 from cogs import meetings as MT
-from web.routes._common import _safe_json_obj, _log, _run_async, render_template, session, request, jsonify, Response
+from web.routes._common import _safe_json_obj, _log, _run_async, _live_publish, render_template, session, request, jsonify, Response
 
 UTC = timezone.utc
 
@@ -19,6 +19,11 @@ def _state(gid):
 
 def _save(gid, state):
     _db().set(gid, 'state', state)
+    # live-пуш: собрания обновились — панель обновится без F5
+    try:
+        _live_publish(gid, 'meetings')
+    except Exception as _ex:
+        _log.debug('meetings live_publish: %s', _ex)
 
 
 def overview_stats(state):

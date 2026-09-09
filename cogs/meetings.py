@@ -400,6 +400,12 @@ class Meetings(commands.Cog):
 
     def _save(self, guild_id, state):
         self.db.set(guild_id, 'state', state)
+        # live-push для панели /meetings — без мигания, мгновенно
+        try:
+            from services.live_bus import publish as _live_pub
+            _live_pub(guild_id, 'meetings')
+        except Exception:
+            pass
 
     def _guild_ch(self, guild, cid):
         if not cid or guild is None:
