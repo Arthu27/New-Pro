@@ -326,6 +326,11 @@ def register(ctx):
                 'channels', f'Маршрут очищен: {spec["label"]}',
                 f'{who}: вернули поведение по умолчанию')
         _live_publish(gid, 'channels')   # живой пуш: маршруты/каналы обновились
+        try:
+            _live_publish(gid, 'channel-routes')
+            _live_publish(gid, 'meetings')
+        except Exception:
+            pass
         return jsonify({'success': True, 'key': key, 'channel_id': cid})
 
     @app.route('/api/staff-role-routes', methods=['GET'])

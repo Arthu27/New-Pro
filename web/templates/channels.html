@@ -678,13 +678,28 @@ textarea.field-input{resize:vertical;min-height:52px}
       else if (c.type === 'category') catCount++;
       else if (c.nsfw) nsfw++;
     });
-    $('stat-text').textContent = textCount;
-    $('stat-voice').textContent = voiceCount;
-    $('stat-cat').textContent = catCount;
-    $('stat-total').textContent = allChannels.length;
-    $('stat-nsfw').textContent = nsfw;
-    $('stat-connected').textContent = connected;
-    $('ch-stats').style.display = 'grid';
+    var stats = {text:textCount, voice:voiceCount, cat:catCount, total:allChannels.length, nsfw:nsfw, conn:connected};
+    // плавные счётчики + silentGuard
+    if(window.renderIfChanged){
+      window.renderIfChanged('ch-stats', stats, function(){
+        var map={ 'stat-text':textCount, 'stat-voice':voiceCount, 'stat-cat':catCount, 'stat-total':allChannels.length, 'stat-nsfw':nsfw, 'stat-connected':connected };
+        Object.keys(map).forEach(function(k){
+          var el=$(k);
+          if(!el) return;
+          if(window.countUp){ try{ window.countUp(el, map[k]); }catch(e){ el.textContent=map[k]; } }
+          else el.textContent=map[k];
+        });
+        $('ch-stats').style.display = 'grid';
+      });
+    } else {
+      $('stat-text').textContent = textCount;
+      $('stat-voice').textContent = voiceCount;
+      $('stat-cat').textContent = catCount;
+      $('stat-total').textContent = allChannels.length;
+      $('stat-nsfw').textContent = nsfw;
+      $('stat-connected').textContent = connected;
+      $('ch-stats').style.display = 'grid';
+    }
   }
 
   function populateCategorySelects() {
@@ -768,7 +783,6 @@ textarea.field-input{resize:vertical;min-height:52px}
   function loadChannels(live) {
     if (!selectedGuild) return;
     if (live && document.querySelector('.modal-overlay.open')) return;
-    /* список уже отрисован из вшитых данных — спиннер не мигает */
     if (!live && !allChannels.length) setLoading();
     return fetch('/api/guild/' + selectedGuild + '/channels')
       .then(function (r) {
@@ -776,15 +790,15 @@ textarea.field-input{resize:vertical;min-height:52px}
         return r.json();
       })
       .then(function (data) {
-        /* API может вернуть {error, channels:[]} — показываем причину, а не пустоту */
         if (data && !Array.isArray(data) && data.error) {
           if (!live) $('channel-list').innerHTML =
             '<div class="ch-empty"><i class="fas fa-triangle-exclamation"></i><p>' + esc(data.error) + '</p><p class="ch-empty-sub">Проверьте, что бот онлайн и состоит на этом сервере.</p></div>';
           return false;
         }
         var nextChannels = Array.isArray(data) ? data : (data.channels || []);
-        var fingerprint = JSON.stringify(nextChannels);
+        var fingerprint = JSON.stringify(nextChannels.map(function(c){return [c.id,c.name,c.position,c.category,c.hidden,c.nsfw,c.slowmode,c.topic,c.connected,c.type];}));
         if (live && fingerprint === lastFingerprint) return false;
+        if (live && window.silentGuard && window.silentGuard('channels-page', fingerprint)) return false;
         lastFingerprint = fingerprint;
         allChannels = nextChannels;
         hiddenChs = {}; hiddenCats = {};
@@ -795,8 +809,19 @@ textarea.field-input{resize:vertical;min-height:52px}
         paintHiddenCount();
         renderStats();
         populateCategorySelects();
-        renderList($('ch-search').value);
-        refreshOpenDetail();
+        if(window.renderSafe){
+          window.renderSafe(function(){
+            renderList($('ch-search').value);
+            refreshOpenDetail();
+          });
+        } else {
+          renderList($('ch-search').value);
+          refreshOpenDetail();
+        }
+        if(live){
+          var pill=$('livePill');
+          if(pill) pill.animate([{transform:'scale(1)'},{transform:'scale(1.07)'},{transform:'scale(1)'}],{duration:220});
+        }
         return true;
       })
       .catch(function (e) {
@@ -1191,18 +1216,15 @@ textarea.field-input{resize:vertical;min-height:52px}
     }
     bindEvents();
     populateGuildSelect();
-    // Живое обновление каждые 2.5 сек без повторного рендера неизменившихся данных.
+    // Live-обновления: пуш по SSE g*:channels + локальный silentGuard, без мигания
     if (window.setLiveRefresh) {
       window.setLiveRefresh(function () {
         if (document.hidden) return;
-        /* во время клика список не перерисовываем: иначе строки
-           «уезжают» и нажатие попадает в другой канал */
+        if (document.querySelector('.modal-overlay.open')) return;
         if (performance.now() - chLastPointerDown < 350) return;
-        /* асинхронно: вернуть прокрутку ПОСЛЕ перерисовки списка,
-           чтобы клики по каналам и прокрутка не сбрасывались вверх */
         if (window.keepScrollAsync) window.keepScrollAsync(loadChannels(true));
         else loadChannels(true);
-      }, 1500);
+      }, 1500, ['g*:channels','channels','g*:channel-routes','channel-routes','dashboard']);
     }
   }
 
