@@ -5,105 +5,147 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Hakumo — панель твоего сервера</title>
   <meta name="description" content="Hakumo — панель управления Discord-сервером: модерация, роли, каналы и участники в одном окне.">
-  <meta name="theme-color" content="#05070f">
+  <meta name="theme-color" content="#04060c">
   <link rel="icon" href="/static/favicon.ico">
   <style>
-    html { background: #05070f; color-scheme: dark; }
-    body { margin: 0; background: #05070f; color: #f4f7ff; }
+    html { background: #04060c; color-scheme: dark; }
+    body { margin: 0; background: #04060c; color: #f3f6ff; }
   </style>
   <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/unbounded-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/brand/emblem-dragon.png" as="image" type="image/png">
   <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
   <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
   <link rel="stylesheet" href="/static/welcome.css?v={{ static_v('welcome.css') }}">
 </head>
 <body>
-  <div class="w-bg" aria-hidden="true">
-    <span class="w-glow g1"></span>
-    <span class="w-glow g2"></span>
-    <span class="w-glow g3"></span>
-    <span class="w-grid"></span>
+  <div class="w-stage" aria-hidden="true">
+    <div class="w-aurora a1"></div>
+    <div class="w-aurora a2"></div>
+    <div class="w-aurora a3"></div>
+    <div class="w-mesh"></div>
+    <div class="w-grain"></div>
+    <div class="w-vignette"></div>
   </div>
 
-  <header class="w-top">
-    <a class="w-brand" href="/">
-      <img src="/static/brand/emblem-dragon-256.webp" width="36" height="36" alt="">
-      <b>HAKUMO</b>
+  <header class="w-nav">
+    <a class="w-logo" href="/welcome">
+      <img src="/static/brand/emblem-dragon-256.webp" width="40" height="40" alt="">
+      <span>HAKUMO</span>
     </a>
-    <a class="w-top-btn" href="/login">Войти</a>
+    <a class="w-nav-cta" href="/login">Войти</a>
   </header>
 
   <section class="w-hero">
     <div class="w-hero-copy">
-      <p class="w-kicker">Discord control panel</p>
-      <h1 class="w-name">HAKUMO</h1>
-      <p class="w-tag">Командный центр<br>твоего сервера</p>
-      <p class="w-lead">Модерация, роли, каналы и участники — в одном стеклянном окне, без хаоса чатов.</p>
-      <div class="w-cta">
-        <a class="w-btn w-btn-main" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a>
-        <a class="w-btn w-btn-soft" href="#features">Возможности</a>
+      <p class="w-eyebrow">Discord control panel</p>
+      <h1 class="w-brand">HAKUMO</h1>
+      <p class="w-headline">Командный центр<br>твоего сервера</p>
+      <p class="w-sub">Модерация, роли, каналы и участники — в одном стеклянном окне.</p>
+      <div class="w-actions">
+        <a class="w-cta w-cta-primary" href="/login">
+          <i class="fas fa-right-to-bracket" aria-hidden="true"></i>
+          Войти в панель
+        </a>
+        <a class="w-cta w-cta-ghost" href="#craft">Смотреть возможности</a>
       </div>
     </div>
-    <div class="w-hero-art" aria-hidden="true">
-      <div class="w-orb"></div>
-      <div class="w-dragon-glow" aria-hidden="true"></div>
+
+    <div class="w-hero-visual" aria-hidden="true">
+      <div class="w-halo"></div>
+      <div class="w-ring"></div>
       <img
-        class="w-dragon"
+        class="w-emblem"
         src="/static/brand/emblem-dragon.png"
-        width="1536" height="1536"
+        width="2048" height="2048"
         fetchpriority="high" decoding="async" alt="">
     </div>
   </section>
 
   <main>
-    <section class="w-sec" id="features">
-      <p class="w-kicker">Возможности</p>
-      <h2 class="w-h2">Всё нужное — на виду</h2>
-      <div class="w-cards">
-        <article class="w-card">
-          <i class="fas fa-shield-halved"></i>
-          <h3>Модерация</h3>
-          <p>Варны, муты, апелляции и журнал — быстро и прозрачно.</p>
+    <section class="w-block" id="craft">
+      <div class="w-block-head">
+        <p class="w-eyebrow">Возможности</p>
+        <h2>Всё под рукой — без шума чатов</h2>
+      </div>
+      <div class="w-rails">
+        <article class="w-rail">
+          <div class="w-rail-ico"><i class="fas fa-shield-halved"></i></div>
+          <div>
+            <h3>Модерация</h3>
+            <p>Варны, муты, апелляции и журнал действий — быстро и прозрачно.</p>
+          </div>
         </article>
-        <article class="w-card">
-          <i class="fas fa-user-tag"></i>
-          <h3>Роли</h3>
-          <p>Роли за наказания и доступы к панели без ручной путаницы.</p>
+        <article class="w-rail">
+          <div class="w-rail-ico"><i class="fas fa-user-tag"></i></div>
+          <div>
+            <h3>Роли и доступы</h3>
+            <p>Роли за наказания и права панели без ручной путаницы.</p>
+          </div>
         </article>
-        <article class="w-card">
-          <i class="fas fa-route"></i>
-          <h3>Каналы</h3>
-          <p>Логи, доказательства и маршруты в одном месте.</p>
+        <article class="w-rail">
+          <div class="w-rail-ico"><i class="fas fa-route"></i></div>
+          <div>
+            <h3>Каналы и маршруты</h3>
+            <p>Логи, доказательства и маршруты — всё в одном месте.</p>
+          </div>
         </article>
-        <article class="w-card">
-          <i class="fas fa-gauge-high"></i>
-          <h3>Обзор</h3>
-          <p>Живые показатели сервера — картина целиком.</p>
+        <article class="w-rail">
+          <div class="w-rail-ico"><i class="fas fa-gauge-high"></i></div>
+          <div>
+            <h3>Живой обзор</h3>
+            <p>Показатели сервера и состояние бота — картина целиком.</p>
+          </div>
         </article>
       </div>
     </section>
 
-    <section class="w-sec">
-      <p class="w-kicker">Старт</p>
-      <h2 class="w-h2">Три шага</h2>
-      <ol class="w-steps">
-        <li><span>1</span><div><b>Войди</b><p>Логин панели или Discord — без лишней регистрации.</p></div></li>
-        <li><span>2</span><div><b>Открой раздел</b><p>Сайдбар ведёт к модерации, ролям и каналам.</p></div></li>
-        <li><span>3</span><div><b>Работай</b><p>Действия пишутся в журнал — ничего не тонет в чатах.</p></div></li>
+    <section class="w-block">
+      <div class="w-block-head">
+        <p class="w-eyebrow">Старт</p>
+        <h2>Три шага до работы</h2>
+      </div>
+      <ol class="w-flow">
+        <li>
+          <span class="w-flow-n">01</span>
+          <div>
+            <h3>Войди</h3>
+            <p>Логин панели или Discord — без лишней регистрации.</p>
+          </div>
+        </li>
+        <li>
+          <span class="w-flow-n">02</span>
+          <div>
+            <h3>Открой раздел</h3>
+            <p>Сайдбар ведёт к модерации, ролям и каналам.</p>
+          </div>
+        </li>
+        <li>
+          <span class="w-flow-n">03</span>
+          <div>
+            <h3>Работай</h3>
+            <p>Каждое действие пишется в журнал — ничего не тонет.</p>
+          </div>
+        </li>
       </ol>
     </section>
 
-    <section class="w-end">
-      <h2>Готов зайти?</h2>
-      <p>Hakumo уже настроен под твой сервер.</p>
-      <a class="w-btn w-btn-main" href="/login"><i class="fas fa-bolt"></i> Открыть панель</a>
+    <section class="w-finale">
+      <div class="w-finale-glass">
+        <h2>Готов зайти?</h2>
+        <p>Hakumo уже настроен под твой сервер.</p>
+        <a class="w-cta w-cta-primary" href="/login">
+          <i class="fas fa-bolt" aria-hidden="true"></i>
+          Открыть панель
+        </a>
+      </div>
     </section>
   </main>
 
-  <footer class="w-foot">
+  <footer class="w-footer">
     <img src="/static/brand/emblem-dragon-256.webp" width="22" height="22" alt="">
-    HAKUMO · панель твоего сервера
+    <span>HAKUMO · панель твоего сервера</span>
   </footer>
 </body>
 </html>
