@@ -193,6 +193,36 @@ def install_loop_probes(loop):
         _log.debug('loop-probes: %s', _ex)
 
 
+def is_idle_wait_stack(stack: str) -> bool:
+    """Windows IOCP / selector idle: цикл ждёт I/O, а не крутит код.
+
+    Инцидент 10.09: после реального фриза монитор снимал уже
+    GetQueuedCompletionStatus/_poll — это здоровый idle ProactorEventLoop,
+    НЕ виновник. Настоящая пауза (GC/диск/sync) уже закончилась.
+    """
+    if not stack:
+        return False
+    markers = (
+        'GetQueuedCompletionStatus',
+        'WaitForMultipleObjects',
+        'windows_events.py',
+        'selectors.py',
+        'select.epoll',
+        'select.kqueue',
+        'selector_events.py',
+    )
+    hit = any(m in stack for m in markers)
+    if not hit:
+        return False
+    # Если в стеке ещё есть «наш» код — это не чистый idle.
+    app_markers = (
+        '/cogs/', '\\cogs\\', '/services/', '\\services\\',
+        'json.dump', 'json.load', 'open(', 'gc.collect',
+        'psutil', 'subprocess', 'requests.',
+    )
+    return not any(m in stack for m in app_markers)
+
+
 def environment_warnings(base_dir, py_version=None):
     """Предупреждения о среде запуска (чистая функция — тестируется).
 
@@ -406,6 +436,9 @@ class ErrorHandler:
         self._loop_beat = time.monotonic()
         self._stack_frozen = False
         self._last_freeze_stack = ''   # последний снятый стек (для алерта)
+        self._last_freeze_at = 0.0
+        self._last_freeze_age = 0.0
+        self._last_freeze_idle = False
         self._start_stack_monitor()
 
         self._repeat = {}                          # дедуп повторных ошибок
@@ -668,7 +701,18 @@ class ErrorHandler:
         self.stats['disconnects'] += 1
         self._disconnected_at = now    # простой посчитается на resumed
         self._disconnects.append(now)
-        log.warning(f"Соединение с Discord потеряно ({kind}) — всего обрывов: {self.stats['disconnects']}")
+        # Если прямо перед обрывом цикл висел — Discord heartbeat не ушёл,
+        # и gateway рвётся «потому что зависание», а не наоборот.
+        hint = ''
+        last_fr = float(getattr(self, '_last_freeze_at', 0.0) or 0.0)
+        if last_fr and (now - last_fr) < 90:
+            age = float(getattr(self, '_last_freeze_age', 0.0) or 0.0)
+            idle = bool(getattr(self, '_last_freeze_idle', False))
+            kind_fr = 'IDLE-WAIT (блокер уже ушёл)' if idle else 'блокер в стеке'
+            hint = (f' — вероятно после зависания event-loop '
+                    f'{age:.1f}с ({kind_fr}) {now - last_fr:.0f}с назад')
+        log.warning(f"Соединение с Discord потеряно ({kind}) — всего обрывов: "
+                    f"{self.stats['disconnects']}{hint}")
         window = float(self.config.get('disconnect_window_sec', 600))
         thr = int(self.config.get('disconnect_alert_threshold', 5))
         recent = sum(1 for ts in self._disconnects if now - ts <= window)
@@ -677,7 +721,9 @@ class ErrorHandler:
             self.queue_alert(
                 "Нестабильное соединение",
                 f"**{recent}** обрывов WebSocket за {int(window // 60)} мин.\n"
-                "Discord переподключается автоматически, но проверьте сеть/хостинг.",
+                "Discord переподключается автоматически, но проверьте сеть/хостинг."
+                + (("\nЧасто связано с зависаниями event-loop (Downloads/"
+                    "Defender/Python 3.14).") if hint else ""),
             )
 
     def _on_resumed(self, kind: str):
@@ -1091,6 +1137,9 @@ class ErrorHandler:
                 _log.debug("stack-monitor: снимок потоков: %s", _ex)
             return out
 
+        def _is_idle_wait_stack(stack: str) -> bool:
+            return is_idle_wait_stack(stack)
+
         def _worker():
             while True:
                 time.sleep(1.0)
@@ -1113,10 +1162,24 @@ class ErrorHandler:
                                 break
                         unstable = main_samples.count(stable) < 2
                         others = _sample_others()
+                        idle = (not unstable) and _is_idle_wait_stack(stable)
+                        # Для алертов/корреляции с disconnect храним стек
+                        # и метку времени последнего фриза.
                         self._last_freeze_stack = stable
-                        msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
-                               f"СТЕК ВИНОВНИКА (main-поток, прямо сейчас):\n"
-                               f"{stable}")
+                        self._last_freeze_at = time.time()
+                        self._last_freeze_age = float(age)
+                        self._last_freeze_idle = bool(idle)
+                        if idle:
+                            msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
+                                   f"IDLE-WAIT (ложный виновник): main-поток уже "
+                                   f"в ожидании I/O (GetQueuedCompletionStatus/"
+                                   f"select). Реальный блокер (GC/диск/sync) "
+                                   f"успел завершиться до снимка стека.\n"
+                                   f"Стек в момент снимка:\n{stable}")
+                        else:
+                            msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
+                                   f"СТЕК ВИНОВНИКА (main-поток, прямо сейчас):\n"
+                                   f"{stable}")
                         if others:
                             msg += ("\nДругие потоки в момент зависания:\n  "
                                     + "\n  ".join(others[:12]))
@@ -1134,6 +1197,10 @@ class ErrorHandler:
                         if unstable:
                             msg += ("\n(стек менялся между сэмплами — виновник "
                                     "уже завершился, смотрите другие потоки выше)")
+                        if idle:
+                            msg += ("\nПодсказка: частые IDLE-WAIT на Windows из "
+                                    "Downloads + Defender / Python 3.14 — "
+                                    "перенесите бота в C:\\Hakumo и поставьте 3.12.")
                         log.critical(msg)
                     elif age < 1.0:
                         self._stack_frozen = False
@@ -1174,19 +1241,25 @@ class ErrorHandler:
                 log.critical(
                     f"EVENT-LOOP ЗАВИСАНИЕ: цикл не отвечал {drift:.1f} сек! "
                     "(виновника называет поток-монитор строкой "
-                    "«СТЕК ВИНОВНИКА» — она появляется В МОМЕНТ зависания)")
+                    "«СТЕК ВИНОВНИКА» / «IDLE-WAIT» — она появляется "
+                    "В МОМЕНТ зависания)")
                 if time.time() - last_alert > 300:
                     last_alert = time.time()
                     _stack_hint = ''
                     if getattr(self, '_last_freeze_stack', ''):
-                        _stack_hint = ("\nСтек виновника (снят монитором "
-                                       "в момент зависания):\n```\n"
+                        idle = bool(getattr(self, '_last_freeze_idle', False))
+                        label = ('IDLE-WAIT — реальный блокер уже ушёл; '
+                                 'смотрите GC и другие потоки') if idle else \
+                                'Стек виновника (снят монитором в момент зависания)'
+                        _stack_hint = (f"\n{label}:\n```\n"
                                        + self._last_freeze_stack[:900]
                                        + "\n```")
                     self.queue_alert(
                         "Зависание event-loop",
                         f"Цикл не отвечал **{drift:.1f} сек** — команды и ивенты в это время стояли.\n"
-                        "Частая причина: тяжёлая синхронная операция (сеть/диск/CPU) в async-коде."
+                        "Частая причина на Windows: антивирус по папке Downloads, "
+                        "полная сборка GC или sync I/O в async-коде. "
+                        "Рекомендация: `C:\\Hakumo` + Python 3.12 + исключение Defender."
                         + _stack_hint,
                     )
 
@@ -1223,7 +1296,13 @@ class ErrorHandler:
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
             await asyncio.sleep(max(60, int(self.config.get('stats_save_sec', 300))))
-            self.save_stats()
+            # Sync json.dump на Windows+Defender легко даёт мультисекундный
+            # фриз цикла — пишем в worker-потоке.
+            try:
+                await asyncio.to_thread(self.save_stats)
+            except Exception as _ex:
+                _log.debug("_persist_task to_thread: %s", _ex)
+                self.save_stats()
 
     # ────────────────────────────────────────────────────────────
     # Обзор для веб-панели / команды

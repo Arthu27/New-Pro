@@ -871,18 +871,31 @@ async def _monitor_voice():
     await bot.wait_until_ready()
     await asyncio.sleep(10)
     last_ping = 0
+    backoff_until = 0.0
     while not bot.is_closed():
         await asyncio.sleep(30)
         channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
         if not channel or not isinstance(channel, discord.VoiceChannel):
             continue
+        # Пока gateway не готов — не дёргаем voice.connect: иначе на обрывах
+        # сессии connect висит на цикле без таймаута и усугубляет зависания.
+        if not bot.is_ready():
+            continue
+        if time.time() < backoff_until:
+            continue
         vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
-        
+
         if not vc or not vc.is_connected():
             try:
-                vc = await channel.connect(self_deaf=False)
+                vc = await asyncio.wait_for(
+                    channel.connect(self_deaf=False), timeout=30)
                 last_ping = time.time()
+                backoff_until = 0.0
+            except asyncio.TimeoutError:
+                backoff_until = time.time() + 60
+                _log.warning("_monitor_voice: connect не уложился в 30с — пауза 60с")
             except Exception as _ex:
+                backoff_until = time.time() + 30
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
         elif time.time() - last_ping > 240:
             try:
@@ -1303,12 +1316,14 @@ async def main():
         _log.debug("version_stamp(): %s", _ex)
 
     # Предупреждения о среде: три главные причины «странных» зависаний
-    # (инцидент 30.08: Downloads + вложенная папка + Python 3.14)
+    # (инцидент 30.08 / 10.09: Downloads + вложенная папка + Python 3.14)
     try:
         from error_handler import environment_warnings
         for msg in environment_warnings(os.path.abspath('.')):
             print(f"[СРЕДА] ⚠ {msg}")
-            _log.warning("СРЕДА: %s", msg)
+            # CRITICAL: иначе в шуме WARNING их не видно, а зависания
+            # 10–20с + обрывы Discord продолжаются месяцами.
+            _log.critical("СРЕДА: %s", msg)
     except Exception as _ex:
         _log.debug("environment_warnings(): %s", _ex)
 
