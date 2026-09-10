@@ -385,10 +385,10 @@
     {% if role != 'uye' %}
     {% set _mnav = [
         ('/', 'fa-house', 'Главная'),
+        ('/channels', 'fa-hashtag', 'Каналы'),
+        ('/chat', 'fa-comments', 'Чат'),
         ('/warnings', 'fa-shield-halved', 'Варны'),
         ('/logs', 'fa-clipboard-list', 'Журнал'),
-        ('/reports-queue', 'fa-flag', 'Репорты'),
-        ('/team-board', 'fa-table-columns', 'Доска'),
     ] %}
     {% set ns = namespace(n=0) %}
     {% for path, icon, label in _mnav %}
