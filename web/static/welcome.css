@@ -173,8 +173,8 @@ h1, h2, h3 { font-family: var(--font-d); font-weight: 700; letter-spacing: -.03e
 .w-hero-copy {
   position: relative;
   z-index: 2;
-  max-width: 560px;
-  padding: clamp(22px, 3vw, 34px);
+  max-width: 620px;
+  padding: clamp(22px, 3vw, 36px) clamp(22px, 3vw, 36px) clamp(24px, 3vw, 34px);
   border-radius: 28px;
   border: 1px solid var(--line-strong);
   background:
@@ -185,7 +185,18 @@ h1, h2, h3 { font-family: var(--font-d); font-weight: 700; letter-spacing: -.03e
   box-shadow:
     0 30px 70px rgba(0,0,0,.38),
     inset 0 1px 0 rgba(255,255,255,.14);
+  overflow: visible;
   animation: wRise .9s var(--ease) both;
+}
+.w-brand {
+  margin: 0 0 12px;
+  font-size: clamp(44px, 7.2vw, 78px);
+  font-weight: 800;
+  line-height: .9;
+  letter-spacing: -.045em;
+  color: var(--gold-2);
+  overflow: visible;
+  white-space: nowrap;
 }
 .w-eyebrow {
   margin: 0 0 14px;
@@ -195,14 +206,6 @@ h1, h2, h3 { font-family: var(--font-d); font-weight: 700; letter-spacing: -.03e
   letter-spacing: .24em;
   text-transform: uppercase;
   color: var(--gold);
-}
-.w-brand {
-  margin: 0 0 12px;
-  font-size: clamp(52px, 10vw, 100px);
-  font-weight: 800;
-  line-height: .88;
-  letter-spacing: -.045em;
-  color: var(--gold-2);
 }
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .w-brand {
