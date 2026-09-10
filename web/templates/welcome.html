@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Hakumo — панель твоего сервера</title>
   <meta name="description" content="Hakumo — панель управления Discord-сервером: модерация, апелляции, предупреждения, статистика и защита. Живые данные, быстрые решения, всё под контролем владельца.">
-  <meta name="theme-color" content="#0e1014">
+  <meta name="theme-color" content="#04060c">
   <link rel="icon" href="/static/favicon.ico">
       <style>
       /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
          первый кадр никогда не белый. */
-      html { background: #0e1014; color-scheme: dark; }
+      html { background: #04060c; color-scheme: dark; }
       body { background: transparent; margin: 0; }
     </style>
 <!-- Lighthouse: all.subset.css и fonts.css не блокируют первую отрисовку.
@@ -70,7 +70,7 @@
     </div>
   </nav>
 
-  <!-- Hero -->
+  <!-- Hero — Mirror Bloom, brand-first -->
   <header class="w-hero">
     <div class="w-dragon-wrap">
       <div class="w-dragon-par" id="wDragonPar">
@@ -80,12 +80,21 @@
       </div>
       <div class="w-dragon-floor" aria-hidden="true"></div>
     </div>
-    <div class="w-eyebrow"><span class="dot"></span> Панель сервера · для всех участников</div>
+    <p class="w-brand-mark">HAKUMO</p>
     <h1 class="w-title">Панель управления <span class="grad">сервером</span></h1>
-    <p class="w-lead">
-      Hakumo — тёмный командный центр твоего сообщества. <b>Каждый участник</b> находит своё:
-      профиль, заявки, обращения и события — без поисков по сотням сообщений.
-    </p>
+    <p class="w-lead">Зеркальный командный центр сообщества — профиль, заявки и события в одном окне.</p>
+    <div class="w-hero-actions">
+      <span class="btn-primary-wrap"><a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a></span>
+      <a class="btn" href="#members"><i class="fas fa-arrow-down"></i> Что внутри</a>
+    </div>
+    <div class="w-scroll-hint" aria-hidden="true">
+      <span class="mouse"></span>
+      <span>Листай ниже</span>
+    </div>
+  </header>
+
+  <!-- Below fold: поиск и показатели -->
+  <section class="w-section w-explore" id="explore" aria-label="Поиск и показатели">
     <div class="w-chips">
       <span class="chip"><i class="fas fa-user"></i> Профиль</span>
       <span class="chip"><i class="fas fa-file-signature"></i> Заявки в команду</span>
@@ -104,20 +113,12 @@
       <button type="button" class="go" id="wSearchClear" aria-label="Очистить поиск" title="Очистить"><i class="fas fa-xmark"></i></button>
     </div>
     <div class="w-search-results" id="wResults"></div>
-    <div class="w-hero-actions">
-      <span class="btn-primary-wrap"><a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a></span>
-      <a class="btn" href="#members"><i class="fas fa-arrow-down"></i> Что внутри</a>
-    </div>
     <div class="w-stats">
       <div class="w-stat"><div class="n" data-count="128">0</div><div class="l">Серверов на панели</div></div>
       <div class="w-stat"><div class="n" data-count="46000">0</div><div class="l">Участников сообществ</div></div>
       <div class="w-stat"><div class="n" data-count="99">0</div><div class="l">% Аптайм бота</div></div>
     </div>
-    <div class="w-scroll-hint" aria-hidden="true">
-      <span class="mouse"></span>
-      <span>Листай ниже</span>
-    </div>
-  </header>
+  </section>
 
   <main id="wMain">
   <!-- Бегущая лента фич -->
