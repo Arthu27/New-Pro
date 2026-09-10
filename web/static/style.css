@@ -2842,3 +2842,24 @@ html[data-theme="light"] .crumb-here {
   border-color: color-mix(in srgb, var(--gold) 30%, transparent);
   box-shadow: 0 0 12px rgba(212, 176, 122, .2);
 }
+
+/* Soft Neu: alternate switch track (.sl) used in panel_menu */
+.switch .sl {
+  position: absolute; inset: 0; border-radius: 99px;
+  background: rgba(0, 0, 0, .4);
+  border: var(--border) solid rgba(255, 255, 255, .06);
+  box-shadow: var(--neu-in-sm);
+  transition: background .22s var(--ease), box-shadow .22s;
+}
+.switch .sl::after {
+  content: ''; position: absolute; left: 2px; top: 50%; transform: translateY(-50%);
+  width: 22px; height: 22px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .35), 0 0 8px rgba(255, 255, 255, .2);
+  transition: left .22s var(--ease-spring);
+}
+.switch input:checked + .sl {
+  background: linear-gradient(180deg, #5aa0ff, #2f7dff);
+  border-color: transparent;
+  box-shadow: 0 0 18px rgba(59, 138, 255, .55), 0 0 6px rgba(59, 138, 255, .4);
+}
+.switch input:checked + .sl::after { left: 21px; }
