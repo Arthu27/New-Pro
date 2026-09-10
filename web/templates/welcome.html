@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Hakumo — панель твоего сервера</title>
-  <meta name="description" content="Hakumo — панель управления Discord-сервером: модерация, участники, роли и защита. Один вход — весь сервер под контролем.">
-  <meta name="theme-color" content="#06080f">
+  <meta name="description" content="Hakumo — панель управления Discord-сервером: модерация, роли, каналы и участники в одном спокойном окне.">
+  <meta name="theme-color" content="#04060c">
   <link rel="icon" href="/static/favicon.ico">
   <style>
-    html { background: #06080f; color-scheme: dark; }
-    body { background: transparent; margin: 0; }
+    html { background: #04060c; color-scheme: dark; }
+    body { margin: 0; background: transparent; }
   </style>
   <noscript>
     <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
@@ -18,7 +18,6 @@
   <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/vendor/fonts/unbounded-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/brand/emblem-dragon.webp" as="image">
   <script nonce="{{ csp_nonce }}">
     ['/static/vendor/fontawesome/css/all.subset.css',
@@ -31,154 +30,193 @@
   <link rel="stylesheet" href="/static/welcome.css?v={{ static_v('welcome.css') }}">
 </head>
 <body>
-  <div class="sg-sky" aria-hidden="true"></div>
-  <div class="sg-grain" aria-hidden="true"></div>
+  <div class="cr-void" aria-hidden="true">
+    <span class="cr-aurora a1"></span>
+    <span class="cr-aurora a2"></span>
+    <span class="cr-aurora a3"></span>
+    <span class="cr-beam"></span>
+  </div>
+  <div class="cr-noise" aria-hidden="true"></div>
 
-  <header class="sg-top" id="sgTop">
-    <a class="sg-brand" href="/">
-      <img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="34" height="34" alt="">
-      <b>HAKUMO</b>
+  <header class="cr-nav" id="crNav">
+    <a class="cr-logo" href="/">
+      <img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="40" height="40" alt="">
+      <span>HAKUMO</span>
     </a>
-    <a class="sg-top-cta" href="/login"><i class="fas fa-right-to-bracket"></i> Войти</a>
+    <a class="cr-nav-btn" href="/login">Войти</a>
   </header>
 
-  <section class="sg-hero" aria-label="Hakumo">
-    <div class="sg-hero-visual" aria-hidden="true">
-      <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="640" height="640" fetchpriority="high" decoding="async" alt="">
-      <div class="sg-hero-wash"></div>
+  <!-- Hero: one composition — brand + line + CTA + dragon plane -->
+  <section class="cr-hero" aria-label="Hakumo">
+    <div class="cr-hero-stage" aria-hidden="true">
+      <img class="cr-dragon dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="900" height="900" fetchpriority="high" decoding="async" alt="">
+      <div class="cr-dragon-glow"></div>
+      <div class="cr-hero-veil"></div>
     </div>
-    <div class="sg-hero-copy">
-      <p class="sg-mark">HAKUMO</p>
-      <h1 class="sg-headline">Панель управления сервером</h1>
-      <p class="sg-lead">Модерация, роли, каналы и участники — в одном спокойном окне без хаоса чатов.</p>
-      <div class="sg-cta-row">
-        <a class="sg-btn sg-btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a>
-        <a class="sg-btn sg-btn-ghost" href="#capabilities"><i class="fas fa-arrow-down"></i> Возможности</a>
+    <div class="cr-hero-copy">
+      <p class="cr-brand">HAKUMO</p>
+      <h1 class="cr-title">Командный центр<br>твоего сервера</h1>
+      <p class="cr-lead">Модерация, роли и участники — в одном стеклянном окне без шума чатов.</p>
+      <div class="cr-actions">
+        <a class="cr-btn cr-btn-glow" href="/login">
+          <i class="fas fa-right-to-bracket"></i>
+          <span>Войти в панель</span>
+        </a>
+        <a class="cr-btn cr-btn-ghost" href="#power">Смотреть силу</a>
       </div>
     </div>
+    <div class="cr-scroll" aria-hidden="true"><span></span></div>
   </section>
 
-  <main class="sg-main">
-    <section class="sg-section" id="capabilities">
-      <p class="sg-kicker">Возможности</p>
-      <h2 class="sg-h2">Всё нужное — без лишнего шума</h2>
-      <p class="sg-sub">Один вход через Discord. Команда видит инструменты, участники — свой профиль и заявки.</p>
-      <div class="sg-features">
-        <div class="sg-feat">
-          <i class="fas fa-shield-halved"></i>
-          <div>
-            <b>Модерация</b>
-            <p>Варны, муты, апелляции и журнал решений — быстро и прозрачно.</p>
-          </div>
-        </div>
-        <div class="sg-feat">
-          <i class="fas fa-users"></i>
-          <div>
-            <b>Участники и роли</b>
-            <p>Карточки, роли за наказания, доступы к панели — без ручного хаоса.</p>
-          </div>
-        </div>
-        <div class="sg-feat">
-          <i class="fas fa-diagram-project"></i>
-          <div>
-            <b>Каналы и маршруты</b>
-            <p>Логи, доказательства, приветствия — маршруты настраиваются в одном месте.</p>
-          </div>
-        </div>
-        <div class="sg-feat">
-          <i class="fas fa-chart-line"></i>
-          <div>
-            <b>Обзор и аналитика</b>
-            <p>Живые показатели сервера и события — чтобы видеть картину целиком.</p>
-          </div>
-        </div>
+  <main>
+    <section class="cr-block" id="power">
+      <div class="cr-block-head">
+        <p class="cr-eyebrow">Сила панели</p>
+        <h2 class="cr-h2">Всё важное —<br><em>под рукой</em></h2>
+        <p class="cr-note">Один вход через Discord. Команда управляет, участники видят свой путь.</p>
+      </div>
+      <div class="cr-rail">
+        <article class="cr-tile">
+          <div class="cr-tile-ico"><i class="fas fa-shield-halved"></i></div>
+          <h3>Модерация</h3>
+          <p>Варны, муты, апелляции и чистый журнал — решения без хаоса.</p>
+        </article>
+        <article class="cr-tile">
+          <div class="cr-tile-ico"><i class="fas fa-user-tag"></i></div>
+          <h3>Роли и доступы</h3>
+          <p>Роли за наказания и права панели — прозрачно и быстро.</p>
+        </article>
+        <article class="cr-tile">
+          <div class="cr-tile-ico"><i class="fas fa-route"></i></div>
+          <h3>Каналы</h3>
+          <p>Логи, доказательства, маршруты — всё настроено в одном месте.</p>
+        </article>
+        <article class="cr-tile">
+          <div class="cr-tile-ico"><i class="fas fa-gauge-high"></i></div>
+          <h3>Живой обзор</h3>
+          <p>Показатели и события сервера — картина целиком, без догадок.</p>
+        </article>
       </div>
     </section>
 
-    <section class="sg-section" id="start">
-      <p class="sg-kicker">Старт</p>
-      <h2 class="sg-h2">Три шага — и ты внутри</h2>
-      <p class="sg-sub">Отдельная регистрация не нужна: аккаунт уже связан с Discord.</p>
-      <div class="sg-steps">
-        <div class="sg-step">
-          <div class="num">1</div>
-          <b>Войди</b>
-          <p>Логин панели или Discord PIN — как удобнее.</p>
-        </div>
-        <div class="sg-step">
-          <div class="num">2</div>
-          <b>Выбери раздел</b>
-          <p>Сайдбар ведёт к модерации, ролям, каналам и обзору.</p>
-        </div>
-        <div class="sg-step">
-          <div class="num">3</div>
-          <b>Работай спокойно</b>
-          <p>Действия пишутся в журнал — ничего не теряется в чатах.</p>
-        </div>
+    <section class="cr-block cr-path" id="start">
+      <div class="cr-block-head">
+        <p class="cr-eyebrow">Старт</p>
+        <h2 class="cr-h2">Три шага —<br><em>и ты внутри</em></h2>
+      </div>
+      <ol class="cr-steps">
+        <li>
+          <span class="n">01</span>
+          <div>
+            <b>Войди</b>
+            <p>Логин панели или Discord — без лишней регистрации.</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">02</span>
+          <div>
+            <b>Открой раздел</b>
+            <p>Сайдбар ведёт к модерации, ролям, каналам и обзору.</p>
+          </div>
+        </li>
+        <li>
+          <span class="n">03</span>
+          <div>
+            <b>Действуй</b>
+            <p>Каждое действие в журнале — ничего не тонет в чатах.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="cr-block" id="faq">
+      <div class="cr-block-head">
+        <p class="cr-eyebrow">FAQ</p>
+        <h2 class="cr-h2">Коротко</h2>
+      </div>
+      <div class="cr-faq">
+        <details>
+          <summary>Только для админов?<i class="fas fa-plus"></i></summary>
+          <p>Нет. Участники видят профиль и заявки; команда — инструменты. У каждого своя зона.</p>
+        </details>
+        <details>
+          <summary>Нужна регистрация?<i class="fas fa-plus"></i></summary>
+          <p>Нет. Вход через логин панели или Discord — аккаунт уже связан.</p>
+        </details>
+        <details>
+          <summary>Как в команду?<i class="fas fa-plus"></i></summary>
+          <p>Войди и открой заявки: заполни анкету и следи за статусом в панели.</p>
+        </details>
       </div>
     </section>
 
-    <section class="sg-section" id="faq">
-      <p class="sg-kicker">FAQ</p>
-      <h2 class="sg-h2">Коротко по делу</h2>
-      <div class="sg-faq">
-        <details>
-          <summary>Панель только для админов?<i class="fas fa-chevron-down"></i></summary>
-          <div class="body">Нет. Участники видят профиль и заявки; команда — модерацию и настройки. Каждый — свою зону.</div>
-        </details>
-        <details>
-          <summary>Нужна отдельная регистрация?<i class="fas fa-chevron-down"></i></summary>
-          <div class="body">Нет. Вход через логин панели или Discord — аккаунт уже привязан.</div>
-        </details>
-        <details>
-          <summary>Как попасть в команду сервера?<i class="fas fa-chevron-down"></i></summary>
-          <div class="body">Войди и открой заявки в команду: заполни анкету и следи за статусом в панели.</div>
-        </details>
-      </div>
-    </section>
-
-    <section class="sg-section sg-static">
-      <div class="sg-end">
-        <h2>Готов зайти?</h2>
-        <p>Hakumo уже настроен под твой сервер.</p>
-        <a class="sg-btn sg-btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a>
-      </div>
+    <section class="cr-finale">
+      <div class="cr-finale-glow" aria-hidden="true"></div>
+      <p class="cr-brand cr-brand-sm">HAKUMO</p>
+      <h2>Готов взять сервер<br>под контроль?</h2>
+      <a class="cr-btn cr-btn-glow" href="/login">
+        <i class="fas fa-bolt"></i>
+        <span>Открыть панель</span>
+      </a>
     </section>
   </main>
 
-  <footer class="sg-foot">
-    <img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="22" height="22" loading="lazy" decoding="async" alt="">
-    HAKUMO · панель твоего сервера
+  <footer class="cr-foot">
+    <img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="24" height="24" loading="lazy" alt="">
+    <span>HAKUMO · панель твоего сервера</span>
   </footer>
 
   <script nonce="{{ csp_nonce }}">
   (function () {
     'use strict';
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var top = document.getElementById('sgTop');
+    var nav = document.getElementById('crNav');
     function onScroll() {
-      if (!top) return;
-      if (window.scrollY > 12) top.classList.add('scrolled');
-      else top.classList.remove('scrolled');
+      if (!nav) return;
+      nav.classList.toggle('on', window.scrollY > 18);
     }
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    var sections = document.querySelectorAll('.sg-section:not(.sg-static)');
-    if (!sections.length) return;
+    /* Soft parallax on dragon — presence, not noise */
+    if (!reduced) {
+      var dragon = document.querySelector('.cr-dragon');
+      var stage = document.querySelector('.cr-hero-stage');
+      if (dragon && stage) {
+        var tx = 0, ty = 0, x = 0, y = 0, ticking = false;
+        window.addEventListener('pointermove', function (e) {
+          var r = stage.getBoundingClientRect();
+          tx = ((e.clientX - r.left) / r.width - 0.5) * 16;
+          ty = ((e.clientY - r.top) / r.height - 0.5) * 10;
+          if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(function () {
+              ticking = false;
+              x += (tx - x) * 0.08;
+              y += (ty - y) * 0.08;
+              /* keep breathe baseline: translateY(-52%) from CSS */
+              dragon.style.transform = 'translate3d(' + x.toFixed(1) + 'px, calc(-52% + ' + y.toFixed(1) + 'px), 0) scale(1.03)';
+            });
+          }
+        }, { passive: true });
+      }
+    }
+
+    var blocks = document.querySelectorAll('.cr-block, .cr-finale');
+    if (!blocks.length) return;
     if (reduced || !('IntersectionObserver' in window)) {
-      sections.forEach(function (el) { el.classList.add('on'); });
+      blocks.forEach(function (el) { el.classList.add('in'); });
       return;
     }
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (en.isIntersecting) {
-          en.target.classList.add('on');
+          en.target.classList.add('in');
           io.unobserve(en.target);
         }
       });
-    }, { threshold: 0.14 });
-    sections.forEach(function (el) { io.observe(el); });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    blocks.forEach(function (el) { io.observe(el); });
   })();
   </script>
 </body>
