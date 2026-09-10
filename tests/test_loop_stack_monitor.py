@@ -234,6 +234,23 @@ check(_ok is True and _gc.get_threshold() == eh2.GC_THRESHOLDS
       and eh2.GC_THRESHOLDS == (50_000, 5_000, 5_000),
       'стартовый граф заморожен, пороги 50000/5000/5000 (автоген2 убран)')
 
+print('\n== IDLE-WAIT: GetQueuedCompletionStatus — ложный виновник ==')
+_gqcs = (
+    '  File "asyncio\\runners.py", line 128, in run\n'
+    '    return self._loop.run_until_complete(task)\n'
+    '  File "asyncio\\base_events.py", line 2019, in _run_once\n'
+    '    event_list = self._selector.select(timeout)\n'
+    '  File "asyncio\\windows_events.py", line 778, in _poll\n'
+    '    status = _overlapped.GetQueuedCompletionStatus(self._iocp, ms)\n'
+)
+check(eh2.is_idle_wait_stack(_gqcs) is True,
+      'стек GQCS/_poll классифицируется как IDLE-WAIT (ложный виновник)')
+_real = _gqcs + '  File "cogs\\temp_moderation.py", line 170, in _save\n    json.dump(data, f)\n'
+check(eh2.is_idle_wait_stack(_real) is False,
+      'тот же стек + json.dump в cogs — НЕ idle (настоящий блокер)')
+check(eh2.is_idle_wait_stack('  File "main.py", line 1\n    time.sleep(10)\n') is False,
+      'обычный sleep в main — не idle-wait')
+
 print('\n== environment_warnings: три ловушки среды запуска ==')
 _w = eh2.environment_warnings(
     r'C:\Users\Administrator\Downloads\New-Pro-x\New-Pro-x', (3, 14, 0))
