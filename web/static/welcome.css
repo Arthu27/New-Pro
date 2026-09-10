@@ -109,14 +109,17 @@ a { text-decoration: none; color: inherit; }
   gap: 9px;
   padding: 12px 22px;
   border-radius: var(--sn-pill);
-  border: 1px solid transparent;
+  border: 1.5px solid rgba(232, 201, 154, .55);
   background: linear-gradient(180deg, #323a4c, #1e2532);
   color: var(--sn-text);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 3px 4px 10px rgba(0, 0, 0, .45), var(--sn-gold-rim);
-  transition: background .2s, box-shadow .2s, transform .12s, filter .15s;
+  box-shadow:
+    3px 4px 10px rgba(0, 0, 0, .45),
+    0 0 22px rgba(212, 176, 122, .4),
+    inset 0 1px 0 rgba(232, 201, 154, .45);
+  transition: background .2s, box-shadow .2s, transform .12s, filter .15s, border-color .2s;
 }
 .btn:hover {
   background: linear-gradient(180deg, #6eb0ff, #3b8aff 55%, #1f6ae0);
@@ -203,9 +206,9 @@ a { text-decoration: none; color: inherit; }
   gap: 12px;
   padding: 9px 14px;
   background: linear-gradient(180deg, rgba(36, 42, 54, .92), rgba(20, 24, 32, .9));
-  border: 1.5px solid rgba(232, 201, 154, .28);
+  border: 1.5px solid rgba(232, 201, 154, .48);
   border-radius: var(--sn-pill);
-  box-shadow: var(--sn-neu-out), 0 0 40px rgba(212, 176, 122, .14);
+  box-shadow: var(--sn-neu-out), 0 0 48px rgba(212, 176, 122, .28), inset 0 1px 0 rgba(232, 201, 154, .22);
   z-index: 100;
 }
 .w-nav .brand { display: flex; align-items: center; gap: 10px; }
@@ -218,12 +221,13 @@ a { text-decoration: none; color: inherit; }
 .w-nav .brand b {
   font-family: 'Unbounded', sans-serif;
   font-weight: 700;
-  letter-spacing: .1em;
-  font-size: 14px;
-  background: linear-gradient(90deg, #f3f4f6, #e8c99a);
+  letter-spacing: .12em;
+  font-size: 15px;
+  background: linear-gradient(90deg, #f6ecda, #e8c99a 40%, #d4b07a);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  text-shadow: 0 0 24px rgba(212, 176, 122, .35);
 }
 .w-nav .brand small {
   display: block;
@@ -375,6 +379,8 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.1;
   margin: 16px 0 12px;
   min-height: 1.15em;
+  /* brand-first: headline stays under Hakumo visual weight */
+  color: rgba(243, 244, 246, .92);
 }
 .w-title.typing::after {
   content: '';
