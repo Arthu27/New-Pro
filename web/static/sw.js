@@ -1,8 +1,8 @@
 // Hakumo Panel Service Worker (Light Edition)
-const CACHE_NAME = 'Hakumo-light-v13-mirror';
+const CACHE_NAME = 'Hakumo-nova-v14';
 const STATIC_ASSETS = [
   '/static/style.css',
-  '/static/soft-neu.css',
+  '/static/panel-nova.css',
   '/static/auth.css',
   '/static/welcome.css',
   '/static/app.js',
