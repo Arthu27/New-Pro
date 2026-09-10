@@ -749,7 +749,7 @@ body.launcher .auth-wrap{display:block}
          запасной путь — открыть в отдельной вкладке). */
       if (passForm.dataset.saDone !== '1') {
         var inFrame = false;
-        try { inFrame = window.self !== window.top; } catch (err) { inFrame = true; }
+        try { inFrame = window.self !== window.top; } catch (err) { inFrame = false; }
         var reqSA = document.requestStorageAccess || document.webkitRequestStorageAccess;
         if (inFrame && typeof reqSA === 'function') {
           e.preventDefault();
