@@ -24,8 +24,8 @@
     <style>
       /* П.5 — критическая сцена: до прихода style.css фон уже фирменный,
          межстраничный белый экран исключён физически. */
-      html { background: #0a0c12; color-scheme: dark; }
-      html[data-theme="light"] { background: #e8ebf1; color-scheme: light; }
+      html { background: #0a0c10; color-scheme: dark; }
+      html[data-theme="light"] { background: #d8dde8; color-scheme: light; }
       body { background: transparent; margin: 0; }
     </style>
     <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
@@ -196,6 +196,7 @@
         <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="sidebar"><i class="fas fa-bars ico-open" aria-hidden="true"></i><i class="fas fa-xmark ico-close" aria-hidden="true"></i></button>
         <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" hidden aria-label="Закрыть меню"></button>
 
+        <div class="panel-stage">
         <!-- ── Сайдбар ─────────────────────────────────────── -->
         <aside class="sidebar" id="sidebar">
             <a href="/" class="brand">
@@ -269,7 +270,7 @@
                 <div class="sidebar-spark" id="sidebarSpark" aria-hidden="true"></div>
                 <div class="sidebar-version">
                     <i class="fas fa-bolt"></i>
-                    HAKUMO <span class="mono">v3.0</span> · Light{% if build_commit %} <span class="mono" title="Сборка панели (git-коммит)">{{ build_commit }}</span>{% endif %}
+                    HAKUMO <span class="mono">v3.0</span> · Living{% if build_commit %} <span class="mono" title="Сборка панели (git-коммит)">{{ build_commit }}</span>{% endif %}
                 </div>
             </div>
         </aside>
@@ -374,6 +375,7 @@
                 {% endblock %}
             </main>
         </div>
+        </div><!-- /.panel-stage -->
     </div>
 
     <!-- ── Плавающее меню быстрых действий ────────────────── -->
