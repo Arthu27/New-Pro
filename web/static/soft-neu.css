@@ -134,6 +134,7 @@ html[data-theme="dark"] body::before { opacity: .5 !important; }
 }
 
 html[data-theme="dark"] .app-shell {
+  position: relative !important;
   overflow: visible !important;
   background:
     radial-gradient(ellipse 78% 70% at 50% 50%, rgba(212, 176, 122, .16), transparent 68%);
