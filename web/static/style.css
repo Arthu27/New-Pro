@@ -1,9 +1,9 @@
 /* ============================================================================
-   HAKUMO · «Modern Frost» — дизайн-система панели, v6
-   Референс: Smart Home UI для Apple Vision Pro. Материал: ТИХОЕ
-   ФРОСТ-СТЕКЛО — фото-фон (глубокий космос), мягкий blur, едва
-   заметная кромка, плоские кнопки и тон-плитки иконок.
-   Никакого глянца Web 2.0. Тема — авто по системе, акцент — сменный.
+   HAKUMO · «Cosmos» — дизайн-система панели, v8
+   Референс: Smart Home UI для Apple Vision Pro. Материал: ФРОСТ-СТЕКЛО
+   на живом КОСМОС-фоне (туманность + звёзды): мягкий blur, едва
+   заметная кромка, плоские кнопки, цветные градиентные плитки
+   иконок. Тема — авто по системе, акцент — сменный.
    ============================================================================ */
 
 /* ── 1. Токены ─────────────────────────────────────────────── */
@@ -197,8 +197,8 @@ body {
   line-height: 1.55;
   color: var(--text);
   background:
-    linear-gradient(180deg, rgba(243, 246, 251, .42) 0%, rgba(236, 240, 247, .58) 100%),
-    url('/static/backgrounds/vision-wallpaper.jpg') center / cover no-repeat fixed;
+    linear-gradient(180deg, rgba(247, 249, 252, .22) 0%, rgba(241, 244, 250, .4) 100%),
+    url('/static/backgrounds/vision-wallpaper-light.jpg') center / cover no-repeat fixed;
   background-color: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -766,11 +766,14 @@ html[data-theme="dark"] {
   width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px;
   display: grid; place-items: center; font-size: 16px;
   color: var(--ac);
-  background: color-mix(in srgb, currentColor 17%, transparent);
-  box-shadow: 0 4px 18px color-mix(in srgb, currentColor 22%, transparent);
-  transition: background .16s, box-shadow .16s;
+  background: linear-gradient(135deg, color-mix(in srgb, currentColor 74%, #fff 26%), currentColor);
+  box-shadow: 0 6px 20px color-mix(in srgb, currentColor 38%, transparent);
+  transition: transform .16s var(--ease), box-shadow .16s;
 }
-.kpi:hover .kpi-icon, .cc-tile:hover .cc-ico { background: color-mix(in srgb, currentColor 23%, transparent); box-shadow: 0 6px 24px color-mix(in srgb, currentColor 32%, transparent); }
+.kpi-icon i, .kpi-icon svg, .cc-ico i, .cc-ico svg,
+.stat-icon i, .stat-icon svg, .metric-icon i, .metric-icon svg,
+.page-head-icon i, .page-head-icon svg { color: #fff; }
+.kpi:hover .kpi-icon, .cc-tile:hover .cc-ico { transform: translateY(-2px) scale(1.05); box-shadow: 0 10px 28px color-mix(in srgb, currentColor 48%, transparent); }
 .kpi:hover .kpi-icon { transform: scale(1.06); }
 .kpi.tone-ok .kpi-icon, .stat-icon.ok { color: var(--ok); }
 .kpi.tone-warn .kpi-icon { color: var(--warn); }
@@ -2297,7 +2300,7 @@ html[data-theme="light"] .switch .track { background: rgba(0, 0, 0, .14); }
 
 /* KPI-иконки: тон-плитка (только здесь, финальное слово) */
 .kpi-icon, .stat-icon, .metric-icon, .cc-tile .cc-ico, .page-head-icon {
-  background: color-mix(in srgb, currentColor 17%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, currentColor 74%, #fff 26%), currentColor);
   border: none;
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
@@ -2311,6 +2314,14 @@ table.data-table thead th, table.table thead th, .table-wrap thead th {
 html[data-theme="light"] table.data-table thead th,
 html[data-theme="light"] table.table thead th,
 html[data-theme="light"] .table-wrap thead th { background: rgba(255, 255, 255, .75); }
+
+/* Мелкие карточки: лёгкий лифт */
+.kpi, .stat-box, .cc-tile, .member-card, .g-card {
+  transition: transform .18s var(--ease), box-shadow .18s, border-color .18s;
+}
+.kpi:hover, .stat-box:hover, .cc-tile:hover, .member-card:hover, .g-card:hover {
+  transform: translateY(-2px);
+}
 
 /* Инпуты: плоские, только рамка + фокус */
 .form-input, .field-input, .inp, input[type="text"], input[type="password"],
