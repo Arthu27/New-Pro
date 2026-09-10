@@ -2463,12 +2463,13 @@ input[type="datetime-local"], input[type="date"], input[type="time"], select, te
   backdrop-filter: var(--glass-blur);
 }
 html[data-theme="dark"] .panel-stage {
-  background: rgba(22, 25, 31, .82);
-  border-color: rgba(255, 255, 255, .09);
+  background: rgba(20, 23, 29, .88);
+  border-color: rgba(255, 255, 255, .1);
   box-shadow:
-    10px 14px 40px rgba(0, 0, 0, .55),
-    -2px -2px 10px rgba(255, 255, 255, .03),
-    inset 0 1px 0 rgba(255, 255, 255, .08);
+    14px 18px 50px rgba(0, 0, 0, .62),
+    -3px -3px 14px rgba(255, 255, 255, .04),
+    inset 0 1px 0 rgba(232, 201, 154, .1),
+    inset 0 -1px 0 rgba(0, 0, 0, .4);
 }
 html[data-theme="light"] .panel-stage {
   background: rgba(236, 238, 244, .78);
@@ -2499,12 +2500,13 @@ html[data-theme="dark"] .page-hero,
 html[data-theme="dark"] .kpi,
 html[data-theme="dark"] .stat-box,
 html[data-theme="dark"] .cc-tile {
-  background: linear-gradient(180deg, #1c2028 0%, #171b22 100%);
-  border-color: rgba(255, 255, 255, .08);
+  background: linear-gradient(165deg, #222833 0%, #171b22 72%, #14181f 100%);
+  border-color: rgba(255, 255, 255, .1);
   box-shadow:
-    5px 6px 16px rgba(0, 0, 0, .45),
-    -2px -2px 8px rgba(255, 255, 255, .03),
-    inset 0 1px 0 rgba(255, 255, 255, .06);
+    8px 10px 24px rgba(0, 0, 0, .55),
+    -3px -3px 10px rgba(255, 255, 255, .045),
+    inset 0 1px 0 rgba(232, 201, 154, .12),
+    inset 0 -1px 0 rgba(0, 0, 0, .35);
 }
 .card:hover, .panel:hover, .kpi:hover, .stat-box:hover, .cc-tile:hover {
   border-color: var(--line-2);
@@ -2628,9 +2630,12 @@ input:focus, select:focus, textarea:focus,
 .modal-input:focus, .modal-textarea:focus,
 .sidebar-search input:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--ac) 70%, transparent);
-  box-shadow: var(--focus-ring), var(--neu-in-sm);
-  background: rgba(0, 0, 0, .34);
+  border-color: rgba(110, 176, 255, .75);
+  box-shadow:
+    0 0 0 3px rgba(59, 138, 255, .35),
+    0 0 28px rgba(59, 138, 255, .5),
+    var(--neu-in-sm);
+  background: rgba(0, 0, 0, .38);
 }
 html[data-theme="light"] .form-input:focus,
 html[data-theme="light"] input:focus,
