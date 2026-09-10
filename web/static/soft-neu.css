@@ -43,9 +43,9 @@
     inset 3px 4px 10px rgba(0, 0, 0, .55),
     inset -1px -1px 4px rgba(255, 255, 255, .03);
   --sn-gold-rim:
-    0 0 0 1px rgba(232, 201, 154, .28),
-    0 0 14px rgba(212, 176, 122, .22),
-    inset 0 1px 0 rgba(232, 201, 154, .35);
+    0 0 0 1.5px rgba(232, 201, 154, .48),
+    0 0 20px rgba(212, 176, 122, .4),
+    inset 0 1px 0 rgba(232, 201, 154, .55);
   --sn-blue-glow:
     0 0 0 1px rgba(110, 176, 255, .45),
     0 0 22px rgba(59, 138, 255, .5),
@@ -54,9 +54,11 @@
     0 0 0 2px rgba(59, 138, 255, .55),
     0 0 24px rgba(59, 138, 255, .55);
   --sn-stage-glow:
-    0 0 60px rgba(212, 176, 122, .12),
-    0 24px 70px rgba(0, 0, 0, .65),
-    inset 0 1px 0 rgba(232, 201, 154, .14);
+    0 0 90px rgba(212, 176, 122, .32),
+    0 0 160px rgba(212, 176, 122, .16),
+    0 28px 80px rgba(0, 0, 0, .7),
+    inset 0 1px 0 rgba(232, 201, 154, .28),
+    inset 0 0 50px rgba(212, 176, 122, .05);
 }
 
 html[data-theme="dark"] {
@@ -107,10 +109,10 @@ html[data-theme="dark"] {
 html[data-theme="dark"] body {
   background-color: #0e1014 !important;
   background-image:
-    radial-gradient(ellipse 90% 55% at 50% -10%, rgba(212, 176, 122, .14), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 10% 40%, rgba(59, 138, 255, .08), transparent 50%),
-    radial-gradient(ellipse 60% 45% at 90% 80%, rgba(212, 176, 122, .07), transparent 48%),
-    linear-gradient(180deg, #151820 0%, #0e1014 55%, #0b0d11 100%) !important;
+    radial-gradient(ellipse 95% 60% at 50% -5%, rgba(212, 176, 122, .22), transparent 52%),
+    radial-gradient(ellipse 70% 50% at 10% 40%, rgba(59, 138, 255, .1), transparent 50%),
+    radial-gradient(ellipse 60% 45% at 90% 80%, rgba(212, 176, 122, .12), transparent 48%),
+    linear-gradient(180deg, #171a20 0%, #0e1014 55%, #0b0d11 100%) !important;
 }
 body::before {
   opacity: .42 !important;
@@ -133,13 +135,18 @@ html[data-theme="dark"] body::before { opacity: .5 !important; }
 
 /* ── Сцена: панель с тёплым золотым ореолом как в ките ─────── */
 html[data-theme="dark"] .panel-stage {
+  position: relative;
   background:
-    linear-gradient(165deg, rgba(34, 40, 52, .92) 0%, rgba(20, 24, 32, .94) 55%, rgba(16, 19, 26, .96) 100%) !important;
-  border: 1px solid rgba(232, 201, 154, .16) !important;
+    linear-gradient(165deg, rgba(38, 44, 56, .94) 0%, rgba(22, 26, 34, .95) 55%, rgba(16, 19, 26, .97) 100%) !important;
+  border: 1.5px solid rgba(232, 201, 154, .32) !important;
   border-radius: 20px !important;
   box-shadow: var(--sn-stage-glow) !important;
   -webkit-backdrop-filter: blur(28px) saturate(1.1) !important;
   backdrop-filter: blur(28px) saturate(1.1) !important;
+}
+html[data-theme="dark"] .app-shell {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 45%, rgba(212, 176, 122, .1), transparent 70%);
 }
 
 html[data-theme="dark"] .sidebar {
@@ -174,10 +181,11 @@ html[data-theme="dark"] .panel:hover,
 html[data-theme="dark"] .kpi:hover,
 html[data-theme="dark"] .stat-box:hover,
 html[data-theme="dark"] .cc-tile:hover {
-  border-color: rgba(232, 201, 154, .28) !important;
+  border-color: rgba(232, 201, 154, .45) !important;
   box-shadow:
     var(--sn-neu-out),
-    0 0 20px rgba(212, 176, 122, .12) !important;
+    0 0 0 1px rgba(232, 201, 154, .25),
+    0 0 28px rgba(212, 176, 122, .22) !important;
 }
 
 html[data-theme="dark"] .panel-head,
