@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="light">
+<html lang="ru" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -7,25 +7,19 @@
     <title>{% block title %}Панель Hakumo{% endblock %}</title>
     {% block styles %}{% endblock %}
     <script nonce="{{ csp_nonce }}">
-      /* П.5: тема — самым первым шагом, ДО любых стилей: фон никогда
-         не «вспыхивает» белым при переходах между разделами/каналами. */
+      /* Mirror Bloom: тёмная тема по умолчанию; светлая тоже рендерится как Mirror Bloom. */
       (function () {
         var t = '';
         try { t = localStorage.getItem('hakumo_theme'); } catch (e) {}
-        if (t !== 'dark' && t !== 'light') {
-          try {
-            t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-              ? 'dark' : 'light';
-          } catch (e) { t = 'dark'; }
-        }
+        if (t !== 'dark' && t !== 'light') t = 'dark';
         try { document.documentElement.setAttribute('data-theme', t); } catch (e) {}
       })();
     </script>
     <style>
-      /* П.5 — критическая сцена: до прихода style.css фон уже фирменный,
-         межстраничный белый экран исключён физически. */
-      html { background: #04060c; color-scheme: dark; }
-      html[data-theme="light"] { background: #d6d8e0; color-scheme: light; }
+      /* Критическая сцена Mirror Bloom — без светлой вспышки */
+      html, html[data-theme="dark"], html[data-theme="light"] {
+        background: #04060c; color-scheme: dark;
+      }
       body { background: transparent; margin: 0; }
     </style>
     <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
