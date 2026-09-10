@@ -545,6 +545,15 @@ body.sidebar-open .mobile-menu .ico-open { display: none; }
 }
 .nav-icon-btn:hover { color: var(--ac); background: color-mix(in srgb, var(--ac) 13%, transparent); border-color: var(--ac-line); }
 .nav-icon-btn:active { transform: scale(.94); }
+.nav-icon-btn.rail-toggle {
+  background: var(--ac-soft);
+  color: var(--ac);
+  border-color: var(--ac-line);
+}
+.nav-icon-btn.rail-toggle:hover { background: color-mix(in srgb, var(--ac) 22%, transparent); }
+@media (max-width: 1280px) {
+  .topbar-secondary { display: none !important; }
+}
 .nav-badge {
   position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 5px;
   border-radius: 99px; background: var(--err); color: #fff; font-size: 10px; font-weight: 800;
