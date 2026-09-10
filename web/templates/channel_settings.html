@@ -36,8 +36,9 @@
 .chs-pend-txt i{color:var(--ac)}
 .chs-pend-txt b{color:var(--text-1,#fff)}
 .chs-pend-actions{display:flex;gap:8px}
-.chs-edit{display:flex;gap:8px;align-items:center}
-.chs-edit select{flex:1;min-width:0;padding:9px 11px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.chs-edit{display:flex;gap:8px;align-items:center;min-width:0;overflow:visible}
+.chs-edit select,.chs-edit .aes{flex:1;min-width:0}
+.chs-edit select{padding:9px 11px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
 /* Имя канала в селекте ВСЕГДА видно: и в закрытом виде, и в выпадашке
    (браузеры любят игнорировать color для option и рисовать светлый текст
    на белом — тогда название «проявляется» только при выделении).

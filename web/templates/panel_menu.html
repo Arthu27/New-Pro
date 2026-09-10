@@ -63,9 +63,9 @@
 
   .switch { position:relative; width:42px; height:22px; flex-shrink:0; }
   .switch input { opacity:0; width:0; height:0; }
-  .switch .sl { position:absolute; inset:0; background:color-mix(in srgb, var(--text) 15%, transparent); border-radius:22px; transition:.2s; cursor:pointer; }
-  .switch .sl:before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#1a1a1a; border-radius:50%; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
-  .switch input:checked + .sl { background:linear-gradient(90deg,var(--ok),#27ae60); }
+  .switch .sl { position:absolute; inset:0; background:rgba(0,0,0,.4); border-radius:22px; transition:.2s; cursor:pointer; box-shadow:inset 2px 2px 6px rgba(0,0,0,.5); }
+  .switch .sl:before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  .switch input:checked + .sl { background:linear-gradient(90deg,var(--ac),#5aa0ff); box-shadow:0 0 16px color-mix(in srgb, var(--ac) 50%, transparent); }
   .switch input:checked + .sl:before { transform:translateX(20px); }
 
   .pm-ico-btn { width:36px; height:36px; border-radius:8px; border:1px solid color-mix(in srgb, var(--text) 14%, transparent); background:color-mix(in srgb, var(--text) 4%, transparent); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:12px; color:inherit; flex-shrink:0; transition:.12s; }
@@ -325,10 +325,16 @@ function saveLayout(){
   }).catch(function(){ toast('Ошибка сети', false); });
 }
 
+var _pmLoading = true;
 function render(){
   if (curRole === 'layout') { renderLayout(); return; }
   var el = document.getElementById('pm-list');
-  if(!MENU.length){ el.innerHTML = '<div class="pm-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'; return; }
+  if(!MENU.length){
+    el.innerHTML = _pmLoading
+      ? '<div class="pm-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'
+      : '<div class="pm-empty"><i class="fas fa-triangle-exclamation"></i>Не удалось загрузить меню. Обновите страницу.</div>';
+    return;
+  }
   var q = (document.getElementById('pm-search-input').value || '').toLowerCase().trim();
   var html = '';
   MENU.forEach(function(g){
@@ -449,10 +455,13 @@ function savePanel(){
 }
 
 function load(){
+  _pmLoading = true;
+  render();
   fetch('/api/panel-menu')
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if(!d.success){ toast('Не удалось загрузить', false); return; }
+      _pmLoading = false;
+      if(!d.success){ toast('Не удалось загрузить', false); render(); return; }
       MENU = d.menu || [];
       CFG = d.config || {};
       var lay = d.layout || {hidden_pages:[], order:{}, group_order:[]};
@@ -466,7 +475,11 @@ function load(){
       refreshState();
       render();
     })
-    .catch(function(){ toast('Ошибка загрузки', false); });
+    .catch(function(){
+      _pmLoading = false;
+      toast('Ошибка загрузки', false);
+      render();
+    });
 }
 
 load();

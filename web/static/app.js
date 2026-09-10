@@ -3739,6 +3739,8 @@
     panel.style.top = top + 'px';
     var left = Math.min(rect.left, win.innerWidth - (panel.offsetWidth || 260) - 10);
     panel.style.left = Math.max(8, left) + 'px';
+    panel.style.right = 'auto';
+    panel.style.width = Math.max(rect.width, 230) + 'px';
   }
 
   function closePanel() {
@@ -3823,7 +3825,7 @@
     btn.type = 'button';
     btn.className = 'aes-btn';
     btn.setAttribute('aria-haspopup', 'listbox');
-    btn.innerHTML = '<span class="aes-value"></span><span class="aes-arrow"></span>';
+    btn.innerHTML = '<span class="aes-value"></span><span class="aes-arrow"><i class="fas fa-chevron-down"></i></span>';
     shell.appendChild(btn);
     var parent = orig.parentNode;
     if (!parent) return;

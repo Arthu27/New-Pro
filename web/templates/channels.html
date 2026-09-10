@@ -128,6 +128,7 @@
           <p id="detail-topic-text"></p>
         </div>
         <div class="ch-detail-actions">
+          <a class="btn-confirm" id="btnOpenInChat" href="/chat" hidden style="text-decoration:none"><i class="fas fa-comments"></i> Открыть в чате</a>
           <button class="btn-confirm" id="btnEditFromDetail" type="button"><i class="fas fa-pen"></i> Редактировать</button>
           <button class="btn-cancel btn-red" id="btnDeleteFromDetail" type="button"><i class="fas fa-trash"></i> Удалить</button>
         </div>
@@ -255,7 +256,7 @@
 
 <style>
 /* ============================================================
-   КАНАЛЫ — Premium V2 (gold theme, live 2.5s, global toast/confirm)
+   КАНАЛЫ — рабочие классы JS (.ch-row / .cat-group) + Nova tokens
    ============================================================ */
 .ch-toolbar{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:16px}
 .ch-toolbar-left{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -297,7 +298,7 @@
 .ch-workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.75fr);gap:16px;align-items:start}
 .ch-workspace > *{min-width:0}
 .ch-box{background:var(--mirror);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);border:1px solid var(--line-2);border-radius:20px;padding:18px;box-shadow:var(--mirror-shadow)}
-.ch-box:hover{border-color:var(--line-3)}
+.ch-box:hover{border-color:var(--ac-line)}
 .ch-box-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:2px 2px 13px;border-bottom:1px solid var(--line)}
 .ch-box-eyebrow,.ch-detail-eyebrow{margin-bottom:4px;color:var(--text-3);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .ch-box-title{font-weight:750;color:var(--text);font-size:15px;display:flex;align-items:center;gap:9px}
@@ -322,9 +323,9 @@
 .cat-empty{color:var(--text-3);font-size:13px;padding:10px;text-align:center;font-style:italic}
 
 /* Строка канала */
-.ch-row{display:flex;align-items:center;gap:13px;padding:12px 14px;background:color-mix(in srgb, var(--text) 3%, transparent);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;transition:transform .15s var(--ease),background .15s,border-color .15s,box-shadow .15s;cursor:pointer;outline:none}
-.ch-row:hover,.ch-row:focus-visible{background:color-mix(in srgb, var(--ac) 9%, transparent);border-color:var(--ac-line);transform:translateY(-1.5px);box-shadow:0 10px 24px rgba(0,0,0,.2)}
-.ch-row.is-selected{border-color:var(--ac);background:color-mix(in srgb, var(--ac) 14%, transparent);box-shadow:0 0 0 1px var(--ac-line),0 12px 28px color-mix(in srgb, var(--ac) 24%, transparent)}
+.ch-row{display:flex;align-items:center;gap:13px;padding:12px 14px;background:color-mix(in srgb, var(--text) 3%, transparent);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;transition:background .15s,border-color .15s,box-shadow .15s;cursor:pointer;outline:none}
+.ch-row:hover,.ch-row:focus-visible{background:color-mix(in srgb, var(--ac) 9%, transparent);border-color:var(--ac-line);box-shadow:0 10px 24px rgba(0,0,0,.2)}
+.ch-row.is-selected{border-color:var(--ac);background:color-mix(in srgb, var(--ac) 16%, transparent);box-shadow:0 0 0 1px var(--ac-line),0 0 28px color-mix(in srgb, var(--ac) 35%, transparent)}
 .ch-row.is-selected .ch-name{color:var(--ac-2)}
 .ch-row-root{border-left:3px solid var(--ac)}
 .ch-type-icon{width:40px;height:40px;border-radius:13px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:linear-gradient(135deg,color-mix(in srgb, var(--ac-2) 68%, #fff 32%),var(--ac));color:#fff;box-shadow:0 6px 16px color-mix(in srgb, var(--ac) 30%, transparent)}
@@ -692,6 +693,8 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('ch-detail').classList.add('is-empty');
     $('ch-detail-placeholder').hidden = false;
     $('ch-detail-content').hidden = true;
+    var openChat = $('btnOpenInChat');
+    if (openChat) openChat.hidden = true;
     document.querySelectorAll('#channel-list .ch-row').forEach(function (row) {
       row.classList.remove('is-selected');
       row.setAttribute('aria-selected', 'false');
@@ -726,8 +729,14 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('ch-detail').classList.remove('is-empty');
     $('ch-detail-placeholder').hidden = true;
     $('ch-detail-content').hidden = false;
+    var openChat = $('btnOpenInChat');
+    if (openChat) {
+      var canChat = (t === 'text' || t === 'news' || t === 'forum');
+      openChat.hidden = !canChat;
+      openChat.href = '/chat?channel=' + encodeURIComponent(String(c.id));
+    }
     document.querySelectorAll('#channel-list .ch-row').forEach(function (row) {
-      var selected = row.getAttribute('data-id') === String(c.id);
+      var selected = String(row.getAttribute('data-id')) === String(c.id);
       row.classList.toggle('is-selected', selected);
       row.setAttribute('aria-selected', selected ? 'true' : 'false');
     });

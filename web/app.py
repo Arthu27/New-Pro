@@ -708,10 +708,14 @@ def after_request (response ):
     # видит весь интернет (витрина, вход, регистрация, анкета), script-src
     # работает по nonce — инлайн-скрипты без nonce и ВСЕ инлайн-обработчики
     # (onclick=...) браузер отбрасывает. Внедрённый в HTML скрипт мёртв.
-    # Панель за логином пока оставлена на 'unsafe-inline' (80+ шаблонов с
-    # инлайн-JS; nonce-миграция — поэтапно, эти страницы не публичны).
-    _PUBLIC_PAGES =('/','/login','/register','/apply','/welcome','/status')
-    if (request .path in _PUBLIC_PAGES
+    # Панель за логином НЕ получает require-trusted-types: 80+ шаблонов
+    # пишут innerHTML (app.js). «/» — витрина только для гостей; залогиненный
+    # «/» — это дашборд панели, иначе TrustedHTML ломает весь UI.
+    _PUBLIC_PAGES = ('/login', '/register', '/apply', '/welcome', '/status')
+    _is_public = request.path in _PUBLIC_PAGES
+    if request.path == '/' and not session.get('logged_in'):
+        _is_public = True
+    if (_is_public
     and str (response .headers .get ('Content-Type','')or '').startswith ('text/html')):
         _nonce =getattr (g ,'csp_nonce','')
         if _nonce :

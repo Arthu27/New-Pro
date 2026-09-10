@@ -479,6 +479,59 @@ def register(ctx):
         return jsonify ({'ok':True })
 
 
+    @app .route ('/api/bot/voice-join', methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_bot_voice_join ():
+        """Подключить бота к голосовому каналу (VOICE_CHANNEL_ID / body.channel_id)."""
+        import web.app as _app
+        import asyncio
+        bot = _app.bot_instance
+        if not bot:
+            return jsonify({'error': 'Бот офлайн — запусти python main.py с TOKEN в .env'}), 503
+        d = _safe_json_obj()
+        raw = d.get('channel_id') or os.environ.get('VOICE_CHANNEL_ID') or 0
+        if not raw:
+            try:
+                with open(os.path.join(_REPO_ROOT, 'config', 'voice_stay.json'), encoding='utf-8') as f:
+                    raw = (json.load(f) or {}).get('channel_id') or 0
+            except Exception:
+                raw = 0
+        try:
+            cid = int(str(raw).strip() or 0)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Некорректный channel_id'}), 400
+        if not cid:
+            return jsonify({'error': 'Не задан VOICE_CHANNEL_ID'}), 400
+
+        async def _join():
+            ch = bot.get_channel(cid)
+            if ch is None:
+                try:
+                    ch = await bot.fetch_channel(cid)
+                except Exception as ex:
+                    return {'error': f'Канал не найден: {ex}'}
+            if not isinstance(ch, discord.VoiceChannel):
+                return {'error': 'Это не голосовой канал'}
+            vc = discord.utils.get(bot.voice_clients, guild=ch.guild)
+            if vc and vc.is_connected():
+                if vc.channel and vc.channel.id == ch.id:
+                    return {'ok': True, 'already': True, 'channel': ch.name, 'id': str(ch.id)}
+                await vc.move_to(ch)
+            else:
+                await ch.connect(self_deaf=False)
+            return {'ok': True, 'channel': ch.name, 'id': str(ch.id)}
+
+        try:
+            fut = asyncio.run_coroutine_threadsafe(_join(), bot.loop)
+            result = fut.result(timeout=60)
+        except Exception as ex:
+            return jsonify({'error': str(ex)}), 500
+        if result.get('error'):
+            return jsonify(result), 400
+        return jsonify(result)
+
+
     @app .route ('/api/bot/prefix',methods =['POST'])
     @login_required 
     @role_required ('owner')

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="light">
+<html lang="ru" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -7,25 +7,19 @@
     <title>{% block title %}Панель Hakumo{% endblock %}</title>
     {% block styles %}{% endblock %}
     <script nonce="{{ csp_nonce }}">
-      /* П.5: тема — самым первым шагом, ДО любых стилей: фон никогда
-         не «вспыхивает» белым при переходах между разделами/каналами. */
+      /* Mirror Bloom: тёмная тема по умолчанию; светлая тоже рендерится как Mirror Bloom. */
       (function () {
         var t = '';
         try { t = localStorage.getItem('hakumo_theme'); } catch (e) {}
-        if (t !== 'dark' && t !== 'light') {
-          try {
-            t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-              ? 'dark' : 'light';
-          } catch (e) { t = 'dark'; }
-        }
+        if (t !== 'dark' && t !== 'light') t = 'dark';
         try { document.documentElement.setAttribute('data-theme', t); } catch (e) {}
       })();
     </script>
     <style>
-      /* П.5 — критическая сцена: до прихода style.css фон уже фирменный,
-         межстраничный белый экран исключён физически. */
-      html { background: #0a0c12; color-scheme: dark; }
-      html[data-theme="light"] { background: #e8ebf1; color-scheme: light; }
+      /* Критическая сцена Mirror Bloom — без светлой вспышки */
+      html, html[data-theme="dark"], html[data-theme="light"] {
+        background: #04060c; color-scheme: dark;
+      }
       body { background: transparent; margin: 0; }
     </style>
     <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
@@ -37,10 +31,12 @@
     <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
     <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
+    <link rel="stylesheet" href="/static/panel-nova.css?v={{ static_v('panel-nova.css') }}">
 </head>
-<body>
+<body class="panel-nova">
     <script nonce="{{ csp_nonce }}">
     /* ── Бут-шим панели ────────────────────────────────────────────
        Страничные скрипты выполняются РАНЬШЕ app.js (он в конце body).
@@ -196,6 +192,7 @@
         <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="sidebar"><i class="fas fa-bars ico-open" aria-hidden="true"></i><i class="fas fa-xmark ico-close" aria-hidden="true"></i></button>
         <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" hidden aria-label="Закрыть меню"></button>
 
+        <div class="panel-stage">
         <!-- ── Сайдбар ─────────────────────────────────────── -->
         <aside class="sidebar" id="sidebar">
             <a href="/" class="brand">
@@ -269,7 +266,7 @@
                 <div class="sidebar-spark" id="sidebarSpark" aria-hidden="true"></div>
                 <div class="sidebar-version">
                     <i class="fas fa-bolt"></i>
-                    HAKUMO <span class="mono">v3.0</span> · Light{% if build_commit %} <span class="mono" title="Сборка панели (git-коммит)">{{ build_commit }}</span>{% endif %}
+                    HAKUMO <span class="mono">v3.0</span> · Nova Glass{% if build_commit %} <span class="mono" title="Сборка панели (git-коммит)">{{ build_commit }}</span>{% endif %}
                 </div>
             </div>
         </aside>
@@ -315,18 +312,18 @@
                 </nav>
 
                 <div class="navbar-right">
+                    <button class="nav-icon-btn rail-toggle" type="button" title="Свернуть меню" aria-label="Свернуть или развернуть меню" id="sidebarCollapseBtn" data-tip="Свернуть меню"><i class="fas fa-indent"></i></button>
                     <span class="ping-pill" id="pingPill" title="Пинг бота — клик для статистики"><span class="ping-dot"></span>—<small>мс</small></span>
                     <div class="navbar-clock" title="Текущее время">
                         <i class="fas fa-clock"></i>
                         <span id="navClock">--:--:--</span>
                     </div>
-                    <button class="nav-icon-btn" type="button" title="Свернуть меню" aria-label="Свернуть или развернуть меню" id="sidebarCollapseBtn" data-tip="Свернуть меню"><i class="fas fa-indent"></i></button>
-                    <button class="nav-icon-btn" type="button" title="Фокус-режим (Shift+F)" aria-label="Переключить фокус-режим" id="focusBtn" data-tip="Фокус-режим · Shift+F"><i class="fas fa-eye"></i></button>
+                    <button class="nav-icon-btn topbar-secondary" type="button" title="Фокус-режим (Shift+F)" aria-label="Переключить фокус-режим" id="focusBtn" data-tip="Фокус-режим · Shift+F"><i class="fas fa-eye"></i></button>
                     <button class="nav-icon-btn" type="button" title="Поиск (Ctrl+K)" aria-label="Открыть глобальный поиск" id="globalSearchBtn"><i class="fas fa-search"></i></button>
                     {% if vis_activity %}
-                    <button class="nav-icon-btn" type="button" title="Лента активности" aria-label="Открыть ленту активности" id="activityBtn"><i class="fas fa-stream"></i></button>
+                    <button class="nav-icon-btn topbar-secondary" type="button" title="Лента активности" aria-label="Открыть ленту активности" id="activityBtn"><i class="fas fa-stream"></i></button>
                     {% endif %}
-                    <span style="position:relative">
+                    <span class="topbar-secondary" style="position:relative">
                       <button class="nav-icon-btn" type="button" title="Акцент панели" aria-label="Выбрать акцент панели" id="accentBtn"><i class="fas fa-droplet"></i></button>
                     </span>
                     <button class="nav-icon-btn theme-toggle" type="button" title="Сменить тему" id="themeToggle" aria-label="Сменить тему">
@@ -336,7 +333,7 @@
                     {% if vis_notifications %}
                     <button class="nav-icon-btn" type="button" title="Уведомления" aria-label="Открыть уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge" id="notifBadge" style="display:none">0</span></button>
                     {% endif %}
-                    <button class="nav-icon-btn" type="button" title="Полный экран" aria-label="Переключить полноэкранный режим" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
+                    <button class="nav-icon-btn topbar-secondary" type="button" title="Полный экран" aria-label="Переключить полноэкранный режим" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
                     {% if demo_mode %}
                     <span class="badge tone-warning" title="Демо-режим: вход отключён (DEMO_MODE=1)"><i class="fas fa-flask"></i> Демо</span>
                     {% endif %}
@@ -374,6 +371,7 @@
                 {% endblock %}
             </main>
         </div>
+        </div><!-- /.panel-stage -->
     </div>
 
     <!-- ── Плавающее меню быстрых действий ────────────────── -->
@@ -387,10 +385,10 @@
     {% if role != 'uye' %}
     {% set _mnav = [
         ('/', 'fa-house', 'Главная'),
+        ('/channels', 'fa-hashtag', 'Каналы'),
+        ('/chat', 'fa-comments', 'Чат'),
         ('/warnings', 'fa-shield-halved', 'Варны'),
         ('/logs', 'fa-clipboard-list', 'Журнал'),
-        ('/reports-queue', 'fa-flag', 'Репорты'),
-        ('/team-board', 'fa-table-columns', 'Доска'),
     ] %}
     {% set ns = namespace(n=0) %}
     {% for path, icon, label in _mnav %}
@@ -499,7 +497,14 @@
       if (v === null) return undefined;
       if (v === 'true') return true;
       if (v === 'false') return false;
-      if (/^-?\d+$/.test(v)) return parseInt(v, 10);
+      /* Discord snowflakes (17–19 digits) and any int ≥ 2^53 lose precision
+         in Number/parseInt — keep them as strings. Small ints stay numbers. */
+      if (/^-?\d+$/.test(v)) {
+        var digits = v[0] === '-' ? v.slice(1) : v;
+        if (digits.length >= 16) return v;
+        var num = parseInt(v, 10);
+        return String(num) === v ? num : v;
+      }
       return v;
     }
     function run(el, e) {
