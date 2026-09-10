@@ -73,7 +73,7 @@
 .cmdx-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--cc,var(--ac)) 15%, transparent);border:1px solid color-mix(in srgb, var(--cc,var(--ac)) 35%, transparent)}
 .cmdx-ico i{font-size:14px;color:var(--cc,var(--ac))}
 .cmdx-kindchip{font-size:10px;font-weight:800;letter-spacing:.07em;padding:3px 8px;border-radius:6px;border:1px solid}
-.cmdx-kindchip.slash{color:var(--ac-2,#818cf8);border-color:color-mix(in srgb, var(--ac) 45%, transparent);background:color-mix(in srgb, var(--ac) 12%, transparent)}
+.cmdx-kindchip.slash{color:var(--ac-2,#7ab5ff);border-color:color-mix(in srgb, var(--ac) 45%, transparent);background:color-mix(in srgb, var(--ac) 12%, transparent)}
 .cmdx-kindchip.prefix{color:#94a3b8;border-color:color-mix(in srgb, #94a3b8 40%, transparent);background:color-mix(in srgb, #94a3b8 10%, transparent)}
 .cmdx-name{font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:6px;word-break:break-all}
 .cmdx-name .cmdx-pfx{color:var(--cc,var(--ac));margin-right:1px}
@@ -123,7 +123,7 @@
 .cmdx-exec label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin-bottom:5px;display:block}
 .cmdx-exec input,.cmdx-exec select,.cmdx-exec textarea{width:100%;padding:9px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:13.5px;outline:none;font-family:inherit}
 .cmdx-exec input:focus,.cmdx-exec select:focus,.cmdx-exec textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
-.btn-exec{padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),color-mix(in srgb, var(--ac) 70%, #818cf8));color:#fff;font-size:13.5px;font-weight:700;cursor:pointer}
+.btn-exec{padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),color-mix(in srgb, var(--ac) 70%, #4d9fff));color:#fff;font-size:13.5px;font-weight:700;cursor:pointer}
 .btn-cancel{padding:10px 18px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text-2);font-size:13.5px;font-weight:600;cursor:pointer;margin-left:8px}
 #result-msg{margin-top:12px;border-radius:10px;padding:10px 14px;font-size:13px;display:none}
 </style>
@@ -202,7 +202,7 @@
   var CAT_COLORS = {
     mod: '#f87171', tickets: '#60a5fa', logs: '#94a3b8',
     voice: '#2dd4bf', economy: '#fbbf24', levels: '#4ade80', fun: '#f472b6',
-    profile: '#c084fc', info: '#38bdf8', automation: '#fb923c', ai: '#818cf8',
+    profile: '#c084fc', info: '#38bdf8', automation: '#fb923c', ai: '#4d9fff',
     events: '#facc15', welcome: '#34d399', system: '#94a3b8', misc: '#cbd5e1'
   };
   var _data = null;           // каталог с сервера
@@ -231,7 +231,7 @@
     var html = '<button type="button" class="cmdx-chip' + (!_activeCat ? ' active' : '') +
       '" data-cat=""><i class="fas fa-border-all"></i>Все разделы<em>' + _data.total + '</em></button>';
     _data.categories.forEach(function (c) {
-      var col = CAT_COLORS[c.id] || '#818cf8';
+      var col = CAT_COLORS[c.id] || '#4d9fff';
       html += '<button type="button" class="cmdx-chip' + (_activeCat === c.id ? ' active' : '') +
         '" data-cat="' + esc(c.id) + '" style="--cc:' + col + '">' +
         '<i class="fas ' + esc(c.icon) + '"></i>' + esc(c.label) + '<em>' + c.count + '</em></button>';
@@ -263,7 +263,7 @@
     }
     var html = '';
     list.forEach(function (c, i) {
-      var col = CAT_COLORS[c.cat] || '#818cf8';
+      var col = CAT_COLORS[c.cat] || '#4d9fff';
       var catMeta = null;
       _data.categories.forEach(function (cc) { if (cc.id === c.cat) catMeta = cc; });
       var kind = kindOf(c);
@@ -417,7 +417,7 @@
   // ── Модалка: детали + выполнение ─────────────────────────────────────
   function openModal(c) {
     _current = c;
-    var col = CAT_COLORS[c.cat] || '#818cf8';
+    var col = CAT_COLORS[c.cat] || '#4d9fff';
     var catMeta = null;
     _data.categories.forEach(function (cc) { if (cc.id === c.cat) catMeta = cc; });
     var kind = kindOf(c);

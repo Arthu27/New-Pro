@@ -8,26 +8,52 @@
   <link rel="icon" href="/static/favicon.ico">
   <style>
     /* Критическая сцена: тёмный фон ДО прихода auth.css — первый кадр не белый. */
-    html { background: #05060a; color-scheme: dark; }
+    html { background: #0a0c12; color-scheme: dark; }
     body { background: transparent; margin: 0; }
   </style>
 <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
 <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
 <link rel="stylesheet" href="/static/auth.css?v={{ static_v('auth.css') }}">
 <style>
 /* ─── Локальные компоненты страницы входа ─────────────────────────────── */
+/* Баннер встроенного превью: если браузер блокирует куки во фрейме */
+/* ── Лаунчер встроенного превью (фрейм не хранит куки) ── */
+.app-launcher{position:relative;z-index:2;width:100%;min-height:calc(100vh - 64px);
+  display:flex;align-items:center;justify-content:center;animation:alIn .3s ease both}
+@keyframes alIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.al-card{max-width:430px;width:100%;background:var(--panel);border:1px solid var(--line);
+  border-radius:22px;padding:36px 32px;text-align:center;
+  box-shadow:0 34px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05)}
+.al-logo{width:84px;height:84px;margin:0 auto 16px;border-radius:26px;
+  background:linear-gradient(135deg,#6cb8ff,#0a84ff 52%,#5e5ce6);
+  display:grid;place-items:center;overflow:hidden;
+  box-shadow:0 12px 36px rgba(10,132,255,.45),inset 0 1px 0 rgba(255,255,255,.35)}
+.al-logo img{width:100%;height:100%;object-fit:cover;padding:12px}
+.al-card h2{font-family:'Inter',-apple-system,sans-serif;font-size:22px;
+  letter-spacing:.02em;margin:0 0 4px;color:var(--text)}
+.al-sub{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--text3);
+  margin:0 0 16px;font-weight:700}
+.al-text{color:var(--text2);font-size:13px;line-height:1.65;margin:0 0 18px}
+.al-btn{display:inline-flex;align-items:center;gap:10px;
+  background:linear-gradient(180deg,#3d9eff,#0a84ff);color:#fff;
+  font-weight:800;font-size:14.5px;padding:14px 30px;border-radius:14px;
+  text-decoration:none;box-shadow:0 6px 18px rgba(10,132,255,.35);
+  transition:filter .15s,transform .12s ease}
+.al-btn:hover{filter:brightness(1.1);color:#fff;transform:translateY(-1px)}
+.al-creds{margin:16px 0 0;font-size:11.5px;color:var(--text3)}
+.al-creds b{color:#e8b64c}
+body.launcher .auth-wrap{display:none}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:rgba(255,255,255,.04);
   border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:18px}
 .seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;
   font-size:12.5px;font-weight:600;padding:8px 10px;border-radius:7px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:7px;transition:color .15s,background .15s}
 .seg button:hover{color:var(--text)}
-.seg button.on{background:linear-gradient(135deg,#c8922a,#a87716);color:#fff;
-  box-shadow:0 2px 10px rgba(200,146,42,.25)}
+.seg button.on{background:linear-gradient(135deg,#6cb8ff,#0a84ff 52%,#5e5ce6);color:#fff;
+  box-shadow:0 4px 14px rgba(10,132,255,.35)}
 .divider-or{display:flex;align-items:center;gap:12px;color:var(--faint);
   font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;margin:16px 0}
 .divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:var(--line)}
@@ -37,20 +63,20 @@
   animation:ci-in .25s ease both}
 @keyframes ci-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 .check-item .ci-ico{width:18px;text-align:center;flex:none}
-.check-item.ok .ci-ico{color:#34d399}
-.check-item.fail .ci-ico{color:#f87171}
-.check-item.warn .ci-ico{color:#fbbf24}
-.check-item.fail{border-color:rgba(248,113,113,.25)}
+.check-item.ok .ci-ico{color:#30d158}
+.check-item.fail .ci-ico{color:#ff453a}
+.check-item.warn .ci-ico{color:#ffd60a}
+.check-item.fail{border-color:rgba(255,69,58,.25)}
 .check-item b{color:var(--text);font-weight:600}
 .check-item .ci-detail{margin-left:auto;color:var(--faint);font-size:11px;max-width:45%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pin-6{letter-spacing:.45em;text-align:center;font-size:17px!important;font-weight:700}
 .method-note{display:flex;gap:9px;align-items:flex-start;font-size:11.5px;color:var(--faint);
   line-height:1.45;margin:-4px 0 14px}
-.method-note i{margin-top:2px;color:#a5b4fc}
+.method-note i{margin-top:2px;color:#6cb8ff}
 .code-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .code-head .dh-ico{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;
-  background:rgba(200,146,42,.12);color:#c8922a;border:1px solid rgba(200,146,42,.3)}
+  background:rgba(232,182,76,.12);color:#e8b64c;border:1px solid rgba(232,182,76,.3)}
 .code-head h2{margin:0;font-size:16px}
 .code-sub{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.5}
 .back-row{margin-top:12px;display:flex;justify-content:center}
@@ -58,6 +84,21 @@
 </head>
 <body>
   <div class="bg-grid" aria-hidden="true"></div>
+
+  <!-- Встроенное превью: если браузер не хранит куки во фрейме (проверка
+       frameGate ниже) — показываем чистый лаунчер «Открыть панель». -->
+  <div class="app-launcher" id="appLauncher" hidden>
+    <div class="al-card">
+      <div class="al-logo"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></div>
+      <h2>Hakumo</h2>
+      <p class="al-sub">Панель управления</p>
+      <p class="al-text">Встроенное окно не хранит сессию — открой панель
+      отдельной вкладкой, и вход сработает сразу.</p>
+      <a class="al-btn" href="/" target="_blank" rel="noopener">
+        <i class="fas fa-arrow-up-right-from-square"></i> Открыть панель
+      </a>
+    </div>
+  </div>
 
   <main class="auth-wrap">
     <header class="brand">
@@ -651,9 +692,56 @@
     }
   };
 
+  /* ── Встроенное превью: фрейм не хранит куки → чистый лаунчер ── */
+  (function frameGate() {
+    var inFrame = false;
+    try { inFrame = window.self !== window.top; } catch (err) { inFrame = true; }
+    if (!inFrame) return;
+    var showLauncher = function () {
+      var l = $('appLauncher');
+      if (l) l.hidden = false;
+      document.body.classList.add('launcher');
+    };
+    /* сюда попали после успешного входа без куки — проба не нужна */
+    if (/[?&]blocked=1/.test(location.search)) { showLauncher(); return; }
+    /* проба: круговорот куки через наш origin */
+    try {
+      document.cookie = 'hakumo_probe=1; path=/; Max-Age=90; SameSite=None; Secure';
+    } catch (err) {}
+    fetch('/api/cookie-probe', { credentials: 'include' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (!d || d.ok !== true) showLauncher(); })
+      .catch(function () { /* сеть/CSRF-шум — оставляем форму */ });
+  })();
+
   var passForm = $('passForm');
   if (passForm) {
     passForm.addEventListener('submit', function (e) {
+      /* ── Встроенное превью (iframe): доступ к кукам сессии ──────
+         Браузер во фрейме молча выбрасывает стороннюю куку сессии:
+         POST /login успешен, но / снова отдаёт публичный лендинг и
+         выкидывает на /login. Storage Access API — по клику просим
+         у браузера разрешение на куки, затем сабмитим как обычно.
+         Отказ или нет API — идём как есть (баннер сверху подскажет
+         запасной путь — открыть в отдельной вкладке). */
+      if (passForm.dataset.saDone !== '1') {
+        var inFrame = false;
+        try { inFrame = window.self !== window.top; } catch (err) { inFrame = true; }
+        var reqSA = document.requestStorageAccess || document.webkitRequestStorageAccess;
+        if (inFrame && typeof reqSA === 'function') {
+          e.preventDefault();
+          var saPromise = null;
+          try { saPromise = reqSA.call(document); } catch (err) { saPromise = null; }
+          var goSubmit = function () {
+            passForm.dataset.saDone = '1';
+            if (typeof passForm.requestSubmit === 'function') passForm.requestSubmit();
+            else passForm.submit();
+          };
+          if (saPromise && typeof saPromise.then === 'function') saPromise.then(goSubmit, goSubmit);
+          else goSubmit();
+          return;
+        }
+      }
       if (passForm.dataset.sent) { e.preventDefault(); return; }
       var u = $('passUsername'), p = $('passPassword');
       if (!u || !u.value.trim() || !p || !p.value) {

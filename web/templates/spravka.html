@@ -195,10 +195,10 @@
 <div class="sp-wrap">
 
 {% set _tones = {
-  'main': '#4f46e5', 'mod': '#dc2626', 'members': '#0284c7', 'roles': '#7c3aed',
+  'main': '#4d9fff', 'mod': '#dc2626', 'members': '#0284c7', 'roles': '#7c3aed',
   'access': '#d97706', 'tickets': '#0891b2', 'bot': '#64748b', 'community': '#db2777',
   'logs': '#475569', 'content': '#0ea5e9', 'ai': '#8b5cf6', 'ops': '#16a34a',
-  'utility': '#4f46e5'
+  'utility': '#4d9fff'
 } %}
 
 
@@ -223,7 +223,7 @@
   <div class="sp-grid" id="sp-grid">
     {% for grp in panel_menu|default([], true) %}
       {% for p in grp.pages %}
-      <a class="sp-card" href="{{ p.path }}" data-grp="{{ grp.key }}" style="--sp-tone: {{ _tones.get(grp.key, '#4f46e5') }}" data-search="{{ p.label|lower }} {{ grp.group|lower }} {{ p.description|default('', true)|lower }}">
+      <a class="sp-card" href="{{ p.path }}" data-grp="{{ grp.key }}" style="--sp-tone: {{ _tones.get(grp.key, '#4d9fff') }}" data-search="{{ p.label|lower }} {{ grp.group|lower }} {{ p.description|default('', true)|lower }}">
         <span class="sp-icon"><i class="fas {{ p.icon }}"></i></span>
         <span class="sp-title">{{ p.label }}</span>
         <span class="sp-desc">{{ p.description|default(grp.group ~ ' — раздел панели «' ~ p.label ~ '»', true) }}</span>

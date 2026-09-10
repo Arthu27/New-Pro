@@ -301,7 +301,7 @@
 .pv-tab i { font-size: 11.5px; }
 
 /* ── V2-превью (как в Discord) ── */
-.v2p { border: 1px solid var(--line); border-left: 4px solid var(--v2c, #4f46e5); border-radius: 12px; padding: 14px 16px; background: color-mix(in srgb, var(--text) 3%, transparent); display: flex; flex-direction: column; gap: 9px; }
+.v2p { border: 1px solid var(--line); border-left: 4px solid var(--v2c, #4d9fff); border-radius: 12px; padding: 14px 16px; background: color-mix(in srgb, var(--text) 3%, transparent); display: flex; flex-direction: column; gap: 9px; }
 .v2p-head { font-size: 15px; font-weight: 800; color: var(--text); }
 .v2p-intro { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
 .v2p-sep { height: 1px; background: color-mix(in srgb, var(--text) 8%, transparent); }
@@ -326,7 +326,7 @@
 .pub-opt-sub { font-size: 11.5px; color: var(--text-3); line-height: 1.5; flex: 1; }
 .pub-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: inherit; }
 .pub-btn:hover { border-color: var(--ac); filter: brightness(1.12); }
-.pub-btn.accent { background: linear-gradient(135deg, var(--ac), color-mix(in srgb, var(--ac) 70%, #818cf8)); color: #fff; border: none; }
+.pub-btn.accent { background: linear-gradient(135deg, var(--ac), color-mix(in srgb, var(--ac) 70%, #4d9fff)); color: #fff; border: none; }
 .pub-btn.accent:hover { filter: brightness(1.1); box-shadow: 0 6px 18px color-mix(in srgb, var(--ac) 35%, transparent); }
 @media (prefers-reduced-motion: reduce) {
   .btn-add, .rule-input, .rule-field, .rule-row, .rule-del, .rule-move button, .pv-link { transition: none; }
@@ -401,7 +401,7 @@
       <div class="rules-pub-fields">
         <div class="rule-line"><i class="fas fa-heading"></i><input class="rule-field" id="rules-title" placeholder="Заголовок эмбеда: Правила сервера" aria-label="Заголовок эмбеда" data-meta="title"></div>
         <div class="rule-line"><i class="fas fa-align-left"></i><input class="rule-field" id="rules-intro" placeholder="Вступление: Нарушение правил ведёт к наказанию" aria-label="Вступление эмбеда" data-meta="intro"></div>
-        <div class="rule-line"><i class="fas fa-palette"></i><input class="rule-field" id="rules-color" type="color" value="#4f46e5" aria-label="Цвет эмбеда" data-meta="color" style="max-width:70px;padding:4px 6px"></div>
+        <div class="rule-line"><i class="fas fa-palette"></i><input class="rule-field" id="rules-color" type="color" value="#4d9fff" aria-label="Цвет эмбеда" data-meta="color" style="max-width:70px;padding:4px 6px"></div>
         <div class="rule-line"><i class="fas fa-wand-magic-sparkles"></i><select class="rule-field" id="rules-img-theme" aria-label="Тема авто-картинок" data-meta="img_theme" style="flex:1">
           <option value="violet">Авто-картинки: тёмный фиолет</option>
           <option value="night">Авто-картинки: ночная</option>
@@ -466,7 +466,7 @@
     var cEl = document.getElementById('rules-color');
     var title = tEl ? tEl.value.trim() : 'Правила сервера';
     var intro = iEl ? iEl.value.trim() : '';
-    var color = cEl ? cEl.value : '#4f46e5';
+    var color = cEl ? cEl.value : '#4d9fff';
     var pt = document.getElementById('preview-title');
     var pi = document.getElementById('preview-intro');
     var pb = document.getElementById('previewColorBar');
@@ -546,7 +546,7 @@
   }
   function curColor() {
     var c = document.getElementById('rules-color');
-    return c ? String(c.value || '#4f46e5').replace('#', '') : '4f46e5';
+    return c ? String(c.value || '#4d9fff').replace('#', '') : '4d9fff';
   }
   function curTitle() {
     var t = document.getElementById('rules-title');
@@ -721,7 +721,7 @@
     if (!box) return;
     var title = (document.getElementById('rules-title').value || '').trim() || 'Правила сервера';
     var intro = (document.getElementById('rules-intro').value || '').trim();
-    var color = (document.getElementById('rules-color').value || '#4f46e5').replace('#', '');
+    var color = (document.getElementById('rules-color').value || '#4d9fff').replace('#', '');
     var html = '<div class="v2p" style="--v2c:#' + esc(color) + '">';
     html += '<div class="v2p-head">' + esc(title) + '</div>';
     if (intro) html += '<div class="v2p-intro">' + esc(intro) + '</div>';

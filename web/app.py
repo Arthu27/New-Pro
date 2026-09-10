@@ -149,10 +149,84 @@ if _USE_FS_SESSION :
     app .config ['SESSION_FILE_DIR']=_os .path .join (_BASE ,'..','data','flask_sessions')
     app .config ['SESSION_FILE_THRESHOLD']=int (_os .getenv ('FLASK_SESSION_THRESHOLD','5000'))
     _os .makedirs (app .config ['SESSION_FILE_DIR'],exist_ok =True )
-    from flask_session import Session 
+    from flask_session import Session
     Session (app )
 
-bot_instance =None 
+# ── Кука сессии во встроенном превью (iframe) ────────────────────
+# Превью панели открывается в стороннем iframe (хост *.e2b.app):
+# браузер в третьем контексте НЕ принимает и НЕ шлёт SameSite=Lax —
+# вход «не прилипал»: POST /login успешен, но / снова отдаёт публичный
+# лендинг, и пользователя циклом выкидывает на /login (жалоба
+# 2026-09-10: «в меню зайти не могу»). CHIPS-кука
+# (SameSite=None; Secure; Partitioned) выживает во фрейме.
+# Детект embed-контекста — по цепочке признаков (прокси превью
+# переписывает Host, одного хоста мало):
+#   1. Host/X-Forwarded-Host *.e2b.app
+#   2. PANEL_EMBED_COOKIE=1 (явный override)
+#   3. E2B_SANDBOX=true — этот процесс и есть превью-песочница,
+#      панель здесь доступна только через https-прокси во фрейме
+#   4. Sec-Fetch-Dest: iframe — браузер сам сообщает, что навигация
+#      из фрейма (Chromium/Firefox); IP запоминаем на час (sticky),
+#      чтобы fetch()-дочерние запросы не понизили куку обратно в Lax
+# Локалка и обычный деплой — прежняя политика (Lax), CSRF-защита
+# SameSite на месте.
+_EMBED_TTL =3600            # сколько помнить iframe-клиента (сек)
+_embed_seen ={}             # remote_addr -> ts последнего iframe-запроса
+
+def _embed_cookie_reason ():
+    try :
+        _host =(request .host or '').lower ()
+        _xfh =(request .headers .get ('X-Forwarded-Host')or '').lower ()
+        if _host .endswith ('.e2b.app')or _xfh .endswith ('.e2b.app'):
+            return 'host'
+    except Exception :
+        pass
+    if _os .getenv ('PANEL_EMBED_COOKIE','0')=='1':
+        return 'env'
+    if _os .getenv ('E2B_SANDBOX','').strip ().lower ()in ('true','1'):
+        return 'sandbox'
+    try :
+        _sfd =(request .headers .get ('Sec-Fetch-Dest')or '').strip ().lower ()
+        if _sfd =='iframe':
+            return 'sec-fetch'
+    except Exception :
+        pass
+    return None
+
+@app .before_request
+def _embed_cookie_policy ():
+    _why =_embed_cookie_reason ()
+    try :
+        if _why :
+            _embed_seen [request .remote_addr ]=_time .time ()
+        _sticky =(_time .time ()-_embed_seen .get (request .remote_addr ,0 )<_EMBED_TTL )
+    except Exception :
+        _sticky =False
+    if _why or _sticky :
+        _samesite ,_secure ,_partitioned ='None' ,True ,True
+    elif _os .getenv ('PANEL_HTTPS','0')=='1':
+        _samesite ,_secure ,_partitioned ='Lax' ,True ,False
+    else :
+        _samesite ,_secure ,_partitioned ='Lax' ,False ,False
+    # выставляем ВСЕ три ключа каждый запрос: иначе конфиг, изменённый
+    # embed-запросом, протекал в обычные (Secure/Partitioned на локалке)
+    app .config ['SESSION_COOKIE_SAMESITE']=_samesite
+    app .config ['SESSION_COOKIE_SECURE']=_secure
+    app .config ['SESSION_COOKIE_PARTITIONED']=_partitioned
+    # Диагностика входа во фрейме: видно, что прислал браузер и какую
+    # политику куки выбрали (лог читается при разборе «не входит»)
+    if request .path =='/login'and request .method =='POST':
+        try :
+            _log .info ('[cookie-policy] host=%s xfh=%s sfd=%s ip=%s → SameSite=%s Secure=%s Partitioned=%s%s',
+                        request .host ,
+                        request .headers .get ('X-Forwarded-Host')or '-',
+                        request .headers .get ('Sec-Fetch-Dest')or '-',
+                        request .remote_addr ,_samesite ,_secure ,_partitioned ,
+                        (' (embed: '+_why +')')if _why else '')
+        except Exception :
+            pass
+
+bot_instance =None
 
 # Rate Limiting 
 from collections import defaultdict 
@@ -1249,6 +1323,13 @@ def index ():
     # Главная = дашборд. Цифры «Модерации сегодня» рендерятся сервером.
     from web .routes .dashboard import _today_mod_stats
     if 'logged_in'not in session :
+        # Только что был успешный вход (?fresh=1), а сессии нет — браузер
+        # заблокировал куку сессии во встроенном фрейме (сторонние куки:
+        # Safari/Chrome). Честно ведём на /login с большим баннером и
+        # кнопкой «Открыть в новой вкладке», а не молча показываем
+        # публичный лендинг (жалоба 2026-09-10: «не могу зайти в демо»).
+        if request .args .get ('fresh')=='1':
+            return redirect ('/login?blocked=1')
         return render_template ('welcome.html')
     if session .get ('role')=='uye':
         return render_template ('member_dashboard.html',role =session .get ('role'),username =session .get ('username'))
@@ -1387,6 +1468,68 @@ def _check_login_code (discord_id ,code ):
     return member_info
 
 
+@app .before_request
+def _demo_autologin ():
+    """Демо-витрина: панель открывается сразу, без страницы входа.
+
+    Браузеры не хранят куки сессии во встроенном фрейме превью
+    (сторонние куки), поэтому классический вход туда невозможен
+    физически. В демо-режиме каждый запрос сам поднимает сессию
+    владельца витрины: открыл превью — сразу панель с каналами.
+    Боевой режим (без DEMO_MODE) не затронут: хук сразу выходит.
+    """
+    if not _demo_mode ():
+        return None
+    if request .path .startswith ('/static/'):
+        return None
+    if session .get ('logged_in'):
+        return None
+    _uname =next ((_n for _n ,_info in USERS .items ()if _info .get ('role')=='owner'),None )
+    if not _uname :
+        return None
+    # Discord ID владельца — как в реальном входе (login_required
+    # перепроверяет его, когда бот онлайн)
+    _owner_did =''
+    try :
+        _owners =sorted (_root_config .Config .all_owner_ids ())
+        if _owners :
+            _owner_did =str (_owners [0 ])
+        else :
+            _g =_panel_guild ()
+            if _g is not None and getattr (_g ,'owner_id',None ):
+                _owner_did =str (_g .owner_id )
+    except Exception as _ex :
+        _log .debug ('demo autologin owner bind: %s',_ex )
+    session .clear ()   # та же анти-fixation гигиена, что в /login
+    session ['logged_in']=True
+    session ['username']=_uname
+    session ['role']='owner'
+    if _owner_did :
+        session ['discord_id']=_owner_did
+    session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None
+    session ['main_guild_id']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else ''
+    session ['_role_checked']=_time .time ()
+    session .modified =True
+    return None
+
+@app .route ('/api/cookie-probe')
+def api_cookie_probe ():
+    """Проба куки для встроенного превью: сохраняет ли фрейм куки.
+
+    Логин-страница во фрейме ставит hakumo_probe и делает запрос сюда:
+    got the cookie — the frame allows cookies (showing the login form);
+    didn't — the browser blocks third-party cookies (showing
+    the launcher «Open the panel in a new tab»)."""
+    _ok =request .cookies .get ('hakumo_probe')=='1'
+    _resp =jsonify ({'ok':_ok })
+    try :
+        _resp .set_cookie ('hakumo_probe','1',max_age =90 ,
+                           samesite ='None' ,secure =True ,partitioned =True )
+    except TypeError :
+        _resp .set_cookie ('hakumo_probe','1',max_age =90 ,
+                           samesite ='None' ,secure =True )
+    return _resp
+
 @app .route ('/login',methods =['GET','POST'])
 def login ():
 # Автоматический вход по токену — БЕЗОПАСНОСТЬ: по умолчанию ВЫКЛЮЧЕНО.
@@ -1421,7 +1564,7 @@ def login ():
                 session ['username']=t ['username']
                 session ['role']=t ['role']
                 session .modified =True 
-                return redirect (url_for ('index'))
+                return redirect ('/?fresh=1')
 
     if request .method =='POST':
         _rl =_rate_limited ('login')
@@ -1483,7 +1626,7 @@ def login ():
             session .modified =True
             _save_login_token (discord_id ,live_role )
             _log_login (display_name ,live_role ,(_res .get ('avatar')if isinstance (_res ,dict )else None ),discord_id ,method ='password+код Discord')
-            resp =redirect (url_for ('index'))
+            resp =redirect ('/?fresh=1')
             return _mark_device_trusted (resp ,discord_id )
 
         # Только зафиксированный пользователь-владелец
@@ -1519,7 +1662,7 @@ def login ():
             session .modified =True
             _save_login_token (username ,USERS [username ]['role'])
             _log_login (username ,'owner',None ,_owner_did or None )
-            return redirect (url_for ('index'))
+            return redirect ('/?fresh=1')
 
             # Вход участника по паролю. Логин — Discord ID ЛИБО ник/тег
             # (display_name/@username): владельца аккаунта система находит
@@ -1598,7 +1741,7 @@ def login ():
             discord_id ,
             method ='пароль' if _login_confirm_enabled () else 'пароль (без подтверждения)'
             )
-            resp =redirect (url_for ('index'))
+            resp =redirect ('/?fresh=1')
             # это устройство теперь доверенное — код больше не спрашиваем
             return _mark_device_trusted (resp ,discord_id )
 

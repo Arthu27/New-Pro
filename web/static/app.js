@@ -86,7 +86,7 @@
     st.setProperty('--ac-line', rgba(0.28));
     /* применяем и градиент кнопок/лого — перекраска полная, без индиго-хвостов */
     st.setProperty('--ac-grad', 'linear-gradient(135deg, #' + s + ', ' + light(0.18) + ' 55%, ' + dark(0.62) + ')');
-    try { localStorage.setItem('hakumo_accent', hex); } catch (e) {}
+    try { localStorage.setItem('hakumo_accent_v2', hex); } catch (e) {}
   };
 
   /* ── 3. Тосты ───────────────────────────────────────────── */
@@ -1511,8 +1511,8 @@
      при каждой перезагрузке страницы / смене канала. */
   (function bootAccent() {
     try {
-      var acc = localStorage.getItem('hakumo_accent');
-      if (acc && acc !== '#4f46e5') window.applyAccent(acc);
+      var acc = localStorage.getItem('hakumo_accent_v2');
+      if (acc) window.applyAccent(acc);
     } catch (e) {}
   })();
   ready(function () {
@@ -1692,7 +1692,7 @@
     var s = String(hex || '').replace('#', '');
     if (s.length === 3) s = s.split('').map(function (c) { return c + c; }).join('');
     var n = parseInt(s, 16);
-    if (isNaN(n)) return 'rgba(79,70,229,' + alpha + ')';
+    if (isNaN(n)) return 'rgba(77,159,255,' + alpha + ')';
     return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
   }
 
@@ -1891,6 +1891,7 @@
 
   /* ── Пресеты акцентов + попап ────────────────────────── */
   var ACCENTS = [
+    { name: 'Неон', hex: '#4d9fff' },
     { name: 'Индиго', hex: '#4f46e5' },
     { name: 'Фиолет', hex: '#7c3aed' },
     { name: 'Небо', hex: '#0284c7' },
@@ -1924,7 +1925,11 @@
     });
     function paint() {
       var cur = '';
-      try { cur = localStorage.getItem('hakumo_accent') || '#4f46e5'; } catch (e) {}
+      try {
+        cur = localStorage.getItem('hakumo_accent_v2')
+          || (getComputedStyle(doc.documentElement).getPropertyValue('--ac') || '').trim()
+          || '#4d9fff';
+      } catch (e) {}
       cur = String(cur).toLowerCase();
       Array.prototype.forEach.call(grid.children, function (sw, i) {
         sw.classList.toggle('active', ACCENTS[i].hex.toLowerCase() === cur);
@@ -2126,13 +2131,13 @@
 
   function accentRGB() {
     try {
-      var v = getComputedStyle(doc.documentElement).getPropertyValue('--ac').trim() || '#4f46e5';
+      var v = getComputedStyle(doc.documentElement).getPropertyValue('--ac').trim() || '#4d9fff';
       v = v.replace('#', '');
       if (v.length === 3) v = v.split('').map(function (c) { return c + c; }).join('');
       var n = parseInt(v, 16);
-      if (isNaN(n)) return { r: 79, g: 70, b: 229 };
+      if (isNaN(n)) return { r: 77, g: 159, b: 255 };
       return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-    } catch (e) { return { r: 79, g: 70, b: 229 }; }
+    } catch (e) { return { r: 77, g: 159, b: 255 }; }
   }
 
   /* ── 1. Созвездие частиц на фоне ───────────────────────── */
@@ -2421,7 +2426,7 @@
   /* ── 3. Конфетти ───────────────────────────────────────── */
   window.celebrate = function () {
     if (reduced) return;
-    var colors = ['#4f46e5', '#7c3aed', '#0284c7', '#059669', '#e11d48', '#d97706', '#16a34a', '#ec4899'];
+    var colors = ['#4d9fff', '#7ab5ff', '#e8b64c', '#7c3aed', '#0284c7', '#059669', '#e11d48', '#d97706', '#16a34a', '#ec4899'];
     var host = doc.createElement('div');
     host.className = 'confetti-host';
     doc.body.appendChild(host);
@@ -3124,7 +3129,7 @@
   var win = window;
   var reduced = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var narrow = function () { return win.innerWidth < 900; };
-  var PALETTE = ['#4f46e5', '#7c3aed', '#a78bfa', '#22d3ee', '#818cf8', '#c7d2fe'];
+  var PALETTE = ['#4d9fff', '#7ab5ff', '#2f7df6', '#a8c8ff', '#e8b64c', '#22d3ee'];
 
   /* ── 1. Регистрация @property для вращения градиента ── */
   function fxRegisterAngle() {
