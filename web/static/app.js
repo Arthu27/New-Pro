@@ -854,7 +854,14 @@
           var span = l.querySelector('span');
           var label = span ? span.textContent : l.textContent;
           var hay = (label + ' ' + (l.getAttribute('title') || '')).toLowerCase();
+          /* «комната» в UI = страница/канал меню; иначе поиск «комнат» пустел */
           var hit = !q || hay.indexOf(q) !== -1;
+          if (!hit && q.length >= 4) {
+            var syn = '';
+            if (q.indexOf('комнат') === 0 || 'комнат'.indexOf(q) === 0) syn = 'канал';
+            else if (q.indexOf('room') === 0) syn = 'канал';
+            if (syn && hay.indexOf(syn) !== -1) hit = true;
+          }
           l.classList.toggle('nav-hide', !!q && !hit);
           if (q && hit && span) hl(span, q);
           else if (span) unhl(span);

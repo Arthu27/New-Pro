@@ -498,9 +498,11 @@ html[data-theme="light"] .nav-link.active {
 
 /* ── Фильтр меню ───────────────────────────────────────────── */
 .sidebar-nav.filtering .nav-group-title { display: none; }
+/* JS ставит .nav-hide на промахи; раньше CSS ждал .has-match (которого
+   никто не ставил) — и при фильтрации ВСЕ пункты оставались display:none. */
 .sidebar-nav.filtering .nav-link { display: none; }
-.sidebar-nav.filtering .nav-group.has-match { margin-bottom: 2px; }
-.sidebar-nav.filtering .nav-group.has-match .nav-link { display: flex; }
+.sidebar-nav.filtering .nav-link:not(.nav-hide) { display: flex; }
+.sidebar-nav.filtering .nav-group:not(.nav-hide) { margin-bottom: 2px; }
 .sidebar-nav .nav-link.search-flash { animation: navFlash .5s var(--ease); }
 @keyframes navFlash { 0% { background: var(--ac-soft); } 100% { background: transparent; } }
 
