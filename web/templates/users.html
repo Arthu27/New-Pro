@@ -64,11 +64,9 @@
   .u-kpi { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border: 1px solid var(--line);
            border-radius: var(--r-lg); background: var(--surface-2); transition: border-color .15s, transform .15s; }
   .u-kpi:hover { border-color: var(--ac-line); transform: translateY(-1px); }
-  .u-kpi-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none;
-               background: var(--ac-soft); color: var(--ac); font-size: 15px; }
-  .u-kpi[data-tone=ok] .u-kpi-ico { background: var(--ok-soft); color: var(--ok); }
-  .u-kpi[data-tone=info] .u-kpi-ico { background: var(--info-soft); color: var(--info); }
-  .u-kpi[data-tone=warn] .u-kpi-ico { background: var(--warn-soft); color: var(--warn); }
+  .u-kpi-ico { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none;
+               background: linear-gradient(135deg, color-mix(in srgb, var(--ac-2) 68%, #fff 32%), var(--ac));
+               color: #fff; font-size: 15px; }
   .u-kpi-txt { min-width: 0; }
   .u-kpi-txt b { display: block; font-size: 17px; line-height: 1.15; color: var(--text-1); font-weight: var(--fw-semibold); }
   .u-kpi-txt span { display: block; font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap;
