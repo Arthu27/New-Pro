@@ -2,6 +2,7 @@
 const CACHE_NAME = 'Hakumo-light-v5';
 const STATIC_ASSETS = [
   '/static/style.css',
+  '/static/soft-neu.css',
   '/static/app.js',
   '/static/pickers.js',
   '/static/api-guard.js',
