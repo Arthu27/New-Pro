@@ -167,7 +167,11 @@ html[data-theme="light"] .panel-stage {
 
   position: relative !important;
   z-index: 1 !important;
-  display: grid !important;
+  display: flex !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
   background:
     linear-gradient(150deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.04) 32%, rgba(8,12,22,.62) 100%) !important;
   -webkit-backdrop-filter: var(--nv-blur) !important;
@@ -204,6 +208,9 @@ html[data-theme="light"] .panel-stage::after {
 html[data-theme="dark"] .sidebar,
 html[data-theme="light"] .sidebar {
 
+  position: relative !important;
+  z-index: 6 !important;
+  flex: 0 0 auto !important;
   background:
     linear-gradient(180deg, rgba(255,255,255,.07) 0%, rgba(0,0,0,.22) 40%, rgba(0,0,0,.35) 100%) !important;
   border-right: 1px solid rgba(255, 255, 255, .1) !important;
@@ -416,6 +423,15 @@ html[data-theme="light"] .topbar {
   backdrop-filter: blur(20px) !important;
   padding: 10px 18px !important;
 
+}
+
+html[data-theme="dark"] .main-wrap,
+html[data-theme="light"] .main-wrap {
+  position: relative !important;
+  z-index: 6 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
 }
 
 html[data-theme="dark"] .main-wrap,
