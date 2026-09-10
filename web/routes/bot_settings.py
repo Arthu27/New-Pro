@@ -209,3 +209,59 @@ def register(ctx):
                         'kind': US.source_kind(),
                         'hint': 'Источник сохранён — /update и автообновление '
                                 'качают уже оттуда. Перезапуск не нужен.'})
+
+
+    VOICE_STAY_PATH = os.path.join(_REPO_ROOT, 'config', 'voice_stay.json')
+
+    def _voice_stay_load():
+        try:
+            if os.path.isfile(VOICE_STAY_PATH):
+                with open(VOICE_STAY_PATH, encoding='utf-8') as f:
+                    d = json.load(f) or {}
+                return str(d.get('channel_id') or d.get('VOICE_CHANNEL_ID') or '').strip()
+        except Exception as _ex:
+            _log.debug('voice_stay load: %s', _ex)
+        return str(os.environ.get('VOICE_CHANNEL_ID') or '').strip()
+
+    def _voice_stay_save(channel_id: str):
+        os.makedirs(os.path.dirname(VOICE_STAY_PATH), exist_ok=True)
+        payload = {
+            'channel_id': str(channel_id or '').strip(),
+            'note': 'Бот заходит в этот голосовой канал при старте (main.py).',
+        }
+        with open(VOICE_STAY_PATH, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        return payload
+
+    @app.route('/api/bot-settings/voice-stay', methods=['GET', 'POST'])
+    @login_required
+    @role_required('owner')
+    def api_bot_settings_voice_stay():
+        """Голосовой канал 24/7: сохранить ID и (опционально) подключиться сейчас."""
+        import web.app as _app
+        if request.method == 'GET':
+            cid = _voice_stay_load()
+            return jsonify({
+                'ok': True,
+                'channel_id': cid,
+                'bot_online': bool(_app.bot_instance),
+                'demo': bool(getattr(_app, '_demo_mode', lambda: False)()),
+            })
+
+        data = _safe_json_obj()
+        raw = str(data.get('channel_id') or '').strip()
+        if raw and (not raw.isdigit() or len(raw) < 5 or len(raw) > 22):
+            return jsonify({'ok': False, 'error': 'ID канала — только цифры Discord snowflake'}), 400
+        saved = _voice_stay_save(raw)
+        # Обновить in-process значение у main, если бот загружен в том же процессе
+        try:
+            import main as _main
+            _main.VOICE_CHANNEL_ID = int(raw) if raw else None
+        except Exception as _ex:
+            _log.debug('voice_stay live update: %s', _ex)
+        return jsonify({
+            'ok': True,
+            'channel_id': saved.get('channel_id') or '',
+            'hint': 'Сохранено. При следующем старте main.py бот зайдёт в этот канал. '
+                    '«Подключиться сейчас» — если бот уже онлайн.',
+        })

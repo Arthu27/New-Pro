@@ -33,9 +33,12 @@
 .bs-out.show{display:block;animation:fadeUp .25s ease}
 .bs-out.ok{color:var(--ok);background:color-mix(in srgb, var(--ok) 8%, transparent);border:1px solid color-mix(in srgb, var(--ok) 25%, transparent)}
 .bs-out.err{color:var(--err);background:color-mix(in srgb, var(--err) 8%, transparent);border:1px solid color-mix(in srgb, var(--err) 25%, transparent)}
-.bs-staff-row{display:flex;align-items:center;gap:10px;margin-top:9px}
-.bs-staff-row label{font-size:11.5px;font-weight:700;color:var(--text-3);min-width:110px}
-.bs-staff-row select{flex:1;min-width:0}
+.bs-staff-row{display:flex;align-items:center;gap:10px;margin-top:9px;position:relative;z-index:1}
+.bs-staff-row label{font-size:11.5px;font-weight:700;color:var(--text-3);min-width:110px;flex:none}
+.bs-staff-row select,.bs-staff-row .aes{flex:1;min-width:0}
+.bs-card{overflow:visible}
+.bs-grid{overflow:visible}
+
 /* ── Кто такой бот: аватар + имя + статус ── */
 .bs-bot{display:flex;align-items:center;gap:12px;padding:11px 13px;margin-bottom:10px;border:1px solid var(--ac-line);background:var(--ac-soft);border-radius:13px}
 .bs-bot[hidden]{display:none}
@@ -97,6 +100,25 @@
       <button class="btn btn-primary" id="bs-sync" type="button"><i class="fas fa-bolt"></i> Обновить команды мгновенно</button>
     </div>
     <div class="bs-out" id="bs-sync-out"></div>
+  </div>
+
+  <!-- Голосовой канал 24/7 -->
+  <div class="bs-card" data-reveal>
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-headphones"></i></div>
+      <div><div class="bs-title">Голосовой канал</div>
+        <div class="bs-sub">Бот остаётся в этом voice-канале при старте и переподключается, если вылетит. Нужен живой <b>main.py</b> с TOKEN — демо-панель в Discord не заходит.</div></div>
+    </div>
+    <div class="row"><label>Channel ID</label>
+      <input type="text" id="bs-voice-id" inputmode="numeric" pattern="[0-9]*" maxlength="22"
+             placeholder="1547390550108540948" aria-label="ID голосового канала" autocomplete="off">
+    </div>
+    <div class="bs-actions">
+      <button class="btn btn-primary" id="bs-voice-save" type="button"><i class="fas fa-save"></i> Сохранить</button>
+      <button class="btn btn-ghost" id="bs-voice-join" type="button"><i class="fas fa-plug"></i> Подключиться сейчас</button>
+      <span class="bs-live" id="bs-voice-live"></span>
+    </div>
+    <div class="bs-out" id="bs-voice-out"></div>
   </div>
 
   <!-- Заявки в команду -->
@@ -377,14 +399,78 @@
     }).catch(function () { toast('Сеть недоступна', false); });
   }
 
+  function loadVoiceStay() {
+    fetch('/api/bot-settings/voice-stay').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) return;
+      if ($('bs-voice-id')) $('bs-voice-id').value = d.channel_id || '';
+      if ($('bs-voice-live')) {
+        $('bs-voice-live').textContent = d.demo
+          ? 'демо — в Discord не зайдёт'
+          : (d.bot_online ? 'бот онлайн' : 'бот офлайн — нужен main.py');
+      }
+    }).catch(function () {});
+  }
+
+  function saveVoiceStay() {
+    var out = $('bs-voice-out');
+    var cid = ($('bs-voice-id').value || '').trim();
+    out.className = 'bs-out show';
+    out.textContent = 'Сохраняю…';
+    fetch('/api/bot-settings/voice-stay', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: cid })
+    }).then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.s === 200 && res.d.ok) {
+          out.className = 'bs-out show ok';
+          out.textContent = res.d.hint || 'Сохранено.';
+          toast('Голосовой канал сохранён', true);
+          loadVoiceStay();
+        } else {
+          out.className = 'bs-out show err';
+          out.textContent = '' + (res.d.error || 'ошибка');
+        }
+      }).catch(function () {
+        out.className = 'bs-out show err';
+        out.textContent = 'Сеть недоступна';
+      });
+  }
+
+  function joinVoiceNow() {
+    var out = $('bs-voice-out');
+    var cid = ($('bs-voice-id').value || '').trim();
+    out.className = 'bs-out show';
+    out.textContent = 'Подключаюсь…';
+    fetch('/api/bot/voice-join', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: cid })
+    }).then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.s === 200 && res.d.ok) {
+          out.className = 'bs-out show ok';
+          out.textContent = (res.d.already ? 'Уже в канале: ' : 'Подключён: ') + (res.d.channel || cid);
+          toast('Бот в голосовом канале', true);
+        } else {
+          out.className = 'bs-out show err';
+          out.textContent = '' + (res.d.error || 'не удалось');
+          toast(out.textContent, false);
+        }
+      }).catch(function () {
+        out.className = 'bs-out show err';
+        out.textContent = 'Сеть недоступна или бот офлайн';
+      });
+  }
+
   function bind() {
     $('bs-save').addEventListener('click', savePresence);
     $('bs-sync').addEventListener('click', sync);
     $('bs-staff-save').addEventListener('click', saveStaffRoles);
+    if ($('bs-voice-save')) $('bs-voice-save').addEventListener('click', saveVoiceStay);
+    if ($('bs-voice-join')) $('bs-voice-join').addEventListener('click', joinVoiceNow);
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); loadStaffRoles(); });
-  else { bind(); load(); loadStaffRoles(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); loadStaffRoles(); loadVoiceStay(); });
+  else { bind(); load(); loadStaffRoles(); loadVoiceStay(); }
 })();
 </script>
 {% endblock %}
