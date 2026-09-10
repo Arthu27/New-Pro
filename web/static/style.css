@@ -108,7 +108,7 @@
   --sidebar-w: 268px;
   --sidebar-rail: 76px;
   --topbar-h: 58px;
-  --stage-pad: 16px;
+  --stage-pad: 22px;
 
   --ease: cubic-bezier(0.25, 0.6, 0.3, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -303,8 +303,9 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
   overflow: hidden;
 }
 html[data-theme="dark"] .panel-stage {
-  background: rgba(18, 22, 30, .62);
-  border-color: rgba(255, 255, 255, .11);
+  background: rgba(16, 20, 28, .55);
+  border-color: rgba(255, 255, 255, .12);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .1);
 }
 html[data-theme="light"] .panel-stage {
   background: rgba(255, 255, 255, .52);
