@@ -1,0 +1,551 @@
+/* ============================================================================
+   HAKUMO · Soft Neu + Glass — визуальный слой с нуля (v11)
+   Цвета и эффекты строго по UI-киту: charcoal grain, soft neu,
+   electric blue glow, warm gold edge/ambient.
+   ============================================================================ */
+
+:root {
+  --sn-bg: #12151a;
+  --sn-bg-2: #171b22;
+  --sn-surface: #1c212a;
+  --sn-surface-2: #232935;
+  --sn-surface-3: #2a3140;
+  --sn-well: #141820;
+
+  --sn-line: rgba(255, 255, 255, .08);
+  --sn-line-2: rgba(255, 255, 255, .14);
+  --sn-line-gold: rgba(232, 201, 154, .35);
+
+  --sn-text: #f3f4f6;
+  --sn-text-2: rgba(230, 233, 240, .64);
+  --sn-text-3: rgba(230, 233, 240, .4);
+
+  --sn-blue: #3b8aff;
+  --sn-blue-2: #6eb0ff;
+  --sn-blue-3: #1f6ae0;
+  --sn-gold: #d4b07a;
+  --sn-gold-2: #e8c99a;
+  --sn-cream: #f3e8d4;
+
+  --sn-r: 12px;
+  --sn-r-lg: 16px;
+  --sn-r-pill: 999px;
+
+  --sn-neu-out:
+    6px 8px 18px rgba(0, 0, 0, .55),
+    -2px -2px 8px rgba(255, 255, 255, .04),
+    inset 0 1px 0 rgba(255, 255, 255, .07);
+  --sn-neu-out-sm:
+    3px 4px 10px rgba(0, 0, 0, .45),
+    -1px -1px 5px rgba(255, 255, 255, .035),
+    inset 0 1px 0 rgba(255, 255, 255, .06);
+  --sn-neu-in:
+    inset 3px 4px 10px rgba(0, 0, 0, .55),
+    inset -1px -1px 4px rgba(255, 255, 255, .03);
+  --sn-gold-rim:
+    0 0 0 1px rgba(232, 201, 154, .28),
+    0 0 14px rgba(212, 176, 122, .22),
+    inset 0 1px 0 rgba(232, 201, 154, .35);
+  --sn-blue-glow:
+    0 0 0 1px rgba(110, 176, 255, .45),
+    0 0 22px rgba(59, 138, 255, .5),
+    0 6px 18px rgba(59, 138, 255, .28);
+  --sn-focus:
+    0 0 0 2px rgba(59, 138, 255, .55),
+    0 0 24px rgba(59, 138, 255, .55);
+  --sn-stage-glow:
+    0 0 60px rgba(212, 176, 122, .12),
+    0 24px 70px rgba(0, 0, 0, .65),
+    inset 0 1px 0 rgba(232, 201, 154, .14);
+}
+
+html[data-theme="dark"] {
+  --bg: var(--sn-bg);
+  --bg-2: var(--sn-bg-2);
+  --bg-3: var(--sn-surface);
+  --mirror: rgba(28, 33, 42, .78);
+  --surface: var(--sn-surface);
+  --surface-1: var(--sn-surface);
+  --surface-2: rgba(255, 255, 255, .045);
+  --surface-3: rgba(255, 255, 255, .08);
+  --well: var(--sn-well);
+  --btn-glass: rgba(255, 255, 255, .06);
+
+  --line: var(--sn-line);
+  --line-2: var(--sn-line-2);
+  --text: var(--sn-text);
+  --text-1: var(--sn-text);
+  --text-2: var(--sn-text-2);
+  --text-3: var(--sn-text-3);
+  --text-4: rgba(230, 233, 240, .24);
+  --muted: var(--sn-text-3);
+  --text2: var(--sn-text-2);
+  --text3: var(--sn-text-3);
+
+  --ac: var(--sn-blue);
+  --ac-2: var(--sn-blue-2);
+  --ac-3: var(--sn-blue-3);
+  --ac2: var(--sn-blue-2);
+  --ac3: var(--sn-blue-3);
+  --ac-soft: rgba(59, 138, 255, .16);
+  --ac-line: rgba(59, 138, 255, .45);
+  --accent: var(--sn-blue);
+  --accent-color: var(--sn-blue);
+  --gold: var(--sn-gold);
+  --gold-2: var(--sn-gold-2);
+  --gold-soft: rgba(212, 176, 122, .16);
+
+  --r: var(--sn-r);
+  --r-sm: 8px;
+  --r-md: var(--sn-r);
+  --r-lg: var(--sn-r-lg);
+  --r-xl: var(--sn-r-lg);
+  --r-stage: 20px;
+}
+
+/* ── Фон: charcoal + grain + тёплый ambient ───────────────── */
+html[data-theme="dark"] body {
+  background-color: #0e1014 !important;
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -10%, rgba(212, 176, 122, .14), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 10% 40%, rgba(59, 138, 255, .08), transparent 50%),
+    radial-gradient(ellipse 60% 45% at 90% 80%, rgba(212, 176, 122, .07), transparent 48%),
+    linear-gradient(180deg, #151820 0%, #0e1014 55%, #0b0d11 100%) !important;
+}
+body::before {
+  opacity: .42 !important;
+  mix-blend-mode: soft-light;
+}
+html[data-theme="dark"] body::before { opacity: .5 !important; }
+
+.bg-aurora i:nth-child(1) {
+  background: radial-gradient(circle, rgba(59, 138, 255, .28), transparent 70%) !important;
+  opacity: .4 !important;
+}
+.bg-aurora i:nth-child(2) {
+  background: radial-gradient(circle, rgba(212, 176, 122, .18), transparent 70%) !important;
+  opacity: .32 !important;
+}
+.bg-aurora i:nth-child(3) {
+  background: radial-gradient(circle, rgba(110, 176, 255, .12), transparent 70%) !important;
+  opacity: .25 !important;
+}
+
+/* ── Сцена: панель с тёплым золотым ореолом как в ките ─────── */
+html[data-theme="dark"] .panel-stage {
+  background:
+    linear-gradient(165deg, rgba(34, 40, 52, .92) 0%, rgba(20, 24, 32, .94) 55%, rgba(16, 19, 26, .96) 100%) !important;
+  border: 1px solid rgba(232, 201, 154, .16) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--sn-stage-glow) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.1) !important;
+  backdrop-filter: blur(28px) saturate(1.1) !important;
+}
+
+html[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, rgba(0, 0, 0, .28), rgba(0, 0, 0, .12)) !important;
+  border-right: 1px solid rgba(255, 255, 255, .07) !important;
+}
+
+html[data-theme="dark"] .topbar {
+  border-bottom: 1px solid rgba(255, 255, 255, .07) !important;
+}
+
+/* ── Карточки / панели ─────────────────────────────────────── */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .page-hero,
+html[data-theme="dark"] .kpi,
+html[data-theme="dark"] .stat-box,
+html[data-theme="dark"] .cc-tile,
+html[data-theme="dark"] .member-card,
+html[data-theme="dark"] .g-card,
+html[data-theme="dark"] .tour-card {
+  background: linear-gradient(165deg, #252b38 0%, #1a1f2a 60%, #161b24 100%) !important;
+  border: 1px solid rgba(255, 255, 255, .09) !important;
+  border-radius: var(--sn-r-lg) !important;
+  box-shadow: var(--sn-neu-out) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-theme="dark"] .card:hover,
+html[data-theme="dark"] .panel:hover,
+html[data-theme="dark"] .kpi:hover,
+html[data-theme="dark"] .stat-box:hover,
+html[data-theme="dark"] .cc-tile:hover {
+  border-color: rgba(232, 201, 154, .28) !important;
+  box-shadow:
+    var(--sn-neu-out),
+    0 0 20px rgba(212, 176, 122, .12) !important;
+}
+
+html[data-theme="dark"] .panel-head,
+html[data-theme="dark"] .card-head {
+  background: linear-gradient(180deg, rgba(59, 90, 140, .22), transparent) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .07) !important;
+}
+
+/* ── Кнопки Soft Neu (кит) ─────────────────────────────────── */
+html[data-theme="dark"] .btn,
+html[data-theme="dark"] .btn-cancel,
+html[data-theme="dark"] .btn-secondary,
+html[data-theme="dark"] .au-btn,
+html[data-theme="dark"] .bs-btn,
+html[data-theme="dark"] .tk-btn,
+html[data-theme="dark"] .sm-btn,
+html[data-theme="dark"] .mu-btn,
+html[data-theme="dark"] .an-btn,
+html[data-theme="dark"] .pf-btn {
+  background: linear-gradient(180deg, #2c3342 0%, #1c222e 100%) !important;
+  color: var(--sn-text) !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--sn-r-pill) !important;
+  box-shadow: var(--sn-neu-out-sm), var(--sn-gold-rim) !important;
+  transition: background .2s cubic-bezier(.22, .9, .3, 1),
+    box-shadow .2s cubic-bezier(.22, .9, .3, 1),
+    transform .12s cubic-bezier(.22, .9, .3, 1),
+    filter .15s !important;
+}
+
+html[data-theme="dark"] .btn:hover,
+html[data-theme="dark"] .btn-cancel:hover,
+html[data-theme="dark"] .btn-secondary:hover,
+html[data-theme="dark"] .au-btn:hover,
+html[data-theme="dark"] .bs-btn:hover {
+  background: linear-gradient(180deg, #5aa0ff 0%, #3b8aff 55%, #1f6ae0 100%) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: var(--sn-blue-glow) !important;
+}
+
+html[data-theme="dark"] .btn:active:not(:disabled),
+html[data-theme="dark"] .btn-primary:active:not(:disabled) {
+  transform: translateY(1px) scale(.98) !important;
+  box-shadow: var(--sn-neu-in) !important;
+  filter: brightness(.9) !important;
+}
+
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] .btn.primary,
+html[data-theme="dark"] .btn-new,
+html[data-theme="dark"] .au-save,
+html[data-theme="dark"] .bs-save,
+html[data-theme="dark"] .an-save,
+html[data-theme="dark"] .fab-main,
+html[data-theme="dark"] .send-btn {
+  background: linear-gradient(180deg, #5aa0ff 0%, #3b8aff 50%, #1f6ae0 100%) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: var(--sn-blue-glow), inset 0 1px 0 rgba(255, 255, 255, .3) !important;
+}
+
+html[data-theme="dark"] .btn-primary:hover,
+html[data-theme="dark"] .btn.primary:hover,
+html[data-theme="dark"] .fab-main:hover {
+  filter: brightness(1.1) !important;
+  box-shadow:
+    0 0 0 1px rgba(110, 176, 255, .55),
+    0 0 32px rgba(59, 138, 255, .6),
+    0 8px 22px rgba(59, 138, 255, .35) !important;
+}
+
+html[data-theme="dark"] .btn:disabled,
+html[data-theme="dark"] .btn-primary:disabled,
+html[data-theme="dark"] button:disabled {
+  background: #2a2e36 !important;
+  color: rgba(255, 255, 255, .28) !important;
+  box-shadow: none !important;
+  border: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Icon buttons */
+html[data-theme="dark"] .nav-icon-btn,
+html[data-theme="dark"] .drawer-close,
+html[data-theme="dark"] .modal-close,
+html[data-theme="dark"] .cmd-modal-close,
+html[data-theme="dark"] .scroll-top-btn,
+html[data-theme="dark"] #fx-topbtn {
+  background: linear-gradient(180deg, #2c3342, #1c222e) !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--sn-neu-out-sm), var(--sn-gold-rim) !important;
+  border-radius: 50% !important;
+  color: var(--sn-text-2) !important;
+}
+html[data-theme="dark"] .nav-icon-btn:hover {
+  background: linear-gradient(180deg, #5aa0ff, #3b8aff) !important;
+  color: #fff !important;
+  box-shadow: var(--sn-blue-glow) !important;
+}
+html[data-theme="dark"] .nav-icon-btn.rail-toggle {
+  box-shadow: var(--sn-neu-out-sm), 0 0 14px rgba(59, 138, 255, .25), inset 0 1px 0 rgba(232, 201, 154, .25) !important;
+  color: var(--sn-blue-2) !important;
+}
+
+/* Pills */
+html[data-theme="dark"] .ping-pill,
+html[data-theme="dark"] .navbar-clock,
+html[data-theme="dark"] .user-pill,
+html[data-theme="dark"] .crumb-home,
+html[data-theme="dark"] .crumb-here,
+html[data-theme="dark"] .sidebar-guild {
+  background: linear-gradient(180deg, #2c3342, #1c222e) !important;
+  border: 1px solid rgba(255, 255, 255, .08) !important;
+  box-shadow: var(--sn-neu-out-sm) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ── Инпуты: inset + яркий blue focus ──────────────────────── */
+html[data-theme="dark"] .form-input,
+html[data-theme="dark"] .field-input,
+html[data-theme="dark"] .inp,
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="url"],
+html[data-theme="dark"] input[type="datetime-local"],
+html[data-theme="dark"] input[type="date"],
+html[data-theme="dark"] input[type="time"],
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .sidebar-search input,
+html[data-theme="dark"] .modal-input,
+html[data-theme="dark"] .modal-textarea,
+html[data-theme="dark"] .au-input,
+html[data-theme="dark"] .bs-input,
+html[data-theme="dark"] .tk-input,
+html[data-theme="dark"] .an-input {
+  background: var(--sn-well) !important;
+  border: 1px solid rgba(255, 255, 255, .08) !important;
+  border-radius: var(--sn-r) !important;
+  box-shadow: var(--sn-neu-in) !important;
+  color: var(--sn-text) !important;
+  transition: border-color .18s, box-shadow .18s !important;
+}
+
+html[data-theme="dark"] .form-input:focus,
+html[data-theme="dark"] .field-input:focus,
+html[data-theme="dark"] .inp:focus,
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus,
+html[data-theme="dark"] .sidebar-search input:focus,
+html[data-theme="dark"] .modal-input:focus,
+html[data-theme="dark"] .modal-textarea:focus {
+  outline: none !important;
+  border-color: rgba(110, 176, 255, .85) !important;
+  box-shadow: var(--sn-focus), var(--sn-neu-in) !important;
+}
+
+/* ── Тогглы: яркий blue glow ───────────────────────────────── */
+html[data-theme="dark"] .switch .track,
+html[data-theme="dark"] .switch .sl,
+html[data-theme="dark"] .toggle {
+  background: rgba(0, 0, 0, .45) !important;
+  border: 1px solid rgba(255, 255, 255, .06) !important;
+  box-shadow: var(--sn-neu-in) !important;
+}
+html[data-theme="dark"] .switch input:checked + .track,
+html[data-theme="dark"] .switch input:checked + .sl,
+html[data-theme="dark"] .toggle.on {
+  background: linear-gradient(180deg, #6eb0ff, #3b8aff 55%, #1f6ae0) !important;
+  border-color: transparent !important;
+  box-shadow:
+    0 0 0 1px rgba(110, 176, 255, .4),
+    0 0 22px rgba(59, 138, 255, .65),
+    0 0 8px rgba(59, 138, 255, .45) !important;
+}
+html[data-theme="dark"] .switch .track::after,
+html[data-theme="dark"] .switch .sl::after,
+html[data-theme="dark"] .switch .sl:before,
+html[data-theme="dark"] .toggle::after {
+  background: #fff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .4), 0 0 10px rgba(255, 255, 255, .25) !important;
+}
+
+/* ── Слайдер: blue track + gold handles ────────────────────── */
+html[data-theme="dark"] input[type="range"] {
+  height: 4px !important;
+  background: rgba(0, 0, 0, .4) !important;
+  box-shadow: var(--sn-neu-in) !important;
+  border-radius: 99px !important;
+}
+html[data-theme="dark"] input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, #3b8aff, #6eb0ff) !important;
+  height: 4px;
+  border-radius: 99px;
+  box-shadow: 0 0 10px rgba(59, 138, 255, .4);
+}
+html[data-theme="dark"] input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  width: 10px !important;
+  height: 22px !important;
+  border-radius: 6px !important;
+  background: linear-gradient(180deg, #e8c99a, #d4b07a) !important;
+  border: none !important;
+  box-shadow: 0 0 14px rgba(212, 176, 122, .65), 0 2px 4px rgba(0, 0, 0, .45) !important;
+  margin-top: -9px;
+}
+html[data-theme="dark"] input[type="range"]::-moz-range-thumb {
+  width: 10px !important;
+  height: 22px !important;
+  border-radius: 6px !important;
+  background: linear-gradient(180deg, #e8c99a, #d4b07a) !important;
+  border: none !important;
+  box-shadow: 0 0 14px rgba(212, 176, 122, .65) !important;
+}
+
+/* ── Progress: blue → gold tip ─────────────────────────────── */
+html[data-theme="dark"] .modern-progress,
+html[data-theme="dark"] .modern-progress-bar,
+html[data-theme="dark"] .studio-preview .prog {
+  height: 6px !important;
+  background: rgba(0, 0, 0, .4) !important;
+  box-shadow: var(--sn-neu-in) !important;
+  border-radius: 99px !important;
+  overflow: visible !important;
+}
+html[data-theme="dark"] .modern-progress > span,
+html[data-theme="dark"] .modern-progress-bar > span,
+html[data-theme="dark"] .studio-preview .prog > i {
+  background: linear-gradient(90deg, #3b8aff 0%, #6eb0ff 50%, #e8c99a 100%) !important;
+  box-shadow: 0 0 12px rgba(59, 138, 255, .5), 3px 0 12px rgba(232, 201, 154, .55) !important;
+  border-radius: 99px !important;
+}
+
+/* ── Nav / tabs ────────────────────────────────────────────── */
+html[data-theme="dark"] .nav-link {
+  border-radius: var(--sn-r) !important;
+}
+html[data-theme="dark"] .nav-link:hover {
+  background: rgba(255, 255, 255, .05) !important;
+}
+html[data-theme="dark"] .nav-link.active {
+  background: linear-gradient(135deg, #5aa0ff, #3b8aff 55%, #1f6ae0) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow:
+    0 0 0 1px rgba(110, 176, 255, .35),
+    0 0 22px rgba(59, 138, 255, .45),
+    0 4px 14px rgba(47, 125, 255, .3) !important;
+}
+html[data-theme="dark"] .tab-btn.active {
+  background: var(--sn-blue) !important;
+  box-shadow: 0 0 18px rgba(59, 138, 255, .45) !important;
+}
+
+/* Select / picker selected = gold glow */
+html[data-theme="dark"] .sshd-pop .item.active,
+html[data-theme="dark"] .sshd-item.active,
+html[data-theme="dark"] .kbd-palette-item.selected,
+html[data-theme="dark"] .picker-item.active,
+html[data-theme="dark"] .aes-item.active,
+html[data-theme="dark"] .at-item.active {
+  background: linear-gradient(90deg, rgba(212, 176, 122, .32), rgba(212, 176, 122, .08)) !important;
+  color: var(--sn-gold-2) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 201, 154, .35),
+    0 0 16px rgba(212, 176, 122, .2) !important;
+}
+
+/* Table rows: blue hover, gold selected */
+html[data-theme="dark"] table.data-table tbody tr:hover,
+html[data-theme="dark"] table.table tbody tr:hover,
+html[data-theme="dark"] .table-wrap tbody tr:hover {
+  box-shadow: inset 0 0 0 1px rgba(59, 138, 255, .45), 0 0 14px rgba(59, 138, 255, .12);
+  background: rgba(59, 138, 255, .06) !important;
+}
+html[data-theme="dark"] table.data-table tbody tr.selected,
+html[data-theme="dark"] table.table tbody tr.selected,
+html[data-theme="dark"] .table-wrap tbody tr.selected,
+html[data-theme="dark"] tr[aria-selected="true"] {
+  box-shadow: inset 0 0 0 1px rgba(232, 201, 154, .5), 0 0 16px rgba(212, 176, 122, .15);
+  background: rgba(212, 176, 122, .08) !important;
+}
+
+/* ── Toast: cream + gold glow ──────────────────────────────── */
+html[data-theme="dark"] .toast {
+  background: linear-gradient(180deg, #f6ecda, #e8d5b5) !important;
+  color: #2a2418 !important;
+  border: none !important;
+  border-radius: var(--sn-r-pill) !important;
+  box-shadow:
+    0 0 0 1px rgba(232, 201, 154, .4),
+    0 0 28px rgba(212, 176, 122, .5),
+    0 12px 32px rgba(0, 0, 0, .35) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-theme="dark"] .toast > i,
+html[data-theme="dark"] .toast-check {
+  background: #30d158 !important;
+  box-shadow: 0 0 12px rgba(48, 209, 88, .5) !important;
+}
+
+/* ── Modal: floating deep shadow + blue header ─────────────── */
+html[data-theme="dark"] .modal-box,
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .cmd-modal,
+html[data-theme="dark"] .kbd-palette-panel,
+html[data-theme="dark"] .drawer {
+  background: linear-gradient(180deg, #262d3c 0%, #181c26 100%) !important;
+  border: 1px solid rgba(255, 255, 255, .1) !important;
+  border-radius: var(--sn-r-lg) !important;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, .65),
+    0 0 40px rgba(59, 138, 255, .08),
+    inset 0 1px 0 rgba(255, 255, 255, .08) !important;
+}
+html[data-theme="dark"] .modal-head,
+html[data-theme="dark"] .modal-card > .modal-head {
+  background: linear-gradient(180deg, rgba(59, 138, 255, .28), transparent) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+}
+
+/* Empty / inset wells */
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .at-empty,
+html[data-theme="dark"] .ma-empty,
+html[data-theme="dark"] .nav-empty {
+  box-shadow: var(--sn-neu-in) !important;
+  background: rgba(0, 0, 0, .25) !important;
+  border-radius: var(--sn-r-lg) !important;
+}
+
+/* Badges gold */
+html[data-theme="dark"] .badge.tone-warning,
+html[data-theme="dark"] .badge.tone-warn {
+  background: rgba(212, 176, 122, .16) !important;
+  color: var(--sn-gold-2) !important;
+  border-color: rgba(232, 201, 154, .3) !important;
+  box-shadow: 0 0 14px rgba(212, 176, 122, .22) !important;
+}
+
+html[data-theme="dark"] .sidebar-version i { color: var(--sn-gold) !important; }
+
+/* Focus visible */
+html[data-theme="dark"] :focus-visible {
+  outline: none !important;
+  box-shadow: var(--sn-focus) !important;
+}
+
+/* Boot splash soft neu */
+html[data-theme="dark"] #bootSplash {
+  background: #0e1014 !important;
+}
+html[data-theme="dark"] .boot-logo {
+  box-shadow: var(--sn-blue-glow), inset 0 1px 0 rgba(232, 201, 154, .3) !important;
+}
+
+/* Mobile nav */
+html[data-theme="dark"] .mobile-nav,
+html[data-theme="dark"] .mobile-menu {
+  background: rgba(22, 26, 34, .92) !important;
+  border: 1px solid rgba(232, 201, 154, .14) !important;
+  box-shadow: var(--sn-neu-out), 0 0 24px rgba(212, 176, 122, .1) !important;
+}

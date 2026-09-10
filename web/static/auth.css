@@ -40,35 +40,35 @@ body {
   margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px; line-height: 1.55; color: var(--text);
-  background:
-    linear-gradient(180deg, rgba(10, 12, 24, .08) 0%, rgba(7, 9, 18, .3) 100%),
-    url('/static/backgrounds/vision-wallpaper.jpg') center / cover no-repeat fixed,
-    var(--bg);
+  background-color: #0e1014;
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -10%, rgba(212, 176, 122, .16), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 15% 50%, rgba(59, 138, 255, .1), transparent 50%),
+    linear-gradient(180deg, #151820 0%, #0e1014 100%);
   -webkit-font-smoothing: antialiased; padding: 28px 16px 40px;
 }
 a { color: var(--ac); text-decoration: none; }
 a:hover { text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
-:focus-visible { outline: 2.5px solid var(--ac2); outline-offset: 2px; border-radius: 6px; }
+:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(59, 138, 255, .55), 0 0 22px rgba(59, 138, 255, .45); border-radius: 8px; }
 
-/* ── Фон: мягкие световые пятна (вместо сетки) ── */
+/* ── Фон Soft Neu: blue + gold ambient ── */
 .bg-grid {
   position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
   background:
-    radial-gradient(52vmax 52vmax at -12vmax -14vmax, color-mix(in srgb, var(--ac) 22%, transparent), transparent 60%),
-    radial-gradient(44vmax 44vmax at 108vmax 12vmax, color-mix(in srgb, #5e5ce6 18%, transparent), transparent 62%);
+    radial-gradient(52vmax 52vmax at -12vmax -14vmax, rgba(59, 138, 255, .16), transparent 60%),
+    radial-gradient(44vmax 44vmax at 108vmax 80%, rgba(212, 176, 122, .12), transparent 62%);
 }
 body::before {
-  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(6, 8, 14, .48) 0%, rgba(5, 7, 12, .64) 100%),
-    url('/static/backgrounds/vision-wallpaper.jpg') center / cover no-repeat;
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .45;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  background-size: 180px 180px; mix-blend-mode: soft-light;
 }
-html[data-theme="light"] body::before {
-  background:
-    linear-gradient(180deg, rgba(238, 241, 246, .74) 0%, rgba(233, 237, 244, .82) 100%),
-    url('/static/backgrounds/vision-wallpaper.jpg') center / cover no-repeat;
+html[data-theme="light"] body {
+  background-color: #d6d8e0;
+  background-image: linear-gradient(180deg, #e4e6ec, #d0d3dc);
 }
+html[data-theme="light"] body::before { opacity: .18; }
 
 /* ── Бренд над карточкой ── */
 .brand { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 18px; text-align: center; }
@@ -84,11 +84,14 @@ html[data-theme="light"] body::before {
 /* ── Карточка: матовое стекло ── */
 .auth-wrap { position: relative; z-index: 1; width: 100%; max-width: 432px; display: flex; flex-direction: column; align-items: center; }
 .card {
-  width: 100%; padding: 22px; border-radius: 28px;
-  background: var(--surface);
-  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .06);
+  width: 100%; padding: 22px; border-radius: 16px;
+  background: linear-gradient(165deg, #252b38 0%, #1a1f2a 60%, #161b24 100%);
+  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  border: 1px solid rgba(232, 201, 154, .18);
+  box-shadow:
+    0 0 50px rgba(212, 176, 122, .12),
+    8px 12px 32px rgba(0, 0, 0, .5),
+    inset 0 1px 0 rgba(232, 201, 154, .14);
   animation: cardIn .45s var(--ease) both;
 }
 @keyframes cardIn { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }

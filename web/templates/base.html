@@ -24,7 +24,7 @@
     <style>
       /* П.5 — критическая сцена: до прихода style.css фон уже фирменный,
          межстраничный белый экран исключён физически. */
-      html { background: #121418; color-scheme: dark; }
+      html { background: #0e1014; color-scheme: dark; }
       html[data-theme="light"] { background: #d6d8e0; color-scheme: light; }
       body { background: transparent; margin: 0; }
     </style>
@@ -39,6 +39,7 @@
     <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
     <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
+    <link rel="stylesheet" href="/static/soft-neu.css?v={{ static_v('soft-neu.css') }}">
 </head>
 <body>
     <script nonce="{{ csp_nonce }}">
@@ -270,7 +271,7 @@
                 <div class="sidebar-spark" id="sidebarSpark" aria-hidden="true"></div>
                 <div class="sidebar-version">
                     <i class="fas fa-bolt"></i>
-                    HAKUMO <span class="mono">v3.0</span> · Soft Neu{% if build_commit %} <span class="mono" title="Сборка панели (git-коммит)">{{ build_commit }}</span>{% endif %}
+                    HAKUMO <span class="mono">v3.0</span> · Soft Neu Kit{% if build_commit %} <span class="mono" title="Сборка панели (git-коммит)">{{ build_commit }}</span>{% endif %}
                 </div>
             </div>
         </aside>
