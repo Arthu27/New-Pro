@@ -1,37 +1,37 @@
 /* ============================================================================
-   HAKUMO · «Living Glass» — страницы входа/регистрации
-   Frosted-карточка на жилом фоне, акцент electric blue.
+   HAKUMO · «Soft Neu» — страницы входа/регистрации
+   Soft Neu + Glass: charcoal, blue glow, warm gold.
    ============================================================================ */
 
 :root {
-  --bg: #d8dde8;
+  --bg: #d6d8e0;
   --surface: rgba(255, 255, 255, .62);
   --surface2: rgba(255, 255, 255, 0.55);
-  --line: rgba(40, 48, 64, 0.12); --line2: rgba(40, 48, 64, 0.2);
-  --text: #161a22; --text2: rgba(40, 48, 64, 0.68); --text3: rgba(40, 48, 64, 0.44);
-  --muted: rgba(40, 48, 64, 0.44); --faint: rgba(40, 48, 64, 0.3);
-  --ac: #2b7fff; --ac2: #5aa2ff; --ac3: #c78f25;
-  --ac-grad: linear-gradient(135deg, #5aa2ff 0%, #2b7fff 55%, #1a5fd4 100%);
-  --ac-line: rgba(43, 127, 255, 0.34);
+  --line: rgba(36, 42, 56, 0.12); --line2: rgba(36, 42, 56, 0.2);
+  --text: #161820; --text2: rgba(36, 42, 56, 0.68); --text3: rgba(36, 42, 56, 0.44);
+  --muted: rgba(36, 42, 56, 0.44); --faint: rgba(36, 42, 56, 0.3);
+  --ac: #2f7dff; --ac2: #5aa0ff; --ac3: #d4b07a;
+  --ac-grad: linear-gradient(135deg, #5aa0ff 0%, #2f7dff 55%, #1a5fd0 100%);
+  --ac-line: rgba(47, 125, 255, 0.38);
   --ok: #34a853; --err: #e5352b; --warn: #e08600;
-  --glass-blur: blur(28px) saturate(1.35);
-  --shadow: 0 30px 80px rgba(20, 24, 40, 0.18);
-  --glow: 0 10px 30px rgba(43, 127, 255, 0.35);
+  --glass-blur: blur(24px) saturate(1.25);
+  --shadow: 0 22px 56px rgba(20, 24, 40, 0.18);
+  --glow: 0 0 22px rgba(47, 125, 255, 0.45);
   --ease: cubic-bezier(0.25, 0.6, 0.3, 1);
 }
 html[data-theme="dark"] {
-  --bg: #0a0c10;
-  --surface: rgba(28, 32, 42, .58);
-  --surface2: rgba(255, 255, 255, 0.055);
-  --line: rgba(255, 255, 255, 0.10); --line2: rgba(255, 255, 255, 0.16);
-  --text: #f4f5f8; --text2: rgba(230, 233, 240, 0.64); --text3: rgba(230, 233, 240, 0.4);
-  --muted: rgba(230, 233, 240, 0.4); --faint: rgba(230, 233, 240, 0.28);
-  --ac: #2b8cff; --ac2: #6bb4ff; --ac3: #e8b64c;
-  --ac-grad: linear-gradient(135deg, #6bb4ff 0%, #2b8cff 55%, #1a6fe0 100%);
-  --ac-line: rgba(43, 140, 255, 0.42);
+  --bg: #121418;
+  --surface: rgba(28, 32, 40, .72);
+  --surface2: rgba(255, 255, 255, 0.045);
+  --line: rgba(255, 255, 255, 0.08); --line2: rgba(255, 255, 255, 0.14);
+  --text: #f2f3f5; --text2: rgba(226, 230, 236, 0.62); --text3: rgba(226, 230, 236, 0.4);
+  --muted: rgba(226, 230, 236, 0.4); --faint: rgba(226, 230, 236, 0.28);
+  --ac: #3b8aff; --ac2: #6eb0ff; --ac3: #d4b07a;
+  --ac-grad: linear-gradient(135deg, #6eb0ff 0%, #3b8aff 55%, #1f6ae0 100%);
+  --ac-line: rgba(59, 138, 255, 0.45);
   --ok: #30d158; --err: #ff453a; --warn: #ffd60a;
-  --shadow: 0 34px 90px rgba(0, 0, 0, 0.55);
-  --glow: 0 12px 36px rgba(43, 140, 255, 0.42);
+  --shadow: 0 28px 70px rgba(0, 0, 0, 0.58);
+  --glow: 0 0 26px rgba(59, 138, 255, 0.5);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
