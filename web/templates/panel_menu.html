@@ -325,10 +325,16 @@ function saveLayout(){
   }).catch(function(){ toast('Ошибка сети', false); });
 }
 
+var _pmLoading = true;
 function render(){
   if (curRole === 'layout') { renderLayout(); return; }
   var el = document.getElementById('pm-list');
-  if(!MENU.length){ el.innerHTML = '<div class="pm-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'; return; }
+  if(!MENU.length){
+    el.innerHTML = _pmLoading
+      ? '<div class="pm-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'
+      : '<div class="pm-empty"><i class="fas fa-triangle-exclamation"></i>Не удалось загрузить меню. Обновите страницу.</div>';
+    return;
+  }
   var q = (document.getElementById('pm-search-input').value || '').toLowerCase().trim();
   var html = '';
   MENU.forEach(function(g){
@@ -449,10 +455,13 @@ function savePanel(){
 }
 
 function load(){
+  _pmLoading = true;
+  render();
   fetch('/api/panel-menu')
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if(!d.success){ toast('Не удалось загрузить', false); return; }
+      _pmLoading = false;
+      if(!d.success){ toast('Не удалось загрузить', false); render(); return; }
       MENU = d.menu || [];
       CFG = d.config || {};
       var lay = d.layout || {hidden_pages:[], order:{}, group_order:[]};
@@ -466,7 +475,11 @@ function load(){
       refreshState();
       render();
     })
-    .catch(function(){ toast('Ошибка загрузки', false); });
+    .catch(function(){
+      _pmLoading = false;
+      toast('Ошибка загрузки', false);
+      render();
+    });
 }
 
 load();

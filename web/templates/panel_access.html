@@ -306,9 +306,11 @@ function updateStats(){
   document.getElementById('cnt-uye').textContent = c.uye;
 }
 
+var _paLoaded = false;
 function renderRoles(){
   var host = document.getElementById('pa-list');
-  if(!PA_ROLES.length){ host.innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-spinner fa-spin"></i>Загружаем роли сервера...</div>'; return; }
+  if(!_paLoaded){ host.innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-spinner fa-spin"></i>Загружаем роли сервера...</div>'; return; }
+  if(!PA_ROLES.length){ host.innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-inbox"></i>Ролей сервера пока нет</div>'; return; }
   var q = (document.getElementById('pa-search-input').value || '').toLowerCase().trim();
   var list = PA_ROLES.filter(function(r){ if(!q) return true; return (r.name||'').toLowerCase().indexOf(q) !== -1; });
   if(!list.length){ host.innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-search"></i>Ролей с таким названием нет</div>'; return; }
@@ -352,14 +354,18 @@ function saveRole(sel){
 }
 
 function loadPA(){
+  _paLoaded = false;
+  renderRoles();
   fetch('/api/role-map')
     .then(function(r){ return r.json(); })
     .then(function(d){
       PA_ROLES = d.guild_roles || [];
       PA_MAP = d.role_map || {};
+      _paLoaded = true;
       renderRoles();
     })
     .catch(function(){
+      _paLoaded = true;
       document.getElementById('pa-list').innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить роли сервера</div>';
     });
 }

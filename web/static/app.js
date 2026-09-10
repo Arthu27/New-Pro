@@ -3825,7 +3825,7 @@
     btn.type = 'button';
     btn.className = 'aes-btn';
     btn.setAttribute('aria-haspopup', 'listbox');
-    btn.innerHTML = '<span class="aes-value"></span><span class="aes-arrow"></span>';
+    btn.innerHTML = '<span class="aes-value"></span><span class="aes-arrow"><i class="fas fa-chevron-down"></i></span>';
     shell.appendChild(btn);
     var parent = orig.parentNode;
     if (!parent) return;

@@ -7,15 +7,20 @@
    там бэкдроп перекрывает страницу намеренно. */
 (function () {
   var INTER = 'button, a, [role="button"], [role="option"], input, select, textarea, label,' +
-              ' summary, .switch, .nav-link, [data-bs-toggle], [onclick], .aes-opt';
+              ' summary, .switch, .nav-link, [data-bs-toggle], [onclick], .aes-opt,' +
+              ' .sshd-row, .sshd-btn, .sshd-search, .gd-combo-item, .gd-combo-in, .mpd-opt';
 
   function overlayIntentional(x, y) {
     /* Открытые оверлеи: модалка, дровер, палитра, сплэш — не лечим.
-       .aes-panel.open — открытый кастомный дропдаун (HakumoSelect): клики
-       по его опциям — законные клики в интерактив, а не «промах».
-       Без этого гарда пробрасывала тап по опции на кнопку ПОД панелью —
-       открывался чужой селект («настройки переключаются сами»). */
-    var open = document.querySelector('.modal-overlay.open, .drawer.open, .kbd-palette:not([hidden]), .aes-panel.open, .sidebar-backdrop.show, .fab.backdrop.show, .chat-drawer-backdrop.show, .tour-mask.show');
+       .aes-panel.open / .sshd.open / .gd-combo.open / .mpd.open — кастомные
+       дропдауны: клики по опциям законные, иначе гард пробрасывает тап на
+       кнопку ПОД панелью («настройки переключаются сами»). */
+    var open = document.querySelector(
+      '.modal-overlay.open, .drawer.open, .kbd-palette:not([hidden]),' +
+      ' .aes-panel.open, .sshd.open, .sshd-pop-float:not([hidden]),' +
+      ' .gd-combo.open, .mpd.open, .mpd.mpd-floating,' +
+      ' .sidebar-backdrop.show, .fab.backdrop.show, .chat-drawer-backdrop.show, .tour-mask.show'
+    );
     if (open) return true;
     var boot = document.getElementById('bootSplash');
     return !!(boot && !boot.classList.contains('out'));
