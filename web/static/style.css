@@ -133,9 +133,9 @@
 }
 
 html[data-theme="dark"] {
-  --bg: #121418;
-  --bg-2: #171a1f;
-  --bg-3: #1d2128;
+  --bg: #03050a;
+  --bg-2: #070b14;
+  --bg-3: #0c1220;
   --mirror: rgba(28, 32, 40, .72);
   --surface: var(--mirror);
   --surface-1: var(--mirror);
