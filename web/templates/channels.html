@@ -128,6 +128,7 @@
           <p id="detail-topic-text"></p>
         </div>
         <div class="ch-detail-actions">
+          <a class="btn-confirm" id="btnOpenInChat" href="/chat" hidden style="text-decoration:none"><i class="fas fa-comments"></i> Открыть в чате</a>
           <button class="btn-confirm" id="btnEditFromDetail" type="button"><i class="fas fa-pen"></i> Редактировать</button>
           <button class="btn-cancel btn-red" id="btnDeleteFromDetail" type="button"><i class="fas fa-trash"></i> Удалить</button>
         </div>
@@ -692,6 +693,8 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('ch-detail').classList.add('is-empty');
     $('ch-detail-placeholder').hidden = false;
     $('ch-detail-content').hidden = true;
+    var openChat = $('btnOpenInChat');
+    if (openChat) openChat.hidden = true;
     document.querySelectorAll('#channel-list .ch-row').forEach(function (row) {
       row.classList.remove('is-selected');
       row.setAttribute('aria-selected', 'false');
@@ -726,8 +729,14 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('ch-detail').classList.remove('is-empty');
     $('ch-detail-placeholder').hidden = true;
     $('ch-detail-content').hidden = false;
+    var openChat = $('btnOpenInChat');
+    if (openChat) {
+      var canChat = (t === 'text' || t === 'news' || t === 'forum');
+      openChat.hidden = !canChat;
+      openChat.href = '/chat?channel=' + encodeURIComponent(String(c.id));
+    }
     document.querySelectorAll('#channel-list .ch-row').forEach(function (row) {
-      var selected = row.getAttribute('data-id') === String(c.id);
+      var selected = String(row.getAttribute('data-id')) === String(c.id);
       row.classList.toggle('is-selected', selected);
       row.setAttribute('aria-selected', selected ? 'true' : 'false');
     });

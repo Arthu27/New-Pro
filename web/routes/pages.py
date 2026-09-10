@@ -4,7 +4,7 @@
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _process_action, _log, _json_snow,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -43,7 +43,8 @@ def register(ctx):
                 initial =_data if isinstance (_data ,list )else ((_data or {}).get ('channels')or [])
         except Exception as _ex :
             _log .debug ('channels_page: первый рендер каналов: %s',_ex )
-        return render_template ('channels.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID ,initial_channels =initial )
+        # Snowflake-safe для Jinja tojson: большие id — строками
+        return render_template ('channels.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID ,initial_channels =_json_snow (initial ))
 
 
     @app .route ('/mod-history')

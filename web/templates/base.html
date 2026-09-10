@@ -497,7 +497,14 @@
       if (v === null) return undefined;
       if (v === 'true') return true;
       if (v === 'false') return false;
-      if (/^-?\d+$/.test(v)) return parseInt(v, 10);
+      /* Discord snowflakes (17–19 digits) and any int ≥ 2^53 lose precision
+         in Number/parseInt — keep them as strings. Small ints stay numbers. */
+      if (/^-?\d+$/.test(v)) {
+        var digits = v[0] === '-' ? v.slice(1) : v;
+        if (digits.length >= 16) return v;
+        var num = parseInt(v, 10);
+        return String(num) === v ? num : v;
+      }
       return v;
     }
     function run(el, e) {

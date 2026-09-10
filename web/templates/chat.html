@@ -1044,11 +1044,13 @@ async function loadGuilds() {
 }
 
 function selectGuild(gid, scrollTo) {
+  gid = String(gid == null ? '' : gid);
+  if (!gid) return;
   _activeGuildId = gid;
   document.querySelectorAll('.guild-icon').forEach(function(el){ el.classList.remove('active'); });
   var gi = document.getElementById('gi-' + gid);
   if (gi) gi.classList.add('active');
-  var g = _guilds.find(function(x){ return x.id === gid; });
+  var g = _guilds.find(function(x){ return String(x.id) === gid; });
   document.getElementById('sidebar-guild-name').textContent = g ? g.name : gid;
   _channelId = null; _dmMode = false; _lastMsgId = null; _fetchSeq++;
   _seenIds = {}; _unreadNew = 0; _lastMsgData = null; _lastDmData = null;
@@ -1119,8 +1121,18 @@ async function loadChannels(gid) {
             '<i class="fas ' + icon + ' ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
         }).join('');
     }
-    if (text.length) selectChannel(text[0].id, text[0].name);
-    else hookChatScroll();
+    if (text.length) {
+      var want = '';
+      try { want = String(new URLSearchParams(location.search).get('channel') || ''); } catch (e) {}
+      var pick = null;
+      if (want) {
+        for (var i = 0; i < text.length; i++) {
+          if (String(text[i].id) === want) { pick = text[i]; break; }
+        }
+      }
+      if (!pick) pick = text[0];
+      selectChannel(pick.id, pick.name);
+    } else hookChatScroll();
   } catch(e) {}
 }
 
@@ -1129,6 +1141,9 @@ async function loadMembers(gid) {
 }
 
 function selectChannel(id, name) {
+  id = String(id == null ? '' : id);
+  name = String(name == null ? '' : name);
+  if (!id) return;
   if (typeof window.__chatCloseDrawers === 'function') window.__chatCloseDrawers();
   _channelId = id; _dmMode = false; _lastMsgId = null; _fetchSeq++;
   _seenIds = {}; _unreadNew = 0; _lastMsgData = null; _lastDmData = null;
@@ -1150,6 +1165,11 @@ function selectChannel(id, name) {
   loadMessages();
   if (_autoRefresh) clearInterval(_autoRefresh);
   _autoRefresh = setInterval(loadMessages, 2000);
+  try {
+    var u = new URL(location.href);
+    u.searchParams.set('channel', id);
+    history.replaceState(null, '', u.pathname + u.search);
+  } catch (e) {}
 }
 
 // ── СООБЩЕНИЯ ──────────────────────────────────────────────────────────────
@@ -1521,6 +1541,9 @@ async function openDmFromInput() {
 }
 
 async function openDm(userId, userName) {
+  userId = String(userId == null ? '' : userId);
+  userName = String(userName == null ? '' : userName);
+  if (!userId) return;
   if (typeof window.__chatCloseDrawers === 'function') window.__chatCloseDrawers();
   _dmMode = true; _dmUserId = userId; _channelId = null; _lastMsgId = null; _fetchSeq++;
   _seenIds = {}; _unreadNew = 0; _lastDmData = null; _lastMsgData = null;
@@ -1532,11 +1555,13 @@ async function openDm(userId, userName) {
   if (!existing) {
     var div = document.createElement('div');
     div.className = 'ch-item active'; div.id = 'dm-' + userId;
-    div.onclick = function(){ openDm(userId, userName); };
+    div.setAttribute('data-act', 'openDm');
+    div.setAttribute('data-a1', userId);
+    div.setAttribute('data-a2', userName);
     div.innerHTML = '<i class="fas fa-user ch-icon"></i><span class="ch-name">' + escHtml(userName) + '</span>';
     document.getElementById('dm-list').appendChild(div);
   } else { existing.classList.add('active'); }
-  var mem = _allMembers.find(function(x){ return x.id === userId; });
+  var mem = _allMembers.find(function(x){ return String(x.id) === userId; });
   var icon = mem && mem.avatar
     ? '<img src="' + mem.avatar + '" alt="" style="width:22px;height:22px;border-radius:50%">'
     : '<i class="fas fa-user"></i>';

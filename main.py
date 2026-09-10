@@ -864,7 +864,27 @@ def start_tunnel():
 
 
 _synced = False
-VOICE_CHANNEL_ID = None
+# Голосовая комната, в которой бот остаётся 24/7 (0 / пусто = не заходить).
+# Приоритет: env VOICE_CHANNEL_ID → config/voice_stay.json → None
+def _resolve_voice_channel_id():
+    raw = (os.environ.get('VOICE_CHANNEL_ID') or '').strip()
+    if raw and raw not in ('0', 'none', 'None'):
+        try:
+            return int(raw) or None
+        except (TypeError, ValueError):
+            pass
+    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config', 'voice_stay.json')
+    try:
+        if os.path.isfile(cfg_path):
+            with open(cfg_path, encoding='utf-8') as f:
+                data = json.load(f) or {}
+            cid = data.get('channel_id') or data.get('VOICE_CHANNEL_ID') or 0
+            return int(str(cid).strip() or 0) or None
+    except Exception as _ex:
+        _log.debug('VOICE_CHANNEL_ID config: %s', _ex)
+    return None
+
+VOICE_CHANNEL_ID = _resolve_voice_channel_id()
 
 async def _monitor_voice():
     """Держим голосовое подключение живым — переподключаемся при падении, каждые 4 минуты играем тишину."""

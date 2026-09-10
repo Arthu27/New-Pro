@@ -121,6 +121,15 @@ src = open(os.path.join(ROOT, 'web', 'templates', 'antifake.html'),
 check('Number(uid)' not in src and 'user_id: String(uid)' in src,
       'antifake: user_id строкой при очистке страйков')
 
+base = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('digits.length >= 16' in base,
+      'base.html data-act: snowflake ≥16 цифр остаётся строкой')
+check("if (/^-?\\d+$/.test(v)) return parseInt(v, 10);" not in base,
+      'base.html: нет слепого parseInt всех цифр')
+chat = open(os.path.join(ROOT, 'web', 'templates', 'chat.html'), encoding='utf-8').read()
+check("id = String(id == null ? '' : id)" in chat,
+      'chat.selectChannel: id принудительно строкой')
+
 print('== 4. MAIN_GUILD_ID: нормализация цифр ==')
 import web.app as _wa  # noqa: E402
 for raw, want in (('12345 ', '12345'), ('"12345"', '12345'),
