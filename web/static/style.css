@@ -17,7 +17,7 @@
   --bg-2: #eef0f5;
   --bg-3: #dfe3ec;
   /* ЗЕРКАЛО: цветная подложка + отражающий блик, одним background */
-  --mirror: rgba(255, 255, 255, .6);
+  --mirror: rgba(255, 255, 255, .56);
   --surface: var(--mirror);
   --surface-1: var(--mirror);
   --surface-2: rgba(255, 255, 255, .46);
@@ -77,7 +77,7 @@
   --shadow-lift: 0 22px 54px rgba(24, 30, 48, .18);
   --mirror-shadow: 0 16px 40px rgba(24, 30, 48, .13), inset 0 1px 0 rgba(255, 255, 255, .7);
 
-  --glass-blur: blur(24px) saturate(1.45);
+  --glass-blur: blur(24px) saturate(1.6);
   --glass-edge: rgba(255, 255, 255, .55);
   --gloss-top: rgba(255, 255, 255, .5);
   --glass-hi: inset 0 1px 0 rgba(255, 255, 255, .6);
@@ -92,8 +92,8 @@
   --r-lg: 20px;
 
   --ac-grad: linear-gradient(135deg, #409cff 0%, #0071e4 52%, #5e5ce6 100%);
-  --ac-glow: 0 10px 30px rgba(0, 113, 228, .34);
-  --stat-glow: 0 12px 40px rgba(0, 113, 228, .24);
+  --ac-glow: 0 10px 32px rgba(0, 113, 228, .46);
+  --stat-glow: 0 14px 44px rgba(0, 113, 228, .34);
 
   --fs-xs: 11px;
   --fs-sm: 12px;
@@ -117,7 +117,7 @@ html[data-theme="dark"] {
   --bg: #07090f;
   --bg-2: #0b0e16;
   --bg-3: #121624;
-  --mirror: rgba(20, 24, 36, .58);
+  --mirror: rgba(25, 31, 50, .52);
   --surface: var(--mirror);
   --surface-1: var(--mirror);
   --surface-2: rgba(255, 255, 255, .06);
@@ -196,39 +196,36 @@ body {
   font-size: var(--fs-md);
   line-height: 1.55;
   color: var(--text);
-  background: var(--bg);
+  background:
+    linear-gradient(180deg, rgba(243, 246, 251, .42) 0%, rgba(236, 240, 247, .58) 100%),
+    url('/static/backgrounds/vision-wallpaper.jpg') center / cover no-repeat fixed;
+  background-color: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100vh;
 }
 
-/* ── 2a. ФОТО-ФОН: живой пейзаж под зеркальным стеклом ─────── */
-body::before {
-  content: '';
-  position: fixed; inset: 0; z-index: -3; pointer-events: none;
+/* ── 2a. ФОТО-ФОН: аврора на самом body — слои z=-N больше не нужны ── */
+html[data-theme="dark"] body {
   background:
-    linear-gradient(180deg, rgba(240, 243, 248, .68) 0%, rgba(233, 237, 244, .82) 100%),
-    url('/static/backgrounds/vision-wallpaper.jpg') center / cover no-repeat;
-}
-html[data-theme="dark"] body::before {
-  background:
-    linear-gradient(180deg, rgba(6, 8, 15, .32) 0%, rgba(4, 6, 12, .52) 100%),
-    url('/static/backgrounds/vision-wallpaper.jpg') center / cover no-repeat;
+    linear-gradient(180deg, rgba(10, 12, 24, .06) 0%, rgba(7, 9, 18, .26) 100%),
+    url('/static/backgrounds/vision-wallpaper.jpg') center / cover no-repeat fixed;
+  background-color: var(--bg);
 }
 /* Движущиеся световые блики поверх фото (зеркало «дышит») */
 .bg-aurora { position: fixed; inset: -12vmax; z-index: -2; pointer-events: none; overflow: hidden; }
 .bg-aurora i {
   position: absolute; display: block; border-radius: 50%;
-  filter: blur(80px); opacity: .26; will-change: transform;
+  filter: blur(80px); opacity: .5; will-change: transform;
   animation: vgDrift 46s var(--ease) infinite alternate;
 }
 .bg-aurora i:nth-child(1) {
   width: 56vmax; height: 56vmax; left: -14vmax; top: -18vmax;
-  background: radial-gradient(circle at 35% 35%, rgba(94, 92, 230, .42), rgba(10, 132, 255, .2) 55%, transparent 72%);
+  background: radial-gradient(circle at 35% 35%, rgba(124, 105, 255, .6), rgba(30, 145, 255, .34) 55%, transparent 72%);
 }
 .bg-aurora i:nth-child(2) {
   width: 52vmax; height: 52vmax; right: -16vmax; bottom: -20vmax;
-  background: radial-gradient(circle at 60% 40%, rgba(100, 210, 255, .28), rgba(48, 209, 88, .12) 58%, transparent 74%);
+  background: radial-gradient(circle at 60% 40%, rgba(70, 210, 255, .5), rgba(186, 100, 255, .3) 58%, transparent 74%);
   animation-delay: -14s; animation-duration: 58s;
 }
 .bg-aurora i:nth-child(3) {
@@ -312,8 +309,13 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
   width: 44px; height: 44px; flex: 0 0 44px; border-radius: 15px; overflow: hidden;
   box-shadow: var(--ac-glow), inset 0 1px 0 rgba(255, 255, 255, .35);
 }
-.brand-title { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.brand-title {
+  font-size: 15px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15;
+  background: linear-gradient(92deg, #8ab8ff 0%, #b08cff 55%, #6fe3ff 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
 .brand-sub { font-size: 10.5px; color: var(--text-3); letter-spacing: .04em; }
+html[data-theme="light"] .brand-title { background: linear-gradient(92deg, #0071e4 0%, #7c3aed 55%, #0891b2 100%); -webkit-background-clip: text; background-clip: text; }
 
 .sidebar-guild {
   display: flex; align-items: center; gap: 10px; margin: 0 2px 10px; padding: 8px 10px;
@@ -764,10 +766,11 @@ html[data-theme="dark"] {
   width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px;
   display: grid; place-items: center; font-size: 16px;
   color: var(--ac);
-  background: color-mix(in srgb, currentColor 13%, transparent);
-  transition: background .16s;
+  background: color-mix(in srgb, currentColor 17%, transparent);
+  box-shadow: 0 4px 18px color-mix(in srgb, currentColor 22%, transparent);
+  transition: background .16s, box-shadow .16s;
 }
-.kpi:hover .kpi-icon, .cc-tile:hover .cc-ico { background: color-mix(in srgb, currentColor 19%, transparent); }
+.kpi:hover .kpi-icon, .cc-tile:hover .cc-ico { background: color-mix(in srgb, currentColor 23%, transparent); box-shadow: 0 6px 24px color-mix(in srgb, currentColor 32%, transparent); }
 .kpi:hover .kpi-icon { transform: scale(1.06); }
 .kpi.tone-ok .kpi-icon, .stat-icon.ok { color: var(--ok); }
 .kpi.tone-warn .kpi-icon { color: var(--warn); }
@@ -2294,9 +2297,8 @@ html[data-theme="light"] .switch .track { background: rgba(0, 0, 0, .14); }
 
 /* KPI-иконки: тон-плитка (только здесь, финальное слово) */
 .kpi-icon, .stat-icon, .metric-icon, .cc-tile .cc-ico, .page-head-icon {
-  background: color-mix(in srgb, currentColor 13%, transparent);
+  background: color-mix(in srgb, currentColor 17%, transparent);
   border: none;
-  box-shadow: none;
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
 
