@@ -481,10 +481,6 @@ html[data-theme="dark"] .cloud-card,
 html[data-theme="light"] .cloud-card,
 html[data-theme="dark"] .ch-stat,
 html[data-theme="light"] .ch-stat,
-html[data-theme="dark"] .ch-cat,
-html[data-theme="light"] .ch-cat,
-html[data-theme="dark"] .ch-item,
-html[data-theme="light"] .ch-item,
 html[data-theme="dark"] .ch-box,
 html[data-theme="light"] .ch-box,
 html[data-theme="dark"] .ch-detail,
@@ -520,8 +516,6 @@ html[data-theme="dark"] .cc-tile:hover,
 html[data-theme="light"] .cc-tile:hover,
 html[data-theme="dark"] .ch-stat:hover,
 html[data-theme="light"] .ch-stat:hover,
-html[data-theme="dark"] .ch-item:hover,
-html[data-theme="light"] .ch-item:hover,
 html[data-theme="dark"] .ch-box:hover,
 html[data-theme="light"] .ch-box:hover {
 
@@ -530,7 +524,6 @@ html[data-theme="light"] .ch-box:hover {
     var(--nv-mirror),
     0 0 0 1px rgba(255, 227, 181, .22),
     0 0 36px rgba(240, 208, 154, .28) !important;
-  transform: translateY(-2px) !important;
 
 }
 
@@ -540,8 +533,8 @@ html[data-theme="dark"] .card-head,
 html[data-theme="light"] .card-head,
 html[data-theme="dark"] .ch-box-header,
 html[data-theme="light"] .ch-box-header,
-html[data-theme="dark"] .ch-cat-head,
-html[data-theme="light"] .ch-cat-head,
+html[data-theme="dark"] .cat-header,
+html[data-theme="light"] .cat-header,
 html[data-theme="dark"] .ch-detail-head,
 html[data-theme="light"] .ch-detail-head {
 
@@ -1063,18 +1056,56 @@ html[data-theme="light"] .ch-detail-title {
 
 }
 
+/* Channels page rows (.ch-row) — keep chat .ch-item separate */
+html[data-theme="dark"] .ch-row,
+html[data-theme="light"] .ch-row {
+  border-radius: 14px !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  background: rgba(255,255,255,.035) !important;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease !important;
+  transform: none !important;
+}
+
+html[data-theme="dark"] .ch-row:hover,
+html[data-theme="light"] .ch-row:hover,
+html[data-theme="dark"] .ch-row:focus-visible,
+html[data-theme="light"] .ch-row:focus-visible {
+  background: rgba(94, 200, 255, .1) !important;
+  border-color: rgba(94, 200, 255, .32) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,.22) !important;
+  transform: none !important;
+}
+
+html[data-theme="dark"] .ch-row.is-selected,
+html[data-theme="light"] .ch-row.is-selected {
+  border-color: rgba(255, 227, 181, .55) !important;
+  box-shadow: var(--nv-mirror), 0 0 22px rgba(240, 208, 154, .25) !important;
+  background:
+    linear-gradient(90deg, rgba(240, 208, 154, .18), rgba(94, 200, 255, .08)) !important;
+  transform: none !important;
+}
+
+/* Chat sidebar items */
 html[data-theme="dark"] .ch-item,
 html[data-theme="light"] .ch-item {
-
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
   padding: 10px 12px !important;
   margin: 6px 0 !important;
   cursor: pointer !important;
-
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
 }
 
+html[data-theme="dark"] .ch-item:hover,
+html[data-theme="light"] .ch-item:hover {
+  background: rgba(94, 200, 255, .1) !important;
+  border-color: rgba(94, 200, 255, .22) !important;
+}
+
+html[data-theme="dark"] .ch-item.active,
+html[data-theme="light"] .ch-item.active,
 html[data-theme="dark"] .ch-item.is-active,
 html[data-theme="light"] .ch-item.is-active,
 html[data-theme="dark"] .ch-item.selected,
@@ -1083,7 +1114,7 @@ html[data-theme="dark"] .ch-item[aria-selected="true"],
 html[data-theme="light"] .ch-item[aria-selected="true"] {
 
   border-color: rgba(255, 227, 181, .55) !important;
-  box-shadow: var(--nv-mirror), 0 0 22px rgba(240, 208, 154, .25) !important;
+  box-shadow: 0 0 18px rgba(240, 208, 154, .22) !important;
   background:
     linear-gradient(90deg, rgba(240, 208, 154, .18), rgba(94, 200, 255, .08)) !important;
 
@@ -1324,8 +1355,6 @@ html[data-theme="dark"] .ch-box,
 html[data-theme="light"] .ch-box,
 html[data-theme="dark"] .ch-detail,
 html[data-theme="light"] .ch-detail,
-html[data-theme="dark"] .ch-cat,
-html[data-theme="light"] .ch-cat,
 html[data-theme="dark"] .ch-detail-grid .cell,
 html[data-theme="light"] .ch-detail-grid .cell {
   background:
@@ -1333,14 +1362,21 @@ html[data-theme="light"] .ch-detail-grid .cell {
   border: 1px solid rgba(255,255,255,.14) !important;
   color: var(--nv-text) !important;
 }
-html[data-theme="dark"] .ch-item .ch-ico,
-html[data-theme="light"] .ch-item .ch-ico {
-  background: linear-gradient(135deg, #9ae0ff, #5ec8ff) !important;
-  color: #fff !important;
-  box-shadow: 0 0 14px rgba(94,200,255,.4) !important;
+html[data-theme="dark"] .cat-group,
+html[data-theme="light"] .cat-group {
+  background: rgba(255,255,255,.03) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
 }
-html[data-theme="dark"] .ch-item .ch-tag,
-html[data-theme="light"] .ch-item .ch-tag {
+html[data-theme="dark"] .ch-row .ch-ico,
+html[data-theme="light"] .ch-row .ch-ico,
+html[data-theme="dark"] .ch-item .ch-icon,
+html[data-theme="light"] .ch-item .ch-icon {
+  color: #9ae0ff !important;
+}
+html[data-theme="dark"] .ch-row .ch-badge,
+html[data-theme="light"] .ch-row .ch-badge {
   background: rgba(94,200,255,.18) !important;
   color: #9ae0ff !important;
   border: 1px solid rgba(94,200,255,.3) !important;
