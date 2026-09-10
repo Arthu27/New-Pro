@@ -489,12 +489,14 @@ def register(ctx):
         bot = _app.bot_instance
         if not bot:
             return jsonify({'error': 'Бот офлайн — запусти python main.py с TOKEN в .env'}), 503
-        d = _safe_json_obj() if '_safe_json_obj' in dir() else (request.get_json(silent=True) or {})
-        try:
-            from main import VOICE_CHANNEL_ID as _cfg_vc
-        except Exception:
-            _cfg_vc = None
-        raw = d.get('channel_id') or _cfg_vc or 0
+        d = _safe_json_obj()
+        raw = d.get('channel_id') or os.environ.get('VOICE_CHANNEL_ID') or 0
+        if not raw:
+            try:
+                with open(os.path.join(_REPO_ROOT, 'config', 'voice_stay.json'), encoding='utf-8') as f:
+                    raw = (json.load(f) or {}).get('channel_id') or 0
+            except Exception:
+                raw = 0
         try:
             cid = int(str(raw).strip() or 0)
         except (TypeError, ValueError):
@@ -528,6 +530,12 @@ def register(ctx):
         if result.get('error'):
             return jsonify(result), 400
         return jsonify(result)
+
+
+    @app .route ('/api/bot/prefix',methods =['POST'])
+    @login_required 
+    @role_required ('owner')
+    def api_bot_prefix ():
         d =_safe_json_obj()
         prefix =d .get ('prefix','!').strip ()
         if not prefix :return jsonify ({'error':'Пустой префикс'}),400 
