@@ -4,1030 +4,148 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Hakumo — панель твоего сервера</title>
-  <meta name="description" content="Hakumo — панель управления Discord-сервером: модерация, апелляции, предупреждения, статистика и защита. Живые данные, быстрые решения, всё под контролем владельца.">
+  <meta name="description" content="Hakumo — панель управления Discord-сервером: модерация, роли, каналы и участники в одном окне.">
   <meta name="theme-color" content="#04060c">
   <link rel="icon" href="/static/favicon.ico">
-      <style>
-      /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
-         первый кадр никогда не белый. */
-      html { background: #04060c; color-scheme: dark; }
-      body { background: transparent; margin: 0; }
-    </style>
-<!-- Lighthouse: all.subset.css и fonts.css не блокируют первую отрисовку.
-     Иконки и шрифты подгружаются параллельно HTML (font-display: swap в
-     fonts.css уже даёт системный фолбэк), страница рисуется сразу.
-     noscript-фолбэк вернёт блокирующую загрузку без JS. -->
-<noscript><link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css"></noscript>
-<!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
-         только разобрав fonts.css и all.subset.css, и они встают в конец
-         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
-         820 мс до последнего шрифта). crossorigin обязателен даже для своего
-         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
-  <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    html { background: #04060c; color-scheme: dark; }
+    body { margin: 0; background: #04060c; color: #f3f6ff; }
+  </style>
   <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <noscript><link rel="stylesheet" href="/static/vendor/fonts/fonts.css"></noscript>
-  <script nonce="{{ csp_nonce }}">
-    /* Иконки и шрифты — без блокировки отрисовки (Lighthouse) и без инлайн-
-       обработчиков (строгий CSP публичной страницы): динамически вставленный
-       <link> браузер грузит асинхронно, применяет по готовности. */
-    ['/static/vendor/fontawesome/css/all.subset.css',
-     '/static/vendor/fonts/fonts.css'].forEach(function (href) {
-      var l = document.createElement('link');
-      l.rel = 'stylesheet'; l.href = href;
-      document.head.appendChild(l);
-    });
-  </script>
+  <link rel="preload" href="/static/vendor/fonts/unbounded-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/brand/emblem-dragon.png" as="image" type="image/png">
+  <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
   <link rel="stylesheet" href="/static/welcome.css?v={{ static_v('welcome.css') }}">
 </head>
 <body>
-
-  <div class="bg-fx" aria-hidden="true">
-    <span class="orb orb1"></span>
-    <span class="orb orb2"></span>
-    <span class="orb orb3"></span>
+  <div class="w-stage" aria-hidden="true">
+    <div class="w-aurora a1"></div>
+    <div class="w-aurora a2"></div>
+    <div class="w-aurora a3"></div>
+    <div class="w-mesh"></div>
+    <div class="w-grain"></div>
+    <div class="w-vignette"></div>
   </div>
-  <div class="bg-grid" aria-hidden="true"></div>
-  <div class="w-progress" id="wProgress" aria-hidden="true"></div>
 
-  <!-- Навигация -->
-  <nav class="w-nav" aria-label="Навигация">
-    <a class="brand" href="/">
-      <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="38" height="38" decoding="async" alt="Hakumo">
-      <span><b>HAKUMO</b><small>панель сервера</small></span>
+  <header class="w-nav">
+    <a class="w-logo" href="/welcome">
+      <img src="/static/brand/emblem-dragon-256.webp" width="40" height="40" alt="">
+      <span>HAKUMO</span>
     </a>
-    <div class="w-nav-links">
-      <a href="#look">Витрина</a>
-      <a href="#demo">В деле</a>
-      <a href="#members">Участникам</a>
-      <a href="#start">Как начать</a>
-      <a href="#staff">Команде</a>
-      <a href="#faq">FAQ</a>
-    </div>
-    <div class="w-nav-actions">
-      <a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти</a>
-    </div>
-  </nav>
-
-  <!-- Hero — Mirror Bloom, brand-first -->
-  <header class="w-hero">
-    <div class="w-dragon-wrap">
-      <div class="w-dragon-par" id="wDragonPar">
-        <div class="w-dragon-ring" aria-hidden="true"></div>
-        <div class="w-dragon-halo" aria-hidden="true"></div>
-        <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" width="112" height="112" fetchpriority="high" decoding="async" alt="Белый дракон Hakumo"></div>
-      </div>
-      <div class="w-dragon-floor" aria-hidden="true"></div>
-    </div>
-    <p class="w-brand-mark">HAKUMO</p>
-    <h1 class="w-title">Панель управления <span class="grad">сервером</span></h1>
-    <p class="w-lead">Зеркальный командный центр сообщества — профиль, заявки и события в одном окне.</p>
-    <div class="w-hero-actions">
-      <span class="btn-primary-wrap"><a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a></span>
-      <a class="btn" href="#members"><i class="fas fa-arrow-down"></i> Что внутри</a>
-    </div>
-    <div class="w-scroll-hint" aria-hidden="true">
-      <span class="mouse"></span>
-      <span>Листай ниже</span>
-    </div>
+    <a class="w-nav-cta" href="/login">Войти</a>
   </header>
 
-  <!-- Below fold: поиск и показатели -->
-  <section class="w-section w-explore" id="explore" aria-label="Поиск и показатели">
-    <div class="w-chips">
-      <span class="chip"><i class="fas fa-user"></i> Профиль</span>
-      <span class="chip"><i class="fas fa-file-signature"></i> Заявки в команду</span>
-      <span class="chip"><i class="fas fa-ticket"></i> Обращения</span>
-      <span class="chip"><i class="fas fa-ranking-star"></i> Уровни</span>
-      <span class="chip"><i class="fas fa-calendar-days"></i> События</span>
-      <span class="chip"><i class="fas fa-keyboard"></i> @-поиск</span>
+  <section class="w-hero">
+    <div class="w-hero-copy">
+      <p class="w-eyebrow">Discord control panel</p>
+      <h1 class="w-brand">HAKUMO</h1>
+      <p class="w-headline">Командный центр<br>твоего сервера</p>
+      <p class="w-sub">Модерация, роли, каналы и участники — в одном стеклянном окне.</p>
+      <div class="w-actions">
+        <a class="w-cta w-cta-primary" href="/login">
+          <i class="fas fa-right-to-bracket" aria-hidden="true"></i>
+          Войти в панель
+        </a>
+        <a class="w-cta w-cta-ghost" href="#craft">Смотреть возможности</a>
+      </div>
     </div>
-    <div class="w-at-hint">
-      <span class="kbd"><i class="fas fa-magnifying-glass"></i></span>
-      <span><b>Поиск без @</b> — Просто печатай: страницы, участники и каналы найдутся сами</span>
-    </div>
-    <div class="w-search">
-      <span class="at-ico"><i class="fas fa-magnifying-glass"></i></span>
-      <input type="text" id="wSearch" placeholder="Начни печатать — разделы, участники и каналы найдутся сами" aria-label="Быстрый поиск по панели">
-      <button type="button" class="go" id="wSearchClear" aria-label="Очистить поиск" title="Очистить"><i class="fas fa-xmark"></i></button>
-    </div>
-    <div class="w-search-results" id="wResults"></div>
-    <div class="w-stats">
-      <div class="w-stat"><div class="n" data-count="128">0</div><div class="l">Серверов на панели</div></div>
-      <div class="w-stat"><div class="n" data-count="46000">0</div><div class="l">Участников сообществ</div></div>
-      <div class="w-stat"><div class="n" data-count="99">0</div><div class="l">% Аптайм бота</div></div>
+
+    <div class="w-hero-visual" aria-hidden="true">
+      <div class="w-halo"></div>
+      <div class="w-ring"></div>
+      <img
+        class="w-emblem"
+        src="/static/brand/emblem-dragon.png"
+        width="2048" height="2048"
+        fetchpriority="high" decoding="async" alt="">
     </div>
   </section>
 
-  <main id="wMain">
-  <!-- Бегущая лента фич -->
-  <div class="w-marquee" aria-label="Возможности панели">
-    <div class="w-marquee-track" id="wMarqueeTrack">
-      <span class="item"><span class="dot"></span> Центр модерации</span>
-      <span class="item"><i class="fas fa-chart-line"></i> Живая аналитика</span>
-      <span class="item"><i class="fas fa-robot"></i> AI-ассистент</span>
-      <span class="item"><i class="fas fa-ticket"></i> Обращения</span>
-      <span class="item"><i class="fas fa-ranking-star"></i> Уровни и награды</span>
-      <span class="item"><i class="fas fa-file-signature"></i> Заявки в команду</span>
-      <span class="item"><i class="fas fa-tv"></i> Экран дежурного</span>
-      <span class="item"><i class="fas fa-shield-halved"></i> Анти-рейд и защита</span>
-      <span class="item"><i class="fas fa-calendar-days"></i> Расписание и ивенты</span>
-      <span class="item"><i class="fas fa-keyboard"></i> @-поиск и хоткеи</span>
-    </div>
-  </div>
-
-  <!-- Панель в деле: живой терминал -->
-  <section class="w-section w-reveal w-terminal-section" id="demo">
-    <div class="w-sec-head">
-      <h2 class="w-sec-title">Панель <span class="grad">в деле</span></h2>
-      <p class="w-sec-sub">Вот так команды выполняются из панели — быстро, наглядно и с тостами.</p>
-    </div>
-    <div class="w-terminal">
-      <div class="w-terminal-bar">
-        <span class="t-dot r"></span><span class="t-dot y"></span><span class="t-dot g"></span>
-        <span class="t-title">hakumo — панель управления</span>
+  <main>
+    <section class="w-block" id="craft">
+      <div class="w-block-head">
+        <p class="w-eyebrow">Возможности</p>
+        <h2>Всё под рукой — без шума чатов</h2>
       </div>
-      <div class="w-terminal-body" id="wTerminal"></div>
-    </div>
-  </section>
-
-  <!-- Витрина: так выглядит панель -->
-  <section class="w-section w-reveal w-showcase-section" id="look">
-    <div class="w-sec-head">
-      <h2 class="w-sec-title">Так <span class="grad">выглядит</span> панель</h2>
-      <p class="w-sec-sub">Обзор сервера: показатели, графики и лента событий с автоматическим обновлением.</p>
-    </div>
-    <div class="w-showcase">
-      <div class="w-showcase-bar">
-        <span class="t-dot r"></span><span class="t-dot y"></span><span class="t-dot g"></span>
-        <span class="t-url">panel.hakumods.xyz/обзор</span>
-      </div>
-      <div class="w-showcase-grid">
-        <div class="w-showcase-side">
-          <div class="s-brand"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" loading="lazy" decoding="async" alt="">HAKUMO</div>
-          <span class="s-item on"><i class="fas fa-home"></i> Обзор</span>
-          <span class="s-item"><i class="fas fa-shield-halved"></i> Модерация</span>
-          <span class="s-item"><i class="fas fa-users"></i> Участники</span>
-          <span class="s-item"><i class="fas fa-ticket"></i> Обращения</span>
-          <span class="s-item"><i class="fas fa-ranking-star"></i> Уровни</span>
-          <span class="s-item"><i class="fas fa-calendar-days"></i> События</span>
-        </div>
-        <div class="w-showcase-main">
-          <div class="w-showcase-kpis">
-            <div class="w-showcase-kpi">
-              <div class="k-ico"><i class="fas fa-users"></i></div>
-              <div class="k-n" data-count2="2480">0</div>
-              <div class="k-l">Участников</div>
-            </div>
-            <div class="w-showcase-kpi">
-              <div class="k-ico"><i class="fas fa-comments"></i></div>
-              <div class="k-n" data-count2="864">0</div>
-              <div class="k-l">Сообщений сегодня</div>
-            </div>
-            <div class="w-showcase-kpi">
-              <div class="k-ico"><i class="fas fa-shield-halved"></i></div>
-              <div class="k-n" data-count2="0">0</div>
-              <div class="k-l">Открытых нарушений</div>
-            </div>
+      <div class="w-rails">
+        <article class="w-rail">
+          <div class="w-rail-ico"><i class="fas fa-shield-halved"></i></div>
+          <div>
+            <h3>Модерация</h3>
+            <p>Варны, муты, апелляции и журнал действий — быстро и прозрачно.</p>
           </div>
-          <div class="w-showcase-panels">
-            <div class="w-showcase-panel">
-              <div class="p-head"><i class="fas fa-chart-column"></i> Активность за 7 дней</div>
-              <div class="w-chart-bars" id="wShowBars"></div>
-            </div>
-            <div class="w-showcase-panel">
-              <div class="p-head"><i class="fas fa-bolt"></i> События</div>
-              <div id="wShowFeed"></div>
-            </div>
+        </article>
+        <article class="w-rail">
+          <div class="w-rail-ico"><i class="fas fa-user-tag"></i></div>
+          <div>
+            <h3>Роли и доступы</h3>
+            <p>Роли за наказания и права панели без ручной путаницы.</p>
           </div>
-        </div>
+        </article>
+        <article class="w-rail">
+          <div class="w-rail-ico"><i class="fas fa-route"></i></div>
+          <div>
+            <h3>Каналы и маршруты</h3>
+            <p>Логи, доказательства и маршруты — всё в одном месте.</p>
+          </div>
+        </article>
+        <article class="w-rail">
+          <div class="w-rail-ico"><i class="fas fa-gauge-high"></i></div>
+          <div>
+            <h3>Живой обзор</h3>
+            <p>Показатели сервера и состояние бота — картина целиком.</p>
+          </div>
+        </article>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Участникам -->
-  <section class="w-section w-reveal" id="members">
-    <div class="w-sec-head">
-      <h2 class="w-sec-title">Всё для <span class="grad">участников</span></h2>
-      <p class="w-sec-sub">Твоя жизнь на сервере — в одном окне. Не нужно листать сотни сообщений.</p>
-    </div>
-    <div class="w-grid">
-      <div class="w-card">
-        <div class="ico"><i class="fas fa-user"></i></div>
-        <b>Твой профиль</b>
-        <p>Роли, статусы, предупреждения и история — прозрачно и всегда под рукой.</p>
+    <section class="w-block">
+      <div class="w-block-head">
+        <p class="w-eyebrow">Старт</p>
+        <h2>Три шага до работы</h2>
       </div>
-      <div class="w-card">
-        <div class="ico cyan"><i class="fas fa-id-card-clip"></i></div>
-        <b>Карточка 360°</b>
-        <p>Вся активность на сервере: сообщения, голос, события — в одной карточке.</p>
-      </div>
-      <div class="w-card">
-        <div class="ico ok"><i class="fas fa-file-signature"></i></div>
-        <b>Заявки в команду</b>
-        <p>Хочешь в модераторы или ивент-команду? Подай заявку в два клика и следи за статусом.</p>
-      </div>
-      <div class="w-card">
-        <div class="ico amber"><i class="fas fa-ticket"></i></div>
-        <b>Обращения</b>
-        <p>Вопрос к команде? Создай обращение — ответ придёт прямо в панель, без потерь в чатах.</p>
-      </div>
-      <div class="w-card">
-        <div class="ico violet"><i class="fas fa-ranking-star"></i></div>
-        <b>Уровни и награды</b>
-        <p>Твой прогресс, опыт и достижения сервера — наглядно и честно.</p>
-      </div>
-      <div class="w-card">
-        <div class="ico"><i class="fas fa-calendar-days"></i></div>
-        <b>События и расписание</b>
-        <p>Ивенты, стримы и дежурства — календарь сервера всегда перед глазами.</p>
-      </div>
-    </div>
-  </section>
+      <ol class="w-flow">
+        <li>
+          <span class="w-flow-n">01</span>
+          <div>
+            <h3>Войди</h3>
+            <p>Логин панели или Discord — без лишней регистрации.</p>
+          </div>
+        </li>
+        <li>
+          <span class="w-flow-n">02</span>
+          <div>
+            <h3>Открой раздел</h3>
+            <p>Сайдбар ведёт к модерации, ролям и каналам.</p>
+          </div>
+        </li>
+        <li>
+          <span class="w-flow-n">03</span>
+          <div>
+            <h3>Работай</h3>
+            <p>Каждое действие пишется в журнал — ничего не тонет.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
 
-  <!-- Как начать -->
-  <section class="w-section w-reveal" id="start">
-    <div class="w-sec-head">
-      <h2 class="w-sec-title">Как <span class="grad">начать</span></h2>
-      <p class="w-sec-sub">Никакой регистрации и мучений: вход через твой Discord-аккаунт.</p>
-    </div>
-    <div class="w-steps">
-      <div class="w-step">
-        <div class="num">1</div>
-        <b>Войди</b>
-        <p>Кнопка «Войти» — авторизация через Discord. Паролей придумывать не нужно.</p>
+    <section class="w-finale">
+      <div class="w-finale-glass">
+        <h2>Готов зайти?</h2>
+        <p>Hakumo уже настроен под твой сервер.</p>
+        <a class="w-cta w-cta-primary" href="/login">
+          <i class="fas fa-bolt" aria-hidden="true"></i>
+          Открыть панель
+        </a>
       </div>
-      <div class="w-step">
-        <div class="num">2</div>
-        <b>Просто печатай</b>
-        <p>@ работает автоматически — поиск откроется сам, как только начнёшь вводить запрос.</p>
-      </div>
-      <div class="w-step">
-        <div class="num">3</div>
-        <b>Живи на сервере</b>
-        <p>Профиль, заявки, обращения и события обновляются автоматически.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Команде -->
-  <section class="w-section w-reveal" id="staff">
-    <div class="w-sec-head">
-      <h2 class="w-sec-title">А для <span class="grad">команды</span></h2>
-      <p class="w-sec-sub">Модерация, аналитика и автоматика — те же руки, та же панель.</p>
-    </div>
-    <div class="w-staff">
-      <span class="chip"><i class="fas fa-shield-halved"></i> Центр модерации</span>
-      <span class="chip"><i class="fas fa-chart-line"></i> Живая аналитика</span>
-      <span class="chip"><i class="fas fa-robot"></i> AI-ассистент</span>
-      <span class="chip"><i class="fas fa-gauge-high"></i> Оперативный центр</span>
-      <span class="chip"><i class="fas fa-tv"></i> Экран дежурного</span>
-      <span class="chip"><i class="fas fa-keyboard"></i> Быстрые команды</span>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section class="w-section w-reveal" id="faq">
-    <div class="w-sec-head">
-      <h2 class="w-sec-title">Частые <span class="grad">вопросы</span></h2>
-    </div>
-    <div class="w-faq">
-      <details>
-        <summary><span class="q-ico"><i class="fas fa-user"></i></span> Кому нужна панель — только команде?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Нет — панель для всех: участники видят свой профиль, заявки, обращения и события, а команда — инструменты модерации. Каждый видит свою часть.</div>
-      </details>
-      <details>
-        <summary><span class="q-ico"><i class="fas fa-key"></i></span> Нужно ли регистрироваться отдельно?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Нет. Вход через логин панели или Discord PIN — аккаунт уже привязан к твоему Discord. Просто войди.</div>
-      </details>
-      <details>
-        <summary><span class="q-ico"><i class="fas fa-at"></i></span> Что умеет @-поиск?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Начни печатать в поле сверху — найдутся страницы, участники, каналы и команды. В панели @ работает точно так же в любом месте.</div>
-      </details>
-      <details>
-        <summary><span class="q-ico"><i class="fas fa-file-signature"></i></span> Как попасть в команду сервера?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Войди в панель и открой «Заявки в команду»: выбери сервер, подтверди Discord ID и заполни анкету. Статус заявки будет виден в панели.</div>
-      </details>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <div class="w-cta w-reveal">
-    <div class="w-cta-box">
-      <h2>Готов? Всё уже настроено.</h2>
-      <p>Вход через Discord-аккаунт, упоминания участников — через @.</p>
-      <span class="btn-primary-wrap"><a class="btn btn-primary" href="/login" style="padding:13px 26px;font-size:14px"><i class="fas fa-right-to-bracket"></i> Войти в панель</a></span>
-    </div>
-  </div>
-
+    </section>
   </main>
 
-  <footer class="w-foot">
-    <img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" loading="lazy" decoding="async" alt="">HAKUMO · панель твоего сервера · сделано с душой
+  <footer class="w-footer">
+    <img src="/static/brand/emblem-dragon-256.webp" width="22" height="22" alt="">
+    <span>HAKUMO · панель твоего сервера</span>
   </footer>
-
-  <script nonce="{{ csp_nonce }}">
-  (function () {
-    'use strict';
-    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    /* ── 1. Параллакс свечений за мышью ── */
-    (function orbs() {
-      if (reduced) return;
-      var orb1 = document.querySelector('.orb1');
-      var orb2 = document.querySelector('.orb2');
-      if (!orb1 || !orb2) return;
-      var tx = 0, ty = 0, x = 0, y = 0, tick = false;
-      document.addEventListener('mousemove', function (e) {
-        tx = (e.clientX / window.innerWidth - 0.5) * 26;
-        ty = (e.clientY / window.innerHeight - 0.5) * 18;
-        if (!tick) {
-          tick = true;
-          requestAnimationFrame(function () {
-            tick = false;
-            x += (tx - x) * 0.06;
-            y += (ty - y) * 0.06;
-            orb1.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
-            orb2.style.transform = 'translate(' + (-x * 0.6).toFixed(1) + 'px,' + (-y * 0.6).toFixed(1) + 'px)';
-          });
-        }
-      }, { passive: true });
-    })();
-
-    /* ── 2. Reveal секций при скролле ── */
-    (function reveal() {
-      var els = document.querySelectorAll('.w-reveal');
-      if (!els.length) return;
-      if (!('IntersectionObserver' in window) || reduced) {
-        els.forEach(function (el) { el.classList.add('on'); });
-        return;
-      }
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) {
-          if (en.isIntersecting) { en.target.classList.add('on'); io.unobserve(en.target); }
-        });
-      }, { threshold: 0.12 });
-      els.forEach(function (el) { io.observe(el); });
-    })();
-
-    /* ── 3. Печатающийся заголовок с ротацией фраз ── */
-    (function typing() {
-      var el = document.querySelector('.w-title');
-      if (!el || reduced) return;
-      var PHRASES = [
-        'Панель управления сервером',
-        'Найди всё за секунду',
-        'Модерация без хаоса',
-        'Живая аналитика 24/7'
-      ];
-      var started = false;
-      /* последнее слово фразы — градиентное: печать не должна его терять */
-      function paintText(text, chars) {
-        /* последнее слово градиентное только когда напечатано полностью */
-        var words = text.split(' ');
-        var lastStart = text.length - words[words.length - 1].length;
-        if (chars >= text.length) {
-          var last = words[words.length - 1];
-          var rest = words.slice(0, -1).join(' ');
-          el.textContent = '';
-          if (rest) el.appendChild(document.createTextNode(rest + ' '));
-          var grad = document.createElement('span');
-          grad.className = 'grad';
-          grad.textContent = last;
-          el.appendChild(grad);
-        } else if (chars >= lastStart) {
-          var shownRest = words.slice(0, -1).join(' ');
-          var lastPart = words[words.length - 1].slice(0, chars - lastStart);
-          el.textContent = (shownRest ? shownRest + ' ' : '') + lastPart;
-        } else {
-          el.textContent = text.slice(0, chars);
-        }
-      }
-      function type(text, then) {
-        el.classList.add('typing');
-        var chars = 0;
-        var total = text.length;
-        var iv = setInterval(function () {
-          chars += 2;
-          if (chars >= total) {
-            clearInterval(iv);
-            el.classList.remove('typing');
-            paintText(text, total);
-            setTimeout(then, 1800);
-            return;
-          }
-          paintText(text, chars);
-        }, 30);
-      }
-      function run() {
-        if (started) return;
-        started = true;
-        var idx = 0, first = true;
-        (function next() {
-          var text = PHRASES[idx % PHRASES.length];
-          idx++;
-          /* первая фраза печатается сразу — заголовок не мигает при загрузке */
-          if (first) {
-            first = false;
-            el.textContent = '';
-            type(text, next);
-            return;
-          }
-          /* дальше: старая фраза мягко растворяется, новая вплывает (без блюра) */
-          el.classList.add('swap-out');
-          setTimeout(function () {
-            el.classList.remove('swap-out');
-            el.textContent = '';
-            el.classList.add('swap-in');
-            setTimeout(function () { el.classList.remove('swap-in'); }, 340);
-            type(text, next);
-          }, 260);
-        })();
-      }
-      var io = new IntersectionObserver(function (en) {
-        if (en[0].isIntersecting) { run(); io.disconnect(); }
-      }, { threshold: 0.4 });
-      io.observe(el);
-      /* Геометрию читаем ПОСЛЕ первого кадра (rAF): иначе это первый
-         синхронный layout всей страницы до отрисовки (Lighthouse:
-         принудительная компоновка, 680 мс). */
-      requestAnimationFrame(function () {
-        if (el.getBoundingClientRect().top < window.innerHeight) run();
-      });
-    })();
-
-    /* ── 4. Живые счётчики ── */
-    (function counters() {
-      var nums = document.querySelectorAll('[data-count]');
-      if (!nums.length) return;
-      function animate(el, target) {
-        if (reduced) { el.textContent = target.toLocaleString('ru-RU'); return; }
-        var start = performance.now(), dur = 1400;
-        function frame(now) {
-          var p = Math.min(1, (now - start) / dur);
-          var eased = 1 - Math.pow(1 - p, 3);
-          el.textContent = Math.round(target * eased).toLocaleString('ru-RU');
-          if (p < 1) requestAnimationFrame(frame);
-        }
-        requestAnimationFrame(frame);
-      }
-      var fired = false;
-      function run() {
-        if (fired) return;
-        fired = true;
-        nums.forEach(function (el) { animate(el, Number(el.dataset.count) || 0); });
-      }
-      /* если бот онлайн — берём реальные цифры */
-      fetch('/api/stats', { headers: { 'Accept': 'application/json' } })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d && d.guilds != null && !d.error) {
-            var stats = document.querySelector('.w-stats');
-            if (stats) {
-              stats.textContent = '';
-              [[d.guilds || 0, 'Серверов на панели'],
-               [d.users || 0, 'Участников сообществ'],
-               [Math.round(d.latency || 0), 'Пинг, мс']].forEach(function (pair) {
-                var w = document.createElement('div');
-                w.className = 'w-stat';
-                var n = document.createElement('div');
-                n.className = 'n';
-                n.setAttribute('data-count', pair[0]);
-                n.textContent = '0';
-                var l = document.createElement('div');
-                l.className = 'l';
-                l.textContent = pair[1];
-                w.appendChild(n);
-                w.appendChild(l);
-                stats.appendChild(w);
-              });
-              nums = stats.querySelectorAll('[data-count]');
-            }
-          }
-          run();
-        })
-        .catch(run);
-      var io = new IntersectionObserver(function (en) {
-        if (en[0].isIntersecting) { run(); io.disconnect(); }
-      }, { threshold: 0.3 });
-      if (nums[0]) io.observe(nums[0].closest('.w-stats') || nums[0]);
-    })();
-
-    /* ── 5. Лента фич: дублируем контент для бесшовного цикла ── */
-    (function marquee() {
-      var track = document.getElementById('wMarqueeTrack');
-      if (!track || reduced) return;
-      /* копия детей вместо innerHTML += innerHTML (Trusted Types) */
-      Array.prototype.forEach.call(track.childNodes, function (n) {
-        track.appendChild(n.cloneNode(true));
-      });
-    })();
-
-    /* ── 6. Живой терминал-демо ── */
-    (function terminal() {
-      var body = document.getElementById('wTerminal');
-      if (!body || reduced) return;
-      var SCENES = [
-        [
-          { type: 'cmd', text: 'hakumo warn @spammer спам в #general' },
-          { type: 'out', text: 'Проверяю участника…', icon: 'fa-circle-notch fa-spin dim' },
-          { type: 'ok',  text: 'Варн №3 выдан: «спам в #general»', icon: 'fa-circle-check ok-ico' }
-        ],
-        [
-          { type: 'cmd', text: 'hakumo lockdown причина: рейд' },
-          { type: 'out', text: 'Закрываю текстовые каналы…', icon: 'fa-circle-notch fa-spin dim' },
-          { type: 'ok',  text: '24 канала закрыты за 0.8 сек', icon: 'fa-shield-halved ok-ico' }
-        ],
-        [
-          { type: 'cmd', text: '@ апелляции в очереди' },
-          { type: 'out', text: 'Ищу в панели…', icon: 'fa-magnifying-glass dim' },
-          { type: 'ok',  text: 'Найдено: 2 апелляции ждут решения', icon: 'fa-scale-balanced ok-ico' }
-        ],
-        [
-          { type: 'cmd', text: 'hakumo announce "Ивент в субботу 20:00"' },
-          { type: 'ok',  text: 'Анонс отправлен в #announcements', icon: 'fa-bullhorn ok-ico' }
-        ]
-      ];
-      function typeLine(line, done) {
-        var div = document.createElement('div');
-        div.className = 'w-term-line';
-        body.appendChild(div);
-        if (line.type === 'cmd') {
-          var pr = document.createElement('span');
-          pr.className = 'prompt';
-          pr.textContent = '>';
-          div.appendChild(pr);
-          div.appendChild(document.createElement('span')).className = 'cmd';
-          div.appendChild(document.createElement('span')).className = 'w-term-caret';
-          var target = div.querySelector('.cmd');
-          var i = 0;
-          var iv = setInterval(function () {
-            i += 2;
-            target.textContent = line.text.slice(0, i);
-            if (i >= line.text.length) {
-              clearInterval(iv);
-              var caret = div.querySelector('.w-term-caret');
-              if (caret) caret.remove();
-              setTimeout(done, 350);
-            }
-          }, 22);
-        } else {
-          if (line.icon) {
-            var li = document.createElement('i');
-            li.className = 'fas ' + line.icon;
-            div.appendChild(li);
-          }
-          var lo = document.createElement('span');
-          lo.className = line.type === 'ok' ? 'ok-ico' : 'out';
-          lo.textContent = line.text;
-          div.appendChild(lo);
-          setTimeout(done, line.type === 'out' ? 500 : 900);
-        }
-      }
-      var started = false;
-      function start() {
-        if (started) return;
-        started = true;
-        var scene = 0;
-        (function next() {
-          var lines = SCENES[scene % SCENES.length];
-          scene++;
-          body.textContent = '';
-          var li = 0;
-          (function step() {
-            if (li >= lines.length) {
-              setTimeout(next, 4200);
-              return;
-            }
-            typeLine(lines[li], function () { li++; step(); });
-          })();
-        })();
-      }
-      /* терминал живёт сразу после загрузки — пустая коробка = плохо;
-         при попадании в зону видимости перезапускаем цикл с начала */
-      var restarting = false;
-      function restart() {
-        if (restarting) return;
-        restarting = true;
-        started = false;
-        start();
-        setTimeout(function () { restarting = false; }, 600);
-      }
-      setTimeout(start, 900);
-      if ('IntersectionObserver' in window) {
-        var io = new IntersectionObserver(function (en) {
-          if (en[0].isIntersecting) { io.disconnect(); restart(); }
-        }, { threshold: 0.3 });
-        io.observe(body);
-      }
-    })();
-
-    /* ── 7. Витрина: бары графика и лента событий ── */
-    (function showcase() {
-      var barsBox = document.getElementById('wShowBars');
-      var feedBox = document.getElementById('wShowFeed');
-      if (!barsBox || !feedBox) return;
-      /* бары: вставляем сразу (без ожидания скролла) */
-      var vals = [42, 68, 55, 90, 74, 96, 60];
-      vals.forEach(function (v, i) {
-        var b = document.createElement('span');
-        b.className = 'b';
-        b.style.height = v + '%';
-        b.style.animationDelay = (i * 90) + 'ms';
-        barsBox.appendChild(b);
-      });
-      /* если бары вне экрана — анимация проигралась впустую: при показе
-         перезапустим рост */
-      var barsShown = false;
-      if ('IntersectionObserver' in window) {
-        var barsIo = new IntersectionObserver(function (en) {
-          if (en[0].isIntersecting && !barsShown) {
-            barsShown = true;
-            var bs = barsBox.querySelectorAll('.b');
-            /* Сначала ВСЕ записи, потом ОДНО чтение (reflow), потом все
-               записи заново — один layout на перезапуск вместо шести
-               (Lighthouse: принудительная компоновка). */
-            bs.forEach(function (b) { b.style.animation = 'none'; });
-            void barsBox.offsetWidth;
-            bs.forEach(function (b, i) {
-              b.style.animation = '';
-              b.style.animationDelay = (i * 90) + 'ms';
-            });
-            barsIo.disconnect();
-          }
-        }, { threshold: 0.3 });
-        barsIo.observe(barsBox);
-      }
-      /* лента событий */
-      var FEED = [
-        { tag: 'warn', cls: 'warn', text: 'Варн: @spammer', when: '2 мин' },
-        { tag: 'ticket', cls: '', text: 'Обращение №14 отвечено', when: '8 мин' },
-        { tag: 'level', cls: 'ok', text: 'Lina достигла уровня 21', when: '14 мин' },
-        { tag: 'event', cls: 'ok', text: 'Ивент «Суббота» создан', when: '26 мин' }
-      ];
-      var started = false;
-      function paint() {
-        if (started) return;
-        started = true;
-        var li = 0;
-        feedBox.textContent = '';
-        (function step() {
-          if (li >= FEED.length) {
-            /* цикл: перезапускаем мягко */
-            setTimeout(function () { started = false; paint(); }, 6000);
-            return;
-          }
-          var f = FEED[li];
-          var div = document.createElement('div');
-          div.className = 'w-feed-line';
-          var tg = document.createElement('span');
-          tg.className = 'tag ' + f.cls;
-          tg.textContent = f.tag;
-          div.appendChild(tg);
-          div.appendChild(document.createElement('span')).textContent = f.text;
-          var wh = document.createElement('span');
-          wh.className = 'when';
-          wh.textContent = f.when;
-          div.appendChild(wh);
-          feedBox.appendChild(div);
-          li++;
-          setTimeout(step, 900);
-        })();
-      }
-      if ('IntersectionObserver' in window) {
-        var io = new IntersectionObserver(function (en) {
-          if (en[0].isIntersecting) { paint(); io.disconnect(); }
-        }, { threshold: 0.3 });
-        io.observe(feedBox);
-      }
-      requestAnimationFrame(function () {
-        if (feedBox.getBoundingClientRect().top < window.innerHeight) paint();
-      });
-    })();
-
-    /* ── 9a. Живое обновление KPI витрины ── */
-    (function showcaseLive() {
-      var kpis = document.querySelectorAll('.w-showcase-kpi .k-n');
-      if (!kpis.length || reduced) return;
-      setInterval(function () {
-        if (document.hidden) return;
-        kpis.forEach(function (el) {
-          var cur = parseInt(el.dataset.live || el.textContent.replace(/\s/g, ''), 10);
-          if (isNaN(cur)) return;
-          var drift = Math.round((Math.random() - 0.5) * cur * 0.04);
-          var next = Math.max(0, cur + drift);
-          el.dataset.live = next;
-          el.textContent = next.toLocaleString('ru-RU');
-        });
-        /* Перезапуск мерцания — пакетно: все classList, ОДНО чтение
-           (reflow), затем tick (было чтение offsetWidth на каждый KPI). */
-        kpis.forEach(function (el) { el.classList.remove('tick'); });
-        void document.documentElement.offsetWidth;
-        kpis.forEach(function (el) { el.classList.add('tick'); });
-      }, 4000);
-    })();
-
-    /* ── 8. Счётчики витрины ── */
-    (function showcaseCounters() {
-      var nums = document.querySelectorAll('[data-count2]');
-      if (!nums.length) return;
-      function animate(el, target) {
-        if (reduced) { el.textContent = target.toLocaleString('ru-RU'); return; }
-        var start = performance.now(), dur = 1100;
-        function frame(now) {
-          var p = Math.min(1, (now - start) / dur);
-          var eased = 1 - Math.pow(1 - p, 3);
-          el.textContent = Math.round(target * eased).toLocaleString('ru-RU');
-          if (p < 1) requestAnimationFrame(frame);
-        }
-        requestAnimationFrame(frame);
-      }
-      /* конечные значения сразу — без нулей до скролла */
-      nums.forEach(function (el) {
-        el.textContent = (Number(el.dataset.count2) || 0).toLocaleString('ru-RU');
-        el.dataset.live = String(Number(el.dataset.count2) || 0);
-      });
-      var fired = false;
-      function run() {
-        if (fired) return;
-        fired = true;
-        nums.forEach(function (el) { animate(el, Number(el.dataset.count2) || 0); });
-      }
-      if ('IntersectionObserver' in window) {
-        var io = new IntersectionObserver(function (en) {
-          if (en[0].isIntersecting) { run(); io.disconnect(); }
-        }, { threshold: 0.3 });
-        io.observe(nums[0]);
-      }
-      requestAnimationFrame(function () {
-        if (nums[0].getBoundingClientRect().top < window.innerHeight) run();
-      });
-    })();
-
-    /* ── 10. Лёгкий 3D-tilt карточек ── */
-    (function tilt() {
-      if (reduced) return;
-      if (!window.matchMedia('(pointer: fine)').matches) return;
-      var SEL = '.w-card, .w-step, .w-stat';
-      var tick = false, lastE = null, lastT = null;
-      /* Прямоугольник кэшируем: чтение геометрии на каждом движении после
-         собственной записи transform = принудительная компоновка каждый
-         кадр (Lighthouse). Кэш сбрасывается при скролле/resize/смене цели.
-         Бонус: rect больше не «плывёт» от наклона самой карточки. */
-      var rectOf = null;
-      function dropRect() { rectOf = null; }
-      window.addEventListener('scroll', dropRect, { passive: true });
-      window.addEventListener('resize', dropRect, { passive: true });
-      function apply(e) {
-        tick = false;
-        var t = e.target.closest(SEL);
-        if (t !== lastT) {
-          if (lastT) lastT.style.transform = '';
-          lastT = t;
-          rectOf = null;
-        }
-        if (!t) return;
-        if (!rectOf || rectOf.el !== t) rectOf = { el: t, r: t.getBoundingClientRect() };
-        var r = rectOf.r;
-        var dx = (e.clientX - r.left) / r.width - 0.5;
-        var dy = (e.clientY - r.top) / r.height - 0.5;
-        t.style.transform = 'perspective(700px) rotateY(' + (dx * 5).toFixed(1) + 'deg) rotateX(' + (-dy * 5).toFixed(1) + 'deg)';
-      }
-      document.addEventListener('mousemove', function (e) {
-        lastE = e;
-        if (!tick) {
-          tick = true;
-          requestAnimationFrame(function () { apply(lastE); });
-        }
-      }, { passive: true });
-    })();
-
-    /* ── 12. Кнопка «наверх» с кольцом прогресса ── */
-    (function topBtn() {
-      var btn = document.getElementById('wTop');
-      if (!btn) return;
-      var ticking = false;
-      var lastRing = 0, max = -1, lastMeasure = 0;
-      /* Высоту документа перечитываем не чаще раза в секунду — на каждом
-         кадре скролла это принудительная компоновка (Lighthouse). */
-      function paint(now) {
-        ticking = false;
-        now = now || performance.now();
-        if (max < 0 || now - lastMeasure >= 1000) {
-          lastMeasure = now;
-          max = document.documentElement.scrollHeight - window.innerHeight;
-        }
-        var p = max > 0 ? window.scrollY / max : 0;
-        btn.classList.toggle('show', window.scrollY > 500);
-        if (now - lastRing >= 120) {
-          lastRing = now;
-          btn.style.setProperty('--top-p', Math.round(p * 100));
-        }
-      }
-      window.addEventListener('scroll', function () {
-        if (!ticking) { ticking = true; requestAnimationFrame(paint); }
-      }, { passive: true });
-      btn.addEventListener('click', function () {
-        window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
-      });
-      paint();
-    })();
-
-    /* ── 11. Scrollspy: активный пункт навигации ── */
-    (function spy() {
-      var links = Array.prototype.slice.call(document.querySelectorAll('.w-nav-links a[href^="#"]'));
-      if (!links.length) return;
-      var sections = links.map(function (a) {
-        return document.querySelector(a.getAttribute('href'));
-      }).filter(Boolean);
-      if (!sections.length) return;
-      var tick = false;
-      function paint() {
-        tick = false;
-        var pos = window.scrollY + window.innerHeight * 0.35;
-        var cur = sections[0];
-        sections.forEach(function (sec) {
-          if (sec.offsetTop <= pos) cur = sec;
-        });
-        var id = cur ? '#' + cur.id : '';
-        links.forEach(function (a) {
-          a.classList.toggle('on', a.getAttribute('href') === id);
-        });
-      }
-      window.addEventListener('scroll', function () {
-        if (!tick) { tick = true; requestAnimationFrame(paint); }
-      }, { passive: true });
-      paint();
-    })();
-  })();
-  </script>
-  <button type="button" class="w-top" id="wTop" aria-label="Наверх" title="Наверх"><i class="fas fa-arrow-up"></i></button>
-
-  <script nonce="{{ csp_nonce }}">
-  (function () {
-    'use strict';
-    /* ── Поиск welcome: живая панель + фолбэк на разделы ── */
-    var PANEL_ICONS = { pages: 'fa-file', members: 'fa-user', channels: 'fa-hashtag',
-                        transcripts: 'fa-file-lines', triggers: 'fa-filter', announcements: 'fa-bullhorn' };
-    var LINKS = [
-      { q: ['профиль', 'profile', 'статус'], label: 'Твой профиль', href: '/login', icon: 'fa-user' },
-      { q: ['карточка', '360', 'активность'], label: 'Карточка 360°', href: '/login', icon: 'fa-id-card-clip' },
-      { q: ['заявк', 'apply', 'команда', 'модератор'], label: 'Заявки в команду', href: '/login', icon: 'fa-file-signature' },
-      { q: ['обращени', 'тикет', 'ticket', 'вопрос'], label: 'Обращения', href: '/login', icon: 'fa-ticket' },
-      { q: ['уровн', 'наград', 'опыт', 'level'], label: 'Уровни и награды', href: '/login', icon: 'fa-ranking-star' },
-      { q: ['событи', 'ивент', 'календар', 'event'], label: 'События и расписание', href: '/login', icon: 'fa-calendar-days' },
-      { q: ['войти', 'вход', 'login', 'регистраци'], label: 'Войти в панель', href: '/login', icon: 'fa-right-to-bracket' },
-      { q: ['правил', 'rules'], label: 'Правила сервера', href: '/login', icon: 'fa-book' },
-      { q: ['модерац', 'штаб', 'mod'], label: 'Центр модерации (для команды)', href: '/login', icon: 'fa-shield-halved' },
-      { q: ['аналитик', 'график', 'stats'], label: 'Аналитика (для команды)', href: '/login', icon: 'fa-chart-line' }
-    ];
-    var inp = document.getElementById('wSearch');
-    var box = document.getElementById('wResults');
-    var timer = null;
-
-    function esc(s) {
-      return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-    /* Trusted Types: строки разметки не строим — row() отдаёт узел */
-    function row(href, icon, label, sub) {
-      var a = document.createElement('a');
-      a.setAttribute('href', href);
-      var ic = document.createElement('i');
-      ic.className = 'fas ' + icon;
-      a.appendChild(ic);
-      var sp = document.createElement('span');
-      var b = document.createElement('b');
-      b.textContent = label;
-      sp.appendChild(b);
-      if (sub) {
-        var sm = document.createElement('small');
-        sm.textContent = sub;
-        sp.appendChild(sm);
-      }
-      a.appendChild(sp);
-      return a;
-    }
-    function show(list) {
-      if (!list.length) { box.classList.remove('show'); return; }
-      box.textContent = '';
-      list.forEach(function (n) { box.appendChild(n); });
-      box.classList.add('show');
-    }
-    function wSearchHide() { box.classList.remove('show'); }
-
-    inp.addEventListener('input', function () {
-      var q = this.value.replace(/^@/, '').trim().toLowerCase();
-      if (!q) { wSearchHide(); return; }
-      /* статичные разделы — мгновенно, живая панель — следом */
-      var local = LINKS.filter(function (l) {
-        return l.q.some(function (k) { return k.indexOf(q) !== -1 || q.indexOf(k) !== -1; });
-      }).slice(0, 4).map(function (l) {
-        return row(l.href, l.icon, l.label);
-      });
-      show(local);
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(function () {
-        fetch('/api/ux/search?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (d) {
-            if (!d || !d.groups || !d.groups.length) return;
-            var items = [];
-            d.groups.forEach(function (g) {
-              (g.items || []).forEach(function (it) {
-                var href = it.path || it.url || it.href || (it.page_path || '');
-                if (!href) return;
-                items.push(row(href, PANEL_ICONS[g.key] || 'fa-file', it.label || it.name || it.title || '—',
-                                   it.description || it.sub || ''));
-              });
-            });
-            /* локальные не дублируем */
-            var hrefs = {};
-            box.querySelectorAll('a').forEach(function (a) { hrefs[a.getAttribute('href')] = 1; });
-            var fresh = items.filter(function (a) {
-              return !hrefs[a.getAttribute('href')];
-            }).slice(0, 8);
-            if (fresh.length) {
-              fresh.forEach(function (n) { box.appendChild(n); });
-              box.classList.add('show');
-            }
-          }).catch(function () {});
-      }, 220);
-    });
-    inp.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        var first = box.querySelector('a');
-        if (first) window.location.href = first.getAttribute('href');
-        else window.location.href = '/login';
-      }
-      if (e.key === 'Escape') wSearchHide();
-    });
-    document.addEventListener('click', function (e) {
-      if (!e.target.closest('.w-search')) wSearchHide();
-    });
-    window.wSearchHide = wSearchHide;
-
-    /* Кнопка «очистить»: слушатель вместо инлайн-onclick — на публичной
-       странице строгий CSP без инлайн-обработчиков. */
-    var clearBtn = document.getElementById('wSearchClear');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function () {
-        inp.value = '';
-        wSearchHide();
-      });
-    }
-
-    /* ── @ автоматически: поле сразу ждёт ввода (desktop) ── */
-    var fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
-    if (fine) {
-      setTimeout(function () { inp.focus({ preventScroll: true }); }, 900);
-    }
-  })();
-
-  /* ── Дракон: мягкий параллакс за курсором (только transform, 1 rAF на событие) ── */
-  (function () {
-    var mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var par = document.getElementById('wDragonPar');
-    if (mq || !par || !('requestAnimationFrame' in window)) return;
-    var tx = 0, ty = 0, dx = 0, dy = 0, raf = null;
-    document.addEventListener('mousemove', function (e) {
-      tx = (e.clientX / window.innerWidth - .5) * 16;
-      ty = (e.clientY / window.innerHeight - .5) * 12;
-      if (raf) return;
-      raf = requestAnimationFrame(function () {
-        raf = null;
-        dx += (tx - dx) * .12;
-        dy += (ty - dy) * .12;
-        par.style.transform = 'translate3d(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px,0)';
-      });
-    });
-  })();
-
-  /* ── Скролл-прогресс: градиентная полоса вверху страницы ── */
-  (function progress() {
-    var bar = document.getElementById('wProgress');
-    if (!bar) return;
-    var raf = null, max = -1, lastMeasure = 0;
-    /* Геометрию документа перечитываем не чаще раза в секунду (на скролле
-       хватает scrollY — Lighthouse: принудительная компоновка), а пишем
-       transform: scaleX — композитор, без layout вообще. */
-    function upd() {
-      raf = null;
-      var now = performance.now();
-      if (max < 0 || now - lastMeasure >= 1000) {
-        lastMeasure = now;
-        max = document.documentElement.scrollHeight - window.innerHeight;
-      }
-      var p = max > 0 ? (window.scrollY / max) : 0;
-      bar.style.transform = 'scaleX(' + Math.min(1, Math.max(0, p)) + ')';
-    }
-    window.addEventListener('scroll', function () {
-      if (!raf) raf = requestAnimationFrame(upd);
-    }, { passive: true });
-    requestAnimationFrame(upd);
-  })();
-  </script>
 </body>
 </html>

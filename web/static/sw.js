@@ -1,5 +1,5 @@
 // Hakumo Panel Service Worker (Light Edition)
-const CACHE_NAME = 'Hakumo-nova-v20';
+const CACHE_NAME = 'Hakumo-nova-v27';
 const STATIC_ASSETS = [
   '/static/style.css',
   '/static/panel-nova.css',
@@ -11,6 +11,9 @@ const STATIC_ASSETS = [
   '/static/websocket-client.js',
   '/static/vendor/fontawesome/css/all.min.css',
   '/static/vendor/fonts/fonts.css',
+  '/static/brand/emblem-dragon-1024.webp',
+  '/static/brand/emblem-dragon-256.webp',
+  '/static/brand/emblem-dragon.webp',
   '/static/brand/emblem-dragon.png'
 ];
 

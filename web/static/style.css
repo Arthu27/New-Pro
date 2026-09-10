@@ -498,9 +498,11 @@ html[data-theme="light"] .nav-link.active {
 
 /* ── Фильтр меню ───────────────────────────────────────────── */
 .sidebar-nav.filtering .nav-group-title { display: none; }
+/* JS ставит .nav-hide на промахи; раньше CSS ждал .has-match (которого
+   никто не ставил) — и при фильтрации ВСЕ пункты оставались display:none. */
 .sidebar-nav.filtering .nav-link { display: none; }
-.sidebar-nav.filtering .nav-group.has-match { margin-bottom: 2px; }
-.sidebar-nav.filtering .nav-group.has-match .nav-link { display: flex; }
+.sidebar-nav.filtering .nav-link:not(.nav-hide) { display: flex; }
+.sidebar-nav.filtering .nav-group:not(.nav-hide) { margin-bottom: 2px; }
 .sidebar-nav .nav-link.search-flash { animation: navFlash .5s var(--ease); }
 @keyframes navFlash { 0% { background: var(--ac-soft); } 100% { background: transparent; } }
 
@@ -2389,14 +2391,18 @@ img[src*="emblem-dragon"] { border-radius: inherit; }
 }
 html[data-theme="light"] .tab-btn.active { background: var(--ac); }
 
-/* Активный пункт меню: чистый electric blue */
+/* Активный пункт меню: electric blue без волосков на скруглениях */
 .nav-link.active {
-  background: var(--ac);
-  border: 1px solid transparent;
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--ac) 38%, transparent);
+  background: linear-gradient(145deg, #6ed0ff 0%, #2aa0e8 48%, #1578c4 100%);
+  border: 1px solid rgba(180, 230, 255, .42);
+  box-shadow: 0 10px 24px rgba(26, 143, 214, .38), inset 0 1px 0 rgba(255, 255, 255, .32);
+  overflow: hidden;
+  isolation: isolate;
+  background-clip: padding-box;
+  transform: none;
 }
 html[data-theme="light"] .nav-link.active {
-  background: var(--ac);
+  background: linear-gradient(145deg, #5eb8ff, #2f8bff 55%, #3a62e8);
 }
 
 /* Переключатель: electric blue как на референсе */
@@ -2710,17 +2716,21 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 99px;
 }
 
-/* Нав: активный — soft blue glow */
+/* Нав: активный — soft blue glow без hairline на скруглениях */
 .nav-link {
   border-radius: var(--r);
+  overflow: hidden;
+  isolation: isolate;
+  background-clip: padding-box;
 }
 .nav-link.active {
-  background: linear-gradient(135deg, #4a93ff, #2f7dff);
-  box-shadow: 0 0 20px rgba(59, 138, 255, .4), 0 4px 14px rgba(47, 125, 255, .3);
-  border: none;
+  background: linear-gradient(145deg, #6ed0ff 0%, #2aa0e8 48%, #1578c4 100%);
+  box-shadow: 0 10px 24px rgba(26, 143, 214, .38), inset 0 1px 0 rgba(255, 255, 255, .32);
+  border: 1px solid rgba(180, 230, 255, .42);
+  transform: none;
 }
 html[data-theme="light"] .nav-link.active {
-  background: linear-gradient(135deg, #4a93ff, #2f7dff);
+  background: linear-gradient(145deg, #5eb8ff, #2f8bff 55%, #3a62e8);
 }
 
 /* Табы */
