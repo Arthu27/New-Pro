@@ -39,7 +39,7 @@ def check(ok, msg):
 from cogs import logs as LOGS  # noqa: E402
 from cogs.logs import (  # noqa: E402
     _actor_person, _card_friendly, _channel_block, _is_our_bot,
-    _person_block, _ping_mod_roles, _role_block, _roles_cell,
+    _person_block, _role_block, _roles_cell,
     _safe_send, _strip_raw_id, _styled_log_embed, action_log_embed,
     nick_change_log_embed, role_batch_log_embed, role_change_log_embed,
 )
@@ -139,7 +139,7 @@ vals = ' '.join(f.value for f in e.fields)
 check('sonya.staff' in vals and 'Moderation' not in vals
       and str(mod.id) in vals,
       'кто выдал — живой модератор, не бот')
-check(e._hakumo_log_meta.get('ping') is True, 'мут-лог тегает роль модеров')
+check(not e._hakumo_log_meta.get('ping'), 'мут-лог НЕ тегает роль модеров')
 
 ban = action_log_embed(g, 'ban', user, mod, reason='флуд', case_id=12)
 check('заблокирован' in (ban.title or '') and not ban.fields[0].inline
@@ -181,12 +181,9 @@ real = _actor_person((g.me.display_name, g.me.id, None, True),
 check('sonya.staff' in real and 'Hakumo' not in real,
       'если мутил бот из панели — в логе человек из дела')
 
-print('== пинг роли модераторов ==')
+print('== роли в логах НЕ тегаются ==')
 with open('data/role_map.json', 'w', encoding='utf-8') as fh:
     json.dump({'111': 'mod', '222': 'admin', '333': 'curator'}, fh)
-roles = _ping_mod_roles(g)
-check(len(roles) == 1 and roles[0].id == 111,
-      'тегаем только роль модератора, не куратора/админа')
 
 
 class _Sent:
@@ -202,11 +199,11 @@ class _Sent:
 ch = _Sent()
 asyncio.run(_safe_send(ch, embed=e))
 kw = ch.sent[-1] if ch.sent else {}
-check('content' in kw and '<@&111>' in str(kw.get('content')),
-      'в сообщении тег роли модераторов')
+check(not kw.get('content') or '<@&' not in str(kw.get('content')),
+      'в сообщении лога нет тега роли')
 am = kw.get('allowed_mentions')
-check(am is not None and getattr(am, 'everyone', True) is False,
-      'пинг ролей без @everyone')
+check(am is None or not getattr(am, 'roles', True),
+      'пинг ролей в логах запрещён')
 
 print('== фото: имя без id, content не выкидывается ==')
 photo = _card_friendly(pb, g)
@@ -214,7 +211,7 @@ check(str(UID) not in photo and 'GhostBlade' in photo,
       'фото-карточка без сырого id')
 src = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
 check("pop ('content'" not in src and "pop('content'" not in src,
-      'фото-режим не выкидывает content (пинг жив)')
+      'фото-режим не выкидывает content')
 check('_is_our_bot' in src and 'if not _is_our_bot' in src,
       'логи mute/timeout/ban пропускают, если актор — наш бот')
 check('send_action_log' in open(os.path.join(ROOT, 'cogs', 'moderation.py'),

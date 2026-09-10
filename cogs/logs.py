@@ -636,17 +636,9 @@ async def _safe_send (ch ,**kw ):
                         kw .pop ('embed',None )
             except Exception as _ex:
                 log.debug("_safe_send(): подавлено: %s", _ex)
-        if _m and _m .get ('ping') and 'allowed_mentions' not in kw :
-            try :
-                _roles =_ping_mod_roles (getattr (ch ,'guild',None ))
-                if _roles :
-                    _ping =' '.join (r .mention for r in _roles )
-                    _prev =str (kw .get ('content')or '').strip ()
-                    kw ['content']=(_prev +' '+_ping ).strip ()if _prev else _ping
-                    kw ['allowed_mentions']=discord .AllowedMentions (
-                    everyone =False ,users =False ,roles =_roles )
-            except Exception as _pex :
-                log .debug ('_safe_send ping: %s',_pex )
+        # Роли в логах НЕ тегаем (заказ владельца 2026-09-10: «логи не
+        # должны тегать ролей»). Раньше сюда добавлялся пинг роли модеров
+        # на mute/ban/warn — убрано полностью.
         if _is_forum_ch (ch ):
             # Форум-канал как лог: каждый лог = НОВЫЙ ПОСТ форума
             # (в сам форум сообщениями писать нельзя — только постами).
@@ -885,9 +877,6 @@ _STACK_FIELD = {
 }
 
 # Наказания: тегаем роль модераторов в content, чтобы пришёл пуш.
-_PING_CATS = {'mute', 'ban', 'warn', 'punish'}
-
-
 def _polish_embed_value(value):
     """Текст поля: без сырых ID, без рваных пробелов, тире как в русском."""
     s = str(value if value is not None else '')
@@ -1267,40 +1256,7 @@ def _actor_person(who, guild=None, target_id=None, actions=None):
     return _bullet(name) if name else '—'
 
 
-def _ping_mod_roles(guild):
-    """Роли модераторов для тега в логе наказания."""
-    out = []
-    seen = set()
-
-    def _add(role):
-        if role is None:
-            return
-        rid = getattr(role, 'id', None)
-        if rid is None or rid in seen:
-            return
-        if getattr(role, 'managed', False):
-            return
-        isdef = getattr(role, 'is_default', None)
-        if callable(isdef) and isdef():
-            return
-        seen.add(rid)
-        out.append(role)
-
-    try:
-        from services.mod_role import resolve_mod_role
-        _add(resolve_mod_role(guild))
-    except Exception as _ex:
-        log.debug('_ping_mod_roles resolve: %s', _ex)
-    try:
-        rm = _json_file_cached('data/role_map.json')
-        getter = getattr(guild, 'get_role', None)
-        for rid, panel in (rm.items() if isinstance(rm, dict) else []):
-            if str(panel) != 'mod' or not str(rid).isdigit():
-                continue
-            _add(getter(int(rid)) if callable(getter) else None)
-    except Exception as _ex:
-        log.debug('_ping_mod_roles map: %s', _ex)
-    return out
+# _ping_mod_roles удалён: роли в логах не тегаются (заказ 2026-09-10)
 
 
 def _quote_msg(text):
@@ -1399,7 +1355,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
         'rows': _rows[:8],
         'color': color if color is not None else base_color,
         'guild': getattr(guild, 'name', ''),
-        'ping': category in _PING_CATS,
+        # 'ping' больше не ставим: роли в логах не тегаются
     }
     return e
 
