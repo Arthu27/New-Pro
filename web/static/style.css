@@ -124,7 +124,7 @@
   --sidebar-w: 268px;
   --sidebar-rail: 76px;
   --topbar-h: 58px;
-  --stage-pad: 20px;
+  --stage-pad: 28px;
 
   --ease: cubic-bezier(0.25, 0.6, 0.3, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

@@ -133,20 +133,36 @@ html[data-theme="dark"] body::before { opacity: .5 !important; }
   opacity: .25 !important;
 }
 
-/* ── Сцена: панель с тёплым золотым ореолом как в ките ─────── */
+html[data-theme="dark"] .app-shell {
+  overflow: visible !important;
+  background:
+    radial-gradient(ellipse 78% 70% at 50% 50%, rgba(212, 176, 122, .16), transparent 68%);
+}
+html[data-theme="dark"] .app-shell::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 24px;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    0 0 50px 8px rgba(212, 176, 122, .22),
+    0 0 120px 20px rgba(212, 176, 122, .12);
+}
 html[data-theme="dark"] .panel-stage {
   position: relative;
+  z-index: 1;
   background:
     linear-gradient(165deg, rgba(38, 44, 56, .94) 0%, rgba(22, 26, 34, .95) 55%, rgba(16, 19, 26, .97) 100%) !important;
-  border: 1.5px solid rgba(232, 201, 154, .32) !important;
+  border: 1.5px solid rgba(232, 201, 154, .38) !important;
   border-radius: 20px !important;
-  box-shadow: var(--sn-stage-glow) !important;
+  box-shadow:
+    0 0 40px rgba(212, 176, 122, .18),
+    0 24px 70px rgba(0, 0, 0, .65),
+    inset 0 1px 0 rgba(232, 201, 154, .28) !important;
   -webkit-backdrop-filter: blur(28px) saturate(1.1) !important;
   backdrop-filter: blur(28px) saturate(1.1) !important;
-}
-html[data-theme="dark"] .app-shell {
-  background:
-    radial-gradient(ellipse 70% 55% at 50% 45%, rgba(212, 176, 122, .1), transparent 70%);
+  overflow: hidden;
 }
 
 html[data-theme="dark"] .sidebar {
