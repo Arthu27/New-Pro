@@ -222,6 +222,7 @@ em { font-style: normal; color: var(--cr-gold-2); }
   max-width: 740px;
 }
 .cr-brand {
+  position: relative;
   margin: 0 0 16px;
   font-family: var(--font-display);
   font-size: clamp(56px, 12vw, 118px);
@@ -234,6 +235,17 @@ em { font-style: normal; color: var(--cr-gold-2); }
   color: transparent;
   filter: drop-shadow(0 0 42px rgba(240, 208, 154, .4));
   animation: crRise 1.05s var(--cr-ease) both;
+}
+.cr-brand::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 20%;
+  bottom: -18px;
+  height: 28px;
+  background: radial-gradient(ellipse at center, rgba(240, 208, 154, .45), transparent 70%);
+  filter: blur(10px);
+  pointer-events: none;
+  z-index: -1;
 }
 .cr-title {
   margin: 0 0 16px;
