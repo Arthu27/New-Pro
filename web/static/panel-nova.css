@@ -471,8 +471,15 @@ html[data-theme="light"] .nav-link {
   margin: 2px 0 !important;
   padding: 9px 12px !important;
   color: var(--nv-text-2) !important;
+  /* Всегда 1px border: смена на border:none у .active давала
+     субпиксельный «заусенец» внизу слева на скруглениях. */
   border: 1px solid transparent !important;
-  transition: background .18s, box-shadow .18s, color .15s, transform .12s !important;
+  background-clip: padding-box !important;
+  -webkit-background-clip: padding-box !important;
+  isolation: isolate !important;
+  overflow: hidden !important;
+  transform: translateZ(0) !important;
+  transition: background .18s, box-shadow .18s, color .15s, border-color .15s !important;
 
 }
 
@@ -488,11 +495,15 @@ html[data-theme="light"] .nav-link:hover {
 html[data-theme="dark"] .nav-link.active,
 html[data-theme="light"] .nav-link.active {
 
-  background: linear-gradient(135deg, rgba(94,200,255,.95), rgba(26,143,214,.95)) !important;
+  background: linear-gradient(145deg, #6ed0ff 0%, #2aa0e8 48%, #1578c4 100%) !important;
   color: #fff !important;
-  border: none !important;
-  box-shadow: var(--nv-bloom-ice) !important;
-  transform: translateX(2px) !important;
+  border-color: rgba(180, 230, 255, .42) !important;
+  /* Без translateX и без «0 0 0 1px» bloom-кольца — они давали
+     серый/белый волосок на нижнем левом скруглении. */
+  box-shadow:
+    0 10px 24px rgba(26, 143, 214, .38),
+    inset 0 1px 0 rgba(255, 255, 255, .32) !important;
+  transform: none !important;
 
 }
 
