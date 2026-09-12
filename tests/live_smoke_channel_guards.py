@@ -111,15 +111,19 @@ async def run_age_and_selfie():
         author = FakeMember(1001, roles=[FakeRole(1, '@everyone')])
 
         author.send = AsyncMock()
-        msg = FakeMessage(ch, author, 'мне +12')
+        msg = FakeMessage(ch, author, 'мне 13_')
         await cog.on_message(msg)
-        check(msg.delete.await_count == 1, 'age-guard: удалил «мне +12»')
+        check(msg.delete.await_count == 1, 'age-guard: удалил «мне 13_»')
         check(ch.send.await_count == 0, 'age-guard: в канал НЕ пишет')
         check(author.send.await_count == 1, 'age-guard: предупреждение в ЛС')
 
-        msg13 = FakeMessage(ch, author, 'мне 13')
+        msg14 = FakeMessage(ch, author, 'мне 14')
+        await cog.on_message(msg14)
+        check(msg14.delete.await_count == 0, 'age-guard: «мне 14» оставлен')
+
+        msg13 = FakeMessage(ch, author, '13+')
         await cog.on_message(msg13)
-        check(msg13.delete.await_count == 0, 'age-guard: «мне 13» оставлен')
+        check(msg13.delete.await_count == 1, 'age-guard: удалил голое «13+»')
         msg16 = FakeMessage(ch, author, 'мне 16')
         await cog.on_message(msg16)
         check(msg16.delete.await_count == 0, 'age-guard: «мне 16» оставлен')
@@ -160,7 +164,7 @@ async def run_age_and_selfie():
         check(poster3.add_roles.await_count == 0, 'selfie: роль уже есть — skip')
 
     check(cg.claimed_underage('мне двенадцать') == 12, 'слова: двенадцать')
-    check(cg.claimed_underage('мне тринадцать') is None, 'слова: тринадцать → None')
+    check(cg.claimed_underage('мне тринадцать') == 13, 'слова: тринадцать → 13')
     check(cg.claimed_underage('2 года на сервере') is None, 'tenure false-positive нет')
 
 
