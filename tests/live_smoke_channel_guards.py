@@ -62,6 +62,7 @@ class FakeMember:
         self.guild_permissions = FakePerms(**perms)
         self.mention = f'<@{uid}>'
         self.add_roles = AsyncMock()
+        self.send = AsyncMock()  # ЛС для age-guard
 
 
 class FakeChannel:
@@ -69,6 +70,7 @@ class FakeChannel:
         self.id = cid
         self.guild = guild
         self.send = AsyncMock()
+        self.mention = f'<#{cid}>'
 
 
 class FakeGuild:
@@ -108,15 +110,16 @@ async def run_age_and_selfie():
         ch = FakeChannel(age_ids[0], guild)
         author = FakeMember(1001, roles=[FakeRole(1, '@everyone')])
 
-        msg = FakeMessage(ch, author, 'мне 12 лет')
+        author.send = AsyncMock()
+        msg = FakeMessage(ch, author, 'мне +12')
         await cog.on_message(msg)
-        check(msg.delete.await_count == 1, 'age-guard: удалил «мне 12 лет»')
-        check(ch.send.await_count == 1, 'age-guard: предупреждение отправлено')
+        check(msg.delete.await_count == 1, 'age-guard: удалил «мне +12»')
+        check(ch.send.await_count == 0, 'age-guard: в канал НЕ пишет')
+        check(author.send.await_count == 1, 'age-guard: предупреждение в ЛС')
 
         msg13 = FakeMessage(ch, author, 'мне 13')
         await cog.on_message(msg13)
         check(msg13.delete.await_count == 0, 'age-guard: «мне 13» оставлен')
-
         msg16 = FakeMessage(ch, author, 'мне 16')
         await cog.on_message(msg16)
         check(msg16.delete.await_count == 0, 'age-guard: «мне 16» оставлен')

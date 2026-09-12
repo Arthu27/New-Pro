@@ -61,6 +61,19 @@ check(claimed_underage('2 года') is None, 'голые «2 года» → Non
 check(claimed_underage('мне 2 года') == 2, 'мне 2 года → 2')
 check(claimed_underage('15 лет') is None, '15 лет → None (от 13 ок)')
 
+# обходы символами
+check(claimed_underage('мне +12') == 12, 'мне +12 → 12')
+check(claimed_underage('мне =11') == 11, 'мне =11 → 11')
+check(claimed_underage('мне ~10 лет') == 10, 'мне ~10 лет → 10')
+check(claimed_underage('мне 1 2') == 12, 'мне 1 2 → 12')
+check(claimed_underage('мне 1-2') == 12, 'мне 1-2 → 12')
+check(claimed_underage('+12 лет') == 12, '+12 лет → 12')
+check(claimed_underage('возраст=+12') == 12, 'возраст=+12 → 12')
+check(claimed_underage('мне ||12||') == 12, 'spoiler 12 → 12')
+check(claimed_underage('мне +13') is None, 'мне +13 → None')
+check(claimed_underage('+13 лет') is None, '+13 лет → None')
+check(claimed_underage('мне 1 3') is None, 'мне 1 3 → None')
+
 check(claimed_underage('') is None, 'пустая строка')
 check(claimed_underage(None) is None, 'None')
 

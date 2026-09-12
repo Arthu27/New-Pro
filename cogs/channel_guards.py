@@ -3,8 +3,9 @@
 
 1) Возраст < 13 в указанных каналах → удалить сообщение.
    Каналы: 1312430207067623456, 1312552287360516207
-   Ловим формулировки вроде «мне 12», «11 лет», «возраст 10».
-   «мне 13» / «13 лет» / 14+ НЕ трогаем — сообщение не удаляем.
+   Ловим «мне 12», «+12», «1 2», «возраст=11» и похожие обходы.
+   «мне 13» / «13 лет» / 14+ НЕ трогаем.
+   Предупреждение — только в ЛС нарушителю (в канал не пишем).
 
 2) Селфи-канал 1312434029278134294 → выдать роль 920462510769975306
    при посте с картинкой/видео (вложение или embed-image).
@@ -14,6 +15,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Optional
 
 import discord
@@ -31,28 +33,29 @@ AGE_GUARD_CHANNELS = frozenset({
 SELFIE_CHANNEL_ID = 1312434029278134294
 SELFIE_ROLE_ID = 920462510769975306
 
-# Минимальный допустимый возраст в канале (заказ: «от 13»).
-# Удаляем только заявленный возраст 1–12; 13+ оставляем как есть.
 AGE_MIN_ALLOWED = 13
 _AGE_MAX_BLOCK = AGE_MIN_ALLOWED - 1  # 12
 
-# Возраст < 13:
-#  • «мне 12» / «я 10» / «возраст 11» — любые 1–12
-#  • «11 лет» — только 10–12 (чтобы «2 года на сервере» не триггерило)
-# (?!\d) не даёт схватить «1» из «13» / «18» / «19».
+# Мусор вокруг/между цифрами: +12, =12, 1 2, 1-2 …
+_AGE_JUNK = r'[\s\+\=\~\*\-\.\:\;\#\|\/\\<>_]*'
+# Одиночная 1–9 не должна схватывать «1» из «1 3» / «1-4» (это не 10–12).
+_NUM_ME = rf'(?P<a_me>1{_AGE_JUNK}[0-2]|[1-9](?!{_AGE_JUNK}\d))(?!\d)'
+_NUM_YRS = rf'(?P<a_yrs>1{_AGE_JUNK}[0-2])(?!\d)'
+_NUM_AGE = rf'(?P<a_age>1{_AGE_JUNK}[0-2]|[1-9](?!{_AGE_JUNK}\d))(?!\d)'
+
 _UNDERAGE_RE = re.compile(
-    r'(?ix)'
-    r'(?:'
-    r'(?:^|[^\wа-яё])(?:мне|я)\s*(?:есть\s*)?(?P<a1>1[0-2]|[1-9])(?!\d)'
-    r'(?:\s*(?:лет|года|год|л\.?))?'
-    r'|'
-    r'(?:^|[^\wа-яё])(?P<a2>1[0-2])(?!\d)\s*(?:лет|года|год)(?:[^\wа-яё]|$)'
-    r'|'
-    r'возраст(?:а|у)?\s*[:=]?\s*(?P<a3>1[0-2]|[1-9])(?!\d)'
-    r')'
+    rf'(?ix)'
+    rf'(?:'
+    rf'(?:^|[^\wа-яё])(?:мне|я)\s*(?:есть\s*)?{_AGE_JUNK}{_NUM_ME}'
+    rf'(?:{_AGE_JUNK}(?:лет|года|год|л\.?))?'
+    rf'|'
+    rf'(?:^|[^\wа-яё]){_AGE_JUNK}{_NUM_YRS}'
+    rf'{_AGE_JUNK}(?:лет|года|год)(?:[^\wа-яё]|$)'
+    rf'|'
+    rf'возраст(?:а|у)?\s*[:=]?{_AGE_JUNK}{_NUM_AGE}'
+    rf')'
 )
 
-# Словесные числа 10–12 (13+ словами не блокируем)
 _WORD_AGES = {
     'десять': 10, 'одиннадцать': 11, 'двенадцать': 12,
 }
@@ -62,21 +65,43 @@ _WORD_AGE_RE = re.compile(
     r'(?:\s*(?:лет|года|год))?'
 )
 
+_ZW_RE = re.compile(
+    r'[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff\u00ad\u180e]'
+)
+
+
+def _normalize_age_text(text: str) -> str:
+    """Убрать zero-width / спойлеры и привести похожие цифры к ASCII."""
+    if not text:
+        return ''
+    t = unicodedata.normalize('NFKC', text)
+    t = _ZW_RE.sub('', t)
+    t = t.replace('||', '')
+    return t
+
+
+def _digits_to_age(raw: Optional[str]) -> int:
+    if not raw:
+        return 0
+    try:
+        return int(re.sub(r'\D', '', raw))
+    except (TypeError, ValueError):
+        return 0
+
 
 def claimed_underage(text: str) -> Optional[int]:
     """Вернуть заявленный возраст 1–12 или None, если <13 не заявлено."""
     if not text:
         return None
-    m = _UNDERAGE_RE.search(text)
+    norm = _normalize_age_text(text)
+    m = _UNDERAGE_RE.search(norm)
     if m:
-        raw = m.group('a1') or m.group('a2') or m.group('a3')
-        try:
-            age = int(raw)
-        except (TypeError, ValueError):
-            age = 0
+        gd = m.groupdict()
+        raw = gd.get('a_me') or gd.get('a_yrs') or gd.get('a_age')
+        age = _digits_to_age(raw)
         if 1 <= age <= _AGE_MAX_BLOCK:
             return age
-    mw = _WORD_AGE_RE.search(text)
+    mw = _WORD_AGE_RE.search(norm)
     if mw:
         age = _WORD_AGES.get(mw.group(1).lower())
         if age is not None and age <= _AGE_MAX_BLOCK:
@@ -115,6 +140,19 @@ def _is_immune(member: discord.Member) -> bool:
     return False
 
 
+async def _warn_author_private(message: discord.Message) -> None:
+    """Закрытое предупреждение только автору (ЛС). В канал не пишем."""
+    ch = getattr(message.channel, 'mention', None) or 'этом канале'
+    text = (
+        f'Твоё сообщение в {ch} удалено: нельзя указывать '
+        f'возраст младше {AGE_MIN_ALLOWED}.'
+    )
+    try:
+        await message.author.send(text)
+    except (discord.Forbidden, discord.HTTPException) as ex:
+        log.debug('age-guard: ЛС %s недоступны: %s', message.author.id, ex)
+
+
 class ChannelGuards(commands.Cog):
     """Возраст-фильтр + роль за селфи."""
 
@@ -130,7 +168,7 @@ class ChannelGuards(commands.Cog):
 
         ch_id = getattr(message.channel, 'id', 0) or 0
 
-        # ── 1) возраст < 13 (от 13 — ок, сообщение не трогаем) ─────────
+        # ── 1) возраст < 13 (ответ только в ЛС) ────────────────────────
         if ch_id in AGE_GUARD_CHANNELS and not _is_immune(message.author):
             age = claimed_underage(message.content or '')
             if age is not None:
@@ -141,17 +179,12 @@ class ChannelGuards(commands.Cog):
                 except discord.HTTPException as ex:
                     log.debug('age-guard delete: %s', ex)
                 else:
-                    log.info('age-guard: удалил msg %s от %s (заявлен возраст %s) в #%s',
-                             message.id, message.author.id, age, ch_id)
-                    try:
-                        await message.channel.send(
-                            f'{message.author.mention} в этом канале нельзя '
-                            f'указывать возраст младше {AGE_MIN_ALLOWED}.',
-                            delete_after=8,
-                        )
-                    except Exception:
-                        pass
-                return  # дальше селфи не обрабатываем (сообщения уже нет)
+                    log.info(
+                        'age-guard: удалил msg %s от %s (заявлен возраст %s) в #%s',
+                        message.id, message.author.id, age, ch_id,
+                    )
+                    await _warn_author_private(message)
+                return
 
         # ── 2) селфи → роль ───────────────────────────────────────────
         if ch_id == SELFIE_CHANNEL_ID and message_has_media(message):
