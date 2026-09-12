@@ -108,22 +108,30 @@ async def run_age_and_selfie():
         ch = FakeChannel(age_ids[0], guild)
         author = FakeMember(1001, roles=[FakeRole(1, '@everyone')])
 
-        msg = FakeMessage(ch, author, 'мне 16 лет')
+        msg = FakeMessage(ch, author, 'мне 12 лет')
         await cog.on_message(msg)
-        check(msg.delete.await_count == 1, 'age-guard: удалил «мне 16 лет»')
+        check(msg.delete.await_count == 1, 'age-guard: удалил «мне 12 лет»')
         check(ch.send.await_count == 1, 'age-guard: предупреждение отправлено')
+
+        msg13 = FakeMessage(ch, author, 'мне 13')
+        await cog.on_message(msg13)
+        check(msg13.delete.await_count == 0, 'age-guard: «мне 13» оставлен')
+
+        msg16 = FakeMessage(ch, author, 'мне 16')
+        await cog.on_message(msg16)
+        check(msg16.delete.await_count == 0, 'age-guard: «мне 16» оставлен')
 
         msg18 = FakeMessage(ch, author, 'мне 18')
         await cog.on_message(msg18)
         check(msg18.delete.await_count == 0, 'age-guard: «мне 18» оставлен')
 
         staff = FakeMember(1002, roles=[FakeRole(1)], manage_messages=True)
-        msgs = FakeMessage(ch, staff, 'мне 15')
+        msgs = FakeMessage(ch, staff, 'мне 11')
         await cog.on_message(msgs)
         check(msgs.delete.await_count == 0, 'age-guard: staff иммунен')
 
         ch2 = FakeChannel(age_ids[1], guild)
-        msg2 = FakeMessage(ch2, author, 'возраст 14')
+        msg2 = FakeMessage(ch2, author, 'возраст 10')
         await cog.on_message(msg2)
         check(msg2.delete.await_count == 1, 'age-guard: второй канал чистит')
 
@@ -148,7 +156,8 @@ async def run_age_and_selfie():
         await cog.on_message(FakeMessage(sch, poster3, 'ещё', attachments=[att]))
         check(poster3.add_roles.await_count == 0, 'selfie: роль уже есть — skip')
 
-    check(cg.claimed_underage('мне семнадцать') == 17, 'слова: семнадцать')
+    check(cg.claimed_underage('мне двенадцать') == 12, 'слова: двенадцать')
+    check(cg.claimed_underage('мне тринадцать') is None, 'слова: тринадцать → None')
     check(cg.claimed_underage('2 года на сервере') is None, 'tenure false-positive нет')
 
 
