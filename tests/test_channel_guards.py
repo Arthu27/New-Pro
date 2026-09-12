@@ -73,6 +73,21 @@ check(claimed_underage('мне +18') is None, 'мне +18 → None')
 check(claimed_underage('18+') is None, '18+ → None')
 check(claimed_underage('2017') is None, '2017 → None')
 
+
+# обходы «меньше/до/под 18»
+check(claimed_underage('ищу девушку меньше 18') == 17, 'ищу девушку меньше 18')
+check(claimed_underage('ищу девушку младше 18') == 17, 'ищу младше 18')
+check(claimed_underage('девушка до 18') == 17, 'девушка до 18')
+check(claimed_underage('под 18') == 17, 'под 18')
+check(claimed_underage('<18') == 17, '<18')
+check(claimed_underage('несовершеннолетнюю') == 17, 'несовершеннолетнюю')
+check(claimed_underage('under 18') == 17, 'under 18')
+check(claimed_underage('не меньше 18') is None, 'не меньше 18 → None')
+check(claimed_underage('не младше 18') is None, 'не младше 18 → None')
+check(claimed_underage('старше 18') is None, 'старше 18 → None')
+check(claimed_underage('от 18') is None, 'от 18 → None')
+check(claimed_underage('ищу девушку 18+') is None, 'ищу 18+ → None')
+
 check(claimed_underage('') is None, 'пустая строка')
 check(claimed_underage(None) is None, 'None')
 
