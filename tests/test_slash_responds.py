@@ -72,6 +72,14 @@ msub = mod_src[mod_src.index('class ModActionModal'):
                mod_src.index('class ModHelpButton')]
 check('thinking=True' in msub and 'await _ack' in msub,
       'модалка наказания: defer thinking=True (type 5, не «не ответило»)')
+ons = msub[msub.index('async def on_submit'):]
+check(ons.find('await _ack') < ons.find('_ensure_action_acl'),
+      'модалка: _ack до ACL (не 10062 из-за проверки прав)')
+check('_is_dead_interaction' in mod_src
+      and 'Unknown Webhook' in mod_src,
+      '10062/10015: мёртвый interaction не долбим followup')
+check("abort execute" in ex or 'interaction мёртв' in ex,
+      'execute не наказывает, если defer уже 10062')
 csub = mod_src[mod_src.index('class _CtxMuteModal'):
                mod_src.index('def _mod_cog_of')]
 check(csub.find('await _ack') < csub.find('apply_panel_action')

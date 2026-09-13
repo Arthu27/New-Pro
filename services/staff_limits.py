@@ -403,11 +403,20 @@ def role_scoped_actions(guild_id, role_ids=()):
     По умолчанию ограничений нет → None (видно всё). Если хоть у одной
     роли модератора есть свои настройки (лимиты/окна/потолки), доступны
     ТОЛЬКО настроенные действия — объединение по всем таким ролям.
+
+    Старший тир (mod/curator/admin/owner из role_map) ГЛАВНЕЕ: override
+    ролей вне карты (хелпер) не сужает меню куратору/модеру.
     """
     overrides = get_role_overrides(guild_id)
+    tmap = _role_tier_map()
+    staff_tier = tier_for_roles(role_ids)
     scoped = None
     for rid in role_ids or ():
-        ov = overrides.get(str(rid)) or {}
+        rid_s = str(rid)
+        # Куратор/модер + хелпер → хелперские лимиты меню не режут
+        if staff_tier in TIER_ORDER and rid_s not in tmap:
+            continue
+        ov = overrides.get(rid_s) or {}
         keys = (set(ov.get('limits') or ())
                 | set(ov.get('windows') or ())
                 | set(ov.get('durations') or ()))
@@ -457,13 +466,19 @@ def effective_max_duration(guild_id, key, role_ids=()):
 
     Свой потолок роли ГЛАВНЕЕ общего; несколько ролей — мягчайший.
     Ничего не настроено — 2 часа у всех (кроме тира владельца).
+    Старший тир игнорирует duration-override ролей вне role_map (хелпер).
     """
     if key not in DURATION_KEYS:
         return 0
     overrides = get_role_overrides(guild_id)
+    tmap = _role_tier_map()
+    staff_tier = tier_for_roles(role_ids)
     best = 0
     for rid in role_ids or ():
-        ov = overrides.get(str(rid)) or {}
+        rid_s = str(rid)
+        if staff_tier in TIER_ORDER and rid_s not in tmap:
+            continue
+        ov = overrides.get(rid_s) or {}
         v = int((ov.get('durations') or {}).get(key) or 0)
         if v > best:
             best = v
@@ -884,9 +899,15 @@ def effective_limits(guild_id, role_ids=()):
     for _k, _v in _tier_defaults(role_ids).items():
         lim[_k] = _v
     overrides = get_role_overrides(guild_id)
+    tmap = _role_tier_map()
+    staff_tier = tier_for_roles(role_ids)
     best = {}          # ключ → (лимит, окно) — лучший из СВОИХ лимитов ролей
     for rid in role_ids or ():
-        ov = overrides.get(str(rid))
+        rid_s = str(rid)
+        # Старший тир игнорирует override хелпера (mute:3 не бьёт куратора)
+        if staff_tier in TIER_ORDER and rid_s not in tmap:
+            continue
+        ov = overrides.get(rid_s)
         if not ov:
             continue
         for k, v in (ov.get('limits') or {}).items():

@@ -229,6 +229,34 @@ check(err_short and 'короче' in err_short, '15 мин — отказ (ми
 check(err_ok is None, '30 мин при потолке 2 ч — можно')
 check(err_long and 'дольше' in err_long, '3 ч при потолке 2 ч — отказ')
 
+print('== 10. Старший тир главнее хелпера (куратор+хелпер) ==')
+HELPER = 948969471916249119
+SL.set_role_limits(GT, HELPER, who='helper', role_name='Хелпер',
+                   mute=3, unmute=3, clear=10)
+# только хелпер — меню сужается, mute=3
+check(SL.role_scoped_actions(GT, [HELPER]) == {'mute', 'unmute', 'clear'},
+      'хелпер alone → только mute/unmute/clear')
+_lm_h, _ = SL.effective_limits(GT, [HELPER])
+check(_lm_h['mute'] == 3, f'хелпер alone: mute=3 ({_lm_h["mute"]})')
+# куратор + хелпер → хелпер не режет меню и не бьёт mute:3
+# (у куратора уже есть ban=9 из §9 — scope={'ban'}, не хелперский набор)
+_scoped_ch = SL.role_scoped_actions(GT, [1002, HELPER])
+check(_scoped_ch != {'mute', 'unmute', 'clear'},
+      f'куратор+хелпер: не хелперское меню ({_scoped_ch})')
+check(_scoped_ch is None or 'ban' in (_scoped_ch or ()),
+      f'куратор+хелпер: бан не вырезан хелпером ({_scoped_ch})')
+_lm_ch, _ = SL.effective_limits(GT, [1002, HELPER])
+check(_lm_ch['mute'] == 10, f'куратор+хелпер: mute=10 тира, не 3 ({_lm_ch["mute"]})')
+check(_lm_ch['ban'] == 9, 'куратор+хелпер: бан остаётся пер-рольным оверрайдом куратора')
+# модер (есть duration mute из §9 → scope={'mute'}) + хелпер → не хелперский набор
+_scoped_mh = SL.role_scoped_actions(GT, [1001, HELPER])
+check(_scoped_mh != {'mute', 'unmute', 'clear'},
+      f'модер+хелпер: не хелперское меню ({_scoped_mh})')
+check(_scoped_mh is None or _scoped_mh == {'mute'},
+      f'модер+хелпер: только свой mute-duration, без clear/unmute хелпера ({_scoped_mh})')
+_lm_mh, _ = SL.effective_limits(GT, [1001, HELPER])
+check(_lm_mh['mute'] == 5, f'модер+хелпер: mute=5 тира ({_lm_mh["mute"]})')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

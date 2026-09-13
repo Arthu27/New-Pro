@@ -199,6 +199,31 @@ try:
     check('warn' not in acts, f'helper НЕ видит warn: {acts}')
     kinds = [k[0] for k in mute_kinds_for(g.id, helper_m)]
     check(kinds == ['mute_chat'], f'mute kinds только чат: {kinds}')
+
+    # куратор (в role_map) + хелпер → полная панель по ACL куратора, не хелперская
+    import json as _json
+    from services import staff_limits as _SL
+    CURATOR_RID = 555666777888999000
+    _rmap_path = pathlib.Path('data/role_map.json')
+    _rmap_path.parent.mkdir(parents=True, exist_ok=True)
+    _rmap_path.write_text(_json.dumps({str(CURATOR_RID): 'curator'}),
+                          encoding='utf-8')
+    _SL.ROLE_MAP_PATH = str(_rmap_path)
+    # ACL: куратор может ban/warn/mute/purge
+    for _act in ('ban', 'warn', 'mute', 'purge', 'timeout'):
+        _cur = list(pacl.load_action_acl(g.id).get(_act) or [])
+        if str(CURATOR_RID) not in [str(x) for x in _cur]:
+            _cur.append(str(CURATOR_RID))
+            pacl.set_action_rule(g.id, _act, _cur)
+    curator_m = _Member(99, [_Role(g.id), _Role(CURATOR_RID),
+                             _Role(HELPER_ROLE_ID)])
+    c_acts = [a[0] for a in actions_for_member(g, curator_m)]
+    check('ban' in c_acts and 'warn' in c_acts and 'mute' in c_acts,
+          f'куратор+хелпер видит полную панель: {c_acts}')
+    check('clear' in c_acts, f'куратор+хелпер видит clear: {c_acts}')
+    _lim_c, _ = _SL.effective_limits(g.id, [CURATOR_RID, HELPER_ROLE_ID])
+    check(_lim_c['mute'] == 10,
+          f'куратор+хелпер mute=10 (не helper 3): {_lim_c["mute"]}')
 except Exception as ex:
     import traceback
     traceback.print_exc()

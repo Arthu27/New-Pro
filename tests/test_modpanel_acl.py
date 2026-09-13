@@ -214,11 +214,16 @@ class _Resp:
         self.sent.append(embed)
         self.done = True
 
+    async def send(self, embed=None, ephemeral=False, **kw):
+        # followup.send после defer
+        self.sent.append(embed)
+
     async def send_modal(self, modal):
         self.modal.append(modal)
 
-    async def defer(self, ephemeral=False):
+    async def defer(self, ephemeral=False, thinking=False):
         self.deferred = True
+        self.done = True
 
 
 class _Inter:
@@ -226,6 +231,7 @@ class _Inter:
         self.user = user
         self.guild = guild
         self.response = _Resp()
+        self.followup = self.response  # после defer отказ идёт через followup.send
 
 
 g = Guild(GID)
@@ -252,7 +258,8 @@ check(bool(i2.response.modal) and not i2.response.sent,
 i3 = _Inter(Member(100, [602]), g)
 modal = ModActionModal(cog, 'ban', guild=g)
 asyncio.run(modal.on_submit(i3))
-check(not i3.response.deferred and not getattr(i3, 'ran', False),
+# ack (defer) идёт ДО ACL — иначе Discord 10062; отказ всё равно до исполнения.
+check(not getattr(i3, 'ran', False),
       'on_submit без разрешения: до исполнения не дошло, отработан отказ')
 check(i3.response.sent and 'Классические разрешения' in str(getattr(i3.response.sent[-1], 'description', '')),
       'отказ в модалке говорит, откуда включить доступ')
