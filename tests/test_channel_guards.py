@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cogs.channel_guards import claimed_underage, message_has_media  # noqa: E402
 from services.helper_acl_seed import (  # noqa: E402
-    HELPER_ROLE_ID, HELPER_ACTIONS, apply_helper_acl_seed,
+    HELPER_ROLE_ID, HELPER_ACTIONS, HELPER_LIMITS, apply_helper_acl_seed,
 )
 
 PASS = FAIL = 0
@@ -130,6 +130,8 @@ check(not message_has_media(_Msg()), 'пусто → False')
 print('== helper_acl_seed constants ==')
 check(HELPER_ROLE_ID == 948969471916249119, 'HELPER_ROLE_ID')
 check(HELPER_ACTIONS == ('mute', 'purge'), 'только mute+purge')
+check(HELPER_LIMITS == {'clear': 10, 'mute': 3, 'unmute': 3},
+      'лимиты: mute/unmute 3, clear 10')
 
 
 print('== helper_acl_seed apply (без MAIN_GUILD) ==')

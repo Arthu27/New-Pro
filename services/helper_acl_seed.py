@@ -5,11 +5,11 @@
   • может вызывать /modpanel;
   • в меню видит ТОЛЬКО «Мут» (чат) и «Очистка сообщений» — без бана,
     варна, войс-мута и таймаута;
-  • лимит чисток как у модеров: 10/день.
+  • лимиты: мут 3/день, снять мут 3/день, очистка 10/день.
 
 Идемпотентно: маркер data/.helper_acl.v<N>. Не трогает чужие роли в ACL —
 только ДОПИСЫВАЕТ helper к спискам mute/purge и к cmd_acl modpanel.
-Лимиты роли ставит только если для helper ещё нет override.
+Лимиты helper при сиде v2+ перезаписываются на HELPER_LIMITS.
 """
 from __future__ import annotations
 
@@ -23,8 +23,9 @@ _log = get_logger('helper_acl_seed')
 HELPER_ROLE_ID = 948969471916249119
 # action_acl ключи (permission_acl.ACTIONS): mute = чат-мут, purge = очистка
 HELPER_ACTIONS = ('mute', 'purge')
-HELPER_LIMITS = {'clear': 10, 'mute': 10, 'unmute': 10}
-SEED_VERSION = 1
+# заказ 2026-09-13: мут/размут по 3 в сутки (не 10)
+HELPER_LIMITS = {'clear': 10, 'mute': 3, 'unmute': 3}
+SEED_VERSION = 2
 MARKER = f'data/.helper_acl.v{SEED_VERSION}'
 _DEMO_GUILD = 987654321098765432
 
@@ -115,14 +116,13 @@ def apply_helper_acl_seed(force=False, guild_id=None):
             _log.warning('helper cmd_acl: %s', ex)
 
         # 3) Лимиты роли → role_scoped_actions сузит меню до clear/mute/unmute
+        # v2+: всегда ставим HELPER_LIMITS (мут/размут 3/день), даже если уже были 10.
         try:
-            from services.staff_limits import get_role_overrides, set_role_limits
-            ov = (get_role_overrides(gid) or {}).get(helper) or {}
-            if not (ov.get('limits') or {}):
-                set_role_limits(
-                    gid, HELPER_ROLE_ID, who='helper_acl_seed',
-                    **HELPER_LIMITS)
-                report['limits'] = True
+            from services.staff_limits import set_role_limits
+            set_role_limits(
+                gid, HELPER_ROLE_ID, who='helper_acl_seed',
+                **HELPER_LIMITS)
+            report['limits'] = True
         except Exception as ex:
             _log.warning('helper limits: %s', ex)
 
