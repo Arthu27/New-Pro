@@ -19,57 +19,73 @@ log =get_logger ("moderation")
 DIVIDER ="✦ ───────────────────── ✦"
 
 
-async def _respond (interaction ,**kw ):
+def _is_dead_interaction(exc):
+    """10062 Unknown interaction / 10015 Unknown webhook — токен уже мёртв."""
+    text = str(exc or '')
+    code = getattr(exc, 'code', None)
+    if code in (10062, 10015):
+        return True
+    return ('10062' in text or '10015' in text
+            or 'Unknown interaction' in text or 'Unknown Webhook' in text)
+
+
+async def _respond(interaction, **kw):
     """Ответить на interaction максимально надёжно.
 
     Первый ответ — response.send_message; если уже был defer/ответ —
-    followup. Ошибки самой отправки глушим с записью в журнал: модератор
-    НИКОГДА не должен видеть «Приложение не отвечает» при выполненном
-    наказании.
+    followup. После 10062/10015 followup НЕ долбим — токен мёртв.
     """
-    try :
-        if interaction .response .is_done ():
-            await interaction .followup .send (**kw )
-        else :
-            await interaction .response .send_message (**kw )
-    except Exception as _e :
-        log .info (f'[MODPANEL] Ответ не доставлен: {_e}')
-        try :
-            await interaction .followup .send (**kw )
-        except Exception as _e2 :
-            log .warning (f'[MODPANEL] Ответ не доставлен и через followup: {_e2}')
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(**kw)
+        else:
+            await interaction.response.send_message(**kw)
+    except Exception as _e:
+        log.info('[MODPANEL] Ответ не доставлен: %s', _e)
+        if _is_dead_interaction(_e):
+            return
+        if not interaction.response.is_done():
+            return
+        try:
+            await interaction.followup.send(**kw)
+        except Exception as _e2:
+            log.warning('[MODPANEL] Ответ не доставлен и через followup: %s', _e2)
 
 
 async def _ack(interaction, ephemeral=True, thinking=True):
-    """Сразу закрыть 3-секундное окно Discord.
+    """Сразу закрыть 3-секундное окно Discord. True — ок, False — токен мёртв.
 
     thinking=True  — «думает…» + followup (модалка / наказание).
-    thinking=False — без спиннера «думает…» на панели (селект).
-    Модалка с thinking=False шлёт type 6 (обновить сообщение) — Discord
-    часто отклоняет, наказание уже выдано, а клиент пишет
-    «приложение не ответило».
+    thinking=False — без спиннера на панели (селект → меню).
+    Для исполнения наказания всегда предпочитаем thinking=True.
+    10062/10015 — не ретраим: interaction уже протух.
     """
     try:
         resp = getattr(interaction, 'response', None)
         if resp is None:
-            return
+            return False
         done = getattr(resp, 'is_done', None)
         if callable(done) and done():
-            return
+            return True
         try:
             await resp.defer(ephemeral=ephemeral, thinking=thinking)
-            return
+            return True
         except TypeError:
             await resp.defer(ephemeral=ephemeral)
-            return
+            return True
     except Exception as _e:
+        if _is_dead_interaction(_e):
+            log.warning('[MODPANEL] defer failed (мёртвый interaction): %s', _e)
+            return False
         if not thinking:
             try:
                 await resp.defer(ephemeral=ephemeral, thinking=True)
-                return
+                return True
             except Exception as _e2:
-                log.debug('[MODPANEL] defer(thinking): %s', _e2)
-        log.debug('[MODPANEL] defer: %s', _e)
+                log.warning('[MODPANEL] defer failed: %s / %s', _e, _e2)
+                return False
+        log.warning('[MODPANEL] defer failed: %s', _e)
+        return False
 
 
 def _is_untouchable(guild, user):
@@ -366,19 +382,16 @@ class Moderation (commands .Cog ):
     #  /modpanel — панель модерации через select-меню════════════════════════════════════════════════════════════════
     @app_commands.command(name="modpanel", description="Панель модерации (выпадающее меню)")
     # Два уровня доступа:
-    #  1) Discord (ВИДИМОСТЬ): default_permissions(moderate_members=True) —
-    #     по умолчанию команда видна только ролям с правом «Модерация
-    #     участников», обычные участники её не видят в меню «/». Это
-    #     настраиваемый дефолт: владелец открывает команду конкретным ролям
-    #     без выдачи полного права — Настройки сервера → Интеграции → Hakumo
-    #     → /modpanel (инструкция продублирована в панели → Доступ).
-    #  2) Бот (ЧТО МОЖНО): ролевой ACL из панели (has_access в main.py) —
-    #     отмеченные тут роли могут вызывать команду, а actions_for_member
-    #     ниже режет конкретные действия (бан/мут/варн/очистка) по ролям.
-    # Рантайм checks.has_permissions(moderate_members) НЕ ставим намеренно:
-    # это жёсткий блок, который не переопределить ни панелью, ни Интеграциями
-    # — из-за него выданные роли «не включались».
-    @app_commands.default_permissions(moderate_members=True)
+    #  1) Discord (ВИДИМОСТЬ): default_permissions(manage_messages=True) —
+    #     команда видна ролям с «Управление сообщениями» (модеры и хелперы).
+    #     Раньше стояло moderate_members — хелперы без этого права не видели
+    #     /modpanel в меню «/». Владелец по-прежнему может сузить список в
+    #     Настройки сервера → Интеграции → Hakumo → /modpanel.
+    #  2) Бот (ЧТО МОЖНО): ролевой ACL + actions_for_member — хелперу сид
+    #     выдаёт только чат-мут и очистку (бан/варн/войс не видит).
+    # Рантайм checks.has_permissions НЕ ставим: жёсткий блок нельзя обойти
+    # ни панелью, ни Интеграциями.
+    @app_commands.default_permissions(manage_messages=True)
     async def modpanel (self ,interaction ):
         # Сразу закрыть 3с-окно Discord: сбор меню/ACL не должен давать
         # «Приложение не отвечает», если цикл чуть занят.
@@ -578,7 +591,10 @@ class Moderation (commands .Cog ):
         """Выполнить выбранное действие модерации."""
         # 3с-окно Discord закрываем ДО ролей/DM/логов: иначе наказание
         # уже выдано, а клиент рисует «приложение не ответило».
-        await _ack (interaction )
+        # Если токен уже мёртв (10062) — не наказываем вслепую.
+        if not await _ack(interaction, thinking=True):
+            log.warning('[MODPANEL] abort execute %s: interaction мёртв', action)
+            return
         guild =interaction .guild
 
         # Лимиты стаффа — защита от «плохих» модераторов (владельца не трогаем).
@@ -2010,9 +2026,11 @@ class UnmuteKindSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         action = self.values[0]
+        # Сначала ack (3с), потом ACL — иначе при лаге 10062 + followup 10015.
+        if not await _ack(interaction, thinking=True):
+            return
         if not await self.cog._ensure_action_acl(interaction, action):
             return
-        await _ack(interaction, thinking=False)
         await self.cog._execute_mod_action(
             interaction, action, self.target_id,
             'Снято через панель', '', proof_link=None)
@@ -2140,7 +2158,8 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
         if panel is not None:
             panel.pending_action = None
         if len(kinds) == 1:
-            await _ack(interaction, thinking=False)
+            if not await _ack(interaction, thinking=True):
+                return
             await cog._execute_mod_action(
                 interaction, kinds[0][0], prefill,
                 'Снято через панель', '', proof_link=None)
@@ -2304,13 +2323,13 @@ class ModActionModal(discord.ui.Modal):
             self.add_item(self.proof)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # thinking=True ДО ACL: 3с-окно Discord; иначе 10062 и «Unknown Webhook».
+        if not await _ack(interaction, thinking=True):
+            return
         # Финальная защита действия: модалку могли открыть до смены прав,
         # роль могли снять — без «классического» разрешения не исполняем.
         if not await self.cog._ensure_action_acl(interaction, self.action):
             return
-        # thinking=True: модалка должна получить type 5, иначе Discord
-        # пишет «приложение не ответило», хотя наказание уже выдано.
-        await _ack(interaction, thinking=True)
         _t = getattr(self, 'target', None)
         _a = getattr(self, 'amount', None)
         _p = getattr(self, 'proof', None)

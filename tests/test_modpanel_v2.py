@@ -248,10 +248,17 @@ class _Followup:
 
 
 class _Resp:
+    def __init__(self):
+        self._done = False
+
     def is_done(self):
-        return False
+        return self._done
+
+    async def defer(self, ephemeral=True, thinking=True):
+        self._done = True
 
     async def send_message(self, embed=None, ephemeral=False, **kw):
+        self._done = True
         SENT['text'] = getattr(embed, 'description', str(embed)); SENT['done'] = True
 
 

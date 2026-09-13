@@ -1122,6 +1122,15 @@ async def on_ready():
         except Exception:
             _seed_gid = int(getattr(bot.guilds[0], "id", 0) or 0) if bot.guilds else 0
         _rep = apply_role_seed(guild_id=_seed_gid or None)
+        try:
+            from services.helper_acl_seed import apply_helper_acl_seed
+            _href = apply_helper_acl_seed(guild_id=_seed_gid or None)
+            if _href.get('applied'):
+                _log.info('helper_acl_seed: %s', _href)
+            else:
+                _log.debug('helper_acl_seed: %s', _href.get('reason'))
+        except Exception as _hex:
+            _log.debug('on_ready(): helper_acl_seed: %s', _hex)
         if _rep.get("applied") and (_rep.get("role_map_added")
                                     or _rep.get("punish_added")
                                     or _rep.get("action_acl_actions")):
