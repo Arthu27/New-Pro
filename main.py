@@ -476,6 +476,8 @@ def _stop_web_server():
 # Старый quick-туннель со случайной ссылкой выключен по умолчанию
 # (вернуть: QUICK_TUNNEL=1, см. main() внизу).
 _tunnel_proc = None
+_tunnel_stop = threading.Event()
+_tunnel_supervisor = None
 
 
 def _tunnel_service_running_windows():
@@ -492,7 +494,13 @@ def _tunnel_service_running_windows():
 
 
 def _start_tunnel_sidecar():
-    global _tunnel_proc
+    """Named tunnel + авто-рестарт (ночные DNS/argotunnel timeout).
+
+    Раньше sidecar писал «Остановился — следующий запуск бота поднимет
+    снова» и умирал: панель по домену падала до утра. Quick-tunnel уже
+    умел рестартить — named-путь теперь тоже.
+    """
+    global _tunnel_proc, _tunnel_supervisor
     raw = (os.environ.get('TUNNEL_AUTOSTART', '') or '').strip().lower()
     if raw in ('0', 'false', 'no', 'off'):
         return
@@ -549,7 +557,9 @@ def _start_tunnel_sidecar():
         # Ключ туннеля мог остаться на старом ПК — поднимем портативную копию
         # из scripts/ или пересоздадим туннель прямо здесь (cert.pem уже есть).
         # Чиним ДО проверки службы: «служба крутится, но туннель мёртв»
-        # после переезда — штатный случай VDS.
+        # после переезда — штатный случай VDS. DNS route — только здесь,
+        # НЕ на каждом ночном рестарте (timeout argotunnel → ложный «панель
+        # упала» при живом процессе).
         if _nt.ensure_credentials(root, scripts_dir, exe):
             print('[ТУННЕЛЬ] Ключ туннеля восстановлен на этой машине (переезд).')
     if _tunnel_service_running_windows():
@@ -563,37 +573,78 @@ def _start_tunnel_sidecar():
     # Конфиг мог переехать с другого ПК (credentials-путь там старый) —
     # подменяем его на наш credentials-файл из scripts/.
     run_cfg = _nt.runtime_config(root, cfg)
-    try:
-        _tunnel_proc = subprocess.Popen(
-            [exe, '--protocol', proto, '--config', run_cfg, 'tunnel', 'run'],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            bufsize=1, text=True, encoding='utf-8', errors='replace',
-        )
-    except Exception as e:
-        print(f'[ТУННЕЛЬ] Не удалось запустить: {e}')
-        return
+    _tunnel_stop.clear()
 
-    def _echo_tunnel_log():
-        # Инцидент 30.08: ~60 строк cloudflared за рестарт прятали
-        # сообщения бота. Показываем только значимое: ошибки, регистрации
-        # соединений, итог пре-чеков (см. services/startup_info.py).
+    def _supervisor():
+        """Держит cloudflared живым: DNS/argotunnel timeout ночью больше
+        не оставляет домен мёртвым до ручного рестарта бота."""
+        global _tunnel_proc
         from services.startup_info import tunnel_line_worth
-        try:
-            for line in _tunnel_proc.stdout:
-                line = (line or '').rstrip()
-                if line and tunnel_line_worth(line):
-                    print(f'[ТУННЕЛЬ] {line}')
-        except Exception as e:
-            print(f'[ТУННЕЛЬ] Чтение лога: {e}')
-        print(f'[ТУННЕЛЬ] Остановился (код {_tunnel_proc.poll()}) — следующий запуск бота поднимет снова.')
+        fail_streak = 0
+        max_fails = int(os.environ.get('TUNNEL_MAX_FAILS', '0') or '0')
+        # 0 = бесконечно (named tunnel должен жить пока жив бот)
+        backoff = 4
+        while not _tunnel_stop.is_set():
+            try:
+                _tunnel_proc = subprocess.Popen(
+                    [exe, '--protocol', proto, '--config', run_cfg,
+                     'tunnel', 'run'],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    bufsize=1, text=True, encoding='utf-8', errors='replace',
+                )
+            except Exception as e:
+                fail_streak += 1
+                print(f'[ТУННЕЛЬ] Не удалось запустить: {e} '
+                      f'(попытка {fail_streak})')
+                if max_fails and fail_streak >= max_fails:
+                    print('[ТУННЕЛЬ] Слишком много ошибок запуска — сдаюсь. '
+                          'Панель остаётся локальной (127.0.0.1:5001).')
+                    return
+                if _tunnel_stop.wait(min(60, backoff * fail_streak)):
+                    return
+                continue
 
-    threading.Thread(target=_echo_tunnel_log, daemon=True).start()
-    print('[ТУННЕЛЬ] Запущен вместе с ботом'
-          + (f' — панель: {pub}' if pub else ' — панель на домене активна.'))
+            print('[ТУННЕЛЬ] Запущен вместе с ботом'
+                  + (f' — панель: {pub}' if pub else
+                     ' — панель на домене активна.'))
+            try:
+                for line in _tunnel_proc.stdout:
+                    if _tunnel_stop.is_set():
+                        break
+                    line = (line or '').rstrip()
+                    if line and tunnel_line_worth(line):
+                        print(f'[ТУННЕЛЬ] {line}')
+            except Exception as e:
+                print(f'[ТУННЕЛЬ] Чтение лога: {e}')
+
+            code = _tunnel_proc.poll()
+            if _tunnel_stop.is_set():
+                return
+            if code not in (0, None):
+                fail_streak += 1
+            else:
+                fail_streak = 0
+            print(f'[ТУННЕЛЬ] Остановился (код {code}) — '
+                  f'перезапуск через {backoff}с '
+                  f'(серия сбоев: {fail_streak}'
+                  + (f'/{max_fails}' if max_fails else '') + '). '
+                  'Локальная панель жива; домен вернётся после рестарта.')
+            if max_fails and fail_streak >= max_fails:
+                print('[ТУННЕЛЬ] Лимит сбоев — останавливаю sidecar. '
+                      'TUNNEL_MAX_FAILS=0 = без лимита.')
+                return
+            if _tunnel_stop.wait(backoff):
+                return
+            backoff = min(60, backoff + 2)
+
+    _tunnel_supervisor = threading.Thread(
+        target=_supervisor, name='tunnel-supervisor', daemon=True)
+    _tunnel_supervisor.start()
 
 
 def _stop_tunnel_sidecar():
-    global _tunnel_proc
+    global _tunnel_proc, _tunnel_supervisor
+    _tunnel_stop.set()
     if _tunnel_proc and _tunnel_proc.poll() is None:
         try:
             _tunnel_proc.terminate()
@@ -604,7 +655,7 @@ def _stop_tunnel_sidecar():
         except Exception as e:
             print(f'[ТУННЕЛЬ] Остановка: {e}')
         _tunnel_proc = None
-
+    _tunnel_supervisor = None
 
 _cleanup_done = False
 
