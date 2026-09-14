@@ -17,6 +17,7 @@ from logger import get_logger
 
 _log = get_logger("antiraid")
 
+import asyncio
 import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timezone
@@ -109,6 +110,7 @@ class AntiRaid(commands.Cog):
             _log.debug("cog_unload(): подавлено: %s", _ex)
 
     def get_config(self, guild_id: int) -> GuildAntiraidConfig:
+        """Синхронно: только вне event loop (тесты / Flask). В async — _aget_config."""
         cfg = self.configs.get(guild_id)
         if cfg is None:
             cfg = GuildAntiraidConfig(guild_id)
@@ -117,12 +119,50 @@ class AntiRaid(commands.Cog):
             cfg.reload()
         return cfg
 
+    async def _aget_config(self, guild_id: int) -> GuildAntiraidConfig:
+        """Неблокирующее чтение конфига: диск уходит в worker-поток."""
+        return await asyncio.to_thread(self.get_config, guild_id)
+
+    async def _aadd_event(self, cfg: GuildAntiraidConfig, event: dict, limit: int = 20):
+        """Неблокирующая запись recent_events (Windows/антивирус не морозит шлюз)."""
+        await asyncio.to_thread(cfg.add_event, event, limit)
+
+    def _reload_pass_sync(self):
+        """Весь диск config_watcher'а — один вызов для asyncio.to_thread.
+
+        Инцидент 2026-09-13: os.path.exists в reload() на main-потоке держал
+        event loop 38.7с (СТЕК ВИНОВНИКА → antiraid.config_watcher → reload).
+        """
+        for guild_id in list(self.configs.keys()):
+            try:
+                self.configs[guild_id].reload()
+            except Exception as e:
+                log.debug("watcher reload error guild=%s: %s", guild_id, e)
+        try:
+            if not os.path.isdir("data"):
+                return
+            for name in os.listdir("data"):
+                if not (name.startswith("antiraid_") and name.endswith(".json")):
+                    continue
+                if name == "antiraid.json":
+                    continue
+                try:
+                    gid = int(name[len("antiraid_"):-len(".json")])
+                except ValueError as _ex:
+                    _log.debug("config_watcher(): подавлено: %s", _ex)
+                    continue
+                if gid not in self.configs:
+                    self.configs[gid] = GuildAntiraidConfig(gid)
+        except Exception as _ex:
+            _log.debug("config_watcher(): подавлено: %s", _ex)
+
     # Настройки анти-рейда меняются редко (сохранение из панели раз в день),
     # поэтому опрос диска не нужен каждые 5 секунд: reload() и так делает
     # дешёвую проверку mtime (stat без чтения файла), а немедленный подхват
     # изменений обеспечивает live-шина — при сохранении настроек Щита в
     # очередь подписки падает сигнал, и watcher перечитывает конфиг тут же.
     # 20с — только страховка на случай, если шина молчит.
+    # Диск — ТОЛЬКО через to_thread: иначе Windows/антивирус морозит Discord.
     @tasks.loop(seconds=20.0)
     async def config_watcher(self):
         import queue as _queue
@@ -144,26 +184,10 @@ class AntiRaid(commands.Cog):
                 pass
         except Exception as _ex:
             log.debug("antiraid watcher: live-шина недоступна: %s", _ex)
-        for guild_id in list(self.configs.keys()):
-            try:
-                self.configs[guild_id].reload()
-            except Exception as e:
-                log.debug("watcher reload error guild=%s: %s", guild_id, e)
         try:
-            for name in os.listdir("data"):
-                if not (name.startswith("antiraid_") and name.endswith(".json")):
-                    continue
-                if name == "antiraid.json":
-                    continue
-                try:
-                    gid = int(name[len("antiraid_"):-len(".json")])
-                except ValueError as _ex:
-                    _log.debug("config_watcher(): подавлено: %s", _ex)
-                    continue
-                if gid not in self.configs:
-                    self.configs[gid] = GuildAntiraidConfig(gid)
+            await asyncio.to_thread(self._reload_pass_sync)
         except Exception as _ex:
-            _log.debug("config_watcher(): подавлено: %s", _ex)
+            _log.debug("config_watcher to_thread: %s", _ex)
 
     @config_watcher.before_loop
     async def before_config_watcher(self):
@@ -213,7 +237,7 @@ class AntiRaid(commands.Cog):
             return
         if member.guild is None:
             return
-        cfg = self.get_config(member.guild.id)
+        cfg = await self._aget_config(member.guild.id)
         if cfg.is_whitelisted(member.id):
             return
 
@@ -242,7 +266,7 @@ class AntiRaid(commands.Cog):
                 ],
                 color=discord.Color.yellow(),
             )
-            cfg.add_event({
+            await self._aadd_event(cfg, {
                 "type": "young_account",
                 "user_id": str(member.id),
                 "user_tag": str(member),
@@ -267,7 +291,7 @@ class AntiRaid(commands.Cog):
                     ],
                     color=discord.Color.dark_red(),
                 )
-                cfg.add_event({
+                await self._aadd_event(cfg, {
                     "type": "join_raid",
                     "count": count,
                     "window": window,
@@ -282,7 +306,7 @@ class AntiRaid(commands.Cog):
             return
         if after.guild is None:
             return
-        cfg = self.get_config(after.guild.id)
+        cfg = await self._aget_config(after.guild.id)
         if not cfg.data.get("bot_protection"):
             return
         if cfg.is_whitelisted(after.id):
@@ -297,7 +321,7 @@ class AntiRaid(commands.Cog):
             ],
             color=discord.Color.purple(),
         )
-        cfg.add_event({
+        await self._aadd_event(cfg, {
             "type": "bot_join",
             "user_id": str(after.id),
             "user_tag": str(after),
@@ -311,7 +335,7 @@ class AntiRaid(commands.Cog):
         guild = messages[0].guild
         if guild is None:
             return
-        cfg = self.get_config(guild.id)
+        cfg = await self._aget_config(guild.id)
         if not cfg.data.get("delete_protection"):
             return
         if len(messages) < 5:
@@ -327,7 +351,7 @@ class AntiRaid(commands.Cog):
             ],
             color=discord.Color.dark_grey(),
         )
-        cfg.add_event({
+        await self._aadd_event(cfg, {
             "type": "bulk_delete",
             "channel_id": str(ch.id),
             "count": len(messages),
