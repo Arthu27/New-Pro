@@ -92,9 +92,15 @@ class _Member:
     async def add_roles(s, *roles, reason=None):
         s.given = list(getattr(s, 'given', [])) + list(roles)
         s.given_reason = reason
+        for r in roles:
+            if r not in s.roles:
+                s.roles.append(r)
 
     async def remove_roles(s, *roles, reason=None):
         s.removed = list(getattr(s, 'removed', [])) + list(roles)
+        for r in roles:
+            if r in s.roles:
+                s.roles.remove(r)
 
 
 class _Guild:
@@ -120,7 +126,15 @@ class _Guild:
         return s.ban_role if rid == 606 else None
 
     async def unban(s, user, reason=None):
-        s.unban_calls = getattr(s, 'unban_calls', []) + [getattr(user, 'id', user)]
+        # Как Discord: без активного бана — ошибка (иначе «пустой разбан»
+        # всегда выглядит успехом в тестах).
+        banned = set(getattr(s, '_banned_ids', ()) or ())
+        uid = getattr(user, 'id', user)
+        if uid not in banned:
+            raise Exception('404 Not Found (not banned)')
+        banned.discard(uid)
+        s._banned_ids = banned
+        s.unban_calls = getattr(s, 'unban_calls', []) + [uid]
         return True
 
 
@@ -184,6 +198,9 @@ _PR.set_roles(G, ban=606)
 
 CHR.set_route(G, 'ban_appeal_channel', 301)
 print('== 3. Разбан из панели: роль снимается ==')
+# роль бана должна быть на участнике (как после реального add_roles)
+if guild.ban_role not in target.roles:
+    target.roles.append(guild.ban_role)
 target.given = [guild.ban_role]
 guild.members = [target]
 mod.bot._mod = mod          # get_cog('Moderation') для unban-ветки
@@ -191,6 +208,11 @@ ok, text = asyncio.run(mod.apply_panel_action(
     guild, target, 'unban', reason='одумался'))
 check(ok and getattr(target, 'removed', []) and target.removed[0].id == 606,
       f'разбан снимает роль бана ({text[:60]})')
+# пустой повторный разбан — без дела
+ok2, text2 = asyncio.run(mod.apply_panel_action(
+    guild, target, 'unban', reason='ещё раз'))
+check(not ok2 and 'Ничего не изменилось' in text2,
+      f'повторный разбан без роли/бана — отказ ({text2[:70]})')
 
 print('== 4. vmute не в голосе — по-человечески ==')
 ok, text = asyncio.run(mod.apply_panel_action(guild, target, 'vmute', amount='30м'))

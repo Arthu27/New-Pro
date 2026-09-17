@@ -174,15 +174,20 @@ async def cap_test():
         guild, target, 'timeout', reason='тест', amount='2ч',
         actor='Модер', duration_cap=None)
     check(ok, '2 часа — в пределах потолка, мут выдан', f'→ {text[:80]}')
+    # новый участник: повторный timeout на уже замученного теперь отказ
+    target2 = _Member(3000000000000000301, 'Жертва2')
+    guild.members.append(target2)
     ok, text = await cog.apply_panel_action(
-        guild, target, 'timeout', reason='тест', amount='30м',
+        guild, target2, 'timeout', reason='тест', amount='30м',
         actor='Модер', duration_cap=None)
     check(ok, '30 минут — минимум, мут выдан', f'→ {text[:80]}')
-    check(7001 in target.added and 7002 in target.added,
+    check(7001 in target2.added and 7002 in target2.added,
           'выданы обе мут-роли')
     # потолок от панели (с ролями зрителя): админ-роли разрешили 28 дней
+    target3 = _Member(3000000000000000302, 'Жертва3')
+    guild.members.append(target3)
     ok, text = await cog.apply_panel_action(
-        guild, target, 'timeout', reason='тест', amount='28д',
+        guild, target3, 'timeout', reason='тест', amount='28д',
         actor='Модер', duration_cap=28 * 86400)
     check(ok, 'потолок с панели (28 дней) пропускает 28д')
 

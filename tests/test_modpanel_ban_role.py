@@ -52,6 +52,8 @@ check('_isolate_member' not in _compact and 'set_permissions' not in _compact,
       'каналы поштучно бот не закрывает (заказ 2026-09-08)')
 check('_punish_role' in _compact and 'add_roles' in _compact,
       'бан = выдать роль бана')
+check('уже под баном' in _ban_branch and 'Повторный бан' in _ban_branch,
+      'повторный бан при уже выданной роли — отказ')
 check('save_held_roles' not in _compact,
       'роли при бане-ролью не снимаются — снапшот не нужен')
 check('Не выбрана роль бана' in _ban_branch and 'Роли наказаний' in _ban_branch,

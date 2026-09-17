@@ -665,7 +665,7 @@ class Moderation (commands .Cog ):
                 return
             ok ,text =await self .apply_panel_action (
             guild ,(user if user is not None else uid ),'warn',
-            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            reason =reason ,actor =interaction .user )
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
@@ -685,7 +685,7 @@ class Moderation (commands .Cog ):
                 return
             ok ,text =await self .apply_panel_action (
             guild ,user ,'unwarn',
-            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            reason =reason ,actor =interaction .user )
             if ok :
                 await _respond (interaction ,embed =success_embed (
                 'Варн снят',f'**{user .display_name }** · `{uid }`\n{text }',guild =guild ),
@@ -759,6 +759,12 @@ class Moderation (commands .Cog ):
                         'Бан из панели работает только с участниками сервера.'),
                         ephemeral =True )
                         return
+                    if _brole in getattr(user, 'roles', []):
+                        await _respond(interaction, embed=error_embed(
+                            f'Участник уже под баном (роль «{_brole.name}»). '
+                            'Повторный бан не нужен — сначала разбан / апелляция.'),
+                            ephemeral=True)
+                        return
                     await user .add_roles (_brole ,reason =reason or 'бан')
                     try :
                         from services .staff_limits import record_hit as _sl_rec
@@ -788,6 +794,16 @@ class Moderation (commands .Cog ):
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))  # Discord — до 28 дней
                     _case_minutes = minutes
+                    # Уже под полным мутом (обе роли) — не дублируем дело/лимит
+                    _tm = self._punish_role(guild, 'mute')
+                    _tv = self._punish_role(guild, 'vmute')
+                    _need = [r for r in (_tm, _tv) if r is not None]
+                    if _need and all(r in getattr(user, 'roles', []) for r in _need):
+                        await _respond(interaction, embed=error_embed(
+                            'Участник уже под мутом (чат + войс). '
+                            'Сначала снимите мут, потом выдайте снова.'),
+                            ephemeral=True)
+                        return
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
@@ -838,6 +854,12 @@ class Moderation (commands .Cog ):
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))
                     _case_minutes = minutes
+                    if _mrole in getattr(user, 'roles', []):
+                        await _respond(interaction, embed=error_embed(
+                            f'Участник уже под чат-мутом (роль «{_mrole.name}»). '
+                            'Сначала снимите мут, потом выдайте снова.'),
+                            ephemeral=True)
+                        return
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
@@ -857,6 +879,12 @@ class Moderation (commands .Cog ):
                     minutes =max (1 ,min (minutes ,40320 ))
                     _case_minutes =minutes
                     if _vrole is not None :
+                        if _vrole in getattr(user, 'roles', []):
+                            await _respond(interaction, embed=error_embed(
+                                f'Участник уже под войс-мутом (роль «{_vrole.name}»). '
+                                'Сначала снимите войс-мут, потом выдайте снова.'),
+                                ephemeral=True)
+                            return
                         # роль + сервер-мут микрофона: в голосовые зайти МОЖНО,
                         # микрофон закрыт (владелец 2026-09-05: «микрофон
                         # должен закрываться, а в войсы он заходить может»)
@@ -891,6 +919,15 @@ class Moderation (commands .Cog ):
                         msg ="🎙️ микрофон заглушён (войс-мут)"
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
+                    _had_role =(_vrole is not None
+                                and _vrole in getattr (user ,'roles',[]))
+                    _had_sm =bool (getattr (
+                        getattr (user ,'voice',None ),'mute',False ))
+                    if not _had_role and not _had_sm :
+                        await _respond (interaction ,embed =error_embed (
+                            'Участник не под войс-мутом — снимать нечего.'),
+                            ephemeral =True )
+                        return
                     if _vrole is not None :
                         await self ._drop_roles (guild ,user ,[_vrole ])
                     # микрофон вернуть В ЛЮБОМ случае (раньше после снятия
@@ -902,6 +939,15 @@ class Moderation (commands .Cog ):
                         log .debug (f'[MODPANEL] vunmute edit: {_ve}')
                     msg ="🎙️ войс-мут снят — микрофон открыт"
                 elif action =="unmute_chat":
+                    _mrole =self ._punish_role (guild ,'mute')
+                    _had_role =(_mrole is not None
+                                and _mrole in getattr (user ,'roles',[]))
+                    _had_to =bool (getattr (user ,'timed_out_until',None ))
+                    if not _had_role and not _had_to :
+                        await _respond (interaction ,embed =error_embed (
+                            'Участник не под чат-мутом — снимать нечего.'),
+                            ephemeral =True )
+                        return
                     try :
                         from services import mute_state
                         await mute_state .clear_chat_mute (guild ,user )
@@ -909,6 +955,19 @@ class Moderation (commands .Cog ):
                         log .debug (f'[MODPANEL] unmute_chat: {_mse}')
                     msg ="чат-мут снят, голос не тронут"
                 else :  # untimeout — снимаем ЛЮБОЙ мут (чат+войс) разом
+                    _tm =self ._punish_role (guild ,'mute')
+                    _tv =self ._punish_role (guild ,'vmute')
+                    _roles_now =getattr (user ,'roles',[])
+                    _had =any (
+                        r is not None and r in _roles_now for r in (_tm ,_tv ))
+                    _had =_had or bool (getattr (user ,'timed_out_until',None ))
+                    _had =_had or bool (getattr (
+                        getattr (user ,'voice',None ),'mute',False ))
+                    if not _had :
+                        await _respond (interaction ,embed =error_embed (
+                            'Участник не под мутом — снимать нечего.'),
+                            ephemeral =True )
+                        return
                     try :
                         from services import mute_state
                         await mute_state .clear_all_mutes (guild ,user )
@@ -1011,22 +1070,30 @@ class Moderation (commands .Cog ):
                 return
             try :
                 member =guild .get_member (uid )
+                role_removed =False 
                 # Снятие апелляции (участник остаётся на сервере)
                 if member is not None :
                     await self ._unisolate_member (guild ,member )
-                    await self ._unban_role (guild ,member )
+                    role_removed =bool (await self ._unban_role (guild ,member ))
                     try :
                         await self ._restore_roles_after_unban (guild ,member )
                     except Exception as _re :
                         log .debug (f'[MODPANEL] restore roles: {_re}')
                 # Настоящий разбан (для легаси-банов, если пользователь вне сервера)
                 unban_done =False
+                fetched =None 
                 try :
                     fetched =await self .bot .fetch_user (uid )
                     await guild .unban (fetched )
                     unban_done =True
                 except Exception as _ub_ex :
                     log .debug (f'unban: {_ub_ex}')
+                # Пустой разбан: не пишем дело и не жрём лимит
+                if not role_removed and not unban_done :
+                    await _respond (interaction ,embed =error_embed (
+                        'Ничего не изменилось — нет роли бана и нет Discord-бана.'),
+                        ephemeral =True )
+                    return 
                 import asyncio as _aio_sc2
                 case_id =await _aio_sc2 .to_thread (
                     self .save_case ,guild .id ,"unban",uid ,interaction .user .id ,reason ,
@@ -1057,7 +1124,7 @@ class Moderation (commands .Cog ):
                 _who =member .display_name if member else (getattr (fetched ,'name','') if unban_done else str (uid ))
                 _desc =f"**{_who}** · `{uid}`\n"
                 _desc +="Снята апелляция и разбан." if (member is not None and unban_done) else \
-                        ("Апелляция снята." if member is not None else \
+                        ("Апелляция снята." if role_removed else \
                          ("Разбан выполнен." if unban_done else "Ничего не изменилось (не изолирован и не забанен)."))
                 if _inv_sent :
                     _desc +="\nСсылка-возврат отправлена в ЛС."
@@ -1157,10 +1224,12 @@ class Moderation (commands .Cog ):
         return True
 
     async def apply_panel_action (self ,guild ,target ,action ,reason ='' ,
-    amount =None ,proof_link =None ,actor ='Панель' ,duration_cap =None ):
-        """Наказание из веб-панели («Пользователи») — единый путь с /modpanel.
+    amount =None ,proof_link =None ,actor ='Панель' ,duration_cap =None ,
+    session_role =None ):
+        """Наказание из веб-панели («Пользователи») и ПКМ — единый путь с /modpanel.
 
         target — discord.Member (на сервере) или строка-ID (ушёл с сервера).
+        actor — строка имени (веб → PanelActor) или discord.Member (ПКМ).
         Возвращает (ok, текст ответа для панели).
         """
         from cogs .embed_utils import error_embed as _err ,success_embed as _ok 
@@ -1168,7 +1237,14 @@ class Moderation (commands .Cog ):
             return False ,'Неизвестное действие'
         if guild is None :
             return False ,'Сервер не найден'
-        _actor =PanelActor (actor )
+        # Строка / None → «Панель: …» (веб). Реальный Member → иерархия и
+        # дела от него (ПКМ). PanelActor как есть — не оборачиваем дважды.
+        if actor is None or isinstance (actor ,str ):
+            _actor =PanelActor (actor or 'Панель')
+        elif getattr (actor ,'is_panel',False ):
+            _actor =actor 
+        else :
+            _actor =actor 
         target_str =str (getattr (target ,'id',target ))
         # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05: «модер наказывает модера
         # и куратора — беспредел»): персонал не наказывает персонал своего
@@ -1178,7 +1254,8 @@ class Moderation (commands .Cog ):
             from services .staff_hierarchy import check as _hcheck
             _hm =target if isinstance (target ,discord .Member ) \
             else guild .get_member (int (target_str )or 0 )
-            _hok ,_hdeny ,_ ,_ =_hcheck (guild ,_actor ,_hm ,action )
+            _hok ,_hdeny ,_ ,_ =_hcheck (
+                guild ,_actor ,_hm ,action ,session_role =session_role )
             if not _hok :
                 return False ,_hdeny
         except Exception as _hex :
@@ -1370,7 +1447,11 @@ class Moderation (commands .Cog ):
             log .debug (f'[MODPANEL] remember_temp: {_ex}')
 
     async def _drop_roles (self ,guild ,user ,roles ):
-        """Снять роли наказания и почистить журнал сроков."""
+        """Снять роли наказания и почистить журнал сроков ТОЛЬКО этих ролей.
+
+        Раньше PR.clear(gid, uid) без role_id сбрасывал ВСЕ таймеры мута
+        при разбане/войс-анмуте — чат-мут мог «забыть» срок.
+        """
         for role in roles :
             if role is None :
                 continue 
@@ -1378,17 +1459,24 @@ class Moderation (commands .Cog ):
                 await user .remove_roles (role ,reason ='снятие наказания')
             except Exception as _ex :
                 log .debug (f'[MODPANEL] remove_roles {role .name }: {_ex}')
-        try :
-            from services import punish_roles as PR 
-            PR .clear (guild .id ,user .id )
-        except Exception as _ex :
-            log .debug (f'[MODPANEL] clear temps: {_ex}')
+            try :
+                from services import punish_roles as PR 
+                PR .clear (guild .id ,user .id ,role .id )
+            except Exception as _ex :
+                log .debug (f'[MODPANEL] clear temps {getattr(role, "id", None)}: {_ex}')
 
     async def _unban_role (self ,guild ,member ):
-        """Снять роль «бана» (если выбрана) — при разбане/снятии апелляции."""
+        """Снять роль «бана» (если выбрана) — при разбане/снятии апелляции.
+
+        True — роль была и снята (или попытка снятия); False — роли не было.
+        """
         _brole =self ._punish_role (guild ,'ban')
-        if _brole is not None :
-            await self ._drop_roles (guild ,member ,[_brole ])
+        if _brole is None :
+            return False 
+        if _brole not in getattr (member ,'roles',[]):
+            return False 
+        await self ._drop_roles (guild ,member ,[_brole ])
+        return True
 
     def _keep_role_on_ban (self ,guild ,role ,ban_role ):
         """@everyone, managed и роль бана при бане не снимаем."""
@@ -1641,22 +1729,15 @@ class _CtxMuteModal(discord.ui.Modal):
             _dur_cap = _pcap(interaction.guild.id, 'mute', _roles)
         except Exception as _cx:
             log.debug(f'[ПКМ] duration cap: {_cx}')
+        # Реальный Member — иначе PanelActor.is_panel=True обходит иерархию
+        # («модер наказывает модера»). record_hit пишет _execute_mod_action.
         ok, text = await self._cog.apply_panel_action(
             interaction.guild, self._member, self._action,
             reason=(str(self.reason.value or '').strip()
                     or 'Причина не указана'),
             amount=str(self.duration.value or '').strip(),
-            actor=getattr(interaction.user, 'display_name', None)
-            or str(interaction.user),
+            actor=interaction.user,
             duration_cap=_dur_cap)
-        # успех — в дневной счётчик модератора
-        if ok:
-            try:
-                from services.staff_limits import record_hit as _rec
-                _rec(interaction.guild_id, interaction.user.id,
-                     self._limit_key, 1)
-            except Exception as _rx:
-                log.debug(f'[ПКМ] record: {_rx}')
         await _respond(
             interaction,
             content=('✅ ' if ok else '⚠️ ') + str(text or ('Готово' if ok else 'Не получилось')),

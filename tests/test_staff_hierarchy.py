@@ -198,6 +198,10 @@ async def main():
     mod_src = open(os.path.join(ROOT, 'cogs/moderation.py'), encoding='utf-8').read()
     check('/modpanel' in mod_src and 'staff_hierarchy' in mod_src,
           '/modpanel и единый путь apply_panel_action проверяют иерархию')
+    check('actor=interaction.user' in mod_src,
+          'ПКМ передаёт реального Member в apply_panel_action (не PanelActor)')
+    check('isinstance (actor ,str )' in mod_src,
+          'веб-строка имени по-прежнему оборачивается в PanelActor')
     w_src = open(os.path.join(ROOT, 'cogs/warnings.py'), encoding='utf-8').read()
     check(w_src.count('staff_hierarchy') >= 2,
           '/warn и /unwarn проверяют иерархию')
