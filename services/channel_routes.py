@@ -146,6 +146,19 @@ ROUTE_SPECS = [
         'empty': 'Не задан — приветствия уходят в системный канал.',
     },
     {
+        'key': 'event_panel_channel',
+        'label': 'Канал панели событий',
+        'icon': 'fa-calendar-days',
+        'kind': 'event_panel',
+        'access': 'Мод+',
+        'step': None,
+        'required': False,
+        'create_hint': 'Куда бот шлёт /event-panel. Можно задать и на странице «События».',
+        'what': 'Панель ивентов Discord: запись, анонсы, список участников. '
+                'Публикуется командой /event-panel или кнопкой на /events.',
+        'empty': 'Не задан — канал из опции команды /event-panel или .env EVENT_PANEL_CHANNEL_ID.',
+    },
+    {
         'key': 'staff_apply_channel',
         'label': 'Канал заявок в команду',
         'icon': 'fa-file-signature',

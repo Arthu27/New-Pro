@@ -152,7 +152,8 @@ def register(ctx):
         """Статус Discord-панели /event-panel (data/event_panel_<gid>.json)."""
         try:
             from cogs.event_panel import (
-                EVENT_MOD_ROLE_ID, configured_panel_channel_id, load_panel_cfg)
+                EVENT_MOD_ROLE_ID, configured_panel_channel_id,
+                load_panel_cfg, target_channel_id)
             cfg = load_panel_cfg(int(guild_id))
         except Exception as ex:
             return jsonify({'ok': False, 'error': str(ex)}), 500
@@ -161,6 +162,10 @@ def register(ctx):
             cfg_ch = int(configured_panel_channel_id() or 0)
         except Exception:
             cfg_ch = 0
+        try:
+            tgt = int(target_channel_id(cfg) or 0)
+        except Exception:
+            tgt = 0
         return jsonify({
             'ok': True,
             'guild_id': str(guild_id),
@@ -171,6 +176,7 @@ def register(ctx):
             'signups': [str(u) for u in signups],
             'channel_id': str(cfg['channel_id']) if cfg.get('channel_id') else '',
             'message_id': str(cfg['message_id']) if cfg.get('message_id') else '',
+            'target_channel_id': str(tgt) if tgt else '',
             'posted_by': str(cfg.get('posted_by') or ''),
             'posted_at': cfg.get('posted_at') or '',
             'last_announce_by': str(cfg.get('last_announce_by') or ''),
@@ -178,6 +184,75 @@ def register(ctx):
             'event_mod_role_id': str(EVENT_MOD_ROLE_ID),
             'configured_channel_id': cfg_ch,
         })
+
+    @app.route('/api/guild/<guild_id>/event-panel', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_guild_event_panel_save(guild_id):
+        """Сохранить канал назначения панели событий."""
+        body = _safe_json_obj() or {}
+        raw = body.get('target_channel_id', body.get('channel_id', 0))
+        try:
+            cid = int(raw or 0)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'Некорректный channel id'}), 400
+        try:
+            from cogs.event_panel import set_target_channel_id, target_channel_id
+            cfg = set_target_channel_id(int(guild_id), cid)
+            return jsonify({
+                'ok': True,
+                'target_channel_id': str(target_channel_id(cfg) or '') or '',
+            })
+        except Exception as ex:
+            return jsonify({'ok': False, 'error': str(ex)}), 500
+
+    @app.route('/api/guild/<guild_id>/event-panel/publish', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_guild_event_panel_publish(guild_id):
+        """Опубликовать / обновить панель в Discord через бота."""
+        import web.app as _app
+        bot = getattr(_app, 'bot_instance', None)
+        if not bot or not getattr(bot, 'loop', None):
+            return jsonify({
+                'ok': False,
+                'error': 'Бот офлайн — опубликуй командой /event-panel в Discord '
+                         'или дождись запуска бота.',
+            }), 503
+        try:
+            from cogs.event_panel import publish_event_panel, set_target_channel_id
+            body = _safe_json_obj() or {}
+            if body.get('target_channel_id') not in (None, ''):
+                try:
+                    set_target_channel_id(int(guild_id), int(body['target_channel_id']))
+                except (TypeError, ValueError):
+                    pass
+
+            async def _post():
+                guild = bot.get_guild(int(guild_id))
+                if guild is None:
+                    guild = await bot.fetch_guild(int(guild_id))
+                if guild is None:
+                    raise ValueError('Сервер не найден')
+                # кэш каналов после fetch_guild часто пуст
+                try:
+                    if not guild.channels:
+                        await guild.fetch_channels()
+                except Exception:
+                    pass
+                uid = session.get('user_id') or session.get('discord_id') or 'panel'
+                msg, cfg = await publish_event_panel(guild, posted_by=uid)
+                return msg, cfg
+
+            import asyncio as _aio
+            msg, cfg = _aio.run_coroutine_threadsafe(_post(), bot.loop).result(timeout=20)
+            return jsonify({
+                'ok': True,
+                'message_id': str(msg.id),
+                'channel_id': str(cfg.get('channel_id') or ''),
+            })
+        except Exception as ex:
+            return jsonify({'ok': False, 'error': f'Не удалось опубликовать: {ex}'}), 500
 
 
     @app .route ('/api/guild/<guild_id>/events/<event_id>/delete',methods =['POST'])

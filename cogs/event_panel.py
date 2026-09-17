@@ -33,6 +33,25 @@ def configured_panel_channel_id() -> int:
         return 0
 
 
+def target_channel_id(cfg: dict | None = None, guild_id: int | None = None) -> int:
+    """Канал назначения из панели (target_channel_id), 0 если не задан."""
+    if cfg is None and guild_id is not None:
+        cfg = load_panel_cfg(guild_id)
+    cfg = cfg or {}
+    try:
+        return int(cfg.get('target_channel_id') or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def set_target_channel_id(guild_id: int, channel_id: int) -> dict:
+    """Сохранить канал назначения панели (из веб-UI / маршрутов)."""
+    cfg = load_panel_cfg(guild_id)
+    cfg['target_channel_id'] = int(channel_id or 0)
+    save_panel_cfg(guild_id, cfg)
+    return cfg
+
+
 async def resolve_panel_channel(
     guild: discord.Guild,
     interaction: discord.Interaction | None = None,
@@ -41,12 +60,18 @@ async def resolve_panel_channel(
 ) -> discord.abc.Messageable | None:
     """Куда слать/обновлять панель.
 
-    Приоритет: опция команды → EVENT_PANEL_CHANNEL_ID → cfg.channel_id →
+    Приоритет: опция команды → target_channel_id (панель) →
+    EVENT_PANEL_CHANNEL_ID → cfg.channel_id (последний пост) →
     канал вызова команды.
     """
+    if cfg is None and guild is not None:
+        cfg = load_panel_cfg(guild.id)
     candidates: list[int] = []
     if channel_opt is not None and getattr(channel_opt, 'id', None):
         candidates.append(int(channel_opt.id))
+    tgt = target_channel_id(cfg)
+    if tgt:
+        candidates.append(tgt)
     fixed = configured_panel_channel_id()
     if fixed:
         candidates.append(fixed)
@@ -75,6 +100,56 @@ async def resolve_panel_channel(
         if ch is not None and hasattr(ch, 'send'):
             return ch
     return None
+
+
+async def publish_event_panel(
+    guild: discord.Guild,
+    *,
+    channel: discord.abc.Messageable | None = None,
+    posted_by: str | int | None = None,
+    interaction: discord.Interaction | None = None,
+) -> tuple[discord.Message, dict]:
+    """Опубликовать или обновить панель в целевом канале.
+
+    Возвращает (message, cfg). Кидает ValueError если канал не найден.
+    """
+    cfg = load_panel_cfg(guild.id)
+    target = channel or await resolve_panel_channel(
+        guild, interaction=interaction, cfg=cfg)
+    if target is None:
+        raise ValueError(
+            'Не найден канал. Задай канал в панели /events, '
+            'EVENT_PANEL_CHANNEL_ID или опцию channel в /event-panel.')
+
+    cfg.setdefault('registration_open', True)
+    cfg.setdefault('signups', [])
+    embed = panel_embed(guild, cfg)
+    view = EventPanelView()
+
+    msg = None
+    mid = cfg.get('message_id')
+    same_ch = (
+        mid
+        and cfg.get('channel_id')
+        and int(cfg['channel_id']) == int(getattr(target, 'id', 0) or 0)
+    )
+    if same_ch:
+        try:
+            msg = await target.fetch_message(int(mid))
+            await msg.edit(embed=embed, view=view)
+        except Exception as ex:
+            log.debug('event-panel edit existing: %s', ex)
+            msg = None
+    if msg is None:
+        msg = await target.send(embed=embed, view=view)
+
+    cfg['message_id'] = msg.id
+    cfg['channel_id'] = getattr(target, 'id', None)
+    if posted_by is not None:
+        cfg['posted_by'] = str(posted_by)
+    cfg['posted_at'] = datetime.now(timezone.utc).isoformat()
+    save_panel_cfg(guild.id, cfg)
+    return msg, cfg
 
 
 def _cfg_path(guild_id: int) -> str:
@@ -324,44 +399,29 @@ class EventPanel(commands.Cog):
 
         await interaction.response.defer(ephemeral=True)
         cfg = load_panel_cfg(interaction.guild.id)
-        target = await resolve_panel_channel(
-            interaction.guild, interaction, channel_opt=channel, cfg=cfg)
-        if target is None:
+        try:
+            target = await resolve_panel_channel(
+                interaction.guild, interaction, channel_opt=channel, cfg=cfg)
+            if target is None:
+                raise ValueError('channel')
+            _msg, cfg = await publish_event_panel(
+                interaction.guild,
+                channel=target,
+                posted_by=interaction.user.id,
+                interaction=interaction,
+            )
+        except ValueError:
             return await interaction.followup.send(
-                '❌ Не найден канал. Укажи опцию `channel` в команде или '
-                'задай `EVENT_PANEL_CHANNEL_ID` в .env.',
+                '❌ Не найден канал. Укажи опцию `channel`, задай канал '
+                'на странице /events или `EVENT_PANEL_CHANNEL_ID` в .env.',
                 ephemeral=True)
+        except Exception as ex:
+            log.exception('event-panel publish: %s', ex)
+            return await interaction.followup.send(
+                f'❌ Не удалось опубликовать: {ex}', ephemeral=True)
 
-        cfg.setdefault('registration_open', True)
-        cfg.setdefault('signups', [])
-        embed = panel_embed(interaction.guild, cfg)
-        view = EventPanelView()
-
-        # Если панель уже есть в целевом канале — обновить, иначе новый пост
-        msg = None
-        mid = cfg.get('message_id')
-        same_ch = (
-            mid
-            and cfg.get('channel_id')
-            and int(cfg['channel_id']) == int(target.id)
-        )
-        if same_ch:
-            try:
-                msg = await target.fetch_message(int(mid))
-                await msg.edit(embed=embed, view=view)
-            except Exception as ex:
-                log.debug('event-panel edit existing: %s', ex)
-                msg = None
-        if msg is None:
-            msg = await target.send(embed=embed, view=view)
-
-        cfg['message_id'] = msg.id
-        cfg['channel_id'] = target.id
-        cfg['posted_by'] = str(interaction.user.id)
-        cfg['posted_at'] = datetime.now(timezone.utc).isoformat()
-        save_panel_cfg(interaction.guild.id, cfg)
         await interaction.followup.send(
-            f'✅ Панель событий в {target.mention}. '
+            f'✅ Панель событий в <#{cfg.get("channel_id")}>. '
             f'Event Mod: <@&{EVENT_MOD_ROLE_ID}>',
             ephemeral=True)
 

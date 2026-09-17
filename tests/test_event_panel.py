@@ -110,6 +110,24 @@ check("event-panel'" in open(
 ev_html = open(os.path.join(ROOT, 'web/templates/events.html'), encoding='utf-8').read()
 check('evKpis' in ev_html and 'ev-discord' in ev_html, 'events.html: KPI + Discord preview')
 check('page-head-copy' in ev_html and 'eyebrow' in ev_html, 'events.html: page-head polish')
+check('evPublish' in ev_html and 'evChannel' in ev_html, 'events.html: publish + channel select')
+check('event_panel_channel' in open(
+    os.path.join(ROOT, 'services/channel_routes.py'), encoding='utf-8').read(),
+    'маршрут event_panel_channel')
+check('set_target_channel_id' in open(
+    os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read()
+    and 'publish_event_panel' in open(
+        os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read(),
+    'target_channel + publish helpers')
+check("/event-panel/publish" in open(
+    os.path.join(ROOT, 'web/routes/guild_extra.py'), encoding='utf-8').read(),
+    'API publish')
+
+# target channel roundtrip
+EP.set_target_channel_id(99, 555666777)
+check(EP.target_channel_id(guild_id=99) == 555666777, 'set/get target_channel_id')
+EP.set_target_channel_id(99, 0)
+check(EP.target_channel_id(guild_id=99) == 0, 'clear target_channel_id')
 
 # AST: persistent custom_id
 src = open(os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read()
