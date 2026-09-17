@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Панель событий Discord — бот сам постит embed + кнопки в канал.
 
-Как /staff-panel: админ или Event Mod публикует панель командой /event-panel.
+Команда /event-panel (Event Mod / админ) публикует панель в Discord.
+Целевой канал: опция `channel` → Config.EVENT_PANEL_CHANNEL_ID → канал вызова.
 Участники жмут «Записаться», Event Mod (роль 852634463535759461) — анонс
 и закрытие записи. Persistent View переживает рестарт бота.
 """
@@ -21,6 +22,59 @@ log = get_logger('event_panel')
 
 EVENT_MOD_ROLE_ID = 852634463535759461
 PANEL_COLOR = 0x5EC8FF
+
+
+def configured_panel_channel_id() -> int:
+    """Snowflake канала из .env / Config (0 = не задан)."""
+    try:
+        from config import Config
+        return int(getattr(Config, 'EVENT_PANEL_CHANNEL_ID', 0) or 0)
+    except Exception:
+        return 0
+
+
+async def resolve_panel_channel(
+    guild: discord.Guild,
+    interaction: discord.Interaction | None = None,
+    channel_opt: discord.abc.GuildChannel | None = None,
+    cfg: dict | None = None,
+) -> discord.abc.Messageable | None:
+    """Куда слать/обновлять панель.
+
+    Приоритет: опция команды → EVENT_PANEL_CHANNEL_ID → cfg.channel_id →
+    канал вызова команды.
+    """
+    candidates: list[int] = []
+    if channel_opt is not None and getattr(channel_opt, 'id', None):
+        candidates.append(int(channel_opt.id))
+    fixed = configured_panel_channel_id()
+    if fixed:
+        candidates.append(fixed)
+    if cfg and cfg.get('channel_id'):
+        try:
+            candidates.append(int(cfg['channel_id']))
+        except (TypeError, ValueError):
+            pass
+    if interaction is not None and getattr(interaction, 'channel', None) is not None:
+        cid = getattr(interaction.channel, 'id', None)
+        if cid:
+            candidates.append(int(cid))
+
+    seen = set()
+    for cid in candidates:
+        if not cid or cid in seen:
+            continue
+        seen.add(cid)
+        ch = guild.get_channel(cid)
+        if ch is None:
+            try:
+                ch = await guild.fetch_channel(cid)
+            except Exception as ex:
+                log.debug('event panel fetch_channel %s: %s', cid, ex)
+                continue
+        if ch is not None and hasattr(ch, 'send'):
+            return ch
+    return None
 
 
 def _cfg_path(guild_id: int) -> str:
@@ -130,11 +184,13 @@ class EventAnnounceModal(discord.ui.Modal, title='Анонс события'):
         view = EventPanelView()
         # Обновить существующее сообщение панели, иначе отправить новое
         msg = None
+        channel = await resolve_panel_channel(guild, interaction, cfg=cfg)
+        if channel is None:
+            return await interaction.response.send_message(
+                'Не найден канал для панели. Задай EVENT_PANEL_CHANNEL_ID '
+                'или укажи канал в /event-panel.',
+                ephemeral=True)
         mid = cfg.get('message_id')
-        cid = cfg.get('channel_id') or getattr(interaction.channel, 'id', None)
-        channel = interaction.channel
-        if cid:
-            channel = guild.get_channel(int(cid)) or interaction.channel
         if mid and channel:
             try:
                 msg = await channel.fetch_message(int(mid))
@@ -252,7 +308,13 @@ class EventPanel(commands.Cog):
     @app_commands.command(
         name='event-panel',
         description='Опубликовать панель событий (Event Mod / админ)')
-    async def event_panel_cmd(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        channel='Куда отправить панель (иначе EVENT_PANEL_CHANNEL_ID или этот канал)')
+    async def event_panel_cmd(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel | None = None,
+    ):
         if interaction.guild is None:
             return await interaction.response.send_message(
                 'Только на сервере.', ephemeral=True)
@@ -262,18 +324,44 @@ class EventPanel(commands.Cog):
 
         await interaction.response.defer(ephemeral=True)
         cfg = load_panel_cfg(interaction.guild.id)
+        target = await resolve_panel_channel(
+            interaction.guild, interaction, channel_opt=channel, cfg=cfg)
+        if target is None:
+            return await interaction.followup.send(
+                '❌ Не найден канал. Укажи опцию `channel` в команде или '
+                'задай `EVENT_PANEL_CHANNEL_ID` в .env.',
+                ephemeral=True)
+
         cfg.setdefault('registration_open', True)
         cfg.setdefault('signups', [])
         embed = panel_embed(interaction.guild, cfg)
         view = EventPanelView()
-        msg = await interaction.channel.send(embed=embed, view=view)
+
+        # Если панель уже есть в целевом канале — обновить, иначе новый пост
+        msg = None
+        mid = cfg.get('message_id')
+        same_ch = (
+            mid
+            and cfg.get('channel_id')
+            and int(cfg['channel_id']) == int(target.id)
+        )
+        if same_ch:
+            try:
+                msg = await target.fetch_message(int(mid))
+                await msg.edit(embed=embed, view=view)
+            except Exception as ex:
+                log.debug('event-panel edit existing: %s', ex)
+                msg = None
+        if msg is None:
+            msg = await target.send(embed=embed, view=view)
+
         cfg['message_id'] = msg.id
-        cfg['channel_id'] = interaction.channel.id
+        cfg['channel_id'] = target.id
         cfg['posted_by'] = str(interaction.user.id)
         cfg['posted_at'] = datetime.now(timezone.utc).isoformat()
         save_panel_cfg(interaction.guild.id, cfg)
         await interaction.followup.send(
-            f'✅ Панель событий в {interaction.channel.mention}. '
+            f'✅ Панель событий в {target.mention}. '
             f'Event Mod: <@&{EVENT_MOD_ROLE_ID}>',
             ephemeral=True)
 

@@ -36,6 +36,16 @@ from cogs import event_panel as EP  # noqa: E402
 
 check(EVENT_MOD_ROLE_ID == 852634463535759461, 'EVENT_MOD_ROLE_ID')
 check(EP.EVENT_MOD_ROLE_ID == EVENT_MOD_ROLE_ID, 'cog использует тот же id')
+check(callable(EP.configured_panel_channel_id), 'configured_panel_channel_id')
+check(callable(EP.resolve_panel_channel), 'resolve_panel_channel')
+check('EVENT_PANEL_CHANNEL_ID' in open(
+    os.path.join(ROOT, 'config.py'), encoding='utf-8').read(),
+    'Config.EVENT_PANEL_CHANNEL_ID')
+check("name='event-panel'" in open(
+    os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read()
+    and 'channel: discord.TextChannel' in open(
+        os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read(),
+    '/event-panel принимает channel')
 
 print('== seed ==')
 for p in __import__('pathlib').Path('data').glob('.event_mod_acl*'):

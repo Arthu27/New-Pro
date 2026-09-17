@@ -185,6 +185,9 @@ class Config:
     COMPANION_USER_ID: int = _env_int('COMPANION_USER_ID', 1353157554967937153)
     REQUIRED_ROLE_ID: int = _env_int('REQUIRED_ROLE_ID', 1474866958758576309)
     APPLY_CHANNEL_ID: int = _env_int('APPLY_CHANNEL_ID', 1484308081302306846)
+    # Куда /event-panel публикует панель ивентов (0 = канал из опции команды
+    # или канал, где вызвали /event-panel). Задать snowflake ID текстового канала.
+    EVENT_PANEL_CHANNEL_ID: int = _env_int('EVENT_PANEL_CHANNEL_ID', 0)
     # Роли, выдаваемые после одобрения заявки в команду (0 = искать по имени)
     STAFF_HELPER_ROLE_ID: int = _env_int('STAFF_HELPER_ROLE_ID', 0)
     STAFF_MODERATOR_ROLE_ID: int = _env_int('STAFF_MODERATOR_ROLE_ID', 0)
