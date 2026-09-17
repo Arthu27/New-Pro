@@ -83,7 +83,7 @@
   var MAIN_GID = '{{ main_guild_id }}';
 
   function loadGuilds() {
-    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+    window.fetchCachedJSON('/api/guilds').then(function (guilds) {
       if (!Array.isArray(guilds)) return;
       document.querySelectorAll('.ba-guild').forEach(function (sel) {
         sel.innerHTML = '<option value="">Выберите сервер...</option>';

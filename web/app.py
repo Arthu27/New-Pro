@@ -544,13 +544,28 @@ def _log_panel_action (action ,detail =''):
     except Exception as _ex:
         _log.debug("_log_panel_action(): подавлено: %s", _ex)
 
-        # ETag: кэш на уровне браузера/бота для GET + JSON по whitelist-путям
+        # ETag: кэш на уровне браузера/бота для GET + JSON.
+        # Точные пути + префиксы гильдий/настроек — чтобы каналы/роли/
+        # bot-settings тоже отдавали 304 и панель грузилась мгновенно.
 _ETAG_PATHS =(
 '/api/logs',
 '/api/warnings',
 '/api/login-log',
 '/api/stats',
 '/api/guilds',
+'/api/channels',
+'/api/roles',
+'/api/bot-settings',
+'/api/bot-stats',
+'/api/my-notifications',
+'/api/notifications',
+'/api/staff-role-routes',
+'/api/activity-feed',
+'/api/panel-visibility',
+)
+_ETAG_PREFIXES =(
+'/api/guild/',
+'/api/bot-settings/',
 )
 
 
@@ -622,10 +637,14 @@ def after_request (response ):
             _log_panel_action (f'{request.method} {path}','')
 
             # ETag: для того же содержимого вернуть 304 (экономия сети и парсинга JSON)
+    _etag_ok =(request .path in _ETAG_PATHS
+               or any (request .path .startswith (p )for p in _ETAG_PREFIXES ))
+    # POST/мутации и live/SSE не кэшируем
     if (request .method =='GET'
     and response .status_code ==200 
     and response .is_json 
-    and request .path in _ETAG_PATHS ):
+    and _etag_ok
+    and not request .path .startswith ('/api/live')):
         try :
             data =response .get_json ()
             etag =_store .make_etag (data )

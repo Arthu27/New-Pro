@@ -361,7 +361,7 @@ window.addEventListener('beforeunload', function (e) {
    для выпадающих селектов появляются сразу, как только ответит /api/channels,
    без ожидания настроек маршрутов. Маршруты дорисовываются по готовности. */
 function chsLoadChannels() {
-  return fetch('/api/channels').then(function (r) { return r.json(); })
+  return window.fetchCachedJSON('/api/channels')
     .then(function (chans) {
       CHS_CHANNELS = (Array.isArray(chans) ? chans : (chans.channels || [])).filter(function (c) {
         return c && !c.hidden && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5);
@@ -372,7 +372,7 @@ function chsLoadChannels() {
 }
 
 function chsLoadRoutes() {
-  return fetch('/api/channel-routes').then(function (r) { return r.json(); })
+  return window.fetchCachedJSON('/api/channel-routes')
     .then(function (d) {
       CHS_ROUTES_LOADED = true;
       if (d.success && d.routes && d.routes.length) {

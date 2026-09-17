@@ -210,7 +210,7 @@
   });
 
   /* загрузить сохранённые префы */
-  fetch('/api/ux/prefs').then(function (r) { return r.json(); }).then(function (d) {
+  window.fetchCachedJSON('/api/ux/prefs').then(function (d) {
     var p = (d && d.prefs) || {};
     if (p.theme) state.theme = p.theme;
     if (p.accent) state.accent = p.accent;

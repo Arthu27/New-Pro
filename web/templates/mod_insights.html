@@ -264,7 +264,7 @@ $('miDossierGo').addEventListener('click', function () {
 $('miDossierId').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('miDossierGo').click(); });
 
 function loadReasons() {
-  fetch('/api/warnings').then(function (r) { return r.json(); }).then(function (warns) {
+  window.fetchCachedJSON('/api/warnings').then(function (warns) {
     if (!window.HakumoChart || !Array.isArray(warns)) return;
     var counts = {};
     warns.forEach(function (w) {

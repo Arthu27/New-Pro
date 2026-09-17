@@ -89,7 +89,7 @@
 
   function loadGuilds() {
     var gs = $('guild-select');
-    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+    window.fetchCachedJSON('/api/guilds').then(function (guilds) {
       if (!Array.isArray(guilds) || !guilds.length) return;
       gs.innerHTML = guilds.map(function (g) {
         return '<option value="' + esc(g.id) + '"' + (String(g.id) === selectedGuild ? ' selected' : '') + '>' + esc(g.name) + '</option>';

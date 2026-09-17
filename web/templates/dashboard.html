@@ -278,7 +278,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   async function loadServerHealth() {
     try {
-      var d = await fetch('/api/dashboard/health').then(function (r) { return r.json(); });
+      var d = await window.fetchCachedJSON('/api/dashboard/health');
       if (!d.success || !d.health) return;
       var fp = JSON.stringify(d.health);
       if (fp === (loadServerHealth._fp || '')) return;
@@ -886,7 +886,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   /* Здоровье бота */
   async function loadHealth() {
     var health = {};
-    try { health = await fetch('/api/bot/health').then(function (r) { return r.json(); }); } catch (e) {}
+    try { health = await window.fetchCachedJSON('/api/bot/health'); } catch (e) {}
     var cur = health.current || health || {};
     var cpu = cur.cpu_percent != null ? cur.cpu_percent : (cur.cpu != null ? cur.cpu : null);
     var ram = cur.memory_percent != null ? cur.memory_percent : (cur.ram_percent != null ? cur.ram_percent : null);
@@ -1062,7 +1062,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     var box = $('pulseStrip');
     if (!box) return;
     try {
-      var d = await fetch('/api/activity-feed').then(function (r) { return r.json(); });
+      var d = await window.fetchCachedJSON('/api/activity-feed');
       var items = Array.isArray(d) ? d : (d.items || []);
       var top = items.slice(0, 5);
       if (!top.length) {

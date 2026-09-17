@@ -770,11 +770,7 @@ textarea.field-input{resize:vertical;min-height:52px}
     if (live && document.querySelector('.modal-overlay.open')) return;
     /* список уже отрисован из вшитых данных — спиннер не мигает */
     if (!live && !allChannels.length) setLoading();
-    return fetch('/api/guild/' + selectedGuild + '/channels')
-      .then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
+    return window.fetchCachedJSON('/api/guild/' + selectedGuild + '/channels', { cacheFirst: true })
       .then(function (data) {
         /* API может вернуть {error, channels:[]} — показываем причину, а не пустоту */
         if (data && !Array.isArray(data) && data.error) {
@@ -993,7 +989,7 @@ textarea.field-input{resize:vertical;min-height:52px}
   // ── Guild select ──
   function populateGuildSelect() {
     var gs = $('ch-guild-select');
-    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+    window.fetchCachedJSON('/api/guilds').then(function (guilds) {
       if (!Array.isArray(guilds) || !guilds.length) {
         gs.innerHTML = '<option value="' + esc(MAIN_GID) + '">Главный сервер</option>';
         selectedGuild = MAIN_GID; loadChannels(); return;

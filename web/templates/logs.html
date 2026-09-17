@@ -370,7 +370,7 @@ body.dense .jl-cbody { gap: 3px; }
 
   async function loadGuilds() {
     try {
-      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      var guilds = await window.fetchCachedJSON('/api/guilds');
       var sel = $('guild-filter');
       (Array.isArray(guilds) ? guilds : []).forEach(function (g) {
         var opt = document.createElement('option');

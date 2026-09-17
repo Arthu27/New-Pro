@@ -471,7 +471,7 @@
 
     var guildSelect = $('guild-id');
     if (guildSelect) {
-      fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+      window.fetchCachedJSON('/api/guilds').then(function (guilds) {
         (guilds || []).forEach(function (g) {
           var opt = document.createElement('option');
           opt.value = g.id;
@@ -491,7 +491,7 @@
 
   function fetchMembers() {
     if (_membersCache) return Promise.resolve(_membersCache);
-    return fetch('/api/members').then(function (r) { return r.json(); }).then(function (list) {
+    return window.fetchCachedJSON('/api/members').then(function (list) {
       _membersCache = (Array.isArray(list) ? list : []).map(function (m) {
         return { id: String(m.id || ''), name: m.name || m.display_name || m.username || String(m.id || '') };
       });

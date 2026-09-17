@@ -89,7 +89,7 @@
     if (window.sshdEnhance && !sel._sshd) {
       window.sshdEnhance(sel, { search: true, searchPlaceholder: 'Канал…' });
     }
-    fetch('/api/channels').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/channels').then(function (d) {
       var channels = d.channels || d || [];
       var keep = String(sel.value || '');
       var seen = {};
@@ -128,7 +128,7 @@
   }
 
   function stickyLoad() {
-    fetch('/api/sticky').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/sticky').then(function (d) {
       if (!d.success) { $('sticky-list').innerHTML = ''; return; }
       stickyRender(d.items || []);
     }).catch(function () {});
@@ -167,7 +167,7 @@
   function panicLoad() {
     var el = $('panic-status');
     if (!el) return;
-    fetch('/api/panic').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/panic').then(function (d) {
       if (d.active) {
         var st = d.state || {};
         el.innerHTML = '<i class="fas fa-circle" style="color:var(--err)"></i><span><b style="color:var(--err)">Локдаун активен</b> — включён: ' +
@@ -222,7 +222,7 @@
   }
 
   function ghostLoad() {
-    fetch('/api/ghost').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/ghost').then(function (d) {
       if (!d.success) { $('ghost-list').innerHTML = ''; return; }
       ghostRender(d.items || []);
     }).catch(function () {});

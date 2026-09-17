@@ -22,7 +22,7 @@
   var sel = document.getElementById('ss-channel');
   var btn = document.getElementById('ss-send');
   if (!sel || !btn) return;
-  fetch('/api/channels').then(function (r) { return r.json(); }).then(function (list) {
+  window.fetchCachedJSON('/api/channels').then(function (list) {
     if (!Array.isArray(list)) list = (list && list.channels) || [];
     list = list.filter(function (c) { return c && !c.hidden && c.id && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5 || !c.type); });
     sel.innerHTML = '<option value="">— выбери канал —</option>' + list.map(function (c) {

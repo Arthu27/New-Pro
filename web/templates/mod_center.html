@@ -322,7 +322,7 @@
     } catch (e) {}
     // демки
     try {
-      var p = await fetch('/api/proofs').then(function (r) { return r.json(); });
+      var p = await window.fetchCachedJSON('/api/proofs');
       if (p && p.items) setNum('mcProofs', p.items.length);
     } catch (e) {}
     // апелляции + на грани

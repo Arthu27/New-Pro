@@ -51,13 +51,25 @@
          очередь дойдёт до страничного скрипта в конце — пикеры и селекты
          получают данные практически к первому кадру («сразу и везде»).
          pickers.js переиспользует эти Promise, не дёргая сеть повторно.
-         login.html не наследует base — на странице входа прогрева нет. */
+         После F5 сначала пробуем sessionStorage (мгновенно). */
       if (!W.__warmLists && W.fetch) {
+        var warmCh = null, warmRo = null;
+        try {
+          var cached = JSON.parse(sessionStorage.getItem('hakumo_etag_json_v1') || '{}');
+          if (cached && typeof cached === 'object') {
+            if (cached['/api/channels'] != null) warmCh = cached['/api/channels'];
+            if (cached['/api/roles'] != null) warmRo = cached['/api/roles'];
+          }
+        } catch (_e) { /* private mode */ }
         W.__warmLists = {
-          channels: W.fetch('/api/channels', { headers: { 'Accept': 'application/json' } })
-            .then(function (r) { return r.json(); }).catch(function () { return null; }),
-          roles: W.fetch('/api/roles', { headers: { 'Accept': 'application/json' } })
-            .then(function (r) { return r.json(); }).catch(function () { return null; })
+          channels: warmCh != null
+            ? Promise.resolve(warmCh)
+            : W.fetch('/api/channels', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { return r.json(); }).catch(function () { return null; }),
+          roles: warmRo != null
+            ? Promise.resolve(warmRo)
+            : W.fetch('/api/roles', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { return r.json(); }).catch(function () { return null; })
         };
       }
       function simpleJSON(url, opts) {
@@ -65,11 +77,19 @@
         return W.fetch(url, init).then(function (r) {
           if (!r.ok && r.status !== 304) throw new Error('HTTP ' + r.status + ': ' + url);
           return r.json();
+        }).then(function (data) {
+          try {
+            var bag2 = JSON.parse(sessionStorage.getItem('hakumo_etag_json_v1') || '{}');
+            bag2[url] = data;
+            sessionStorage.setItem('hakumo_etag_json_v1', JSON.stringify(bag2));
+          } catch (_e) {}
+          return data;
         }).catch(function () {
           return W.fetch(url, Object.assign({}, init, { cache: 'no-store' })).then(function (r) { return r.json(); });
         });
       }
       if (!W.fetchCachedJSON) W.fetchCachedJSON = simpleJSON;
+      if (!W.apiGet) W.apiGet = simpleJSON;
       if (!W.fetchCached) W.fetchCached = W.fetch;
       if (!W.renderSafe) W.renderSafe = function (fn) { if (typeof fn === 'function') { try { fn(); } catch (e) {} } };
       if (!W.keepScroll) W.keepScroll = W.renderSafe;

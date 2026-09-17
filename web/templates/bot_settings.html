@@ -203,7 +203,7 @@
 
   function load() {
     loadUpdateSource();
-    fetch('/api/bot-settings').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/bot-settings').then(function (d) {
       if (!d || !d.ok) throw new Error('api');
       $('bs-status').value = d.presence.status;
       $('bs-activity').value = d.presence.activity_type;
@@ -273,7 +273,7 @@
   function shortSha(sha) { return sha ? String(sha).slice(0, 7) : '—'; }
 
   function loadUpdateSource() {
-    fetch('/api/bot-settings/update-source').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/bot-settings/update-source').then(function (d) {
       if (!d || !d.ok) throw new Error('api');
       if ($('bs-upd-repo')) $('bs-upd-repo').value = d.repo || '';
       if ($('bs-upd-branch')) $('bs-upd-branch').value = d.branch || '';
@@ -364,7 +364,7 @@
   }
 
   function loadStaffRoles() {
-    fetch('/api/staff-role-routes').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/staff-role-routes').then(function (d) {
       if (!d || !d.success) throw new Error('api');
       STAFF_ROLES = d.roles || [];
       STAFF_GUILD_ROLES = d.guild_roles || [];
@@ -400,7 +400,7 @@
   }
 
   function loadVoiceStay() {
-    fetch('/api/bot-settings/voice-stay').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/bot-settings/voice-stay').then(function (d) {
       if (!d || !d.ok) return;
       if ($('bs-voice-id')) $('bs-voice-id').value = d.channel_id || '';
       if ($('bs-voice-live')) {

@@ -301,7 +301,7 @@
 
   async function loadGuilds() {
     try {
-      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      var guilds = await window.fetchCachedJSON('/api/guilds');
       var sel = $('guild-select');
       (Array.isArray(guilds) ? guilds : []).forEach(function (g) {
         var opt = document.createElement('option');
