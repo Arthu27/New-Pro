@@ -67,7 +67,7 @@ MODERATION_COGS = frozenset({
     'mod_plus.py',
     'warnings.py', 'temp_moderation.py', 'proof_cog.py',
     # автомод
-    'ai_moderation.py', 'auto_filter.py',
+    'ai_moderation.py', 'auto_filter.py', 'channel_guards.py',
     # анти-рейд / безопасность / верификация
     'antiraid.py', 'guardian.py', 'security.py', 'age_verification.py',
     'impersonation.py',
@@ -120,7 +120,7 @@ CORE_ONLY_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | AI_CHAT_COGS
 # доказательства, автомод, jail, защита и верификация, апелляции, логи.
 MOD_LEAN_COGS = frozenset({
     'moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
-    'proof_cog.py', 'auto_filter.py',
+    'proof_cog.py', 'auto_filter.py', 'channel_guards.py',
     'antiraid.py', 'guardian.py',
     'age_verification.py',  # верификация молодых аккаунтов: карантин + анкета (заказ 31.08)
     'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
