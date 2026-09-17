@@ -181,6 +181,19 @@ def main():
     check('уже под чат-мутом' in src, 'текст отказа чат-мута')
     check('уже под войс-мутом' in src, 'текст отказа войс-мута')
     check('уже под мутом (чат + войс)' in src, 'текст отказа полного мута')
+    check('actor=interaction.user' in src,
+          'ПКМ: иерархия от реального Member')
+    check('Ничего не изменилось — нет роли бана' in src,
+          'пустой разбан без дела/лимита')
+    check('PR .clear (guild .id ,user .id ,role .id )' in src
+          or 'PR.clear(guild.id, user.id, role.id)' in src,
+          'снятие роли чистит только её таймер')
+
+    warn_src = open(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'cogs', 'warnings.py'), encoding='utf-8').read()
+    check('уже под ролью' in warn_src,
+          'авто-наказание по варнам не дублирует роль')
 
     print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
     return 1 if FAIL else 0

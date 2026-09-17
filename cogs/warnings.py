@@ -326,11 +326,17 @@ class warnings(commands.Cog):
                 rid = PR.role_for(guild.id, 'mute')
                 role = guild.get_role(rid) if rid else None
                 if role is not None:
+                    # Уже под мут-ролью — не дублируем выдачу на каждом
+                    # следующем варне выше порога (3→4→5…).
+                    if role in getattr(member, 'roles', []):
+                        return f'Мут: уже под ролью «{role.name}»'
                     import time as _time
                     await member.add_roles(role, reason=f'Авто: {warn_count} предупреждений')
                     PR.add_temp(guild.id, member.id, role.id,
                                 _time.time() + max(60, minutes * 60))
                     return f'Мут: роль «{role.name}» {minutes} мин'
+                if getattr(member, 'timed_out_until', None):
+                    return 'Мут: уже стоит Discord-таймаут'
                 until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
                 await member.timeout(until, reason=f'Авто-наказание: {warn_count} предупреждений')
                 return f'Мут {minutes} мин'
@@ -340,6 +346,8 @@ class warnings(commands.Cog):
                 vrid = PR.role_for(guild.id, 'vmute')
                 vrole = guild.get_role(vrid) if vrid else None
                 if vrole is not None:
+                    if vrole in getattr(member, 'roles', []):
+                        return f'Войс-мут: уже под ролью «{vrole.name}»'
                     import time as _time
                     await member.add_roles(vrole, reason=f'Авто: {warn_count} предупреждений (войс-мут)')
                     PR.add_temp(guild.id, member.id, vrole.id,
@@ -356,6 +364,8 @@ class warnings(commands.Cog):
                 # роли нет — нативный server-mute (работает, только если участник в голосе)
                 voice = getattr(member, 'voice', None)
                 if voice is not None and getattr(voice, 'channel', None) is not None:
+                    if getattr(voice, 'mute', False):
+                        return 'Войс-мут: микрофон уже заглушён'
                     await member.edit(mute=True, reason=f'Авто войс-мут: {warn_count} предупреждений')
                     return f'Войс-мут {minutes} мин'
                 # вне голоса нативный server-mute поставить нельзя — мягкий фоллбэк:
@@ -368,6 +378,8 @@ class warnings(commands.Cog):
                 rid = PR.role_for(guild.id, 'ban')
                 role = guild.get_role(rid) if rid else None
                 if role is not None:
+                    if role in getattr(member, 'roles', []):
+                        return f'Бан: уже под ролью «{role.name}»'
                     # «бан» ролью: участник остаётся на сервере, апелляция —
                     # в канале апелляции (если выбран)
                     await member.add_roles(role, reason=f'Авто: {warn_count} предупреждений')
