@@ -280,8 +280,8 @@ if os.path.exists(_pmf):
     os.remove(_pmf)
 from services.panel_menu import panel_groups_for, DEFAULT_GROUPS  # noqa: E402
 cg = DEFAULT_GROUPS.get('curator') or []
-check('community' in cg and 'mod' in cg,
-      f'дефолт куратора: модерация + тикеты + сообщество ({cg})')
+check('community' in cg and 'content' in cg and 'tickets' not in cg,
+      f'дефолт куратора: модерация + сообщество + контент (без мёртвых tickets) ({cg})')
 visible = panel_groups_for('curator')
 keys = [g['key'] for g in visible]
 check(set(['main', 'mod', 'members', 'community', 'logs', 'ai']) <= set(keys),

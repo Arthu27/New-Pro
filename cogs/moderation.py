@@ -2408,10 +2408,19 @@ class ModPanelView(discord.ui.View):
         super().__init__(timeout=300)
         self.cog = cog
         self.allowed = allowed
+        self.member = member
         self.owner_id = getattr(member, 'id', None)
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
+        self._actor_label = ''
+        try:
+            from services.staff_hierarchy import actor_panel_role, LABELS
+            guild = getattr(member, 'guild', None)
+            tier = actor_panel_role(guild, member) if member is not None else 'uye'
+            self._actor_label = LABELS.get(tier, '') or ''
+        except Exception:
+            self._actor_label = ''
         self._rebuild(None)
 
     def _action_label(self, action):
@@ -2430,7 +2439,10 @@ class ModPanelView(discord.ui.View):
             desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
         else:
             desc = "Участник и действие — в любом порядке."
-        e = discord.Embed(title="🛡 Панель модерации", description=desc, color=0x5865F2)
+        title = "🛡 Панель модерации"
+        if self._actor_label:
+            title = f"🛡 Панель модерации · {self._actor_label.capitalize()}"
+        e = discord.Embed(title=title, description=desc, color=0x5865F2)
         icon = getattr(getattr(guild, 'icon', None), 'url', None)
         name = getattr(guild, 'name', None) if guild is not None else None
         if name and icon:
