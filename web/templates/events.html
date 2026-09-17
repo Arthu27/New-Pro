@@ -71,7 +71,7 @@
               <div><div class="ev-field-name">Запись</div><div class="ev-field-val" id="evPvReg">Открыта</div></div>
               <div><div class="ev-field-name">Участников</div><div class="ev-field-val" id="evPvCount">0</div></div>
             </div>
-            <div class="ev-embed-foot">Hakumo · Event Panel</div>
+            <div class="ev-embed-foot">Hakumo · /event-panel</div>
           </div>
         </div>
         <div class="ev-btns" aria-hidden="true">
@@ -182,7 +182,7 @@
     $('evKpis').innerHTML =
       kpi(open ? 'fa-door-open' : 'fa-door-closed', open ? 'Открыта' : 'Закрыта', 'Запись', open ? 'tone-ok' : 'tone-warn') +
       kpi('fa-user-check', String(count), 'Записалось', count ? 'tone-ok' : '') +
-      kpi(posted ? 'fa-hashtag' : 'fa-circle-minus', posted ? 'В Discord' : 'Нет', 'Панель', posted ? 'tone-ok' : 'tone-warn') +
+      kpi(posted ? 'fa-hashtag' : 'fa-circle-minus', posted ? 'Есть' : 'Нет', 'В Discord', posted ? 'tone-ok' : 'tone-warn') +
       kpi('fa-bullhorn', d.last_announce_at ? fmtWhen(d.last_announce_at) : '—', 'Последний анонс');
 
     var rows = [
