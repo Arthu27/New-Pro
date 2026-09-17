@@ -91,6 +91,28 @@ check(claimed_underage('ищу девушку 18+') is None, 'ищу 18+ → Non
 check(claimed_underage('') is None, 'пустая строка')
 check(claimed_underage(None) is None, 'None')
 
+print('== guild-wide: без голых цифр (allow_bare=False) ==')
+from cogs.channel_guards import (  # noqa: E402
+    AGE_GUARD_GUILD_WIDE, AGE_GUARD_CHANNELS, _should_scan_channel,
+)
+check(AGE_GUARD_GUILD_WIDE is True, 'AGE_GUARD_GUILD_WIDE включён')
+check(_should_scan_channel(999999), 'скан любого канала при guild-wide')
+check(_should_scan_channel(next(iter(AGE_GUARD_CHANNELS))),
+      'скан канала знакомств')
+# явные — ловим везде
+check(claimed_underage('мне 14', allow_bare=False) == 14, 'guild: мне 14')
+check(claimed_underage('ищу девушку меньше 18', allow_bare=False) == 17,
+      'guild: меньше 18')
+check(claimed_underage('мне семнадцать', allow_bare=False) == 17,
+      'guild: семнадцать')
+# голые цифры — только в знакомствах (allow_bare=True)
+check(claimed_underage('17+', allow_bare=False) is None,
+      'guild: голое 17+ не трогаем')
+check(claimed_underage('просто 16 в чате', allow_bare=False) is None,
+      'guild: голое 16 в общем чате → None')
+check(claimed_underage('17+', allow_bare=True) == 17,
+      'знакомства: 17+ → 17')
+
 
 print('== message_has_media (shape) ==')
 
