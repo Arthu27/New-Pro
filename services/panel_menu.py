@@ -165,7 +165,7 @@ MENU = [
     ]},
     {'group': 'Сообщество', 'key': 'community', 'icon': 'fa-gamepad', 'pages': [
         {'path': '/events', 'label': 'События', 'icon': 'fa-calendar-days',
-         'description': 'Панель ивентов в Discord — публикует бот (/event-panel)',
+         'description': 'Статус ивент-панели Discord (/event-panel)',
          'access': 'Мод+', 'tone': 'info'},
         {'path': '/voice-stats', 'label': 'Голосовая', 'icon': 'fa-microphone'},
 

@@ -145,6 +145,41 @@ def register(ctx):
         return jsonify (events )
 
 
+    @app.route('/api/guild/<guild_id>/event-panel')
+    @login_required
+    @role_required('mod')
+    def api_guild_event_panel(guild_id):
+        """Статус Discord-панели /event-panel (data/event_panel_<gid>.json)."""
+        try:
+            from cogs.event_panel import (
+                EVENT_MOD_ROLE_ID, configured_panel_channel_id, load_panel_cfg)
+            cfg = load_panel_cfg(int(guild_id))
+        except Exception as ex:
+            return jsonify({'ok': False, 'error': str(ex)}), 500
+        signups = list(cfg.get('signups') or [])
+        try:
+            cfg_ch = int(configured_panel_channel_id() or 0)
+        except Exception:
+            cfg_ch = 0
+        return jsonify({
+            'ok': True,
+            'guild_id': str(guild_id),
+            'title': cfg.get('title') or 'События сервера',
+            'description': cfg.get('description') or '',
+            'registration_open': bool(cfg.get('registration_open', True)),
+            'signup_count': len(signups),
+            'signups': [str(u) for u in signups],
+            'channel_id': str(cfg['channel_id']) if cfg.get('channel_id') else '',
+            'message_id': str(cfg['message_id']) if cfg.get('message_id') else '',
+            'posted_by': str(cfg.get('posted_by') or ''),
+            'posted_at': cfg.get('posted_at') or '',
+            'last_announce_by': str(cfg.get('last_announce_by') or ''),
+            'last_announce_at': cfg.get('last_announce_at') or '',
+            'event_mod_role_id': str(EVENT_MOD_ROLE_ID),
+            'configured_channel_id': cfg_ch,
+        })
+
+
     @app .route ('/api/guild/<guild_id>/events/<event_id>/delete',methods =['POST'])
     @login_required 
     @role_required ('admin')

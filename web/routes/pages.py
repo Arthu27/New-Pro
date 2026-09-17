@@ -66,9 +66,10 @@ def register(ctx):
     @login_required
     @role_required ('mod')
     def events_page ():
-        return render_template ('events.html', role=session.get('role'),
+        gid = active_guild_id()
+        return render_template('events.html', role=session.get('role'),
                                username=session.get('username'),
-                               main_guild_id=active_guild_id())
+                               main_guild_id=gid, guild_id=gid)
 
 
 

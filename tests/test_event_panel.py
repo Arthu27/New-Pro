@@ -102,6 +102,14 @@ check(os.path.exists(os.path.join(ROOT, 'web/templates/events.html')),
       'шаблон events.html')
 pages = open(os.path.join(ROOT, 'web/routes/pages.py'), encoding='utf-8').read()
 check("'/events'" in pages, 'роут /events')
+check("event-panel'" in open(
+    os.path.join(ROOT, 'web/routes/guild_extra.py'), encoding='utf-8').read()
+    or '/event-panel' in open(
+        os.path.join(ROOT, 'web/routes/guild_extra.py'), encoding='utf-8').read(),
+    'API /event-panel')
+ev_html = open(os.path.join(ROOT, 'web/templates/events.html'), encoding='utf-8').read()
+check('evKpis' in ev_html and 'ev-discord' in ev_html, 'events.html: KPI + Discord preview')
+check('page-head-copy' in ev_html and 'eyebrow' in ev_html, 'events.html: page-head polish')
 
 # AST: persistent custom_id
 src = open(os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read()

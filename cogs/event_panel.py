@@ -120,29 +120,29 @@ def is_event_mod(member: discord.Member) -> bool:
 
 def panel_embed(guild: discord.Guild, cfg: dict | None = None) -> discord.Embed:
     cfg = cfg or {}
-    title = cfg.get('title') or 'События сервера'
+    title = (cfg.get('title') or 'События сервера').strip()
     desc = cfg.get('description') or (
-        'Здесь публикуются ивенты команды.\n'
+        'Анонсы и запись на ивенты сервера.\n'
         'Нажми **Записаться**, чтобы отметить интерес.\n'
-        f'Ведут ивенты — роль <@&{EVENT_MOD_ROLE_ID}>.'
+        f'Ведут — <@&{EVENT_MOD_ROLE_ID}>.'
     )
     e = discord.Embed(
-        title=f'🎉 {title}',
-        description=desc,
+        title=title[:256],
+        description=str(desc)[:4000],
         color=PANEL_COLOR,
         timestamp=datetime.now(timezone.utc),
     )
     open_reg = cfg.get('registration_open', True)
     e.add_field(
         name='Запись',
-        value='🟢 Открыта' if open_reg else '🔒 Закрыта',
+        value='**Открыта**' if open_reg else '**Закрыта**',
         inline=True,
     )
     signup = cfg.get('signups') or []
-    e.add_field(name='Записалось', value=str(len(signup)), inline=True)
+    e.add_field(name='Участников', value=f'**{len(signup)}**', inline=True)
     if guild and guild.icon:
         e.set_thumbnail(url=guild.icon.url)
-    e.set_footer(text='Hakumo · Event Panel')
+    e.set_footer(text='Hakumo · /event-panel')
     return e
 
 
@@ -172,7 +172,7 @@ class EventAnnounceModal(discord.ui.Modal, title='Анонс события'):
         cfg['description'] = (
             f"**Когда:** {str(self.when_in.value).strip()}\n"
             f"{(str(self.details_in.value or '').strip() or 'Подробности у ведущих.')}\n\n"
-            f'Жми **Записаться** ниже.'
+            'Нажми **Записаться** ниже.'
         )
         cfg['registration_open'] = True
         cfg['signups'] = []
@@ -223,7 +223,7 @@ class EventPanelView(discord.ui.View):
 
     @discord.ui.button(
         label='Записаться', style=discord.ButtonStyle.success,
-        emoji='✋', custom_id='event_panel:signup')
+        custom_id='event_panel:signup')
     async def signup(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         if guild is None:
@@ -252,7 +252,7 @@ class EventPanelView(discord.ui.View):
 
     @discord.ui.button(
         label='Анонс', style=discord.ButtonStyle.primary,
-        emoji='📢', custom_id='event_panel:announce')
+        custom_id='event_panel:announce')
     async def announce(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not is_event_mod(interaction.user):
             return await interaction.response.send_message(
@@ -260,8 +260,8 @@ class EventPanelView(discord.ui.View):
         await interaction.response.send_modal(EventAnnounceModal(None))
 
     @discord.ui.button(
-        label='Закрыть запись', style=discord.ButtonStyle.secondary,
-        emoji='🔒', custom_id='event_panel:close')
+        label='Запись', style=discord.ButtonStyle.secondary,
+        custom_id='event_panel:close')
     async def close_reg(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not is_event_mod(interaction.user):
             return await interaction.response.send_message(
@@ -282,7 +282,7 @@ class EventPanelView(discord.ui.View):
 
     @discord.ui.button(
         label='Список', style=discord.ButtonStyle.secondary,
-        emoji='📋', custom_id='event_panel:list')
+        custom_id='event_panel:list')
     async def show_list(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not is_event_mod(interaction.user):
             return await interaction.response.send_message(
