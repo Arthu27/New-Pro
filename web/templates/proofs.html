@@ -313,7 +313,7 @@
   }
 
   function load() {
-    fetch('/api/proofs').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/proofs').then(function (d) {
       all = Array.isArray(d) ? d : (d.items || []);
       var _p0 = all[0] || null;
       var fp = all.length + '|' + (_p0 ? String(_p0.id || _p0.name || _p0.file || '').slice(0, 80) : '');
@@ -455,7 +455,7 @@
       : '<i class="fas fa-toggle-off"></i> Включить';
   }
   function pfReqLoad() {
-    fetch('/api/proof-required').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/proof-required').then(function (d) {
       if (d && d.success) { pfReqOn = !!d.required; pfReqRender(); }
     }).catch(function (e) { console.debug('req load', e); });
   }
@@ -589,7 +589,7 @@
   wlFill();
 
   function wlLoad() {
-    fetch('/api/proof-whitelist').then(function (r) { return r.json(); })
+    window.fetchCachedJSON('/api/proof-whitelist')
       .then(function (d) { wlRender(d); }).catch(function () {});
   }
 

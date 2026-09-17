@@ -95,8 +95,7 @@ async function loadRoles() {
   var box = $('roles-list');
   if (!selectedGuild) { box.innerHTML = '<div class="empty-msg">Сервер не выбран</div>'; return; }
   try {
-    var r = await fetch('/api/guild/' + selectedGuild + '/roles');
-    var roles = await r.json();
+    var roles = await window.fetchCachedJSON('/api/guild/' + selectedGuild + '/roles', { cacheFirst: true });
     var fp = (roles || []).map(function (x) { return x.id + ':' + x.name + ':' + (x.members || 0); }).join('|');
     if (window.silentGuard && window.silentGuard('roles-' + selectedGuild, fp)) return;
     if (!Array.isArray(roles) || roles.length === 0) {
@@ -171,7 +170,7 @@ async function loadGuilds() {
   var sel = $('guild-select');
   var guilds = [];
   try {
-    var d = await fetch('/api/guilds').then(function (r) { return r.json(); });
+    var d = await window.fetchCachedJSON('/api/guilds');
     guilds = Array.isArray(d) ? d : (Array.isArray(d && d.guilds) ? d.guilds : []);
   } catch (e) { console.debug('Список серверов не загрузился:', e); }
   guilds = guilds.filter(function (g) { return g && g.id; });

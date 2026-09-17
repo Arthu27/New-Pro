@@ -854,7 +854,16 @@
           var span = l.querySelector('span');
           var label = span ? span.textContent : l.textContent;
           var hay = (label + ' ' + (l.getAttribute('title') || '')).toLowerCase();
+          /* «комната» в UI = страница/канал меню; иначе поиск «комнат» пустел */
           var hit = !q || hay.indexOf(q) !== -1;
+          if (!hit && q.length >= 4) {
+            var syn = '';
+            if (q.indexOf('комнат') === 0 || 'комнат'.indexOf(q) === 0) syn = 'канал';
+            else if (q.indexOf('room') === 0) syn = 'канал';
+            else if (q.indexOf('welcome') === 0 || q.indexOf('привет') === 0) syn = 'приветствие';
+            else if (q.indexOf('уведом') === 0 || q.indexOf('notif') === 0) syn = 'уведомления';
+            if (syn && hay.indexOf(syn) !== -1) hit = true;
+          }
           l.classList.toggle('nav-hide', !!q && !hit);
           if (q && hit && span) hl(span, q);
           else if (span) unhl(span);
@@ -1152,7 +1161,8 @@
         var ownItems = own.map(function (n) {
           return {
             title: n.title || n.action || 'Уведомление',
-            body: n.body || n.detail || '',
+            /* API отдаёт message; старые записи могли писать body/detail */
+            body: n.body || n.message || n.detail || '',
             icon: /^fa-/.test(n.icon || '') ? n.icon : 'fa-bell',
             ts: n.ts || n.created_at || n.timestamp || 0,
             kind: 'personal',
@@ -1537,16 +1547,46 @@
 // ETag-кэш для частых GET-опросов. 304 — штатный «данные не
 // изменились»: возвращаем сохранённый JSON и не заставляем
 // страницы разбирать пустое тело.
+// sessionStorage — мгновенная первая отрисовка после F5.
 // ============================================================
 (function () {
   var _etagStore = Object.create(null);
+  var _SS_KEY = 'hakumo_etag_json_v1';
+  var _SS_ETAG = 'hakumo_etag_hdr_v1';
+
+  function _safeParse(raw) {
+    try { return raw ? JSON.parse(raw) : null; } catch (_e) { return null; }
+  }
+  function _hydrate() {
+    try {
+      var d = _safeParse(sessionStorage.getItem(_SS_KEY));
+      if (d && typeof d === 'object') {
+        Object.keys(d).forEach(function (k) { window._etagCache._d[k] = d[k]; });
+      }
+      var e = _safeParse(sessionStorage.getItem(_SS_ETAG));
+      if (e && typeof e === 'object') {
+        Object.keys(e).forEach(function (k) { _etagStore[k] = e[k]; });
+      }
+    } catch (_e) { /* private mode */ }
+  }
+  function _persist() {
+    try {
+      sessionStorage.setItem(_SS_KEY, JSON.stringify(window._etagCache._d));
+      sessionStorage.setItem(_SS_ETAG, JSON.stringify(_etagStore));
+    } catch (_e) { /* quota */ }
+  }
 
   window._etagCache = {
     _d: Object.create(null),
     get: function (url) { return this._d[url]; },
     has: function (url) { return Object.prototype.hasOwnProperty.call(this._d, url); },
-    set: function (url, data) { this._d[url] = data; return data; }
+    set: function (url, data) {
+      this._d[url] = data;
+      _persist();
+      return data;
+    }
   };
+  _hydrate();
 
   function requestOptions(opts) {
     opts = opts || {};
@@ -1561,12 +1601,16 @@
     if (_etagStore[url]) init.headers.set('If-None-Match', _etagStore[url]);
     return fetch(url, init).then(function (r) {
       var etag = r.headers.get('ETag');
-      if (etag) _etagStore[url] = etag;
+      if (etag) {
+        _etagStore[url] = etag;
+        _persist();
+      }
       return r;
     });
   };
 
   window.fetchCachedJSON = function (url, opts) {
+    opts = opts || {};
     function consume(response, retried) {
       if (response.status === 304) {
         if (window._etagCache.has(url)) return window._etagCache.get(url);
@@ -1588,8 +1632,26 @@
       });
     }
 
-    return window.fetchCached(url, opts).then(function (r) { return consume(r, false); });
+    var network = window.fetchCached(url, opts).then(function (r) { return consume(r, false); });
+
+    // Opt-in мгновенный кадр (списки каналов/ролей): отдать кэш сразу.
+    // По умолчанию ждём сеть/304 — иначе настройки могли мелькнуть устаревшими.
+    if (opts.cacheFirst === true && window._etagCache.has(url)) {
+      var stale = window._etagCache.get(url);
+      network.then(function (fresh) {
+        if (fresh !== stale && typeof window.dispatchEvent === 'function') {
+          try {
+            window.dispatchEvent(new CustomEvent('hakumo:cache-updated', { detail: { url: url } }));
+          } catch (_e) { /* IE */ }
+        }
+      }).catch(function () { /* фон */ });
+      return Promise.resolve(stale);
+    }
+    return network;
   };
+
+  /* Алиас: единая точка GET JSON по всей панели */
+  window.apiGet = window.fetchCachedJSON;
 })();
 
 // ============================================================
@@ -2878,7 +2940,9 @@
     if (!host) return;
 
     var backdrop = doc.createElement('div');
-    backdrop.className = 'fab backdrop';
+    /* НЕ вешаем класс .fab на backdrop — иначе он наследует layout FAB
+       (right/bottom/flex) и перекрывает «+» непредсказуемо. */
+    backdrop.className = 'fab-backdrop';
     doc.body.appendChild(backdrop);
 
     var wrap = doc.createElement('div');
@@ -2892,6 +2956,7 @@
       { icon: 'fa-clock', label: 'Новая мера', href: '/temp-moderation', tone: 'tone-info', min: 1 },
       { icon: 'fa-triangle-exclamation', label: 'Выдать варн', href: '/warnings', tone: 'tone-warn', min: 1 },
       { icon: 'fa-table-columns', label: 'Задача команде', href: '/team-board', tone: '', min: 1 },
+      { icon: 'fa-hashtag', label: 'Каналы', href: '/channels', tone: 'tone-ok', min: 1 },
       { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err', min: 3 },
       { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '', min: 1 },
       { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok', min: 0 }
@@ -2900,21 +2965,33 @@
       if (window.panelPathHidden && window.panelPathHidden(it.href)) return false;
       return true;
     });
+    if (!items.length) {
+      /* хоть один пункт — иначе «+» открывает пустоту и кажется сломанным */
+      items = [{ icon: 'fa-house', label: 'Обзор', href: '/', tone: '', min: 0 }];
+    }
     wrap.innerHTML = items.map(function (it) {
       return '<a class="fab-item ' + it.tone + '" href="' + esc0(it.href) + '">' +
         '<span class="ico"><i class="fas ' + it.icon + '"></i></span>' + esc0(it.label) + '</a>';
     }).join('') +
-    '<button type="button" class="fab-main" aria-label="Быстрые действия"><i class="fas fa-plus"></i></button>';
+    '<button type="button" class="fab-main" aria-label="Быстрые действия" aria-expanded="false"><i class="fas fa-plus"></i></button>';
     host.appendChild(wrap);
 
     var mainBtn = wrap.querySelector('.fab-main');
     function close() {
       wrap.classList.remove('open');
       backdrop.classList.remove('show');
+      if (mainBtn) mainBtn.setAttribute('aria-expanded', 'false');
     }
-    mainBtn.addEventListener('click', function () {
-      var open = wrap.classList.toggle('open');
-      backdrop.classList.toggle('show', open);
+    function openFab() {
+      wrap.classList.add('open');
+      backdrop.classList.add('show');
+      if (mainBtn) mainBtn.setAttribute('aria-expanded', 'true');
+    }
+    mainBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (wrap.classList.contains('open')) close();
+      else openFab();
     });
     backdrop.addEventListener('click', close);
     doc.addEventListener('keydown', function (e) {

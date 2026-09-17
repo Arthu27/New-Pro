@@ -92,9 +92,9 @@
   async function load() {
     try {
       var stats = {};
-      try { stats = await fetch('/api/stats').then(function(r){return r.json();}); } catch(e){}
+      try { stats = await window.fetchCachedJSON('/api/stats'); } catch(e){}
       var health = {};
-      try { health = await fetch('/api/bot/health').then(function(r){return r.json();}); } catch(e){}
+      try { health = await window.fetchCachedJSON('/api/bot/health'); } catch(e){}
       var cur = health.current || health || {};
       var cpuV = cur.cpu_percent != null ? cur.cpu_percent : cur.cpu;
       var ramV = cur.memory_percent != null ? cur.memory_percent : cur.ram_percent;

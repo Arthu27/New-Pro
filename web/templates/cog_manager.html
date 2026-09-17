@@ -120,7 +120,7 @@ function render(){
 
 async function loadCogs(){
   try {
-    var d = await fetch('/api/cogs').then(r => r.json());
+    var d = await window.fetchCachedJSON('/api/cogs');
     _cogs = d || [];
     render();
   } catch(e){ document.getElementById('cm-grid').innerHTML = '<div class="cm-empty"><i class="fas fa-exclamation-triangle"></i>Ошибка загрузки</div>'; }

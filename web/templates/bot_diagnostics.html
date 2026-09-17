@@ -182,7 +182,7 @@
 (function() {
   'use strict';
   function load() {
-    fetch('/api/bot/health').then(function (r) { return r.json(); }).then(function (data) {
+    window.fetchCachedJSON('/api/bot/health').then(function (data) {
       /* бот офлайн / битый ответ не должен ронять страницу */
       if (!data || data.error || !data.current) {
         document.getElementById('botOnlineBadge').textContent = 'ОФЛАЙН';
@@ -301,7 +301,7 @@
     }, { icon_fa: 'fa-arrows-rotate', okText: 'Перезапустить', danger: true });
   };
   function loadErrors() {
-    fetch('/api/bot/errors').then(r => r.json()).then(errs => {
+    window.fetchCachedJSON('/api/bot/errors').then(errs => {
       const box = document.getElementById('errorsBox');
       if (!errs.length) {
         box.innerHTML = '<div   style="text-align: center;"><i class="fas fa-check-circle"></i> Нет ошибок</div>';

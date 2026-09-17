@@ -100,7 +100,7 @@
   }
 
   function load() {
-    fetch('/api/todo').then(function (r) { return r.json(); }).then(function (d) {
+    window.fetchCachedJSON('/api/todo').then(function (d) {
       if (d && d.ok) { tasks = d.tasks || []; render(); }
       else toast('Не удалось загрузить задачи', false);
     }).catch(function () { toast('API недоступен', false); });

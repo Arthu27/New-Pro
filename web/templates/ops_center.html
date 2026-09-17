@@ -119,7 +119,7 @@
   /* ── Статус бота ── */
   async function loadStatus() {
     try {
-      var d = await fetch('/api/status-public').then(function (r) { return r.json(); });
+      var d = await window.fetchCachedJSON('/api/status-public');
       var on = !!d.online;
       var ico = $('opsStatusIco');
       ico.style.background = on ? 'var(--ok-soft)' : 'var(--err-soft)';
@@ -151,7 +151,7 @@
 
   async function loadHealth() {
     var health = {};
-    try { health = await fetch('/api/bot/health').then(function (r) { return r.json(); }); } catch (e) {}
+    try { health = await window.fetchCachedJSON('/api/bot/health'); } catch (e) {}
     var cur = health.current || health || {};
     var cpu = cur.cpu_percent != null ? cur.cpu_percent : (cur.cpu != null ? cur.cpu : null);
     var ram = cur.memory_percent != null ? cur.memory_percent : (cur.ram_percent != null ? cur.ram_percent : null);
@@ -185,7 +185,7 @@
     var box = $('panelLogList');
     if (!box) return;
     try {
-      var d = await fetch('/api/panel-logs').then(function (r) { return r.json(); });
+      var d = await window.fetchCachedJSON('/api/panel-logs');
       var items = Array.isArray(d) ? d : (d.items || []);
       /* данные не изменились — список не перерисовываем */
       var fp = items.slice(0, 14).map(function (it) {

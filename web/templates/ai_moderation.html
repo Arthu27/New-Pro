@@ -333,7 +333,7 @@
   'use strict';
   // Load config
   function loadConfig() {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(function (raw) {
+    window.fetchCachedJSON('/api/ai-mod/config').then(function (raw) {
       /* модуль может быть офлайн или конфиг старого формата:
          никогда не роняем страницу, а показываем честный статус */
       if (!raw || raw.error || typeof raw.enabled === 'undefined') {
@@ -380,7 +380,7 @@
   }
   // Load stats
   function loadStats() {
-    fetch('/api/ai-mod/stats').then(r => r.json()).then(s => {
+    window.fetchCachedJSON('/api/ai-mod/stats').then(s => {
       document.getElementById('statTotal').textContent = s.total;
       document.getElementById('stat24h').textContent = s.last_24h;
       document.getElementById('statBans').textContent = s.bans;
@@ -412,7 +412,7 @@
     saveConfig({enabled: newVal}).then(() => loadConfig());
   };
   window.toggleLang = function(l) {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+    window.fetchCachedJSON('/api/ai-mod/config').then(function (cfg) {
       if (!cfg || cfg.error) return;
       let langs = Array.isArray(cfg.languages) ? cfg.languages.slice() : ['ru', 'tr', 'en'];
       const i = langs.indexOf(l);
@@ -421,7 +421,7 @@
     });
   };
   window.toggleSev = function(s) {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+    window.fetchCachedJSON('/api/ai-mod/config').then(function (cfg) {
       if (!cfg || cfg.error) return;
       cfg.auto_actions = cfg.auto_actions || {};
       cfg.auto_actions[s] = !cfg.auto_actions[s];
@@ -429,7 +429,7 @@
     });
   };
   window.toggleEsc = function() {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+    window.fetchCachedJSON('/api/ai-mod/config').then(function (cfg) {
       if (!cfg || cfg.error) return;
       cfg.escalation = cfg.escalation || {};
       cfg.escalation.enabled = !cfg.escalation.enabled;

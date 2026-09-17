@@ -19,7 +19,7 @@
       '.modal-overlay.open, .drawer.open, .kbd-palette:not([hidden]),' +
       ' .aes-panel.open, .sshd.open, .sshd-pop-float:not([hidden]),' +
       ' .gd-combo.open, .mpd.open, .mpd.mpd-floating,' +
-      ' .sidebar-backdrop.show, .fab.backdrop.show, .chat-drawer-backdrop.show, .tour-mask.show'
+      ' .sidebar-backdrop.show, .fab-backdrop.show, .fab.backdrop.show, .chat-drawer-backdrop.show, .tour-mask.show'
     );
     if (open) return true;
     var boot = document.getElementById('bootSplash');

@@ -457,8 +457,7 @@ function savePanel(){
 function load(){
   _pmLoading = true;
   render();
-  fetch('/api/panel-menu')
-    .then(function(r){ return r.json(); })
+  window.fetchCachedJSON('/api/panel-menu')
     .then(function(d){
       _pmLoading = false;
       if(!d.success){ toast('Не удалось загрузить', false); render(); return; }

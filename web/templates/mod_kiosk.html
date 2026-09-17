@@ -657,7 +657,7 @@
         }
       } catch (e) {}
       try {
-        var p = await fetch('/api/proofs').then(function (r) { return r.json(); });
+        var p = await window.fetchCachedJSON('/api/proofs');
         if (p && p.items) { setNum('kkProofs', p.items.length); setNum('ktProofs', p.items.length); }
       } catch (e) {}
       var gid = await activeGid();
@@ -833,7 +833,7 @@
     var _actyFp = '';
     async function loadActivity() {
       try {
-        var d = await fetch('/api/activity-feed').then(function (r) { return r.json(); });
+        var d = await window.fetchCachedJSON('/api/activity-feed');
         var items = Array.isArray(d) ? d : (d.items || []);
         var top = items.slice(0, 10);
         var fp = top.map(function (it) { return it.ts + '|' + it.title + '|' + it.user; }).join('\u0001');

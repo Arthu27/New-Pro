@@ -128,7 +128,7 @@
   async function loadThreat() {
     if (!$('threat-val')) return;
     try {
-      var d = await fetch('/api/security/threat-index').then(function (r) { return r.json(); });
+      var d = await window.fetchCachedJSON('/api/security/threat-index');
       if (!d || !d.success) return;
       $('threat-val').textContent = d.threat_score || 15;
       $('lockdown-state').textContent = d.lockdown_active ? 'АКТИВЕН' : 'ВЫКЛЮЧЕН';
@@ -138,7 +138,7 @@
 
   async function loadTunnel() {
     try {
-      var d = await fetch('/api/tunnel-url').then(function (r) { return r.json(); });
+      var d = await window.fetchCachedJSON('/api/tunnel-url');
       if (d && d.url) {
         $('tunnel-status').textContent = 'Cloudflare активен';
         $('tunnel-dot').className = 'dot status-on';
