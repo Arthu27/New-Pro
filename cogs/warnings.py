@@ -393,6 +393,12 @@ class warnings(commands.Cog):
                     except Exception as _ex:
                         log.debug(f'бан-ролью: канал апелляции не открыт: {_ex}')
                     return f'Бан: роль «{role.name}» + апелляция'
+                # Нет роли бана — настоящий Discord-бан; не дублируем
+                try:
+                    await guild.fetch_ban(member)
+                    return 'Бан: участник уже в Discord-бане'
+                except Exception:
+                    pass
                 await member.ban(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Бан'
         except Exception as e:

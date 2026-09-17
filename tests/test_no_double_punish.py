@@ -3,6 +3,7 @@
 
 Бан / чат-мут / войс-мут / полный мут: если роль уже на участнике —
 _execute_mod_action отказывается, без нового дела и без списания лимита.
+Пустой unmute/unban — тоже без дела.
 
 Запуск: python3 tests/test_no_double_punish.py
 """
@@ -55,6 +56,7 @@ class Member:
         self.mention = f'<@{uid}>'
         self.bot = False
         self.voice = None
+        self.timed_out_until = None
         self.add_roles = AsyncMock()
         self.remove_roles = AsyncMock()
         self.edit = AsyncMock()
@@ -85,9 +87,6 @@ class Interaction:
 
 
 async def _run(action, target_roles, punish_map):
-    ban_r = punish_map.get('ban')
-    mute_r = punish_map.get('mute')
-    vmute_r = punish_map.get('vmute')
     guild = NS(id=42, owner_id=700000000000000007, me=NS(
         top_role=Role(9999, 'bot'),
         guild_permissions=NS(
@@ -125,7 +124,7 @@ async def _run(action, target_roles, punish_map):
                 await cog._execute_mod_action(
                     it, action, str(target.id), amount='30m',
                     reason='test', proof_link='https://cdn.example/x.png')
-    return target, it
+    return target, it, cog
 
 
 def main():
@@ -135,65 +134,65 @@ def main():
     roles = {'ban': ban, 'mute': mute, 'vmute': vmute}
 
     print('== ban ==')
-    t, it = asyncio.run(_run('ban', [ban], roles))
+    t, _, cog = asyncio.run(_run('ban', [ban], roles))
     check(t.add_roles.await_count == 0, 'повторный ban: add_roles не вызван')
-    sent = it.followup.send.await_args
-    # followup.send(embed=..., ephemeral=True) or positional
-    text = ''
-    if sent:
-        kwargs = sent.kwargs or {}
-        emb = kwargs.get('embed') or (sent.args[0] if sent.args else None)
-        if emb is not None:
-            text = (getattr(emb, 'description', None) or '') + (getattr(emb, 'title', None) or '')
-            # error_embed may put text in description
-            if hasattr(emb, 'to_dict'):
-                d = emb.to_dict()
-                text = str(d)
-            else:
-                text = str(getattr(emb, 'description', '') or '') + str(emb)
-    # softer: just ensure no add_roles
-    t2, _ = asyncio.run(_run('ban', [], roles))
+    check(cog.save_case.call_count == 0, 'повторный ban: дело не пишется')
+    t2, _, cog2 = asyncio.run(_run('ban', [], roles))
     check(t2.add_roles.await_count == 1, 'первый ban: add_roles вызван')
+    check(cog2.save_case.call_count == 1, 'первый ban: дело пишется')
 
     print('== mute_chat ==')
-    t3, _ = asyncio.run(_run('mute_chat', [mute], roles))
+    t3, _, cog3 = asyncio.run(_run('mute_chat', [mute], roles))
     check(t3.add_roles.await_count == 0, 'повторный mute_chat: нет add_roles')
-    t4, _ = asyncio.run(_run('mute_chat', [], roles))
+    check(cog3.save_case.call_count == 0, 'повторный mute_chat: дело не пишется')
+    t4, _, _ = asyncio.run(_run('mute_chat', [], roles))
     check(t4.add_roles.await_count == 1, 'первый mute_chat: add_roles')
 
     print('== vmute ==')
-    t5, _ = asyncio.run(_run('vmute', [vmute], roles))
+    t5, _, cog5 = asyncio.run(_run('vmute', [vmute], roles))
     check(t5.add_roles.await_count == 0, 'повторный vmute: нет add_roles')
-    t6, _ = asyncio.run(_run('vmute', [], roles))
+    check(cog5.save_case.call_count == 0, 'повторный vmute: дело не пишется')
+    t6, _, _ = asyncio.run(_run('vmute', [], roles))
     check(t6.add_roles.await_count == 1, 'первый vmute: add_roles')
 
     print('== timeout (чат+войс) ==')
-    t7, _ = asyncio.run(_run('timeout', [mute, vmute], roles))
+    t7, _, cog7 = asyncio.run(_run('timeout', [mute, vmute], roles))
     check(t7.add_roles.await_count == 0, 'повторный timeout: нет add_roles')
-    t8, _ = asyncio.run(_run('timeout', [], roles))
+    check(cog7.save_case.call_count == 0, 'повторный timeout: дело не пишется')
+    t8, _, _ = asyncio.run(_run('timeout', [], roles))
     check(t8.add_roles.await_count >= 1, 'первый timeout: add_roles')
 
+    print('== empty unmute ==')
+    _, _, cog9 = asyncio.run(_run('untimeout', [], roles))
+    check(cog9.save_case.call_count == 0, 'пустой untimeout: дело не пишется')
+    _, _, cog10 = asyncio.run(_run('vunmute', [], roles))
+    check(cog10.save_case.call_count == 0, 'пустой vunmute: дело не пишется')
+    _, _, cog11 = asyncio.run(_run('unmute_chat', [], roles))
+    check(cog11.save_case.call_count == 0, 'пустой unmute_chat: дело не пишется')
+
     print('== source guards ==')
-    src = open(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'cogs', 'moderation.py'), encoding='utf-8').read()
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    src = open(os.path.join(root, 'cogs', 'moderation.py'), encoding='utf-8').read()
     check('уже под баном' in src, 'текст отказа бана')
     check('уже под чат-мутом' in src, 'текст отказа чат-мута')
     check('уже под войс-мутом' in src, 'текст отказа войс-мута')
     check('уже под мутом (чат + войс)' in src, 'текст отказа полного мута')
     check('actor=interaction.user' in src,
           'ПКМ: иерархия от реального Member')
+    check('actor =interaction .user' in src,
+          '/modpanel warn/unwarn: реальный Member')
     check('Ничего не изменилось — нет роли бана' in src,
           'пустой разбан без дела/лимита')
-    check('PR .clear (guild .id ,user .id ,role .id )' in src
-          or 'PR.clear(guild.id, user.id, role.id)' in src,
+    check('снимать нечего' in src,
+          'пустой unmute без дела/лимита')
+    check('PR .clear (guild .id ,user .id ,role .id )' in src,
           'снятие роли чистит только её таймер')
 
-    warn_src = open(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'cogs', 'warnings.py'), encoding='utf-8').read()
+    warn_src = open(os.path.join(root, 'cogs', 'warnings.py'), encoding='utf-8').read()
     check('уже под ролью' in warn_src,
           'авто-наказание по варнам не дублирует роль')
+    check('уже в Discord-бане' in warn_src,
+          'авто-бан не дублирует Discord-бан')
 
     print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
     return 1 if FAIL else 0

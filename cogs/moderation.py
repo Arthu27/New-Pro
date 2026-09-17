@@ -665,7 +665,7 @@ class Moderation (commands .Cog ):
                 return
             ok ,text =await self .apply_panel_action (
             guild ,(user if user is not None else uid ),'warn',
-            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            reason =reason ,actor =interaction .user )
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
@@ -685,7 +685,7 @@ class Moderation (commands .Cog ):
                 return
             ok ,text =await self .apply_panel_action (
             guild ,user ,'unwarn',
-            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            reason =reason ,actor =interaction .user )
             if ok :
                 await _respond (interaction ,embed =success_embed (
                 'Варн снят',f'**{user .display_name }** · `{uid }`\n{text }',guild =guild ),
@@ -919,6 +919,15 @@ class Moderation (commands .Cog ):
                         msg ="🎙️ микрофон заглушён (войс-мут)"
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
+                    _had_role =(_vrole is not None
+                                and _vrole in getattr (user ,'roles',[]))
+                    _had_sm =bool (getattr (
+                        getattr (user ,'voice',None ),'mute',False ))
+                    if not _had_role and not _had_sm :
+                        await _respond (interaction ,embed =error_embed (
+                            'Участник не под войс-мутом — снимать нечего.'),
+                            ephemeral =True )
+                        return
                     if _vrole is not None :
                         await self ._drop_roles (guild ,user ,[_vrole ])
                     # микрофон вернуть В ЛЮБОМ случае (раньше после снятия
@@ -930,6 +939,15 @@ class Moderation (commands .Cog ):
                         log .debug (f'[MODPANEL] vunmute edit: {_ve}')
                     msg ="🎙️ войс-мут снят — микрофон открыт"
                 elif action =="unmute_chat":
+                    _mrole =self ._punish_role (guild ,'mute')
+                    _had_role =(_mrole is not None
+                                and _mrole in getattr (user ,'roles',[]))
+                    _had_to =bool (getattr (user ,'timed_out_until',None ))
+                    if not _had_role and not _had_to :
+                        await _respond (interaction ,embed =error_embed (
+                            'Участник не под чат-мутом — снимать нечего.'),
+                            ephemeral =True )
+                        return
                     try :
                         from services import mute_state
                         await mute_state .clear_chat_mute (guild ,user )
@@ -937,6 +955,19 @@ class Moderation (commands .Cog ):
                         log .debug (f'[MODPANEL] unmute_chat: {_mse}')
                     msg ="чат-мут снят, голос не тронут"
                 else :  # untimeout — снимаем ЛЮБОЙ мут (чат+войс) разом
+                    _tm =self ._punish_role (guild ,'mute')
+                    _tv =self ._punish_role (guild ,'vmute')
+                    _roles_now =getattr (user ,'roles',[])
+                    _had =any (
+                        r is not None and r in _roles_now for r in (_tm ,_tv ))
+                    _had =_had or bool (getattr (user ,'timed_out_until',None ))
+                    _had =_had or bool (getattr (
+                        getattr (user ,'voice',None ),'mute',False ))
+                    if not _had :
+                        await _respond (interaction ,embed =error_embed (
+                            'Участник не под мутом — снимать нечего.'),
+                            ephemeral =True )
+                        return
                     try :
                         from services import mute_state
                         await mute_state .clear_all_mutes (guild ,user )
