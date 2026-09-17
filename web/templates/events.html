@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}События — Hakumo{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1><i class="fas fa-calendar-days"></i> События</h1>
+    <p class="muted">Панель ивентов публикует бот в Discord. Event Mod ведёт анонсы и запись.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h3><i class="fas fa-circle-info"></i> Как пользоваться</h3></div>
+  <div class="card-body" style="line-height:1.55">
+    <ol style="margin:0;padding-left:1.2em">
+      <li>Выдай роль Event Mod: <code>852634463535759461</code> ведущим ивентов.</li>
+      <li>В нужном канале Discord выполни <code>/event-panel</code> (Event Mod или Manage Server).</li>
+      <li>Бот отправит панель: участники жмут <b>Записаться</b>, Event Mod — <b>Анонс</b> / <b>Закрыть запись</b> / <b>Список</b>.</li>
+    </ol>
+    <p class="muted" style="margin-top:14px;margin-bottom:0">
+      Сид прав на <code>/event-panel</code> применяется при старте бота автоматически.
+    </p>
+  </div>
+</div>
+{% endblock %}

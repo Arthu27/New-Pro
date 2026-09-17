@@ -190,7 +190,7 @@ async function loadSettings() {
     }
   } catch(e) {
     console.error('loadSettings ошибки:', e);
-    alert('Настройки загруз ошибка произошла: ' + e.message);
+    alert('Ошибка загрузки настроек: ' + e.message);
   }
   updatePreviews();
 }
