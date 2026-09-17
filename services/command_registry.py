@@ -88,6 +88,7 @@ MODULE_CATEGORY = {
     'proactive_ai.py': 'ai', 'proactive_mod.py': 'ai',
     # события и команда
     'giveaway.py': 'events', 'meeting.py': 'events', 'events.py': 'events',
+    'event_panel.py': 'events',
     'duty.py': 'events', 'staff_rating.py': 'events',
     'staff_shifts.py': 'events', 'staff_stats.py': 'events',
     'weekly_crown.py': 'events',

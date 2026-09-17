@@ -152,11 +152,17 @@ WELCOME_LEAN_COGS = frozenset({
     'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
 })
 
+# События: Discord-панель ивентов (Event Mod).
+EVENT_LEAN_COGS = frozenset({
+    'event_panel.py',
+})
+
 # Итоговый «лёгкий» состав: ~30 модулей вместо ~110.
 # Музыка удалена (2026-09-01); в составе остаётся VOICE_STATS_COGS
 # (voice_tracker: статистика присутствия в голосе, без /play).
 LEAN_COGS = (CORE_COGS | MOD_LEAN_COGS | TICKET_LEAN_COGS
-             | VOICE_STATS_COGS | AI_LEAN_COGS | WELCOME_LEAN_COGS)
+             | VOICE_STATS_COGS | AI_LEAN_COGS | WELCOME_LEAN_COGS
+             | EVENT_LEAN_COGS)
 
 # env-переменные
 ENV_MOD_ONLY = 'MOD_ONLY'

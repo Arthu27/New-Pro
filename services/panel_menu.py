@@ -164,18 +164,11 @@ MENU = [
          'min_role': 'owner', 'description': 'Куда писать логи и оформление карточек'},
     ]},
     {'group': 'Сообщество', 'key': 'community', 'icon': 'fa-gamepad', 'pages': [
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        {'path': '/events', 'label': 'События', 'icon': 'fa-calendar-days',
+         'description': 'Статус ивент-панели Discord (/event-panel)',
+         'access': 'Мод+', 'tone': 'info'},
         {'path': '/voice-stats', 'label': 'Голосовая', 'icon': 'fa-microphone'},
-        
+
         
         
         
@@ -271,6 +264,7 @@ PAGE_MIN_ROLE = {
     '/mod-settings': 'admin',
     '/role-settings': 'admin',
     '/welcome-editor': 'admin',
+    '/events': 'mod',
     '/rules-editor': 'admin',
     '/pagerduty': 'admin',
     '/anticrash': 'admin',

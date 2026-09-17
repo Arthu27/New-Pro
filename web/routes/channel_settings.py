@@ -165,6 +165,20 @@ def _staff_set(key):
     return _set
 
 
+def _event_panel_get(gid):
+    try:
+        from cogs.event_panel import target_channel_id
+        return int(target_channel_id(guild_id=int(gid)) or 0)
+    except Exception:
+        return 0
+
+
+def _event_panel_set(gid, cid):
+    from cogs.event_panel import set_target_channel_id
+    set_target_channel_id(int(gid), int(cid or 0))
+    return True
+
+
 ADAPTERS = {
     'ban_appeal_channel': (CHR.get_route, CHR.set_route),
     'appeal_menu_channel': (CHR.get_route, CHR.set_route),
@@ -173,6 +187,7 @@ ADAPTERS = {
     'report_channel': (CHR.get_route, CHR.set_route),
     'appeals_channel': (CHR.get_route, CHR.set_route),
     'welcome_channel': (_welcome_get, _welcome_set),
+    'event_panel_channel': (_event_panel_get, _event_panel_set),
     'guardian_channel': (CHR.get_route, CHR.set_route),
     'antiraid_channel': (_antiraid_get, _antiraid_set),
     'security_channel': (_security_get, _security_set),

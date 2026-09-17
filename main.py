@@ -1106,21 +1106,21 @@ async def on_ready():
     # Стартовые роли из config/role_seed.json — применяем один раз при старте
     # бота (роли персонала для уровней/лимитов + роль бана), чтобы выкатка
     # на VPS сразу подняла настройки владельца. Панель делает то же у себя.
+    _seed_gid = 0
+    try:
+        from config import Config as _Cfg
+        _mg = int(getattr(_Cfg, "MAIN_GUILD_ID", 0) or 0)
+        if _mg and bot.get_guild(_mg):
+            _seed_gid = _mg
+        elif bot.guilds:
+            _seed_gid = bot.guilds[0].id
+    except Exception:
+        _seed_gid = int(getattr(bot.guilds[0], "id", 0) or 0) if bot.guilds else 0
     try:
         from services.role_seed import apply_role_seed
         # боевой gid: MAIN_GUILD_ID, если бот реально в нём, иначе первая
         # гильдия (так punish-роли и action_acl применятся, даже когда
         # MAIN_GUILD_ID в .env ещё не прописан на VPS).
-        _seed_gid = 0
-        try:
-            from config import Config as _Cfg
-            _mg = int(getattr(_Cfg, "MAIN_GUILD_ID", 0) or 0)
-            if _mg and bot.get_guild(_mg):
-                _seed_gid = _mg
-            elif bot.guilds:
-                _seed_gid = bot.guilds[0].id
-        except Exception:
-            _seed_gid = int(getattr(bot.guilds[0], "id", 0) or 0) if bot.guilds else 0
         _rep = apply_role_seed(guild_id=_seed_gid or None)
         if _rep.get("applied") and (_rep.get("role_map_added")
                                     or _rep.get("punish_added")
@@ -1130,6 +1130,16 @@ async def on_ready():
                   f"разрешения действий {_rep.get('action_acl_actions')}")
     except Exception as _ex:
         _log.debug("on_ready(): role_seed: %s", _ex)
+
+    # Event Mod (852634463535759461) → /event-panel
+    try:
+        from services.event_mod_acl_seed import apply_event_mod_acl_seed
+        _em = apply_event_mod_acl_seed(guild_id=_seed_gid or None)
+        if _em.get('applied') and _em.get('cmd_acl'):
+            print(f"[РОЛИ] Event Mod сид: cmd_acl event-panel "
+                  f"(роль {_em.get('role_id')})")
+    except Exception as _ex:
+        _log.debug("on_ready(): event_mod_acl_seed: %s", _ex)
 
     # Связь с веб-панелью — САМОЕ ВАЖНОЕ в хвосте on_ready: без неё панель
     # показывает «бот выключен», хотя он в сети. Держим отдельно и защищённо.

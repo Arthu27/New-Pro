@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% block title %}События — Hakumo{% endblock %}
+{% block page_title %}События{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество</div>
+    <h1>События</h1>
+    <p class="lead">Панель ивентов в Discord: запись участников, анонсы и закрытие набора. Публикует бот командой <code>/event-panel</code>.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn btn-primary" id="evPublish" title="Опубликовать панель в Discord">
+      <i class="fas fa-paper-plane"></i> Опубликовать
+    </button>
+    <button type="button" class="btn" id="evRefresh" title="Обновить статус">
+      <i class="fas fa-rotate"></i> Обновить
+    </button>
+  </div>
+</div>
+
+<div class="card" id="evSetupCard" style="margin-bottom:14px">
+  <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-hashtag"></i> Куда слать панель</div>
+  <p class="muted" style="margin:0 0 10px">Выбери текстовый канал Discord — туда уйдёт <code>/event-panel</code> и кнопка «Опубликовать». Можно также задать в «Каналах и маршрутах» или в <code>EVENT_PANEL_CHANNEL_ID</code>.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+    <div style="flex:1;min-width:240px">
+      <label class="muted" for="evChannel">Канал панели</label>
+      <select id="evChannel" class="form-input" style="width:100%" aria-label="Канал панели событий">
+        <option value="">— не задан —</option>
+      </select>
+    </div>
+    <button type="button" class="btn btn-primary" id="evSaveCh"><i class="fas fa-save"></i> Сохранить</button>
+  </div>
+  <div id="evSetupMsg" class="hint" style="margin-top:8px;margin-bottom:0"></div>
+</div>
+
+<div class="kpi-row" id="evKpis">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2><i class="fas fa-sliders"></i> Статус панели</h2>
+        <div class="sub">Что сейчас висит в Discord и куда бот шлёт сообщение.</div>
+      </div>
+    </div>
+    <div class="panel-body" id="evStatus">
+      <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка…</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2><i class="fas fa-users"></i> Записавшиеся</h2>
+        <div class="sub">Список из последней открытой записи.</div>
+      </div>
+    </div>
+    <div class="panel-body" id="evSignups">
+      <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка…</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2><i class="fab fa-discord"></i> Как выглядит в Discord</h2>
+        <div class="sub">Превью эмбеда и кнопок панели.</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="ev-discord" id="evPreview" aria-label="Превью панели Discord">
+        <div class="ev-discord-head">
+          <div class="ev-discord-avatar" aria-hidden="true"><i class="fas fa-robot"></i></div>
+          <div>
+            <div class="ev-discord-name">Hakumo <span class="ev-app">APP</span></div>
+            <div class="ev-discord-time" id="evPvTime">сегодня</div>
+          </div>
+        </div>
+        <div class="ev-embed">
+          <div class="ev-embed-bar" aria-hidden="true"></div>
+          <div class="ev-embed-body">
+            <div class="ev-embed-title" id="evPvTitle">События сервера</div>
+            <div class="ev-embed-desc" id="evPvDesc">Здесь публикуются ивенты команды.</div>
+            <div class="ev-embed-fields">
+              <div><div class="ev-field-name">Запись</div><div class="ev-field-val" id="evPvReg">Открыта</div></div>
+              <div><div class="ev-field-name">Участников</div><div class="ev-field-val" id="evPvCount">0</div></div>
+            </div>
+            <div class="ev-embed-foot">Hakumo · /event-panel</div>
+          </div>
+        </div>
+        <div class="ev-btns" aria-hidden="true">
+          <span class="ev-btn ev-btn-ok">Записаться</span>
+          <span class="ev-btn ev-btn-pri">Анонс</span>
+          <span class="ev-btn">Запись</span>
+          <span class="ev-btn">Список</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2><i class="fas fa-list-ol"></i> Как пользоваться</h2>
+        <div class="sub">Команда в Discord, роль Event Mod, канал назначения.</div>
+      </div>
+    </div>
+    <div class="panel-body ev-howto">
+      <ol>
+        <li>Выдай роль Event Mod <code id="evRoleCode">852634463535759461</code> ведущим ивентов.</li>
+        <li>На странице <b>События</b> выбери канал и жми <b>Опубликовать</b> — или в Discord выполни <code>/event-panel</code>.</li>
+        <li>Панель уйдёт в выбранный канал (или <code>EVENT_PANEL_CHANNEL_ID</code> / опцию <code>channel</code>).</li>
+        <li>Участники жмут <b>Записаться</b>. Event Mod — <b>Анонс</b>, <b>Запись</b> (вкл/выкл), <b>Список</b>.</li>
+      </ol>
+      <div class="hint" style="margin-top:12px;margin-bottom:0">
+        <i class="fas fa-circle-info"></i>
+        Права на <code>/event-panel</code> сидятся при старте бота автоматически. Повторный вызов команды обновляет то же сообщение, если канал не менялся.
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.ev-howto ol { margin: 0; padding-left: 1.2em; line-height: 1.6; color: var(--text-2); }
+.ev-howto li + li { margin-top: 6px; }
+.ev-howto code { font-size: .92em; }
+.ev-meta { display: grid; gap: 10px; }
+.ev-meta-row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line-2); }
+.ev-meta-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.ev-meta-k { color: var(--text-3); font-size: var(--fs-sm); flex: none; }
+.ev-meta-v { color: var(--text-1); font-weight: 600; text-align: right; word-break: break-word; }
+.ev-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.ev-pill.ok { background: var(--ok-soft, color-mix(in srgb, var(--ok) 18%, transparent)); color: var(--ok); }
+.ev-pill.off { background: var(--warn-soft, color-mix(in srgb, var(--warn) 18%, transparent)); color: var(--warn); }
+.ev-pill.muted { background: var(--btn-glass); color: var(--text-3); }
+.ev-signup-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.ev-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line-2); font-size: 12.5px; color: var(--text-2); }
+.ev-discord { background: #313338; color: #dbdee1; border-radius: 12px; padding: 14px 16px; font-family: "gg sans", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.ev-discord-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ev-discord-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #5EC8FF, #3B82F6); display: flex; align-items: center; justify-content: center; color: #fff; flex: none; }
+.ev-discord-name { font-weight: 600; color: #f2f3f5; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+.ev-app { background: #5865F2; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; letter-spacing: .3px; }
+.ev-discord-time { color: #949ba4; font-size: 12px; }
+.ev-embed { display: flex; gap: 0; background: #2b2d31; border-radius: 4px; overflow: hidden; max-width: 520px; }
+.ev-embed-bar { width: 4px; background: #5EC8FF; flex: none; }
+.ev-embed-body { padding: 8px 12px 10px; min-width: 0; flex: 1; }
+.ev-embed-title { font-weight: 700; color: #f2f3f5; font-size: 16px; margin-bottom: 6px; }
+.ev-embed-desc { color: #dbdee1; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
+.ev-embed-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.ev-field-name { font-size: 12px; font-weight: 700; color: #f2f3f5; margin-bottom: 2px; }
+.ev-field-val { font-size: 14px; color: #dbdee1; }
+.ev-embed-foot { margin-top: 10px; font-size: 12px; color: #949ba4; }
+.ev-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ev-btn { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 3px; font-size: 13px; font-weight: 500; background: #4e5058; color: #fff; }
+.ev-btn-ok { background: #248046; }
+.ev-btn-pri { background: #5865F2; }
+@media (max-width: 820px) {
+  .grid-2 { grid-template-columns: 1fr !important; }
+}
+</style>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  var GID = '{{ guild_id or main_guild_id }}';
+  var API = '/api/guild/' + GID + '/event-panel';
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function kpi(icon, num, label, tone) {
+    return '<div class="kpi ' + (tone || '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+      '<div class="kpi-copy"><div class="kpi-value">' + esc(num) + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
+  }
+  function fmtWhen(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return esc(iso);
+      return d.toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return esc(iso); }
+  }
+  function chLabel(id) {
+    if (!id) return 'не задан';
+    return '<code>#' + esc(id) + '</code>';
+  }
+
+  function render(d) {
+    var open = !!d.registration_open;
+    var count = d.signup_count || 0;
+    var posted = !!(d.channel_id && d.message_id);
+    var cfgCh = d.configured_channel_id || 0;
+
+    $('evKpis').innerHTML =
+      kpi(open ? 'fa-door-open' : 'fa-door-closed', open ? 'Открыта' : 'Закрыта', 'Запись', open ? 'tone-ok' : 'tone-warn') +
+      kpi('fa-user-check', String(count), 'Записалось', count ? 'tone-ok' : '') +
+      kpi(posted ? 'fa-hashtag' : 'fa-circle-minus', posted ? 'Есть' : 'Нет', 'В Discord', posted ? 'tone-ok' : 'tone-warn') +
+      kpi('fa-bullhorn', d.last_announce_at ? fmtWhen(d.last_announce_at) : '—', 'Последний анонс');
+
+    var rows = [
+      ['Название', esc(d.title || 'События сервера')],
+      ['Канал назначения', d.target_channel_id ? chLabel(d.target_channel_id) : '<span class="ev-pill muted">не задан в панели</span>'],
+      ['Канал панели (пост)', posted ? chLabel(d.channel_id) : '<span class="ev-pill muted">ещё не опубликована</span>'],
+      ['EVENT_PANEL_CHANNEL_ID', cfgCh ? chLabel(cfgCh) : '<span class="ev-pill muted">0 — запасной .env</span>'],
+      ['Роль Event Mod', '<code>' + esc(d.event_mod_role_id) + '</code>'],
+      ['Сообщение', d.message_id ? '<code>' + esc(d.message_id) + '</code>' : '—'],
+      ['Опубликовал', d.posted_by ? esc(d.posted_by) + ' · ' + fmtWhen(d.posted_at) : '—']
+    ];
+    $('evStatus').innerHTML = '<div class="ev-meta">' + rows.map(function (r) {
+      return '<div class="ev-meta-row"><span class="ev-meta-k">' + r[0] + '</span><span class="ev-meta-v">' + r[1] + '</span></div>';
+    }).join('') + '</div>';
+
+    if (d.target_channel_id && $('evChannel') && !$('evChannel').dataset.touched) {
+      $('evChannel').value = String(d.target_channel_id);
+    }
+
+    var signups = d.signups || [];
+    if (!signups.length) {
+      $('evSignups').innerHTML = '<div class="empty"><i class="fas fa-mug-hot"></i><span>Пока никто не записался.</span></div>';
+    } else {
+      var more = '';
+      var show = signups.slice(0, 48);
+      if (signups.length > 48) more = '<div class="hint" style="margin-top:10px">…и ещё ' + (signups.length - 48) + '</div>';
+      $('evSignups').innerHTML = '<div class="ev-signup-list">' + show.map(function (uid) {
+        return '<span class="ev-chip"><i class="fas fa-user"></i> ' + esc(uid) + '</span>';
+      }).join('') + '</div>' + more;
+    }
+
+    $('evPvTitle').textContent = d.title || 'События сервера';
+    var desc = (d.description || 'Здесь публикуются ивенты команды.\nНажми Записаться, чтобы отметить интерес.').replace(/<@&\d+>/g, '@Event Mod');
+    $('evPvDesc').textContent = desc;
+    $('evPvReg').textContent = open ? 'Открыта' : 'Закрыта';
+    $('evPvCount').textContent = String(count);
+    $('evPvTime').textContent = d.posted_at ? fmtWhen(d.posted_at) : 'ожидает публикации';
+    if (d.event_mod_role_id) $('evRoleCode').textContent = d.event_mod_role_id;
+  }
+
+  function setMsg(text, ok) {
+    var el = $('evSetupMsg');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = ok === false ? 'var(--err)' : (ok ? 'var(--ok)' : '');
+  }
+
+  async function loadChannels(selected) {
+    var sel = $('evChannel');
+    if (!sel) return;
+    try {
+      var r = await fetch('/api/guild/' + GID + '/channels', { credentials: 'same-origin' });
+      var data = await r.json();
+      var list = Array.isArray(data) ? data : (data.channels || data.items || []);
+      var opts = ['<option value="">— не задан —</option>'];
+      list.filter(function (c) {
+        var t = c.type;
+        return (t === 0 || t === 5 || t === 'text' || t === 'news' || t == null) && (c.id || c.channel_id);
+      }).sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+      }).forEach(function (c) {
+        var id = String(c.id || c.channel_id);
+        opts.push('<option value="' + esc(id) + '">#' + esc(c.name || id) + '</option>');
+      });
+      sel.innerHTML = opts.join('');
+      if (selected) sel.value = String(selected);
+    } catch (e) {
+      setMsg('Не удалось загрузить каналы: ' + (e.message || e), false);
+    }
+  }
+
+  async function load() {
+    if (!GID || GID === 'None' || GID === '0') {
+      $('evKpis').innerHTML = kpi('fa-triangle-exclamation', '—', 'Нет guild id', 'tone-err');
+      $('evStatus').innerHTML = '<div class="empty"><i class="fas fa-server"></i><span>Не выбран основной сервер (MAIN_GUILD_ID).</span></div>';
+      $('evSignups').innerHTML = '';
+      return;
+    }
+    try {
+      var r = await fetch(API, { credentials: 'same-origin' });
+      var d = await r.json();
+      if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status));
+      await loadChannels(d.target_channel_id || '');
+      render(d);
+    } catch (e) {
+      $('evKpis').innerHTML = kpi('fa-triangle-exclamation', 'Ошибка', String(e.message || e), 'tone-err');
+      $('evStatus').innerHTML = '<div class="empty"><i class="fas fa-plug"></i><span>Не удалось загрузить статус панели.</span></div>';
+      $('evSignups').innerHTML = '';
+    }
+  }
+
+  if ($('evChannel')) {
+    $('evChannel').addEventListener('change', function () {
+      $('evChannel').dataset.touched = '1';
+    });
+  }
+  $('evRefresh').addEventListener('click', load);
+  $('evSaveCh').addEventListener('click', async function () {
+    var cid = $('evChannel').value || '0';
+    setMsg('Сохраняю…');
+    try {
+      var r = await fetch(API, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_channel_id: cid })
+      });
+      var d = await r.json();
+      if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status));
+      delete $('evChannel').dataset.touched;
+      setMsg('Канал сохранён. Можно публиковать.', true);
+      load();
+    } catch (e) {
+      setMsg(String(e.message || e), false);
+    }
+  });
+  $('evPublish').addEventListener('click', async function () {
+    var cid = $('evChannel').value || '';
+    setMsg('Публикую в Discord…');
+    $('evPublish').disabled = true;
+    try {
+      var r = await fetch(API + '/publish', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cid ? { target_channel_id: cid } : {})
+      });
+      var d = await r.json();
+      if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status));
+      setMsg('Панель опубликована в #' + (d.channel_id || cid), true);
+      load();
+    } catch (e) {
+      setMsg(String(e.message || e), false);
+    } finally {
+      $('evPublish').disabled = false;
+    }
+  });
+  load();
+})();
+</script>
+{% endblock %}
