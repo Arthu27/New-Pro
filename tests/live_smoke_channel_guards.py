@@ -145,7 +145,28 @@ async def run_age_and_selfie():
         other = FakeChannel(999, guild)
         msg_o = FakeMessage(other, author, 'мне 12')
         await cog.on_message(msg_o)
-        check(msg_o.delete.await_count == 0, 'age-guard: чужой канал не трогает')
+        check(msg_o.delete.await_count == 1,
+              'age-guard: общий канал тоже чистит «мне 12» (guild-wide)')
+        check(author.send.await_count >= 1, 'age-guard: ЛС после guild-wide')
+
+        # в общем чате голые цифры НЕ трогаем (только знакомства)
+        msg_bare = FakeMessage(other, author, 'просто 17+ в чате')
+        await cog.on_message(msg_bare)
+        check(msg_bare.delete.await_count == 0,
+              'age-guard: голое 17+ вне знакомств не трогает')
+
+        # правка сообщения с возрастом
+        edited = FakeMessage(other, author, 'мне 14')
+        await cog.on_message_edit(
+            FakeMessage(other, author, 'привет'), edited)
+        check(edited.delete.await_count == 1,
+              'age-guard: правка «мне 14» удалена')
+
+        # solicitation везде
+        msg_sol = FakeMessage(other, author, 'ищу девушку меньше 18')
+        await cog.on_message(msg_sol)
+        check(msg_sol.delete.await_count == 1,
+              'age-guard: «меньше 18» в общем канале удалено')
 
         sch = FakeChannel(cg.SELFIE_CHANNEL_ID, guild)
         poster = FakeMember(2001, roles=[FakeRole(1)])
