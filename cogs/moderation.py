@@ -759,6 +759,12 @@ class Moderation (commands .Cog ):
                         'Бан из панели работает только с участниками сервера.'),
                         ephemeral =True )
                         return
+                    if _brole in getattr(user, 'roles', []):
+                        await _respond(interaction, embed=error_embed(
+                            f'Участник уже под баном (роль «{_brole.name}»). '
+                            'Повторный бан не нужен — сначала разбан / апелляция.'),
+                            ephemeral=True)
+                        return
                     await user .add_roles (_brole ,reason =reason or 'бан')
                     try :
                         from services .staff_limits import record_hit as _sl_rec
@@ -788,6 +794,16 @@ class Moderation (commands .Cog ):
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))  # Discord — до 28 дней
                     _case_minutes = minutes
+                    # Уже под полным мутом (обе роли) — не дублируем дело/лимит
+                    _tm = self._punish_role(guild, 'mute')
+                    _tv = self._punish_role(guild, 'vmute')
+                    _need = [r for r in (_tm, _tv) if r is not None]
+                    if _need and all(r in getattr(user, 'roles', []) for r in _need):
+                        await _respond(interaction, embed=error_embed(
+                            'Участник уже под мутом (чат + войс). '
+                            'Сначала снимите мут, потом выдайте снова.'),
+                            ephemeral=True)
+                        return
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
@@ -838,6 +854,12 @@ class Moderation (commands .Cog ):
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))
                     _case_minutes = minutes
+                    if _mrole in getattr(user, 'roles', []):
+                        await _respond(interaction, embed=error_embed(
+                            f'Участник уже под чат-мутом (роль «{_mrole.name}»). '
+                            'Сначала снимите мут, потом выдайте снова.'),
+                            ephemeral=True)
+                        return
                     try:
                         from services import mute_state
                         await mute_state.clear_all_mutes(guild, user)
@@ -857,6 +879,12 @@ class Moderation (commands .Cog ):
                     minutes =max (1 ,min (minutes ,40320 ))
                     _case_minutes =minutes
                     if _vrole is not None :
+                        if _vrole in getattr(user, 'roles', []):
+                            await _respond(interaction, embed=error_embed(
+                                f'Участник уже под войс-мутом (роль «{_vrole.name}»). '
+                                'Сначала снимите войс-мут, потом выдайте снова.'),
+                                ephemeral=True)
+                            return
                         # роль + сервер-мут микрофона: в голосовые зайти МОЖНО,
                         # микрофон закрыт (владелец 2026-09-05: «микрофон
                         # должен закрываться, а в войсы он заходить может»)
