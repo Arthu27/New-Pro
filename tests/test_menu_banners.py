@@ -54,8 +54,8 @@ for kind, preset in MB.PRESETS.items():
           f'{kind}: pill без корня «{root}» ({preset["pill"]!r})')
     check('hakumo' not in p, f'{kind}: pill без Hakumo ({preset["pill"]!r})')
     check('панель модерации' not in p, f'{kind}: нет «панель модерации»')
-check(MB.PRESETS['modpanel']['pill'] == 'Действия команды',
-      'modpanel pill = Действия команды')
+check(MB.PRESETS['modpanel']['pill'] == 'контроль и порядок',
+      'modpanel pill = контроль и порядок')
 
 print('== emoji_for_action fallbacks ==')
 check(ME.emoji_for_action('warn') == '⚠️', f"warn {ME.emoji_for_action('warn')!r}")
@@ -96,9 +96,10 @@ for child in view.children:
             texts.append(c)
 joined = '\n'.join(texts)
 check('Участник' in joined and 'Действие' in joined, 'подписи блоков')
-check('Участник:' not in joined and 'можно выбрать' not in joined,
+check('Участник:' not in joined and 'можно выбрать' not in joined
+      and 'селекты ниже' not in joined,
       f'без Участник:@ и старого статуса: {joined!r}')
-check('селекты ниже' in joined, f'новый статус: {joined!r}')
+check('лимитах' in joined, f'статус про лимиты: {joined!r}')
 check(joined.count('# Панель модерации') == 0 and 'HAKUMO' not in joined,
       f'без дубля заголовка: {joined!r}')
 check('-# модерация' not in joined, 'без футера модерация')
@@ -119,8 +120,8 @@ for child in view.children:
 st_joined = '\n'.join(st_texts)
 check('Участник:' not in st_joined and '@' not in st_joined,
       f'после выбора без Участник:@: {st_joined!r}')
-check('v7' in (view._banner_name or ''),
-      f'banner filename v7 cache-bust: {view._banner_name!r}')
+check('v8' in (view._banner_name or ''),
+      f'banner filename v8 cache-bust: {view._banner_name!r}')
 # footer helper без дубля (для embed-фолбека)
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == 'модерация', f"footer hakumo={view._footer_text(g)!r}")
