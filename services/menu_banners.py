@@ -319,23 +319,27 @@ def select_label(text: str) -> str:
 
 
 def select_emoji():
-    """Стикер селекта: 🤍 или свой эмодзи сервера из MENU_SELECT_EMOJI.
+    """Стикер селекта: gold-neon heart (application emoji) или 🤍 / env.
 
-    Примеры:
-      MENU_SELECT_EMOJI=🤍
-      MENU_SELECT_EMOJI=<:hakumo:1234567890123456789>
+    MENU_SELECT_EMOJI перекрывает всё (unicode или <:name:id>).
     """
-    raw = (os.environ.get('MENU_SELECT_EMOJI') or '🤍').strip() or '🤍'
-    m = re.fullmatch(r'<(a)?:([\w~]+):(\d+)>', raw)
-    if m:
-        try:
-            import discord
-            return discord.PartialEmoji(
-                name=m.group(2), id=int(m.group(3)),
-                animated=bool(m.group(1)))
-        except Exception:
-            return '🤍'
-    return raw
+    raw = (os.environ.get('MENU_SELECT_EMOJI') or '').strip()
+    if raw:
+        m = re.fullmatch(r'<(a)?:([\w~]+):(\d+)>', raw)
+        if m:
+            try:
+                import discord
+                return discord.PartialEmoji(
+                    name=m.group(2), id=int(m.group(3)),
+                    animated=bool(m.group(1)))
+            except Exception:
+                return '🤍'
+        return raw
+    try:
+        from services.menu_emojis import emoji_heart
+        return emoji_heart()
+    except Exception:
+        return '🤍'
 
 
 # ─── иконки стикеров ───────────────────────────────────────────

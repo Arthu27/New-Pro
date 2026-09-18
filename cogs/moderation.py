@@ -393,9 +393,15 @@ class Moderation (commands .Cog ):
             'их в панели: Щит сервера → Лимиты команды → роль.'),
             ephemeral =True )
             return 
+        # стикеры gold-neon → application emoji (для селекта)
+        try:
+            from services.menu_emojis import ensure_menu_emojis
+            await ensure_menu_emojis(interaction.client)
+        except Exception as _ee:
+            log.debug('modpanel emoji sync: %s', _ee)
         view = ModPanelView(self, interaction.user, allowed)
         view._root_edit = interaction.edit_original_response
-        # Components V2 (LayoutView): чёрный Container + баннер + селекты
+        # Components V2: Container + баннер + селекты со стикерами
         banner = view._banner_file or view._make_banner_file()
         await _respond(interaction, view=view, file=banner, ephemeral=True)
 
@@ -1820,7 +1826,8 @@ MODPANEL_ACTIONS = [
     ("unban", "Снять бан", "Снять роль бана (по ID)", "unban"),
 ]
 
-# Эмодзи действий — разные иконки (не одинаковое 🤍)
+# Эмодзи-фолбек (пока application emoji не залиты). Селект берёт
+# стикеры через services.menu_emojis.emoji_for_action.
 MODPANEL_EMOJI = {
     "warn": "⚠️",
     "unwarn": "✖️",
@@ -1835,16 +1842,6 @@ MODPANEL_EMOJI = {
     "vunmute": "🔊",
     "unmute": "🔊",
     "unmute_chat": "💬",
-}
-
-MODPANEL_BTN_STYLE = {
-    "warn": discord.ButtonStyle.secondary,
-    "unwarn": discord.ButtonStyle.success,
-    "mute": discord.ButtonStyle.secondary,
-    "unmute": discord.ButtonStyle.success,
-    "clear": discord.ButtonStyle.primary,
-    "ban": discord.ButtonStyle.danger,
-    "unban": discord.ButtonStyle.success,
 }
 
 
@@ -2065,8 +2062,7 @@ async def _silent_reset_panel(interaction, panel):
     """
     try:
         guild = getattr(interaction, 'guild', None)
-        old_t = panel.target_select
-        old_btns = list(getattr(panel, 'action_buttons', []) or [])
+        old_t, old_a = panel.target_select, panel.action_select
         panel._rebuild(guild)
         kw = panel.panel_edit_kwargs()
         pushed = False
@@ -2095,8 +2091,7 @@ async def _silent_reset_panel(interaction, panel):
             try:
                 panel._rebuild(guild)
             except Exception:
-                panel.target_select = old_t
-                panel.action_buttons = old_btns
+                panel.target_select, panel.action_select = old_t, old_a
     except Exception as _e:
         log.debug('modpanel reset: %s', _e)
 
@@ -2193,14 +2188,19 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
 
 
 class ModActionSelect(discord.ui.Select):
-    """Подменю мут/размут — селект. Главная панель использует кнопки."""
+    """Выбор действия модерации — стикеры gold-neon (application emoji)."""
 
     def __init__(self, cog, member=None, allowed=None, target_select=None):
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_action
         acts = allowed if allowed is not None else MODPANEL_ACTIONS
-        options = [discord.SelectOption(
-                       label=label, value=value, description=desc[:100],
-                       emoji=MODPANEL_EMOJI.get(value, "•"))
-                   for value, label, desc, _key in acts]
+        options = []
+        for value, label, desc, _key in acts:
+            opt = discord.SelectOption(
+                label=select_label(label), value=value,
+                description=(desc or '')[:100],
+                emoji=emoji_for_action(value))
+            options.append(opt)
         super().__init__(
             placeholder="› Что сделать?",
             options=options,
@@ -2229,45 +2229,6 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        if action != "clear" and not prefill:
-            if view is not None:
-                await view.refresh(interaction)
-                return
-        await _launch_action(self.cog, interaction, action, prefill, panel=view)
-
-
-class ModActionButton(discord.ui.Button):
-    """Кнопка действия на главной панели /modpanel (Components V2)."""
-
-    def __init__(self, cog, action: str, label: str, target_select=None):
-        style = MODPANEL_BTN_STYLE.get(action, discord.ButtonStyle.secondary)
-        emoji = MODPANEL_EMOJI.get(action)
-        # label без «›» — на кнопке чище
-        lab = (label or action)[:80]
-        super().__init__(style=style, label=lab, emoji=emoji)
-        self.cog = cog
-        self.action = action
-        self.target_select = target_select
-
-    async def callback(self, interaction: discord.Interaction):
-        action = self.action
-        if not await self.cog._ensure_action_acl(interaction, action):
-            return
-        view = self.view
-        prefill = ""
-        if view is not None:
-            prefill = str(getattr(view, 'selected_uid', None) or '')
-            view.pending_action = action
-        if not prefill:
-            try:
-                _sel = getattr(self, "target_select", None)
-                _vals = list(getattr(_sel, "values", []) or [])
-                if _vals:
-                    prefill = str(_vals[0].id)
-                    if view is not None:
-                        view.selected_uid = prefill
-            except Exception as _pe:
-                log.debug("modpanel btn prefill: %s", _pe)
         if action != "clear" and not prefill:
             if view is not None:
                 await view.refresh(interaction)
@@ -2547,23 +2508,10 @@ class ModPanelView(discord.ui.LayoutView):
                 defaults = []
         self.target_select = ModTargetSelect(
             self.cog, default_values=defaults or None)
-        # кнопки действий вместо выпадающего списка
-        acts = list(self.allowed or MODPANEL_ACTIONS)
+        self.action_select = ModActionSelect(
+            self.cog, None, self.allowed,
+            target_select=self.target_select)
         self.action_buttons = []
-        self.action_select = None  # больше не используем на главной
-        rows = []
-        row = discord.ui.ActionRow()
-        for i, (value, label, _desc, _key) in enumerate(acts):
-            btn = ModActionButton(
-                self.cog, value, label, target_select=self.target_select)
-            self.action_buttons.append(btn)
-            if len(row.children) >= 5:
-                rows.append(row)
-                row = discord.ui.ActionRow()
-            row.add_item(btn)
-        if row.children:
-            rows.append(row)
-        self._action_rows = rows
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_container
         self._make_banner_file()
@@ -2573,17 +2521,17 @@ class ModPanelView(discord.ui.LayoutView):
                 status=self._status_text(),
                 footer=self._footer_text(guild),
                 target_select=self.target_select,
-                action_rows=rows,
+                action_select=self.action_select,
             )
             if box is not None:
                 self.add_item(box)
                 return
-        # фолбек без Container
-        r1 = discord.ui.ActionRow()
-        r1.add_item(self.target_select)
-        self.add_item(r1)
-        for r in rows:
-            self.add_item(r)
+        row1 = discord.ui.ActionRow()
+        row1.add_item(self.target_select)
+        row2 = discord.ui.ActionRow()
+        row2.add_item(self.action_select)
+        self.add_item(row1)
+        self.add_item(row2)
 
     def panel_edit_kwargs(self):
         """kwargs для edit_message / edit_original_response (V2)."""

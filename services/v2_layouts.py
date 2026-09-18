@@ -179,8 +179,8 @@ def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
 
 def build_modpanel_container(*, banner_filename: str, status: str,
                              footer: str = 'Hakumo · модерация',
-                             target_select=None, action_rows=None):
-    """Container V2 для /modpanel: баннер + user-select + кнопки действий."""
+                             target_select=None, action_select=None):
+    """Container V2 для /modpanel: баннер + user-select + селект действий."""
     if not V2_AVAILABLE:
         return None
     from discord.components import MediaGalleryItem
@@ -190,15 +190,14 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
         _ui.Separator(),
         _ui.TextDisplay(status),
-        _ui.TextDisplay('### Кого наказать'),
     ]
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
         children.append(row)
-    children.append(_ui.Separator())
-    children.append(_ui.TextDisplay('### Действие'))
-    for row in (action_rows or []):
+    if action_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(action_select)
         children.append(row)
     children.append(_ui.Separator())
     children.append(_ui.TextDisplay(f'-# {footer}'))
