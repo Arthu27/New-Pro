@@ -196,6 +196,12 @@ def _role_tier_map(guild_id=None):
         out.setdefault(kid, 'curator')
     except Exception:
         pass
+    try:
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        hid = str(int(KNOWN_HELPER_ROLE_ID))
+        out.setdefault(hid, 'mod')
+    except Exception:
+        pass
     return out
 
 

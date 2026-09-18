@@ -60,6 +60,13 @@ def _role_map_tiers():
             out[kid] = 'curator'
     except Exception as _ex:
         _log.debug('role_map_tiers curator fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        hid = str(int(KNOWN_HELPER_ROLE_ID))
+        if hid not in out:
+            out[hid] = 'mod'
+    except Exception as _ex:
+        _log.debug('role_map_tiers helper fallback: %s', _ex)
     return out
 
 
