@@ -401,9 +401,12 @@ class Moderation (commands .Cog ):
             log.debug('modpanel emoji sync: %s', _ee)
         view = ModPanelView(self, interaction.user, allowed)
         view._root_edit = interaction.edit_original_response
-        # Components V2: Container + баннер + селекты со стикерами
+        # Components V2: Container + селекты (баннер — по флагу SHOW_MENU_BANNER)
         banner = view._banner_file or view._make_banner_file()
-        await _respond(interaction, view=view, file=banner, ephemeral=True)
+        if banner is not None:
+            await _respond(interaction, view=view, file=banner, ephemeral=True)
+        else:
+            await _respond(interaction, view=view, ephemeral=True)
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -2489,8 +2492,13 @@ class ModPanelView(discord.ui.LayoutView):
         return modpanel_status_text(self.selected_uid, pending)
 
     def _footer_text(self, guild):
+        """Один ярлык без дубля HAKUMO/Hakumo."""
         name = getattr(guild, 'name', None) if guild is not None else None
-        return f'{name} · Hakumo · модерация' if name else 'Hakumo · модерация'
+        if not name:
+            return 'модерация'
+        if name.strip().casefold() in ('hakumo', 'хакумо'):
+            return 'модерация'
+        return f'{name} · модерация'
 
     def panel_embed(self, guild):
         """Классический эмбед — фолбек, если V2 недоступен."""
@@ -2508,10 +2516,8 @@ class ModPanelView(discord.ui.LayoutView):
             description=desc,
             color=0x000000,
         )
-        e.set_author(name="HAKUMO")
         icon = getattr(getattr(guild, 'icon', None), 'url', None)
-        name = getattr(guild, 'name', None) if guild is not None else None
-        footer = f"{name} · Hakumo" if name else "Hakumo"
+        footer = self._footer_text(guild)
         if icon:
             e.set_footer(text=footer, icon_url=icon)
         else:
@@ -2519,14 +2525,22 @@ class ModPanelView(discord.ui.LayoutView):
         return e
 
     def panel_payload(self, guild):
-        """(embed, discord.File) — фолбек эмбед + баннер."""
-        from services.menu_banners import menu_banner_file
+        """(embed, discord.File|None) — фолбек эмбед (+ баннер, если включён)."""
+        from services.v2_layouts import SHOW_MENU_BANNER
         embed = self.panel_embed(guild)
+        if not SHOW_MENU_BANNER:
+            return embed, None
+        from services.menu_banners import menu_banner_file
         bio, name = menu_banner_file('modpanel')
         embed.set_image(url=f'attachment://{name}')
         return embed, discord.File(bio, filename=name)
 
     def _make_banner_file(self):
+        from services.v2_layouts import SHOW_MENU_BANNER
+        if not SHOW_MENU_BANNER:
+            self._banner_name = None
+            self._banner_file = None
+            return None
         from services.menu_banners import menu_banner_file
         bio, name = menu_banner_file('modpanel')
         self._banner_name = name
@@ -2573,13 +2587,16 @@ class ModPanelView(discord.ui.LayoutView):
 
     def panel_edit_kwargs(self):
         """kwargs для edit_message / edit_original_response (V2)."""
-        banner = self._banner_file or self._make_banner_file()
-        return {
+        kw = {
             'view': self,
-            'attachments': [banner],
             'embed': None,
             'content': None,
         }
+        if self._banner_file is not None:
+            kw['attachments'] = [self._banner_file]
+        else:
+            kw['attachments'] = []
+        return kw
 
     async def refresh(self, interaction, *, rebuild_action=True):
         guild = getattr(interaction, 'guild', None)

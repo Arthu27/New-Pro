@@ -187,32 +187,41 @@ def black_container(*children):
     return _ui.Container(*children, accent_colour=discord.Colour(_BLACK))
 
 
-def build_modpanel_items(*, banner_filename: str, status: str,
-                         footer: str = 'Hakumo · модерация',
-                         target_select=None, action_select=None):
-    """Один компактный чёрный Container: баннер + селекты без разрывов.
+# Временно: без баннера — смотрим только текст+селекты.
+# Вернуть True, когда снова нужна картинка.
+SHOW_MENU_BANNER = False
 
-    Раньше каждый select был в своём Container — Discord оставлял большие
-    пустые промежутки. Теперь всё в одном блоке.
-    """
+
+def build_modpanel_items(*, banner_filename: str, status: str,
+                         footer: str = 'модерация',
+                         target_select=None, action_select=None,
+                         show_banner: bool = None):
+    """Один компактный чёрный Container: (баннер) + селекты без разрывов."""
     box = build_modpanel_container(
         banner_filename=banner_filename, status=status, footer=footer,
-        target_select=target_select, action_select=action_select)
+        target_select=target_select, action_select=action_select,
+        show_banner=show_banner)
     return [box] if box is not None else None
 
 
 def build_modpanel_container(*, banner_filename: str, status: str,
-                             footer: str = 'Hakumo · модерация',
-                             target_select=None, action_select=None):
+                             footer: str = 'модерация',
+                             target_select=None, action_select=None,
+                             show_banner: bool = None):
     """Один общий чёрный Container — компактно, без пустых щелей."""
     if not V2_AVAILABLE:
         return None
-    from discord.components import MediaGalleryItem
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
     children = [
-        _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
-        _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
-        _ui.TextDisplay(status),
+        # бренд один раз в заголовке — без дубля HAKUMO/Hakumo в футере
+        _ui.TextDisplay('# Панель модерации'),
     ]
+    if show_banner and banner_filename:
+        from discord.components import MediaGalleryItem
+        children.append(
+            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+    children.append(_ui.TextDisplay(status))
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
@@ -221,26 +230,33 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         row = _ui.ActionRow()
         row.add_item(action_select)
         children.append(row)
-    children.append(_ui.TextDisplay(f'-# {footer}'))
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'))
     return black_container(*children)
 
 
 def build_appeals_menu_items(*, banner_filename: str, body: str,
-                             footer: str, menu_select=None):
+                             footer: str, menu_select=None,
+                             show_banner: bool = None):
     """Один компактный чёрный Container для меню апелляций."""
     if not V2_AVAILABLE:
         return None
-    from discord.components import MediaGalleryItem
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
     children = [
-        _ui.TextDisplay('# Апелляции на наказания\n-# HAKUMO'),
-        _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
-        _ui.TextDisplay(body),
+        _ui.TextDisplay('# Апелляции'),
     ]
+    if show_banner and banner_filename:
+        from discord.components import MediaGalleryItem
+        children.append(
+            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+    children.append(_ui.TextDisplay(body))
     if menu_select is not None:
         row = _ui.ActionRow()
         row.add_item(menu_select)
         children.append(row)
-    children.append(_ui.TextDisplay(f'-# {footer}'))
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'))
     return [black_container(*children)]
 
 

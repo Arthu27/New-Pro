@@ -1294,28 +1294,33 @@ class Appeals(commands.Cog):
         guild = channel.guild
         state = self._load(guild.id)
         from services.menu_banners import menu_banner_file
-        from services.v2_layouts import V2_AVAILABLE
+        from services.v2_layouts import V2_AVAILABLE, SHOW_MENU_BANNER
         try:
             from services.menu_emojis import ensure_menu_emojis
             await ensure_menu_emojis(self.bot)
         except Exception as _ex:
             log.debug('appeals: menu_emojis: %s', _ex)
-        bio, bname = menu_banner_file('appeals')
-        banner = discord.File(bio, filename=bname)
+        banner = None
+        bname = None
+        if SHOW_MENU_BANNER:
+            bio, bname = menu_banner_file('appeals')
+            banner = discord.File(bio, filename=bname)
         body = (
             'Несогласны с наказанием — варном, мутом или баном?\n'
             'Выберите ниже **«Подать апелляцию»**: откроется окно — '
             'расскажите свою версию.\n\n'
             'Для вашей апелляции создастся отдельный тред — '
             'модераторы ответят прямо в нём.')
-        footer = f'{guild.name} · Hakumo · апелляции'
+        footer = f'{guild.name} · апелляции'
+        if guild.name and guild.name.strip().casefold() in ('hakumo', 'хакумо'):
+            footer = 'апелляции'
         embed = discord.Embed(
             title='Апелляции на наказания',
             description=body,
             color=0x000000,
             timestamp=datetime.now(UTC))
-        embed.set_author(name='HAKUMO')
-        embed.set_image(url=f'attachment://{bname}')
+        if banner is not None and bname:
+            embed.set_image(url=f'attachment://{bname}')
         embed.set_footer(text=footer,
                          icon_url=guild.icon.url if guild.icon else None)
         old = (state.get('menu') or {})
@@ -1325,8 +1330,10 @@ class Appeals(commands.Cog):
         use_v2 = bool(V2_AVAILABLE)
         view = (AppealMenuView(banner_filename=bname, body=body, footer=footer)
                 if use_v2 else AppealMenuView())
-        send_kw = {'view': view, 'file': banner, 'wait': True,
+        send_kw = {'view': view, 'wait': True,
                    'username': 'Апелляции', 'avatar_url': avatar}
+        if banner is not None:
+            send_kw['file'] = banner
         # V2: без эмбеда (флаг IS_COMPONENTS_V2); фолбек — embed+view
         if not use_v2:
             send_kw['embed'] = embed
@@ -1348,14 +1355,19 @@ class Appeals(commands.Cog):
             except Exception as _ex:
                 log.debug('appeals: меню через вебхук не ушло: %s', _ex)
                 msg = None
-                bio, bname = menu_banner_file('appeals')
-                banner = discord.File(bio, filename=bname)
-                embed.set_image(url=f'attachment://{bname}')
+                banner = None
+                bname = None
+                if SHOW_MENU_BANNER:
+                    bio, bname = menu_banner_file('appeals')
+                    banner = discord.File(bio, filename=bname)
+                    embed.set_image(url=f'attachment://{bname}')
                 view = (AppealMenuView(banner_filename=bname, body=body,
                                        footer=footer)
                         if use_v2 else AppealMenuView())
-                send_kw = {'view': view, 'file': banner, 'wait': True,
+                send_kw = {'view': view, 'wait': True,
                            'username': 'Апелляции', 'avatar_url': avatar}
+                if banner is not None:
+                    send_kw['file'] = banner
                 if not use_v2:
                     send_kw['embed'] = embed
         # фолбэк — обычная отправка от бота (вебхука нет или не вышло)
@@ -1369,10 +1381,14 @@ class Appeals(commands.Cog):
                         await old_msg.delete()
                     except Exception as _dx:
                         log.debug('appeals: старое меню бота: %s', _dx)
+                send_bot = {'view': view}
+                if banner is not None:
+                    send_bot['file'] = banner
                 if use_v2:
-                    msg = await channel.send(view=view, file=banner)
+                    msg = await channel.send(**send_bot)
                 else:
-                    msg = await channel.send(embed=embed, view=view, file=banner)
+                    send_bot['embed'] = embed
+                    msg = await channel.send(**send_bot)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 return False, f'Бот не может писать в этот канал: {_ex}'
         state['menu'] = {'channel_id': channel.id, 'message_id': msg.id,
