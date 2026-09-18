@@ -31,28 +31,36 @@ FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
 W, H = 1200, 420
 
-# Пресеты: headline, pill, accent, bg candidates
+# Пресеты: headline + pill без повторов (слово заголовка и бренд HAKUMO
+# уже на баннере — в pill их не дублируем).
 PRESETS = {
     'modpanel': {
         'headline': 'МОДЕРАЦИЯ',
-        'pill': 'панель модерации',
+        'pill': 'Действия команды',
         'accent': (245, 245, 248),
         'tint': (8, 8, 10),
         'bgs': ('help_bg.png', 'hakumo_log_bg.png', 'staff.jpg'),
     },
     'appeals': {
         'headline': 'АПЕЛЛЯЦИИ',
-        'pill': 'обжаловать наказание',
+        'pill': 'Обжаловать наказание',
         'accent': (245, 245, 248),
         'tint': (8, 8, 10),
         'bgs': ('hakumo_log_bg.png', 'help_bg.png', 'staff.jpg'),
     },
     'staff': {
         'headline': 'НАБОРЫ',
-        'pill': 'стань частью команды',
+        'pill': 'Стань частью команды',
         'accent': (245, 245, 248),
         'tint': (8, 8, 10),
         'bgs': ('staff.jpg', 'help_bg.png', 'hakumo_log_bg.png'),
+    },
+    'events': {
+        'headline': 'ИВЕНТЫ',
+        'pill': 'Анонсы и запись',
+        'accent': (245, 245, 248),
+        'tint': (8, 8, 10),
+        'bgs': ('help_bg.png', 'hakumo_log_bg.png', 'staff.jpg'),
     },
 }
 
@@ -62,7 +70,10 @@ _CUSTOM_NAMES = {
                  'modpanel_custom.png', 'modpanel_custom.jpg'),
     'appeals': ('appeals_banner_custom.png', 'appeals_banner_custom.jpg',
                 'appeals_custom.png', 'appeals_custom.jpg'),
-    'staff': ('staff_hakumo_banner.png', 'staff_banner_custom.png'),
+    'staff': ('staff_banner_custom.png', 'staff_hakumo_banner.png',
+              'staff_banner_custom.jpg'),
+    'events': ('events_banner_custom.png', 'events_banner_custom.jpg',
+               'events_banner.png'),
 }
 
 # Стикеры действий → серебристый акцент (чёрная тема)
@@ -333,43 +344,11 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
     # ручная подмена целиком (без перерисовки), если *_custom*
     custom = _find_custom(kind)
     if custom:
-        # если custom — это старый procedural/AI «как есть», всё равно
-        # предпочитаем premium-композит, кроме явного *_custom* с другим именем…
-        # custom всегда выигрывает — для полного контроля
         try:
             return _cover(Image.open(custom).convert('RGBA'), W, H)
         except Exception:
             pass
-    if kind == 'staff':
-        staff_path = os.path.join(ASSETS, 'staff.jpg')
-        if os.path.isfile(staff_path):
-            try:
-                return _cover(Image.open(staff_path).convert('RGBA'), W, H)
-            except Exception:
-                pass
-
-    img = _premium_bg(kind)
-    if img is None:
-        img = Image.new('RGBA', (W, H), (0, 0, 0, 255))
-        rnd = random.Random(hash(kind) & 0xFFFFFFFF)
-        spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-        sd = ImageDraw.Draw(spark)
-        for _ in range(160):
-            x, yy = rnd.randint(0, W - 1), rnd.randint(0, H - 1)
-            a = rnd.randint(40, 180)
-            r = rnd.choice((0, 0, 1, 1, 2))
-            sd.ellipse((x - r, yy - r, x + r, yy + r), fill=(255, 255, 255, a))
-        img = Image.alpha_composite(img, spark)
-        try:
-            atm = _load_atmosphere(kind).convert('RGBA')
-            atm = ImageEnhance.Brightness(atm).enhance(0.40)
-            dark = Image.new('RGBA', (W, H), (0, 0, 0, 150))
-            atm = Image.alpha_composite(atm, dark)
-            img = Image.blend(img, atm, 0.28)
-        except Exception:
-            pass
-
-    return _draw_banner_chrome(img, kind)
+    return _render_banner_fresh(kind)
 
 
 def menu_banner_bytes(kind: str = 'modpanel') -> bytes:
@@ -648,11 +627,49 @@ def save_default_banners(out_dir: str = None) -> dict:
     out_dir = out_dir or ASSETS
     os.makedirs(out_dir, exist_ok=True)
     paths = {}
-    for kind in ('modpanel', 'appeals'):
+    for kind in ('modpanel', 'appeals', 'staff', 'events'):
         path = os.path.join(out_dir, f'{kind}_banner.png')
-        render_menu_banner(kind).save(path, format='PNG', optimize=True)
+        # без *_custom*: иначе старый запечённый текст перебьёт пресет
+        img = _render_banner_fresh(kind)
+        img.save(path, format='PNG', optimize=True)
         paths[kind] = path
     return paths
+
+
+def _render_banner_fresh(kind: str) -> Image.Image:
+    """Баннер с актуальным chrome (игнор *_custom* подмены)."""
+    if kind == 'staff':
+        staff_path = os.path.join(ASSETS, 'staff.jpg')
+        if os.path.isfile(staff_path):
+            try:
+                # staff.jpg — фото без нашего chrome; для меню нужна надпись
+                base = _cover(Image.open(staff_path).convert('RGBA'), W, H)
+                dark = Image.new('RGBA', (W, H), (0, 0, 0, 140))
+                base = Image.alpha_composite(base, dark)
+                return _draw_banner_chrome(base, kind)
+            except Exception:
+                pass
+    img = _premium_bg(kind)
+    if img is None:
+        img = Image.new('RGBA', (W, H), (0, 0, 0, 255))
+        rnd = random.Random(hash(kind) & 0xFFFFFFFF)
+        spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        sd = ImageDraw.Draw(spark)
+        for _ in range(160):
+            x, yy = rnd.randint(0, W - 1), rnd.randint(0, H - 1)
+            a = rnd.randint(40, 180)
+            r = rnd.choice((0, 0, 1, 1, 2))
+            sd.ellipse((x - r, yy - r, x + r, yy + r), fill=(255, 255, 255, a))
+        img = Image.alpha_composite(img, spark)
+        try:
+            atm = _load_atmosphere(kind).convert('RGBA')
+            atm = ImageEnhance.Brightness(atm).enhance(0.40)
+            dark = Image.new('RGBA', (W, H), (0, 0, 0, 150))
+            atm = Image.alpha_composite(atm, dark)
+            img = Image.blend(img, atm, 0.28)
+        except Exception:
+            pass
+    return _draw_banner_chrome(img, kind)
 
 
 def render_stickers_preview(out_path: str = None) -> str:

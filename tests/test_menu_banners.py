@@ -37,11 +37,25 @@ for key in ME.STICKER_KEYS:
     check(p and os.path.getsize(p) > 500, f'sticker {key}')
 
 print('== menu_banners ==')
-for kind in ('modpanel', 'appeals'):
+for kind in ('modpanel', 'appeals', 'staff', 'events'):
     img = MB.render_menu_banner(kind)
     check(img.size == (MB.W, MB.H), f'{kind} size')
 check(MB.select_label('Варн').startswith('›'), 'select_label')
 check(MB.select_emoji() == '🤍' or MB.select_emoji() is not None, 'select_emoji')
+
+print('== banner pills без дублей headline/Hakumo ==')
+import re as _re
+for kind, preset in MB.PRESETS.items():
+    h = preset['headline'].casefold()
+    p = preset['pill'].casefold()
+    root = _re.sub(r'[^а-яa-z]', '', h)[:6]
+    pill_letters = _re.sub(r'[^а-яa-z]', '', p)
+    check(not (root and root in pill_letters),
+          f'{kind}: pill без корня «{root}» ({preset["pill"]!r})')
+    check('hakumo' not in p, f'{kind}: pill без Hakumo ({preset["pill"]!r})')
+    check('панель модерации' not in p, f'{kind}: нет «панель модерации»')
+check(MB.PRESETS['modpanel']['pill'] == 'Действия команды',
+      'modpanel pill = Действия команды')
 
 print('== emoji_for_action fallbacks ==')
 check(ME.emoji_for_action('warn') == '⚠️', f"warn {ME.emoji_for_action('warn')!r}")
@@ -99,6 +113,20 @@ check(view._footer_text(g2) == 'My Server · модерация',
 check(view._banner_file is not None, 'banner file attached')
 check(len(view.children) == 3, f'без футер-блока: {len(view.children)}')
 
+print('== empty select placeholders (нет дубля с заголовком блока) ==')
+check(getattr(view.target_select, 'placeholder', None) in ('', None),
+      f'target placeholder empty: {getattr(view.target_select, "placeholder", None)!r}')
+check(getattr(view.action_select, 'placeholder', None) in ('', None),
+      f'action placeholder empty: {getattr(view.action_select, "placeholder", None)!r}')
+from cogs.appeals import AppealMenuSelect  # noqa: E402
+from cogs.staff_apply import RoleSelect  # noqa: E402
+check(getattr(AppealMenuSelect(), 'placeholder', None) in ('', None),
+      'appeals select empty')
+check(getattr(RoleSelect(), 'placeholder', None) in ('', None),
+      'staff select empty')
+check('-# подать апелляцию' not in joined and '-# кого' not in joined.lower(),
+      'без subtitle-дублей в modpanel текстах')
+
 print('== appeals ==')
 from cogs.appeals import AppealMenuSelect, AppealMenuView  # noqa: E402
 asel = AppealMenuSelect()
@@ -112,12 +140,23 @@ for child in av.children:
         av_acc.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
 check(av_acc and all(a == 0 for a in av_acc), f'appeals accent чёрный: {av_acc}')
 check(len(av.children) >= 1, f'appeals блоки: {len(av.children)}')
+# appeals fallback: без subtitle-дубля
+av_texts = []
+for child in av.children:
+    for k in list(getattr(child, 'children', []) or []):
+        c = getattr(k, 'content', None)
+        if c:
+            av_texts.append(c)
+av_joined = '\n'.join(av_texts)
+check('-# подать апелляцию' not in av_joined,
+      f'appeals без subtitle: {av_joined!r}')
 check(MB.H == 420, f'баннер полный размер H={MB.H}')
 
 art = '/opt/cursor/artifacts'
 os.makedirs(art, exist_ok=True)
-MB.render_menu_banner('modpanel').save(os.path.join(art, 'banner-modpanel.png'))
-check(True, 'preview banner')
+for kind in ('modpanel', 'appeals', 'staff', 'events'):
+    MB.render_menu_banner(kind).save(os.path.join(art, f'banner-{kind}.png'))
+check(True, 'preview banners')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

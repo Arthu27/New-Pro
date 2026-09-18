@@ -285,7 +285,7 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
         row = _ui.ActionRow()
         row.add_item(menu_select)
         items.append(black_container(
-            _ui.TextDisplay('**Обращение**\n-# подать апелляцию'),
+            _ui.TextDisplay('**Обращение**'),
             row,
         ))
     return items
@@ -313,7 +313,7 @@ def build_staff_menu_items(*, banner_filename: str, body: str = None,
         row = _ui.ActionRow()
         row.add_item(role_select)
         items.append(black_container(
-            _ui.TextDisplay('**Роль**\n-# к кому хотите присоединиться'),
+            _ui.TextDisplay('**Роль**'),
             row,
         ))
     return items
@@ -339,7 +339,7 @@ def build_events_menu_items(*, banner_filename: str, status: str,
     items.append(black_container(*head))
     if action_row is not None:
         items.append(black_container(
-            _ui.TextDisplay('**Действия**\n-# запись и управление'),
+            _ui.TextDisplay('**Действия**'),
             action_row,
         ))
     return items

@@ -424,7 +424,7 @@ class RoleSelect(discord.ui.Select):
             ),
         ]
         super().__init__(
-            placeholder="К кому хотите присоединиться?",
+            placeholder="",
             options=options,
             custom_id="staff_role_select_v2"
         )

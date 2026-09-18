@@ -880,7 +880,7 @@ class AppealMenuSelect(discord.ui.Select):
         from services.menu_emojis import get_cached, emoji_heart
         super().__init__(
             custom_id=MENU_CUSTOM_ID,
-            placeholder='К кому хотите обратиться? · Апелляция',
+            placeholder='',
             min_values=1, max_values=1,
             options=[discord.SelectOption(
                 label=select_label('Подать апелляцию'), value='submit',
@@ -969,7 +969,7 @@ class AppealMenuView(discord.ui.LayoutView):
             row = _ui.ActionRow()
             row.add_item(sel)
             self.add_item(black_container(
-                _ui.TextDisplay('**Обращение**\n-# подать апелляцию'),
+                _ui.TextDisplay('**Обращение**'),
                 row,
             ))
         else:
