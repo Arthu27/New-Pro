@@ -5,13 +5,15 @@
   main._monitor_voice → vc.play → Thread.start → _started.wait
 
 ``discord.VoiceClient.play`` синхронно ждёт старт AudioPlayer — на loop
-это зависание. Проверяем, что play уходит в to_thread / executor.
+это зависание. Проверяем: play → to_thread (+ wait_for), connect → wait_for.
 
 Запуск: python3 tests/test_voice_monitor_no_block.py
 """
 import ast
+import asyncio
 import os
 import sys
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -29,6 +31,14 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
+def _call_name(node):
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if isinstance(node, ast.Name):
+        return node.id
+    return ''
+
+
 print('== _monitor_voice: play не на event loop ==')
 src_path = os.path.join(ROOT, 'main.py')
 src = open(src_path, encoding='utf-8').read()
@@ -42,91 +52,94 @@ for node in tree.body:
 
 check(fn is not None, '_monitor_voice найдена')
 body = ast.get_source_segment(src, fn) if fn else ''
-check('to_thread' in body or 'run_in_executor' in body,
-      'play уходит в to_thread / run_in_executor')
-check('await asyncio.to_thread(vc.play' in body
-      or 'await asyncio.to_thread(vc.play,' in body
-      or 'run_in_executor' in body and 'vc.play' in body,
-      'конкретно vc.play обёрнут в await to_thread/executor')
+doc = ast.get_docstring(fn) or ''
 
-# Прямой vc.play(...) на loop запрещён (без to_thread рядом)
-# Ищем в AST: Call attr play на vc без родителя Await(to_thread...)
-class _PlayFinder(ast.NodeVisitor):
+check('to_thread' in body, 'play уходит в to_thread')
+check('wait_for' in body and 'connect' in body,
+      'connect обёрнут в wait_for (таймаут)')
+check('wait_for' in body and 'to_thread' in body,
+      'play: wait_for(to_thread(...))')
+check('vc.play(' not in body.replace('to_thread(vc.play', ''),
+      'нет голого vc.play( вне to_thread')
+# проще по строкам
+bad = [ln.strip() for ln in body.splitlines()
+       if 'vc.play(' in ln and 'to_thread' not in ln]
+check(not bad, f'строки без to_thread рядом с vc.play: {bad}')
+check('to_thread' in doc or 'EVENT-LOOP' in doc,
+      'докстринг объясняет зависание')
+
+# AST: to_thread(vc.play) существует внутри функции
+class _Finder(ast.NodeVisitor):
     def __init__(self):
-        self.direct = []
-        self.threaded = []
-
-    def visit_Await(self, node):
-        # await asyncio.to_thread(vc.play, ...)
-        call = node.value
-        if isinstance(call, ast.Call):
-            f = call.func
-            name = ''
-            if isinstance(f, ast.Attribute):
-                name = f.attr
-            elif isinstance(f, ast.Name):
-                name = f.id
-            if name in ('to_thread', 'run_in_executor') and call.args:
-                first = call.args[0]
-                # run_in_executor(None, vc.play, source) — play вторым
-                for arg in call.args:
-                    if (isinstance(arg, ast.Attribute) and arg.attr == 'play'):
-                        self.threaded.append(arg)
-                        break
-                else:
-                    if (isinstance(first, ast.Attribute) and first.attr == 'play'):
-                        self.threaded.append(first)
-        self.generic_visit(node)
+        self.threaded_play = 0
+        self.wait_for_connect = 0
+        self.wait_for_play = 0
+        self.bare_play = 0
 
     def visit_Call(self, node):
+        name = _call_name(node.func)
+        if name == 'to_thread':
+            for arg in node.args:
+                if (isinstance(arg, ast.Attribute) and arg.attr == 'play'):
+                    self.threaded_play += 1
+        if name == 'wait_for' and node.args:
+            inner = node.args[0]
+            if isinstance(inner, ast.Call):
+                iname = _call_name(inner.func)
+                if iname == 'connect' or (
+                        isinstance(inner.func, ast.Attribute)
+                        and inner.func.attr == 'connect'):
+                    self.wait_for_connect += 1
+                if iname == 'to_thread':
+                    self.wait_for_play += 1
         if (isinstance(node.func, ast.Attribute) and node.func.attr == 'play'
                 and isinstance(node.func.value, ast.Name)
                 and node.func.value.id == 'vc'):
-            # отметим; threaded проверим отдельно
-            self.direct.append(node)
+            # Call(vc.play) — ок только как arg to_thread; иначе bare
+            # Проверим родителя нельзя здесь — считаем через threaded_play
+            self.bare_play += 1
         self.generic_visit(node)
 
 
 if fn:
-    finder = _PlayFinder()
-    finder.visit(fn)
-    check(len(finder.threaded) >= 1,
-          f'есть await to_thread(vc.play) ({len(finder.threaded)})')
-    # каждый vc.play должен быть аргументом to_thread — не «голый» call как statement
-    # Голый: Expr(Call(play)) — плохо. Call(play) как arg to_thread — ок.
-    bare = []
-    for n in finder.direct:
-        parent_ok = any(n is t or n.func is t for t in finder.threaded)
-        # проще: если Call(play) не является первым/вторым аргом Await(to_thread)
-        # — считаем голым, если родитель не Call(to_thread)
-        bare.append(n)
-    # Перепроверим: в исходнике не должно быть строки «vc.play(» без to_thread на той же/пред строке
-    lines = body.splitlines()
-    bad_lines = []
-    for i, line in enumerate(lines):
-        if 'vc.play(' in line and 'to_thread' not in line and 'run_in_executor' not in line:
-            # предыдущая строка тоже без to_thread?
-            prev = lines[i - 1] if i else ''
-            if 'to_thread' not in prev and 'run_in_executor' not in prev:
-                bad_lines.append(line.strip())
-    check(not bad_lines,
-          f'нет голого vc.play( на loop ({bad_lines})')
+    f = _Finder()
+    f.visit(fn)
+    check(f.threaded_play >= 1, f'to_thread(vc.play) в AST ({f.threaded_play})')
+    check(f.wait_for_connect >= 1,
+          f'wait_for(connect) в AST ({f.wait_for_connect})')
+    check(f.wait_for_play >= 1,
+          f'wait_for(to_thread(play)) в AST ({f.wait_for_play})')
+    check(f.bare_play == 0,
+          f'нет вызова vc.play(...) — только ссылка в to_thread '
+          f'(bare={f.bare_play})')
 
-check('EVENT-LOOP' in (fn.docstring if fn and hasattr(fn, 'docstring') else '')
-      or 'to_thread' in (ast.get_docstring(fn) or ''),
-      'докстринг объясняет зависание / to_thread')
+print('== нет других vc.play в репозитории ==')
+other = []
+for dirpath, _dns, files in os.walk(ROOT):
+    if any(x in dirpath for x in ('/.git', '/__pycache__', '/.venv', '/venv',
+                                    '/node_modules', '/tests')):
+        continue
+    for fnm in files:
+        if not fnm.endswith('.py'):
+            continue
+        path = os.path.join(dirpath, fnm)
+        try:
+            text = open(path, encoding='utf-8').read()
+        except OSError:
+            continue
+        if 'vc.play(' in text or '.play(source)' in text:
+            if path.endswith('main.py') and '_monitor_voice' in text:
+                continue
+            other.append(os.path.relpath(path, ROOT))
+check(not other, f'других play(source) нет ({other})')
 
 print('== runtime: блокирующий play через to_thread не стопорит loop ==')
-import asyncio
-import time
 
 
 async def _sim():
     def blocking_play(_src=None):
-        time.sleep(0.35)  # имитация Thread.start/_started.wait
+        time.sleep(0.35)
 
-    t0 = time.monotonic()
-    # параллельно крутим loop — если play на loop, ticks не успеют
     ticks = 0
 
     async def ticker():
@@ -136,15 +149,34 @@ async def _sim():
             ticks += 1
 
     task = asyncio.create_task(ticker())
-    await asyncio.to_thread(blocking_play, object())
+    await asyncio.wait_for(asyncio.to_thread(blocking_play, object()),
+                           timeout=15.0)
     await task
-    elapsed = time.monotonic() - t0
-    return ticks, elapsed
+    return ticks
 
 
-ticks, elapsed = asyncio.run(_sim())
+ticks = asyncio.run(_sim())
 check(ticks >= 5, f'ticker успел 5 тиков пока play «висел» ({ticks})')
-check(elapsed < 1.0, f'wall < 1s ({elapsed:.2f}s)')
+
+print('== runtime: wait_for рвёт вечный play ==')
+
+
+async def _sim_timeout():
+    def forever(_src=None):
+        time.sleep(60)
+
+    t0 = time.monotonic()
+    try:
+        await asyncio.wait_for(asyncio.to_thread(forever, object()),
+                               timeout=0.2)
+        return False, time.monotonic() - t0
+    except asyncio.TimeoutError:
+        return True, time.monotonic() - t0
+
+
+ok_to, elapsed = asyncio.run(_sim_timeout())
+check(ok_to, 'wait_for даёт TimeoutError')
+check(elapsed < 2.0, f'timeout сработал быстро ({elapsed:.2f}s)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
