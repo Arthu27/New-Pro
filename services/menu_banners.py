@@ -29,7 +29,7 @@ FONTS = os.path.join(ASSETS, 'fonts')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
-W, H = 1200, 200
+W, H = 1200, 420
 
 # Пресеты: headline, pill, accent, bg candidates
 PRESETS = {
@@ -212,12 +212,12 @@ def _center_text(draw, text, font, y, fill, w, stroke=0, stroke_fill=None):
 
 def _gradient_headline(img: Image.Image, text: str, y: int, accent) -> Image.Image:
     """Чёткий белый заголовок с лёгким neon-glow (буквы острые)."""
-    f_head = _font(True, max(48, min(78, H // 2 - 20)))
+    f_head = _font(True, max(64, min(96, H // 4)))
     glow_layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow_layer)
     _center_text(gd, text, f_head, y, (255, 255, 255, 90), W,
-                 stroke=6, stroke_fill=(255, 255, 255, 40))
-    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(6))
+                 stroke=8, stroke_fill=(255, 255, 255, 45))
+    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(8))
     out = Image.alpha_composite(img, glow_layer)
     sharp = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(sharp)
@@ -227,7 +227,7 @@ def _gradient_headline(img: Image.Image, text: str, y: int, accent) -> Image.Ima
 
 
 def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
-    """PNG-баннер: HAKUMO + заголовок + pill. Чётко, без дубля в тексте сообщения."""
+    """PNG-баннер 1200×420: HAKUMO + заголовок + pill."""
     custom = _find_custom(kind)
     if custom:
         try:
@@ -247,9 +247,9 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
     rnd = random.Random(hash(kind) & 0xFFFFFFFF)
     spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(spark)
-    for _ in range(90):
+    for _ in range(140):
         x, yy = rnd.randint(0, W - 1), rnd.randint(0, H - 1)
-        a = rnd.randint(40, 160)
+        a = rnd.randint(40, 170)
         r = rnd.choice((0, 0, 1, 1, 2))
         sd.ellipse((x - r, yy - r, x + r, yy + r), fill=(255, 255, 255, a))
     img = Image.alpha_composite(img, spark)
@@ -264,29 +264,29 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
 
     d = ImageDraw.Draw(img)
     brand = _spaced('HAKUMO')
-    f_brand = _font(False, 15)
-    f_pill = _font(False, 16)
+    f_brand = _font(False, 18)
+    f_pill = _font(False, 20)
     accent = preset['accent']
     headline = preset['headline']
     pill = preset['pill']
 
-    _center_text(d, brand, f_brand, 14, (235, 235, 240, 230), W)
-    line_w = 100
-    ly = 36
+    _center_text(d, brand, f_brand, 48, (235, 235, 240, 230), W)
+    line_w = 120
+    ly = 82
     d.line(((W - line_w) // 2, ly, (W + line_w) // 2, ly),
            fill=(255, 255, 255, 160), width=1)
 
-    img = _gradient_headline(img, headline, 52, accent)
+    img = _gradient_headline(img, headline, 140, accent)
     d = ImageDraw.Draw(img)
 
     pb = d.textbbox((0, 0), pill, font=f_pill)
-    pw, ph = pb[2] - pb[0] + 40, pb[3] - pb[1] + 16
-    px0, py0 = (W - pw) // 2, H - ph - 22
+    pw, ph = pb[2] - pb[0] + 48, pb[3] - pb[1] + 22
+    px0, py0 = (W - pw) // 2, 300
     d.rounded_rectangle((px0, py0, px0 + pw, py0 + ph),
-                        radius=max(10, ph // 2),
+                        radius=max(12, ph // 2),
                         fill=(0, 0, 0, 220),
                         outline=(255, 255, 255, 220), width=2)
-    _center_text(d, pill, f_pill, py0 + 5, (255, 255, 255, 255), W)
+    _center_text(d, pill, f_pill, py0 + 8, (255, 255, 255, 255), W)
     return img.convert('RGBA')
 
 

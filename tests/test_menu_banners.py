@@ -107,7 +107,7 @@ for child in av.children:
         av_acc.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
 check(av_acc and all(a == 0 for a in av_acc), f'appeals accent чёрный: {av_acc}')
 check(len(av.children) == 1, f'appeals один блок: {len(av.children)}')
-check(MB.H <= 220, f'баннер компактный H={MB.H}')
+check(MB.H == 420, f'баннер полный размер H={MB.H}')
 
 art = '/opt/cursor/artifacts'
 os.makedirs(art, exist_ok=True)
