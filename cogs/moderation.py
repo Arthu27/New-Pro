@@ -2511,7 +2511,7 @@ class ModPanelView(discord.ui.LayoutView):
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
-        self._banner_name = 'hakumo_modpanel_banner_v3.png'
+        self._banner_name = 'hakumo_modpanel_banner_v4.png'
         self._banner_file = None
         self._use_v2 = True
         self._actor_label = ''
@@ -2554,9 +2554,9 @@ class ModPanelView(discord.ui.LayoutView):
         if self.pending_action:
             bits.append(f"«{self._action_label(self.pending_action)}»")
         if bits:
-            desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
+            desc = " · ".join(bits)
         else:
-            desc = "Выберите участника и действие ниже."
+            desc = "Селекты ниже."
         title = "Модерация"
         if self._actor_label:
             title = f"Модерация · {self._actor_label.capitalize()}"
