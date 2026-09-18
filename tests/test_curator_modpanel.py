@@ -163,6 +163,21 @@ check(SL.role_scoped_actions(GID, [CURATOR, MOD]) is None
       or 'ban' in (SL.role_scoped_actions(GID, [CURATOR, MOD]) or ()),
       'scoped не схлопнут в helper-only')
 
+print('== 7. Страховка: куратор+хелпер при ошибочном helper-scoped ==')
+# Намеренно повесим те же лимиты на роль КУРАТОРА (как будто сид/руками
+# скопировали хелперские) + хелпер — меню всё равно не должно быть
+# хелперским: есть младшая роль → guard сбрасывает scoped.
+SL.set_role_limits(GID, CURATOR, who='test', mute=3, unmute=3, clear=10)
+acts3 = [a[0] for a in actions_for_member(guild, cur_h)]
+check('ban' in acts3 and 'warn' in acts3,
+      f'страховка: куратор+хелпер при curator-limits mute/clear → полная '
+      f'панель {acts3}')
+# Чистый куратор без хелпера — свои mute/clear лимиты ОСТАЮТСЯ (не трогаем)
+cur_only = _Member(45, [GID, CURATOR], guild=guild)
+acts4 = [a[0] for a in actions_for_member(guild, cur_only)]
+check(set(acts4) <= {'mute', 'unmute', 'clear'} or 'ban' not in acts4,
+      f'чистый куратор со своими mute-лимитами не раздувается: {acts4}')
+
 shutil.rmtree(_TMP, ignore_errors=True)
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
