@@ -2192,7 +2192,7 @@ class ModActionSelect(discord.ui.Select):
                        emoji=heart)
                    for value, label, desc, _key in acts]
         super().__init__(
-            placeholder="Что сделать?",
+            placeholder="› Что сделать?",
             options=options,
             min_values=1,
             max_values=1,
@@ -2441,11 +2441,13 @@ class ModPanelView(discord.ui.View):
             desc = (
                 "Выберите участника и действие ниже.\n"
                 "Порядок любой — можно менять выбор.")
+        # тёмный фиолетово-золотой тон под баннер HAKUMO
         e = discord.Embed(
             title="Панель модерации",
             description=desc,
-            color=0x1A1428,
+            color=0x1E1430,
         )
+        e.set_author(name="HAKUMO")
         icon = getattr(getattr(guild, 'icon', None), 'url', None)
         name = getattr(guild, 'name', None) if guild is not None else None
         footer = f"{name} · Hakumo" if name else "Hakumo"
