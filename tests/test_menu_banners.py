@@ -63,11 +63,27 @@ check(not getattr(view, 'action_buttons', None), 'без кнопок')
 emojis = [str(o.emoji) for o in view.action_select.options]
 check(len(set(emojis)) >= 4, f'разные эмодзи {emojis}')
 check(all(e != '🤍' for e in emojis), f'не все 🤍: {emojis}')
+# каждый select в своём чёрном Container
+accents = []
+for child in view.children:
+    ac = getattr(child, 'accent_colour', None) or getattr(child, 'accent_color', None)
+    if ac is not None:
+        accents.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
+check(len(view.children) >= 3, f'несколько чёрных блоков: {len(view.children)}')
+check(accents and all(a == 0 for a in accents), f'accent чёрный: {accents}')
 
 print('== appeals ==')
-from cogs.appeals import AppealMenuSelect  # noqa: E402
+from cogs.appeals import AppealMenuSelect, AppealMenuView  # noqa: E402
 asel = AppealMenuSelect()
 check(asel.options[0].label.startswith('›'), 'appeals label')
+av = AppealMenuView()
+check(av.has_components_v2(), 'appeals LayoutView')
+av_acc = []
+for child in av.children:
+    ac = getattr(child, 'accent_colour', None) or getattr(child, 'accent_color', None)
+    if ac is not None:
+        av_acc.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
+check(av_acc and all(a == 0 for a in av_acc), f'appeals accent чёрный: {av_acc}')
 
 art = '/opt/cursor/artifacts'
 os.makedirs(art, exist_ok=True)

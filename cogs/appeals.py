@@ -945,12 +945,37 @@ def _hook_avatar(guild):
         return None
 
 
-class AppealMenuView(discord.ui.View):
-    """Обёртка меню (persistent — переживает рестарт)."""
+class AppealMenuView(discord.ui.LayoutView):
+    """Меню апелляций: чёрный Container V2 + select (persistent)."""
 
-    def __init__(self):
+    def __init__(self, *, banner_filename: str = None, body: str = None,
+                 footer: str = None):
         super().__init__(timeout=None)
-        self.add_item(AppealMenuSelect())
+        from services.v2_layouts import V2_AVAILABLE, build_appeals_menu_items
+        sel = AppealMenuSelect()
+        if (V2_AVAILABLE and banner_filename and body is not None
+                and footer is not None):
+            items = build_appeals_menu_items(
+                banner_filename=banner_filename, body=body, footer=footer,
+                menu_select=sel)
+            if items:
+                for item in items:
+                    self.add_item(item)
+                return
+        # регистрация после рестарта / фолбек — select в чёрном блоке
+        if V2_AVAILABLE:
+            from services.v2_layouts import black_container
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(black_container(
+                _ui.TextDisplay('**Обращение**\n-# подать апелляцию'),
+                row,
+            ))
+        else:
+            row = discord.ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(row)
 
 
 DM_APPEAL_CUSTOM_ID = 'appeal:dm:open'
@@ -1269,27 +1294,42 @@ class Appeals(commands.Cog):
         guild = channel.guild
         state = self._load(guild.id)
         from services.menu_banners import menu_banner_file
+        from services.v2_layouts import V2_AVAILABLE
+        try:
+            from services.menu_emojis import ensure_menu_emojis
+            await ensure_menu_emojis(self.bot)
+        except Exception as _ex:
+            log.debug('appeals: menu_emojis: %s', _ex)
         bio, bname = menu_banner_file('appeals')
         banner = discord.File(bio, filename=bname)
+        body = (
+            'Несогласны с наказанием — варном, мутом или баном?\n'
+            'Выберите ниже **«Подать апелляцию»**: откроется окно — '
+            'расскажите свою версию.\n\n'
+            'Для вашей апелляции создастся отдельный тред — '
+            'модераторы ответят прямо в нём.')
+        footer = f'{guild.name} · Hakumo · апелляции'
         embed = discord.Embed(
             title='Апелляции на наказания',
-            description=(
-                'Несогласны с наказанием — варном, мутом или баном?\n'
-                'Выберите ниже **«Подать апелляцию»**: откроется окно — '
-                'расскажите свою версию.\n\n'
-                'Для вашей апелляции создастся отдельный тред — '
-                'модераторы ответят прямо в нём.'),
+            description=body,
             color=0x000000,
             timestamp=datetime.now(UTC))
         embed.set_author(name='HAKUMO')
         embed.set_image(url=f'attachment://{bname}')
-        embed.set_footer(text=f'{guild.name} · Hakumo · апелляции',
+        embed.set_footer(text=footer,
                          icon_url=guild.icon.url if guild.icon else None)
         old = (state.get('menu') or {})
         avatar = _hook_avatar(guild)
         msg = None
         used_hook = None
-        view = AppealMenuView()
+        use_v2 = bool(V2_AVAILABLE)
+        view = (AppealMenuView(banner_filename=bname, body=body, footer=footer)
+                if use_v2 else AppealMenuView())
+        send_kw = {'view': view, 'file': banner, 'wait': True,
+                   'username': 'Апелляции', 'avatar_url': avatar}
+        # V2: без эмбеда (флаг IS_COMPONENTS_V2); фолбек — embed+view
+        if not use_v2:
+            send_kw['embed'] = embed
         # главный путь — вебхук: имя «Апелляции», кнопки работают как раньше
         hook = await _channel_webhook(channel)
         if hook is not None:
@@ -1298,26 +1338,26 @@ class Appeals(commands.Cog):
                 if (old.get('message_id')
                         and int(old.get('webhook_id') or 0) == hook.id
                         and int(old.get('channel_id') or 0) == channel.id):
-                    # edit_message вебхука не всегда принимает новый file —
-                    # пересоздаём сообщение, чтобы баннер обновился.
                     try:
                         await hook.delete_message(int(old['message_id']))
                     except Exception as _dx:
                         log.debug('appeals: старое меню не удалено: %s', _dx)
-                    msg = await hook.send(
-                        embed=embed, view=view, file=banner, wait=True,
-                        username='Апелляции', avatar_url=avatar)
+                    msg = await hook.send(**send_kw)
                 else:
-                    msg = await hook.send(
-                        embed=embed, view=view, file=banner, wait=True,
-                        username='Апелляции', avatar_url=avatar)
+                    msg = await hook.send(**send_kw)
             except Exception as _ex:
                 log.debug('appeals: меню через вебхук не ушло: %s', _ex)
                 msg = None
-                # пересоздать file — BytesIO мог быть прочитан
                 bio, bname = menu_banner_file('appeals')
                 banner = discord.File(bio, filename=bname)
                 embed.set_image(url=f'attachment://{bname}')
+                view = (AppealMenuView(banner_filename=bname, body=body,
+                                       footer=footer)
+                        if use_v2 else AppealMenuView())
+                send_kw = {'view': view, 'file': banner, 'wait': True,
+                           'username': 'Апелляции', 'avatar_url': avatar}
+                if not use_v2:
+                    send_kw['embed'] = embed
         # фолбэк — обычная отправка от бота (вебхука нет или не вышло)
         if msg is None:
             try:
@@ -1329,7 +1369,10 @@ class Appeals(commands.Cog):
                         await old_msg.delete()
                     except Exception as _dx:
                         log.debug('appeals: старое меню бота: %s', _dx)
-                msg = await channel.send(embed=embed, view=view, file=banner)
+                if use_v2:
+                    msg = await channel.send(view=view, file=banner)
+                else:
+                    msg = await channel.send(embed=embed, view=view, file=banner)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 return False, f'Бот не может писать в этот канал: {_ex}'
         state['menu'] = {'channel_id': channel.id, 'message_id': msg.id,

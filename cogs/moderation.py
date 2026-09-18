@@ -1721,11 +1721,16 @@ async def ctx_unmute(interaction, member: discord.Member):
     embed = discord.Embed(
         title="Снять мут",
         description=f"{member.mention}\nКак снять — чат или войс.",
-        color=0x2ECC71)
-    await interaction.response.send_message(
-        embed=embed,
-        view=UnmuteKindView(mod, member.id, kinds, member=interaction.user),
-        ephemeral=True)
+        color=0x000000)
+    view = UnmuteKindView(
+        mod, member.id, kinds, member=interaction.user,
+        status=f'# Снять мут\n{member.mention}\n-# чат или войс')
+    from services.v2_layouts import V2_AVAILABLE
+    if V2_AVAILABLE:
+        await interaction.response.send_message(view=view, ephemeral=True)
+    else:
+        await interaction.response.send_message(
+            embed=embed, view=view, ephemeral=True)
 
 
 _CTX_COMMANDS = (ctx_full_mute, ctx_voice_mute, ctx_unmute)
@@ -1990,14 +1995,25 @@ class MuteKindSelect(discord.ui.Select):
         await interaction.response.send_modal(modal)
 
 
-class MuteKindView(discord.ui.View):
-    """Короткое меню «чат / войс / оба» после пункта «Мут»."""
+class MuteKindView(discord.ui.LayoutView):
+    """Короткое меню «чат / войс / оба» после пункта «Мут» — чёрный блок."""
 
-    def __init__(self, cog, target_id, kinds, member=None):
+    def __init__(self, cog, target_id, kinds, member=None, *, status: str = None):
         super().__init__(timeout=180)
         self.cog = cog
         self.member = member
-        self.add_item(MuteKindSelect(cog, target_id, kinds))
+        sel = MuteKindSelect(cog, target_id, kinds)
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        text = status or '**Тип мута**\n-# чат / войс / оба'
+        if V2_AVAILABLE:
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(black_container(_ui.TextDisplay(text), row))
+        else:
+            row = discord.ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(row)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.member and getattr(interaction.user, 'id', None) != getattr(self.member, 'id', None):
@@ -2032,14 +2048,25 @@ class UnmuteKindSelect(discord.ui.Select):
             'Снято через панель', '', proof_link=None)
 
 
-class UnmuteKindView(discord.ui.View):
-    """Короткое меню «чат или войс» после пункта «Снять мут»."""
+class UnmuteKindView(discord.ui.LayoutView):
+    """Короткое меню «чат или войс» после пункта «Снять мут» — чёрный блок."""
 
-    def __init__(self, cog, target_id, kinds, member=None):
+    def __init__(self, cog, target_id, kinds, member=None, *, status: str = None):
         super().__init__(timeout=180)
         self.cog = cog
         self.member = member
-        self.add_item(UnmuteKindSelect(cog, target_id, kinds))
+        sel = UnmuteKindSelect(cog, target_id, kinds)
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        text = status or '**Снять мут**\n-# чат / войс / оба'
+        if V2_AVAILABLE:
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(black_container(_ui.TextDisplay(text), row))
+        else:
+            row = discord.ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(row)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.member and getattr(interaction.user, 'id', None) != getattr(self.member, 'id', None):
@@ -2130,11 +2157,16 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
         embed = discord.Embed(
             title="Мут",
             description=f"{who}\nКакой — чат, войс или оба.",
-            color=0xE67E22)
-        await interaction.response.send_message(
-            embed=embed,
-            view=MuteKindView(cog, prefill, kinds, member=interaction.user),
-            ephemeral=True)
+            color=0x000000)
+        view = MuteKindView(
+            cog, prefill, kinds, member=interaction.user,
+            status=f'# Мут\n{who}\n-# чат, войс или оба')
+        from services.v2_layouts import V2_AVAILABLE
+        if V2_AVAILABLE:
+            await interaction.response.send_message(view=view, ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                embed=embed, view=view, ephemeral=True)
         if panel is not None:
             await _silent_reset_panel(interaction, panel)
         return
@@ -2171,11 +2203,16 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
         embed = discord.Embed(
             title="Снять мут",
             description=f"{who}\nКак снять — чат или войс.",
-            color=0x2ECC71)
-        await interaction.response.send_message(
-            embed=embed,
-            view=UnmuteKindView(cog, prefill, kinds, member=interaction.user),
-            ephemeral=True)
+            color=0x000000)
+        view = UnmuteKindView(
+            cog, prefill, kinds, member=interaction.user,
+            status=f'# Снять мут\n{who}\n-# чат или войс')
+        from services.v2_layouts import V2_AVAILABLE
+        if V2_AVAILABLE:
+            await interaction.response.send_message(view=view, ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                embed=embed, view=view, ephemeral=True)
         if panel is not None:
             await _silent_reset_panel(interaction, panel)
         return
@@ -2188,7 +2225,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
 
 
 class ModActionSelect(discord.ui.Select):
-    """Выбор действия модерации — стикеры gold-neon (application emoji)."""
+    """Выбор действия модерации — белые neon-стикеры (application emoji)."""
 
     def __init__(self, cog, member=None, allowed=None, target_select=None):
         from services.menu_banners import select_label
@@ -2513,18 +2550,19 @@ class ModPanelView(discord.ui.LayoutView):
             target_select=self.target_select)
         self.action_buttons = []
 
-        from services.v2_layouts import V2_AVAILABLE, build_modpanel_container
+        from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
         self._make_banner_file()
         if V2_AVAILABLE and self._use_v2:
-            box = build_modpanel_container(
+            items = build_modpanel_items(
                 banner_filename=self._banner_name,
                 status=self._status_text(),
                 footer=self._footer_text(guild),
                 target_select=self.target_select,
                 action_select=self.action_select,
             )
-            if box is not None:
-                self.add_item(box)
+            if items:
+                for item in items:
+                    self.add_item(item)
                 return
         row1 = discord.ui.ActionRow()
         row1.add_item(self.target_select)

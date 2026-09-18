@@ -177,10 +177,59 @@ def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
     return 'Выберите участника и действие ниже.\n-# Порядок любой'
 
 
+# Чёрный акцент Container (рамка/полоса слева) — селекты Discord
+# нельзя перекрасить, поэтому каждый select живёт в своём чёрном блоке.
+_BLACK = 0x000000
+
+
+def black_container(*children):
+    """Container с чёрным accent (0x000000)."""
+    return _ui.Container(*children, accent_colour=discord.Colour(_BLACK))
+
+
+def build_modpanel_items(*, banner_filename: str, status: str,
+                         footer: str = 'Hakumo · модерация',
+                         target_select=None, action_select=None):
+    """Top-level V2-блоки /modpanel: баннер + чёрные контейнеры селектов.
+
+    Каждый select — в отдельном Container с accent 0x000000, чтобы
+    панель выглядела цельно чёрной (сам виджет Discord серый — API
+    цвета селекта не даёт).
+    """
+    if not V2_AVAILABLE:
+        return None
+    from discord.components import MediaGalleryItem
+    items = [
+        black_container(
+            _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
+            _ui.Separator(spacing=SeparatorSpacing.large),
+            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
+            _ui.Separator(),
+            _ui.TextDisplay(status),
+        ),
+    ]
+    if target_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(target_select)
+        items.append(black_container(
+            _ui.TextDisplay('**Участник**\n-# кого наказать'),
+            row,
+        ))
+    if action_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(action_select)
+        items.append(black_container(
+            _ui.TextDisplay('**Действие**\n-# что сделать'),
+            row,
+        ))
+    items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
+    return items
+
+
 def build_modpanel_container(*, banner_filename: str, status: str,
                              footer: str = 'Hakumo · модерация',
                              target_select=None, action_select=None):
-    """Container V2 для /modpanel: баннер + user-select + селект действий."""
+    """Один общий чёрный Container (фолбек / совместимость)."""
     if not V2_AVAILABLE:
         return None
     from discord.components import MediaGalleryItem
@@ -201,7 +250,33 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         children.append(row)
     children.append(_ui.Separator())
     children.append(_ui.TextDisplay(f'-# {footer}'))
-    return _ui.Container(*children, accent_colour=discord.Colour(0x000000))
+    return black_container(*children)
+
+
+def build_appeals_menu_items(*, banner_filename: str, body: str,
+                             footer: str, menu_select=None):
+    """Чёрные V2-блоки меню апелляций: баннер + select."""
+    if not V2_AVAILABLE:
+        return None
+    from discord.components import MediaGalleryItem
+    items = [
+        black_container(
+            _ui.TextDisplay('# Апелляции на наказания\n-# HAKUMO'),
+            _ui.Separator(spacing=SeparatorSpacing.large),
+            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
+            _ui.Separator(),
+            _ui.TextDisplay(body),
+        ),
+    ]
+    if menu_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(menu_select)
+        items.append(black_container(
+            _ui.TextDisplay('**Обращение**\n-# подать апелляцию'),
+            row,
+        ))
+    items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
+    return items
 
 
 async def send_v2_or_embed(target, *, view, embed, fallback_view=None,
