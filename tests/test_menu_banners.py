@@ -80,5 +80,12 @@ for kind in ('modpanel', 'appeals'):
     check(os.path.isfile(path) and os.path.getsize(path) > 1000,
           f'preview saved {path}')
 
+print('== stickers pack ==')
+paths = MB.ensure_sticker_pack(os.path.join(_TMP, 'stickers'))
+check(len(paths) >= 6, f'stickers generated: {len(paths)}')
+check(all(os.path.getsize(p) > 500 for p in paths), 'stickers non-empty')
+st = MB.render_sticker('warn', 128)
+check(st.size == (128, 128), 'warn sticker 128x128')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
