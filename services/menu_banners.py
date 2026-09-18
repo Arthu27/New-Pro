@@ -358,11 +358,15 @@ def menu_banner_bytes(kind: str = 'modpanel') -> bytes:
 
 
 def menu_banner_file(kind: str = 'modpanel', filename: str = None):
-    """(BytesIO, filename) для discord.File."""
+    """(BytesIO, filename) для discord.File.
+
+    Имя файла версионируем — иначе Discord CDN держит старый PNG
+    с «Панель модерации · Hakumo».
+    """
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    name = filename or f'hakumo_{kind}_banner.png'
+    name = filename or f'hakumo_{kind}_banner_v3.png'
     return bio, name
 
 

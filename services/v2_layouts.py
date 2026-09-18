@@ -166,15 +166,11 @@ def rules_embed(title: str, items: list, footer: str = ''):
 # ── МОДЕРАЦИЯ /modpanel ──────────────────────────────────────────────
 
 def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
-    """Текст статуса под баннером панели."""
-    bits = []
-    if selected_uid:
-        bits.append(f'**Участник:** <@{selected_uid}>')
-    if pending_label:
-        bits.append(f'**Действие:** {pending_label}')
-    if bits:
-        return ' · '.join(bits) + '\n-# можно выбрать заново, порядок любой'
-    return '-# выберите участника и действие · порядок любой'
+    """Статус под баннером — без «Участник: @…» / «Действие: …».
+
+    Выбор уже виден в селектах; дублировать надпись не нужно.
+    """
+    return ''
 
 
 # Чёрный акцент Container (рамка/полоса слева) — селекты Discord
@@ -209,7 +205,7 @@ def build_modpanel_items(*, banner_filename: str, status: str,
         head.append(
             _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
     else:
-        head.append(_ui.TextDisplay('# Панель модерации'))
+        head.append(_ui.TextDisplay('# Модерация'))
     if status:
         head.append(_ui.TextDisplay(status))
     items.append(black_container(*head))
@@ -248,7 +244,7 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         children.append(
             _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
     else:
-        children.append(_ui.TextDisplay('# Панель модерации'))
+        children.append(_ui.TextDisplay('# Модерация'))
     if status:
         children.append(_ui.TextDisplay(status))
     if target_select is not None:

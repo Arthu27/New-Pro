@@ -2511,7 +2511,7 @@ class ModPanelView(discord.ui.LayoutView):
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
-        self._banner_name = 'hakumo_modpanel_banner.png'
+        self._banner_name = 'hakumo_modpanel_banner_v3.png'
         self._banner_file = None
         self._use_v2 = True
         self._actor_label = ''
@@ -2557,9 +2557,9 @@ class ModPanelView(discord.ui.LayoutView):
             desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
         else:
             desc = "Выберите участника и действие ниже."
-        title = "Панель модерации"
+        title = "Модерация"
         if self._actor_label:
-            title = f"Панель модерации · {self._actor_label.capitalize()}"
+            title = f"Модерация · {self._actor_label.capitalize()}"
         e = discord.Embed(
             title=title,
             description=desc,

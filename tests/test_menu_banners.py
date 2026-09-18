@@ -96,6 +96,8 @@ for child in view.children:
             texts.append(c)
 joined = '\n'.join(texts)
 check('Участник' in joined and 'Действие' in joined, 'подписи блоков')
+check('Участник:' not in joined and 'выберите участника' not in joined,
+      f'без статуса Участник/@: {joined!r}')
 check(joined.count('# Панель модерации') == 0 and 'HAKUMO' not in joined,
       f'без дубля заголовка: {joined!r}')
 check('-# модерация' not in joined, 'без футера модерация')
@@ -104,6 +106,20 @@ check(any(
     for child in view.children
     for k in list(getattr(child, 'children', []) or [])
 ), 'есть MediaGallery')
+# после выбора участника статус всё равно без «Участник: @…»
+view.selected_uid = '424242424242424242'
+view._rebuild(None)
+st_texts = []
+for child in view.children:
+    for k in list(getattr(child, 'children', []) or []):
+        c = getattr(k, 'content', None)
+        if c:
+            st_texts.append(c)
+st_joined = '\n'.join(st_texts)
+check('Участник:' not in st_joined and '@' not in st_joined,
+      f'после выбора без Участник:@: {st_joined!r}')
+check('v3' in (view._banner_name or ''),
+      f'banner filename v3 cache-bust: {view._banner_name!r}')
 # footer helper без дубля (для embed-фолбека)
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == 'модерация', f"footer hakumo={view._footer_text(g)!r}")
