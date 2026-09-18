@@ -2242,7 +2242,7 @@ class ModActionSelect(discord.ui.Select):
                 emoji=emoji_for_action(value))
             options.append(opt)
         super().__init__(
-            placeholder="› Что сделать?",
+            placeholder="› Выберите действие",
             options=options,
             min_values=1,
             max_values=1,
@@ -2427,7 +2427,7 @@ class ModTargetSelect(discord.ui.UserSelect):
     """Участник мышкой. Можно выбрать ДО действия или ПОСЛЕ — порядок любой."""
 
     def __init__(self, cog, default_values=None):
-        kw = dict(placeholder="Кого наказать?", min_values=1, max_values=1)
+        kw = dict(placeholder="› Выберите участника", min_values=1, max_values=1)
         if default_values:
             kw['default_values'] = list(default_values)
         super().__init__(**kw)

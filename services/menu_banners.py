@@ -210,26 +210,118 @@ def _center_text(draw, text, font, y, fill, w, stroke=0, stroke_fill=None):
     draw.text(((w - tw) / 2, y), text, font=font, fill=fill, **kw)
 
 
+# Готовые premium-исходники (AI) → assets/, иначе procedural
+_PREMIUM_SRC = {
+    'modpanel': (
+        'modpanel_banner_premium_src.png',
+        '/opt/cursor/artifacts/assets/modpanel-banner-premium.png',
+    ),
+    'appeals': (
+        'appeals_banner_premium_src.png',
+        '/opt/cursor/artifacts/assets/appeals-banner-premium.png',
+    ),
+}
+
+
 def _gradient_headline(img: Image.Image, text: str, y: int, accent) -> Image.Image:
     """Чёткий белый заголовок с лёгким neon-glow (буквы острые)."""
     f_head = _font(True, max(64, min(96, H // 4)))
     glow_layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow_layer)
-    _center_text(gd, text, f_head, y, (255, 255, 255, 90), W,
-                 stroke=8, stroke_fill=(255, 255, 255, 45))
-    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(8))
+    _center_text(gd, text, f_head, y, (255, 255, 255, 100), W,
+                 stroke=10, stroke_fill=(255, 255, 255, 50))
+    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(10))
     out = Image.alpha_composite(img, glow_layer)
+    # второй мягкий ореол
+    glow2 = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    g2 = ImageDraw.Draw(glow2)
+    _center_text(g2, text, f_head, y, (255, 255, 255, 55), W)
+    glow2 = glow2.filter(ImageFilter.GaussianBlur(22))
+    out = Image.alpha_composite(out, glow2)
     sharp = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     sd = ImageDraw.Draw(sharp)
     _center_text(sd, text, f_head, y, (255, 255, 255, 255), W,
-                 stroke=1, stroke_fill=(0, 0, 0, 120))
+                 stroke=1, stroke_fill=(0, 0, 0, 140))
     return Image.alpha_composite(out, sharp)
 
 
+def _draw_banner_chrome(img: Image.Image, kind: str) -> Image.Image:
+    """HAKUMO + headline + pill поверх фона — всегда чёткие буквы."""
+    preset = PRESETS.get(kind, PRESETS['modpanel'])
+    d = ImageDraw.Draw(img)
+    brand = _spaced('HAKUMO')
+    f_brand = _font(False, 18)
+    f_pill = _font(False, 20)
+    accent = preset['accent']
+    headline = preset['headline']
+    pill = preset['pill']
+
+    _center_text(d, brand, f_brand, 48, (240, 240, 245, 235), W)
+    line_w = 120
+    ly = 82
+    d.line(((W - line_w) // 2, ly, (W + line_w) // 2, ly),
+           fill=(255, 255, 255, 170), width=1)
+
+    img = _gradient_headline(img, headline, 140, accent)
+    d = ImageDraw.Draw(img)
+
+    pb = d.textbbox((0, 0), pill, font=f_pill)
+    pw, ph = pb[2] - pb[0] + 52, pb[3] - pb[1] + 24
+    px0, py0 = (W - pw) // 2, 300
+    # soft glow behind pill
+    glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.rounded_rectangle((px0 - 10, py0 - 10, px0 + pw + 10, py0 + ph + 10),
+                         radius=ph // 2 + 10, fill=(255, 255, 255, 35))
+    glow = glow.filter(ImageFilter.GaussianBlur(12))
+    img = Image.alpha_composite(img, glow)
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle((px0, py0, px0 + pw, py0 + ph),
+                        radius=max(14, ph // 2),
+                        fill=(0, 0, 0, 230),
+                        outline=(255, 255, 255, 230), width=2)
+    _center_text(d, pill, f_pill, py0 + 9, (255, 255, 255, 255), W)
+    return img.convert('RGBA')
+
+
+def _premium_bg(kind: str) -> Optional[Image.Image]:
+    """Мягкий premium-фон из AI-исходника (если есть)."""
+    names = _PREMIUM_SRC.get(kind)
+    if not names:
+        return None
+    asset_name, artifact = names
+    candidates = (
+        os.path.join(ASSETS, asset_name),
+        artifact,
+    )
+    for path in candidates:
+        if not path or not os.path.isfile(path):
+            continue
+        try:
+            raw = Image.open(path).convert('RGBA')
+            # contain → letterbox на чёрном, текст не обрежем; потом blur как атмосфера
+            bg = Image.new('RGBA', (W, H), (0, 0, 0, 255))
+            # cover для атмосферы (края можно обрезать — текст рисуем сами)
+            covered = _cover(raw, W, H)
+            covered = ImageEnhance.Brightness(covered).enhance(0.55)
+            dark = Image.new('RGBA', (W, H), (0, 0, 0, 110))
+            covered = Image.alpha_composite(covered, dark)
+            # лёгкое размытие — AI-текст не конкурирует с нашим острым
+            covered = covered.filter(ImageFilter.GaussianBlur(1.2))
+            return covered
+        except Exception:
+            continue
+    return None
+
+
 def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
-    """PNG-баннер 1200×420: HAKUMO + заголовок + pill."""
+    """PNG-баннер 1200×420: premium-фон + чёткие буквы. Селекты не трогаем."""
+    # ручная подмена целиком (без перерисовки), если *_custom*
     custom = _find_custom(kind)
     if custom:
+        # если custom — это старый procedural/AI «как есть», всё равно
+        # предпочитаем premium-композит, кроме явного *_custom* с другим именем…
+        # custom всегда выигрывает — для полного контроля
         try:
             return _cover(Image.open(custom).convert('RGBA'), W, H)
         except Exception:
@@ -242,52 +334,28 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
             except Exception:
                 pass
 
-    preset = PRESETS.get(kind, PRESETS['modpanel'])
-    img = Image.new('RGBA', (W, H), (0, 0, 0, 255))
-    rnd = random.Random(hash(kind) & 0xFFFFFFFF)
-    spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(spark)
-    for _ in range(140):
-        x, yy = rnd.randint(0, W - 1), rnd.randint(0, H - 1)
-        a = rnd.randint(40, 170)
-        r = rnd.choice((0, 0, 1, 1, 2))
-        sd.ellipse((x - r, yy - r, x + r, yy + r), fill=(255, 255, 255, a))
-    img = Image.alpha_composite(img, spark)
-    try:
-        atm = _load_atmosphere(kind).convert('RGBA')
-        atm = ImageEnhance.Brightness(atm).enhance(0.45)
-        dark = Image.new('RGBA', (W, H), (0, 0, 0, 140))
-        atm = Image.alpha_composite(atm, dark)
-        img = Image.blend(img, atm, 0.30)
-    except Exception:
-        pass
+    img = _premium_bg(kind)
+    if img is None:
+        img = Image.new('RGBA', (W, H), (0, 0, 0, 255))
+        rnd = random.Random(hash(kind) & 0xFFFFFFFF)
+        spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        sd = ImageDraw.Draw(spark)
+        for _ in range(160):
+            x, yy = rnd.randint(0, W - 1), rnd.randint(0, H - 1)
+            a = rnd.randint(40, 180)
+            r = rnd.choice((0, 0, 1, 1, 2))
+            sd.ellipse((x - r, yy - r, x + r, yy + r), fill=(255, 255, 255, a))
+        img = Image.alpha_composite(img, spark)
+        try:
+            atm = _load_atmosphere(kind).convert('RGBA')
+            atm = ImageEnhance.Brightness(atm).enhance(0.40)
+            dark = Image.new('RGBA', (W, H), (0, 0, 0, 150))
+            atm = Image.alpha_composite(atm, dark)
+            img = Image.blend(img, atm, 0.28)
+        except Exception:
+            pass
 
-    d = ImageDraw.Draw(img)
-    brand = _spaced('HAKUMO')
-    f_brand = _font(False, 18)
-    f_pill = _font(False, 20)
-    accent = preset['accent']
-    headline = preset['headline']
-    pill = preset['pill']
-
-    _center_text(d, brand, f_brand, 48, (235, 235, 240, 230), W)
-    line_w = 120
-    ly = 82
-    d.line(((W - line_w) // 2, ly, (W + line_w) // 2, ly),
-           fill=(255, 255, 255, 160), width=1)
-
-    img = _gradient_headline(img, headline, 140, accent)
-    d = ImageDraw.Draw(img)
-
-    pb = d.textbbox((0, 0), pill, font=f_pill)
-    pw, ph = pb[2] - pb[0] + 48, pb[3] - pb[1] + 22
-    px0, py0 = (W - pw) // 2, 300
-    d.rounded_rectangle((px0, py0, px0 + pw, py0 + ph),
-                        radius=max(12, ph // 2),
-                        fill=(0, 0, 0, 220),
-                        outline=(255, 255, 255, 220), width=2)
-    _center_text(d, pill, f_pill, py0 + 8, (255, 255, 255, 255), W)
-    return img.convert('RGBA')
+    return _draw_banner_chrome(img, kind)
 
 
 def menu_banner_bytes(kind: str = 'modpanel') -> bytes:

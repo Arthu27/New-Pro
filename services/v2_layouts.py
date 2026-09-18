@@ -173,8 +173,8 @@ def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
     if pending_label:
         bits.append(f'**Действие:** {pending_label}')
     if bits:
-        return ' · '.join(bits) + '\n-# Можно выбрать заново и в любом порядке'
-    return 'Выберите участника и действие ниже.\n-# Порядок любой'
+        return ' · '.join(bits) + '\n-# можно выбрать заново, порядок любой'
+    return '-# выберите участника и действие · порядок любой'
 
 
 # Чёрный акцент Container (рамка/полоса слева) — селекты Discord
