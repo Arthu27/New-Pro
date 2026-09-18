@@ -103,14 +103,23 @@ bot_member = _Member(4000000000000000400, 'Ботяра', bot=True)
 guild.members = [mod, mod2, curator, admin, owner_server, owner_bot,
                  user1, bot_member]
 
-# mod_role-источник указывает на роль модератора
+# mod_role-источник указывает на роль модератора (хелпер)
 import json
 with open('data/reports_%d.json' % guild.id, 'w') as f:
     json.dump({'mod_role_id': '7001'}, f)
-mod_role_obj = _Role(7001)
+# role_map: хелпер=mod, куратор=807030012301541377 (как на боевом сервере)
+HELPER_ROLE = 7001
+CURATOR_ROLE = 807030012301541377
+with open('data/role_map.json', 'w') as f:
+    json.dump({str(HELPER_ROLE): 'mod', str(CURATOR_ROLE): 'curator'}, f)
+
+mod_role_obj = _Role(HELPER_ROLE)
+curator_role_obj = _Role(CURATOR_ROLE)
 mod.roles.append(mod_role_obj)
 mod2.roles.append(mod_role_obj)
+# Куратор держит И хелпера, И куратора — высшая роль должна победить
 curator.roles.append(mod_role_obj)
+curator.roles.append(curator_role_obj)
 # админ — по administrator-праву, роль можно не добавлять
 
 
@@ -125,6 +134,18 @@ def run(actor, target, action='timeout', actor_role=None, session_role=None):
 
 
 async def main():
+    print('== 0. Куратор+хелпер: высшая роль без session_role ==')
+    tr = SH.target_panel_role(guild, curator)
+    check(tr == 'curator',
+          f'куратор с ролью хелпера → curator (не mod), got={tr}')
+    ar = SH.actor_panel_role(guild, curator)  # без session — как /modpanel
+    check(ar == 'curator',
+          f'/modpanel actor без сессии → curator, got={ar}')
+    ok, _ = run(curator, mod)  # без session_role
+    check(ok, 'куратор(+хелпер) → модератор без session: можно')
+    ok, deny = run(mod, curator)
+    check(not ok, 'модератор → куратор(+хелпер): НЕЛЬЗЯ')
+
     print('== 1. Матрица: кто кого наказывает ==')
     ok, _ = run(mod, user1)
     check(ok, 'модератор → участник: можно')
@@ -135,11 +156,11 @@ async def main():
     check(not ok, 'модератор → куратор: НЕЛЬЗЯ')
     ok, deny = run(mod, admin)
     check(not ok, 'модератор → администратор: НЕЛЬЗЯ')
-    ok, _ = run(curator, user1, session_role='curator')
+    ok, _ = run(curator, user1)  # роль из Discord, без session
     check(ok, 'куратор → участник: можно')
-    ok, _ = run(curator, mod, session_role='curator')
+    ok, _ = run(curator, mod)
     check(ok, 'куратор → модератор: можно')
-    ok, deny = run(curator, curator, session_role='curator')
+    ok, deny = run(curator, curator)
     check(not ok, 'куратор → куратор: НЕЛЬЗЯ')
     ok, _ = run(admin, user1, session_role='admin')
     check(ok, 'админ → участник: можно')
@@ -172,7 +193,7 @@ async def main():
     check(not ok, 'модер НЕ снимает варны куратору')
     ok, deny = run(mod, mod2, action='untimeout', session_role='mod')
     check(not ok, 'модер НЕ снимает муты модератору (иначе снимали бы друг другу)')
-    ok, _ = run(curator, mod, action='unwarn', session_role='curator')
+    ok, _ = run(curator, mod, action='unwarn')
     check(ok, 'куратор снимает варн модератору: можно')
 
     print('== 4. Панельная роль из Discord: цель определяется сам ==')
@@ -182,8 +203,15 @@ async def main():
     check(tr == 'admin', 'Discord-администратор → admin (цель)')
     tr = SH.target_panel_role(guild, mod)
     check(tr == 'mod', 'обладатель модер-роли → mod (цель)')
+    tr = SH.target_panel_role(guild, curator)
+    check(tr == 'curator', 'куратор+хелпер → curator по высшей роли')
     ar = SH.actor_panel_role(guild, None)
     check(ar == 'owner', 'статический вход (None) — владелец панели')
+    check(SH.best_mapped_tier(curator) == 'curator',
+          'best_mapped_tier: куратор побеждает хелпера')
+    check(str(CURATOR_ROLE) in open(os.path.join(ROOT, 'config/role_seed.json'),
+                                    encoding='utf-8').read(),
+          'сид: 807030012301541377 = curator')
 
     print('== 5. Отказ — человекочитаемый ==')
     ok, deny = run(mod, curator, action='мут', session_role='mod')

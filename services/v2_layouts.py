@@ -218,7 +218,7 @@ def build_modpanel_items(*, banner_filename: str, status: str,
         row = _ui.ActionRow()
         row.add_item(target_select)
         items.append(black_container(
-            _ui.TextDisplay('**Участник**\n-# кого наказать'),
+            _ui.TextDisplay('**Участник**'),
             row,
         ))
     # 3) действие — отдельный блок
@@ -226,7 +226,7 @@ def build_modpanel_items(*, banner_filename: str, status: str,
         row = _ui.ActionRow()
         row.add_item(action_select)
         items.append(black_container(
-            _ui.TextDisplay('**Действие**\n-# что сделать'),
+            _ui.TextDisplay('**Действие**'),
             row,
         ))
     # футер «модерация» убран — пустой блок не нужен
@@ -265,7 +265,7 @@ def build_modpanel_container(*, banner_filename: str, status: str,
 def build_appeals_menu_items(*, banner_filename: str, body: str,
                              footer: str, menu_select=None,
                              show_banner: bool = None):
-    """Баннер и select апелляций — тоже отдельными блоками."""
+    """Баннер и select апелляций — отдельные чёрные блоки."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
@@ -288,8 +288,60 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
             _ui.TextDisplay('**Обращение**\n-# подать апелляцию'),
             row,
         ))
-    if footer:
-        items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
+    return items
+
+
+def build_staff_menu_items(*, banner_filename: str, body: str = None,
+                           role_select=None, show_banner: bool = None):
+    """Наборы: баннер + select роли в отдельных чёрных блоках."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    head = []
+    if show_banner and banner_filename:
+        from discord.components import MediaGalleryItem
+        head.append(
+            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+    else:
+        head.append(_ui.TextDisplay('# Наборы'))
+    if body:
+        head.append(_ui.TextDisplay(body))
+    items.append(black_container(*head))
+    if role_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(role_select)
+        items.append(black_container(
+            _ui.TextDisplay('**Роль**\n-# к кому хотите присоединиться'),
+            row,
+        ))
+    return items
+
+
+def build_events_menu_items(*, banner_filename: str, status: str,
+                            action_row=None, show_banner: bool = None):
+    """Ивенты: баннер + кнопки/селект в чёрных блоках."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    head = []
+    if show_banner and banner_filename:
+        from discord.components import MediaGalleryItem
+        head.append(
+            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+    else:
+        head.append(_ui.TextDisplay('# Ивенты'))
+    if status:
+        head.append(_ui.TextDisplay(status))
+    items.append(black_container(*head))
+    if action_row is not None:
+        items.append(black_container(
+            _ui.TextDisplay('**Действия**\n-# запись и управление'),
+            action_row,
+        ))
     return items
 
 

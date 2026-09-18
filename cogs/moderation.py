@@ -1947,6 +1947,9 @@ def actions_for_member(guild, member):
     Дополнительно работают «Лимиты команды» (Щит сервера → Лимиты → роль):
     если у ролей модератора заданы лимиты только на часть действий, видит
     только их (пересечение с разрешениями).
+
+    Куратор/админ+хелпер: смотрим ВЫСШИЙ тир — хелперские лимиты mute/clear
+    не схлопывают /modpanel до хелперского меню.
     """
     try:
         uid = getattr(member, "id", 0)
@@ -1966,6 +1969,37 @@ def actions_for_member(guild, member):
         scoped = _rsa(guild.id, role_ids)
     except Exception:
         scoped = None
+    # Страховка: старший тир (куратор/админ) + хелпер — если scoped всё ещё
+    # «хелперский» (mute/unmute/clear), сбрасываем. Чистые лимиты старшей
+    # роли без младшей не трогаем.
+    try:
+        from services.staff_hierarchy import actor_panel_role, RANK
+        from services.staff_limits import _role_tier_map
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        _tier = actor_panel_role(guild, member)
+        _rank = RANK.get(_tier, -1)
+        if (_rank >= RANK.get('curator', 2)
+                and scoped is not None
+                and set(scoped) <= {'mute', 'unmute', 'clear'}):
+            _tmap = _role_tier_map()
+            _helper = str(int(KNOWN_HELPER_ROLE_ID))
+            _has_junior = False
+            for _rid in role_ids:
+                _rs = str(_rid)
+                if _rs == _helper:
+                    _has_junior = True
+                    break
+                _m = _tmap.get(_rs)
+                if _m and RANK.get(_m, -1) < _rank:
+                    _has_junior = True
+                    break
+            if _has_junior:
+                log.info(
+                    'actions_for_member: тир %s + младшая роль — '
+                    'игнор хелперского scoped %s', _tier, scoped)
+                scoped = None
+    except Exception as _ex:
+        log.debug('actions_for_member: tier-guard: %s', _ex)
     if scoped is None:
         base = list(MODPANEL_ACTIONS)
     else:
@@ -2400,7 +2434,7 @@ class ModHelpButton(discord.ui.Button):
             color=0x5865F2)
         embed.add_field(
             name='🎯 Цель',
-            value='Выберите участника МЫШКОЙ в меню «Кого наказать?» — при выборе '
+            value='Выберите участника МЫШКОЙ в меню «Участник» — при выборе '
                   'действия бот НЕ попросит ник второй раз. Участник ушёл с сервера? '
                   'Он останется в списке выбора: подойдёт и его ID.',
             inline=False)
@@ -2427,7 +2461,7 @@ class ModTargetSelect(discord.ui.UserSelect):
     """Участник мышкой. Можно выбрать ДО действия или ПОСЛЕ — порядок любой."""
 
     def __init__(self, cog, default_values=None):
-        kw = dict(placeholder="Кого наказать?", min_values=1, max_values=1)
+        kw = dict(placeholder="› Участник", min_values=1, max_values=1)
         if default_values:
             kw['default_values'] = list(default_values)
         super().__init__(**kw)
@@ -2469,6 +2503,7 @@ class ModPanelView(discord.ui.LayoutView):
         super().__init__(timeout=300)
         self.cog = cog
         self.allowed = allowed
+        self.member = member
         self.owner_id = getattr(member, 'id', None)
         self.selected_uid = None
         self.pending_action = None
@@ -2476,6 +2511,14 @@ class ModPanelView(discord.ui.LayoutView):
         self._banner_name = 'hakumo_modpanel_banner.png'
         self._banner_file = None
         self._use_v2 = True
+        self._actor_label = ''
+        try:
+            from services.staff_hierarchy import actor_panel_role, LABELS
+            guild = getattr(member, 'guild', None)
+            tier = actor_panel_role(guild, member) if member is not None else 'uye'
+            self._actor_label = LABELS.get(tier, '') or ''
+        except Exception:
+            self._actor_label = ''
         self._rebuild(None)
 
     def _action_label(self, action):
@@ -2511,8 +2554,11 @@ class ModPanelView(discord.ui.LayoutView):
             desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
         else:
             desc = "Выберите участника и действие ниже."
+        title = "Панель модерации"
+        if self._actor_label:
+            title = f"Панель модерации · {self._actor_label.capitalize()}"
         e = discord.Embed(
-            title="Панель модерации",
+            title=title,
             description=desc,
             color=0x000000,
         )
