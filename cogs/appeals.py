@@ -876,14 +876,15 @@ class AppealMenuSelect(discord.ui.Select):
     """Select «Подать апелляцию» в канале (persistent)."""
 
     def __init__(self):
+        from services.menu_banners import select_label, select_emoji
         super().__init__(
             custom_id=MENU_CUSTOM_ID,
-            placeholder='Несогласны с наказанием? Подайте апелляцию…',
+            placeholder='К кому хотите обратиться? · Апелляция',
             min_values=1, max_values=1,
             options=[discord.SelectOption(
-                label='Подать апелляцию', value='submit',
-                description='Откроется окно: расскажите, что произошло',
-                emoji='⚖️')])
+                label=select_label('Подать апелляцию'), value='submit',
+                description='Расскажите свою версию — откроется окно',
+                emoji=select_emoji())])
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog('Appeals')
@@ -1260,28 +1261,34 @@ class Appeals(commands.Cog):
         """Опубликовать меню подачи апелляций в канал (из панели).
 
         Возвращает (ok, сообщение). Повторная публикация обновляет сообщение.
+        Фирменный баннер HAKUMO + селект в стиле наборов.
         """
         if channel is None:
             return False, 'Канал не найден'
         guild = channel.guild
         state = self._load(guild.id)
+        from services.menu_banners import menu_banner_file
+        bio, bname = menu_banner_file('appeals')
+        banner = discord.File(bio, filename=bname)
         embed = discord.Embed(
-            title='⚖ Апелляции на наказания',
+            title='Апелляции на наказания',
             description=(
                 'Несогласны с наказанием — варном, мутом или баном?\n'
                 'Выберите ниже **«Подать апелляцию»**: откроется окно — '
                 'расскажите свою версию.\n\n'
                 'Для вашей апелляции создастся отдельный тред — '
                 'модераторы ответят прямо в нём.'),
-            color=0xF1C40F,
+            color=0x1A1428,
             timestamp=datetime.now(UTC))
-        embed.set_footer(text=f'{guild.name} · апелляции',
+        embed.set_image(url=f'attachment://{bname}')
+        embed.set_footer(text=f'{guild.name} · Hakumo · апелляции',
                          icon_url=guild.icon.url if guild.icon else None)
         old = (state.get('menu') or {})
         avatar = _hook_avatar(guild)
         msg = None
         used_hook = None
-        # главный путь — вебхук: имя «⚖ Апелляции», кнопки работают как раньше
+        view = AppealMenuView()
+        # главный путь — вебхук: имя «Апелляции», кнопки работают как раньше
         hook = await _channel_webhook(channel)
         if hook is not None:
             used_hook = hook
@@ -1289,25 +1296,38 @@ class Appeals(commands.Cog):
                 if (old.get('message_id')
                         and int(old.get('webhook_id') or 0) == hook.id
                         and int(old.get('channel_id') or 0) == channel.id):
-                    msg = await hook.edit_message(
-                        int(old['message_id']), embed=embed, view=AppealMenuView())
+                    # edit_message вебхука не всегда принимает новый file —
+                    # пересоздаём сообщение, чтобы баннер обновился.
+                    try:
+                        await hook.delete_message(int(old['message_id']))
+                    except Exception as _dx:
+                        log.debug('appeals: старое меню не удалено: %s', _dx)
+                    msg = await hook.send(
+                        embed=embed, view=view, file=banner, wait=True,
+                        username='Апелляции', avatar_url=avatar)
                 else:
                     msg = await hook.send(
-                        embed=embed, view=AppealMenuView(), wait=True,
-                        username=HOOK_USERNAME, avatar_url=avatar)
+                        embed=embed, view=view, file=banner, wait=True,
+                        username='Апелляции', avatar_url=avatar)
             except Exception as _ex:
                 log.debug('appeals: меню через вебхук не ушло: %s', _ex)
                 msg = None
+                # пересоздать file — BytesIO мог быть прочитан
+                bio, bname = menu_banner_file('appeals')
+                banner = discord.File(bio, filename=bname)
+                embed.set_image(url=f'attachment://{bname}')
         # фолбэк — обычная отправка от бота (вебхука нет или не вышло)
         if msg is None:
             try:
                 if (old.get('message_id')
                         and int(old.get('channel_id') or 0) == channel.id
                         and not int(old.get('webhook_id') or 0)):
-                    msg = await channel.edit_message(
-                        int(old['message_id']), embed=embed, view=AppealMenuView())
-                if msg is None:
-                    msg = await channel.send(embed=embed, view=AppealMenuView())
+                    try:
+                        old_msg = await channel.fetch_message(int(old['message_id']))
+                        await old_msg.delete()
+                    except Exception as _dx:
+                        log.debug('appeals: старое меню бота: %s', _dx)
+                msg = await channel.send(embed=embed, view=view, file=banner)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 return False, f'Бот не может писать в этот канал: {_ex}'
         state['menu'] = {'channel_id': channel.id, 'message_id': msg.id,

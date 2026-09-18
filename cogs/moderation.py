@@ -395,7 +395,9 @@ class Moderation (commands .Cog ):
             return 
         view =ModPanelView (self ,interaction .user ,allowed )
         view ._root_edit =interaction .edit_original_response
-        await _respond (interaction ,embed =view .panel_embed (interaction .guild ),view =view ,ephemeral =True )
+        embed ,banner =view .panel_payload (interaction .guild )
+        await _respond (interaction ,embed =embed ,view =view ,file =banner ,
+                        ephemeral =True )
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -1818,21 +1820,22 @@ MODPANEL_ACTIONS = [
     ("unban", "Снять бан", "Снять роль бана (по ID)", "unban"),
 ]
 
-# Эмодзи действий: меню панели живое, а не текстовое
+# Эмодзи действий: меню в стиле наборов — единый 🤍, подпись «› …»
+# (см. services.menu_banners). Старые ключи оставлены для mute-подменю.
 MODPANEL_EMOJI = {
-    "warn": "⚠️",
-    "unwarn": "📵",
-    "ban": "🚫",
-    "mute": "🔇",
-    "timeout": "🔇",
-    "mute_chat": "🤐",
-    "vmute": "🎙️",
-    "unban": "✅",
-    "clear": "🧹",
-    "untimeout": "🔊",
-    "vunmute": "🎤",
-    "unmute": "🔊",
-    "unmute_chat": "💬",
+    "warn": "🤍",
+    "unwarn": "🤍",
+    "ban": "🤍",
+    "mute": "🤍",
+    "timeout": "🤍",
+    "mute_chat": "🤍",
+    "vmute": "🤍",
+    "unban": "🤍",
+    "clear": "🤍",
+    "untimeout": "🤍",
+    "vunmute": "🤍",
+    "unmute": "🤍",
+    "unmute_chat": "🤍",
 }
 
 # Пункт /modpanel → «классическое» разрешение (панель → Доступ → Права
@@ -1959,9 +1962,11 @@ class MuteKindSelect(discord.ui.Select):
     """Второй шаг мута: чат / войс / оба. Дальше — модалка срока."""
 
     def __init__(self, cog, target_id, kinds):
+        from services.menu_banners import select_label, select_emoji
+        heart = select_emoji()
         options = [discord.SelectOption(
-            label=label, value=value, description=desc,
-            emoji=MODPANEL_EMOJI.get(value, '🔇'))
+            label=select_label(label), value=value, description=desc,
+            emoji=heart)
             for value, label, desc in kinds]
         super().__init__(placeholder="Какой мут?",
                          options=options, min_values=1, max_values=1)
@@ -1999,9 +2004,11 @@ class UnmuteKindSelect(discord.ui.Select):
     """Второй шаг размута: чат / войс / оба. Без ввода и без кнопок."""
 
     def __init__(self, cog, target_id, kinds):
+        from services.menu_banners import select_label, select_emoji
+        heart = select_emoji()
         options = [discord.SelectOption(
-            label=label, value=value, description=desc,
-            emoji=MODPANEL_EMOJI.get(value, '🔊'))
+            label=select_label(label), value=value, description=desc,
+            emoji=heart)
             for value, label, desc in kinds]
         super().__init__(placeholder="Как снять мут?",
                          options=options, min_values=1, max_values=1)
@@ -2177,10 +2184,12 @@ class ModActionSelect(discord.ui.Select):
     """Выбор действия модерации — только то, что доступно этому модератору."""
 
     def __init__(self, cog, member=None, allowed=None, target_select=None):
+        from services.menu_banners import select_label, select_emoji
         acts = allowed if allowed is not None else MODPANEL_ACTIONS
+        heart = select_emoji()
         options = [discord.SelectOption(
-                       label=label, value=value, description=desc,
-                       emoji=MODPANEL_EMOJI.get(value, '⚡'))
+                       label=select_label(label), value=value, description=desc,
+                       emoji=heart)
                    for value, label, desc, _key in acts]
         super().__init__(
             placeholder="Что сделать?",
@@ -2429,15 +2438,30 @@ class ModPanelView(discord.ui.View):
         if bits:
             desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
         else:
-            desc = "Участник и действие — в любом порядке."
-        e = discord.Embed(title="🛡 Панель модерации", description=desc, color=0x5865F2)
+            desc = (
+                "Выберите участника и действие ниже.\n"
+                "Порядок любой — можно менять выбор.")
+        e = discord.Embed(
+            title="Панель модерации",
+            description=desc,
+            color=0x1A1428,
+        )
         icon = getattr(getattr(guild, 'icon', None), 'url', None)
         name = getattr(guild, 'name', None) if guild is not None else None
-        if name and icon:
-            e.set_footer(text=name, icon_url=icon)
-        elif name:
-            e.set_footer(text=name)
+        footer = f"{name} · Hakumo" if name else "Hakumo"
+        if icon:
+            e.set_footer(text=footer, icon_url=icon)
+        else:
+            e.set_footer(text=footer)
         return e
+
+    def panel_payload(self, guild):
+        """(embed, discord.File) — эмбед с фирменным баннером HAKUMO."""
+        from services.menu_banners import menu_banner_file
+        embed = self.panel_embed(guild)
+        bio, name = menu_banner_file('modpanel')
+        embed.set_image(url=f'attachment://{name}')
+        return embed, discord.File(bio, filename=name)
 
     def _rebuild(self, guild):
         self.clear_items()
@@ -2459,22 +2483,24 @@ class ModPanelView(discord.ui.View):
         guild = getattr(interaction, 'guild', None)
         if rebuild_action:
             self._rebuild(guild)
-        embed = self.panel_embed(guild)
+        embed, banner = self.panel_payload(guild)
         try:
             if not interaction.response.is_done():
-                await interaction.response.edit_message(embed=embed, view=self)
+                await interaction.response.edit_message(
+                    embed=embed, view=self, attachments=[banner])
                 return
         except Exception as _e:
             log.debug('modpanel refresh edit_message: %s', _e)
         msg = getattr(interaction, 'message', None)
         if msg is not None:
             try:
-                await msg.edit(embed=embed, view=self)
+                await msg.edit(embed=embed, view=self, attachments=[banner])
                 return
             except Exception as _e:
                 log.debug('modpanel refresh msg.edit: %s', _e)
         try:
-            await interaction.edit_original_response(embed=embed, view=self)
+            await interaction.edit_original_response(
+                embed=embed, view=self, attachments=[banner])
         except Exception as _e:
             log.debug('modpanel refresh original: %s', _e)
             try:
