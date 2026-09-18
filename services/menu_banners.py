@@ -29,7 +29,7 @@ FONTS = os.path.join(ASSETS, 'fonts')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
-W, H = 1200, 420
+W, H = 1200, 180
 
 # Пресеты: headline, pill, accent, bg candidates
 PRESETS = {
@@ -211,8 +211,9 @@ def _center_text(draw, text, font, y, fill, w, stroke=0, stroke_fill=None):
 
 
 def _gradient_headline(img: Image.Image, text: str, y: int, accent) -> Image.Image:
-    """Белый верх → фиолетовый низ букв (как НАБОРЫ)."""
-    f_head = _font(True, 90)
+    """Белый верх → серебристый низ букв (компактный баннер)."""
+    # ~40% высоты баннера — крупно, но не съедает всё
+    f_head = _font(True, max(42, min(72, H // 3)))
     white_layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     wd = ImageDraw.Draw(white_layer)
     _center_text(wd, text, f_head, y, (255, 255, 255, 255), W,
@@ -229,9 +230,8 @@ def _gradient_headline(img: Image.Image, text: str, y: int, accent) -> Image.Ima
     md.rectangle((0, split, W, y + th + 8), fill=255)
     mask = mask.filter(ImageFilter.GaussianBlur(1.4))
     mixed = Image.composite(purple_layer, white_layer, mask)
-    # bloom под заголовком
-    glow = mixed.filter(ImageFilter.GaussianBlur(14))
-    glow = ImageEnhance.Brightness(glow).enhance(1.55)
+    glow = mixed.filter(ImageFilter.GaussianBlur(10))
+    glow = ImageEnhance.Brightness(glow).enhance(1.45)
     out = Image.alpha_composite(img, glow)
     out = Image.alpha_composite(out, mixed)
     return out
@@ -259,39 +259,36 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
     d = ImageDraw.Draw(img)
 
     brand = _spaced('HAKUMO')
-    f_brand = _font(False, 18)
-    f_pill = _font(False, 20)
+    f_brand = _font(False, 13)
+    f_pill = _font(False, 15)
     accent = preset['accent']
     headline = preset['headline']
     pill = preset['pill']
 
-    # тонкая золотая линия под брендом
-    _center_text(d, brand, f_brand, 28, (230, 220, 245, 220), W)
-    line_w = 120
-    ly = 58
+    _center_text(d, brand, f_brand, 10, (230, 220, 245, 200), W)
+    line_w = 90
+    ly = 30
     d.line(((W - line_w) // 2, ly, (W + line_w) // 2, ly),
-           fill=(*accent, 140), width=1)
+           fill=(*accent, 130), width=1)
 
-    img = _gradient_headline(img, headline, 125, accent)
+    img = _gradient_headline(img, headline, 42, accent)
     d = ImageDraw.Draw(img)
 
-    # pill CTA со свечением
     pb = d.textbbox((0, 0), pill, font=f_pill)
-    pw, ph = pb[2] - pb[0] + 48, pb[3] - pb[1] + 22
-    px0, py0 = (W - pw) // 2, 270
+    pw, ph = pb[2] - pb[0] + 36, pb[3] - pb[1] + 14
+    px0, py0 = (W - pw) // 2, 112
     glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
-    gd.rounded_rectangle((px0 - 8, py0 - 8, px0 + pw + 8, py0 + ph + 8),
-                         radius=ph // 2 + 8, fill=(*accent, 55))
-    glow = glow.filter(ImageFilter.GaussianBlur(10))
+    gd.rounded_rectangle((px0 - 5, py0 - 5, px0 + pw + 5, py0 + ph + 5),
+                         radius=ph // 2 + 5, fill=(*accent, 50))
+    glow = glow.filter(ImageFilter.GaussianBlur(7))
     img = Image.alpha_composite(img, glow)
     d = ImageDraw.Draw(img)
     d.rounded_rectangle((px0, py0, px0 + pw, py0 + ph),
-                        radius=ph // 2,
-                        fill=(14, 10, 24, 230),
-                        outline=(*accent, 220), width=2)
-    _center_text(d, pill, f_pill, py0 + 8, (248, 244, 255, 255), W)
-    _center_text(d, brand, f_brand, H - 44, (195, 185, 215, 170), W)
+                        radius=max(8, ph // 2),
+                        fill=(10, 10, 14, 235),
+                        outline=(*accent, 210), width=2)
+    _center_text(d, pill, f_pill, py0 + 4, (248, 244, 255, 255), W)
     return img.convert('RGBA')
 
 

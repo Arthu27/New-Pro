@@ -190,54 +190,27 @@ def black_container(*children):
 def build_modpanel_items(*, banner_filename: str, status: str,
                          footer: str = 'Hakumo · модерация',
                          target_select=None, action_select=None):
-    """Top-level V2-блоки /modpanel: баннер + чёрные контейнеры селектов.
+    """Один компактный чёрный Container: баннер + селекты без разрывов.
 
-    Каждый select — в отдельном Container с accent 0x000000, чтобы
-    панель выглядела цельно чёрной (сам виджет Discord серый — API
-    цвета селекта не даёт).
+    Раньше каждый select был в своём Container — Discord оставлял большие
+    пустые промежутки. Теперь всё в одном блоке.
     """
-    if not V2_AVAILABLE:
-        return None
-    from discord.components import MediaGalleryItem
-    items = [
-        black_container(
-            _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
-            _ui.Separator(spacing=SeparatorSpacing.large),
-            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
-            _ui.Separator(),
-            _ui.TextDisplay(status),
-        ),
-    ]
-    if target_select is not None:
-        row = _ui.ActionRow()
-        row.add_item(target_select)
-        items.append(black_container(
-            _ui.TextDisplay('**Участник**\n-# кого наказать'),
-            row,
-        ))
-    if action_select is not None:
-        row = _ui.ActionRow()
-        row.add_item(action_select)
-        items.append(black_container(
-            _ui.TextDisplay('**Действие**\n-# что сделать'),
-            row,
-        ))
-    items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
-    return items
+    box = build_modpanel_container(
+        banner_filename=banner_filename, status=status, footer=footer,
+        target_select=target_select, action_select=action_select)
+    return [box] if box is not None else None
 
 
 def build_modpanel_container(*, banner_filename: str, status: str,
                              footer: str = 'Hakumo · модерация',
                              target_select=None, action_select=None):
-    """Один общий чёрный Container (фолбек / совместимость)."""
+    """Один общий чёрный Container — компактно, без пустых щелей."""
     if not V2_AVAILABLE:
         return None
     from discord.components import MediaGalleryItem
     children = [
         _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
-        _ui.Separator(spacing=SeparatorSpacing.large),
         _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
-        _ui.Separator(),
         _ui.TextDisplay(status),
     ]
     if target_select is not None:
@@ -248,35 +221,27 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         row = _ui.ActionRow()
         row.add_item(action_select)
         children.append(row)
-    children.append(_ui.Separator())
     children.append(_ui.TextDisplay(f'-# {footer}'))
     return black_container(*children)
 
 
 def build_appeals_menu_items(*, banner_filename: str, body: str,
                              footer: str, menu_select=None):
-    """Чёрные V2-блоки меню апелляций: баннер + select."""
+    """Один компактный чёрный Container для меню апелляций."""
     if not V2_AVAILABLE:
         return None
     from discord.components import MediaGalleryItem
-    items = [
-        black_container(
-            _ui.TextDisplay('# Апелляции на наказания\n-# HAKUMO'),
-            _ui.Separator(spacing=SeparatorSpacing.large),
-            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
-            _ui.Separator(),
-            _ui.TextDisplay(body),
-        ),
+    children = [
+        _ui.TextDisplay('# Апелляции на наказания\n-# HAKUMO'),
+        _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
+        _ui.TextDisplay(body),
     ]
     if menu_select is not None:
         row = _ui.ActionRow()
         row.add_item(menu_select)
-        items.append(black_container(
-            _ui.TextDisplay('**Обращение**\n-# подать апелляцию'),
-            row,
-        ))
-    items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
-    return items
+        children.append(row)
+    children.append(_ui.TextDisplay(f'-# {footer}'))
+    return [black_container(*children)]
 
 
 async def send_v2_or_embed(target, *, view, embed, fallback_view=None,
