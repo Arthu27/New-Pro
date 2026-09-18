@@ -31,7 +31,7 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-print('== stickers gold files ==')
+print('== stickers white neon files ==')
 for key in ME.STICKER_KEYS:
     p = ME.sticker_path(key)
     check(p and os.path.getsize(p) > 500, f'sticker {key}')
