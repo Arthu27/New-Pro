@@ -1723,11 +1723,11 @@ async def ctx_unmute(interaction, member: discord.Member):
             'Модуль модерации не загружен.', ephemeral=True)
     embed = discord.Embed(
         title="Снять мут",
-        description=f"{member.mention}\nКак снять — чат или войс.",
+        description=f"{member.mention}",
         color=0x000000)
     view = UnmuteKindView(
         mod, member.id, kinds, member=interaction.user,
-        status=f'# Снять мут\n{member.mention}\n-# чат или войс')
+        status=f'# Снять мут\n{member.mention}')
     from services.v2_layouts import V2_AVAILABLE
     if V2_AVAILABLE:
         await interaction.response.send_message(view=view, ephemeral=True)
@@ -1827,8 +1827,8 @@ MODPANEL_ACTIONS = [
     # Мут/размут — ОДИН пункт, вид (чат/войс/оба) прячется во второй селект.
     ("warn", "Варн", "Предупреждение за нарушение", "warn"),
     ("unwarn", "Снять варн", "Убрать последний варн", "warn"),
-    ("mute", "Мут", "Чат, войс или оба — следующим шагом", "mute"),
-    ("unmute", "Снять мут", "Чат или войс — следующим шагом", "unmute"),
+    ("mute", "Мут", "Выдать мут", "mute"),
+    ("unmute", "Снять мут", "Снять мут", "unmute"),
     ("clear", "Очистка сообщений", "Удалить сообщения в канале", "clear"),
     ("ban", "Бан", "Роль бана: доступ закрыт (с апелляцией)", "ban"),
     ("unban", "Снять бан", "Снять роль бана (по ID)", "unban"),
@@ -1888,11 +1888,11 @@ def mute_kinds_for(guild_id, member):
     both = _action_acl_allows(guild_id, member, 'timeout')
     out = []
     if chat:
-        out.append(('mute_chat', 'Чат', 'Закрыть переписку'))
+        out.append(('mute_chat', 'Чат', None))
     if voice:
-        out.append(('vmute', 'Войс', 'Выключить микрофон'))
+        out.append(('vmute', 'Войс', None))
     if both:
-        out.append(('timeout', 'Чат и войс', 'Заглушить оба'))
+        out.append(('timeout', 'Чат и войс', None))
     return out
 
 
@@ -1904,11 +1904,11 @@ def unmute_kinds_for(guild_id, member):
         or _action_acl_allows(guild_id, member, 'timeout')
     out = []
     if chat:
-        out.append(('unmute_chat', 'Чат', 'Вернуть переписку'))
+        out.append(('unmute_chat', 'Чат', None))
     if voice:
-        out.append(('vunmute', 'Войс', 'Вернуть микрофон'))
+        out.append(('vunmute', 'Войс', None))
     if chat and voice:
-        out.append(('untimeout', 'Чат и войс', 'Снять оба мута'))
+        out.append(('untimeout', 'Чат и войс', None))
     return out
 
 
@@ -2014,10 +2014,11 @@ class MuteKindSelect(discord.ui.Select):
         from services.menu_banners import select_label
         from services.menu_emojis import emoji_for_action
         options = [discord.SelectOption(
-            label=select_label(label), value=value, description=desc,
+            label=select_label(label), value=value,
+            **({'description': desc[:100]} if desc else {}),
             emoji=emoji_for_action(value))
             for value, label, desc in kinds]
-        super().__init__(placeholder="Какой мут?",
+        super().__init__(placeholder="",
                          options=options, min_values=1, max_values=1)
         self.cog = cog
         self.target_id = str(target_id)
@@ -2041,7 +2042,7 @@ class MuteKindView(discord.ui.LayoutView):
         self.member = member
         sel = MuteKindSelect(cog, target_id, kinds)
         from services.v2_layouts import V2_AVAILABLE, black_container
-        text = status or '**Тип мута**\n-# чат / войс / оба'
+        text = status or '**Мут**'
         if V2_AVAILABLE:
             from discord import ui as _ui
             row = _ui.ActionRow()
@@ -2067,10 +2068,11 @@ class UnmuteKindSelect(discord.ui.Select):
         from services.menu_banners import select_label
         from services.menu_emojis import emoji_for_action
         options = [discord.SelectOption(
-            label=select_label(label), value=value, description=desc,
+            label=select_label(label), value=value,
+            **({'description': desc[:100]} if desc else {}),
             emoji=emoji_for_action(value))
             for value, label, desc in kinds]
-        super().__init__(placeholder="Как снять мут?",
+        super().__init__(placeholder="",
                          options=options, min_values=1, max_values=1)
         self.cog = cog
         self.target_id = str(target_id)
@@ -2094,7 +2096,7 @@ class UnmuteKindView(discord.ui.LayoutView):
         self.member = member
         sel = UnmuteKindSelect(cog, target_id, kinds)
         from services.v2_layouts import V2_AVAILABLE, black_container
-        text = status or '**Снять мут**\n-# чат / войс / оба'
+        text = status or '**Снять мут**'
         if V2_AVAILABLE:
             from discord import ui as _ui
             row = _ui.ActionRow()
@@ -2193,11 +2195,11 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             log.debug('prefill mention %r: %s', prefill, _e)
         embed = discord.Embed(
             title="Мут",
-            description=f"{who}\nКакой — чат, войс или оба.",
+            description=f"{who}",
             color=0x000000)
         view = MuteKindView(
             cog, prefill, kinds, member=interaction.user,
-            status=f'# Мут\n{who}\n-# чат, войс или оба')
+            status=f'# Мут\n{who}')
         from services.v2_layouts import V2_AVAILABLE
         if V2_AVAILABLE:
             await interaction.response.send_message(view=view, ephemeral=True)
@@ -2239,11 +2241,11 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             log.debug('prefill mention %r: %s', prefill, _e)
         embed = discord.Embed(
             title="Снять мут",
-            description=f"{who}\nКак снять — чат или войс.",
+            description=f"{who}",
             color=0x000000)
         view = UnmuteKindView(
             cog, prefill, kinds, member=interaction.user,
-            status=f'# Снять мут\n{who}\n-# чат или войс')
+            status=f'# Снять мут\n{who}')
         from services.v2_layouts import V2_AVAILABLE
         if V2_AVAILABLE:
             await interaction.response.send_message(view=view, ephemeral=True)
