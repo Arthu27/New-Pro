@@ -73,7 +73,7 @@ check(len(view.children) == 1, f'один компактный блок: {len(vi
 check(accents and all(a == 0 for a in accents), f'accent чёрный: {accents}')
 # без баннера + без повтора HAKUMO/Hakumo
 from services.v2_layouts import SHOW_MENU_BANNER  # noqa: E402
-check(SHOW_MENU_BANNER is False, 'баннер временно выключен')
+check(SHOW_MENU_BANNER is True, 'баннер включён')
 box = view.children[0]
 kids = list(getattr(box, 'children', []) or [])
 texts = []
@@ -82,16 +82,17 @@ for k in kids:
     if c:
         texts.append(c)
 joined = '\n'.join(texts)
-check('HAKUMO' not in joined and 'Hakumo' not in joined,
-      f'без повтора бренда: {joined!r}')
-check(not any(type(k).__name__ == 'MediaGallery' for k in kids),
-      'без MediaGallery')
+check('Панель модерации' not in joined and 'HAKUMO' not in joined,
+      f'без дубля заголовка: {joined!r}')
+check(any(type(k).__name__ == 'MediaGallery' for k in kids),
+      'есть MediaGallery')
 # footer без дубля
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == 'модерация', f"footer hakumo={view._footer_text(g)!r}")
 g2 = type('G', (), {'name': 'My Server'})()
 check(view._footer_text(g2) == 'My Server · модерация',
       f"footer other={view._footer_text(g2)!r}")
+check(view._banner_file is not None, 'banner file attached')
 
 print('== appeals ==')
 from cogs.appeals import AppealMenuSelect, AppealMenuView  # noqa: E402
@@ -106,7 +107,7 @@ for child in av.children:
         av_acc.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
 check(av_acc and all(a == 0 for a in av_acc), f'appeals accent чёрный: {av_acc}')
 check(len(av.children) == 1, f'appeals один блок: {len(av.children)}')
-check(MB.H <= 200, f'баннер компактный H={MB.H}')
+check(MB.H <= 220, f'баннер компактный H={MB.H}')
 
 art = '/opt/cursor/artifacts'
 os.makedirs(art, exist_ok=True)

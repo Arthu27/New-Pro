@@ -187,9 +187,9 @@ def black_container(*children):
     return _ui.Container(*children, accent_colour=discord.Colour(_BLACK))
 
 
-# Временно: без баннера — смотрим только текст+селекты.
-# Вернуть True, когда снова нужна картинка.
-SHOW_MENU_BANNER = False
+# Баннер включён: текст «Панель модерации / HAKUMO» в сообщении не дублируем —
+# бренд и заголовок живут на картинке.
+SHOW_MENU_BANNER = True
 
 
 def build_modpanel_items(*, banner_filename: str, status: str,
@@ -213,14 +213,14 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
-    children = [
-        # бренд один раз в заголовке — без дубля HAKUMO/Hakumo в футере
-        _ui.TextDisplay('# Панель модерации'),
-    ]
+    children = []
     if show_banner and banner_filename:
         from discord.components import MediaGalleryItem
         children.append(
             _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+    else:
+        # без картинки — короткий заголовок (бренд не дублируем)
+        children.append(_ui.TextDisplay('# Панель модерации'))
     children.append(_ui.TextDisplay(status))
     if target_select is not None:
         row = _ui.ActionRow()
@@ -243,13 +243,13 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
-    children = [
-        _ui.TextDisplay('# Апелляции'),
-    ]
+    children = []
     if show_banner and banner_filename:
         from discord.components import MediaGalleryItem
         children.append(
             _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+    else:
+        children.append(_ui.TextDisplay('# Апелляции'))
     children.append(_ui.TextDisplay(body))
     if menu_select is not None:
         row = _ui.ActionRow()

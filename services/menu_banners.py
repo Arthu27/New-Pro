@@ -29,29 +29,29 @@ FONTS = os.path.join(ASSETS, 'fonts')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
-W, H = 1200, 180
+W, H = 1200, 200
 
 # Пресеты: headline, pill, accent, bg candidates
 PRESETS = {
     'modpanel': {
         'headline': 'МОДЕРАЦИЯ',
-        'pill': 'Панель модерации · Hakumo',
-        'accent': (230, 230, 235),
-        'tint': (20, 20, 24),
+        'pill': 'панель модерации',
+        'accent': (245, 245, 248),
+        'tint': (8, 8, 10),
         'bgs': ('help_bg.png', 'hakumo_log_bg.png', 'staff.jpg'),
     },
     'appeals': {
         'headline': 'АПЕЛЛЯЦИИ',
-        'pill': 'Обжаловать наказание · Hakumo',
-        'accent': (230, 230, 235),
-        'tint': (18, 18, 22),
+        'pill': 'обжаловать наказание',
+        'accent': (245, 245, 248),
+        'tint': (8, 8, 10),
         'bgs': ('hakumo_log_bg.png', 'help_bg.png', 'staff.jpg'),
     },
     'staff': {
         'headline': 'НАБОРЫ',
-        'pill': 'Стань частью команды HAKUMO',
-        'accent': (230, 230, 235),
-        'tint': (20, 20, 24),
+        'pill': 'стань частью команды',
+        'accent': (245, 245, 248),
+        'tint': (8, 8, 10),
         'bgs': ('staff.jpg', 'help_bg.png', 'hakumo_log_bg.png'),
     },
 }
@@ -211,41 +211,29 @@ def _center_text(draw, text, font, y, fill, w, stroke=0, stroke_fill=None):
 
 
 def _gradient_headline(img: Image.Image, text: str, y: int, accent) -> Image.Image:
-    """Белый верх → серебристый низ букв (компактный баннер)."""
-    # ~40% высоты баннера — крупно, но не съедает всё
-    f_head = _font(True, max(42, min(72, H // 3)))
-    white_layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    wd = ImageDraw.Draw(white_layer)
-    _center_text(wd, text, f_head, y, (255, 255, 255, 255), W,
-                 stroke=2, stroke_fill=(20, 10, 40, 160))
-    purple_layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    pd = ImageDraw.Draw(purple_layer)
-    _center_text(pd, text, f_head, y, (*accent, 255), W,
-                 stroke=2, stroke_fill=(20, 10, 40, 120))
-    bbox = wd.textbbox((0, 0), text, font=f_head)
-    th = bbox[3] - bbox[1]
-    mask = Image.new('L', (W, H), 0)
-    md = ImageDraw.Draw(mask)
-    split = y + int(th * 0.46)
-    md.rectangle((0, split, W, y + th + 8), fill=255)
-    mask = mask.filter(ImageFilter.GaussianBlur(1.4))
-    mixed = Image.composite(purple_layer, white_layer, mask)
-    glow = mixed.filter(ImageFilter.GaussianBlur(10))
-    glow = ImageEnhance.Brightness(glow).enhance(1.45)
-    out = Image.alpha_composite(img, glow)
-    out = Image.alpha_composite(out, mixed)
-    return out
+    """Чёткий белый заголовок с лёгким neon-glow (буквы острые)."""
+    f_head = _font(True, max(48, min(78, H // 2 - 20)))
+    glow_layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow_layer)
+    _center_text(gd, text, f_head, y, (255, 255, 255, 90), W,
+                 stroke=6, stroke_fill=(255, 255, 255, 40))
+    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(6))
+    out = Image.alpha_composite(img, glow_layer)
+    sharp = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(sharp)
+    _center_text(sd, text, f_head, y, (255, 255, 255, 255), W,
+                 stroke=1, stroke_fill=(0, 0, 0, 120))
+    return Image.alpha_composite(out, sharp)
 
 
 def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
-    """PNG-баннер для меню kind (modpanel/appeals/staff)."""
+    """PNG-баннер: HAKUMO + заголовок + pill. Чётко, без дубля в тексте сообщения."""
     custom = _find_custom(kind)
     if custom:
         try:
             return _cover(Image.open(custom).convert('RGBA'), W, H)
         except Exception:
             pass
-    # staff.jpg уже готовый арт — не перекрываем заголовком
     if kind == 'staff':
         staff_path = os.path.join(ASSETS, 'staff.jpg')
         if os.path.isfile(staff_path):
@@ -255,40 +243,50 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
                 pass
 
     preset = PRESETS.get(kind, PRESETS['modpanel'])
-    img = _load_atmosphere(kind)
-    d = ImageDraw.Draw(img)
+    img = Image.new('RGBA', (W, H), (0, 0, 0, 255))
+    rnd = random.Random(hash(kind) & 0xFFFFFFFF)
+    spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(spark)
+    for _ in range(90):
+        x, yy = rnd.randint(0, W - 1), rnd.randint(0, H - 1)
+        a = rnd.randint(40, 160)
+        r = rnd.choice((0, 0, 1, 1, 2))
+        sd.ellipse((x - r, yy - r, x + r, yy + r), fill=(255, 255, 255, a))
+    img = Image.alpha_composite(img, spark)
+    try:
+        atm = _load_atmosphere(kind).convert('RGBA')
+        atm = ImageEnhance.Brightness(atm).enhance(0.45)
+        dark = Image.new('RGBA', (W, H), (0, 0, 0, 140))
+        atm = Image.alpha_composite(atm, dark)
+        img = Image.blend(img, atm, 0.30)
+    except Exception:
+        pass
 
+    d = ImageDraw.Draw(img)
     brand = _spaced('HAKUMO')
-    f_brand = _font(False, 13)
-    f_pill = _font(False, 15)
+    f_brand = _font(False, 15)
+    f_pill = _font(False, 16)
     accent = preset['accent']
     headline = preset['headline']
     pill = preset['pill']
 
-    _center_text(d, brand, f_brand, 10, (230, 220, 245, 200), W)
-    line_w = 90
-    ly = 30
+    _center_text(d, brand, f_brand, 14, (235, 235, 240, 230), W)
+    line_w = 100
+    ly = 36
     d.line(((W - line_w) // 2, ly, (W + line_w) // 2, ly),
-           fill=(*accent, 130), width=1)
+           fill=(255, 255, 255, 160), width=1)
 
-    img = _gradient_headline(img, headline, 42, accent)
+    img = _gradient_headline(img, headline, 52, accent)
     d = ImageDraw.Draw(img)
 
     pb = d.textbbox((0, 0), pill, font=f_pill)
-    pw, ph = pb[2] - pb[0] + 36, pb[3] - pb[1] + 14
-    px0, py0 = (W - pw) // 2, 112
-    glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow)
-    gd.rounded_rectangle((px0 - 5, py0 - 5, px0 + pw + 5, py0 + ph + 5),
-                         radius=ph // 2 + 5, fill=(*accent, 50))
-    glow = glow.filter(ImageFilter.GaussianBlur(7))
-    img = Image.alpha_composite(img, glow)
-    d = ImageDraw.Draw(img)
+    pw, ph = pb[2] - pb[0] + 40, pb[3] - pb[1] + 16
+    px0, py0 = (W - pw) // 2, H - ph - 22
     d.rounded_rectangle((px0, py0, px0 + pw, py0 + ph),
-                        radius=max(8, ph // 2),
-                        fill=(10, 10, 14, 235),
-                        outline=(*accent, 210), width=2)
-    _center_text(d, pill, f_pill, py0 + 4, (248, 244, 255, 255), W)
+                        radius=max(10, ph // 2),
+                        fill=(0, 0, 0, 220),
+                        outline=(255, 255, 255, 220), width=2)
+    _center_text(d, pill, f_pill, py0 + 5, (255, 255, 255, 255), W)
     return img.convert('RGBA')
 
 
