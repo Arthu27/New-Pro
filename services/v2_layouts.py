@@ -27,7 +27,7 @@ try:
     from discord import ui as _ui
     V2_AVAILABLE = all(hasattr(_ui, c) for c in (
         'LayoutView', 'TextDisplay', 'Container', 'Section',
-        'Separator', 'Thumbnail', 'MediaGallery'))
+        'Separator', 'Thumbnail', 'MediaGallery', 'ActionRow'))
 except Exception as _ex:                                    # pragma: no cover
     V2_AVAILABLE = False
     _log.warning("v2_layouts(): Components V2 недоступны: %s", _ex)
@@ -163,7 +163,46 @@ def rules_embed(title: str, items: list, footer: str = ''):
     return e
 
 
-# ── УНИВЕРСАЛЬНАЯ ОТПРАВКА ───────────────────────────────────────────
+# ── МОДЕРАЦИЯ /modpanel ──────────────────────────────────────────────
+
+def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
+    """Текст статуса под баннером панели."""
+    bits = []
+    if selected_uid:
+        bits.append(f'**Участник:** <@{selected_uid}>')
+    if pending_label:
+        bits.append(f'**Действие:** {pending_label}')
+    if bits:
+        return ' · '.join(bits) + '\n-# Можно выбрать заново и в любом порядке'
+    return 'Выберите участника и действие ниже.\n-# Порядок любой'
+
+
+def build_modpanel_container(*, banner_filename: str, status: str,
+                             footer: str = 'Hakumo · модерация',
+                             target_select=None, action_select=None):
+    """Container V2 для /modpanel: заголовок, баннер, статус, селекты."""
+    if not V2_AVAILABLE:
+        return None
+    from discord.components import MediaGalleryItem
+    children = [
+        _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+        _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')),
+        _ui.Separator(),
+        _ui.TextDisplay(status),
+    ]
+    if target_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(target_select)
+        children.append(row)
+    if action_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(action_select)
+        children.append(row)
+    children.append(_ui.Separator())
+    children.append(_ui.TextDisplay(f'-# {footer}'))
+    return _ui.Container(*children, accent_colour=discord.Colour(0x000000))
+
 
 async def send_v2_or_embed(target, *, view, embed, fallback_view=None,
                            v2_items=None):

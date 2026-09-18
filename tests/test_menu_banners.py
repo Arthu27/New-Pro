@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Фирменные меню: баннеры HAKUMO + селекты «🤍 › …».
+"""Фирменные меню: баннеры HAKUMO + Components V2 /modpanel.
 
 Запуск: python3 tests/test_menu_banners.py
 """
@@ -14,6 +14,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from services import menu_banners as MB  # noqa: E402
+from services import v2_layouts as V2  # noqa: E402
 from cogs.moderation import ModPanelView, ModActionSelect, MODPANEL_ACTIONS  # noqa: E402
 
 PASS = FAIL = 0
@@ -43,19 +44,33 @@ check(MB.select_label('Варн').startswith('›'),
       f"select_label: {MB.select_label('Варн')!r}")
 check(MB.select_emoji() == '🤍', 'emoji 🤍')
 
-print('== modpanel payload ==')
+print('== modpanel Components V2 ==')
+check(V2.v2_available(), 'V2 доступны в discord.py')
 view = ModPanelView(None, None, list(MODPANEL_ACTIONS))
+check(view.has_components_v2(), 'ModPanelView = LayoutView V2')
+check(len(view.children) >= 1, f'container на месте ({len(view.children)})')
+box = view.children[0]
+check(type(box).__name__ == 'Container', f'корень Container: {type(box).__name__}')
+check(getattr(box, 'accent_colour', None) is not None
+      and int(getattr(box.accent_colour, 'value', box.accent_colour) or 0) == 0,
+      f'accent чёрный: {getattr(box, "accent_colour", None)}')
+texts = [getattr(c, 'content', '') for c in box.children
+         if type(c).__name__ == 'TextDisplay']
+check(any('Панель модерации' in t for t in texts), f'заголовок V2: {texts[:2]}')
+check(any(type(c).__name__ == 'MediaGallery' for c in box.children),
+      'MediaGallery баннер')
+check(view.target_select is not None and view.action_select is not None,
+      'селекты собраны')
+check(view._banner_file is not None
+      and view._banner_file.filename.endswith('.png'),
+      f'banner file {getattr(view._banner_file, "filename", None)}')
+
+# фолбек-эмбед всё ещё собирается
 embed, banner = view.panel_payload(None)
 check(embed.image.url and 'attachment://' in embed.image.url,
-      f'embed image attachment: {embed.image.url}')
+      f'embed fallback attachment: {embed.image.url}')
 check(embed.color and embed.color.value == 0x000000,
       f'чёрный цвет эмбеда ({embed.color.value:#x})')
-check(getattr(embed.author, 'name', None) == 'HAKUMO' or
-      (embed.author and embed.author.name == 'HAKUMO'),
-      f'author HAKUMO: {embed.author}')
-check('Панель модерации' in (embed.title or ''),
-      f'title: {embed.title!r}')
-check(banner.filename.endswith('.png'), f'file name {banner.filename}')
 
 sel = ModActionSelect(None, allowed=list(MODPANEL_ACTIONS)[:3])
 labs = [o.label for o in sel.options]
@@ -74,7 +89,6 @@ check('апелляц' in asel.placeholder.lower() or 'присоединить�
       or 'обратиться' in asel.placeholder.lower(),
       f'appeals placeholder: {asel.placeholder!r}')
 
-# сохранить превью в artifacts
 art = '/opt/cursor/artifacts'
 os.makedirs(art, exist_ok=True)
 for kind in ('modpanel', 'appeals'):

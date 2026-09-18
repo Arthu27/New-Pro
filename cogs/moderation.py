@@ -393,11 +393,11 @@ class Moderation (commands .Cog ):
             'их в панели: Щит сервера → Лимиты команды → роль.'),
             ephemeral =True )
             return 
-        view =ModPanelView (self ,interaction .user ,allowed )
-        view ._root_edit =interaction .edit_original_response
-        embed ,banner =view .panel_payload (interaction .guild )
-        await _respond (interaction ,embed =embed ,view =view ,file =banner ,
-                        ephemeral =True )
+        view = ModPanelView(self, interaction.user, allowed)
+        view._root_edit = interaction.edit_original_response
+        # Components V2 (LayoutView): чёрный Container + баннер + селекты
+        banner = view._banner_file or view._make_banner_file()
+        await _respond(interaction, view=view, file=banner, ephemeral=True)
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -2057,12 +2057,12 @@ async def _silent_reset_panel(interaction, panel):
         guild = getattr(interaction, 'guild', None)
         old_t, old_a = panel.target_select, panel.action_select
         panel._rebuild(guild)
-        embed = panel.panel_embed(guild)
+        kw = panel.panel_edit_kwargs()
         pushed = False
         root = getattr(panel, '_root_edit', None)
         if root is not None:
             try:
-                await root(embed=embed, view=panel)
+                await root(**kw)
                 pushed = True
             except Exception as _e:
                 log.debug('modpanel reset root: %s', _e)
@@ -2070,21 +2070,24 @@ async def _silent_reset_panel(interaction, panel):
             try:
                 msg = getattr(interaction, 'message', None)
                 if msg is not None:
-                    await msg.edit(embed=embed, view=panel)
+                    await msg.edit(**kw)
                     pushed = True
             except Exception as _e:
                 log.debug('modpanel reset msg.edit: %s', _e)
         if not pushed:
             try:
-                await interaction.edit_original_response(embed=embed, view=panel)
+                await interaction.edit_original_response(**kw)
                 pushed = True
             except Exception as _e:
                 log.debug('modpanel reset original: %s', _e)
         if not pushed:
             panel.clear_items()
             panel.target_select, panel.action_select = old_t, old_a
-            panel.add_item(old_t)
-            panel.add_item(old_a)
+            # восстановить старую раскладку не всегда возможно — пересоберём
+            try:
+                panel._rebuild(guild)
+            except Exception:
+                pass
     except Exception as _e:
         log.debug('modpanel reset: %s', _e)
 
@@ -2410,8 +2413,11 @@ class ModTargetSelect(discord.ui.UserSelect):
             log.debug("ModTargetSelect: %s", _te)
 
 
-class ModPanelView(discord.ui.View):
-    """Селект участника + селект действия. Порядок любой, пункт можно выбрать снова."""
+class ModPanelView(discord.ui.LayoutView):
+    """Components V2: баннер + селекты в чёрном Container.
+
+    Фолбек panel_embed/panel_payload — если V2 не приняли (старый клиент).
+    """
 
     def __init__(self, cog, member=None, allowed=None):
         super().__init__(timeout=300)
@@ -2421,6 +2427,9 @@ class ModPanelView(discord.ui.View):
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
+        self._banner_name = 'hakumo_modpanel_banner.png'
+        self._banner_file = None
+        self._use_v2 = True
         self._rebuild(None)
 
     def _action_label(self, action):
@@ -2429,7 +2438,19 @@ class ModPanelView(discord.ui.View):
                 return label
         return action
 
+    def _status_text(self):
+        from services.v2_layouts import modpanel_status_text
+        pending = None
+        if self.pending_action:
+            pending = self._action_label(self.pending_action)
+        return modpanel_status_text(self.selected_uid, pending)
+
+    def _footer_text(self, guild):
+        name = getattr(guild, 'name', None) if guild is not None else None
+        return f'{name} · Hakumo · модерация' if name else 'Hakumo · модерация'
+
     def panel_embed(self, guild):
+        """Классический эмбед — фолбек, если V2 недоступен."""
         bits = []
         if self.selected_uid:
             bits.append(f"участник <@{self.selected_uid}>")
@@ -2455,12 +2476,19 @@ class ModPanelView(discord.ui.View):
         return e
 
     def panel_payload(self, guild):
-        """(embed, discord.File) — эмбед с фирменным баннером HAKUMO."""
+        """(embed, discord.File) — фолбек эмбед + баннер."""
         from services.menu_banners import menu_banner_file
         embed = self.panel_embed(guild)
         bio, name = menu_banner_file('modpanel')
         embed.set_image(url=f'attachment://{name}')
         return embed, discord.File(bio, filename=name)
+
+    def _make_banner_file(self):
+        from services.menu_banners import menu_banner_file
+        bio, name = menu_banner_file('modpanel')
+        self._banner_name = name
+        self._banner_file = discord.File(bio, filename=name)
+        return self._banner_file
 
     def _rebuild(self, guild):
         self.clear_items()
@@ -2472,34 +2500,67 @@ class ModPanelView(discord.ui.View):
                     defaults = [mem]
             except Exception:
                 defaults = []
-        self.target_select = ModTargetSelect(self.cog, default_values=defaults or None)
-        self.action_select = ModActionSelect(self.cog, None, self.allowed,
-                                             target_select=self.target_select)
-        self.add_item(self.target_select)
-        self.add_item(self.action_select)
+        self.target_select = ModTargetSelect(
+            self.cog, default_values=defaults or None)
+        self.action_select = ModActionSelect(
+            self.cog, None, self.allowed,
+            target_select=self.target_select)
+
+        from services.v2_layouts import V2_AVAILABLE, build_modpanel_container
+        self._make_banner_file()
+        if V2_AVAILABLE and self._use_v2:
+            box = build_modpanel_container(
+                banner_filename=self._banner_name,
+                status=self._status_text(),
+                footer=self._footer_text(guild),
+                target_select=self.target_select,
+                action_select=self.action_select,
+            )
+            if box is not None:
+                self.add_item(box)
+                return
+        # фолбек: обычные селекты без Container (LayoutView всё равно V2-
+        # флаг — поэтому при полном отказе вызывающий шлёт классический View)
+        row1 = discord.ui.ActionRow()
+        row1.add_item(self.target_select)
+        row2 = discord.ui.ActionRow()
+        row2.add_item(self.action_select)
+        self.add_item(row1)
+        self.add_item(row2)
+
+    def panel_edit_kwargs(self):
+        """kwargs для edit_message / edit_original_response (V2)."""
+        banner = self._banner_file or self._make_banner_file()
+        return {
+            'view': self,
+            'attachments': [banner],
+            'embed': None,
+            'content': None,
+        }
 
     async def refresh(self, interaction, *, rebuild_action=True):
         guild = getattr(interaction, 'guild', None)
         if rebuild_action:
             self._rebuild(guild)
-        embed, banner = self.panel_payload(guild)
+        else:
+            # обновить только статусный текст — полная пересборка проще
+            self._rebuild(guild)
+        kw = self.panel_edit_kwargs()
         try:
             if not interaction.response.is_done():
-                await interaction.response.edit_message(
-                    embed=embed, view=self, attachments=[banner])
+                await interaction.response.edit_message(**kw)
                 return
         except Exception as _e:
             log.debug('modpanel refresh edit_message: %s', _e)
         msg = getattr(interaction, 'message', None)
         if msg is not None:
             try:
-                await msg.edit(embed=embed, view=self, attachments=[banner])
+                await msg.edit(**kw)
                 return
             except Exception as _e:
                 log.debug('modpanel refresh msg.edit: %s', _e)
         try:
-            await interaction.edit_original_response(
-                embed=embed, view=self, attachments=[banner])
+            await interaction.edit_original_response(**kw)
         except Exception as _e:
             log.debug('modpanel refresh original: %s', _e)
             try:
