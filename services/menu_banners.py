@@ -65,17 +65,17 @@ _CUSTOM_NAMES = {
     'staff': ('staff_hakumo_banner.png', 'staff_banner_custom.png'),
 }
 
-# Стикеры действий → акцент + тип иконки
+# Стикеры действий → мягкий акцент + тип иконки (пастель Hakumo)
 STICKER_SPECS = {
-    'warn':       {'accent': (251, 191, 36),  'icon': 'warn'},
-    'mute':       {'accent': (96, 165, 250),  'icon': 'mute'},
-    'ban':        {'accent': (248, 113, 113), 'icon': 'ban'},
-    'clear':      {'accent': (52, 211, 153),  'icon': 'clear'},
-    'unban':      {'accent': (74, 222, 128),  'icon': 'unban'},
-    'appeal':     {'accent': (192, 132, 252), 'icon': 'appeal'},
-    'helper':     {'accent': (196, 160, 255), 'icon': 'helper'},
-    'moderator':  {'accent': (129, 140, 248), 'icon': 'mod'},
-    'heart':      {'accent': (255, 230, 245), 'icon': 'heart'},
+    'warn':       {'accent': (255, 200, 110), 'icon': 'warn'},
+    'mute':       {'accent': (140, 190, 255), 'icon': 'mute'},
+    'ban':        {'accent': (255, 130, 145), 'icon': 'ban'},
+    'clear':      {'accent': (120, 230, 200), 'icon': 'clear'},
+    'unban':      {'accent': (140, 235, 170), 'icon': 'unban'},
+    'appeal':     {'accent': (210, 165, 255), 'icon': 'appeal'},
+    'helper':     {'accent': (220, 185, 255), 'icon': 'helper'},
+    'moderator':  {'accent': (165, 175, 255), 'icon': 'mod'},
+    'heart':      {'accent': (255, 210, 235), 'icon': 'heart'},
 }
 
 
@@ -341,157 +341,223 @@ def select_emoji():
 # ─── иконки стикеров ───────────────────────────────────────────
 
 def _icon_layer(size: int, accent, kind: str) -> Image.Image:
-    """Белая пиктограмма по центру круга."""
+    """Мягкая светящаяся пиктограмма (рисуем крупно → blur glow)."""
     layer = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
-    cx = cy = size / 2
     ink = (255, 255, 255, 255)
-    soft = (*accent, 220)
-    s = size / 128.0  # scale from 128 base
+    s = size / 128.0
+    stroke = max(3, int(7 * s))
 
-    def L(pts, w=5):
+    def L(pts, w=None):
+        ww = stroke if w is None else max(2, int(w * s))
         d.line([(p[0] * s, p[1] * s) for p in pts],
-               fill=ink, width=max(2, int(w * s)), joint='curve')
+               fill=ink, width=ww, joint='curve')
 
-    def E(box, fill=None, outline=ink, width=4):
+    def E(box, fill=None, outline=ink, width=None):
         b = [v * s for v in box]
-        d.ellipse(b, fill=fill, outline=outline,
-                  width=max(2, int(width * s)))
+        ww = stroke if width is None else max(2, int(width * s))
+        d.ellipse(b, fill=fill, outline=outline if fill is None else None,
+                  width=ww if fill is None else 0)
 
-    def P(pts, fill=ink, outline=None, width=2):
-        d.polygon([(p[0] * s, p[1] * s) for p in pts],
-                  fill=fill, outline=outline)
+    def P(pts, fill=ink):
+        d.polygon([(p[0] * s, p[1] * s) for p in pts], fill=fill)
 
-    def R(box, fill=None, outline=ink, width=3, radius=6):
+    def R(box, fill=None, outline=ink, width=None, radius=10):
         b = [v * s for v in box]
-        d.rounded_rectangle(b, radius=int(radius * s), fill=fill,
-                            outline=outline, width=max(1, int(width * s)))
+        ww = stroke if width is None else max(2, int(width * s))
+        d.rounded_rectangle(
+            b, radius=int(radius * s),
+            fill=fill, outline=None if fill else outline,
+            width=0 if fill else ww)
 
     if kind == 'warn':
-        L([(64, 30), (96, 90)], 5)
-        L([(96, 90), (32, 90)], 5)
-        L([(32, 90), (64, 30)], 5)
-        E((60, 48, 68, 68), fill=ink, outline=None, width=1)
-        E((60, 74, 68, 82), fill=ink, outline=None, width=1)
+        L([(64, 34), (95, 90)], 8)
+        L([(95, 90), (33, 90)], 8)
+        L([(33, 90), (64, 34)], 8)
+        for cx, cy in ((64, 36), (93, 88), (35, 88)):
+            E((cx - 4, cy - 4, cx + 4, cy + 4), fill=ink, outline=None, width=1)
+        E((60, 52, 68, 70), fill=ink, outline=None, width=1)
+        E((60, 76, 68, 84), fill=ink, outline=None, width=1)
     elif kind == 'mute':
-        # speaker body
-        P([(34, 50), (50, 50), (66, 36), (66, 92), (50, 78), (34, 78)],
-          fill=ink)
-        # slash
-        L([(90, 38), (40, 94)], 6)
+        P([(36, 52), (52, 52), (68, 38), (68, 90), (52, 76), (36, 76)])
+        L([(86, 44), (44, 92)], 8)
     elif kind == 'ban':
-        E((34, 34, 94, 94), fill=None, outline=ink, width=6)
-        L([(46, 46), (82, 82)], 6)
+        E((36, 36, 92, 92), fill=None, outline=ink, width=8)
+        L([(48, 48), (80, 80)], 8)
     elif kind == 'clear':
-        # broom handle
-        L([(78, 30), (48, 78)], 5)
-        # bristles
-        P([(40, 72), (58, 86), (52, 96), (30, 84)], fill=ink)
-        # sparkles
-        for sx, sy in ((84, 44), (92, 58), (74, 62)):
-            L([(sx - 4, sy), (sx + 4, sy)], 2)
-            L([(sx, sy - 4), (sx, sy + 4)], 2)
+        L([(80, 32), (46, 82)], 7)
+        P([(38, 74), (58, 90), (50, 98), (28, 84)])
+        for sx, sy, r in ((86, 42, 5), (94, 56, 4), (76, 60, 3)):
+            L([(sx - r, sy), (sx + r, sy)], 2)
+            L([(sx, sy - r), (sx, sy + r)], 2)
     elif kind == 'unban':
-        # unlocked padlock
-        E((44, 36, 84, 70), fill=None, outline=ink, width=5)
-        L([(84, 52), (84, 42)], 5)
-        R((40, 58, 88, 98), fill=ink, outline=None, radius=8)
-        E((58, 70, 70, 82), fill=(18, 14, 28, 255), outline=None, width=1)
+        E((46, 34, 82, 66), fill=None, outline=ink, width=6)
+        L([(82, 50), (82, 40)], 6)
+        R((40, 56, 88, 98), fill=ink, outline=None, radius=10)
+        E((58, 70, 70, 82), fill=(20, 14, 30, 255), outline=None, width=1)
     elif kind == 'appeal':
-        R((40, 30, 88, 98), fill=None, outline=ink, width=4, radius=6)
-        L([(52, 48), (76, 48)], 3)
-        L([(52, 60), (76, 60)], 3)
-        L([(52, 72), (68, 72)], 3)
-        L([(72, 30), (88, 46), (72, 46), (72, 30)], 3)
+        R((42, 30, 86, 98), fill=None, outline=ink, width=6, radius=10)
+        L([(54, 50), (74, 50)], 4)
+        L([(54, 62), (74, 62)], 4)
+        L([(54, 74), (66, 74)], 4)
     elif kind == 'helper':
         pts = []
         for i in range(10):
             ang = math.pi / 2 + i * math.pi / 5
-            r = 34 if i % 2 == 0 else 15
+            r = 32 if i % 2 == 0 else 14
             pts.append((64 + r * math.cos(ang), 64 - r * math.sin(ang)))
-        P(pts, fill=ink)
+        P(pts)
     elif kind == 'mod':
-        L([(64, 30), (94, 43), (94, 70), (64, 96), (34, 70), (34, 43), (64, 30)], 5)
-        E((56, 54, 72, 70), fill=soft, outline=None, width=1)
+        body = [(64, 30), (94, 44), (94, 72), (64, 100), (34, 72), (34, 44)]
+        P(body)
+        E((56, 54, 72, 70), fill=(*accent, 255), outline=None, width=1)
     elif kind == 'heart':
         pts = []
-        for t in range(0, 360, 4):
+        for t in range(0, 360, 3):
             rad = math.radians(t)
             x = 16 * math.sin(rad) ** 3
             y = (13 * math.cos(rad) - 5 * math.cos(2 * rad)
                  - 2 * math.cos(3 * rad) - math.cos(4 * rad))
-            pts.append((64 + x * 2.1, 58 - y * 2.1))
-        P(pts, fill=ink)
+            pts.append((64 + x * 2.15, 58 - y * 2.15))
+        P(pts)
     else:
-        f = _font(True, int(36 * s))
+        f = _font(True, int(40 * s))
         label = kind.upper()[:3]
         bbox = d.textbbox((0, 0), label, font=f)
         tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
         d.text(((size - tw) / 2, (size - th) / 2 - 2), label, font=f, fill=ink)
 
-    return layer
+    bloom = layer.filter(ImageFilter.GaussianBlur(max(2, size // 40)))
+    bloom = ImageEnhance.Brightness(bloom).enhance(1.6)
+    out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    out = Image.alpha_composite(out, bloom)
+    out = Image.alpha_composite(out, layer)
+    return out
 
 
-def render_sticker(key: str, size: int = 128) -> Image.Image:
-    """Стеклянный круглый стикер-иконка для загрузки как эмодзи сервера."""
-    spec = STICKER_SPECS.get(key, {'accent': (168, 85, 247), 'icon': key})
+def _radial_disc(size: int, inset: int, inner, outer) -> Image.Image:
+    """Радиальный градиент-диск (стекло)."""
+    disc = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    cx = cy = (size - 1) / 2.0
+    r_max = max(1.0, (size - 2 * inset) / 2.0)
+    px = disc.load()
+    ir, ig, ib, ia = inner
+    or_, og, ob, oa = outer
+    for y in range(inset, size - inset):
+        for x in range(inset, size - inset):
+            dx, dy = x - cx, y - cy
+            dist = math.sqrt(dx * dx + dy * dy) / r_max
+            if dist > 1.0:
+                continue
+            bias = max(0.0, 1.0 - ((y - inset) / max(1, size - 2 * inset))) * 0.22
+            t = min(1.0, dist)
+            t = t * t * (3 - 2 * t)
+            r = int(ir + (or_ - ir) * t + 40 * bias)
+            g = int(ig + (og - ig) * t + 35 * bias)
+            b = int(ib + (ob - ib) * t + 45 * bias)
+            a = int(ia + (oa - ia) * t)
+            px[x, y] = (min(255, r), min(255, g), min(255, b), min(255, a))
+    return disc
+
+
+def _load_curated_sticker(key: str, size: int) -> Optional[Image.Image]:
+    """Готовый арт из assets/stickers/{key}.png (если есть)."""
+    path = os.path.join(STICKERS, f'{key}.png')
+    if not os.path.isfile(path):
+        return None
+    try:
+        im = Image.open(path).convert('RGBA')
+        if im.size != (size, size):
+            im = im.resize((size, size), Image.Resampling.LANCZOS)
+        return im
+    except Exception:
+        return None
+
+
+def render_sticker(key: str, size: int = 128, *, procedural: bool = False) -> Image.Image:
+    """Стикер-эмодзи: курируемый арт из assets, иначе procedural орб."""
+    if not procedural:
+        curated = _load_curated_sticker(key, size)
+        if curated is not None:
+            return curated
+
+    spec = STICKER_SPECS.get(key, {'accent': (196, 150, 255), 'icon': key})
     accent = spec['accent']
     icon = spec['icon']
 
-    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    pad = 3
+    scale = 4 if size >= 64 else 2
+    S = size * scale
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    pad = int(6 * scale * (size / 128.0))
+    inset = pad + int(4 * scale)
 
-    # outer soft glow
-    glow = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow)
-    gd.ellipse((pad, pad, size - pad - 1, size - pad - 1), fill=(*accent, 100))
-    glow = glow.filter(ImageFilter.GaussianBlur(max(4, size // 18)))
-    img = Image.alpha_composite(img, glow)
+    aura = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    ad = ImageDraw.Draw(aura)
+    ad.ellipse((pad // 2, pad // 2, S - pad // 2 - 1, S - pad // 2 - 1),
+               fill=(*accent, 95))
+    aura = aura.filter(ImageFilter.GaussianBlur(max(6, S // 14)))
+    img = Image.alpha_composite(img, aura)
 
-    d = ImageDraw.Draw(img)
-    # glass disc
-    inset = pad + max(2, size // 20)
-    rim_w = max(2, size // 28)
-    d.ellipse((inset, inset, size - inset - 1, size - inset - 1),
-              fill=(16, 12, 26, 245))
-    # accent rim
-    d.ellipse((inset, inset, size - inset - 1, size - inset - 1),
-              outline=(*accent, 255), width=rim_w)
-    # inner highlight ring (only if enough room)
-    hi = inset + max(4, size // 16)
-    if size - 2 * hi > 4:
-        d.ellipse((hi, hi, size - hi - 1, size - hi - 1),
-                  outline=(255, 255, 255, 35),
-                  width=max(1, size // 64))
+    glass = _radial_disc(
+        S, inset,
+        inner=(42, 32, 64, 235),
+        outer=(12, 8, 22, 252),
+    )
+    tint = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    td = ImageDraw.Draw(tint)
+    td.ellipse((inset, inset, S - inset - 1, S - inset - 1),
+               fill=(*accent, 42))
+    glass = Image.alpha_composite(glass, tint)
+    img = Image.alpha_composite(img, glass)
 
-    # top gloss
-    if size >= 48:
-        gloss = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-        gld = ImageDraw.Draw(gloss)
-        gld.ellipse((inset + 8, inset + 6, size - inset - 10, size // 2 + 4),
-                    fill=(255, 255, 255, 28))
-        gloss = gloss.filter(ImageFilter.GaussianBlur(4))
-        mask = Image.new('L', (size, size), 0)
-        ImageDraw.Draw(mask).ellipse(
-            (inset, inset, size - inset - 1, size - inset - 1), fill=255)
-        gloss.putalpha(Image.composite(
-            gloss.split()[-1], Image.new('L', (size, size), 0), mask))
-        img = Image.alpha_composite(img, gloss)
+    rim = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    rd = ImageDraw.Draw(rim)
+    rim_w = max(2 * scale, int(3.2 * scale))
+    rd.ellipse((inset, inset, S - inset - 1, S - inset - 1),
+               outline=(*accent, 220), width=rim_w)
+    hi = inset + int(5 * scale)
+    if S - 2 * hi > 8 * scale:
+        rd.ellipse((hi, hi, S - hi - 1, S - hi - 1),
+                   outline=(255, 255, 255, 50), width=max(1, scale))
+    rim_soft = rim.filter(ImageFilter.GaussianBlur(max(1, scale // 2)))
+    img = Image.alpha_composite(img, rim_soft)
+    img = Image.alpha_composite(img, rim)
 
-    # icon
-    icon_img = _icon_layer(size, accent, icon)
+    gloss = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(gloss)
+    gx0, gy0 = inset + int(10 * scale), inset + int(6 * scale)
+    gx1, gy1 = S - inset - int(10 * scale), S // 2 + int(2 * scale)
+    gd.ellipse((gx0, gy0, gx1, gy1), fill=(255, 255, 255, 48))
+    bx = inset + int(22 * scale)
+    by = inset + int(18 * scale)
+    br = int(10 * scale)
+    gd.ellipse((bx, by, bx + br, by + br // 2), fill=(255, 255, 255, 80))
+    gloss = gloss.filter(ImageFilter.GaussianBlur(max(3, 2 * scale)))
+    mask = Image.new('L', (S, S), 0)
+    ImageDraw.Draw(mask).ellipse(
+        (inset, inset, S - inset - 1, S - inset - 1), fill=255)
+    ga = gloss.split()[-1]
+    gloss.putalpha(Image.composite(ga, Image.new('L', (S, S), 0), mask))
+    img = Image.alpha_composite(img, gloss)
+
+    icon_img = _icon_layer(S, accent, icon)
     img = Image.alpha_composite(img, icon_img)
+
+    if scale > 1:
+        img = img.resize((size, size), Image.Resampling.LANCZOS)
     return img
 
 
-def ensure_sticker_pack(out_dir: str = None) -> list:
-    """Записать assets/stickers/*.png — вернуть пути."""
+def ensure_sticker_pack(out_dir: str = None, *, force: bool = False) -> list:
+    """Записать stickers/*.png. Курируемый арт в assets/ не затирается без force."""
     out_dir = out_dir or STICKERS
     os.makedirs(out_dir, exist_ok=True)
     paths = []
     for key in STICKER_SPECS:
         path = os.path.join(out_dir, f'{key}.png')
-        render_sticker(key).save(path, format='PNG')
+        curated = out_dir == STICKERS and os.path.isfile(path) and not force
+        if not curated:
+            render_sticker(key, procedural=True).save(path, format='PNG')
         paths.append(path)
     return paths
 
@@ -511,25 +577,25 @@ def save_default_banners(out_dir: str = None) -> dict:
 def render_stickers_preview(out_path: str = None) -> str:
     """Коллаж стикеров для превью."""
     keys = [k for k in STICKER_SPECS if k != 'heart'] + ['heart']
-    cell, pad, top = 140, 24, 56
+    cell, pad, top = 148, 28, 58
     cols = len(keys)
     w = cols * cell + pad * 2
-    h = cell + pad * 2 + top + 28
-    canvas = Image.new('RGBA', (w, h), (18, 16, 24, 255))
+    h = cell + pad * 2 + top + 30
+    canvas = Image.new('RGBA', (w, h), (14, 12, 20, 255))
     d = ImageDraw.Draw(canvas)
-    f = _font(False, 16)
+    f = _font(False, 17)
     f_sm = _font(False, 14)
     title = 'Стикеры для эмодзи сервера (залить в Discord)'
-    d.text((pad, 18), title, font=f, fill=(230, 225, 240, 255))
+    d.text((pad, 18), title, font=f, fill=(235, 230, 245, 255))
     for i, key in enumerate(keys):
-        st = render_sticker(key, 112)
-        x = pad + i * cell + (cell - 112) // 2
+        st = render_sticker(key, 120)
+        x = pad + i * cell + (cell - 120) // 2
         y = top
         canvas.alpha_composite(st, (x, y))
         bbox = d.textbbox((0, 0), key, font=f_sm)
         tw = bbox[2] - bbox[0]
-        d.text((x + (112 - tw) / 2, y + 118), key, font=f_sm,
-               fill=(180, 175, 195, 220))
+        d.text((x + (120 - tw) / 2, y + 126), key, font=f_sm,
+               fill=(175, 170, 190, 220))
     out_path = out_path or os.path.join(
         '/opt/cursor/artifacts', 'stickers-pack-preview.png')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
