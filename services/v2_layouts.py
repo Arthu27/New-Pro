@@ -196,19 +196,49 @@ def build_modpanel_items(*, banner_filename: str, status: str,
                          footer: str = 'модерация',
                          target_select=None, action_select=None,
                          show_banner: bool = None):
-    """Один компактный чёрный Container: (баннер) + селекты без разрывов."""
-    box = build_modpanel_container(
-        banner_filename=banner_filename, status=status, footer=footer,
-        target_select=target_select, action_select=action_select,
-        show_banner=show_banner)
-    return [box] if box is not None else None
+    """Отдельные чёрные блоки: баннер · участник · действие (как раньше)."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    # 1) баннер + статус
+    head = []
+    if show_banner and banner_filename:
+        from discord.components import MediaGalleryItem
+        head.append(
+            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+    else:
+        head.append(_ui.TextDisplay('# Панель модерации'))
+    if status:
+        head.append(_ui.TextDisplay(status))
+    items.append(black_container(*head))
+    # 2) участник — отдельный блок
+    if target_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(target_select)
+        items.append(black_container(
+            _ui.TextDisplay('**Участник**\n-# кого наказать'),
+            row,
+        ))
+    # 3) действие — отдельный блок
+    if action_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(action_select)
+        items.append(black_container(
+            _ui.TextDisplay('**Действие**\n-# что сделать'),
+            row,
+        ))
+    if footer:
+        items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
+    return items
 
 
 def build_modpanel_container(*, banner_filename: str, status: str,
                              footer: str = 'модерация',
                              target_select=None, action_select=None,
                              show_banner: bool = None):
-    """Один общий чёрный Container — компактно, без пустых щелей."""
+    """Один общий Container (фолбек) — без раздельных блоков."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
@@ -219,9 +249,9 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         children.append(
             _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
     else:
-        # без картинки — короткий заголовок (бренд не дублируем)
         children.append(_ui.TextDisplay('# Панель модерации'))
-    children.append(_ui.TextDisplay(status))
+    if status:
+        children.append(_ui.TextDisplay(status))
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
@@ -238,26 +268,32 @@ def build_modpanel_container(*, banner_filename: str, status: str,
 def build_appeals_menu_items(*, banner_filename: str, body: str,
                              footer: str, menu_select=None,
                              show_banner: bool = None):
-    """Один компактный чёрный Container для меню апелляций."""
+    """Баннер и select апелляций — тоже отдельными блоками."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
-    children = []
+    items = []
+    head = []
     if show_banner and banner_filename:
         from discord.components import MediaGalleryItem
-        children.append(
+        head.append(
             _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
     else:
-        children.append(_ui.TextDisplay('# Апелляции'))
-    children.append(_ui.TextDisplay(body))
+        head.append(_ui.TextDisplay('# Апелляции'))
+    if body:
+        head.append(_ui.TextDisplay(body))
+    items.append(black_container(*head))
     if menu_select is not None:
         row = _ui.ActionRow()
         row.add_item(menu_select)
-        children.append(row)
+        items.append(black_container(
+            _ui.TextDisplay('**Обращение**\n-# подать апелляцию'),
+            row,
+        ))
     if footer:
-        children.append(_ui.TextDisplay(f'-# {footer}'))
-    return [black_container(*children)]
+        items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
+    return items
 
 
 async def send_v2_or_embed(target, *, view, embed, fallback_view=None,

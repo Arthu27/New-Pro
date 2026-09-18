@@ -69,23 +69,26 @@ for child in view.children:
     ac = getattr(child, 'accent_colour', None) or getattr(child, 'accent_color', None)
     if ac is not None:
         accents.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
-check(len(view.children) == 1, f'один компактный блок: {len(view.children)}')
+check(len(view.children) >= 3, f'раздельные блоки: {len(view.children)}')
 check(accents and all(a == 0 for a in accents), f'accent чёрный: {accents}')
-# без баннера + без повтора HAKUMO/Hakumo
+# баннер + без дубля «Панель модерации / HAKUMO» в тексте
 from services.v2_layouts import SHOW_MENU_BANNER  # noqa: E402
 check(SHOW_MENU_BANNER is True, 'баннер включён')
-box = view.children[0]
-kids = list(getattr(box, 'children', []) or [])
 texts = []
-for k in kids:
-    c = getattr(k, 'content', None)
-    if c:
-        texts.append(c)
+for child in view.children:
+    for k in list(getattr(child, 'children', []) or []):
+        c = getattr(k, 'content', None)
+        if c:
+            texts.append(c)
 joined = '\n'.join(texts)
-check('Панель модерации' not in joined and 'HAKUMO' not in joined,
+check('Участник' in joined and 'Действие' in joined, 'подписи блоков')
+check(joined.count('# Панель модерации') == 0 and 'HAKUMO' not in joined,
       f'без дубля заголовка: {joined!r}')
-check(any(type(k).__name__ == 'MediaGallery' for k in kids),
-      'есть MediaGallery')
+check(any(
+    type(k).__name__ == 'MediaGallery'
+    for child in view.children
+    for k in list(getattr(child, 'children', []) or [])
+), 'есть MediaGallery')
 # footer без дубля
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == 'модерация', f"footer hakumo={view._footer_text(g)!r}")
@@ -106,7 +109,7 @@ for child in av.children:
     if ac is not None:
         av_acc.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
 check(av_acc and all(a == 0 for a in av_acc), f'appeals accent чёрный: {av_acc}')
-check(len(av.children) == 1, f'appeals один блок: {len(av.children)}')
+check(len(av.children) >= 1, f'appeals блоки: {len(av.children)}')
 check(MB.H == 420, f'баннер полный размер H={MB.H}')
 
 art = '/opt/cursor/artifacts'
