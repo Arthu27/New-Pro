@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Кастомные эмодзи меню из assets/stickers (Application Emoji).
 
-Стикеры gold-neon заливаются как эмодзи приложения бота
+Белые neon-стикеры заливаются как эмодзи приложения бота
 (create_application_emoji) — тогда их видно в селектах /modpanel
-без ручной заливки на сервер. Имена: hakumo_warn, hakumo_mute, …
+без ручной заливки на сервер. Имена: hakumo_w_warn, hakumo_w_mute, …
 """
 from __future__ import annotations
 
@@ -64,7 +64,8 @@ _synced = False
 
 
 def _emoji_name(key: str) -> str:
-    return f'hakumo_{key}'
+    # w_ = белый неон-пак (v2); старые hakumo_* не трогаем
+    return f'hakumo_w_{key}'
 
 
 def sticker_path(key: str) -> Optional[str]:
@@ -86,12 +87,12 @@ def emoji_for_action(action: str):
 
 
 def emoji_heart():
-    """Стикер-сердечко (селект по умолчанию) или 🤍."""
+    """Белое neon-сердечко или 🤍."""
     return _cache.get('heart') or '🤍'
 
 
 async def ensure_menu_emojis(bot) -> Dict[str, Any]:
-    """Залить недостающие стикеры как application emoji, заполнить кэш."""
+    """Залить белые стикеры как application emoji, заполнить кэш."""
     global _synced
     if _synced and len(_cache) >= len(STICKER_KEYS):
         return dict(_cache)
@@ -106,23 +107,27 @@ async def ensure_menu_emojis(bot) -> Dict[str, Any]:
         if name in existing:
             _cache[key] = existing[name]
             continue
+        # фолбек на старое имя, если белое ещё не создано, но золотое есть
+        legacy = f'hakumo_{key}'
         path = sticker_path(key)
         if not path:
             _log.warning('menu_emojis: нет файла %s', key)
+            if legacy in existing:
+                _cache[key] = existing[legacy]
             continue
         try:
             with open(path, 'rb') as f:
                 image = f.read()
-            # PNG для application emoji ≤ 256KB обычно ок на 128×128
             em = await bot.create_application_emoji(name=name, image=image)
             _cache[key] = em
             existing[name] = em
-            _log.info('menu_emojis: создан <: %s :> %s', name, em.id)
+            _log.info('menu_emojis: создан %s id=%s', name, em.id)
         except Exception as ex:
-            # уже есть / лимит / нет прав — пробуем найти по имени
             _log.warning('menu_emojis: create %s: %s', name, ex)
             if name in existing:
                 _cache[key] = existing[name]
+            elif legacy in existing:
+                _cache[key] = existing[legacy]
 
     _synced = True
     return dict(_cache)
