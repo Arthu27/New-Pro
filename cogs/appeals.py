@@ -876,7 +876,8 @@ class AppealMenuSelect(discord.ui.Select):
     """Select «Подать апелляцию» в канале (persistent)."""
 
     def __init__(self):
-        from services.menu_banners import select_label, select_emoji
+        from services.menu_banners import select_label
+        from services.menu_emojis import get_cached, emoji_heart
         super().__init__(
             custom_id=MENU_CUSTOM_ID,
             placeholder='К кому хотите обратиться? · Апелляция',
@@ -884,7 +885,7 @@ class AppealMenuSelect(discord.ui.Select):
             options=[discord.SelectOption(
                 label=select_label('Подать апелляцию'), value='submit',
                 description='Расскажите свою версию — откроется окно',
-                emoji=select_emoji())])
+                emoji=get_cached('appeal') or emoji_heart())])
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog('Appeals')
