@@ -1969,11 +1969,11 @@ class MuteKindSelect(discord.ui.Select):
     """Второй шаг мута: чат / войс / оба. Дальше — модалка срока."""
 
     def __init__(self, cog, target_id, kinds):
-        from services.menu_banners import select_label, select_emoji
-        heart = select_emoji()
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_action
         options = [discord.SelectOption(
             label=select_label(label), value=value, description=desc,
-            emoji=heart)
+            emoji=emoji_for_action(value))
             for value, label, desc in kinds]
         super().__init__(placeholder="Какой мут?",
                          options=options, min_values=1, max_values=1)
@@ -2011,11 +2011,11 @@ class UnmuteKindSelect(discord.ui.Select):
     """Второй шаг размута: чат / войс / оба. Без ввода и без кнопок."""
 
     def __init__(self, cog, target_id, kinds):
-        from services.menu_banners import select_label, select_emoji
-        heart = select_emoji()
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_action
         options = [discord.SelectOption(
             label=select_label(label), value=value, description=desc,
-            emoji=heart)
+            emoji=emoji_for_action(value))
             for value, label, desc in kinds]
         super().__init__(placeholder="Как снять мут?",
                          options=options, min_values=1, max_values=1)

@@ -405,19 +405,22 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 class RoleSelect(discord.ui.Select):
     def __init__(self):
         # Должности: Хелпер и Модератор (чат-контроль упразднён 2026-08-27)
-        from services.menu_banners import select_label, select_emoji
+        from services.menu_banners import select_label
+        from services.menu_emojis import get_cached, emoji_heart
+        helper_em = get_cached('helper') or emoji_heart()
+        mod_em = get_cached('moderator') or emoji_heart()
         options = [
             discord.SelectOption(
                 label=select_label("Хелпер"),
                 value="Helper",
                 description="Помощь участникам сервера",
-                emoji=select_emoji(),
+                emoji=helper_em,
             ),
             discord.SelectOption(
                 label=select_label("Модератор"),
                 value="Moderator",
                 description="Модерация сервера и участников",
-                emoji=select_emoji(),
+                emoji=mod_em,
             ),
         ]
         super().__init__(
