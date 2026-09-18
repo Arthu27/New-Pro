@@ -311,17 +311,17 @@ def _premium_bg(kind: str) -> Optional[Image.Image]:
         try:
             raw = Image.open(path).convert('RGBA')
             covered = _cover(raw, W, H)
-            # сильный blur + затемнение — AI-буквы не читаются, остаётся космос
-            covered = covered.filter(ImageFilter.GaussianBlur(18))
-            covered = ImageEnhance.Brightness(covered).enhance(0.42)
-            dark = Image.new('RGBA', (W, H), (0, 0, 0, 150))
+            # blur убивает AI/старый текст, космос остаётся читаемым
+            covered = covered.filter(ImageFilter.GaussianBlur(20))
+            covered = ImageEnhance.Brightness(covered).enhance(0.55)
+            dark = Image.new('RGBA', (W, H), (0, 0, 0, 110))
             covered = Image.alpha_composite(covered, dark)
-            # чистый центр под наш текст
+            # мягкая вуаль по центру под наш текст
             veil = Image.new('RGBA', (W, H), (0, 0, 0, 0))
             vd = ImageDraw.Draw(veil)
-            vd.ellipse((W * 0.15, H * 0.08, W * 0.85, H * 0.92),
-                       fill=(0, 0, 0, 170))
-            veil = veil.filter(ImageFilter.GaussianBlur(40))
+            vd.ellipse((W * 0.12, H * 0.05, W * 0.88, H * 0.95),
+                       fill=(0, 0, 0, 120))
+            veil = veil.filter(ImageFilter.GaussianBlur(36))
             covered = Image.alpha_composite(covered, veil)
             # редкие острые звёзды поверх
             spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
