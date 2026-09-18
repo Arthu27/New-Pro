@@ -84,18 +84,20 @@ joined = '\n'.join(texts)
 check('Участник' in joined and 'Действие' in joined, 'подписи блоков')
 check(joined.count('# Панель модерации') == 0 and 'HAKUMO' not in joined,
       f'без дубля заголовка: {joined!r}')
+check('-# модерация' not in joined, 'без футера модерация')
 check(any(
     type(k).__name__ == 'MediaGallery'
     for child in view.children
     for k in list(getattr(child, 'children', []) or [])
 ), 'есть MediaGallery')
-# footer без дубля
+# footer helper без дубля (для embed-фолбека)
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == 'модерация', f"footer hakumo={view._footer_text(g)!r}")
 g2 = type('G', (), {'name': 'My Server'})()
 check(view._footer_text(g2) == 'My Server · модерация',
       f"footer other={view._footer_text(g2)!r}")
 check(view._banner_file is not None, 'banner file attached')
+check(len(view.children) == 3, f'без футер-блока: {len(view.children)}')
 
 print('== appeals ==')
 from cogs.appeals import AppealMenuSelect, AppealMenuView  # noqa: E402

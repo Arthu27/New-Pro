@@ -229,8 +229,7 @@ def build_modpanel_items(*, banner_filename: str, status: str,
             _ui.TextDisplay('**Действие**\n-# что сделать'),
             row,
         ))
-    if footer:
-        items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
+    # футер «модерация» убран — пустой блок не нужен
     return items
 
 
@@ -260,8 +259,6 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         row = _ui.ActionRow()
         row.add_item(action_select)
         children.append(row)
-    if footer:
-        children.append(_ui.TextDisplay(f'-# {footer}'))
     return black_container(*children)
 
 
