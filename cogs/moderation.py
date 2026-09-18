@@ -2276,7 +2276,7 @@ class ModActionSelect(discord.ui.Select):
                 emoji=emoji_for_action(value))
             options.append(opt)
         super().__init__(
-            placeholder="› Что сделать?",
+            placeholder="",
             options=options,
             min_values=1,
             max_values=1,

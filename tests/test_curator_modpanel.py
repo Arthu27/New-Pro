@@ -225,9 +225,12 @@ joined = '\n'.join(
 check('**Участник**' in joined, 'заголовок блока Участник на месте')
 check(getattr(view.target_select, 'placeholder', None) in ('', None),
       f'view select пустой: {getattr(view.target_select, "placeholder", None)!r}')
-# Действие не дублирует своё имя в placeholder
-check('Действие' not in (getattr(view.action_select, 'placeholder', '') or ''),
-      f'action placeholder без «Действие»: {getattr(view.action_select, "placeholder", "")!r}')
+# Действие: заголовок есть, select тоже пустой (без «Что сделать?»)
+check('**Действие**' in joined, 'заголовок блока Действие на месте')
+check(getattr(view.action_select, 'placeholder', None) in ('', None),
+      f'action select пустой: {getattr(view.action_select, "placeholder", None)!r}')
+check('Что сделать' not in (getattr(view.action_select, 'placeholder', '') or ''),
+      'в action placeholder нет «Что сделать»')
 
 shutil.rmtree(_TMP, ignore_errors=True)
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
