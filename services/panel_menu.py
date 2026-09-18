@@ -299,10 +299,11 @@ HIDDEN_PATHS = []
 
 
 # Defaults applied if a role has no stored config yet.
-# Куратор — старший модератор: всё модерское + тикеты и сообщество.
+# Куратор — старший модератор: всё модерское + сообщество + контент
+# (каналы/объявления). Ключ 'tickets' в MENU нет — не добавляем мёртвый.
 DEFAULT_GROUPS = {
     'mod': ['main', 'mod', 'protection', 'members', 'logs', 'ai'],
-    'curator': ['main', 'mod', 'protection', 'members', 'tickets', 'community', 'logs', 'ai'],
+    'curator': ['main', 'mod', 'protection', 'members', 'community', 'content', 'logs', 'ai'],
     'admin': [g['key'] for g in MENU],
 }
 
@@ -547,6 +548,11 @@ def panel_groups_for(role):
     allowed_groups = (cfg.get('groups') or DEFAULT_GROUPS.get(role, []))
     if role == 'owner':
         allowed_groups = [g['key'] for g in MENU]
+    # Мёртвый ключ 'tickets' → 'content' (кураторское меню)
+    if isinstance(allowed_groups, list) and 'tickets' in allowed_groups:
+        allowed_groups = [('content' if g == 'tickets' else g) for g in allowed_groups]
+        if 'content' not in allowed_groups:
+            allowed_groups.append('content')
     allowed_items = cfg.get('items') or []
     if not isinstance(allowed_groups, list):
         allowed_groups = []

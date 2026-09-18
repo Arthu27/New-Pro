@@ -1143,6 +1143,15 @@ def _get_role_from_discord (discord_id :str )->str :
                 best_mapped ='curator'
             elif mapped =='mod'and best_mapped not in ('curator','admin','owner'):
                 best_mapped ='mod'
+        # Известная роль куратора сервера — даже если role_map ещё пуст
+        if best_mapped =='uye':
+            try :
+                from services .staff_roles import KNOWN_CURATOR_ROLE_ID as _KCR
+                if any (int (getattr (r ,'id',0 )or 0 )==int (_KCR )
+                        for r in (_roles_eff or [])):
+                    best_mapped ='curator'
+            except Exception as _cex :
+                _log .debug ('known curator role: %s',_cex )
         if best_mapped !='uye':
             return best_mapped 
 

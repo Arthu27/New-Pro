@@ -1929,6 +1929,9 @@ def actions_for_member(guild, member):
     Дополнительно работают «Лимиты команды» (Щит сервера → Лимиты → роль):
     если у ролей модератора заданы лимиты только на часть действий, видит
     только их (пересечение с разрешениями).
+
+    Куратор+хелпер: смотрим ВЫСШИЙ тир — хелперские лимиты mute/clear
+    не схлопывают /modpanel до хелперского меню.
     """
     try:
         uid = getattr(member, "id", 0)
@@ -1948,6 +1951,39 @@ def actions_for_member(guild, member):
         scoped = _rsa(guild.id, role_ids)
     except Exception:
         scoped = None
+    # Страховка: куратор+хелпер — если scoped всё ещё «хелперский»
+    # (mute/unmute/clear), сбрасываем. Только когда есть младшая роль
+    # (хелпер/mod); чисто кураторские свои лимиты не трогаем.
+    try:
+        from services.staff_hierarchy import best_mapped_tier, RANK
+        from services.staff_limits import _role_tier_map
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        _tier = best_mapped_tier(member)
+        _rank = RANK.get(_tier, -1)
+        if (_rank >= RANK.get('curator', 2)
+                and scoped is not None
+                and set(scoped) <= {'mute', 'unmute', 'clear'}):
+            _tmap = _role_tier_map()
+            _helper = str(int(KNOWN_HELPER_ROLE_ID))
+            _has_junior = False
+            for _rid in role_ids:
+                _rs = str(_rid)
+                if _rs == _helper:
+                    _has_junior = True
+                    break
+                _m = _tmap.get(_rs)
+                # один RANK: иначе TIER_ORDER.index ≠ RANK и куратор
+                # ошибочно считался «младше себя»
+                if _m and RANK.get(_m, -1) < _rank:
+                    _has_junior = True
+                    break
+            if _has_junior:
+                log.info(
+                    'actions_for_member: тир %s + младшая роль — '
+                    'игнор хелперского scoped %s', _tier, scoped)
+                scoped = None
+    except Exception as _ex:
+        log.debug('actions_for_member: tier-guard: %s', _ex)
     if scoped is None:
         base = list(MODPANEL_ACTIONS)
     else:
@@ -2408,10 +2444,19 @@ class ModPanelView(discord.ui.View):
         super().__init__(timeout=300)
         self.cog = cog
         self.allowed = allowed
+        self.member = member
         self.owner_id = getattr(member, 'id', None)
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
+        self._actor_label = ''
+        try:
+            from services.staff_hierarchy import actor_panel_role, LABELS
+            guild = getattr(member, 'guild', None)
+            tier = actor_panel_role(guild, member) if member is not None else 'uye'
+            self._actor_label = LABELS.get(tier, '') or ''
+        except Exception:
+            self._actor_label = ''
         self._rebuild(None)
 
     def _action_label(self, action):
@@ -2430,7 +2475,10 @@ class ModPanelView(discord.ui.View):
             desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
         else:
             desc = "Участник и действие — в любом порядке."
-        e = discord.Embed(title="🛡 Панель модерации", description=desc, color=0x5865F2)
+        title = "🛡 Панель модерации"
+        if self._actor_label:
+            title = f"🛡 Панель модерации · {self._actor_label.capitalize()}"
+        e = discord.Embed(title=title, description=desc, color=0x5865F2)
         icon = getattr(getattr(guild, 'icon', None), 'url', None)
         name = getattr(guild, 'name', None) if guild is not None else None
         if name and icon:
