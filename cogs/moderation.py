@@ -2434,7 +2434,7 @@ class ModHelpButton(discord.ui.Button):
             color=0x5865F2)
         embed.add_field(
             name='🎯 Цель',
-            value='Выберите участника МЫШКОЙ в меню «Участник» — при выборе '
+            value='Выберите участника МЫШКОЙ в меню ниже — при выборе '
                   'действия бот НЕ попросит ник второй раз. Участник ушёл с сервера? '
                   'Он останется в списке выбора: подойдёт и его ID.',
             inline=False)
@@ -2461,7 +2461,8 @@ class ModTargetSelect(discord.ui.UserSelect):
     """Участник мышкой. Можно выбрать ДО действия или ПОСЛЕ — порядок любой."""
 
     def __init__(self, cog, default_values=None):
-        kw = dict(placeholder="› Участник", min_values=1, max_values=1)
+        # Пустой placeholder: подпись «Участник» уже над селектом — без дубля.
+        kw = dict(placeholder="", min_values=1, max_values=1)
         if default_values:
             kw['default_values'] = list(default_values)
         super().__init__(**kw)

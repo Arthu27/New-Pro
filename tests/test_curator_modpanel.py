@@ -208,13 +208,26 @@ acts_ad = [a[0] for a in actions_for_member(guild, admin_discord)]
 check('ban' in acts_ad and 'warn' in acts_ad,
       f'Discord admin+helper полная панель: {acts_ad}')
 
-print('== 9. Плейсхолдер без «Кого наказать?» ==')
+print('== 9. Пустой placeholder у select участника ==')
 from cogs.moderation import ModTargetSelect  # noqa: E402
 ts = ModTargetSelect(None)
-check(getattr(ts, 'placeholder', '') != 'Кого наказать?',
-      f'placeholder не «Кого наказать?»: {getattr(ts, "placeholder", "")!r}')
-check('Кого наказать' not in (getattr(ts, 'placeholder', '') or ''),
-      'в placeholder нет «Кого наказать»')
+ph = getattr(ts, 'placeholder', None)
+check(ph in ('', None), f'placeholder пустой: {ph!r}')
+check('Участник' not in (ph or ''), 'в placeholder нет «Участник»')
+check('Кого наказать' not in (ph or ''), 'в placeholder нет «Кого наказать»')
+# V2: заголовок блока есть, в select — пусто
+from cogs.moderation import ModPanelView, MODPANEL_ACTIONS  # noqa: E402
+view = ModPanelView(None, cur_h, list(MODPANEL_ACTIONS))
+joined = '\n'.join(
+    getattr(k, 'content', '') or ''
+    for child in view.children
+    for k in list(getattr(child, 'children', []) or []))
+check('**Участник**' in joined, 'заголовок блока Участник на месте')
+check(getattr(view.target_select, 'placeholder', None) in ('', None),
+      f'view select пустой: {getattr(view.target_select, "placeholder", None)!r}')
+# Действие не дублирует своё имя в placeholder
+check('Действие' not in (getattr(view.action_select, 'placeholder', '') or ''),
+      f'action placeholder без «Действие»: {getattr(view.action_select, "placeholder", "")!r}')
 
 shutil.rmtree(_TMP, ignore_errors=True)
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
