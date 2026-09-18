@@ -1278,8 +1278,9 @@ class Appeals(commands.Cog):
                 'расскажите свою версию.\n\n'
                 'Для вашей апелляции создастся отдельный тред — '
                 'модераторы ответят прямо в нём.'),
-            color=0x1A1428,
+            color=0x000000,
             timestamp=datetime.now(UTC))
+        embed.set_author(name='HAKUMO')
         embed.set_image(url=f'attachment://{bname}')
         embed.set_footer(text=f'{guild.name} · Hakumo · апелляции',
                          icon_url=guild.icon.url if guild.icon else None)

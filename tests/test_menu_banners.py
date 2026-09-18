@@ -48,8 +48,8 @@ view = ModPanelView(None, None, list(MODPANEL_ACTIONS))
 embed, banner = view.panel_payload(None)
 check(embed.image.url and 'attachment://' in embed.image.url,
       f'embed image attachment: {embed.image.url}')
-check(embed.color and embed.color.value == 0x1E1430,
-      f'тёмный цвет эмбеда ({embed.color.value:#x})')
+check(embed.color and embed.color.value == 0x000000,
+      f'чёрный цвет эмбеда ({embed.color.value:#x})')
 check(getattr(embed.author, 'name', None) == 'HAKUMO' or
       (embed.author and embed.author.name == 'HAKUMO'),
       f'author HAKUMO: {embed.author}')

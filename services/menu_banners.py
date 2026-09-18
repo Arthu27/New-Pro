@@ -36,22 +36,22 @@ PRESETS = {
     'modpanel': {
         'headline': 'МОДЕРАЦИЯ',
         'pill': 'Панель модерации · Hakumo',
-        'accent': (196, 140, 255),
-        'tint': (110, 55, 200),
+        'accent': (230, 230, 235),
+        'tint': (20, 20, 24),
         'bgs': ('help_bg.png', 'hakumo_log_bg.png', 'staff.jpg'),
     },
     'appeals': {
         'headline': 'АПЕЛЛЯЦИИ',
         'pill': 'Обжаловать наказание · Hakumo',
-        'accent': (210, 160, 255),
-        'tint': (125, 70, 210),
+        'accent': (230, 230, 235),
+        'tint': (18, 18, 22),
         'bgs': ('hakumo_log_bg.png', 'help_bg.png', 'staff.jpg'),
     },
     'staff': {
         'headline': 'НАБОРЫ',
         'pill': 'Стань частью команды HAKUMO',
-        'accent': (196, 140, 255),
-        'tint': (120, 60, 205),
+        'accent': (230, 230, 235),
+        'tint': (20, 20, 24),
         'bgs': ('staff.jpg', 'help_bg.png', 'hakumo_log_bg.png'),
     },
 }
@@ -65,17 +65,17 @@ _CUSTOM_NAMES = {
     'staff': ('staff_hakumo_banner.png', 'staff_banner_custom.png'),
 }
 
-# Стикеры действий → мягкий акцент + тип иконки (пастель Hakumo)
+# Стикеры действий → серебристый акцент (чёрная тема)
 STICKER_SPECS = {
-    'warn':       {'accent': (255, 200, 110), 'icon': 'warn'},
-    'mute':       {'accent': (140, 190, 255), 'icon': 'mute'},
-    'ban':        {'accent': (255, 130, 145), 'icon': 'ban'},
-    'clear':      {'accent': (120, 230, 200), 'icon': 'clear'},
-    'unban':      {'accent': (140, 235, 170), 'icon': 'unban'},
-    'appeal':     {'accent': (210, 165, 255), 'icon': 'appeal'},
-    'helper':     {'accent': (220, 185, 255), 'icon': 'helper'},
-    'moderator':  {'accent': (165, 175, 255), 'icon': 'mod'},
-    'heart':      {'accent': (255, 210, 235), 'icon': 'heart'},
+    'warn':       {'accent': (240, 240, 245), 'icon': 'warn'},
+    'mute':       {'accent': (220, 225, 235), 'icon': 'mute'},
+    'ban':        {'accent': (235, 235, 240), 'icon': 'ban'},
+    'clear':      {'accent': (230, 235, 240), 'icon': 'clear'},
+    'unban':      {'accent': (225, 230, 235), 'icon': 'unban'},
+    'appeal':     {'accent': (235, 235, 240), 'icon': 'appeal'},
+    'helper':     {'accent': (240, 240, 245), 'icon': 'helper'},
+    'moderator':  {'accent': (230, 230, 240), 'icon': 'mod'},
+    'heart':      {'accent': (245, 245, 250), 'icon': 'heart'},
 }
 
 

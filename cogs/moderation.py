@@ -2438,14 +2438,11 @@ class ModPanelView(discord.ui.View):
         if bits:
             desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
         else:
-            desc = (
-                "Выберите участника и действие ниже.\n"
-                "Порядок любой — можно менять выбор.")
-        # тёмный фиолетово-золотой тон под баннер HAKUMO
+            desc = "Выберите участника и действие ниже."
         e = discord.Embed(
             title="Панель модерации",
             description=desc,
-            color=0x1E1430,
+            color=0x000000,
         )
         e.set_author(name="HAKUMO")
         icon = getattr(getattr(guild, 'icon', None), 'url', None)
