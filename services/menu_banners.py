@@ -285,7 +285,7 @@ def _draw_banner_chrome(img: Image.Image, kind: str) -> Image.Image:
 
 
 def _premium_bg(kind: str) -> Optional[Image.Image]:
-    """Мягкий premium-фон из AI-исходника (если есть)."""
+    """Мягкий premium-фон из AI-исходника (только атмосфера, без текста)."""
     names = _PREMIUM_SRC.get(kind)
     if not names:
         return None
@@ -299,16 +299,30 @@ def _premium_bg(kind: str) -> Optional[Image.Image]:
             continue
         try:
             raw = Image.open(path).convert('RGBA')
-            # contain → letterbox на чёрном, текст не обрежем; потом blur как атмосфера
-            bg = Image.new('RGBA', (W, H), (0, 0, 0, 255))
-            # cover для атмосферы (края можно обрезать — текст рисуем сами)
             covered = _cover(raw, W, H)
-            covered = ImageEnhance.Brightness(covered).enhance(0.55)
-            dark = Image.new('RGBA', (W, H), (0, 0, 0, 110))
+            # сильный blur + затемнение — AI-буквы не читаются, остаётся космос
+            covered = covered.filter(ImageFilter.GaussianBlur(18))
+            covered = ImageEnhance.Brightness(covered).enhance(0.42)
+            dark = Image.new('RGBA', (W, H), (0, 0, 0, 150))
             covered = Image.alpha_composite(covered, dark)
-            # лёгкое размытие — AI-текст не конкурирует с нашим острым
-            covered = covered.filter(ImageFilter.GaussianBlur(1.2))
-            return covered
+            # чистый центр под наш текст
+            veil = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+            vd = ImageDraw.Draw(veil)
+            vd.ellipse((W * 0.15, H * 0.08, W * 0.85, H * 0.92),
+                       fill=(0, 0, 0, 170))
+            veil = veil.filter(ImageFilter.GaussianBlur(40))
+            covered = Image.alpha_composite(covered, veil)
+            # редкие острые звёзды поверх
+            spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+            sd = ImageDraw.Draw(spark)
+            rng = random.Random(hash(kind) ^ 0xA5A5)
+            for _ in range(70):
+                x = rng.randint(20, W - 20)
+                y = rng.randint(15, H - 15)
+                s = rng.choice((1, 1, 1, 2))
+                a = rng.randint(100, 210)
+                sd.ellipse((x, y, x + s, y + s), fill=(255, 255, 255, a))
+            return Image.alpha_composite(covered, spark)
         except Exception:
             continue
     return None
