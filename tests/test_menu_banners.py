@@ -52,10 +52,14 @@ for kind, preset in MB.PRESETS.items():
     pill_letters = _re.sub(r'[^а-яa-z]', '', p)
     check(not (root and root in pill_letters),
           f'{kind}: pill без корня «{root}» ({preset["pill"]!r})')
-    check('hakumo' not in p, f'{kind}: pill без Hakumo ({preset["pill"]!r})')
+    check('hakumo' not in p or kind == 'modpanel',
+          f'{kind}: pill без Hakumo ({preset["pill"]!r})')
+    if kind == 'modpanel':
+        check('hakumo' in p and 'панель' not in p,
+              f'modpanel pill · Hakumo без «панель»: {preset["pill"]!r}')
     check('панель модерации' not in p, f'{kind}: нет «панель модерации»')
-check(MB.PRESETS['modpanel']['pill'] == 'контроль и порядок',
-      'modpanel pill = контроль и порядок')
+check(MB.PRESETS['modpanel']['pill'] == 'контроль и порядок · Hakumo',
+      'modpanel pill = контроль и порядок · Hakumo')
 
 print('== emoji_for_action fallbacks ==')
 check(ME.emoji_for_action('warn') == '⚠️', f"warn {ME.emoji_for_action('warn')!r}")
@@ -120,8 +124,8 @@ for child in view.children:
 st_joined = '\n'.join(st_texts)
 check('Участник:' not in st_joined and '@' not in st_joined,
       f'после выбора без Участник:@: {st_joined!r}')
-check('v8' in (view._banner_name or ''),
-      f'banner filename v8 cache-bust: {view._banner_name!r}')
+check('v9' in (view._banner_name or ''),
+      f'banner filename v9 cache-bust: {view._banner_name!r}')
 # footer helper без дубля (для embed-фолбека)
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == 'модерация', f"footer hakumo={view._footer_text(g)!r}")
