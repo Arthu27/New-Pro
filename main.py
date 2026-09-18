@@ -887,17 +887,24 @@ def _resolve_voice_channel_id():
 VOICE_CHANNEL_ID = _resolve_voice_channel_id()
 
 async def _monitor_voice():
-    """Держим голосовое подключение живым — переподключаемся при падении, каждые 4 минуты играем тишину."""
+    """Держим голосовое подключение живым — переподключаемся при падении,
+    каждые 4 минуты играем тишину (keep-alive).
+
+    ВАЖНО: ``VoiceClient.play`` синхронно ждёт старт AudioPlayer-потока
+    (``Thread.start`` → ``_started.wait``). На живом сервере это давало
+    EVENT-LOOP ЗАВИСАНИЕ ~7 сек (стек: ``_monitor_voice`` → ``vc.play``).
+    Поэтому ``play`` уводим в ``asyncio.to_thread``.
+    """
     await bot.wait_until_ready()
     await asyncio.sleep(10)
-    last_ping = 0
+    last_ping = 0.0
     while not bot.is_closed():
         await asyncio.sleep(30)
         channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
         if not channel or not isinstance(channel, discord.VoiceChannel):
             continue
         vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
-        
+
         if not vc or not vc.is_connected():
             try:
                 vc = await channel.connect(self_deaf=False)
@@ -908,12 +915,13 @@ async def _monitor_voice():
             try:
                 if not vc.is_playing():
                     import io
-                    delete = io.BytesIO(b'\x00' * 3840)
-                    source = discord.PCMAudio(delete)
-                    vc.play(source)
+                    silence = io.BytesIO(b'\x00' * 3840)
+                    source = discord.PCMAudio(silence)
+                    await asyncio.to_thread(vc.play, source)
                 last_ping = time.time()
             except Exception as _ex:
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
+
 
 @bot.event
 async def on_disconnect():
