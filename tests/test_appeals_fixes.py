@@ -387,6 +387,7 @@ class _StubAppeals:
     def __init__(s):
         s.opened = []
         s.deleted = []
+        s.finalized = []
         s.notified = []
         s.unban_cards = []
 
@@ -396,6 +397,12 @@ class _StubAppeals:
 
     async def _delete_appeal_card(s, g, state, item, message=None):
         s.deleted.append(item.get('id'))
+        return True
+
+    async def _finalize_appeal_card(s, g, state, item, *, accept=False,
+                                    unbanned=False, reviewer=None,
+                                    message=None, view=None, closed=False):
+        s.finalized.append(item.get('id'))
         return True
 
     async def _notify_user(s, *a, **k):
@@ -422,7 +429,7 @@ check(opened is True and stub.opened == [BANNED],
 check(SP._open_channel_for_claim(None, GID, pend) is False,
       'без бота панель не падает — просто False')
 
-# resolve из панели: accept → карточка разбана + удаление карточки
+# resolve из панели: accept → карточка разбана + обновление карточки
 res_st = AP.empty_state()
 acc, _e = AP.create_appeal(res_st, BANNED, 'Егорик',
                            'Принимите, я всё осознал', NOW)
@@ -434,21 +441,23 @@ check(stub.unban_cards and stub.unban_cards[0][0] == acc['id']
       and stub.unban_cards[0][1] == MOD,
       'дело + карточка разбана от имени решившего из панели',
       str(stub.unban_cards))
-check(payload['effects'].get('card_deleted') is True,
-      'карточка удалена после решения из панели')
-check(stub.deleted == [acc['id']], 'удалена именно эта карточка')
+check(payload['effects'].get('card_updated') is True,
+      'карточка обновлена после решения из панели')
+check(stub.finalized == [acc['id']], 'обновлена именно эта карточка')
+check(stub.deleted == [], 'карточку не удаляем')
 
-# reject из панели → карточка тоже удаляется
+# reject из панели → карточка тоже остаётся (обновляется)
 rej_st = AP.empty_state()
 rej, _e = AP.create_appeal(rej_st, BANNED, 'Егорик',
                            'Отклоните тогда', NOW)
 SP._save(GID, rej_st)
-stub.deleted.clear()
+stub.finalized.clear()
 ok, err, code, payload = SP.resolve_panel(loop_bot, GID, rej['id'], False,
                                           'ПанМод')
-check(ok and stub.deleted == [rej['id']] and
-      payload['effects'].get('card_deleted') is True,
-      'отклонение из панели тоже удаляет карточку')
+check(ok and stub.finalized == [rej['id']] and
+      payload['effects'].get('card_updated') is True,
+      'отклонение из панели обновляет карточку')
+check(stub.deleted == [], 'отклонение тоже не удаляет карточку')
 
 _loop.call_soon_threadsafe(_loop.stop)
 appmod.bot_instance = None
