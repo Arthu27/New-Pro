@@ -216,8 +216,8 @@ check(SH.best_mapped_tier(admin_discord) == 'mod',
 print('== 9. Финальный /modpanel V2 ==')
 from cogs.moderation import ModTargetSelect  # noqa: E402
 ts = ModTargetSelect(None)
-ph = getattr(ts, 'placeholder', None)
-check(ph == 'Кого наказать?', f'placeholder участника: {ph!r}')
+ph = getattr(ts, 'placeholder', None) or ''
+check(ph == '', f'placeholder участника пустой: {ph!r}')
 from cogs.moderation import ModPanelView, MODPANEL_ACTIONS  # noqa: E402
 view = ModPanelView(None, cur_h, list(MODPANEL_ACTIONS))
 joined = '\n'.join(
@@ -225,13 +225,13 @@ joined = '\n'.join(
     for child in view.children
     for k in list(getattr(child, 'children', []) or []))
 check('**Участник**' in joined and 'кого наказать' not in joined,
-      'заголовок Участник без дубля')
-check(getattr(view.target_select, 'placeholder', None) == 'Кого наказать?',
-      f'view select: {getattr(view.target_select, "placeholder", None)!r}')
+      'заголовок Участник без дубля в select')
+check((getattr(view.target_select, 'placeholder', None) or '') == '',
+      f'view select пустой: {getattr(view.target_select, "placeholder", None)!r}')
 check('**Действие**' in joined and 'что сделать' not in joined,
-      'заголовок Действие без дубля')
-check(getattr(view.action_select, 'placeholder', None) == '› Что сделать?',
-      f'action select: {getattr(view.action_select, "placeholder", None)!r}')
+      'заголовок Действие без дубля в select')
+check((getattr(view.action_select, 'placeholder', None) or '') == '',
+      f'action select пустой: {getattr(view.action_select, "placeholder", None)!r}')
 check('Hakumo · модерация' not in joined,
       'без футера')
 check('Панель модерации' in joined and 'HAKUMO' in joined,
