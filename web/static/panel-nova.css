@@ -258,6 +258,8 @@ html[data-theme="light"] .sidebar {
   html[data-theme="dark"] .app-shell,
   html[data-theme="light"] .app-shell {
     padding: 0 !important;
+    overflow-x: clip !important;
+    max-width: 100% !important;
   }
   html[data-theme="dark"] .panel-stage,
   html[data-theme="light"] .panel-stage {
@@ -265,6 +267,14 @@ html[data-theme="light"] .sidebar {
     border-radius: 0 !important;
     border-left: 0 !important;
     border-right: 0 !important;
+    /* backdrop-filter + overflow:hidden ломают fixed-drawer и едят клики на WebKit */
+    overflow: visible !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  html[data-theme="dark"] .panel-stage::after,
+  html[data-theme="light"] .panel-stage::after {
+    display: none !important;
   }
   html[data-theme="dark"] .sidebar,
   html[data-theme="light"] .sidebar {
@@ -299,13 +309,17 @@ html[data-theme="light"] .sidebar {
     flex: none !important;
     padding-top: 56px !important;
     height: 100% !important;
+    overflow: hidden !important;
   }
   html[data-theme="dark"] .main-content,
   html[data-theme="light"] .main-content {
     width: 100% !important;
     max-width: 100% !important;
-    padding: 8px 12px 108px !important;
+    padding: 8px 12px calc(108px + env(safe-area-inset-bottom, 0px)) !important;
     box-sizing: border-box !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    height: 100% !important;
   }
   html[data-theme="dark"] .topbar,
   html[data-theme="light"] .topbar {
@@ -321,7 +335,7 @@ html[data-theme="light"] .sidebar {
   html[data-theme="light"] .mobile-nav {
     left: 8px !important;
     right: 8px !important;
-    bottom: 8px !important;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
     width: auto !important;
     transform: none !important;
     justify-content: space-around !important;
@@ -336,6 +350,7 @@ html[data-theme="light"] .sidebar {
     padding: 8px 4px !important;
     font-size: 10px !important;
     gap: 4px !important;
+    min-height: 44px !important;
   }
   html[data-theme="dark"] .mobile-nav a i,
   html[data-theme="light"] .mobile-nav a i {
@@ -363,6 +378,10 @@ html[data-theme="light"] .sidebar {
   html[data-theme="dark"] .stat-row,
   html[data-theme="light"] .stat-row {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  html[data-theme="dark"] .sidebar-backdrop,
+  html[data-theme="light"] .sidebar-backdrop {
+    z-index: 2100 !important;
   }
 }
 
