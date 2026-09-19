@@ -106,8 +106,8 @@ view._rebuild(None)
 st_joined = _collect_texts(view)
 check('<@424242424242424242>' in st_joined and 'Участник:' not in st_joined,
       f'после выбора краткий статус: {st_joined!r}')
-check('v14' in (view._banner_name or ''),
-      f'banner filename v14: {view._banner_name!r}')
+check('v15' in (view._banner_name or ''),
+      f'banner filename v15: {view._banner_name!r}')
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == '',
       f"footer выключен: {view._footer_text(g)!r}")
