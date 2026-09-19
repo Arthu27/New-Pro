@@ -28,6 +28,10 @@ STICKERS = os.path.join(ASSETS, 'stickers')
 FONTS = os.path.join(ASSETS, 'fonts')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
+# Display-шрифты для чёткого заголовка (Cyrillic + sharp edges)
+_FONT_DISPLAY = '/usr/share/fonts/truetype/noto/NotoSansDisplay-Bold.ttf'
+_FONT_UI = '/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf'
+_FONT_UI_B = '/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf'
 
 W, H = 1200, 520
 
@@ -90,11 +94,21 @@ STICKER_SPECS = {
 }
 
 
-def _font(bold=False, sz=20):
-    try:
-        return ImageFont.truetype(FONT_B if bold else FONT_R, sz)
-    except Exception:
-        return ImageFont.load_default()
+def _font(bold=False, sz=20, *, display=False):
+    paths = []
+    if display:
+        paths.append(_FONT_DISPLAY if bold else _FONT_UI)
+    if bold:
+        paths.extend((_FONT_UI_B, FONT_B, _FONT_DISPLAY))
+    else:
+        paths.extend((_FONT_UI, FONT_R))
+    for path in paths:
+        try:
+            if path and os.path.isfile(path):
+                return ImageFont.truetype(path, sz)
+        except Exception:
+            continue
+    return ImageFont.load_default()
 
 
 def _find_custom(kind: str) -> Optional[str]:
@@ -118,6 +132,18 @@ def _cover(img: Image.Image, w: int, h: int) -> Image.Image:
         y0 = (bh - nh) // 2
         img = img.crop((0, y0, bw, y0 + nh))
     return img.resize((w, h), Image.Resampling.LANCZOS)
+
+
+def _fit_pad(img: Image.Image, w: int, h: int,
+             fill=(0, 0, 0, 255)) -> Image.Image:
+    """Вписать целиком без обрезки (чёрные поля по краям)."""
+    bw, bh = img.size
+    scale = min(w / bw, h / bh)
+    nw, nh = max(1, int(bw * scale)), max(1, int(bh * scale))
+    resized = img.resize((nw, nh), Image.Resampling.LANCZOS)
+    canvas = Image.new('RGBA', (w, h), fill)
+    canvas.alpha_composite(resized, ((w - nw) // 2, (h - nh) // 2))
+    return canvas
 
 
 def _load_atmosphere(kind: str) -> Image.Image:
@@ -225,6 +251,7 @@ def _center_text(draw, text, font, y, fill, w, stroke=0, stroke_fill=None):
 _PREMIUM_SRC = {
     'modpanel': (
         'modpanel_banner_premium_src.png',
+        '/opt/cursor/artifacts/assets/modpanel-banner-premium-v15.png',
         '/opt/cursor/artifacts/assets/modpanel-banner-premium.png',
     ),
     'appeals': (
@@ -233,66 +260,86 @@ _PREMIUM_SRC = {
     ),
 }
 
+# Суперсэмплинг chrome: рисуем в 3× и сжимаем LANCZOS — буквы острые.
+_BANNER_SS = 3
 
-def _gradient_headline(img: Image.Image, text: str, y: int, accent) -> Image.Image:
-    """Чёткий белый заголовок с лёгким neon-glow (буквы острые)."""
-    f_head = _font(True, max(64, min(96, H // 4)))
-    glow_layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    gd = ImageDraw.Draw(glow_layer)
-    _center_text(gd, text, f_head, y, (255, 255, 255, 100), W,
-                 stroke=10, stroke_fill=(255, 255, 255, 50))
-    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(10))
-    out = Image.alpha_composite(img, glow_layer)
-    # второй мягкий ореол
-    glow2 = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+
+def _gradient_headline(img: Image.Image, text: str, y: int, accent,
+                       *, ww: int = None, hh: int = None,
+                       scale: int = 1) -> Image.Image:
+    """Чёткий белый заголовок: мягкий glow + острый слой букв."""
+    ww = ww or img.size[0]
+    hh = hh or img.size[1]
+    f_sz = max(72, min(110, hh // 4)) * scale // max(1, scale) * scale
+    # при ss=3 → ~96*3 = 288 px на холсте 3×
+    f_sz = int(max(70, min(104, H // 4.6)) * scale)
+    f_head = _font(True, f_sz, display=True)
+    glow = Image.new('RGBA', (ww, hh), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    _center_text(gd, text, f_head, y, (255, 255, 255, 55), ww)
+    glow = glow.filter(ImageFilter.GaussianBlur(max(10, 18 * scale)))
+    out = Image.alpha_composite(img, glow)
+    glow2 = Image.new('RGBA', (ww, hh), (0, 0, 0, 0))
     g2 = ImageDraw.Draw(glow2)
-    _center_text(g2, text, f_head, y, (255, 255, 255, 55), W)
-    glow2 = glow2.filter(ImageFilter.GaussianBlur(22))
+    _center_text(g2, text, f_head, y, (255, 255, 255, 28), ww)
+    glow2 = glow2.filter(ImageFilter.GaussianBlur(max(20, 36 * scale)))
     out = Image.alpha_composite(out, glow2)
-    sharp = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    sharp = Image.new('RGBA', (ww, hh), (0, 0, 0, 0))
     sd = ImageDraw.Draw(sharp)
-    _center_text(sd, text, f_head, y, (255, 255, 255, 255), W,
-                 stroke=1, stroke_fill=(0, 0, 0, 140))
+    _center_text(sd, text, f_head, y, (255, 255, 255, 255), ww,
+                 stroke=max(1, scale), stroke_fill=(0, 0, 0, 120))
     return Image.alpha_composite(out, sharp)
 
 
 def _draw_banner_chrome(img: Image.Image, kind: str) -> Image.Image:
-    """HAKUMO + headline + pill поверх фона — всегда чёткие буквы."""
+    """HAKUMO + headline + pill — 3× supersample, потом LANCZOS вниз."""
     preset = PRESETS.get(kind, PRESETS['modpanel'])
-    d = ImageDraw.Draw(img)
+    ss = _BANNER_SS
+    ww, hh = W * ss, H * ss
+    base = img.convert('RGBA')
+    if base.size != (ww, hh):
+        base = base.resize((ww, hh), Image.Resampling.LANCZOS)
+
     brand = _spaced('HAKUMO')
-    f_brand = _font(False, 18)
-    f_pill = _font(False, 20)
+    f_brand = _font(False, 17 * ss)
+    f_pill = _font(False, 21 * ss)
     accent = preset['accent']
     headline = preset['headline']
     pill = preset['pill']
 
-    _center_text(d, brand, f_brand, 48, (240, 240, 245, 235), W)
-    line_w = 120
-    ly = 82
-    d.line(((W - line_w) // 2, ly, (W + line_w) // 2, ly),
-           fill=(255, 255, 255, 170), width=1)
+    d = ImageDraw.Draw(base)
+    _center_text(d, brand, f_brand, 46 * ss, (248, 248, 252, 250), ww)
+    line_w = 132 * ss
+    ly = 78 * ss
+    d.line(((ww - line_w) // 2, ly, (ww + line_w) // 2, ly),
+           fill=(255, 255, 255, 200), width=max(1, ss))
 
-    img = _gradient_headline(img, headline, 140, accent)
-    d = ImageDraw.Draw(img)
+    base = _gradient_headline(
+        base, headline, 148 * ss, accent, ww=ww, hh=hh, scale=ss)
+    d = ImageDraw.Draw(base)
 
     pb = d.textbbox((0, 0), pill, font=f_pill)
-    pw, ph = pb[2] - pb[0] + 52, pb[3] - pb[1] + 24
-    px0, py0 = (W - pw) // 2, 300
-    # soft glow behind pill
-    glow = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    pw = pb[2] - pb[0] + 60 * ss
+    ph = pb[3] - pb[1] + 30 * ss
+    px0, py0 = (ww - pw) // 2, 318 * ss
+
+    glow = Image.new('RGBA', (ww, hh), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
-    gd.rounded_rectangle((px0 - 10, py0 - 10, px0 + pw + 10, py0 + ph + 10),
-                         radius=ph // 2 + 10, fill=(255, 255, 255, 35))
-    glow = glow.filter(ImageFilter.GaussianBlur(12))
-    img = Image.alpha_composite(img, glow)
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle((px0, py0, px0 + pw, py0 + ph),
-                        radius=max(14, ph // 2),
-                        fill=(0, 0, 0, 230),
-                        outline=(255, 255, 255, 230), width=2)
-    _center_text(d, pill, f_pill, py0 + 9, (255, 255, 255, 255), W)
-    return img.convert('RGBA')
+    gd.rounded_rectangle(
+        (px0 - 14 * ss, py0 - 14 * ss, px0 + pw + 14 * ss, py0 + ph + 14 * ss),
+        radius=ph // 2 + 14 * ss, fill=(255, 255, 255, 22))
+    glow = glow.filter(ImageFilter.GaussianBlur(max(10, 16 * ss)))
+    base = Image.alpha_composite(base, glow)
+    d = ImageDraw.Draw(base)
+    d.rounded_rectangle(
+        (px0, py0, px0 + pw, py0 + ph),
+        radius=max(16 * ss, ph // 2),
+        fill=(0, 0, 0, 240),
+        outline=(255, 255, 255, 245), width=max(2, 2 * ss))
+    _center_text(d, pill, f_pill, py0 + 11 * ss, (255, 255, 255, 255), ww)
+
+    out = base.resize((W, H), Image.Resampling.LANCZOS)
+    return out.filter(ImageFilter.UnsharpMask(radius=1.4, percent=135, threshold=2))
 
 
 def _premium_bg(kind: str) -> Optional[Image.Image]:
@@ -300,40 +347,48 @@ def _premium_bg(kind: str) -> Optional[Image.Image]:
     names = _PREMIUM_SRC.get(kind)
     if not names:
         return None
-    asset_name, artifact = names
-    candidates = (
-        os.path.join(ASSETS, asset_name),
-        artifact,
-    )
+    # tuple может быть длиннее (несколько fallback-путей)
+    candidates = []
+    for entry in names:
+        if not entry:
+            continue
+        if entry.startswith('/'):
+            candidates.append(entry)
+        else:
+            candidates.append(os.path.join(ASSETS, entry))
     for path in candidates:
         if not path or not os.path.isfile(path):
             continue
         try:
             raw = Image.open(path).convert('RGBA')
-            covered = _cover(raw, W, H)
+            # сначала в 2× для чистого даунскейла фона
+            covered = _cover(raw, W * _BANNER_SS, H * _BANNER_SS)
             # blur убивает AI/старый текст, космос остаётся читаемым
-            covered = covered.filter(ImageFilter.GaussianBlur(20))
-            covered = ImageEnhance.Brightness(covered).enhance(0.55)
-            dark = Image.new('RGBA', (W, H), (0, 0, 0, 110))
+            covered = covered.filter(ImageFilter.GaussianBlur(32))
+            covered = ImageEnhance.Brightness(covered).enhance(0.38)
+            covered = ImageEnhance.Color(covered).enhance(0.35)
+            dark = Image.new('RGBA', covered.size, (0, 0, 0, 155))
             covered = Image.alpha_composite(covered, dark)
             # мягкая вуаль по центру под наш текст
-            veil = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+            veil = Image.new('RGBA', covered.size, (0, 0, 0, 0))
             vd = ImageDraw.Draw(veil)
-            vd.ellipse((W * 0.12, H * 0.05, W * 0.88, H * 0.95),
-                       fill=(0, 0, 0, 120))
-            veil = veil.filter(ImageFilter.GaussianBlur(36))
+            ww, hh = covered.size
+            vd.ellipse((ww * 0.10, hh * 0.02, ww * 0.90, hh * 0.98),
+                       fill=(0, 0, 0, 130))
+            veil = veil.filter(ImageFilter.GaussianBlur(48))
             covered = Image.alpha_composite(covered, veil)
-            # редкие острые звёзды поверх
-            spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+            # редкие острые звёзды поверх (на 2× — после даунскейла точечные)
+            spark = Image.new('RGBA', covered.size, (0, 0, 0, 0))
             sd = ImageDraw.Draw(spark)
-            rng = random.Random(hash(kind) ^ 0xA5A5)
-            for _ in range(70):
-                x = rng.randint(20, W - 20)
-                y = rng.randint(15, H - 15)
-                s = rng.choice((1, 1, 1, 2))
-                a = rng.randint(100, 210)
+            rng = random.Random(hash(kind) ^ 0xB7E1)
+            for _ in range(110):
+                x = rng.randint(20, ww - 20)
+                y = rng.randint(15, hh - 15)
+                s = rng.choice((1, 1, 1, 2, 2, 3))
+                a = rng.randint(120, 230)
                 sd.ellipse((x, y, x + s, y + s), fill=(255, 255, 255, a))
-            return Image.alpha_composite(covered, spark)
+            covered = Image.alpha_composite(covered, spark)
+            return covered  # chrome сам даунскейлит с ss
         except Exception:
             continue
     return None
@@ -345,7 +400,8 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
     custom = _find_custom(kind)
     if custom:
         try:
-            return _cover(Image.open(custom).convert('RGBA'), W, H)
+            # pad, не crop — иначе обрезается HAKUMO сверху/снизу
+            return _fit_pad(Image.open(custom).convert('RGBA'), W, H)
         except Exception:
             pass
     return _render_banner_fresh(kind)
@@ -353,20 +409,21 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
 
 def menu_banner_bytes(kind: str = 'modpanel') -> bytes:
     buf = io.BytesIO()
-    render_menu_banner(kind).save(buf, format='PNG', optimize=True)
+    # compress_level ниже → меньше артефактов на тонких линиях/звёздах
+    render_menu_banner(kind).save(
+        buf, format='PNG', optimize=False, compress_level=4)
     return buf.getvalue()
 
 
 def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     """(BytesIO, filename) для discord.File.
 
-    Имя файла версионируем — иначе Discord CDN держит старый PNG
-    с «Панель модерации · Hakumo».
+    Имя файла версионируем — иначе Discord CDN держит старый PNG.
     """
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    name = filename or f'hakumo_{kind}_banner_v14.png'
+    name = filename or f'hakumo_{kind}_banner_v15.png'
     return bio, name
 
 
@@ -642,35 +699,38 @@ def save_default_banners(out_dir: str = None) -> dict:
 
 def _render_banner_fresh(kind: str) -> Image.Image:
     """Баннер с актуальным chrome (игнор *_custom* подмены)."""
+    ss = _BANNER_SS
+    ww, hh = W * ss, H * ss
     if kind == 'staff':
         staff_path = os.path.join(ASSETS, 'staff.jpg')
         if os.path.isfile(staff_path):
             try:
                 # staff.jpg — фото без нашего chrome; для меню нужна надпись
-                base = _cover(Image.open(staff_path).convert('RGBA'), W, H)
-                dark = Image.new('RGBA', (W, H), (0, 0, 0, 140))
+                base = _cover(Image.open(staff_path).convert('RGBA'), ww, hh)
+                dark = Image.new('RGBA', (ww, hh), (0, 0, 0, 140))
                 base = Image.alpha_composite(base, dark)
                 return _draw_banner_chrome(base, kind)
             except Exception:
                 pass
     img = _premium_bg(kind)
     if img is None:
-        img = Image.new('RGBA', (W, H), (0, 0, 0, 255))
+        img = Image.new('RGBA', (ww, hh), (0, 0, 0, 255))
         rnd = random.Random(hash(kind) & 0xFFFFFFFF)
-        spark = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        spark = Image.new('RGBA', (ww, hh), (0, 0, 0, 0))
         sd = ImageDraw.Draw(spark)
-        for _ in range(160):
-            x, yy = rnd.randint(0, W - 1), rnd.randint(0, H - 1)
-            a = rnd.randint(40, 180)
-            r = rnd.choice((0, 0, 1, 1, 2))
+        for _ in range(220):
+            x, yy = rnd.randint(0, ww - 1), rnd.randint(0, hh - 1)
+            a = rnd.randint(50, 200)
+            r = rnd.choice((0, 0, 1, 1, 2, 2))
             sd.ellipse((x - r, yy - r, x + r, yy + r), fill=(255, 255, 255, a))
         img = Image.alpha_composite(img, spark)
         try:
             atm = _load_atmosphere(kind).convert('RGBA')
-            atm = ImageEnhance.Brightness(atm).enhance(0.40)
-            dark = Image.new('RGBA', (W, H), (0, 0, 0, 150))
+            atm = atm.resize((ww, hh), Image.Resampling.LANCZOS)
+            atm = ImageEnhance.Brightness(atm).enhance(0.38)
+            dark = Image.new('RGBA', (ww, hh), (0, 0, 0, 160))
             atm = Image.alpha_composite(atm, dark)
-            img = Image.blend(img, atm, 0.28)
+            img = Image.blend(img, atm, 0.26)
         except Exception:
             pass
     return _draw_banner_chrome(img, kind)

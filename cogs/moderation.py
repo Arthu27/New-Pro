@@ -2520,7 +2520,7 @@ class ModPanelView(discord.ui.LayoutView):
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
-        self._banner_name = 'hakumo_modpanel_banner_v14.png'
+        self._banner_name = 'hakumo_modpanel_banner_v15.png'
         self._banner_file = None
         self._banner_bytes = None
         self._use_v2 = True
