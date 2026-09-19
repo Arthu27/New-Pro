@@ -106,9 +106,10 @@ g = _Guild()
 print('== столбик человека / канала (weebook v2) ==')
 pb = _person_block(user)
 check(user.mention in pb and 'ghost.blade' in pb and str(UID) in pb,
-      'пользователь: тег + username + id')
-check(pb.count('\n') >= 2 and pb.startswith('•') and '"' not in pb,
-      'weebook: столбик «•» без кавычек')
+      'пользователь: тег + username · id')
+check(pb.count('\n') == 1 and pb.startswith('•') and '"' not in pb
+      and f'ghost.blade · {UID}' in pb,
+      'weebook коротко: две строки, без кавычек')
 cb = _channel_block(voice)
 check(voice.mention in cb, 'голосовой канал: упоминание')
 check('общение' not in cb, 'имя канала не дублируется — mention уже имя')
@@ -142,7 +143,8 @@ vals = ' '.join(f.value for f in e.fields)
 check('sonyastaff' in vals and 'Moderation' not in vals
       and str(mod.id) in vals,
       'кто выдал — живой модератор, не бот')
-check(not e._hakumo_log_meta.get('ping'), 'мут-лог НЕ тегает роль модеров')
+check(e._hakumo_log_meta.get('ping') is True,
+      'мут-лог тегает роль модеров (ping=True)')
 check(e._hakumo_log_meta.get('style') == 'weebook', 'meta.style=weebook')
 
 ban = action_log_embed(g, 'ban', user, mod, reason='флуд', case_id=12)
@@ -186,9 +188,10 @@ real = _actor_person((g.me.display_name, g.me.id, None, True),
 check('sonya.staff' in real and 'Hakumo' not in real,
       'если мутил бот из панели — в логе человек из дела')
 
-print('== роли в логах НЕ тегаются ==')
+print('== роли в логах тегаются на наказаниях ==')
 with open('data/role_map.json', 'w', encoding='utf-8') as fh:
     json.dump({'111': 'mod', '222': 'admin', '333': 'curator'}, fh)
+g._roles[111] = _Role(111, 'Модератор')
 
 
 class _Sent:
@@ -204,11 +207,11 @@ class _Sent:
 ch = _Sent()
 asyncio.run(_safe_send(ch, embed=e))
 kw = ch.sent[-1] if ch.sent else {}
-check(not kw.get('content') or '<@&' not in str(kw.get('content')),
-      'в сообщении лога нет тега роли')
+check('<@&111>' in str(kw.get('content') or ''),
+      'в сообщении лога есть тег роли модеров')
 am = kw.get('allowed_mentions')
-check(am is None or not getattr(am, 'roles', True),
-      'пинг ролей в логах запрещён')
+check(am is not None and bool(getattr(am, 'roles', None)),
+      'пинг ролей разрешён (allowed_mentions)')
 
 print('== фото: имя без id, content не выкидывается ==')
 photo = _card_friendly(pb, g)
@@ -279,8 +282,9 @@ check(any('Выдал' in n for n in names)
       f'поля Выдал / Пользователь / Выданы ({names[:3]})')
 check(any('Профиль' in n for n in names), 'профиль тоже в карточке роли')
 vals = ' '.join(f.value for f in rc.fields)
-check(user.mention in vals and 'ghost.blade' in vals and str(UID) in vals,
-      'пользователь столбиком: тег + username + id')
+check(user.mention in vals and 'ghost.blade' in vals and str(UID) in vals
+      and f'ghost.blade · {UID}' in vals,
+      'пользователь коротко: тег + username · id')
 check(mod.mention in vals and 'sonyastaff' in vals,
       'выдал — человек, не бот')
 check(dota.mention in vals and 'Dota 2' in vals,
@@ -340,8 +344,9 @@ check('кип' in ' '.join(f.value for f in nick.fields)
       and 'Кипарис' in ' '.join(f.value for f in nick.fields),
       'старый и новый ник видны')
 rb = _role_block(dota)
-check(dota.mention in rb and 'Dota 2' in rb and str(dota.id) in rb,
-      'роль столбиком как человек: тег + имя + id')
+check(dota.mention in rb and 'Dota 2' in rb and str(dota.id) in rb
+      and f'Dota 2 · {dota.id}' in rb,
+      'роль коротко: тег + имя · id')
 check(_roles_cell([dota, dota]).count(dota.mention) == 1,
       'дубль одной роли не рисуем дважды')
 lsrc = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
@@ -377,8 +382,8 @@ check(all(f.inline for f in voice_leave.fields),
       'оба поля inline — две колонки weebook')
 vv = ' '.join(f.value for f in voice_leave.fields)
 check(admin.mention in vv and 'legacy.noper' in vv
-      and str(admin.id) in vv,
-      'админ: mention + username + id')
+      and str(admin.id) in vv and f'legacy.noper · {admin.id}' in vv,
+      'админ коротко: mention + username · id')
 check(vch.mention in vv and str(vch.id) in vv,
       'канал: mention + id')
 check(not getattr(getattr(voice_leave, 'author', None), 'name', None),

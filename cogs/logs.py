@@ -669,7 +669,18 @@ async def _safe_send (ch ,**kw ):
                         kw .pop ('embed',None )
             except Exception as _ex:
                 log.debug("_safe_send(): подавлено: %s", _ex)
-        # Роли в логах НЕ тегаем (заказ владельца 2026-09-10).
+        # Мут/бан/варн: тег роли модеров в content — в эмбеде Discord не пингует.
+        if _m and _m .get ('ping') and 'allowed_mentions' not in kw :
+            try :
+                _roles =_ping_mod_roles (getattr (ch ,'guild',None ))
+                if _roles :
+                    _ping =' '.join (r .mention for r in _roles )
+                    _prev =str (kw .get ('content')or '').strip ()
+                    kw ['content']=(_prev +' '+_ping ).strip ()if _prev else _ping
+                    kw ['allowed_mentions']=discord .AllowedMentions (
+                        everyone =False ,users =False ,roles =_roles )
+            except Exception as _pex :
+                log .debug ('_safe_send ping: %s',_pex )
         if _is_forum_ch (ch ):
             _tk ={}
             for _k in ('content','embed','embeds','file','files','view','allowed_mentions'):
@@ -906,6 +917,9 @@ _STACK_FIELD = {
 }
 
 # Наказания: тегаем роль модераторов в content, чтобы пришёл пуш.
+_PING_CATS = {'mute', 'ban', 'warn', 'punish'}
+
+
 def _polish_embed_value(value):
     """Текст поля: без сырых ID, без рваных пробелов, тире как в русском."""
     s = str(value if value is not None else '')
@@ -1020,7 +1034,7 @@ def _verify_ru(v):
 
 
 def _person_block(user, fallback=None):
-    """Weebook: @тег · username · id столбиком."""
+    """Weebook коротко: @тег + «username · id» (две строки)."""
     if user is None:
         return fallback or '—'
     mention = getattr(user, 'mention', None)
@@ -1030,29 +1044,32 @@ def _person_block(user, fallback=None):
     lines = []
     if mention:
         lines.append(str(mention))
-    # username (legacy.noper) — как на референсе weebook
-    if uname and str(uname) not in lines:
-        lines.append(str(uname))
-    elif dname and str(dname) not in (str(mention or ''),) and str(dname) not in lines:
-        lines.append(str(dname))
     try:
         uid = int(uid or 0)
     except (TypeError, ValueError):
         uid = 0
-    if uid:
+    label = None
+    if uname and str(uname) not in (str(mention or ''),):
+        label = str(uname)
+    elif dname and str(dname) not in (str(mention or ''),):
+        label = str(dname)
+    if label and uid:
+        lines.append(f'{label} · {uid}')
+    elif label:
+        lines.append(label)
+    elif uid:
         lines.append(str(uid))
     return _bullet(*lines) if lines else (fallback or '—')
 
 
 def _channel_block(ch):
-    """Weebook: #канал · id столбиком."""
+    """Weebook коротко: #канал · id (две строки)."""
     if ch is None:
         return '—'
     lines = []
     mention = getattr(ch, 'mention', None)
     name = getattr(ch, 'name', None)
     cid = getattr(ch, 'id', None)
-    # голосовой — с эмодзи, как в референсе
     is_voice = False
     try:
         import discord as _d
@@ -1085,7 +1102,7 @@ def _avatar_url(user):
 
 
 def _role_block(role):
-    """Роль столбиком: @упоминание, имя, id — как человек."""
+    """Роль коротко: @упоминание + «имя · id»."""
     if role is None:
         return '—'
     if isinstance(role, str):
@@ -1096,13 +1113,16 @@ def _role_block(role):
     lines = []
     if mention:
         lines.append(str(mention))
-    if name and str(name) not in (str(mention or ''),):
-        lines.append(str(name))
     try:
         rid = int(rid or 0)
     except (TypeError, ValueError):
         rid = 0
-    if rid:
+    label = str(name) if name and str(name) not in (str(mention or ''),) else None
+    if label and rid:
+        lines.append(f'{label} · {rid}')
+    elif label:
+        lines.append(label)
+    elif rid:
         lines.append(str(rid))
     return _bullet(*lines) if lines else '—'
 
@@ -1302,7 +1322,43 @@ def _actor_person(who, guild=None, target_id=None, actions=None):
     return _bullet(name) if name else '—'
 
 
-# _ping_mod_roles удалён: роли в логах не тегаются (заказ 2026-09-10)
+# _ping_mod_roles: роли модеров для живого пуша в mute/ban/warn
+
+
+def _ping_mod_roles(guild):
+    """Роли модераторов для тега в логе наказания."""
+    out = []
+    seen = set()
+
+    def _add(role):
+        if role is None:
+            return
+        rid = getattr(role, 'id', None)
+        if rid is None or rid in seen:
+            return
+        if getattr(role, 'managed', False):
+            return
+        isdef = getattr(role, 'is_default', None)
+        if callable(isdef) and isdef():
+            return
+        seen.add(rid)
+        out.append(role)
+
+    try:
+        from services.mod_role import resolve_mod_role
+        _add(resolve_mod_role(guild))
+    except Exception as _ex:
+        log.debug('_ping_mod_roles resolve: %s', _ex)
+    try:
+        rm = _json_file_cached('data/role_map.json')
+        getter = getattr(guild, 'get_role', None)
+        for rid, panel in (rm.items() if isinstance(rm, dict) else []):
+            if str(panel) != 'mod' or not str(rid).isdigit():
+                continue
+            _add(getter(int(rid)) if callable(getter) else None)
+    except Exception as _ex:
+        log.debug('_ping_mod_roles map: %s', _ex)
+    return out
 
 
 def _quote_msg(text):
@@ -1401,6 +1457,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
         'color': accent,
         'guild': getattr(guild, 'name', ''),
         'style': 'weebook',
+        'ping': category in _PING_CATS,
     }
     return e
 
