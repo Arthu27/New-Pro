@@ -198,10 +198,10 @@ SHOW_MENU_BANNER = True
 
 
 def build_modpanel_items(*, banner_filename: str, status: str,
-                         footer: str = 'Hakumo · модерация',
+                         footer: str = '',
                          target_select=None, action_select=None,
                          show_banner: bool = None):
-    """Карточки как в референсе: шапка · участник · действие · футер."""
+    """Шапка + крупные селекты без лишних подписей и без футера."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
@@ -217,34 +217,32 @@ def build_modpanel_items(*, banner_filename: str, status: str,
     if status:
         head.append(_ui.TextDisplay(status))
     items.append(black_container(*head))
-    # 2) участник — заголовок без дубля placeholder
+    # 2–3) селекты в чёрных блоках — без заголовков и placeholder-надписей
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
         items.append(black_container(
-            _ui.TextDisplay('**Участник**'),
+            _ui.Separator(spacing=SeparatorSpacing.large),
             row,
+            _ui.Separator(spacing=SeparatorSpacing.large),
         ))
-    # 3) действие — заголовок без дубля placeholder
     if action_select is not None:
         row = _ui.ActionRow()
         row.add_item(action_select)
         items.append(black_container(
-            _ui.TextDisplay('**Действие**'),
+            _ui.Separator(spacing=SeparatorSpacing.large),
             row,
+            _ui.Separator(spacing=SeparatorSpacing.large),
         ))
-    # 4) футер
-    foot = (footer or 'Hakumo · модерация').strip()
-    if foot:
-        items.append(black_container(_ui.TextDisplay(f'-# {foot}')))
+    # футер убран — не нужен
     return items
 
 
 def build_modpanel_container(*, banner_filename: str, status: str,
-                             footer: str = 'Hakumo · модерация',
+                             footer: str = '',
                              target_select=None, action_select=None,
                              show_banner: bool = None):
-    """Один общий Container (фолбек) — без раздельных блоков."""
+    """Один общий Container (фолбек) — без футера."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
@@ -265,9 +263,6 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         row = _ui.ActionRow()
         row.add_item(action_select)
         children.append(row)
-    if footer:
-        children.append(_ui.Separator())
-        children.append(_ui.TextDisplay(f'-# {footer}'))
     return black_container(*children)
 
 

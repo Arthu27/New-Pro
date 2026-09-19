@@ -208,26 +208,27 @@ acts_ad = [a[0] for a in actions_for_member(guild, admin_discord)]
 check('ban' in acts_ad and 'warn' in acts_ad,
       f'Discord admin+helper полная панель: {acts_ad}')
 
-print('== 9. Placeholders и блоки как в референсе V2 ==')
+print('== 9. Селекты без надписей, без футера ==')
 from cogs.moderation import ModTargetSelect  # noqa: E402
 ts = ModTargetSelect(None)
-ph = getattr(ts, 'placeholder', None)
-check(ph == 'Кого наказать?', f'placeholder участника: {ph!r}')
-check('Участник' not in (ph or ''), 'в placeholder нет слова «Участник»')
+ph = getattr(ts, 'placeholder', None) or ''
+check(ph == '', f'placeholder участника пустой: {ph!r}')
 from cogs.moderation import ModPanelView, MODPANEL_ACTIONS  # noqa: E402
 view = ModPanelView(None, cur_h, list(MODPANEL_ACTIONS))
 joined = '\n'.join(
     getattr(k, 'content', '') or ''
     for child in view.children
     for k in list(getattr(child, 'children', []) or []))
-check('**Участник**' in joined and 'кого наказать' not in joined,
-      'заголовок Участник без дубля подсказки')
-check(getattr(view.target_select, 'placeholder', None) == 'Кого наказать?',
-      f'view select: {getattr(view.target_select, "placeholder", None)!r}')
-check('**Действие**' in joined and 'что сделать' not in joined,
-      'заголовок Действие без дубля подсказки')
-check(getattr(view.action_select, 'placeholder', None) == '› Что сделать?',
-      f'action select: {getattr(view.action_select, "placeholder", None)!r}')
+check('**Участник**' not in joined and 'кого наказать' not in joined,
+      'без заголовка Участник')
+check((getattr(view.target_select, 'placeholder', None) or '') == '',
+      f'view select пустой: {getattr(view.target_select, "placeholder", None)!r}')
+check('**Действие**' not in joined and 'что сделать' not in joined,
+      'без заголовка Действие')
+check((getattr(view.action_select, 'placeholder', None) or '') == '',
+      f'action select пустой: {getattr(view.action_select, "placeholder", None)!r}')
+check('Hakumo · модерация' not in joined and 'модерация' not in joined.lower(),
+      'без футера Hakumo · модерация')
 check('Панель модерации' in joined and 'HAKUMO' in joined,
       'шапка Панель модерации / HAKUMO')
 

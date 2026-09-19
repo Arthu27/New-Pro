@@ -29,7 +29,7 @@ FONTS = os.path.join(ASSETS, 'fonts')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
-W, H = 1200, 420
+W, H = 1200, 520
 
 # Пресеты: headline + pill без повторов (слово заголовка и бренд HAKUMO
 # уже на баннере — в pill их не дублируем).
@@ -340,7 +340,7 @@ def _premium_bg(kind: str) -> Optional[Image.Image]:
 
 
 def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
-    """PNG-баннер 1200×420: premium-фон + чёткие буквы. Селекты не трогаем."""
+    """PNG-баннер 1200×520: premium-фон + чёткие буквы. Селекты не трогаем."""
     # ручная подмена целиком (без перерисовки), если *_custom*
     custom = _find_custom(kind)
     if custom:
@@ -366,7 +366,7 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    name = filename or f'hakumo_{kind}_banner_v12.png'
+    name = filename or f'hakumo_{kind}_banner_v13.png'
     return bio, name
 
 
