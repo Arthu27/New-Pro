@@ -61,6 +61,7 @@ _UNICODE = {
 
 _cache: Dict[str, Any] = {}
 _synced = False
+_sync_task = None  # asyncio.Task | None — один фоновый sync
 
 
 def _emoji_name(key: str) -> str:
@@ -91,10 +92,14 @@ def emoji_heart():
     return _cache.get('heart') or '🤍'
 
 
+def emojis_ready() -> bool:
+    return _synced and len(_cache) >= len(STICKER_KEYS)
+
+
 async def ensure_menu_emojis(bot) -> Dict[str, Any]:
     """Залить белые стикеры как application emoji, заполнить кэш."""
     global _synced
-    if _synced and len(_cache) >= len(STICKER_KEYS):
+    if emojis_ready():
         return dict(_cache)
     try:
         existing = {e.name: e for e in await bot.fetch_application_emojis()}
@@ -131,3 +136,29 @@ async def ensure_menu_emojis(bot) -> Dict[str, Any]:
 
     _synced = True
     return dict(_cache)
+
+
+def schedule_ensure_menu_emojis(bot) -> None:
+    """Фон: не блокировать /modpanel на Discord emoji API.
+
+    Пока кэш пуст — селекты берут unicode-фолбек; после sync
+    следующий открытие панели уже с application emoji.
+    """
+    global _sync_task
+    if emojis_ready():
+        return
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    if _sync_task is not None and not _sync_task.done():
+        return
+
+    async def _run():
+        try:
+            await ensure_menu_emojis(bot)
+        except Exception as ex:
+            _log.debug('menu_emojis background: %s', ex)
+
+    _sync_task = loop.create_task(_run())
