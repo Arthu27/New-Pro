@@ -27,7 +27,7 @@ try:
     from discord import ui as _ui
     V2_AVAILABLE = all(hasattr(_ui, c) for c in (
         'LayoutView', 'TextDisplay', 'Container', 'Section',
-        'Separator', 'Thumbnail', 'MediaGallery'))
+        'Separator', 'Thumbnail', 'MediaGallery', 'ActionRow'))
 except Exception as _ex:                                    # pragma: no cover
     V2_AVAILABLE = False
     _log.warning("v2_layouts(): Components V2 недоступны: %s", _ex)
@@ -163,7 +163,286 @@ def rules_embed(title: str, items: list, footer: str = ''):
     return e
 
 
-# ── УНИВЕРСАЛЬНАЯ ОТПРАВКА ───────────────────────────────────────────
+# ── МОДЕРАЦИЯ /modpanel ──────────────────────────────────────────────
+
+def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
+    """Подпись под баннером в шапке панели (без «порядок любой»)."""
+    bits = []
+    if selected_uid:
+        bits.append(f'участник <@{selected_uid}>')
+    if pending_label:
+        bits.append(f'«{pending_label}»')
+    if bits:
+        return ' · '.join(bits)
+    return 'Выберите участника и действие ниже.'
+
+
+# Чёрный акцент Container (рамка/полоса слева) — селекты Discord
+# нельзя перекрасить, поэтому каждый select живёт в своём чёрном блоке.
+_BLACK = 0x000000
+
+
+def black_container(*children, accent: int = None):
+    """Container с чёрным accent (0x000000) или своим цветом."""
+    colour = discord.Colour(accent if accent is not None else _BLACK)
+    return _ui.Container(*children, accent_colour=colour)
+
+
+def _gallery(banner_filename: str):
+    from discord.components import MediaGalleryItem
+    return _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}'))
+
+
+# Баннер в шапке вместе с заголовком (как в референсе V2).
+SHOW_MENU_BANNER = True
+
+
+def build_modpanel_items(*, banner_filename: str, status: str,
+                         footer: str = '',
+                         target_select=None, action_select=None,
+                         show_banner: bool = None):
+    """Шапка + крупные селекты без лишних подписей и без футера."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    # 1) шапка: заголовок + HAKUMO + разделитель + баннер + статус
+    head = [
+        _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
+    if show_banner and banner_filename:
+        head.append(_gallery(banner_filename))
+    if status:
+        head.append(_ui.TextDisplay(status))
+    items.append(black_container(*head))
+    # 2–3) селекты в чёрных блоках — без заголовков и placeholder-надписей
+    if target_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(target_select)
+        items.append(black_container(
+            _ui.Separator(spacing=SeparatorSpacing.large),
+            row,
+            _ui.Separator(spacing=SeparatorSpacing.large),
+        ))
+    if action_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(action_select)
+        items.append(black_container(
+            _ui.Separator(spacing=SeparatorSpacing.large),
+            row,
+            _ui.Separator(spacing=SeparatorSpacing.large),
+        ))
+    # футер убран — не нужен
+    return items
+
+
+def build_modpanel_container(*, banner_filename: str, status: str,
+                             footer: str = '',
+                             target_select=None, action_select=None,
+                             show_banner: bool = None):
+    """Один общий Container (фолбек) — без футера."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    children = [
+        _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
+    if show_banner and banner_filename:
+        children.append(_gallery(banner_filename))
+    if status:
+        children.append(_ui.TextDisplay(status))
+    if target_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(target_select)
+        children.append(row)
+    if action_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(action_select)
+        children.append(row)
+    return black_container(*children)
+
+
+def build_appeals_menu_items(*, banner_filename: str, body: str,
+                             footer: str, menu_select=None,
+                             show_banner: bool = None):
+    """Баннер в шапке + select апелляций — как у модерации."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    head = [
+        _ui.TextDisplay('# Апелляции\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
+    if show_banner and banner_filename:
+        head.append(_gallery(banner_filename))
+    if body:
+        head.append(_ui.TextDisplay(body))
+    items.append(black_container(*head))
+    if menu_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(menu_select)
+        items.append(black_container(
+            _ui.TextDisplay('**Обращение**\n-# подать или проверить'),
+            row,
+        ))
+    if footer:
+        items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
+    return items
+
+
+def build_staff_menu_items(*, banner_filename: str, body: str = None,
+                           role_select=None, show_banner: bool = None):
+    """Наборы: шапка с баннером + select роли."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    head = [
+        _ui.TextDisplay('# Наборы\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
+    if show_banner and banner_filename:
+        head.append(_gallery(banner_filename))
+    if body:
+        head.append(_ui.TextDisplay(body))
+    items.append(black_container(*head))
+    if role_select is not None:
+        row = _ui.ActionRow()
+        row.add_item(role_select)
+        items.append(black_container(
+            _ui.TextDisplay('**Роль**\n-# на какую подать'),
+            row,
+        ))
+    return items
+
+
+def build_events_menu_items(*, banner_filename: str, status: str,
+                            action_row=None, show_banner: bool = None):
+    """Ивенты: шапка с баннером + действия."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    head = [
+        _ui.TextDisplay('# Ивенты\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
+    if show_banner and banner_filename:
+        head.append(_gallery(banner_filename))
+    if status:
+        head.append(_ui.TextDisplay(status))
+    items.append(black_container(*head))
+    if action_row is not None:
+        items.append(black_container(
+            _ui.TextDisplay('**Действия**'),
+            action_row,
+        ))
+    return items
+
+
+def _full_bleed_gallery(banner_filename: str):
+    """Совместимость: MediaGallery (раньше full-bleed)."""
+    return _gallery(banner_filename)
+
+
+def build_log_card_items(*, title: str, rows=None, footer: str = '',
+                         accent: int = None, image_filename: str = None,
+                         note: str = None):
+    """Карточка лога Components V2 (webhook/channel): текст + опционально фото."""
+    if not V2_AVAILABLE:
+        return None
+    children = []
+    head = f'# {title}' if title else '# Лог'
+    if note:
+        head = f'{head}\n{note}'
+    children.append(_ui.TextDisplay(head[:4000]))
+    if rows:
+        lines = []
+        for name, value in list(rows)[:12]:
+            n = str(name or '').strip()
+            v = str(value or '').strip()
+            if not v:
+                continue
+            lines.append(f'**{n}**\n{v}' if n else v)
+        if lines:
+            children.append(_ui.TextDisplay('\n\n'.join(lines)[:4000]))
+    if image_filename:
+        children.append(_full_bleed_gallery(image_filename))
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    return [black_container(*children, accent=accent if accent is not None else _BLACK)]
+
+
+def build_log_card_view(*, title: str, rows=None, footer: str = '',
+                        accent: int = None, image_filename: str = None,
+                        note: str = None, timeout=None):
+    """LayoutView для лога — готов к channel/webhook .send(view=...)."""
+    items = build_log_card_items(
+        title=title, rows=rows, footer=footer, accent=accent,
+        image_filename=image_filename, note=note)
+    if not items:
+        return None
+    view = _ui.LayoutView(timeout=timeout)
+    for it in items:
+        view.add_item(it)
+    return view
+
+
+def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
+                            image_filename: str = None, buttons=None,
+                            accent: int = None):
+    """Карточка апелляции V2: текст/фото + ActionRow с кнопками."""
+    if not V2_AVAILABLE:
+        return None
+    children = []
+    head = f'# {title}' if title else '# Апелляция'
+    if body:
+        head = f'{head}\n{body}'
+    children.append(_ui.TextDisplay(head[:4000]))
+    if image_filename:
+        children.append(_full_bleed_gallery(image_filename))
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    if buttons:
+        row = _ui.ActionRow()
+        for btn in buttons:
+            row.add_item(btn)
+        children.append(row)
+    return [black_container(*children, accent=accent if accent is not None else _BLACK)]
+
+
+def build_notice_items(*, title: str, body: str = '', footer: str = '',
+                       accent: int = None):
+    """Короткое V2-уведомление (ЛС / пост-апелляция)."""
+    if not V2_AVAILABLE:
+        return None
+    text = f'# {title}' if title else ''
+    if body:
+        text = f'{text}\n{body}' if text else body
+    children = [_ui.TextDisplay(text[:4000])]
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    return [black_container(*children, accent=accent if accent is not None else _BLACK)]
+
+
+def notice_layout_view(*, title: str, body: str = '', footer: str = '',
+                       accent: int = None, timeout=None):
+    items = build_notice_items(title=title, body=body, footer=footer, accent=accent)
+    if not items:
+        return None
+    view = _ui.LayoutView(timeout=timeout)
+    for it in items:
+        view.add_item(it)
+    return view
+
 
 async def send_v2_or_embed(target, *, view, embed, fallback_view=None,
                            v2_items=None):

@@ -1143,12 +1143,20 @@ def _get_role_from_discord (discord_id :str )->str :
                 best_mapped ='curator'
             elif mapped =='mod'and best_mapped not in ('curator','admin','owner'):
                 best_mapped ='mod'
-        if best_mapped !='uye':
-            return best_mapped 
 
-            # 2. Автоматически как по Discord-администрации
-        perms =_perms_eff if _perms_eff is not None else member .guild_permissions 
-        if perms .administrator :
+            # 2. Discord-админка поднимает выше mapped helper/mod:
+            # админ+хелпер → admin (не схлопываем в хелпера)
+        perms =_perms_eff if _perms_eff is not None else member .guild_permissions
+        if perms is not None and getattr (perms ,'administrator',False ):
+            if best_mapped in ('uye','mod','curator'):
+                return 'admin'
+            if best_mapped =='admin':
+                return 'admin'
+        if best_mapped !='uye':
+            return best_mapped
+
+            # 3. Автоматически как по Discord-администрации
+        if perms is not None and getattr (perms ,'administrator',False ):
             return 'admin'
         if perms .ban_members or perms .kick_members or perms .manage_guild :
             return 'mod'

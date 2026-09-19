@@ -1027,6 +1027,14 @@ async def on_ready():
         # «всё зависло». Теперь падение/зависание синка — это просто
         # предупреждение в логе: бот остаётся живым и управляемым.
         bot.loop.create_task(_sync_commands_bg())
+        # Gold-neon стикеры меню → application emoji (для /modpanel селекта)
+        async def _sync_menu_emojis():
+            try:
+                from services.menu_emojis import ensure_menu_emojis
+                await ensure_menu_emojis(bot)
+            except Exception as _ex:
+                _log.warning("on_ready(): menu emoji sync: %s", _ex)
+        bot.loop.create_task(_sync_menu_emojis())
         # Куча к этому моменту построена: замораживаем стартовый граф и
         # делаем сборки редкими — мультисекундные паузы GC рвали цикл
         # (инцидент 30.08: зависания 6–10 сек каждые ~3 мин, стек-монитор

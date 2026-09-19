@@ -229,6 +229,53 @@ check(err_short and 'короче' in err_short, '15 мин — отказ (ми
 check(err_ok is None, '30 мин при потолке 2 ч — можно')
 check(err_long and 'дольше' in err_long, '3 ч при потолке 2 ч — отказ')
 
+print('== 10. Старший тир главнее хелпера (куратор+хелпер) ==')
+HELPER = 803553848396349510  # боевой хелпер/mod в role_map
+# хелпер в карте как mod — раньше его overrides били куратора
+_rmap2 = dict(_rmap)
+_rmap2[str(HELPER)] = 'mod'
+with open(os.path.join(_TMP, 'role_map.json'), 'w', encoding='utf-8') as _rf:
+    _json.dump(_rmap2, _rf)
+SL.set_role_limits(GT, HELPER, who='helper', role_name='Хелпер',
+                   mute=3, unmute=3, clear=10)
+# только хелпер — меню сужается, mute=3
+check(SL.role_scoped_actions(GT, [HELPER]) == {'mute', 'unmute', 'clear'},
+      'хелпер alone → только mute/unmute/clear')
+_lm_h, _ = SL.effective_limits(GT, [HELPER])
+check(_lm_h['mute'] == 3, f'хелпер alone: mute=3 ({_lm_h["mute"]})')
+# куратор + хелпер → хелпер не режет меню и не бьёт mute:3
+_scoped_ch = SL.role_scoped_actions(GT, [1002, HELPER])
+check(_scoped_ch != {'mute', 'unmute', 'clear'},
+      f'куратор+хелпер: не хелперское меню ({_scoped_ch})')
+check(_scoped_ch is None or 'ban' in (_scoped_ch or ()),
+      f'куратор+хелпер: бан не вырезан хелпером ({_scoped_ch})')
+_lm_ch, _ = SL.effective_limits(GT, [1002, HELPER])
+check(_lm_ch['mute'] == 10, f'куратор+хелпер: mute=10 тира, не 3 ({_lm_ch["mute"]})')
+check(_lm_ch['ban'] == 9, 'куратор+хелпер: бан остаётся пер-рольным оверрайдом куратора')
+# модер + хелпер — оба тир mod: overrides объединяются (один уровень)
+_scoped_mh = SL.role_scoped_actions(GT, [1001, HELPER])
+check(_scoped_mh == {'mute', 'unmute', 'clear'},
+      f'модер+хелпер одного тира: объединение overrides ({_scoped_mh})')
+_lm_mh, _ = SL.effective_limits(GT, [1001, HELPER])
+check(_lm_mh['mute'] == 3,
+      f'модер+хелпер одного тира: mute с оверрайда хелпера ({_lm_mh["mute"]})')
+# известная роль куратора в tier map даже без файла
+check(SL.tier_for_roles([807030012301541377]) == 'curator',
+      'KNOWN_CURATOR_ROLE_ID → тир curator')
+# Главный боевой кейс: у куратора НЕТ своих overrides, у хелпера есть —
+# раньше меню схлопывалось в mute/unmute/clear. Теперь → None (всё видно).
+CUR_CLEAN = 807030012301541377
+_rmap3 = dict(_rmap2)
+_rmap3[str(CUR_CLEAN)] = 'curator'
+with open(os.path.join(_TMP, 'role_map.json'), 'w', encoding='utf-8') as _rf:
+    _json.dump(_rmap3, _rf)
+_scoped_clean = SL.role_scoped_actions(GT, [CUR_CLEAN, HELPER])
+check(_scoped_clean is None,
+      f'куратор без overrides + хелпер: полное меню (None), got={_scoped_clean}')
+_lm_clean, _ = SL.effective_limits(GT, [CUR_CLEAN, HELPER])
+check(_lm_clean['mute'] == 10,
+      f'куратор без overrides: mute=10 тира, не хелперские 3 ({_lm_clean["mute"]})')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

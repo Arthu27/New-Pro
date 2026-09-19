@@ -19,6 +19,21 @@ PASS = 0
 FAIL = 0
 
 
+def _appeal_custom_ids(view):
+    ids = []
+    def walk(items):
+        for it in items or []:
+            cid = getattr(it, 'custom_id', None)
+            if cid:
+                ids.append(str(cid))
+            kids = getattr(it, 'children', None)
+            if kids:
+                walk(kids)
+    walk(getattr(view, 'children', None))
+    return ids
+
+
+
 def check(ok, msg):
     global PASS, FAIL
     if ok:
@@ -99,8 +114,8 @@ print('== 4. view: уникальные custom_id ==')
 import discord  # noqa: E402
 v1 = ap.AppealView(object(), 4242, 7)
 v2 = ap.AppealView(object(), 4242, 8)
-ids1 = sorted(c.custom_id for c in v1.children)
-ids2 = sorted(c.custom_id for c in v2.children)
+ids1 = sorted(_appeal_custom_ids(v1))
+ids2 = sorted(_appeal_custom_ids(v2))
 check(ids1 == ['appeal:accept:7', 'appeal:claim:7', 'appeal:reject:7'],
       f'custom_id несут id апелляции: {ids1}')
 check(not set(ids1) & set(ids2), 'custom_id не пересекаются между апелляциями')

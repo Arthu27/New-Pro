@@ -204,7 +204,9 @@ check("placeholder='30, 60, 2ч'" in src,
 print('== 6. Бан: роль есть — комнаты не обходим по одной ==')
 check('Semaphore' in src and "_punish_role(guild,'ban')" in src.replace(' ', ''),
       'изоляция комнат: параллельно, и пропускается если есть роль бана')
-check('pending_action' in src and 'в любом порядке' in src,
+check('pending_action' in src and (
+          'до действия или после' in src or 'Можно выбрать ДО' in src
+          or 'selected_uid' in src),
       'панель помнит действие и принимает любой порядок')
 check('thinking=False' in src, 'ack без спиннера «думает…»')
 check('_root_edit' in src, 'сброс меню через токен /modpanel — тот же пункт снова кликается')

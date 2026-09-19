@@ -229,8 +229,8 @@ _e = _styled_log_embed(_G(), 'mod', 'Выдано предупреждение',
                                ('Причина', 'спам')])
 asyncio.run(_safe_send(_ch, embed=_e))
 _kw = _ch.sent[-1] if _ch.sent else {}
-check('embed' in _kw and 'file' not in _kw,
-      'по умолчанию в канал уходит эмбед Discord, без фото')
+check(('view' in _kw and 'embed' not in _kw) or ('embed' in _kw and 'file' not in _kw),
+      'по умолчанию V2-карточка (view) или эмбед Discord, без фото')
 
 LC.save_log_cards_cfg('424245', {'enabled': True, 'delivery': 'photo',
                                  'bg_url': 'https://example.com/bg.jpg'})
@@ -238,7 +238,7 @@ _chp = _Ch()
 asyncio.run(_safe_send(_chp, embed=_e))
 _kwp = _chp.sent[-1] if _chp.sent else {}
 check('file' in _kwp and 'embed' not in _kwp,
-      'delivery=photo: в канал уходит только фото')
+      'delivery=photo: в канал уходит фото')
 check(getattr(_kwp.get('file'), 'filename', '') == 'hakumo_log.jpg',
       'файл hakumo_log.jpg')
 
@@ -249,16 +249,18 @@ _e2 = _styled_log_embed(_G(), 'mod', 'Выдано предупреждение'
                         fields=[('Пользователь', 'GhostBlade')])
 asyncio.run(_safe_send(_ch2, embed=_e2))
 _kw2 = _ch2.sent[-1] if _ch2.sent else {}
-check('embed' in _kw2 and 'file' not in _kw2,
-      'enabled=False: текстовый эмбед, без фото')
+check(('view' in _kw2 and 'file' not in _kw2)
+      or ('embed' in _kw2 and 'file' not in _kw2),
+      'enabled=False: V2/эмбед текст, без фото')
 
 os.remove(LC.log_cards_cfg_path('424245'))
 _ch3 = _Ch()
 _e3 = _styled_log_embed(_G(), 'mod', 'Событие', fields=[('А', 'б')])
 asyncio.run(_safe_send(_ch3, embed=_e3))
 _kw3 = _ch3.sent[-1] if _ch3.sent else {}
-check('embed' in _kw3 and 'file' not in _kw3,
-      'нет файла настроек: эмбед Discord')
+check(('view' in _kw3 and 'file' not in _kw3)
+      or ('embed' in _kw3 and 'file' not in _kw3),
+      'нет файла настроек: V2 или эмбед Discord')
 LC.save_log_cards_cfg('424245', {'delivery': 'photo'})
 _ch4 = _Ch()
 asyncio.run(_safe_send(_ch4, embed=_e3))

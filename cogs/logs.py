@@ -452,6 +452,36 @@ def _punish_role_map (guild ):
         return {}
 
 
+def _member_is_staff (member ):
+    """Админ / роль стаффа — для weebook-заголовков в войсе."""
+    if member is None :
+        return False
+    try :
+        perms =getattr (member ,'guild_permissions',None )
+        if perms is not None and (
+                getattr (perms ,'administrator',False )
+                or getattr (perms ,'manage_guild',False )
+                or getattr (perms ,'kick_members',False )
+                or getattr (perms ,'ban_members',False )
+                or getattr (perms ,'moderate_members',False )):
+            return True
+    except Exception as _ex :
+        log .debug ('_member_is_staff perms: %s',_ex )
+    try :
+        staff_ids =_staff_role_ids (getattr (member ,'guild',None ))
+        if not staff_ids :
+            return False
+        for role in (getattr (member ,'roles',None )or ()):
+            try :
+                if int (getattr (role ,'id',0 )or 0 )in staff_ids :
+                    return True
+            except (TypeError ,ValueError ):
+                continue
+    except Exception as _ex :
+        log .debug ('_member_is_staff roles: %s',_ex )
+    return False
+
+
 def _role_log_dest (role ,staff_ids ,punish_map ):
     def _rid (v ):
         try :
@@ -587,6 +617,9 @@ async def _safe_send (ch ,**kw ):
     Частый боевой сценарий: категория « Логи» создана старым кодом без
     доступа для бота → Forbidden на каждом send → «логи не работают».
     Ошибка пишется в журнал, слушатель живёт дальше.
+
+    По умолчанию — weebook v2 (классический эмбед: «— •», «| поле:», «•»).
+    Режим delivery=photo — JPEG-карточка.
     """
     try :
         _e =kw .get ('embed')
@@ -598,7 +631,7 @@ async def _safe_send (ch ,**kw ):
                 _th_name =str (_m0 .get ('title',''))if _m0 else ''
         _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None
         _has_file ='file'in kw or 'files'in kw
-        # Вид лога: «photo» — одно фото со стеклом; иначе эмбед Discord.
+        # Вид лога: «photo» — одно фото со стеклом; иначе weebook-эмбед.
         if not _has_file and _m is not None :
             try :
                 from services .log_card import (render_log_card ,get_log_cards_cfg ,
@@ -636,12 +669,19 @@ async def _safe_send (ch ,**kw ):
                         kw .pop ('embed',None )
             except Exception as _ex:
                 log.debug("_safe_send(): подавлено: %s", _ex)
-        # Роли в логах НЕ тегаем (заказ владельца 2026-09-10: «логи не
-        # должны тегать ролей»). Раньше сюда добавлялся пинг роли модеров
-        # на mute/ban/warn — убрано полностью.
+        # Мут/бан/варн: тег роли модеров в content — в эмбеде Discord не пингует.
+        if _m and _m .get ('ping') and 'allowed_mentions' not in kw :
+            try :
+                _roles =_ping_mod_roles (getattr (ch ,'guild',None ))
+                if _roles :
+                    _ping =' '.join (r .mention for r in _roles )
+                    _prev =str (kw .get ('content')or '').strip ()
+                    kw ['content']=(_prev +' '+_ping ).strip ()if _prev else _ping
+                    kw ['allowed_mentions']=discord .AllowedMentions (
+                        everyone =False ,users =False ,roles =_roles )
+            except Exception as _pex :
+                log .debug ('_safe_send ping: %s',_pex )
         if _is_forum_ch (ch ):
-            # Форум-канал как лог: каждый лог = НОВЫЙ ПОСТ форума
-            # (в сам форум сообщениями писать нельзя — только постами).
             _tk ={}
             for _k in ('content','embed','embeds','file','files','view','allowed_mentions'):
                 if _k in kw :
@@ -871,12 +911,15 @@ _LONG_FIELD = {
 # в одну строку и лог выглядит как каша.
 _STACK_FIELD = {
     'пользователь', 'участник', 'автор', 'виновник', 'кому',
-    'модератор', 'выдал', 'канал', 'голосовой канал', 'удалил', 'создал',
-    'изменил', 'проверяющий', 'выданы', 'сняты', 'срок', 'профиль',
-    'история', 'дело', 'причина', 'было', 'стало',
+    'администратор', 'модератор', 'выдал', 'канал', 'голосовой канал',
+    'удалил', 'создал', 'изменил', 'проверяющий', 'выданы', 'сняты',
+    'срок', 'профиль', 'история', 'дело', 'причина', 'было', 'стало',
 }
 
 # Наказания: тегаем роль модераторов в content, чтобы пришёл пуш.
+_PING_CATS = {'mute', 'ban', 'warn', 'punish'}
+
+
 def _polish_embed_value(value):
     """Текст поля: без сырых ID, без рваных пробелов, тире как в русском."""
     s = str(value if value is not None else '')
@@ -935,31 +978,32 @@ def _clean_reason(text):
 
 
 def _q(text):
-    """Кавычки вокруг имени: «GhostBlade» → "GhostBlade". Упоминания не трогаем."""
+    """Имя как есть (weebook v2 без кавычек). Упоминания/ссылки не трогаем."""
     t = str(text or '').strip()
     if not t:
         return '—'
     if t.startswith('>'):
         t = t.lstrip('>').strip()
-    if _is_plain_name(t):
-        t = t.replace('"', "'")
-        return f'"{t}"'
-    return t
+    if t.startswith('•'):
+        t = t.lstrip('•').strip()
+    return t or '—'
 
 
 def _bullet(*lines):
-    """Столбик-таблица: цитата Discord (полоска слева) + кавычки у имён."""
+    """Weebook v2: столбик «• строка» (mention / ник / id)."""
     out = []
     seen = set()
     for ln in lines:
         txt = _q(ln)
-        if not txt or txt in seen:
+        if not txt or txt in seen or txt == '—':
+            if txt == '—' and not out:
+                return '• —'
             continue
         seen.add(txt)
-        if not txt.startswith('>'):
-            txt = '> ' + txt
+        if not txt.startswith('•'):
+            txt = '• ' + txt
         out.append(txt)
-    return '\n'.join(out) or '> —'
+    return '\n'.join(out) or '• —'
 
 
 def _yn(flag):
@@ -990,42 +1034,61 @@ def _verify_ru(v):
 
 
 def _person_block(user, fallback=None):
-    """Человек столбиком: @тег, ник, id."""
+    """Weebook коротко: @тег + «username · id» (две строки)."""
     if user is None:
         return fallback or '—'
     mention = getattr(user, 'mention', None)
-    uname = (getattr(user, 'display_name', None)
-             or getattr(user, 'global_name', None)
-             or getattr(user, 'name', None)
-             or fallback)
+    uname = getattr(user, 'name', None) or getattr(user, 'global_name', None)
+    dname = getattr(user, 'display_name', None)
     uid = getattr(user, 'id', None)
     lines = []
     if mention:
         lines.append(str(mention))
-    if uname and str(uname) not in (str(mention or ''),):
-        lines.append(str(uname))
     try:
         uid = int(uid or 0)
     except (TypeError, ValueError):
         uid = 0
-    if uid:
+    label = None
+    if uname and str(uname) not in (str(mention or ''),):
+        label = str(uname)
+    elif dname and str(dname) not in (str(mention or ''),):
+        label = str(dname)
+    if label and uid:
+        lines.append(f'{label} · {uid}')
+    elif label:
+        lines.append(label)
+    elif uid:
         lines.append(str(uid))
     return _bullet(*lines) if lines else (fallback or '—')
 
 
 def _channel_block(ch):
-    """Канал: только #упоминание (оно уже показывает имя).
-
-    Раньше столбик был mention + «имя» + id — в Discord это одно и то же
-    дважды (владелец 2026-09-06: «2 раз написать не обязательно»).
-    """
+    """Weebook коротко: #канал · id (две строки)."""
     if ch is None:
         return '—'
+    lines = []
     mention = getattr(ch, 'mention', None)
-    if mention:
-        return _bullet(str(mention))
     name = getattr(ch, 'name', None)
-    return _bullet('#' + str(name or 'канал'))
+    cid = getattr(ch, 'id', None)
+    is_voice = False
+    try:
+        import discord as _d
+        ctype = getattr(ch, 'type', None)
+        is_voice = ctype in (getattr(_d.ChannelType, 'voice', None),
+                             getattr(_d.ChannelType, 'stage_voice', None))
+    except Exception:
+        is_voice = 'voice' in str(getattr(ch, 'type', '') or '').lower()
+    if mention:
+        lines.append(str(mention))
+    elif name:
+        lines.append(('🔊 ' if is_voice else '#') + str(name))
+    try:
+        cid = int(cid or 0)
+    except (TypeError, ValueError):
+        cid = 0
+    if cid:
+        lines.append(str(cid))
+    return _bullet(*lines) if lines else '—'
 
 
 def _avatar_url(user):
@@ -1039,7 +1102,7 @@ def _avatar_url(user):
 
 
 def _role_block(role):
-    """Роль столбиком: @упоминание, имя, id — как человек."""
+    """Роль коротко: @упоминание + «имя · id»."""
     if role is None:
         return '—'
     if isinstance(role, str):
@@ -1050,13 +1113,16 @@ def _role_block(role):
     lines = []
     if mention:
         lines.append(str(mention))
-    if name and str(name) not in (str(mention or ''),):
-        lines.append(str(name))
     try:
         rid = int(rid or 0)
     except (TypeError, ValueError):
         rid = 0
-    if rid:
+    label = str(name) if name and str(name) not in (str(mention or ''),) else None
+    if label and rid:
+        lines.append(f'{label} · {rid}')
+    elif label:
+        lines.append(label)
+    elif rid:
         lines.append(str(rid))
     return _bullet(*lines) if lines else '—'
 
@@ -1256,7 +1322,43 @@ def _actor_person(who, guild=None, target_id=None, actions=None):
     return _bullet(name) if name else '—'
 
 
-# _ping_mod_roles удалён: роли в логах не тегаются (заказ 2026-09-10)
+# _ping_mod_roles: роли модеров для живого пуша в mute/ban/warn
+
+
+def _ping_mod_roles(guild):
+    """Роли модераторов для тега в логе наказания."""
+    out = []
+    seen = set()
+
+    def _add(role):
+        if role is None:
+            return
+        rid = getattr(role, 'id', None)
+        if rid is None or rid in seen:
+            return
+        if getattr(role, 'managed', False):
+            return
+        isdef = getattr(role, 'is_default', None)
+        if callable(isdef) and isdef():
+            return
+        seen.add(rid)
+        out.append(role)
+
+    try:
+        from services.mod_role import resolve_mod_role
+        _add(resolve_mod_role(guild))
+    except Exception as _ex:
+        log.debug('_ping_mod_roles resolve: %s', _ex)
+    try:
+        rm = _json_file_cached('data/role_map.json')
+        getter = getattr(guild, 'get_role', None)
+        for rid, panel in (rm.items() if isinstance(rm, dict) else []):
+            if str(panel) != 'mod' or not str(rid).isdigit():
+                continue
+            _add(getter(int(rid)) if callable(getter) else None)
+    except Exception as _ex:
+        log.debug('_ping_mod_roles map: %s', _ex)
+    return out
 
 
 def _quote_msg(text):
@@ -1267,95 +1369,95 @@ def _quote_msg(text):
     return '```\n' + s[:900] + '\n```'
 
 
+def _weebook_title(title: str) -> str:
+    """Заголовок weebook: «— • …»."""
+    t = str(title or '').strip()
+    if not t:
+        return '— • Лог'
+    if t.startswith('—'):
+        return t[:256]
+    return f'— • {t}'[:256]
+
+
+def _weebook_field_name(name: str) -> str:
+    """Имя поля weebook: «| Подпись:»."""
+    n = str(name or '').strip().rstrip(':')
+    if not n:
+        n = 'Инфо'
+    if n.startswith('|'):
+        n = n.lstrip('|').strip().rstrip(':')
+    return f'| {n}:'[:256]
+
+
 def _styled_log_embed(guild, category, title, fields=(), color=None,
                       thumbnail=None, image=None, note=None, card_rows=None,
                       author=None):
-    """Лог-эмбед: нативный title Discord (крупный чёткий шрифт), поля
-    с подписями, профиль справа. Без markdown-каши в description.
+    """Лог weebook v2: «— • заголовок», поля «| Имя:» + «• …», 2 колонки.
 
     fields: список кортежей (имя, значение); пустые значения пропускаются.
     note: свободный текст под заголовком (предупреждения и т.п.).
     """
     icon, base_color, cat_name = _cat_meta(category)
-    e = _LogEmbed(color=color if color is not None else base_color,
+    # тёмный акцент как у weebook (не яркая радуга)
+    accent = color if color is not None else 0x2B2D31
+    e = _LogEmbed(color=accent,
                   timestamp=datetime.datetime.now(datetime.timezone.utc))
-    e.title = str(title or '').strip()[:256]
+    e.title = _weebook_title(title)
     _who = ''
     rows = []
     for name, value in fields:
         if value in (None, ''):
             continue
         raw_v = str(value)
-        if ('\n' in raw_v or raw_v.startswith(('・', '>', '"', '```'))):
-            value = raw_v.strip()
+        if ('\n' in raw_v or raw_v.startswith(('・', '>', '•', '"', '```'))):
+            # нормализуем старые цитаты «> » → «• »
+            value = raw_v.replace('\n> ', '\n• ').replace('\n>', '\n•')
+            if value.startswith('>'):
+                value = '•' + value[1:]
+            value = value.strip()
         else:
             value = _polish_embed_value(value)
+            if value and not value.startswith(('•', '```', '|')):
+                value = _bullet(value)
         key = str(name or '').strip()
         rows.append((key, value))
         if not _who and key.lower() in (
-                'пользователь', 'участник', 'автор', 'виновник', 'кому'):
+                'пользователь', 'участник', 'автор', 'виновник', 'кому',
+                'администратор'):
             _who = _card_friendly(value, guild)
     if note:
         e.description = _polish_embed_value(note)[:4096]
     for name, value in rows[:20]:
-        e.add_field(name=name[:256], value=value[:1024], inline=False)
-    # Профиль цели справа; кто выдал — сверху, с аватаркой.
+        key_l = name.lower()
+        longish = (key_l in _LONG_FIELD
+                   or value.count('\n') > 5
+                   or len(value) > 180)
+        e.add_field(
+            name=_weebook_field_name(name),
+            value=value[:1024],
+            inline=not longish,
+        )
+    # Профиль цели справа (аватар)
     if thumbnail:
         e.set_thumbnail(url=thumbnail)
-    if author is not None and not _is_our_bot(guild, author):
-        try:
-            if isinstance(author, (tuple, list)):
-                an = author[0] if author else None
-                ai = None
-            else:
-                an = (getattr(author, 'display_name', None)
-                      or getattr(author, 'name', None))
-                ai = None
-                try:
-                    ai = str(author.display_avatar.url)
-                except Exception:
-                    ai = None
-            if an and str(an) not in ('—', 'система', '?'):
-                _pre = 'Выдал ' if category in (
-                    'ban', 'mute', 'warn', 'punish', 'staff',
-                    'nick', 'rest', 'role') else ''
-                _an = f'{_pre}{an}'[:256]
-                if ai:
-                    e.set_author(name=_an, icon_url=ai)
-                else:
-                    e.set_author(name=_an)
-        except Exception as _ax:
-            log.debug('_styled_log_embed author: %s', _ax)
-    footer_text = f"Hakumo Log · {cat_name} · {getattr(guild, 'name', '')}"
-    gicon = getattr(guild, 'icon', None)
-    try:
-        gicon = gicon.url if gicon else None
-    except Exception:
-        gicon = None
-    if gicon:
-        e.set_footer(text=footer_text, icon_url=gicon)
-    else:
-        e.set_footer(text=footer_text)
+    # без set_author — weebook чистый, без «Выдал …» сверху
+    # timestamp даёт «Сегодня, в 4:35» в клиенте Discord
     if image:
         e.set_image(url=image)
-    # Метаданные для карточки лога (рисует services/log_card.py при отправке)
-    # note тоже передаём строкой на карточку — в Discord уходит только картинка,
-    # текст эмбеда скрывается (_safe_send), поэтому информацию не теряем.
     _rows = [(n, v) for n, v in (card_rows if card_rows is not None else fields)
              if v not in (None, '')]
-    # Карточка — картинка: markdown и сырые ID на ней не рисуем,
-    # упоминания превращаем в имена (заказ: «вместо id — имя»).
     _rows = [(_card_friendly(n, guild), _card_friendly(v, guild))
              for n, v in _rows]
     if note and len(_rows) < 8:
         _rows.append(('Инфо', note))
     e._hakumo_log_meta = {
         'cat': category,
-        'title': title,
+        'title': str(title or '').strip(),
         'rows': _rows[:8],
-        'color': color if color is not None else base_color,
+        'color': accent,
         'guild': getattr(guild, 'name', ''),
-        # 'ping' больше не ставим: роли в логах не тегаются
+        'style': 'weebook',
+        'ping': category in _PING_CATS,
     }
     return e
 
@@ -3174,21 +3276,26 @@ class Logs (commands .Cog ):
         if before .channel ==after .channel :
             return 
         b ,a =before .channel ,after .channel
+        _staff =_member_is_staff (member )
+        _who_label ='Администратор'if _staff else 'Участник'
         if b is None and a is not None :
             # Зашёл в голосовой канал
-            action ='Зашёл в голосовой канал'
+            action =('Администратор зашёл в голосовой канал'if _staff
+                     else 'Зашёл в голосовой канал')
             color =0x1ABC9C
             detail ={'channel':a .name }
             line =a .name
         elif b is not None and a is None :
-            # Вышел из голосового
-            action ='Вышел из голосового канала'
+            # Вышел из голосового — weebook: «Администратор вышел…»
+            action =('Администратор вышел из голосового канала'if _staff
+                     else 'Вышел из голосового канала')
             color =0x95A5A6
             detail ={'channel':b .name }
             line =b .name
         else :
             # Переключился на другой канал
-            action ='Перешёл в другой канал'
+            action =('Администратор перешёл в другой канал'if _staff
+                     else 'Перешёл в другой канал')
             color =0x3498DB
             detail ={'channel':f'{b.name} → {a.name}','from':b .name ,'to':a .name }
             line =f"**{b.name}** ➜ **{a.name}**"
@@ -3203,19 +3310,15 @@ class Logs (commands .Cog ):
             return
         _vch = a if a is not None else b
         _vfields =[
-        ('Участник',_person_block (member )),
+        (_who_label ,_person_block (member )),
         ]
         if b is not None and a is not None :
             _vfields .append (('Было',_channel_block (b )))
             _vfields .append (('Стало',_channel_block (a )))
         else :
-            _vfields .append (('Канал',_channel_block (_vch )if _vch is not None else _bullet (line )))
-        try :
-            _in =a if a is not None else b
-            if _in is not None :
-                _vfields .append (('В канале сейчас',_bullet (f"{len(_in.members)} чел.")))
-        except Exception as _ex:
-            log.debug("on_voice_state_update(): подавлено: %s", _ex)
+            # weebook v2: «| Голосовой канал:» рядом с человеком
+            _vfields .append (('Голосовой канал',
+                               _channel_block (_vch )if _vch is not None else _bullet (line )))
         _vth =None
         try :
             _vth =str (member .display_avatar .url )

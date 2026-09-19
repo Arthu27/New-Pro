@@ -140,6 +140,28 @@ def _dm_embed(status, item, guild_name=''):
     return embed
 
 
+async def _send_dm_notice(user, *, status, item, guild_name='', body=''):
+    """ЛС V2 (Components) с фолбеком на эмбед."""
+    embed = _dm_embed(status, item, guild_name)
+    if body:
+        embed.description = body
+    footer = f'{guild_name} · {DM_FOOTER}' if guild_name else DM_FOOTER
+    try:
+        from services.v2_layouts import V2_AVAILABLE, notice_layout_view
+        if V2_AVAILABLE:
+            view = notice_layout_view(
+                title=embed.title or '',
+                body=body or '',
+                footer=footer,
+                accent=int(embed.color.value) if embed.color else COLOR_PENDING,
+                timeout=None)
+            if view is not None:
+                return await user.send(view=view)
+    except Exception as _ex:
+        log.debug('appeals dm V2: %s', _ex)
+    return await user.send(embed=embed)
+
+
 def _parse_ts(value):
     s = str(value or '').strip()
     if not s:
@@ -310,38 +332,69 @@ def fmt_card_text(item):
 
 # ─── view с кнопками ────────────────────────────────────────────────────────
 
-class AppealView(discord.ui.View):
-    """Persistent-кнопки под конкретную апелляцию.
+class AppealView(discord.ui.LayoutView):
+    """Persistent-кнопки под апелляцией — Components V2 LayoutView.
 
     custom_id уникален для каждой апелляции ('appeal:accept:7'), поэтому
     view можно перерегистрировать после рестарта бота (on_ready ниже) —
     кнопки не умирают, пока апелляция ждёт решения.
     """
 
-    def __init__(self, cog, guild_id, appeal_id):
+    def __init__(self, cog, guild_id, appeal_id, *, title='', body='',
+                 footer='', image_filename=None, accent=None):
         super().__init__(timeout=None)
         self.cog = cog
         self.guild_id = guild_id
         self.appeal_id = appeal_id
-        for label, style, verb in (
-                ('Принять', discord.ButtonStyle.success, 'accept'),
-                ('Отклонить', discord.ButtonStyle.danger, 'reject')):
-            btn = discord.ui.Button(
-                label=label, style=style,
-                custom_id=f'appeal:{verb}:{appeal_id}')
-            btn.callback = self._make_cb(verb == 'accept')
-            self.add_item(btn)
-        claim = discord.ui.Button(
+        self._card_title = title
+        self._card_body = body
+        self._card_footer = footer
+        self._image_filename = image_filename
+        self._accent = accent
+        self._accept_btn = discord.ui.Button(
+            label='Принять', style=discord.ButtonStyle.success,
+            custom_id=f'appeal:accept:{appeal_id}')
+        self._accept_btn.callback = self._make_cb(True)
+        self._reject_btn = discord.ui.Button(
+            label='Отклонить', style=discord.ButtonStyle.danger,
+            custom_id=f'appeal:reject:{appeal_id}')
+        self._reject_btn.callback = self._make_cb(False)
+        self._claim_btn_ref = discord.ui.Button(
             label='Взять в работу', style=discord.ButtonStyle.primary,
             emoji='✋', custom_id=f'appeal:claim:{appeal_id}')
-        claim.callback = self._claim
-        self.add_item(claim)
+        self._claim_btn_ref.callback = self._claim
+        self._rebuild_card()
+
+    def _rebuild_card(self):
+        """Собрать V2-карточку или только ряд кнопок (для add_view)."""
+        self.clear_items()
+        buttons = [self._accept_btn, self._reject_btn, self._claim_btn_ref]
+        from services.v2_layouts import V2_AVAILABLE, build_appeal_card_items, black_container
+        if V2_AVAILABLE and (self._card_title or self._card_body or self._image_filename):
+            items = build_appeal_card_items(
+                title=self._card_title or f'Апелляция #{self.appeal_id}',
+                body=self._card_body,
+                footer=self._card_footer,
+                image_filename=self._image_filename,
+                buttons=buttons,
+                accent=self._accent,
+            )
+            if items:
+                for it in items:
+                    self.add_item(it)
+                return
+        if V2_AVAILABLE:
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            for btn in buttons:
+                row.add_item(btn)
+            self.add_item(black_container(row))
+        else:
+            for btn in buttons:
+                self.add_item(btn)
 
     def _claim_btn(self):
-        for child in self.children:
-            if str(getattr(child, 'custom_id', '')).startswith('appeal:claim:'):
-                return child
-        return None
+        return self._claim_btn_ref
 
     async def _claim(self, interaction):
         """Взять апелляцию в работу / снять с себя (повторный клик)."""
@@ -452,15 +505,29 @@ class AppealView(discord.ui.View):
             except Exception as _uncl_ex:
                 log.debug('appeals: снятие с работы, комната #%s: %s',
                           item['id'], _uncl_ex)
-        embed = (interaction.message.embeds[0]
-                 if interaction.message and interaction.message.embeds else None)
-        if embed is not None:
-            tail = (f'В работе: {item["claimed_by"]["name"]}'
-                    if item.get('claimed_by') else 'Очередь общая')
-            embed.set_footer(text=tail)
-            await interaction.response.edit_message(embed=embed, view=self)
-        else:
-            await interaction.response.edit_message(view=self)
+        # LayoutView нельзя смешивать с embed — Discord отклонит payload.
+        # Кнопки уже обновлены in-place; карточку пересобираем только если
+        # есть сохранённый контент (иначе после add_view сотрём V2-текст).
+        self._card_footer = (
+            f'В работе: {item["claimed_by"]["name"]}'
+            if item.get('claimed_by') else 'Очередь общая')
+        if self._card_title or self._card_body or self._image_filename:
+            self._rebuild_card()
+        edit_kw = {
+            'view': self,
+            'content': None,
+            'embed': None,
+            'embeds': [],
+        }
+        try:
+            await interaction.response.edit_message(**edit_kw)
+        except Exception as _ed:
+            log.debug('appeals claim edit: %s', _ed)
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.defer(ephemeral=True)
+            except Exception as _df:
+                log.debug('appeals claim defer: %s', _df)
         await interaction.followup.send(note, ephemeral=True)
 
     def _make_cb(self, accept):
@@ -876,14 +943,16 @@ class AppealMenuSelect(discord.ui.Select):
     """Select «Подать апелляцию» в канале (persistent)."""
 
     def __init__(self):
+        from services.menu_banners import select_label
+        from services.menu_emojis import get_cached, emoji_heart
         super().__init__(
             custom_id=MENU_CUSTOM_ID,
-            placeholder='Несогласны с наказанием? Подайте апелляцию…',
+            placeholder='',
             min_values=1, max_values=1,
             options=[discord.SelectOption(
-                label='Подать апелляцию', value='submit',
-                description='Откроется окно: расскажите, что произошло',
-                emoji='⚖️')])
+                label=select_label('Подать апелляцию'), value='submit',
+                description='Расскажите свою версию — откроется окно',
+                emoji=get_cached('appeal') or emoji_heart())])
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog('Appeals')
@@ -943,12 +1012,37 @@ def _hook_avatar(guild):
         return None
 
 
-class AppealMenuView(discord.ui.View):
-    """Обёртка меню (persistent — переживает рестарт)."""
+class AppealMenuView(discord.ui.LayoutView):
+    """Меню апелляций: чёрный Container V2 + select (persistent)."""
 
-    def __init__(self):
+    def __init__(self, *, banner_filename: str = None, body: str = None,
+                 footer: str = None):
         super().__init__(timeout=None)
-        self.add_item(AppealMenuSelect())
+        from services.v2_layouts import V2_AVAILABLE, build_appeals_menu_items
+        sel = AppealMenuSelect()
+        if (V2_AVAILABLE and banner_filename and body is not None
+                and footer is not None):
+            items = build_appeals_menu_items(
+                banner_filename=banner_filename, body=body, footer=footer,
+                menu_select=sel)
+            if items:
+                for item in items:
+                    self.add_item(item)
+                return
+        # регистрация после рестарта / фолбек — select в чёрном блоке
+        if V2_AVAILABLE:
+            from services.v2_layouts import black_container
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(black_container(
+                _ui.TextDisplay('**Обращение**'),
+                row,
+            ))
+        else:
+            row = discord.ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(row)
 
 
 DM_APPEAL_CUSTOM_ID = 'appeal:dm:open'
@@ -1024,8 +1118,17 @@ class Appeals(commands.Cog):
             state = self._load(guild.id)
             for item in pending_items(state):
                 if item.get('message_id'):
-                    self.bot.add_view(AppealView(self, guild.id, item['id']),
-                                      message_id=item['message_id'])
+                    snap = item.get('card_v2') or {}
+                    self.bot.add_view(
+                        AppealView(
+                            self, guild.id, item['id'],
+                            title=str(snap.get('title') or ''),
+                            body=str(snap.get('body') or ''),
+                            footer=str(snap.get('footer') or ''),
+                            image_filename=snap.get('image') or None,
+                            accent=snap.get('accent'),
+                        ),
+                        message_id=item['message_id'])
                     restored += 1
         try:
             self.bot.add_view(AppealMenuView())
@@ -1260,28 +1363,57 @@ class Appeals(commands.Cog):
         """Опубликовать меню подачи апелляций в канал (из панели).
 
         Возвращает (ok, сообщение). Повторная публикация обновляет сообщение.
+        Фирменный баннер HAKUMO + селект в стиле наборов.
         """
         if channel is None:
             return False, 'Канал не найден'
         guild = channel.guild
         state = self._load(guild.id)
+        from services.menu_banners import menu_banner_file
+        from services.v2_layouts import V2_AVAILABLE, SHOW_MENU_BANNER
+        try:
+            from services.menu_emojis import ensure_menu_emojis
+            await ensure_menu_emojis(self.bot)
+        except Exception as _ex:
+            log.debug('appeals: menu_emojis: %s', _ex)
+        banner = None
+        bname = None
+        if SHOW_MENU_BANNER:
+            bio, bname = menu_banner_file('appeals')
+            banner = discord.File(bio, filename=bname)
+        body = (
+            'Несогласны с наказанием — варном, мутом или баном?\n'
+            'Выберите ниже **«Подать апелляцию»**: откроется окно — '
+            'расскажите свою версию.\n\n'
+            'Для вашей апелляции создастся отдельный тред — '
+            'модераторы ответят прямо в нём.')
+        footer = f'{guild.name} · апелляции'
+        if guild.name and guild.name.strip().casefold() in ('hakumo', 'хакумо'):
+            footer = 'апелляции'
         embed = discord.Embed(
-            title='⚖ Апелляции на наказания',
-            description=(
-                'Несогласны с наказанием — варном, мутом или баном?\n'
-                'Выберите ниже **«Подать апелляцию»**: откроется окно — '
-                'расскажите свою версию.\n\n'
-                'Для вашей апелляции создастся отдельный тред — '
-                'модераторы ответят прямо в нём.'),
-            color=0xF1C40F,
+            title='Апелляции на наказания',
+            description=body,
+            color=0x000000,
             timestamp=datetime.now(UTC))
-        embed.set_footer(text=f'{guild.name} · апелляции',
+        if banner is not None and bname:
+            embed.set_image(url=f'attachment://{bname}')
+        embed.set_footer(text=footer,
                          icon_url=guild.icon.url if guild.icon else None)
         old = (state.get('menu') or {})
         avatar = _hook_avatar(guild)
         msg = None
         used_hook = None
-        # главный путь — вебхук: имя «⚖ Апелляции», кнопки работают как раньше
+        use_v2 = bool(V2_AVAILABLE)
+        view = (AppealMenuView(banner_filename=bname, body=body, footer=footer)
+                if use_v2 else AppealMenuView())
+        send_kw = {'view': view, 'wait': True,
+                   'username': 'Апелляции', 'avatar_url': avatar}
+        if banner is not None:
+            send_kw['file'] = banner
+        # V2: без эмбеда (флаг IS_COMPONENTS_V2); фолбек — embed+view
+        if not use_v2:
+            send_kw['embed'] = embed
+        # главный путь — вебхук: имя «Апелляции», кнопки работают как раньше
         hook = await _channel_webhook(channel)
         if hook is not None:
             used_hook = hook
@@ -1289,25 +1421,50 @@ class Appeals(commands.Cog):
                 if (old.get('message_id')
                         and int(old.get('webhook_id') or 0) == hook.id
                         and int(old.get('channel_id') or 0) == channel.id):
-                    msg = await hook.edit_message(
-                        int(old['message_id']), embed=embed, view=AppealMenuView())
+                    try:
+                        await hook.delete_message(int(old['message_id']))
+                    except Exception as _dx:
+                        log.debug('appeals: старое меню не удалено: %s', _dx)
+                    msg = await hook.send(**send_kw)
                 else:
-                    msg = await hook.send(
-                        embed=embed, view=AppealMenuView(), wait=True,
-                        username=HOOK_USERNAME, avatar_url=avatar)
+                    msg = await hook.send(**send_kw)
             except Exception as _ex:
                 log.debug('appeals: меню через вебхук не ушло: %s', _ex)
                 msg = None
+                banner = None
+                bname = None
+                if SHOW_MENU_BANNER:
+                    bio, bname = menu_banner_file('appeals')
+                    banner = discord.File(bio, filename=bname)
+                    embed.set_image(url=f'attachment://{bname}')
+                view = (AppealMenuView(banner_filename=bname, body=body,
+                                       footer=footer)
+                        if use_v2 else AppealMenuView())
+                send_kw = {'view': view, 'wait': True,
+                           'username': 'Апелляции', 'avatar_url': avatar}
+                if banner is not None:
+                    send_kw['file'] = banner
+                if not use_v2:
+                    send_kw['embed'] = embed
         # фолбэк — обычная отправка от бота (вебхука нет или не вышло)
         if msg is None:
             try:
                 if (old.get('message_id')
                         and int(old.get('channel_id') or 0) == channel.id
                         and not int(old.get('webhook_id') or 0)):
-                    msg = await channel.edit_message(
-                        int(old['message_id']), embed=embed, view=AppealMenuView())
-                if msg is None:
-                    msg = await channel.send(embed=embed, view=AppealMenuView())
+                    try:
+                        old_msg = await channel.fetch_message(int(old['message_id']))
+                        await old_msg.delete()
+                    except Exception as _dx:
+                        log.debug('appeals: старое меню бота: %s', _dx)
+                send_bot = {'view': view}
+                if banner is not None:
+                    send_bot['file'] = banner
+                if use_v2:
+                    msg = await channel.send(**send_bot)
+                else:
+                    send_bot['embed'] = embed
+                    msg = await channel.send(**send_bot)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 return False, f'Бот не может писать в этот канал: {_ex}'
         state['menu'] = {'channel_id': channel.id, 'message_id': msg.id,
@@ -1704,6 +1861,60 @@ class Appeals(commands.Cog):
             log.debug('appeals: карточка-картинка #%s: %s', item.get('id'), _ex)
         return file
 
+    def _appeal_card_text_from_embed(self, embed):
+        """Собрать title/body/footer ДО paint (paint может очистить embed)."""
+        body_bits = []
+        if getattr(embed, 'description', None):
+            body_bits.append(str(embed.description))
+        for field in getattr(embed, 'fields', None) or []:
+            body_bits.append(f'**{field.name}**\n{field.value}')
+        author = getattr(embed, 'author', None)
+        if author and getattr(author, 'name', None):
+            body_bits.insert(0, f'от **{author.name}**')
+        footer = ''
+        try:
+            footer = str(getattr(getattr(embed, 'footer', None), 'text', '') or '')
+        except Exception:
+            footer = ''
+        accent = None
+        try:
+            accent = int(embed.color.value) if embed.color else COLOR_PENDING
+        except Exception:
+            accent = COLOR_PENDING
+        return {
+            'title': str(getattr(embed, 'title', None) or ''),
+            'body': '\n\n'.join(body_bits)[:3500],
+            'footer': footer,
+            'accent': accent,
+        }
+
+    def _appeal_v2_send_kw(self, guild_id, item, embed, card_file=None,
+                           *, snap=None):
+        """kwargs для отправки карточки апелляции: V2 LayoutView (+файл)."""
+        snap = dict(snap or self._appeal_card_text_from_embed(embed))
+        image_name = getattr(card_file, 'filename', None) if card_file else None
+        snap['image'] = image_name
+        view = AppealView(
+            self, guild_id, item['id'],
+            title=snap.get('title') or f'Апелляция #{item["id"]}',
+            body=snap.get('body') or '',
+            footer=snap.get('footer') or '',
+            image_filename=image_name,
+            accent=snap.get('accent'),
+        )
+        kw = {'view': view}
+        if card_file is not None:
+            kw['file'] = card_file
+        # снимок для add_view после рестарта — иначе claim сотрёт карточку
+        item['card_v2'] = {
+            'title': snap.get('title') or '',
+            'body': snap.get('body') or '',
+            'footer': snap.get('footer') or '',
+            'image': image_name,
+            'accent': snap.get('accent'),
+        }
+        return kw
+
     async def _submit_channel_appeal(self, user, guild, text, channel=None):
         """Апелляция из меню в канале: карточка в отдельном треде."""
         guild_id = guild.id
@@ -1741,13 +1952,13 @@ class Appeals(commands.Cog):
                         inline=False)
         embed.set_footer(text=f'appeal #{item["id"]} · решение — меню под карточкой')
         card_file = None
+        snap = self._appeal_card_text_from_embed(embed)
         try:
             appearance = normalize_appearance(state.get('appearance'))
             card_file = await self._paint_appeal_card(embed, item, appearance)
         except Exception as _ex:
             log.debug('appeals: карточка-картинка #%s: %s', item['id'], _ex)
 
-        view = AppealView(self, guild_id, item['id'])
         # Куда падает карточка: «всё сюда, кроме логов» — сама комната
         # апелляции, где и кнопки, и обсуждение (владелец 2026-09-06).
         # Нет комнаты — запасной путь прежний: канал карточек, заявка
@@ -1758,9 +1969,8 @@ class Appeals(commands.Cog):
             use_thread = True
         if target is not None:
             name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
-            send_kw = {'embed': embed, 'view': view}
-            if card_file is not None:
-                send_kw['file'] = card_file
+            send_kw = self._appeal_v2_send_kw(
+                guild_id, item, embed, card_file, snap=snap)
             card = None
             if use_thread:
                 try:
@@ -1801,11 +2011,11 @@ class Appeals(commands.Cog):
                                                             fallback_channel=target)
         self._save(guild_id, state)
         try:
-            embed = _dm_embed('submitted', item, str(guild.name))
-            embed.description = (
+            body = (
                 f'Модераторы сервера **{guild.name}** уже получили её. '
                 + self._dm_channel_line(ch_opened, ch_ref))
-            await user.send(embed=embed)
+            await _send_dm_notice(user, status='submitted', item=item,
+                                  guild_name=str(guild.name), body=body)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС подтверждения #%s не дошло: %s', item['id'], _ex)
         return item, None
@@ -1835,21 +2045,14 @@ class Appeals(commands.Cog):
         # нет комнаты — запасной канал карточек (владелец 2026-09-06)
         channel, use_thread = await self._card_channel(guild, state)
         if channel is not None:
-            view = AppealView(self, guild_id, item['id'])
-            # Оформление карточки из панели: авто-картинка в выбранной теме,
-            # своя картинка по URL (скачиваем файлом — без пережатия) или
-            # обычный эмбед без картинки.
             appearance = normalize_appearance(state.get('appearance'))
-            send_kwargs = {'embed': embed, 'view': view}
+            snap = self._appeal_card_text_from_embed(embed)
             painted = await self._paint_appeal_card(embed, item, appearance)
-            if painted is not None:
-                send_kwargs['file'] = painted
+            send_kwargs = self._appeal_v2_send_kw(
+                guild_id, item, embed, painted, snap=snap)
             msg = None
             if use_thread:
-                # запасной путь без комнаты: заявка — в собственную ветку,
-                # чтобы канал карточек не замусоривался. Раньше это делал
-                # только путь «меню в канале», а из ЛС карточка падала
-                # голым сообщением в общий канал (несостыковка 2026-09-08).
+                # запасной путь без комнаты: заявка — в собственную ветку
                 try:
                     thread = await channel.create_thread(
                         name=f'Апелляция #{item["id"]} · {str(user)[:40]}',
@@ -1857,8 +2060,6 @@ class Appeals(commands.Cog):
                     msg = await thread.send(**send_kwargs)
                     item['thread_id'] = thread.id
                 except (discord.Forbidden, discord.HTTPException) as _ex:
-                    # нет права «Создавать публичные ветки» — НЕ теряем
-                    # заявку: карточка ложится прямо в канал (как в меню-пути)
                     log.warning('appeals: тред #%s не создан (%s) — карточка в канал',
                                 item['id'], _ex)
             if msg is None:
@@ -1870,16 +2071,13 @@ class Appeals(commands.Cog):
             if msg is not None:
                 item['message_id'] = msg.id
                 item['thread_url'] = msg.jump_url
-                # где лежит карточка (для удаления после решения) + пинг
                 item['card_channel_id'] = getattr(channel, 'id', None)
                 self._save(guild_id, state)
                 ping = await self._ping_mod_role(channel, settings_of(state), item)
                 item['ping_message_id'] = getattr(ping, 'id', None)
                 await self._fire_panel_event(item)
         # Канал апелляции открывается после подачи при ЛЮБОМ пути подачи
-        # (скрыт до подачи — заказ владельца 2026-09-05). Сначала СОХРАНЯЕМ
-        # state, потом вешаем на локальный item временные поля для ответа:
-        # item уезжает в JSON — канал и имя канала в БД хранить нельзя.
+        # (скрыт до подачи — заказ владельца 2026-09-05).
         _opened, _ch_ref = await self._open_appeal_channel(guild, user)
         self._save(guild_id, state)
         item['_channel_status'] = _opened           # временно, только для ответа
@@ -1991,43 +2189,40 @@ class Appeals(commands.Cog):
         except (discord.NotFound, discord.HTTPException):
             return
         if accept:
-            embed = _dm_embed('accepted', item, guild_name)
+            status = 'accepted'
             if member_present:
-                embed.description = (
+                body = (
                     f'Наказание снято: изоляция убрана — вы снова видите '
                     f'каналы сервера **{guild_name}**. Добро пожаловать назад!')
             elif unbanned:
-                embed.description = (
+                body = (
                     f'Бан на сервере **{guild_name}** снят. '
                     + (f'Возвращайтесь по ссылке (работает один раз, 24 ч):\n{invite_url}'
                        if invite_url else
                        'Можно вернуться по вашему приглашению на сервер.'))
                 if not invite_url:
-                    embed.description += ' Или попросите свежую ссылку у знакомых модераторов.'
+                    body += ' Или попросите свежую ссылку у знакомых модераторов.'
             else:
-                embed.description = (f'Ваша апелляция на сервере **{guild_name}** '
-                                     'принята.')
+                body = (f'Ваша апелляция на сервере **{guild_name}** '
+                        'принята.')
         else:
-            embed = _dm_embed('rejected', item, guild_name)
-            embed.description = 'К сожалению, в этот раз — нет.'
+            status = 'rejected'
+            body = 'К сожалению, в этот раз — нет.'
             text_brief = str(item.get('text') or '').strip()
             if text_brief:
-                embed.add_field(name='Ваша апелляция',
-                                value=text_brief[:300], inline=False)
+                body += f'\n\n**Ваша апелляция**\n{text_brief[:300]}'
             if item.get('reply'):
-                embed.add_field(name='Комментарий модератора',
-                                value=str(item['reply'])[:300], inline=False)
+                body += f'\n\n**Комментарий модератора**\n{str(item["reply"])[:300]}'
             if cooldown_hours > 0:
                 reviewed = _parse_ts(item.get('reviewed_at'))
                 if reviewed is not None:
                     from datetime import timedelta
                     retry = reviewed + timedelta(hours=cooldown_hours)
-                    embed.add_field(
-                        name='Повторная подача',
-                        value=f'не раньше **{retry.strftime("%d.%m %H:%M")}**',
-                        inline=False)
+                    body += (f'\n\n**Повторная подача**\n'
+                             f'не раньше **{retry.strftime("%d.%m %H:%M")}**')
         try:
-            await user.send(embed=embed)
+            await _send_dm_notice(user, status=status, item=item,
+                                  guild_name=guild_name, body=body)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС %s закрыты: %s', item['user_id'], _ex)
             return
