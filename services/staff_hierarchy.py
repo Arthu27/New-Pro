@@ -21,8 +21,8 @@
 Кто есть кто:
   • исполнитель: панельная роль входа (session['role']) + Discord-мембер;
     статический вход из .env — это владелец (owner);
-  • цель: панельная роль участника (та же _get_role_from_discord, что при
-    входе) + Discord-метки (владелец бота/сервера, бот).
+  • цель/исполнитель без сессии: та же лестница, что web.app._get_role_from_discord
+    — высший тир из data/role_map.json (куратор+хелпер → куратор), не нижний.
 """
 from logger import get_logger
 
@@ -44,12 +44,66 @@ LABELS = {
 REMOVE_ACTIONS = ('unwarn', 'untimeout', 'vunmute', 'unmute_chat', 'unban', 'unmute')
 
 
+def _role_map_tiers():
+    """{discord_role_id(str): panel_tier} из data/role_map.json + известная
+    роль куратора сервера (807030012301541377), если в карте ещё нет."""
+    out = {}
+    try:
+        from services.staff_limits import _role_tier_map
+        out.update(_role_tier_map() or {})
+    except Exception as _ex:
+        _log.debug('role_map_tiers: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_CURATOR_ROLE_ID
+        kid = str(int(KNOWN_CURATOR_ROLE_ID))
+        if kid not in out:
+            out[kid] = 'curator'
+    except Exception as _ex:
+        _log.debug('role_map_tiers curator fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        hid = str(int(KNOWN_HELPER_ROLE_ID))
+        if hid not in out:
+            out[hid] = 'mod'
+    except Exception as _ex:
+        _log.debug('role_map_tiers helper fallback: %s', _ex)
+    return out
+
+
+def best_mapped_tier(member):
+    """Высший панельный тир по Discord-ролям участника (role_map).
+
+    Куратор + хелпер (mod) → 'curator'. Без стафф-ролей → None.
+    """
+    if member is None:
+        return None
+    tmap = _role_map_tiers()
+    if not tmap:
+        return None
+    best = None
+    best_rank = -1
+    for role in (getattr(member, 'roles', None) or []):
+        rid = str(getattr(role, 'id', '') or '')
+        tier = tmap.get(rid)
+        if not tier:
+            continue
+        rank = RANK.get(tier, -1)
+        if rank > best_rank:
+            best, best_rank = tier, rank
+    return best
+
+
 def target_panel_role(guild, member, bot=None):
     """Панельная роль цели: та же логика, что при входе в панель.
 
-    mod/curator/admin по Discord-ролям и правам, owner — владелец сервера
-    или владелец бота. Порядок и источники — как в web.app._get_role_from_discord,
-    чтобы панель и бот НЕ разошлись во мнениях, кто перед ними.
+    Порядок:
+      1) владелец бота / сервера → owner
+      2) высший из (role_map, Discord-права):
+         curator/admin в карте и Discord Administrator важнее helper/mod
+      3) uye
+
+    Раньше куратор/админ с ролью хелпера определялся как «mod» —
+    /modpanel давал права хелпера.
     """
     if member is None:
         return 'uye'
@@ -63,30 +117,41 @@ def target_panel_role(guild, member, bot=None):
             _log.debug('target_panel_role: bot-owner: %s', _ex)
         if getattr(member, 'id', None) == getattr(guild, 'owner_id', None):
             return 'owner'
-        # права считаем БЕЗ игнорируемых ролей (владелец 2026-09-05:
-        # «облачная» роль с правами не делает носителя модератором/админом)
+
+        # Высший тир = max(role_map, Discord-права). Куратор/админ+хелпер
+        # не схлопывается в mod: mapped helper не важнее Discord Administrator
+        # и не важнее curator/admin в карте.
+        mapped = best_mapped_tier(member)
         try:
             from services import ignored_roles as _IR
             perms = _IR.effective_permissions(member, guild)
         except Exception as _ex:
             _log.debug('target_panel_role: ignored: %s', _ex)
             perms = getattr(member, 'guild_permissions', None)
+
+        perm_tier = None
         if perms is not None and getattr(perms, 'administrator', False):
-            return 'admin'
-        # настроенная модер-роль (единый источник панели) → модератор+
-        try:
-            from services.mod_role import get_mod_role_id
-            rid = str(get_mod_role_id(guild.id) or '')
-            if rid and any(str(r.id) == rid
-                           for r in (getattr(member, 'roles', None) or [])):
-                return 'mod'
-        except Exception as _ex:
-            _log.debug('target_panel_role: mod_role: %s', _ex)
-        if perms is not None and (getattr(perms, 'ban_members', False)
-                                  or getattr(perms, 'manage_guild', False)
-                                  or getattr(perms, 'manage_messages', False)):
-            return 'mod'
-        return 'uye'
+            perm_tier = 'admin'
+        else:
+            try:
+                from services.mod_role import get_mod_role_id
+                rid = str(get_mod_role_id(guild.id) or '')
+                if rid and any(str(r.id) == rid
+                               for r in (getattr(member, 'roles', None) or [])):
+                    perm_tier = 'mod'
+            except Exception as _ex:
+                _log.debug('target_panel_role: mod_role: %s', _ex)
+            if (perm_tier is None and perms is not None
+                    and (getattr(perms, 'ban_members', False)
+                         or getattr(perms, 'manage_guild', False)
+                         or getattr(perms, 'manage_messages', False))):
+                perm_tier = 'mod'
+
+        best = 'uye'
+        for tier in (mapped, perm_tier):
+            if tier in RANK and RANK[tier] > RANK.get(best, -1):
+                best = tier
+        return best
     except Exception as _ex:
         _log.debug('target_panel_role: %s', _ex)
         return 'uye'
@@ -97,8 +162,8 @@ def actor_panel_role(guild, actor, session_role=None):
 
     actor — Discord-мембер (бот/панель под Discord-аккаунтом) или None
     (статический вход из .env = владелец панели). session_role — панельная
-    роль входа ('mod'/'curator'/'admin'), панель знает её точно и передаёт:
-    Discord-роли не различают куратора от модератора, а панельная — да.
+    роль входа ('mod'/'curator'/'admin'), панель знает её точно и передаёт.
+    Без сессии — высший тир Discord-ролей (role_map), как у цели.
     """
     if actor is None or getattr(actor, 'is_panel', False):
         return 'owner'
