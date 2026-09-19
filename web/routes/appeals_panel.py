@@ -365,9 +365,8 @@ def apply_side_effects(bot, gid, item, accept, state=None, reviewer=None,
             except Exception as _ex:
                 _log.debug('appeals: карточка разбана из панели: %s', _ex)
     dm = _notify_user(bot, gid, item, accept, bool(unbanned), member_present)
-    # решение вынесено — карточку апелляции в канале удаляем (панель и
-    # кнопки в Discord теперь ведут себя одинаково)
-    card_deleted = False
+    # решение вынесено — карточку обновляем (кто принял / исход), не удаляем
+    card_updated = False
     try:
         cog = bot.get_cog('Appeals')
     except Exception as _ex:
@@ -378,14 +377,19 @@ def apply_side_effects(bot, gid, item, accept, state=None, reviewer=None,
         try:
             _g = bot.get_guild(int(gid))
         except Exception as _ex:
-            _log.debug('appeals: guild на удалении карточки: %s', _ex)
+            _log.debug('appeals: guild на обновлении карточки: %s', _ex)
         try:
-            card_deleted = bool(_run_async(
-                cog._delete_appeal_card(_g, state, item), timeout=10))
+            card_updated = bool(_run_async(
+                cog._finalize_appeal_card(
+                    _g, state, item,
+                    accept=bool(accept),
+                    unbanned=bool(unbanned),
+                    reviewer=reviewer,
+                ), timeout=10))
         except Exception as _ex:
-            _log.debug('appeals: удаление карточки из панели: %s', _ex)
+            _log.debug('appeals: обновление карточки из панели: %s', _ex)
     return {'offline': False, 'unbanned': unbanned, 'dm_attempted': dm,
-            'card_deleted': card_deleted}
+            'card_deleted': False, 'card_updated': card_updated}
 
 
 def resolve_panel(bot, gid, appeal_id, accept, reviewer, reply=None, now=None,

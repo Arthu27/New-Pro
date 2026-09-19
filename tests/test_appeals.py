@@ -99,12 +99,37 @@ print('== 4. view: уникальные custom_id ==')
 import discord  # noqa: E402
 v1 = ap.AppealView(object(), 4242, 7)
 v2 = ap.AppealView(object(), 4242, 8)
-ids1 = sorted(c.custom_id for c in v1.children)
-ids2 = sorted(c.custom_id for c in v2.children)
+
+
+def _btn_ids(view):
+    ids = []
+    for child in view.children:
+        cid = getattr(child, 'custom_id', None)
+        if cid:
+            ids.append(cid)
+        for nested in list(getattr(child, 'children', None) or []):
+            nid = getattr(nested, 'custom_id', None)
+            if nid:
+                ids.append(nid)
+            for deep in list(getattr(nested, 'children', None) or []):
+                did = getattr(deep, 'custom_id', None)
+                if did:
+                    ids.append(did)
+    return sorted(ids)
+
+
+ids1 = _btn_ids(v1)
+ids2 = _btn_ids(v2)
 check(ids1 == ['appeal:accept:7', 'appeal:claim:7', 'appeal:reject:7'],
       f'custom_id несут id апелляции: {ids1}')
 check(not set(ids1) & set(ids2), 'custom_id не пересекаются между апелляциями')
 check(v1.timeout is None, 'persistent (timeout=None) — переживает рестарт')
+check(v1.has_components_v2(), 'карточка апелляции — Components V2 LayoutView')
+v1.apply_resolved(title='Апелляция #7 — принята',
+                   body='текст\n\n**Решение**\n✅ Принята',
+                   footer='решение вынесено · принята', accent=0x57F287)
+check(v1._resolved and _btn_ids(v1) == [],
+      'после решения кнопок нет')
 
 print('== 5. хранилище ==')
 db = GuildData('appeals')

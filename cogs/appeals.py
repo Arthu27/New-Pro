@@ -140,6 +140,28 @@ def _dm_embed(status, item, guild_name=''):
     return embed
 
 
+async def _send_dm_notice(user, *, status, item, guild_name='', body=''):
+    """ЛС V2 (Components) с фолбеком на эмбед."""
+    embed = _dm_embed(status, item, guild_name)
+    if body:
+        embed.description = body
+    footer = f'{guild_name} · {DM_FOOTER}' if guild_name else DM_FOOTER
+    try:
+        from services.v2_layouts import V2_AVAILABLE, notice_layout_view
+        if V2_AVAILABLE:
+            view = notice_layout_view(
+                title=embed.title or '',
+                body=body or '',
+                footer=footer,
+                accent=int(embed.color.value) if embed.color else COLOR_PENDING,
+                timeout=None)
+            if view is not None:
+                return await user.send(view=view)
+    except Exception as _ex:
+        log.debug('appeals dm V2: %s', _ex)
+    return await user.send(embed=embed)
+
+
 def _parse_ts(value):
     s = str(value or '').strip()
     if not s:
@@ -310,38 +332,83 @@ def fmt_card_text(item):
 
 # ─── view с кнопками ────────────────────────────────────────────────────────
 
-class AppealView(discord.ui.View):
-    """Persistent-кнопки под конкретную апелляцию.
+class AppealView(discord.ui.LayoutView):
+    """Persistent-кнопки под апелляцией — Components V2 LayoutView.
 
     custom_id уникален для каждой апелляции ('appeal:accept:7'), поэтому
     view можно перерегистрировать после рестарта бота (on_ready ниже) —
     кнопки не умирают, пока апелляция ждёт решения.
     """
 
-    def __init__(self, cog, guild_id, appeal_id):
+    def __init__(self, cog, guild_id, appeal_id, *, title='', body='',
+                 footer='', image_filename=None, accent=None):
         super().__init__(timeout=None)
         self.cog = cog
         self.guild_id = guild_id
         self.appeal_id = appeal_id
-        for label, style, verb in (
-                ('Принять', discord.ButtonStyle.success, 'accept'),
-                ('Отклонить', discord.ButtonStyle.danger, 'reject')):
-            btn = discord.ui.Button(
-                label=label, style=style,
-                custom_id=f'appeal:{verb}:{appeal_id}')
-            btn.callback = self._make_cb(verb == 'accept')
-            self.add_item(btn)
-        claim = discord.ui.Button(
+        self._card_title = title
+        self._card_body = body
+        self._card_footer = footer
+        self._image_filename = image_filename
+        self._accent = accent
+        self._resolved = False
+        self._accept_btn = discord.ui.Button(
+            label='Принять', style=discord.ButtonStyle.success,
+            custom_id=f'appeal:accept:{appeal_id}')
+        self._accept_btn.callback = self._make_cb(True)
+        self._reject_btn = discord.ui.Button(
+            label='Отклонить', style=discord.ButtonStyle.danger,
+            custom_id=f'appeal:reject:{appeal_id}')
+        self._reject_btn.callback = self._make_cb(False)
+        self._claim_btn_ref = discord.ui.Button(
             label='Взять в работу', style=discord.ButtonStyle.primary,
             emoji='✋', custom_id=f'appeal:claim:{appeal_id}')
-        claim.callback = self._claim
-        self.add_item(claim)
+        self._claim_btn_ref.callback = self._claim
+        self._rebuild_card()
+
+    def _rebuild_card(self):
+        """Собрать V2-карточку (с кнопками или без — после решения)."""
+        self.clear_items()
+        buttons = None if self._resolved else [
+            self._accept_btn, self._reject_btn, self._claim_btn_ref]
+        from services.v2_layouts import V2_AVAILABLE, build_appeal_card_items, black_container
+        if V2_AVAILABLE and (self._card_title or self._card_body or self._image_filename):
+            items = build_appeal_card_items(
+                title=self._card_title or f'Апелляция #{self.appeal_id}',
+                body=self._card_body,
+                footer=self._card_footer,
+                image_filename=self._image_filename,
+                buttons=buttons,
+                accent=self._accent,
+            )
+            if items:
+                for it in items:
+                    self.add_item(it)
+                return
+        if self._resolved:
+            return
+        if V2_AVAILABLE:
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            for btn in buttons or ():
+                row.add_item(btn)
+            self.add_item(black_container(row))
+        else:
+            for btn in buttons or ():
+                self.add_item(btn)
+
+    def apply_resolved(self, *, title, body, footer, accent):
+        """Пересобрать карточку после решения — без кнопок."""
+        self._resolved = True
+        self._card_title = title
+        self._card_body = body
+        self._card_footer = footer
+        self._accent = accent
+        # картинку оставляем (attachment:// уже в сообщении)
+        self._rebuild_card()
 
     def _claim_btn(self):
-        for child in self.children:
-            if str(getattr(child, 'custom_id', '')).startswith('appeal:claim:'):
-                return child
-        return None
+        return self._claim_btn_ref
 
     async def _claim(self, interaction):
         """Взять апелляцию в работу / снять с себя (повторный клик)."""
@@ -452,15 +519,29 @@ class AppealView(discord.ui.View):
             except Exception as _uncl_ex:
                 log.debug('appeals: снятие с работы, комната #%s: %s',
                           item['id'], _uncl_ex)
-        embed = (interaction.message.embeds[0]
-                 if interaction.message and interaction.message.embeds else None)
-        if embed is not None:
-            tail = (f'В работе: {item["claimed_by"]["name"]}'
-                    if item.get('claimed_by') else 'Очередь общая')
-            embed.set_footer(text=tail)
-            await interaction.response.edit_message(embed=embed, view=self)
-        else:
-            await interaction.response.edit_message(view=self)
+        # LayoutView нельзя смешивать с embed — Discord отклонит payload.
+        # Кнопки уже обновлены in-place; карточку пересобираем только если
+        # есть сохранённый контент (иначе после add_view сотрём V2-текст).
+        self._card_footer = (
+            f'В работе: {item["claimed_by"]["name"]}'
+            if item.get('claimed_by') else 'Очередь общая')
+        if self._card_title or self._card_body or self._image_filename:
+            self._rebuild_card()
+        edit_kw = {
+            'view': self,
+            'content': None,
+            'embed': None,
+            'embeds': [],
+        }
+        try:
+            await interaction.response.edit_message(**edit_kw)
+        except Exception as _ed:
+            log.debug('appeals claim edit: %s', _ed)
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.defer(ephemeral=True)
+            except Exception as _df:
+                log.debug('appeals claim defer: %s', _df)
         await interaction.followup.send(note, ephemeral=True)
 
     def _make_cb(self, accept):
@@ -568,24 +649,25 @@ class AppealView(discord.ui.View):
             member_present=member_present, invite_url=invite_url,
             guild_id=gid)
 
-        # Карточка сделала своё дело: решение вынесено — сообщение с кнопками
-        # удаляем, чтобы канал апелляций не замусоривался (владелец
-        # 2026-09-06). Модератору — короткий ephemeral-ответ, полная история
-        # живёт в панели («Апелляции → История решений»).
+        # Карточка остаётся: V2-блок обновляется — кто решил, исход, без кнопок.
         status = ('принята (разбанен)' if (accept and unbanned)
                   else ('принята' if accept else 'отклонена'))
-        _done_note = (f'Апелляция #{item["id"]} — {status}. Карточка удалена; '
-                      'история — в панели «Апелляции».')
         try:
-            await interaction.response.send_message(_done_note, ephemeral=True)
+            await interaction.response.defer(ephemeral=True)
         except Exception as _ex:
-            log.debug('appeals: ответ решения: %s', _ex)
-            try:
-                await interaction.followup.send(_done_note, ephemeral=True)
-            except Exception as _ex2:
-                log.debug('appeals: followup решения: %s', _ex2)
-        await self.cog._delete_appeal_card(
-            guild, state, item, message=interaction.message)
+            log.debug('appeals: defer решения: %s', _ex)
+        await self.cog._finalize_appeal_card(
+            guild, state, item,
+            accept=accept, unbanned=unbanned,
+            reviewer=interaction.user,
+            message=interaction.message,
+            view=self)
+        _done_note = (f'Апелляция #{item["id"]} — {status}. '
+                      'Карточка обновлена (кто принял и исход).')
+        try:
+            await interaction.followup.send(_done_note, ephemeral=True)
+        except Exception as _ex2:
+            log.debug('appeals: followup решения: %s', _ex2)
 
 
 
@@ -1024,8 +1106,17 @@ class Appeals(commands.Cog):
             state = self._load(guild.id)
             for item in pending_items(state):
                 if item.get('message_id'):
-                    self.bot.add_view(AppealView(self, guild.id, item['id']),
-                                      message_id=item['message_id'])
+                    snap = item.get('card_v2') or {}
+                    self.bot.add_view(
+                        AppealView(
+                            self, guild.id, item['id'],
+                            title=str(snap.get('title') or ''),
+                            body=str(snap.get('body') or ''),
+                            footer=str(snap.get('footer') or ''),
+                            image_filename=snap.get('image') or None,
+                            accent=snap.get('accent'),
+                        ),
+                        message_id=item['message_id'])
                     restored += 1
         try:
             self.bot.add_view(AppealMenuView())
@@ -1237,10 +1328,12 @@ class Appeals(commands.Cog):
                 return
             self._save(guild.id, state)
             for item in closed:
-                # карточка в канале: вопрос закрыт — сообщение удаляем,
-                # канал не замусоривается (владелец 2026-09-06)
+                # карточка остаётся с пометкой «закрыта» (бан снят вручную)
                 try:
-                    await self._delete_appeal_card(guild, state, item)
+                    await self._finalize_appeal_card(
+                        guild, state, item,
+                        accept=True, unbanned=True, closed=True,
+                        reviewer='Discord (разбан вручную)')
                 except Exception as _ex:
                     log.debug('appeals: автозакрытие карточки #%s: %s', item['id'], _ex)
                 try:
@@ -1538,6 +1631,152 @@ class Appeals(commands.Cog):
             log.debug('appeals: карточка разбана #%s: %s', item.get('id'), _ex)
         return case_id
 
+    def _resolved_card_parts(self, item, *, accept, unbanned=False, reviewer=None,
+                             closed=False):
+        """title/body/footer/accent для карточки после решения."""
+        if closed:
+            status_word = 'закрыта'
+            title = f'Апелляция #{item["id"]} — закрыта'
+            outcome = '⏹ Закрыта · бан снят вручную'
+            accent = COLOR_CLOSED
+        else:
+            status_word = 'принята' if accept else 'отклонена'
+            title = f'Апелляция #{item["id"]} — {status_word}'
+            outcome = ('✅ Принята' + (' · разбанен' if unbanned else '')
+                       if accept else '❌ Отклонена')
+            accent = COLOR_YES if accept else COLOR_NO
+        snap = item.get('card_v2') or {}
+        base_body = str(snap.get('body') or item.get('text') or '').strip()
+        who = None
+        if reviewer is not None and not isinstance(reviewer, str):
+            mention = getattr(reviewer, 'mention', None)
+            name = (getattr(reviewer, 'display_name', None)
+                    or getattr(reviewer, 'name', None) or str(reviewer))
+            who = f'{mention} ({name})' if mention else str(name)
+        elif reviewer:
+            who = str(reviewer)
+        if not who:
+            who = str(item.get('reviewed_by') or 'модератор')
+        decision = [
+            '**Решение**',
+            outcome,
+            f'Модератор: {who}',
+        ]
+        reviewed_at = item.get('reviewed_at')
+        if reviewed_at:
+            try:
+                dt = _parse_ts(reviewed_at)
+                if dt is not None:
+                    decision.append(f'Когда: <t:{int(dt.timestamp())}:f>')
+            except Exception:
+                decision.append(f'Когда: {reviewed_at}')
+        reply = (item.get('reply') or '').strip()
+        if reply:
+            decision.append(f'Комментарий: {reply}')
+        body = (base_body + '\n\n' + '\n'.join(decision)).strip()[:3500]
+        footer = f'решение вынесено · {status_word}'
+        return title, body, footer, accent
+
+    async def _finalize_appeal_card(self, guild, state, item, *, accept=False,
+                                    unbanned=False, reviewer=None,
+                                    message=None, view=None, closed=False):
+        """Оставить карточку после решения: кто принял, исход, без кнопок.
+
+        Пинг роли модерации убираем (он больше не нужен). Саму карточку
+        не удаляем — в канале видно историю решения.
+        """
+        title, body, footer, accent = self._resolved_card_parts(
+            item, accept=accept, unbanned=unbanned, reviewer=reviewer,
+            closed=closed)
+        # обновить снимок — после рестарта карточка останется «решённой»
+        snap = dict(item.get('card_v2') or {})
+        snap.update({
+            'title': title, 'body': body, 'footer': footer,
+            'accent': accent, 'resolved': True,
+        })
+        item['card_v2'] = snap
+        try:
+            gid = int(getattr(guild, 'id', 0) or item.get('guild_id') or 0)
+            if gid and state is not None:
+                self._save(gid, state)
+        except Exception as _ex:
+            log.debug('appeals: save после finalize: %s', _ex)
+
+        edit_view = view
+        if edit_view is None:
+            edit_view = AppealView(
+                self, int(getattr(guild, 'id', 0) or 0), item['id'],
+                title=title, body=body, footer=footer,
+                image_filename=snap.get('image'),
+                accent=accent)
+        if hasattr(edit_view, 'apply_resolved'):
+            edit_view.apply_resolved(
+                title=title, body=body, footer=footer, accent=accent)
+        else:
+            edit_view._card_title = title
+            edit_view._card_body = body
+            edit_view._card_footer = footer
+            edit_view._accent = accent
+            edit_view._resolved = True
+            edit_view._rebuild_card()
+
+        edit_kw = {
+            'view': edit_view,
+            'content': None,
+            'embed': None,
+            'embeds': [],
+        }
+        # 1) сообщение из интеракции
+        if message is not None:
+            try:
+                await message.edit(**edit_kw)
+            except Exception as _ex:
+                log.debug('appeals: finalize edit message: %s', _ex)
+        else:
+            # 2) панель / автозакрытие — fetch по message_id
+            try:
+                mid = int(item.get('message_id') or 0)
+                ch_id = int(item.get('card_channel_id')
+                            or item.get('thread_id') or 0)
+                ch = None
+                if guild is not None and ch_id:
+                    ch = guild.get_channel(ch_id) or self.bot.get_channel(ch_id)
+                if ch is None and message is not None:
+                    ch = getattr(message, 'channel', None)
+                if ch is not None and mid:
+                    msg = await ch.fetch_message(mid)
+                    await msg.edit(**edit_kw)
+            except Exception as _ex:
+                log.debug('appeals: finalize fetch/edit: %s', _ex)
+
+        # пинг роли больше не нужен — убираем только его
+        try:
+            await self._delete_appeal_ping(guild, item, message=message)
+        except Exception as _ex:
+            log.debug('appeals: ping cleanup: %s', _ex)
+        return True
+
+    async def _delete_appeal_ping(self, guild, item, message=None):
+        """Удалить только пинг роли под карточкой (карточку не трогаем)."""
+        ping_id = item.get('ping_message_id')
+        if not ping_id:
+            return False
+        ch = None
+        try:
+            ch_id = int(item.get('card_channel_id') or 0)
+            if guild is not None and ch_id:
+                ch = guild.get_channel(ch_id) or self.bot.get_channel(ch_id)
+            if ch is None and message is not None:
+                ch = getattr(message, 'channel', None)
+            if ch is None:
+                return False
+            msg = await ch.fetch_message(int(ping_id))
+            await msg.delete()
+            return True
+        except Exception as _ex:
+            log.debug('appeals: delete ping: %s', _ex)
+            return False
+
     async def _delete_appeal_card(self, guild, state, item, message=None):
         """Удалить карточку решённой апелляции — вместе с пингом роли.
 
@@ -1704,6 +1943,58 @@ class Appeals(commands.Cog):
             log.debug('appeals: карточка-картинка #%s: %s', item.get('id'), _ex)
         return file
 
+    def _appeal_card_text_from_embed(self, embed):
+        """Собрать title/body/footer ДО paint (paint может очистить embed)."""
+        body_bits = []
+        if getattr(embed, 'description', None):
+            body_bits.append(str(embed.description))
+        for field in getattr(embed, 'fields', None) or []:
+            body_bits.append(f'**{field.name}**\n{field.value}')
+        author = getattr(embed, 'author', None)
+        if author and getattr(author, 'name', None):
+            body_bits.insert(0, f'от **{author.name}**')
+        footer = ''
+        try:
+            footer = str(getattr(getattr(embed, 'footer', None), 'text', '') or '')
+        except Exception:
+            footer = ''
+        accent = None
+        accent = 0x000000  # чёрный акцент как у /modpanel
+        return {
+            'title': str(getattr(embed, 'title', None) or ''),
+            'body': '\n\n'.join(body_bits)[:3500],
+            'footer': footer,
+            'accent': accent,
+        }
+
+    def _appeal_v2_send_kw(self, guild_id, item, embed, card_file=None,
+                           *, snap=None):
+        """kwargs для отправки карточки апелляции: V2 LayoutView (+файл)."""
+        snap = dict(snap or self._appeal_card_text_from_embed(embed))
+        image_name = getattr(card_file, 'filename', None) if card_file else None
+        snap['image'] = image_name
+        view = AppealView(
+            self, guild_id, item['id'],
+            title=snap.get('title') or f'Апелляция #{item["id"]}',
+            body=snap.get('body') or '',
+            footer=snap.get('footer') or '',
+            image_filename=image_name,
+            accent=snap.get('accent'),
+        )
+        kw = {'view': view}
+        if card_file is not None:
+            kw['file'] = card_file
+        # снимок для add_view после рестарта — иначе claim сотрёт карточку
+        item['card_v2'] = {
+            'title': snap.get('title') or '',
+            'body': snap.get('body') or '',
+            'footer': snap.get('footer') or '',
+            'image': image_name,
+            'accent': snap.get('accent'),
+        }
+        return kw
+
+    
     async def _submit_channel_appeal(self, user, guild, text, channel=None):
         """Апелляция из меню в канале: карточка в отдельном треде."""
         guild_id = guild.id
@@ -1741,13 +2032,13 @@ class Appeals(commands.Cog):
                         inline=False)
         embed.set_footer(text=f'appeal #{item["id"]} · решение — меню под карточкой')
         card_file = None
+        snap = self._appeal_card_text_from_embed(embed)
         try:
             appearance = normalize_appearance(state.get('appearance'))
             card_file = await self._paint_appeal_card(embed, item, appearance)
         except Exception as _ex:
             log.debug('appeals: карточка-картинка #%s: %s', item['id'], _ex)
 
-        view = AppealView(self, guild_id, item['id'])
         # Куда падает карточка: «всё сюда, кроме логов» — сама комната
         # апелляции, где и кнопки, и обсуждение (владелец 2026-09-06).
         # Нет комнаты — запасной путь прежний: канал карточек, заявка
@@ -1758,9 +2049,8 @@ class Appeals(commands.Cog):
             use_thread = True
         if target is not None:
             name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
-            send_kw = {'embed': embed, 'view': view}
-            if card_file is not None:
-                send_kw['file'] = card_file
+            send_kw = self._appeal_v2_send_kw(
+                guild_id, item, embed, card_file, snap=snap)
             card = None
             if use_thread:
                 try:
@@ -1801,11 +2091,11 @@ class Appeals(commands.Cog):
                                                             fallback_channel=target)
         self._save(guild_id, state)
         try:
-            embed = _dm_embed('submitted', item, str(guild.name))
-            embed.description = (
+            body = (
                 f'Модераторы сервера **{guild.name}** уже получили её. '
                 + self._dm_channel_line(ch_opened, ch_ref))
-            await user.send(embed=embed)
+            await _send_dm_notice(user, status='submitted', item=item,
+                                  guild_name=str(guild.name), body=body)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС подтверждения #%s не дошло: %s', item['id'], _ex)
         return item, None
@@ -1835,15 +2125,12 @@ class Appeals(commands.Cog):
         # нет комнаты — запасной канал карточек (владелец 2026-09-06)
         channel, use_thread = await self._card_channel(guild, state)
         if channel is not None:
-            view = AppealView(self, guild_id, item['id'])
-            # Оформление карточки из панели: авто-картинка в выбранной теме,
-            # своя картинка по URL (скачиваем файлом — без пережатия) или
-            # обычный эмбед без картинки.
+            # Оформление карточки: V2 LayoutView + опциональная картинка.
             appearance = normalize_appearance(state.get('appearance'))
-            send_kwargs = {'embed': embed, 'view': view}
+            snap = self._appeal_card_text_from_embed(embed)
             painted = await self._paint_appeal_card(embed, item, appearance)
-            if painted is not None:
-                send_kwargs['file'] = painted
+            send_kwargs = self._appeal_v2_send_kw(
+                guild_id, item, embed, painted, snap=snap)
             msg = None
             if use_thread:
                 # запасной путь без комнаты: заявка — в собственную ветку,
