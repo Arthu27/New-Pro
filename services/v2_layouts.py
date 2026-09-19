@@ -166,8 +166,8 @@ def rules_embed(title: str, items: list, footer: str = ''):
 # ── МОДЕРАЦИЯ /modpanel ──────────────────────────────────────────────
 
 def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
-    """Короткая подпись под баннером — без дубля выбора из селектов."""
-    return '-# помните о лимитах команды'
+    """Под баннером статус не дублируем — селекты уже всё показывают."""
+    return ''
 
 
 # Чёрный акцент Container (рамка/полоса слева) — селекты Discord

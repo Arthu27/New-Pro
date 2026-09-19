@@ -101,9 +101,12 @@ for child in view.children:
 joined = '\n'.join(texts)
 check('Участник' in joined and 'Действие' in joined, 'подписи блоков')
 check('Участник:' not in joined and 'можно выбрать' not in joined
-      and 'селекты ниже' not in joined,
-      f'без Участник:@ и старого статуса: {joined!r}')
-check('лимитах' in joined, f'статус про лимиты: {joined!r}')
+      and 'селекты ниже' not in joined and 'лимитах' not in joined,
+      f'без лишнего статуса: {joined!r}')
+check(joined.strip() in ('**Участник**\n**Действие**', '**Участник****Действие**')
+      or ('**Участник**' in joined and '**Действие**' in joined
+          and joined.count('-#') == 0),
+      f'только подписи блоков: {joined!r}')
 check(joined.count('# Панель модерации') == 0 and 'HAKUMO' not in joined,
       f'без дубля заголовка: {joined!r}')
 check('-# модерация' not in joined, 'без футера модерация')
