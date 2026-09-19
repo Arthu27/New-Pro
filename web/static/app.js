@@ -45,17 +45,15 @@
   function bootTheme() {
     var t = '';
     try { t = localStorage.getItem('hakumo_theme') || ''; } catch (e) {}
-    if (!t) {
-      // первый визит — следуем за системной темой
-      try {
-        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      } catch (e) { t = 'light'; }
-    }
-    if (t !== 'light' && t !== 'dark') t = 'light';
+    /* Панель всегда тёмная/чёрная по умолчанию — не светлая Soft Neu. */
+    if (t !== 'light' && t !== 'dark') t = 'dark';
+    if (t === 'light') t = 'dark';
     doc.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {}
   }
 
   window.toggleTheme = function () {
+    /* Переключатель оставляем, но «светлая» тоже чёрная (Nova). */
     var cur = doc.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     var next = cur === 'dark' ? 'light' : 'dark';
     doc.documentElement.setAttribute('data-theme', next);
@@ -697,8 +695,8 @@
   /* ── Действия палитры (команды, а не только страницы) ── */
   var PALETTE_ACTIONS = [
     { label: 'Сменить тему', icon: 'fa-circle-half-stroke', sub: 'переключить светлая/тёмная', run: function () { window.toggleTheme(); window.showToast('Тема переключена', true); } },
-    { label: 'Светлая тема', icon: 'fa-sun', sub: 'включить светлый режим', run: function () { document.documentElement.setAttribute('data-theme', 'light'); try { localStorage.setItem('hakumo_theme', 'light'); } catch (e) {} } },
-    { label: 'Тёмная тема', icon: 'fa-moon', sub: 'включить тёмный режим', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {} } },
+    { label: 'Светлая тема', icon: 'fa-sun', sub: 'панель остаётся чёрной', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {} } },
+    { label: 'Тёмная тема', icon: 'fa-moon', sub: 'чёрная панель', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {} } },
     { label: 'Скопировать ссылку страницы', icon: 'fa-link', sub: 'в буфер обмена', run: function () {
       var done = function () { window.showToast('Ссылка скопирована', true); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(window.location.href).then(done, function () {});
