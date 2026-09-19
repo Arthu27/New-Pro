@@ -407,12 +407,29 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
     return _render_banner_fresh(kind)
 
 
-def menu_banner_bytes(kind: str = 'modpanel') -> bytes:
+# Process-wide PNG cache: 3× supersample ~0.9s; /modpanel must not redo it.
+_BYTES_CACHE: dict = {}
+
+
+def menu_banner_bytes(kind: str = 'modpanel', *, force: bool = False) -> bytes:
+    if not force and kind in _BYTES_CACHE:
+        return _BYTES_CACHE[kind]
     buf = io.BytesIO()
     # compress_level ниже → меньше артефактов на тонких линиях/звёздах
     render_menu_banner(kind).save(
         buf, format='PNG', optimize=False, compress_level=4)
-    return buf.getvalue()
+    raw = buf.getvalue()
+    _BYTES_CACHE[kind] = raw
+    return raw
+
+
+def warm_menu_banners(kinds=('modpanel',)) -> None:
+    """Прогрев кэша при старте бота — первый /modpanel без PIL."""
+    for kind in kinds:
+        try:
+            menu_banner_bytes(kind)
+        except Exception:
+            pass
 
 
 def menu_banner_file(kind: str = 'modpanel', filename: str = None):

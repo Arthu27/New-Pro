@@ -35,8 +35,24 @@ check(MB.PRESETS['modpanel']['pill'] == 'Панель модерации · Haku
       'modpanel pill = Панель модерации · Hakumo')
 check(MB.PRESETS['modpanel']['headline'] == 'МОДЕРАЦИЯ', 'headline МОДЕРАЦИЯ')
 
+print('== banner process cache ==')
+import time as _time
+MB._BYTES_CACHE.clear()
+t0 = _time.perf_counter()
+raw1 = MB.menu_banner_bytes('modpanel')
+cold_ms = (_time.perf_counter() - t0) * 1000
+t0 = _time.perf_counter()
+raw2 = MB.menu_banner_bytes('modpanel')
+hot_ms = (_time.perf_counter() - t0) * 1000
+check(raw1 == raw2 and len(raw1) > 1000, f'кэш байтов одинаковый ({len(raw1)})')
+check(hot_ms < 50, f'горячий баннер <50ms (было {hot_ms:.1f}ms, cold {cold_ms:.0f}ms)')
+check('modpanel' in MB._BYTES_CACHE, 'kind в _BYTES_CACHE')
+MB.warm_menu_banners(('appeals',))
+check('appeals' in MB._BYTES_CACHE, 'warm_menu_banners заполняет кэш')
+
 print('== emoji_for_action fallbacks ==')
-from services.menu_emojis import emoji_for_action  # noqa: E402
+from services.menu_emojis import emoji_for_action, schedule_ensure_menu_emojis  # noqa: E402
+check(callable(schedule_ensure_menu_emojis), 'schedule_ensure_menu_emojis есть')
 check(str(emoji_for_action('warn')), "warn '⚠️'")
 check(bool(emoji_for_action('ban')), 'ban')
 check(bool(emoji_for_action('clear')), 'clear')
