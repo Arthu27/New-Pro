@@ -117,10 +117,10 @@ check(view._footer_text(g2) == '',
 check(view._banner_file is not None, 'banner file attached')
 
 print('== select placeholders ==')
-check(getattr(view.target_select, 'placeholder', None) == 'Кого наказать?',
-      f'target placeholder: {getattr(view.target_select, "placeholder", None)!r}')
-check(getattr(view.action_select, 'placeholder', None) == '› Что сделать?',
-      f'action placeholder: {getattr(view.action_select, "placeholder", None)!r}')
+check((getattr(view.target_select, 'placeholder', None) or '') == '',
+      f'target placeholder пустой: {getattr(view.target_select, "placeholder", None)!r}')
+check((getattr(view.action_select, 'placeholder', None) or '') == '',
+      f'action placeholder пустой: {getattr(view.action_select, "placeholder", None)!r}')
 
 # V2, не синий эмбед
 check(view.has_components_v2(), 'LayoutView V2')
