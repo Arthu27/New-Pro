@@ -36,7 +36,7 @@ W, H = 1200, 420
 PRESETS = {
     'modpanel': {
         'headline': 'МОДЕРАЦИЯ',
-        'pill': 'контроль и порядок · Hakumo',
+        'pill': 'Панель модерации · Hakumo',
         'accent': (245, 245, 248),
         'tint': (8, 8, 10),
         'bgs': ('help_bg.png', 'hakumo_log_bg.png', 'staff.jpg'),
@@ -366,7 +366,7 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    name = filename or f'hakumo_{kind}_banner_v11.png'
+    name = filename or f'hakumo_{kind}_banner_v12.png'
     return bio, name
 
 

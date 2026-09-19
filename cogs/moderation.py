@@ -2286,7 +2286,7 @@ class ModActionSelect(discord.ui.Select):
                 emoji=emoji_for_action(value))
             options.append(opt)
         super().__init__(
-            placeholder="",
+            placeholder="› Что сделать?",
             options=options,
             min_values=1,
             max_values=1,
@@ -2471,8 +2471,8 @@ class ModTargetSelect(discord.ui.UserSelect):
     """Участник мышкой. Можно выбрать до действия или после."""
 
     def __init__(self, cog, default_values=None):
-        # Пустой placeholder: подпись «Участник» уже над селектом — без дубля.
-        kw = dict(placeholder="", min_values=1, max_values=1)
+        # Placeholder как в референсе; подпись блока — «Участник».
+        kw = dict(placeholder="Кого наказать?", min_values=1, max_values=1)
         if default_values:
             kw['default_values'] = list(default_values)
         super().__init__(**kw)
@@ -2519,7 +2519,7 @@ class ModPanelView(discord.ui.LayoutView):
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
-        self._banner_name = 'hakumo_modpanel_banner_v11.png'
+        self._banner_name = 'hakumo_modpanel_banner_v12.png'
         self._banner_file = None
         self._banner_bytes = None
         self._use_v2 = True
@@ -2547,12 +2547,10 @@ class ModPanelView(discord.ui.LayoutView):
         return modpanel_status_text(self.selected_uid, pending)
 
     def _footer_text(self, guild):
-        """Один ярлык без дубля HAKUMO/Hakumo."""
+        """Футер карточки — как в референсе: Hakumo · модерация."""
         name = getattr(guild, 'name', None) if guild is not None else None
-        if not name:
-            return 'модерация'
-        if name.strip().casefold() in ('hakumo', 'хакумо'):
-            return 'модерация'
+        if not name or name.strip().casefold() in ('hakumo', 'хакумо'):
+            return 'Hakumo · модерация'
         return f'{name} · модерация'
 
     def panel_embed(self, guild):

@@ -166,7 +166,7 @@ def rules_embed(title: str, items: list, footer: str = ''):
 # ── МОДЕРАЦИЯ /modpanel ──────────────────────────────────────────────
 
 def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
-    """Подпись под баннером: инструкция или текущий выбор (без «порядок любой»)."""
+    """Подпись под баннером в шапке панели (без «порядок любой»)."""
     bits = []
     if selected_uid:
         bits.append(f'участник <@{selected_uid}>')
@@ -188,55 +188,60 @@ def black_container(*children, accent: int = None):
     return _ui.Container(*children, accent_colour=colour)
 
 
-def _full_bleed_gallery(banner_filename: str):
-    """MediaGallery на верхнем уровне LayoutView — шире, чем внутри Container."""
+def _gallery(banner_filename: str):
     from discord.components import MediaGalleryItem
     return _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}'))
 
 
-# Баннер включён: текст «Панель модерации / HAKUMO» в сообщении не дублируем —
-# бренд и заголовок живут на картинке.
+# Баннер в шапке вместе с заголовком (как в референсе V2).
 SHOW_MENU_BANNER = True
 
 
 def build_modpanel_items(*, banner_filename: str, status: str,
-                         footer: str = 'модерация',
+                         footer: str = 'Hakumo · модерация',
                          target_select=None, action_select=None,
                          show_banner: bool = None):
-    """Полный баннер сверху + статус + чёрные блоки участник/действие."""
+    """Карточки как в референсе: шапка · участник · действие · футер."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    # 1) баннер full-bleed (вне Container — иначе Discord сжимает картинку)
+    # 1) шапка: заголовок + HAKUMO + разделитель + баннер + статус
+    head = [
+        _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
     if show_banner and banner_filename:
-        items.append(_full_bleed_gallery(banner_filename))
-    else:
-        items.append(black_container(_ui.TextDisplay('# Модерация')))
+        head.append(_gallery(banner_filename))
     if status:
-        items.append(black_container(_ui.TextDisplay(status)))
-    # 2) участник — отдельный блок
+        head.append(_ui.TextDisplay(status))
+    items.append(black_container(*head))
+    # 2) участник
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
         items.append(black_container(
-            _ui.TextDisplay('**Участник**'),
+            _ui.TextDisplay('**Участник**\n-# кого наказать'),
             row,
         ))
-    # 3) действие — отдельный блок
+    # 3) действие
     if action_select is not None:
         row = _ui.ActionRow()
         row.add_item(action_select)
         items.append(black_container(
-            _ui.TextDisplay('**Действие**'),
+            _ui.TextDisplay('**Действие**\n-# что сделать'),
             row,
         ))
+    # 4) футер
+    foot = (footer or 'Hakumo · модерация').strip()
+    if foot:
+        items.append(black_container(_ui.TextDisplay(f'-# {foot}')))
     return items
 
 
 def build_modpanel_container(*, banner_filename: str, status: str,
-                             footer: str = 'модерация',
+                             footer: str = 'Hakumo · модерация',
                              target_select=None, action_select=None,
                              show_banner: bool = None):
     """Один общий Container (фолбек) — без раздельных блоков."""
@@ -244,11 +249,12 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
-    children = []
+    children = [
+        _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
     if show_banner and banner_filename:
-        children.append(_full_bleed_gallery(banner_filename))
-    else:
-        children.append(_ui.TextDisplay('# Модерация'))
+        children.append(_gallery(banner_filename))
     if status:
         children.append(_ui.TextDisplay(status))
     if target_select is not None:
@@ -259,53 +265,64 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         row = _ui.ActionRow()
         row.add_item(action_select)
         children.append(row)
+    if footer:
+        children.append(_ui.Separator())
+        children.append(_ui.TextDisplay(f'-# {footer}'))
     return black_container(*children)
 
 
 def build_appeals_menu_items(*, banner_filename: str, body: str,
                              footer: str, menu_select=None,
                              show_banner: bool = None):
-    """Баннер full-bleed + select апелляций в чёрном блоке."""
+    """Баннер в шапке + select апелляций — как у модерации."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
+    head = [
+        _ui.TextDisplay('# Апелляции\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
     if show_banner and banner_filename:
-        items.append(_full_bleed_gallery(banner_filename))
-    else:
-        items.append(black_container(_ui.TextDisplay('# Апелляции')))
+        head.append(_gallery(banner_filename))
     if body:
-        items.append(black_container(_ui.TextDisplay(body)))
+        head.append(_ui.TextDisplay(body))
+    items.append(black_container(*head))
     if menu_select is not None:
         row = _ui.ActionRow()
         row.add_item(menu_select)
         items.append(black_container(
-            _ui.TextDisplay('**Обращение**'),
+            _ui.TextDisplay('**Обращение**\n-# подать или проверить'),
             row,
         ))
+    if footer:
+        items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
     return items
 
 
 def build_staff_menu_items(*, banner_filename: str, body: str = None,
                            role_select=None, show_banner: bool = None):
-    """Наборы: баннер full-bleed + select роли."""
+    """Наборы: шапка с баннером + select роли."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
+    head = [
+        _ui.TextDisplay('# Наборы\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
     if show_banner and banner_filename:
-        items.append(_full_bleed_gallery(banner_filename))
-    else:
-        items.append(black_container(_ui.TextDisplay('# Наборы')))
+        head.append(_gallery(banner_filename))
     if body:
-        items.append(black_container(_ui.TextDisplay(body)))
+        head.append(_ui.TextDisplay(body))
+    items.append(black_container(*head))
     if role_select is not None:
         row = _ui.ActionRow()
         row.add_item(role_select)
         items.append(black_container(
-            _ui.TextDisplay('**Роль**'),
+            _ui.TextDisplay('**Роль**\n-# на какую подать'),
             row,
         ))
     return items
@@ -313,24 +330,32 @@ def build_staff_menu_items(*, banner_filename: str, body: str = None,
 
 def build_events_menu_items(*, banner_filename: str, status: str,
                             action_row=None, show_banner: bool = None):
-    """Ивенты: баннер full-bleed + кнопки/селект."""
+    """Ивенты: шапка с баннером + действия."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
+    head = [
+        _ui.TextDisplay('# Ивенты\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
     if show_banner and banner_filename:
-        items.append(_full_bleed_gallery(banner_filename))
-    else:
-        items.append(black_container(_ui.TextDisplay('# Ивенты')))
+        head.append(_gallery(banner_filename))
     if status:
-        items.append(black_container(_ui.TextDisplay(status)))
+        head.append(_ui.TextDisplay(status))
+    items.append(black_container(*head))
     if action_row is not None:
         items.append(black_container(
             _ui.TextDisplay('**Действия**'),
             action_row,
         ))
     return items
+
+
+def _full_bleed_gallery(banner_filename: str):
+    """Совместимость: MediaGallery (раньше full-bleed)."""
+    return _gallery(banner_filename)
 
 
 def build_log_card_items(*, title: str, rows=None, footer: str = '',

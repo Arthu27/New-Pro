@@ -208,29 +208,28 @@ acts_ad = [a[0] for a in actions_for_member(guild, admin_discord)]
 check('ban' in acts_ad and 'warn' in acts_ad,
       f'Discord admin+helper полная панель: {acts_ad}')
 
-print('== 9. Пустой placeholder у select участника ==')
+print('== 9. Placeholders и блоки как в референсе V2 ==')
 from cogs.moderation import ModTargetSelect  # noqa: E402
 ts = ModTargetSelect(None)
 ph = getattr(ts, 'placeholder', None)
-check(ph in ('', None), f'placeholder пустой: {ph!r}')
-check('Участник' not in (ph or ''), 'в placeholder нет «Участник»')
-check('Кого наказать' not in (ph or ''), 'в placeholder нет «Кого наказать»')
-# V2: заголовок блока есть, в select — пусто
+check(ph == 'Кого наказать?', f'placeholder участника: {ph!r}')
+check('Участник' not in (ph or ''), 'в placeholder нет слова «Участник»')
 from cogs.moderation import ModPanelView, MODPANEL_ACTIONS  # noqa: E402
 view = ModPanelView(None, cur_h, list(MODPANEL_ACTIONS))
 joined = '\n'.join(
     getattr(k, 'content', '') or ''
     for child in view.children
     for k in list(getattr(child, 'children', []) or []))
-check('**Участник**' in joined, 'заголовок блока Участник на месте')
-check(getattr(view.target_select, 'placeholder', None) in ('', None),
-      f'view select пустой: {getattr(view.target_select, "placeholder", None)!r}')
-# Действие: заголовок есть, select тоже пустой (без «Что сделать?»)
-check('**Действие**' in joined, 'заголовок блока Действие на месте')
-check(getattr(view.action_select, 'placeholder', None) in ('', None),
-      f'action select пустой: {getattr(view.action_select, "placeholder", None)!r}')
-check('Что сделать' not in (getattr(view.action_select, 'placeholder', '') or ''),
-      'в action placeholder нет «Что сделать»')
+check('**Участник**' in joined and 'кого наказать' in joined,
+      'заголовок блока Участник + подпись')
+check(getattr(view.target_select, 'placeholder', None) == 'Кого наказать?',
+      f'view select: {getattr(view.target_select, "placeholder", None)!r}')
+check('**Действие**' in joined and 'что сделать' in joined,
+      'заголовок блока Действие + подпись')
+check(getattr(view.action_select, 'placeholder', None) == '› Что сделать?',
+      f'action select: {getattr(view.action_select, "placeholder", None)!r}')
+check('Панель модерации' in joined and 'HAKUMO' in joined,
+      'шапка Панель модерации / HAKUMO')
 
 shutil.rmtree(_TMP, ignore_errors=True)
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
