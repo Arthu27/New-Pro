@@ -418,22 +418,28 @@ def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
 
 
 def build_notice_items(*, title: str, body: str = '', footer: str = '',
-                       accent: int = None):
-    """Короткое V2-уведомление (ЛС / пост-апелляция)."""
+                       accent: int = None, brand: str = 'HAKUMO'):
+    """ЛС/уведомление V2: чёрный (или статусный) контейнер, бренд, текст."""
     if not V2_AVAILABLE:
         return None
-    text = f'# {title}' if title else ''
+    children = []
+    head = f'# {title}' if title else '# Уведомление'
+    if brand:
+        head = f'{head}\n-# {brand}'
+    children.append(_ui.TextDisplay(head[:500]))
+    children.append(_ui.Separator(spacing=SeparatorSpacing.large))
     if body:
-        text = f'{text}\n{body}' if text else body
-    children = [_ui.TextDisplay(text[:4000])]
+        children.append(_ui.TextDisplay(str(body)[:3500]))
     if footer:
+        children.append(_ui.Separator())
         children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
     return [black_container(*children, accent=accent if accent is not None else _BLACK)]
 
 
 def notice_layout_view(*, title: str, body: str = '', footer: str = '',
-                       accent: int = None, timeout=None):
-    items = build_notice_items(title=title, body=body, footer=footer, accent=accent)
+                       accent: int = None, brand: str = 'HAKUMO', timeout=None):
+    items = build_notice_items(
+        title=title, body=body, footer=footer, accent=accent, brand=brand)
     if not items:
         return None
     view = _ui.LayoutView(timeout=timeout)
