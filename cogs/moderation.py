@@ -393,9 +393,20 @@ class Moderation (commands .Cog ):
             'их в панели: Щит сервера → Лимиты команды → роль.'),
             ephemeral =True )
             return 
-        view =ModPanelView (self ,interaction .user ,allowed )
-        view ._root_edit =interaction .edit_original_response
-        await _respond (interaction ,embed =view .panel_embed (interaction .guild ),view =view ,ephemeral =True )
+        # стикеры gold-neon → application emoji (для селекта)
+        try:
+            from services.menu_emojis import ensure_menu_emojis
+            await ensure_menu_emojis(interaction.client)
+        except Exception as _ee:
+            log.debug('modpanel emoji sync: %s', _ee)
+        view = ModPanelView(self, interaction.user, allowed)
+        view._root_edit = interaction.edit_original_response
+        # Components V2: Container + селекты (баннер — по флагу SHOW_MENU_BANNER)
+        banner = view._banner_file or view._make_banner_file()
+        if banner is not None:
+            await _respond(interaction, view=view, file=banner, ephemeral=True)
+        else:
+            await _respond(interaction, view=view, ephemeral=True)
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -760,6 +771,13 @@ class Moderation (commands .Cog ):
                         ephemeral =True )
                         return
                     await user .add_roles (_brole ,reason =reason or 'бан')
+                    # Если человек в войсе — выкинуть сразу (роль бана
+                    # каналы закрывает, но из голосового сам не выйдет).
+                    try :
+                        if getattr (getattr (user ,'voice',None ),'channel',None ):
+                            await user .move_to (None ,reason =reason or 'бан')
+                    except Exception as _vdisc :
+                        log .debug (f'[MODPANEL] ban voice kick: {_vdisc}')
                     try :
                         from services .staff_limits import record_hit as _sl_rec
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
@@ -1712,12 +1730,17 @@ async def ctx_unmute(interaction, member: discord.Member):
             'Модуль модерации не загружен.', ephemeral=True)
     embed = discord.Embed(
         title="Снять мут",
-        description=f"{member.mention}\nКак снять — чат или войс.",
-        color=0x2ECC71)
-    await interaction.response.send_message(
-        embed=embed,
-        view=UnmuteKindView(mod, member.id, kinds, member=interaction.user),
-        ephemeral=True)
+        description=f"{member.mention}",
+        color=0x000000)
+    view = UnmuteKindView(
+        mod, member.id, kinds, member=interaction.user,
+        status=f'# Снять мут\n{member.mention}')
+    from services.v2_layouts import V2_AVAILABLE
+    if V2_AVAILABLE:
+        await interaction.response.send_message(view=view, ephemeral=True)
+    else:
+        await interaction.response.send_message(
+            embed=embed, view=view, ephemeral=True)
 
 
 _CTX_COMMANDS = (ctx_full_mute, ctx_voice_mute, ctx_unmute)
@@ -1811,29 +1834,31 @@ MODPANEL_ACTIONS = [
     # Мут/размут — ОДИН пункт, вид (чат/войс/оба) прячется во второй селект.
     ("warn", "Варн", "Предупреждение за нарушение", "warn"),
     ("unwarn", "Снять варн", "Убрать последний варн", "warn"),
-    ("mute", "Мут", "Чат, войс или оба — следующим шагом", "mute"),
-    ("unmute", "Снять мут", "Чат или войс — следующим шагом", "unmute"),
+    ("mute", "Мут", "Выдать мут", "mute"),
+    ("unmute", "Снять мут", "Снять мут", "unmute"),
     ("clear", "Очистка сообщений", "Удалить сообщения в канале", "clear"),
     ("ban", "Бан", "Роль бана: доступ закрыт (с апелляцией)", "ban"),
     ("unban", "Снять бан", "Снять роль бана (по ID)", "unban"),
 ]
 
-# Эмодзи действий: меню панели живое, а не текстовое
+# Эмодзи-фолбек (пока application emoji не залиты). Селект берёт
+# стикеры через services.menu_emojis.emoji_for_action.
 MODPANEL_EMOJI = {
     "warn": "⚠️",
-    "unwarn": "📵",
-    "ban": "🚫",
+    "unwarn": "✖️",
+    "ban": "⛔",
     "mute": "🔇",
     "timeout": "🔇",
-    "mute_chat": "🤐",
+    "mute_chat": "💬",
     "vmute": "🎙️",
-    "unban": "✅",
+    "unban": "🔓",
     "clear": "🧹",
     "untimeout": "🔊",
-    "vunmute": "🎤",
+    "vunmute": "🔊",
     "unmute": "🔊",
     "unmute_chat": "💬",
 }
+
 
 # Пункт /modpanel → «классическое» разрешение (панель → Доступ → Права
 # команд → Классические разрешения). Ключи — как в permission_acl.ACTIONS:
@@ -1870,11 +1895,11 @@ def mute_kinds_for(guild_id, member):
     both = _action_acl_allows(guild_id, member, 'timeout')
     out = []
     if chat:
-        out.append(('mute_chat', 'Чат', 'Закрыть переписку'))
+        out.append(('mute_chat', 'Чат', None))
     if voice:
-        out.append(('vmute', 'Войс', 'Выключить микрофон'))
+        out.append(('vmute', 'Войс', None))
     if both:
-        out.append(('timeout', 'Чат и войс', 'Заглушить оба'))
+        out.append(('timeout', 'Чат и войс', None))
     return out
 
 
@@ -1886,11 +1911,11 @@ def unmute_kinds_for(guild_id, member):
         or _action_acl_allows(guild_id, member, 'timeout')
     out = []
     if chat:
-        out.append(('unmute_chat', 'Чат', 'Вернуть переписку'))
+        out.append(('unmute_chat', 'Чат', None))
     if voice:
-        out.append(('vunmute', 'Войс', 'Вернуть микрофон'))
+        out.append(('vunmute', 'Войс', None))
     if chat and voice:
-        out.append(('untimeout', 'Чат и войс', 'Снять оба мута'))
+        out.append(('untimeout', 'Чат и войс', None))
     return out
 
 
@@ -1929,6 +1954,9 @@ def actions_for_member(guild, member):
     Дополнительно работают «Лимиты команды» (Щит сервера → Лимиты → роль):
     если у ролей модератора заданы лимиты только на часть действий, видит
     только их (пересечение с разрешениями).
+
+    Куратор/админ+хелпер: смотрим ВЫСШИЙ тир — хелперские лимиты mute/clear
+    не схлопывают /modpanel до хелперского меню.
     """
     try:
         uid = getattr(member, "id", 0)
@@ -1948,6 +1976,37 @@ def actions_for_member(guild, member):
         scoped = _rsa(guild.id, role_ids)
     except Exception:
         scoped = None
+    # Страховка: старший тир (куратор/админ) + хелпер — если scoped всё ещё
+    # «хелперский» (mute/unmute/clear), сбрасываем. Чистые лимиты старшей
+    # роли без младшей не трогаем.
+    try:
+        from services.staff_hierarchy import actor_panel_role, RANK
+        from services.staff_limits import _role_tier_map
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        _tier = actor_panel_role(guild, member)
+        _rank = RANK.get(_tier, -1)
+        if (_rank >= RANK.get('curator', 2)
+                and scoped is not None
+                and set(scoped) <= {'mute', 'unmute', 'clear'}):
+            _tmap = _role_tier_map()
+            _helper = str(int(KNOWN_HELPER_ROLE_ID))
+            _has_junior = False
+            for _rid in role_ids:
+                _rs = str(_rid)
+                if _rs == _helper:
+                    _has_junior = True
+                    break
+                _m = _tmap.get(_rs)
+                if _m and RANK.get(_m, -1) < _rank:
+                    _has_junior = True
+                    break
+            if _has_junior:
+                log.info(
+                    'actions_for_member: тир %s + младшая роль — '
+                    'игнор хелперского scoped %s', _tier, scoped)
+                scoped = None
+    except Exception as _ex:
+        log.debug('actions_for_member: tier-guard: %s', _ex)
     if scoped is None:
         base = list(MODPANEL_ACTIONS)
     else:
@@ -1959,11 +2018,14 @@ class MuteKindSelect(discord.ui.Select):
     """Второй шаг мута: чат / войс / оба. Дальше — модалка срока."""
 
     def __init__(self, cog, target_id, kinds):
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_action
         options = [discord.SelectOption(
-            label=label, value=value, description=desc,
-            emoji=MODPANEL_EMOJI.get(value, '🔇'))
+            label=select_label(label), value=value,
+            **({'description': desc[:100]} if desc else {}),
+            emoji=emoji_for_action(value))
             for value, label, desc in kinds]
-        super().__init__(placeholder="Какой мут?",
+        super().__init__(placeholder="› Куда мут?",
                          options=options, min_values=1, max_values=1)
         self.cog = cog
         self.target_id = str(target_id)
@@ -1978,14 +2040,25 @@ class MuteKindSelect(discord.ui.Select):
         await interaction.response.send_modal(modal)
 
 
-class MuteKindView(discord.ui.View):
-    """Короткое меню «чат / войс / оба» после пункта «Мут»."""
+class MuteKindView(discord.ui.LayoutView):
+    """Короткое меню «чат / войс / оба» после пункта «Мут» — чёрный блок."""
 
-    def __init__(self, cog, target_id, kinds, member=None):
+    def __init__(self, cog, target_id, kinds, member=None, *, status: str = None):
         super().__init__(timeout=180)
         self.cog = cog
         self.member = member
-        self.add_item(MuteKindSelect(cog, target_id, kinds))
+        sel = MuteKindSelect(cog, target_id, kinds)
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        text = status or '**Мут**'
+        if V2_AVAILABLE:
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(black_container(_ui.TextDisplay(text), row))
+        else:
+            row = discord.ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(row)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.member and getattr(interaction.user, 'id', None) != getattr(self.member, 'id', None):
@@ -1999,11 +2072,14 @@ class UnmuteKindSelect(discord.ui.Select):
     """Второй шаг размута: чат / войс / оба. Без ввода и без кнопок."""
 
     def __init__(self, cog, target_id, kinds):
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_action
         options = [discord.SelectOption(
-            label=label, value=value, description=desc,
-            emoji=MODPANEL_EMOJI.get(value, '🔊'))
+            label=select_label(label), value=value,
+            **({'description': desc[:100]} if desc else {}),
+            emoji=emoji_for_action(value))
             for value, label, desc in kinds]
-        super().__init__(placeholder="Как снять мут?",
+        super().__init__(placeholder="› Куда снять?",
                          options=options, min_values=1, max_values=1)
         self.cog = cog
         self.target_id = str(target_id)
@@ -2018,14 +2094,25 @@ class UnmuteKindSelect(discord.ui.Select):
             'Снято через панель', '', proof_link=None)
 
 
-class UnmuteKindView(discord.ui.View):
-    """Короткое меню «чат или войс» после пункта «Снять мут»."""
+class UnmuteKindView(discord.ui.LayoutView):
+    """Короткое меню «чат или войс» после пункта «Снять мут» — чёрный блок."""
 
-    def __init__(self, cog, target_id, kinds, member=None):
+    def __init__(self, cog, target_id, kinds, member=None, *, status: str = None):
         super().__init__(timeout=180)
         self.cog = cog
         self.member = member
-        self.add_item(UnmuteKindSelect(cog, target_id, kinds))
+        sel = UnmuteKindSelect(cog, target_id, kinds)
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        text = status or '**Снять мут**'
+        if V2_AVAILABLE:
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(black_container(_ui.TextDisplay(text), row))
+        else:
+            row = discord.ui.ActionRow()
+            row.add_item(sel)
+            self.add_item(row)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.member and getattr(interaction.user, 'id', None) != getattr(self.member, 'id', None):
@@ -2050,12 +2137,12 @@ async def _silent_reset_panel(interaction, panel):
         guild = getattr(interaction, 'guild', None)
         old_t, old_a = panel.target_select, panel.action_select
         panel._rebuild(guild)
-        embed = panel.panel_embed(guild)
+        kw = panel.panel_edit_kwargs()
         pushed = False
         root = getattr(panel, '_root_edit', None)
         if root is not None:
             try:
-                await root(embed=embed, view=panel)
+                await root(**kw)
                 pushed = True
             except Exception as _e:
                 log.debug('modpanel reset root: %s', _e)
@@ -2063,21 +2150,22 @@ async def _silent_reset_panel(interaction, panel):
             try:
                 msg = getattr(interaction, 'message', None)
                 if msg is not None:
-                    await msg.edit(embed=embed, view=panel)
+                    await msg.edit(**kw)
                     pushed = True
             except Exception as _e:
                 log.debug('modpanel reset msg.edit: %s', _e)
         if not pushed:
             try:
-                await interaction.edit_original_response(embed=embed, view=panel)
+                await interaction.edit_original_response(**kw)
                 pushed = True
             except Exception as _e:
                 log.debug('modpanel reset original: %s', _e)
         if not pushed:
-            panel.clear_items()
-            panel.target_select, panel.action_select = old_t, old_a
-            panel.add_item(old_t)
-            panel.add_item(old_a)
+            # не удалось запушить — вернуть прежние селекты (custom_id)
+            try:
+                panel.target_select, panel.action_select = old_t, old_a
+            except Exception:
+                pass
     except Exception as _e:
         log.debug('modpanel reset: %s', _e)
 
@@ -2115,12 +2203,17 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             log.debug('prefill mention %r: %s', prefill, _e)
         embed = discord.Embed(
             title="Мут",
-            description=f"{who}\nКакой — чат, войс или оба.",
-            color=0xE67E22)
-        await interaction.response.send_message(
-            embed=embed,
-            view=MuteKindView(cog, prefill, kinds, member=interaction.user),
-            ephemeral=True)
+            description=f"{who}",
+            color=0x000000)
+        view = MuteKindView(
+            cog, prefill, kinds, member=interaction.user,
+            status=f'# Мут\n{who}')
+        from services.v2_layouts import V2_AVAILABLE
+        if V2_AVAILABLE:
+            await interaction.response.send_message(view=view, ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                embed=embed, view=view, ephemeral=True)
         if panel is not None:
             await _silent_reset_panel(interaction, panel)
         return
@@ -2156,12 +2249,17 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             log.debug('prefill mention %r: %s', prefill, _e)
         embed = discord.Embed(
             title="Снять мут",
-            description=f"{who}\nКак снять — чат или войс.",
-            color=0x2ECC71)
-        await interaction.response.send_message(
-            embed=embed,
-            view=UnmuteKindView(cog, prefill, kinds, member=interaction.user),
-            ephemeral=True)
+            description=f"{who}",
+            color=0x000000)
+        view = UnmuteKindView(
+            cog, prefill, kinds, member=interaction.user,
+            status=f'# Снять мут\n{who}')
+        from services.v2_layouts import V2_AVAILABLE
+        if V2_AVAILABLE:
+            await interaction.response.send_message(view=view, ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                embed=embed, view=view, ephemeral=True)
         if panel is not None:
             await _silent_reset_panel(interaction, panel)
         return
@@ -2174,16 +2272,21 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
 
 
 class ModActionSelect(discord.ui.Select):
-    """Выбор действия модерации — только то, что доступно этому модератору."""
+    """Выбор действия модерации — белые neon-стикеры (application emoji)."""
 
     def __init__(self, cog, member=None, allowed=None, target_select=None):
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_action
         acts = allowed if allowed is not None else MODPANEL_ACTIONS
-        options = [discord.SelectOption(
-                       label=label, value=value, description=desc,
-                       emoji=MODPANEL_EMOJI.get(value, '⚡'))
-                   for value, label, desc, _key in acts]
+        options = []
+        for value, label, desc, _key in acts:
+            opt = discord.SelectOption(
+                label=select_label(label), value=value,
+                description=(desc or '')[:100],
+                emoji=emoji_for_action(value))
+            options.append(opt)
         super().__init__(
-            placeholder="Что сделать?",
+            placeholder="› Что сделать?",
             options=options,
             min_values=1,
             max_values=1,
@@ -2210,13 +2313,12 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Действие без участника: запоминаем и ждём выбор человека
-        # (можно и наоборот — сначала человек, потом действие).
         if action != "clear" and not prefill:
             if view is not None:
                 await view.refresh(interaction)
                 return
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
+
 
 _PUNISH_MODPANEL = ("ban", "timeout", "mute_chat", "vmute")
 
@@ -2342,7 +2444,7 @@ class ModHelpButton(discord.ui.Button):
             color=0x5865F2)
         embed.add_field(
             name='🎯 Цель',
-            value='Выберите участника МЫШКОЙ в меню «Кого наказать?» — при выборе '
+            value='Выберите участника МЫШКОЙ в меню ниже — при выборе '
                   'действия бот НЕ попросит ник второй раз. Участник ушёл с сервера? '
                   'Он останется в списке выбора: подойдёт и его ID.',
             inline=False)
@@ -2366,9 +2468,10 @@ class ModHelpButton(discord.ui.Button):
 
 
 class ModTargetSelect(discord.ui.UserSelect):
-    """Участник мышкой. Можно выбрать ДО действия или ПОСЛЕ — порядок любой."""
+    """Участник мышкой. Можно выбрать до действия или после."""
 
     def __init__(self, cog, default_values=None):
+        # Placeholder в селекте; заголовок блока — «Участник» (без дубля).
         kw = dict(placeholder="Кого наказать?", min_values=1, max_values=1)
         if default_values:
             kw['default_values'] = list(default_values)
@@ -2401,17 +2504,33 @@ class ModTargetSelect(discord.ui.UserSelect):
             log.debug("ModTargetSelect: %s", _te)
 
 
-class ModPanelView(discord.ui.View):
-    """Селект участника + селект действия. Порядок любой, пункт можно выбрать снова."""
+class ModPanelView(discord.ui.LayoutView):
+    """Components V2: баннер + селекты в чёрном Container.
+
+    Фолбек panel_embed/panel_payload — если V2 не приняли (старый клиент).
+    """
 
     def __init__(self, cog, member=None, allowed=None):
         super().__init__(timeout=300)
         self.cog = cog
         self.allowed = allowed
+        self.member = member
         self.owner_id = getattr(member, 'id', None)
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
+        self._banner_name = 'hakumo_modpanel_banner_v14.png'
+        self._banner_file = None
+        self._banner_bytes = None
+        self._use_v2 = True
+        self._actor_label = ''
+        try:
+            from services.staff_hierarchy import actor_panel_role, LABELS
+            guild = getattr(member, 'guild', None)
+            tier = actor_panel_role(guild, member) if member is not None else 'uye'
+            self._actor_label = LABELS.get(tier, '') or ''
+        except Exception:
+            self._actor_label = ''
         self._rebuild(None)
 
     def _action_label(self, action):
@@ -2420,24 +2539,72 @@ class ModPanelView(discord.ui.View):
                 return label
         return action
 
+    def _status_text(self):
+        from services.v2_layouts import modpanel_status_text
+        pending = None
+        if self.pending_action:
+            pending = self._action_label(self.pending_action)
+        return modpanel_status_text(self.selected_uid, pending)
+
+    def _footer_text(self, guild):
+        """Футер отключён — панель без нижней полоски."""
+        return ''
+
     def panel_embed(self, guild):
+        """Классический эмбед — фолбек, если V2 недоступен."""
         bits = []
         if self.selected_uid:
             bits.append(f"участник <@{self.selected_uid}>")
         if self.pending_action:
             bits.append(f"«{self._action_label(self.pending_action)}»")
         if bits:
-            desc = " · ".join(bits) + "\nМожно выбрать заново и в любом порядке."
+            desc = " · ".join(bits)
         else:
-            desc = "Участник и действие — в любом порядке."
-        e = discord.Embed(title="🛡 Панель модерации", description=desc, color=0x5865F2)
-        icon = getattr(getattr(guild, 'icon', None), 'url', None)
-        name = getattr(guild, 'name', None) if guild is not None else None
-        if name and icon:
-            e.set_footer(text=name, icon_url=icon)
-        elif name:
-            e.set_footer(text=name)
+            desc = "Выберите участника и действие ниже."
+        title = "Модерация"
+        if self._actor_label:
+            title = f"Модерация · {self._actor_label.capitalize()}"
+        e = discord.Embed(
+            title=title,
+            description=desc,
+            color=0x000000,
+        )
         return e
+
+    def panel_payload(self, guild):
+        """(embed, discord.File|None) — фолбек эмбед (+ баннер, если включён)."""
+        from services.v2_layouts import SHOW_MENU_BANNER
+        embed = self.panel_embed(guild)
+        if not SHOW_MENU_BANNER:
+            return embed, None
+        from services.menu_banners import menu_banner_file
+        bio, name = menu_banner_file('modpanel')
+        embed.set_image(url=f'attachment://{name}')
+        return embed, discord.File(bio, filename=name)
+
+    def _make_banner_file(self, *, force: bool = False):
+        """Баннер для вложений. PIL — только один раз, дальше кэш байтов."""
+        from services.v2_layouts import SHOW_MENU_BANNER
+        if not SHOW_MENU_BANNER:
+            self._banner_name = None
+            self._banner_file = None
+            self._banner_bytes = None
+            return None
+        import io as _io
+        if self._banner_bytes and self._banner_name and not force:
+            bio = _io.BytesIO(self._banner_bytes)
+            bio.seek(0)
+            self._banner_file = discord.File(bio, filename=self._banner_name)
+            return self._banner_file
+        from services.menu_banners import menu_banner_file
+        bio, name = menu_banner_file('modpanel')
+        raw = bio.getvalue() if hasattr(bio, 'getvalue') else bio.read()
+        self._banner_bytes = raw
+        self._banner_name = name
+        out = _io.BytesIO(raw)
+        out.seek(0)
+        self._banner_file = discord.File(out, filename=name)
+        return self._banner_file
 
     def _rebuild(self, guild):
         self.clear_items()
@@ -2449,32 +2616,71 @@ class ModPanelView(discord.ui.View):
                     defaults = [mem]
             except Exception:
                 defaults = []
-        self.target_select = ModTargetSelect(self.cog, default_values=defaults or None)
-        self.action_select = ModActionSelect(self.cog, None, self.allowed,
-                                             target_select=self.target_select)
-        self.add_item(self.target_select)
-        self.add_item(self.action_select)
+        self.target_select = ModTargetSelect(
+            self.cog, default_values=defaults or None)
+        self.action_select = ModActionSelect(
+            self.cog, None, self.allowed,
+            target_select=self.target_select)
+        self.action_buttons = []
+
+        from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
+        self._make_banner_file(force=False)
+        if V2_AVAILABLE and self._use_v2:
+            items = build_modpanel_items(
+                banner_filename=self._banner_name,
+                status=self._status_text(),
+                footer=self._footer_text(guild),
+                target_select=self.target_select,
+                action_select=self.action_select,
+            )
+            if items:
+                for item in items:
+                    self.add_item(item)
+                return
+        row1 = discord.ui.ActionRow()
+        row1.add_item(self.target_select)
+        row2 = discord.ui.ActionRow()
+        row2.add_item(self.action_select)
+        self.add_item(row1)
+        self.add_item(row2)
+
+    def panel_edit_kwargs(self):
+        """kwargs для edit_message / edit_original_response (V2)."""
+        # свежий File из кэша байтов — BytesIO одноразовый
+        self._make_banner_file(force=False)
+        kw = {
+            'view': self,
+            'embed': None,
+            'embeds': [],
+            'content': None,
+        }
+        if self._banner_file is not None:
+            kw['attachments'] = [self._banner_file]
+        else:
+            kw['attachments'] = []
+        return kw
 
     async def refresh(self, interaction, *, rebuild_action=True):
         guild = getattr(interaction, 'guild', None)
-        if rebuild_action:
-            self._rebuild(guild)
-        embed = self.panel_embed(guild)
+        # селекты Discord требуют новый custom_id-ряд после клика —
+        # пересобираем LayoutView, баннер берём из кэша (без PIL).
+        self._rebuild(guild)
+        kw = self.panel_edit_kwargs()
         try:
             if not interaction.response.is_done():
-                await interaction.response.edit_message(embed=embed, view=self)
+                await interaction.response.edit_message(**kw)
                 return
         except Exception as _e:
             log.debug('modpanel refresh edit_message: %s', _e)
         msg = getattr(interaction, 'message', None)
         if msg is not None:
             try:
-                await msg.edit(embed=embed, view=self)
+                await msg.edit(**kw)
                 return
             except Exception as _e:
                 log.debug('modpanel refresh msg.edit: %s', _e)
         try:
-            await interaction.edit_original_response(embed=embed, view=self)
+            await interaction.edit_original_response(**kw)
         except Exception as _e:
             log.debug('modpanel refresh original: %s', _e)
             try:

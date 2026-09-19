@@ -349,7 +349,30 @@ def check_action(guild_id: int, member, action: str) -> bool:
         # нет явного правила → запрет (default-deny для действий модерации)
         return False
     user_roles = {str(r.id) for r in getattr(member, "roles", [])}
-    return bool(user_roles.intersection(set(allowed)))
+    if user_roles.intersection(set(allowed)):
+        return True
+    # Старший тир наследует ACL младших mapped-ролей.
+    # Куратор+хелпер: бан выдан модерам → куратор тоже видит бан в /modpanel.
+    # Не наследует от ролей ВЫШЕ себя (warn только админам → куратор без warn).
+    try:
+        from services.staff_hierarchy import RANK, best_mapped_tier
+        from services.staff_limits import _role_tier_map
+        best = best_mapped_tier(member)
+        best_rank = RANK.get(best, -1)
+        if best_rank < RANK.get('mod', 1):
+            return False
+        tmap = _role_tier_map()
+        for rid in allowed:
+            tier = tmap.get(str(rid))
+            if not tier:
+                continue
+            r = RANK.get(tier, -1)
+            # строго младше: куратор ← mod; сам mod чужие mod-роли не ест
+            if 0 < r < best_rank:
+                return True
+    except Exception as _ex:
+        log.debug('check_action senior inherit: %s', _ex)
+    return False
 
 
 def _candidates(command: str) -> list:
