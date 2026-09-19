@@ -2460,7 +2460,7 @@ class ModHelpButton(discord.ui.Button):
 
 
 class ModTargetSelect(discord.ui.UserSelect):
-    """Участник мышкой. Можно выбрать ДО действия или ПОСЛЕ — порядок любой."""
+    """Участник мышкой. Можно выбрать до действия или после."""
 
     def __init__(self, cog, default_values=None):
         # Пустой placeholder: подпись «Участник» уже над селектом — без дубля.
@@ -2556,7 +2556,7 @@ class ModPanelView(discord.ui.LayoutView):
         if bits:
             desc = " · ".join(bits)
         else:
-            desc = "Селекты ниже."
+            desc = None
         title = "Модерация"
         if self._actor_label:
             title = f"Модерация · {self._actor_label.capitalize()}"

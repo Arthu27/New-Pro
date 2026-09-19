@@ -101,7 +101,10 @@ for child in view.children:
 joined = '\n'.join(texts)
 check('Участник' in joined and 'Действие' in joined, 'подписи блоков')
 check('Участник:' not in joined and 'можно выбрать' not in joined
-      and 'селекты ниже' not in joined and 'лимитах' not in joined,
+      and 'селекты ниже' not in joined and 'лимитах' not in joined
+      and 'Порядок любой' not in joined
+      and 'порядок любой' not in joined.lower()
+      and 'Выберите участника и действие' not in joined,
       f'без лишнего статуса: {joined!r}')
 check(joined.strip() in ('**Участник**\n**Действие**', '**Участник****Действие**')
       or ('**Участник**' in joined and '**Действие**' in joined
