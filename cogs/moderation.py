@@ -142,6 +142,24 @@ class Moderation (commands .Cog ):
         except Exception as _ex :
             log .debug (f'punish_roles_loop старт: {_ex}')
 
+    async def cog_load(self):
+        # Баннер ~0.9с на 3× PIL — греем в потоке, чтобы /modpanel не ждал.
+        import asyncio
+        try:
+            from services.menu_banners import warm_menu_banners
+            await asyncio.to_thread(warm_menu_banners, ('modpanel', 'appeals'))
+        except Exception as _ex:
+            log.debug('modpanel banner warm: %s', _ex)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        # Application emoji — в фоне; панель не ждёт HTTP Discord.
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(self.bot)
+        except Exception as _ex:
+            log.debug('menu emoji warm: %s', _ex)
+
     def _recent_mute_count(self, guild_id, user_id, hours: float = 48.0) -> int:
         """Сколько мутов (таймаут/чат/войс) получил пользователь за окно.
         Источник — data/mod_data.json (те же дела, что пишет save_case)."""
@@ -393,15 +411,15 @@ class Moderation (commands .Cog ):
             'их в панели: Щит сервера → Лимиты команды → роль.'),
             ephemeral =True )
             return 
-        # стикеры gold-neon → application emoji (для селекта)
+        # стикеры → application emoji в фоне (unicode-фолбек, пока нет кэша)
         try:
-            from services.menu_emojis import ensure_menu_emojis
-            await ensure_menu_emojis(interaction.client)
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(interaction.client)
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
         view = ModPanelView(self, interaction.user, allowed)
         view._root_edit = interaction.edit_original_response
-        # Components V2: Container + селекты (баннер — по флагу SHOW_MENU_BANNER)
+        # Components V2: баннер из process-cache (без повторного PIL)
         banner = view._banner_file or view._make_banner_file()
         if banner is not None:
             await _respond(interaction, view=view, file=banner, ephemeral=True)
