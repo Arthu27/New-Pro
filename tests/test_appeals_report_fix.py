@@ -27,6 +27,39 @@ sys.path.insert(0, ROOT)
 
 PASS = FAIL = 0
 
+def _dm_body(dm):
+    if dm is None:
+        return ''
+    desc = getattr(dm, 'description', None)
+    if desc:
+        return str(desc)
+    texts = []
+    def walk(items):
+        for it in items or []:
+            c = getattr(it, 'content', None)
+            if c:
+                texts.append(str(c))
+            kids = getattr(it, 'children', None)
+            if kids:
+                walk(kids)
+    walk(getattr(dm, 'children', None))
+    return '\n'.join(texts)
+
+
+def _appeal_custom_ids(view):
+    ids = []
+    def walk(items):
+        for it in items or []:
+            cid = getattr(it, 'custom_id', None)
+            if cid:
+                ids.append(str(cid))
+            kids = getattr(it, 'children', None)
+            if kids:
+                walk(kids)
+    walk(getattr(view, 'children', None))
+    return ids
+
+
 
 def check(ok, msg, extra=''):
     global PASS, FAIL
@@ -140,7 +173,7 @@ class _User:
         self.dms = []
 
     async def send(self, embed=None, **kw):
-        self.dms.append(embed)
+        self.dms.append(embed if embed is not None else kw.get('view'))
 
 
 class _Bot:
@@ -187,7 +220,7 @@ async def main():
           'тег куратора 807030012301541377 ушёл в комнату при подаче')
     check(not cards_ch.sent, 'запасной канал модеров не тронут')
     view = (appeal_ch.sent[0] or {}).get('view')
-    ids = [b.custom_id for b in view.children] if view else []
+    ids = _appeal_custom_ids(view) if view else []
     check(any(str(i).startswith('appeal:accept:') for i in ids)
           and any(str(i).startswith('appeal:reject:') for i in ids)
           and any(str(i).startswith('appeal:claim:') for i in ids),
@@ -220,7 +253,7 @@ async def main():
             self.dms = []
 
         async def send(self, embed=None, **kw):
-            self.dms.append(embed)
+            self.dms.append(embed if embed is not None else kw.get('view'))
     du = _DmUser()
     appeal_ch3 = _Channel(APPEAL_CH, fail_threads=True)
     cards_ch3 = _Channel(CARDS_CH, name='карточки', fail_threads=True)
@@ -228,7 +261,7 @@ async def main():
     cog3 = A.Appeals(_Bot(guild3))
     guild3._members[du.id] = du     # участник на сервере → доступ сразу
     await cog3._submit_channel_appeal(du, guild3, 'Прошу разбан, всё было не так')
-    check(len(du.dms) == 1 and 'открыт для вас' in (du.dms[0].description or ''),
+    check(len(du.dms) == 1 and 'открыт для вас' in _dm_body(du.dms[0]),
           'канал открылся — ЛС говорит «открыт»')
     # комнаты на сервере нет — открыть нечего → честный текст
     # (другой человек: у первого уже есть pending — дубликаты не принимаем)
@@ -238,7 +271,7 @@ async def main():
     guild4 = _Guild([cards_ch4], [everyone, mod_role])
     cog4 = A.Appeals(_Bot(guild4))
     await cog4._submit_channel_appeal(du2, guild4, 'Прошу разбан, всё было не так')
-    check(du2.dms and 'открыть не получилось' in (du2.dms[0].description or ''),
+    check(du2.dms and 'открыть не получилось' in _dm_body(du2.dms[0]),
           'канал НЕ открылся — ЛС честно говорит об этом')
     CR.set_route(GID, 'ban_appeal_channel', APPEAL_CH)
 

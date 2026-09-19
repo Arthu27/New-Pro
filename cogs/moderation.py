@@ -771,6 +771,13 @@ class Moderation (commands .Cog ):
                         ephemeral =True )
                         return
                     await user .add_roles (_brole ,reason =reason or 'бан')
+                    # Если человек в войсе — выкинуть сразу (роль бана
+                    # каналы закрывает, но из голосового сам не выйдет).
+                    try :
+                        if getattr (getattr (user ,'voice',None ),'channel',None ):
+                            await user .move_to (None ,reason =reason or 'бан')
+                    except Exception as _vdisc :
+                        log .debug (f'[MODPANEL] ban voice kick: {_vdisc}')
                     try :
                         from services .staff_limits import record_hit as _sl_rec
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
@@ -2511,7 +2518,7 @@ class ModPanelView(discord.ui.LayoutView):
         self.selected_uid = None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
-        self._banner_name = 'hakumo_modpanel_banner_v10.png'
+        self._banner_name = 'hakumo_modpanel_banner_v11.png'
         self._banner_file = None
         self._use_v2 = True
         self._actor_label = ''
@@ -2556,7 +2563,7 @@ class ModPanelView(discord.ui.LayoutView):
         if bits:
             desc = " · ".join(bits)
         else:
-            desc = None
+            desc = "Выберите участника и действие ниже."
         title = "Модерация"
         if self._actor_label:
             title = f"Модерация · {self._actor_label.capitalize()}"

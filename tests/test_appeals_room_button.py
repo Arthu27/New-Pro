@@ -30,6 +30,21 @@ PASS = 0
 FAIL = 0
 
 
+def _appeal_custom_ids(view):
+    ids = []
+    def walk(items):
+        for it in items or []:
+            cid = getattr(it, 'custom_id', None)
+            if cid:
+                ids.append(str(cid))
+            kids = getattr(it, 'children', None)
+            if kids:
+                walk(kids)
+    walk(getattr(view, 'children', None))
+    return ids
+
+
+
 def check(ok, msg, extra=''):
     global PASS, FAIL
     if ok:
@@ -172,7 +187,7 @@ check(len(room.sent) >= 1 and not room.threads,
       'карточка легла прямо в комнату апелляции')
 check(len(cards.sent) == 0, 'запасной канал не тронут')
 view = (room.sent[0] or {}).get('view')
-ids = [str(b.custom_id) for b in view.children] if view else []
+ids = _appeal_custom_ids(view) if view else []
 check(any(i.startswith('appeal:accept:') for i in ids)
       and any(i.startswith('appeal:claim:') for i in ids),
       'на карточке кнопки Принять / Взять в работу', f'→ {ids}')

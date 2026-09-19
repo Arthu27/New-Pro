@@ -166,8 +166,15 @@ def rules_embed(title: str, items: list, footer: str = ''):
 # ── МОДЕРАЦИЯ /modpanel ──────────────────────────────────────────────
 
 def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
-    """Под баннером статус не дублируем — селекты уже всё показывают."""
-    return ''
+    """Подпись под баннером: инструкция или текущий выбор (без «порядок любой»)."""
+    bits = []
+    if selected_uid:
+        bits.append(f'участник <@{selected_uid}>')
+    if pending_label:
+        bits.append(f'«{pending_label}»')
+    if bits:
+        return ' · '.join(bits)
+    return 'Выберите участника и действие ниже.'
 
 
 # Чёрный акцент Container (рамка/полоса слева) — селекты Discord
@@ -175,9 +182,16 @@ def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
 _BLACK = 0x000000
 
 
-def black_container(*children):
-    """Container с чёрным accent (0x000000)."""
-    return _ui.Container(*children, accent_colour=discord.Colour(_BLACK))
+def black_container(*children, accent: int = None):
+    """Container с чёрным accent (0x000000) или своим цветом."""
+    colour = discord.Colour(accent if accent is not None else _BLACK)
+    return _ui.Container(*children, accent_colour=colour)
+
+
+def _full_bleed_gallery(banner_filename: str):
+    """MediaGallery на верхнем уровне LayoutView — шире, чем внутри Container."""
+    from discord.components import MediaGalleryItem
+    return _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}'))
 
 
 # Баннер включён: текст «Панель модерации / HAKUMO» в сообщении не дублируем —
@@ -189,23 +203,19 @@ def build_modpanel_items(*, banner_filename: str, status: str,
                          footer: str = 'модерация',
                          target_select=None, action_select=None,
                          show_banner: bool = None):
-    """Отдельные чёрные блоки: баннер · участник · действие (как раньше)."""
+    """Полный баннер сверху + статус + чёрные блоки участник/действие."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    # 1) баннер + статус
-    head = []
+    # 1) баннер full-bleed (вне Container — иначе Discord сжимает картинку)
     if show_banner and banner_filename:
-        from discord.components import MediaGalleryItem
-        head.append(
-            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+        items.append(_full_bleed_gallery(banner_filename))
     else:
-        head.append(_ui.TextDisplay('# Модерация'))
+        items.append(black_container(_ui.TextDisplay('# Модерация')))
     if status:
-        head.append(_ui.TextDisplay(status))
-    items.append(black_container(*head))
+        items.append(black_container(_ui.TextDisplay(status)))
     # 2) участник — отдельный блок
     if target_select is not None:
         row = _ui.ActionRow()
@@ -222,7 +232,6 @@ def build_modpanel_items(*, banner_filename: str, status: str,
             _ui.TextDisplay('**Действие**'),
             row,
         ))
-    # футер «модерация» убран — пустой блок не нужен
     return items
 
 
@@ -237,9 +246,7 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         show_banner = SHOW_MENU_BANNER
     children = []
     if show_banner and banner_filename:
-        from discord.components import MediaGalleryItem
-        children.append(
-            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+        children.append(_full_bleed_gallery(banner_filename))
     else:
         children.append(_ui.TextDisplay('# Модерация'))
     if status:
@@ -258,22 +265,18 @@ def build_modpanel_container(*, banner_filename: str, status: str,
 def build_appeals_menu_items(*, banner_filename: str, body: str,
                              footer: str, menu_select=None,
                              show_banner: bool = None):
-    """Баннер и select апелляций — отдельные чёрные блоки."""
+    """Баннер full-bleed + select апелляций в чёрном блоке."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    head = []
     if show_banner and banner_filename:
-        from discord.components import MediaGalleryItem
-        head.append(
-            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+        items.append(_full_bleed_gallery(banner_filename))
     else:
-        head.append(_ui.TextDisplay('# Апелляции'))
+        items.append(black_container(_ui.TextDisplay('# Апелляции')))
     if body:
-        head.append(_ui.TextDisplay(body))
-    items.append(black_container(*head))
+        items.append(black_container(_ui.TextDisplay(body)))
     if menu_select is not None:
         row = _ui.ActionRow()
         row.add_item(menu_select)
@@ -286,22 +289,18 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
 
 def build_staff_menu_items(*, banner_filename: str, body: str = None,
                            role_select=None, show_banner: bool = None):
-    """Наборы: баннер + select роли в отдельных чёрных блоках."""
+    """Наборы: баннер full-bleed + select роли."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    head = []
     if show_banner and banner_filename:
-        from discord.components import MediaGalleryItem
-        head.append(
-            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+        items.append(_full_bleed_gallery(banner_filename))
     else:
-        head.append(_ui.TextDisplay('# Наборы'))
+        items.append(black_container(_ui.TextDisplay('# Наборы')))
     if body:
-        head.append(_ui.TextDisplay(body))
-    items.append(black_container(*head))
+        items.append(black_container(_ui.TextDisplay(body)))
     if role_select is not None:
         row = _ui.ActionRow()
         row.add_item(role_select)
@@ -314,28 +313,115 @@ def build_staff_menu_items(*, banner_filename: str, body: str = None,
 
 def build_events_menu_items(*, banner_filename: str, status: str,
                             action_row=None, show_banner: bool = None):
-    """Ивенты: баннер + кнопки/селект в чёрных блоках."""
+    """Ивенты: баннер full-bleed + кнопки/селект."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    head = []
     if show_banner and banner_filename:
-        from discord.components import MediaGalleryItem
-        head.append(
-            _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}')))
+        items.append(_full_bleed_gallery(banner_filename))
     else:
-        head.append(_ui.TextDisplay('# Ивенты'))
+        items.append(black_container(_ui.TextDisplay('# Ивенты')))
     if status:
-        head.append(_ui.TextDisplay(status))
-    items.append(black_container(*head))
+        items.append(black_container(_ui.TextDisplay(status)))
     if action_row is not None:
         items.append(black_container(
             _ui.TextDisplay('**Действия**'),
             action_row,
         ))
     return items
+
+
+def build_log_card_items(*, title: str, rows=None, footer: str = '',
+                         accent: int = None, image_filename: str = None,
+                         note: str = None):
+    """Карточка лога Components V2 (webhook/channel): текст + опционально фото."""
+    if not V2_AVAILABLE:
+        return None
+    children = []
+    head = f'# {title}' if title else '# Лог'
+    if note:
+        head = f'{head}\n{note}'
+    children.append(_ui.TextDisplay(head[:4000]))
+    if rows:
+        lines = []
+        for name, value in list(rows)[:12]:
+            n = str(name or '').strip()
+            v = str(value or '').strip()
+            if not v:
+                continue
+            lines.append(f'**{n}**\n{v}' if n else v)
+        if lines:
+            children.append(_ui.TextDisplay('\n\n'.join(lines)[:4000]))
+    if image_filename:
+        children.append(_full_bleed_gallery(image_filename))
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    return [black_container(*children, accent=accent if accent is not None else _BLACK)]
+
+
+def build_log_card_view(*, title: str, rows=None, footer: str = '',
+                        accent: int = None, image_filename: str = None,
+                        note: str = None, timeout=None):
+    """LayoutView для лога — готов к channel/webhook .send(view=...)."""
+    items = build_log_card_items(
+        title=title, rows=rows, footer=footer, accent=accent,
+        image_filename=image_filename, note=note)
+    if not items:
+        return None
+    view = _ui.LayoutView(timeout=timeout)
+    for it in items:
+        view.add_item(it)
+    return view
+
+
+def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
+                            image_filename: str = None, buttons=None,
+                            accent: int = None):
+    """Карточка апелляции V2: текст/фото + ActionRow с кнопками."""
+    if not V2_AVAILABLE:
+        return None
+    children = []
+    head = f'# {title}' if title else '# Апелляция'
+    if body:
+        head = f'{head}\n{body}'
+    children.append(_ui.TextDisplay(head[:4000]))
+    if image_filename:
+        children.append(_full_bleed_gallery(image_filename))
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    if buttons:
+        row = _ui.ActionRow()
+        for btn in buttons:
+            row.add_item(btn)
+        children.append(row)
+    return [black_container(*children, accent=accent if accent is not None else _BLACK)]
+
+
+def build_notice_items(*, title: str, body: str = '', footer: str = '',
+                       accent: int = None):
+    """Короткое V2-уведомление (ЛС / пост-апелляция)."""
+    if not V2_AVAILABLE:
+        return None
+    text = f'# {title}' if title else ''
+    if body:
+        text = f'{text}\n{body}' if text else body
+    children = [_ui.TextDisplay(text[:4000])]
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    return [black_container(*children, accent=accent if accent is not None else _BLACK)]
+
+
+def notice_layout_view(*, title: str, body: str = '', footer: str = '',
+                       accent: int = None, timeout=None):
+    items = build_notice_items(title=title, body=body, footer=footer, accent=accent)
+    if not items:
+        return None
+    view = _ui.LayoutView(timeout=timeout)
+    for it in items:
+        view.add_item(it)
+    return view
 
 
 async def send_v2_or_embed(target, *, view, embed, fallback_view=None,

@@ -587,6 +587,9 @@ async def _safe_send (ch ,**kw ):
     Частый боевой сценарий: категория « Логи» создана старым кодом без
     доступа для бота → Forbidden на каждом send → «логи не работают».
     Ошибка пишется в журнал, слушатель живёт дальше.
+
+    Предпочитаем Components V2 (LayoutView) — как webhook V2 у меню;
+    при сбое — классический эмбед / фото.
     """
     try :
         _e =kw .get ('embed')
@@ -598,6 +601,7 @@ async def _safe_send (ch ,**kw ):
                 _th_name =str (_m0 .get ('title',''))if _m0 else ''
         _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None
         _has_file ='file'in kw or 'files'in kw
+        _photo_name =None
         # Вид лога: «photo» — одно фото со стеклом; иначе эмбед Discord.
         if not _has_file and _m is not None :
             try :
@@ -632,10 +636,58 @@ async def _safe_send (ch ,**kw ):
                     if _jpg :
                         _buf =_io .BytesIO (_jpg )
                         _buf ._log_embed =_e
-                        kw ['file']=discord .File (_buf ,filename ='hakumo_log.jpg')
+                        _photo_name ='hakumo_log.jpg'
+                        kw ['file']=discord .File (_buf ,filename =_photo_name )
                         kw .pop ('embed',None )
+                        _has_file =True
             except Exception as _ex:
                 log.debug("_safe_send(): подавлено: %s", _ex)
+        # Components V2: быстрая чёрная карточка (текст ± MediaGallery фото)
+        if 'view' not in kw and (_e is not None or _m is not None or _photo_name ):
+            try :
+                from services .v2_layouts import V2_AVAILABLE ,build_log_card_view
+                if V2_AVAILABLE :
+                    _meta =_m or {}
+                    _title =(_meta .get ('title')or _th_name or
+                             (getattr (_e ,'title',None )if _e is not None else None )or 'Лог')
+                    _rows =list (_meta .get ('rows')or [])
+                    if not _rows and _e is not None :
+                        for _f in (getattr (_e ,'fields',None )or []):
+                            _rows .append ((getattr (_f ,'name',''),getattr (_f ,'value','')))
+                    _footer =''
+                    try :
+                        _ft =getattr (getattr (_e ,'footer',None ),'text',None )if _e else None
+                        _footer =str (_ft or '')
+                    except Exception :
+                        _footer =''
+                    if not _footer and _meta .get ('guild'):
+                        _footer =f"Hakumo Log · {_meta .get ('guild')}"
+                    _accent =_meta .get ('color')
+                    _note =None
+                    if _e is not None and not _photo_name :
+                        _note =getattr (_e ,'description',None )
+                    _view =build_log_card_view (
+                        title =str (_title ),
+                        rows =_rows ,
+                        footer =_footer ,
+                        accent =int (_accent )if _accent is not None else None ,
+                        image_filename =_photo_name ,
+                        note =_note if not _photo_name else None ,
+                        timeout =None )
+                    if _view is not None :
+                        _vkw ={'view':_view }
+                        if 'file'in kw :
+                            _vkw ['file']=kw ['file']
+                        elif 'files'in kw :
+                            _vkw ['files']=kw ['files']
+                        if _is_forum_ch (ch ):
+                            await ch .create_thread (
+                                name =(_th_name or 'Лог')[:100],**_vkw )
+                            return True
+                        await ch .send (**_vkw )
+                        return True
+            except Exception as _v2e :
+                log .debug ('_safe_send V2: %s',_v2e )
         # Роли в логах НЕ тегаем (заказ владельца 2026-09-10: «логи не
         # должны тегать ролей»). Раньше сюда добавлялся пинг роли модеров
         # на mute/ban/warn — убрано полностью.

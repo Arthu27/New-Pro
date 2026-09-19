@@ -94,44 +94,51 @@ from services.v2_layouts import SHOW_MENU_BANNER  # noqa: E402
 check(SHOW_MENU_BANNER is True, 'баннер включён')
 texts = []
 for child in view.children:
+    c = getattr(child, 'content', None)
+    if c:
+        texts.append(c)
     for k in list(getattr(child, 'children', []) or []):
         c = getattr(k, 'content', None)
         if c:
             texts.append(c)
 joined = '\n'.join(texts)
 check('Участник' in joined and 'Действие' in joined, 'подписи блоков')
+check('Выберите участника и действие ниже.' in joined,
+      f'инструкция под баннером: {joined!r}')
 check('Участник:' not in joined and 'можно выбрать' not in joined
       and 'селекты ниже' not in joined and 'лимитах' not in joined
       and 'Порядок любой' not in joined
-      and 'порядок любой' not in joined.lower()
-      and 'Выберите участника и действие' not in joined,
+      and 'порядок любой' not in joined.lower(),
       f'без лишнего статуса: {joined!r}')
-check(joined.strip() in ('**Участник**\n**Действие**', '**Участник****Действие**')
-      or ('**Участник**' in joined and '**Действие**' in joined
-          and joined.count('-#') == 0),
-      f'только подписи блоков: {joined!r}')
+check('**Участник**' in joined and '**Действие**' in joined
+      and joined.count('-#') == 0,
+      f'подписи блоков без футера: {joined!r}')
 check(joined.count('# Панель модерации') == 0 and 'HAKUMO' not in joined,
       f'без дубля заголовка: {joined!r}')
 check('-# модерация' not in joined, 'без футера модерация')
-check(any(
-    type(k).__name__ == 'MediaGallery'
-    for child in view.children
-    for k in list(getattr(child, 'children', []) or [])
-), 'есть MediaGallery')
-# после выбора участника статус всё равно без «Участник: @…»
+# MediaGallery full-bleed — верхний уровень LayoutView (не внутри Container)
+check(any(type(child).__name__ == 'MediaGallery' for child in view.children)
+      or any(type(k).__name__ == 'MediaGallery'
+             for child in view.children
+             for k in list(getattr(child, 'children', []) or [])),
+      'есть MediaGallery full-bleed')
+# после выбора участника — краткий статус с mention, без «Участник:»
 view.selected_uid = '424242424242424242'
 view._rebuild(None)
 st_texts = []
 for child in view.children:
+    c = getattr(child, 'content', None)
+    if c:
+        st_texts.append(c)
     for k in list(getattr(child, 'children', []) or []):
         c = getattr(k, 'content', None)
         if c:
             st_texts.append(c)
 st_joined = '\n'.join(st_texts)
-check('Участник:' not in st_joined and '@' not in st_joined,
-      f'после выбора без Участник:@: {st_joined!r}')
-check('v10' in (view._banner_name or ''),
-      f'banner filename v10 cache-bust: {view._banner_name!r}')
+check('Участник:' not in st_joined and '<@424242424242424242>' in st_joined,
+      f'после выбора краткий статус: {st_joined!r}')
+check('v11' in (view._banner_name or ''),
+      f'banner filename v11 cache-bust: {view._banner_name!r}')
 # footer helper без дубля (для embed-фолбека)
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == 'модерация', f"footer hakumo={view._footer_text(g)!r}")
@@ -139,7 +146,8 @@ g2 = type('G', (), {'name': 'My Server'})()
 check(view._footer_text(g2) == 'My Server · модерация',
       f"footer other={view._footer_text(g2)!r}")
 check(view._banner_file is not None, 'banner file attached')
-check(len(view.children) == 3, f'без футер-блока: {len(view.children)}')
+# gallery + status + участник + действие
+check(len(view.children) == 4, f'блоки: gallery+status+2 selects: {len(view.children)}')
 
 print('== empty select placeholders (нет дубля с заголовком блока) ==')
 check(getattr(view.target_select, 'placeholder', None) in ('', None),

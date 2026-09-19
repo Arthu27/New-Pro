@@ -140,6 +140,28 @@ def _dm_embed(status, item, guild_name=''):
     return embed
 
 
+async def _send_dm_notice(user, *, status, item, guild_name='', body=''):
+    """ЛС V2 (Components) с фолбеком на эмбед."""
+    embed = _dm_embed(status, item, guild_name)
+    if body:
+        embed.description = body
+    footer = f'{guild_name} · {DM_FOOTER}' if guild_name else DM_FOOTER
+    try:
+        from services.v2_layouts import V2_AVAILABLE, notice_layout_view
+        if V2_AVAILABLE:
+            view = notice_layout_view(
+                title=embed.title or '',
+                body=body or '',
+                footer=footer,
+                accent=int(embed.color.value) if embed.color else COLOR_PENDING,
+                timeout=None)
+            if view is not None:
+                return await user.send(view=view)
+    except Exception as _ex:
+        log.debug('appeals dm V2: %s', _ex)
+    return await user.send(embed=embed)
+
+
 def _parse_ts(value):
     s = str(value or '').strip()
     if not s:
@@ -310,38 +332,69 @@ def fmt_card_text(item):
 
 # ─── view с кнопками ────────────────────────────────────────────────────────
 
-class AppealView(discord.ui.View):
-    """Persistent-кнопки под конкретную апелляцию.
+class AppealView(discord.ui.LayoutView):
+    """Persistent-кнопки под апелляцией — Components V2 LayoutView.
 
     custom_id уникален для каждой апелляции ('appeal:accept:7'), поэтому
     view можно перерегистрировать после рестарта бота (on_ready ниже) —
     кнопки не умирают, пока апелляция ждёт решения.
     """
 
-    def __init__(self, cog, guild_id, appeal_id):
+    def __init__(self, cog, guild_id, appeal_id, *, title='', body='',
+                 footer='', image_filename=None, accent=None):
         super().__init__(timeout=None)
         self.cog = cog
         self.guild_id = guild_id
         self.appeal_id = appeal_id
-        for label, style, verb in (
-                ('Принять', discord.ButtonStyle.success, 'accept'),
-                ('Отклонить', discord.ButtonStyle.danger, 'reject')):
-            btn = discord.ui.Button(
-                label=label, style=style,
-                custom_id=f'appeal:{verb}:{appeal_id}')
-            btn.callback = self._make_cb(verb == 'accept')
-            self.add_item(btn)
-        claim = discord.ui.Button(
+        self._card_title = title
+        self._card_body = body
+        self._card_footer = footer
+        self._image_filename = image_filename
+        self._accent = accent
+        self._accept_btn = discord.ui.Button(
+            label='Принять', style=discord.ButtonStyle.success,
+            custom_id=f'appeal:accept:{appeal_id}')
+        self._accept_btn.callback = self._make_cb(True)
+        self._reject_btn = discord.ui.Button(
+            label='Отклонить', style=discord.ButtonStyle.danger,
+            custom_id=f'appeal:reject:{appeal_id}')
+        self._reject_btn.callback = self._make_cb(False)
+        self._claim_btn_ref = discord.ui.Button(
             label='Взять в работу', style=discord.ButtonStyle.primary,
             emoji='✋', custom_id=f'appeal:claim:{appeal_id}')
-        claim.callback = self._claim
-        self.add_item(claim)
+        self._claim_btn_ref.callback = self._claim
+        self._rebuild_card()
+
+    def _rebuild_card(self):
+        """Собрать V2-карточку или только ряд кнопок (для add_view)."""
+        self.clear_items()
+        buttons = [self._accept_btn, self._reject_btn, self._claim_btn_ref]
+        from services.v2_layouts import V2_AVAILABLE, build_appeal_card_items, black_container
+        if V2_AVAILABLE and (self._card_title or self._card_body or self._image_filename):
+            items = build_appeal_card_items(
+                title=self._card_title or f'Апелляция #{self.appeal_id}',
+                body=self._card_body,
+                footer=self._card_footer,
+                image_filename=self._image_filename,
+                buttons=buttons,
+                accent=self._accent,
+            )
+            if items:
+                for it in items:
+                    self.add_item(it)
+                return
+        if V2_AVAILABLE:
+            from discord import ui as _ui
+            row = _ui.ActionRow()
+            for btn in buttons:
+                row.add_item(btn)
+            self.add_item(black_container(row))
+        else:
+            for btn in buttons:
+                self.add_item(btn)
 
     def _claim_btn(self):
-        for child in self.children:
-            if str(getattr(child, 'custom_id', '')).startswith('appeal:claim:'):
-                return child
-        return None
+        return self._claim_btn_ref
 
     async def _claim(self, interaction):
         """Взять апелляцию в работу / снять с себя (повторный клик)."""
@@ -460,6 +513,11 @@ class AppealView(discord.ui.View):
             embed.set_footer(text=tail)
             await interaction.response.edit_message(embed=embed, view=self)
         else:
+            # V2-карточка: обновляем футер в раскладке
+            self._card_footer = (
+                f'В работе: {item["claimed_by"]["name"]}'
+                if item.get('claimed_by') else 'Очередь общая')
+            self._rebuild_card()
             await interaction.response.edit_message(view=self)
         await interaction.followup.send(note, ephemeral=True)
 
@@ -1785,6 +1843,40 @@ class Appeals(commands.Cog):
             log.debug('appeals: карточка-картинка #%s: %s', item.get('id'), _ex)
         return file
 
+    def _appeal_v2_send_kw(self, guild_id, item, embed, card_file=None):
+        """kwargs для отправки карточки апелляции: V2 LayoutView (+файл)."""
+        body_bits = []
+        if embed.description:
+            body_bits.append(str(embed.description))
+        for field in getattr(embed, 'fields', None) or []:
+            body_bits.append(f'**{field.name}**\n{field.value}')
+        author = getattr(embed, 'author', None)
+        if author and getattr(author, 'name', None):
+            body_bits.insert(0, f'от **{author.name}**')
+        image_name = getattr(card_file, 'filename', None) if card_file else None
+        footer = ''
+        try:
+            footer = str(getattr(getattr(embed, 'footer', None), 'text', '') or '')
+        except Exception:
+            footer = ''
+        accent = None
+        try:
+            accent = int(embed.color.value) if embed.color else COLOR_PENDING
+        except Exception:
+            accent = COLOR_PENDING
+        view = AppealView(
+            self, guild_id, item['id'],
+            title=str(embed.title or f'Апелляция #{item["id"]}'),
+            body='\n\n'.join(body_bits)[:3500],
+            footer=footer,
+            image_filename=image_name,
+            accent=accent,
+        )
+        kw = {'view': view}
+        if card_file is not None:
+            kw['file'] = card_file
+        return kw
+
     async def _submit_channel_appeal(self, user, guild, text, channel=None):
         """Апелляция из меню в канале: карточка в отдельном треде."""
         guild_id = guild.id
@@ -1828,7 +1920,6 @@ class Appeals(commands.Cog):
         except Exception as _ex:
             log.debug('appeals: карточка-картинка #%s: %s', item['id'], _ex)
 
-        view = AppealView(self, guild_id, item['id'])
         # Куда падает карточка: «всё сюда, кроме логов» — сама комната
         # апелляции, где и кнопки, и обсуждение (владелец 2026-09-06).
         # Нет комнаты — запасной путь прежний: канал карточек, заявка
@@ -1839,9 +1930,7 @@ class Appeals(commands.Cog):
             use_thread = True
         if target is not None:
             name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
-            send_kw = {'embed': embed, 'view': view}
-            if card_file is not None:
-                send_kw['file'] = card_file
+            send_kw = self._appeal_v2_send_kw(guild_id, item, embed, card_file)
             card = None
             if use_thread:
                 try:
@@ -1882,11 +1971,11 @@ class Appeals(commands.Cog):
                                                             fallback_channel=target)
         self._save(guild_id, state)
         try:
-            embed = _dm_embed('submitted', item, str(guild.name))
-            embed.description = (
+            body = (
                 f'Модераторы сервера **{guild.name}** уже получили её. '
                 + self._dm_channel_line(ch_opened, ch_ref))
-            await user.send(embed=embed)
+            await _send_dm_notice(user, status='submitted', item=item,
+                                  guild_name=str(guild.name), body=body)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС подтверждения #%s не дошло: %s', item['id'], _ex)
         return item, None
@@ -1916,21 +2005,12 @@ class Appeals(commands.Cog):
         # нет комнаты — запасной канал карточек (владелец 2026-09-06)
         channel, use_thread = await self._card_channel(guild, state)
         if channel is not None:
-            view = AppealView(self, guild_id, item['id'])
-            # Оформление карточки из панели: авто-картинка в выбранной теме,
-            # своя картинка по URL (скачиваем файлом — без пережатия) или
-            # обычный эмбед без картинки.
             appearance = normalize_appearance(state.get('appearance'))
-            send_kwargs = {'embed': embed, 'view': view}
             painted = await self._paint_appeal_card(embed, item, appearance)
-            if painted is not None:
-                send_kwargs['file'] = painted
+            send_kwargs = self._appeal_v2_send_kw(guild_id, item, embed, painted)
             msg = None
             if use_thread:
-                # запасной путь без комнаты: заявка — в собственную ветку,
-                # чтобы канал карточек не замусоривался. Раньше это делал
-                # только путь «меню в канале», а из ЛС карточка падала
-                # голым сообщением в общий канал (несостыковка 2026-09-08).
+                # запасной путь без комнаты: заявка — в собственную ветку
                 try:
                     thread = await channel.create_thread(
                         name=f'Апелляция #{item["id"]} · {str(user)[:40]}',
@@ -1938,8 +2018,6 @@ class Appeals(commands.Cog):
                     msg = await thread.send(**send_kwargs)
                     item['thread_id'] = thread.id
                 except (discord.Forbidden, discord.HTTPException) as _ex:
-                    # нет права «Создавать публичные ветки» — НЕ теряем
-                    # заявку: карточка ложится прямо в канал (как в меню-пути)
                     log.warning('appeals: тред #%s не создан (%s) — карточка в канал',
                                 item['id'], _ex)
             if msg is None:
@@ -1951,16 +2029,13 @@ class Appeals(commands.Cog):
             if msg is not None:
                 item['message_id'] = msg.id
                 item['thread_url'] = msg.jump_url
-                # где лежит карточка (для удаления после решения) + пинг
                 item['card_channel_id'] = getattr(channel, 'id', None)
                 self._save(guild_id, state)
                 ping = await self._ping_mod_role(channel, settings_of(state), item)
                 item['ping_message_id'] = getattr(ping, 'id', None)
                 await self._fire_panel_event(item)
         # Канал апелляции открывается после подачи при ЛЮБОМ пути подачи
-        # (скрыт до подачи — заказ владельца 2026-09-05). Сначала СОХРАНЯЕМ
-        # state, потом вешаем на локальный item временные поля для ответа:
-        # item уезжает в JSON — канал и имя канала в БД хранить нельзя.
+        # (скрыт до подачи — заказ владельца 2026-09-05).
         _opened, _ch_ref = await self._open_appeal_channel(guild, user)
         self._save(guild_id, state)
         item['_channel_status'] = _opened           # временно, только для ответа
@@ -2072,43 +2147,40 @@ class Appeals(commands.Cog):
         except (discord.NotFound, discord.HTTPException):
             return
         if accept:
-            embed = _dm_embed('accepted', item, guild_name)
+            status = 'accepted'
             if member_present:
-                embed.description = (
+                body = (
                     f'Наказание снято: изоляция убрана — вы снова видите '
                     f'каналы сервера **{guild_name}**. Добро пожаловать назад!')
             elif unbanned:
-                embed.description = (
+                body = (
                     f'Бан на сервере **{guild_name}** снят. '
                     + (f'Возвращайтесь по ссылке (работает один раз, 24 ч):\n{invite_url}'
                        if invite_url else
                        'Можно вернуться по вашему приглашению на сервер.'))
                 if not invite_url:
-                    embed.description += ' Или попросите свежую ссылку у знакомых модераторов.'
+                    body += ' Или попросите свежую ссылку у знакомых модераторов.'
             else:
-                embed.description = (f'Ваша апелляция на сервере **{guild_name}** '
-                                     'принята.')
+                body = (f'Ваша апелляция на сервере **{guild_name}** '
+                        'принята.')
         else:
-            embed = _dm_embed('rejected', item, guild_name)
-            embed.description = 'К сожалению, в этот раз — нет.'
+            status = 'rejected'
+            body = 'К сожалению, в этот раз — нет.'
             text_brief = str(item.get('text') or '').strip()
             if text_brief:
-                embed.add_field(name='Ваша апелляция',
-                                value=text_brief[:300], inline=False)
+                body += f'\n\n**Ваша апелляция**\n{text_brief[:300]}'
             if item.get('reply'):
-                embed.add_field(name='Комментарий модератора',
-                                value=str(item['reply'])[:300], inline=False)
+                body += f'\n\n**Комментарий модератора**\n{str(item["reply"])[:300]}'
             if cooldown_hours > 0:
                 reviewed = _parse_ts(item.get('reviewed_at'))
                 if reviewed is not None:
                     from datetime import timedelta
                     retry = reviewed + timedelta(hours=cooldown_hours)
-                    embed.add_field(
-                        name='Повторная подача',
-                        value=f'не раньше **{retry.strftime("%d.%m %H:%M")}**',
-                        inline=False)
+                    body += (f'\n\n**Повторная подача**\n'
+                             f'не раньше **{retry.strftime("%d.%m %H:%M")}**')
         try:
-            await user.send(embed=embed)
+            await _send_dm_notice(user, status=status, item=item,
+                                  guild_name=guild_name, body=body)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС %s закрыты: %s', item['user_id'], _ex)
             return
