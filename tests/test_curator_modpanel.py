@@ -220,12 +220,12 @@ joined = '\n'.join(
     getattr(k, 'content', '') or ''
     for child in view.children
     for k in list(getattr(child, 'children', []) or []))
-check('**Участник**' in joined and 'кого наказать' in joined,
-      'заголовок блока Участник + подпись')
+check('**Участник**' in joined and 'кого наказать' not in joined,
+      'заголовок Участник без дубля подсказки')
 check(getattr(view.target_select, 'placeholder', None) == 'Кого наказать?',
       f'view select: {getattr(view.target_select, "placeholder", None)!r}')
-check('**Действие**' in joined and 'что сделать' in joined,
-      'заголовок блока Действие + подпись')
+check('**Действие**' in joined and 'что сделать' not in joined,
+      'заголовок Действие без дубля подсказки')
 check(getattr(view.action_select, 'placeholder', None) == '› Что сделать?',
       f'action select: {getattr(view.action_select, "placeholder", None)!r}')
 check('Панель модерации' in joined and 'HAKUMO' in joined,

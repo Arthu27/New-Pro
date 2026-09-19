@@ -86,8 +86,8 @@ joined = _collect_texts(view)
 check('Панель модерации' in joined and 'HAKUMO' in joined,
       f'шапка с заголовком: {joined!r}')
 check('Участник' in joined and 'Действие' in joined, 'подписи блоков')
-check('кого наказать' in joined and 'что сделать' in joined,
-      f'подписи-подсказки блоков: {joined!r}')
+check('кого наказать' not in joined and 'что сделать' not in joined,
+      f'без дублей подсказок над селектом: {joined!r}')
 check('Выберите участника и действие ниже.' in joined,
       f'инструкция под баннером: {joined!r}')
 check('Порядок любой' not in joined and 'порядок любой' not in joined.lower(),

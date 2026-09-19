@@ -217,20 +217,20 @@ def build_modpanel_items(*, banner_filename: str, status: str,
     if status:
         head.append(_ui.TextDisplay(status))
     items.append(black_container(*head))
-    # 2) участник
+    # 2) участник — заголовок без дубля placeholder
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
         items.append(black_container(
-            _ui.TextDisplay('**Участник**\n-# кого наказать'),
+            _ui.TextDisplay('**Участник**'),
             row,
         ))
-    # 3) действие
+    # 3) действие — заголовок без дубля placeholder
     if action_select is not None:
         row = _ui.ActionRow()
         row.add_item(action_select)
         items.append(black_container(
-            _ui.TextDisplay('**Действие**\n-# что сделать'),
+            _ui.TextDisplay('**Действие**'),
             row,
         ))
     # 4) футер
