@@ -505,20 +505,29 @@ class AppealView(discord.ui.LayoutView):
             except Exception as _uncl_ex:
                 log.debug('appeals: снятие с работы, комната #%s: %s',
                           item['id'], _uncl_ex)
-        embed = (interaction.message.embeds[0]
-                 if interaction.message and interaction.message.embeds else None)
-        if embed is not None:
-            tail = (f'В работе: {item["claimed_by"]["name"]}'
-                    if item.get('claimed_by') else 'Очередь общая')
-            embed.set_footer(text=tail)
-            await interaction.response.edit_message(embed=embed, view=self)
-        else:
-            # V2-карточка: обновляем футер в раскладке
-            self._card_footer = (
-                f'В работе: {item["claimed_by"]["name"]}'
-                if item.get('claimed_by') else 'Очередь общая')
+        # LayoutView нельзя смешивать с embed — Discord отклонит payload.
+        # Кнопки уже обновлены in-place; карточку пересобираем только если
+        # есть сохранённый контент (иначе после add_view сотрём V2-текст).
+        self._card_footer = (
+            f'В работе: {item["claimed_by"]["name"]}'
+            if item.get('claimed_by') else 'Очередь общая')
+        if self._card_title or self._card_body or self._image_filename:
             self._rebuild_card()
-            await interaction.response.edit_message(view=self)
+        edit_kw = {
+            'view': self,
+            'content': None,
+            'embed': None,
+            'embeds': [],
+        }
+        try:
+            await interaction.response.edit_message(**edit_kw)
+        except Exception as _ed:
+            log.debug('appeals claim edit: %s', _ed)
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.defer(ephemeral=True)
+            except Exception as _df:
+                log.debug('appeals claim defer: %s', _df)
         await interaction.followup.send(note, ephemeral=True)
 
     def _make_cb(self, accept):
@@ -1109,8 +1118,17 @@ class Appeals(commands.Cog):
             state = self._load(guild.id)
             for item in pending_items(state):
                 if item.get('message_id'):
-                    self.bot.add_view(AppealView(self, guild.id, item['id']),
-                                      message_id=item['message_id'])
+                    snap = item.get('card_v2') or {}
+                    self.bot.add_view(
+                        AppealView(
+                            self, guild.id, item['id'],
+                            title=str(snap.get('title') or ''),
+                            body=str(snap.get('body') or ''),
+                            footer=str(snap.get('footer') or ''),
+                            image_filename=snap.get('image') or None,
+                            accent=snap.get('accent'),
+                        ),
+                        message_id=item['message_id'])
                     restored += 1
         try:
             self.bot.add_view(AppealMenuView())
@@ -1843,17 +1861,16 @@ class Appeals(commands.Cog):
             log.debug('appeals: карточка-картинка #%s: %s', item.get('id'), _ex)
         return file
 
-    def _appeal_v2_send_kw(self, guild_id, item, embed, card_file=None):
-        """kwargs для отправки карточки апелляции: V2 LayoutView (+файл)."""
+    def _appeal_card_text_from_embed(self, embed):
+        """Собрать title/body/footer ДО paint (paint может очистить embed)."""
         body_bits = []
-        if embed.description:
+        if getattr(embed, 'description', None):
             body_bits.append(str(embed.description))
         for field in getattr(embed, 'fields', None) or []:
             body_bits.append(f'**{field.name}**\n{field.value}')
         author = getattr(embed, 'author', None)
         if author and getattr(author, 'name', None):
             body_bits.insert(0, f'от **{author.name}**')
-        image_name = getattr(card_file, 'filename', None) if card_file else None
         footer = ''
         try:
             footer = str(getattr(getattr(embed, 'footer', None), 'text', '') or '')
@@ -1864,17 +1881,38 @@ class Appeals(commands.Cog):
             accent = int(embed.color.value) if embed.color else COLOR_PENDING
         except Exception:
             accent = COLOR_PENDING
+        return {
+            'title': str(getattr(embed, 'title', None) or ''),
+            'body': '\n\n'.join(body_bits)[:3500],
+            'footer': footer,
+            'accent': accent,
+        }
+
+    def _appeal_v2_send_kw(self, guild_id, item, embed, card_file=None,
+                           *, snap=None):
+        """kwargs для отправки карточки апелляции: V2 LayoutView (+файл)."""
+        snap = dict(snap or self._appeal_card_text_from_embed(embed))
+        image_name = getattr(card_file, 'filename', None) if card_file else None
+        snap['image'] = image_name
         view = AppealView(
             self, guild_id, item['id'],
-            title=str(embed.title or f'Апелляция #{item["id"]}'),
-            body='\n\n'.join(body_bits)[:3500],
-            footer=footer,
+            title=snap.get('title') or f'Апелляция #{item["id"]}',
+            body=snap.get('body') or '',
+            footer=snap.get('footer') or '',
             image_filename=image_name,
-            accent=accent,
+            accent=snap.get('accent'),
         )
         kw = {'view': view}
         if card_file is not None:
             kw['file'] = card_file
+        # снимок для add_view после рестарта — иначе claim сотрёт карточку
+        item['card_v2'] = {
+            'title': snap.get('title') or '',
+            'body': snap.get('body') or '',
+            'footer': snap.get('footer') or '',
+            'image': image_name,
+            'accent': snap.get('accent'),
+        }
         return kw
 
     async def _submit_channel_appeal(self, user, guild, text, channel=None):
@@ -1914,6 +1952,7 @@ class Appeals(commands.Cog):
                         inline=False)
         embed.set_footer(text=f'appeal #{item["id"]} · решение — меню под карточкой')
         card_file = None
+        snap = self._appeal_card_text_from_embed(embed)
         try:
             appearance = normalize_appearance(state.get('appearance'))
             card_file = await self._paint_appeal_card(embed, item, appearance)
@@ -1930,7 +1969,8 @@ class Appeals(commands.Cog):
             use_thread = True
         if target is not None:
             name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
-            send_kw = self._appeal_v2_send_kw(guild_id, item, embed, card_file)
+            send_kw = self._appeal_v2_send_kw(
+                guild_id, item, embed, card_file, snap=snap)
             card = None
             if use_thread:
                 try:
@@ -2006,8 +2046,10 @@ class Appeals(commands.Cog):
         channel, use_thread = await self._card_channel(guild, state)
         if channel is not None:
             appearance = normalize_appearance(state.get('appearance'))
+            snap = self._appeal_card_text_from_embed(embed)
             painted = await self._paint_appeal_card(embed, item, appearance)
-            send_kwargs = self._appeal_v2_send_kw(guild_id, item, embed, painted)
+            send_kwargs = self._appeal_v2_send_kw(
+                guild_id, item, embed, painted, snap=snap)
             msg = None
             if use_thread:
                 # запасной путь без комнаты: заявка — в собственную ветку

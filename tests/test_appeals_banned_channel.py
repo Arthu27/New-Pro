@@ -193,8 +193,16 @@ async def main():
     check(len(guild4._room.sent) == 1, 'карточка отправлена в комнату')
     if guild4._room.sent:
         view = guild4._room.sent[0].get('view')
-        labels = [getattr(c, 'label', '') for c in
-                  getattr(view, 'children', [])]
+        labels = []
+        def _walk(items):
+            for it in items or []:
+                lab = getattr(it, 'label', None)
+                if lab:
+                    labels.append(lab)
+                kids = getattr(it, 'children', None)
+                if kids:
+                    _walk(kids)
+        _walk(getattr(view, 'children', None))
         check('Принять' in labels and 'Отклонить' in labels,
               f'меню разбана в карточке: {labels}')
     check(len(guild4._room.overwrites) == 1,

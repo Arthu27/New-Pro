@@ -2161,10 +2161,11 @@ async def _silent_reset_panel(interaction, panel):
             except Exception as _e:
                 log.debug('modpanel reset original: %s', _e)
         if not pushed:
+            # не удалось запушить — вернуть прежние селекты (custom_id)
             try:
-                panel._rebuild(guild)
-            except Exception:
                 panel.target_select, panel.action_select = old_t, old_a
+            except Exception:
+                pass
     except Exception as _e:
         log.debug('modpanel reset: %s', _e)
 
@@ -2520,6 +2521,7 @@ class ModPanelView(discord.ui.LayoutView):
         self._root_edit = None  # interaction.edit_original_response от /modpanel
         self._banner_name = 'hakumo_modpanel_banner_v11.png'
         self._banner_file = None
+        self._banner_bytes = None
         self._use_v2 = True
         self._actor_label = ''
         try:
@@ -2591,16 +2593,28 @@ class ModPanelView(discord.ui.LayoutView):
         embed.set_image(url=f'attachment://{name}')
         return embed, discord.File(bio, filename=name)
 
-    def _make_banner_file(self):
+    def _make_banner_file(self, *, force: bool = False):
+        """Баннер для вложений. PIL — только один раз, дальше кэш байтов."""
         from services.v2_layouts import SHOW_MENU_BANNER
         if not SHOW_MENU_BANNER:
             self._banner_name = None
             self._banner_file = None
+            self._banner_bytes = None
             return None
+        import io as _io
+        if self._banner_bytes and self._banner_name and not force:
+            bio = _io.BytesIO(self._banner_bytes)
+            bio.seek(0)
+            self._banner_file = discord.File(bio, filename=self._banner_name)
+            return self._banner_file
         from services.menu_banners import menu_banner_file
         bio, name = menu_banner_file('modpanel')
+        raw = bio.getvalue() if hasattr(bio, 'getvalue') else bio.read()
+        self._banner_bytes = raw
         self._banner_name = name
-        self._banner_file = discord.File(bio, filename=name)
+        out = _io.BytesIO(raw)
+        out.seek(0)
+        self._banner_file = discord.File(out, filename=name)
         return self._banner_file
 
     def _rebuild(self, guild):
@@ -2621,7 +2635,7 @@ class ModPanelView(discord.ui.LayoutView):
         self.action_buttons = []
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
-        self._make_banner_file()
+        self._make_banner_file(force=False)
         if V2_AVAILABLE and self._use_v2:
             items = build_modpanel_items(
                 banner_filename=self._banner_name,
@@ -2643,9 +2657,12 @@ class ModPanelView(discord.ui.LayoutView):
 
     def panel_edit_kwargs(self):
         """kwargs для edit_message / edit_original_response (V2)."""
+        # свежий File из кэша байтов — BytesIO одноразовый
+        self._make_banner_file(force=False)
         kw = {
             'view': self,
             'embed': None,
+            'embeds': [],
             'content': None,
         }
         if self._banner_file is not None:
@@ -2656,11 +2673,9 @@ class ModPanelView(discord.ui.LayoutView):
 
     async def refresh(self, interaction, *, rebuild_action=True):
         guild = getattr(interaction, 'guild', None)
-        if rebuild_action:
-            self._rebuild(guild)
-        else:
-            # обновить только статусный текст — полная пересборка проще
-            self._rebuild(guild)
+        # селекты Discord требуют новый custom_id-ряд после клика —
+        # пересобираем LayoutView, баннер берём из кэша (без PIL).
+        self._rebuild(guild)
         kw = self.panel_edit_kwargs()
         try:
             if not interaction.response.is_done():
