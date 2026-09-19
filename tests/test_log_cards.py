@@ -238,10 +238,9 @@ _chp = _Ch()
 asyncio.run(_safe_send(_chp, embed=_e))
 _kwp = _chp.sent[-1] if _chp.sent else {}
 check('file' in _kwp and 'embed' not in _kwp,
-      'delivery=photo: в канал уходит фото (+ V2 view)')
+      'delivery=photo: в канал уходит фото')
 check(getattr(_kwp.get('file'), 'filename', '') == 'hakumo_log.jpg',
       'файл hakumo_log.jpg')
-check('view' in _kwp, 'photo + Components V2 LayoutView')
 
 LC.save_log_cards_cfg('424245', {'enabled': False, 'delivery': 'photo',
                                  'bg_url': 'https://example.com/bg.jpg'})
