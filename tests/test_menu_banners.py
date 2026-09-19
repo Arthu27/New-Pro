@@ -127,8 +127,8 @@ for child in view.children:
 st_joined = '\n'.join(st_texts)
 check('Участник:' not in st_joined and '@' not in st_joined,
       f'после выбора без Участник:@: {st_joined!r}')
-check('v9' in (view._banner_name or ''),
-      f'banner filename v9 cache-bust: {view._banner_name!r}')
+check('v10' in (view._banner_name or ''),
+      f'banner filename v10 cache-bust: {view._banner_name!r}')
 # footer helper без дубля (для embed-фолбека)
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == 'модерация', f"footer hakumo={view._footer_text(g)!r}")

@@ -366,7 +366,7 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    name = filename or f'hakumo_{kind}_banner_v9.png'
+    name = filename or f'hakumo_{kind}_banner_v10.png'
     return bio, name
 
 
