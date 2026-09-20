@@ -193,6 +193,59 @@ def install_loop_probes(loop):
         _log.debug('loop-probes: %s', _ex)
 
 
+def is_idle_wait_stack(stack: str) -> bool:
+    """Windows IOCP / selector idle: цикл ждёт I/O, а не крутит код.
+
+    Инцидент 10.09 / 20.09: после реального фриза монитор снимал уже
+    GetQueuedCompletionStatus/_poll — это здоровый idle ProactorEventLoop,
+    НЕ виновник. Настоящая пауза (GC/диск/sync/voice.play) уже закончилась.
+    """
+    if not stack:
+        return False
+    markers = (
+        'GetQueuedCompletionStatus',
+        'WaitForMultipleObjects',
+        'windows_events.py',
+        'selectors.py',
+        'select.epoll',
+        'select.kqueue',
+        'selector_events.py',
+    )
+    hit = any(m in stack for m in markers)
+    if not hit:
+        return False
+    # Если в стеке ещё есть «наш» код — это не чистый idle.
+    app_markers = (
+        '/cogs/', '\\cogs\\', '/services/', '\\services\\',
+        'json.dump', 'json.load', 'open(', 'gc.collect',
+        'psutil', 'subprocess', 'requests.',
+        '_monitor_voice', 'vc.play',
+    )
+    return not any(m in stack for m in app_markers)
+
+
+def is_reconnect_wait_stack(stack: str) -> bool:
+    """Discord gateway reconnect: KeepAliveHandler.Thread.start на цикле.
+
+    Инцидент 20.09: после обрыва шлюза стек ловил
+    gateway.received_message → _keep_alive.start → _started.wait.
+    Это старт heartbeat-потока при HELLO, не наш sync-код.
+    """
+    if not stack:
+        return False
+    gw = ('gateway.py' in stack or 'discord\\gateway' in stack
+          or 'discord/gateway' in stack)
+    if not gw:
+        return False
+    return any(m in stack for m in (
+        '_keep_alive.start',
+        'KeepAliveHandler',
+        '_started.wait',
+        'received_message',
+        'from_client',
+    ))
+
+
 def environment_warnings(base_dir, py_version=None):
     """Предупреждения о среде запуска (чистая функция — тестируется).
 
@@ -406,6 +459,10 @@ class ErrorHandler:
         self._loop_beat = time.monotonic()
         self._stack_frozen = False
         self._last_freeze_stack = ''   # последний снятый стек (для алерта)
+        self._last_freeze_at = 0.0
+        self._last_freeze_age = 0.0
+        self._last_freeze_idle = False
+        self._last_freeze_kind = ''    # '', 'idle', 'reconnect', 'blocker'
         self._start_stack_monitor()
 
         self._repeat = {}                          # дедуп повторных ошибок
@@ -668,7 +725,23 @@ class ErrorHandler:
         self.stats['disconnects'] += 1
         self._disconnected_at = now    # простой посчитается на resumed
         self._disconnects.append(now)
-        log.warning(f"Соединение с Discord потеряно ({kind}) — всего обрывов: {self.stats['disconnects']}")
+        # Если прямо перед обрывом цикл висел — Discord heartbeat не ушёл,
+        # и gateway рвётся «потому что зависание», а не наоборот.
+        hint = ''
+        last_fr = float(getattr(self, '_last_freeze_at', 0.0) or 0.0)
+        if last_fr and (now - last_fr) < 90:
+            age = float(getattr(self, '_last_freeze_age', 0.0) or 0.0)
+            fr_kind = str(getattr(self, '_last_freeze_kind', '') or '')
+            if fr_kind == 'idle' or bool(getattr(self, '_last_freeze_idle', False)):
+                kind_fr = 'IDLE-WAIT (блокер уже ушёл)'
+            elif fr_kind == 'reconnect':
+                kind_fr = 'RECONNECT-WAIT (KeepAlive start)'
+            else:
+                kind_fr = 'блокер в стеке'
+            hint = (f' — вероятно после зависания event-loop '
+                    f'{age:.1f}с ({kind_fr}) {now - last_fr:.0f}с назад')
+        log.warning(f"Соединение с Discord потеряно ({kind}) — всего обрывов: "
+                    f"{self.stats['disconnects']}{hint}")
         window = float(self.config.get('disconnect_window_sec', 600))
         thr = int(self.config.get('disconnect_alert_threshold', 5))
         recent = sum(1 for ts in self._disconnects if now - ts <= window)
@@ -677,7 +750,9 @@ class ErrorHandler:
             self.queue_alert(
                 "Нестабильное соединение",
                 f"**{recent}** обрывов WebSocket за {int(window // 60)} мин.\n"
-                "Discord переподключается автоматически, но проверьте сеть/хостинг.",
+                "Discord переподключается автоматически, но проверьте сеть/хостинг."
+                + (("\nЧасто связано с зависаниями event-loop (voice keep-alive "
+                    "play на цикле / Defender / Python 3.14).") if hint else ""),
             )
 
     def _on_resumed(self, kind: str):
@@ -1099,6 +1174,9 @@ class ErrorHandler:
                     # loop_lag_threshold на лету (анти-краш центр).
                     threshold = float(self.config.get('loop_lag_threshold', 5.0)) + 1.0
                     age = time.monotonic() - self._loop_beat
+                    # Сон/гибернация ОС — не зависание кода (как в async-watchdog).
+                    if age > 180.0:
+                        continue
                     if age > threshold and not self._stack_frozen:
                         self._stack_frozen = True
                         main_samples = []
@@ -1113,10 +1191,39 @@ class ErrorHandler:
                                 break
                         unstable = main_samples.count(stable) < 2
                         others = _sample_others()
+                        idle = (not unstable) and is_idle_wait_stack(stable)
+                        reconnect = ((not unstable) and (not idle)
+                                     and is_reconnect_wait_stack(stable))
+                        soft = idle or reconnect
+                        # Для алертов/корреляции с disconnect храним стек
+                        # и метку времени последнего фриза.
                         self._last_freeze_stack = stable
-                        msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
-                               f"СТЕК ВИНОВНИКА (main-поток, прямо сейчас):\n"
-                               f"{stable}")
+                        self._last_freeze_at = time.time()
+                        self._last_freeze_age = float(age)
+                        self._last_freeze_idle = bool(idle)
+                        if idle:
+                            self._last_freeze_kind = 'idle'
+                        elif reconnect:
+                            self._last_freeze_kind = 'reconnect'
+                        else:
+                            self._last_freeze_kind = 'blocker'
+                        if idle:
+                            msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
+                                   f"IDLE-WAIT (ложный виновник): main-поток уже "
+                                   f"в ожидании I/O (GetQueuedCompletionStatus/"
+                                   f"select). Реальный блокер (GC/диск/sync/"
+                                   f"voice.play) успел завершиться до снимка.\n"
+                                   f"Стек в момент снимка:\n{stable}")
+                        elif reconnect:
+                            msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
+                                   f"RECONNECT-WAIT: gateway KeepAliveHandler."
+                                   f"start/_started.wait при переподключении "
+                                   f"Discord (не sync-код бота).\n"
+                                   f"Стек в момент снимка:\n{stable}")
+                        else:
+                            msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
+                                   f"СТЕК ВИНОВНИКА (main-поток, прямо сейчас):\n"
+                                   f"{stable}")
                         if others:
                             msg += ("\nДругие потоки в момент зависания:\n  "
                                     + "\n  ".join(others[:12]))
@@ -1134,7 +1241,20 @@ class ErrorHandler:
                         if unstable:
                             msg += ("\n(стек менялся между сэмплами — виновник "
                                     "уже завершился, смотрите другие потоки выше)")
-                        log.critical(msg)
+                        if idle:
+                            msg += ("\nПодсказка: частые IDLE-WAIT на Windows — "
+                                    "часто после voice keep-alive play на цикле "
+                                    "или Defender; play уведён в to_thread.")
+                        if reconnect:
+                            msg += ("\nПодсказка: RECONNECT-WAIT сам по себе "
+                                    "не лечится — устраните причину обрыва "
+                                    "(предыдущий реальный фриз цикла).")
+                        # Soft (idle/reconnect): WARNING — не раздуваем CRITICAL
+                        # и не пугаем «бот сломан», когда стек уже idle.
+                        if soft:
+                            log.warning(msg)
+                        else:
+                            log.critical(msg)
                     elif age < 1.0:
                         self._stack_frozen = False
                 except Exception as _ex:
@@ -1171,22 +1291,41 @@ class ErrorHandler:
             if drift > float(self.config.get('loop_lag_threshold', 5.0)):
                 if drift > self.stats.get('loop_lag_max', 0.0):
                     self.stats['loop_lag_max'] = round(drift, 2)
-                log.critical(
+                soft = False
+                last_fr = float(getattr(self, '_last_freeze_at', 0.0) or 0.0)
+                if last_fr and (time.time() - last_fr) < 120:
+                    soft = bool(getattr(self, '_last_freeze_idle', False)
+                                or getattr(self, '_last_freeze_kind', '')
+                                in ('idle', 'reconnect'))
+                # Soft-диагноз (IDLE/RECONNECT): не спамим CRITICAL —
+                # реальный блокер либо уже ушёл, либо это keep-alive start.
+                _lvl = log.warning if soft else log.critical
+                _lvl(
                     f"EVENT-LOOP ЗАВИСАНИЕ: цикл не отвечал {drift:.1f} сек! "
                     "(виновника называет поток-монитор строкой "
-                    "«СТЕК ВИНОВНИКА» — она появляется В МОМЕНТ зависания)")
-                if time.time() - last_alert > 300:
+                    "«СТЕК ВИНОВНИКА» / «IDLE-WAIT» / «RECONNECT-WAIT» — "
+                    "она появляется В МОМЕНТ зависания)")
+                if (not soft) and time.time() - last_alert > 300:
                     last_alert = time.time()
                     _stack_hint = ''
                     if getattr(self, '_last_freeze_stack', ''):
-                        _stack_hint = ("\nСтек виновника (снят монитором "
-                                       "в момент зависания):\n```\n"
+                        fr_kind = str(getattr(self, '_last_freeze_kind', '') or '')
+                        if fr_kind == 'idle' or bool(getattr(self, '_last_freeze_idle', False)):
+                            label = ('IDLE-WAIT — реальный блокер уже ушёл; '
+                                     'смотрите GC и другие потоки')
+                        elif fr_kind == 'reconnect':
+                            label = 'RECONNECT-WAIT — KeepAlive при reconnect'
+                        else:
+                            label = 'Стек виновника (снят монитором в момент зависания)'
+                        _stack_hint = (f"\n{label}:\n```\n"
                                        + self._last_freeze_stack[:900]
                                        + "\n```")
                     self.queue_alert(
                         "Зависание event-loop",
                         f"Цикл не отвечал **{drift:.1f} сек** — команды и ивенты в это время стояли.\n"
-                        "Частая причина: тяжёлая синхронная операция (сеть/диск/CPU) в async-коде."
+                        "Частая причина: voice keep-alive `vc.play` на цикле, "
+                        "антивирус по Downloads, GC или sync I/O. "
+                        "Рекомендация: play в to_thread, `C:\\Hakumo` + Python 3.12."
                         + _stack_hint,
                     )
 
@@ -1223,7 +1362,13 @@ class ErrorHandler:
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
             await asyncio.sleep(max(60, int(self.config.get('stats_save_sec', 300))))
-            self.save_stats()
+            # Sync json.dump на Windows+Defender легко даёт мультисекундный
+            # фриз цикла — пишем в worker-потоке.
+            try:
+                await asyncio.to_thread(self.save_stats)
+            except Exception as _ex:
+                _log.debug("_persist_task to_thread: %s", _ex)
+                self.save_stats()
 
     # ────────────────────────────────────────────────────────────
     # Обзор для веб-панели / команды

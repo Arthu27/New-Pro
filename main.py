@@ -887,31 +887,58 @@ def _resolve_voice_channel_id():
 VOICE_CHANNEL_ID = _resolve_voice_channel_id()
 
 async def _monitor_voice():
-    """Держим голосовое подключение живым — переподключаемся при падении, каждые 4 минуты играем тишину."""
+    """Держим голосовое подключение живым — переподключаемся при падении,
+    каждые 4 минуты играем тишину (keep-alive).
+
+    ВАЖНО: ``VoiceClient.play`` синхронно ждёт старт AudioPlayer-потока
+    (``Thread.start`` → ``_started.wait``). На живом сервере это давало
+    EVENT-LOOP ЗАВИСАНИЕ ~7–26 сек (стек: ``_monitor_voice`` → ``vc.play``
+    или после обрыва — gateway ``_keep_alive.start``). Поэтому ``play``
+    уводим в ``asyncio.to_thread`` + ``wait_for``, ``connect`` с таймаутом,
+    а при неготовом gateway не дёргаем reconnect.
+    """
     await bot.wait_until_ready()
     await asyncio.sleep(10)
-    last_ping = 0
+    last_ping = 0.0
+    backoff_until = 0.0
     while not bot.is_closed():
         await asyncio.sleep(30)
         channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
         if not channel or not isinstance(channel, discord.VoiceChannel):
             continue
+        # Пока gateway не готов — не дёргаем voice.connect: иначе на обрывах
+        # сессии connect висит на цикле и усугубляет зависания.
+        if not bot.is_ready():
+            continue
+        if time.time() < backoff_until:
+            continue
         vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
-        
+
         if not vc or not vc.is_connected():
             try:
-                vc = await channel.connect(self_deaf=False)
+                vc = await asyncio.wait_for(
+                    channel.connect(self_deaf=False), timeout=30.0)
                 last_ping = time.time()
+                backoff_until = 0.0
+            except asyncio.TimeoutError:
+                backoff_until = time.time() + 60
+                _log.warning("_monitor_voice: connect не уложился в 30с — пауза 60с")
             except Exception as _ex:
+                backoff_until = time.time() + 30
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
         elif time.time() - last_ping > 240:
             try:
                 if not vc.is_playing():
                     import io
-                    delete = io.BytesIO(b'\x00' * 3840)
-                    source = discord.PCMAudio(delete)
-                    vc.play(source)
+                    silence = io.BytesIO(b'\x00' * 3840)
+                    source = discord.PCMAudio(silence)
+                    await asyncio.wait_for(
+                        asyncio.to_thread(vc.play, source), timeout=15.0)
                 last_ping = time.time()
+            except asyncio.TimeoutError:
+                _log.warning("_monitor_voice: play timeout 15s (#%s)",
+                             getattr(channel, 'id', '?'))
+                last_ping = time.time()  # не долбить play каждые 30с
             except Exception as _ex:
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
 
@@ -1338,7 +1365,9 @@ async def main():
         from error_handler import environment_warnings
         for msg in environment_warnings(os.path.abspath('.')):
             print(f"[СРЕДА] ⚠ {msg}")
-            _log.warning("СРЕДА: %s", msg)
+            # CRITICAL: иначе в шуме WARNING их не видно, а зависания
+            # 10–20с + обрывы Discord продолжаются месяцами.
+            _log.critical("СРЕДА: %s", msg)
     except Exception as _ex:
         _log.debug("environment_warnings(): %s", _ex)
 
