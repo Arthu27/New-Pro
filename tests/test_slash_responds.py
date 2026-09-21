@@ -103,8 +103,12 @@ check(cb.find('await _launch_action') > 0
       'ModActionSelect: ACK через send_message формы, без SQLite в колбэке')
 check('_cancel_panel_reset' in mod_src and '_reset_task' in mod_src,
       'фоновый rebuild панели отменяется при новом клике')
+check('_reset_gen' in mod_src,
+      'поколение сброса — устаревший rebuild не пушится')
 check('Сброс селектов фоном' not in mod_src[mod_src.index('class ModTargetSelect'):
-                                              mod_src.index('class ModPanelView')],
+                                              mod_src.index('class ModPanelView')]
+      and '_schedule_panel_reset' not in mod_src[mod_src.index('class ModTargetSelect'):
+                                                 mod_src.index('class ModPanelView')],
       'после выбора участника НЕТ фонового rebuild (гонка с Действием)')
 mks = mod_src[mod_src.index('class MuteKindSelect'):
               mod_src.index('class MuteKindView')]

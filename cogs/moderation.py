@@ -2159,6 +2159,10 @@ def _cancel_panel_reset(panel):
     """Отменить фоновый rebuild — он съедает цикл и рвёт ACK селекта."""
     if panel is None:
         return
+    try:
+        panel._reset_gen = int(getattr(panel, '_reset_gen', 0) or 0) + 1
+    except Exception:
+        pass
     task = getattr(panel, '_reset_task', None)
     if task is None:
         return
@@ -2173,18 +2177,30 @@ def _cancel_panel_reset(panel):
         pass
 
 
-async def _silent_reset_panel(interaction, panel):
+async def _silent_reset_panel(interaction, panel, *, gen=None):
     """Сбросить селекты, чтобы панель можно было жать много раз.
 
-    Discord не шлёт callback на уже выбранный пункт — после каждого шага
+    Discord не шлёт callback на уже выбранный пункт — после действия
     собираем меню заново и пушим в эфемерку токеном /modpanel (_root_edit)
     или через сохранённое _panel_message.
-    Баннер НЕ перезаливаем.
+    Баннер НЕ перезаливаем. gen — номер поколения: устаревший сброс
+    не пушит edit, если уже запланирован новый или клик отменил.
     """
+    import asyncio as _aio
     try:
+        if gen is not None and gen != getattr(panel, '_reset_gen', None):
+            return
         guild = getattr(interaction, 'guild', None) or getattr(panel, '_guild', None)
         old_t, old_a = panel.target_select, panel.action_select
         panel._rebuild(guild)
+        # Дать циклу отменить task до HTTP-edit (rebuild уже синхронный)
+        await _aio.sleep(0)
+        if gen is not None and gen != getattr(panel, '_reset_gen', None):
+            try:
+                panel.target_select, panel.action_select = old_t, old_a
+            except Exception:
+                pass
+            return
         msg = getattr(panel, '_panel_message', None) or getattr(
             interaction, 'message', None)
         kw = panel.panel_edit_kwargs(message=msg, reattach_banner=False)
@@ -2213,32 +2229,51 @@ async def _silent_reset_panel(interaction, panel):
                 panel.target_select, panel.action_select = old_t, old_a
             except Exception:
                 pass
+    except _aio.CancelledError:
+        raise
     except Exception as _e:
         log.debug('modpanel reset: %s', _e)
 
 
-def _schedule_panel_reset(interaction, panel, *, clear_pending=True, delay=0.8):
+def _schedule_panel_reset(interaction, panel, *, clear_pending=True, delay=1.5):
     """Фоновый сброс селектов после ACK — панель многоразовая.
 
-    Один task на панель: предыдущий сброс отменяем, иначе rebuild
-    LayoutView+edit пересекается со следующим кликом «Действие» и
-    Discord пишет «не ответило вовремя».
+    Один task на панель + поколение _reset_gen: клик «Действие»
+    отменяет незавершённый rebuild, чтобы не было таймаута.
+    selected_uid сохраняем — можно сразу жать следующее наказание
+    тому же участнику без повторного выбора.
     """
     if panel is None:
         return
     import asyncio as _aio
+    try:
+        loop = _aio.get_running_loop()
+    except RuntimeError:
+        log.debug('modpanel schedule reset: нет running loop')
+        return
     _cancel_panel_reset(panel)
+    try:
+        panel._reset_gen = int(getattr(panel, '_reset_gen', 0) or 0) + 1
+    except Exception:
+        panel._reset_gen = 1
+    my_gen = panel._reset_gen
 
     async def _run():
         try:
             await _aio.sleep(delay)
+            if my_gen != getattr(panel, '_reset_gen', None):
+                return
             kept_uid = getattr(panel, 'selected_uid', None)
+            # После действия pending сбрасываем; цель оставляем для серии
+            if clear_pending:
+                panel.pending_action = None
             kept_pending = None if clear_pending else getattr(
                 panel, 'pending_action', None)
-            # Состояние ДО rebuild — чтобы статус в шапке совпал с памятью
             panel.selected_uid = kept_uid
             panel.pending_action = kept_pending
-            await _silent_reset_panel(interaction, panel)
+            await _silent_reset_panel(interaction, panel, gen=my_gen)
+            if my_gen != getattr(panel, '_reset_gen', None):
+                return
             panel.selected_uid = kept_uid
             panel.pending_action = kept_pending
         except _aio.CancelledError:
@@ -2250,7 +2285,7 @@ def _schedule_panel_reset(interaction, panel, *, clear_pending=True, delay=0.8):
                 panel._reset_task = None
 
     try:
-        panel._reset_task = _aio.create_task(_run())
+        panel._reset_task = loop.create_task(_run())
     except Exception as _e:
         log.debug('modpanel schedule reset task: %s', _e)
 
@@ -2526,9 +2561,11 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Без участника — только запомнить + тихий ACK (без rebuild)
+        # Без участника — запомнить действие + тихий ACK.
+        # Сброс селекта (pending сохраняем) — можно сменить/повторить пункт.
         if action != "clear" and not prefill and view is not None:
             await _ack(interaction, thinking=False)
+            _schedule_panel_reset(interaction, view, clear_pending=False)
             return
         # С участником — send_message кнопки/видов = ACK (<3с)
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
@@ -2652,11 +2689,10 @@ class ModTargetSelect(discord.ui.UserSelect):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        """Выбор участника: ACK первой строкой, без rebuild/edit.
+        """Выбор участника: ACK первой строкой, без rebuild на пути ответа.
 
-        Rebuild LayoutView+MediaGallery на каждый клик сжигал 3с →
-        «не ответило вовремя». selected_uid в памяти view достаточно
-        для следующего шага «Действие»; селекты сбрасываем фоном.
+        selected_uid в памяти view; селекты сбрасываются ПОСЛЕ действия
+        (не здесь — иначе гонка с кликом «Действие»).
         """
         view = self.view
         _cancel_panel_reset(view)
@@ -2709,6 +2745,7 @@ class ModPanelView(discord.ui.LayoutView):
         self._root_edit = None  # interaction.edit_original_response от /modpanel
         self._panel_message = None  # исходная эфемерка для reset
         self._reset_task = None  # один фоновый rebuild — без гонок
+        self._reset_gen = 0  # поколение сброса (отмена устаревших)
         self._guild = getattr(member, 'guild', None)
         self._banner_name = 'hakumo_modpanel_banner_v15.png'
         self._banner_file = None

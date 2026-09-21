@@ -320,6 +320,65 @@ view2._rebuild(g7)
 check(id(view2.action_select) != old,
       'после шага селект наказаний собирается заново — можно выбрать то же')
 
+print('== 8. Серия действий: uid сохраняется, селект обновляется, клик отменяет reset ==')
+view4 = M.ModPanelView(cog, opener, allowed=allowed)
+view4.selected_uid = '3000000000000000300'
+view4._guild = g7
+edits = []
+
+async def _root(**kw):
+    edits.append(kw)
+
+view4._root_edit = _root
+
+async def _series():
+    # короткий delay для теста
+    inter5 = _PInter(opener, g7)
+    view4.action_select._values = ['mute']
+    # подменим schedule на быстрый delay через прямой вызов после callback
+    await view4.action_select.callback(inter5)
+    # callback ставит delay=1.5 — ускорим: отменим и поставим 0.05
+    M._cancel_panel_reset(view4)
+    M._schedule_panel_reset(inter5, view4, clear_pending=True, delay=0.05)
+    check(view4._reset_task is not None and not view4._reset_task.done(),
+          'после действия запланирован сброс селектов (серия)')
+    sel_before = id(view4.action_select)
+    await view4._reset_task
+    check(id(view4.action_select) != sel_before,
+          'после сброса — новый action_select (тот же пункт снова кликабелен)')
+    check(view4.selected_uid == '3000000000000000300',
+          'участник остаётся в памяти — серия без повторного выбора')
+    check(view4.pending_action is None,
+          'pending сброшен после действия — готов к новому пункту')
+    check(bool(edits), 'сброс пушит edit панели (_root_edit)')
+
+    # клик отменяет незавершённый reset (без гонки)
+    view5 = M.ModPanelView(cog, opener, allowed=allowed)
+    view5.selected_uid = '3000000000000000300'
+    view5._guild = g7
+    view5._root_edit = _root
+    gen0 = int(getattr(view5, '_reset_gen', 0) or 0)
+    M._schedule_panel_reset(inter5, view5, clear_pending=True, delay=5.0)
+    task_long = view5._reset_task
+    check(task_long is not None and not task_long.done(),
+          'длинный reset task создан')
+    inter6 = _PInter(opener, g7)
+    view5.action_select._values = ['clear']
+    await view5.action_select.callback(inter6)
+    check(int(view5._reset_gen) > gen0,
+          'клик «Действие» поднимает поколение / отменяет старый reset')
+    check(view5._reset_task is not task_long,
+          'старый длинный reset заменён (не конкурирует с новым кликом)')
+    # дождаться, пока цикл доставит CancelledError старому task
+    try:
+        await asyncio.wait_for(task_long, timeout=0.5)
+    except (asyncio.CancelledError, asyncio.TimeoutError):
+        pass
+    check(task_long.cancelled() or task_long.done(),
+          'старый длинный reset отменён кликом')
+
+asyncio.run(_series())
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
