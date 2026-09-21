@@ -292,7 +292,7 @@ view.selected_uid = '3000000000000000300'
 inter2 = _PInter(opener, g7)
 asyncio.run(view.target_select.callback(inter2))
 check(bool(inter2.response.modal) or bool(inter2.response.sent),
-      'после участника (действие уже выбрано) — вид мута или модалка')
+      'после участника (действие уже выбрано) — вид мута или кнопка формы')
 
 # наоборот: сначала человек, потом действие
 view2 = M.ModPanelView(cog, opener, allowed=allowed)
@@ -301,7 +301,7 @@ inter3 = _PInter(opener, g7)
 view2.action_select._values = ['mute']
 asyncio.run(view2.action_select.callback(inter3))
 check(bool(inter3.response.modal) or bool(inter3.response.sent),
-      'сначала участник, потом действие — вид мута или модалка сразу')
+      'сначала участник, потом действие — ACK (вид мута / кнопка формы)')
 
 # повтор выбора: rebuild даёт НОВЫЙ селект (Discord снова шлёт callback)
 old = id(view2.action_select)

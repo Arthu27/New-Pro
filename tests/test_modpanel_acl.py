@@ -232,26 +232,25 @@ class _Inter:
 g = Guild(GID)
 set_action_rule(GID, 'ban', ['601'])
 
-# выбор пункта в меню: без разрешения модалку всё равно открываем
-# (send_modal <3с Discord; ACL — в on_submit, см. ниже). Иначе
-# SQLite/диск на пути к ответу → «приложение не ответило вовремя».
+# выбор пункта в меню: без разрешения — ACK кнопкой формы (модалка со 2-го
+# клика; ACL в on_submit). Иначе send_modal с селекта → таймаут 3с.
 i = _Inter(Member(100, [602]), g)
 sel = ModActionSelect(cog, member=Member(100, [602]), allowed=[a for a in MODPANEL_ACTIONS])
 sel._values = ['ban']  # как discord проставляет выбранное значение
 asyncio.run(sel.callback(i))
-check(bool(i.response.modal) and not i.response.sent,
-      'выбор «Бан» без разрешения → модалка открылась (ACL в on_submit)')
-check('_send_modal_fast' in open(
+check(bool(i.response.sent) and not i.response.modal,
+      'выбор «Бан» без разрешения → ACK сообщением+кнопкой (не send_modal)')
+check('_offer_mod_form' in open(
         os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read(),
-      'путь действия шлёт модалку через _send_modal_fast')
+      'путь действия: ACK→кнопка→модалка (_offer_mod_form)')
 
-# своя роль — модалка открывается
+# своя роль — тоже ACK кнопкой (модалка со второго клика)
 i2 = _Inter(Member(100, [601]), g)
 sel2 = ModActionSelect(cog, member=Member(100, [601]), allowed=[a for a in MODPANEL_ACTIONS])
 sel2._values = ['ban']
 asyncio.run(sel2.callback(i2))
-check(bool(i2.response.modal) and not i2.response.sent,
-      'с ролью «Бан» модалка открывается')
+check(bool(i2.response.sent) and not i2.response.modal,
+      'с ролью «Бан» — ACK кнопкой формы')
 
 # отправка модалки: даже если меню старое — без права не исполняем
 i3 = _Inter(Member(100, [602]), g)

@@ -2049,12 +2049,10 @@ class MuteKindSelect(discord.ui.Select):
         self.target_id = str(target_id)
 
     async def callback(self, interaction: discord.Interaction):
-        # ACL не здесь: send_modal обязан уложиться в 3с; проверка в on_submit.
+        # Не send_modal с селекта — ACK кнопкой, модалка со второго клика.
         action = self.values[0]
-        modal = ModActionModal(self.cog, action, guild=interaction.guild,
-                               prefill_target=self.target_id,
-                               user=interaction.user)
-        await _send_modal_fast(interaction, modal)
+        await _offer_mod_form(
+            interaction, self.cog, action, self.target_id)
 
 
 class MuteKindView(discord.ui.LayoutView):
@@ -2236,11 +2234,93 @@ async def _send_modal_fast(interaction, modal):
     return False
 
 
-async def _launch_action(cog, interaction, action, prefill, panel=None):
-    """Открыть модалку / размут. panel — чтобы потом сбросить селект.
+_MODAL_TITLES = {
+    "warn": "Варн",
+    "unwarn": "Снять варн",
+    "ban": "Бан",
+    "timeout": "Мут (чат + войс)",
+    "mute_chat": "Мут (только чат)",
+    "vmute": "Мут (только войс)",
+    "unban": "Снять бан",
+    "clear": "Очистка сообщений",
+    "untimeout": "Размут (чат + войс)",
+    "vunmute": "Размут (войс)",
+}
 
-    Критично: send_modal/send_message — ПЕРВЫЙ ответ Discord (<3с).
-    Сброс панели — фоном после ответа.
+
+class _OpenModFormButton(discord.ui.Button):
+    """Второй клик открывает модалку — свежие 3с Discord.
+
+    Селект действия НЕ шлёт send_modal (на загруженном цикле не успевает).
+    Вместо этого сразу ACK сообщением + кнопка; модалка — с кнопки.
+    """
+
+    def __init__(self, cog, action, prefill, *, label: str):
+        super().__init__(
+            label=(label or 'Открыть форму')[:80],
+            style=discord.ButtonStyle.secondary,
+            custom_id=None,
+        )
+        self.cog = cog
+        self.action = action
+        self.prefill = str(prefill or '')
+
+    async def callback(self, interaction: discord.Interaction):
+        modal = ModActionModal(
+            self.cog, self.action, guild=interaction.guild,
+            prefill_target=self.prefill, user=interaction.user)
+        await _send_modal_fast(interaction, modal)
+
+
+class _OpenModFormView(discord.ui.View):
+    """Эфемерка с одной кнопкой — ACK селекта + путь к модалке."""
+
+    def __init__(self, cog, action, prefill, *, title: str, who: str):
+        super().__init__(timeout=180)
+        self.cog = cog
+        lbl = f'▶ {title}'[:80]
+        self.add_item(_OpenModFormButton(cog, action, prefill, label=lbl))
+        self._title = title
+        self._who = who
+
+
+async def _offer_mod_form(interaction, cog, action, prefill):
+    """Сразу ACK (send_message), модалка — по кнопке. Всегда <3с."""
+    title = _MODAL_TITLES.get(action, action)
+    who = prefill or '—'
+    try:
+        if prefill and interaction.guild is not None:
+            mem = interaction.guild.get_member(int(prefill))
+            if mem is not None:
+                who = mem.mention
+    except Exception:
+        pass
+    view = _OpenModFormView(cog, action, prefill, title=title, who=who)
+    text = (
+        f'**{title}** · {who}\n'
+        f'Нажмите кнопку ниже — откроется форма.\n'
+        f'-# speed-fix: ACK→кнопка→модалка'
+    )
+    try:
+        await interaction.response.send_message(
+            content=text, view=view, ephemeral=True)
+        return True
+    except Exception as ex:
+        log.warning('modpanel offer form: %s', ex)
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(thinking=False)
+        except Exception:
+            pass
+        return False
+
+
+async def _launch_action(cog, interaction, action, prefill, panel=None):
+    """Открыть форму / размут. panel — чтобы потом сбросить селект.
+
+    Критично: ПЕРВЫЙ ответ Discord — всегда send_message/defer (<3с).
+    Модалку шлём только со СВЕЖЕГО клика по кнопке (_OpenModFormButton),
+    иначе на загруженном цикле Discord рисует «не ответило вовремя».
     """
     import asyncio as _aio
 
@@ -2248,8 +2328,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
         if panel is None:
             return
         try:
-            # Пауза: не конкурировать с открытием модалки на том же цикле.
-            await _aio.sleep(1.2)
+            await _aio.sleep(0.8)
             panel.pending_action = None
             await _silent_reset_panel(interaction, panel)
         except Exception as _e:
@@ -2273,9 +2352,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 ephemeral=True)
             return
         if len(kinds) == 1:
-            modal = ModActionModal(cog, kinds[0][0], guild=interaction.guild,
-                                   prefill_target=prefill, user=interaction.user)
-            if await _send_modal_fast(interaction, modal):
+            if await _offer_mod_form(interaction, cog, kinds[0][0], prefill):
                 _aio.create_task(_reset_later())
             return
         who = prefill
@@ -2356,10 +2433,8 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                     'Не удалось открыть снятие мута. Попробуйте снова.'),
                     ephemeral=True)
         return
-    # Обычное действие → модалка (бан/варн/мут-вид уже выбран)
-    modal = ModActionModal(cog, action, guild=interaction.guild,
-                           prefill_target=prefill, user=interaction.user)
-    if await _send_modal_fast(interaction, modal):
+    # Бан / варн / очистка / … → ACK сообщением + кнопка формы
+    if await _offer_mod_form(interaction, cog, action, prefill):
         _aio.create_task(_reset_later())
 
 
@@ -2416,9 +2491,8 @@ class ModActionSelect(discord.ui.Select):
             if view is not None:
                 await view.refresh(interaction)
                 return
-        # С участником — send_modal/send_message СРАЗУ (<3с Discord).
-        # ACL не здесь: SQLite/диск съедают окно; проверка в on_submit
-        # и в mute_kinds_for / unmute_kinds_for внутри _launch_action.
+        # С участником — сразу ACK (сообщение+кнопка формы), НЕ send_modal.
+        # Модалка откроется со свежего клика по кнопке (<3с гарантированно).
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
 
 
@@ -2631,7 +2705,7 @@ class ModPanelView(discord.ui.LayoutView):
         # Метка сборки — чтобы на живом боте было видно: задеплоен ли фикс.
         tag = _modpanel_build_tag()
         if tag and text and not self.selected_uid and not self.pending_action:
-            return f'{text}\n-# build {tag}'
+            return f'⚡ SPEED OK · build {tag}\n{text}'
         return text
 
     def _footer_text(self, guild):

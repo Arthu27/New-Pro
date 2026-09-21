@@ -1071,7 +1071,14 @@ async def on_ready():
             gc_stabilize()
         except Exception as _ex:
             _log.warning("on_ready(): GC-стабилизация не удалась: %s", _ex)
-        bot.loop.create_task(_monitor_voice())
+        # Voice stay: по умолчанию ВКЛ если задан канал. Полностью выключить:
+        # VOICE_STAY_ENABLED=0. Silence-ping по-прежнему только VOICE_SILENCE_PING=1.
+        _voice_stay = (os.environ.get('VOICE_STAY_ENABLED') or '1').strip().lower() \
+            not in ('0', 'false', 'no', 'off')
+        if VOICE_CHANNEL_ID and _voice_stay:
+            bot.loop.create_task(_monitor_voice())
+        else:
+            _log.info('voice stay: выключен (нет канала или VOICE_STAY_ENABLED=0)')
         # Фоновая дозагрузка участников в кэш (раз в 20с, по одной гильдии) —
         # чтобы поиск/пикеры/профили панели видели и тех, кого «нет в листе».
         try:

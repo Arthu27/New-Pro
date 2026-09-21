@@ -107,6 +107,8 @@ check('кого наказать' not in joined and 'что сделать' not 
       f'без дублей подсказок в TextDisplay: {joined!r}')
 check('Выберите участника и действие ниже.' in joined,
       f'инструкция под баннером: {joined!r}')
+check('SPEED OK' in joined or 'build ' in joined,
+      f'метка SPEED/build в шапке (проверка деплоя): {joined!r}')
 check('Порядок любой' not in joined and 'порядок любой' not in joined.lower()
       and 'в любом порядке' not in joined.lower(),
       f'без «порядок любой»: {joined!r}')
