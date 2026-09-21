@@ -403,7 +403,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=multi-fix-v12',
+        log.info('modpanel open uid=%s gid=%s build=multi-fix-v13',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -456,7 +456,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v12',
+        log.info('modpanel ready msg=%s build=multi-fix-v13',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2084,9 +2084,8 @@ class MuteKindSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         action = self.values[0]
-        panel = self.panel or getattr(self.view, 'panel', None) or self.view
-        if panel is not None and hasattr(panel, '_clear_kind_mode'):
-            panel._clear_kind_mode()
+        # MuteKindView.panel → основная ModPanelView (не сама kind-view)
+        panel = self.panel or getattr(self.view, 'panel', None)
         await _offer_mod_form(
             interaction, self.cog, action, self.target_id, panel=panel)
 
@@ -2143,15 +2142,15 @@ class UnmuteKindSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         # ACK сразу (<3с), ACL после — иначе SQLite съедает окно Discord.
         action = self.values[0]
-        panel = self.panel or getattr(self.view, 'panel', None) or self.view
+        panel = self.panel or getattr(self.view, 'panel', None)
         await _ack(interaction, thinking=False)
         if not await self.cog._ensure_action_acl(interaction, action):
             return
         await self.cog._execute_mod_action(
             interaction, action, self.target_id,
             'Снято через панель', '', proof_link=None)
-        if panel is not None and hasattr(panel, '_clear_kind_mode'):
-            panel._clear_kind_mode()
+        # Основная панель уже сброшена при открытии kind-меню; ещё раз не вредно
+        if panel is not None:
             try:
                 await _silent_reset_panel(interaction, panel)
             except Exception as ex:
@@ -2167,7 +2166,7 @@ class UnmuteKindView(discord.ui.LayoutView):
         self.cog = cog
         self.member = member
         self.panel = panel
-        sel = UnmuteKindSelect(cog, target_id, kinds)
+        sel = UnmuteKindSelect(cog, target_id, kinds, panel=panel)
 
         from services.v2_layouts import V2_AVAILABLE, black_container
         text = status or '**Снять мут**'
@@ -2561,9 +2560,21 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 who = mem.mention
         except Exception as _e:
             log.debug('prefill mention %r: %s', prefill, _e)
-        ok = await _enter_kind_mode(
-            interaction, panel, kinds=kinds, target_id=prefill,
-            title=f'Мут · {who}', unmute=False)
+        # Отдельное короткое меню вида — ОСНОВНУЮ панель НЕ трогаем kind-mode
+        # (иначе после Мута «Снять мут» мёртв). Сразу сбрасываем селект действий.
+        kind_view = MuteKindView(
+            cog, prefill, kinds, member=interaction.user,
+            status=f'# Мут\n{who}', panel=panel)
+        from services.v2_layouts import V2_AVAILABLE
+        ok = await _send_kind_menu(
+            interaction, view=kind_view,
+            embed=None if V2_AVAILABLE else discord.Embed(
+                title='Мут', description=f'{who}', color=0x000000))
+        if panel is not None:
+            try:
+                await _reset_after_step(interaction, panel, prefer_resend=False)
+            except Exception as ex:
+                log.debug('mute kind main reset: %s', ex)
         if not ok:
             await _respond(interaction, embed=error_embed(
                 'Не удалось открыть выбор вида мута. Попробуйте ещё раз.'),
@@ -2595,9 +2606,19 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 who = mem.mention
         except Exception as _e:
             log.debug('prefill mention %r: %s', prefill, _e)
-        ok = await _enter_kind_mode(
-            interaction, panel, kinds=kinds, target_id=prefill,
-            title=f'Снять мут · {who}', unmute=True)
+        kind_view = UnmuteKindView(
+            cog, prefill, kinds, member=interaction.user,
+            status=f'# Снять мут\n{who}', panel=panel)
+        from services.v2_layouts import V2_AVAILABLE
+        ok = await _send_kind_menu(
+            interaction, view=kind_view,
+            embed=None if V2_AVAILABLE else discord.Embed(
+                title='Снять мут', description=f'{who}', color=0x000000))
+        if panel is not None:
+            try:
+                await _reset_after_step(interaction, panel, prefer_resend=False)
+            except Exception as ex:
+                log.debug('unmute kind main reset: %s', ex)
         if not ok:
             await _respond(interaction, embed=error_embed(
                 'Не удалось открыть выбор снятия мута. Попробуйте ещё раз.'),
@@ -2989,20 +3010,13 @@ class ModPanelView(discord.ui.LayoutView):
         # БЕЗ default_values на UserSelect (sticky). uid — в памяти + статус.
         self.target_select = ModTargetSelect(self.cog, default_values=None)
         self.target_select.panel = self
-        kind_mode = getattr(self, '_kind_mode', None)
-        if kind_mode and getattr(self, '_kind_kinds', None):
-            tid = getattr(self, '_kind_target', None) or self.selected_uid or ''
-            if kind_mode == 'unmute':
-                self.action_select = UnmuteKindSelect(
-                    self.cog, tid, self._kind_kinds, panel=self)
-            else:
-                self.action_select = MuteKindSelect(
-                    self.cog, tid, self._kind_kinds, panel=self)
-        else:
-            self.action_select = ModActionSelect(
-                self.cog, None, self.allowed,
-                target_select=self.target_select)
-            self.action_select.panel = self
+        # Главная панель ВСЕГДА с полным списком действий.
+        # Виды мута/размута — отдельная эфемерка (MuteKindView), иначе
+        # после «Мут» пункт «Снять мут» пропадает / панель зависает.
+        self.action_select = ModActionSelect(
+            self.cog, None, self.allowed,
+            target_select=self.target_select)
+        self.action_select.panel = self
         self.action_buttons = []
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items

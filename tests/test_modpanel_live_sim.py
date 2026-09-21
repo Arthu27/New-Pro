@@ -164,8 +164,8 @@ view._root_edit = _root
 check(view.action_select is not None, 'есть action_select (не кнопки)')
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
-check('multi-fix-v12' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
-      'build tag multi-fix-v12')
+check('multi-fix-v13' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
+      'build tag multi-fix-v13')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
@@ -211,7 +211,7 @@ async def _ban_twice():
 asyncio.run(_ban_twice())
 
 
-print('== LIVE 3. Мут: вид на ТОЙ ЖЕ панели (не новое окно) ==')
+print('== LIVE 3. Мут → вид отдельно, основная панель жива для Размут ==')
 
 
 async def _mute_flow():
@@ -223,6 +223,10 @@ async def _mute_flow():
         ('vmute', 'Войс', 'только войс'),
         ('timeout', 'Оба', 'чат + войс'),
     ]
+    view_m._unmute_kinds_cache = [
+        ('unmute_chat', 'Чат', ''),
+        ('vunmute', 'Войс', ''),
+    ]
     msg = _PanelMsg(222)
     view_m._panel_message = msg
 
@@ -231,21 +235,20 @@ async def _mute_flow():
     view_m._root_edit = _root2
 
     inter = _Inter(opener, g, message=msg)
-    # response.edit_message для kind mode
-    inter.response.edits = []
     view_m.action_select._values = ['mute']
     await view_m.action_select.callback(inter)
-    check(getattr(view_m, '_kind_mode', None) == 'mute',
-          'панель в режиме выбора вида мута')
-    check(isinstance(view_m.action_select, M.MuteKindSelect),
-          'вместо действий — селект вида мута')
-    check(len(inter._fu_sent) == 0, 'followup новой панели нет')
+    check(bool(inter.response.sent), 'мут → отдельное меню вида (send_message)')
+    check(isinstance(view_m.action_select, M.ModActionSelect),
+          'на основной панели снова ModActionSelect (не kind)')
     check(msg.deleted is False, 'основная панель не удалена')
-    check(inter.response.done or len(msg.edits) >= 1
-          or len(getattr(inter.response, 'edits', [])) >= 1,
-          'вид мута — edit того же сообщения')
-    check(len(inter.response.sent) == 0,
-          'нет отдельного send_message подменю')
+    check(len(msg.edits) >= 1, 'основная панель сброшена edit после мута')
+
+    # сразу Снять мут на основной панели
+    inter2 = _Inter(opener, g, message=msg)
+    view_m.action_select._values = ['unmute']
+    await view_m.action_select.callback(inter2)
+    check(bool(inter2.response.sent) or inter2.response.done,
+          'после Мута сразу Снять мут отвечает')
 
 
 asyncio.run(_mute_flow())
@@ -320,7 +323,8 @@ check('timeout=300' in src, 'панель на 5 минут')
 check('prefer_resend=True' not in src, 'нигде не форсим resend')
 check('class ModActionSelect' in src and 'class ModActionButton' not in src,
       'действия — селект, не кнопки')
-check('_enter_kind_mode' in src, 'вид мута на той же панели')
+check('_send_kind_menu' in src and 'MuteKindView' in src,
+      'вид мута — отдельное меню, основная панель цела')
 bind = src[src.index('def _bind_live_panel'):src.index('async def _send_modal_fast')]
 check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'нет bot.wait_for на пути сброса')
