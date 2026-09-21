@@ -56,6 +56,12 @@ mp = mod_src[mod_src.index('async def modpanel'):
              mod_src.index('def _parse_target_id')]
 check('await _ack' in mp and mp.find('await _ack') < mp.find('actions_for_member'),
       '/modpanel сразу закрывает 3с-окно Discord (_ack до меню)')
+check('await ensure_menu_emojis' not in mp,
+      '/modpanel не ждёт Discord emoji API перед ответом')
+check('schedule_ensure_menu_emojis' in mp,
+      '/modpanel греет emoji в фоне')
+check('cog_load' in mod_src and 'warm_menu_banners' in mod_src,
+      'баннер прогревается при загрузке кога')
 uni = mod_src[mod_src.index('async def _unisolate_member'):
               mod_src.index('def _preflight_reason') if 'def _preflight_reason' in mod_src
               else mod_src.index('# ── Почему Forbidden')]

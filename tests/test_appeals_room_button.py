@@ -172,7 +172,26 @@ check(len(room.sent) >= 1 and not room.threads,
       'карточка легла прямо в комнату апелляции')
 check(len(cards.sent) == 0, 'запасной канал не тронут')
 view = (room.sent[0] or {}).get('view')
-ids = [str(b.custom_id) for b in view.children] if view else []
+
+
+def _ids(v):
+    out = []
+    stack = list(getattr(v, 'children', None) or [])
+    while stack:
+        node = stack.pop()
+        cid = getattr(node, 'custom_id', None)
+        if cid:
+            out.append(str(cid))
+        nested = getattr(node, 'children', None)
+        if nested:
+            try:
+                stack.extend(list(nested))
+            except Exception:
+                pass
+    return out
+
+
+ids = _ids(view) if view else []
 check(any(i.startswith('appeal:accept:') for i in ids)
       and any(i.startswith('appeal:claim:') for i in ids),
       'на карточке кнопки Принять / Взять в работу', f'→ {ids}')

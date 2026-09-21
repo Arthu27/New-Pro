@@ -180,15 +180,29 @@ TIER_DEFAULT_DURATIONS = {
 
 def _role_tier_map(guild_id=None):
     """{role_id(str): tier} из data/role_map.json (та же настройка, что в
-    панели «Панели и роли»). Сбой чтения — пустой словарь (не мешаем)."""
+    панели «Панели и роли»). Сбой чтения — пустой словарь (не мешаем).
+    Известная роль куратора сервера всегда в карте (fallback)."""
     try:
         data = _load_json(ROLE_MAP_PATH, {})
         if not isinstance(data, dict):
-            return {}
-        return {str(rid): str(tier) for rid, tier in data.items()
-                if str(tier) in TIER_ORDER}
+            data = {}
+        out = {str(rid): str(tier) for rid, tier in data.items()
+               if str(tier) in TIER_ORDER}
     except Exception:
-        return {}
+        out = {}
+    try:
+        from services.staff_roles import KNOWN_CURATOR_ROLE_ID
+        kid = str(int(KNOWN_CURATOR_ROLE_ID))
+        out.setdefault(kid, 'curator')
+    except Exception:
+        pass
+    try:
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        hid = str(int(KNOWN_HELPER_ROLE_ID))
+        out.setdefault(hid, 'mod')
+    except Exception:
+        pass
+    return out
 
 
 def tier_for_roles(role_ids):
@@ -397,17 +411,50 @@ def set_role_durations(guild_id, role_id, who=None, role_name=None, **kw):
     return dict(row.get('durations') or {})
 
 
+def _tier_rank(tier):
+    try:
+        return TIER_ORDER.index(tier)
+    except (ValueError, TypeError):
+        return -1
+
+
+def _role_ids_for_overrides(role_ids):
+    """Роли, чьи лимиты/меню учитываются при нескольких стафф-ролях.
+
+    Старший тир главнее: у куратора+хелпера (mod) хелперские overrides
+    не сужают меню и не бьют mute:3. Роли вне role_map тоже игнор, если
+    у человека уже есть стафф-тир.
+    """
+    tmap = _role_tier_map()
+    staff_tier = tier_for_roles(role_ids)
+    staff_rank = _tier_rank(staff_tier)
+    out = []
+    for rid in role_ids or ():
+        rid_s = str(rid)
+        mapped = tmap.get(rid_s)
+        if staff_tier in TIER_ORDER:
+            if mapped is None:
+                continue
+            if _tier_rank(mapped) < staff_rank:
+                continue
+        out.append(rid_s)
+    return out
+
+
 def role_scoped_actions(guild_id, role_ids=()):
     """Какие действия доступны модератору через /modpanel.
 
     По умолчанию ограничений нет → None (видно всё). Если хоть у одной
     роли модератора есть свои настройки (лимиты/окна/потолки), доступны
     ТОЛЬКО настроенные действия — объединение по всем таким ролям.
+
+    Старший тир (куратор > хелпер/mod) ГЛАВНЕЕ: override младших ролей
+    не сужает меню куратору.
     """
     overrides = get_role_overrides(guild_id)
     scoped = None
-    for rid in role_ids or ():
-        ov = overrides.get(str(rid)) or {}
+    for rid_s in _role_ids_for_overrides(role_ids):
+        ov = overrides.get(rid_s) or {}
         keys = (set(ov.get('limits') or ())
                 | set(ov.get('windows') or ())
                 | set(ov.get('durations') or ()))
@@ -457,13 +504,14 @@ def effective_max_duration(guild_id, key, role_ids=()):
 
     Свой потолок роли ГЛАВНЕЕ общего; несколько ролей — мягчайший.
     Ничего не настроено — 2 часа у всех (кроме тира владельца).
+    Старший тир игнорирует duration-override младших ролей (хелпер).
     """
     if key not in DURATION_KEYS:
         return 0
     overrides = get_role_overrides(guild_id)
     best = 0
-    for rid in role_ids or ():
-        ov = overrides.get(str(rid)) or {}
+    for rid_s in _role_ids_for_overrides(role_ids):
+        ov = overrides.get(rid_s) or {}
         v = int((ov.get('durations') or {}).get(key) or 0)
         if v > best:
             best = v
@@ -876,6 +924,8 @@ def effective_limits(guild_id, role_ids=()):
     общего или меньше — неважно. Общего лимита нет, а у роли есть —
     действует лимит роли. Несколько ролей со своими лимитами — побеждает
     самая мягкая (роль дают осознанно, наказывать за вторую роль странно).
+
+    Младший тир (хелпер/mod при кураторе) overrides не применяет.
     """
     lim = dict(get_limits(guild_id))
     win = dict(get_windows(guild_id))
@@ -885,8 +935,8 @@ def effective_limits(guild_id, role_ids=()):
         lim[_k] = _v
     overrides = get_role_overrides(guild_id)
     best = {}          # ключ → (лимит, окно) — лучший из СВОИХ лимитов ролей
-    for rid in role_ids or ():
-        ov = overrides.get(str(rid))
+    for rid_s in _role_ids_for_overrides(role_ids):
+        ov = overrides.get(rid_s)
         if not ov:
             continue
         for k, v in (ov.get('limits') or {}).items():
