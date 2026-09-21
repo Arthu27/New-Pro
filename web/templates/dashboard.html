@@ -95,21 +95,20 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   document.querySelectorAll('[data-widget]').forEach(function (el) { el.style.order = ''; });
 })();
 </script>
-<div class="page-hero" id="ccHero">
-  <span class="aura" aria-hidden="true"></span>
-  <div class="cc-mesh" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div class="cc-grid" aria-hidden="true"></div>
-  <button type="button" class="btn btn-icon btn-ghost" id="ccSettings" style="position:absolute;top:14px;right:16px;z-index:5;cursor:pointer" title="Настроить виджеты главной" aria-label="Настроить виджеты главной"><i class="fas fa-sliders"></i></button>
-  <div class="page-hero-content">
-    <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления · сборка 59</div>
-    <h1 id="heroTitle">Добро пожаловать</h1>
-    <p id="heroWelcomeMsg">Логи, жалобы и быстрые действия — в одном месте. Управляйте сервером без лишних кликов.</p>
+<div class="page-head" id="ccHero">
+  <div class="page-head-copy">
+    <div class="eyebrow" id="heroGreeting">Панель управления</div>
+    <h1 id="heroTitle">Обзор сервера</h1>
+    <p class="lead" id="heroWelcomeMsg">Логи, жалобы и быстрые действия — в одном месте.</p>
     <div class="cc-date" id="ccDate"></div>
     <div class="cc-chips">
       <span class="live-chip" id="chipBot"><span class="dot"></span> бот: проверка…</span>
       {% if '/security' in panel_visible_paths %}<span class="live-chip" id="chipThreat"><i class="fas fa-shield-halved"></i> угрозы: —</span>{% endif %}
       <span class="live-chip" id="chipMod"><i class="fas fa-gavel"></i> действий за 7 дн: —</span>
     </div>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn btn-icon btn-ghost" id="ccSettings" title="Настроить виджеты" aria-label="Настроить виджеты"><i class="fas fa-sliders"></i></button>
   </div>
 </div>
 
