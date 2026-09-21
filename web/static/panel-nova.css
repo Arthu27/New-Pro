@@ -1,8 +1,7 @@
 /* ============================================================================
-   HAKUMO · Panel Nova Glass — ПОЛНОСТЬЮ С НУЛЯ (v14)
-   Старый Soft Neu / Mirror Bloom слой удалён.
-   Новый язык: floating glass islands, ice bloom, champagne gold,
-   specular sheen, living void. Ничего от прежнего вида.
+   HAKUMO · Panel Nova Glass — v15 ALL PAGES
+   Единый язык на всю панель: floating glass, ice bloom, champagne gold.
+   v15: unify всех страниц (шапки, карточки, формы, мобилка).
    ============================================================================ */
 
 :root {
@@ -1609,4 +1608,227 @@ html[data-theme="light"] .gd-combo-list {
     linear-gradient(150deg, rgba(18, 24, 40, .96), rgba(8, 12, 22, .98)) !important;
   border: 1px solid rgba(255, 227, 181, .28) !important;
   box-shadow: 0 18px 48px rgba(0, 0, 0, .55) !important;
+}
+
+/* ============================================================================
+   Panel Unify ALL PAGES — v15
+   Одна система на все ~70 страниц: шапки, карточки, формы, таблицы,
+   мобилка. Настройки/API не трогаем — только вид.
+   ============================================================================ */
+
+/* page-hero → тот же язык, что page-head (старые страницы) */
+html[data-theme="dark"] .page-hero,
+html[data-theme="light"] .page-hero,
+html[data-theme="dark"] .analytics-cockpit,
+html[data-theme="light"] .analytics-cockpit {
+  margin: 0 0 18px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] .page-hero h1,
+html[data-theme="light"] .page-hero h1,
+html[data-theme="dark"] .analytics-cockpit h1,
+html[data-theme="light"] .analytics-cockpit h1 {
+  font-family: var(--font-display) !important;
+  font-size: clamp(26px, 3.2vw, 36px) !important;
+  font-weight: 750 !important;
+  letter-spacing: -.03em !important;
+  color: var(--nv-text) !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--nv-text) !important;
+}
+html[data-theme="dark"] .page-hero p,
+html[data-theme="light"] .page-hero p,
+html[data-theme="dark"] .analytics-cockpit .lead,
+html[data-theme="light"] .analytics-cockpit .lead {
+  max-width: 62ch !important;
+  color: var(--nv-text-2) !important;
+  font-size: 14.5px !important;
+}
+html[data-theme="dark"] .page-hero-greeting,
+html[data-theme="light"] .page-hero-greeting,
+html[data-theme="dark"] .analytics-eyebrow,
+html[data-theme="light"] .analytics-eyebrow {
+  color: var(--nv-champagne) !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  letter-spacing: .14em !important;
+  text-transform: uppercase !important;
+}
+
+/* секции / карточки — единый ритм */
+html[data-theme="dark"] .section,
+html[data-theme="light"] .section,
+html[data-theme="dark"] .card,
+html[data-theme="light"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="light"] .panel {
+  margin-bottom: 14px !important;
+}
+html[data-theme="dark"] .bs-title,
+html[data-theme="light"] .bs-title {
+  color: var(--nv-text) !important;
+  font-weight: 700 !important;
+  letter-spacing: -.01em !important;
+}
+
+/* формы: тач-цели и колонка на телефоне */
+html[data-theme="dark"] .form-input,
+html[data-theme="light"] .form-input,
+html[data-theme="dark"] select.form-input,
+html[data-theme="light"] select.form-input,
+html[data-theme="dark"] .aes .aes-btn,
+html[data-theme="light"] .aes .aes-btn,
+html[data-theme="dark"] .sshd-btn,
+html[data-theme="light"] .sshd-btn {
+  min-height: 42px !important;
+}
+html[data-theme="dark"] .btn,
+html[data-theme="light"] .btn,
+html[data-theme="dark"] .control-btn,
+html[data-theme="light"] .control-btn {
+  min-height: 42px !important;
+}
+
+/* таблицы — гавань скролла */
+html[data-theme="dark"] .table-wrap,
+html[data-theme="light"] .table-wrap,
+html[data-theme="dark"] .ma-rows,
+html[data-theme="light"] .ma-rows {
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+}
+
+/* убрать «AI purple / cream» акценты со старых страниц */
+html[data-theme="dark"] [style*="#4f46e5"],
+html[data-theme="light"] [style*="#4f46e5"],
+html[data-theme="dark"] [style*="#9b59b6"],
+html[data-theme="light"] [style*="#9b59b6"],
+html[data-theme="dark"] [style*="#f5f1e8"],
+html[data-theme="light"] [style*="#f5f1e8"],
+html[data-theme="dark"] [style*="#F4F1EA"],
+html[data-theme="light"] [style*="#F4F1EA"] {
+  /* фон карточек темы переопределяем классами .nv-theme-* */
+}
+
+/* feed / list rows — одинаковые на всех страницах */
+html[data-theme="dark"] .feed-item,
+html[data-theme="light"] .feed-item {
+  border-radius: 14px !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  background: rgba(255,255,255,.03) !important;
+  margin-bottom: 6px !important;
+}
+html[data-theme="dark"] .feed-item:hover,
+html[data-theme="light"] .feed-item:hover {
+  background: rgba(94,200,255,.08) !important;
+  transform: none !important;
+}
+
+/* pre/code — не «сырой dump» на весь экран */
+html[data-theme="dark"] pre,
+html[data-theme="light"] pre,
+html[data-theme="dark"] .konsol-out,
+html[data-theme="light"] .konsol-out {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  border-radius: 12px !important;
+  background: rgba(0,0,0,.55) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  color: var(--nv-text-2) !important;
+  font-size: 12.5px !important;
+}
+
+@media (max-width: 760px) {
+  html[data-theme="dark"] .page-head,
+  html[data-theme="light"] .page-head,
+  html[data-theme="dark"] .page-hero,
+  html[data-theme="light"] .page-hero {
+    margin-bottom: 12px !important;
+  }
+  html[data-theme="dark"] .page-head h1,
+  html[data-theme="light"] .page-head h1,
+  html[data-theme="dark"] .page-hero h1,
+  html[data-theme="light"] .page-hero h1,
+  html[data-theme="dark"] .analytics-cockpit h1,
+  html[data-theme="light"] .analytics-cockpit h1 {
+    font-size: 24px !important;
+  }
+  /* любые flex-ряды настроек → колонка */
+  html[data-theme="dark"] .card > div[style*="display:flex"],
+  html[data-theme="light"] .card > div[style*="display:flex"],
+  html[data-theme="dark"] .section > div[style*="display:flex"],
+  html[data-theme="light"] .section > div[style*="display:flex"],
+  html[data-theme="dark"] .panel > div[style*="display:flex"],
+  html[data-theme="light"] .panel > div[style*="display:flex"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  html[data-theme="dark"] .card > div[style*="display: grid"],
+  html[data-theme="light"] .card > div[style*="display: grid"],
+  html[data-theme="dark"] .section > div[style*="display: grid"],
+  html[data-theme="light"] .section > div[style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+  }
+  html[data-theme="dark"] .kpi-row,
+  html[data-theme="light"] .kpi-row {
+    grid-template-columns: 1fr !important;
+    display: grid !important;
+  }
+  html[data-theme="dark"] .seg,
+  html[data-theme="light"] .seg {
+    width: 100% !important;
+    display: flex !important;
+  }
+  html[data-theme="dark"] .seg-btn,
+  html[data-theme="light"] .seg-btn {
+    flex: 1 1 auto !important;
+    min-height: 42px !important;
+    justify-content: center !important;
+  }
+  html[data-theme="dark"] .btn,
+  html[data-theme="light"] .btn {
+    width: auto !important;
+  }
+  html[data-theme="dark"] table:not(.keep-grid),
+  html[data-theme="light"] table:not(.keep-grid) {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+}
+
+/* тема: пресеты без purple/cream */
+.nv-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.nv-theme-card {
+  cursor: pointer;
+  border-radius: 16px;
+  padding: 20px 16px;
+  text-align: center;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.12);
+  transition: border-color .15s, box-shadow .15s;
+}
+.nv-theme-card:hover,
+.nv-theme-card.on {
+  border-color: rgba(94,200,255,.5);
+  box-shadow: var(--nv-bloom-ice);
+}
+.nv-theme-card .ico { font-size: 28px; color: var(--nv-ice); margin-bottom: 8px; }
+.nv-theme-card .ttl { font-weight: 700; color: var(--nv-text); margin-bottom: 4px; }
+.nv-theme-card .sub { font-size: 12.5px; color: var(--nv-text-3); }
+.nv-swatch-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.nv-swatch {
+  width: 44px; height: 44px; border-radius: 12px; cursor: pointer;
+  border: 2px solid transparent; box-sizing: border-box;
+}
+.nv-swatch.selected {
+  border-color: #fff;
+  box-shadow: var(--nv-bloom-ice);
 }

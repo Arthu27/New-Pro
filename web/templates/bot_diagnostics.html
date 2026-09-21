@@ -3,18 +3,13 @@
 {% block page_title %}<i class="fas fa-heartbeat" ></i> Bot Диагностика{% endblock %}
 {% block content %}
 
-{% block page_hero %}
-<div class="page-hero">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot" id="healthDot"></span>
-      <span id="healthStatus">Загрузка...</span>
-    </div>
-    <h1>Bot Диагностика &amp; Auto-Repair</h1>
-    <p>Real-time мониторинг здоровья бота, автоматический ремонт при сбоях, hot-reload cog'ов и агрегация ошибок.</p>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow"><span class="dot" id="healthDot"></span> <span id="healthStatus">Статус</span></div>
+    <h1>Диагностика бота</h1>
+    <p class="lead">Здоровье, auto-repair, hot-reload модулей и агрегация ошибок — в одном месте.</p>
   </div>
 </div>
-{% endblock %}
 
 <style>
 .diag-vital { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); position: relative; overflow: hidden; transition: all 0.2s; }
