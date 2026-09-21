@@ -403,7 +403,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=multi-fix-v13',
+        log.info('modpanel open uid=%s gid=%s build=multi-fix-v14',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -449,14 +449,18 @@ class Moderation (commands .Cog ):
                 log.warning('modpanel followup: %s', ex2)
                 return
         view._panel_message = panel_msg
+        view._panel_message_id = getattr(panel_msg, 'id', None)
         # Редактор именно ЭТОГО сообщения (не «чужого» original после followup)
         if panel_msg is not None and hasattr(panel_msg, 'edit'):
             async def _edit_panel(**kw):
+                # всегда только view= на refresh
+                if 'view' in kw and len(kw) > 1:
+                    kw = {'view': kw['view']}
                 return await panel_msg.edit(**kw)
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v13',
+        log.info('modpanel ready msg=%s build=multi-fix-v14',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2194,19 +2198,37 @@ class UnmuteKindView(discord.ui.LayoutView):
 
 
 def _bind_live_panel(panel, interaction):
-    """Привязать сброс к сообщению, на котором кликнули (то что на экране).
+    """Привязать сброс к ОСНОВНОМУ сообщению панели.
 
-    Collector'ов / wait_for не используем — только View + edit/resend.
-    interaction.message на component-клике = видимая панель.
+    Collector'ов / wait_for не используем — только View + edit.
+    interaction.message на клике по меню вида мута — ДРУГОЕ ephemeral:
+    его нельзя записывать в _panel_message, иначе rebuild уходит не туда
+    и селекты на главной панели мёртвые (рассинхрон custom_id).
     """
     if panel is None:
         return
     msg = getattr(interaction, 'message', None)
     if msg is None:
         return
+    mid = getattr(msg, 'id', None)
+    known_id = getattr(panel, '_panel_message_id', None)
+    known_msg = getattr(panel, '_panel_message', None)
+    known_mid = known_id if known_id is not None else getattr(known_msg, 'id', None)
+    # Уже знаем id основной панели — не переезжаем на kind-меню / чужой msg
+    if (known_mid is not None and mid is not None
+            and int(mid) != int(known_mid)):
+        return
     panel._panel_message = msg
+    if mid is not None:
+        try:
+            panel._panel_message_id = int(mid)
+        except Exception:
+            panel._panel_message_id = mid
 
     async def _edit(**kw):
+        # V2 refresh: только view= — иначе селекты снова залипают
+        if 'view' in kw and len(kw) > 1:
+            kw = {'view': kw['view']}
         return await msg.edit(**kw)
 
     panel._root_edit = _edit
@@ -2245,46 +2267,60 @@ def _cancel_panel_reset(panel):
 
 
 async def _push_panel_view(panel, interaction=None):
-    """Запушить текущий view в ТО ЖЕ сообщение панели. Без нового окна.
+    """Запушить view в ТО ЖЕ сообщение. Без нового окна.
 
-    Порядок: msg.edit → _root_edit → followup.edit_message.
-    Важно: после _rebuild custom_id новые — Discord обязан получить edit,
-    иначе клики «мёртвые» (рассинхрон).
+    V2: только view= (без content/embed/attachments).
     """
     msg = getattr(panel, '_panel_message', None)
-    kw = panel.panel_edit_kwargs(message=msg, reattach_banner=False)
-    # 1) прямое edit сообщения
+    kw = {'view': panel}  # строго только view — иначе селекты мрут
+    errors = []
+
+    async def _ok(new_msg):
+        if new_msg is not None and hasattr(new_msg, 'id'):
+            want = getattr(panel, '_panel_message_id', None)
+            try:
+                if want is not None and int(new_msg.id) != int(want):
+                    log.warning(
+                        'modpanel push: ответили msg=%s, ждали %s — не переезжаем',
+                        getattr(new_msg, 'id', None), want)
+                    return True
+            except Exception:
+                pass
+            panel._panel_message = new_msg
+            try:
+                panel._panel_message_id = int(new_msg.id)
+            except Exception:
+                panel._panel_message_id = new_msg.id
+        return True
+
     if msg is not None and hasattr(msg, 'edit'):
         try:
-            new_msg = await msg.edit(**kw)
-            if new_msg is not None and hasattr(new_msg, 'id'):
-                panel._panel_message = new_msg
-            return True
+            return await _ok(await msg.edit(**kw))
         except Exception as ex:
-            log.info('modpanel push msg.edit: %s', ex)
-    # 2) замыкание с открытия /modpanel
+            errors.append(f'msg.edit:{ex}')
     root = getattr(panel, '_root_edit', None)
     if root is not None:
         try:
-            new_msg = await root(**kw)
-            if new_msg is not None and hasattr(new_msg, 'id'):
-                panel._panel_message = new_msg
-            return True
+            return await _ok(await root(**kw))
         except Exception as ex:
-            log.info('modpanel push root: %s', ex)
-    # 3) followup.edit_message — тот же ephemeral, без нового окна
+            errors.append(f'root:{ex}')
     fu = getattr(panel, '_mod_followup', None)
     if fu is None and interaction is not None:
         fu = getattr(interaction, 'followup', None)
-    mid = getattr(msg, 'id', None)
+    mid = getattr(msg, 'id', None) or getattr(panel, '_panel_message_id', None)
     if fu is not None and mid and hasattr(fu, 'edit_message'):
         try:
-            new_msg = await fu.edit_message(mid, **kw)
-            if new_msg is not None and hasattr(new_msg, 'id'):
-                panel._panel_message = new_msg
-            return True
+            return await _ok(await fu.edit_message(int(mid), **kw))
         except Exception as ex:
-            log.info('modpanel push followup.edit_message: %s', ex)
+            errors.append(f'fu.edit:{ex}')
+    if interaction is not None:
+        try:
+            edit_orig = getattr(interaction, 'edit_original_response', None)
+            if callable(edit_orig):
+                return await _ok(await edit_orig(**kw))
+        except Exception as ex:
+            errors.append(f'orig:{ex}')
+    log.warning('modpanel push FAILED: %s', '; '.join(errors) or 'no path')
     return False
 
 
@@ -2417,7 +2453,11 @@ _MODAL_TITLES = {
 
 
 async def _reset_after_step(interaction, panel, *, prefer_resend=False):
-    """После шага: сброс селектов на ТОЙ ЖЕ панели. Новое окно запрещено."""
+    """После шага: сброс селектов на ТОЙ ЖЕ панели. Новое окно запрещено.
+
+    Сразу + запасной через 0.45с — если первый edit не дошёл до Discord,
+    второй клик по Действию всё равно оживёт.
+    """
     if panel is None:
         return
     panel.pending_action = None
@@ -2428,12 +2468,16 @@ async def _reset_after_step(interaction, panel, *, prefer_resend=False):
         await _silent_reset_panel(interaction, panel)
     except Exception as ex:
         log.warning('modpanel reset after step: %s', ex)
-        _schedule_panel_reset(interaction, panel, clear_pending=True, delay=0.2)
+    # запасной push новых custom_id (не отменяется — новое поколение)
+    _schedule_panel_reset(interaction, panel, clear_pending=True, delay=0.45)
 
 
 async def _enter_kind_mode(interaction, panel, *, kinds, target_id, title,
                            unmute=False):
-    """Показать выбор вида мута/размута НА ТОЙ ЖЕ панели (edit, не новое окно)."""
+    """Legacy: kind на той же панели. Сейчас мут идёт через _send_kind_menu.
+
+    Оставлен безопасным: view-only push, без переезда на чужой message.
+    """
     if panel is None:
         return False
     _bind_live_panel(panel, interaction)
@@ -2444,34 +2488,7 @@ async def _enter_kind_mode(interaction, panel, *, kinds, target_id, title,
     panel._kind_title = title or ('Снять мут' if unmute else 'Мут')
     guild = getattr(interaction, 'guild', None) or getattr(panel, '_guild', None)
     panel._rebuild(guild)
-    msg = getattr(panel, '_panel_message', None)
-    kw = panel.panel_edit_kwargs(message=msg, reattach_banner=False)
-    try:
-        if not interaction.response.is_done():
-            # Один ACK = edit того же сообщения
-            try:
-                await interaction.response.edit_message(**kw)
-                log.info('modpanel kind mode on same msg=%s',
-                         getattr(msg, 'id', None))
-                return True
-            except Exception as ex:
-                log.info('modpanel kind edit_message: %s', ex)
-                try:
-                    await _ack(interaction, thinking=False)
-                except Exception:
-                    pass
-        if msg is not None and hasattr(msg, 'edit'):
-            await msg.edit(**kw)
-            return True
-        root = getattr(panel, '_root_edit', None)
-        if root is not None:
-            await root(**kw)
-            return True
-    except Exception as ex:
-        log.warning('modpanel kind mode: %s', ex)
-        panel._clear_kind_mode()
-        return False
-    return False
+    return await _push_panel_view(panel, interaction)
 
 
 async def _offer_mod_form(interaction, cog, action, prefill, panel=None):
@@ -2877,6 +2894,7 @@ class ModPanelView(discord.ui.LayoutView):
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
         self._panel_message = None  # исходная эфемерка для reset
+        self._panel_message_id = None
         self._mod_followup = None  # не для нового окна — только legacy
         self._reset_task = None  # один фоновый rebuild — без гонок
         self._reset_gen = 0  # поколение сброса (отмена устаревших)
@@ -3047,39 +3065,22 @@ class ModPanelView(discord.ui.LayoutView):
         self.add_item(row2)
 
     def panel_edit_kwargs(self, *, message=None, reattach_banner=False):
-        """kwargs для edit_message / edit_original_response (V2).
+        """kwargs для edit панели.
 
-        reattach_banner=False (по умолчанию на refresh): НЕ грузим PNG
-        заново — оставляем attachment сообщения. Повторный upload на
-        каждом клике селекта давал «приложение не ответило вовремя».
+        Components V2: на refresh передаём ТОЛЬКО view=.
+        content/embed/attachments в edit ломают селекты — второй клик
+        по «Действие» перестаёт отвечать.
         """
-        kw = {
-            'view': self,
-            'embed': None,
-            'embeds': [],
-            'content': None,
-        }
+        if not reattach_banner:
+            return {'view': self}
+        # Первый показ / явная перезагрузка баннера
+        kw = {'view': self}
         from services.v2_layouts import SHOW_MENU_BANNER
         if not SHOW_MENU_BANNER:
-            kw['attachments'] = []
             return kw
-        kept = None
-        if not reattach_banner and message is not None:
-            try:
-                atts = list(getattr(message, 'attachments', None) or [])
-                if atts:
-                    kept = atts
-            except Exception:
-                kept = None
-        if kept is not None:
-            kw['attachments'] = kept
-            return kw
-        # Первый показ / нет старых вложений — прикрепить File из кэша.
         self._make_banner_file(force=False)
         if self._banner_file is not None:
             kw['attachments'] = [self._banner_file]
-        else:
-            kw['attachments'] = []
         return kw
 
     async def refresh(self, interaction, *, rebuild_action=True):

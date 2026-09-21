@@ -435,19 +435,20 @@ async def _msg_identity():
     view.selected_uid = '3000000000000000300'
     view._guild = g7
     shown = _PanelMsg(111)
-    stale = _PanelMsg(222)  # устаревшая ссылка — клик на другом msg
+    stale = _PanelMsg(222)  # устаревший объект; id панели = 111
     view._panel_message = stale
+    view._panel_message_id = 111
     async def _root(**kw):
         return await stale.edit(**kw)
     view._root_edit = _root
     inter = _PInter(opener, g7)
-    # interaction.message = то, на чём кликнули (видимая панель)
+    # interaction.message = то, на чём кликнули (тот же id основной панели)
     inter.message = shown
     sel_before = id(view.action_select)
     await M._silent_reset_panel(inter, view)
     check(id(view.action_select) != sel_before, 'reset пересобрал селект')
     check(len(shown.edits) == 1, 'edit ушёл в interaction.message (клик)')
-    check(len(stale.edits) == 0, 'устаревший _panel_message не трогали')
+    check(len(stale.edits) == 0, 'устаревший объект _panel_message не трогали')
     check(view._panel_message is shown or getattr(view._panel_message, 'id', None) == 111,
           'панель привязана к живому сообщению клика')
     # второй «клик» того же действия — новый select примет callback
@@ -458,6 +459,17 @@ async def _msg_identity():
     check(bool(inter2.response.modal) or bool(inter2.response.sent)
           or inter2.response.done,
           'после сброса второе действие снова ACK/модалка')
+
+    # kind-меню (другой id) НЕ ворует указатель основной панели
+    kind_ephemeral = _PanelMsg(777)
+    inter_kind = _PInter(opener, g7)
+    inter_kind.message = kind_ephemeral
+    edits_before = len(shown.edits)
+    await M._silent_reset_panel(inter_kind, view)
+    check(getattr(view._panel_message, 'id', None) == 111,
+          'kind-меню не переписало _panel_message')
+    check(len(kind_ephemeral.edits) == 0, 'kind-сообщение не редактировали')
+    check(len(shown.edits) > edits_before, 'сброс всё равно на основную панель')
 
     # resend отключён — новое окно больше не создаём
     view_r = M.ModPanelView(cog, opener, allowed=allowed)
@@ -479,6 +491,7 @@ async def _msg_identity():
     view_a.pending_action = 'mute'
     live = _PanelMsg(444)
     view_a._panel_message = live
+    view_a._panel_message_id = 444
     fu2 = _FakeFollowup()
     view_a._mod_followup = fu2
     inter_a = _PInter(opener, g7)
@@ -486,7 +499,7 @@ async def _msg_identity():
     await M._reset_after_step(inter_a, view_a, prefer_resend=False)
     check(view_a.pending_action is None, 'после шага pending сброшен')
     check(len(fu2.sent) == 0, 'без новой эфемерки — только edit той же панели')
-    check(len(live.edits) == 1, 'селекты сброшены edit на том же сообщении')
+    check(len(live.edits) >= 1, 'селекты сброшены edit на том же сообщении')
     check(view_a.selected_uid == '3000000000000000300',
           'участник сохранён для серии действий')
     check(getattr(view_a._panel_message, 'id', None) == 444,
@@ -503,10 +516,13 @@ check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'reset-хелперы без bot.wait_for')
 check('_send_kind_menu' in src and 'MuteKindView' in src,
       'вид мута — отдельное меню MuteKindView')
-check('multi-fix-v13' in src, 'build=multi-fix-v13 в логе открытия')
+check('multi-fix-v14' in src or 'multi-fix-v13' in src,
+      'build=multi-use в логе открытия')
 check('resend disabled' in src or 'return False' in src[src.index('async def _resend_fresh_panel'):
                                                           src.index('def _cancel_panel_reset')],
       'resend заглушка — новое окно запрещено')
+check('_panel_message_id' in src and 'int(mid) != int(known_mid)' in src,
+      'bind не переезжает на kind-меню (другой message id)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

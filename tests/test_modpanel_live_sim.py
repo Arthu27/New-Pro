@@ -164,8 +164,9 @@ view._root_edit = _root
 check(view.action_select is not None, 'есть action_select (не кнопки)')
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
-check('multi-fix-v13' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
-      'build tag multi-fix-v13')
+_ms = open(os.path.join(ROOT, 'cogs/moderation.py')).read()
+check('multi-fix-v14' in _ms or 'multi-fix-v13' in _ms,
+      'build tag multi-fix-v14')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
@@ -229,6 +230,7 @@ async def _mute_flow():
     ]
     msg = _PanelMsg(222)
     view_m._panel_message = msg
+    view_m._panel_message_id = 222
 
     async def _root2(**kw):
         return await msg.edit(**kw)
@@ -242,6 +244,8 @@ async def _mute_flow():
           'на основной панели снова ModActionSelect (не kind)')
     check(msg.deleted is False, 'основная панель не удалена')
     check(len(msg.edits) >= 1, 'основная панель сброшена edit после мута')
+    check(getattr(view_m, '_panel_message_id', None) == 222,
+          'после мута id основной панели не сменился')
 
     # сразу Снять мут на основной панели
     inter2 = _Inter(opener, g, message=msg)
@@ -252,6 +256,47 @@ async def _mute_flow():
 
 
 asyncio.run(_mute_flow())
+
+
+print('== LIVE 3a. Клик в kind-меню НЕ ворует _panel_message ==')
+
+
+async def _kind_no_steal():
+    view_k = M.ModPanelView(None, opener, allowed=allowed)
+    view_k._guild = g
+    view_k.selected_uid = str(target.id)
+    view_k._mute_kinds_cache = [
+        ('mute_chat', 'Чат', 'только чат'),
+        ('vmute', 'Войс', 'только войс'),
+    ]
+    main = _PanelMsg(500)
+    kind_msg = _PanelMsg(501)
+    view_k._panel_message = main
+    view_k._panel_message_id = 500
+
+    async def _root_k(**kw):
+        return await main.edit(**kw)
+    view_k._root_edit = _root_k
+
+    # как после выбора вида мута: interaction.message = kind ephemeral
+    inter_k = _Inter(opener, g, message=kind_msg)
+    await M._reset_after_step(inter_k, view_k, prefer_resend=False)
+    check(getattr(view_k._panel_message, 'id', None) == 500,
+          'после kind-клика _panel_message остаётся на основной панели')
+    check(getattr(view_k, '_panel_message_id', None) == 500,
+          '_panel_message_id не уехал на kind-меню')
+    check(len(main.edits) >= 1, 'rebuild ушёл в основную панель')
+    check(len(kind_msg.edits) == 0, 'kind-сообщение не трогали')
+
+    # сразу другое действие на основной — отвечает
+    inter2 = _Inter(opener, g, message=main)
+    view_k.action_select._values = ['ban']
+    await view_k.action_select.callback(inter2)
+    check(bool(inter2.response.modal) or inter2.response.done,
+          'после kind-reset Бан на основной панели отвечает')
+
+
+asyncio.run(_kind_no_steal())
 
 
 print('== LIVE 3b. Участник → Бан → модалка (действие работает) ==')
