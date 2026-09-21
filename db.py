@@ -68,6 +68,52 @@ def clear_guild_data_cache() -> None:
     """Сброс всего кэша (тесты / смена DB_PATH)."""
     with _GD_CACHE_LOCK:
         _GD_CACHE.clear()
+    _reset_shared_conns()
+
+
+# Персистентное соединение на поток. Раньше _conn() открывал НОВЫЙ
+# sqlite3.connect + гонял PRAGMA на КАЖДЫЙ get/set — а /modpanel и ACL
+# дёргают get десятки раз за клик, плюс каждый voice/join-ивент. Это
+# забивало event loop → Discord «не ответило вовремя». Теперь коннект
+# создаётся один раз на поток (WAL безопасен для параллельных писателей).
+_TLOCAL = threading.local()
+
+
+def _shared_conn(db_path: str) -> sqlite3.Connection:
+    conns = getattr(_TLOCAL, 'conns', None)
+    if conns is None:
+        conns = {}
+        _TLOCAL.conns = conns
+    conn = conns.get(db_path)
+    if conn is not None:
+        return conn
+    d = os.path.dirname(db_path)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    conn = sqlite3.connect(db_path, timeout=5.0, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA synchronous=NORMAL')
+        conn.execute('PRAGMA temp_store=MEMORY')
+        conn.execute('PRAGMA busy_timeout=5000')
+    except Exception:
+        pass
+    conns[db_path] = conn
+    return conn
+
+
+def _reset_shared_conns() -> None:
+    """Закрыть кэшированные коннекты этого потока (смена DB_PATH в тестах)."""
+    conns = getattr(_TLOCAL, 'conns', None)
+    if not conns:
+        return
+    for c in list(conns.values()):
+        try:
+            c.close()
+        except Exception:
+            pass
+    _TLOCAL.conns = {}
 
 
 class GuildData:
@@ -87,38 +133,26 @@ class GuildData:
         self._ensure_table()
     
     def _conn(self):
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        # timeout: не зависать на locked DB (панель + бот пишут параллельно)
-        conn = sqlite3.connect(self.db_path, timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        try:
-            conn.execute('PRAGMA journal_mode=WAL')
-            conn.execute('PRAGMA synchronous=NORMAL')
-            conn.execute('PRAGMA temp_store=MEMORY')
-        except Exception:
-            pass
-        return conn
+        # Персистентный коннект на поток — без reconnect+PRAGMA на каждый вызов.
+        return _shared_conn(self.db_path)
     
     def _ensure_table(self):
         conn = self._conn()
-        try:
-            conn.execute('''
-            CREATE TABLE IF NOT EXISTS guild_data (
-                namespace TEXT NOT NULL,
-                guild_id INTEGER NOT NULL,
-                key TEXT NOT NULL,
-                value TEXT NOT NULL,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (namespace, guild_id, key)
-            )
-        ''')
-            conn.execute('''
-            CREATE INDEX IF NOT EXISTS idx_guild_data_ns_guild 
-            ON guild_data(namespace, guild_id)
-        ''')
-            conn.commit()
-        finally:
-            conn.close()
+        conn.execute('''
+        CREATE TABLE IF NOT EXISTS guild_data (
+            namespace TEXT NOT NULL,
+            guild_id INTEGER NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (namespace, guild_id, key)
+        )
+    ''')
+        conn.execute('''
+        CREATE INDEX IF NOT EXISTS idx_guild_data_ns_guild 
+        ON guild_data(namespace, guild_id)
+    ''')
+        conn.commit()
     
     def get(self, guild_id: int, key: str, default: Any = None) -> Any:
         """Чтение значения (с коротким TTL-кэшем)."""
@@ -126,13 +160,10 @@ class GuildData:
         if cached is not _MISSING:
             return default if cached is None else cached
         conn = self._conn()
-        try:
-            row = conn.execute(
-                'SELECT value FROM guild_data WHERE namespace = ? AND guild_id = ? AND key = ?',
-                (self.namespace, guild_id, str(key))
-            ).fetchone()
-        finally:
-            conn.close()
+        row = conn.execute(
+            'SELECT value FROM guild_data WHERE namespace = ? AND guild_id = ? AND key = ?',
+            (self.namespace, guild_id, str(key))
+        ).fetchone()
         if row:
             try:
                 value = json.loads(row['value'])
@@ -159,8 +190,6 @@ class GuildData:
             log.error(f"DB write error: {e}")
             _gd_cache_invalidate(self.namespace, guild_id, key)
             return False
-        finally:
-            conn.close()
     
     def delete(self, guild_id: int, key: str) -> bool:
         """Удаление значения"""
@@ -176,19 +205,14 @@ class GuildData:
         except Exception as e:
             log.error(f"DB delete error: {e}")
             return False
-        finally:
-            conn.close()
     
     def get_all(self, guild_id: int) -> Dict[str, Any]:
         """Все данные гильдии"""
         conn = self._conn()
-        try:
-            rows = conn.execute(
-                'SELECT key, value FROM guild_data WHERE namespace = ? AND guild_id = ?',
-                (self.namespace, guild_id)
-            ).fetchall()
-        finally:
-            conn.close()
+        rows = conn.execute(
+            'SELECT key, value FROM guild_data WHERE namespace = ? AND guild_id = ?',
+            (self.namespace, guild_id)
+        ).fetchall()
         result = {}
         for row in rows:
             try:
@@ -200,25 +224,19 @@ class GuildData:
     def get_all_keys(self, guild_id: int) -> List[str]:
         """Все ключи гильдии"""
         conn = self._conn()
-        try:
-            rows = conn.execute(
-                'SELECT key FROM guild_data WHERE namespace = ? AND guild_id = ?',
-                (self.namespace, guild_id)
-            ).fetchall()
-        finally:
-            conn.close()
+        rows = conn.execute(
+            'SELECT key FROM guild_data WHERE namespace = ? AND guild_id = ?',
+            (self.namespace, guild_id)
+        ).fetchall()
         return [row['key'] for row in rows]
     
     def count(self, guild_id: int) -> int:
         """Количество записей"""
         conn = self._conn()
-        try:
-            row = conn.execute(
-                'SELECT COUNT(*) as cnt FROM guild_data WHERE namespace = ? AND guild_id = ?',
-                (self.namespace, guild_id)
-            ).fetchone()
-        finally:
-            conn.close()
+        row = conn.execute(
+            'SELECT COUNT(*) as cnt FROM guild_data WHERE namespace = ? AND guild_id = ?',
+            (self.namespace, guild_id)
+        ).fetchone()
         return row['cnt'] if row else 0
     
     def exists(self, guild_id: int, key: str) -> bool:
@@ -240,8 +258,6 @@ class GuildData:
         except Exception as e:
             log.error(f"DB clear error: {e}")
             return False
-        finally:
-            conn.close()
     
     def migrate_from_json(self, json_path: str, guild_id: int):
         """Перенести данные из JSON-файла в БД"""
@@ -279,41 +295,27 @@ class UserData:
         self._ensure_table()
     
     def _conn(self):
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        conn = sqlite3.connect(self.db_path, timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        try:
-            conn.execute('PRAGMA journal_mode=WAL')
-            conn.execute('PRAGMA synchronous=NORMAL')
-        except Exception:
-            pass
-        return conn
+        return _shared_conn(self.db_path)
     
     def _ensure_table(self):
         conn = self._conn()
-        try:
-            conn.execute('''
-            CREATE TABLE IF NOT EXISTS user_data (
-                namespace TEXT NOT NULL,
-                user_id INTEGER NOT NULL,
-                value TEXT NOT NULL,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (namespace, user_id)
-            )
-        ''')
-            conn.commit()
-        finally:
-            conn.close()
+        conn.execute('''
+        CREATE TABLE IF NOT EXISTS user_data (
+            namespace TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
+            value TEXT NOT NULL,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (namespace, user_id)
+        )
+    ''')
+        conn.commit()
     
     def get(self, user_id: int, default: Any = None) -> Any:
         conn = self._conn()
-        try:
-            row = conn.execute(
-                'SELECT value FROM user_data WHERE namespace = ? AND user_id = ?',
-                (self.namespace, user_id)
-            ).fetchone()
-        finally:
-            conn.close()
+        row = conn.execute(
+            'SELECT value FROM user_data WHERE namespace = ? AND user_id = ?',
+            (self.namespace, user_id)
+        ).fetchone()
         if row:
             try:
                 return json.loads(row['value'])
@@ -334,8 +336,6 @@ class UserData:
         except Exception as e:
             log.error(f"DB write error: {e}")
             return False
-        finally:
-            conn.close()
     
     def delete(self, user_id: int) -> bool:
         conn = self._conn()
@@ -349,19 +349,14 @@ class UserData:
         except Exception as e:
             log.error(f"DB delete error: {e}")
             return False
-        finally:
-            conn.close()
     
     def get_all(self) -> Dict[int, Any]:
         """Все пользователи"""
         conn = self._conn()
-        try:
-            rows = conn.execute(
-                'SELECT user_id, value FROM user_data WHERE namespace = ?',
-                (self.namespace,)
-            ).fetchall()
-        finally:
-            conn.close()
+        rows = conn.execute(
+            'SELECT user_id, value FROM user_data WHERE namespace = ?',
+            (self.namespace,)
+        ).fetchall()
         result = {}
         for row in rows:
             try:

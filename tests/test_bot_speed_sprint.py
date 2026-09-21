@@ -120,5 +120,44 @@ hot = (time.perf_counter() - t0) * 1000 / 500
 check(hot < cold or hot < 0.05,
       f'hot get быстрее cold (cold={cold:.2f}ms hot={hot:.3f}ms)')
 
+print('== 7. Персистентный коннект: без reconnect на каждый вызов ==')
+import db as _dbmod  # noqa: E402
+db_src = open(os.path.join(ROOT, 'db.py'), encoding='utf-8').read()
+check('_shared_conn' in db_src and 'threading.local' in db_src,
+      'db: соединение на поток (thread-local persistent)')
+gd = _dbmod.GuildData('conn_reuse')
+c1 = gd._conn()
+c2 = gd._conn()
+check(c1 is c2, 'db: _conn() отдаёт тот же коннект (без reconnect)')
+# другой namespace, тот же путь → тот же коннект
+gd_other = _dbmod.GuildData('conn_reuse_2')
+check(gd_other._conn() is c1, 'db: коннект общий на путь БД, не на namespace')
+# запись без кэша тоже быстрая (нет connect+PRAGMA на set)
+_dbmod.clear_guild_data_cache()
+gd.set(3, 'k', {'v': 1})
+t0 = time.perf_counter()
+for i in range(300):
+    gd.set(3, 'k', {'v': i})
+wr = (time.perf_counter() - t0) * 1000 / 300
+check(wr < 5.0, f'db: 300 set без reconnect быстрые ({wr:.3f}ms/шт)')
+
+print('== 8. punish_roles: mtime-кэш, без полного read на каждый ивент ==')
+pr_src = open(os.path.join(ROOT, 'services', 'punish_roles.py'), encoding='utf-8').read()
+check('_CACHE' in pr_src and 'os.stat' in pr_src,
+      'punish_roles: _load() кэширует по mtime (stat вместо full read)')
+import importlib  # noqa: E402
+import services.punish_roles as PR  # noqa: E402
+importlib.reload(PR)
+PR.set_roles(555, who='t', mute=4242)
+# несколько чтений подряд — файл не менялся → берётся кэш (тот же объект)
+d1 = PR._load()
+d2 = PR._load()
+check(d1 is d2, 'punish_roles: повторный _load() без изменений файла — из кэша')
+check(PR.role_for(555, 'mute') == 4242, 'punish_roles: role_for читает верно')
+# запись меняет файл → следующий _load() видит новое
+PR.set_roles(555, who='t', mute=9999)
+check(PR.role_for(555, 'mute') == 9999,
+      'punish_roles: после set_roles кэш обновлён (следующее чтение свежее)')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
