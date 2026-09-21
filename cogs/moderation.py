@@ -397,15 +397,18 @@ class Moderation (commands .Cog ):
     # это жёсткий блок, который не переопределить ни панелью, ни Интеграциями
     # — из-за него выданные роли «не включались».
     @app_commands.default_permissions(moderate_members=True)
-    async def modpanel (self ,interaction ):
+    @app_commands.describe(
+        target='Сразу открыть панель на этом участнике (необязательно)')
+    async def modpanel (self ,interaction ,target :discord .Member =None ):
         # defer → потом edit_original_response с панелью (НЕ followup!).
         # Раньше _respond после defer слал followup, а сброс селектов правил
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=multi-fix-v15',
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v16',
                  getattr(interaction.user, 'id', None),
-                 getattr(interaction.guild, 'id', None))
+                 getattr(interaction.guild, 'id', None),
+                 getattr(target, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
         if not allowed :
             await _respond (interaction ,
@@ -419,7 +422,7 @@ class Moderation (commands .Cog ):
             schedule_ensure_menu_emojis(interaction.client)
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
-        view = ModPanelView(self, interaction.user, allowed)
+        view = ModPanelView(self, interaction.user, allowed, preselect=target)
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
@@ -460,7 +463,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v15',
+        log.info('modpanel ready msg=%s build=multi-fix-v16',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2894,13 +2897,17 @@ class ModPanelView(discord.ui.LayoutView):
     Фолбек panel_embed/panel_payload — если V2 не приняли (старый клиент).
     """
 
-    def __init__(self, cog, member=None, allowed=None):
+    def __init__(self, cog, member=None, allowed=None, preselect=None):
         super().__init__(timeout=300)  # 5 минут — любые действия без нового окна
         self.cog = cog
         self.allowed = allowed
         self.member = member
         self.owner_id = getattr(member, 'id', None)
-        self.selected_uid = None
+        # /modpanel target: сразу показать участника, без второго выбора.
+        # default_values на UserSelect передаём ОДНОКРАТНО (см. _rebuild) —
+        # на дальнейших rebuild'ах он снова sticky-select ломает выбор другого.
+        self._preselect_member = preselect
+        self.selected_uid = str(preselect.id) if preselect is not None else None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
         self._panel_message = None  # исходная эфемерка для reset
@@ -3035,8 +3042,13 @@ class ModPanelView(discord.ui.LayoutView):
 
     def _rebuild(self, guild):
         self.clear_items()
-        # БЕЗ default_values на UserSelect (sticky). uid — в памяти + статус.
-        self.target_select = ModTargetSelect(self.cog, default_values=None)
+        # default_values ставим ТОЛЬКО на самый первый rebuild — когда
+        # /modpanel открыт сразу с участником (target=). На дальнейших
+        # rebuild'ах НЕ передаём (sticky select не даёт выбрать другого).
+        _preselect = self._preselect_member
+        self._preselect_member = None
+        self.target_select = ModTargetSelect(
+            self.cog, default_values=[_preselect] if _preselect else None)
         self.target_select.panel = self
         # Главная панель ВСЕГДА с полным списком действий.
         # Виды мута/размута — отдельная эфемерка (MuteKindView), иначе

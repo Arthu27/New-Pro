@@ -167,7 +167,7 @@ async def main():
     mod = _User(200, 'Модератор', mod=True)
     rep_u, acc_u = _User(111, 'Жаловавшийся'), _User(222, 'Обвинённый')
     inter = make_interaction(perms(), _Msg(777001), {111: rep_u, 222: acc_u})
-    await R.ReportCardView.open_thread(view, inter, view.open_thread)
+    await R.ReportCardView.open_thread(view, inter)
     msg = inter.message
     check(len(msg.threads) == 1, 'ветка разбора создана')
     check(len(msg.threads[0].sent) == 1,
@@ -182,7 +182,7 @@ async def main():
 
     print('== 2. Права НЕ выданы → честное указание, что включить ==')
     inter2 = make_interaction(perms(create_public_threads=False), _Msg(777002))
-    await R.ReportCardView.open_thread(view, inter2, view.open_thread)
+    await R.ReportCardView.open_thread(view, inter2)
     got = inter2.followup.calls[0] if inter2.followup.calls else ''
     check('Создавать публичные ветки' in got and 'Права доступа' in got,
           'бот говорит: включи «Создавать публичные ветки» в правах канала')
@@ -194,7 +194,7 @@ async def main():
     m3 = _Msg(777003, fail=True)
     inter3 = make_interaction(perms(), m3)
     # подменяем Forbidden, который бросит фейк, на клиентское исключение:
-    await R.ReportCardView.open_thread(view, inter3, view.open_thread)
+    await R.ReportCardView.open_thread(view, inter3)
     got3 = inter3.followup.calls[0] if inter3.followup.calls else ''
     check('Создавать публичные ветки' in got3,
           'при Forbidden — человеческая подсказка, не «Не удалось создать ветку»')
@@ -204,7 +204,7 @@ async def main():
         async def create_thread(self, **kw):
             raise ValueError('ветки выключены на сервере')
     inter4 = make_interaction(perms(), _Boom(777004))
-    await R.ReportCardView.open_thread(view, inter4, view.open_thread)
+    await R.ReportCardView.open_thread(view, inter4)
     got4 = inter4.followup.calls[0] if inter4.followup.calls else ''
     check('Не удалось создать ветку' in got4 and 'ветки выключены' in got4,
           'иные ошибки показываются с причиной (диагностика не потеряна)')

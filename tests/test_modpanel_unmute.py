@@ -516,7 +516,7 @@ check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'reset-хелперы без bot.wait_for')
 check('_send_kind_menu' in src and 'MuteKindView' in src,
       'вид мута — отдельное меню MuteKindView')
-check('multi-fix-v15' in src or 'multi-fix-v13' in src,
+check('multi-fix-v16' in src or 'multi-fix-v13' in src,
       'build=multi-use в логе открытия')
 check('resend disabled' in src or 'return False' in src[src.index('async def _resend_fresh_panel'):
                                                           src.index('def _cancel_panel_reset')],
