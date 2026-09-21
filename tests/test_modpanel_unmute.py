@@ -260,6 +260,10 @@ class _PInter:
         self.response = _PResp()
         self.message = _PMsg()
 
+        async def _fu(**kw):
+            self.response.sent.append(kw)
+        self.followup = types.SimpleNamespace(send=_fu)
+
     async def edit_original_response(self, **kw):
         self.message.edits.append(kw)
 
@@ -295,7 +299,8 @@ view2.selected_uid = '3000000000000000300'
 inter3 = _PInter(opener, g7)
 view2.action_select._values = ['mute']
 asyncio.run(view2.action_select.callback(inter3))
-check(bool(inter3.response.modal) or bool(inter3.response.sent),
+check(bool(inter3.response.modal) or bool(inter3.response.sent)
+      or inter3.response.done,
       'сначала участник, потом действие — ACK (вид мута / кнопка формы)')
 
 # ModTargetSelect: только defer, selected_uid в памяти

@@ -24,6 +24,7 @@ import os
 import shutil
 import sys
 import tempfile
+import types
 
 _TMP = tempfile.mkdtemp(prefix='hakumo_modpanel_acl_')
 os.chdir(_TMP)
@@ -212,14 +213,15 @@ class _Resp:
         return self.done
 
     async def send_message(self, embed=None, ephemeral=False, **kw):
-        self.sent.append(embed)
+        self.sent.append(embed if embed is not None else kw)
         self.done = True
 
     async def send_modal(self, modal):
         self.modal.append(modal)
 
-    async def defer(self, ephemeral=False):
+    async def defer(self, ephemeral=False, thinking=True, **kw):
         self.deferred = True
+        self.done = True
 
 
 class _Inter:
@@ -227,6 +229,10 @@ class _Inter:
         self.user = user
         self.guild = guild
         self.response = _Resp()
+        async def _fu(**kw):
+            embed = kw.get('embed')
+            self.response.sent.append(embed if embed is not None else kw)
+        self.followup = types.SimpleNamespace(send=_fu)
 
 
 g = Guild(GID)
@@ -253,12 +259,15 @@ check(bool(i2.response.sent) and not i2.response.modal,
       'с ролью «Бан» — ACK кнопкой формы')
 
 # отправка модалки: даже если меню старое — без права не исполняем
+# (_ack сразу, затем ACL → отказ followup; execute не зовём)
 i3 = _Inter(Member(100, [602]), g)
 modal = ModActionModal(cog, 'ban', guild=g)
 asyncio.run(modal.on_submit(i3))
-check(not i3.response.deferred and not getattr(i3, 'ran', False),
+check(i3.response.deferred and not getattr(i3, 'ran', False),
       'on_submit без разрешения: до исполнения не дошло, отработан отказ')
-check(i3.response.sent and 'Классические разрешения' in str(getattr(i3.response.sent[-1], 'description', '')),
+_deny = i3.response.sent[-1] if i3.response.sent else None
+_deny_txt = str(getattr(_deny, 'description', '') or _deny)
+check(i3.response.sent and 'Классические разрешения' in _deny_txt,
       'отказ в модалке говорит, откуда включить доступ')
 
 # с правами — исполнение идёт дальше. Дальше цепочка демки/канала апелляции

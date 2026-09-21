@@ -78,6 +78,8 @@ msub = mod_src[mod_src.index('class ModActionModal'):
                mod_src.index('class ModTargetSelect')]
 check('thinking=True' in msub and 'await _ack' in msub,
       'модалка наказания: defer thinking=True (type 5, не «не ответило»)')
+check(msub.find('await _ack') < msub.find('_ensure_action_acl'),
+      'модалка: _ack до ACL (иначе таймаут на submit)')
 # Выбор действия с участником: ACK сообщением+кнопкой (<3с), модалка — со 2-го клика.
 launch = mod_src[mod_src.index('async def _launch_action'):
                  mod_src.index('class ModActionSelect')]
@@ -95,6 +97,11 @@ cb = asel[asel.index('async def callback'):
           asel.index('await _launch_action') + len('await _launch_action')]
 check('_ensure_action_acl' not in cb,
       'ModActionSelect: без ACL до _launch_action')
+check(cb.find('await _ack') < cb.find('await _launch_action')
+      and '_cancel_panel_reset' in cb,
+      'ModActionSelect: ACK + отмена reset ДО _launch_action')
+check('_cancel_panel_reset' in mod_src and '_reset_task' in mod_src,
+      'фоновый rebuild панели отменяется при новом клике')
 mks = mod_src[mod_src.index('class MuteKindSelect'):
               mod_src.index('class MuteKindView')]
 mkcb = mks[mks.index('async def callback'):]
