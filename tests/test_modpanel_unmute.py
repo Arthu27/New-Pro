@@ -487,7 +487,7 @@ check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'reset-хелперы без bot.wait_for')
 check('_mod_followup' in src and 'interaction.followup' in src,
       'открытие панели сохраняет followup для resend')
-check('multi-fix-v8' in src, 'build=multi-fix-v8 в логе открытия')
+check('multi-fix-v9' in src, 'build=multi-fix-v9 в логе открытия')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

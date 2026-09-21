@@ -403,7 +403,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=multi-fix-v8',
+        log.info('modpanel open uid=%s gid=%s build=multi-fix-v9',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -456,7 +456,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v8',
+        log.info('modpanel ready msg=%s build=multi-fix-v9',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2938,11 +2938,23 @@ class ModPanelView(discord.ui.LayoutView):
     def _rebuild(self, guild):
         self.clear_items()
         defaults = []
-        if self.selected_uid and guild is not None:
+        if self.selected_uid:
             try:
-                mem = guild.get_member(int(self.selected_uid))
-                if mem is not None:
+                uid = int(self.selected_uid)
+                # UserSelect принимает Member / Object — Object надёжнее:
+                # не падаем на «сырых» моках и частичных объектах, селект
+                # всё равно показывает выбранного.
+                mem = None
+                if guild is not None:
+                    try:
+                        mem = guild.get_member(uid)
+                    except Exception:
+                        mem = None
+                if mem is not None and isinstance(
+                        mem, (discord.Member, discord.User, discord.Object)):
                     defaults = [mem]
+                else:
+                    defaults = [discord.Object(id=uid)]
             except Exception:
                 defaults = []
         self.target_select = ModTargetSelect(

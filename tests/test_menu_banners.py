@@ -209,8 +209,9 @@ check((getattr(view.action_select, 'placeholder', None) or '') == '',
 # V2, не синий эмбед
 check(view.has_components_v2(), 'LayoutView V2')
 src = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
-check("await _respond(interaction, view=view" in src
-      or "await _respond(interaction, view=view," in src,
+_mp = src[src.index('async def modpanel'):]
+_mp = _mp[:_mp.index('def _parse_target_id')]
+check('edit_original_response' in _mp and ("'view': view" in _mp or 'view=view' in _mp),
       'команда шлёт V2 view, не синий embed')
 check('0x5865F2' not in src or 'panel_embed' in src,
       'нет синего blurple как основного цвета панели')
