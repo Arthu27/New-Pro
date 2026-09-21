@@ -569,6 +569,61 @@ def _mod_ping_roles(guild):
     return out
 
 
+# Роль «Стафф админ» (заказ владельца 2026-09-21) — последний рубеж
+# эскалации: жалоба на администратора (или выше) уходит именно ей.
+STAFF_ESCALATION_ROLE_ID = 1549118975110152263
+
+# тир цели жалобы → тиры, которые её разбирают (не тегаем персонал,
+# который по staff_hierarchy и так не может судить равного/старшего)
+_ESCALATION_TIERS = {
+    'mod': ({'curator', 'admin', 'owner'}, 'Кураторы и выше'),
+    'curator': ({'admin', 'owner'}, 'Администраторы и выше'),
+}
+
+
+def _roles_by_tiers(guild, tiers, tmap):
+    out = []
+    seen = set()
+    for role in getattr(guild, 'roles', None) or []:
+        rid = str(getattr(role, 'id', ''))
+        if tmap.get(rid) in tiers and rid not in seen:
+            seen.add(rid)
+            out.append(role)
+    return out
+
+
+def _staff_escalation(guild, target):
+    """Жалоба на стафф — кого звать (владелец 2026-09-21, эскалация вверх):
+
+      на модератора → кураторы и выше
+      на куратора   → администраторы и выше
+      на админа/владельца панели → фиксированная роль «Стафф админ»
+
+    Возвращает (roles, target_tier, escalation_label). target_tier == 'uye',
+    если жалоба помечена «Стафф», а цель на деле стаффом не значится —
+    тогда эскалации нет, зовём обычных модераторов (см. _deliver_report).
+    """
+    from services.staff_hierarchy import target_panel_role
+    tier = target_panel_role(guild, target)
+    try:
+        from services.staff_limits import _role_tier_map
+        tmap = _role_tier_map()
+    except Exception as _ex:
+        _log.debug('reports: escalation tier_map: %s', _ex)
+        tmap = {}
+    fixed = guild.get_role(STAFF_ESCALATION_ROLE_ID) if guild else None
+    spec = _ESCALATION_TIERS.get(tier)
+    if spec is not None:
+        tiers, label = spec
+        roles = _roles_by_tiers(guild, tiers, tmap)
+        if not roles and fixed is not None:
+            roles = [fixed]  # на сервере нет тировых ролей — фиксированная
+        return roles, tier, label
+    if tier in ('admin', 'owner'):
+        return ([fixed] if fixed is not None else []), tier, 'Стафф-админ'
+    return [], tier, ''
+
+
 async def _deliver_mod_ping(channel, roles, **kwargs):
     """Отправить сообщение так, чтобы тег роли РЕАЛЬНО прилетел.
 
@@ -645,16 +700,22 @@ async def _deliver_mod_ping(channel, roles, **kwargs):
 
 def _report_card_body(*, caller, target, against: str, location: str,
                       voice_name: str, channel_mention: str, reason: str,
-                      violations_text: str, days) -> str:
+                      violations_text: str, days, target_tier: str = '',
+                      escalation_label: str = '') -> str:
     """Текст V2-карточки вызова — секции вместо полей эмбеда."""
+    from services.staff_hierarchy import LABELS as _TIER_LABELS
     against_label = ('🛡️ Состав модерации (стафф)' if against == 'staff'
                      else '👤 Обычный участник')
     location_label = ('🔊 Голосовой канал' if location == 'voice'
                       else '💬 Чат')
     lines = []
     if against == 'staff':
-        lines.append('⚠️ **Жалоба касается модератора/куратора** — пусть '
-                     'разбирает старший состав, без конфликта интересов.')
+        tier_label = _TIER_LABELS.get(target_tier, '') if target_tier else ''
+        who = f' ({tier_label})' if tier_label else ''
+        lines.append(f'⚠️ **Жалоба касается персонала{who}** — конфликт '
+                     'интересов, разбирает старший состав.')
+        if escalation_label:
+            lines.append(f'**Кто разбирает:** {escalation_label}')
         lines.append('')
     lines += [
         f'**Кто вызвал:** {caller.mention}',
@@ -890,15 +951,16 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
 
     def __init__(self):
         super().__init__()
+        from services.menu_emojis import emoji_for_report
         self.target_select = discord.ui.UserSelect(required=True)
         self.against_select = discord.ui.Select(
             required=True,
             options=[
                 discord.SelectOption(label='Пользователь', value='user',
-                                     emoji='👤',
+                                     emoji=emoji_for_report('user'),
                                      description='Обычный участник сервера'),
                 discord.SelectOption(label='Стафф', value='staff',
-                                     emoji='🛡️',
+                                     emoji=emoji_for_report('staff'),
                                      description='Модератор, куратор или админ'),
             ])
         self.location_select = discord.ui.Select(
@@ -989,18 +1051,34 @@ async def _deliver_report(interaction, target, reason: str, against: str,
     vc = getattr(_voice, 'channel', None) if _voice is not None else None
 
     days = cfg.get('expiry_days', 90)
+
+    # Жалоба на стафф — эскалация ВВЕРХ по иерархии (владелец 2026-09-21):
+    # модератора судят кураторы+, куратора — админы+, админа — «Стафф админ».
+    # Обычных модераторов на такую жалобу не зовём (конфликт интересов).
+    target_tier = ''
+    escalation_label = ''
+    if against == 'staff':
+        esc_roles, target_tier, escalation_label = _staff_escalation(guild, target)
+        ping_roles = esc_roles or _mod_ping_roles(guild)
+        if not esc_roles:
+            escalation_label = ''  # цель не стафф в системе — обычный тег
+        if target_tier == 'uye':
+            target_tier = ''  # не значится стаффом — без «(участник)» в тексте
+    else:
+        ping_roles = _mod_ping_roles(guild)
+
     body = _report_card_body(
         caller=interaction.user, target=target, against=against,
         location=location, voice_name=(vc.name if vc is not None else ''),
         channel_mention=interaction.channel.mention,
         reason=reason[:1500], days=days,
-        violations_text=_violations_field(guild.id, target.id, cfg))
+        violations_text=_violations_field(guild.id, target.id, cfg),
+        target_tier=target_tier, escalation_label=escalation_label)
     accent = 0xF39C12 if against == 'staff' else 0xE74C3C
     card_view = ReportCardView(
         title='🛎️ Вызов модератора', body=body,
         footer=f'{guild.name} · /report', accent=accent)
 
-    ping_roles = _mod_ping_roles(guild)
     ping = ' '.join(r.mention for r in ping_roles)
     if not ping:
         _fire_new_event(
@@ -1221,6 +1299,11 @@ class Reports(commands.Cog):
     # ── команды ─────────────────────────────────────────────────────
     @app_commands.command(name='report', description='Позвать модератора')
     async def report_slash(self, interaction):
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(interaction.client)
+        except Exception as _ee:
+            _log.debug('report emoji sync: %s', _ee)
         try:
             await interaction.response.send_modal(ReportModal())
         except Exception as ex:
