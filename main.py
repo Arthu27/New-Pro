@@ -1359,6 +1359,18 @@ async def main():
     except Exception as _ex:
         _log.debug("version_stamp(): %s", _ex)
 
+    # Общий пул потоков для asyncio.to_thread (PIL, SQLite, JSON).
+    # Дефолтный min(32, cpu+4) тесен, когда панель + баннеры + ACL
+    # одновременно уходят с цикла — поднимаем заранее.
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        _pool = ThreadPoolExecutor(max_workers=32, thread_name_prefix='hakumo-io')
+        loop = asyncio.get_running_loop()
+        loop.set_default_executor(_pool)
+        _log.info("Executor: ThreadPoolExecutor(32) для to_thread/PIL/SQLite")
+    except Exception as _ex:
+        _log.debug("set_default_executor: %s", _ex)
+
     # Предупреждения о среде: три главные причины «странных» зависаний
     # (инцидент 30.08: Downloads + вложенная папка + Python 3.14)
     try:

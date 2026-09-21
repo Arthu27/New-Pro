@@ -2,9 +2,12 @@
 Центральный Database Helper
 Простой API перехода JSON -> DB для когов
 """
+import copy
 import sqlite3
 import os
 import json
+import threading
+import time
 from typing import Any, Optional, Dict, List
 from datetime import datetime
 
@@ -12,6 +15,59 @@ from config import Config
 from logger import get_logger
 
 log = get_logger("db_helper")
+
+# Короткий read-through кэш: /modpanel и ACL дергают GuildData.get десятки
+# раз за клик. Без кэша каждый вызов = новый sqlite3.connect (на Windows
+# Defender это доли-секунды → Discord «не ответило вовремя»).
+_GD_CACHE: Dict[tuple, tuple] = {}  # (ns, gid, key) -> (value, mono_ts)
+_GD_CACHE_LOCK = threading.Lock()
+_GD_CACHE_TTL = 15.0
+_GD_CACHE_MAX = 4096
+_MISSING = object()
+
+
+def _gd_cache_get(ns: str, guild_id: int, key: str):
+    ck = (ns, int(guild_id), str(key))
+    now = time.monotonic()
+    with _GD_CACHE_LOCK:
+        hit = _GD_CACHE.get(ck)
+        if not hit:
+            return _MISSING
+        val, ts = hit
+        if now - ts > _GD_CACHE_TTL:
+            _GD_CACHE.pop(ck, None)
+            return _MISSING
+        return copy.deepcopy(val) if isinstance(val, (dict, list)) else val
+
+
+def _gd_cache_put(ns: str, guild_id: int, key: str, value: Any) -> None:
+    ck = (ns, int(guild_id), str(key))
+    stored = copy.deepcopy(value) if isinstance(value, (dict, list)) else value
+    now = time.monotonic()
+    with _GD_CACHE_LOCK:
+        if len(_GD_CACHE) >= _GD_CACHE_MAX and ck not in _GD_CACHE:
+            # вытесняем ~10% самых старых
+            doomed = sorted(_GD_CACHE.items(), key=lambda kv: kv[1][1])[: max(1, _GD_CACHE_MAX // 10)]
+            for k, _ in doomed:
+                _GD_CACHE.pop(k, None)
+        _GD_CACHE[ck] = (stored, now)
+
+
+def _gd_cache_invalidate(ns: str, guild_id: int, key: Optional[str] = None) -> None:
+    gid = int(guild_id)
+    with _GD_CACHE_LOCK:
+        if key is None:
+            drop = [ck for ck in _GD_CACHE if ck[0] == ns and ck[1] == gid]
+            for ck in drop:
+                _GD_CACHE.pop(ck, None)
+        else:
+            _GD_CACHE.pop((ns, gid, str(key)), None)
+
+
+def clear_guild_data_cache() -> None:
+    """Сброс всего кэша (тесты / смена DB_PATH)."""
+    with _GD_CACHE_LOCK:
+        _GD_CACHE.clear()
 
 
 class GuildData:
@@ -32,8 +88,15 @@ class GuildData:
     
     def _conn(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        conn = sqlite3.connect(self.db_path)
+        # timeout: не зависать на locked DB (панель + бот пишут параллельно)
+        conn = sqlite3.connect(self.db_path, timeout=5.0)
         conn.row_factory = sqlite3.Row
+        try:
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA synchronous=NORMAL')
+            conn.execute('PRAGMA temp_store=MEMORY')
+        except Exception:
+            pass
         return conn
     
     def _ensure_table(self):
@@ -58,7 +121,10 @@ class GuildData:
             conn.close()
     
     def get(self, guild_id: int, key: str, default: Any = None) -> Any:
-        """Чтение значения"""
+        """Чтение значения (с коротким TTL-кэшем)."""
+        cached = _gd_cache_get(self.namespace, guild_id, key)
+        if cached is not _MISSING:
+            return default if cached is None else cached
         conn = self._conn()
         try:
             row = conn.execute(
@@ -69,9 +135,12 @@ class GuildData:
             conn.close()
         if row:
             try:
-                return json.loads(row['value'])
+                value = json.loads(row['value'])
             except Exception:
-                return row['value']
+                value = row['value']
+            _gd_cache_put(self.namespace, guild_id, key, value)
+            return value
+        _gd_cache_put(self.namespace, guild_id, key, None)
         return default
     
     def set(self, guild_id: int, key: str, value: Any) -> bool:
@@ -84,9 +153,11 @@ class GuildData:
                 (self.namespace, guild_id, str(key), json.dumps(value, ensure_ascii=False), datetime.now().isoformat())
             )
             conn.commit()
+            _gd_cache_put(self.namespace, guild_id, key, value)
             return True
         except Exception as e:
             log.error(f"DB write error: {e}")
+            _gd_cache_invalidate(self.namespace, guild_id, key)
             return False
         finally:
             conn.close()
@@ -100,6 +171,7 @@ class GuildData:
                 (self.namespace, guild_id, str(key))
             )
             conn.commit()
+            _gd_cache_invalidate(self.namespace, guild_id, key)
             return True
         except Exception as e:
             log.error(f"DB delete error: {e}")
@@ -163,6 +235,7 @@ class GuildData:
                 (self.namespace, guild_id)
             )
             conn.commit()
+            _gd_cache_invalidate(self.namespace, guild_id, None)
             return True
         except Exception as e:
             log.error(f"DB clear error: {e}")
@@ -207,8 +280,13 @@ class UserData:
     
     def _conn(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=5.0)
         conn.row_factory = sqlite3.Row
+        try:
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA synchronous=NORMAL')
+        except Exception:
+            pass
         return conn
     
     def _ensure_table(self):

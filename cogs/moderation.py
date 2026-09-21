@@ -2102,10 +2102,11 @@ class UnmuteKindSelect(discord.ui.Select):
         self.target_id = str(target_id)
 
     async def callback(self, interaction: discord.Interaction):
+        # ACK сразу (<3с), ACL после — иначе SQLite съедает окно Discord.
         action = self.values[0]
+        await _ack(interaction, thinking=False)
         if not await self.cog._ensure_action_acl(interaction, action):
             return
-        await _ack(interaction, thinking=False)
         await self.cog._execute_mod_action(
             interaction, action, self.target_id,
             'Снято через панель', '', proof_link=None)

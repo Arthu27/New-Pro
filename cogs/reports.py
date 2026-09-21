@@ -796,6 +796,12 @@ class Reports(commands.Cog):
         _lim = _verdict_limit_denied(guild, interaction.user, v['kind'])
         if _lim:
             return await interaction.response.send_message(f'🚫 {_lim}', ephemeral=True)
+        # ACK до Discord API (timeout/kick/ban) — иначе 3с-окно сгорает на сети.
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(thinking=False)
+        except Exception as _dx:
+            _log.debug('apply_verdict defer: %s', _dx)
         applied = 'Применено.'
         try:
             if v['kind'] == 'mute' and member:
@@ -809,8 +815,7 @@ class Reports(commands.Cog):
                     _sec = int(float(hours) * 3600)
                     _derr = _SL.mute_duration_error(_sec, cap_sec=_cap)
                     if _derr:
-                        return await interaction.response.send_message(
-                            _derr, ephemeral=True)
+                        return await interaction.followup.send(_derr, ephemeral=True)
                 except Exception as _ex:
                     _log.debug('вердикт mute cap: %s', _ex)
                 until = datetime.now(timezone.utc) + timedelta(
@@ -843,7 +848,7 @@ class Reports(commands.Cog):
             elif v['kind'] == 'none':
                 applied = 'Нарушений не зафиксировано.'
         except Exception as ex:
-            return await interaction.response.send_message(
+            return await interaction.followup.send(
                 f'Discord не принял наказание: {ex}', ephemeral=True)
 
         if v['kind'] in ('mute', 'kick', 'ban'):
@@ -857,7 +862,16 @@ class Reports(commands.Cog):
                           description=(f"**{v['label']}**\nОбвиняемый: <@{t['accused_id']}>\n"
                                        f"Модератор: {interaction.user.mention}\n{applied}"),
                           color=0x2ECC71 if v['kind'] == 'none' else 0xE74C3C)
-        await interaction.response.edit_message(content='', embed=None, view=None)
+        try:
+            await interaction.edit_original_response(content='', embed=None, view=None)
+        except Exception as _ex:
+            _log.debug('apply_verdict edit_original: %s', _ex)
+            try:
+                msg = getattr(interaction, 'message', None)
+                if msg is not None:
+                    await msg.edit(content='', embed=None, view=None)
+            except Exception as _ex2:
+                _log.debug('apply_verdict msg.edit: %s', _ex2)
         await interaction.channel.send(embed=e)
         for uid in (t['reporter_id'], t['accused_id']):
             user = interaction.client.get_user(int(uid)) or \
