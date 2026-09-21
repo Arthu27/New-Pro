@@ -1079,6 +1079,29 @@ async def on_ready():
             bot.loop.create_task(_monitor_voice())
         else:
             _log.info('voice stay: выключен (нет канала или VOICE_STAY_ENABLED=0)')
+        # Детектор зависания event loop: если callback >1с — пишем в лог.
+        # Без этого «не ответило вовремя» выглядит как баг панели, хотя
+        # виноват sync-код в другом коге.
+        try:
+            bot.loop.set_debug(False)
+            bot.loop.slow_callback_duration = 0.5
+        except Exception as _ex:
+            _log.debug('slow_callback_duration: %s', _ex)
+
+        async def _loop_lag_watchdog():
+            import asyncio as _aio
+            while not bot.is_closed():
+                t0 = _aio.get_running_loop().time()
+                await _aio.sleep(1.0)
+                lag = _aio.get_running_loop().time() - t0 - 1.0
+                if lag > 0.5:
+                    _log.warning('EVENT-LOOP lag=%.2fs (sync-код блокирует цикл)',
+                                 lag)
+
+        try:
+            bot.loop.create_task(_loop_lag_watchdog())
+        except Exception as _ex:
+            _log.debug('loop lag watchdog: %s', _ex)
         # Фоновая дозагрузка участников в кэш (раз в 20с, по одной гильдии) —
         # чтобы поиск/пикеры/профили панели видели и тех, кого «нет в листе».
         try:

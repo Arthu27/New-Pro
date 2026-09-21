@@ -214,38 +214,85 @@ class VoiceTracker(commands.Cog):
         self.db = GuildData("voice_stats")
         # {guild_id: {user_id: join_timestamp}}
         self.sessions: dict = {}
+        # Буфер записей: НЕ пишем SQLite на каждый leave — иначе
+        # on_voice_state_update блокирует event loop и /modpanel
+        # получает «не ответило вовремя». Сливаем пачкой раз в N сек.
+        # ключ (gid, uid) -> rec dict
+        self._pending: dict = {}
+        self._flush_voice_stats.start()
+
+    def cog_unload(self):
+        try:
+            self._flush_voice_stats.cancel()
+        except Exception:
+            pass
+        try:
+            self._flush_sync()
+        except Exception:
+            pass
 
     # ── Запись статистики ────────────────────────────────────────────────
 
     def _record(self, guild_id: int, member: discord.Member, elapsed: int):
-        """Записать время в базу"""
+        """Накопить время в буфере (без SQLite на горячем пути)."""
         if elapsed <= 0:
             return
-
         uid = str(member.id)
-        data = self.db.get(guild_id, uid, {
-            'name': member.display_name,
-            'avatar': str(member.display_avatar.url),
-            'total_seconds': 0,
-            'daily': {}
-        })
-
-        data['total_seconds'] = data.get('total_seconds', 0) + elapsed
+        key = (guild_id, uid)
+        data = self._pending.get(key)
+        if data is None:
+            # Читаем кэш/БД один раз при первом касании буфера
+            data = self.db.get(guild_id, uid, {
+                'name': member.display_name,
+                'avatar': str(member.display_avatar.url),
+                'total_seconds': 0,
+                'daily': {}
+            }) or {
+                'name': member.display_name,
+                'avatar': str(member.display_avatar.url),
+                'total_seconds': 0,
+                'daily': {}
+            }
+        data['total_seconds'] = int(data.get('total_seconds', 0) or 0) + elapsed
         data['name'] = member.display_name
-        data['avatar'] = str(member.display_avatar.url)
-
-        # Ежедневная статистика
+        try:
+            data['avatar'] = str(member.display_avatar.url)
+        except Exception:
+            pass
         today = str(date.today())
-        daily = data.get('daily', {})
-        daily[today] = daily.get(today, 0) + elapsed
-        # Храним только последние 30 дней
+        daily = data.get('daily') or {}
+        daily[today] = int(daily.get(today, 0) or 0) + elapsed
         if len(daily) > 30:
-            sorted_days = sorted(daily.keys())
-            for old_day in sorted_days[:-30]:
+            for old_day in sorted(daily.keys())[:-30]:
                 del daily[old_day]
         data['daily'] = daily
+        self._pending[key] = data
 
-        self.db.set(guild_id, uid, data)
+    def _flush_sync(self):
+        """Слить буфер в SQLite (вызывать из to_thread / unload)."""
+        if not self._pending:
+            return
+        batch = self._pending
+        self._pending = {}
+        for (gid, uid), data in batch.items():
+            try:
+                self.db.set(gid, uid, data)
+            except Exception as ex:
+                log.debug('voice_stats flush %s/%s: %s', gid, uid, ex)
+
+    @tasks.loop(seconds=10.0)
+    async def _flush_voice_stats(self):
+        if not self._pending:
+            return
+        import asyncio
+        try:
+            await asyncio.to_thread(self._flush_sync)
+        except Exception as ex:
+            log.debug('voice_stats flush loop: %s', ex)
+
+    @_flush_voice_stats.before_loop
+    async def _flush_voice_stats_wait(self):
+        await self.bot.wait_until_ready()
 
     # ── События ──────────────────────────────────────────────────────────
 

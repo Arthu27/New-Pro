@@ -103,6 +103,17 @@ check('VOICE_SILENCE_PING' in main_src,
       'voice: silence-ping выключен по умолчанию (VOICE_SILENCE_PING)')
 check('to_thread(vc.play' in main_src.replace(' ', ''),
       'voice: если play — только to_thread')
+check('_loop_lag_watchdog' in main_src or 'EVENT-LOOP lag' in main_src,
+      'main: watchdog лага event loop')
+vt = open(os.path.join(ROOT, 'cogs', 'voice_tracker.py'), encoding='utf-8').read()
+check('_pending' in vt and 'to_thread(self._flush_sync)' in vt.replace(' ', ''),
+      'voice_tracker: SQLite flush в to_thread, не на leave')
+imp = open(os.path.join(ROOT, 'cogs', 'impersonation.py'), encoding='utf-8').read()
+check('_prot_cache' in imp, 'impersonation: кэш protected members')
+mod = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+mt = mod[mod.index('class ModTargetSelect'):mod.index('class ModPanelView')]
+check('_schedule_panel_reset' not in mt,
+      'ModTargetSelect: без фонового rebuild после выбора участника')
 
 print('== 6. Runtime: кэш vs сырой SQLite ==')
 clear_guild_data_cache()

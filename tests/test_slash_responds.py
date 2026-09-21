@@ -97,11 +97,15 @@ cb = asel[asel.index('async def callback'):
           asel.index('await _launch_action') + len('await _launch_action')]
 check('_ensure_action_acl' not in cb,
       'ModActionSelect: без ACL до _launch_action')
-check(cb.find('await _ack') < cb.find('await _launch_action')
-      and '_cancel_panel_reset' in cb,
-      'ModActionSelect: ACK + отмена reset ДО _launch_action')
+check(cb.find('await _launch_action') > 0
+      and '_cancel_panel_reset' in cb
+      and 'mute_kinds_for' not in cb,
+      'ModActionSelect: ACK через send_message формы, без SQLite в колбэке')
 check('_cancel_panel_reset' in mod_src and '_reset_task' in mod_src,
       'фоновый rebuild панели отменяется при новом клике')
+check('Сброс селектов фоном' not in mod_src[mod_src.index('class ModTargetSelect'):
+                                              mod_src.index('class ModPanelView')],
+      'после выбора участника НЕТ фонового rebuild (гонка с Действием)')
 mks = mod_src[mod_src.index('class MuteKindSelect'):
               mod_src.index('class MuteKindView')]
 mkcb = mks[mks.index('async def callback'):]

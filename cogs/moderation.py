@@ -401,6 +401,9 @@ class Moderation (commands .Cog ):
         # Сразу закрыть 3с-окно Discord: сбор меню/ACL не должен давать
         # «Приложение не отвечает», если цикл чуть занят.
         await _ack (interaction ,thinking =False )
+        log.info('modpanel open uid=%s gid=%s build=send-ack-v3',
+                 getattr(interaction.user, 'id', None),
+                 getattr(interaction.guild, 'id', None))
         # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
         # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -2326,7 +2329,7 @@ class _OpenModFormView(discord.ui.View):
 
 
 async def _offer_mod_form(interaction, cog, action, prefill):
-    """ACK уже закрыт (defer) или закрываем send_message. Модалка — по кнопке."""
+    """ACK = send_message с кнопкой формы (не defer). Модалка — со 2-го клика."""
     title = _MODAL_TITLES.get(action, action)
     who = prefill or '—'
     try:
@@ -2343,6 +2346,7 @@ async def _offer_mod_form(interaction, cog, action, prefill):
             await interaction.followup.send(
                 content=text, view=view, ephemeral=True)
         else:
+            # Первый ответ = само сообщение с кнопкой (закрывает 3с)
             await interaction.response.send_message(
                 content=text, view=view, ephemeral=True)
         return True
@@ -2355,30 +2359,47 @@ async def _offer_mod_form(interaction, cog, action, prefill):
             pass
         try:
             if not interaction.response.is_done():
-                await interaction.response.defer(thinking=False)
+                await interaction.response.defer(thinking=True)
         except Exception:
             pass
         return False
 
 
+async def _send_kind_menu(interaction, *, view, embed=None):
+    """Показать меню вида мута/размута — ACK через send_message/followup."""
+    try:
+        if interaction.response.is_done():
+            kw = {'view': view, 'ephemeral': True}
+            if embed is not None:
+                kw['embed'] = embed
+            await interaction.followup.send(**kw)
+        else:
+            kw = {'view': view, 'ephemeral': True}
+            if embed is not None:
+                kw['embed'] = embed
+            await interaction.response.send_message(**kw)
+        return True
+    except Exception as ex:
+        log.warning('modpanel kind menu: %s', ex)
+        try:
+            kw = {'view': view, 'ephemeral': True}
+            if embed is not None:
+                kw['embed'] = embed
+            await _respond(interaction, **kw)
+            return True
+        except Exception:
+            return False
+
+
 async def _launch_action(cog, interaction, action, prefill, panel=None):
     """Открыть форму / размут. panel — чтобы потом сбросить селект.
 
-    Критично: к моменту входа окно Discord уже закрыто (defer в селекте)
-    ИЛИ закрываем здесь первым await. Тяжёлое (kinds/V2) — только после ACK.
+    ПЕРВЫЙ ответ Discord — send_message (кнопка / виды мута), НЕ defer.
+    kinds только из кэша панели; на промахе — кнопка формы без SQLite.
     """
-    # Страховка: если селект не успел defer — закрываем окно сразу.
-    if not interaction.response.is_done():
-        await _ack(interaction, thinking=False)
-
     if action == "mute":
-        gid = getattr(interaction, 'guild_id', None) or getattr(
-            getattr(interaction, 'guild', None), 'id', None)
-        kinds = None
-        if panel is not None:
-            kinds = getattr(panel, '_mute_kinds_cache', None)
-        if not kinds:
-            kinds = mute_kinds_for(gid, interaction.user)
+        # Только кэш панели — без SQLite на пути ACK
+        kinds = getattr(panel, '_mute_kinds_cache', None) if panel else None
         if not kinds:
             await _respond(interaction, embed=error_embed(
                 'Мут тебе не выдан.'), ephemeral=True)
@@ -2399,34 +2420,19 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 who = mem.mention
         except Exception as _e:
             log.debug('prefill mention %r: %s', prefill, _e)
-        view = MuteKindView(
+        kind_view = MuteKindView(
             cog, prefill, kinds, member=interaction.user,
             status=f'# Мут\n{who}')
-        try:
-            from services.v2_layouts import V2_AVAILABLE
-            if V2_AVAILABLE:
-                await _respond(interaction, view=view, ephemeral=True)
-            else:
-                await _respond(
-                    interaction,
-                    embed=discord.Embed(title="Мут", description=f"{who}",
-                                        color=0x000000),
-                    view=view, ephemeral=True)
+        from services.v2_layouts import V2_AVAILABLE
+        ok = await _send_kind_menu(
+            interaction, view=kind_view,
+            embed=None if V2_AVAILABLE else discord.Embed(
+                title="Мут", description=f"{who}", color=0x000000))
+        if ok:
             _schedule_panel_reset(interaction, panel, clear_pending=True)
-        except Exception as ex:
-            log.warning('modpanel mute kinds: %s', ex)
-            await _respond(interaction, embed=error_embed(
-                'Не удалось открыть выбор вида мута. Попробуйте снова.'),
-                ephemeral=True)
         return
     if action == "unmute":
-        gid = getattr(interaction, 'guild_id', None) or getattr(
-            getattr(interaction, 'guild', None), 'id', None)
-        kinds = None
-        if panel is not None:
-            kinds = getattr(panel, '_unmute_kinds_cache', None)
-        if not kinds:
-            kinds = unmute_kinds_for(gid, interaction.user)
+        kinds = getattr(panel, '_unmute_kinds_cache', None) if panel else None
         if not kinds:
             await _respond(interaction, embed=error_embed(
                 'Снять мут тебе не выдано.'), ephemeral=True)
@@ -2437,6 +2443,8 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 ephemeral=True)
             return
         if len(kinds) == 1:
+            if not interaction.response.is_done():
+                await _ack(interaction, thinking=True)
             await cog._execute_mod_action(
                 interaction, kinds[0][0], prefill,
                 'Снято через панель', '', proof_link=None)
@@ -2449,27 +2457,18 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 who = mem.mention
         except Exception as _e:
             log.debug('prefill mention %r: %s', prefill, _e)
-        view = UnmuteKindView(
+        kind_view = UnmuteKindView(
             cog, prefill, kinds, member=interaction.user,
             status=f'# Снять мут\n{who}')
-        try:
-            from services.v2_layouts import V2_AVAILABLE
-            if V2_AVAILABLE:
-                await _respond(interaction, view=view, ephemeral=True)
-            else:
-                await _respond(
-                    interaction,
-                    embed=discord.Embed(title="Снять мут", description=f"{who}",
-                                        color=0x000000),
-                    view=view, ephemeral=True)
+        from services.v2_layouts import V2_AVAILABLE
+        ok = await _send_kind_menu(
+            interaction, view=kind_view,
+            embed=None if V2_AVAILABLE else discord.Embed(
+                title="Снять мут", description=f"{who}", color=0x000000))
+        if ok:
             _schedule_panel_reset(interaction, panel, clear_pending=True)
-        except Exception as ex:
-            log.warning('modpanel unmute kinds: %s', ex)
-            await _respond(interaction, embed=error_embed(
-                'Не удалось открыть снятие мута. Попробуйте снова.'),
-                ephemeral=True)
         return
-    # Бан / варн / очистка / … → followup/кнопка формы
+    # Бан / варн / очистка / … → send_message с кнопкой (это и есть ACK)
     if await _offer_mod_form(interaction, cog, action, prefill):
         _schedule_panel_reset(interaction, panel, clear_pending=True)
 
@@ -2498,20 +2497,17 @@ class ModActionSelect(discord.ui.Select):
         self.target_select = target_select
 
     async def callback(self, interaction: discord.Interaction):
-        """ACK первой строкой — до kinds/V2/rebuild.
+        """ACK = send_message формы/видов. Без defer(type6) и без SQLite.
 
-        Фон `_schedule_panel_reset` после выбора участника раньше
-        пересекался с этим колбэком → «не ответило вовремя».
+        Фоновый rebuild панели после выбора участника больше НЕ стартует —
+        он пересекался с этим кликом и давал «не ответило вовремя».
         """
         view = self.view
-        # Сбросить фоновый rebuild панели — он блокирует цикл
         _cancel_panel_reset(view)
-        # 3с Discord закрываем ДО любой логики
-        await _ack(interaction, thinking=False)
         try:
             lag = (discord.utils.utcnow() - interaction.created_at).total_seconds()
-            if lag > 1.5:
-                log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят?)',
+            if lag > 1.0:
+                log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят)',
                             lag)
         except Exception:
             pass
@@ -2530,10 +2526,11 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Без участника при живой панели — запомнить действие (уже ACK).
+        # Без участника — только запомнить + тихий ACK (без rebuild)
         if action != "clear" and not prefill and view is not None:
-            _schedule_panel_reset(interaction, view, clear_pending=False)
+            await _ack(interaction, thinking=False)
             return
+        # С участником — send_message кнопки/видов = ACK (<3с)
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
 
 
@@ -2675,7 +2672,8 @@ class ModTargetSelect(discord.ui.UserSelect):
             # Действие уже ждали — ACK формой (кнопка), не rebuild панели.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
-        # Только ACK. Без тяжёлого refresh на пути ответа.
+        # Только ACK. Без rebuild/reset — иначе LayoutView-edit
+        # пересекается со следующим кликом «Действие» и жрёт 3с.
         try:
             if not interaction.response.is_done():
                 try:
@@ -2692,9 +2690,6 @@ class ModTargetSelect(discord.ui.UserSelect):
                         ephemeral=True)
             except Exception as _te2:
                 log.debug('ModTargetSelect fallback: %s', _te2)
-        # Сброс селектов фоном — панель снова кликабельна много раз
-        if view is not None:
-            _schedule_panel_reset(interaction, view, clear_pending=False)
 
 
 class ModPanelView(discord.ui.LayoutView):
