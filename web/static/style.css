@@ -1407,6 +1407,8 @@ html[data-theme="dark"] .tab-btn.active .count { background: rgba(255,255,255,.2
 .aes-panel.open { display: block; }
 .aes-panel .aes-list { max-height: 260px; overflow-y: auto; overscroll-behavior: contain; }
 .aes-panel .aes-search { width: 100%; padding: 8.5px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--well); color: var(--text); margin-bottom: 5px; touch-action: none; }
+/* жест по поиску не тянет страницу сзади (телефон) */
+.aes-panel .aes-search { touch-action: none; }
 .aes-group { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--text-4); padding: 8px 10px 4px; }
 .aes-opt { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 12px; font-size: var(--fs-sm); color: var(--text-2); cursor: pointer; }
 .aes-opt:hover, .aes-opt.active { background: var(--ac-soft); color: var(--text); }
