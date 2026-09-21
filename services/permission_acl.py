@@ -264,19 +264,40 @@ def clear_rule(guild_id: int, command: str):
 
 
 # ─── Классические разрешения (Action ACL) ──────────────────────────────────
+# Короткий кэш: /modpanel → mute_kinds_for дергает check_action 3× до
+# send_modal/send_message (<3с Discord). Повторные SQLite-чтения на
+# Windows Defender съедают окно.
+_ACTION_ACL_CACHE = {}  # gid -> (acl: dict, mono_ts)
+_ACTION_ACL_TTL = 20.0
+
+
 def load_action_acl(guild_id: int) -> dict:
     """Вернуть ограничения действий: {action: [role_ids]}"""
     try:
-        acl = _action_acl_db().get(int(guild_id), "acl", {})
-        return acl if isinstance(acl, dict) else {}
+        key = int(guild_id)
+    except (TypeError, ValueError):
+        return {}
+    import time as _time
+    now = _time.monotonic()
+    hit = _ACTION_ACL_CACHE.get(key)
+    if hit and (now - hit[1]) < _ACTION_ACL_TTL:
+        return dict(hit[0]) if isinstance(hit[0], dict) else {}
+    try:
+        acl = _action_acl_db().get(key, "acl", {})
+        if not isinstance(acl, dict):
+            acl = {}
     except Exception as e:
         log.warning(f"[action_acl] load error: {e}")
-        return {}
+        acl = {}
+    _ACTION_ACL_CACHE[key] = (acl, now)
+    return dict(acl)
 
 
 def save_action_acl(guild_id: int, acl: dict):
     try:
-        _action_acl_db().set(int(guild_id), "acl", acl or {})
+        key = int(guild_id)
+        _ACTION_ACL_CACHE.pop(key, None)
+        _action_acl_db().set(key, "acl", acl or {})
     except Exception as e:
         log.warning(f"[action_acl] save error: {e}")
 

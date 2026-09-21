@@ -12,8 +12,9 @@
 3) правило на действие — пункт исчезает у чужих ролей и остаётся у
    назначенных (владелец сервера/бота и админ видят всё);
 4) фильтры работают вместе с «Лимитами команды» (staff_limits);
-5) защита на исполнении: выбор меню и отправка модалки отказывают, если
-   доступ сняли, пока меню было открыто; веб-панель (PanelActor) НЕ
+5) защита на исполнении: отправка модалки (on_submit) отказывает, если
+   доступ сняли, пока меню было открыто; выбор пункта шлёт модалку сразу
+   (<3с Discord), ACL не на пути к send_modal; веб-панель (PanelActor) НЕ
    режется ролевым ACL — у неё своя авторизация.
 
 Запуск: /tmp/venv/bin/python tests/test_modpanel_acl.py
@@ -231,14 +232,18 @@ class _Inter:
 g = Guild(GID)
 set_action_rule(GID, 'ban', ['601'])
 
-# выбор пункта в меню: чужой роли модалка не откроется
+# выбор пункта в меню: без разрешения модалку всё равно открываем
+# (send_modal <3с Discord; ACL — в on_submit, см. ниже). Иначе
+# SQLite/диск на пути к ответу → «приложение не ответило вовремя».
 i = _Inter(Member(100, [602]), g)
 sel = ModActionSelect(cog, member=Member(100, [602]), allowed=[a for a in MODPANEL_ACTIONS])
 sel._values = ['ban']  # как discord проставляет выбранное значение
 asyncio.run(sel.callback(i))
-check(not i.response.modal, 'выбор «Бан» без разрешения → модалка не открылась')
-check(i.response.sent and 'Классические разрешения' in str(getattr(i.response.sent[0], 'description', '')),
-      'отказ объясняет, где включить доступ')
+check(bool(i.response.modal) and not i.response.sent,
+      'выбор «Бан» без разрешения → модалка открылась (ACL в on_submit)')
+check('_send_modal_fast' in open(
+        os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read(),
+      'путь действия шлёт модалку через _send_modal_fast')
 
 # своя роль — модалка открывается
 i2 = _Inter(Member(100, [601]), g)

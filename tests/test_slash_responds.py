@@ -78,6 +78,35 @@ msub = mod_src[mod_src.index('class ModActionModal'):
                mod_src.index('class ModTargetSelect')]
 check('thinking=True' in msub and 'await _ack' in msub,
       'модалка наказания: defer thinking=True (type 5, не «не ответило»)')
+# Выбор действия с участником: send_modal ПЕРВЫМ (<3с), без ACL/диска до ответа.
+launch = mod_src[mod_src.index('async def _launch_action'):
+                 mod_src.index('class ModActionSelect')]
+check('async def _send_modal_fast' in mod_src,
+      '_send_modal_fast: send_modal как первый ответ')
+check('create_task(_reset_later)' in launch or 'create_task(_reset_later())' in launch,
+      '_launch_action: сброс панели фоном после send_modal')
+check(launch.find('send_modal') < launch.find('create_task'),
+      '_launch_action: send_modal раньше create_task(_reset_later)')
+asel = mod_src[mod_src.index('class ModActionSelect'):
+               mod_src.index('_PUNISH_MODPANEL') if '_PUNISH_MODPANEL' in mod_src
+               else mod_src.index('class ModActionModal')]
+# Внутри callback селекта до _launch_action не должно быть _ensure_action_acl
+# (SQLite съедает 3с; ACL в on_submit).
+cb = asel[asel.index('async def callback'):
+          asel.index('await _launch_action') + len('await _launch_action')]
+check('_ensure_action_acl' not in cb,
+      'ModActionSelect: без ACL до _launch_action / send_modal')
+mks = mod_src[mod_src.index('class MuteKindSelect'):
+              mod_src.index('class MuteKindView')]
+mkcb = mks[mks.index('async def callback'):]
+check('_ensure_action_acl' not in mkcb and '_send_modal_fast' in mkcb,
+      'MuteKindSelect: send_modal сразу, ACL в on_submit')
+proof_src = open(os.path.join(ROOT, 'cogs', 'proof_cog.py'), encoding='utf-8').read()
+check('_PROOF_REQ_CACHE' in proof_src and '_PROOF_WL_CACHE' in proof_src,
+      'proof config + whitelist кэшируются до сборки модалки')
+acl_src = open(os.path.join(ROOT, 'services', 'permission_acl.py'), encoding='utf-8').read()
+check('_ACTION_ACL_CACHE' in acl_src,
+      'action ACL кэшируется (mute_kinds_for ×3 до ответа)')
 check('Кого наказать?' not in mod_src and 'Что сделать?' not in mod_src,
       'нет старой синей панели (placeholders Кого/Что)')
 check('Участник и действие — в любом порядке.' not in mod_src,

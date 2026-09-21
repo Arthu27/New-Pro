@@ -236,26 +236,57 @@ def _proof_whitelist_path(gid):
     return f'data/proof_whitelist_{int(gid)}.json'
 
 
+# Кэш whitelist: ModActionModal.__init__ читает его до send_modal (<3с).
+_PROOF_WL_CACHE = {}  # gid -> (wl: dict, mono_ts)
+_PROOF_WL_TTL = 45.0
+
+
 def proof_whitelist(gid):
     """{'users': [...], 'roles': [...]} — кто освобождён от обязательной демки."""
-    data = _load_json(_proof_whitelist_path(gid), {})
+    try:
+        key = int(gid or 0)
+    except (TypeError, ValueError):
+        key = 0
+    import time as _time
+    now = _time.monotonic()
+    hit = _PROOF_WL_CACHE.get(key)
+    if hit and (now - hit[1]) < _PROOF_WL_TTL:
+        wl = hit[0]
+        return {'users': list(wl.get('users') or []),
+                'roles': list(wl.get('roles') or [])}
+    empty = {'users': [], 'roles': []}
+    try:
+        data = _load_json(_proof_whitelist_path(key), {})
+    except Exception as _ex:
+        log.debug(f'[PROOF] whitelist: чтение пропущено: {_ex}')
+        _PROOF_WL_CACHE[key] = (empty, now)
+        return dict(empty)
     if isinstance(data, dict):
         users = data.get('users')
         roles = data.get('roles')
-        return {
+        result = {
             'users': [int(u) for u in (users if isinstance(users, list) else [])
                       if str(u).isdigit()],
             'roles': [int(r) for r in (roles if isinstance(roles, list) else [])
                       if str(r).isdigit()],
         }
-    # старый плоский формат [ids...] — трактуем как список участников
-    if isinstance(data, list):
-        return {'users': [int(u) for u in data if str(u).isdigit()], 'roles': []}
-    return {'users': [], 'roles': []}
+    elif isinstance(data, list):
+        # старый плоский формат [ids...] — трактуем как список участников
+        result = {'users': [int(u) for u in data if str(u).isdigit()],
+                  'roles': []}
+    else:
+        result = dict(empty)
+    _PROOF_WL_CACHE[key] = (result, now)
+    return {'users': list(result['users']), 'roles': list(result['roles'])}
 
 
 def _save_proof_whitelist(gid, wl):
-    _save_json(_proof_whitelist_path(gid),
+    try:
+        key = int(gid or 0)
+        _PROOF_WL_CACHE.pop(key, None)
+    except (TypeError, ValueError):
+        key = gid
+    _save_json(_proof_whitelist_path(key),
                {'users': [int(u) for u in wl['users']],
                 'roles': [int(r) for r in wl['roles']]})
 
@@ -301,24 +332,44 @@ def _proof_cfg_path(gid):
     return f'data/proof_config_{int(gid)}.json'
 
 
+# Короткий кэш: /modpanel → send_modal должен уложиться в 3с Discord.
+# Чтение JSON с диска (Windows Defender) иначе съедает окно.
+_PROOF_REQ_CACHE = {}  # gid -> (required: bool, mono_ts)
+_PROOF_REQ_TTL = 45.0
+
+
 def proof_is_required(gid):
     """Обязательна ли демка к наказаниям на сервере.
 
     По умолчанию — НЕТ (заказ владельца 2026-08-27: ничего не требовать,
     пока сам не включишь в панели → «Доказательства»)."""
     try:
-        data = _load_json(_proof_cfg_path(gid), {})
+        key = int(gid or 0)
+    except (TypeError, ValueError):
+        key = 0
+    import time as _time
+    now = _time.monotonic()
+    hit = _PROOF_REQ_CACHE.get(key)
+    if hit and (now - hit[1]) < _PROOF_REQ_TTL:
+        return bool(hit[0])
+    required = False
+    try:
+        data = _load_json(_proof_cfg_path(key), {})
         if isinstance(data, dict):
-            return bool(data.get('required', False))
+            required = bool(data.get('required', False))
     except Exception as _ex:
         log.debug(f'[PROOF] конфиг: чтение пропущено: {_ex}')
-    return False
+        required = False
+    _PROOF_REQ_CACHE[key] = (required, now)
+    return required
 
 
 def proof_set_required(gid, on):
     """Переключить требование доказательства из панели. Возвращает итог."""
     try:
-        _save_json(_proof_cfg_path(gid), {'required': bool(on)})
+        key = int(gid or 0)
+        _PROOF_REQ_CACHE.pop(key, None)
+        _save_json(_proof_cfg_path(key), {'required': bool(on)})
     except Exception as _ex:
         log.debug(f'[PROOF] конфиг: запись пропущена: {_ex}')
     return proof_is_required(gid)

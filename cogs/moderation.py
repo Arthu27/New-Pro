@@ -2049,13 +2049,12 @@ class MuteKindSelect(discord.ui.Select):
         self.target_id = str(target_id)
 
     async def callback(self, interaction: discord.Interaction):
+        # ACL не здесь: send_modal обязан уложиться в 3с; проверка в on_submit.
         action = self.values[0]
-        if not await self.cog._ensure_action_acl(interaction, action):
-            return
         modal = ModActionModal(self.cog, action, guild=interaction.guild,
                                prefill_target=self.target_id,
                                user=interaction.user)
-        await interaction.response.send_modal(modal)
+        await _send_modal_fast(interaction, modal)
 
 
 class MuteKindView(discord.ui.LayoutView):
@@ -2189,8 +2188,46 @@ async def _silent_reset_panel(interaction, panel):
         log.debug('modpanel reset: %s', _e)
 
 
+async def _send_modal_fast(interaction, modal):
+    """send_modal как первый ответ — иначе Discord: «не ответило вовремя».
+
+    Нельзя defer перед модалкой. Любая ошибка → запасной ephemeral.
+    """
+    try:
+        await interaction.response.send_modal(modal)
+        return True
+    except Exception as ex:
+        log.warning('modpanel send_modal: %s', ex)
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                embed=error_embed(
+                    'Не удалось открыть форму. Нажмите действие ещё раз '
+                    'или снова вызовите /modpanel.'),
+                ephemeral=True)
+            return False
+    except Exception as ex2:
+        log.debug('modpanel send_modal fallback: %s', ex2)
+    return False
+
+
 async def _launch_action(cog, interaction, action, prefill, panel=None):
-    """Открыть модалку / размут. panel — чтобы потом сбросить селект."""
+    """Открыть модалку / размут. panel — чтобы потом сбросить селект.
+
+    Критично: send_modal/send_message — ПЕРВЫЙ ответ Discord (<3с).
+    Сброс панели — фоном после ответа.
+    """
+    import asyncio as _aio
+
+    async def _reset_later():
+        if panel is None:
+            return
+        try:
+            panel.pending_action = None
+            await _silent_reset_panel(interaction, panel)
+        except Exception as _e:
+            log.debug('modpanel reset later: %s', _e)
+
     if action == "mute":
         gid = getattr(interaction, 'guild_id', None) or getattr(
             getattr(interaction, 'guild', None), 'id', None)
@@ -2204,14 +2241,11 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 'Сначала выберите участника — или выберите его сейчас в меню.'),
                 ephemeral=True)
             return
-        if panel is not None:
-            panel.pending_action = None
         if len(kinds) == 1:
             modal = ModActionModal(cog, kinds[0][0], guild=interaction.guild,
                                    prefill_target=prefill, user=interaction.user)
-            await interaction.response.send_modal(modal)
-            if panel is not None:
-                await _silent_reset_panel(interaction, panel)
+            if await _send_modal_fast(interaction, modal):
+                _aio.create_task(_reset_later())
             return
         who = prefill
         try:
@@ -2220,21 +2254,25 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 who = mem.mention
         except Exception as _e:
             log.debug('prefill mention %r: %s', prefill, _e)
-        embed = discord.Embed(
-            title="Мут",
-            description=f"{who}",
-            color=0x000000)
         view = MuteKindView(
             cog, prefill, kinds, member=interaction.user,
             status=f'# Мут\n{who}')
-        from services.v2_layouts import V2_AVAILABLE
-        if V2_AVAILABLE:
-            await interaction.response.send_message(view=view, ephemeral=True)
-        else:
-            await interaction.response.send_message(
-                embed=embed, view=view, ephemeral=True)
-        if panel is not None:
-            await _silent_reset_panel(interaction, panel)
+        try:
+            from services.v2_layouts import V2_AVAILABLE
+            if V2_AVAILABLE:
+                await interaction.response.send_message(view=view, ephemeral=True)
+            else:
+                await interaction.response.send_message(
+                    embed=discord.Embed(title="Мут", description=f"{who}",
+                                        color=0x000000),
+                    view=view, ephemeral=True)
+            _aio.create_task(_reset_later())
+        except Exception as ex:
+            log.warning('modpanel mute kinds: %s', ex)
+            if not interaction.response.is_done():
+                await _respond(interaction, embed=error_embed(
+                    'Не удалось открыть выбор вида мута. Попробуйте снова.'),
+                    ephemeral=True)
         return
     if action == "unmute":
         gid = getattr(interaction, 'guild_id', None) or getattr(
@@ -2249,15 +2287,12 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 'Сначала выберите участника — или выберите его сейчас в меню.'),
                 ephemeral=True)
             return
-        if panel is not None:
-            panel.pending_action = None
         if len(kinds) == 1:
             await _ack(interaction, thinking=False)
             await cog._execute_mod_action(
                 interaction, kinds[0][0], prefill,
                 'Снято через панель', '', proof_link=None)
-            if panel is not None:
-                await _silent_reset_panel(interaction, panel)
+            _aio.create_task(_reset_later())
             return
         who = prefill
         try:
@@ -2266,28 +2301,31 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 who = mem.mention
         except Exception as _e:
             log.debug('prefill mention %r: %s', prefill, _e)
-        embed = discord.Embed(
-            title="Снять мут",
-            description=f"{who}",
-            color=0x000000)
         view = UnmuteKindView(
             cog, prefill, kinds, member=interaction.user,
             status=f'# Снять мут\n{who}')
-        from services.v2_layouts import V2_AVAILABLE
-        if V2_AVAILABLE:
-            await interaction.response.send_message(view=view, ephemeral=True)
-        else:
-            await interaction.response.send_message(
-                embed=embed, view=view, ephemeral=True)
-        if panel is not None:
-            await _silent_reset_panel(interaction, panel)
+        try:
+            from services.v2_layouts import V2_AVAILABLE
+            if V2_AVAILABLE:
+                await interaction.response.send_message(view=view, ephemeral=True)
+            else:
+                await interaction.response.send_message(
+                    embed=discord.Embed(title="Снять мут", description=f"{who}",
+                                        color=0x000000),
+                    view=view, ephemeral=True)
+            _aio.create_task(_reset_later())
+        except Exception as ex:
+            log.warning('modpanel unmute kinds: %s', ex)
+            if not interaction.response.is_done():
+                await _respond(interaction, embed=error_embed(
+                    'Не удалось открыть снятие мута. Попробуйте снова.'),
+                    ephemeral=True)
         return
+    # Обычное действие → модалка (бан/варн/мут-вид уже выбран)
     modal = ModActionModal(cog, action, guild=interaction.guild,
                            prefill_target=prefill, user=interaction.user)
-    await interaction.response.send_modal(modal)
-    if panel is not None:
-        panel.pending_action = None
-        await _silent_reset_panel(interaction, panel)
+    if await _send_modal_fast(interaction, modal):
+        _aio.create_task(_reset_later())
 
 
 class ModActionSelect(discord.ui.Select):
@@ -2315,8 +2353,6 @@ class ModActionSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         action = self.values[0]
-        if not await self.cog._ensure_action_acl(interaction, action):
-            return
         view = self.view
         prefill = ""
         if view is not None:
@@ -2332,10 +2368,14 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
+        # Без участника — только запомнить действие (ACK внутри refresh).
         if action != "clear" and not prefill:
             if view is not None:
                 await view.refresh(interaction)
                 return
+        # С участником — send_modal/send_message СРАЗУ (<3с Discord).
+        # ACL не здесь: SQLite/диск съедают окно; проверка в on_submit
+        # и в mute_kinds_for / unmute_kinds_for внутри _launch_action.
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
 
 
