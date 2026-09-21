@@ -96,14 +96,13 @@ var currentAccentColor = '#4d9fff';
 var currentFontSize = 14;
 
 function resolveTheme(t){
-  if(t === 'auto') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  return t === 'light' ? 'light' : 'dark';
+  /* Панель всегда чёрная — auto/light тоже dark. */
+  return 'dark';
 }
 function setTheme(theme) {
-  currentTheme = theme;
-  var resolved = resolveTheme(theme);
-  document.documentElement.setAttribute('data-theme', resolved);
-  try { localStorage.setItem('hakumo_theme', resolved); } catch(e){}
+  currentTheme = 'dark';
+  document.documentElement.setAttribute('data-theme', 'dark');
+  try { localStorage.setItem('hakumo_theme', 'dark'); } catch(e){}
 }
 function setAccentColor(color) {
   currentAccentColor = color;
