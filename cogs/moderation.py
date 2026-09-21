@@ -2486,8 +2486,9 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Без участника — только запомнить действие и ACK (без rebuild).
-        if action != "clear" and not prefill:
+        # Без участника при живой панели — запомнить действие и ACK (без rebuild).
+        # Без view (тесты / крайний случай) или clear — сразу форма.
+        if action != "clear" and not prefill and view is not None:
             try:
                 if not interaction.response.is_done():
                     try:
@@ -2497,8 +2498,7 @@ class ModActionSelect(discord.ui.Select):
             except Exception as _ae:
                 log.warning('ModActionSelect ACK(no target): %s', _ae)
             return
-        # С участником — сразу ACK (сообщение+кнопка формы), НЕ send_modal.
-        # Модалка откроется со свежего клика по кнопке (<3с гарантированно).
+        # С участником (или clear / нет view) — ACK сообщением+кнопкой формы.
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
 
 
