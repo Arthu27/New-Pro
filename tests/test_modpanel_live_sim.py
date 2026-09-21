@@ -109,6 +109,11 @@ class _Resp:
         self.deferred = True
         self.done = True
 
+    async def edit_message(self, **kw):
+        self.edits = getattr(self, 'edits', [])
+        self.edits.append(kw)
+        self.done = True
+
 
 class _Inter:
     def __init__(self, user, guild, message=None):
@@ -159,8 +164,8 @@ view._root_edit = _root
 check(view.action_select is not None, 'есть action_select (не кнопки)')
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
-check('multi-fix-v9' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
-      'build tag multi-use-v9')
+check('multi-fix-v10' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
+      'build tag multi-fix-v10')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
@@ -206,14 +211,13 @@ async def _ban_twice():
 asyncio.run(_ban_twice())
 
 
-print('== LIVE 3. Мут: подменю вида, основная панель не resend ==')
+print('== LIVE 3. Мут: вид на ТОЙ ЖЕ панели (не новое окно) ==')
 
 
 async def _mute_flow():
     view_m = M.ModPanelView(None, opener, allowed=allowed)
     view_m._guild = g
     view_m.selected_uid = str(target.id)
-    # подставим kinds вручную (как кэш при открытии)
     view_m._mute_kinds_cache = [
         ('mute_chat', 'Чат', 'только чат'),
         ('vmute', 'Войс', 'только войс'),
@@ -221,24 +225,27 @@ async def _mute_flow():
     ]
     msg = _PanelMsg(222)
     view_m._panel_message = msg
-    view_m._mod_followup = types.SimpleNamespace(send=lambda **kw: None)
 
     async def _root2(**kw):
         return await msg.edit(**kw)
     view_m._root_edit = _root2
 
     inter = _Inter(opener, g, message=msg)
+    # response.edit_message для kind mode
+    inter.response.edits = []
     view_m.action_select._values = ['mute']
     await view_m.action_select.callback(inter)
-    # подменю вида — send_message (отдельное короткое меню, не «вторая панель»)
-    check(bool(inter.response.sent) or bool(inter.response.modal)
-          or inter.response.done,
-          'мут с несколькими видами — ACK (подменю или модалка)')
-    check(msg.deleted is False, 'основная панель не удалена после мута')
-    # followup новой ГЛАВНОЙ панели не должен уходить через _resend
-    # (prefer_resend=False); подменю может быть response.send_message
-    check(len(inter._fu_sent) == 0,
-          'главная панель не ушла через followup.send')
+    check(getattr(view_m, '_kind_mode', None) == 'mute',
+          'панель в режиме выбора вида мута')
+    check(isinstance(view_m.action_select, M.MuteKindSelect),
+          'вместо действий — селект вида мута')
+    check(len(inter._fu_sent) == 0, 'followup новой панели нет')
+    check(msg.deleted is False, 'основная панель не удалена')
+    check(inter.response.done or len(msg.edits) >= 1
+          or len(getattr(inter.response, 'edits', [])) >= 1,
+          'вид мута — edit того же сообщения')
+    check(len(inter.response.sent) == 0,
+          'нет отдельного send_message подменю')
 
 
 asyncio.run(_mute_flow())
@@ -279,17 +286,21 @@ async def _order():
 asyncio.run(_order())
 
 
-print('== LIVE 5. prefer_resend=False по умолчанию; Collector нет ==')
+print('== LIVE 5. 5 минут, без нового окна, Collector нет ==')
 src = open(os.path.join(ROOT, 'cogs/moderation.py'), encoding='utf-8').read()
-check('prefer_resend=False' in src, 'сброс без нового окна по умолчанию')
-check(src.count('prefer_resend=True') == 0, 'нигде не форсим resend')
+check('timeout=300' in src, 'панель на 5 минут')
+check('prefer_resend=True' not in src, 'нигде не форсим resend')
 check('class ModActionSelect' in src and 'class ModActionButton' not in src,
       'действия — селект, не кнопки')
+check('_enter_kind_mode' in src, 'вид мута на той же панели')
 bind = src[src.index('def _bind_live_panel'):src.index('async def _send_modal_fast')]
 check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'нет bot.wait_for на пути сброса')
-check("await _reset_after_step(interaction, panel, prefer_resend=False)" in src,
+check("await _reset_after_step(interaction, panel, prefer_resend=False)" in src
+      or '_reset_after_step(interaction, panel' in src,
       'после модалки — edit той же панели')
+check(int(M.ModPanelView(None, opener, allowed=allowed).timeout) == 300,
+      'ModPanelView.timeout == 300')
 
 
 print('== LIVE 6. Серия: clear → ban → clear на одном message ==')

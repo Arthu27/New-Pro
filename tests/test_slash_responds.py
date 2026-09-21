@@ -70,7 +70,7 @@ check('schedule_ensure_menu_emojis' in mp,
       '/modpanel греет emoji в фоне')
 check('cog_load' in mod_src and 'warm_menu_banners' in mod_src,
       'баннер прогревается при загрузке кога')
-check('multi-fix-v6' in mp or 'build=multi-fix' in mp,
+check('multi-fix-v10' in mp or 'build=multi-fix' in mp,
       '/modpanel: метка деплоя multi-fix')
 uni = mod_src[mod_src.index('async def _unisolate_member'):
               mod_src.index('def _preflight_reason') if 'def _preflight_reason' in mod_src
@@ -96,23 +96,30 @@ launch = mod_src[mod_src.index('async def _launch_action'):
 check('async def _offer_mod_form' in mod_src,
       '_offer_mod_form: модалка с селекта')
 check('send_modal' in mod_src[mod_src.index('async def _offer_mod_form'):
-                              mod_src.index('async def _send_kind_menu')],
+                              mod_src.index('async def _send_kind_menu')
+                              if 'async def _send_kind_menu' in mod_src
+                              else mod_src.index('async def _launch_action')],
       '_offer_mod_form: send_modal сразу (без кнопки)')
 check('_OpenModFormButton' not in mod_src and '_OpenModFormView' not in mod_src,
       'кнопка «открыть форму» убрана')
 check('_offer_mod_form' in launch,
       '_launch_action: бан/варн через _offer_mod_form')
-_offer_body = mod_src[mod_src.index('async def _offer_mod_form'):
-                      mod_src.index('async def _send_kind_menu')]
+_offer_end = (mod_src.index('async def _send_kind_menu')
+              if 'async def _send_kind_menu' in mod_src
+              else mod_src.index('async def _launch_action'))
+_offer_body = mod_src[mod_src.index('async def _offer_mod_form'):_offer_end]
 check('_reset_after_step' in _offer_body or '_silent_reset_panel' in _offer_body,
       '_offer_mod_form: сброс панели сразу после модалки')
-check('_mod_followup' in mod_src and '_resend_fresh_panel' in mod_src
-      and '_bind_live_panel' in mod_src and '_reset_after_step' in mod_src,
-      'multi-use: bind live msg + resend без Collector')
-check('multi-fix-v9' in mod_src,
-      'build tag multi-fix-v9 для проверки деплоя')
+check('_enter_kind_mode' in mod_src and '_bind_live_panel' in mod_src
+      and '_reset_after_step' in mod_src,
+      'multi-use: kind на той же панели, без нового окна')
+check('multi-fix-v10' in mod_src,
+      'build tag multi-fix-v10 для проверки деплоя')
+check('timeout=300' in mod_src,
+      'панель живёт 5 минут')
 check('_schedule_panel_reset' in launch or '_silent_reset_panel' in launch
       or '_reset_after_step' in launch
+      or '_enter_kind_mode' in launch
       or 'panel=panel' in launch,
       '_launch_action: сброс панели после шага')
 asel = mod_src[mod_src.index('class ModActionSelect'):

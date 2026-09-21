@@ -439,7 +439,7 @@ async def _msg_identity():
           or inter2.response.done,
           'после сброса второе действие снова ACK/модалка')
 
-    # resend: edit падает → новая эфемерка через followup
+    # resend отключён — новое окно больше не создаём
     view_r = M.ModPanelView(cog, opener, allowed=allowed)
     view_r.selected_uid = '3000000000000000300'
     view_r._guild = g7
@@ -447,18 +447,12 @@ async def _msg_identity():
     view_r._panel_message = broken
     fu = _FakeFollowup()
     view_r._mod_followup = fu
-    inter_r = _PInter(opener, g7)
-    inter_r.message = broken
-    old_sel = id(view_r.action_select)
     ok = await M._resend_fresh_panel(view_r)
-    check(ok is True, 'resend вернул True')
-    check(broken.deleted, 'старая эфемерка удалена')
-    check(len(fu.sent) == 1, 'followup.send прислал новую панель')
-    check(id(view_r.action_select) != old_sel, 'resend собрал новый action_select')
-    check(getattr(view_r._panel_message, 'id', None) == 999,
-          'панель ссылается на новое сообщение')
+    check(ok is False, 'resend отключён — всегда False')
+    check(not broken.deleted, 'старую эфемерку НЕ удаляем')
+    check(len(fu.sent) == 0, 'followup.send новой панели нет')
 
-    # _reset_after_step по умолчанию — edit той же панели, НЕ новое окно
+    # _reset_after_step — edit той же панели, НЕ новое окно
     view_a = M.ModPanelView(cog, opener, allowed=allowed)
     view_a.selected_uid = '3000000000000000300'
     view_a._guild = g7
@@ -477,17 +471,22 @@ async def _msg_identity():
           'участник сохранён для серии действий')
     check(getattr(view_a._panel_message, 'id', None) == 444,
           'остаёмся на том же сообщении панели')
+    check(int(getattr(view_a, 'timeout', 0) or 0) == 300,
+          'панель живёт 5 минут (timeout=300)')
 
 asyncio.run(_msg_identity())
 
-print('== 10. Нет Collector / wait_for на пути modpanel ==')
+print('== 10. Нет Collector / нового окна; kind на той же панели ==')
 src = open(M.__file__, encoding='utf-8').read()
 bind = src[src.index('def _bind_live_panel'):src.index('async def _send_modal_fast')]
 check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'reset-хелперы без bot.wait_for')
-check('_mod_followup' in src and 'interaction.followup' in src,
-      'открытие панели сохраняет followup для resend')
-check('multi-fix-v9' in src, 'build=multi-fix-v9 в логе открытия')
+check('_enter_kind_mode' in src and 'edit_message' in src,
+      'вид мута — edit той же панели, не followup')
+check('multi-fix-v10' in src, 'build=multi-fix-v10 в логе открытия')
+check('resend disabled' in src or 'return False' in src[src.index('async def _resend_fresh_panel'):
+                                                          src.index('def _cancel_panel_reset')],
+      'resend заглушка — новое окно запрещено')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
