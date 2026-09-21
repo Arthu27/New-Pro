@@ -165,8 +165,8 @@ check(view.action_select is not None, 'есть action_select (не кнопки
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
 _ms = open(os.path.join(ROOT, 'cogs/moderation.py')).read()
-check('multi-fix-v15' in _ms or 'multi-fix-v13' in _ms,
-      'build tag multi-fix-v15')
+check('multi-fix-v16' in _ms or 'multi-fix-v13' in _ms,
+      'build tag multi-fix-v16')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
@@ -395,6 +395,44 @@ async def _member_status():
 
 
 asyncio.run(_member_status())
+
+
+print('== LIVE 4c. /modpanel target= — панель открывается сразу на участнике ==')
+
+
+async def _preselect_open():
+    import discord as _discord
+    preselect_obj = _discord.Object(id=target.id)
+    view_p = M.ModPanelView(None, opener, allowed=allowed, preselect=preselect_obj)
+    check(view_p.selected_uid == str(target.id),
+          'preselect: selected_uid выставлен до первого клика')
+    check(f'участник <@{target.id}>' in view_p._status_text(),
+          'preselect: статус на панели сразу показывает участника')
+    dv = list(getattr(view_p.target_select, 'default_values', None) or [])
+    check(len(dv) == 1 and getattr(dv[0], 'id', None) == target.id,
+          'preselect: UserSelect получил default_values один раз')
+    check(getattr(view_p, '_preselect_member', 'нет атрибута') is None,
+          'preselect: одноразовый — потреблён после первого _rebuild')
+    # действие сразу доступно без выбора участника мышкой
+    msg = _PanelMsg(700)
+    view_p._panel_message = msg
+    view_p._panel_message_id = 700
+
+    async def _root_p(**kw):
+        return await msg.edit(**kw)
+    view_p._root_edit = _root_p
+    inter = _Inter(opener, g, message=msg)
+    view_p.action_select._values = ['ban']
+    await view_p.action_select.callback(inter)
+    check(bool(inter.response.modal),
+          'preselect: действие срабатывает без ручного выбора участника')
+
+    # повторный rebuild (после действия) — БЕЗ default_values (не sticky)
+    dv2 = list(getattr(view_p.target_select, 'default_values', None) or [])
+    check(not dv2, 'preselect: на повторном rebuild default_values не повторяется')
+
+
+asyncio.run(_preselect_open())
 
 
 print('== LIVE 5. 5 минут, без нового окна, Collector нет ==')
