@@ -2043,7 +2043,7 @@ class MuteKindSelect(discord.ui.Select):
             **({'description': desc[:100]} if desc else {}),
             emoji=emoji_for_action(value))
             for value, label, desc in kinds]
-        super().__init__(placeholder="› Куда мут?",
+        super().__init__(placeholder="",
                          options=options, min_values=1, max_values=1)
         self.cog = cog
         self.target_id = str(target_id)
@@ -2069,7 +2069,9 @@ class MuteKindView(discord.ui.LayoutView):
             from discord import ui as _ui
             row = _ui.ActionRow()
             row.add_item(sel)
-            self.add_item(black_container(_ui.TextDisplay(text), row))
+            # Как в главной панели: заголовок «Действие», селект без «Куда мут?»
+            self.add_item(black_container(
+                _ui.TextDisplay(f'{text}\n**Действие**'), row))
         else:
             row = discord.ui.ActionRow()
             row.add_item(sel)
@@ -2094,7 +2096,7 @@ class UnmuteKindSelect(discord.ui.Select):
             **({'description': desc[:100]} if desc else {}),
             emoji=emoji_for_action(value))
             for value, label, desc in kinds]
-        super().__init__(placeholder="› Куда снять?",
+        super().__init__(placeholder="",
                          options=options, min_values=1, max_values=1)
         self.cog = cog
         self.target_id = str(target_id)
