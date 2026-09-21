@@ -403,7 +403,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=multi-fix-v7',
+        log.info('modpanel open uid=%s gid=%s build=multi-fix-v8',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -456,7 +456,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v7',
+        log.info('modpanel ready msg=%s build=multi-fix-v8',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2420,10 +2420,10 @@ _MODAL_TITLES = {
 }
 
 
-async def _reset_after_step(interaction, panel, *, prefer_resend=True):
-    """После шага: свежие селекты. Resend надёжнее edit (sticky Discord).
+async def _reset_after_step(interaction, panel, *, prefer_resend=False):
+    """После шага: сброс селектов на ТОЙ ЖЕ панели (без нового окна).
 
-    Collector / wait_for не используем — только View + edit/followup.
+    Collector / wait_for не используем. Resend — только если edit упал.
     """
     if panel is None:
         return
@@ -2469,8 +2469,8 @@ async def _offer_mod_form(interaction, cog, action, prefill, panel=None):
         except Exception:
             pass
         return False
-    # Панель снова кликабельна сразу (тот же пункт Discord примет снова)
-    await _reset_after_step(interaction, panel, prefer_resend=True)
+    # Та же панель, свежие селекты — без второй эфемерки
+    await _reset_after_step(interaction, panel, prefer_resend=False)
     return True
 
 
@@ -2538,7 +2538,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 title="Мут", description=f"{who}", color=0x000000))
         if ok and panel is not None:
             # Основная панель свободна для следующего действия
-            await _reset_after_step(interaction, panel, prefer_resend=True)
+            await _reset_after_step(interaction, panel, prefer_resend=False)
         return
     if action == "unmute":
         kinds = getattr(panel, '_unmute_kinds_cache', None) if panel else None
@@ -2557,7 +2557,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             await cog._execute_mod_action(
                 interaction, kinds[0][0], prefill,
                 'Снято через панель', '', proof_link=None)
-            await _reset_after_step(interaction, panel, prefer_resend=True)
+            await _reset_after_step(interaction, panel, prefer_resend=False)
             return
         who = prefill
         try:
@@ -2575,7 +2575,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             embed=None if V2_AVAILABLE else discord.Embed(
                 title="Снять мут", description=f"{who}", color=0x000000))
         if ok and panel is not None:
-            await _reset_after_step(interaction, panel, prefer_resend=True)
+            await _reset_after_step(interaction, panel, prefer_resend=False)
         return
     # Бан / варн / очистка / … → модалка сразу
     await _offer_mod_form(interaction, cog, action, prefill, panel=panel)

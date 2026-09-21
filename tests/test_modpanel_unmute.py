@@ -458,7 +458,7 @@ async def _msg_identity():
     check(getattr(view_r._panel_message, 'id', None) == 999,
           'панель ссылается на новое сообщение')
 
-    # _reset_after_step с prefer_resend — сразу свежая панель
+    # _reset_after_step по умолчанию — edit той же панели, НЕ новое окно
     view_a = M.ModPanelView(cog, opener, allowed=allowed)
     view_a.selected_uid = '3000000000000000300'
     view_a._guild = g7
@@ -469,11 +469,14 @@ async def _msg_identity():
     view_a._mod_followup = fu2
     inter_a = _PInter(opener, g7)
     inter_a.message = live
-    await M._reset_after_step(inter_a, view_a, prefer_resend=True)
+    await M._reset_after_step(inter_a, view_a, prefer_resend=False)
     check(view_a.pending_action is None, 'после шага pending сброшен')
-    check(len(fu2.sent) == 1, 'prefer_resend шлёт новую панель')
+    check(len(fu2.sent) == 0, 'без новой эфемерки — только edit той же панели')
+    check(len(live.edits) == 1, 'селекты сброшены edit на том же сообщении')
     check(view_a.selected_uid == '3000000000000000300',
           'участник сохранён для серии действий')
+    check(getattr(view_a._panel_message, 'id', None) == 444,
+          'остаёмся на том же сообщении панели')
 
 asyncio.run(_msg_identity())
 
@@ -484,7 +487,7 @@ check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'reset-хелперы без bot.wait_for')
 check('_mod_followup' in src and 'interaction.followup' in src,
       'открытие панели сохраняет followup для resend')
-check('multi-fix-v7' in src, 'build=multi-fix-v7 в логе открытия')
+check('multi-fix-v8' in src, 'build=multi-fix-v8 в логе открытия')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
