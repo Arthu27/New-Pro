@@ -379,6 +379,49 @@ async def _series():
 
 asyncio.run(_series())
 
+print('== 9. Сброс правит ТО сообщение панели, что показали (не чужой original) ==')
+
+class _PanelMsg:
+    def __init__(self, mid):
+        self.id = mid
+        self.edits = []
+        self.attachments = []
+
+    async def edit(self, **kw):
+        self.edits.append(kw)
+        return self
+
+async def _msg_identity():
+    view = M.ModPanelView(cog, opener, allowed=allowed)
+    view.selected_uid = '3000000000000000300'
+    view._guild = g7
+    shown = _PanelMsg(111)
+    ghost = _PanelMsg(222)  # «чужой» original после followup-бага
+    view._panel_message = shown
+    async def _root(**kw):
+        return await shown.edit(**kw)
+    view._root_edit = _root
+    inter = _PInter(opener, g7)
+    # притворимся, что interaction.message — другой объект (не панель)
+    inter.message = ghost
+    sel_before = id(view.action_select)
+    await M._silent_reset_panel(inter, view)
+    check(id(view.action_select) != sel_before, 'reset пересобрал селект')
+    check(len(shown.edits) == 1, 'edit ушёл в показанное сообщение панели')
+    check(len(ghost.edits) == 0,
+          'чужой original/message НЕ трогали (баг followup)')
+    check(view._panel_message is shown or getattr(view._panel_message, 'id', None) == 111,
+          'панель продолжает ссылаться на то же сообщение')
+    # второй «клик» того же действия — новый select примет callback
+    view.action_select._values = ['mute']
+    inter2 = _PInter(opener, g7)
+    await view.action_select.callback(inter2)
+    check(bool(inter2.response.modal) or bool(inter2.response.sent)
+          or inter2.response.done,
+          'после сброса второе действие снова ACK/модалка')
+
+asyncio.run(_msg_identity())
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

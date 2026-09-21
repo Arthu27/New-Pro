@@ -398,14 +398,14 @@ class Moderation (commands .Cog ):
     # — из-за него выданные роли «не включались».
     @app_commands.default_permissions(moderate_members=True)
     async def modpanel (self ,interaction ):
-        # Сразу закрыть 3с-окно Discord: сбор меню/ACL не должен давать
-        # «Приложение не отвечает», если цикл чуть занят.
+        # defer → потом edit_original_response с панелью (НЕ followup!).
+        # Раньше _respond после defer слал followup, а сброс селектов правил
+        # original_response (пустое) — на экране селект оставался «залипшим»,
+        # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=modal-direct-v5',
+        log.info('modpanel open uid=%s gid=%s build=multi-fix-v6',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
-        # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
-        # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
         allowed =actions_for_member (interaction .guild ,interaction .user )
         if not allowed :
             await _respond (interaction ,
@@ -414,27 +414,47 @@ class Moderation (commands .Cog ):
             'их в панели: Щит сервера → Лимиты команды → роль.'),
             ephemeral =True )
             return 
-        # стикеры → application emoji в фоне (unicode-фолбек, пока нет кэша)
         try:
             from services.menu_emojis import schedule_ensure_menu_emojis
             schedule_ensure_menu_emojis(interaction.client)
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
         view = ModPanelView(self, interaction.user, allowed)
-        view._root_edit = interaction.edit_original_response
         view._guild = interaction.guild
-        # Components V2: баннер из process-cache (без повторного PIL)
         banner = view._banner_file or view._make_banner_file()
+        edit_kw = {
+            'view': view,
+            'content': None,
+            'embed': None,
+            'embeds': [],
+        }
         if banner is not None:
-            await _respond(interaction, view=view, file=banner, ephemeral=True)
+            edit_kw['attachments'] = [banner]
         else:
-            await _respond(interaction, view=view, ephemeral=True)
-        # Сообщение панели — для многоразового сброса селектов
+            edit_kw['attachments'] = []
+        panel_msg = None
         try:
-            view._panel_message = await interaction.original_response()
-        except Exception as _me:
-            log.debug('modpanel original_response: %s', _me)
-            view._panel_message = None
+            # Панель = original response (тот же токен, что и сброс селектов)
+            panel_msg = await interaction.edit_original_response(**edit_kw)
+        except Exception as ex:
+            log.warning('modpanel edit_original: %s — followup fallback', ex)
+            try:
+                fu_kw = {'view': view, 'ephemeral': True, 'wait': True}
+                if banner is not None:
+                    fu_kw['file'] = banner
+                panel_msg = await interaction.followup.send(**fu_kw)
+            except Exception as ex2:
+                log.warning('modpanel followup: %s', ex2)
+                return
+        view._panel_message = panel_msg
+        # Редактор именно ЭТОГО сообщения (не «чужого» original после followup)
+        if panel_msg is not None and hasattr(panel_msg, 'edit'):
+            async def _edit_panel(**kw):
+                return await panel_msg.edit(**kw)
+            view._root_edit = _edit_panel
+        else:
+            view._root_edit = interaction.edit_original_response
+        log.info('modpanel ready msg=%s', getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -2181,13 +2201,11 @@ def _cancel_panel_reset(panel):
 
 
 async def _silent_reset_panel(interaction, panel, *, gen=None):
-    """Сбросить селекты, чтобы панель можно было жать много раз.
+    """Сбросить селекты на ТОМ ЖЕ сообщении панели, что видит модератор.
 
-    Discord не шлёт callback на уже выбранный пункт — после действия
-    собираем меню заново и пушим в эфемерку токеном /modpanel (_root_edit)
-    или через сохранённое _panel_message.
-    Баннер НЕ перезаливаем. gen — номер поколения: устаревший сброс
-    не пушит edit, если уже запланирован новый или клик отменил.
+    Критично: правим _panel_message / _root_edit (сообщение с LayoutView),
+    а не «чужой» original после followup — иначе UI залипает и второй
+    клик Discord не присылает.
     """
     import asyncio as _aio
     try:
@@ -2195,11 +2213,12 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
             return
         guild = getattr(interaction, 'guild', None) or getattr(panel, '_guild', None)
         old_t, old_a = panel.target_select, panel.action_select
-        # Цель оставляем — серия наказаний одному человеку
         kept_uid = getattr(panel, 'selected_uid', None)
+        kept_pending = getattr(panel, 'pending_action', None)
         panel._rebuild(guild)
         if kept_uid:
             panel.selected_uid = kept_uid
+        panel.pending_action = kept_pending
         await _aio.sleep(0)
         if gen is not None and gen != getattr(panel, '_reset_gen', None):
             try:
@@ -2207,41 +2226,42 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
             except Exception:
                 pass
             return
-        msg = getattr(panel, '_panel_message', None) or getattr(
-            interaction, 'message', None)
+        msg = getattr(panel, '_panel_message', None)
         kw = panel.panel_edit_kwargs(message=msg, reattach_banner=False)
         pushed = False
-        # 1) токен исходного /modpanel — самый надёжный для эфемерки
-        root = getattr(panel, '_root_edit', None)
-        if root is not None:
+        # 1) прямое edit сохранённого сообщения панели
+        if msg is not None and hasattr(msg, 'edit'):
             try:
-                await root(**kw)
-                pushed = True
-            except Exception as _e:
-                log.debug('modpanel reset root: %s', _e)
-        # 2) сохранённое сообщение панели
-        if not pushed and msg is not None:
-            try:
-                await msg.edit(**kw)
+                new_msg = await msg.edit(**kw)
+                if new_msg is not None:
+                    panel._panel_message = new_msg
                 pushed = True
             except Exception as _e:
                 log.debug('modpanel reset msg.edit: %s', _e)
+        # 2) _root_edit (edit_original или замыкание на msg.edit)
         if not pushed:
-            try:
-                # Только если это ещё token /modpanel (не select после modal)
-                await interaction.edit_original_response(**kw)
-                pushed = True
-            except Exception as _e:
-                log.debug('modpanel reset original: %s', _e)
+            root = getattr(panel, '_root_edit', None)
+            if root is not None:
+                try:
+                    new_msg = await root(**kw)
+                    if new_msg is not None and hasattr(new_msg, 'id'):
+                        panel._panel_message = new_msg
+                    pushed = True
+                except Exception as _e:
+                    log.debug('modpanel reset root: %s', _e)
         if not pushed:
-            log.warning('modpanel reset: не удалось обновить панель — '
-                        'второй клик по тому же пункту может не сработать')
+            log.warning(
+                'modpanel reset FAILED — второй клик по тому же пункту '
+                'может не сработать (msg=%s root=%s)',
+                getattr(msg, 'id', None),
+                bool(getattr(panel, '_root_edit', None)))
             try:
                 panel.target_select, panel.action_select = old_t, old_a
             except Exception:
                 pass
         else:
-            log.debug('modpanel reset: ok uid=%s', kept_uid)
+            log.info('modpanel reset ok uid=%s msg=%s',
+                     kept_uid, getattr(panel._panel_message, 'id', None))
     except _aio.CancelledError:
         raise
     except Exception as _e:

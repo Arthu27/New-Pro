@@ -56,12 +56,22 @@ mp = mod_src[mod_src.index('async def modpanel'):
              mod_src.index('def _parse_target_id')]
 check('await _ack' in mp and mp.find('await _ack') < mp.find('actions_for_member'),
       '/modpanel сразу закрывает 3с-окно Discord (_ack до меню)')
+check('edit_original_response(**edit_kw)' in mp.replace(' ', '')
+      or 'edit_original_response(**edit_kw)' in mp,
+      '/modpanel: панель через edit_original (не followup) — сброс правит то же сообщение')
+check('await _respond(interaction, view=view' not in mp.replace(' ', '')
+      and 'await _respond(interaction,view=view' not in mp.replace(' ', ''),
+      '/modpanel: успех не через followup._respond(view=…) — иначе 2-й клик мёртв')
+check('_panel_message' in mp and '_root_edit' in mp,
+      '/modpanel: сохраняет сообщение панели для сброса селектов')
 check('await ensure_menu_emojis' not in mp,
       '/modpanel не ждёт Discord emoji API перед ответом')
 check('schedule_ensure_menu_emojis' in mp,
       '/modpanel греет emoji в фоне')
 check('cog_load' in mod_src and 'warm_menu_banners' in mod_src,
       'баннер прогревается при загрузке кога')
+check('multi-fix-v6' in mp or 'build=multi-fix' in mp,
+      '/modpanel: метка деплоя multi-fix')
 uni = mod_src[mod_src.index('async def _unisolate_member'):
               mod_src.index('def _preflight_reason') if 'def _preflight_reason' in mod_src
               else mod_src.index('# ── Почему Forbidden')]
