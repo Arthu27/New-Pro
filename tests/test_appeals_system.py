@@ -69,12 +69,21 @@ class _Resp:
     def __init__(s):
         s.msg = None
         s.edited = 0
+        s._done = False
 
     async def send_message(s, content=None, **kw):
         s.msg = str(content or '')
+        s._done = True
 
     async def edit_message(s, **kw):
         s.edited += 1
+        s._done = True
+
+    async def defer(s, ephemeral=False, **kw):
+        s._done = True
+
+    def is_done(s):
+        return s._done
 
 
 class _Embed:
@@ -91,9 +100,21 @@ class _Msg:
     def __init__(s):
         s.embeds = [_Embed()]
         s.deleted = False
+        s.edited = 0
 
     async def delete(s):
         s.deleted = True
+
+    async def edit(s, **kw):
+        s.edited += 1
+
+
+class _Followup:
+    def __init__(s, resp):
+        s._resp = resp
+
+    async def send(s, content=None, **kw):
+        s._resp.msg = str(content or '')
 
 
 class _Inter:
@@ -101,6 +122,7 @@ class _Inter:
         s.user = user
         s.response = _Resp()
         s.message = _Msg()
+        s.followup = _Followup(s.response)
 
 
 class _Guild:
@@ -139,6 +161,8 @@ def _cog_with(state):
 
     cog._notify_user = _noop
     cog._make_return_invite = _noop
+    cog._log_unban_decision = _noop
+    cog._delete_appeal_ping = _noop
     return cog, guild
 
 
@@ -177,7 +201,8 @@ asyncio.new_event_loop().run_until_complete(view._resolve(it2, False))
 check('отклонена' in (it2.response.msg or '') and 'Лимит' not in (it2.response.msg or ''),
       'отклонение прошло без вопроса о лимите', (it2.response.msg or '')[:60])
 check(item['status'] == 'rejected', 'апелляция отклонена')
-check(it2.message.deleted, 'карточка после отклонения удалена')
+check(not it2.message.deleted and it2.message.edited >= 1,
+      'карточка после отклонения остаётся (обновлена)')
 
 print('== 3. Принятие без лимита: решение + расходка «unban» в счётчик ==')
 state2 = {'items': [], 'next_id': 1, 'settings': {}}
@@ -192,7 +217,8 @@ it3 = _Inter(mod_ok2)
 asyncio.new_event_loop().run_until_complete(view2._resolve(it3, True))
 check('принята' in (it3.response.msg or '') and item2['status'] == 'accepted',
       'принятие выполнилось', (it3.response.msg or '')[:60])
-check(it3.message.deleted, 'карточка после принятия удалена')
+check(not it3.message.deleted and it3.message.edited >= 1,
+      'карточка после принятия остаётся (обновлена)')
 check(guild2.unbans == [UID], 'настоящий разбан вызван')
 _ok, used, lim = SL.check_limit(GID, mod_ok2.id, 'unban', 1)
 check(used == 1, f'расходка «unban» записана (used={used})')

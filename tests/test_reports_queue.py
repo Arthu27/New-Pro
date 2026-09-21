@@ -65,6 +65,21 @@ check(closed1['verdict'].startswith('Нарушение') and closed1['kind'] ==
       'решённый тикет несёт вердикт и вид')
 check(open1['age_min'] >= 0 and open1['created_readable'], 'возраст и дата человеческие')
 
+print('== 1b. JSON-вердикт → человеческий текст ==')
+raw_json = json.dumps({'kind': 'none', 'label': 'Отклонено'}, ensure_ascii=True)
+RC.ticket_set('t2', verdict=raw_json)
+py2 = RQ.queue_payload('777', {'44': 'Апеллянт'})
+c2 = [i for i in py2['items'] if i['thread_id'] == 't2'][0]
+check(c2['verdict'] == 'Отклонено' and '{' not in c2['verdict'],
+      f'JSON verdict → label «Отклонено» (не сырой blob): {c2["verdict"]!r}')
+check(c2.get('verdict_kind') == 'none', f'verdict_kind=none: {c2.get("verdict_kind")!r}')
+raw_u = '{"kind": "accepted", "label": "\\u041f\\u0440\\u0438\\u043d\\u044f\\u0442\\u043e"}'
+lab, kind = RQ._verdict_display(raw_u)
+check(lab == 'Принято' and kind == 'accepted',
+      f'unicode escapes → «Принято»: {lab!r}')
+lab2, _ = RQ._verdict_display('Просто текст')
+check(lab2 == 'Просто текст', 'plain-string verdict без JSON остаётся как есть')
+
 print('== 2. события диспетчера ==')
 check('appeal_new' in ND.EVENTS and 'report_new' in ND.EVENTS,
       'новые события зарегистрированы')
@@ -114,10 +129,20 @@ check(r.status_code == 200, 'страница открывается модер�
 html = r.get_data(as_text=True)
 check('id="rqKpis"' in html and 'id="rqChips"' in html and 'id="rqList"' in html,
       'KPI, фильтры и список в шаблоне')
+check('rq-verdict' in html and 'rq-setup-grid' in html,
+      'свежая вёрстка очереди (verdict chip + setup grid)')
+check('Вердикт:' not in html or 'rq-verdict' in html,
+      'нет сырого префикса «Вердикт:» без chip')
+# API не отдаёт сырой JSON в поле verdict
+RC.ticket_set('t2', verdict=json.dumps(
+    {'kind': 'none', 'label': 'Без наказания'}, ensure_ascii=True))
 r = client.get('/api/guild/777/reports-queue').get_json()
 check(r.get('success') and r['stats']['open'] == 1
       and any(i['thread_id'] == 't2' and i['verdict'] for i in r['items']),
       'API: сводка и элементы')
+hit = next(i for i in r['items'] if i['thread_id'] == 't2')
+check(hit['verdict'] == 'Без наказания' and '{' not in hit['verdict'],
+      f'API verdict человеческий: {hit["verdict"]!r}')
 r = client.get('/api/guild/555/reports-queue').get_json()
 check(r.get('success') and all(i['thread_id'] != 't3' for i in r['items']),
       'изоляция: /555 отвечает данными главного сервера')

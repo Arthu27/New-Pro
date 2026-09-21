@@ -264,19 +264,40 @@ def clear_rule(guild_id: int, command: str):
 
 
 # ─── Классические разрешения (Action ACL) ──────────────────────────────────
+# Короткий кэш: /modpanel → mute_kinds_for дергает check_action 3× до
+# send_modal/send_message (<3с Discord). Повторные SQLite-чтения на
+# Windows Defender съедают окно.
+_ACTION_ACL_CACHE = {}  # gid -> (acl: dict, mono_ts)
+_ACTION_ACL_TTL = 20.0
+
+
 def load_action_acl(guild_id: int) -> dict:
     """Вернуть ограничения действий: {action: [role_ids]}"""
     try:
-        acl = _action_acl_db().get(int(guild_id), "acl", {})
-        return acl if isinstance(acl, dict) else {}
+        key = int(guild_id)
+    except (TypeError, ValueError):
+        return {}
+    import time as _time
+    now = _time.monotonic()
+    hit = _ACTION_ACL_CACHE.get(key)
+    if hit and (now - hit[1]) < _ACTION_ACL_TTL:
+        return dict(hit[0]) if isinstance(hit[0], dict) else {}
+    try:
+        acl = _action_acl_db().get(key, "acl", {})
+        if not isinstance(acl, dict):
+            acl = {}
     except Exception as e:
         log.warning(f"[action_acl] load error: {e}")
-        return {}
+        acl = {}
+    _ACTION_ACL_CACHE[key] = (acl, now)
+    return dict(acl)
 
 
 def save_action_acl(guild_id: int, acl: dict):
     try:
-        _action_acl_db().set(int(guild_id), "acl", acl or {})
+        key = int(guild_id)
+        _ACTION_ACL_CACHE.pop(key, None)
+        _action_acl_db().set(key, "acl", acl or {})
     except Exception as e:
         log.warning(f"[action_acl] save error: {e}")
 
@@ -349,7 +370,30 @@ def check_action(guild_id: int, member, action: str) -> bool:
         # нет явного правила → запрет (default-deny для действий модерации)
         return False
     user_roles = {str(r.id) for r in getattr(member, "roles", [])}
-    return bool(user_roles.intersection(set(allowed)))
+    if user_roles.intersection(set(allowed)):
+        return True
+    # Старший тир наследует ACL младших mapped-ролей.
+    # Куратор+хелпер: бан выдан модерам → куратор тоже видит бан в /modpanel.
+    # Не наследует от ролей ВЫШЕ себя (warn только админам → куратор без warn).
+    try:
+        from services.staff_hierarchy import RANK, best_mapped_tier
+        from services.staff_limits import _role_tier_map
+        best = best_mapped_tier(member)
+        best_rank = RANK.get(best, -1)
+        if best_rank < RANK.get('mod', 1):
+            return False
+        tmap = _role_tier_map()
+        for rid in allowed:
+            tier = tmap.get(str(rid))
+            if not tier:
+                continue
+            r = RANK.get(tier, -1)
+            # строго младше: куратор ← mod; сам mod чужие mod-роли не ест
+            if 0 < r < best_rank:
+                return True
+    except Exception as _ex:
+        log.debug('check_action senior inherit: %s', _ex)
+    return False
 
 
 def _candidates(command: str) -> list:
