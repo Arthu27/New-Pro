@@ -184,6 +184,22 @@ check('discord.ui.Label' in _src and 'discord.ui.UserSelect' in _src,
 check('Выберите нарушителя' in _src and 'На кого жалоба?' in _src
       and 'Где происходило нарушение?' in _src and 'Причина жалобы' in _src,
       'все 4 поля формы на месте')
+check('emoji_for_report' in _src,
+      '«На кого жалоба?» — свои стикеры (Стафф/Участник), не родовые эмодзи')
+import os as _os
+_assets = _os.path.join(_os.path.dirname(_os.path.dirname(
+    _os.path.abspath(__file__))), 'assets', 'stickers')
+check(_os.path.isfile(_os.path.join(_assets, 'staff.png'))
+      and _os.path.isfile(_os.path.join(_assets, 'user.png')),
+      'стикеры staff.png/user.png лежат в assets/stickers')
+_emj_src = open(_os.path.join(_os.path.dirname(_os.path.dirname(
+    _os.path.abspath(__file__))), 'services', 'menu_emojis.py'),
+    encoding='utf-8').read()
+check("'staff'" in _emj_src and "'user'" in _emj_src
+      and 'STICKER_KEYS' in _emj_src,
+      'staff/user в STICKER_KEYS — заливаются как application emoji')
+check('def emoji_for_report' in _emj_src,
+      'emoji_for_report(): кэш стикера или unicode-фолбек')
 
 # ── 2. Вызов уходит в канал модерации ───────────────────────────────────────
 print('== 2. Сигнал в чат модеров (V2-карточка + отдельный пинг) ==')

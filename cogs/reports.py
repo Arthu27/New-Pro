@@ -890,15 +890,16 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
 
     def __init__(self):
         super().__init__()
+        from services.menu_emojis import emoji_for_report
         self.target_select = discord.ui.UserSelect(required=True)
         self.against_select = discord.ui.Select(
             required=True,
             options=[
                 discord.SelectOption(label='Пользователь', value='user',
-                                     emoji='👤',
+                                     emoji=emoji_for_report('user'),
                                      description='Обычный участник сервера'),
                 discord.SelectOption(label='Стафф', value='staff',
-                                     emoji='🛡️',
+                                     emoji=emoji_for_report('staff'),
                                      description='Модератор, куратор или админ'),
             ])
         self.location_select = discord.ui.Select(
@@ -1221,6 +1222,11 @@ class Reports(commands.Cog):
     # ── команды ─────────────────────────────────────────────────────
     @app_commands.command(name='report', description='Позвать модератора')
     async def report_slash(self, interaction):
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(interaction.client)
+        except Exception as _ee:
+            _log.debug('report emoji sync: %s', _ee)
         try:
             await interaction.response.send_modal(ReportModal())
         except Exception as ex:
