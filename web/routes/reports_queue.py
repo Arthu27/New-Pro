@@ -20,6 +20,47 @@ KIND_META = {'card': ('Вызов модератора', 'fa-bell', 'danger'),
              'appeal': ('Апелляция', 'fa-scale-balanced', 'info')}
 
 
+def _verdict_display(raw):
+    """Человеческий текст вердикта из SQLite.
+
+    В БД часто лежит JSON ``{"kind","label",...}`` (в т.ч. с ``\\uXXXX``).
+    Панель раньше показывала сырой blob — «невозможно понять».
+    """
+    text = str(raw or '').strip()
+    if not text:
+        return '', ''
+    kind = ''
+    label = text
+    if text.startswith('{'):
+        try:
+            import json as _json
+            obj = _json.loads(text)
+            if isinstance(obj, dict):
+                kind = str(obj.get('kind') or '').strip()
+                label = str(obj.get('label') or '').strip()
+                if not label:
+                    try:
+                        from services.reports_core import KIND_LABELS
+                        label = KIND_LABELS.get(kind, '') or kind or 'Решено'
+                    except Exception:
+                        label = kind or 'Решено'
+                # hours в label уже обычно есть; если нет и hours > 0 — допишем
+                try:
+                    hours = float(obj.get('hours') or 0)
+                except (TypeError, ValueError):
+                    hours = 0.0
+                if hours and '·' not in label and kind in ('mute', 'timeout', 'ban'):
+                    if hours < 1:
+                        label = f'{label} · {int(hours * 60)} мин'
+                    elif hours < 24:
+                        label = f'{label} · {hours:g} ч'
+                    else:
+                        label = f'{label} · {hours / 24:g} дн'
+        except Exception:
+            label = text
+    return label[:200], kind
+
+
 def _guild_channels_roles(gid):
     """Списки текстовых каналов и ролей гильдии (для пикеров настройки).
 
@@ -56,6 +97,7 @@ def queue_payload(gid, names=None):
         except (TypeError, ValueError):
             age_min = 0
         verdict = str(t.get('verdict') or '').strip()
+        verdict_label, verdict_kind = _verdict_display(verdict)
         items.append({
             'thread_id': t['thread_id'],
             'kind': t['kind'],
@@ -67,7 +109,9 @@ def queue_payload(gid, names=None):
             'created_readable': _fmt(t['created']),
             'closed': bool(t.get('closed')),
             'closed_readable': _fmt(t.get('closed') or 0),
-            'verdict': verdict[:300],
+            # только человеческий текст — UI больше не видит сырой JSON
+            'verdict': verdict_label,
+            'verdict_kind': verdict_kind,
         })
     return {'stats': RC.ticket_stats(gid), 'items': items}
 
