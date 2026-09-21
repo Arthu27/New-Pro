@@ -185,11 +185,9 @@ ri = _RInter()
 _aio.run(view2.refresh(ri))
 check(bool(ri.response.defers), 'refresh сначала defer (ACK <3с)')
 check(bool(ri.edits), 'после ACK — edit_original_response')
-atts = (ri.edits[-1].get('attachments') if ri.edits else None) or []
-check(atts and all(getattr(a, 'filename', None) for a in atts),
-      'attachments = keep старого баннера (не discord.File)')
-check(not any(type(a).__name__ == 'File' for a in atts),
-      'нет повторного File-upload баннера')
+kw = ri.edits[-1] if ri.edits else {}
+check(set(kw.keys()) == {'view'} or 'view' in kw,
+      'refresh V2 — только view= (attachments ломают селекты)')
 check('участник <@111>' in _collect_texts(view2),
       'статус обновился после выбора')
 
@@ -198,7 +196,9 @@ src_mod = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').re
 mts = src_mod[src_mod.index('class ModTargetSelect'):
               src_mod.index('class ModPanelView')]
 check('await view.refresh' not in mts,
-      'ModTargetSelect: без refresh (только ACK) — фикс таймаута участника')
+      'ModTargetSelect: без view.refresh (ACK + silent reset)')
+check('_silent_reset_panel' in mts,
+      'ModTargetSelect: статус участника через _silent_reset_panel')
 
 print('== select placeholders ==')
 check((getattr(view.target_select, 'placeholder', None) or '') == '',

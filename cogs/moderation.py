@@ -403,7 +403,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=multi-fix-v14',
+        log.info('modpanel open uid=%s gid=%s build=multi-fix-v15',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -460,7 +460,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v14',
+        log.info('modpanel ready msg=%s build=multi-fix-v15',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2841,7 +2841,12 @@ class ModTargetSelect(discord.ui.UserSelect):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        """Выбор участника: ACK сразу. selected_uid в памяти панели."""
+        """Выбор участника: ACK → статус на панели + свежий UserSelect.
+
+        Сразу (не через delay): иначе статус «участник @…» не меняется,
+        а sticky UserSelect не даёт выбрать другого. Delayed schedule
+        раньше гонялся с «Действие» — его здесь нет.
+        """
         view = getattr(self, 'panel', None) or self.view
         _cancel_panel_reset(view)
         _bind_live_panel(view, interaction)
@@ -2857,9 +2862,7 @@ class ModTargetSelect(discord.ui.UserSelect):
             # Действие уже ждали — модалка / вид мута сразу.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
-        # Только ACK. Сброс селектов — ПОСЛЕ действия (не здесь):
-        # фоновый rebuild после участника гонялся с кликом «Действие»
-        # и оставлял мёртвые custom_id → действия «не работали».
+        # ACK <3с, потом view-only edit (статус + сброс sticky)
         try:
             if not interaction.response.is_done():
                 try:
@@ -2876,6 +2879,13 @@ class ModTargetSelect(discord.ui.UserSelect):
                         ephemeral=True)
             except Exception as _te2:
                 log.debug('ModTargetSelect fallback: %s', _te2)
+            return
+        if view is None:
+            return
+        try:
+            await _silent_reset_panel(interaction, view)
+        except Exception as _re:
+            log.warning('ModTargetSelect status refresh: %s', _re)
 
 
 class ModPanelView(discord.ui.LayoutView):

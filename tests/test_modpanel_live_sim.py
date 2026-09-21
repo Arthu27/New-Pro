@@ -165,8 +165,8 @@ check(view.action_select is not None, 'есть action_select (не кнопки
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
 _ms = open(os.path.join(ROOT, 'cogs/moderation.py')).read()
-check('multi-fix-v14' in _ms or 'multi-fix-v13' in _ms,
-      'build tag multi-fix-v14')
+check('multi-fix-v15' in _ms or 'multi-fix-v13' in _ms,
+      'build tag multi-fix-v15')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
@@ -360,6 +360,41 @@ async def _order():
 
 
 asyncio.run(_order())
+
+
+print('== LIVE 4b. Выбор участника — статус на панели меняется ==')
+
+
+async def _member_status():
+    view_t = M.ModPanelView(None, opener, allowed=allowed)
+    view_t._guild = g
+    msg = _PanelMsg(660)
+    view_t._panel_message = msg
+    view_t._panel_message_id = 660
+
+    async def _root_t(**kw):
+        return await msg.edit(**kw)
+    view_t._root_edit = _root_t
+
+    class _U2:
+        id = target.id
+    view_t.target_select._values = [_U2()]
+    sel_before = id(view_t.target_select)
+    inter = _Inter(opener, g, message=msg)
+    await view_t.target_select.callback(inter)
+    check(view_t.selected_uid == str(target.id), 'uid записан')
+    check(inter.response.done, 'ACK defer после участника')
+    check(f'участник <@{target.id}>' in view_t._status_text(),
+          'статус панели показывает выбранного')
+    check(id(view_t.target_select) != sel_before,
+          'UserSelect пересобран — sticky сброшен, можно выбрать другого')
+    check(len(msg.edits) >= 1, 'edit той же панели после выбора участника')
+    check(getattr(view_t, '_reset_task', None) in (None,) or
+          (view_t._reset_task is not None and view_t._reset_task.done()),
+          'без фонового delayed-reset (только сразу)')
+
+
+asyncio.run(_member_status())
 
 
 print('== LIVE 5. 5 минут, без нового окна, Collector нет ==')
