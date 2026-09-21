@@ -102,12 +102,17 @@ check('_OpenModFormButton' not in mod_src and '_OpenModFormView' not in mod_src,
       'кнопка «открыть форму» убрана')
 check('_offer_mod_form' in launch,
       '_launch_action: бан/варн через _offer_mod_form')
-check('await _silent_reset_panel' in mod_src[mod_src.index('async def _offer_mod_form'):
-                                            mod_src.index('async def _send_kind_menu')]
-      or '_silent_reset_panel' in mod_src[mod_src.index('async def _offer_mod_form'):
-                                          mod_src.index('async def _send_kind_menu')],
+_offer_body = mod_src[mod_src.index('async def _offer_mod_form'):
+                      mod_src.index('async def _send_kind_menu')]
+check('_reset_after_step' in _offer_body or '_silent_reset_panel' in _offer_body,
       '_offer_mod_form: сброс панели сразу после модалки')
+check('_mod_followup' in mod_src and '_resend_fresh_panel' in mod_src
+      and '_bind_live_panel' in mod_src and '_reset_after_step' in mod_src,
+      'multi-use: bind live msg + resend без Collector')
+check('multi-fix-v7' in mod_src,
+      'build tag multi-fix-v7 для проверки деплоя')
 check('_schedule_panel_reset' in launch or '_silent_reset_panel' in launch
+      or '_reset_after_step' in launch
       or 'panel=panel' in launch,
       '_launch_action: сброс панели после шага')
 asel = mod_src[mod_src.index('class ModActionSelect'):

@@ -350,7 +350,8 @@ async def _series():
           'участник остаётся в памяти — серия без повторного выбора')
     check(view4.pending_action is None,
           'pending сброшен после действия — готов к новому пункту')
-    check(bool(edits), 'сброс пушит edit панели (_root_edit)')
+    check(bool(edits) or bool(getattr(inter5.message, 'edits', None)),
+          'сброс пушит edit панели (message.edit / _root_edit)')
 
     # клик отменяет незавершённый reset (без гонки)
     view5 = M.ModPanelView(cog, opener, allowed=allowed)
@@ -379,48 +380,111 @@ async def _series():
 
 asyncio.run(_series())
 
-print('== 9. Сброс правит ТО сообщение панели, что показали (не чужой original) ==')
+print('== 9. Сброс правит живое сообщение клика + resend fallback ==')
 
 class _PanelMsg:
-    def __init__(self, mid):
+    def __init__(self, mid, *, fail_edit=False):
         self.id = mid
         self.edits = []
         self.attachments = []
+        self.deleted = False
+        self._fail_edit = fail_edit
 
     async def edit(self, **kw):
+        if self._fail_edit:
+            raise RuntimeError('edit fail')
         self.edits.append(kw)
         return self
+
+    async def delete(self):
+        self.deleted = True
+
+
+class _FakeFollowup:
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, **kw):
+        msg = _PanelMsg(999)
+        self.sent.append(kw)
+        return msg
+
 
 async def _msg_identity():
     view = M.ModPanelView(cog, opener, allowed=allowed)
     view.selected_uid = '3000000000000000300'
     view._guild = g7
     shown = _PanelMsg(111)
-    ghost = _PanelMsg(222)  # «чужой» original после followup-бага
-    view._panel_message = shown
+    stale = _PanelMsg(222)  # устаревшая ссылка — клик на другом msg
+    view._panel_message = stale
     async def _root(**kw):
-        return await shown.edit(**kw)
+        return await stale.edit(**kw)
     view._root_edit = _root
     inter = _PInter(opener, g7)
-    # притворимся, что interaction.message — другой объект (не панель)
-    inter.message = ghost
+    # interaction.message = то, на чём кликнули (видимая панель)
+    inter.message = shown
     sel_before = id(view.action_select)
     await M._silent_reset_panel(inter, view)
     check(id(view.action_select) != sel_before, 'reset пересобрал селект')
-    check(len(shown.edits) == 1, 'edit ушёл в показанное сообщение панели')
-    check(len(ghost.edits) == 0,
-          'чужой original/message НЕ трогали (баг followup)')
+    check(len(shown.edits) == 1, 'edit ушёл в interaction.message (клик)')
+    check(len(stale.edits) == 0, 'устаревший _panel_message не трогали')
     check(view._panel_message is shown or getattr(view._panel_message, 'id', None) == 111,
-          'панель продолжает ссылаться на то же сообщение')
+          'панель привязана к живому сообщению клика')
     # второй «клик» того же действия — новый select примет callback
     view.action_select._values = ['mute']
     inter2 = _PInter(opener, g7)
+    inter2.message = shown
     await view.action_select.callback(inter2)
     check(bool(inter2.response.modal) or bool(inter2.response.sent)
           or inter2.response.done,
           'после сброса второе действие снова ACK/модалка')
 
+    # resend: edit падает → новая эфемерка через followup
+    view_r = M.ModPanelView(cog, opener, allowed=allowed)
+    view_r.selected_uid = '3000000000000000300'
+    view_r._guild = g7
+    broken = _PanelMsg(333, fail_edit=True)
+    view_r._panel_message = broken
+    fu = _FakeFollowup()
+    view_r._mod_followup = fu
+    inter_r = _PInter(opener, g7)
+    inter_r.message = broken
+    old_sel = id(view_r.action_select)
+    ok = await M._resend_fresh_panel(view_r)
+    check(ok is True, 'resend вернул True')
+    check(broken.deleted, 'старая эфемерка удалена')
+    check(len(fu.sent) == 1, 'followup.send прислал новую панель')
+    check(id(view_r.action_select) != old_sel, 'resend собрал новый action_select')
+    check(getattr(view_r._panel_message, 'id', None) == 999,
+          'панель ссылается на новое сообщение')
+
+    # _reset_after_step с prefer_resend — сразу свежая панель
+    view_a = M.ModPanelView(cog, opener, allowed=allowed)
+    view_a.selected_uid = '3000000000000000300'
+    view_a._guild = g7
+    view_a.pending_action = 'mute'
+    live = _PanelMsg(444)
+    view_a._panel_message = live
+    fu2 = _FakeFollowup()
+    view_a._mod_followup = fu2
+    inter_a = _PInter(opener, g7)
+    inter_a.message = live
+    await M._reset_after_step(inter_a, view_a, prefer_resend=True)
+    check(view_a.pending_action is None, 'после шага pending сброшен')
+    check(len(fu2.sent) == 1, 'prefer_resend шлёт новую панель')
+    check(view_a.selected_uid == '3000000000000000300',
+          'участник сохранён для серии действий')
+
 asyncio.run(_msg_identity())
+
+print('== 10. Нет Collector / wait_for на пути modpanel ==')
+src = open(M.__file__, encoding='utf-8').read()
+bind = src[src.index('def _bind_live_panel'):src.index('async def _send_modal_fast')]
+check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
+      'reset-хелперы без bot.wait_for')
+check('_mod_followup' in src and 'interaction.followup' in src,
+      'открытие панели сохраняет followup для resend')
+check('multi-fix-v7' in src, 'build=multi-fix-v7 в логе открытия')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
