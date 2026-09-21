@@ -85,7 +85,7 @@ check('async def _offer_mod_form' in mod_src,
       '_offer_mod_form: ACK кнопкой, не send_modal с селекта')
 check('_offer_mod_form' in launch,
       '_launch_action: бан/варн через _offer_mod_form')
-check('create_task(_reset_later)' in launch or 'create_task(_reset_later())' in launch,
+check('_schedule_panel_reset' in launch,
       '_launch_action: сброс панели фоном после ACK')
 asel = mod_src[mod_src.index('class ModActionSelect'):
                mod_src.index('_PUNISH_MODPANEL') if '_PUNISH_MODPANEL' in mod_src
@@ -106,6 +106,10 @@ check('_PROOF_REQ_CACHE' in proof_src and '_PROOF_WL_CACHE' in proof_src,
 acl_src = open(os.path.join(ROOT, 'services', 'permission_acl.py'), encoding='utf-8').read()
 check('_ACTION_ACL_CACHE' in acl_src,
       'action ACL кэшируется (mute_kinds_for ×3 до ответа)')
+check('_schedule_panel_reset' in mod_src,
+      'панель сбрасывает селекты (_schedule_panel_reset) — многоразовая')
+check('SPEED OK' not in mod_src and 'speed-fix' not in mod_src,
+      'нет SPEED/speed-fix надписей в modpanel')
 check('Кого наказать?' not in mod_src and 'Что сделать?' not in mod_src,
       'нет старой синей панели (placeholders Кого/Что)')
 check('Участник и действие — в любом порядке.' not in mod_src,
