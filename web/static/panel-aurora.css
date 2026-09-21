@@ -79,17 +79,32 @@ html[data-theme="light"] .bg-aurora {
 
 /* ── 2. Курсор-прожектор на карточках ──────────────────────────────────── */
 /* --mx/--my (0..100, %) ставит web/static/aurora-fx.js на mousemove.
-   Без JS/при reduced-motion — просто нет подсветки, карточка живёт как раньше. */
+   Без JS/при reduced-motion — просто нет подсветки, карточка живёт как раньше.
+
+   Слои (важно: у .panel/.card уже overflow:hidden + стекло):
+     фон карточки → ::after прожектор (z=1) → ::before ободок (z=2) → контент (z=3).
+   z-index:-1 прятал бы ободок под непрозрачным/стеклянным фоном; inset:-1px
+   обрезался бы overflow:hidden. Контент .card раньше не имел z-index (в отличие
+   от .panel > * в style.css) — прожектор перекрывал текст. */
 .panel, .card, .mt-kpi, .kpi, .stat-box {
   --mx: 50%;
   --my: 20%;
+}
+
+.panel, .card {
+  position: relative;
+}
+
+.panel > *, .card > * {
+  position: relative;
+  z-index: 3;
 }
 
 .panel::after, .card::after {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
   pointer-events: none;
   opacity: 0;
   border-radius: inherit;
@@ -107,15 +122,12 @@ html[data-theme="light"] .bg-aurora {
 }
 
 /* ── 3. Вращающийся ободок-свечение (наведение / фокус) ────────────────── */
-.panel, .card {
-  position: relative;
-}
-
 .panel::before, .card::before {
   content: '';
   position: absolute;
-  inset: -1px;
-  z-index: -1;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
   border-radius: inherit;
   padding: 1px;
   opacity: 0;
@@ -144,21 +156,22 @@ html[data-theme="light"] .bg-aurora {
   .panel::before, .card::before { animation: none !important; opacity: 0 !important; }
 }
 
-/* ── 3b. Кнопки-праймари: тот же приём, компактнее ─────────────────────── */
+/* ── 3b. Кнопки-праймари: внешнее свечение без изоляции (иначе z:-1
+   прячется под фоном кнопки внутри isolated stacking context) ─────────── */
 .btn-primary, .btn.primary, .btn-new {
   position: relative;
-  isolation: isolate;
 }
 
 .btn-primary::after, .btn.primary::after, .btn-new::after {
   content: '';
   position: absolute;
-  inset: -2px;
+  inset: -3px;
   z-index: -1;
+  pointer-events: none;
   border-radius: inherit;
   background: conic-gradient(from var(--aurora-angle), var(--av-glow-1), var(--gold, #f0d09a), var(--av-glow-3), var(--av-glow-1));
   opacity: 0;
-  filter: blur(6px);
+  filter: blur(8px);
   transition: opacity .3s ease;
   animation: avSpin 4s linear infinite;
   animation-play-state: paused;
