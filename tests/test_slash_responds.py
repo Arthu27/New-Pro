@@ -84,11 +84,22 @@ check(msub.find('await _ack') < msub.find('_ensure_action_acl'),
 launch = mod_src[mod_src.index('async def _launch_action'):
                  mod_src.index('class ModActionSelect')]
 check('async def _offer_mod_form' in mod_src,
-      '_offer_mod_form: ACK кнопкой, не send_modal с селекта')
+      '_offer_mod_form: модалка с селекта')
+check('send_modal' in mod_src[mod_src.index('async def _offer_mod_form'):
+                              mod_src.index('async def _send_kind_menu')],
+      '_offer_mod_form: send_modal сразу (без кнопки)')
+check('_OpenModFormButton' not in mod_src and '_OpenModFormView' not in mod_src,
+      'кнопка «открыть форму» убрана')
 check('_offer_mod_form' in launch,
       '_launch_action: бан/варн через _offer_mod_form')
-check('_schedule_panel_reset' in launch,
-      '_launch_action: сброс панели фоном после ACK')
+check('await _silent_reset_panel' in mod_src[mod_src.index('async def _offer_mod_form'):
+                                            mod_src.index('async def _send_kind_menu')]
+      or '_silent_reset_panel' in mod_src[mod_src.index('async def _offer_mod_form'):
+                                          mod_src.index('async def _send_kind_menu')],
+      '_offer_mod_form: сброс панели сразу после модалки')
+check('_schedule_panel_reset' in launch or '_silent_reset_panel' in launch
+      or 'panel=panel' in launch,
+      '_launch_action: сброс панели после шага')
 asel = mod_src[mod_src.index('class ModActionSelect'):
                mod_src.index('_PUNISH_MODPANEL') if '_PUNISH_MODPANEL' in mod_src
                else mod_src.index('class ModActionModal')]
@@ -100,7 +111,7 @@ check('_ensure_action_acl' not in cb,
 check(cb.find('await _launch_action') > 0
       and '_cancel_panel_reset' in cb
       and 'mute_kinds_for' not in cb,
-      'ModActionSelect: ACK через send_message формы, без SQLite в колбэке')
+      'ModActionSelect: ACK через send_modal, без SQLite в колбэке')
 check('_cancel_panel_reset' in mod_src and '_reset_task' in mod_src,
       'фоновый rebuild панели отменяется при новом клике')
 check('_reset_gen' in mod_src,
@@ -114,7 +125,7 @@ mks = mod_src[mod_src.index('class MuteKindSelect'):
               mod_src.index('class MuteKindView')]
 mkcb = mks[mks.index('async def callback'):]
 check('_offer_mod_form' in mkcb and '_ensure_action_acl' not in mkcb,
-      'MuteKindSelect: тоже ACK→кнопка, ACL в on_submit')
+      'MuteKindSelect: send_modal сразу, ACL в on_submit')
 proof_src = open(os.path.join(ROOT, 'cogs', 'proof_cog.py'), encoding='utf-8').read()
 check('_PROOF_REQ_CACHE' in proof_src and '_PROOF_WL_CACHE' in proof_src,
       'proof config + whitelist кэшируются до сборки модалки')
