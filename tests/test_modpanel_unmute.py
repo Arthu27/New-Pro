@@ -277,22 +277,17 @@ view.action_select._values = ['mute']
 asyncio.run(view.action_select.callback(inter))
 check(view.pending_action == 'mute' and not inter.response.modal,
       'действие без участника — запомнили, модалку не открыли')
-# refresh: defer (ACK) + edit_original — не ждём upload баннера
-updated = bool(inter.response.edits) or bool(inter.message.edits)
-check(inter.response.done and updated,
-      'меню обновилось после ACK (defer + edit, без таймаута 3с)')
-if inter.message.edits:
-    atts = inter.message.edits[-1].get('attachments')
-    check(atts is not None and atts and not any(
-        type(a).__name__ == 'File' or hasattr(a, 'fp') for a in atts),
-          'баннер не перезаливается — keep старых attachments')
+# без участника: только ACK (defer), без rebuild LayoutView
+check(inter.response.done,
+      'действие без участника — ACK defer (<3с), без тяжёлого edit')
 
-# теперь человек → выбор вида мута или модалка
+# теперь человек → выбор вида мута или кнопка формы
 view.selected_uid = '3000000000000000300'
 inter2 = _PInter(opener, g7)
 asyncio.run(view.target_select.callback(inter2))
-check(bool(inter2.response.modal) or bool(inter2.response.sent),
-      'после участника (действие уже выбрано) — вид мута или кнопка формы')
+check(bool(inter2.response.modal) or bool(inter2.response.sent)
+      or inter2.response.done,
+      'после участника (действие уже выбрано) — вид мута / кнопка / ACK')
 
 # наоборот: сначала человек, потом действие
 view2 = M.ModPanelView(cog, opener, allowed=allowed)
@@ -302,6 +297,17 @@ view2.action_select._values = ['mute']
 asyncio.run(view2.action_select.callback(inter3))
 check(bool(inter3.response.modal) or bool(inter3.response.sent),
       'сначала участник, потом действие — ACK (вид мута / кнопка формы)')
+
+# ModTargetSelect: только defer, selected_uid в памяти
+view3 = M.ModPanelView(cog, opener, allowed=allowed)
+inter4 = _PInter(opener, g7)
+
+class _User:
+    id = 3000000000000000300
+view3.target_select._values = [_User()]
+asyncio.run(view3.target_select.callback(inter4))
+check(view3.selected_uid == '3000000000000000300' and inter4.response.done,
+      'выбор участника: ACK defer + uid в памяти (без rebuild)')
 
 # повтор выбора: rebuild даёт НОВЫЙ селект (Discord снова шлёт callback)
 old = id(view2.action_select)

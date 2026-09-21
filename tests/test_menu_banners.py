@@ -193,6 +193,13 @@ check(not any(type(a).__name__ == 'File' for a in atts),
 check('участник <@111>' in _collect_texts(view2),
       'статус обновился после выбора')
 
+# ModTargetSelect больше не зовёт refresh — только defer
+src_mod = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+mts = src_mod[src_mod.index('class ModTargetSelect'):
+              src_mod.index('class ModPanelView')]
+check('await view.refresh' not in mts,
+      'ModTargetSelect: без refresh (только ACK) — фикс таймаута участника')
+
 print('== select placeholders ==')
 check((getattr(view.target_select, 'placeholder', None) or '') == '',
       f'target placeholder пустой: {getattr(view.target_select, "placeholder", None)!r}')

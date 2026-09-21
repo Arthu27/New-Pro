@@ -2486,11 +2486,17 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Без участника — только запомнить действие (ACK внутри refresh).
+        # Без участника — только запомнить действие и ACK (без rebuild).
         if action != "clear" and not prefill:
-            if view is not None:
-                await view.refresh(interaction)
-                return
+            try:
+                if not interaction.response.is_done():
+                    try:
+                        await interaction.response.defer(thinking=False)
+                    except TypeError:
+                        await interaction.response.defer()
+            except Exception as _ae:
+                log.warning('ModActionSelect ACK(no target): %s', _ae)
+            return
         # С участником — сразу ACK (сообщение+кнопка формы), НЕ send_modal.
         # Модалка откроется со свежего клика по кнопке (<3с гарантированно).
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
@@ -2617,6 +2623,13 @@ class ModTargetSelect(discord.ui.UserSelect):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
+        """Выбор участника: ACK первой строкой, без rebuild/edit.
+
+        Rebuild LayoutView+MediaGallery на каждый клик сжигал 3с →
+        «не ответило вовремя» (скрин: SPEED OK, но статус не обновился,
+        Gordost' выбран только в UI Discord). selected_uid в памяти view
+        достаточно для следующего шага «Действие».
+        """
         view = self.view
         try:
             vals = list(self.values or [])
@@ -2627,18 +2640,26 @@ class ModTargetSelect(discord.ui.UserSelect):
         pending = getattr(view, 'pending_action', None) if view is not None else None
         prefill = getattr(view, 'selected_uid', None) if view is not None else None
         if pending and prefill:
+            # Действие уже ждали — ACK формой (кнопка), не rebuild панели.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
-        # Только запомнили человека — ACK сразу, потом лёгкий refresh
-        # (без повторной загрузки баннера — иначе «не ответило вовремя»).
-        if view is not None:
-            await view.refresh(interaction, rebuild_action=False)
-            return
+        # Только ACK. Без refresh/edit — иначе таймаут на V2 LayoutView.
         try:
             if not interaction.response.is_done():
-                await interaction.response.defer(thinking=False)
+                try:
+                    await interaction.response.defer(thinking=False)
+                except TypeError:
+                    await interaction.response.defer()
         except Exception as _te:
-            log.debug("ModTargetSelect: %s", _te)
+            log.warning('ModTargetSelect ACK: %s', _te)
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        content=(f'Участник <@{prefill}> выбран.'
+                                 if prefill else 'Участник выбран.'),
+                        ephemeral=True)
+            except Exception as _te2:
+                log.debug('ModTargetSelect fallback: %s', _te2)
 
 
 class ModPanelView(discord.ui.LayoutView):
@@ -2851,13 +2872,11 @@ class ModPanelView(discord.ui.LayoutView):
     async def refresh(self, interaction, *, rebuild_action=True):
         """Обновить панель после клика селекта.
 
-        Сначала ACK (defer type 6), потом rebuild + edit без upload баннера.
-        Иначе Discord 3с-окно сгорает на сети/Defender при повторной
-        загрузке PNG → «приложение не ответило вовремя».
+        ACK (defer) — первой строкой. Rebuild+edit только после ACK.
+        (ModTargetSelect больше сюда не ходит — только defer.)
         """
         guild = getattr(interaction, 'guild', None)
         msg = getattr(interaction, 'message', None)
-        # 1) сразу закрыть 3с-окно
         try:
             resp = getattr(interaction, 'response', None)
             if resp is not None and not resp.is_done():
@@ -2866,27 +2885,22 @@ class ModPanelView(discord.ui.LayoutView):
                 except TypeError:
                     await resp.defer()
         except Exception as _e:
-            log.debug('modpanel refresh defer: %s', _e)
-        # 2) лёгкий rebuild (без PIL/upload)
-        self._rebuild(guild)
-        kw = self.panel_edit_kwargs(message=msg, reattach_banner=False)
-        # 3) правка уже после ack
+            log.warning('modpanel refresh defer: %s', _e)
         try:
-            await interaction.edit_original_response(**kw)
-            return
-        except Exception as _e:
-            log.debug('modpanel refresh original: %s', _e)
-        if msg is not None:
+            self._rebuild(guild)
+            kw = self.panel_edit_kwargs(message=msg, reattach_banner=False)
             try:
-                await msg.edit(**kw)
+                await interaction.edit_original_response(**kw)
                 return
             except Exception as _e:
-                log.debug('modpanel refresh msg.edit: %s', _e)
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(**kw)
-        except Exception as _e:
-            log.debug('modpanel refresh edit_message: %s', _e)
+                log.debug('modpanel refresh original: %s', _e)
+            if msg is not None:
+                try:
+                    await msg.edit(**kw)
+                except Exception as _e2:
+                    log.debug('modpanel refresh msg.edit: %s', _e2)
+        except Exception as _e3:
+            log.debug('modpanel refresh body: %s', _e3)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         user = interaction.user
