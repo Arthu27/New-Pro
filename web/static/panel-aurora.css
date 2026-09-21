@@ -1,0 +1,259 @@
+/* ============================================================================
+   HAKUMO · Aurora FX — v16 signature layer
+   ----------------------------------------------------------------------------
+   Ложится ПОСЛЕ panel-nova.css: не переписывает структуру/цвета темы, только
+   добавляет фирменные эффекты поверх уже существующих классов (.panel,
+   .card, .mt-kpi, .btn, .bg-aurora, #bootSplash…) — работает на ВСЕХ 89
+   страницах панели без правки шаблонов.
+
+   Что добавляет:
+    1. Многослойный «mesh aurora» фон вместо трёх плоских орбов — плавнее,
+       глубже, с лёгким шумом-зерном для премиального ощущения плёнки.
+    2. Курсор-прожектор на карточках (--mx/--my ставит aurora-fx.js).
+    3. Вращающийся градиентный ободок-свечение на активных карточках/кнопках.
+    4. Каскадное появление карточек при загрузке страницы (fade + rise).
+    5. Кинематографичный бут-сплэш — больше света, мягкая пульсация колец.
+
+   Все анимации — под prefers-reduced-motion: reduce (полностью отключаются).
+   ============================================================================ */
+
+@property --aurora-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+:root {
+  --av-glow-1: #5ec8ff;
+  --av-glow-2: #f0d09a;
+  --av-glow-3: #b98bff;
+  --av-glow-4: #ff8a9e;
+  --av-spot-size: 520px;
+}
+
+/* ── 1. Mesh aurora: глубже и живее трёх орбов ─────────────────────────── */
+html[data-theme="dark"] .bg-aurora,
+html[data-theme="light"] .bg-aurora {
+  filter: saturate(1.15);
+}
+
+.bg-aurora::before {
+  content: '';
+  position: fixed;
+  inset: -10%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 30% at 12% 8%, color-mix(in srgb, var(--av-glow-1) 30%, transparent), transparent 70%),
+    radial-gradient(30% 26% at 88% 14%, color-mix(in srgb, var(--av-glow-2) 24%, transparent), transparent 70%),
+    radial-gradient(34% 32% at 82% 92%, color-mix(in srgb, var(--av-glow-3) 20%, transparent), transparent 72%),
+    radial-gradient(28% 24% at 6% 90%, color-mix(in srgb, var(--av-glow-4) 16%, transparent), transparent 72%);
+  opacity: .5;
+  filter: blur(60px);
+  animation: avMeshDrift 28s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+
+@keyframes avMeshDrift {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50%  { transform: translate3d(1.5%, -2%, 0) rotate(2deg) scale(1.05); }
+  100% { transform: translate3d(-1.5%, 1.5%, 0) rotate(-1.5deg) scale(1.02); }
+}
+
+/* тонкое киношное зерно поверх — премиальная «плёночная» глубина */
+.bg-aurora::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 180px 180px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-aurora::before { animation: none; }
+}
+
+/* ── 2. Курсор-прожектор на карточках ──────────────────────────────────── */
+/* --mx/--my (0..100, %) ставит web/static/aurora-fx.js на mousemove.
+   Без JS/при reduced-motion — просто нет подсветки, карточка живёт как раньше. */
+.panel, .card, .mt-kpi, .kpi, .stat-box {
+  --mx: 50%;
+  --my: 20%;
+}
+
+.panel::after, .card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: inherit;
+  background: radial-gradient(var(--av-spot-size) var(--av-spot-size) at var(--mx) var(--my),
+    color-mix(in srgb, var(--ac, #5ec8ff) 16%, transparent), transparent 62%);
+  transition: opacity .35s ease;
+}
+
+.panel.av-hot::after, .card.av-hot::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce), (hover: none) {
+  .panel::after, .card::after { display: none; }
+}
+
+/* ── 3. Вращающийся ободок-свечение (наведение / фокус) ────────────────── */
+.panel, .card {
+  position: relative;
+}
+
+.panel::before, .card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  opacity: 0;
+  background: conic-gradient(from var(--aurora-angle),
+    color-mix(in srgb, var(--ac, #5ec8ff) 65%, transparent),
+    color-mix(in srgb, var(--gold, #f0d09a) 55%, transparent),
+    transparent 35%,
+    color-mix(in srgb, var(--ac, #5ec8ff) 65%, transparent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: opacity .3s ease;
+  animation: avSpin 5.5s linear infinite;
+  animation-play-state: paused;
+}
+
+.panel:hover::before, .card:hover::before,
+.panel:focus-within::before, .card:focus-within::before {
+  opacity: .9;
+  animation-play-state: running;
+}
+
+@keyframes avSpin { to { --aurora-angle: 360deg; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .panel::before, .card::before { animation: none !important; opacity: 0 !important; }
+}
+
+/* ── 3b. Кнопки-праймари: тот же приём, компактнее ─────────────────────── */
+.btn-primary, .btn.primary, .btn-new {
+  position: relative;
+  isolation: isolate;
+}
+
+.btn-primary::after, .btn.primary::after, .btn-new::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(from var(--aurora-angle), var(--av-glow-1), var(--gold, #f0d09a), var(--av-glow-3), var(--av-glow-1));
+  opacity: 0;
+  filter: blur(6px);
+  transition: opacity .3s ease;
+  animation: avSpin 4s linear infinite;
+  animation-play-state: paused;
+}
+
+.btn-primary:hover::after, .btn.primary:hover::after, .btn-new:hover::after {
+  opacity: .55;
+  animation-play-state: running;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary::after, .btn.primary::after, .btn-new::after { display: none; }
+}
+
+/* ── 4. Каскадное появление карточек при загрузке ──────────────────────── */
+.main-content .panel,
+.main-content .card,
+.main-content .kpi,
+.main-content .stat-box,
+.main-content .mt-kpi {
+  animation: avRiseIn .55s cubic-bezier(.2, .8, .2, 1) both;
+  animation-delay: calc(var(--av-i, 0) * 45ms);
+}
+
+@keyframes avRiseIn {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-content .panel,
+  .main-content .card,
+  .main-content .kpi,
+  .main-content .stat-box,
+  .main-content .mt-kpi {
+    animation: none;
+  }
+}
+
+/* ── 5. Бут-сплэш: кинематографичный вход ──────────────────────────────── */
+#bootSplash {
+  background:
+    radial-gradient(60% 60% at 50% 42%, rgba(94, 200, 255, .10), transparent 70%),
+    #000;
+}
+
+#bootSplash .boot-ring {
+  box-shadow: 0 0 40px 6px color-mix(in srgb, var(--ac, #5ec8ff) 45%, transparent);
+}
+
+#bootSplash .boot-logo {
+  animation: avBootPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes avBootPulse {
+  0%, 100% { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ac, #5ec8ff) 55%, transparent)); }
+  50%      { filter: drop-shadow(0 0 26px color-mix(in srgb, var(--gold, #f0d09a) 65%, transparent)); }
+}
+
+#bootSplash .boot-name {
+  background: linear-gradient(90deg, var(--av-glow-1), var(--gold, #f0d09a), var(--av-glow-3), var(--av-glow-1));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: avNameShine 3.2s linear infinite;
+}
+
+@keyframes avNameShine { to { background-position: 200% center; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #bootSplash .boot-logo,
+  #bootSplash .boot-name { animation: none; }
+}
+
+/* ── 6. Живой пинг/статус — мягкий пульс акцентом ───────────────────────── */
+.ping-pill .ping-dot,
+.live-chip .dot,
+.live-pill .dot {
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok, #3ee0a0) 55%, transparent);
+  animation: avPulseRing 2.2s ease-out infinite;
+}
+
+@keyframes avPulseRing {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok, #3ee0a0) 45%, transparent); }
+  70%  { box-shadow: 0 0 0 8px color-mix(in srgb, var(--ok, #3ee0a0) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok, #3ee0a0) 0%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ping-pill .ping-dot, .live-chip .dot, .live-pill .dot { animation: none; }
+}
+
+/* ── Печать/старые браузеры без backdrop-filter/@property — без сюрпризов */
+@supports not (background: conic-gradient(from 0deg, red, blue)) {
+  .panel::before, .card::before,
+  .btn-primary::after, .btn.primary::after, .btn-new::after { display: none; }
+}
