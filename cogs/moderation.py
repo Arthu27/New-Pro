@@ -2150,12 +2150,14 @@ async def _silent_reset_panel(interaction, panel):
     эфемерную панель токеном исходного /modpanel (_root_edit), а не
     interaction.message.edit (у эфемерки он часто падает).
     Если пуш не вышел — возвращаем старые селекты, иначе custom_id разъедутся.
+    Баннер НЕ перезаливаем — оставляем attachment сообщения.
     """
     try:
         guild = getattr(interaction, 'guild', None)
         old_t, old_a = panel.target_select, panel.action_select
         panel._rebuild(guild)
-        kw = panel.panel_edit_kwargs()
+        msg = getattr(interaction, 'message', None)
+        kw = panel.panel_edit_kwargs(message=msg, reattach_banner=False)
         pushed = False
         root = getattr(panel, '_root_edit', None)
         if root is not None:
@@ -2166,7 +2168,6 @@ async def _silent_reset_panel(interaction, panel):
                 log.debug('modpanel reset root: %s', _e)
         if not pushed:
             try:
-                msg = getattr(interaction, 'message', None)
                 if msg is not None:
                     await msg.edit(**kw)
                     pushed = True
@@ -2510,15 +2511,14 @@ class ModTargetSelect(discord.ui.UserSelect):
         if pending and prefill:
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
-        # Только запомнили человека — без «думает…», мгновенный апдейт меню.
+        # Только запомнили человека — ACK сразу, потом лёгкий refresh
+        # (без повторной загрузки баннера — иначе «не ответило вовремя»).
         if view is not None:
             await view.refresh(interaction, rebuild_action=False)
             return
         try:
             if not interaction.response.is_done():
-                # ephemeral: подтверждение клика тихое — на экране ничего
-                # не появляется (всем не показывать «бот думает…»)
-                await interaction.response.defer(ephemeral=True)
+                await interaction.response.defer(thinking=False)
         except Exception as _te:
             log.debug("ModTargetSelect: %s", _te)
 
@@ -2551,6 +2551,12 @@ class ModPanelView(discord.ui.LayoutView):
         except Exception:
             self._actor_label = ''
         self._rebuild(None)
+        # File для первого ответа /modpanel (process-cache байтов).
+        # На refresh баннер НЕ перезаливаем — keep message.attachments.
+        try:
+            self._make_banner_file(force=False)
+        except Exception:
+            pass
 
     def _action_label(self, action):
         for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):
@@ -2643,7 +2649,13 @@ class ModPanelView(discord.ui.LayoutView):
         self.action_buttons = []
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
-        self._make_banner_file(force=False)
+        # Имя баннера для MediaGallery — без нового File (upload только при
+        # первом /modpanel; на refresh оставляем старый attachment).
+        from services.v2_layouts import SHOW_MENU_BANNER
+        if SHOW_MENU_BANNER and not self._banner_name:
+            self._banner_name = 'hakumo_modpanel_banner_v15.png'
+        if not SHOW_MENU_BANNER:
+            self._banner_name = None
         if V2_AVAILABLE and self._use_v2:
             items = build_modpanel_items(
                 banner_filename=self._banner_name,
@@ -2663,16 +2675,36 @@ class ModPanelView(discord.ui.LayoutView):
         self.add_item(row1)
         self.add_item(row2)
 
-    def panel_edit_kwargs(self):
-        """kwargs для edit_message / edit_original_response (V2)."""
-        # свежий File из кэша байтов — BytesIO одноразовый
-        self._make_banner_file(force=False)
+    def panel_edit_kwargs(self, *, message=None, reattach_banner=False):
+        """kwargs для edit_message / edit_original_response (V2).
+
+        reattach_banner=False (по умолчанию на refresh): НЕ грузим PNG
+        заново — оставляем attachment сообщения. Повторный upload на
+        каждом клике селекта давал «приложение не ответило вовремя».
+        """
         kw = {
             'view': self,
             'embed': None,
             'embeds': [],
             'content': None,
         }
+        from services.v2_layouts import SHOW_MENU_BANNER
+        if not SHOW_MENU_BANNER:
+            kw['attachments'] = []
+            return kw
+        kept = None
+        if not reattach_banner and message is not None:
+            try:
+                atts = list(getattr(message, 'attachments', None) or [])
+                if atts:
+                    kept = atts
+            except Exception:
+                kept = None
+        if kept is not None:
+            kw['attachments'] = kept
+            return kw
+        # Первый показ / нет старых вложений — прикрепить File из кэша.
+        self._make_banner_file(force=False)
         if self._banner_file is not None:
             kw['attachments'] = [self._banner_file]
         else:
@@ -2680,18 +2712,33 @@ class ModPanelView(discord.ui.LayoutView):
         return kw
 
     async def refresh(self, interaction, *, rebuild_action=True):
+        """Обновить панель после клика селекта.
+
+        Сначала ACK (defer type 6), потом rebuild + edit без upload баннера.
+        Иначе Discord 3с-окно сгорает на сети/Defender при повторной
+        загрузке PNG → «приложение не ответило вовремя».
+        """
         guild = getattr(interaction, 'guild', None)
-        # селекты Discord требуют новый custom_id-ряд после клика —
-        # пересобираем LayoutView, баннер берём из кэша (без PIL).
-        self._rebuild(guild)
-        kw = self.panel_edit_kwargs()
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(**kw)
-                return
-        except Exception as _e:
-            log.debug('modpanel refresh edit_message: %s', _e)
         msg = getattr(interaction, 'message', None)
+        # 1) сразу закрыть 3с-окно
+        try:
+            resp = getattr(interaction, 'response', None)
+            if resp is not None and not resp.is_done():
+                try:
+                    await resp.defer(thinking=False)
+                except TypeError:
+                    await resp.defer()
+        except Exception as _e:
+            log.debug('modpanel refresh defer: %s', _e)
+        # 2) лёгкий rebuild (без PIL/upload)
+        self._rebuild(guild)
+        kw = self.panel_edit_kwargs(message=msg, reattach_banner=False)
+        # 3) правка уже после ack
+        try:
+            await interaction.edit_original_response(**kw)
+            return
+        except Exception as _e:
+            log.debug('modpanel refresh original: %s', _e)
         if msg is not None:
             try:
                 await msg.edit(**kw)
@@ -2699,14 +2746,10 @@ class ModPanelView(discord.ui.LayoutView):
             except Exception as _e:
                 log.debug('modpanel refresh msg.edit: %s', _e)
         try:
-            await interaction.edit_original_response(**kw)
+            if not interaction.response.is_done():
+                await interaction.response.edit_message(**kw)
         except Exception as _e:
-            log.debug('modpanel refresh original: %s', _e)
-            try:
-                if not interaction.response.is_done():
-                    await interaction.response.defer()
-            except Exception as _e2:
-                log.debug('modpanel refresh defer: %s', _e2)
+            log.debug('modpanel refresh edit_message: %s', _e)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         user = interaction.user
