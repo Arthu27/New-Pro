@@ -463,6 +463,10 @@ class ErrorHandler:
         self._last_freeze_age = 0.0
         self._last_freeze_idle = False
         self._last_freeze_kind = ''    # '', 'idle', 'reconnect', 'blocker'
+        # Кольцо стеков main ДО фриза (инцидент 21.09): IDLE-WAIT снимает уже
+        # здоровый GetQueuedCompletionStatus — виновник ушёл. Держим ~12 сек
+        # истории, чтобы в soft-дампе показать, ЧЕМ цикл был занят раньше.
+        self._stack_ring = deque(maxlen=12)  # (monotonic_ts, stack_str)
         self._start_stack_monitor()
 
         self._repeat = {}                          # дедуп повторных ошибок
@@ -1166,14 +1170,38 @@ class ErrorHandler:
                 _log.debug("stack-monitor: снимок потоков: %s", _ex)
             return out
 
+        def _ring_pre_freeze(now, age):
+            """Не-idle стеки main за окно фриза — кандидаты в реальные блокеры."""
+            window = age + 2.0
+            out = []
+            seen = set()
+            for ts, stack in list(self._stack_ring):
+                if now - ts > window:
+                    continue
+                if is_idle_wait_stack(stack) or is_reconnect_wait_stack(stack):
+                    continue
+                # Короткий отпечаток, чтобы не дублировать одинаковые кадры.
+                key = stack[-400:]
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(stack)
+            return out[-4:]  # самое свежее, не больше 4
+
         def _worker():
             while True:
                 time.sleep(1.0)
                 try:
+                    now = time.monotonic()
+                    # Всегда пишем кольцо — дёшево и нужно для IDLE-WAIT.
+                    try:
+                        self._stack_ring.append((now, _sample_main()))
+                    except Exception as _ex:
+                        _log.debug("stack-monitor: ring sample: %s", _ex)
                     # Порог перечитываем на каждом тике: панель может менять
                     # loop_lag_threshold на лету (анти-краш центр).
                     threshold = float(self.config.get('loop_lag_threshold', 5.0)) + 1.0
-                    age = time.monotonic() - self._loop_beat
+                    age = now - self._loop_beat
                     # Сон/гибернация ОС — не зависание кода (как в async-watchdog).
                     if age > 180.0:
                         continue
@@ -1195,6 +1223,7 @@ class ErrorHandler:
                         reconnect = ((not unstable) and (not idle)
                                      and is_reconnect_wait_stack(stable))
                         soft = idle or reconnect
+                        pre = _ring_pre_freeze(now, age) if soft else []
                         # Для алертов/корреляции с disconnect храним стек
                         # и метку времени последнего фриза.
                         self._last_freeze_stack = stable
@@ -1224,6 +1253,14 @@ class ErrorHandler:
                             msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
                                    f"СТЕК ВИНОВНИКА (main-поток, прямо сейчас):\n"
                                    f"{stable}")
+                        if pre:
+                            msg += ("\nСтеки main ДО снимка (кандидаты в "
+                                    "реальный блокер, новее ниже):\n---\n"
+                                    + "\n---\n".join(pre))
+                        elif soft:
+                            msg += ("\nСтеки main ДО снимка: нет не-idle кадров "
+                                    "в кольце (~12с) — блокер короче 1с или "
+                                    "цикл просто голодал по I/O/таймерам.")
                         if others:
                             msg += ("\nДругие потоки в момент зависания:\n  "
                                     + "\n  ".join(others[:12]))
@@ -1242,9 +1279,12 @@ class ErrorHandler:
                             msg += ("\n(стек менялся между сэмплами — виновник "
                                     "уже завершился, смотрите другие потоки выше)")
                         if idle:
-                            msg += ("\nПодсказка: частые IDLE-WAIT на Windows — "
-                                    "часто после voice keep-alive play на цикле "
-                                    "или Defender; play уведён в to_thread.")
+                            msg += ("\nПодсказка: это НЕ текущий дедлок — цикл "
+                                    "уже снова в IOCP-wait. Частые IDLE-WAIT на "
+                                    "Windows: Defender/Downloads, Python 3.14, "
+                                    "VOICE_SILENCE_PING=1; play по умолчанию выкл. "
+                                    "Смотрите «Стеки main ДО снимка» и строки "
+                                    "«GC: СБОРКА ЗАНИМАЛА».")
                         if reconnect:
                             msg += ("\nПодсказка: RECONNECT-WAIT сам по себе "
                                     "не лечится — устраните причину обрыва "
