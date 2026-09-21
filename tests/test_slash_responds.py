@@ -75,9 +75,16 @@ check(ex.find('await _ack') < ex.find('save_case'),
 check(ex.find('embed =confirm') < ex.find('send_action_log'),
       'модератору «готово» уходит до лога/ЛС — иначе Discord уже нарисовал отказ')
 msub = mod_src[mod_src.index('class ModActionModal'):
-               mod_src.index('class ModHelpButton')]
+               mod_src.index('class ModTargetSelect')]
 check('thinking=True' in msub and 'await _ack' in msub,
       'модалка наказания: defer thinking=True (type 5, не «не ответило»)')
+check('Кого наказать?' not in mod_src and 'Что сделать?' not in mod_src,
+      'нет старой синей панели (placeholders Кого/Что)')
+check('Участник и действие — в любом порядке.' not in mod_src,
+      'нет старого текста «в любом порядке»')
+check('class ModPanelView(discord.ui.LayoutView)' in mod_src
+      or 'class ModPanelView(discord.ui.LayoutView)' in mod_src.replace(' ', ''),
+      'ModPanelView = Components V2 LayoutView')
 csub = mod_src[mod_src.index('class _CtxMuteModal'):
                mod_src.index('def _mod_cog_of')]
 check(csub.find('await _ack') < csub.find('apply_panel_action')

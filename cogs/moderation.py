@@ -2447,45 +2447,6 @@ class ModActionModal(discord.ui.Modal):
         )
 
 
-class ModHelpButton(discord.ui.Button):
-    """«Как это работает» — короткая шпаргалка, не мешает меню."""
-
-    def __init__(self):
-        super().__init__(emoji='❓', style=discord.ButtonStyle.secondary,
-                         label='Как это работает')
-
-    async def callback(self, interaction: discord.Interaction):
-        embed = discord.Embed(
-            title='❓ Шпаргалка по панели',
-            description=(
-                'Панель личная — только вызвавший модератор нажимает её меню.\n'
-                'Меню живёт 5 минут, потом просто вызовите /modpanel снова.'),
-            color=0x5865F2)
-        embed.add_field(
-            name='🎯 Цель',
-            value='Выберите участника МЫШКОЙ в меню ниже — при выборе '
-                  'действия бот НЕ попросит ник второй раз. Участник ушёл с сервера? '
-                  'Он останется в списке выбора: подойдёт и его ID.',
-            inline=False)
-        embed.add_field(
-            name='⏱ Срок',
-            value='Муты: от 30 минут до 2 часов. «30», «60», «2ч». Просто число = минуты.',
-            inline=False)
-        embed.add_field(
-            name='🚫 Бан — это апелляция',
-            value='Участник остаётся на сервере, все каналы закрыты. Канал '
-                  'апелляции откроется ему сам — после подачи апелляции '
-                  'кнопкой в ЛС бота. Канал задаёт владелец: Панель → Каналы '
-                  'и маршруты.',
-            inline=False)
-        embed.add_field(
-            name='🧹 Чистка',
-            value='Удаляет N последних сообщений в канале, где вы находитесь.',
-            inline=False)
-        embed.set_footer(text='Шпаргалка · панель Hakumo')
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
 class ModTargetSelect(discord.ui.UserSelect):
     """Участник мышкой. Можно выбрать до действия или после."""
 
