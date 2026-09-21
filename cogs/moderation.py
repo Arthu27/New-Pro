@@ -2149,7 +2149,7 @@ class UnmuteKindView(discord.ui.LayoutView):
         return True
 
 
-# Метка сборки убрана — панель без служебных SPEED/build надписей.
+# Служебные build-метки в шапке панели не показываем.
 
 
 async def _silent_reset_panel(interaction, panel):
