@@ -2140,6 +2140,30 @@ class UnmuteKindView(discord.ui.LayoutView):
         return True
 
 
+# Метка сборки в шапке /modpanel — видно, задеплоен ли фикс таймаута.
+_MODPANEL_BUILD = None
+
+
+def _modpanel_build_tag():
+    global _MODPANEL_BUILD
+    if _MODPANEL_BUILD is not None:
+        return _MODPANEL_BUILD
+    try:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        head_path = os.path.join(root, '.git', 'HEAD')
+        with open(head_path, encoding='utf-8') as fh:
+            head = fh.read().strip()
+        if head.startswith('ref:'):
+            ref = head.split(' ', 1)[1].strip()
+            with open(os.path.join(root, '.git', ref), encoding='utf-8') as fh:
+                _MODPANEL_BUILD = fh.read().strip()[:7]
+        else:
+            _MODPANEL_BUILD = head[:7]
+    except Exception:
+        _MODPANEL_BUILD = 'local'
+    return _MODPANEL_BUILD
+
+
 async def _silent_reset_panel(interaction, panel):
     """Сбросить селект наказаний, чтобы то же действие можно было выбрать снова.
 
@@ -2224,6 +2248,8 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
         if panel is None:
             return
         try:
+            # Пауза: не конкурировать с открытием модалки на том же цикле.
+            await _aio.sleep(1.2)
             panel.pending_action = None
             await _silent_reset_panel(interaction, panel)
         except Exception as _e:
@@ -2232,7 +2258,11 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
     if action == "mute":
         gid = getattr(interaction, 'guild_id', None) or getattr(
             getattr(interaction, 'guild', None), 'id', None)
-        kinds = mute_kinds_for(gid, interaction.user)
+        kinds = None
+        if panel is not None:
+            kinds = getattr(panel, '_mute_kinds_cache', None)
+        if not kinds:
+            kinds = mute_kinds_for(gid, interaction.user)
         if not kinds:
             await _respond(interaction, embed=error_embed(
                 'Мут тебе не выдан.'), ephemeral=True)
@@ -2278,7 +2308,11 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
     if action == "unmute":
         gid = getattr(interaction, 'guild_id', None) or getattr(
             getattr(interaction, 'guild', None), 'id', None)
-        kinds = unmute_kinds_for(gid, interaction.user)
+        kinds = None
+        if panel is not None:
+            kinds = getattr(panel, '_unmute_kinds_cache', None)
+        if not kinds:
+            kinds = unmute_kinds_for(gid, interaction.user)
         if not kinds:
             await _respond(interaction, embed=error_embed(
                 'Снять мут тебе не выдано.'), ephemeral=True)
@@ -2353,6 +2387,14 @@ class ModActionSelect(discord.ui.Select):
         self.target_select = target_select
 
     async def callback(self, interaction: discord.Interaction):
+        # Если цикл уже лагал — Discord всё равно покажет таймаут; логируем.
+        try:
+            lag = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+            if lag > 1.5:
+                log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят?)',
+                            lag)
+        except Exception:
+            pass
         action = self.values[0]
         view = self.view
         prefill = ""
@@ -2545,6 +2587,8 @@ class ModPanelView(discord.ui.LayoutView):
         self._banner_bytes = None
         self._use_v2 = True
         self._actor_label = ''
+        self._mute_kinds_cache = None
+        self._unmute_kinds_cache = None
         try:
             from services.staff_hierarchy import actor_panel_role, LABELS
             guild = getattr(member, 'guild', None)
@@ -2552,6 +2596,18 @@ class ModPanelView(discord.ui.LayoutView):
             self._actor_label = LABELS.get(tier, '') or ''
         except Exception:
             self._actor_label = ''
+        # Виды мута/размута — один раз при открытии панели (не на каждый клик).
+        try:
+            guild = getattr(member, 'guild', None)
+            gid = getattr(guild, 'id', None)
+            vals = {a[0] for a in (allowed or [])}
+            if gid and member is not None:
+                if 'mute' in vals:
+                    self._mute_kinds_cache = mute_kinds_for(gid, member)
+                if 'unmute' in vals:
+                    self._unmute_kinds_cache = unmute_kinds_for(gid, member)
+        except Exception as _kx:
+            log.debug('modpanel kinds cache: %s', _kx)
         self._rebuild(None)
         # File для первого ответа /modpanel (process-cache байтов).
         # На refresh баннер НЕ перезаливаем — keep message.attachments.
@@ -2571,7 +2627,12 @@ class ModPanelView(discord.ui.LayoutView):
         pending = None
         if self.pending_action:
             pending = self._action_label(self.pending_action)
-        return modpanel_status_text(self.selected_uid, pending)
+        text = modpanel_status_text(self.selected_uid, pending)
+        # Метка сборки — чтобы на живом боте было видно: задеплоен ли фикс.
+        tag = _modpanel_build_tag()
+        if tag and text and not self.selected_uid and not self.pending_action:
+            return f'{text}\n-# build {tag}'
+        return text
 
     def _footer_text(self, guild):
         """Футер отключён — панель без нижней полоски."""

@@ -99,8 +99,10 @@ print('== 5. Executor + voice off-loop ==')
 main_src = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('ThreadPoolExecutor' in main_src and 'set_default_executor' in main_src,
       'main: общий ThreadPoolExecutor(32)')
+check('VOICE_SILENCE_PING' in main_src,
+      'voice: silence-ping выключен по умолчанию (VOICE_SILENCE_PING)')
 check('to_thread(vc.play' in main_src.replace(' ', ''),
-      'voice keep-alive: play off-loop')
+      'voice: если play — только to_thread')
 
 print('== 6. Runtime: кэш vs сырой SQLite ==')
 clear_guild_data_cache()

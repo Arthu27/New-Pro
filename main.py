@@ -887,20 +887,25 @@ def _resolve_voice_channel_id():
 VOICE_CHANNEL_ID = _resolve_voice_channel_id()
 
 async def _monitor_voice():
-    """Держим голосовое подключение живым — переподключаемся при падении,
-    каждые 4 минуты играем тишину (keep-alive).
+    """Держим голосовое подключение живым — только connect, без play.
 
-    ВАЖНО: ``VoiceClient.play`` синхронно ждёт старт AudioPlayer-потока
-    (``Thread.start`` → ``_started.wait``). На живом сервере это давало
-    EVENT-LOOP ЗАВИСАНИЕ ~7–26 сек (стек: ``_monitor_voice`` → ``vc.play``
-    или после обрыва — gateway ``_keep_alive.start``). Поэтому ``play``
-    уводим в ``asyncio.to_thread`` + ``wait_for``, ``connect`` с таймаутом,
-    а при неготовом gateway не дёргаем reconnect.
+    Раньше каждые 4 мин играли тишину через ``vc.play``. Даже в
+    ``asyncio.to_thread`` это давало гонки с gateway и на живом сервере
+    снова всплывало «Moderation не ответило вовремя» (цикл занят /
+    voice state machine). Подключение само держит сессию Discord.
+
+    Silence-ping только если явно: ``VOICE_SILENCE_PING=1`` (тогда play
+    строго через ``to_thread`` + ``wait_for``).
     """
     await bot.wait_until_ready()
     await asyncio.sleep(10)
     last_ping = 0.0
     backoff_until = 0.0
+    _silence = (os.environ.get('VOICE_SILENCE_PING') or '').strip().lower() in (
+        '1', 'true', 'yes', 'on')
+    if _silence:
+        _log.warning('_monitor_voice: VOICE_SILENCE_PING=1 — play включён '
+                     '(риск лагов); по умолчанию play ВЫКЛ')
     while not bot.is_closed():
         await asyncio.sleep(30)
         channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
@@ -926,7 +931,7 @@ async def _monitor_voice():
             except Exception as _ex:
                 backoff_until = time.time() + 30
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
-        elif time.time() - last_ping > 240:
+        elif _silence and time.time() - last_ping > 240:
             try:
                 if not vc.is_playing():
                     import io
@@ -938,9 +943,12 @@ async def _monitor_voice():
             except asyncio.TimeoutError:
                 _log.warning("_monitor_voice: play timeout 15s (#%s)",
                              getattr(channel, 'id', '?'))
-                last_ping = time.time()  # не долбить play каждые 30с
+                last_ping = time.time()
             except Exception as _ex:
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
+        else:
+            # Без silence-ping просто считаем соединение живым.
+            last_ping = time.time()
 
 @bot.event
 async def on_disconnect():
