@@ -70,7 +70,7 @@ check('schedule_ensure_menu_emojis' in mp,
       '/modpanel греет emoji в фоне')
 check('cog_load' in mod_src and 'warm_menu_banners' in mod_src,
       'баннер прогревается при загрузке кога')
-check('multi-fix-v10' in mp or 'build=multi-fix' in mp,
+check('multi-fix-v11' in mp or 'build=multi-fix' in mp,
       '/modpanel: метка деплоя multi-fix')
 uni = mod_src[mod_src.index('async def _unisolate_member'):
               mod_src.index('def _preflight_reason') if 'def _preflight_reason' in mod_src
@@ -113,8 +113,8 @@ check('_reset_after_step' in _offer_body or '_silent_reset_panel' in _offer_body
 check('_enter_kind_mode' in mod_src and '_bind_live_panel' in mod_src
       and '_reset_after_step' in mod_src,
       'multi-use: kind на той же панели, без нового окна')
-check('multi-fix-v10' in mod_src,
-      'build tag multi-fix-v10 для проверки деплоя')
+check('multi-fix-v11' in mod_src,
+      'build tag multi-fix-v11 для проверки деплоя')
 check('timeout=300' in mod_src,
       'панель живёт 5 минут')
 check('_schedule_panel_reset' in launch or '_silent_reset_panel' in launch
@@ -138,11 +138,14 @@ check('_cancel_panel_reset' in mod_src and '_reset_task' in mod_src,
       'фоновый rebuild панели отменяется при новом клике')
 check('_reset_gen' in mod_src,
       'поколение сброса — устаревший rebuild не пушится')
-check('Сброс селектов фоном' not in mod_src[mod_src.index('class ModTargetSelect'):
-                                              mod_src.index('class ModPanelView')]
-      and '_schedule_panel_reset' not in mod_src[mod_src.index('class ModTargetSelect'):
-                                                 mod_src.index('class ModPanelView')],
-      'после выбора участника НЕТ фонового rebuild (гонка с Действием)')
+tgt_body = mod_src[mod_src.index('class ModTargetSelect'):
+                   mod_src.index('class ModPanelView')]
+check('_schedule_panel_reset' in tgt_body and '_cancel_panel_reset' in tgt_body,
+      'после участника — мягкий сброс UserSelect (анти-sticky), клик Действие отменяет')
+check('_push_panel_view' in mod_src,
+      'push панели после rebuild — без рассинхрона custom_id')
+check('multi-fix-v11' in mod_src,
+      'build tag multi-fix-v11 для проверки деплоя')
 mks = mod_src[mod_src.index('class MuteKindSelect'):
               mod_src.index('class MuteKindView')]
 mkcb = mks[mks.index('async def callback'):]

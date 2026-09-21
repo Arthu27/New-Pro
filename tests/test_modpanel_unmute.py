@@ -303,16 +303,46 @@ check(bool(inter3.response.modal) or bool(inter3.response.sent)
       or inter3.response.done,
       'сначала участник, потом действие — ACK (вид мута / кнопка формы)')
 
-# ModTargetSelect: только defer, selected_uid в памяти
+# ModTargetSelect: ACK + uid + мягкий сброс (анти-sticky)
 view3 = M.ModPanelView(cog, opener, allowed=allowed)
-inter4 = _PInter(opener, g7)
+view3._guild = g7
 
 class _User:
     id = 3000000000000000300
-view3.target_select._values = [_User()]
-asyncio.run(view3.target_select.callback(inter4))
-check(view3.selected_uid == '3000000000000000300' and inter4.response.done,
-      'выбор участника: ACK defer + uid в памяти (без rebuild)')
+
+async def _tgt_pick():
+    msg = _PMsg()
+    msg.id = 55
+    msg.attachments = []
+    inter4 = _PInter(opener, g7)
+    inter4.message = msg
+    view3._panel_message = msg
+    async def _edit(**kw):
+        return await msg.edit(**kw)
+    view3._root_edit = _edit
+    view3.target_select._values = [_User()]
+    await view3.target_select.callback(inter4)
+    check(view3.selected_uid == '3000000000000000300' and inter4.response.done,
+          'выбор участника: ACK defer + uid в памяти')
+    check(view3._reset_task is not None and not view3._reset_task.done(),
+          'после участника запланирован мягкий сброс UserSelect')
+    sel_before = id(view3.target_select)
+    await view3._reset_task
+    check(id(view3.target_select) != sel_before,
+          'после сброса — новый UserSelect (можно выбрать снова)')
+    check(view3.selected_uid == '3000000000000000300',
+          'uid сохранился после мягкого сброса')
+    # второй выбор другого участника
+    class _User2:
+        id = 3000000000000000999
+    inter4b = _PInter(opener, g7)
+    inter4b.message = msg
+    view3.target_select._values = [_User2()]
+    await view3.target_select.callback(inter4b)
+    check(view3.selected_uid == '3000000000000000999',
+          'второй выбор участника работает')
+
+asyncio.run(_tgt_pick())
 
 # повтор выбора: rebuild даёт НОВЫЙ селект (Discord снова шлёт callback)
 old = id(view2.action_select)
@@ -483,7 +513,7 @@ check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'reset-хелперы без bot.wait_for')
 check('_enter_kind_mode' in src and 'edit_message' in src,
       'вид мута — edit той же панели, не followup')
-check('multi-fix-v10' in src, 'build=multi-fix-v10 в логе открытия')
+check('multi-fix-v11' in src, 'build=multi-fix-v11 в логе открытия')
 check('resend disabled' in src or 'return False' in src[src.index('async def _resend_fresh_panel'):
                                                           src.index('def _cancel_panel_reset')],
       'resend заглушка — новое окно запрещено')

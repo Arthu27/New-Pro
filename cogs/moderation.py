@@ -403,7 +403,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=multi-fix-v10',
+        log.info('modpanel open uid=%s gid=%s build=multi-fix-v11',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -456,7 +456,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v10',
+        log.info('modpanel ready msg=%s build=multi-fix-v11',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2245,10 +2245,55 @@ def _cancel_panel_reset(panel):
         pass
 
 
+async def _push_panel_view(panel, interaction=None):
+    """Запушить текущий view в ТО ЖЕ сообщение панели. Без нового окна.
+
+    Порядок: msg.edit → _root_edit → followup.edit_message.
+    Важно: после _rebuild custom_id новые — Discord обязан получить edit,
+    иначе клики «мёртвые» (рассинхрон).
+    """
+    msg = getattr(panel, '_panel_message', None)
+    kw = panel.panel_edit_kwargs(message=msg, reattach_banner=False)
+    # 1) прямое edit сообщения
+    if msg is not None and hasattr(msg, 'edit'):
+        try:
+            new_msg = await msg.edit(**kw)
+            if new_msg is not None and hasattr(new_msg, 'id'):
+                panel._panel_message = new_msg
+            return True
+        except Exception as ex:
+            log.info('modpanel push msg.edit: %s', ex)
+    # 2) замыкание с открытия /modpanel
+    root = getattr(panel, '_root_edit', None)
+    if root is not None:
+        try:
+            new_msg = await root(**kw)
+            if new_msg is not None and hasattr(new_msg, 'id'):
+                panel._panel_message = new_msg
+            return True
+        except Exception as ex:
+            log.info('modpanel push root: %s', ex)
+    # 3) followup.edit_message — тот же ephemeral, без нового окна
+    fu = getattr(panel, '_mod_followup', None)
+    if fu is None and interaction is not None:
+        fu = getattr(interaction, 'followup', None)
+    mid = getattr(msg, 'id', None)
+    if fu is not None and mid and hasattr(fu, 'edit_message'):
+        try:
+            new_msg = await fu.edit_message(mid, **kw)
+            if new_msg is not None and hasattr(new_msg, 'id'):
+                panel._panel_message = new_msg
+            return True
+        except Exception as ex:
+            log.info('modpanel push followup.edit_message: %s', ex)
+    return False
+
+
 async def _silent_reset_panel(interaction, panel, *, gen=None):
     """Сбросить селекты edit'ом ТОГО ЖЕ сообщения. Новое окно не создаём.
 
-    Без Discord Collector / followup.send.
+    После rebuild ОБЯЗАН быть успешный push — иначе custom_id рассинхрон
+    и нельзя выбрать участника/действие повторно.
     """
     import asyncio as _aio
     try:
@@ -2258,7 +2303,6 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
         if hasattr(panel, '_clear_kind_mode'):
             panel._clear_kind_mode()
         guild = getattr(interaction, 'guild', None) or getattr(panel, '_guild', None)
-        old_t, old_a = panel.target_select, panel.action_select
         kept_uid = getattr(panel, 'selected_uid', None)
         kept_pending = getattr(panel, 'pending_action', None)
         panel._rebuild(guild)
@@ -2266,39 +2310,15 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
             panel.selected_uid = kept_uid
         panel.pending_action = kept_pending
         await _aio.sleep(0)
-        if gen is not None and gen != getattr(panel, '_reset_gen', None):
-            try:
-                panel.target_select, panel.action_select = old_t, old_a
-            except Exception:
-                pass
-            return
-        msg = getattr(panel, '_panel_message', None)
-        kw = panel.panel_edit_kwargs(message=msg, reattach_banner=False)
-        pushed = False
-        if msg is not None and hasattr(msg, 'edit'):
-            try:
-                new_msg = await msg.edit(**kw)
-                if new_msg is not None:
-                    panel._panel_message = new_msg
-                pushed = True
-            except Exception as _e:
-                log.info('modpanel reset edit fail: %s', _e)
+        # Даже если поколение сменилось — всё равно пушим: иначе мёртвые селекты
+        pushed = await _push_panel_view(panel, interaction)
         if not pushed:
-            root = getattr(panel, '_root_edit', None)
-            if root is not None:
-                try:
-                    new_msg = await root(**kw)
-                    if new_msg is not None and hasattr(new_msg, 'id'):
-                        panel._panel_message = new_msg
-                    pushed = True
-                except Exception as _e:
-                    log.info('modpanel reset root fail: %s', _e)
-        if not pushed:
-            log.warning('modpanel reset FAILED (без нового окна)')
-            try:
-                panel.target_select, panel.action_select = old_t, old_a
-            except Exception:
-                pass
+            log.warning('modpanel reset FAILED push (селекты могут не отвечать)')
+            # одна отложенная попытка (не из уже запланированного reset)
+            if gen is None:
+                _schedule_panel_reset(
+                    interaction, panel,
+                    clear_pending=(kept_pending is None), delay=0.4)
         else:
             log.info('modpanel reset ok uid=%s msg=%s',
                      kept_uid, getattr(panel._panel_message, 'id', None))
@@ -2790,8 +2810,9 @@ class ModTargetSelect(discord.ui.UserSelect):
             # Действие уже ждали — модалка / вид мута сразу.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
-        # Только ACK. Без rebuild/reset — иначе LayoutView-edit
-        # пересекается со следующим кликом «Действие» и жрёт 3с.
+        # ACK сразу. Потом тихий сброс UserSelect (без default) — иначе
+        # Discord sticky и второй выбор участника не шлётся.
+        # Клик «Действие» отменяет этот reset (_cancel_panel_reset).
         try:
             if not interaction.response.is_done():
                 try:
@@ -2808,6 +2829,9 @@ class ModTargetSelect(discord.ui.UserSelect):
                         ephemeral=True)
             except Exception as _te2:
                 log.debug('ModTargetSelect fallback: %s', _te2)
+        if view is not None:
+            _schedule_panel_reset(
+                interaction, view, clear_pending=False, delay=0.2)
 
 
 class ModPanelView(discord.ui.LayoutView):
@@ -2956,28 +2980,9 @@ class ModPanelView(discord.ui.LayoutView):
 
     def _rebuild(self, guild):
         self.clear_items()
-        defaults = []
-        if self.selected_uid:
-            try:
-                uid = int(self.selected_uid)
-                # UserSelect принимает Member / Object — Object надёжнее:
-                # не падаем на «сырых» моках и частичных объектах, селект
-                # всё равно показывает выбранного.
-                mem = None
-                if guild is not None:
-                    try:
-                        mem = guild.get_member(uid)
-                    except Exception:
-                        mem = None
-                if mem is not None and isinstance(
-                        mem, (discord.Member, discord.User, discord.Object)):
-                    defaults = [mem]
-                else:
-                    defaults = [discord.Object(id=uid)]
-            except Exception:
-                defaults = []
-        self.target_select = ModTargetSelect(
-            self.cog, default_values=defaults or None)
+        # БЕЗ default_values на UserSelect: иначе Discord sticky и второй
+        # выбор участника не приходит. selected_uid — в памяти + статус.
+        self.target_select = ModTargetSelect(self.cog, default_values=None)
         kind_mode = getattr(self, '_kind_mode', None)
         if kind_mode and getattr(self, '_kind_kinds', None):
             tid = getattr(self, '_kind_target', None) or self.selected_uid or ''

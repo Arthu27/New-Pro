@@ -164,8 +164,8 @@ view._root_edit = _root
 check(view.action_select is not None, 'есть action_select (не кнопки)')
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
-check('multi-fix-v10' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
-      'build tag multi-fix-v10')
+check('multi-fix-v11' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
+      'build tag multi-fix-v11')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
@@ -249,6 +249,42 @@ async def _mute_flow():
 
 
 asyncio.run(_mute_flow())
+
+
+print('== LIVE 3b. Второй выбор участника после первого ==')
+
+
+async def _member_twice():
+    view_t = M.ModPanelView(None, opener, allowed=allowed)
+    view_t._guild = g
+    msg = _PanelMsg(777)
+    view_t._panel_message = msg
+    async def _root(**kw):
+        return await msg.edit(**kw)
+    view_t._root_edit = _root
+
+    class U1:
+        id = target.id
+    class U2:
+        id = 3000000000000000999
+
+    inter1 = _Inter(opener, g, message=msg)
+    view_t.target_select._values = [U1()]
+    await view_t.target_select.callback(inter1)
+    check(view_t.selected_uid == str(target.id), '1-й участник записан')
+    # дождаться мягкого сброса
+    if view_t._reset_task:
+        await view_t._reset_task
+    check(id(view_t.target_select) != id(view_t.action_select), 'селекты на месте')
+    inter2 = _Inter(opener, g, message=msg)
+    view_t.target_select._values = [U2()]
+    await view_t.target_select.callback(inter2)
+    check(view_t.selected_uid == '3000000000000000999',
+          '2-й выбор участника прошёл')
+    check(len(inter2._fu_sent) == 0, 'без нового окна при 2-м выборе')
+
+
+asyncio.run(_member_twice())
 
 
 print('== LIVE 4. Действие без участника → потом участник ==')
