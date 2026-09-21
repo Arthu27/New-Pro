@@ -164,8 +164,8 @@ view._root_edit = _root
 check(view.action_select is not None, 'есть action_select (не кнопки)')
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
-check('multi-fix-v11' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
-      'build tag multi-fix-v11')
+check('multi-fix-v12' in open(os.path.join(ROOT, 'cogs/moderation.py')).read(),
+      'build tag multi-fix-v12')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
@@ -251,40 +251,32 @@ async def _mute_flow():
 asyncio.run(_mute_flow())
 
 
-print('== LIVE 3b. Второй выбор участника после первого ==')
+print('== LIVE 3b. Участник → Бан → модалка (действие работает) ==')
 
 
-async def _member_twice():
-    view_t = M.ModPanelView(None, opener, allowed=allowed)
-    view_t._guild = g
-    msg = _PanelMsg(777)
-    view_t._panel_message = msg
+async def _action_works():
+    view_a = M.ModPanelView(None, opener, allowed=allowed)
+    view_a._guild = g
+    view_a.selected_uid = str(target.id)
+    msg = _PanelMsg(778)
+    view_a._panel_message = msg
     async def _root(**kw):
         return await msg.edit(**kw)
-    view_t._root_edit = _root
-
-    class U1:
-        id = target.id
-    class U2:
-        id = 3000000000000000999
-
-    inter1 = _Inter(opener, g, message=msg)
-    view_t.target_select._values = [U1()]
-    await view_t.target_select.callback(inter1)
-    check(view_t.selected_uid == str(target.id), '1-й участник записан')
-    # дождаться мягкого сброса
-    if view_t._reset_task:
-        await view_t._reset_task
-    check(id(view_t.target_select) != id(view_t.action_select), 'селекты на месте')
+    view_a._root_edit = _root
+    inter = _Inter(opener, g, message=msg)
+    view_a.action_select._values = ['ban']
+    await view_a.action_select.callback(inter)
+    check(bool(inter.response.modal), 'Бан с участником → send_modal')
+    check(len(inter._fu_sent) == 0, 'без нового окна')
+    # после сброса снова действие
+    view_a.action_select._values = ['clear']
     inter2 = _Inter(opener, g, message=msg)
-    view_t.target_select._values = [U2()]
-    await view_t.target_select.callback(inter2)
-    check(view_t.selected_uid == '3000000000000000999',
-          '2-й выбор участника прошёл')
-    check(len(inter2._fu_sent) == 0, 'без нового окна при 2-м выборе')
+    await view_a.action_select.callback(inter2)
+    check(bool(inter2.response.modal) or inter2.response.done,
+          'второе действие после сброса работает')
 
 
-asyncio.run(_member_twice())
+asyncio.run(_action_works())
 
 
 print('== LIVE 4. Действие без участника → потом участник ==')

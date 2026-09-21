@@ -403,7 +403,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=multi-fix-v11',
+        log.info('modpanel open uid=%s gid=%s build=multi-fix-v12',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -456,7 +456,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v11',
+        log.info('modpanel ready msg=%s build=multi-fix-v12',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2314,7 +2314,6 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
         pushed = await _push_panel_view(panel, interaction)
         if not pushed:
             log.warning('modpanel reset FAILED push (селекты могут не отвечать)')
-            # одна отложенная попытка (не из уже запланированного reset)
             if gen is None:
                 _schedule_panel_reset(
                     interaction, panel,
@@ -2323,6 +2322,11 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
             log.info('modpanel reset ok uid=%s msg=%s',
                      kept_uid, getattr(panel._panel_message, 'id', None))
     except _aio.CancelledError:
+        # rebuild уже мог сменить custom_id — обязаны запушить, иначе мёртвая панель
+        try:
+            await _push_panel_view(panel, interaction)
+        except Exception:
+            pass
         raise
     except Exception as _e:
         log.warning('modpanel reset: %s', _e)
@@ -2627,13 +2631,9 @@ class ModActionSelect(discord.ui.Select):
         self.target_select = target_select
 
     async def callback(self, interaction: discord.Interaction):
-        """ACK = send_modal сразу (без кнопки). Сброс панели после модалки.
-
-        Фоновый rebuild после выбора участника не стартует — гонка убрана.
-        """
-        view = self.view
+        """ACK = send_modal сразу (без кнопки). Сброс панели после модалки."""
+        view = getattr(self, 'panel', None) or self.view
         _cancel_panel_reset(view)
-        # Живое сообщение клика — сброс правит его (не «чужой» original)
         _bind_live_panel(view, interaction)
         try:
             lag = (discord.utils.utcnow() - interaction.created_at).total_seconds()
@@ -2657,10 +2657,23 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Без участника — запомнить действие + тихий ACK + сброс селекта
+        # Без участника — запомнить действие, попросить выбрать участника
         if action != "clear" and not prefill and view is not None:
-            await _ack(interaction, thinking=False)
             view.pending_action = action
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        content='Сначала выберите участника выше, затем действие.',
+                        ephemeral=True)
+                else:
+                    await interaction.followup.send(
+                        content='Сначала выберите участника выше, затем действие.',
+                        ephemeral=True)
+            except Exception:
+                try:
+                    await _ack(interaction, thinking=False)
+                except Exception:
+                    pass
             try:
                 _bind_live_panel(view, interaction)
                 await _silent_reset_panel(interaction, view)
@@ -2790,12 +2803,8 @@ class ModTargetSelect(discord.ui.UserSelect):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        """Выбор участника: ACK первой строкой, без rebuild на пути ответа.
-
-        selected_uid в памяти view; селекты сбрасываются ПОСЛЕ действия
-        (не здесь — иначе гонка с кликом «Действие»).
-        """
-        view = self.view
+        """Выбор участника: ACK сразу. selected_uid в памяти панели."""
+        view = getattr(self, 'panel', None) or self.view
         _cancel_panel_reset(view)
         _bind_live_panel(view, interaction)
         try:
@@ -2810,9 +2819,9 @@ class ModTargetSelect(discord.ui.UserSelect):
             # Действие уже ждали — модалка / вид мута сразу.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
-        # ACK сразу. Потом тихий сброс UserSelect (без default) — иначе
-        # Discord sticky и второй выбор участника не шлётся.
-        # Клик «Действие» отменяет этот reset (_cancel_panel_reset).
+        # Только ACK. Сброс селектов — ПОСЛЕ действия (не здесь):
+        # фоновый rebuild после участника гонялся с кликом «Действие»
+        # и оставлял мёртвые custom_id → действия «не работали».
         try:
             if not interaction.response.is_done():
                 try:
@@ -2829,9 +2838,6 @@ class ModTargetSelect(discord.ui.UserSelect):
                         ephemeral=True)
             except Exception as _te2:
                 log.debug('ModTargetSelect fallback: %s', _te2)
-        if view is not None:
-            _schedule_panel_reset(
-                interaction, view, clear_pending=False, delay=0.2)
 
 
 class ModPanelView(discord.ui.LayoutView):
@@ -2980,9 +2986,9 @@ class ModPanelView(discord.ui.LayoutView):
 
     def _rebuild(self, guild):
         self.clear_items()
-        # БЕЗ default_values на UserSelect: иначе Discord sticky и второй
-        # выбор участника не приходит. selected_uid — в памяти + статус.
+        # БЕЗ default_values на UserSelect (sticky). uid — в памяти + статус.
         self.target_select = ModTargetSelect(self.cog, default_values=None)
+        self.target_select.panel = self
         kind_mode = getattr(self, '_kind_mode', None)
         if kind_mode and getattr(self, '_kind_kinds', None):
             tid = getattr(self, '_kind_target', None) or self.selected_uid or ''
@@ -2996,6 +3002,7 @@ class ModPanelView(discord.ui.LayoutView):
             self.action_select = ModActionSelect(
                 self.cog, None, self.allowed,
                 target_select=self.target_select)
+            self.action_select.panel = self
         self.action_buttons = []
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
