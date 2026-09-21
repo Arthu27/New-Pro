@@ -401,7 +401,7 @@ class Moderation (commands .Cog ):
         # Сразу закрыть 3с-окно Discord: сбор меню/ACL не должен давать
         # «Приложение не отвечает», если цикл чуть занят.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s build=send-ack-v3',
+        log.info('modpanel open uid=%s gid=%s build=multi-use-v4',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None))
         # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
