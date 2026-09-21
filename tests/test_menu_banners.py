@@ -132,6 +132,65 @@ check(view._footer_text(g2) == '',
       f"footer other выключен: {view._footer_text(g2)!r}")
 check(view._banner_file is not None, 'banner file attached')
 
+print('== select refresh: ACK first, no banner re-upload ==')
+import asyncio as _aio
+
+
+class _Att:
+    filename = 'hakumo_modpanel_banner_v15.png'
+
+
+class _RMsg:
+    def __init__(self):
+        self.attachments = [_Att()]
+        self.edits = []
+
+    async def edit(self, **kw):
+        self.edits.append(kw)
+
+
+class _RResp:
+    def __init__(self):
+        self.done = False
+        self.defers = []
+
+    def is_done(self):
+        return self.done
+
+    async def defer(self, **kw):
+        self.defers.append(kw)
+        self.done = True
+
+    async def edit_message(self, **kw):
+        self.done = True
+        raise AssertionError('edit_message не должен вызываться после defer')
+
+
+class _RInter:
+    def __init__(self):
+        self.guild = None
+        self.response = _RResp()
+        self.message = _RMsg()
+        self.edits = []
+
+    async def edit_original_response(self, **kw):
+        self.edits.append(kw)
+
+
+view2 = ModPanelView(cog=None, member=None, allowed=list(MODPANEL_ACTIONS)[:3])
+view2.selected_uid = '111'
+ri = _RInter()
+_aio.run(view2.refresh(ri))
+check(bool(ri.response.defers), 'refresh сначала defer (ACK <3с)')
+check(bool(ri.edits), 'после ACK — edit_original_response')
+atts = (ri.edits[-1].get('attachments') if ri.edits else None) or []
+check(atts and all(getattr(a, 'filename', None) for a in atts),
+      'attachments = keep старого баннера (не discord.File)')
+check(not any(type(a).__name__ == 'File' for a in atts),
+      'нет повторного File-upload баннера')
+check('участник <@111>' in _collect_texts(view2),
+      'статус обновился после выбора')
+
 print('== select placeholders ==')
 check((getattr(view.target_select, 'placeholder', None) or '') == '',
       f'target placeholder пустой: {getattr(view.target_select, "placeholder", None)!r}')

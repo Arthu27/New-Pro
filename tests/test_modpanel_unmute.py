@@ -269,11 +269,23 @@ allowed = [a for a in M.MODPANEL_ACTIONS
 view = M.ModPanelView(cog, opener, allowed=allowed)
 old_sel = view.action_select
 inter = _PInter(opener, g7)
+# эфемерка уже с баннером — refresh должен KEEP attachments, не File
+class _Att:
+    filename = 'hakumo_modpanel_banner_v15.png'
+inter.message.attachments = [_Att()]
 view.action_select._values = ['mute']
 asyncio.run(view.action_select.callback(inter))
 check(view.pending_action == 'mute' and not inter.response.modal,
       'действие без участника — запомнили, модалку не открыли')
-check(inter.response.edits, 'меню обновилось без спиннера (edit_message)')
+# refresh: defer (ACK) + edit_original — не ждём upload баннера
+updated = bool(inter.response.edits) or bool(inter.message.edits)
+check(inter.response.done and updated,
+      'меню обновилось после ACK (defer + edit, без таймаута 3с)')
+if inter.message.edits:
+    atts = inter.message.edits[-1].get('attachments')
+    check(atts is not None and atts and not any(
+        type(a).__name__ == 'File' or hasattr(a, 'fp') for a in atts),
+          'баннер не перезаливается — keep старых attachments')
 
 # теперь человек → выбор вида мута или модалка
 view.selected_uid = '3000000000000000300'
