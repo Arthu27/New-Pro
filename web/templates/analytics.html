@@ -101,9 +101,21 @@
   .analytics-lensbar{align-items:flex-start;flex-wrap:wrap}.analytics-lenses{order:3;width:100%;overflow:auto}
 }
 @media (max-width: 560px) {
-  .analytics-cockpit{padding:19px 16px}.analytics-cockpit h1{font-size:31px}.analytics-server-control{width:100%;min-width:0}
-  .analytics-refresh{flex:1}.analytics-updated{flex:1}.analytics-brief{grid-template-columns:1fr}.analytics-kpi{min-height:92px}
-  .analytics-lensbar>div:first-child{min-width:0;flex:1}.analytics-print{margin-left:auto}.analytics-wrap .section{padding:15px}.an-sumgrid{grid-template-columns:1fr!important}
+  /* Компактная шапка: KPI сразу в первом экране, без пустой «дыры». */
+  .analytics-cockpit{padding:12px 4px 8px;margin-bottom:10px}
+  .analytics-cockpit h1{font-size:26px;letter-spacing:-.03em}
+  .analytics-cockpit-main>p{margin:8px 0 12px;font-size:12.5px}
+  .analytics-eyebrow{margin-bottom:8px}
+  .analytics-server-control{width:100%;min-width:0}
+  .analytics-controlbar{gap:8px}
+  .analytics-refresh,.analytics-updated{flex:1;min-height:44px}
+  .analytics-brief{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .analytics-kpi{min-height:84px;padding:12px 13px}
+  .analytics-kpi strong{margin-top:10px;font-size:22px}
+  .analytics-insight{margin-bottom:10px;padding:10px 12px}
+  .analytics-signal-grid{gap:8px;margin-bottom:10px}
+  .analytics-lensbar>div:first-child{min-width:0;flex:1}.analytics-print{margin-left:auto}
+  .analytics-wrap .section{padding:15px}.an-sumgrid{grid-template-columns:1fr!important}
 }
 @media (prefers-reduced-motion:reduce){.analytics-refresh.busy i,.leader-row,.bar-fill:after,.analytics-signal-grid article{animation:none!important;transition:none!important}}
 @media print{.analytics-controlbar,.analytics-lensbar,.analytics-jump,.an-csv{display:none!important}.analytics-cockpit{grid-template-columns:1fr;background:var(--bg)!important}.analytics-brief{grid-template-columns:repeat(4,1fr)}.analytics-wrap [data-an-section].an-lens-hidden{display:block!important}}

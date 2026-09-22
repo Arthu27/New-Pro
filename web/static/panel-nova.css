@@ -1677,6 +1677,24 @@ html[data-theme="light"] .analytics-cockpit {
   border: 0 !important;
   box-shadow: none !important;
 }
+/* Аналитика: акцент всегда ледяной (не красный err/кастом),
+   иначе «Обновить» выглядит как ошибка. */
+html[data-theme="dark"] .analytics-refresh,
+html[data-theme="light"] .analytics-refresh {
+  color: var(--nv-ice) !important;
+  border-color: color-mix(in srgb, var(--nv-ice) 42%, transparent) !important;
+  background: color-mix(in srgb, var(--nv-ice) 14%, transparent) !important;
+}
+html[data-theme="dark"] .analytics-server-control > i,
+html[data-theme="light"] .analytics-server-control > i {
+  color: var(--nv-ice) !important;
+}
+/* FAB на плотных страницах сигналов мешает читать KPI — прячем. */
+body:has(.analytics-cockpit) .fab,
+body:has(.analytics-cockpit) .fab-backdrop,
+body:has(.analytics-cockpit) .fab-main {
+  display: none !important;
+}
 html[data-theme="dark"] .page-hero h1,
 html[data-theme="light"] .page-hero h1,
 html[data-theme="dark"] .analytics-cockpit h1,

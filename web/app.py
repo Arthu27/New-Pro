@@ -3094,12 +3094,14 @@ def _log_act_class (a ):
         return ''
     if 'разбан' in a or 'бан снят' in a or 'unban' in a :return 'unban'
     if ('размут' in a or 'мут снят' in a or 'мьют снят' in a or 'таймаут снят' in a
-    or 'unmute' in a or 'untimeout' in a ):return 'unmute'
+    or 'unmute' in a or 'untimeout' in a or 'vunmute' in a
+    or 'войс-мут снят' in a or a .endswith ('снят')and 'мут' in a ):
+        return 'unmute'
     if 'бан' in a or 'ban' in a :return 'ban'
     if 'кик' in a or 'kick' in a :return 'kick'
     if 'варн' in a or 'warn' in a or 'предупрежд' in a :return 'warn'
     if ('мут' in a or 'мьют' in a or 'mute' in a or 'таймаут' in a
-    or 'timeout' in a ):return 'mute'
+    or 'timeout' in a or 'vmute' in a ):return 'mute'
     return ''
 
 
