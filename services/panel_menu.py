@@ -203,9 +203,8 @@ MENU = [
         # дубль «Команд»). Сама страница жива — на неё ведёт профиль участника.
     ]},
     {'group': 'AI', 'key': 'ai', 'icon': 'fa-brain', 'pages': [
-        {'path': '/ai-chat', 'label': 'AI Чат', 'icon': 'fa-comments'},
+        # /ai-chat снят (AI-чат retired 2026-09-22) — осталась только модерация.
         {'path': '/ai-moderation', 'label': 'AI Модерация', 'icon': 'fa-robot'},
-        
     ]},
     {'group': 'Система', 'key': 'ops', 'icon': 'fa-server', 'pages': [
         {'path': '/bot-diagnostics', 'label': 'Диагностика', 'icon': 'fa-heartbeat'},
@@ -243,7 +242,6 @@ _ROLE_LEVEL = {'uye': 0, 'mod': 1, 'curator': 2, 'admin': 3, 'owner': 4}
 PAGE_MIN_ROLE = {
     '/': 'uye',
     '/spravka': 'uye',
-    '/ai-chat': 'uye',
     '/panel-access': 'owner',
     '/panel-menu': 'owner',
     '/role-permissions': 'owner',
@@ -312,7 +310,6 @@ CONFIGURABLE = ('mod', 'curator', 'admin')
 PAGE_COGS = {
     '/voice-stats': ('voice_tracker',),
     '/afk-list': ('afk',),
-    '/ai-chat': ('ai_chat',),
     '/welcome-editor': ('welcome_cog',),
     '/staff-apps': ('staff_apply',),
     '/appeals': ('appeals',),

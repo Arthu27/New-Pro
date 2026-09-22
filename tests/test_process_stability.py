@@ -77,16 +77,21 @@ for t in ths:
     t.join()
 check(not errs and len(c3) <= 50, f'4 потока + лимит 50: errors={len(errs)}, len={len(c3)}')
 
-print('== 2. AI-чат: кэш сообщений ограничен ==')
-ai = open(os.path.join(ROOT, 'cogs', 'ai_chat.py'), encoding='utf-8').read()
-check('from services.ttl_cache import TTLMap' in ai,
-      'TTLMap подключён в ai_chat')
-check('_message_cache =TTLMap' in ai or '_message_cache = TTLMap' in ai,
-      'кэш сообщений — TTLMap с лимитом')
-check('_message_cache .put (' in ai or '_message_cache.put(' in ai,
-      'запись в кэш через put (вытеснение работает)')
-check('if cache_key in _message_cache' not in ai,
-      'нет старой проверки «in dict» без чистки')
+print('== 2. AI-чат: снят с эксплуатации ==')
+from cogs_policy import RETIRED_COGS, select_from_environment  # noqa: E402
+check('ai_chat.py' in RETIRED_COGS, 'ai_chat.py в RETIRED_COGS')
+en_ai, dis_ai = select_from_environment(
+    sorted(f for f in os.listdir(os.path.join(ROOT, 'cogs')) if f.endswith('.py')),
+    environ={})
+check('ai_chat.py' not in en_ai and 'ai_chat.py' in dis_ai,
+      'AI-чат не грузится в LEAN')
+menu = open(os.path.join(ROOT, 'services', 'panel_menu.py'), encoding='utf-8').read()
+check("{'path': '/ai-chat'" not in menu, 'пункт /ai-chat убран из меню панели')
+rex = open(os.path.join(ROOT, 'web', 'routes_extra.py'), encoding='utf-8').read()
+import_block = rex.split('from web.routes import')[-1].split(')')[0]
+check('\nai_chat' not in import_block.replace(' ', '')
+      and 'ai_chat,' not in import_block,
+      'маршруты ai_chat не регистрируются')
 
 print('== 3. main.py: журнал запусков + сторож памяти ==')
 mn = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()

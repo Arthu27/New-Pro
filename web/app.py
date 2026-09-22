@@ -5442,20 +5442,7 @@ def api_voice_command ():
     async def dispatch ():
         owner =await bot_instance .fetch_user (OWNER_ID_INT )
         dm =await owner .create_dm ()
-        # Вместо создания фейкового объекта сообщения — используем ai_chat cog напрямую
-        cog =bot_instance .get_cog ('AIChat')
-        if not cog :
-            return 'AIChat cog не найден'
-            # правильно вызываем _detect_owner_intent
-            # Для этого нужен фейковый объект сообщения — используем DM-канал
-        async for msg in dm .history (limit =1 ):
-        # Нашли реальное сообщение — запускаем распознавание intent'а
-            result =await cog ._detect_owner_intent (command ,msg )
-            if not result :
-            # Хендлер не сработал — передаём в обычный AI
-                await dm .send (command )
-            return 'OK'
-            # Если истории сообщений нет — шлём сразу в ЛС
+        # AI-чат снят: просто пересылаем команду владельцу в ЛС.
         await dm .send (command )
         return 'OK (DM sent)'
 

@@ -29,7 +29,7 @@ from web.routes import (
     pages,
     modplus,
     backups,
-    ai_chat,
+    # AI-чат retired: модуль web.routes.ai_chat больше не подключаем.
     ai_mod,
     admin_api,
     members,

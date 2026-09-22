@@ -91,7 +91,7 @@ for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
              'staff_apply.py',
              'voice_tracker.py',
-             'ai_chat.py', 'ai_moderation.py',
+             'ai_moderation.py',
              'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
              'afk.py', 'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
@@ -99,7 +99,9 @@ for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
 # в составе они не фигурируют (ни enabled, ни disabled).
 for gone_music in ('music_cog.py', 'voice_commands.py'):
     assert gone_music not in enabled and gone_music not in ALL_SET, gone_music
-check(True, 'lean: модерация/репорты/AI/приветствие/логи/afk — живы; музыка удалена')
+# AI-чат retired: файл на диске, но в LEAN не грузится.
+assert 'ai_chat.py' in ALL_SET and 'ai_chat.py' in disabled, 'ai_chat.py'
+check(True, 'lean: модерация/репорты/AI-мод/приветствие/логи/afk — живы; музыка удалена; AI-чат retired')
 # Старая заглушка verification.py физически удалена — её заменил
 # полноценный age_verification.py (карантин + анкета молодых аккаунтов).
 assert 'verification.py' not in ALL_SET, 'verification.py должна быть удалена'
@@ -159,12 +161,12 @@ check(sorted(set(NON_HELPERS) - set(MOD_ONLY_COGS)) == disabled_m,
 for fun in ('economy_cog.py', 'fun_cog.py', 'minigames.py',
             'giveaway.py', 'level_cog.py', 'anime_daily.py', 'starboard.py'):
     assert fun not in enabled_m and fun not in ALL_SET, fun
-# AI-чат/приветствие живут на диске, но в mod_only отключены; музыка удалена с диска.
+# AI-чат retired (на диске, но не в MOD_ONLY); приветствие тоже выключено; музыка удалена.
 for off_now in ('ai_chat.py', 'welcome_cog.py'):
     assert off_now in disabled_m, off_now
 for gone_music in ('music_cog.py', 'voice_commands.py'):
     assert gone_music not in ALL_SET, gone_music
-check(True, 'mod_only: экономика/игры/раздачи/левелинг/музыка удалены; AI/приветствие — выключены')
+check(True, 'mod_only: экономика/игры/раздачи/левелинг/музыка удалены; AI-чат/приветствие — выключены')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
              'antiraid.py', 'security.py', 'age_verification.py', 'auto_filter.py',
              'ai_moderation.py', 'reports.py', 'logs.py', 'proof_cog.py',
@@ -175,14 +177,16 @@ check(not set(enabled_m) & set(disabled_m) and
       len(enabled_m) + len(disabled_m) == len(NON_HELPERS),
       'mod_only: разбиение без пересечений и потерь')
 
-print('\n== 5.5 BOT_CORE=1 — «модерация + репорты + логи + AI» ==')
+print('\n== 5.5 BOT_CORE=1 — «модерация + репорты + логи» ==')
 check(CORE_COGS <= CORE_ONLY_COGS and MODERATION_COGS <= CORE_ONLY_COGS
       and TICKET_COGS <= CORE_ONLY_COGS and AI_CHAT_COGS <= CORE_ONLY_COGS,
-      'core: = ядро + модерация + репорты + AI-чат')
+      'core: = ядро + модерация + репорты (AI-чат пуст/retired)')
 check('voice_tracker.py' not in CORE_ONLY_COGS and 'music_cog.py' not in CORE_ONLY_COGS,
       'core: музыка не входит в ядро (фича удалена)')
 check('economy_cog.py' not in CORE_ONLY_COGS,
       'core: экономика/веселуха выключены')
+check('ai_chat.py' not in CORE_ONLY_COGS and 'ai_chat.py' in RETIRED_COGS,
+      'core: AI-чат retired — не в keep-листе')
 missing_core = sorted(f for f in CORE_ONLY_COGS if f not in ALL_SET)
 check(missing_core == [], f'CORE_ONLY_COGS: все файлы на диске {missing_core}')
 enabled_c, disabled_c = select_cog_files(ALL_FILES, core=True)
@@ -194,12 +198,13 @@ for gone in ('economy_cog.py', 'fun_cog.py', 'level_cog.py',
              'music_cog.py', 'voice_commands.py'):
     assert gone not in ALL_SET, gone
 assert 'welcome_cog.py' in disabled_c, 'welcome_cog.py'
-check(True, 'core: экономика/игры/левелинг/музыка удалены; приветствие выключено')
+assert 'ai_chat.py' in disabled_c, 'ai_chat.py'
+check(True, 'core: экономика/игры/левелинг/музыка удалены; приветствие и AI-чат выключены')
 for keep in ('moderation.py', 'reports.py', 'staff_apply.py',
-             'logs.py', 'log_menu.py', 'ai_chat.py', 'ai_moderation.py',
+             'logs.py', 'log_menu.py', 'ai_moderation.py',
              'help.py', 'cog_manager.py'):
     assert keep in enabled_c, keep
-check(True, 'core: модерация/репорты/логи/AI/системное — живы')
+check(True, 'core: модерация/репорты/логи/AI-мод/системное — живы')
 check(not set(enabled_c) & set(disabled_c)
       and len(enabled_c) + len(disabled_c) == len(NON_HELPERS),
       'core: разбиение без пересечений и потерь')
