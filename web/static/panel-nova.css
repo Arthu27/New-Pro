@@ -1620,6 +1620,37 @@ html[data-theme="light"] .sshd-btn {
   border: 1px solid rgba(255,255,255,.12) !important;
   color: var(--nv-text) !important;
 }
+/* Ниша селекта: имя канала/роли всегда читаемо (не clip/transparent
+   от градиентных заголовков aurora/nova). */
+html[data-theme="dark"] .sshd-lbl,
+html[data-theme="light"] .sshd-lbl,
+html[data-theme="dark"] .aes .aes-value,
+html[data-theme="light"] .aes .aes-value,
+html[data-theme="dark"] .picker-chip,
+html[data-theme="light"] .picker-chip {
+  color: var(--nv-text) !important;
+  -webkit-text-fill-color: var(--nv-text) !important;
+  background: none !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+html[data-theme="dark"] .picker-chip.ok,
+html[data-theme="light"] .picker-chip.ok {
+  color: var(--ok, #3ee0a0) !important;
+  -webkit-text-fill-color: var(--ok, #3ee0a0) !important;
+}
+html[data-theme="dark"] .picker-chip.warn,
+html[data-theme="light"] .picker-chip.warn {
+  color: var(--warn, #f0d09a) !important;
+  -webkit-text-fill-color: var(--warn, #f0d09a) !important;
+}
+html[data-theme="dark"] .picker-chip.bad,
+html[data-theme="light"] .picker-chip.bad {
+  color: var(--err, #ff6b7a) !important;
+  -webkit-text-fill-color: var(--err, #ff6b7a) !important;
+}
 html[data-theme="dark"] .gd-combo-list,
 html[data-theme="light"] .gd-combo-list {
   z-index: 3200 !important;

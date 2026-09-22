@@ -341,6 +341,7 @@ body.dense .jl-cbody { gap: 3px; }
   var PUNISH_KINDS = { ban: 1, unban: 1, kick: 1, warn: 1, mute: 1, timeout: 1, unmute: 1 };
   var viewMode = 'punish';
   var shapeMode = 'feed';   /* лента — красивый вид по умолчанию, таблица — запасной */
+  var _autoAllOnce = false; /* после переезда: пустой punish → сразу «все» */
   try {
     var saved = localStorage.getItem('jlViewMode');
     if (saved === 'all' || saved === 'punish') viewMode = saved;
@@ -394,6 +395,23 @@ body.dense .jl-cbody { gap: 3px; }
     if (fp === _logsFp) return;
     _logsFp = fp;
     allLogs = raw;
+    /* Если наказаний нет, а событий полно (типично после переезда) —
+       не оставляем «пустой журнал»: один раз переключаем на все события,
+       чтобы страница не выглядела сломанной. Выбор пользователя в
+       localStorage уважаем — авто-переход только при дефолте punish. */
+    if (!_autoAllOnce && viewMode === 'punish' && allLogs.length > 0) {
+      var anyPunish = allLogs.some(function (l) { return !!PUNISH_KINDS[actionKind(l.action)]; });
+      if (!anyPunish) {
+        _autoAllOnce = true;
+        try {
+          if (!localStorage.getItem('jlViewMode')) {
+            viewMode = 'all';
+          }
+        } catch (e) {
+          viewMode = 'all';
+        }
+      }
+    }
     window.renderSafe(function () { render(); updateStats(); updateFilters(); });
     if (!window.__modLivePaused) stampNow();
   }
