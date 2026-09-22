@@ -153,7 +153,8 @@ check(EP.target_channel_id(guild_id=99) == 0, 'clear target_channel_id')
 # AST: persistent custom_id
 src = open(os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read()
 for cid in ('event_panel:signup', 'event_panel:announce',
-            'event_panel:close', 'event_panel:list'):
+            'event_panel:start', 'event_panel:close',
+            'event_panel:list', 'event_panel:end'):
     check(cid in src, f'persistent button {cid}')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
