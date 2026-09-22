@@ -1,5 +1,5 @@
 // Hakumo Panel Service Worker (Light Edition)
-const CACHE_NAME = 'Hakumo-nova-v24-analytics-lift';
+const CACHE_NAME = 'Hakumo-nova-v25-analytics-clear';
 const STATIC_ASSETS = [
   '/static/style.css',
   '/static/panel-nova.css',
