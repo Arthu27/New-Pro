@@ -1,7 +1,7 @@
 {
   "name": "Hakumo Panel",
   "short_name": "Hakumo",
-  "description": "Moebius Discord Bot Панель управления",
+  "description": "Веб-панель управления Discord-ботом Hakumo",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f6f8",

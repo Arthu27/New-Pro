@@ -211,7 +211,7 @@ class ConversationAnalyzer :
     @staticmethod 
     def detect_sentiment (messages :List [Dict ])->str :
         """Определяет настроение разговора"""
-        positive_words =['спасибо','teşekkürler','отлично','супер','класс','помог','решил']
+        positive_words =['спасибо','благодарю','отлично','супер','класс','помог','решил']
         negative_words =['бесит','злюсь','ненавижу','тупой','идиот','не работает','ошибка']
 
         all_text =' '.join ([msg .get ('content','')for msg in messages [-10 :]]).lower ()

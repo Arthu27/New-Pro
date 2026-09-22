@@ -402,7 +402,7 @@ def register(ctx):
         is_owner =user_role =='owner'
 
         if is_owner :
-            eylem_prompt =(
+            action_prompt =(
             "=== РЕЖИМ J.A.R.V.I.S. (ВЛАДЕЛЕЦ) ===\n"
             "Ты — личный ассистент Arthur'а.\n\n"
             "ПРАВИЛО ДЕЙСТВИЙ — использовать тег [EYLEM:...] ТОЛЬКО при явном запросе:\n"
@@ -411,7 +411,7 @@ def register(ctx):
             "  'бан' / 'забанить' → [EYLEM:BAN:user_id:причина]\n"
             "  'кик' / 'выгнать' → [EYLEM:KICK:user_id:причина]\n"
             "  'мут' / 'тайм-аут' / 'заткнуть' → [EYLEM:TIMEOUT:user_id:минуты:причина]\n"
-            "  'напиши в канал' / 'отправь сообщение' + ad_канала + текст → [EYLEM:СООБЩЕНИЕ:channel_name:text]\n"
+            "  'напиши в канал' / 'отправь сообщение' + имя_канала + текст → [EYLEM:СООБЩЕНИЕ:channel_name:text]\n"
             "  'медленный режим' / 'slowmode' → [EYLEM:KANAL_YAVAШ:channel_id:секунды]\n"
             "  'выдай роль' / 'дай роль' → [EYLEM:ROL_VER:user_id:role_id]\n"
             "  'забери роль' / 'убери роль' → [EYLEM:ROL_AL:user_id:role_id]\n"
@@ -442,7 +442,7 @@ def register(ctx):
             "Отвечай кратко и по делу.\n"
             )
         else :
-            eylem_prompt =(
+            action_prompt =(
             "=== РЕЖИМ ИНФОРМАЦИИ ===\n"
             "Этот пользователь может только запрашивать информацию, не может выполнять действия.\n"
             "Если пользователь запрашивает действие, ответь: 'Это действие доступно только владельцу или администратору'.\n"
@@ -469,7 +469,7 @@ def register(ctx):
         f"=== ПОСЛЕДНИЕ ЛОГИ (последние 10) ===\n{chr(10).join(recent_logs[-10:]) if recent_logs else 'Логов нет'}\n\n"
         f"{user_info_block}"
         f"{channel_messages_block}\n"
-        f"{eylem_prompt}\n"
+        f"{action_prompt}\n"
         "Говори ТОЛЬКО на русском языке. Никакого турецкого, никакого английского. "
         "Ты сильный и точный ассистент: на простые вопросы отвечай сразу одним-двумя "
         "чёткими предложениями, без воды и без «хороший вопрос». Не тупи и не "
@@ -491,16 +491,16 @@ def register(ctx):
         except Exception as e :
         # Fallback: локальный ответ
             print (f"[AI-CHAT] _call exception: {e}")
-            from web .ai_helper import _local_moebius_fallback 
+            from web .ai_helper import _local_hakumo_fallback 
             try :
-                answer ,model_name ,_ =_local_moebius_fallback (messages )
+                answer ,model_name ,_ =_local_hakumo_fallback (messages )
             except Exception as _fe :
                 print (f"[AI-CHAT] fallback exception: {_fe}")
                 return jsonify ({'error':'AI сервис сейчас недоступен. Попробуйте позже.'}),503 
         if not answer :
-            from web .ai_helper import _local_moebius_fallback 
+            from web .ai_helper import _local_hakumo_fallback 
             try :
-                answer ,model_name ,_ =_local_moebius_fallback (messages )
+                answer ,model_name ,_ =_local_hakumo_fallback (messages )
             except Exception :
                 return jsonify ({'error':'AI вернул пустой ответ.'}),502 
 

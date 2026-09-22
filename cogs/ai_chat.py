@@ -65,13 +65,13 @@ OWNER_ID = clean_number(os.getenv('OWNER_ID')) or 0
 # {owner_dm_message_id: {'user_id': int, 'channel_id': int, 'question': str, 'is_dm': bool}}
 _pending_questions :dict ={}
 
-# Фильтр мата (русский + турецкий) — совпадение только целого слова
+# Фильтр мата (русский; латиница — доп. защита) — только целое слово
 PROFANITY_WORDS =[
 # русский мат
 'сука','сучка','бля','блять','блядь','хуй','хуя','хуё','пизда','пиздец',
 'ебал','ебан','ёбан','пидор','пидр','шлюха','мразь','гандон','залупа',
 'мудак','долбоёб','нахуй','охуеть','заебал','уёбок','уебок','хер','мразота',
-# турецкий мат (многоязычная защита)
+# грубые латинские формы (доп. защита)
 'amk','amq','orospu','sik','göt','got','piç','pic',
 'yarrak','yarak','siktir','bok','kahpe','ibne','amcık','amcik']
 
@@ -84,12 +84,12 @@ def _has_profanity (text :str )->bool :
             return True 
     return False 
 
-    # Пользователь основанный на разговор история — постоянный depolama
+    # История диалогов пользователей (постоянное хранение)
 HISTORY_FILE ='data/ai_chat_histories.json'
 KNOWLEDGE_FILE ='data/ai_knowledge_base.json'
 INSTRUCTIONS_FILE ='data/ai_instructions.json'
 PROFILES_FILE ='data/ai_user_profiles.json'# Пользователь профили личности
-OWNER_PREFS_FILE ='data/owner_preferences.json'# Arthur'un постоянный tercihleri
+OWNER_PREFS_FILE ='data/owner_preferences.json'# постоянные предпочтения владельца
 _save_counter =0 
 
 
@@ -110,11 +110,11 @@ def _load_profiles ()->dict :
 
 def _save_profiles (profiles :dict ):
     if not save_json (PROFILES_FILE ,profiles ,log =log ):
-        log .info ('[AI] Profil сохран Ошибки — см. json_store warning')
+        log .info ('[AI] Ошибка сохранения профиля — см. json_store warning')
 
 
 def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
-    """Разговор user profilini обновить"""
+    """Обновить профиль пользователя по диалогу"""
     uid =str (user_id )
     if uid not in profiles :
         profiles [uid ]={
@@ -129,10 +129,10 @@ def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
     # Определение интересов
     interest_keywords ={
     'музыка':['музыка','песня','альбом','исполнитель','rap','pop','rock'],
-    'oyun':['oyun','game','lol','valorant','minecraft','cs2'],
-    'anime':['anime','manga','naruto','attack on titan','one piece'],
-    'spor':['футбол','баскетбол','матч','гол','команда'],
-    'teknoloji':['kod','python','программирование','написано','ai'],
+    'игры':['игра','игры','game','lol','valorant','minecraft','cs2'],
+    'аниме':['аниме','anime','manga','наруто','one piece'],
+    'спорт':['футбол','баскетбол','матч','гол','команда'],
+    'технологии':['код','python','программирование','написано','ai','нейросеть'],
     }
     q_lower =question .lower ()
     for interest ,keywords in interest_keywords .items ():
@@ -141,7 +141,7 @@ def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
                 p ['interests'].append (interest )
             p ['topics'][interest ]=p ['topics'].get (interest ,0 )+1 
 
-            # Разговор определение стиля
+            # Определение стиля общения
     if len (question )<10 :
         p ['style']='краткий'
     elif '?'in question and len (question )>50 :
@@ -164,11 +164,11 @@ def _load_knowledge_base ()->dict :
     return load_json (KNOWLEDGE_FILE ,{},log =log )
 
 def _load_instructions ()->dict :
-    """Сервер основанный на постоянный инструкции загрузить"""
+    """Загрузить постоянные инструкции сервера"""
     return load_json (INSTRUCTIONS_FILE ,{},log =log )
 
 def _save_instructions (instructions :dict ):
-    """Постоянный инструкции сохранить"""
+    """Сохранить постоянные инструкции"""
     if not save_json (INSTRUCTIONS_FILE ,instructions ,log =log ):
         log .info ('[AI] Ошибка сохранения инструкций — см. json_store warning')
 
@@ -1252,8 +1252,8 @@ class AIChat (commands .Cog ):
             answer ="Я не могу это сказать. "
 
             # Ответы "не знаю" — спросить у владельца
-        bilmiyorum_triggers =['не знаю','не нашёл ответ','нет данных','информации нет']
-        if OWNER_ID and any (t in answer .lower ()for t in bilmiyorum_triggers ):
+        unknown_triggers =['не знаю','не нашёл ответ','нет данных','информации нет']
+        if OWNER_ID and any (t in answer .lower ()for t in unknown_triggers ):
             try :
                 owner =await self .bot .fetch_user (OWNER_ID )
                 guild_id =message .guild .id if message .guild else 0 

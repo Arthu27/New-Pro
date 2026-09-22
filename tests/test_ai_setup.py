@@ -118,12 +118,12 @@ check('ЕСЛИ СПРАШИВАЮТ' in kb2,
       'дайджест есть и в сверхкомпактной версии')
 
 # ═══ 3. Офлайн-фолбэк: «как настроить» → гайд, а не общий блок ══════════
-print('== офлайн-фолбэк _local_moebius_fallback ==')
-from web.ai_helper import _local_moebius_fallback  # noqa: E402
+print('== офлайн-фолбэк _local_hakumo_fallback ==')
+from web.ai_helper import _local_hakumo_fallback  # noqa: E402
 
 
 def fallback(q):
-    return _local_moebius_fallback([{'role': 'user', 'content': q}])[0]
+    return _local_hakumo_fallback([{'role': 'user', 'content': q}])[0]
 
 
 check('/ai-tickets' in fallback('как настроить тикеты?'),
