@@ -341,8 +341,9 @@ _PROOF_REQ_TTL = 45.0
 def proof_is_required(gid):
     """Обязательна ли демка к наказаниям на сервере.
 
-    По умолчанию — НЕТ (заказ владельца 2026-08-27: ничего не требовать,
-    пока сам не включишь в панели → «Доказательства»)."""
+    По умолчанию — ДА (заказ владельца 2026-09-22: наказания через
+    доказательство; фото/видео уходит в канал демок). Выключить можно
+    в панели → «Доказательства»."""
     try:
         key = int(gid or 0)
     except (TypeError, ValueError):
@@ -352,14 +353,14 @@ def proof_is_required(gid):
     hit = _PROOF_REQ_CACHE.get(key)
     if hit and (now - hit[1]) < _PROOF_REQ_TTL:
         return bool(hit[0])
-    required = False
+    required = True
     try:
         data = _load_json(_proof_cfg_path(key), {})
-        if isinstance(data, dict):
-            required = bool(data.get('required', False))
+        if isinstance(data, dict) and 'required' in data:
+            required = bool(data.get('required'))
     except Exception as _ex:
         log.debug(f'[PROOF] конфиг: чтение пропущено: {_ex}')
-        required = False
+        required = True
     _PROOF_REQ_CACHE[key] = (required, now)
     return required
 
@@ -382,12 +383,12 @@ class ProofCog(commands.Cog):
 
     async def _proof_channel(self, guild):
         """Канал доказательств: явный выбор в панели («Каналы и маршруты»),
-        иначе автосоздание через систему логов."""
+        иначе известный канал боевого сервера, иначе автосоздание в «Логи»."""
         try:
-            from services.channel_routes import get_route
-            cid = get_route(guild.id, 'proof_channel')
+            from services.channel_routes import resolve_route, channel_on_guild
+            cid = resolve_route(guild.id, 'proof_channel', guild=guild)
             if cid:
-                ch = guild.get_channel(cid)
+                ch = channel_on_guild(guild, cid) or guild.get_channel(cid)
                 if ch is not None:
                     return ch
                 log.warning('[PROOF] маршрут proof_channel=%s не найден — фолбэк', cid)
@@ -403,18 +404,40 @@ class ProofCog(commands.Cog):
     def _proof_embed(self, user, entry, extra_note=None):
         color = ACTION_COLORS.get(entry['action'].lower(), PURPLE)
         e = discord.Embed(
-            title=f"Демка #{entry['id']} · {entry['action']}",
+            title=f"📎 Демка #{entry['id']} · {entry['action']}",
             color=color,
             timestamp=_now())
-        e.add_field(name='Нарушитель', value=f'{user} (`{entry["user_id"]}`)', inline=True)
-        e.add_field(name='Модератор', value=f'`{entry["mod_name"]}`', inline=True)
+        who_got = user if isinstance(user, str) else (
+            f'{user} (`{entry["user_id"]}`)')
+        e.add_field(
+            name='Кто выдал',
+            value=f'{entry.get("mod_name") or "—"} (`{entry.get("mod_id") or "—"}`)',
+            inline=True)
+        e.add_field(
+            name='Кому',
+            value=who_got,
+            inline=True)
         e.add_field(name='Наказание', value=entry['action'], inline=True)
-        e.add_field(name='Причина', value=entry['reason'] or '—', inline=False)
+        e.add_field(
+            name='За что',
+            value=(entry.get('reason') or '—')[:900],
+            inline=False)
+        media = entry.get('media') or {}
+        if media.get('kind') == 'video':
+            e.add_field(
+                name='Медиа',
+                value=f'🎬 Видео · `{media.get("name") or "video"}` — во вложении',
+                inline=False)
+        elif media.get('kind') == 'image':
+            e.add_field(
+                name='Медиа',
+                value=f'🖼️ Фото · `{media.get("name") or "image"}` — во вложении / превью',
+                inline=False)
         if entry.get('link'):
-            e.add_field(name='Ссылка на демку', value=entry['link'][:900], inline=False)
+            e.add_field(name='Ссылка', value=entry['link'][:900], inline=False)
         if extra_note:
             e.add_field(name='Внимание', value=extra_note, inline=False)
-        e.set_footer(text='Hakumo · Доказательства · листай канал — тут все демки')
+        e.set_footer(text='Hakumo · Доказательства · канал демок к наказаниям')
         return e
 
     async def _post_proof(self, guild, entry, file=None, image_inline=False, note=None):
@@ -597,6 +620,44 @@ async def try_deliver_proof(bot, guild, moderator, user, action, reason,
         return None
 
 
+async def try_deliver_proof_bytes(bot, guild, moderator, user, action, reason,
+                                  filename, data, content_type=None, link=None):
+    """Демка из панели: сырые байты файла (фото/видео) → канал доказательств.
+
+    Тот же формат карточки, что у /modpanel: кто выдал, кому, за что, медиа.
+    """
+    if not data:
+        return await try_deliver_proof(bot, guild, moderator, user, action, reason,
+                                       link=link)
+    try:
+        cog = getattr(bot, 'get_cog', lambda name: None)('ProofCog') if bot else None
+        if cog is None:
+            return None
+        # минимальный суррогат Attachment для _create_and_post
+        class _Att:
+            def __init__(self):
+                self.filename = filename or 'proof.bin'
+                self.size = len(data)
+                self.content_type = content_type
+                self.url = (link or '').strip() or None
+
+            async def read(self):
+                return data
+
+        ok, entry, note = await cog._create_and_post(
+            guild, moderator, user, action, reason,
+            attachment=_Att(), link=(link or None))
+        if not ok:
+            return 'Демку записал, но канал доказательств недоступен (права бота?).'
+        txt = f'Демка #{entry["id"]} — в канале доказательств.'
+        if note:
+            txt += f'\nВнимание: {note[:200]}'
+        return txt
+    except Exception as e:
+        log.warning(f'[PROOF] panel bytes ({action}): {e}')
+        return None
+
+
 VIDEO_EXTS = ('.mp4', '.mov', '.webm', '.mkv', '.avi', '.m4v')
 
 
@@ -649,6 +710,8 @@ async def require_proof(interaction, attachment=None, action_ru='наказан�
         description=_desc,
     )
     e.set_footer(text='Отключить требование: панель → «Доказательства» (тумблер сверху)')
+    # ## ❌ — чтобы apply_panel_action из панели видел отказ как ошибку
+    e.description = f'## ❌ Требуется доказательство\n{_desc}'
     try:
         await interaction.followup.send(embed=e, ephemeral=True)
     except Exception:

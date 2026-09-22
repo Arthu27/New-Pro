@@ -273,6 +273,14 @@
     </div>
     <div class="pn-lbl"><span>Причина</span><span class="pn-cnt" id="pnReasonCnt">0/500</span></div>
     <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500" aria-label="Причина наказания">
+    <div id="pnProofBlock">
+    <div class="pn-lbl"><span>Доказательство</span><span class="pn-cnt">фото / видео / ссылка</span></div>
+    <input type="file" id="pnProofFile" accept="image/*,video/*" aria-label="Файл доказательства"
+           style="margin-bottom:6px;width:100%;padding:8px;border:1px dashed var(--line-2);border-radius:10px;font-size:13px">
+    <input id="pnProof" type="url" placeholder="или ссылка https://… на скрин/видео" maxlength="500" aria-label="Ссылка на доказательство">
+    <div class="pn-hint" id="pnProofHint" style="margin-top:6px"><i class="fas fa-paperclip"></i>
+      <span>Демка уйдёт в канал доказательств: кто выдал, кому, за что и файл.</span></div>
+    </div>
     <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:10px" disabled><i class="fas fa-bolt"></i> Применить</button>
     <div class="pn-hint" id="pnHint" hidden><i class="fas fa-circle-info"></i><span id="pnHintText"></span></div>
     <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
@@ -779,6 +787,11 @@
     var meta = {};
     pnActions.forEach(function (a) { if (a.value === pnSel) meta = a; });
     $('pnDurBlock').hidden = !meta.duration;
+    var needProof = !!(meta.proof && pnOpts && pnOpts.proof_required !== false);
+    if ($('pnProofBlock')) $('pnProofBlock').hidden = !pnSel || !meta.proof;
+    if ($('pnProofFile') && !needProof) {
+      /* поле всё равно показываем для действий с proof=true — можно приложить добровольно */
+    }
     var limSel = pnLimits[pnSel];
     var limOut = limSel && !pnLimitExempt &&
                  typeof limSel.left === 'number' && limSel.left <= 0;
@@ -792,6 +805,8 @@
             ' — действие снова станет доступно после обновления окна.';
     } else if (pnSel === 'ban' && pnOpts && !pnOpts.ban_ready) {
       msg = '«Бан» пока не работает: не выбрана роль бана. Панель → Роли наказаний → «Бан».';
+    } else if (needProof) {
+      msg = 'Нужно доказательство: фото/видео с устройства или ссылка https://…';
     }
     $('pnMsg').textContent = msg;
     $('pnMsg').style.color = msg ? 'var(--warn)' : '';
@@ -826,15 +841,33 @@
     btn.disabled = true;
     $('pnMsg').textContent = 'Применяем…';
     $('pnMsg').style.color = '';
-    fetch('/api/guild/' + gid + '/punish', {
-      credentials: 'same-origin', method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    var fileEl = $('pnProofFile');
+    var hasFile = fileEl && fileEl.files && fileEl.files[0];
+    var proofUrl = ($('pnProof') && $('pnProof').value.trim()) || '';
+    var body;
+    var headers = {};
+    if (hasFile) {
+      body = new FormData();
+      body.append('user_id', pnUid);
+      body.append('action', pnSel);
+      body.append('duration', $('pnDurBlock').hidden ? '' : $('pnDur').value.trim());
+      body.append('reason', $('pnReason').value.trim());
+      if (proofUrl) body.append('proof', proofUrl);
+      body.append('file', fileEl.files[0], fileEl.files[0].name);
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify({
         user_id: pnUid,
         action: pnSel,
         duration: $('pnDurBlock').hidden ? '' : $('pnDur').value.trim(),
-        reason: $('pnReason').value.trim()
-      })
+        reason: $('pnReason').value.trim(),
+        proof: proofUrl
+      });
+    }
+    fetch('/api/guild/' + gid + '/punish', {
+      credentials: 'same-origin', method: 'POST',
+      headers: headers,
+      body: body
     }).then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false;
       var t = d.message || d.error || 'Готово';
@@ -843,6 +876,8 @@
            потом покажем результат (иначе перерисовка его сотрёт) */
         pnSelect('');
         pnResetForm();
+        if (fileEl) fileEl.value = '';
+        if ($('pnProof')) $('pnProof').value = '';
         pnLoad().then(function () {
           $('pnMsg').textContent = t;
           $('pnMsg').style.color = '';

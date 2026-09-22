@@ -5,8 +5,8 @@ POST /api/guild/<gid>/punish — выдать наказание (варн, му
 снятия). Исполняет тот же код, что и /modpanel: длительности «60, 1ч, 3ч, 1д»,
 «бан» — роль бана: бот каналы поштучно не закрывает, доступ закрывает сама
 роль (владелец 2026-09-08); нужна выбранная роль в «Ролях наказаний».
-Доказательство панель не спрашивает:
-форма упрощена, поле убрано.
+Доказательство панель принимает файлом или ссылкой: фото/видео уходит
+в канал доказательств (кто выдал, кому, за что + медиа).
 
 GET /api/guild/<gid>/punish/options — что доступно именно ЭТОМУ
 пользователю панели: список действий отфильтрован по ACL «Права команд»
@@ -26,7 +26,7 @@ from web.routes._common import (
 
 # (value, label, нужна_длительность, нужно_доказательство_если_тумблер)
 PANEL_ACTIONS = [
-    ('warn', 'Варн', False, False),
+    ('warn', 'Варн', False, True),
     # «Снять варн» — тот же единый путь apply_panel_action('unwarn'),
     # что и у /modpanel. Раньше действия не было В ЭТОМ списке (в боте
     # панель PANEL_ACTIONS из cogs/moderation.py — другая, с тем же
@@ -237,7 +237,20 @@ def register(ctx):
         if cog is None:
             return jsonify({'success': False,
                             'error': 'Модуль модерации не загружен'}), 404
-        d = _safe_json_obj()
+        # JSON или multipart (файл доказательства с устройства)
+        proof_file = None
+        proof_bytes = None
+        proof_name = None
+        proof_ctype = None
+        if (request.content_type or '').lower().startswith('multipart/'):
+            d = request.form
+            proof_file = request.files.get('proof') or request.files.get('file')
+            if proof_file and (proof_file.filename or '').strip():
+                proof_bytes = proof_file.read()
+                proof_name = proof_file.filename
+                proof_ctype = proof_file.mimetype
+        else:
+            d = _safe_json_obj()
         action = str(d.get('action') or '').strip()
         if action not in _VALUE_SET:
             return jsonify({'success': False, 'error': 'Неизвестное действие'}), 400
@@ -273,6 +286,33 @@ def register(ctx):
         duration = str(d.get('duration') or '').strip()[:40] or None
         proof = str(d.get('proof') or '').strip()[:500] or None
         actor = str(session.get('username') or 'Панель')
+
+        # Наказания через доказательство: файл или ссылка обязательны,
+        # если тумблер «требовать демку» включён (по умолчанию — да).
+        _need_proof = False
+        for _v, _lbl, _dur, _prf in PANEL_ACTIONS:
+            if _v == action and _prf:
+                _need_proof = True
+                break
+        if _need_proof:
+            try:
+                from cogs.proof_cog import proof_is_required, proof_is_whitelisted
+                if proof_is_required(int(gid)):
+                    _wl = False
+                    if member_viewer is not None:
+                        _wl = proof_is_whitelisted(
+                            int(gid),
+                            user_id=getattr(member_viewer, 'id', 0),
+                            role_ids=[getattr(r, 'id', 0)
+                                      for r in getattr(member_viewer, 'roles', []) or []])
+                    if not _wl and not proof and not proof_bytes:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Нужно доказательство: загрузите фото/видео '
+                                     'или укажите ссылку https://…',
+                        }), 400
+            except Exception as _pex:
+                _log.debug('punish proof gate: %s', _pex)
 
         # «Лимиты команды» (Щит сервера → Лимиты) применяются и в карточке
         # участника: модератор, вошедший через Discord-аккаунт, НЕ может
@@ -323,13 +363,51 @@ def register(ctx):
             ok, text = _run_async(cog.apply_panel_action(
                 guild, target, action, reason=reason,
                 amount=duration, proof_link=proof, actor=actor,
-                duration_cap=_dur_cap))
+                duration_cap=_dur_cap,
+                proof_ok=bool(proof_bytes or proof)))
         except Exception as _ex:
             _log.warning('punish: %s', _ex)
             return jsonify({'success': False,
                             'error': f'Не получилось: {_ex}'}), 200
         if not text:
             text = 'Готово' if ok else 'Не получилось'
+        # Фото/видео с панели → канал доказательств (кто/кому/за что + медиа)
+        if ok and (proof_bytes or proof):
+            try:
+                from cogs.proof_cog import try_deliver_proof_bytes, try_deliver_proof
+                _p_ru = {
+                    'ban': 'бан', 'kick': 'кик', 'timeout': 'мут',
+                    'mute_chat': 'мут чата', 'vmute': 'войс-мут',
+                    'warn': 'варн',
+                }.get(action, action)
+                _mod = member_viewer
+                if _mod is None:
+                    class _PanelMod:
+                        id = int(session.get('discord_id') or 0) or 0
+                        display_name = actor
+                        def __str__(self):
+                            return actor
+                    _mod = _PanelMod()
+                _tgt = member
+                if _tgt is None:
+                    class _PanelUser:
+                        id = int(raw_uid)
+                        display_name = raw_uid
+                        def __str__(self):
+                            return f'ID {raw_uid}'
+                    _tgt = _PanelUser()
+                if proof_bytes:
+                    _st = _run_async(try_deliver_proof_bytes(
+                        bot, guild, _mod, _tgt, _p_ru, reason or '—',
+                        proof_name, proof_bytes, proof_ctype, link=proof))
+                else:
+                    _st = _run_async(try_deliver_proof(
+                        bot, guild, _mod, _tgt, _p_ru, reason or '—',
+                        link=proof))
+                if _st:
+                    text = f'{text}\n{_st}'
+            except Exception as _dex:
+                _log.warning('punish proof deliver: %s', _dex)
         # успешное действие — в счётчик модератора (если лимиты для него есть)
         if ok and quota_actor is not None:
             try:

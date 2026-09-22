@@ -64,8 +64,8 @@ save_acl(GID, {})
 save_action_acl(GID, {})
 
 from cogs.proof_cog import proof_is_required, proof_set_required
-check(proof_is_required(GID) is False,
-      'по умолчанию доказательства НЕ требуются (включается в панели)')
+check(proof_is_required(GID) is True,
+      'по умолчанию доказательства ТРЕБУЮТСЯ (выключается в панели)')
 proof_set_required(GID, True)  # строгий режим — явно включаем
 
 print('== is_media_attachment ==')

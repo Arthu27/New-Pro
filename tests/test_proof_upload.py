@@ -134,7 +134,7 @@ check(ok is True and not i.followup.sent and not i.response.msgs,
 
 # строгий режим включаем явно (по умолчанию демка не нужна)
 from cogs.proof_cog import proof_is_required as _pir, proof_set_required as _psr
-check(_pir(G1) is False, 'по умолчанию доказательства НЕ требуются')
+check(_pir(G1) is True, 'по умолчанию доказательства ТРЕБУЮТСЯ')
 _psr(G1, True)
 
 # доверенная роль — тоже освобождает
