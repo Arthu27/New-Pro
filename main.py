@@ -887,20 +887,25 @@ def _resolve_voice_channel_id():
 VOICE_CHANNEL_ID = _resolve_voice_channel_id()
 
 async def _monitor_voice():
-    """Держим голосовое подключение живым — переподключаемся при падении,
-    каждые 4 минуты играем тишину (keep-alive).
+    """Держим голосовое подключение живым — только connect, без play.
 
-    ВАЖНО: ``VoiceClient.play`` синхронно ждёт старт AudioPlayer-потока
-    (``Thread.start`` → ``_started.wait``). На живом сервере это давало
-    EVENT-LOOP ЗАВИСАНИЕ ~7–26 сек (стек: ``_monitor_voice`` → ``vc.play``
-    или после обрыва — gateway ``_keep_alive.start``). Поэтому ``play``
-    уводим в ``asyncio.to_thread`` + ``wait_for``, ``connect`` с таймаутом,
-    а при неготовом gateway не дёргаем reconnect.
+    Раньше каждые 4 мин играли тишину через ``vc.play``. Даже в
+    ``asyncio.to_thread`` это давало гонки с gateway и на живом сервере
+    снова всплывало «Moderation не ответило вовремя» (цикл занят /
+    voice state machine). Подключение само держит сессию Discord.
+
+    Silence-ping только если явно: ``VOICE_SILENCE_PING=1`` (тогда play
+    строго через ``to_thread`` + ``wait_for``).
     """
     await bot.wait_until_ready()
     await asyncio.sleep(10)
     last_ping = 0.0
     backoff_until = 0.0
+    _silence = (os.environ.get('VOICE_SILENCE_PING') or '').strip().lower() in (
+        '1', 'true', 'yes', 'on')
+    if _silence:
+        _log.warning('_monitor_voice: VOICE_SILENCE_PING=1 — play включён '
+                     '(риск лагов); по умолчанию play ВЫКЛ')
     while not bot.is_closed():
         await asyncio.sleep(30)
         channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
@@ -926,7 +931,7 @@ async def _monitor_voice():
             except Exception as _ex:
                 backoff_until = time.time() + 30
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
-        elif time.time() - last_ping > 240:
+        elif _silence and time.time() - last_ping > 240:
             try:
                 if not vc.is_playing():
                     import io
@@ -938,9 +943,12 @@ async def _monitor_voice():
             except asyncio.TimeoutError:
                 _log.warning("_monitor_voice: play timeout 15s (#%s)",
                              getattr(channel, 'id', '?'))
-                last_ping = time.time()  # не долбить play каждые 30с
+                last_ping = time.time()
             except Exception as _ex:
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
+        else:
+            # Без silence-ping просто считаем соединение живым.
+            last_ping = time.time()
 
 @bot.event
 async def on_disconnect():
@@ -1063,7 +1071,37 @@ async def on_ready():
             gc_stabilize()
         except Exception as _ex:
             _log.warning("on_ready(): GC-стабилизация не удалась: %s", _ex)
-        bot.loop.create_task(_monitor_voice())
+        # Voice stay: по умолчанию ВКЛ если задан канал. Полностью выключить:
+        # VOICE_STAY_ENABLED=0. Silence-ping по-прежнему только VOICE_SILENCE_PING=1.
+        _voice_stay = (os.environ.get('VOICE_STAY_ENABLED') or '1').strip().lower() \
+            not in ('0', 'false', 'no', 'off')
+        if VOICE_CHANNEL_ID and _voice_stay:
+            bot.loop.create_task(_monitor_voice())
+        else:
+            _log.info('voice stay: выключен (нет канала или VOICE_STAY_ENABLED=0)')
+        # Детектор зависания event loop: если callback >1с — пишем в лог.
+        # Без этого «не ответило вовремя» выглядит как баг панели, хотя
+        # виноват sync-код в другом коге.
+        try:
+            bot.loop.set_debug(False)
+            bot.loop.slow_callback_duration = 0.5
+        except Exception as _ex:
+            _log.debug('slow_callback_duration: %s', _ex)
+
+        async def _loop_lag_watchdog():
+            import asyncio as _aio
+            while not bot.is_closed():
+                t0 = _aio.get_running_loop().time()
+                await _aio.sleep(1.0)
+                lag = _aio.get_running_loop().time() - t0 - 1.0
+                if lag > 0.5:
+                    _log.warning('EVENT-LOOP lag=%.2fs (sync-код блокирует цикл)',
+                                 lag)
+
+        try:
+            bot.loop.create_task(_loop_lag_watchdog())
+        except Exception as _ex:
+            _log.debug('loop lag watchdog: %s', _ex)
         # Фоновая дозагрузка участников в кэш (раз в 20с, по одной гильдии) —
         # чтобы поиск/пикеры/профили панели видели и тех, кого «нет в листе».
         try:
@@ -1358,6 +1396,18 @@ async def main():
         _log.info("ВЕРСИЯ КОДА: %s", _vs)
     except Exception as _ex:
         _log.debug("version_stamp(): %s", _ex)
+
+    # Общий пул потоков для asyncio.to_thread (PIL, SQLite, JSON).
+    # Дефолтный min(32, cpu+4) тесен, когда панель + баннеры + ACL
+    # одновременно уходят с цикла — поднимаем заранее.
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        _pool = ThreadPoolExecutor(max_workers=32, thread_name_prefix='hakumo-io')
+        loop = asyncio.get_running_loop()
+        loop.set_default_executor(_pool)
+        _log.info("Executor: ThreadPoolExecutor(32) для to_thread/PIL/SQLite")
+    except Exception as _ex:
+        _log.debug("set_default_executor: %s", _ex)
 
     # Предупреждения о среде: три главные причины «странных» зависаний
     # (инцидент 30.08: Downloads + вложенная папка + Python 3.14)

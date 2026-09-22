@@ -142,26 +142,35 @@ class KnowledgeBase :
         return [doc for score ,doc in scored_docs [:max_results ]]
 
     def get_context_for_query (self ,query :str )->str :
-        """Получает контекст из релевантной информации для ответа на вопрос"""
-        results =self .search (query ,max_results =3 )
+        """Получает контекст из релевантной информации для ответа на вопрос.
 
-        if not results :
+        Правила сервера всегда кладём в начало (чтобы ИИ их «знал»),
+        затем — FAQ/тикеты по релевантности запроса.
+        """
+        rules =[d for d in self .documents if d .get ('type')=='rule']
+        results =self .search (query ,max_results =4 )
+        # убрать дубли правил из search
+        extra =[d for d in results if d .get ('type')!='rule']
+
+        if not rules and not extra :
             return ""
 
         context_parts =["БАЗА ЗНАНИЙ И ПРАВИЛА СЕРВЕРА:"]
-
-        for i ,doc in enumerate (results ,1 ):
+        for i ,doc in enumerate (rules [:12 ],1 ):
+            context_parts .append (f"\n{i}. ПРАВИЛО СЕРВЕРА:\n{doc['content'][:500]}")
+        n0 =len (rules [:12 ])
+        for j ,doc in enumerate (extra [:3 ],1 ):
+            i =n0 +j 
             doc_type =doc ['type']
-            content =doc ['content'][:500 ]  # Ограничиваем длину
-
-            if doc_type =='rule':
-                context_parts .append (f"\n{i}. ПРАВИЛО СЕРВЕРА:\n{content}")
-            elif doc_type =='faq':
+            content =doc ['content'][:500 ]
+            if doc_type =='faq':
                 context_parts .append (f"\n{i}. ПОХОЖИЙ ОТВЕТ ИЗ FAQ:\n{content}")
             elif doc_type =='ticket':
                 context_parts .append (f"\n{i}. РЕШЕНИЕ ИЗ ПРОШЛЫХ ТИКЕТОВ:\n{content}")
             elif doc_type =='note':
                 context_parts .append (f"\n{i}. ЗАМЕТКА О ПОЛЬЗОВАТЕЛЕ:\n{content}")
+            else :
+                context_parts .append (f"\n{i}. {doc_type.upper()}:\n{content}")
 
         return "\n".join (context_parts )
 

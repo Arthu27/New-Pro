@@ -7,11 +7,46 @@
   <div class="page-head-copy">
     <div class="eyebrow"> AI </div>
     <h1>AI Чат</h1>
-    <p class="lead">Общайся с Hakumo AI — задавай вопросы по серверу, модерации и командам.</p>
+    <p class="lead">Сильный ассистент Hakumo — вопросы по серверу, модерации и командам. Настройки Discord-канала — ниже.</p>
   </div>
   <div class="page-head-actions">
-    <span class="badge security" id="model-badge"><i class="fas fa-robot"></i> Mistral</span>
+    <span class="badge security" id="model-badge"><i class="fas fa-robot"></i> Mistral Large</span>
     <button type="button" class="btn" onclick="clearChat()" title="Очистить чат"><i class="fas fa-trash"></i> Очистить</button>
+  </div>
+</div>
+
+<div class="panel" id="ai-settings-panel" style="margin-bottom:16px">
+  <div class="panel-head">
+    <div><h2><i class="fas fa-sliders"></i> Discord AI — каналы и сила</h2>
+      <div class="sub">Канал, где бот отвечает; reply на его сообщения продолжает диалог.</div></div>
+  </div>
+  <div class="panel-body" style="display:grid;gap:12px;max-width:720px">
+    <label style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="ai-enabled" checked> ИИ-чат включён
+    </label>
+    <label>ID каналов (через запятую)
+      <input type="text" class="form-input" id="ai-channels" placeholder="1312434963941167134" style="width:100%;margin-top:6px">
+    </label>
+    <div style="display:flex;flex-wrap:wrap;gap:14px">
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ai-respond-all" checked> Отвечать на все сообщения в канале</label>
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ai-reply-bot" checked> Отвечать на reply к боту</label>
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ai-require-mention"> Только по @упоминанию</label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <label>Модель Discord
+        <input type="text" class="form-input" id="ai-model" placeholder="mistral-large-latest" style="width:100%;margin-top:6px">
+      </label>
+      <label>Температура (0–1)
+        <input type="number" class="form-input" id="ai-temp" min="0" max="1" step="0.01" value="0.18" style="width:100%;margin-top:6px">
+      </label>
+      <label>Max tokens
+        <input type="number" class="form-input" id="ai-tokens" min="256" max="4096" step="64" value="1600" style="width:100%;margin-top:6px">
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button type="button" class="btn btn-primary" id="ai-settings-save"><i class="fas fa-save"></i> Сохранить</button>
+      <span class="hint" id="ai-settings-status"></span>
+    </div>
   </div>
 </div>
 
@@ -21,7 +56,7 @@
       <div class="welcome-ico"><i class="fas fa-robot"></i></div>
       <div>
         <b>Привет, {{ username }}!</b>
-        <p>Hakumo AI — вопросы по серверу, модерации и командам бота.</p>
+        <p>Hakumo AI — точные ответы по серверу, модерации и командам бота.</p>
         <div class="prompt-row">
           <button type="button" class="prompt-chip" data-prompt="Что умеет бот на этом сервере?"><i class="fas fa-bolt"></i> Что умеет бот?</button>
           <button type="button" class="prompt-chip" data-prompt="Как настроить автофильтр от спама?"><i class="fas fa-filter"></i> Как настроить автофильтр?</button>
@@ -172,6 +207,58 @@
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
   });
+
+  function fillSettings(s) {
+    if (!s) return;
+    var en = $('ai-enabled'); if (en) en.checked = !!s.enabled;
+    var ch = $('ai-channels'); if (ch) ch.value = (s.channels || []).join(', ');
+    var ra = $('ai-respond-all'); if (ra) ra.checked = !!s.respond_all;
+    var rb = $('ai-reply-bot'); if (rb) rb.checked = !!s.reply_to_bot;
+    var rm = $('ai-require-mention'); if (rm) rm.checked = !!s.require_mention;
+    var md = $('ai-model'); if (md) md.value = s.model || '';
+    var tp = $('ai-temp'); if (tp) tp.value = s.temperature != null ? s.temperature : 0.18;
+    var tk = $('ai-tokens'); if (tk) tk.value = s.max_tokens || 1600;
+  }
+
+  function loadSettings() {
+    fetch('/api/ai-chat/settings', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(fillSettings)
+      .catch(function () {});
+  }
+
+  var saveBtn = $('ai-settings-save');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function () {
+      var st = $('ai-settings-status');
+      var channels = String(($('ai-channels') && $('ai-channels').value) || '')
+        .split(/[,;\s]+/).map(function (x) { return x.trim(); }).filter(Boolean)
+        .map(function (x) { return parseInt(x, 10); }).filter(function (n) { return n > 0; });
+      var body = {
+        enabled: !!($('ai-enabled') && $('ai-enabled').checked),
+        channels: channels,
+        respond_all: !!($('ai-respond-all') && $('ai-respond-all').checked),
+        reply_to_bot: !!($('ai-reply-bot') && $('ai-reply-bot').checked),
+        require_mention: !!($('ai-require-mention') && $('ai-require-mention').checked),
+        model: ($('ai-model') && $('ai-model').value) || '',
+        temperature: parseFloat(($('ai-temp') && $('ai-temp').value) || '0.18'),
+        max_tokens: parseInt(($('ai-tokens') && $('ai-tokens').value) || '1600', 10)
+      };
+      if (st) st.textContent = 'Сохраняю…';
+      fetch('/api/ai-chat/settings', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (x) {
+          if (st) st.textContent = x.ok ? 'Сохранено' : (x.d && x.d.error) || 'Ошибка';
+          if (x.ok && x.d && x.d.settings) fillSettings(x.d.settings);
+        })
+        .catch(function () { if (st) st.textContent = 'Сеть недоступна'; });
+    });
+  }
+  loadSettings();
 
   window.sendMessage = sendMessage;
   window.clearChat = clearChat;

@@ -107,6 +107,8 @@ check('кого наказать' not in joined and 'что сделать' not 
       f'без дублей подсказок в TextDisplay: {joined!r}')
 check('Выберите участника и действие ниже.' in joined,
       f'инструкция под баннером: {joined!r}')
+check('SPEED OK' not in joined,
+      f'без SPEED надписи в шапке: {joined!r}')
 check('Порядок любой' not in joined and 'порядок любой' not in joined.lower()
       and 'в любом порядке' not in joined.lower(),
       f'без «порядок любой»: {joined!r}')
@@ -183,13 +185,20 @@ ri = _RInter()
 _aio.run(view2.refresh(ri))
 check(bool(ri.response.defers), 'refresh сначала defer (ACK <3с)')
 check(bool(ri.edits), 'после ACK — edit_original_response')
-atts = (ri.edits[-1].get('attachments') if ri.edits else None) or []
-check(atts and all(getattr(a, 'filename', None) for a in atts),
-      'attachments = keep старого баннера (не discord.File)')
-check(not any(type(a).__name__ == 'File' for a in atts),
-      'нет повторного File-upload баннера')
+kw = ri.edits[-1] if ri.edits else {}
+check(set(kw.keys()) == {'view'} or 'view' in kw,
+      'refresh V2 — только view= (attachments ломают селекты)')
 check('участник <@111>' in _collect_texts(view2),
       'статус обновился после выбора')
+
+# ModTargetSelect больше не зовёт refresh — только defer
+src_mod = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+mts = src_mod[src_mod.index('class ModTargetSelect'):
+              src_mod.index('class ModPanelView')]
+check('await view.refresh' not in mts,
+      'ModTargetSelect: без view.refresh (ACK + silent reset)')
+check('_silent_reset_panel' in mts,
+      'ModTargetSelect: статус участника через _silent_reset_panel')
 
 print('== select placeholders ==')
 check((getattr(view.target_select, 'placeholder', None) or '') == '',
@@ -200,8 +209,9 @@ check((getattr(view.action_select, 'placeholder', None) or '') == '',
 # V2, не синий эмбед
 check(view.has_components_v2(), 'LayoutView V2')
 src = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
-check("await _respond(interaction, view=view" in src
-      or "await _respond(interaction, view=view," in src,
+_mp = src[src.index('async def modpanel'):]
+_mp = _mp[:_mp.index('def _parse_target_id')]
+check('edit_original_response' in _mp and ("'view': view" in _mp or 'view=view' in _mp),
       'команда шлёт V2 view, не синий embed')
 check('0x5865F2' not in src or 'panel_embed' in src,
       'нет синего blurple как основного цвета панели')

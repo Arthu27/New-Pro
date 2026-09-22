@@ -417,6 +417,14 @@ def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
     return [black_container(*children, accent=accent if accent is not None else _BLACK)]
 
 
+def build_report_card_items(*, title: str, body: str = '', footer: str = '',
+                            buttons=None, accent: int = None):
+    """Карточка вызова модератора (/report) V2 — тот же чёрный блок,
+    что у карточек апелляций (единый стиль панелей Hakumo)."""
+    return build_appeal_card_items(title=title, body=body, footer=footer,
+                                   buttons=buttons, accent=accent)
+
+
 def build_notice_items(*, title: str, body: str = '', footer: str = '',
                        accent: int = None, brand: str = 'HAKUMO'):
     """ЛС/уведомление V2: чёрный (или статусный) контейнер, бренд, текст."""

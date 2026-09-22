@@ -1954,10 +1954,13 @@ class Appeals(commands.Cog):
                                 'показываю ссылкой', item['id'], fname)
                     embed.set_image(url=appearance['url'])
             elif appearance.get('mode') == 'auto':
-                png = render_appeal_card(
+                import asyncio as _aio
+                from functools import partial as _partial
+                png = await _aio.to_thread(_partial(
+                    render_appeal_card,
                     appeal_id=item['id'], user_name=item['user_name'],
                     text=item['text'],
-                    theme=appearance.get('theme'))
+                    theme=appearance.get('theme')))
                 if png:
                     fn = appeal_card_filename(item['id'])
                     file = discord.File(io.BytesIO(png), filename=fn)

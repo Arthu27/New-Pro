@@ -230,10 +230,13 @@ check(IR.is_ignored_role(CLOUD_ROLE, GID), 'is_ignored_role работает')
 print('== 6. Выбор участника в /modpanel — молча ==')
 src = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
 i = src.find('class ModTargetSelect')
-block = src[i:i + 1800]
-check('send_message' not in block,
+j = src.find('class ModPanelView', i)
+block = src[i:j if j > i else i + 2500]
+# Основной ACK — defer(thinking=False). Toast «Цель:…» не шлём
+# (send_message только в except-fallback, если defer упал).
+check('Цель:' not in block and 'выберите действие' not in block.lower(),
       'при выборе цели НЕТ сообщений «Цель: … выберите действие»')
-check('defer(ephemeral=True)' in block,
+check('defer(thinking=False)' in block or 'defer(ephemeral=True)' in block,
       'клик подтверждается тихо (ephemeral defer, на экране ничего)')
 
 print('== 7. Команды не ограничены каналами в коде ==')

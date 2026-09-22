@@ -121,10 +121,13 @@ class WelcomeCard(commands.Cog):
                 bg = WCG.load_bg_bytes(appearance['file'])
             # Авто-картинка (или фолбэк при битом файле): тема-градиент
             av = await self._avatar_bytes(member)
-            png = WCG.render_welcome_card(
+            import asyncio as _aio
+            from functools import partial as _partial
+            png = await _aio.to_thread(_partial(
+                WCG.render_welcome_card,
                 member.display_name, guild.name, guild.member_count or 0,
                 avatar_bytes=av, kind=kind, theme=appearance['theme'],
-                bg_bytes=bg)
+                bg_bytes=bg))
             file = discord.File(io.BytesIO(png),
                                 filename=WCG.welcome_card_filename(kind))
             await ch.send(content=(text if kind == 'welcome' else None), file=file)

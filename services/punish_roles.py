@@ -169,13 +169,34 @@ def level_transition(gid, warn_count):
     return add_id, remove
 
 
+# mtime-кэш: role_for/get/due зовут _load() на КАЖДЫЙ voice/join-ивент и
+# в циклах — раньше это был полный read+json.loads файла каждый раз, что
+# грузило event loop. Теперь читаем с диска только когда файл изменился.
+_CACHE = {'mtime': None, 'size': None, 'data': None}
+
+
 def _load():
+    try:
+        st = os.stat(PATH)
+    except OSError:
+        _CACHE['mtime'] = None
+        _CACHE['size'] = None
+        _CACHE['data'] = {}
+        return {}
+    sig_m, sig_s = st.st_mtime, st.st_size
+    if _CACHE['data'] is not None and _CACHE['mtime'] == sig_m \
+            and _CACHE['size'] == sig_s:
+        return _CACHE['data']
     try:
         with open(PATH, 'r', encoding='utf-8') as fp:
             data = json.load(fp)
-        return data if isinstance(data, dict) else {}
+        data = data if isinstance(data, dict) else {}
     except (OSError, ValueError):
-        return {}
+        data = {}
+    _CACHE['mtime'] = sig_m
+    _CACHE['size'] = sig_s
+    _CACHE['data'] = data
+    return data
 
 
 def _save(data):
@@ -184,6 +205,16 @@ def _save(data):
     with open(tmp, 'w', encoding='utf-8') as fp:
         json.dump(data, fp, ensure_ascii=False, indent=2)
     os.replace(tmp, PATH)
+    # Обновляем кэш сразу — следующий _load() не пойдёт на диск.
+    try:
+        st = os.stat(PATH)
+        _CACHE['mtime'] = st.st_mtime
+        _CACHE['size'] = st.st_size
+        _CACHE['data'] = data
+    except OSError:
+        _CACHE['mtime'] = None
+        _CACHE['size'] = None
+        _CACHE['data'] = data
 
 
 def _clean_roles(raw):

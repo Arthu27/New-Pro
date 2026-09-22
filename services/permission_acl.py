@@ -195,14 +195,40 @@ def all_categories():
     return {k: list(v) for k, v in _command_categories_cached().items()}
 
 
+# Короткий кэш cmd_acl: has_access на каждый slash / interaction_check.
+_CMD_ACL_CACHE = {}  # gid -> (acl: dict, mono_ts)
+_CMD_ACL_TTL = 20.0
+
+
 def load_acl(guild_id: int) -> dict:
     """Вернуть ограничения: {command_or_category: [role_ids]}"""
     try:
-        acl = _acl_db().get(int(guild_id), "acl", {})
-        return acl if isinstance(acl, dict) else {}
+        key = int(guild_id)
+    except (TypeError, ValueError):
+        return {}
+    import time as _time
+    now = _time.monotonic()
+    hit = _CMD_ACL_CACHE.get(key)
+    if hit and (now - hit[1]) < _CMD_ACL_TTL:
+        return dict(hit[0]) if isinstance(hit[0], dict) else {}
+    try:
+        acl = _acl_db().get(key, "acl", {})
+        if not isinstance(acl, dict):
+            acl = {}
     except Exception as e:
         log.warning(f"[cmd_acl] load error: {e}")
-        return {}
+        acl = {}
+    _CMD_ACL_CACHE[key] = (acl, now)
+    return dict(acl)
+
+
+def save_acl(guild_id: int, acl: dict):
+    try:
+        key = int(guild_id)
+        _CMD_ACL_CACHE.pop(key, None)
+        _acl_db().set(key, "acl", acl or {})
+    except Exception as e:
+        log.warning(f"[cmd_acl] save error: {e}")
 
 
 def effective_acl(guild_id: int) -> dict:
@@ -240,13 +266,6 @@ def materialize_category(acl: dict, cat: str) -> dict:
             acl.setdefault(cmd, [])  # категория была «всем» — команды тоже
     acl.pop(cat, None)
     return acl
-
-
-def save_acl(guild_id: int, acl: dict):
-    try:
-        _acl_db().set(int(guild_id), "acl", acl or {})
-    except Exception as e:
-        log.warning(f"[cmd_acl] save error: {e}")
 
 
 def set_rule(guild_id: int, command: str, role_ids: list):

@@ -260,6 +260,10 @@ class _PInter:
         self.response = _PResp()
         self.message = _PMsg()
 
+        async def _fu(**kw):
+            self.response.sent.append(kw)
+        self.followup = types.SimpleNamespace(send=_fu)
+
     async def edit_original_response(self, **kw):
         self.message.edits.append(kw)
 
@@ -277,22 +281,17 @@ view.action_select._values = ['mute']
 asyncio.run(view.action_select.callback(inter))
 check(view.pending_action == 'mute' and not inter.response.modal,
       'действие без участника — запомнили, модалку не открыли')
-# refresh: defer (ACK) + edit_original — не ждём upload баннера
-updated = bool(inter.response.edits) or bool(inter.message.edits)
-check(inter.response.done and updated,
-      'меню обновилось после ACK (defer + edit, без таймаута 3с)')
-if inter.message.edits:
-    atts = inter.message.edits[-1].get('attachments')
-    check(atts is not None and atts and not any(
-        type(a).__name__ == 'File' or hasattr(a, 'fp') for a in atts),
-          'баннер не перезаливается — keep старых attachments')
+# без участника: только ACK (defer), без rebuild LayoutView
+check(inter.response.done,
+      'действие без участника — ACK defer (<3с), без тяжёлого edit')
 
-# теперь человек → выбор вида мута или модалка
+# теперь человек → выбор вида мута или кнопка формы
 view.selected_uid = '3000000000000000300'
 inter2 = _PInter(opener, g7)
 asyncio.run(view.target_select.callback(inter2))
-check(bool(inter2.response.modal) or bool(inter2.response.sent),
-      'после участника (действие уже выбрано) — вид мута или модалка')
+check(bool(inter2.response.modal) or bool(inter2.response.sent)
+      or inter2.response.done,
+      'после участника (действие уже выбрано) — вид мута / кнопка / ACK')
 
 # наоборот: сначала человек, потом действие
 view2 = M.ModPanelView(cog, opener, allowed=allowed)
@@ -300,14 +299,230 @@ view2.selected_uid = '3000000000000000300'
 inter3 = _PInter(opener, g7)
 view2.action_select._values = ['mute']
 asyncio.run(view2.action_select.callback(inter3))
-check(bool(inter3.response.modal) or bool(inter3.response.sent),
-      'сначала участник, потом действие — вид мута или модалка сразу')
+check(bool(inter3.response.modal) or bool(inter3.response.sent)
+      or inter3.response.done,
+      'сначала участник, потом действие — ACK (вид мута / кнопка формы)')
+
+# ModTargetSelect: ACK + uid в памяти (без фонового rebuild — гонка с Действием)
+view3 = M.ModPanelView(cog, opener, allowed=allowed)
+view3._guild = g7
+inter4 = _PInter(opener, g7)
+
+class _User:
+    id = 3000000000000000300
+view3.target_select._values = [_User()]
+asyncio.run(view3.target_select.callback(inter4))
+check(view3.selected_uid == '3000000000000000300' and inter4.response.done,
+      'выбор участника: ACK defer + uid в памяти')
+check(getattr(view3, '_reset_task', None) in (None,) or
+      (view3._reset_task is not None and view3._reset_task.done()),
+      'после участника НЕТ фонового delayed-reset (не ломает Действие)')
+
+# действие после участника — модалка
+view3b = M.ModPanelView(cog, opener, allowed=allowed)
+view3b._guild = g7
+view3b.selected_uid = '3000000000000000300'
+msg_b = _PMsg(); msg_b.id = 56; msg_b.attachments = []
+view3b._panel_message = msg_b
+async def _edit_b(**kw):
+    return await msg_b.edit(**kw)
+view3b._root_edit = _edit_b
+inter_act = _PInter(opener, g7)
+inter_act.message = msg_b
+view3b.action_select._values = ['ban']
+asyncio.run(view3b.action_select.callback(inter_act))
+check(bool(inter_act.response.modal),
+      'после участника действие Бан → send_modal (работает)')
 
 # повтор выбора: rebuild даёт НОВЫЙ селект (Discord снова шлёт callback)
 old = id(view2.action_select)
 view2._rebuild(g7)
 check(id(view2.action_select) != old,
       'после шага селект наказаний собирается заново — можно выбрать то же')
+
+print('== 8. Серия действий: uid сохраняется, селект обновляется, клик отменяет reset ==')
+view4 = M.ModPanelView(cog, opener, allowed=allowed)
+view4.selected_uid = '3000000000000000300'
+view4._guild = g7
+edits = []
+
+async def _root(**kw):
+    edits.append(kw)
+
+view4._root_edit = _root
+
+async def _series():
+    # короткий delay для теста
+    inter5 = _PInter(opener, g7)
+    view4.action_select._values = ['mute']
+    # подменим schedule на быстрый delay через прямой вызов после callback
+    await view4.action_select.callback(inter5)
+    # callback ставит delay=1.5 — ускорим: отменим и поставим 0.05
+    M._cancel_panel_reset(view4)
+    M._schedule_panel_reset(inter5, view4, clear_pending=True, delay=0.05)
+    check(view4._reset_task is not None and not view4._reset_task.done(),
+          'после действия запланирован сброс селектов (серия)')
+    sel_before = id(view4.action_select)
+    await view4._reset_task
+    check(id(view4.action_select) != sel_before,
+          'после сброса — новый action_select (тот же пункт снова кликабелен)')
+    check(view4.selected_uid == '3000000000000000300',
+          'участник остаётся в памяти — серия без повторного выбора')
+    check(view4.pending_action is None,
+          'pending сброшен после действия — готов к новому пункту')
+    check(bool(edits) or bool(getattr(inter5.message, 'edits', None)),
+          'сброс пушит edit панели (message.edit / _root_edit)')
+
+    # клик отменяет незавершённый reset (без гонки)
+    view5 = M.ModPanelView(cog, opener, allowed=allowed)
+    view5.selected_uid = '3000000000000000300'
+    view5._guild = g7
+    view5._root_edit = _root
+    gen0 = int(getattr(view5, '_reset_gen', 0) or 0)
+    M._schedule_panel_reset(inter5, view5, clear_pending=True, delay=5.0)
+    task_long = view5._reset_task
+    check(task_long is not None and not task_long.done(),
+          'длинный reset task создан')
+    inter6 = _PInter(opener, g7)
+    view5.action_select._values = ['clear']
+    await view5.action_select.callback(inter6)
+    check(int(view5._reset_gen) > gen0,
+          'клик «Действие» поднимает поколение / отменяет старый reset')
+    check(view5._reset_task is not task_long,
+          'старый длинный reset заменён (не конкурирует с новым кликом)')
+    # дождаться, пока цикл доставит CancelledError старому task
+    try:
+        await asyncio.wait_for(task_long, timeout=0.5)
+    except (asyncio.CancelledError, asyncio.TimeoutError):
+        pass
+    check(task_long.cancelled() or task_long.done(),
+          'старый длинный reset отменён кликом')
+
+asyncio.run(_series())
+
+print('== 9. Сброс правит живое сообщение клика + resend fallback ==')
+
+class _PanelMsg:
+    def __init__(self, mid, *, fail_edit=False):
+        self.id = mid
+        self.edits = []
+        self.attachments = []
+        self.deleted = False
+        self._fail_edit = fail_edit
+
+    async def edit(self, **kw):
+        if self._fail_edit:
+            raise RuntimeError('edit fail')
+        self.edits.append(kw)
+        return self
+
+    async def delete(self):
+        self.deleted = True
+
+
+class _FakeFollowup:
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, **kw):
+        msg = _PanelMsg(999)
+        self.sent.append(kw)
+        return msg
+
+
+async def _msg_identity():
+    view = M.ModPanelView(cog, opener, allowed=allowed)
+    view.selected_uid = '3000000000000000300'
+    view._guild = g7
+    shown = _PanelMsg(111)
+    stale = _PanelMsg(222)  # устаревший объект; id панели = 111
+    view._panel_message = stale
+    view._panel_message_id = 111
+    async def _root(**kw):
+        return await stale.edit(**kw)
+    view._root_edit = _root
+    inter = _PInter(opener, g7)
+    # interaction.message = то, на чём кликнули (тот же id основной панели)
+    inter.message = shown
+    sel_before = id(view.action_select)
+    await M._silent_reset_panel(inter, view)
+    check(id(view.action_select) != sel_before, 'reset пересобрал селект')
+    check(len(shown.edits) == 1, 'edit ушёл в interaction.message (клик)')
+    check(len(stale.edits) == 0, 'устаревший объект _panel_message не трогали')
+    check(view._panel_message is shown or getattr(view._panel_message, 'id', None) == 111,
+          'панель привязана к живому сообщению клика')
+    # второй «клик» того же действия — новый select примет callback
+    view.action_select._values = ['mute']
+    inter2 = _PInter(opener, g7)
+    inter2.message = shown
+    await view.action_select.callback(inter2)
+    check(bool(inter2.response.modal) or bool(inter2.response.sent)
+          or inter2.response.done,
+          'после сброса второе действие снова ACK/модалка')
+
+    # kind-меню (другой id) НЕ ворует указатель основной панели
+    kind_ephemeral = _PanelMsg(777)
+    inter_kind = _PInter(opener, g7)
+    inter_kind.message = kind_ephemeral
+    edits_before = len(shown.edits)
+    await M._silent_reset_panel(inter_kind, view)
+    check(getattr(view._panel_message, 'id', None) == 111,
+          'kind-меню не переписало _panel_message')
+    check(len(kind_ephemeral.edits) == 0, 'kind-сообщение не редактировали')
+    check(len(shown.edits) > edits_before, 'сброс всё равно на основную панель')
+
+    # resend отключён — новое окно больше не создаём
+    view_r = M.ModPanelView(cog, opener, allowed=allowed)
+    view_r.selected_uid = '3000000000000000300'
+    view_r._guild = g7
+    broken = _PanelMsg(333, fail_edit=True)
+    view_r._panel_message = broken
+    fu = _FakeFollowup()
+    view_r._mod_followup = fu
+    ok = await M._resend_fresh_panel(view_r)
+    check(ok is False, 'resend отключён — всегда False')
+    check(not broken.deleted, 'старую эфемерку НЕ удаляем')
+    check(len(fu.sent) == 0, 'followup.send новой панели нет')
+
+    # _reset_after_step — edit той же панели, НЕ новое окно
+    view_a = M.ModPanelView(cog, opener, allowed=allowed)
+    view_a.selected_uid = '3000000000000000300'
+    view_a._guild = g7
+    view_a.pending_action = 'mute'
+    live = _PanelMsg(444)
+    view_a._panel_message = live
+    view_a._panel_message_id = 444
+    fu2 = _FakeFollowup()
+    view_a._mod_followup = fu2
+    inter_a = _PInter(opener, g7)
+    inter_a.message = live
+    await M._reset_after_step(inter_a, view_a, prefer_resend=False)
+    check(view_a.pending_action is None, 'после шага pending сброшен')
+    check(len(fu2.sent) == 0, 'без новой эфемерки — только edit той же панели')
+    check(len(live.edits) >= 1, 'селекты сброшены edit на том же сообщении')
+    check(view_a.selected_uid == '3000000000000000300',
+          'участник сохранён для серии действий')
+    check(getattr(view_a._panel_message, 'id', None) == 444,
+          'остаёмся на том же сообщении панели')
+    check(int(getattr(view_a, 'timeout', 0) or 0) == 300,
+          'панель живёт 5 минут (timeout=300)')
+
+asyncio.run(_msg_identity())
+
+print('== 10. Нет Collector / нового окна; kind на той же панели ==')
+src = open(M.__file__, encoding='utf-8').read()
+bind = src[src.index('def _bind_live_panel'):src.index('async def _send_modal_fast')]
+check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
+      'reset-хелперы без bot.wait_for')
+check('_send_kind_menu' in src and 'MuteKindView' in src,
+      'вид мута — отдельное меню MuteKindView')
+check('multi-fix-v16' in src or 'multi-fix-v13' in src,
+      'build=multi-use в логе открытия')
+check('resend disabled' in src or 'return False' in src[src.index('async def _resend_fresh_panel'):
+                                                          src.index('def _cancel_panel_reset')],
+      'resend заглушка — новое окно запрещено')
+check('_panel_message_id' in src and 'int(mid) != int(known_mid)' in src,
+      'bind не переезжает на kind-меню (другой message id)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

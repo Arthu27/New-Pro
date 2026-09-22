@@ -397,12 +397,18 @@ class Moderation (commands .Cog ):
     # это жёсткий блок, который не переопределить ни панелью, ни Интеграциями
     # — из-за него выданные роли «не включались».
     @app_commands.default_permissions(moderate_members=True)
-    async def modpanel (self ,interaction ):
-        # Сразу закрыть 3с-окно Discord: сбор меню/ACL не должен давать
-        # «Приложение не отвечает», если цикл чуть занят.
+    @app_commands.describe(
+        target='Сразу открыть панель на этом участнике (необязательно)')
+    async def modpanel (self ,interaction ,target :discord .Member =None ):
+        # defer → потом edit_original_response с панелью (НЕ followup!).
+        # Раньше _respond после defer слал followup, а сброс селектов правил
+        # original_response (пустое) — на экране селект оставался «залипшим»,
+        # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
-        # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v16',
+                 getattr(interaction.user, 'id', None),
+                 getattr(interaction.guild, 'id', None),
+                 getattr(target, 'id', None))
         allowed =actions_for_member (interaction .guild ,interaction .user )
         if not allowed :
             await _respond (interaction ,
@@ -411,20 +417,54 @@ class Moderation (commands .Cog ):
             'их в панели: Щит сервера → Лимиты команды → роль.'),
             ephemeral =True )
             return 
-        # стикеры → application emoji в фоне (unicode-фолбек, пока нет кэша)
         try:
             from services.menu_emojis import schedule_ensure_menu_emojis
             schedule_ensure_menu_emojis(interaction.client)
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
-        view = ModPanelView(self, interaction.user, allowed)
-        view._root_edit = interaction.edit_original_response
-        # Components V2: баннер из process-cache (без повторного PIL)
+        view = ModPanelView(self, interaction.user, allowed, preselect=target)
+        view._guild = interaction.guild
+        # followup = resend свежей панели после действия (без Collector)
+        view._mod_followup = interaction.followup
         banner = view._banner_file or view._make_banner_file()
+        edit_kw = {
+            'view': view,
+            'content': None,
+            'embed': None,
+            'embeds': [],
+        }
         if banner is not None:
-            await _respond(interaction, view=view, file=banner, ephemeral=True)
+            edit_kw['attachments'] = [banner]
         else:
-            await _respond(interaction, view=view, ephemeral=True)
+            edit_kw['attachments'] = []
+        panel_msg = None
+        try:
+            # Панель = original response (тот же токен, что и сброс селектов)
+            panel_msg = await interaction.edit_original_response(**edit_kw)
+        except Exception as ex:
+            log.warning('modpanel edit_original: %s — followup fallback', ex)
+            try:
+                fu_kw = {'view': view, 'ephemeral': True, 'wait': True}
+                if banner is not None:
+                    fu_kw['file'] = banner
+                panel_msg = await interaction.followup.send(**fu_kw)
+            except Exception as ex2:
+                log.warning('modpanel followup: %s', ex2)
+                return
+        view._panel_message = panel_msg
+        view._panel_message_id = getattr(panel_msg, 'id', None)
+        # Редактор именно ЭТОГО сообщения (не «чужого» original после followup)
+        if panel_msg is not None and hasattr(panel_msg, 'edit'):
+            async def _edit_panel(**kw):
+                # всегда только view= на refresh
+                if 'view' in kw and len(kw) > 1:
+                    kw = {'view': kw['view']}
+                return await panel_msg.edit(**kw)
+            view._root_edit = _edit_panel
+        else:
+            view._root_edit = interaction.edit_original_response
+        log.info('modpanel ready msg=%s build=multi-fix-v16',
+                 getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -2033,9 +2073,9 @@ def actions_for_member(guild, member):
 
 
 class MuteKindSelect(discord.ui.Select):
-    """Второй шаг мута: чат / войс / оба. Дальше — модалка срока."""
+    """Второй шаг мута: чат / войс / оба — на ТОЙ ЖЕ панели, потом модалка."""
 
-    def __init__(self, cog, target_id, kinds):
+    def __init__(self, cog, target_id, kinds, panel=None):
         from services.menu_banners import select_label
         from services.menu_emojis import emoji_for_action
         options = [discord.SelectOption(
@@ -2043,35 +2083,39 @@ class MuteKindSelect(discord.ui.Select):
             **({'description': desc[:100]} if desc else {}),
             emoji=emoji_for_action(value))
             for value, label, desc in kinds]
-        super().__init__(placeholder="› Куда мут?",
+        super().__init__(placeholder="",
                          options=options, min_values=1, max_values=1)
         self.cog = cog
         self.target_id = str(target_id)
+        self.panel = panel
 
     async def callback(self, interaction: discord.Interaction):
-        # ACL не здесь: send_modal обязан уложиться в 3с; проверка в on_submit.
         action = self.values[0]
-        modal = ModActionModal(self.cog, action, guild=interaction.guild,
-                               prefill_target=self.target_id,
-                               user=interaction.user)
-        await _send_modal_fast(interaction, modal)
+        # MuteKindView.panel → основная ModPanelView (не сама kind-view)
+        panel = self.panel or getattr(self.view, 'panel', None)
+        await _offer_mod_form(
+            interaction, self.cog, action, self.target_id, panel=panel)
 
 
 class MuteKindView(discord.ui.LayoutView):
     """Короткое меню «чат / войс / оба» после пункта «Мут» — чёрный блок."""
 
-    def __init__(self, cog, target_id, kinds, member=None, *, status: str = None):
+    def __init__(self, cog, target_id, kinds, member=None, *, status: str = None,
+                 panel=None):
         super().__init__(timeout=180)
         self.cog = cog
         self.member = member
-        sel = MuteKindSelect(cog, target_id, kinds)
+        self.panel = panel
+        sel = MuteKindSelect(cog, target_id, kinds, panel=panel)
         from services.v2_layouts import V2_AVAILABLE, black_container
         text = status or '**Мут**'
         if V2_AVAILABLE:
             from discord import ui as _ui
             row = _ui.ActionRow()
             row.add_item(sel)
-            self.add_item(black_container(_ui.TextDisplay(text), row))
+            # Как в главной панели: заголовок «Действие», селект без «Куда мут?»
+            self.add_item(black_container(
+                _ui.TextDisplay(f'{text}\n**Действие**'), row))
         else:
             row = discord.ui.ActionRow()
             row.add_item(sel)
@@ -2086,9 +2130,9 @@ class MuteKindView(discord.ui.LayoutView):
 
 
 class UnmuteKindSelect(discord.ui.Select):
-    """Второй шаг размута: чат / войс / оба. Без ввода и без кнопок."""
+    """Второй шаг размута: чат / войс / оба — на ТОЙ ЖЕ панели."""
 
-    def __init__(self, cog, target_id, kinds):
+    def __init__(self, cog, target_id, kinds, panel=None):
         from services.menu_banners import select_label
         from services.menu_emojis import emoji_for_action
         options = [discord.SelectOption(
@@ -2096,36 +2140,50 @@ class UnmuteKindSelect(discord.ui.Select):
             **({'description': desc[:100]} if desc else {}),
             emoji=emoji_for_action(value))
             for value, label, desc in kinds]
-        super().__init__(placeholder="› Куда снять?",
+        super().__init__(placeholder="",
                          options=options, min_values=1, max_values=1)
         self.cog = cog
         self.target_id = str(target_id)
+        self.panel = panel
 
     async def callback(self, interaction: discord.Interaction):
+        # ACK сразу (<3с), ACL после — иначе SQLite съедает окно Discord.
         action = self.values[0]
+        panel = self.panel or getattr(self.view, 'panel', None)
+        await _ack(interaction, thinking=False)
         if not await self.cog._ensure_action_acl(interaction, action):
             return
-        await _ack(interaction, thinking=False)
         await self.cog._execute_mod_action(
             interaction, action, self.target_id,
             'Снято через панель', '', proof_link=None)
+        # Основная панель уже сброшена при открытии kind-меню; ещё раз не вредно
+        if panel is not None:
+            try:
+                await _silent_reset_panel(interaction, panel)
+            except Exception as ex:
+                log.debug('unmute kind restore: %s', ex)
 
 
 class UnmuteKindView(discord.ui.LayoutView):
     """Короткое меню «чат или войс» после пункта «Снять мут» — чёрный блок."""
 
-    def __init__(self, cog, target_id, kinds, member=None, *, status: str = None):
+    def __init__(self, cog, target_id, kinds, member=None, *, status: str = None,
+                 panel=None):
         super().__init__(timeout=180)
         self.cog = cog
         self.member = member
-        sel = UnmuteKindSelect(cog, target_id, kinds)
+        self.panel = panel
+        sel = UnmuteKindSelect(cog, target_id, kinds, panel=panel)
+
         from services.v2_layouts import V2_AVAILABLE, black_container
         text = status or '**Снять мут**'
         if V2_AVAILABLE:
             from discord import ui as _ui
             row = _ui.ActionRow()
             row.add_item(sel)
-            self.add_item(black_container(_ui.TextDisplay(text), row))
+            # Как в главной панели: «Действие», без «Куда снять?»
+            self.add_item(black_container(
+                _ui.TextDisplay(f'{text}\n**Действие**'), row))
         else:
             row = discord.ui.ActionRow()
             row.add_item(sel)
@@ -2139,53 +2197,225 @@ class UnmuteKindView(discord.ui.LayoutView):
         return True
 
 
-async def _silent_reset_panel(interaction, panel):
-    """Сбросить селект наказаний, чтобы то же действие можно было выбрать снова.
+# Служебные build-метки в шапке панели не показываем.
 
-    Discord не шлёт callback, если кликнуть уже выбранный пункт — поэтому
-    после шага собираем меню заново и пушим в сообщение.
 
-    После send_modal ответ взаимодействия уже занят, поэтому правим
-    эфемерную панель токеном исходного /modpanel (_root_edit), а не
-    interaction.message.edit (у эфемерки он часто падает).
-    Если пуш не вышел — возвращаем старые селекты, иначе custom_id разъедутся.
-    Баннер НЕ перезаливаем — оставляем attachment сообщения.
+def _bind_live_panel(panel, interaction):
+    """Привязать сброс к ОСНОВНОМУ сообщению панели.
+
+    Collector'ов / wait_for не используем — только View + edit.
+    interaction.message на клике по меню вида мута — ДРУГОЕ ephemeral:
+    его нельзя записывать в _panel_message, иначе rebuild уходит не туда
+    и селекты на главной панели мёртвые (рассинхрон custom_id).
     """
+    if panel is None:
+        return
+    msg = getattr(interaction, 'message', None)
+    if msg is None:
+        return
+    mid = getattr(msg, 'id', None)
+    known_id = getattr(panel, '_panel_message_id', None)
+    known_msg = getattr(panel, '_panel_message', None)
+    known_mid = known_id if known_id is not None else getattr(known_msg, 'id', None)
+    # Уже знаем id основной панели — не переезжаем на kind-меню / чужой msg
+    if (known_mid is not None and mid is not None
+            and int(mid) != int(known_mid)):
+        return
+    panel._panel_message = msg
+    if mid is not None:
+        try:
+            panel._panel_message_id = int(mid)
+        except Exception:
+            panel._panel_message_id = mid
+
+    async def _edit(**kw):
+        # V2 refresh: только view= — иначе селекты снова залипают
+        if 'view' in kw and len(kw) > 1:
+            kw = {'view': kw['view']}
+        return await msg.edit(**kw)
+
+    panel._root_edit = _edit
+
+
+async def _resend_fresh_panel(panel):
+    """Больше НЕ шлём новое окно — только edit той же панели.
+
+    Оставлено как заглушка: всегда False, чтобы старые вызовы не создавали
+    вторую эфемерку.
+    """
+    log.debug('modpanel resend disabled — только edit той же панели')
+    return False
+
+
+def _cancel_panel_reset(panel):
+    """Отменить фоновый rebuild — он съедает цикл и рвёт ACK селекта."""
+    if panel is None:
+        return
     try:
-        guild = getattr(interaction, 'guild', None)
-        old_t, old_a = panel.target_select, panel.action_select
-        panel._rebuild(guild)
-        msg = getattr(interaction, 'message', None)
-        kw = panel.panel_edit_kwargs(message=msg, reattach_banner=False)
-        pushed = False
-        root = getattr(panel, '_root_edit', None)
-        if root is not None:
+        panel._reset_gen = int(getattr(panel, '_reset_gen', 0) or 0) + 1
+    except Exception:
+        pass
+    task = getattr(panel, '_reset_task', None)
+    if task is None:
+        return
+    try:
+        if not task.done():
+            task.cancel()
+    except Exception:
+        pass
+    try:
+        panel._reset_task = None
+    except Exception:
+        pass
+
+
+async def _push_panel_view(panel, interaction=None):
+    """Запушить view в ТО ЖЕ сообщение. Без нового окна.
+
+    V2: только view= (без content/embed/attachments).
+    """
+    msg = getattr(panel, '_panel_message', None)
+    kw = {'view': panel}  # строго только view — иначе селекты мрут
+    errors = []
+
+    async def _ok(new_msg):
+        if new_msg is not None and hasattr(new_msg, 'id'):
+            want = getattr(panel, '_panel_message_id', None)
             try:
-                await root(**kw)
-                pushed = True
-            except Exception as _e:
-                log.debug('modpanel reset root: %s', _e)
-        if not pushed:
-            try:
-                if msg is not None:
-                    await msg.edit(**kw)
-                    pushed = True
-            except Exception as _e:
-                log.debug('modpanel reset msg.edit: %s', _e)
-        if not pushed:
-            try:
-                await interaction.edit_original_response(**kw)
-                pushed = True
-            except Exception as _e:
-                log.debug('modpanel reset original: %s', _e)
-        if not pushed:
-            # не удалось запушить — вернуть прежние селекты (custom_id)
-            try:
-                panel.target_select, panel.action_select = old_t, old_a
+                if want is not None and int(new_msg.id) != int(want):
+                    log.warning(
+                        'modpanel push: ответили msg=%s, ждали %s — не переезжаем',
+                        getattr(new_msg, 'id', None), want)
+                    return True
             except Exception:
                 pass
+            panel._panel_message = new_msg
+            try:
+                panel._panel_message_id = int(new_msg.id)
+            except Exception:
+                panel._panel_message_id = new_msg.id
+        return True
+
+    if msg is not None and hasattr(msg, 'edit'):
+        try:
+            return await _ok(await msg.edit(**kw))
+        except Exception as ex:
+            errors.append(f'msg.edit:{ex}')
+    root = getattr(panel, '_root_edit', None)
+    if root is not None:
+        try:
+            return await _ok(await root(**kw))
+        except Exception as ex:
+            errors.append(f'root:{ex}')
+    fu = getattr(panel, '_mod_followup', None)
+    if fu is None and interaction is not None:
+        fu = getattr(interaction, 'followup', None)
+    mid = getattr(msg, 'id', None) or getattr(panel, '_panel_message_id', None)
+    if fu is not None and mid and hasattr(fu, 'edit_message'):
+        try:
+            return await _ok(await fu.edit_message(int(mid), **kw))
+        except Exception as ex:
+            errors.append(f'fu.edit:{ex}')
+    if interaction is not None:
+        try:
+            edit_orig = getattr(interaction, 'edit_original_response', None)
+            if callable(edit_orig):
+                return await _ok(await edit_orig(**kw))
+        except Exception as ex:
+            errors.append(f'orig:{ex}')
+    log.warning('modpanel push FAILED: %s', '; '.join(errors) or 'no path')
+    return False
+
+
+async def _silent_reset_panel(interaction, panel, *, gen=None):
+    """Сбросить селекты edit'ом ТОГО ЖЕ сообщения. Новое окно не создаём.
+
+    После rebuild ОБЯЗАН быть успешный push — иначе custom_id рассинхрон
+    и нельзя выбрать участника/действие повторно.
+    """
+    import asyncio as _aio
+    try:
+        if gen is not None and gen != getattr(panel, '_reset_gen', None):
+            return
+        _bind_live_panel(panel, interaction)
+        if hasattr(panel, '_clear_kind_mode'):
+            panel._clear_kind_mode()
+        guild = getattr(interaction, 'guild', None) or getattr(panel, '_guild', None)
+        kept_uid = getattr(panel, 'selected_uid', None)
+        kept_pending = getattr(panel, 'pending_action', None)
+        panel._rebuild(guild)
+        if kept_uid:
+            panel.selected_uid = kept_uid
+        panel.pending_action = kept_pending
+        await _aio.sleep(0)
+        # Даже если поколение сменилось — всё равно пушим: иначе мёртвые селекты
+        pushed = await _push_panel_view(panel, interaction)
+        if not pushed:
+            log.warning('modpanel reset FAILED push (селекты могут не отвечать)')
+            if gen is None:
+                _schedule_panel_reset(
+                    interaction, panel,
+                    clear_pending=(kept_pending is None), delay=0.4)
+        else:
+            log.info('modpanel reset ok uid=%s msg=%s',
+                     kept_uid, getattr(panel._panel_message, 'id', None))
+    except _aio.CancelledError:
+        # rebuild уже мог сменить custom_id — обязаны запушить, иначе мёртвая панель
+        try:
+            await _push_panel_view(panel, interaction)
+        except Exception:
+            pass
+        raise
     except Exception as _e:
-        log.debug('modpanel reset: %s', _e)
+        log.warning('modpanel reset: %s', _e)
+
+
+def _schedule_panel_reset(interaction, panel, *, clear_pending=True, delay=0.35):
+    """Фоновый сброс после ACK — по умолчанию быстро (0.35с)."""
+    if panel is None:
+        return
+    import asyncio as _aio
+    try:
+        loop = _aio.get_running_loop()
+    except RuntimeError:
+        log.debug('modpanel schedule reset: нет running loop')
+        return
+    _cancel_panel_reset(panel)
+    try:
+        panel._reset_gen = int(getattr(panel, '_reset_gen', 0) or 0) + 1
+    except Exception:
+        panel._reset_gen = 1
+    my_gen = panel._reset_gen
+
+    async def _run():
+        try:
+            await _aio.sleep(delay)
+            if my_gen != getattr(panel, '_reset_gen', None):
+                return
+            kept_uid = getattr(panel, 'selected_uid', None)
+            if clear_pending:
+                panel.pending_action = None
+            kept_pending = None if clear_pending else getattr(
+                panel, 'pending_action', None)
+            panel.selected_uid = kept_uid
+            panel.pending_action = kept_pending
+            await _silent_reset_panel(interaction, panel, gen=my_gen)
+            if my_gen != getattr(panel, '_reset_gen', None):
+                return
+            panel.selected_uid = kept_uid
+            panel.pending_action = kept_pending
+        except _aio.CancelledError:
+            raise
+        except Exception as _e:
+            log.debug('modpanel schedule reset: %s', _e)
+        finally:
+            if getattr(panel, '_reset_task', None) is _aio.current_task():
+                panel._reset_task = None
+
+    try:
+        panel._reset_task = loop.create_task(_run())
+    except Exception as _e:
+        log.debug('modpanel schedule reset task: %s', _e)
 
 
 async def _send_modal_fast(interaction, modal):
@@ -2211,27 +2441,125 @@ async def _send_modal_fast(interaction, modal):
     return False
 
 
-async def _launch_action(cog, interaction, action, prefill, panel=None):
-    """Открыть модалку / размут. panel — чтобы потом сбросить селект.
+_MODAL_TITLES = {
+    "warn": "Варн",
+    "unwarn": "Снять варн",
+    "ban": "Бан",
+    "timeout": "Мут (чат + войс)",
+    "mute_chat": "Мут (только чат)",
+    "vmute": "Мут (только войс)",
+    "unban": "Снять бан",
+    "clear": "Очистка сообщений",
+    "untimeout": "Размут (чат + войс)",
+    "vunmute": "Размут (войс)",
+}
 
-    Критично: send_modal/send_message — ПЕРВЫЙ ответ Discord (<3с).
-    Сброс панели — фоном после ответа.
+
+async def _reset_after_step(interaction, panel, *, prefer_resend=False):
+    """После шага: сброс селектов на ТОЙ ЖЕ панели. Новое окно запрещено.
+
+    Сразу + запасной через 0.45с — если первый edit не дошёл до Discord,
+    второй клик по Действию всё равно оживёт.
     """
-    import asyncio as _aio
+    if panel is None:
+        return
+    panel.pending_action = None
+    if hasattr(panel, '_clear_kind_mode'):
+        panel._clear_kind_mode()
+    _bind_live_panel(panel, interaction)
+    try:
+        await _silent_reset_panel(interaction, panel)
+    except Exception as ex:
+        log.warning('modpanel reset after step: %s', ex)
+    # запасной push новых custom_id (не отменяется — новое поколение)
+    _schedule_panel_reset(interaction, panel, clear_pending=True, delay=0.45)
 
-    async def _reset_later():
-        if panel is None:
-            return
+
+async def _enter_kind_mode(interaction, panel, *, kinds, target_id, title,
+                           unmute=False):
+    """Legacy: kind на той же панели. Сейчас мут идёт через _send_kind_menu.
+
+    Оставлен безопасным: view-only push, без переезда на чужой message.
+    """
+    if panel is None:
+        return False
+    _bind_live_panel(panel, interaction)
+    panel.pending_action = None
+    panel._kind_mode = 'unmute' if unmute else 'mute'
+    panel._kind_target = str(target_id)
+    panel._kind_kinds = list(kinds or [])
+    panel._kind_title = title or ('Снять мут' if unmute else 'Мут')
+    guild = getattr(interaction, 'guild', None) or getattr(panel, '_guild', None)
+    panel._rebuild(guild)
+    return await _push_panel_view(panel, interaction)
+
+
+async def _offer_mod_form(interaction, cog, action, prefill, panel=None):
+    """Сразу send_modal (без кнопки). После открытия — сброс панели.
+
+    Кнопку «открыть форму» убрали: меню/модалка появляется сразу.
+    Сброс селектов сразу после ACK, чтобы можно было жать следующее
+    действие, не дожидаясь закрытия модалки.
+    """
+    modal = ModActionModal(
+        cog, action, guild=getattr(interaction, 'guild', None),
+        prefill_target=prefill, user=getattr(interaction, 'user', None))
+    try:
+        if interaction.response.is_done():
+            # Уже ACK (не должно быть на селекте) — модалку не открыть
+            log.warning('modpanel offer: response already done, modal skipped')
+            return False
+        await interaction.response.send_modal(modal)
+    except Exception as ex:
+        log.warning('modpanel send_modal: %s', ex)
         try:
-            panel.pending_action = None
-            await _silent_reset_panel(interaction, panel)
-        except Exception as _e:
-            log.debug('modpanel reset later: %s', _e)
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    embed=error_embed(
+                        'Не удалось открыть форму. Выберите действие ещё раз.'),
+                    ephemeral=True)
+        except Exception:
+            pass
+        return False
+    # Та же панель, свежие селекты — без второй эфемерки
+    await _reset_after_step(interaction, panel, prefer_resend=False)
+    return True
 
+
+async def _send_kind_menu(interaction, *, view, embed=None):
+    """Показать меню вида мута/размута — ACK через send_message/followup."""
+    try:
+        if interaction.response.is_done():
+            kw = {'view': view, 'ephemeral': True}
+            if embed is not None:
+                kw['embed'] = embed
+            await interaction.followup.send(**kw)
+        else:
+            kw = {'view': view, 'ephemeral': True}
+            if embed is not None:
+                kw['embed'] = embed
+            await interaction.response.send_message(**kw)
+        return True
+    except Exception as ex:
+        log.warning('modpanel kind menu: %s', ex)
+        try:
+            kw = {'view': view, 'ephemeral': True}
+            if embed is not None:
+                kw['embed'] = embed
+            await _respond(interaction, **kw)
+            return True
+        except Exception:
+            return False
+
+
+async def _launch_action(cog, interaction, action, prefill, panel=None):
+    """Открыть форму / размут. panel — сброс селектов после шага.
+
+    Бан/варн/… → send_modal сразу. Мут с несколькими видами → подменю.
+    kinds только из кэша панели (без SQLite на пути ACK).
+    """
     if action == "mute":
-        gid = getattr(interaction, 'guild_id', None) or getattr(
-            getattr(interaction, 'guild', None), 'id', None)
-        kinds = mute_kinds_for(gid, interaction.user)
+        kinds = getattr(panel, '_mute_kinds_cache', None) if panel else None
         if not kinds:
             await _respond(interaction, embed=error_embed(
                 'Мут тебе не выдан.'), ephemeral=True)
@@ -2242,10 +2570,8 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 ephemeral=True)
             return
         if len(kinds) == 1:
-            modal = ModActionModal(cog, kinds[0][0], guild=interaction.guild,
-                                   prefill_target=prefill, user=interaction.user)
-            if await _send_modal_fast(interaction, modal):
-                _aio.create_task(_reset_later())
+            await _offer_mod_form(
+                interaction, cog, kinds[0][0], prefill, panel=panel)
             return
         who = prefill
         try:
@@ -2254,30 +2580,28 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 who = mem.mention
         except Exception as _e:
             log.debug('prefill mention %r: %s', prefill, _e)
-        view = MuteKindView(
+        # Отдельное короткое меню вида — ОСНОВНУЮ панель НЕ трогаем kind-mode
+        # (иначе после Мута «Снять мут» мёртв). Сразу сбрасываем селект действий.
+        kind_view = MuteKindView(
             cog, prefill, kinds, member=interaction.user,
-            status=f'# Мут\n{who}')
-        try:
-            from services.v2_layouts import V2_AVAILABLE
-            if V2_AVAILABLE:
-                await interaction.response.send_message(view=view, ephemeral=True)
-            else:
-                await interaction.response.send_message(
-                    embed=discord.Embed(title="Мут", description=f"{who}",
-                                        color=0x000000),
-                    view=view, ephemeral=True)
-            _aio.create_task(_reset_later())
-        except Exception as ex:
-            log.warning('modpanel mute kinds: %s', ex)
-            if not interaction.response.is_done():
-                await _respond(interaction, embed=error_embed(
-                    'Не удалось открыть выбор вида мута. Попробуйте снова.'),
-                    ephemeral=True)
+            status=f'# Мут\n{who}', panel=panel)
+        from services.v2_layouts import V2_AVAILABLE
+        ok = await _send_kind_menu(
+            interaction, view=kind_view,
+            embed=None if V2_AVAILABLE else discord.Embed(
+                title='Мут', description=f'{who}', color=0x000000))
+        if panel is not None:
+            try:
+                await _reset_after_step(interaction, panel, prefer_resend=False)
+            except Exception as ex:
+                log.debug('mute kind main reset: %s', ex)
+        if not ok:
+            await _respond(interaction, embed=error_embed(
+                'Не удалось открыть выбор вида мута. Попробуйте ещё раз.'),
+                ephemeral=True)
         return
     if action == "unmute":
-        gid = getattr(interaction, 'guild_id', None) or getattr(
-            getattr(interaction, 'guild', None), 'id', None)
-        kinds = unmute_kinds_for(gid, interaction.user)
+        kinds = getattr(panel, '_unmute_kinds_cache', None) if panel else None
         if not kinds:
             await _respond(interaction, embed=error_embed(
                 'Снять мут тебе не выдано.'), ephemeral=True)
@@ -2288,11 +2612,12 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 ephemeral=True)
             return
         if len(kinds) == 1:
-            await _ack(interaction, thinking=False)
+            if not interaction.response.is_done():
+                await _ack(interaction, thinking=True)
             await cog._execute_mod_action(
                 interaction, kinds[0][0], prefill,
                 'Снято через панель', '', proof_link=None)
-            _aio.create_task(_reset_later())
+            await _reset_after_step(interaction, panel, prefer_resend=False)
             return
         who = prefill
         try:
@@ -2301,31 +2626,26 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
                 who = mem.mention
         except Exception as _e:
             log.debug('prefill mention %r: %s', prefill, _e)
-        view = UnmuteKindView(
+        kind_view = UnmuteKindView(
             cog, prefill, kinds, member=interaction.user,
-            status=f'# Снять мут\n{who}')
-        try:
-            from services.v2_layouts import V2_AVAILABLE
-            if V2_AVAILABLE:
-                await interaction.response.send_message(view=view, ephemeral=True)
-            else:
-                await interaction.response.send_message(
-                    embed=discord.Embed(title="Снять мут", description=f"{who}",
-                                        color=0x000000),
-                    view=view, ephemeral=True)
-            _aio.create_task(_reset_later())
-        except Exception as ex:
-            log.warning('modpanel unmute kinds: %s', ex)
-            if not interaction.response.is_done():
-                await _respond(interaction, embed=error_embed(
-                    'Не удалось открыть снятие мута. Попробуйте снова.'),
-                    ephemeral=True)
+            status=f'# Снять мут\n{who}', panel=panel)
+        from services.v2_layouts import V2_AVAILABLE
+        ok = await _send_kind_menu(
+            interaction, view=kind_view,
+            embed=None if V2_AVAILABLE else discord.Embed(
+                title='Снять мут', description=f'{who}', color=0x000000))
+        if panel is not None:
+            try:
+                await _reset_after_step(interaction, panel, prefer_resend=False)
+            except Exception as ex:
+                log.debug('unmute kind main reset: %s', ex)
+        if not ok:
+            await _respond(interaction, embed=error_embed(
+                'Не удалось открыть выбор снятия мута. Попробуйте ещё раз.'),
+                ephemeral=True)
         return
-    # Обычное действие → модалка (бан/варн/мут-вид уже выбран)
-    modal = ModActionModal(cog, action, guild=interaction.guild,
-                           prefill_target=prefill, user=interaction.user)
-    if await _send_modal_fast(interaction, modal):
-        _aio.create_task(_reset_later())
+    # Бан / варн / очистка / … → модалка сразу
+    await _offer_mod_form(interaction, cog, action, prefill, panel=panel)
 
 
 class ModActionSelect(discord.ui.Select):
@@ -2352,8 +2672,18 @@ class ModActionSelect(discord.ui.Select):
         self.target_select = target_select
 
     async def callback(self, interaction: discord.Interaction):
+        """ACK = send_modal сразу (без кнопки). Сброс панели после модалки."""
+        view = getattr(self, 'panel', None) or self.view
+        _cancel_panel_reset(view)
+        _bind_live_panel(view, interaction)
+        try:
+            lag = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+            if lag > 1.0:
+                log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят)',
+                            lag)
+        except Exception:
+            pass
         action = self.values[0]
-        view = self.view
         prefill = ""
         if view is not None:
             prefill = str(getattr(view, 'selected_uid', None) or '')
@@ -2368,14 +2698,31 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Без участника — только запомнить действие (ACK внутри refresh).
-        if action != "clear" and not prefill:
-            if view is not None:
-                await view.refresh(interaction)
-                return
-        # С участником — send_modal/send_message СРАЗУ (<3с Discord).
-        # ACL не здесь: SQLite/диск съедают окно; проверка в on_submit
-        # и в mute_kinds_for / unmute_kinds_for внутри _launch_action.
+        # Без участника — запомнить действие, попросить выбрать участника
+        if action != "clear" and not prefill and view is not None:
+            view.pending_action = action
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        content='Сначала выберите участника выше, затем действие.',
+                        ephemeral=True)
+                else:
+                    await interaction.followup.send(
+                        content='Сначала выберите участника выше, затем действие.',
+                        ephemeral=True)
+            except Exception:
+                try:
+                    await _ack(interaction, thinking=False)
+                except Exception:
+                    pass
+            try:
+                _bind_live_panel(view, interaction)
+                await _silent_reset_panel(interaction, view)
+            except Exception:
+                _schedule_panel_reset(
+                    interaction, view, clear_pending=False, delay=0.2)
+            view.pending_action = action
+            return
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
 
 
@@ -2465,13 +2812,10 @@ class ModActionModal(discord.ui.Modal):
             self.add_item(self.proof)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Финальная защита действия: модалку могли открыть до смены прав,
-        # роль могли снять — без «классического» разрешения не исполняем.
+        # thinking=True СРАЗУ — иначе Discord «не ответило», ACL/лимиты после.
+        await _ack(interaction, thinking=True)
         if not await self.cog._ensure_action_acl(interaction, self.action):
             return
-        # thinking=True: модалка должна получить type 5, иначе Discord
-        # пишет «приложение не ответило», хотя наказание уже выдано.
-        await _ack(interaction, thinking=True)
         _t = getattr(self, 'target', None)
         _a = getattr(self, 'amount', None)
         _p = getattr(self, 'proof', None)
@@ -2500,7 +2844,15 @@ class ModTargetSelect(discord.ui.UserSelect):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        view = self.view
+        """Выбор участника: ACK → статус на панели + свежий UserSelect.
+
+        Сразу (не через delay): иначе статус «участник @…» не меняется,
+        а sticky UserSelect не даёт выбрать другого. Delayed schedule
+        раньше гонялся с «Действие» — его здесь нет.
+        """
+        view = getattr(self, 'panel', None) or self.view
+        _cancel_panel_reset(view)
+        _bind_live_panel(view, interaction)
         try:
             vals = list(self.values or [])
             if view is not None and vals:
@@ -2510,18 +2862,33 @@ class ModTargetSelect(discord.ui.UserSelect):
         pending = getattr(view, 'pending_action', None) if view is not None else None
         prefill = getattr(view, 'selected_uid', None) if view is not None else None
         if pending and prefill:
+            # Действие уже ждали — модалка / вид мута сразу.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
-        # Только запомнили человека — ACK сразу, потом лёгкий refresh
-        # (без повторной загрузки баннера — иначе «не ответило вовремя»).
-        if view is not None:
-            await view.refresh(interaction, rebuild_action=False)
-            return
+        # ACK <3с, потом view-only edit (статус + сброс sticky)
         try:
             if not interaction.response.is_done():
-                await interaction.response.defer(thinking=False)
+                try:
+                    await interaction.response.defer(thinking=False)
+                except TypeError:
+                    await interaction.response.defer()
         except Exception as _te:
-            log.debug("ModTargetSelect: %s", _te)
+            log.warning('ModTargetSelect ACK: %s', _te)
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        content=(f'Участник <@{prefill}> выбран.'
+                                 if prefill else 'Участник выбран.'),
+                        ephemeral=True)
+            except Exception as _te2:
+                log.debug('ModTargetSelect fallback: %s', _te2)
+            return
+        if view is None:
+            return
+        try:
+            await _silent_reset_panel(interaction, view)
+        except Exception as _re:
+            log.warning('ModTargetSelect status refresh: %s', _re)
 
 
 class ModPanelView(discord.ui.LayoutView):
@@ -2530,20 +2897,36 @@ class ModPanelView(discord.ui.LayoutView):
     Фолбек panel_embed/panel_payload — если V2 не приняли (старый клиент).
     """
 
-    def __init__(self, cog, member=None, allowed=None):
-        super().__init__(timeout=300)
+    def __init__(self, cog, member=None, allowed=None, preselect=None):
+        super().__init__(timeout=300)  # 5 минут — любые действия без нового окна
         self.cog = cog
         self.allowed = allowed
         self.member = member
         self.owner_id = getattr(member, 'id', None)
-        self.selected_uid = None
+        # /modpanel target: сразу показать участника, без второго выбора.
+        # default_values на UserSelect передаём ОДНОКРАТНО (см. _rebuild) —
+        # на дальнейших rebuild'ах он снова sticky-select ломает выбор другого.
+        self._preselect_member = preselect
+        self.selected_uid = str(preselect.id) if preselect is not None else None
         self.pending_action = None
         self._root_edit = None  # interaction.edit_original_response от /modpanel
+        self._panel_message = None  # исходная эфемерка для reset
+        self._panel_message_id = None
+        self._mod_followup = None  # не для нового окна — только legacy
+        self._reset_task = None  # один фоновый rebuild — без гонок
+        self._reset_gen = 0  # поколение сброса (отмена устаревших)
+        self._kind_mode = None  # None | 'mute' | 'unmute' — на той же панели
+        self._kind_target = None
+        self._kind_kinds = None
+        self._kind_title = ''
+        self._guild = getattr(member, 'guild', None)
         self._banner_name = 'hakumo_modpanel_banner_v15.png'
         self._banner_file = None
         self._banner_bytes = None
         self._use_v2 = True
         self._actor_label = ''
+        self._mute_kinds_cache = None
+        self._unmute_kinds_cache = None
         try:
             from services.staff_hierarchy import actor_panel_role, LABELS
             guild = getattr(member, 'guild', None)
@@ -2551,6 +2934,18 @@ class ModPanelView(discord.ui.LayoutView):
             self._actor_label = LABELS.get(tier, '') or ''
         except Exception:
             self._actor_label = ''
+        # Виды мута/размута — один раз при открытии панели (не на каждый клик).
+        try:
+            guild = getattr(member, 'guild', None)
+            gid = getattr(guild, 'id', None)
+            vals = {a[0] for a in (allowed or [])}
+            if gid and member is not None:
+                if 'mute' in vals:
+                    self._mute_kinds_cache = mute_kinds_for(gid, member)
+                if 'unmute' in vals:
+                    self._unmute_kinds_cache = unmute_kinds_for(gid, member)
+        except Exception as _kx:
+            log.debug('modpanel kinds cache: %s', _kx)
         self._rebuild(None)
         # File для первого ответа /modpanel (process-cache байтов).
         # На refresh баннер НЕ перезаливаем — keep message.attachments.
@@ -2565,7 +2960,20 @@ class ModPanelView(discord.ui.LayoutView):
                 return label
         return action
 
+    def _clear_kind_mode(self):
+        self._kind_mode = None
+        self._kind_target = None
+        self._kind_kinds = None
+        self._kind_title = ''
+
     def _status_text(self):
+        if getattr(self, '_kind_mode', None):
+            title = getattr(self, '_kind_title', None) or (
+                'Снять мут' if self._kind_mode == 'unmute' else 'Мут')
+            uid = getattr(self, '_kind_target', None) or self.selected_uid
+            if uid:
+                return f'**{title}**\n-# участник <@{uid}> · выберите вид'
+            return f'**{title}**\n-# выберите вид'
         from services.v2_layouts import modpanel_status_text
         pending = None
         if self.pending_action:
@@ -2634,19 +3042,21 @@ class ModPanelView(discord.ui.LayoutView):
 
     def _rebuild(self, guild):
         self.clear_items()
-        defaults = []
-        if self.selected_uid and guild is not None:
-            try:
-                mem = guild.get_member(int(self.selected_uid))
-                if mem is not None:
-                    defaults = [mem]
-            except Exception:
-                defaults = []
+        # default_values ставим ТОЛЬКО на самый первый rebuild — когда
+        # /modpanel открыт сразу с участником (target=). На дальнейших
+        # rebuild'ах НЕ передаём (sticky select не даёт выбрать другого).
+        _preselect = self._preselect_member
+        self._preselect_member = None
         self.target_select = ModTargetSelect(
-            self.cog, default_values=defaults or None)
+            self.cog, default_values=[_preselect] if _preselect else None)
+        self.target_select.panel = self
+        # Главная панель ВСЕГДА с полным списком действий.
+        # Виды мута/размута — отдельная эфемерка (MuteKindView), иначе
+        # после «Мут» пункт «Снять мут» пропадает / панель зависает.
         self.action_select = ModActionSelect(
             self.cog, None, self.allowed,
             target_select=self.target_select)
+        self.action_select.panel = self
         self.action_buttons = []
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
@@ -2677,51 +3087,32 @@ class ModPanelView(discord.ui.LayoutView):
         self.add_item(row2)
 
     def panel_edit_kwargs(self, *, message=None, reattach_banner=False):
-        """kwargs для edit_message / edit_original_response (V2).
+        """kwargs для edit панели.
 
-        reattach_banner=False (по умолчанию на refresh): НЕ грузим PNG
-        заново — оставляем attachment сообщения. Повторный upload на
-        каждом клике селекта давал «приложение не ответило вовремя».
+        Components V2: на refresh передаём ТОЛЬКО view=.
+        content/embed/attachments в edit ломают селекты — второй клик
+        по «Действие» перестаёт отвечать.
         """
-        kw = {
-            'view': self,
-            'embed': None,
-            'embeds': [],
-            'content': None,
-        }
+        if not reattach_banner:
+            return {'view': self}
+        # Первый показ / явная перезагрузка баннера
+        kw = {'view': self}
         from services.v2_layouts import SHOW_MENU_BANNER
         if not SHOW_MENU_BANNER:
-            kw['attachments'] = []
             return kw
-        kept = None
-        if not reattach_banner and message is not None:
-            try:
-                atts = list(getattr(message, 'attachments', None) or [])
-                if atts:
-                    kept = atts
-            except Exception:
-                kept = None
-        if kept is not None:
-            kw['attachments'] = kept
-            return kw
-        # Первый показ / нет старых вложений — прикрепить File из кэша.
         self._make_banner_file(force=False)
         if self._banner_file is not None:
             kw['attachments'] = [self._banner_file]
-        else:
-            kw['attachments'] = []
         return kw
 
     async def refresh(self, interaction, *, rebuild_action=True):
         """Обновить панель после клика селекта.
 
-        Сначала ACK (defer type 6), потом rebuild + edit без upload баннера.
-        Иначе Discord 3с-окно сгорает на сети/Defender при повторной
-        загрузке PNG → «приложение не ответило вовремя».
+        ACK (defer) — первой строкой. Rebuild+edit только после ACK.
+        (ModTargetSelect больше сюда не ходит — только defer.)
         """
         guild = getattr(interaction, 'guild', None)
         msg = getattr(interaction, 'message', None)
-        # 1) сразу закрыть 3с-окно
         try:
             resp = getattr(interaction, 'response', None)
             if resp is not None and not resp.is_done():
@@ -2730,27 +3121,22 @@ class ModPanelView(discord.ui.LayoutView):
                 except TypeError:
                     await resp.defer()
         except Exception as _e:
-            log.debug('modpanel refresh defer: %s', _e)
-        # 2) лёгкий rebuild (без PIL/upload)
-        self._rebuild(guild)
-        kw = self.panel_edit_kwargs(message=msg, reattach_banner=False)
-        # 3) правка уже после ack
+            log.warning('modpanel refresh defer: %s', _e)
         try:
-            await interaction.edit_original_response(**kw)
-            return
-        except Exception as _e:
-            log.debug('modpanel refresh original: %s', _e)
-        if msg is not None:
+            self._rebuild(guild)
+            kw = self.panel_edit_kwargs(message=msg, reattach_banner=False)
             try:
-                await msg.edit(**kw)
+                await interaction.edit_original_response(**kw)
                 return
             except Exception as _e:
-                log.debug('modpanel refresh msg.edit: %s', _e)
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(**kw)
-        except Exception as _e:
-            log.debug('modpanel refresh edit_message: %s', _e)
+                log.debug('modpanel refresh original: %s', _e)
+            if msg is not None:
+                try:
+                    await msg.edit(**kw)
+                except Exception as _e2:
+                    log.debug('modpanel refresh msg.edit: %s', _e2)
+        except Exception as _e3:
+            log.debug('modpanel refresh body: %s', _e3)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         user = interaction.user

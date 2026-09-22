@@ -24,6 +24,7 @@ import os
 import shutil
 import sys
 import tempfile
+import types
 
 _TMP = tempfile.mkdtemp(prefix='hakumo_modpanel_acl_')
 os.chdir(_TMP)
@@ -212,14 +213,15 @@ class _Resp:
         return self.done
 
     async def send_message(self, embed=None, ephemeral=False, **kw):
-        self.sent.append(embed)
+        self.sent.append(embed if embed is not None else kw)
         self.done = True
 
     async def send_modal(self, modal):
         self.modal.append(modal)
 
-    async def defer(self, ephemeral=False):
+    async def defer(self, ephemeral=False, thinking=True, **kw):
         self.deferred = True
+        self.done = True
 
 
 class _Inter:
@@ -227,39 +229,47 @@ class _Inter:
         self.user = user
         self.guild = guild
         self.response = _Resp()
+        async def _fu(**kw):
+            embed = kw.get('embed')
+            self.response.sent.append(embed if embed is not None else kw)
+        self.followup = types.SimpleNamespace(send=_fu)
 
 
 g = Guild(GID)
 set_action_rule(GID, 'ban', ['601'])
 
-# выбор пункта в меню: без разрешения модалку всё равно открываем
-# (send_modal <3с Discord; ACL — в on_submit, см. ниже). Иначе
-# SQLite/диск на пути к ответу → «приложение не ответило вовремя».
+# выбор пункта в меню: без разрешения — ACK модалкой (ACL в on_submit).
+# send_modal с селекта — форма сразу, без кнопки.
 i = _Inter(Member(100, [602]), g)
 sel = ModActionSelect(cog, member=Member(100, [602]), allowed=[a for a in MODPANEL_ACTIONS])
 sel._values = ['ban']  # как discord проставляет выбранное значение
 asyncio.run(sel.callback(i))
-check(bool(i.response.modal) and not i.response.sent,
-      'выбор «Бан» без разрешения → модалка открылась (ACL в on_submit)')
-check('_send_modal_fast' in open(
+check(bool(i.response.modal) and not getattr(i.response, 'sent', None),
+      'выбор «Бан» без разрешения → send_modal сразу (не кнопка)')
+check('send_modal' in open(
+        os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+      and '_OpenModFormButton' not in open(
         os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read(),
-      'путь действия шлёт модалку через _send_modal_fast')
+      'путь действия: send_modal сразу, без кнопки формы')
 
-# своя роль — модалка открывается
+# своя роль — тоже модалка сразу
 i2 = _Inter(Member(100, [601]), g)
 sel2 = ModActionSelect(cog, member=Member(100, [601]), allowed=[a for a in MODPANEL_ACTIONS])
 sel2._values = ['ban']
 asyncio.run(sel2.callback(i2))
-check(bool(i2.response.modal) and not i2.response.sent,
-      'с ролью «Бан» модалка открывается')
+check(bool(i2.response.modal),
+      'с ролью «Бан» — send_modal сразу')
 
 # отправка модалки: даже если меню старое — без права не исполняем
+# (_ack сразу, затем ACL → отказ followup; execute не зовём)
 i3 = _Inter(Member(100, [602]), g)
 modal = ModActionModal(cog, 'ban', guild=g)
 asyncio.run(modal.on_submit(i3))
-check(not i3.response.deferred and not getattr(i3, 'ran', False),
+check(i3.response.deferred and not getattr(i3, 'ran', False),
       'on_submit без разрешения: до исполнения не дошло, отработан отказ')
-check(i3.response.sent and 'Классические разрешения' in str(getattr(i3.response.sent[-1], 'description', '')),
+_deny = i3.response.sent[-1] if i3.response.sent else None
+_deny_txt = str(getattr(_deny, 'description', '') or _deny)
+check(i3.response.sent and 'Классические разрешения' in _deny_txt,
       'отказ в модалке говорит, откуда включить доступ')
 
 # с правами — исполнение идёт дальше. Дальше цепочка демки/канала апелляции

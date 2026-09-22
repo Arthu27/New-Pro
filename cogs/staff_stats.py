@@ -357,7 +357,8 @@ class StaffStats(commands.Cog):
     async def staff_stats(self, interaction: discord.Interaction, модератор: discord.Member = None, дней: int = 30):
         guild = interaction.guild
         дней = max(1, min(дней, 365))
-        # сбор действий (файлы + sqlite) — в рабочем потоке (event loop не встаёт)
+        # ACK сразу — иначе collect_actions (диск+sqlite) съедает 3с Discord.
+        await interaction.response.defer(thinking=True)
         import asyncio as _aio_s
         actions = await _aio_s.to_thread(collect_actions, guild.id)
 
@@ -367,9 +368,9 @@ class StaffStats(commands.Cog):
             # Таблица команды + select-меню: выбрать любого участника и
             # открыть его полный профиль (варны/сообщения/войс/наказания).
             view = StaffProfileView(guild, дней)
-            await interaction.response.send_message(embed=e, view=view)
+            await interaction.followup.send(embed=e, view=view)
         else:
-            await interaction.response.send_message(embed=e)
+            await interaction.followup.send(embed=e)
 
     @staff_stats.error
     async def staff_stats_error(self, interaction, error):

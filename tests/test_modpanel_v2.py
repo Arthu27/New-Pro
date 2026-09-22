@@ -61,13 +61,14 @@ check(not next((c for c in cat['commands'] if c['name'] == 'play'), None),
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
 # Сетап-команды (verify-setup, report-setup/settings) убраны в панель,
-# /afk-remove удалён (AFK спадает авто) — в меню 5 команд: /апелляция
-# убрана 2026-09-08 («она у нас в кнопке»). /proof удалена из бота
-# 2026-09-04: демки грузятся через /report и панель.
+# /afk-remove удалён (AFK спадает авто). /апелляция убрана 2026-09-08
+# («она у нас в кнопке»). /proof удалена 2026-09-04. /event-panel —
+# публикация панели событий (ивент-моды).
 check(set(keep) == {'modpanel', 'update',
-                    'afk', 'report', 'my-violations'},
-      f'белый список слеш-меню = 5 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'update', 'afk', 'report', 'my-violations'):
+                    'afk', 'report', 'my-violations', 'event-panel'},
+      f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'update', 'afk', 'report', 'my-violations',
+             'event-panel'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
 check('апелляция' not in keep, '/апелляция убрана из KEEP_SLASH (кнопка вместо команды)')
 for gone in ('afk-remove', 'verify-setup', 'report-setup', 'report-settings'):

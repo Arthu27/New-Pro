@@ -23,6 +23,7 @@ STICKERS = os.path.join(ROOT, 'assets', 'stickers')
 STICKER_KEYS = (
     'warn', 'mute', 'ban', 'clear', 'unban',
     'appeal', 'helper', 'moderator', 'heart',
+    'staff', 'user',  # /report: «На кого жалоба?» (Стафф/Участник)
 )
 
 # действие /modpanel → ключ стикера
@@ -90,6 +91,21 @@ def emoji_for_action(action: str):
 def emoji_heart():
     """Белое neon-сердечко или 🤍."""
     return _cache.get('heart') or '🤍'
+
+
+# /report: «На кого жалоба?» — свой стикер вместо родовых эмодзи Discord.
+_REPORT_UNICODE = {
+    'staff': '🛡️',
+    'user': '👤',
+}
+
+
+def emoji_for_report(kind: str):
+    """PartialEmoji/Emoji для пункта «Стафф»/«Участник» или unicode-фолбек."""
+    em = _cache.get(kind)
+    if em is not None:
+        return em
+    return _REPORT_UNICODE.get(kind, '❔')
 
 
 def emojis_ready() -> bool:

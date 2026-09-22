@@ -56,12 +56,22 @@ mp = mod_src[mod_src.index('async def modpanel'):
              mod_src.index('def _parse_target_id')]
 check('await _ack' in mp and mp.find('await _ack') < mp.find('actions_for_member'),
       '/modpanel сразу закрывает 3с-окно Discord (_ack до меню)')
+check('edit_original_response(**edit_kw)' in mp.replace(' ', '')
+      or 'edit_original_response(**edit_kw)' in mp,
+      '/modpanel: панель через edit_original (не followup) — сброс правит то же сообщение')
+check('await _respond(interaction, view=view' not in mp.replace(' ', '')
+      and 'await _respond(interaction,view=view' not in mp.replace(' ', ''),
+      '/modpanel: успех не через followup._respond(view=…) — иначе 2-й клик мёртв')
+check('_panel_message' in mp and '_root_edit' in mp,
+      '/modpanel: сохраняет сообщение панели для сброса селектов')
 check('await ensure_menu_emojis' not in mp,
       '/modpanel не ждёт Discord emoji API перед ответом')
 check('schedule_ensure_menu_emojis' in mp,
       '/modpanel греет emoji в фоне')
 check('cog_load' in mod_src and 'warm_menu_banners' in mod_src,
       'баннер прогревается при загрузке кога')
+check('multi-fix-v16' in mp or 'multi-fix-v13' in mp or 'build=multi-fix' in mp,
+      '/modpanel: метка деплоя multi-fix')
 uni = mod_src[mod_src.index('async def _unisolate_member'):
               mod_src.index('def _preflight_reason') if 'def _preflight_reason' in mod_src
               else mod_src.index('# ── Почему Forbidden')]
@@ -78,28 +88,75 @@ msub = mod_src[mod_src.index('class ModActionModal'):
                mod_src.index('class ModTargetSelect')]
 check('thinking=True' in msub and 'await _ack' in msub,
       'модалка наказания: defer thinking=True (type 5, не «не ответило»)')
-# Выбор действия с участником: send_modal ПЕРВЫМ (<3с), без ACL/диска до ответа.
+check(msub.find('await _ack') < msub.find('_ensure_action_acl'),
+      'модалка: _ack до ACL (иначе таймаут на submit)')
+# Выбор действия с участником: ACK сообщением+кнопкой (<3с), модалка — со 2-го клика.
 launch = mod_src[mod_src.index('async def _launch_action'):
                  mod_src.index('class ModActionSelect')]
-check('async def _send_modal_fast' in mod_src,
-      '_send_modal_fast: send_modal как первый ответ')
-check('create_task(_reset_later)' in launch or 'create_task(_reset_later())' in launch,
-      '_launch_action: сброс панели фоном после send_modal')
-check(launch.find('send_modal') < launch.find('create_task'),
-      '_launch_action: send_modal раньше create_task(_reset_later)')
+check('async def _offer_mod_form' in mod_src,
+      '_offer_mod_form: модалка с селекта')
+check('send_modal' in mod_src[mod_src.index('async def _offer_mod_form'):
+                              mod_src.index('async def _send_kind_menu')
+                              if 'async def _send_kind_menu' in mod_src
+                              else mod_src.index('async def _launch_action')],
+      '_offer_mod_form: send_modal сразу (без кнопки)')
+check('_OpenModFormButton' not in mod_src and '_OpenModFormView' not in mod_src,
+      'кнопка «открыть форму» убрана')
+check('_offer_mod_form' in launch,
+      '_launch_action: бан/варн через _offer_mod_form')
+_offer_end = (mod_src.index('async def _send_kind_menu')
+              if 'async def _send_kind_menu' in mod_src
+              else mod_src.index('async def _launch_action'))
+_offer_body = mod_src[mod_src.index('async def _offer_mod_form'):_offer_end]
+check('_reset_after_step' in _offer_body or '_silent_reset_panel' in _offer_body,
+      '_offer_mod_form: сброс панели сразу после модалки')
+check('_send_kind_menu' in mod_src and '_bind_live_panel' in mod_src
+      and '_reset_after_step' in mod_src,
+      'multi-use: kind-меню отдельно, основная панель сбрасывается')
+check('multi-fix-v16' in mod_src or 'multi-fix-v13' in mod_src,
+      'build tag multi-fix для проверки деплоя')
+check('timeout=300' in mod_src,
+      'панель живёт 5 минут')
+check('_schedule_panel_reset' in launch or '_silent_reset_panel' in launch
+      or '_reset_after_step' in launch
+      or '_enter_kind_mode' in launch
+      or 'panel=panel' in launch,
+      '_launch_action: сброс панели после шага')
 asel = mod_src[mod_src.index('class ModActionSelect'):
                mod_src.index('_PUNISH_MODPANEL') if '_PUNISH_MODPANEL' in mod_src
                else mod_src.index('class ModActionModal')]
 # Внутри callback селекта до _launch_action не должно быть _ensure_action_acl
-# (SQLite съедает 3с; ACL в on_submit).
 cb = asel[asel.index('async def callback'):
           asel.index('await _launch_action') + len('await _launch_action')]
 check('_ensure_action_acl' not in cb,
-      'ModActionSelect: без ACL до _launch_action / send_modal')
+      'ModActionSelect: без ACL до _launch_action')
+check(cb.find('await _launch_action') > 0
+      and '_cancel_panel_reset' in cb
+      and 'mute_kinds_for' not in cb,
+      'ModActionSelect: ACK через send_modal, без SQLite в колбэке')
+check('_cancel_panel_reset' in mod_src and '_reset_task' in mod_src,
+      'фоновый rebuild панели отменяется при новом клике')
+check('_reset_gen' in mod_src,
+      'поколение сброса — устаревший rebuild не пушится')
+tgt_body = mod_src[mod_src.index('class ModTargetSelect'):
+                   mod_src.index('class ModPanelView')]
+check('_schedule_panel_reset' not in tgt_body,
+      'после участника НЕТ фонового delayed-reset')
+check('_silent_reset_panel' in tgt_body,
+      'после участника сразу статус/sticky через _silent_reset_panel')
+check('panel' in tgt_body or 'getattr(self, \'panel\'' in tgt_body
+      or "getattr(self, 'panel'" in tgt_body,
+      'ModTargetSelect берёт panel явно')
+check('_push_panel_view' in mod_src,
+      'push панели после rebuild — без рассинхрона custom_id')
+check('_panel_message_id' in mod_src,
+      'id основной панели зафиксирован — kind-меню его не ворует')
+check('multi-fix-v16' in mod_src or 'multi-fix-v13' in mod_src,
+      'build tag multi-fix для проверки деплоя')
 mks = mod_src[mod_src.index('class MuteKindSelect'):
               mod_src.index('class MuteKindView')]
 mkcb = mks[mks.index('async def callback'):]
-check('_ensure_action_acl' not in mkcb and '_send_modal_fast' in mkcb,
+check('_offer_mod_form' in mkcb and '_ensure_action_acl' not in mkcb,
       'MuteKindSelect: send_modal сразу, ACL в on_submit')
 proof_src = open(os.path.join(ROOT, 'cogs', 'proof_cog.py'), encoding='utf-8').read()
 check('_PROOF_REQ_CACHE' in proof_src and '_PROOF_WL_CACHE' in proof_src,
@@ -107,6 +164,10 @@ check('_PROOF_REQ_CACHE' in proof_src and '_PROOF_WL_CACHE' in proof_src,
 acl_src = open(os.path.join(ROOT, 'services', 'permission_acl.py'), encoding='utf-8').read()
 check('_ACTION_ACL_CACHE' in acl_src,
       'action ACL кэшируется (mute_kinds_for ×3 до ответа)')
+check('_schedule_panel_reset' in mod_src,
+      'панель сбрасывает селекты (_schedule_panel_reset) — многоразовая')
+check('SPEED OK' not in mod_src and 'speed-fix' not in mod_src,
+      'нет SPEED/speed-fix надписей в modpanel')
 check('Кого наказать?' not in mod_src and 'Что сделать?' not in mod_src,
       'нет старой синей панели (placeholders Кого/Что)')
 check('Участник и действие — в любом порядке.' not in mod_src,
