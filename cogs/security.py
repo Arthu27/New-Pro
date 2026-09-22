@@ -72,12 +72,26 @@ def _similarity (a :str ,b :str )->float :
     return common /max (la ,lb )
 
 def _extract_domains (text :str )->list :
-    """Metinden domain'leri удалить."""
+    """Достать домены из текста (http/www и голые discord.gg / t.me)."""
+    if not text :
+        return []
     pattern =re .compile (
-    r'(?:https?://|www\.)([a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,})',
+    r'(?:https?://|www\.)([a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,})'
+    r'|(?:discord\.gg|discord(?:app)?\.com/invite)/[A-Za-z0-9-]+'
+    r'|(?:t\.me|telegram\.me)/[A-Za-z0-9_]+',
     re .IGNORECASE 
     )
-    return [m .group (1 ).lower ()for m in pattern .finditer (text )]
+    out =[]
+    for m in pattern .finditer (str (text )):
+        if m .group (1 ):
+            out .append (m .group (1 ).lower ())
+        else :
+            raw =m .group (0 ).lower ()
+            if 'discord' in raw :
+                out .append ('discord.gg')
+            elif 't.me' in raw or 'telegram.me' in raw :
+                out .append ('t.me')
+    return out
 
 def _is_suspicious_name (name :str )->bool :
     name_lower =name .lower ()
@@ -95,9 +109,29 @@ class Security (commands .Cog ):
         # Burst tracking: uid -> [timestamps]
         self .burst_tracker :dict [int ,list ]=defaultdict (list )
         self .backup_loop .start ()
+        self ._perms_warned =set ()
 
     def cog_unload (self ):
         self .backup_loop .cancel ()
+
+    @commands .Cog .listener ()
+    async def on_ready (self ):
+        """Один раз за сессию предупредить, если бот не может удалять ссылки."""
+        for guild in list (getattr (self .bot ,'guilds',[]) or []):
+            try :
+                me =guild .me 
+                if me is None or me .guild_permissions .manage_messages :
+                    continue 
+                if guild .id in self ._perms_warned :
+                    continue 
+                self ._perms_warned .add (guild .id )
+                _log .warning (
+                    'Security: на сервере %s (%s) у бота нет «Управление сообщениями» — '
+                    'запрещённые ссылки не будут удаляться, пока не выдадите право роли бота.',
+                    guild .name ,guild .id ,
+                )
+            except Exception as _ex:
+                _log .debug ('on_ready perms check: %s',_ex )
 
         #  Log helper 
     async def _log (self ,guild :discord .Guild ,embed :discord .Embed ,cfg :dict ):
@@ -238,12 +272,27 @@ class Security (commands .Cog ):
 
         #  Сканер ссылок 
         if cfg .get ('link_scanner',False ):
-            has_bad ,bad_domains =self ._scan_links (message .content )
+            scan_text =(message .content or '' )
+            try :
+                for emb in (message .embeds or []):
+                    for attr in ('url','title','description'):
+                        val =getattr (emb ,attr ,None )
+                        if val :
+                            scan_text +='\n'+str (val )
+            except Exception as _ex:
+                _log .debug ('link_scanner embeds: %s',_ex )
+            has_bad ,bad_domains =self ._scan_links (scan_text )
             if has_bad :
                 try :
                     await message .delete ()
+                except discord.Forbidden :
+                    _log .warning (
+                        'Security link_scanner: нет права удалять в #%s (guild=%s)',
+                        getattr (message .channel ,'name','?'),
+                        getattr (message .guild ,'id','?'),
+                    )
                 except Exception as _ex:
-                    _log.debug("on_message(): подавлено: %s", _ex)
+                    _log .warning ("on_message(): не удалось удалить вредоносную ссылку: %s", _ex)
                 e =discord .Embed (
                 title ="🛡️ Вредоносная ссылка заблокирована",
                 color =0xe74c3c ,
@@ -322,7 +371,7 @@ class Security (commands .Cog ):
     @commands .Cog .listener ()
     async def on_member_join (self ,member :discord .Member ):
         cfg =_load_cfg (str (member .guild .id ))
-        if not cfg .get ('fake_account',True ):
+        if not cfg .get ('fake_account',False ):
             return 
 
         score ,warnings =self ._fake_account_score (member ,cfg )

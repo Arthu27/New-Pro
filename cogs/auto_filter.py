@@ -95,9 +95,12 @@ FOLD = str.maketrans({'4': 'a', 'а': 'a', '@': 'a', '^': 'a',
                       'у': 'y'})
 WORD_CHARS = r'0-9a-zа-яё'
 SEPARATORS = r'[^0-9a-zа-яё]{0,3}'          # «м у с о р» / «м-у-с-о-р»
-LINK_RE = re.compile(r'(?:https?://[^\s<>\)\]]+|www\.[^\s<>\)\]]+'
-                     r'|(?:discord\.gg|discord(?:app)?\.com/invite)/[A-Za-z0-9-]+)',
-                     re.IGNORECASE)
+LINK_RE = re.compile(
+    r'(?:https?://[^\s<>\)\]\|]+|www\.[^\s<>\)\]\|]+'
+    r'|(?:discord\.gg|discord(?:app)?\.com/invite)/[A-Za-z0-9-]+'
+    r'|(?:t\.me|telegram\.me)/[A-Za-z0-9_]+)',
+    re.IGNORECASE,
+)
 
 
 def normalize_text(text: str) -> str:
@@ -151,10 +154,40 @@ def find_bad_word(text: str, words):
 
 
 def extract_links(text: str):
-    """Все URL/инвайты из сообщения (схема, www или discord-invite)."""
+    """Все URL/инвайты из сообщения (схема, www, discord-invite, t.me)."""
     if not text:
         return []
-    return LINK_RE.findall(str(text))
+    # Срезаем хвост от спойлеров Discord (||https://x|| → https://x).
+    found = []
+    for raw in LINK_RE.findall(str(text)):
+        cleaned = str(raw).rstrip('|').rstrip('.,;:!?)')
+        if cleaned:
+            found.append(cleaned)
+    return found
+
+
+def message_text_for_filter(message) -> str:
+    """Текст сообщения + URL из эмбедов/вложений (иначе ссылка в эмбеде не ловится)."""
+    parts = [getattr(message, 'content', None) or '']
+    try:
+        for emb in getattr(message, 'embeds', None) or []:
+            for attr in ('url', 'title', 'description'):
+                val = getattr(emb, attr, None)
+                if val:
+                    parts.append(str(val))
+            author = getattr(emb, 'author', None)
+            if author is not None and getattr(author, 'url', None):
+                parts.append(str(author.url))
+            for field in getattr(emb, 'fields', None) or []:
+                if getattr(field, 'value', None):
+                    parts.append(str(field.value))
+        for att in getattr(message, 'attachments', None) or []:
+            url = getattr(att, 'url', None)
+            if url:
+                parts.append(str(url))
+    except Exception as _ex:
+        _log.debug('message_text_for_filter(): подавлено: %s', _ex)
+    return '\n'.join(parts)
 
 
 def link_allowed(link: str, whitelist) -> bool:
@@ -175,7 +208,7 @@ def caps_ratio(text: str) -> float:
 def classify_message(cfg: dict, text: str) -> list:
     """Список нарушений {'filter', 'detail'} для текста по конфигу."""
     out = []
-    if not cfg.get('enabled', True):
+    if not cfg.get('enabled', False):
         return out
     w = cfg.get('words', {})
     if w.get('enabled') and w.get('list'):
@@ -399,7 +432,8 @@ class AutoFilter(commands.Cog):
         if not cfg['enabled'] or self._is_immune(message, cfg):
             return
 
-        violations = classify_message(cfg, message.content or '')
+        text = message_text_for_filter(message)
+        violations = classify_message(cfg, text)
         flood_kind = None
         if cfg['flood']['enabled']:
             f = cfg['flood']
@@ -421,10 +455,31 @@ class AutoFilter(commands.Cog):
             action = cfg[fname]['action']
             detail = violations[0]['detail']
 
+        deleted = False
         try:
             await message.delete()
+            deleted = True
+        except discord.Forbidden:
+            log.warning(
+                'AutoFilter: нет права удалять сообщения в #%s (guild=%s) — '
+                'выдайте боту «Управление сообщениями»',
+                getattr(message.channel, 'name', '?'),
+                getattr(message.guild, 'id', '?'),
+            )
+            try:
+                await self._modlog(
+                    message.guild,
+                    'Автофильтр: нет права удалять',
+                    [('Канал', getattr(message.channel, 'mention', '—')),
+                     ('Участник', f'{author.mention} ({author.id})'),
+                     ('Совпадение', str(detail)[:120]),
+                     ('Нужно', 'Право бота «Управление сообщениями» в этом канале')],
+                    color=0xE74C3C,
+                )
+            except Exception as _ex:
+                _log.debug('_punish(): лог прав подавлен: %s', _ex)
         except Exception as _ex:
-            _log.debug("_punish(): подавлено: %s", _ex)
+            log.warning('AutoFilter: не удалось удалить сообщение: %s', _ex)
         try:
             await message.channel.send(f'{author.mention} {NOTICE_TEXT[fname]}', delete_after=6)
         except Exception as _ex:
@@ -450,9 +505,9 @@ class AutoFilter(commands.Cog):
                            [('Участник', f'{author.mention} ({author.id})'),
                             ('Канал', getattr(message.channel, 'mention', '—')),
                             ('Совпадение', str(detail)[:120]),
-                            ('Действие', ACTION_LABELS[action]),
+                            ('Действие', ACTION_LABELS[action] + ('' if deleted else ' · ⚠️ сообщение НЕ удалено (нет права)')),
                             ('Текст', f'```{text_preview}```'.replace('`', 'ʼ'))],
-                           color=0xE67E22)
+                           color=0xE67E22 if deleted else 0xE74C3C)
 
     # ── /filter … ─────────────────────────────────────────────
     def _status_embed(self, cfg) -> discord.Embed:
