@@ -1219,7 +1219,26 @@ html[data-theme="light"] .ch-detail-title {
   font-size: 15px !important;
   font-weight: 600 !important;
   color: var(--nv-text) !important;
+  -webkit-text-fill-color: var(--nv-text) !important;
+  background: none !important;
 
+}
+
+/* Карточка канала: не клипуем заголовок с именем (overflow:hidden на .ch-detail
+   прятал название в «нише» после клика). */
+html[data-theme="dark"] .ch-detail,
+html[data-theme="light"] .ch-detail {
+  overflow: visible !important;
+}
+html[data-theme="dark"] .ch-detail-body,
+html[data-theme="light"] .ch-detail-body {
+  overflow: auto !important;
+}
+html[data-theme="dark"] #detail-name,
+html[data-theme="light"] #detail-name {
+  color: var(--nv-text) !important;
+  -webkit-text-fill-color: var(--nv-text) !important;
+  background: none !important;
 }
 
 /* Channels page rows (.ch-row) — keep chat .ch-item separate */
