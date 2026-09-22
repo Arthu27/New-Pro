@@ -24,6 +24,8 @@ STICKER_KEYS = (
     'warn', 'mute', 'ban', 'clear', 'unban',
     'appeal', 'helper', 'moderator', 'heart',
     'staff', 'user',  # /report: «На кого жалоба?» (Стафф/Участник)
+    # /event-panel (Events V2)
+    'signup', 'announce', 'start', 'finish', 'elist',
 )
 
 # действие /modpanel → ключ стикера
@@ -106,6 +108,38 @@ def emoji_for_report(kind: str):
     if em is not None:
         return em
     return _REPORT_UNICODE.get(kind, '❔')
+
+
+# /event-panel — свои стикеры на кнопках (V2 как у модпанели)
+_EVENT_UNICODE = {
+    'signup': '✋',
+    'announce': '📣',
+    'start': '▶',
+    'finish': '🏁',
+    'elist': '📋',
+    'reg': '🔓',
+}
+EVENT_STICKER = {
+    'signup': 'signup',
+    'announce': 'announce',
+    'start': 'start',
+    'finish': 'finish',
+    'elist': 'elist',
+    'reg': 'clear',
+}
+
+
+def emoji_for_event(kind: str):
+    """Стикер кнопки event-panel или unicode-фолбек."""
+    key = EVENT_STICKER.get(kind, kind)
+    em = _cache.get(key)
+    if em is not None:
+        return em
+    # запасные уже залитые ключи
+    alt = {'reg': 'clear', 'elist': 'moderator'}.get(kind)
+    if alt and _cache.get(alt) is not None:
+        return _cache[alt]
+    return _EVENT_UNICODE.get(kind, '🤍')
 
 
 def emojis_ready() -> bool:

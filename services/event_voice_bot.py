@@ -395,6 +395,16 @@ def build_event_client():
                                 '(проверь, что бот на сервере + scopes)')
             except Exception as ex:
                 log.warning('event-bot commands setup: %s', ex)
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(bot)
+        except Exception:
+            pass
+        try:
+            from services.menu_banners import ensure_sticker_pack
+            ensure_sticker_pack()
+        except Exception:
+            pass
 
         if not _stay_on():
             log.info('event-bot voice stay off')

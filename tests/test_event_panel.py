@@ -128,8 +128,9 @@ check("event-panel'" in open(
     'API /event-panel')
 ev_html = open(os.path.join(ROOT, 'web/templates/events.html'), encoding='utf-8').read()
 check('evKpis' in ev_html and 'ev-discord' in ev_html, 'events.html: KPI + Discord preview')
-check('▶ Старт' in ev_html or 'Старт' in ev_html, 'events.html: сценарий Старт')
-check('ev-btn-go' in ev_html, 'events.html: стиль кнопки Старт')
+check('Старт' in ev_html, 'events.html: сценарий Старт')
+check('ev-btn-go' in ev_html or 'pub-opt-accent' in ev_html, 'events.html: акцент Старт')
+check('V2' in ev_html and 'pub-opt' in ev_html, 'events.html: V2 howto cards')
 check('page-head-copy' in ev_html and 'eyebrow' in ev_html, 'events.html: page-head polish')
 check('evPublish' in ev_html and 'evChannel' in ev_html, 'events.html: publish + channel select')
 check('event_panel_channel' in open(
