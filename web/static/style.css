@@ -1927,6 +1927,11 @@ input[type="color"].studio-custom { width: 34px; height: 34px; padding: 2px; bor
 }
 .fab-main:hover { filter: brightness(1.08); transform: scale(1.05); }
 .fab.open .fab-main { transform: rotate(45deg); }
+/* На аналитике FAB не нужен — не занимаем место даже до CSS страницы. */
+body.page-analytics #fabHost,
+body.page-analytics .fab {
+  display: none !important;
+}
 .fab-item {
   /* Закрыто: полностью убираем из потока. Раньше opacity:0 оставлял
      высоту всех пунктов — «+» визуально уезжал вверх и перекрывал
