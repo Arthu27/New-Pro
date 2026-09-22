@@ -1099,7 +1099,8 @@ def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float
     except Exception :
         return "Извините, произошла ошибка. Попробуйте позже."
 
-def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None )->Tuple [str ,List [Dict ],str ,Dict ]:
+def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None ,
+temperature :float =None ,max_tokens :int =None ,model :str =None )->Tuple [str ,List [Dict ],str ,Dict ]:
     """
     Главная функция AI-ассистента чата (RAG + интеграция правил).
     Используется из cogs/ai_chat.py и веб-панели.
@@ -1120,6 +1121,13 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     "ФОРМА ОТВЕТА: первое предложение — прямой точный ответ (без воды и «конечно!»); "
     "дальше — суть и детали, полезные догадки и варианты; если вопрос расплывчат — "
     "ответь на самую вероятную трактовку и одной строкой уточни альтернативу.",
+    "ПРОСТЫЕ ВОПРОСЫ (факты, «кто ты», «что умеешь», арифметика, значение слова, "
+    "да/нет): отвечай СРАЗУ одним-двумя точными предложениями. Не тупи, не "
+    "переспрашивай очевидное, не раздувай ответ. Ошибка в простом факте — "
+    "недопустима: лучше «не уверен, вероятнее всего X», чем ложный ответ.",
+    "REPLY-ДИАЛОГ: если пользователь отвечает на твоё предыдущее сообщение "
+    "(в тексте будет пометка «отвечает на твоё предыдущее…») — продолжай ТУ ЖЕ "
+    "тему, учитывай свой прошлый ответ, не начинай с нуля и не игнорируй контекст.",
     "ФОРМАТ Discord: короткие абзацы, **жирный** для ключевого, списки маркером; "
     "код — только в коде. Без шаблонных извинений и без «как AI я не могу».",
     "ТОН: подстраивайся под спрашивающего — спросили коротко, отвечай коротко; "
@@ -1139,6 +1147,8 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     "«данных нет», «я не могу это узнать»: общие знания, логику и здравый смысл "
     "используй свободно и отвечай как взрослый эксперт.",
     "4. Никаких служебных команд ACTION:* — максимум ACTION:ESCALATE (позвать модератора).",
+    "5. Не путай имена, даты и цифры из хроники канала — если в контексте есть "
+    "конкретные данные, цитируй их точно.",
     ]
     if context .get ('user_name'):
         sys_lines .append (f"Собеседник: {context.get('user_name')} (ID: {context.get('user_id', '?')})")
@@ -1305,9 +1315,12 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         })
     messages .append ({"role":"user","content":question })
 
-    # Детерминизм заказан владельцем: тот же вопрос → тот же ответ,
-    # без «плавания» формулировок. Хвост длиннее — ответы полные.
-    answer ,model_name ,rate_info =_call (messages ,max_tokens =1408 ,temperature =0.25 )
+    # Детерминизм + точность: низкая температура, полный хвост.
+    # Параметры можно усилить из настроек Discord-чата / панели.
+    _temp =0.18 if temperature is None else float (temperature )
+    _toks =1600 if max_tokens is None else int (max_tokens )
+    answer ,model_name ,rate_info =_call (
+    messages ,max_tokens =_toks ,temperature =_temp ,model =model )
 
     updated_history =list (history )+[
     {"role":"user","content":question },
