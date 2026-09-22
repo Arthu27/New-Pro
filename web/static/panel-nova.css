@@ -300,9 +300,9 @@ html[data-theme="light"] .sidebar {
     max-width: 100% !important;
     min-width: 0 !important;
     flex: none !important;
-    /* Топбар на мобилке в 2 ряда (~118px). 56px оставлял заголовок
-       под иконками (поиск/настройки/колокол) — контент «съедался». */
-    padding-top: calc(122px + env(safe-area-inset-top, 0px)) !important;
+    /* Топбар в один ряд: иначе 2 ряда (~118px) + контент уезжает вниз.
+       Контент стартует сразу под компактной шапкой. */
+    padding-top: calc(64px + env(safe-area-inset-top, 0px)) !important;
     height: 100% !important;
     overflow: hidden !important;
   }
@@ -325,6 +325,57 @@ html[data-theme="light"] .sidebar {
     max-width: none !important;
     border-radius: 0 !important;
     margin: 0 !important;
+    /* Один ряд: бренд + крошка + иконки. Без wrap контент поднимается. */
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-height: 56px !important;
+    height: 56px !important;
+    padding: 6px 10px 6px 56px !important;
+    overflow: hidden !important;
+  }
+  html[data-theme="dark"] .topbar .navbar-right,
+  html[data-theme="light"] .topbar .navbar-right {
+    flex-wrap: nowrap !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+  }
+  html[data-theme="dark"] .topbar .nav-icon-btn,
+  html[data-theme="light"] .topbar .nav-icon-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    flex: 0 0 auto !important;
+  }
+  html[data-theme="dark"] .topbar .theme-toggle,
+  html[data-theme="light"] .topbar .theme-toggle,
+  html[data-theme="dark"] .topbar #accentBtn,
+  html[data-theme="light"] .topbar #accentBtn,
+  html[data-theme="dark"] .topbar #sidebarCollapseBtn,
+  html[data-theme="light"] .topbar #sidebarCollapseBtn,
+  html[data-theme="dark"] .topbar #globalSearchBtn,
+  html[data-theme="light"] .topbar #globalSearchBtn {
+    display: none !important;
+  }
+  html[data-theme="dark"] .topbar .user-pill,
+  html[data-theme="light"] .topbar .user-pill {
+    padding: 3px 6px 3px 3px !important;
+    gap: 4px !important;
+  }
+  html[data-theme="dark"] .topbar .user-info,
+  html[data-theme="light"] .topbar .user-info,
+  html[data-theme="dark"] .topbar .user-caret,
+  html[data-theme="light"] .topbar .user-caret {
+    display: none !important;
+  }
+  html[data-theme="dark"] .crumbs,
+  html[data-theme="light"] .crumbs {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
   }
   html[data-theme="dark"] .mobile-nav,
   html[data-theme="light"] .mobile-nav {
