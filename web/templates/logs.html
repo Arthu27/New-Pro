@@ -197,8 +197,8 @@ body.dense .jl-cbody { gap: 3px; }
 <div class="panel">
   <div class="toolbar">
     <div class="jl-view-toggle" role="group" aria-label="Что показывать в журнале">
-      <button type="button" id="jl-view-pun" class="active">Только наказания</button>
-      <button type="button" id="jl-view-all">Все события</button>
+      <button type="button" id="jl-view-pun">Только наказания</button>
+      <button type="button" id="jl-view-all" class="active">Все события</button>
     </div>
     <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
       <input type="search" id="search" placeholder="Участник / причина / действие" aria-label="Поиск по журналу">
@@ -339,9 +339,12 @@ body.dense .jl-cbody { gap: 3px; }
   /* только наказания — вид журнала по умолчанию (жалоба владельца:
      «сделай не все действия» — входы/роли/каналы журналу не нужны) */
   var PUNISH_KINDS = { ban: 1, unban: 1, kick: 1, warn: 1, mute: 1, timeout: 1, unmute: 1 };
-  var viewMode = 'punish';
+  /* После переезда наказаний часто 0, а события есть — стартуем с «все»,
+     иначе журнал выглядит «сломанным». Явный клик «Только наказания»
+     по-прежнему сохраняется в localStorage. */
+  var viewMode = 'all';
   var shapeMode = 'feed';   /* лента — красивый вид по умолчанию, таблица — запасной */
-  var _autoAllOnce = false; /* после переезда: пустой punish → сразу «все» */
+  var _autoAllOnce = false;
   try {
     var saved = localStorage.getItem('jlViewMode');
     if (saved === 'all' || saved === 'punish') viewMode = saved;
@@ -395,21 +398,18 @@ body.dense .jl-cbody { gap: 3px; }
     if (fp === _logsFp) return;
     _logsFp = fp;
     allLogs = raw;
-    /* Если наказаний нет, а событий полно (типично после переезда) —
-       не оставляем «пустой журнал»: один раз переключаем на все события,
-       чтобы страница не выглядела сломанной. Выбор пользователя в
-       localStorage уважаем — авто-переход только при дефолте punish. */
+    /* Пустой punish при живых событиях (типично после переезда) — один раз
+       уводим на «все события», даже если в localStorage остался punish
+       от прошлой сессии: иначе журнал снова выглядит мёртвым. */
     if (!_autoAllOnce && viewMode === 'punish' && allLogs.length > 0) {
       var anyPunish = allLogs.some(function (l) { return !!PUNISH_KINDS[actionKind(l.action)]; });
+      _autoAllOnce = true;
       if (!anyPunish) {
-        _autoAllOnce = true;
-        try {
-          if (!localStorage.getItem('jlViewMode')) {
-            viewMode = 'all';
-          }
-        } catch (e) {
-          viewMode = 'all';
-        }
+        viewMode = 'all';
+        try { localStorage.setItem('jlViewMode', 'all'); } catch (e) { /* ignore */ }
+        var pToggle = $('jl-view-pun'), aToggle = $('jl-view-all');
+        if (pToggle) pToggle.classList.toggle('active', false);
+        if (aToggle) aToggle.classList.toggle('active', true);
       }
     }
     window.renderSafe(function () { render(); updateStats(); updateFilters(); });
