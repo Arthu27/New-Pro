@@ -503,6 +503,11 @@ def register(ctx):
                 answer ,model_name ,_ =_local_hakumo_fallback (messages )
             except Exception :
                 return jsonify ({'error':'AI вернул пустой ответ.'}),502 
+        try :
+            from web .ai_helper import _sanitize_ai_reply 
+            answer =_sanitize_ai_reply (answer )
+        except Exception :
+            pass 
 
                 # ── ВЫПОЛНЕНИЕ FUNC (function calling) — обработка [FUNC:...] от AI ──────────
         import re as _re 
