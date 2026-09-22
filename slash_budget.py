@@ -100,6 +100,10 @@ KEEP_SLASH = frozenset({
     'my-violations',       # мои нарушения (обжалование — /апелляция в ЛС)
     # Панель событий: публикует Event Mod / админ в канал ивентов.
     'event-panel',
+    # Мафия — голосовая игра (заказ владельца 2026-09-21): группа команд
+    # /mafia start|cancel|redeal|kick|add|resend|remind|kill|voteout|
+    # check|doncheck — в дереве это ОДНА команда-группа «mafia».
+    'mafia',
     # Сетап-команды (/verify-setup, /report-setup, /report-settings) убраны
     # из меню (2026-09-01): всё настраивается в веб-панели (страницы
     # «Верификация» и «Репорты»). Сами слеш-команды в Discord не регистрируются.
