@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
     <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
     <link rel="stylesheet" href="/static/panel-nova.css?v={{ static_v('panel-nova.css') }}">
+    <link rel="stylesheet" href="/static/panel-aurora.css?v={{ static_v('panel-aurora.css') }}">
 </head>
 <body class="panel-nova">
     <script nonce="{{ csp_nonce }}">
@@ -466,6 +467,8 @@
     <script src="/static/click-guard.js?v={{ static_v('click-guard.js') }}"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
     <script src="/static/app.js?v={{ static_v('app.js') }}"></script>
+    <!-- Aurora FX: курсор-прожектор на карточках + каскад появления (v16) -->
+    <script src="/static/aurora-fx.js?v={{ static_v('aurora-fx.js') }}"></script>
     {%- if not standalone|default(False) %}
     <script nonce="{{ csp_nonce }}">
     /* Отказ в доступе (redirect c ?denied=...): объясняем по-человечески,

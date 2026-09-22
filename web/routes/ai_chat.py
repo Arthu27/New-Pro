@@ -11,11 +11,10 @@ from web.routes._common import (
     render_template, session, redirect, url_for, request, jsonify, Response,
     os, json, time, math, discord, datetime, timezone)
 
-# Модель панельного AI — заказ владельца: в панели заведомо СЛАБАЯ (дешёвая)
-# модель; боевой сильный ответчик живёт в Discord-чате (cogs/ai_chat).
-# Переопределяется через AI_PANEL_MODEL в .env.
-_AI_PANEL_MODEL = (os.getenv('AI_PANEL_MODEL', 'mistral-small-latest')
-                   or 'mistral-small-latest')
+# Модель панельного AI — сильная по умолчанию (заказ: не тупить в простых
+# ответах). Переопределяется через AI_PANEL_MODEL в .env.
+_AI_PANEL_MODEL = (os.getenv('AI_PANEL_MODEL', 'mistral-large-latest')
+                   or 'mistral-large-latest')
 
 def register(ctx):
     app = ctx.app
@@ -472,6 +471,9 @@ def register(ctx):
         f"{channel_messages_block}\n"
         f"{eylem_prompt}\n"
         "Говори ТОЛЬКО на русском языке. Никакого турецкого, никакого английского. "
+        "Ты сильный и точный ассистент: на простые вопросы отвечай сразу одним-двумя "
+        "чёткими предложениями, без воды и без «хороший вопрос». Не тупи и не "
+        "ошибайся в очевидных фактах из контекста выше. "
         "Используй ТОЛЬКО реальные данные из контекста выше, никогда не выдумывай. "
         "Если в списке нет нужного имени или действия, скажи 'Такого пользователя/действия в записях нет'. "
         "При выполнении действия используй ID участника, а не имя — в списке участников у каждого есть ID.\n"
@@ -483,7 +485,9 @@ def register(ctx):
         messages .append ({'role':'user','content':question })
 
         try :
-            answer ,model_name ,_ =_call (messages ,max_tokens =1024 ,model =_AI_PANEL_MODEL )
+            answer ,model_name ,_ =_call (
+            messages ,max_tokens =1600 ,temperature =0.18 ,model =_AI_PANEL_MODEL )
+
         except Exception as e :
         # Fallback: локальный ответ
             print (f"[AI-CHAT] _call exception: {e}")
@@ -741,7 +745,8 @@ def register(ctx):
                 'content':"Сформулируй финальный ответ на основе данных выше."
                 })
                 try :
-                    final_answer ,model_name2 ,_ =_call (messages ,max_tokens =1024 ,model =_AI_PANEL_MODEL )
+                    final_answer ,model_name2 ,_ =_call (
+                    messages ,max_tokens =1600 ,temperature =0.18 ,model =_AI_PANEL_MODEL )
                     if final_answer :
                         answer =final_answer 
                 except Exception as _fe2 :
@@ -1036,6 +1041,26 @@ def register(ctx):
         session [history_key ]=new_history [-12 :]
         session .modified =True 
         return jsonify ({'answer':answer ,'model':model_name })
+
+
+    @app .route ('/api/ai-chat/settings',methods =['GET','POST'])
+    @login_required 
+    @role_required ('admin')
+    def api_ai_chat_settings ():
+        """Каналы и сила Discord AI-чата (админ)."""
+        from services .ai_chat_settings import load_settings ,save_settings 
+        if request .method =='GET':
+            return jsonify (load_settings ())
+        body =_safe_json_obj ()or {}
+        cur =load_settings ()
+        for key in ('enabled','reply_to_bot','respond_all','require_mention',
+        'model','temperature','max_tokens','channels'):
+            if key in body :
+                cur [key ]=body [key ]
+        if not save_settings (cur ):
+            return jsonify ({'error':'Не удалось сохранить'}),500 
+        # Сброс in-memory dynamic set не нужен — _ai_allowed читает файл
+        return jsonify ({'ok':True ,'settings':load_settings ()})
 
 
     @app .route ('/api/ai-chat/clear',methods =['POST'])

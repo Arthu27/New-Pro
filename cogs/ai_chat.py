@@ -12,9 +12,38 @@ from json_store import load_json ,save_json
 from services.ttl_cache import TTLMap 
 
 
-AI_CHANNELS =set ()# Пусто — dinamik как addnir
-# Динамические каналы — DM'den addnip удалить
-_dynamic_channels :set =set ()# DM'den /ai-channel команда addnir
+AI_CHANNELS =set ()# устаревший in-memory набор (совместимость)
+# Динамические каналы — добавляются командой / из панели
+_dynamic_channels :set =set ()
+
+def _ai_allowed_channel_ids ()->set :
+    """Все каналы, где ИИ слушает: settings + .env + runtime."""
+    try :
+        from services .ai_chat_settings import channel_ids ,env_channel_ids ,load_settings 
+        cfg =load_settings ()
+        if not cfg .get ('enabled',True ):
+            return set ()
+        return channel_ids (cfg )|env_channel_ids ()|set (AI_CHANNELS )|set (_dynamic_channels )
+    except Exception as _ex :
+        log .debug ('_ai_allowed_channel_ids: %s',_ex )
+        return set (AI_CHANNELS )|set (_dynamic_channels )|set ([1312434963941167134 ])
+
+
+def _ai_chat_cfg ()->dict :
+    try :
+        from services .ai_chat_settings import load_settings 
+        return load_settings ()
+    except Exception :
+        return {
+        'enabled':True ,
+        'channels':[1312434963941167134 ],
+        'reply_to_bot':True ,
+        'respond_all':True ,
+        'require_mention':False ,
+        'model':'',
+        'temperature':0.18 ,
+        'max_tokens':1600 ,
+        }
 
 # АКТИВНЫЕ ЗАДАЧИ (цепочка «условие → действие»)
 _active_tasks :list =[]# [{'id': int, 'desc': str, 'condition': str, 'action': str, 'target_id': int}]
@@ -377,19 +406,25 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
         return []
 
 
-async def _get_channel_context (channel ,limit :int =12 )->list :
-    """Собрать последние сообщения текущего канала (для контекста беседы)"""
+async def _get_channel_context (channel ,limit :int =16 )->list :
+    """Собрать последние сообщения канала — включая ответы бота (для reply-диалога)."""
     try :
         context_messages =[]
         async for msg in channel .history (limit =limit ):
+            name =msg .author .display_name 
             if msg .author .bot :
-                continue # сообщения бота не включаем
+                name =f'{name} (бот)'
+            content =(msg .content or '').strip ()
+            if not content and msg .embeds :
+                content ='(embed)'
+            if not content :
+                continue 
             context_messages .append ({
-            'author':msg .author .display_name ,
-            'content':_resolve_mentions (msg .content [:200 ],channel .guild ),# 150 → 200 karakter
-            'timestamp':msg .created_at .strftime ('%H:%M')
+            'author':name ,
+            'content':_resolve_mentions (content [:280 ],channel .guild ),
+            'timestamp':msg .created_at .strftime ('%H:%M'),
+            'is_bot':bool (msg .author .bot ),
             })
-            # Развернуть: сначала самые старые
         context_messages .reverse ()
         return context_messages 
     except Exception as e :
@@ -400,11 +435,20 @@ async def _get_channel_context (channel ,limit :int =12 )->list :
 def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =None ,channel_context :list =None )->str :
     try :
         from web .ai_helper import ai_assistant 
+        # Свежие знания/инструкции с диска — панель могла обновить без рестарта
+        global _knowledge_base ,_instructions ,_histories 
+        try :
+            _knowledge_base =_load_knowledge_base ()
+            _instructions =_load_instructions ()
+        except Exception as _ex :
+            log .debug ('_call_ai reload kb: %s',_ex )
         history =_histories .get (user_id ,[])
+        _cfg =_ai_chat_cfg ()
 
         # Пользователь infosi
         user_name ='друг'
         guild_id =0 
+        member =None 
         if guild :
             member =guild .get_member (user_id )
             guild_id =guild .id 
@@ -421,68 +465,46 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         'is_dm':is_dm ,
         }
 
-        # владелец сервера и роли администраторов (инфо)
+        # Полное досье сервера — каналы, роли, правила, онлайн, варны, мод
         if guild :
             try :
-                owner =guild .owner 
-                if owner :
-                    context ['guild_owner']=owner .display_name 
-
-                    # Администратор роли — manage_messages или kick разрешение которые являются
-                staff_roles =[]
-                for role in guild .roles :
-                    if role .is_default ():
-                        continue 
-                    if role .permissions .manage_messages or role .permissions .kick_members or role .permissions .administrator :
-                        members =[m .display_name for m in role .members if not m .bot ][:5 ]
-                        if members :
-                            staff_roles .append ({'name':role .name ,'members':members })
-                if staff_roles :
-                    context ['staff_roles']=staff_roles [:8 ]# Max 8 роли
-
-                    # Слепок каналов и ролей — ИИ отвечает о сервере фактами
-                context ['channels']=[
-                ('# '+c .name )for c in guild .text_channels ][:40 ]+[
-                ('  '+c .name )for c in guild .voice_channels ][:20 ]
-                context ['roles']=[
-                r .name for r in sorted (
-                (r for r in guild .roles if not r .is_default ()and not r .managed ),
-                key =lambda r :r .position ,reverse =True )][:30 ]
+                from services .ai_server_snapshot import (
+                build_server_dossier ,find_mentioned_members )
+                dossier =build_server_dossier (guild )
+                mentioned =find_mentioned_members (guild ,question )
+                if mentioned :
+                    dossier ['mentioned_members']=mentioned 
+                context ['server_dossier']=dossier 
+                # дублируем ключевые поля для совместимости со старым промптом
+                if dossier .get ('guild_owner'):
+                    context ['guild_owner']=dossier ['guild_owner']
+                if dossier .get ('staff_roles'):
+                    context ['staff_roles']=dossier ['staff_roles']
+                if dossier .get ('roles'):
+                    context ['roles']=[r .split (' (id=')[0 ]for r in dossier ['roles'][:30 ]]
+                if dossier .get ('channel_map'):
+                    context ['channels']=[
+                    x .strip ()for x in dossier ['channel_map']
+                    if x .strip ().startswith ('#')or x .strip ().startswith ('🔊')][:40 ]
+                if dossier .get ('server_status'):
+                    context ['server_status']=dossier ['server_status']
                 if member :
                     context ['asker_roles']=[
                     r .name for r in member .roles if not r .is_default ()][:10 ]
             except Exception as e :
-                log .info (f'[AI] Guild info Ошибки: {e}')
+                log .info (f'[AI] server dossier Ошибки: {e}')
+                # фолбэк — старый минимальный слепок
+                try :
+                    owner =guild .owner 
+                    if owner :
+                        context ['guild_owner']=owner .display_name 
+                    context ['channels']=[
+                    ('# '+c .name )for c in guild .text_channels ][:40 ]
+                    context ['roles']=[
+                    r .name for r in guild .roles if not r .is_default ()][:30 ]
+                except Exception as _ex :
+                    log .debug ('_call_ai fallback guild: %s',_ex )
 
-                # СОСТОЯНИЕ СЕРВЕРА видно ИИ у всех (публичные цифры гильдии) —
-        # иначе он отвечал «данных нет» про онлайн/голосовые
-        if guild :
-            try :
-                online =[m for m in guild .members if not m .bot and m .status !=discord .Status .offline ]
-                in_voice =[]
-                for vc in guild .voice_channels :
-                    for m in vc .members :
-                        if not m .bot :
-                            in_voice .append (m .display_name )
-                            # Недавно присоединившиеся (за 24 часа)
-                import datetime as _dt 
-                cutoff =_dt .datetime .now (_dt .timezone .utc )-_dt .timedelta (hours =24 )
-                recent_joins =[m .display_name for m in guild .members 
-                if not m .bot and m .joined_at and m .joined_at >cutoff ]
-                # Открытые ticket-каналы
-                ticket_channels =[c for c in guild .text_channels if c .name .startswith ('ticket-')]
-                context ['server_status']={
-                'online_count':len (online ),
-                'voice_count':len (in_voice ),
-                'voice_members':in_voice [:5 ],
-                'recent_joins':recent_joins [:5 ],
-                'active_tickets':len (ticket_channels ),
-                'total_members':guild .member_count ,
-                }
-            except Exception as e :
-                log .info (f'[AI] Сервер status Ошибки: {e}')
-
-                #  АКТИВЕН ЗАДАЧИ 
         if str (user_id )=='987430047889637426':
             try :
                 from cogs .ai_chat import _active_tasks 
@@ -491,44 +513,35 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
             except Exception as _ex:
                 log.debug("_call_ai(): подавлено: %s", _ex)
 
-                # Добавить последние Discord-сообщения пользователя в контекст (только на сервере)
         if recent_messages :
             context ['recent_user_messages']=recent_messages 
 
-            # Добавить контекст канала (только на сервере)
         if channel_context :
             context ['channel_context']=channel_context 
 
-            # Добавить релевантную информацию из базы сервера
         if guild_id and str (guild_id )in _knowledge_base :
             guild_knowledge =_knowledge_base [str (guild_id )]
             relevant_knowledge =[]
             q_lower =question .lower ()
 
             for item in guild_knowledge :
-            # пропускаем ненадёжные записи (веб-поиск)
                 if item .get ('confidence')=='low':
                     continue 
-
-                    # совпадение по словам вопроса
                 if any (word in item .get ('question','').lower ()for word in q_lower .split ()if len (word )>2 ):
                     relevant_knowledge .append (f"заранее выученное: {item.get('question', '')} → {item.get('info', '')}")
-                    # совпадение по имени/теме
                 elif 'name'in item and any (word in item ['name'].lower ()for word in q_lower .split ()if len (word )>2 ):
                     relevant_knowledge .append (f"Известная личность: {item['name']} → {item.get('info', '')}")
                 elif 'topic'in item and any (word in item ['topic'].lower ()for word in q_lower .split ()if len (word )>2 ):
                     relevant_knowledge .append (f"Известная тема: {item['topic']} → {item.get('info', '')}")
 
             if relevant_knowledge :
-                context ['learned_knowledge']=relevant_knowledge [:3 ]# не больше 3 записей
+                context ['learned_knowledge']=relevant_knowledge [:5 ]
 
-                # инструкции сервера — в контекст
         if guild_id :
             guild_instructions =_instructions .get (str (guild_id ),[])
             if guild_instructions :
                 context ['guild_instructions']=guild_instructions 
 
-                # профиль пользователя — в контекст
         uid_str =str (user_id )
         if uid_str in _profiles :
             p =_profiles [uid_str ]
@@ -537,7 +550,12 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
             if p .get ('style'):
                 context ['user_style']=p ['style']
 
-        answer ,new_history ,model_name ,_ =ai_assistant (question ,context ,history )
+        answer ,new_history ,model_name ,_ =ai_assistant (
+        question ,context ,history ,
+        temperature =float (_cfg .get ('temperature',0.18 )),
+        max_tokens =int (_cfg .get ('max_tokens',1600 )),
+        model =(_cfg .get ('model')or None )or None ,
+        )
 
         # Profili обновить
         _update_profile (user_id ,question ,answer ,_profiles )
@@ -1129,11 +1147,27 @@ class AIChat (commands .Cog ):
                 return # намерение обработано — обычный AI-ответ не нужен
 
         is_ticket_channel =False 
-        is_ai_channel =(
-        message .channel .id in AI_CHANNELS or 
-        message .channel .id in _dynamic_channels or 
-        is_ticket_channel 
-        )
+        cfg =_ai_chat_cfg ()
+        allowed =_ai_allowed_channel_ids ()
+        is_ai_channel =message .channel .id in allowed 
+
+        # Reply на сообщение бота в AI-канале — всегда продолжаем диалог
+        is_reply_to_bot =False 
+        ref_content =''
+        if (cfg .get ('reply_to_bot',True )and message .reference 
+        and is_ai_channel and self .bot .user ):
+            ref_msg =message .reference .resolved 
+            if ref_msg is None and message .reference .message_id :
+                try :
+                    ref_msg =await message .channel .fetch_message (
+                    message .reference .message_id )
+                except Exception as _ex :
+                    log .debug ('ai reply fetch: %s',_ex )
+                    ref_msg =None 
+            if (isinstance (ref_msg ,discord .Message )
+            and ref_msg .author and ref_msg .author .id ==self .bot .user .id ):
+                is_reply_to_bot =True 
+                ref_content =(ref_msg .content or '').strip ()[:400 ]
 
             # Заказ владельца: в личке ИИ НЕ работает — чат только на сервере.
             # Перехват reply владельца на ожидающие вопросы и его команды
@@ -1147,27 +1181,33 @@ class AIChat (commands .Cog ):
                 log .info (f'[AI] DM notice Ошибки: {_dm_ex}')
             return 
 
-        if not (is_dm or is_ai_channel ):
+        if not is_ai_channel :
             return 
 
-        if is_ai_channel and not is_dm :
-            is_allowed_ai =(
-            message .channel .id in _dynamic_channels or 
-            is_ticket_channel 
-            )
-            if not is_allowed_ai :
+        # В AI-канале: все сообщения (по умолчанию) / reply на бота / @mention
+        mentioned_me =bool (
+        self .bot .user and self .bot .user in (message .mentions or []))
+        if not cfg .get ('respond_all',True ):
+            # Узкий режим: только reply на бота или @mention
+            if not (is_reply_to_bot or mentioned_me ):
                 return 
-            if is_ticket_channel :
-                lower_msg =message .content .lower ()
-                insult_kws =['оскорб','мат','написал','ебал','рот','сук','хуй','дурак','идиот','обозва','жалоб','матер','шлюх','урод','мраз','гнид','пидор','соси']
-                if any (w in lower_msg for w in insult_kws )or message .mentions :
-                    return # разбором оскорблений занимается AI-модерация (ai_moderation), не чат-ассистент
-            content =re .sub (r'^moe\s*','',message .content ,flags =re .IGNORECASE ).strip ()
-            for m in message .mentions :
-                content =content .replace (f'<@{m.id}>','').replace (f'<@!{m.id}>','')
-            content =content .strip ()or 'Здравствуйте!'
-        else :
-            content =message .content .strip ()or 'Здравствуйте!'
+        elif cfg .get ('require_mention')and not (mentioned_me or is_reply_to_bot ):
+            return 
+
+        if is_ticket_channel :
+            lower_msg =message .content .lower ()
+            insult_kws =['оскорб','мат','написал','ебал','рот','сук','хуй','дурак','идиот','обозва','жалоб','матер','шлюх','урод','мраз','гнид','пидор','соси']
+            if any (w in lower_msg for w in insult_kws )or message .mentions :
+                return # разбором оскорблений занимается AI-модерация (ai_moderation), не чат-ассистент
+        content =re .sub (r'^moe\s*','',message .content ,flags =re .IGNORECASE ).strip ()
+        for m in message .mentions :
+            content =content .replace (f'<@{m.id}>','').replace (f'<@!{m.id}>','')
+        content =content .strip ()or 'Здравствуйте!'
+        if is_reply_to_bot and ref_content :
+            content =(
+            f'(пользователь отвечает на твоё предыдущее сообщение: '
+            f'«{ref_content}»)\n{content}'
+            )
 
             # <@123> / <#456> в вопросе → читаемые имена — ИИ видит, о ком речь
         if message .guild :
@@ -1200,7 +1240,7 @@ class AIChat (commands .Cog ):
                 recent_msgs =await _get_recent_user_messages (
                 message .author .id ,message .guild ,limit =15 
                 )
-                channel_ctx =await _get_channel_context (message .channel ,limit =12 )
+                channel_ctx =await _get_channel_context (message .channel ,limit =16 )
 
             answer =await self .bot .loop .run_in_executor (
             None ,_call_ai ,content ,message .author .id ,
@@ -1208,7 +1248,7 @@ class AIChat (commands .Cog ):
             recent_msgs ,channel_ctx 
             )
 
-        if _kufur_var_mi (answer ):
+        if _has_profanity (answer ):
             answer ="Я не могу это сказать. "
 
             # Ответы "не знаю" — спросить у владельца
