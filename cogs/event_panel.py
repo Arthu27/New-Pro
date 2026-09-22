@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Панель событий Discord — бот сам постит embed + кнопки в канал.
 
-Команда /event-panel (Event Mod / админ) публикует панель в Discord.
-Целевой канал: опция `channel` → Config.EVENT_PANEL_CHANNEL_ID → канал вызова.
-Участники жмут «Записаться», Event Mod (роль 852634463535759461) — анонс
-и закрытие записи. Persistent View переживает рестарт бота.
+Команда /event-panel (Event Admin / Event Mod / админ) публикует панель
+в Discord. Целевой канал: опция `channel` → Config.EVENT_PANEL_CHANNEL_ID
+→ канал вызова. Участники жмут «Записаться»; Event Admin
+(1551527644326002748) и Event Mod (852634463535759461) — анонс и закрытие
+записи. Persistent View переживает рестарт бота.
 """
 from __future__ import annotations
 
@@ -20,7 +21,9 @@ from logger import get_logger
 
 log = get_logger('event_panel')
 
+EVENT_ADMIN_ROLE_ID = 1551527644326002748
 EVENT_MOD_ROLE_ID = 852634463535759461
+EVENT_STAFF_ROLE_IDS = (EVENT_ADMIN_ROLE_ID, EVENT_MOD_ROLE_ID)
 PANEL_COLOR = 0x5EC8FF
 
 
@@ -176,6 +179,7 @@ def save_panel_cfg(guild_id: int, data: dict) -> None:
 
 
 def is_event_mod(member: discord.Member) -> bool:
+    """Event Admin, Event Mod, manage_guild / admin / владелец бота."""
     if member is None:
         return False
     try:
@@ -190,7 +194,8 @@ def is_event_mod(member: discord.Member) -> bool:
     except Exception:
         pass
     roles = getattr(member, 'roles', None) or []
-    return any(int(getattr(r, 'id', 0) or 0) == EVENT_MOD_ROLE_ID for r in roles)
+    have = {int(getattr(r, 'id', 0) or 0) for r in roles}
+    return any(rid in have for rid in EVENT_STAFF_ROLE_IDS)
 
 
 def panel_embed(guild: discord.Guild, cfg: dict | None = None) -> discord.Embed:
@@ -199,7 +204,7 @@ def panel_embed(guild: discord.Guild, cfg: dict | None = None) -> discord.Embed:
     desc = cfg.get('description') or (
         'Анонсы и запись на ивенты сервера.\n'
         'Нажми **Записаться**, чтобы отметить интерес.\n'
-        f'Ведут — <@&{EVENT_MOD_ROLE_ID}>.'
+        f'Ведут — <@&{EVENT_ADMIN_ROLE_ID}> · <@&{EVENT_MOD_ROLE_ID}>.'
     )
     e = discord.Embed(
         title=title[:256],
@@ -284,7 +289,8 @@ class EventAnnounceModal(discord.ui.Modal, title='Анонс события'):
         # пинг роли event mod + заинтересованных — мягко
         try:
             await channel.send(
-                f'<@&{EVENT_MOD_ROLE_ID}> новый анонс: **{cfg["title"]}**',
+                f'<@&{EVENT_ADMIN_ROLE_ID}> <@&{EVENT_MOD_ROLE_ID}> '
+                f'новый анонс: **{cfg["title"]}**',
                 delete_after=30)
         except Exception:
             pass
@@ -422,6 +428,7 @@ class EventPanel(commands.Cog):
 
         await interaction.followup.send(
             f'✅ Панель событий в <#{cfg.get("channel_id")}>. '
+            f'Event Admin: <@&{EVENT_ADMIN_ROLE_ID}> · '
             f'Event Mod: <@&{EVENT_MOD_ROLE_ID}>',
             ephemeral=True)
 

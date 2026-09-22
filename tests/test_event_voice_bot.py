@@ -84,13 +84,27 @@ print('== build client ==')
 # без реального старта — только конструктор
 os.environ.pop('EVENT_BOT_TOKEN', None)
 client = EV.build_event_client()
-check(client is not None and hasattr(client, 'start'), 'Client собран')
+check(client is not None and hasattr(client, 'start'), 'Bot собран')
+check(hasattr(client, 'tree') and hasattr(client, 'add_cog'),
+      'есть CommandTree + add_cog (slash)')
 # intents: guilds + voice
 ints = client.intents
 check(bool(ints.guilds) and bool(ints.voice_states),
       'intents: guilds + voice_states')
 check(not bool(getattr(ints, 'message_content', False)),
       'без message_content (лёгкий клиент)')
+check(callable(getattr(EV, '_load_and_sync_event_commands', None)),
+      'sync /event-panel helper')
+
+print('== event-panel roles ==')
+from cogs import event_panel as EP  # noqa: E402
+check(getattr(EP, 'EVENT_ADMIN_ROLE_ID', 0) == 1551527644326002748,
+      'Event Admin role')
+check(getattr(EP, 'EVENT_MOD_ROLE_ID', 0) == 852634463535759461,
+      'Event Mod role')
+check('event-panel' in open(
+    os.path.join(ROOT, 'cogs', 'event_panel.py'), encoding='utf-8').read(),
+      'команда event-panel в cog')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

@@ -56,7 +56,8 @@ check(saved.get('channel_id') == '1550986919981351043'
 check(EV._resolve_event_voice_channel_id() == 1550986919981351043,
       'resolve channel')
 st = EV.event_bot_status()
-check('token_set' in st and 'channel_id' in st and 'online' in st,
+check('token_set' in st and 'channel_id' in st and 'online' in st
+      and 'commands_synced' in st and 'commands' in st,
       f'status keys: {list(st)}')
 
 print('== panel wiring ==')

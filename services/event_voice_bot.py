@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Отдельный Event-бот: сидит в голосовом канале 24/7 (как основной).
+"""Отдельный Event-бот: войс 24/7 + слеш /event-panel.
 
 Токен: EVENT_BOT_TOKEN в .env (НЕ коммитить) — правится из панели
 «Совместные боты». Канал/stay: config/event_voice_stay.json.
 
 Если кикнули/отвалился — сразу заходит обратно (voice_state_update +
-монитор каждые 10с), по тому же принципу, что voice-stay у основного бота.
+монитор каждые 5с). На ready синкает /event-panel (Event Admin/Mod),
+чтобы команда была видна у приложения Event-бота.
 
-Запуск: start.bat → main.py (второй клиент).
+Запуск: start.bat → main.py (второй клиент) или
+scripts/run_event_voice_stay.py.
 """
 from __future__ import annotations
 
@@ -45,6 +47,8 @@ _stay_enabled = True
 # (иначе race: disconnect → on_voice_state_update → rejoin поверх connect).
 _joining = False
 _suppress_rejoin_until = 0.0
+_commands_synced = False
+_synced_command_names: list[str] = []
 
 
 def _repo_root() -> str:
@@ -269,57 +273,159 @@ def _schedule_rejoin(client: discord.Client, reason: str = '') -> None:
         log.debug('schedule rejoin: %s', ex)
 
 
-def build_event_client() -> discord.Client:
-    """Лёгкий клиент: intents guilds + voice states (для кика/возврата)."""
+def _event_sync_guilds(bot: discord.Client) -> list:
+    """Гильдии для slash-синка: Config → иначе все серверы, где бот уже есть."""
+    guilds = []
+    try:
+        from config import Config
+        guilds = list(Config.guild_objects() or [])
+    except Exception as ex:
+        log.debug('event guild_objects: %s', ex)
+    if guilds:
+        return guilds
+    out = []
+    for g in list(getattr(bot, 'guilds', None) or []):
+        try:
+            out.append(discord.Object(id=int(g.id)))
+        except Exception:
+            pass
+    return out
+
+
+async def _load_and_sync_event_commands(bot) -> list[str]:
+    """Загрузить EventPanel + синкнуть /event-panel (чтобы команды были видны)."""
+    global _commands_synced, _synced_command_names
+    names: list[str] = []
+    try:
+        from cogs.event_panel import EventPanel, EventPanelView
+    except Exception as ex:
+        log.warning('event-bot: не удалось импортировать event_panel: %s', ex)
+        return names
+
+    # Persistent buttons после рестарта
+    try:
+        bot.add_view(EventPanelView())
+    except Exception as ex:
+        log.debug('event-bot add_view: %s', ex)
+
+    guilds = _event_sync_guilds(bot)
+    try:
+        if bot.get_cog('EventPanel') is None:
+            # guilds=[] в discord.py = никуда не вешать → команды не видны.
+            # Пустой Config → вешаем на серверы бота; если и их нет — global.
+            if guilds:
+                await bot.add_cog(EventPanel(bot), guilds=guilds)
+            else:
+                await bot.add_cog(EventPanel(bot))
+            log.info('event-bot: cog EventPanel загружен (guilds=%s)',
+                     [getattr(g, 'id', g) for g in guilds] or 'global')
+    except Exception as ex:
+        log.warning('event-bot add_cog EventPanel: %s', ex)
+        return names
+
+    tree = getattr(bot, 'tree', None)
+    if tree is None:
+        log.warning('event-bot: нет command tree')
+        return names
+
+    try:
+        if guilds:
+            for g in guilds:
+                try:
+                    synced = await tree.sync(guild=g)
+                    for c in synced or []:
+                        n = getattr(c, 'name', None)
+                        if n and n not in names:
+                            names.append(str(n))
+                    log.info('event-bot slash sync guild=%s → %s',
+                             getattr(g, 'id', g),
+                             [getattr(c, 'name', '?') for c in (synced or [])])
+                except Exception as ex:
+                    log.warning('event-bot sync guild %s: %s',
+                                getattr(g, 'id', g), ex)
+        else:
+            synced = await tree.sync()
+            for c in synced or []:
+                n = getattr(c, 'name', None)
+                if n and n not in names:
+                    names.append(str(n))
+            log.info('event-bot slash sync GLOBAL → %s',
+                     [getattr(c, 'name', '?') for c in (synced or [])])
+    except Exception as ex:
+        log.warning('event-bot tree.sync: %s', ex)
+
+    _synced_command_names = list(names)
+    _commands_synced = bool(names)
+    return names
+
+
+def build_event_client():
+    """Bot: voice-stay + slash /event-panel (Event Admin/Mod)."""
+    from discord.ext import commands
+
     intents = discord.Intents.none()
     intents.guilds = True
     intents.voice_states = True
-    client = discord.Client(intents=intents)
+    # members не privileged-обязателен для slash: роли приходят в interaction
+    bot = commands.Bot(command_prefix=commands.when_mentioned,
+                       intents=intents,
+                       help_command=None)
 
-    @client.event
+    @bot.event
     async def on_ready():
-        log.info('event-bot online as %s (%s)', client.user, client.user.id)
+        global _commands_synced, _monitor_task
+        log.info('event-bot online as %s (%s)', bot.user, bot.user.id)
         try:
-            await client.change_presence(
+            await bot.change_presence(
                 activity=discord.Activity(
                     type=discord.ActivityType.watching,
                     name='Events'),
                 status=discord.Status.online)
         except Exception as ex:
             log.debug('event-bot presence: %s', ex)
+
+        # Команды — чтобы /event-panel был виден у Event-бота
+        if not _commands_synced or bot.get_cog('EventPanel') is None:
+            try:
+                names = await _load_and_sync_event_commands(bot)
+                if names:
+                    log.info('event-bot commands ready: %s', names)
+                else:
+                    log.warning('event-bot commands: sync вернул пусто '
+                                '(проверь, что бот на сервере + scopes)')
+            except Exception as ex:
+                log.warning('event-bot commands setup: %s', ex)
+
         if not _stay_on():
             log.info('event-bot voice stay off')
             return
         cid = _resolve_event_voice_channel_id()
         if not cid:
             return
-        global _monitor_task
         if _monitor_task is None or _monitor_task.done():
-            _monitor_task = client.loop.create_task(
-                _monitor_event_voice(client), name='event-voice-monitor')
-        ok, msg = await ensure_voice_joined(client, cid)
+            _monitor_task = bot.loop.create_task(
+                _monitor_event_voice(bot), name='event-voice-monitor')
+        ok, msg = await ensure_voice_joined(bot, cid)
         if ok:
             log.info('event-bot voice: %s', msg)
         else:
             log.warning('event-bot voice: %s', msg)
-            _schedule_rejoin(client, 'on_ready-fail')
+            _schedule_rejoin(bot, 'on_ready-fail')
 
-    @client.event
+    @bot.event
     async def on_resumed():
         log.info('event-bot resumed — проверяю войс')
-        _schedule_rejoin(client, 'resume')
+        _schedule_rejoin(bot, 'resume')
 
-    @client.event
+    @bot.event
     async def on_voice_state_update(member, before, after):
-        # Нас кикнули / вытащили из канала → сразу обратно
-        me = client.user
+        me = bot.user
         if me is None or member is None:
             return
         if int(getattr(member, 'id', 0) or 0) != int(me.id):
             return
         if not _stay_on():
             return
-        # Только пока сами в connect/move — иначе любой кик сразу возвращает
         if _joining:
             return
         target = _resolve_event_voice_channel_id()
@@ -331,14 +437,13 @@ def build_event_client() -> discord.Client:
             log.warning(
                 'event-bot left voice (before=%s after=%s) — returning to %s',
                 before_id, after_id, target)
-            _schedule_rejoin(client, 'kicked-or-moved')
+            _schedule_rejoin(bot, 'kicked-or-moved')
 
-    @client.event
+    @bot.event
     async def on_disconnect():
-        # Gateway drop — после resume монитор/rejoin поднимут войс
         log.warning('event-bot gateway disconnect')
 
-    return client
+    return bot
 
 
 async def _monitor_event_voice(client: discord.Client) -> None:
@@ -378,7 +483,7 @@ async def _monitor_event_voice(client: discord.Client) -> None:
 
 async def start_event_bot() -> Optional[discord.Client]:
     """Старт event-бота, если EVENT_BOT_TOKEN задан. Иначе None."""
-    global _event_client, _stop_runner, _voice_channel_id
+    global _event_client, _stop_runner, _voice_channel_id, _commands_synced
     token = event_bot_token()
     if not token:
         log.info('EVENT_BOT_TOKEN пуст — event-бот не запускается')
@@ -387,15 +492,17 @@ async def start_event_bot() -> Optional[discord.Client]:
         return _event_client
     _stop_runner = False
     _voice_channel_id = None  # перечитать cfg
+    _commands_synced = False
     load_event_voice_cfg()
     _event_client = build_event_client()
 
     async def _runner():
-        global _event_client
+        global _event_client, _commands_synced
         delay = 5
         while not _stop_runner:
             client = _event_client
             if client is None or client.is_closed():
+                _commands_synced = False
                 client = build_event_client()
                 _event_client = client
             try:
@@ -413,6 +520,7 @@ async def start_event_bot() -> Optional[discord.Client]:
             await asyncio.sleep(delay)
             delay = min(60, delay * 2)
             if not _stop_runner:
+                _commands_synced = False
                 _event_client = build_event_client()
 
     asyncio.get_running_loop().create_task(_runner(), name='event-voice-bot')
@@ -467,4 +575,6 @@ def event_bot_status() -> dict:
         'voice_connected': voice_ok,
         'voice_channel_id': str(voice_id) if voice_id else '',
         'default_channel_id': str(DEFAULT_EVENT_VOICE_CHANNEL_ID),
+        'commands_synced': bool(_commands_synced),
+        'commands': list(_synced_command_names),
     }
