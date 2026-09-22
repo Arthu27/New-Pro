@@ -166,8 +166,17 @@ async def ensure_voice_joined(client: discord.Client | None = None,
     if not cid:
         return False, 'Не задан голосовой канал event-бота'
     async with _lock():
+        # уже в цели — не трогаем (нет disconnect → нет ложного leave)
+        try:
+            for v in list(client.voice_clients or []):
+                if (v.is_connected()
+                        and getattr(getattr(v, 'channel', None), 'id', None) == cid):
+                    return True, f'Уже в <#{cid}>'
+        except Exception:
+            pass
         _joining = True
-        _suppress_rejoin_until = time.time() + 8.0
+        # suppress только пока сами коннектимся (свой disconnect/move)
+        _suppress_rejoin_until = time.time() + 3.0
         try:
             channel = client.get_channel(cid)
             if channel is None:
@@ -191,7 +200,6 @@ async def ensure_voice_joined(client: discord.Client | None = None,
                 try:
                     await vc.move_to(channel)
                     log.info('event-bot moved to voice %s', cid)
-                    _suppress_rejoin_until = time.time() + 5.0
                     return True, f'Переехал в <#{cid}>'
                 except Exception:
                     try:
@@ -199,11 +207,11 @@ async def ensure_voice_joined(client: discord.Client | None = None,
                     except Exception:
                         pass
             try:
+                # как мод-бот: self_deaf=False, без play; reconnect=True
                 await asyncio.wait_for(
                     channel.connect(self_deaf=False, reconnect=True),
                     timeout=45.0)
                 log.info('event-bot joined voice %s', cid)
-                _suppress_rejoin_until = time.time() + 5.0
                 return True, f'Зашёл в <#{cid}>'
             except asyncio.TimeoutError:
                 return False, 'Таймаут connect 45с'
@@ -215,26 +223,27 @@ async def ensure_voice_joined(client: discord.Client | None = None,
                 return False, f'Не удалось зайти: {ex}'
         finally:
             _joining = False
+            # сразу после connect разрешаем реагировать на кик
+            _suppress_rejoin_until = time.time() + 0.8
 
 
 def _schedule_rejoin(client: discord.Client, reason: str = '') -> None:
-    """Мгновенный возврат в войс после кика/обрыва (не ждём 10с монитора)."""
+    """Мгновенный возврат в войс после кика/обрыва (не ждём монитора)."""
     global _rejoin_task
     if not _stay_on() or client.is_closed():
         return
-    if _joining or time.time() < _suppress_rejoin_until:
+    if _joining:
         return
 
     async def _go():
-        # Несколько попыток — как у мод-бота через монитор, но сразу.
-        delays = (1.2, 2.5, 4.0, 7.0)
+        # Быстрый первый заход + retries (кик не должен оставлять бота снаружи)
+        delays = (0.4, 1.0, 2.0, 3.5, 6.0, 10.0)
         for i, delay in enumerate(delays):
             await asyncio.sleep(delay)
             if client.is_closed() or not _stay_on():
                 return
             if _joining:
                 continue
-            # уже сидим в цели — выходим
             cid = _resolve_event_voice_channel_id()
             for v in list(client.voice_clients or []):
                 try:
@@ -310,32 +319,38 @@ def build_event_client() -> discord.Client:
             return
         if not _stay_on():
             return
-        if _joining or time.time() < _suppress_rejoin_until:
+        # Только пока сами в connect/move — иначе любой кик сразу возвращает
+        if _joining:
             return
         target = _resolve_event_voice_channel_id()
         before_id = getattr(getattr(before, 'channel', None), 'id', None)
         after_id = getattr(getattr(after, 'channel', None), 'id', None)
-        # уже в целевом — ок
         if after_id == target:
             return
-        # ушли из целевого / выгнали / перетащили в другой
         if before_id == target or after_id is None or after_id != target:
             log.warning(
                 'event-bot left voice (before=%s after=%s) — returning to %s',
                 before_id, after_id, target)
             _schedule_rejoin(client, 'kicked-or-moved')
 
+    @client.event
+    async def on_disconnect():
+        # Gateway drop — после resume монитор/rejoin поднимут войс
+        log.warning('event-bot gateway disconnect')
+
     return client
 
 
 async def _monitor_event_voice(client: discord.Client) -> None:
-    """Как у основного бота: каждые 10с проверяем и заходим обратно."""
+    """Каждые 5с проверяем и заходим обратно (плотнее мод-бота)."""
     await client.wait_until_ready()
-    await asyncio.sleep(3)
+    await asyncio.sleep(2)
     backoff_until = 0.0
     while not client.is_closed() and not _stop_runner:
-        await asyncio.sleep(10)
+        await asyncio.sleep(5)
         if not client.is_ready() or not _stay_on():
+            continue
+        if _joining:
             continue
         if time.time() < backoff_until:
             continue
@@ -357,7 +372,7 @@ async def _monitor_event_voice(client: discord.Client) -> None:
             backoff_until = 0.0
             log.info('event-bot monitor: %s', msg)
         else:
-            backoff_until = time.time() + 20
+            backoff_until = time.time() + 12
             log.warning('event-bot monitor: %s', msg)
 
 
