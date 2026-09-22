@@ -1,0 +1,4 @@
+{
+  "channel_id": "1547390550108540948",
+  "note": "Event-бот (EVENT_BOT_TOKEN) заходит в этот голосовой канал при старте. Переопредели через EVENT_VOICE_CHANNEL_ID в .env."
+}
