@@ -50,10 +50,10 @@ from services import event_voice_bot as EV  # noqa: E402
 
 # cfg path relative to package → write into repo config is ok; use save API
 saved = EV.save_event_voice_cfg(
-    channel_id='1547390550108540948', stay_enabled=True)
-check(saved.get('channel_id') == '1547390550108540948'
+    channel_id='1550986919981351043', stay_enabled=True)
+check(saved.get('channel_id') == '1550986919981351043'
       and saved.get('stay_enabled') is True, f'save cfg: {saved}')
-check(EV._resolve_event_voice_channel_id() == 1547390550108540948,
+check(EV._resolve_event_voice_channel_id() == 1550986919981351043,
       'resolve channel')
 st = EV.event_bot_status()
 check('token_set' in st and 'channel_id' in st and 'online' in st,
@@ -98,7 +98,7 @@ d = r.get_json() or {}
 check(r.status_code == 200 and d.get('ok') and 'event' in d and 'main' in d,
       f'GET /api/co-bots: {str(d)[:120]}')
 r = client.post('/api/co-bots/event', json={
-    'channel_id': '1547390550108540948', 'stay_enabled': True})
+    'channel_id': '1550986919981351043', 'stay_enabled': True})
 d = r.get_json() or {}
 check(r.status_code == 200 and d.get('ok'), f'POST event cfg: {d}')
 

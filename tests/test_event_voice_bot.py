@@ -29,14 +29,14 @@ def check(ok, msg):
 print('== module + defaults ==')
 from services import event_voice_bot as EV  # noqa: E402
 
-check(EV.DEFAULT_EVENT_VOICE_CHANNEL_ID == 1547390550108540948,
+check(EV.DEFAULT_EVENT_VOICE_CHANNEL_ID == 1550986919981351043,
       f'default voice = {EV.DEFAULT_EVENT_VOICE_CHANNEL_ID}')
 check(callable(EV.start_event_bot) and callable(EV.build_event_client),
       'start/build API')
 check(EV.event_bot_token() == '', 'без env токен пуст')
 
-os.environ['EVENT_VOICE_CHANNEL_ID'] = '1547390550108540948'
-check(EV._resolve_event_voice_channel_id() == 1547390550108540948,
+os.environ['EVENT_VOICE_CHANNEL_ID'] = '1550986919981351043'
+check(EV._resolve_event_voice_channel_id() == 1550986919981351043,
       'EVENT_VOICE_CHANNEL_ID читается')
 os.environ.pop('EVENT_VOICE_CHANNEL_ID', None)
 
@@ -44,7 +44,7 @@ cfg = os.path.join(ROOT, 'config', 'event_voice_stay.json')
 check(os.path.isfile(cfg), 'config/event_voice_stay.json есть')
 import json  # noqa: E402
 data = json.load(open(cfg, encoding='utf-8'))
-check(str(data.get('channel_id')) == '1547390550108540948',
+check(str(data.get('channel_id')) == '1550986919981351043',
       f'json channel_id={data.get("channel_id")}')
 
 print('== .env.example + main wiring ==')

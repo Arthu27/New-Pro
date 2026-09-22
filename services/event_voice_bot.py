@@ -4,8 +4,10 @@
 Токен: EVENT_BOT_TOKEN в .env (НЕ коммитить) — правится из панели
 «Совместные боты». Канал/stay: config/event_voice_stay.json.
 
-Не грузит коги модерации — только presence + voice stay. Запускается
-вторым клиентом из main.py (start.bat), если токен задан.
+Если кикнули/отвалился — сразу заходит обратно (voice_state_update +
+монитор каждые 10с), по тому же принципу, что voice-stay у основного бота.
+
+Запуск: start.bat → main.py (второй клиент).
 """
 from __future__ import annotations
 
@@ -21,15 +23,28 @@ from logger import get_logger
 
 log = get_logger('event_voice_bot')
 
-DEFAULT_EVENT_VOICE_CHANNEL_ID = 1547390550108540948
+# Канал войса Event-бота (заказ владельца 2026-09-22).
+DEFAULT_EVENT_VOICE_CHANNEL_ID = 1550986919981351043
 _CFG_REL = 'config/event_voice_stay.json'
+
+# Opus для voice protocol (если есть в системе) — без play тоже полезно.
+try:
+    if not discord.opus.is_loaded():
+        discord.opus.load_opus('libopus.so.0')
+except Exception:
+    pass
 
 _event_client: Optional[discord.Client] = None
 _monitor_task: Optional[asyncio.Task] = None
 _connect_lock: Optional[asyncio.Lock] = None
+_rejoin_task: Optional[asyncio.Task] = None
 _stop_runner = False
 _voice_channel_id: Optional[int] = None
 _stay_enabled = True
+# Пока сами коннектимся/переезжаем — не реагируем на свой же disconnect
+# (иначе race: disconnect → on_voice_state_update → rejoin поверх connect).
+_joining = False
+_suppress_rejoin_until = 0.0
 
 
 def _repo_root() -> str:
@@ -86,7 +101,8 @@ def save_event_voice_cfg(channel_id: str | int | None = None,
         'channel_id': cur['channel_id'],
         'stay_enabled': cur['stay_enabled'],
         'note': 'Event-бот заходит в этот голосовой канал при старте '
-                '(start.bat → main.py). Токен — только EVENT_BOT_TOKEN в .env.',
+                '(start.bat → main.py). Если кикнули — заходит снова. '
+                'Токен — только EVENT_BOT_TOKEN в .env.',
     }
     path = _cfg_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -94,7 +110,6 @@ def save_event_voice_cfg(channel_id: str | int | None = None,
     with open(tmp, 'w', encoding='utf-8') as fh:
         json.dump(payload, fh, ensure_ascii=False, indent=2)
     os.replace(tmp, path)
-    # live apply
     global _voice_channel_id, _stay_enabled
     try:
         _voice_channel_id = int(payload['channel_id']) if payload['channel_id'] else None
@@ -109,8 +124,7 @@ def save_event_voice_cfg(channel_id: str | int | None = None,
 
 def _resolve_event_voice_channel_id() -> Optional[int]:
     global _voice_channel_id
-    if _voice_channel_id:
-        return _voice_channel_id
+    # всегда перечитываем cfg/env — панель могла сменить канал
     cfg = load_event_voice_cfg()
     try:
         cid = int(str(cfg.get('channel_id') or 0) or 0) or None
@@ -136,46 +150,118 @@ def _lock() -> asyncio.Lock:
 
 async def ensure_voice_joined(client: discord.Client | None = None,
                               channel_id: int | None = None) -> tuple[bool, str]:
-    """Подключить event-бота к войсу (с замком, без двойного connect)."""
+    """Подключить event-бота к войсу (с замком). Кикнули — зови снова."""
+    global _joining, _suppress_rejoin_until
     client = client or _event_client
-    if client is None or client.is_closed() or not client.is_ready():
+    if client is None or client.is_closed():
         return False, 'Event-бот офлайн — запусти через start.bat'
+    try:
+        if not client.is_ready():
+            return False, 'Event-бот ещё не ready'
+    except Exception:
+        return False, 'Event-бот не ready'
     if not _stay_on():
         return False, 'Voice stay выключен в настройках совместных ботов'
     cid = int(channel_id or _resolve_event_voice_channel_id() or 0)
     if not cid:
         return False, 'Не задан голосовой канал event-бота'
     async with _lock():
-        channel = client.get_channel(cid)
-        if channel is None:
-            try:
-                channel = await client.fetch_channel(cid)
-            except Exception as ex:
-                return False, f'Канал не найден: {ex}'
-        if not isinstance(channel, discord.VoiceChannel):
-            return False, 'ID не голосовой канал'
-        vc = discord.utils.get(client.voice_clients, guild=channel.guild)
-        if vc and vc.is_connected():
-            if getattr(vc.channel, 'id', None) == cid:
-                return True, f'Уже в <#{cid}>'
-            try:
-                await vc.move_to(channel)
-                return True, f'Переехал в <#{cid}>'
-            except Exception as ex:
+        _joining = True
+        _suppress_rejoin_until = time.time() + 8.0
+        try:
+            channel = client.get_channel(cid)
+            if channel is None:
                 try:
-                    await vc.disconnect(force=True)
+                    channel = await client.fetch_channel(cid)
+                except Exception as ex:
+                    return False, f'Канал не найден: {ex}'
+            if not isinstance(channel, discord.VoiceChannel):
+                return False, 'ID не голосовой канал'
+            # убрать мёртвые voice clients
+            for stale in list(client.voice_clients or []):
+                try:
+                    if not stale.is_connected():
+                        await stale.disconnect(force=True)
                 except Exception:
                     pass
-        try:
-            await asyncio.wait_for(channel.connect(self_deaf=False), timeout=45.0)
-            log.info('event-bot joined voice %s', cid)
-            return True, f'Зашёл в <#{cid}>'
-        except Exception as ex:
-            return False, f'Не удалось зайти: {ex}'
+            vc = discord.utils.get(client.voice_clients, guild=channel.guild)
+            if vc and vc.is_connected():
+                if getattr(vc.channel, 'id', None) == cid:
+                    return True, f'Уже в <#{cid}>'
+                try:
+                    await vc.move_to(channel)
+                    log.info('event-bot moved to voice %s', cid)
+                    _suppress_rejoin_until = time.time() + 5.0
+                    return True, f'Переехал в <#{cid}>'
+                except Exception:
+                    try:
+                        await vc.disconnect(force=True)
+                    except Exception:
+                        pass
+            try:
+                await asyncio.wait_for(
+                    channel.connect(self_deaf=False, reconnect=True),
+                    timeout=45.0)
+                log.info('event-bot joined voice %s', cid)
+                _suppress_rejoin_until = time.time() + 5.0
+                return True, f'Зашёл в <#{cid}>'
+            except asyncio.TimeoutError:
+                return False, 'Таймаут connect 45с'
+            except Exception as ex:
+                # Already connected / race
+                msg = str(ex).lower()
+                if 'already' in msg and 'connected' in msg:
+                    return True, f'Уже подключён (<#{cid}>)'
+                return False, f'Не удалось зайти: {ex}'
+        finally:
+            _joining = False
+
+
+def _schedule_rejoin(client: discord.Client, reason: str = '') -> None:
+    """Мгновенный возврат в войс после кика/обрыва (не ждём 10с монитора)."""
+    global _rejoin_task
+    if not _stay_on() or client.is_closed():
+        return
+    if _joining or time.time() < _suppress_rejoin_until:
+        return
+
+    async def _go():
+        # Несколько попыток — как у мод-бота через монитор, но сразу.
+        delays = (1.2, 2.5, 4.0, 7.0)
+        for i, delay in enumerate(delays):
+            await asyncio.sleep(delay)
+            if client.is_closed() or not _stay_on():
+                return
+            if _joining:
+                continue
+            # уже сидим в цели — выходим
+            cid = _resolve_event_voice_channel_id()
+            for v in list(client.voice_clients or []):
+                try:
+                    if (v.is_connected()
+                            and getattr(v.channel, 'id', None) == cid):
+                        log.info('event-bot rejoin skip — already in %s', cid)
+                        return
+                except Exception:
+                    pass
+            ok, msg = await ensure_voice_joined(client)
+            if ok:
+                log.info('event-bot rejoin (%s try=%s): %s',
+                         reason or 'auto', i + 1, msg)
+                return
+            log.warning('event-bot rejoin fail (%s try=%s): %s',
+                        reason or 'auto', i + 1, msg)
+
+    if _rejoin_task is not None and not _rejoin_task.done():
+        return
+    try:
+        _rejoin_task = client.loop.create_task(_go(), name='event-voice-rejoin')
+    except Exception as ex:
+        log.debug('schedule rejoin: %s', ex)
 
 
 def build_event_client() -> discord.Client:
-    """Лёгкий клиент: intents только guilds + voice states."""
+    """Лёгкий клиент: intents guilds + voice states (для кика/возврата)."""
     intents = discord.Intents.none()
     intents.guilds = True
     intents.voice_states = True
@@ -183,7 +269,6 @@ def build_event_client() -> discord.Client:
 
     @client.event
     async def on_ready():
-        # on_ready также на resume — не рвём сессию повторным connect
         log.info('event-bot online as %s (%s)', client.user, client.user.id)
         try:
             await client.change_presence(
@@ -208,17 +293,48 @@ def build_event_client() -> discord.Client:
             log.info('event-bot voice: %s', msg)
         else:
             log.warning('event-bot voice: %s', msg)
+            _schedule_rejoin(client, 'on_ready-fail')
+
+    @client.event
+    async def on_resumed():
+        log.info('event-bot resumed — проверяю войс')
+        _schedule_rejoin(client, 'resume')
+
+    @client.event
+    async def on_voice_state_update(member, before, after):
+        # Нас кикнули / вытащили из канала → сразу обратно
+        me = client.user
+        if me is None or member is None:
+            return
+        if int(getattr(member, 'id', 0) or 0) != int(me.id):
+            return
+        if not _stay_on():
+            return
+        if _joining or time.time() < _suppress_rejoin_until:
+            return
+        target = _resolve_event_voice_channel_id()
+        before_id = getattr(getattr(before, 'channel', None), 'id', None)
+        after_id = getattr(getattr(after, 'channel', None), 'id', None)
+        # уже в целевом — ок
+        if after_id == target:
+            return
+        # ушли из целевого / выгнали / перетащили в другой
+        if before_id == target or after_id is None or after_id != target:
+            log.warning(
+                'event-bot left voice (before=%s after=%s) — returning to %s',
+                before_id, after_id, target)
+            _schedule_rejoin(client, 'kicked-or-moved')
 
     return client
 
 
 async def _monitor_event_voice(client: discord.Client) -> None:
-    """Держим войсе-сессию: reconnect только если реально отвалились."""
+    """Как у основного бота: каждые 10с проверяем и заходим обратно."""
     await client.wait_until_ready()
-    await asyncio.sleep(8)
+    await asyncio.sleep(3)
     backoff_until = 0.0
     while not client.is_closed() and not _stop_runner:
-        await asyncio.sleep(30)
+        await asyncio.sleep(10)
         if not client.is_ready() or not _stay_on():
             continue
         if time.time() < backoff_until:
@@ -226,25 +342,28 @@ async def _monitor_event_voice(client: discord.Client) -> None:
         cid = _resolve_event_voice_channel_id()
         if not cid:
             continue
-        vc = None
+        in_target = False
         for v in list(client.voice_clients or []):
-            if v.is_connected():
-                vc = v
-                break
-        if vc and getattr(vc.channel, 'id', None) == cid:
+            try:
+                if v.is_connected() and getattr(v.channel, 'id', None) == cid:
+                    in_target = True
+                    break
+            except Exception:
+                pass
+        if in_target:
             continue
         ok, msg = await ensure_voice_joined(client, cid)
         if ok:
             backoff_until = 0.0
             log.info('event-bot monitor: %s', msg)
         else:
-            backoff_until = time.time() + 45
-            log.debug('event-bot monitor: %s', msg)
+            backoff_until = time.time() + 20
+            log.warning('event-bot monitor: %s', msg)
 
 
 async def start_event_bot() -> Optional[discord.Client]:
     """Старт event-бота, если EVENT_BOT_TOKEN задан. Иначе None."""
-    global _event_client, _stop_runner
+    global _event_client, _stop_runner, _voice_channel_id
     token = event_bot_token()
     if not token:
         log.info('EVENT_BOT_TOKEN пуст — event-бот не запускается')
@@ -252,7 +371,8 @@ async def start_event_bot() -> Optional[discord.Client]:
     if _event_client is not None and not _event_client.is_closed():
         return _event_client
     _stop_runner = False
-    load_event_voice_cfg()  # прогреть stay/channel
+    _voice_channel_id = None  # перечитать cfg
+    load_event_voice_cfg()
     _event_client = build_event_client()
 
     async def _runner():
@@ -264,9 +384,9 @@ async def start_event_bot() -> Optional[discord.Client]:
                 client = build_event_client()
                 _event_client = client
             try:
-                log.info('event-bot connecting…')
+                log.info('event-bot connecting… channel=%s',
+                         _resolve_event_voice_channel_id())
                 await client.start(token)
-                # start() вернулся — сессия закрыта. Не долбим close() ещё раз.
                 if _stop_runner:
                     break
                 log.warning('event-bot session ended — retry in %ss', delay)
