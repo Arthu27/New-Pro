@@ -1,4 +1,5 @@
 {
   "channel_id": "1547390550108540948",
-  "note": "Event-бот (EVENT_BOT_TOKEN) заходит в этот голосовой канал при старте. Переопредели через EVENT_VOICE_CHANNEL_ID в .env."
+  "stay_enabled": true,
+  "note": "Event-бот заходит в этот голосовой канал при старте (start.bat → main.py). Токен — только EVENT_BOT_TOKEN в .env."
 }
