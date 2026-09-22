@@ -123,6 +123,101 @@ check('ai-settings-save' in tpl and 'loadSettings' in tpl,
 print('== 5. DM по-прежнему выключен ==')
 check('ИИ-чат теперь работает только на сервере' in cog, 'DM отказ сохранён')
 
+print('== 6. Критичные баги и досье сервера ==')
+check('_kufur_var_mi' not in cog, 'баг NameError _kufur_var_mi убран')
+check('_has_profanity (answer )' in cog or '_has_profanity(answer)' in cog.replace(' ', ''),
+      'фильтр мата в ответах использует _has_profanity')
+check('build_server_dossier' in cog and 'server_dossier' in cog,
+      'ког кладёт полное досье сервера')
+check('find_mentioned_members' in cog, 'поиск участников из вопроса')
+
+from services import ai_server_snapshot as Snap  # noqa: E402
+
+class _Role:
+    def __init__(self, name, admin=False):
+        self.name = name
+        self.id = hash(name) % 10_000_000
+        self.position = 1
+        self.managed = False
+        class P:
+            administrator = admin
+            kick_members = admin
+            manage_messages = admin
+        self.permissions = P()
+        self.members = []
+    def is_default(self):
+        return self.name == '@everyone'
+
+class _Ch:
+    def __init__(self, name, cat=None, voice=False):
+        self.name = name
+        self.id = hash(name) % 10_000_000
+        self.category = cat
+class _Cat:
+    def __init__(self, name):
+        self.name = name
+        self.text_channels = []
+        self.voice_channels = []
+
+class _Guild:
+    id = 777
+    name = 'Hakumo Demo'
+    member_count = 42
+    owner = type('O', (), {'display_name': 'Кипарис'})()
+    members = []
+    roles = [_Role('@everyone'), _Role('Админ', admin=True), _Role('Участник')]
+    categories = []
+    text_channels = [_Ch('общий'), _Ch('правила')]
+    voice_channels = [_Ch('Лобби', voice=True)]
+
+g = _Guild()
+# minimal discord.Status mock not needed if we catch — build uses discord.Status
+import types, sys
+fake_discord = types.ModuleType('discord')
+class _St:
+    offline = 'offline'
+fake_discord.Status = _St
+sys.modules['discord'] = fake_discord
+# Patch guild.members empty list with status
+class _M:
+    bot = False
+    status = 'online'
+    display_name = 'Лина'
+    name = 'lina'
+    global_name = None
+    joined_at = None
+    roles = []
+    voice = None
+g.members = [_M()]
+g.roles[1].members = [_M()]
+
+d = Snap.build_server_dossier(g)
+check(d.get('guild_name') == 'Hakumo Demo' and d.get('rules'),
+      'досье: имя сервера + правила')
+check(d.get('channel_map') and any('общий' in x for x in d['channel_map']),
+      'досье: карта каналов')
+lines = Snap.dossier_to_prompt_lines(d)
+check(any('ЖИВОЕ ДОСЬЕ' in x for x in lines) and any('ПРАВИЛА' in x for x in lines),
+      'досье в промпт-строках')
+
+import web.ai_helper as H  # noqa: E402
+cap = {}
+def fc(messages, max_tokens=2048, temperature=0.7, model=None):
+    cap['sys'] = messages[0]['content']
+    return ('ок', 'mistral-large-latest', {})
+H._call, old = fc, H._call
+try:
+    H.ai_assistant('какие правила?', context={
+        'guild_id': '777', 'guild_name': 'Demo',
+        'server_dossier': d,
+    })
+finally:
+    H._call = old
+check('ЖИВОЕ ДОСЬЕ СЕРВЕРА' in cap['sys'] and 'ПРАВИЛА СЕРВЕРА' in cap['sys'],
+      'ai_assistant вшивает досье в system prompt')
+check('У тебя ЕСТЬ доступ к живому досье' in cap['sys'],
+      'запрет отговорок «нет доступа к серверу»')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

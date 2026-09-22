@@ -435,12 +435,20 @@ async def _get_channel_context (channel ,limit :int =16 )->list :
 def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =None ,channel_context :list =None )->str :
     try :
         from web .ai_helper import ai_assistant 
+        # Свежие знания/инструкции с диска — панель могла обновить без рестарта
+        global _knowledge_base ,_instructions ,_histories 
+        try :
+            _knowledge_base =_load_knowledge_base ()
+            _instructions =_load_instructions ()
+        except Exception as _ex :
+            log .debug ('_call_ai reload kb: %s',_ex )
         history =_histories .get (user_id ,[])
         _cfg =_ai_chat_cfg ()
 
         # Пользователь infosi
         user_name ='друг'
         guild_id =0 
+        member =None 
         if guild :
             member =guild .get_member (user_id )
             guild_id =guild .id 
@@ -457,68 +465,46 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         'is_dm':is_dm ,
         }
 
-        # владелец сервера и роли администраторов (инфо)
+        # Полное досье сервера — каналы, роли, правила, онлайн, варны, мод
         if guild :
             try :
-                owner =guild .owner 
-                if owner :
-                    context ['guild_owner']=owner .display_name 
-
-                    # Администратор роли — manage_messages или kick разрешение которые являются
-                staff_roles =[]
-                for role in guild .roles :
-                    if role .is_default ():
-                        continue 
-                    if role .permissions .manage_messages or role .permissions .kick_members or role .permissions .administrator :
-                        members =[m .display_name for m in role .members if not m .bot ][:5 ]
-                        if members :
-                            staff_roles .append ({'name':role .name ,'members':members })
-                if staff_roles :
-                    context ['staff_roles']=staff_roles [:8 ]# Max 8 роли
-
-                    # Слепок каналов и ролей — ИИ отвечает о сервере фактами
-                context ['channels']=[
-                ('# '+c .name )for c in guild .text_channels ][:40 ]+[
-                ('  '+c .name )for c in guild .voice_channels ][:20 ]
-                context ['roles']=[
-                r .name for r in sorted (
-                (r for r in guild .roles if not r .is_default ()and not r .managed ),
-                key =lambda r :r .position ,reverse =True )][:30 ]
+                from services .ai_server_snapshot import (
+                build_server_dossier ,find_mentioned_members )
+                dossier =build_server_dossier (guild )
+                mentioned =find_mentioned_members (guild ,question )
+                if mentioned :
+                    dossier ['mentioned_members']=mentioned 
+                context ['server_dossier']=dossier 
+                # дублируем ключевые поля для совместимости со старым промптом
+                if dossier .get ('guild_owner'):
+                    context ['guild_owner']=dossier ['guild_owner']
+                if dossier .get ('staff_roles'):
+                    context ['staff_roles']=dossier ['staff_roles']
+                if dossier .get ('roles'):
+                    context ['roles']=[r .split (' (id=')[0 ]for r in dossier ['roles'][:30 ]]
+                if dossier .get ('channel_map'):
+                    context ['channels']=[
+                    x .strip ()for x in dossier ['channel_map']
+                    if x .strip ().startswith ('#')or x .strip ().startswith ('🔊')][:40 ]
+                if dossier .get ('server_status'):
+                    context ['server_status']=dossier ['server_status']
                 if member :
                     context ['asker_roles']=[
                     r .name for r in member .roles if not r .is_default ()][:10 ]
             except Exception as e :
-                log .info (f'[AI] Guild info Ошибки: {e}')
+                log .info (f'[AI] server dossier Ошибки: {e}')
+                # фолбэк — старый минимальный слепок
+                try :
+                    owner =guild .owner 
+                    if owner :
+                        context ['guild_owner']=owner .display_name 
+                    context ['channels']=[
+                    ('# '+c .name )for c in guild .text_channels ][:40 ]
+                    context ['roles']=[
+                    r .name for r in guild .roles if not r .is_default ()][:30 ]
+                except Exception as _ex :
+                    log .debug ('_call_ai fallback guild: %s',_ex )
 
-                # СОСТОЯНИЕ СЕРВЕРА видно ИИ у всех (публичные цифры гильдии) —
-        # иначе он отвечал «данных нет» про онлайн/голосовые
-        if guild :
-            try :
-                online =[m for m in guild .members if not m .bot and m .status !=discord .Status .offline ]
-                in_voice =[]
-                for vc in guild .voice_channels :
-                    for m in vc .members :
-                        if not m .bot :
-                            in_voice .append (m .display_name )
-                            # Недавно присоединившиеся (за 24 часа)
-                import datetime as _dt 
-                cutoff =_dt .datetime .now (_dt .timezone .utc )-_dt .timedelta (hours =24 )
-                recent_joins =[m .display_name for m in guild .members 
-                if not m .bot and m .joined_at and m .joined_at >cutoff ]
-                # Открытые ticket-каналы
-                ticket_channels =[c for c in guild .text_channels if c .name .startswith ('ticket-')]
-                context ['server_status']={
-                'online_count':len (online ),
-                'voice_count':len (in_voice ),
-                'voice_members':in_voice [:5 ],
-                'recent_joins':recent_joins [:5 ],
-                'active_tickets':len (ticket_channels ),
-                'total_members':guild .member_count ,
-                }
-            except Exception as e :
-                log .info (f'[AI] Сервер status Ошибки: {e}')
-
-                #  АКТИВЕН ЗАДАЧИ 
         if str (user_id )=='987430047889637426':
             try :
                 from cogs .ai_chat import _active_tasks 
@@ -527,44 +513,35 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
             except Exception as _ex:
                 log.debug("_call_ai(): подавлено: %s", _ex)
 
-                # Добавить последние Discord-сообщения пользователя в контекст (только на сервере)
         if recent_messages :
             context ['recent_user_messages']=recent_messages 
 
-            # Добавить контекст канала (только на сервере)
         if channel_context :
             context ['channel_context']=channel_context 
 
-            # Добавить релевантную информацию из базы сервера
         if guild_id and str (guild_id )in _knowledge_base :
             guild_knowledge =_knowledge_base [str (guild_id )]
             relevant_knowledge =[]
             q_lower =question .lower ()
 
             for item in guild_knowledge :
-            # пропускаем ненадёжные записи (веб-поиск)
                 if item .get ('confidence')=='low':
                     continue 
-
-                    # совпадение по словам вопроса
                 if any (word in item .get ('question','').lower ()for word in q_lower .split ()if len (word )>2 ):
                     relevant_knowledge .append (f"заранее выученное: {item.get('question', '')} → {item.get('info', '')}")
-                    # совпадение по имени/теме
                 elif 'name'in item and any (word in item ['name'].lower ()for word in q_lower .split ()if len (word )>2 ):
                     relevant_knowledge .append (f"Известная личность: {item['name']} → {item.get('info', '')}")
                 elif 'topic'in item and any (word in item ['topic'].lower ()for word in q_lower .split ()if len (word )>2 ):
                     relevant_knowledge .append (f"Известная тема: {item['topic']} → {item.get('info', '')}")
 
             if relevant_knowledge :
-                context ['learned_knowledge']=relevant_knowledge [:3 ]# не больше 3 записей
+                context ['learned_knowledge']=relevant_knowledge [:5 ]
 
-                # инструкции сервера — в контекст
         if guild_id :
             guild_instructions =_instructions .get (str (guild_id ),[])
             if guild_instructions :
                 context ['guild_instructions']=guild_instructions 
 
-                # профиль пользователя — в контекст
         uid_str =str (user_id )
         if uid_str in _profiles :
             p =_profiles [uid_str ]
@@ -1263,7 +1240,7 @@ class AIChat (commands .Cog ):
                 recent_msgs =await _get_recent_user_messages (
                 message .author .id ,message .guild ,limit =15 
                 )
-                channel_ctx =await _get_channel_context (message .channel ,limit =12 )
+                channel_ctx =await _get_channel_context (message .channel ,limit =16 )
 
             answer =await self .bot .loop .run_in_executor (
             None ,_call_ai ,content ,message .author .id ,
@@ -1271,7 +1248,7 @@ class AIChat (commands .Cog ):
             recent_msgs ,channel_ctx 
             )
 
-        if _kufur_var_mi (answer ):
+        if _has_profanity (answer ):
             answer ="Я не могу это сказать. "
 
             # Ответы "не знаю" — спросить у владельца
