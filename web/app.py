@@ -3369,7 +3369,18 @@ def api_logs ():
         # Один мут/бан = одна строка: дела + журнал + аудит склеены
         all_events =_log_merge_duplicates (all_events )
         all_events .sort (key =_ts_sort_key ,reverse =True )
-        return jsonify (all_events [:1000 ])
+        # Лимит 1000: не выкидываем наказания ради «сервер обновлён».
+        # Сначала все punish-события, потом добиваем остальными до 1000.
+        def _is_punish (ev ):
+            return bool (_log_act_class (ev .get ('action')))
+        _pun =[e for e in all_events if _is_punish (e )]
+        _rest =[e for e in all_events if not _is_punish (e )]
+        _cap =1000 
+        _keep =_pun [:_cap ]
+        if len (_keep )<_cap :
+            _keep .extend (_rest [:_cap -len (_keep )])
+        _keep .sort (key =_ts_sort_key ,reverse =True )
+        return jsonify (_keep )
     except Exception as e :
         print (f"Ошибка чтения логов: {e}")
         return jsonify ([])
