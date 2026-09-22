@@ -568,19 +568,24 @@ import urllib .request
 import urllib .error 
 
 def _sanitize_ai_reply (text :str )->str :
-    """Убрать устаревший бренд/воду из любого ответа (LLM или офлайн)."""
+    """Вырезать устаревший бренд/воду. Старый шаблон Moebius — целиком заменить."""
     if not text :
         return text 
     out =str (text )
-    # заголовки старого бренда
-    out =re .sub (
-    r'(?im)^\s*[🤖\s]*\*?\*?Hakumo\s*\(?\s*Moebius\s*\)?\s*[—\-–]?\s*автономн\w*\s*ассистент:?\s*\*?\*?\s*',
-    '',out )
+    # Полный старый шаблон (ещё мог приехать с кэша/старого процесса)
+    if re .search (r'Hakumo\s*\(\s*Moebius\s*\)|автономн\w*\s+ассистент|внимательно прочитал|дружище',out ,re .I ):
+        m =re .search (r'«([^»]{1,80})»|"([^"]{1,80})"',out )
+        quoted =(m .group (1 )or m .group (2 )or '').strip ().lower ()if m else ''
+        if re .fullmatch (r'(привет|даров|дарова|здарова|хай|салют|hey|hi)[!?.]*',quoted or ''):
+            return 'Привет. Чем помочь?'
+        if any (k in (quoted or out .lower ())for k in ('поможешь','помоги','если спросят')):
+            return 'Да. Напиши вопрос — отвечу по делу.'
+        return 'Я Hakumo. Спроси коротко: правила, команды или статус сервера.'
     out =re .sub (r'(?i)Hakumo\s*\(\s*Moebius\s*\)','Hakumo',out )
     out =re .sub (r'(?i)\bMoebius\b','',out )
-    out =re .sub (r'(?i)автономн\w*\s+ассистент','ассистент',out )
+    out =re .sub (r'(?i)/ticket\b','/report',out )
+    out =re .sub (r'(?i)систем\w*\s+тикетов','/report',out )
     out =re .sub (r'(?i),?\s*дружище!?','',out )
-    out =re .sub (r'(?im)^Я внимательно прочитал твоё сообщение:[^\n]*\n+','',out )
     out =re .sub (r'[ \t]{2,}',' ',out )
     out =re .sub (r'\n{3,}','\n\n',out )
     return out .strip ()
@@ -591,11 +596,12 @@ def _local_hakumo_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     return _sanitize_ai_reply (text ),tag ,meta 
 
 
+# Совместимость со старыми импортами
+_local_moebius_fallback =_local_hakumo_fallback 
+
+
 def _local_hakumo_fallback_impl (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
-    """
-    Локальный офлайн-ответчик Hakumo без внешних API.
-    Все ответы — только на русском; имя бренда — Hakumo.
-    """
+    """Простой офлайн-ответчик Hakumo: коротко, по-русски, без тикетов и Moebius."""
     last_msg =""
     sys_prompt =""
     for m in messages :
@@ -604,377 +610,144 @@ def _local_hakumo_fallback_impl (messages :List [Dict ])->Tuple [str ,str ,Dict 
         elif m .get ("role")=="user":
             last_msg =str (m .get ("content","")).strip ()
 
-    q_lower =last_msg .lower ()
-    _tag ="hakumo-offline"
-    _meta ={"provider":"fallback","latency_ms":10 }
+    q =last_msg .lower ().strip ()
+    q_compact =re .sub (r'[^\wа-яё]+',' ',q ,flags =re .I ).strip ()
+    tag ="hakumo-offline"
+    meta ={"provider":"fallback","latency_ms":10 }
 
-    def _from_sys (*patterns ,default =None ):
+    def pack (text ,ms =10 ):
+        return text ,tag ,{**meta ,"latency_ms":ms }
+
+    def from_sys (*patterns ,default =None ):
         for p in patterns :
-            m =re .search (p ,sys_prompt ,re .IGNORECASE )
+            m =re .search (p ,sys_prompt ,re .I )
             if m :
-                return m .group (1 )
+                return m .group (1 ).strip ()
         return default 
 
-    def _pack (text ,latency =10 ):
-        return (_sanitize_ai_reply (text ),_tag ,{**_meta ,"latency_ms":latency })
+    # Привет
+    if q_compact in {
+    "привет","здравствуй","здравствуйте","здрасте","хай","салют","даров","дарова",
+    "здарова","доброе утро","добрый день","добрый вечер","hey","hi","hello","приветик","йо"
+    }or re .fullmatch (r'(привет|даров|дарова|здарова|хай|салют|hey|hi)( всем)?',q_compact ):
+        return pack ("Привет. Чем помочь?")
 
-    # 1. Приветствие — коротко, без самопрезентации
-    _q_compact =re .sub (r'[^\wа-яё]+',' ',q_lower ,flags =re .IGNORECASE ).strip ()
-    if _q_compact in {
-    "привет","здравствуй","здравствуйте","здрасте","хай","салют","даров",
-    "здарова","доброе утро","добрый день","добрый вечер","hey","hi","hello",
-    "приветик","йо","yo"
-    }or re .fullmatch (r'(привет|даров|здарова|хай|салют|hey|hi)( всем)?',_q_compact ):
-        return _pack ("Привет. Чем помочь?")
-
-    # 1.05. Кто ты / что это — один короткий ответ
-    _who = any (k in q_lower for k in [
-    "кто ты","что ты такое","расскажи о себе","ты кто","что за бот",
-    "кто ты такой","что умеешь","что ты умеешь","расскажи кто ты"
-    ])
-    _what_bot =(
-    (("что это"in q_lower or "что такое"in q_lower )
-    and any (k in q_lower for k in ["hakumo","moebius","бот","ассистент","помощник"]))
-    or q_lower .strip ()in ("что это","что это?","это что","это что?")
-    or ("автономн"in q_lower and "ассистент"in q_lower )
-    or ("moebius"in q_lower and any (k in q_lower for k in ["кто","что","это","ассистент"]))
-    or (q_lower .strip ()in ("hakumo","moebius")or q_lower .startswith ("hakumo (moebius)"))
-    )
-    if _who or _what_bot :
-        return _pack (
+    # Кто ты / старый бренд
+    if (any (k in q for k in ("кто ты","что ты такое","расскажи о себе","ты кто","что за бот","кто ты такой","что умеешь","что ты умеешь"))
+    or (("что это"in q or "что такое"in q )and any (k in q for k in ("hakumo","moebius","бот","ассистент","помощник")))
+    or ("автономн"in q and "ассистент"in q )
+    or "moebius"in q
+    or q_compact in ("что это","это что","hakumo","moebius")
+    or q .startswith ("hakumo (moebius)")):
+        return pack (
         "Я Hakumo — AI-помощник сервера: правила, команды, панель, статус. "
-        "Наказания выдают модераторы. Спроси коротко — отвечу по делу.",
+        "Наказания выдают модераторы. Тикетов нет — жалоба через /report.",
         11 )
 
-    # 1.07. «Поможешь?» / «если спросят» — прямой ответ, без интро
-    if any (k in q_lower for k in [
-    "поможешь","помоги","можешь помочь","подскажешь","ответишь","если спросят"
-    ])and not any (k in q_lower for k in ["правил","команд","настро","варн","бан","панел","кто ты"]):
-        return _pack ("Да. Напиши вопрос — отвечу по делу.")
+    # Поможешь?
+    if any (k in q for k in ("поможешь","помоги","можешь помочь","подскажешь","ответишь","если спросят"))\
+    and not any (k in q for k in ("правил","команд","настро","варн","бан","панел","кто ты")):
+        return pack ("Да. Напиши вопрос — отвечу по делу.")
 
-    # 1.5. Поиск сообщений
-    if (any (k in q_lower for k in [
-    "покажи сообщ","найди сообщ","выведи сообщ","историю сообщ",
-    "последние сообщ","что писал","где писал","искать сообщ"
-    ])or (
-    any (w in q_lower for w in ['покажи','найди','выведи','историю'])
-    and re .search (r'сообщ',q_lower )
-    ))and not any (ex in q_lower for ex in ['правил','команд','помощь','помощи','help']):
-        target_id_m2 =re .search (r'\b(\d{17,20})\b',last_msg )
-        target_name_m2 =re .search (r'@([\w\.\-_]+)',last_msg )
-        if target_id_m2 :
-            target_str =f"<@{target_id_m2.group(1)}>"
-        elif target_name_m2 :
-            target_str =f"@{target_name_m2.group(1)}"
-        else :
-            target_str ="указанного пользователя"
-        log_status ="не найден (бот ещё не записал ни одного сообщения)"
+    # Как дела
+    if any (k in q for k in ("как дела","как жизнь","что нового","как ты","как самочувствие")):
+        return pack ("У меня всё отлично. Чем помочь?")
+
+    # Спасибо / пока
+    if any (k in q for k in ("спасибо","спс","благодарю","сяп","thank")):
+        return pack ("Пожалуйста.")
+    if re .search (r'\bпока\b|до свидания|\bудачи\b|спокойной ночи|до встречи|\bбывай\b',q ):
+        return pack ("До встречи.")
+
+    # Настройка
+    if (any (k in q for k in ("настро","как включить","как выключить","куда нажать","как поставить","как подключить","как поменять","как сменить"))
+    and "настроени"not in q ):
         try :
-            import json as _jj 
-            _target_gid =os .getenv ('MAIN_GUILD_ID','')or 'unknown'
-            _log_f =f'data/message_log_{_target_gid}.json'
-            if os .path .exists (_log_f ):
-                try :
-                    with open (_log_f ,'r',encoding ='utf-8')as _lfp :
-                        _ldata =_jj .load (_lfp )
-                    log_status =f"есть, {len(_ldata)} записей (в офлайн-режиме фильтр недоступен)"
-                except Exception :
-                    log_status ="повреждён или недоступен"
-        except Exception as _ex:
-            _log.debug("_local_hakumo_fallback(): подавлено: %s", _ex)
-        return (
-        f"**Поиск сообщений {target_str}**\n\n"
-        "Сейчас нет связи с AI-сервисом, поэтому полный поиск по Discord API недоступен.\n\n"
-        "**Что сделать:**\n"
-        "• Проверьте `MISTRAL_API_KEY` / Ollama — тогда поиск заработает через API.\n"
-        "• Или панель → «Пользователи» / «Логи сообщений».\n"
-        "• Или `/history @пользователь` в Discord.\n\n"
-        f"Статус лога бота: {log_status}\n"
-        "Выдумывать текст чужих сообщений не буду.",
-        _tag ,{**_meta ,"latency_ms":11 }
-        )
+            from web .ai_knowledge import build_setup_faq 
+            return pack (build_setup_faq (last_msg ),11 )
+        except Exception :
+            pass 
 
-    # 1.6. «Как настроить X?»
-    if (any (k in q_lower for k in ["настро","как включить","как выключить","где включается","где выключается","куда нажать","как поставить","как подключить","как завести","как поменять","как сменить"])and "настроени" not in q_lower ):
-        try :
-            from web .ai_knowledge import build_setup_faq
-            return (build_setup_faq (last_msg ),_tag ,{**_meta ,"latency_ms":11 })
-        except Exception as _ex:
-            _log.debug("_local_hakumo_fallback(): подавлено: %s", _ex )
+    # Музыка / экономика — нет
+    if any (k in q for k in ("музыка","песня","трек","play","мьюзик")):
+        return pack ("Музыкального модуля нет. Я помогаю с правилами, командами и панелью.",12 )
+    if any (k in q for k in ("экономика","монеты","баланс","деньги","магазин","shop","монета")):
+        return pack ("Экономики и магазина нет. Спроси про роли или раздел панели.",12 )
 
-    # 2. Как дела
-    if any (k in q_lower for k in ["как дела","как жизнь","что нового","как ты","как самочувствие"]):
-        return _pack ("У меня всё отлично. Чем помочь?")
+    # AFK
+    if any (k in q for k in ("афк","afk","отошел","отошёл")):
+        return pack ("AFK: `/afk [причина]`. Если тебя упомянут — бот ответит, что ты отошёл.",11 )
 
-    # 3. (блок «кто ты» выше)
+    # FAQ из system
+    faq =re .search (r'ВОПРОС:\s*([^\n]+)\nОТВЕТ АДМИНИСТРАЦИИ:\s*([^\n]+)',sys_prompt ,re .I )
+    if faq :
+        return pack (f"{faq.group(2).strip()}")
 
-    # 4. Спасибо
-    if any (k in q_lower for k in ["спасибо","спс","благодарю","сяп","thank"]):
-        return _pack ("Пожалуйста.")
-
-    # 5. Прощание
-    if re .search (r'\bпока\b|до свидания|\bудачи\b|спокойной ночи|до встречи|\bбывай\b',q_lower ):
-        return _pack ("До встречи.")
-
-    # 6. Владелец
-    if any (k in q_lower for k in ["кто владелец","создатель","кто создатель","владелец сервера","овнер"]):
-        owner =_from_sys (r'Владелец(?: сервера)?:\s*([^\n|]+)',r'Владелец:\s*([^\n]+)')
-        if owner :
-            return (
-            f"Владелец сервера по данным бота: **{owner.strip()}**.\n"
-            "Важные вопросы к руководству — через тикет или канал связи с админами.",
-            _tag ,{**_meta ,"latency_ms":11 }
-            )
-        return (
-        "Владелец и администрация управляют сервером. "
-        "Важный вопрос — через тикет поддержки или канал связи с админами.",
-        _tag ,{**_meta ,"latency_ms":11 }
-        )
-
-    # 7. Музыка — модуля нет
-    if any (k in q_lower for k in ["музыка","песня","трек","слушать","play","мьюзик"]):
-        return (
-        "Музыкального модуля в этом боте нет. "
-        "Hakumo — модерационный и информационный ассистент (правила, панель, модерация).",
-        _tag ,{**_meta ,"latency_ms":12 }
-        )
-
-    # 8. Экономика — модуля нет
-    if any (k in q_lower for k in ["экономика","монеты","баланс","деньги","магазин","shop","монета","эко"]):
-        return (
-        "Экономики и магазина монет в этом боте нет. "
-        "Нужны роли или настройки — смотри панель или спроси про конкретный раздел.",
-        _tag ,{**_meta ,"latency_ms":12 }
-        )
-
-    # 9. AFK
-    if any (k in q_lower for k in ["афк","afk","отошел","отошёл"]):
-        return (
-        "**AFK:** команда `/afk [причина]`. "
-        "Если тебя упомянут, бот ответит, что ты отошёл.",
-        _tag ,{**_meta ,"latency_ms":11 }
-        )
-
-    # 10. FAQ из system
-    faq_match =re .search (r'ВОПРОС:\s*([^\n]+)\nОТВЕТ АДМИНИСТРАЦИИ:\s*([^\n]+)',sys_prompt ,re .IGNORECASE )
-    if faq_match :
-        return (
-        "**Из базы знаний сервера:**\n"
-        f"• Вопрос: *{faq_match.group(1).strip()}*\n"
-        f"• Ответ администрации: {faq_match.group(2).strip()}\n\n"
-        "Нужны детали — уточни вопрос или открой тикет.",
-        _tag ,_meta 
-        )
-
-    # 11. Досье участника
-    user_id_m =re .search (r'\b(\d{17,20})\b',last_msg )
-    user_name_m =re .search (r'@([\w\.\-_]+)',last_msg )
-    if (user_id_m or user_name_m )and any (k in q_lower for k in ["варн","предупред","истор","профиль","кто такой","проверь","досье","наруш"]):
-        target =user_id_m .group (1 )if user_id_m else user_name_m .group (1 )
-        w_count =0 
-        w_reasons =[]
-        import json as _json 
-        if os .path .exists ('data/warnings.json'):
-            try :
-                with open ('data/warnings.json','r',encoding ='utf-8')as _fp :
-                    _wd =_json .load (_fp )
-                for _gid ,_gw in _wd .items ():
-                    for _uid ,_ws in _gw .items ():
-                        if _uid ==target or target .lower ()in str (_uid ).lower ():
-                            w_count +=len (_ws )
-                            w_reasons .extend ([_w .get ('reason','?')for _w in _ws ])
-            except Exception as _ex:
-                _log.debug("_local_hakumo_fallback(): подавлено: %s", _ex)
-        m_count =0 
-        if os .path .exists ('data/mod_data.json'):
-            try :
-                with open ('data/mod_data.json','r',encoding ='utf-8')as _fp :
-                    _md =_json .load (_fp )
-                for _case in _md .get ('case',{}).values ():
-                    for _c in _case :
-                        if str (_c .get ('user_id',''))==target :
-                            m_count +=1 
-            except Exception as _ex:
-                _log.debug("_local_hakumo_fallback(): подавлено: %s", _ex)
-        return (
-        f"**По пользователю ({target}):**\n"
-        f"• Предупреждений: {w_count}"+(f" (причины: {', '.join(w_reasons[:3])})"if w_reasons else "")+"\n"
-        f"• Записей модерации: {m_count}\n"
-        f"Подробнее: `/history` или панель → Пользователи.",
-        _tag ,{**_meta ,"latency_ms":14 }
-        )
-
-    # 12. Правила
-    if any (k in q_lower for k in ["запрет","правило","правила","запрещено","нельзя","свод правил"]):
-        rule_lines =[]
-        import re as _r 
-        for r_match in _r .finditer (r'(Правило\s*#\d+:[^\n]+)',sys_prompt ):
-            if r_match .group (1 )not in rule_lines :
-                rule_lines .append (f"• {r_match.group(1)}")
-        if not rule_lines and 'ПРАВИЛА СЕРВЕРА'in sys_prompt :
+    # Правила
+    if any (k in q for k in ("запрет","правило","правила","запрещено","нельзя","свод правил")):
+        lines =[]
+        for rm in re .finditer (r'(Правило\s*#\d+:[^\n]+)',sys_prompt ):
+            lines .append ("• "+rm .group (1 ))
+        if not lines and 'ПРАВИЛА СЕРВЕРА'in sys_prompt :
             chunk =sys_prompt .split ('ПРАВИЛА СЕРВЕРА',1 )[-1 ]
             for line in chunk .splitlines ():
                 t =line .strip ().lstrip ('•-– ').strip ()
                 if t .startswith ('Правило')or (t and t [0 ].isdigit ()and '.'in t [:4 ]):
-                    rule_lines .append ('• '+t )
-                if len (rule_lines )>=8 :
+                    lines .append ('• '+t )
+                if len (lines )>=8 :
                     break 
-        if not rule_lines :
-            import json as _j 
-            for rf in [f"data/rules_{os .getenv ('MAIN_GUILD_ID','0')}.json","data/rules.json"]:
-                if os .path .exists (rf ):
-                    try :
-                        with open (rf ,'r',encoding ='utf-8')as _fp :
-                            _rd =_j .load (_fp )
-                            for _ritem in _rd .get ('rules',[]):
-                                rtext =_ritem .get ('text','')
-                                if rtext and f"• {rtext}"not in rule_lines :
-                                    rule_lines .append (f"• {rtext}")
-                            if rule_lines :
-                                break 
-                    except Exception as _ex:
-                        _log.debug("_local_hakumo_fallback(): подавлено: %s", _ex)
-        if not rule_lines :
-            rule_lines =[
-            "• Правило #1: Уважение — без оскорблений, мата и языка вражды.",
-            "• Правило #2: Без спама, флуда и рекламы без разрешения.",
-            "• Правило #3: В голосовых — не мешать другим.",
-            "• Правило #4: Решения модерации обжалуются через тикеты.",
-            "• Правило #5: Не распространять личные данные и вредоносные ссылки."
+        if not lines :
+            lines =[
+            "• Уважение — без оскорблений и языка вражды.",
+            "• Без спама, флуда и рекламы без разрешения.",
+            "• В голосовых — не мешать другим.",
+            "• Решения модерации обжалуются через апелляции / /my-violations.",
+            "• Не распространять личные данные и вредоносные ссылки.",
             ]
-        return (
-        "📜 **Свод правил сервера Hakumo:**\n"
-        +"\n".join (rule_lines [:8 ])+
-        "\n\nСоблюдайте правила. Наказания выдают модераторы-люди.",
-        _tag ,{**_meta ,"latency_ms":11 }
-        )
-
-    # 13. Объявление
-    if any (k in q_lower for k in ["объявление","анонс","новость","announcement"]):
-        topic_m =re .search (r"'([^']+)'|«([^»]+)»",last_msg )
-        topic_val =(topic_m .group (1 )or topic_m .group (2 ))if topic_m else "Обновление сервера"
-        return (
-        f"**{topic_val}**\n\n"
-        f"По теме «{topic_val}» следите за каналом объявлений администрации. "
-        "Вопросы — в поддержку или тикет.",
-        _tag ,{**_meta ,"latency_ms":12 }
-        )
-
-    # 14. Отчёт модерации
-    if any (k in q_lower for k in ["еженедельный","отчет","отчёт","сводка","активность модер","активность модераторов","мод-действий","статистика модер"]):
-        facts =[]
-        total =0 
-        try :
-            from web .routes .analytics_plus import _read_audit ,_parse_ts 
-            from datetime import datetime as _dt ,timedelta as _td 
-            _gid =int (os .getenv ('MAIN_GUILD_ID','0')or 0 )
-            cutoff =_dt .now ()-_td (days =7 )
-            per_mod ={}
-            for ev in _read_audit (_gid ):
-                if ev .get ('category')!='mod':
-                    continue 
-                _ts =_parse_ts (ev .get ('timestamp'))
-                if _ts is None or _ts <cutoff :
-                    continue 
-                total +=1 
-                _mn =str (ev .get ('mod_name')or '').strip ()
-                if _mn :
-                    per_mod [_mn ]=per_mod .get (_mn ,0 )+1 
-            if per_mod :
-                top =sorted (per_mod .items (),key =lambda kv :kv [1 ],reverse =True )
-                facts .append ("• Активность модераторов за 7 дней:")
-                facts +=[f"  — {name}: {cnt}" for name ,cnt in top [:8 ]]
-            if total ==0 and not per_mod :
-                return (
-                "**Отчёт модерации за 7 дней:**\n\n"
-                "В журнале нет ни одного мод-действия за неделю — это данные бота, не выдумка.\n"
-                "Когда появятся наказания через команды — цифры будут здесь и в панели «Отчёты».",
-                _tag ,{**_meta ,"latency_ms":12 }
-                )
-        except Exception as _ex:
-            _log.debug("_local_hakumo_fallback(): подавлено: %s", _ex)
-            return (
-            "**Отчёт модерации:** журнал сейчас недоступен — цифры не выдумываю. "
-            "Смотри панель → «Отчёты».",
-            _tag ,{**_meta ,"latency_ms":12 }
-            )
-        return (
-        f"**Отчёт модерации за 7 дней** (журнал бота):\n\n"
-        f"• Всего мод-действий: {total}\n"
-        +"\n".join (facts )+
-        "\n\nПодробности — панель → «Отчёты».",
-        _tag ,{**_meta ,"latency_ms":15 }
-        )
-
-    # 15. Эмбеды
-    if "embed"in q_lower or "эмбед"in q_lower :
-        return (
-        "Эмбеды — аккуратные карточки с правилами и объявлениями. "
-        "Общайтесь уважительно и соблюдайте правила сервера.",
-        _tag ,_meta 
-        )
-
-    # 16. Статус сервера
-    if any (k in q_lower for k in ["online","сколько человек","сколько участников","в голосе","онлайн","в сети","состояние сервера","статус сервера","кто в войсе","кто онлайн"]):
-        on_val =_from_sys (
-        r'(\d+)\s*в сети',
-        r'Сейчас:\s*(\d+)\s*в сети',
-        r'(\d+)\s*online',
-        default =None )
-        vc_val =_from_sys (
-        r'(\d+)\s*в голосовых',
-        r'в голосовых\s*(\d+)',
-        default ='0')
-        voice_line =''
-        if 'Голосовые:'in sys_prompt :
-            voice_line ='\n• '+[ln .strip ()for ln in sys_prompt .splitlines ()if 'Голосовые:'in ln ][0 ]
-        members =_from_sys (r'Участников(?: на сервере)?:\s*(\d+)',default =None )
-        head =[]
-        if members :
-            head .append (f"участников всего **{members}**")
-        if on_val is not None :
-            head .append (f"сейчас **{on_val}** в сети")
-        head .append (f"в голосовых **{vc_val}**")
-        return (
-        "**Состояние сервера Hakumo:**\n"
-        f"• {', '.join(head)}."
-        +voice_line +
-        "\nНужны правила, команды или раздел панели — спроси прямо.",
-        _tag ,{**_meta ,"latency_ms":12 }
-        )
-
-    # 16.5. Панель
-    if any (k in q_lower for k in ["панел","panel","куратор","веб-панель","где настроить доступ","роли доступа"]):
-        try :
-            from web .ai_knowledge import build_panel_faq
-            return (build_panel_faq (),_tag ,{**_meta ,"latency_ms":11 })
-        except Exception as _ex:
-            _log.debug("_local_hakumo_fallback(): подавлено: %s", _ex )
-
-    # 17. Команды
-    if any (k in q_lower for k in ["команда","помощь","help","особенность","команды","что ты умеешь","справка","какие команды"]):
-        return _pack (
-        "Команды: `/modpanel` (варн/мут/кик/бан), `/report`, `/my-violations`, `/afk`. "
-        "Музыки и экономики нет. Нужны правила или онлайн — так и напиши.",
+        return pack (
+        "**Свод правил:**\n"+"\n".join (lines [:8 ])+
+        "\nНаказания выдают модераторы-люди.",
         11 )
 
-    # 18. Модерация
-    if any (k in q_lower for k in ["предупреждение","варн","наказание","бан","кик","мут","история наказа"]):
-        return _pack (
-        "Модерация через `/modpanel`. История: `/history`. Жалоба: `/report`. "
-        "Наказания выдаёт модератор-человек.",
-        14 )
+    # Статус
+    if any (k in q for k in ("online","сколько человек","сколько участников","в голосе","онлайн","в сети","состояние сервера","статус сервера","кто в войсе","кто онлайн")):
+        on_val =from_sys (r'(\d+)\s*в сети',r'Сейчас:\s*(\d+)\s*в сети',default =None )
+        vc_val =from_sys (r'(\d+)\s*в голосовых',default ='0')
+        members =from_sys (r'Участников(?: на сервере)?:\s*(\d+)',default =None )
+        parts =[]
+        if members :
+            parts .append (f"всего {members}")
+        if on_val is not None :
+            parts .append (f"в сети {on_val}")
+        parts .append (f"в голосовых {vc_val}")
+        return pack ("Сейчас на сервере: "+", ".join (parts )+".",12 )
 
-    # 19. Тикеты / поддержка
-    if any (k in q_lower for k in ["ticket","поддержка","тикет","жалоба","администратор","админ","проблема","модератор","помогите"]):
-        return _pack (
-        "Жалоба — `/report`. Вопросы по правилам/командам можно сюда. Сложное — модераторам.",
+    # Панель
+    if any (k in q for k in ("панел","panel","куратор","веб-панель","роли доступа")):
+        try :
+            from web .ai_knowledge import build_panel_faq 
+            return pack (build_panel_faq (),11 )
+        except Exception :
+            return pack ("Панель Hakumo — веб-управление сервером. Адрес даёт владелец.",11 )
+
+    # Команды / модерация / жалоба
+    if any (k in q for k in ("команда","помощь","help","команды","справка","какие команды")):
+        return pack (
+        "Команды: `/modpanel`, `/report`, `/my-violations`, `/afk`. "
+        "Музыки, экономики и тикетов нет.",
+        11 )
+    if any (k in q for k in ("предупреждение","варн","наказание","бан","кик","мут","история наказа")):
+        return pack (
+        "Модерация: `/modpanel`. История: `/history`. Жалоба: `/report`.",
+        14 )
+    if any (k in q for k in ("ticket","поддержка","тикет","жалоба","админ","проблема","модератор","помогите")):
+        return pack (
+        "Тикетов нет. Жалоба — `/report`. Вопросы по правилам/командам — сюда.",
         10 )
 
-    # 20. Короткий дефолт — без интро и без саморекламы
-    return _pack (
-    "Уточни вопрос одной фразой — например: «правила», «команды», «кто онлайн».",
-    12 )
+    # Дефолт
+    return pack ("Уточни вопрос одной фразой: «правила», «команды» или «кто онлайн».",12 )
+
 
 def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->Tuple [str ,str ,Dict ]:
     """

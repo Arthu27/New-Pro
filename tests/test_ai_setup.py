@@ -75,8 +75,8 @@ check('/channel-settings' in faq_routes and '14' in faq_routes,
       'каналы: гайд про хаб 14 маршрутов')
 
 faq_tickets = build_setup_faq('как настроить тикеты?')
-check('/ai-tickets' in faq_tickets,
-      'тикеты: гайд ведёт на живые AI-тикеты /ai-tickets')
+check('/report' in faq_tickets and 'Тикет-системы' in faq_tickets,
+      'тикеты: гайд честно говорит что тикетов нет → /report')
 
 faq_raid = build_setup_faq('как включить антирейд')
 check('/antiraid' in faq_raid and '/antifake' in faq_raid,
@@ -126,8 +126,8 @@ def fallback(q):
     return _local_hakumo_fallback([{'role': 'user', 'content': q}])[0]
 
 
-check('/ai-tickets' in fallback('как настроить тикеты?'),
-      '«как настроить тикеты» → гайд, а не общий блок тикетов')
+check('/report' in fallback('как настроить тикеты?'),
+      '«как настроить тикеты» → /report, без AI-тикетов')
 check('/mod-settings' in fallback('помоги настроить варны'),
       '«помоги настроить варны» → гайд по лестнице')
 check('/guardian' in fallback('как настроить щит сервера'),

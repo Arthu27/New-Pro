@@ -1,76 +1,71 @@
 {% extends "base.html" %}
-{% block title %}AI Чат — Hakumo{% endblock %}
-{% block page_title %}AI Чат{% endblock %}
+{% block title %}AI-чат — Hakumo{% endblock %}
+{% block page_title %}AI-чат{% endblock %}
 {% block content %}
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow"> AI </div>
-    <h1>AI Чат</h1>
-    <p class="lead">Сильный ассистент Hakumo — вопросы по серверу, модерации и командам. Настройки Discord-канала — ниже.</p>
+    <div class="eyebrow">AI</div>
+    <h1>AI-чат</h1>
+    <p class="lead">Короткие ответы по серверу: правила, команды, статус. Без воды.</p>
   </div>
   <div class="page-head-actions">
-    <span class="badge security" id="model-badge"><i class="fas fa-robot"></i> Mistral Large</span>
-    <button type="button" class="btn" onclick="clearChat()" title="Очистить чат"><i class="fas fa-trash"></i> Очистить</button>
+    <span class="badge security" id="model-badge"><i class="fas fa-robot"></i> Hakumo</span>
+    <button type="button" class="btn" onclick="clearChat()" title="Очистить"><i class="fas fa-trash"></i> Очистить</button>
   </div>
 </div>
 
-<div class="panel" id="ai-settings-panel" style="margin-bottom:16px">
-  <div class="panel-head">
-    <div><h2><i class="fas fa-sliders"></i> Discord AI — каналы и сила</h2>
-      <div class="sub">Канал, где бот отвечает; reply на его сообщения продолжает диалог.</div></div>
-  </div>
-  <div class="panel-body" style="display:grid;gap:12px;max-width:720px">
-    <label style="display:flex;align-items:center;gap:10px">
-      <input type="checkbox" id="ai-enabled" checked> ИИ-чат включён
+<details class="ai-set" id="ai-settings-panel">
+  <summary>
+    <span><i class="fas fa-sliders"></i> Discord: канал и режим</span>
+    <span class="hint" id="ai-settings-status"></span>
+  </summary>
+  <div class="ai-set-body">
+    <label class="ai-check"><input type="checkbox" id="ai-enabled" checked> ИИ включён</label>
+    <label class="ai-field">Каналы (ID через запятую)
+      <input type="text" class="form-input" id="ai-channels" placeholder="1312434963941167134">
     </label>
-    <label>ID каналов (через запятую)
-      <input type="text" class="form-input" id="ai-channels" placeholder="1312434963941167134" style="width:100%;margin-top:6px">
-    </label>
-    <div style="display:flex;flex-wrap:wrap;gap:14px">
-      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ai-respond-all" checked> Отвечать на все сообщения в канале</label>
-      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ai-reply-bot" checked> Отвечать на reply к боту</label>
-      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ai-require-mention"> Только по @упоминанию</label>
+    <div class="ai-checks">
+      <label class="ai-check"><input type="checkbox" id="ai-respond-all" checked> Все сообщения в канале</label>
+      <label class="ai-check"><input type="checkbox" id="ai-reply-bot" checked> Reply на бота</label>
+      <label class="ai-check"><input type="checkbox" id="ai-require-mention"> Только @упоминание</label>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-      <label>Модель Discord
-        <input type="text" class="form-input" id="ai-model" placeholder="mistral-large-latest" style="width:100%;margin-top:6px">
+    <div class="ai-grid3">
+      <label class="ai-field">Модель
+        <input type="text" class="form-input" id="ai-model" placeholder="mistral-large-latest">
       </label>
-      <label>Температура (0–1)
-        <input type="number" class="form-input" id="ai-temp" min="0" max="1" step="0.01" value="0.18" style="width:100%;margin-top:6px">
+      <label class="ai-field">Температура
+        <input type="number" class="form-input" id="ai-temp" min="0" max="1" step="0.01" value="0.18">
       </label>
-      <label>Max tokens
-        <input type="number" class="form-input" id="ai-tokens" min="256" max="4096" step="64" value="1600" style="width:100%;margin-top:6px">
+      <label class="ai-field">Max tokens
+        <input type="number" class="form-input" id="ai-tokens" min="256" max="4096" step="64" value="1600">
       </label>
     </div>
-    <div style="display:flex;gap:10px;align-items:center">
-      <button type="button" class="btn btn-primary" id="ai-settings-save"><i class="fas fa-save"></i> Сохранить</button>
-      <span class="hint" id="ai-settings-status"></span>
-    </div>
+    <button type="button" class="btn btn-primary" id="ai-settings-save"><i class="fas fa-save"></i> Сохранить</button>
   </div>
-</div>
+</details>
 
-<div class="chat-wrap">
+<div class="ai-shell">
   <div class="chat-box" id="chat-box">
     <div class="welcome-msg">
       <div class="welcome-ico"><i class="fas fa-robot"></i></div>
       <div>
-        <b>Привет, {{ username }}!</b>
-        <p>Hakumo AI — точные ответы по серверу, модерации и командам бота.</p>
+        <b>Hakumo</b>
+        <p>Спроси коротко: правила, команды, кто онлайн.</p>
         <div class="prompt-row">
-          <button type="button" class="prompt-chip" data-prompt="Что умеет бот на этом сервере?"><i class="fas fa-bolt"></i> Что умеет бот?</button>
-          <button type="button" class="prompt-chip" data-prompt="Как настроить автофильтр от спама?"><i class="fas fa-filter"></i> Как настроить автофильтр?</button>
-          <button type="button" class="prompt-chip" data-prompt="Сколько сейчас модераторов и что они делают?"><i class="fas fa-shield-halved"></i> Про модерацию</button>
+          <button type="button" class="prompt-chip" data-prompt="Какие команды есть?">Команды</button>
+          <button type="button" class="prompt-chip" data-prompt="Покажи правила">Правила</button>
+          <button type="button" class="prompt-chip" data-prompt="Кто сейчас онлайн?">Онлайн</button>
         </div>
       </div>
     </div>
   </div>
 
   <div class="chat-input-wrap">
-    <textarea class="chat-input" id="chat-input" placeholder="Напишите сообщение..." rows="1" aria-label="Напишите сообщение..."></textarea>
-    <button type="button" class="send-btn" id="send-btn" onclick="sendMessage()" title="Отправить" aria-label="Отправить сообщение"><i class="fas fa-paper-plane"></i></button>
+    <textarea class="chat-input" id="chat-input" placeholder="Вопрос…" rows="1" aria-label="Вопрос"></textarea>
+    <button type="button" class="send-btn" id="send-btn" onclick="sendMessage()" title="Отправить" aria-label="Отправить"><i class="fas fa-paper-plane"></i></button>
   </div>
-  <div class="chat-hint">Enter — отправить · Shift+Enter — новая строка</div>
+  <div class="chat-hint">Enter — отправить · Shift+Enter — новая строка · тикетов нет, жалоба: /report</div>
 </div>
 
 <script nonce="{{ csp_nonce }}">
@@ -82,7 +77,6 @@
   var input = $('chat-input');
   var sendBtn = $('send-btn');
   var isTyping = false;
-
   if (!chatBox || !input || !sendBtn) return;
 
   function getTime() {
@@ -91,22 +85,29 @@
   }
 
   function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function cleanText(text) {
+    if (!text) return '';
+    text = String(text)
+      .replace(/`{3,}/g, '')
+      .replace(/^`+|`+$/gm, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/Hakumo\s*\(\s*Moebius\s*\)/gi, 'Hakumo')
+      .replace(/\bMoebius\b/gi, '')
+      .replace(/дружище!?/gi, '')
+      .trim();
+    return text;
   }
 
   function addMsg(text, type, model) {
-    if (!chatBox) return;
     var welcome = chatBox.querySelector('.welcome-msg');
     if (welcome) welcome.remove();
-
-    if (text) {
-      text = text.replace(/`{3,}/g, '');
-      text = text.replace(/^`+|`+$/gm, '');
-      text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
-      text = text.replace(/\*([^*]+)\*/g, '$1');
-      text = text.trim();
-    }
-
+    text = cleanText(text);
     var div = document.createElement('div');
     div.className = 'msg ' + type;
     var icon = type === 'bot' ? 'fa-robot' : 'fa-user';
@@ -121,7 +122,6 @@
   }
 
   function showTyping() {
-    if (!chatBox) return;
     var div = document.createElement('div');
     div.className = 'msg bot';
     div.id = 'typing-indicator';
@@ -140,14 +140,12 @@
   async function sendMessage() {
     var msg = input.value.trim();
     if (!msg || isTyping) return;
-
     addMsg(msg, 'user');
     input.value = '';
     input.style.height = 'auto';
     isTyping = true;
     sendBtn.disabled = true;
     showTyping();
-
     try {
       var r = await fetch('/api/ai-chat', {
         method: 'POST',
@@ -156,9 +154,8 @@
       });
       var d = await r.json();
       removeTyping();
-      if (d.error) {
-        addMsg(d.error, 'bot');
-      } else {
+      if (d.error) addMsg(d.error, 'bot');
+      else {
         addMsg(d.answer || '(пустой ответ)', 'bot', d.model);
         if (d.model) {
           var mb = $('model-badge');
@@ -169,31 +166,28 @@
       removeTyping();
       addMsg('Ошибка соединения: ' + (e.message || 'unknown'), 'bot');
     }
-
     isTyping = false;
     sendBtn.disabled = false;
     input.focus();
   }
 
   async function clearChat() {
-    window.confirmAction('Очистить чат?', 'История разговора с AI будет стёрта.', function () {
+    window.confirmAction('Очистить чат?', 'История разговора будет стёрта.', function () {
       try { fetch('/api/ai-chat/clear', { method: 'POST' }).catch(function () {}); } catch (e) {}
       chatBox.innerHTML =
         '<div class="welcome-msg">' +
           '<div class="welcome-ico"><i class="fas fa-robot"></i></div>' +
-          '<div><b>Чат очищен</b><p>Можете начать новый разговор.</p></div>' +
+          '<div><b>Чат очищен</b><p>Задай новый вопрос.</p></div>' +
         '</div>';
     }, { okText: 'Очистить', danger: true });
   }
 
-  /* быстрые подсказки */
   chatBox.addEventListener('click', function (e) {
     var chip = e.target.closest('.prompt-chip');
-    if (chip) {
-      input.value = chip.dataset.prompt;
-      input.focus();
-      sendMessage();
-    }
+    if (!chip) return;
+    input.value = chip.dataset.prompt;
+    input.focus();
+    sendMessage();
   });
 
   input.addEventListener('keydown', function (e) {
@@ -202,7 +196,6 @@
       sendMessage();
     }
   });
-
   input.addEventListener('input', function () {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
@@ -236,7 +229,7 @@
         .map(function (x) { return parseInt(x, 10); }).filter(function (n) { return n > 0; });
       var body = {
         enabled: !!($('ai-enabled') && $('ai-enabled').checked),
-        channels: channels,
+        channels: channels.length ? channels : [1312434963941167134],
         respond_all: !!($('ai-respond-all') && $('ai-respond-all').checked),
         reply_to_bot: !!($('ai-reply-bot') && $('ai-reply-bot').checked),
         require_mention: !!($('ai-require-mention') && $('ai-require-mention').checked),
@@ -259,7 +252,6 @@
     });
   }
   loadSettings();
-
   window.sendMessage = sendMessage;
   window.clearChat = clearChat;
 })();

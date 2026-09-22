@@ -71,9 +71,15 @@ def _normalize(raw: dict | None) -> dict:
                     out.append(cid)
             except (TypeError, ValueError):
                 continue
-        # Не даём случайно стереть единственный боевой канал пустым списком
-        # через битый JSON — пустой список = «все выкл», это явно ок.
         cfg['channels'] = out
+    # Пока ИИ включён — всегда держим боевой канал, даже если список пуст
+    # (пустой список раньше «убивал» ответы в Discord).
+    if cfg.get('enabled', True) and not cfg.get('channels'):
+        cfg['channels'] = [DEFAULT_CHAT_CHANNEL_ID]
+    elif cfg.get('enabled', True) and DEFAULT_CHAT_CHANNEL_ID not in cfg['channels']:
+        # Не дублируем, если владелец явно задал другие каналы — только
+        # гарантируем дефолт, когда список пуст (выше). Здесь ничего.
+        pass
     return cfg
 
 
@@ -84,7 +90,13 @@ def load_settings() -> dict:
         cfg = dict(DEFAULT_SETTINGS)
         save_settings(cfg)
         return cfg
-    return _normalize(data)
+    cfg = _normalize(data)
+    # Если ИИ включён, а список каналов пуст — вернуть боевой канал
+    if cfg.get('enabled', True) and not (cfg.get('channels') or []):
+        cfg = dict(cfg)
+        cfg['channels'] = [DEFAULT_CHAT_CHANNEL_ID]
+        save_settings(cfg)
+    return cfg
 
 
 def save_settings(cfg: dict) -> bool:

@@ -18,15 +18,20 @@ _dynamic_channels :set =set ()
 
 def _ai_allowed_channel_ids ()->set :
     """Все каналы, где ИИ слушает: settings + .env + runtime."""
+    default ={1312434963941167134 }
     try :
-        from services .ai_chat_settings import channel_ids ,env_channel_ids ,load_settings 
+        from services .ai_chat_settings import (
+        channel_ids ,env_channel_ids ,load_settings ,DEFAULT_CHAT_CHANNEL_ID )
         cfg =load_settings ()
         if not cfg .get ('enabled',True ):
             return set ()
-        return channel_ids (cfg )|env_channel_ids ()|set (AI_CHANNELS )|set (_dynamic_channels )
+        ids =channel_ids (cfg )|env_channel_ids ()|set (AI_CHANNELS )|set (_dynamic_channels )
+        if not ids :
+            ids ={int (DEFAULT_CHAT_CHANNEL_ID )}
+        return ids 
     except Exception as _ex :
-        log .debug ('_ai_allowed_channel_ids: %s',_ex )
-        return set (AI_CHANNELS )|set (_dynamic_channels )|set ([1312434963941167134 ])
+        log .warning ('_ai_allowed_channel_ids fallback: %s',_ex )
+        return set (AI_CHANNELS )|set (_dynamic_channels )|default
 
 
 def _ai_chat_cfg ()->dict :
@@ -1146,7 +1151,6 @@ class AIChat (commands .Cog ):
             if intent :
                 return # намерение обработано — обычный AI-ответ не нужен
 
-        is_ticket_channel =False 
         cfg =_ai_chat_cfg ()
         allowed =_ai_allowed_channel_ids ()
         is_ai_channel =message .channel .id in allowed 
@@ -1182,6 +1186,8 @@ class AIChat (commands .Cog ):
             return 
 
         if not is_ai_channel :
+            log .debug (
+            '[AI] skip ch=%s allowed=%s',message .channel .id ,sorted (allowed )[:8 ])
             return 
 
         # В AI-канале: все сообщения (по умолчанию) / reply на бота / @mention
@@ -1194,15 +1200,10 @@ class AIChat (commands .Cog ):
         elif cfg .get ('require_mention')and not (mentioned_me or is_reply_to_bot ):
             return 
 
-        if is_ticket_channel :
-            lower_msg =message .content .lower ()
-            insult_kws =['оскорб','мат','написал','ебал','рот','сук','хуй','дурак','идиот','обозва','жалоб','матер','шлюх','урод','мраз','гнид','пидор','соси']
-            if any (w in lower_msg for w in insult_kws )or message .mentions :
-                return # разбором оскорблений занимается AI-модерация (ai_moderation), не чат-ассистент
         content =re .sub (r'^moe\s*','',message .content ,flags =re .IGNORECASE ).strip ()
         for m in message .mentions :
             content =content .replace (f'<@{m.id}>','').replace (f'<@!{m.id}>','')
-        content =content .strip ()or 'Здравствуйте!'
+        content =content .strip ()or 'привет'
         if is_reply_to_bot and ref_content :
             content =(
             f'(пользователь отвечает на твоё предыдущее сообщение: '
@@ -1213,43 +1214,36 @@ class AIChat (commands .Cog ):
         if message .guild :
             content =_resolve_mentions (content ,message .guild )
 
-            # командный запрос владельца — режим J.A.R.V.I.S.
-        if OWNER_ID and message .author .id ==OWNER_ID :
-            cmd_triggers =['создай канал','новый канал','сделай объявление','объяви',
-            'забань','кикни','выдай таймаут','дай роль','сними роль']
-            if any (t in content .lower ()for t in cmd_triggers ):
-                context ={}
-                context ['jarvis_mode']=True 
-                context ['available_commands']=(
-                'Использовать команды:\n'
-                '/moderate ban @user причина\n'
-                '/moderate kick @user причина\n'
-                '/moderate timeout @user minutes причина\n'
-                '/роли @user @роли\n'
-                '/utility clear количество\n'
-                '/utility lock\n'
-                '/utility unlock\n'
-                'Каналы создаются в Discord: Настройки сервера → Каналы'
+        try :
+            async with message .channel .typing ():
+                recent_msgs =[]
+                channel_ctx =[]
+
+                if not is_dm and message .guild :
+                    recent_msgs =await _get_recent_user_messages (
+                    message .author .id ,message .guild ,limit =15 
+                    )
+                    channel_ctx =await _get_channel_context (message .channel ,limit =16 )
+
+                answer =await self .bot .loop .run_in_executor (
+                None ,_call_ai ,content ,message .author .id ,
+                message .guild if not is_dm else None ,
+                recent_msgs ,channel_ctx 
                 )
+        except Exception as _ai_ex :
+            log .info (f'[AI] generate error: {_ai_ex}')
+            answer ='Сейчас не могу ответить. Напиши ещё раз чуть позже.'
 
-        async with message .channel .typing ():
-            recent_msgs =[]
-            channel_ctx =[]
-
-            if not is_dm and message .guild :
-                recent_msgs =await _get_recent_user_messages (
-                message .author .id ,message .guild ,limit =15 
-                )
-                channel_ctx =await _get_channel_context (message .channel ,limit =16 )
-
-            answer =await self .bot .loop .run_in_executor (
-            None ,_call_ai ,content ,message .author .id ,
-            message .guild if not is_dm else None ,
-            recent_msgs ,channel_ctx 
-            )
+        try :
+            from web .ai_helper import _sanitize_ai_reply 
+            answer =_sanitize_ai_reply (answer or '')
+        except Exception :
+            answer =(answer or '').strip ()
+        if not answer :
+            answer ='Не понял вопрос. Напиши короче: «правила» или «команды».'
 
         if _has_profanity (answer ):
-            answer ="Я не могу это сказать. "
+            answer ="Я не могу это сказать."
 
             # Ответы "не знаю" — спросить у владельца
         unknown_triggers =['не знаю','не нашёл ответ','нет данных','информации нет']
@@ -1303,11 +1297,18 @@ class AIChat (commands .Cog ):
                 log .debug ('[DM LOG] подавлено: %s',_le )
             await message .channel .send (answer )
         else :
-            chunks =_split_long (answer )
-            if chunks :
-                await message .reply (chunks [0 ],mention_author =False )
-                for extra in chunks [1 :]:
-                    await message .channel .send (extra )
+            try :
+                chunks =_split_long (answer )
+                if chunks :
+                    await message .reply (chunks [0 ],mention_author =False )
+                    for extra in chunks [1 :]:
+                        await message .channel .send (extra )
+            except Exception as _send_ex :
+                log .info (f'[AI] reply error: {_send_ex}')
+                try :
+                    await message .channel .send (answer [:1900 ])
+                except Exception as _send2 :
+                    log .info (f'[AI] channel send error: {_send2}')
 
 
 async def setup (bot ):
