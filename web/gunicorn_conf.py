@@ -58,7 +58,7 @@ errorlog = os.getenv('WEB_ERROR_LOG', '-')    # stdout
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 
 # Имя процессов (видно в ps/top)
-proc_name = 'moebius-web'
+proc_name = 'hakumo-web'
 
 # Перезапуск воркера после максимального числа запросов (защита от утечек памяти)
 max_requests = _num('WEB_MAX_REQUESTS', 1000)

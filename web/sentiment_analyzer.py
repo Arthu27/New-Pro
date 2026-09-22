@@ -39,7 +39,7 @@ class SentimentAnalyzer :
     # Шаблоны для определения эмоций
     EMOTION_PATTERNS ={
     'positive':[
-    r'\b(teşekkürler|благодарю|отлично|круто|супер|класс|здорово|прекрасно|замечательно)\b',
+    r'\b(спасибо|благодарю|отлично|круто|супер|класс|здорово|прекрасно|замечательно)\b',
     r'\b(хорошо|normal|ok|oky|ladno|ponyal|prinyal)\b',
     r'\b(lyublyu|nravitsya|obojayu|kayf|vostorg)\b',
     r'\b(rad|rada|scastliv|scastliva|dovolen|dovolna)\b',
@@ -47,7 +47,7 @@ class SentimentAnalyzer :
     ],
     'negative':[
     r'\b(besit|zlyus|nenaviju|razdrajaet|dostalo|zadolbalo)\b',
-    r'\b(ужасно|отвратительно|кошмар|жуть|kötü)\b',
+    r'\b(ужасно|отвратительно|кошмар|жуть|плохо)\b',
     r'\b(grustno|pecalno|tosklivo|biroko|depressiya)\b',
     r'\b(устал|устала|вымотался|вымоталась|нет сил)\b',
     r'\b(глупый|тупой|дурак|дурацкий)\b',
@@ -59,7 +59,7 @@ class SentimentAnalyzer :
     ],
     }
 
-    # Vesovie koefficienti для duygular
+    # Весовые коэффициенты эмоций
     EMOTION_WEIGHTS ={
     'positive':1.0 ,
     'negative':-1.0 ,
@@ -69,13 +69,13 @@ class SentimentAnalyzer :
     def __init__ (self ):
         self .message_buffer =defaultdict (list )# channel_id -> messages
         self .sentiment_cache ={}# channel_id -> sentiment_data
-        self .alerts_sent =set ()# Predotvrasenie spama предупреждение
+        self .alerts_sent =set ()# защита от спама предупреждений
 
-        # Загруз история
+        # Загрузка истории
         self ._load_history ()
 
     def analyze_message (self ,message :discord .Message )->Dict :
-        """Analiz ediyor bir сообщение"""
+        """Анализ одного сообщения"""
         content =message .content .lower ()
 
         # Определяем эмоции
@@ -113,7 +113,7 @@ class SentimentAnalyzer :
         return result 
 
     def _detect_emotions (self ,content :str )->Dict [str ,float ]:
-        """Opredelyaet duygular в metine"""
+        """Определяет эмоции в тексте"""
         emotions ={'positive':0.0 ,'negative':0.0 ,'neutral':0.0 }
 
         for emotion ,patterns in self .EMOTION_PATTERNS .items ():
@@ -155,7 +155,7 @@ class SentimentAnalyzer :
             # Считаем среднее настроение
         avg_sentiment =sum (msg ['sentiment_score']for msg in recent )/len (recent )
 
-        # Podscitivaem duygular
+        # Считаем эмоции
         emotion_counts ={'positive':0 ,'negative':0 ,'neutral':0 }
         for msg in recent :
             emotion_counts [msg ['dominant_emotion']]+=1 
@@ -227,7 +227,7 @@ class SentimentAnalyzer :
         else :
             mood ='neutral'
 
-            # Topluyoruz duygular
+            # Собираем эмоции
         total_emotions ={'positive':0 ,'negative':0 ,'neutral':0 }
         for s in channel_sentiments :
             for emotion ,count in s ['emotion_breakdown'].items ():

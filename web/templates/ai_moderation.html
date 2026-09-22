@@ -211,13 +211,6 @@
           <p>Детекция токсичности, спама и дискриминации на русском</p>
         </div>
       </div>
-      <div class="aimod-toggle-card" data-lang="tr" onclick="toggleLang('tr')">
-        <div class="switch" data-switch="tr"></div>
-        <div class="info">
-          <h4>Турецкий</h4>
-          <p>Детекция токсичности, спама и дискриминации на турецком</p>
-        </div>
-      </div>
       <div class="aimod-toggle-card" data-lang="en" onclick="toggleLang('en')">
         <div class="switch" data-switch="en"></div>
         <div class="info">
@@ -342,7 +335,7 @@
       }
       var cfg = raw;
       var esc = cfg.escalation || {};
-      var langs = Array.isArray(cfg.languages) ? cfg.languages : ['ru', 'tr', 'en'];
+      var langs = Array.isArray(cfg.languages) ? cfg.languages : ['ru', 'en'];
       var auto = cfg.auto_actions || {};
       document.getElementById('masterSwitch').classList.toggle('on', !!cfg.enabled);
       document.getElementById('masterToggle').classList.toggle('active', !!cfg.enabled);
@@ -350,7 +343,7 @@
       document.getElementById('statusBadge').className = 'badge ' + (cfg.enabled ? 'badge-ok' : 'badge-err');
       document.getElementById('heroStatus').textContent = cfg.enabled ? 'AI Активен' : 'AI Выключен';
       document.getElementById('heroDot').className = 'dot ' + (cfg.enabled ? 'ok' : 'err');
-      ['ru', 'tr', 'en'].forEach(l => {
+      ['ru', 'en'].forEach(l => {
         const sw = document.querySelector(`[data-switch="${l}"]`);
         const card = document.querySelector(`[data-lang="${l}"]`);
         const on = langs.indexOf(l) !== -1;
@@ -409,7 +402,7 @@
   window.toggleLang = function(l) {
     fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
       if (!cfg || cfg.error) return;
-      let langs = Array.isArray(cfg.languages) ? cfg.languages.slice() : ['ru', 'tr', 'en'];
+      let langs = Array.isArray(cfg.languages) ? cfg.languages.slice() : ['ru', 'en'];
       const i = langs.indexOf(l);
       if (i >= 0) langs.splice(i, 1); else langs.push(l);
       saveConfig({languages: langs}).then(() => loadConfig());

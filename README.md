@@ -1,4 +1,4 @@
-# Hakumo (MOEBIUS) — Discord Bot
+# Hakumo — Discord Bot
 
 Русский Discord-бот с AI-функциями, модерацией и веб-панелью управления.
 

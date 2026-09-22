@@ -48,7 +48,7 @@ class SelfLearning :
         if len (self .feedback_log )>1000 :
             self .feedback_log =self .feedback_log [-1000 :]
 
-            # Analiz ediyoruz ve obucaemsya
+            # Анализируем и обучаемся
         self ._analyze_and_learn (entry )
 
         # Сохран
@@ -109,7 +109,7 @@ class SelfLearning :
         self ._save_data ()
 
     def _analyze_and_learn (self ,feedback :Dict ):
-        """Analiz ediyor obratnuyu ссылка ve obucaetsya"""
+        """Анализ обратной связи и обучение"""
         feedback_type =feedback ['feedback_type']
 
         if feedback_type =='negative':
