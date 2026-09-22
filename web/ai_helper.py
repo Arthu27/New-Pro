@@ -1099,7 +1099,8 @@ def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float
     except Exception :
         return "Извините, произошла ошибка. Попробуйте позже."
 
-def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None )->Tuple [str ,List [Dict ],str ,Dict ]:
+def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None ,
+temperature :float =None ,max_tokens :int =None ,model :str =None )->Tuple [str ,List [Dict ],str ,Dict ]:
     """
     Главная функция AI-ассистента чата (RAG + интеграция правил).
     Используется из cogs/ai_chat.py и веб-панели.
@@ -1120,6 +1121,13 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     "ФОРМА ОТВЕТА: первое предложение — прямой точный ответ (без воды и «конечно!»); "
     "дальше — суть и детали, полезные догадки и варианты; если вопрос расплывчат — "
     "ответь на самую вероятную трактовку и одной строкой уточни альтернативу.",
+    "ПРОСТЫЕ ВОПРОСЫ (факты, «кто ты», «что умеешь», арифметика, значение слова, "
+    "да/нет): отвечай СРАЗУ одним-двумя точными предложениями. Не тупи, не "
+    "переспрашивай очевидное, не раздувай ответ. Ошибка в простом факте — "
+    "недопустима: лучше «не уверен, вероятнее всего X», чем ложный ответ.",
+    "REPLY-ДИАЛОГ: если пользователь отвечает на твоё предыдущее сообщение "
+    "(в тексте будет пометка «отвечает на твоё предыдущее…») — продолжай ТУ ЖЕ "
+    "тему, учитывай свой прошлый ответ, не начинай с нуля и не игнорируй контекст.",
     "ФОРМАТ Discord: короткие абзацы, **жирный** для ключевого, списки маркером; "
     "код — только в коде. Без шаблонных извинений и без «как AI я не могу».",
     "ТОН: подстраивайся под спрашивающего — спросили коротко, отвечай коротко; "
@@ -1139,6 +1147,11 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     "«данных нет», «я не могу это узнать»: общие знания, логику и здравый смысл "
     "используй свободно и отвечай как взрослый эксперт.",
     "4. Никаких служебных команд ACTION:* — максимум ACTION:ESCALATE (позвать модератора).",
+    "5. Не путай имена, даты и цифры из хроники канала — если в контексте есть "
+    "конкретные данные, цитируй их точно.",
+    "6. У тебя ЕСТЬ доступ к живому досье сервера ниже (каналы, роли, правила, "
+    "онлайн, голосовые, варны, модерация). Используй его. Запрещено говорить "
+    "«у меня нет доступа к серверу» / «не вижу данные сервера».",
     ]
     if context .get ('user_name'):
         sys_lines .append (f"Собеседник: {context.get('user_name')} (ID: {context.get('user_id', '?')})")
@@ -1148,25 +1161,54 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     # ИИ всегда знает «сегодня» — вопросы про даты/сроки отвечает точно
     try :
         sys_lines .append ("Сегодняшняя дата: "+
-        datetime .datetime .now ().strftime ('%d.%m.%Y'))
+        datetime .datetime .now ().strftime ('%d.%m.%Y %H:%M'))
     except Exception as _ex:
         _log.debug("ai_assistant(): подавлено: %s", _ex)
 
-    if context .get ('member_count'):
-        sys_lines .append (f"Участников на сервере: {context['member_count']}")
-    if context .get ('guild_owner'):
-        sys_lines .append (f"Владелец сервера: {context['guild_owner']}")
-    if context .get ('staff_roles'):
+    # Полное досье (предпочтительно) — иначе старые поля
+    if context .get ('server_dossier'):
         try :
-            _sr ='; '.join (
-            f"{r0.get('name')}: {', '.join(r0.get('members') or [])}"
-            for r0 in (context ['staff_roles']or [])[:8 ])
-            if _sr :
-                sys_lines .append ("Команда сервера (роль — люди): "+_sr )
+            from services .ai_server_snapshot import dossier_to_prompt_lines 
+            sys_lines .extend (dossier_to_prompt_lines (context ['server_dossier']))
         except Exception as _ex:
-            _log.debug("ai_assistant(): подавлено: %s", _ex)
-        # Реальные слеш-команды бота (из whitelist меню) — ИИ советует
-        # только существующее, не выдумывает /search и т.п.
+            _log.debug("ai_assistant dossier: %s", _ex)
+    else :
+        if context .get ('member_count'):
+            sys_lines .append (f"Участников на сервере: {context['member_count']}")
+        if context .get ('guild_owner'):
+            sys_lines .append (f"Владелец сервера: {context['guild_owner']}")
+        if context .get ('staff_roles'):
+            try :
+                _sr ='; '.join (
+                f"{r0.get('name')}: {', '.join(r0.get('members') or [])}"
+                for r0 in (context ['staff_roles']or [])[:8 ])
+                if _sr :
+                    sys_lines .append ("Команда сервера (роль — люди): "+_sr )
+            except Exception as _ex:
+                _log.debug("ai_assistant(): подавлено: %s", _ex)
+        if context .get ('channels'):
+            _chs =[str (c )for c in context ['channels']if c ][:40 ]
+            if _chs :
+                sys_lines .append ("Каналы сервера: "+", ".join (_chs ))
+        if context .get ('roles'):
+            _rls =[str (r0 )for r0 in context ['roles']if r0 ][:30 ]
+            if _rls :
+                sys_lines .append ("Роли сервера: "+", ".join (_rls ))
+        if context .get ('server_status'):
+            s =context ['server_status']
+            _st =[f"Сейчас: {s.get('online_count', 0)} в сети, {s.get('voice_count', 0)} в голосовых."]
+            if s .get ('voice_detail'):
+                _st .append ('Голосовые: '+' | '.join (s ['voice_detail'][:8 ]))
+            elif s .get ('voice_members'):
+                _st .append ('В войсе: '+', '.join (s ['voice_members'][:8 ]))
+            if s .get ('recent_joins'):
+                _st .append ('Зашли за 24ч: '+', '.join (s ['recent_joins'][:8 ]))
+            if s .get ('active_tickets')is not None :
+                _st .append (f"Открытых тикетов: {s.get('active_tickets')}")
+            sys_lines .append (' '.join (_st ))
+
+    # Реальные слеш-команды бота (из whitelist меню) — ИИ советует
+    # только существующее, не выдумывает /search и т.п.
     try :
         from slash_budget import KEEP_SLASH as _KEEP 
         _cmds =sorted (str (c )for c in _KEEP )
@@ -1178,15 +1220,6 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
             "или через панель, а не придумывай новую.")
     except Exception as _ex:
         _log.debug("ai_assistant(): подавлено: %s", _ex)
-
-    if context .get ('channels'):
-        _chs =[str (c )for c in context ['channels']if c ][:40 ]
-        if _chs :
-            sys_lines .append ("Каналы сервера: "+", ".join (_chs ))
-    if context .get ('roles'):
-        _rls =[str (r0 )for r0 in context ['roles']if r0 ][:30 ]
-        if _rls :
-            sys_lines .append ("Роли сервера: "+", ".join (_rls ))
 
         # Всё о панели и боте: роли (включая Куратора), разделы и страницы —
         # чтобы ИИ отвечал про панель точно и не выдумывал ссылок.
@@ -1213,7 +1246,7 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         # Хроника разговора — ИИ понимает, «о чём вообще речь», и не тупит
     if context .get ('channel_context'):
         _cc =[]
-        for m in (context ['channel_context']or [])[-12 :]:
+        for m in (context ['channel_context']or [])[-16 :]:
             if isinstance (m ,dict ):
                 _cc .append (f"[{m.get('timestamp','')}] {m.get('author','?')}: {m.get('content','')}")
             else :
@@ -1240,7 +1273,8 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     if context .get ('user_style'):
         sys_lines .append ("Любимый стиль общения спрашивающего: "+str (context ['user_style']))
 
-    if context .get ('server_status'):
+    # Если полного досье нет — короткий статус; иначе уже в досье
+    if (not context .get ('server_dossier')) and context .get ('server_status'):
         s =context ['server_status']
         sys_lines .append (f"Текущее состояние сервера: {s.get('online_count', 0)} в сети, {s.get('voice_count', 0)} в голосовых.")
 
@@ -1248,10 +1282,12 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         # из того же журнала, что и страница «Отчёты». Модель отвечает
         # фактами, а не выдумками.
     _q_lower =(question or '').lower ()
-    if any (k in _q_lower for k in [
+    _want_mod =any (k in _q_lower for k in [
     'активност','активность','модер','модеров ',' модеров','отчёт','отчет',
     'сводк','еженедельн','наказан','варн','предупрежден','who did the moderation',
-    ]):
+    ])
+    # Если досье уже дало mod_week — не дублируем; иначе подгружаем по запросу
+    if _want_mod and not (context .get ('server_dossier')or {}).get ('mod_week'):
         try :
             from web .routes .analytics_plus import _read_audit ,_parse_ts 
             from datetime import datetime as _dt ,timedelta as _td 
@@ -1305,9 +1341,12 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         })
     messages .append ({"role":"user","content":question })
 
-    # Детерминизм заказан владельцем: тот же вопрос → тот же ответ,
-    # без «плавания» формулировок. Хвост длиннее — ответы полные.
-    answer ,model_name ,rate_info =_call (messages ,max_tokens =1408 ,temperature =0.25 )
+    # Детерминизм + точность: низкая температура, полный хвост.
+    # Параметры можно усилить из настроек Discord-чата / панели.
+    _temp =0.18 if temperature is None else float (temperature )
+    _toks =1600 if max_tokens is None else int (max_tokens )
+    answer ,model_name ,rate_info =_call (
+    messages ,max_tokens =_toks ,temperature =_temp ,model =model )
 
     updated_history =list (history )+[
     {"role":"user","content":question },
