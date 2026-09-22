@@ -217,7 +217,7 @@ finally:
     st.DATA_DIR = old_dir
 
 
-print('\n== 11. Ког импортируется и регистрирует группу ==')
+print('\n== 11. Ког: /mafia меню ==')
 import asyncio  # noqa: E402
 import discord  # noqa: E402
 from discord.ext import commands  # noqa: E402
@@ -227,14 +227,22 @@ async def _load_cog():
     bot = commands.Bot(command_prefix='!', intents=discord.Intents.none(),
                        help_command=None)
     await bot.load_extension('cogs.mafia')
-    names = {c.name for c in bot.tree.get_commands()}
+    cmds = [c for c in bot.tree.get_commands() if c.name == 'mafia']
     cog = bot.get_cog('mafia')
+    is_group = bool(cmds) and isinstance(cmds[0], discord.app_commands.Group)
     await bot.close()
-    return names, cog is not None
+    return bool(cmds), cog is not None, is_group
 
-names, ok = asyncio.run(_load_cog())
+has_cmd, ok, is_group = asyncio.run(_load_cog())
 check(ok, 'cog mafia загружен')
-check('mafia' in names, f'группа /mafia в дереве ({names})')
+check(has_cmd, '/mafia в дереве')
+check(not is_group, '/mafia — одна команда с меню, не группа подкоманд')
+
+# меню содержит все действия ТЗ
+from cogs.mafia import MafiaActionSelect  # noqa: E402
+opts = {o.value for o in MafiaActionSelect().options}
+check(opts == {'start', 'status', 'panel', 'resend', 'add', 'cancel', 'presets'},
+      f'меню действий: {sorted(opts)}')
 
 
 print('\n== 12. LEAN + KEEP_SLASH ==')

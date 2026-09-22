@@ -100,7 +100,7 @@ KEEP_SLASH = frozenset({
     'my-violations',       # мои нарушения (обжалование — /апелляция в ЛС)
     # Панель событий: публикует Event Mod / админ в канал ивентов.
     'event-panel',
-    # Мафия: группа /mafia (start/status/panel/resend/add/cancel/presets).
+    # Мафия: одна /mafia → выпадающее меню действий (как /modpanel).
     'mafia',
     # Сетап-команды (/verify-setup, /report-setup, /report-settings) убраны
     # из меню (2026-09-01): всё настраивается в веб-панели (страницы

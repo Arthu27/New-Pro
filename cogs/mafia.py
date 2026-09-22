@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Бот Мафии — Discord UI по ТЗ.
 
-/mafia start — ведущий в войсе запускает лобби из участников канала.
-Раздача ролей, DM + кнопка подтверждения, сводка ведущему, игровой стол.
+/mafia — одна команда с выпадающим меню: начать, статус, сводка, переслать роль,
+добавить, отменить, пресеты. Раздача ролей, DM + подтверждение, стол ведущего.
 """
 from __future__ import annotations
 
@@ -661,11 +661,19 @@ class Mafia(commands.Cog, name='mafia'):
             await interaction.response.send_message(
                 'Вы уже подтвердили участие.', ephemeral=True)
 
-    # ── slash ────────────────────────────────────────────────
-    mafia = app_commands.Group(name='mafia', description='Бот Мафии — раздача ролей и стол')
+    # ── slash: одна /mafia → выпадающее меню ─────────────────
 
-    @mafia.command(name='start', description='Начать новую игру (вы должны быть в голосовом канале)')
-    async def mafia_start(self, interaction: discord.Interaction):
+    @app_commands.command(name='mafia', description='Мафия — меню ведущего (старт, статус, роли…)')
+    async def mafia(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            await interaction.response.send_message('Только на сервере.', ephemeral=True)
+            return
+        game = STORE.get(interaction.guild.id)
+        embed = menu_embed(game, interaction.user.id)
+        view = MafiaMenuView(self, interaction.guild.id, interaction.user.id)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    async def action_start(self, interaction: discord.Interaction) -> None:
         if not interaction.guild or not isinstance(interaction.user, discord.Member):
             await interaction.response.send_message('Только на сервере.', ephemeral=True)
             return
@@ -673,14 +681,14 @@ class Mafia(commands.Cog, name='mafia'):
         if existing and existing.phase != PHASE_ENDED:
             await interaction.response.send_message(
                 f'Уже есть игра **#{existing.game_id}** ({_phase_label(existing.phase)}). '
-                'Сначала `/mafia cancel` или завершите её.',
+                'Сначала выберите «Отменить игру» в меню `/mafia`.',
                 ephemeral=True,
             )
             return
         voice = interaction.user.voice.channel if interaction.user.voice else None
         if voice is None:
             await interaction.response.send_message(
-                'Зайдите в голосовой канал с игроками, затем снова `/mafia start`.',
+                'Зайдите в голосовой канал с игроками, затем снова `/mafia` → «Начать игру».',
                 ephemeral=True,
             )
             return
@@ -694,21 +702,20 @@ class Mafia(commands.Cog, name='mafia'):
         )
         STORE.set(game)
         view = LobbyView(interaction.guild.id)
+        # лобби — публично в канале; меню остаётся ephemeral
         await interaction.response.send_message(embed=lobby_embed(game), view=view)
         msg = await interaction.original_response()
         game.lobby_message_id = msg.id
         STORE.persist(game)
 
-    @mafia.command(name='status', description='Статус текущей игры')
-    async def mafia_status(self, interaction: discord.Interaction):
+    async def action_status(self, interaction: discord.Interaction) -> None:
         game = STORE.get(interaction.guild.id) if interaction.guild else None
         if not game:
             await interaction.response.send_message('Активной игры нет.', ephemeral=True)
             return
         await interaction.response.send_message(embed=public_status_embed(game), ephemeral=True)
 
-    @mafia.command(name='panel', description='Прислать ведущему сводку ещё раз')
-    async def mafia_panel(self, interaction: discord.Interaction):
+    async def action_panel(self, interaction: discord.Interaction) -> None:
         game = STORE.get(interaction.guild.id) if interaction.guild else None
         if not game:
             await interaction.response.send_message('Игры нет.', ephemeral=True)
@@ -722,9 +729,7 @@ class Mafia(commands.Cog, name='mafia'):
         await self.ensure_host_summary(game, interaction.user)
         await interaction.followup.send('Сводка отправлена в ЛС.', ephemeral=True)
 
-    @mafia.command(name='resend', description='Повторно отправить роль игроку')
-    @app_commands.describe(player='Кому переслать роль')
-    async def mafia_resend(self, interaction: discord.Interaction, player: discord.Member):
+    async def action_resend(self, interaction: discord.Interaction, player: discord.Member) -> None:
         game = STORE.get(interaction.guild.id) if interaction.guild else None
         if not game or interaction.user.id != game.host_id:
             await interaction.response.send_message('Только ведущий активной игры.', ephemeral=True)
@@ -746,9 +751,7 @@ class Mafia(commands.Cog, name='mafia'):
             await interaction.response.send_message(
                 'Не смог написать в ЛС — пусть откроет личку с ботом.', ephemeral=True)
 
-    @mafia.command(name='add', description='Добавить игрока из войса в состав')
-    @app_commands.describe(player='Кого добавить')
-    async def mafia_add(self, interaction: discord.Interaction, player: discord.Member):
+    async def action_add(self, interaction: discord.Interaction, player: discord.Member) -> None:
         game = STORE.get(interaction.guild.id) if interaction.guild else None
         if not game or interaction.user.id != game.host_id:
             await interaction.response.send_message('Только ведущий.', ephemeral=True)
@@ -763,8 +766,7 @@ class Mafia(commands.Cog, name='mafia'):
         except Exception as e:
             await interaction.response.send_message(str(e), ephemeral=True)
 
-    @mafia.command(name='cancel', description='Отменить текущую игру')
-    async def mafia_cancel(self, interaction: discord.Interaction):
+    async def action_cancel(self, interaction: discord.Interaction) -> None:
         game = STORE.get(interaction.guild.id) if interaction.guild else None
         if not game:
             await interaction.response.send_message('Игры нет.', ephemeral=True)
@@ -780,8 +782,7 @@ class Mafia(commands.Cog, name='mafia'):
         await interaction.response.send_message(f'Игра #{game.game_id} отменена.', ephemeral=True)
         await self.refresh_public(game)
 
-    @mafia.command(name='presets', description='Показать пресеты ролей по числу игроков')
-    async def mafia_presets(self, interaction: discord.Interaction):
+    async def action_presets(self, interaction: discord.Interaction) -> None:
         lines = []
         for n in (6, 7, 8, 9, 10, 11, 12, 14):
             try:
@@ -790,6 +791,140 @@ class Mafia(commands.Cog, name='mafia'):
                 pass
         e = discord.Embed(title='Пресеты мафии', description='\n'.join(lines), color=GOLD)
         await interaction.response.send_message(embed=e, ephemeral=True)
+
+
+def menu_embed(game: Game | None, user_id: int) -> discord.Embed:
+    if game is None:
+        desc = (
+            'Активной игры нет.\n'
+            'Выберите **Начать игру** — вы должны быть в голосовом канале с игроками.'
+        )
+        color = BLUE
+    else:
+        host_mark = ' · вы ведущий' if user_id == game.host_id else ''
+        desc = (
+            f'Игра **#{game.game_id}** · {_phase_label(game.phase)}{host_mark}\n'
+            f'Игроков: **{len(game.players)}** · '
+            f'подтвердили: **{game.confirmed_count()}/{len(game.players)}**'
+        )
+        color = GOLD if game.phase != PHASE_PLAYING else RED
+    e = discord.Embed(title='🎲 Мафия', description=desc, color=color)
+    e.set_footer(text='Выберите действие в меню ниже')
+    return e
+
+
+class MafiaMenuView(discord.ui.View):
+    """Главное меню /mafia — одно select вместо кучи подкоманд."""
+
+    def __init__(self, cog: 'Mafia', guild_id: int, user_id: int):
+        super().__init__(timeout=180)
+        self.cog = cog
+        self.guild_id = guild_id
+        self.user_id = user_id
+        self.add_item(MafiaActionSelect())
+
+
+class MafiaActionSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(
+                label='Начать игру', value='start', emoji='▶️',
+                description='Лобби из вашего голосового канала'),
+            discord.SelectOption(
+                label='Статус', value='status', emoji='📊',
+                description='Фаза и прогресс текущей игры'),
+            discord.SelectOption(
+                label='Сводка ведущему', value='panel', emoji='📋',
+                description='Прислать панель ролей в ЛС ещё раз'),
+            discord.SelectOption(
+                label='Переслать роль', value='resend', emoji='📨',
+                description='Повторно отправить роль игроку'),
+            discord.SelectOption(
+                label='Добавить игрока', value='add', emoji='➕',
+                description='Добавить участника в состав'),
+            discord.SelectOption(
+                label='Отменить игру', value='cancel', emoji='🗑️',
+                description='Сбросить текущую партию'),
+            discord.SelectOption(
+                label='Пресеты ролей', value='presets', emoji='🎭',
+                description='Состав по числу игроков (6–14+)'),
+        ]
+        super().__init__(
+            placeholder='Выберите действие…',
+            min_values=1,
+            max_values=1,
+            options=options,
+            custom_id='mafia:menu:action',
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        view: MafiaMenuView = self.view  # type: ignore
+        if interaction.user.id != view.user_id:
+            await interaction.response.send_message('Это чужое меню.', ephemeral=True)
+            return
+        action = self.values[0]
+        cog = view.cog
+        if action == 'start':
+            await cog.action_start(interaction)
+        elif action == 'status':
+            await cog.action_status(interaction)
+        elif action == 'panel':
+            await cog.action_panel(interaction)
+        elif action == 'presets':
+            await cog.action_presets(interaction)
+        elif action == 'cancel':
+            await cog.action_cancel(interaction)
+        elif action == 'resend':
+            game = STORE.get(view.guild_id)
+            if not game or interaction.user.id != game.host_id:
+                await interaction.response.send_message(
+                    'Только ведущий активной игры.', ephemeral=True)
+                return
+            if not game.players:
+                await interaction.response.send_message('В составе никого нет.', ephemeral=True)
+                return
+            await interaction.response.send_message(
+                'Кому переслать роль?',
+                view=MafiaUserPickView(cog, view.guild_id, mode='resend'),
+                ephemeral=True,
+            )
+        elif action == 'add':
+            game = STORE.get(view.guild_id)
+            if not game or interaction.user.id != game.host_id:
+                await interaction.response.send_message('Только ведущий.', ephemeral=True)
+                return
+            await interaction.response.send_message(
+                'Кого добавить в состав?',
+                view=MafiaUserPickView(cog, view.guild_id, mode='add'),
+                ephemeral=True,
+            )
+
+
+class MafiaUserPickView(discord.ui.View):
+    """UserSelect для resend / add из меню."""
+
+    def __init__(self, cog: 'Mafia', guild_id: int, mode: str):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.guild_id = guild_id
+        self.mode = mode
+        self.picker = discord.ui.UserSelect(
+            placeholder='Выберите игрока…',
+            min_values=1,
+            max_values=1,
+        )
+        self.picker.callback = self._on_pick  # type: ignore
+        self.add_item(self.picker)
+
+    async def _on_pick(self, interaction: discord.Interaction):
+        if not self.picker.values:
+            await interaction.response.send_message('Никого не выбрали.', ephemeral=True)
+            return
+        member = self.picker.values[0]
+        if self.mode == 'resend':
+            await self.cog.action_resend(interaction, member)  # type: ignore
+        else:
+            await self.cog.action_add(interaction, member)  # type: ignore
 
 
 async def setup(bot: commands.Bot):
