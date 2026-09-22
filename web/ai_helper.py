@@ -751,50 +751,66 @@ def _local_hakumo_fallback_impl (messages :List [Dict ])->Tuple [str ,str ,Dict 
 
 def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->Tuple [str ,str ,Dict ]:
     """
-    Мультпровайдерный вызов LLM API:
-    1) Ollama (локальная LLM)
-    2) Mistral AI API (MISTRAL_API_KEY: mistral-large/medium/small)
-    3) OpenRouter / DeepSeek / OpenAI API
-    4) Локальный офлайн-движок Hakumo (fallback)
+    Свой ИИ → запас → офлайн:
+    1) Ollama (свой мозг на VDS) — OLLAMA_MODEL / AI_OWN_MODEL
+    2) Mistral API (запас)
+    3) OpenRouter / DeepSeek / OpenAI (запас)
+    4) Короткий офлайн-фолбэк Hakumo
     """
-    model_name =model or os .getenv ("AI_MODEL","mistral-large-latest")
-    ollama_url =os .getenv ("OLLAMA_URL","http://127.0.0.1:11434")
+    from services .hakumo_brain import own_model_name ,backup_model_name 
 
-    # 1. Попытка Ollama (локальная LLM) — очень быстро, если работает
+    ollama_url =(os .getenv ("OLLAMA_URL")or "http://127.0.0.1:11434").rstrip ('/')
+    own =own_model_name (model )
+    backup =backup_model_name (model )
+    # Чуть ниже температура для точности, если не задали явно высокую
     try :
-        payload =json .dumps ({
-        "model":model_name ,
-        "messages":messages ,
-        "stream":False ,
-        "options":{
-        "temperature":temperature ,
-        "num_predict":max_tokens 
-        }
-        }).encode ('utf-8')
-        req =urllib .request .Request (
-        f"{ollama_url}/api/chat",
-        data =payload ,
-        headers ={"Content-Type":"application/json"},
-        method ="POST"
-        )
-        with urllib .request .urlopen (req ,timeout =12 )as resp :
-            data =json .loads (resp .read ().decode ('utf-8'))
-            text =data .get ("message",{}).get ("content","").strip ()
-            if text :
-                return text ,model_name ,{"provider":"ollama"}
-    except Exception as _ex:
-        _log.debug("_call(): подавлено: %s", _ex)
+        temperature =float (temperature )
+    except (TypeError ,ValueError ):
+        temperature =0.15 
+    temperature =max (0.0 ,min (1.0 ,temperature ))
 
-        # 2. Mistral AI API — Автоматическая ротация нескольких ключей (Key Rotation)
+    # 1. СВОЙ ИИ — Ollama (только локальные имена моделей)
+    _cloudish =('mistral-large','mistral-small','mistral-medium','gpt-','claude','deepseek-chat','openai/')
+    ollama_candidates =[]
+    for cand in (own ,):
+        if cand and not any (x in cand .lower ()for x in _cloudish ):
+            ollama_candidates .append (cand )
+    for try_model in ollama_candidates :
+        try :
+            payload =json .dumps ({
+            "model":try_model ,
+            "messages":messages ,
+            "stream":False ,
+            "options":{
+            "temperature":temperature ,
+            "num_predict":max_tokens ,
+            "top_p":0.9 ,
+            }
+            }).encode ('utf-8')
+            req =urllib .request .Request (
+            f"{ollama_url}/api/chat",
+            data =payload ,
+            headers ={"Content-Type":"application/json"},
+            method ="POST"
+            )
+            with urllib .request .urlopen (req ,timeout =45 )as resp :
+                data =json .loads (resp .read ().decode ('utf-8'))
+                text =data .get ("message",{}).get ("content","").strip ()
+                if text :
+                    return text ,try_model ,{"provider":"ollama","own_ai":True }
+        except Exception as _ex :
+            _log .debug ("ollama %s: %s",try_model ,_ex )
+
+    # 2. ЗАПАС — Mistral
     mistral_env =os .getenv ("MISTRAL_API_KEY","")
     mistral_keys =[k .strip ()for k in mistral_env .split (",")if k .strip ()]
     if mistral_keys :
-        target_model =model_name if "mistral"in str (model_name ).lower ()else "mistral-large-latest"
+        target_model =backup if "mistral"in str (backup ).lower ()else "mistral-large-latest"
         payload =json .dumps ({
         "model":target_model ,
         "messages":messages ,
         "max_tokens":max_tokens ,
-        "temperature":temperature 
+        "temperature":min (temperature ,0.3 ),
         }).encode ('utf-8')
         for idx_key ,mistral_key in enumerate (mistral_keys ):
             try :
@@ -807,15 +823,15 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
                 },
                 method ="POST"
                 )
-                with urllib .request .urlopen (req ,timeout =10 )as resp :
+                with urllib .request .urlopen (req ,timeout =20 )as resp :
                     data =json .loads (resp .read ().decode ('utf-8'))
                     text =data .get ("choices",[{}])[0 ].get ("message",{}).get ("content","").strip ()
                     if text :
-                        return text ,target_model ,{"provider":"mistral","key_index":idx_key }
+                        return text ,target_model ,{"provider":"mistral","backup":True ,"key_index":idx_key }
             except Exception as _me :
-                print (f"[AI API] Mistral ключ #{idx_key+1} недоступен ({_me}), пробуем следующий...")
+                _log .debug ("mistral key #%s: %s",idx_key +1 ,_me )
 
-                # 3. OpenRouter / DeepSeek / OpenAI API
+    # 3. ЗАПАС — OpenRouter / DeepSeek / OpenAI
     api_key =os .getenv ("OPENROUTER_API_KEY")or os .getenv ("DEEPSEEK_API_KEY")or os .getenv ("OPENAI_API_KEY")or os .getenv ("AI_API_KEY")
     api_url =os .getenv ("AI_API_URL")
     if not api_url and os .getenv ("OPENROUTER_API_KEY"):
@@ -828,10 +844,10 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
     if api_key :
         try :
             payload =json .dumps ({
-            "model":model_name ,
+            "model":backup ,
             "messages":messages ,
             "max_tokens":max_tokens ,
-            "temperature":temperature 
+            "temperature":min (temperature ,0.3 ),
             }).encode ('utf-8')
             req =urllib .request .Request (
             api_url ,
@@ -842,15 +858,15 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
             },
             method ="POST"
             )
-            with urllib .request .urlopen (req ,timeout =10 )as resp :
+            with urllib .request .urlopen (req ,timeout =20 )as resp :
                 data =json .loads (resp .read ().decode ('utf-8'))
                 text =data .get ("choices",[{}])[0 ].get ("message",{}).get ("content","").strip ()
                 if text :
-                    return text ,model_name ,{"provider":"api"}
+                    return text ,backup ,{"provider":"api","backup":True }
         except Exception as _oe :
-            print (f"[AI API] Внешняя API ошибка: {_oe}")
+            _log .debug ("backup api: %s",_oe )
 
-            # 4. Умный локальный fallback Hakumo (работает, даже если ни один LLM-сервис недоступен — без ошибок!)
+    # 4. Аварийный короткий офлайн
     return _local_hakumo_fallback (messages )
 
 def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->str :
@@ -1103,6 +1119,17 @@ temperature :float =None ,max_tokens :int =None ,model :str =None )->Tuple [str 
     answer ,model_name ,rate_info =_call (
     messages ,max_tokens =_toks ,temperature =_temp ,model =model )
     answer =_sanitize_ai_reply (answer or '')
+    try :
+        from services .hakumo_brain import ground_answer 
+        _allowed =None 
+        try :
+            from slash_budget import KEEP_SLASH as _KEEP 
+            _allowed ={str (c ).lower ()for c in _KEEP }|{('/'+str (c )).lower ()for c in _KEEP }
+        except Exception :
+            pass 
+        answer =ground_answer (answer ,_allowed )
+    except Exception as _gex :
+        _log .debug ('ground_answer: %s',_gex )
 
     updated_history =list (history )+[
     {"role":"user","content":question },

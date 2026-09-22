@@ -31,7 +31,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'require_mention': False,
     # Сила ответа Discord-чата (пусто = AI_MODEL / mistral-large-latest).
     'model': '',
-    'temperature': 0.18,
+    'temperature': 0.12,
     'max_tokens': 1600,
     # Свои инструкции владельца для Hakumo Brain (тон, правила сервера, FAQ).
     'custom_instructions': '',

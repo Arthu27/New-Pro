@@ -15,12 +15,13 @@
   </div>
 </div>
 
-<details class="ai-set" id="ai-settings-panel">
+<details class="ai-set" id="ai-settings-panel" open>
   <summary>
-    <span><i class="fas fa-sliders"></i> Discord: канал и режим</span>
+    <span><i class="fas fa-sliders"></i> Discord AI — свой ИИ и запас</span>
     <span class="hint" id="ai-settings-status"></span>
   </summary>
   <div class="ai-set-body">
+    <div class="ai-status" id="ai-own-status">Проверяю свой ИИ…</div>
     <label class="ai-check"><input type="checkbox" id="ai-enabled" checked> ИИ включён</label>
     <label class="ai-field">Каналы (ID через запятую)
       <input type="text" class="form-input" id="ai-channels" placeholder="1312434963941167134">
@@ -32,20 +33,29 @@
     </div>
     <label class="ai-field">Свои инструкции для Hakumo (тон, правила сервера, что говорить)
       <textarea class="form-input" id="ai-custom" rows="5" maxlength="4000"
-        placeholder="Например: отвечай коротко; если спрашивают про набор в стафф — направь в #набор; не шути про баны."></textarea>
+        placeholder="Например: отвечай коротко; набор в стафф — #набор; не шути про баны."></textarea>
     </label>
     <div class="ai-grid3">
-      <label class="ai-field">Модель
-        <input type="text" class="form-input" id="ai-model" placeholder="mistral-large-latest / llama3.1">
+      <label class="ai-field">Модель запаса (облако)
+        <input type="text" class="form-input" id="ai-model" placeholder="mistral-large-latest">
       </label>
       <label class="ai-field">Температура
-        <input type="number" class="form-input" id="ai-temp" min="0" max="1" step="0.01" value="0.18">
+        <input type="number" class="form-input" id="ai-temp" min="0" max="1" step="0.01" value="0.12">
       </label>
       <label class="ai-field">Max tokens
         <input type="number" class="form-input" id="ai-tokens" min="256" max="4096" step="64" value="1600">
       </label>
     </div>
-    <p class="hint" style="margin:0">Свой ИИ: поставь Ollama на VDS (`OLLAMA_URL`) или ключ `MISTRAL_API_KEY`. Без модели останется только короткий запасной режим.</p>
+    <div class="ai-need">
+      <b>Чтобы свой ИИ работал как нужно</b>
+      <ol>
+        <li>На VDS: установить <code>Ollama</code></li>
+        <li><code>ollama pull llama3.1</code> (или qwen2.5:7b)</li>
+        <li>В <code>.env</code>: <code>OLLAMA_URL=http://127.0.0.1:11434</code> и <code>OLLAMA_MODEL=llama3.1</code></li>
+        <li>Опционально запас: <code>MISTRAL_API_KEY=...</code></li>
+        <li>Рестарт бота. Канал AI: <code>1312434963941167134</code></li>
+      </ol>
+    </div>
     <button type="button" class="btn btn-primary" id="ai-settings-save"><i class="fas fa-save"></i> Сохранить</button>
   </div>
 </details>
@@ -215,8 +225,14 @@
     var rm = $('ai-require-mention'); if (rm) rm.checked = !!s.require_mention;
     var md = $('ai-model'); if (md) md.value = s.model || '';
     var cu = $('ai-custom'); if (cu) cu.value = s.custom_instructions || '';
-    var tp = $('ai-temp'); if (tp) tp.value = s.temperature != null ? s.temperature : 0.18;
+    var tp = $('ai-temp'); if (tp) tp.value = s.temperature != null ? s.temperature : 0.12;
     var tk = $('ai-tokens'); if (tk) tk.value = s.max_tokens || 1600;
+    var st = $('ai-own-status');
+    if (st && s.own_ai) {
+      var o = s.own_ai;
+      st.className = 'ai-status ' + (o.online ? 'ok' : 'bad');
+      st.textContent = (o.online ? '● ' : '○ ') + (o.hint || (o.online ? 'Ollama онлайн' : 'Ollama офлайн'));
+    }
   }
 
   function loadSettings() {

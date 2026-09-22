@@ -1055,7 +1055,16 @@ def register(ctx):
         """Каналы и сила Discord AI-чата (админ)."""
         from services .ai_chat_settings import load_settings ,save_settings 
         if request .method =='GET':
-            return jsonify (load_settings ())
+            cfg =load_settings ()
+            try :
+                from services .hakumo_brain import check_own_ai ,own_model_name ,backup_model_name 
+                cfg =dict (cfg )
+                cfg ['own_ai']=check_own_ai ()
+                cfg ['own_model']=own_model_name ()
+                cfg ['backup_model']=backup_model_name (cfg .get ('model'))
+            except Exception as _ex :
+                _log .debug ('own_ai status: %s',_ex )
+            return jsonify (cfg )
         body =_safe_json_obj ()or {}
         cur =load_settings ()
         for key in ('enabled','reply_to_bot','respond_all','require_mention',

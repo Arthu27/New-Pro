@@ -1242,7 +1242,8 @@ class AIChat (commands .Cog ):
 
         try :
             from web .ai_helper import _sanitize_ai_reply 
-            answer =_sanitize_ai_reply (answer or '')
+            from services .hakumo_brain import ground_answer 
+            answer =ground_answer (_sanitize_ai_reply (answer or ''))
         except Exception :
             answer =(answer or '').strip ()
         if not answer :
