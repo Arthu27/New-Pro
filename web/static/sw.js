@@ -1,5 +1,5 @@
 // Hakumo Panel Service Worker (Light Edition)
-const CACHE_NAME = 'Hakumo-nova-v22-channels';
+const CACHE_NAME = 'Hakumo-nova-v26-topbar-one-row';
 const STATIC_ASSETS = [
   '/static/style.css',
   '/static/panel-nova.css',

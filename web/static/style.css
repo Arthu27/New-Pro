@@ -1927,15 +1927,30 @@ input[type="color"].studio-custom { width: 34px; height: 34px; padding: 2px; bor
 }
 .fab-main:hover { filter: brightness(1.08); transform: scale(1.05); }
 .fab.open .fab-main { transform: rotate(45deg); }
+/* На аналитике FAB не нужен — не занимаем место даже до CSS страницы. */
+body.page-analytics #fabHost,
+body.page-analytics .fab {
+  display: none !important;
+}
 .fab-item {
-  display: flex; align-items: center; gap: 10px; padding: 9px 15px 9px 10px; border-radius: 17px;
+  /* Закрыто: полностью убираем из потока. Раньше opacity:0 оставлял
+     высоту всех пунктов — «+» визуально уезжал вверх и перекрывал
+     страницу (аналитика/каналы на мобилке). */
+  display: none; align-items: center; gap: 10px; padding: 9px 15px 9px 10px; border-radius: 17px;
   background: var(--surface); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
   border: 1px solid var(--line); color: var(--text); font-size: var(--fs-sm); font-weight: var(--fw-semibold);
-  box-shadow: var(--shadow-2); cursor: pointer; opacity: 0; transform: translateY(8px) scale(.94);
-  pointer-events: none; /* закрыто — не перехватывают клик по «+» */
-  transition: opacity .2s var(--ease), transform .2s var(--ease-spring);
+  box-shadow: var(--shadow-2); cursor: pointer;
+  transform: translateY(8px) scale(.94);
+  animation: none;
 }
-.fab.open .fab-item { opacity: 1; transform: none; pointer-events: auto; }
+.fab.open .fab-item {
+  display: flex; transform: none;
+  animation: fabItemIn .18s var(--ease-spring);
+}
+@keyframes fabItemIn {
+  from { opacity: 0; transform: translateY(8px) scale(.94); }
+  to { opacity: 1; transform: none; }
+}
 .fab-item .ico { width: 30px; height: 30px; border-radius: 11px; display: grid; place-items: center; font-size: 12px; background: var(--ac-soft); color: var(--ac); }
 .fab-item.tone-warn .ico { background: var(--warn-soft); color: var(--warn); }
 .fab-item.tone-err .ico { background: var(--err-soft); color: var(--err); }

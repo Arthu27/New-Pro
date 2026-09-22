@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="/static/panel-nova.css?v={{ static_v('panel-nova.css') }}">
     <link rel="stylesheet" href="/static/panel-aurora.css?v={{ static_v('panel-aurora.css') }}">
 </head>
-<body class="panel-nova">
+<body class="panel-nova{% block body_class %}{% endblock %}">
     <script nonce="{{ csp_nonce }}">
     /* ── Бут-шим панели ────────────────────────────────────────────
        Страничные скрипты выполняются РАНЬШЕ app.js (он в конце body).

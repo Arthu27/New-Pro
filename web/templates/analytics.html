@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Аналитика — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-chart-line"  ></i> Аналитика сервера{% endblock %}
+{% block body_class %} page-analytics{% endblock %}
 {% block content %}
 
 {% block page_hero %}
@@ -100,10 +101,28 @@
   .analytics-brief{grid-template-columns:1fr 1fr}.analytics-grid-2{grid-template-columns:1fr}.analytics-signal-grid{grid-template-columns:1fr}
   .analytics-lensbar{align-items:flex-start;flex-wrap:wrap}.analytics-lenses{order:3;width:100%;overflow:auto}
 }
+@media (max-width: 760px) {
+  /* Поднимаем KPI: убираем авто-иконку раздела и лишний lead. */
+  .analytics-cockpit>.page-head-icon{display:none!important}
+  .analytics-cockpit .lead{display:none!important}
+  .analytics-cockpit{padding:4px 0 0!important;margin:0 0 8px!important;gap:0!important}
+  .analytics-eyebrow{margin-bottom:4px!important}
+  .analytics-cockpit h1{font-size:22px!important;line-height:1.1!important;letter-spacing:-.03em!important}
+  .analytics-cockpit-main>p{margin:0!important}
+  .analytics-controlbar{gap:6px;margin-top:8px}
+  .analytics-server-control{width:100%;min-width:0;min-height:40px;padding:6px 10px}
+  .analytics-refresh,.analytics-updated{flex:1 1 calc(50% - 6px);min-height:40px;padding:6px 10px}
+  .analytics-updated small{display:none}
+  .analytics-brief{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  .analytics-kpi{min-height:78px;padding:11px 12px}
+  .analytics-kpi strong{margin-top:8px;font-size:21px}
+}
 @media (max-width: 560px) {
-  .analytics-cockpit{padding:19px 16px}.analytics-cockpit h1{font-size:31px}.analytics-server-control{width:100%;min-width:0}
-  .analytics-refresh{flex:1}.analytics-updated{flex:1}.analytics-brief{grid-template-columns:1fr}.analytics-kpi{min-height:92px}
-  .analytics-lensbar>div:first-child{min-width:0;flex:1}.analytics-print{margin-left:auto}.analytics-wrap .section{padding:15px}.an-sumgrid{grid-template-columns:1fr!important}
+  .analytics-cockpit h1{font-size:20px!important}
+  .analytics-insight{margin-bottom:10px;padding:10px 12px}
+  .analytics-signal-grid{gap:8px;margin-bottom:10px}
+  .analytics-lensbar>div:first-child{min-width:0;flex:1}.analytics-print{margin-left:auto}
+  .analytics-wrap .section{padding:15px}.an-sumgrid{grid-template-columns:1fr!important}
 }
 @media (prefers-reduced-motion:reduce){.analytics-refresh.busy i,.leader-row,.bar-fill:after,.analytics-signal-grid article{animation:none!important;transition:none!important}}
 @media print{.analytics-controlbar,.analytics-lensbar,.analytics-jump,.an-csv{display:none!important}.analytics-cockpit{grid-template-columns:1fr;background:var(--bg)!important}.analytics-brief{grid-template-columns:repeat(4,1fr)}.analytics-wrap [data-an-section].an-lens-hidden{display:block!important}}

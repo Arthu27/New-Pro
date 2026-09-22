@@ -300,7 +300,9 @@ html[data-theme="light"] .sidebar {
     max-width: 100% !important;
     min-width: 0 !important;
     flex: none !important;
-    padding-top: 56px !important;
+    /* Топбар в один ряд: иначе 2 ряда (~118px) + контент уезжает вниз.
+       Контент стартует сразу под компактной шапкой. */
+    padding-top: calc(64px + env(safe-area-inset-top, 0px)) !important;
     height: 100% !important;
     overflow: hidden !important;
   }
@@ -323,6 +325,57 @@ html[data-theme="light"] .sidebar {
     max-width: none !important;
     border-radius: 0 !important;
     margin: 0 !important;
+    /* Один ряд: бренд + крошка + иконки. Без wrap контент поднимается. */
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-height: 56px !important;
+    height: 56px !important;
+    padding: 6px 10px 6px 56px !important;
+    overflow: hidden !important;
+  }
+  html[data-theme="dark"] .topbar .navbar-right,
+  html[data-theme="light"] .topbar .navbar-right {
+    flex-wrap: nowrap !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+  }
+  html[data-theme="dark"] .topbar .nav-icon-btn,
+  html[data-theme="light"] .topbar .nav-icon-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    flex: 0 0 auto !important;
+  }
+  html[data-theme="dark"] .topbar .theme-toggle,
+  html[data-theme="light"] .topbar .theme-toggle,
+  html[data-theme="dark"] .topbar #accentBtn,
+  html[data-theme="light"] .topbar #accentBtn,
+  html[data-theme="dark"] .topbar #sidebarCollapseBtn,
+  html[data-theme="light"] .topbar #sidebarCollapseBtn,
+  html[data-theme="dark"] .topbar #globalSearchBtn,
+  html[data-theme="light"] .topbar #globalSearchBtn {
+    display: none !important;
+  }
+  html[data-theme="dark"] .topbar .user-pill,
+  html[data-theme="light"] .topbar .user-pill {
+    padding: 3px 6px 3px 3px !important;
+    gap: 4px !important;
+  }
+  html[data-theme="dark"] .topbar .user-info,
+  html[data-theme="light"] .topbar .user-info,
+  html[data-theme="dark"] .topbar .user-caret,
+  html[data-theme="light"] .topbar .user-caret {
+    display: none !important;
+  }
+  html[data-theme="dark"] .crumbs,
+  html[data-theme="light"] .crumbs {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
   }
   html[data-theme="dark"] .mobile-nav,
   html[data-theme="light"] .mobile-nav {
@@ -1676,6 +1729,68 @@ html[data-theme="light"] .analytics-cockpit {
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
+}
+/* Аналитика: акцент всегда ледяной (не красный err/кастом),
+   иначе «Обновить» выглядит как ошибка. */
+html.page-analytics,
+body.page-analytics,
+html.page-analytics .analytics-cockpit,
+body.page-analytics .analytics-cockpit {
+  --ac: var(--nv-ice) !important;
+  --ac-2: var(--nv-ice-2) !important;
+  --ac-3: var(--nv-ice-3) !important;
+  --ac2: var(--nv-ice-2) !important;
+  --ac3: var(--nv-ice-3) !important;
+  --accent: var(--nv-ice) !important;
+  --accent-color: var(--nv-ice) !important;
+  --ac-soft: color-mix(in srgb, var(--nv-ice) 14%, transparent) !important;
+  --ac-line: color-mix(in srgb, var(--nv-ice) 42%, transparent) !important;
+}
+html[data-theme="dark"] .analytics-refresh,
+html[data-theme="light"] .analytics-refresh {
+  color: var(--nv-ice) !important;
+  border-color: color-mix(in srgb, var(--nv-ice) 42%, transparent) !important;
+  background: color-mix(in srgb, var(--nv-ice) 14%, transparent) !important;
+}
+html[data-theme="dark"] .analytics-server-control > i,
+html[data-theme="light"] .analytics-server-control > i {
+  color: var(--nv-ice) !important;
+}
+/* FAB: класс страницы надёжнее :has() на старых WebView. */
+html.page-analytics #fabHost,
+html.page-analytics .fab,
+html.page-analytics .fab-backdrop,
+html.page-analytics .fab-main,
+body.page-analytics #fabHost,
+body.page-analytics .fab,
+body.page-analytics .fab-backdrop,
+body.page-analytics .fab-main,
+body:has(.analytics-cockpit) #fabHost,
+body:has(.analytics-cockpit) .fab,
+body:has(.analytics-cockpit) .fab-backdrop,
+body:has(.analytics-cockpit) .fab-main {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+/* Авто-иконка раздела в grid-шапке аналитики занимает целый ряд. */
+html.page-analytics .analytics-cockpit > .page-head-icon,
+body.page-analytics .analytics-cockpit > .page-head-icon {
+  display: none !important;
+}
+@media (max-width: 760px) {
+  html.page-analytics .analytics-cockpit .lead,
+  body.page-analytics .analytics-cockpit .lead {
+    display: none !important;
+  }
+  html[data-theme="dark"] .analytics-cockpit,
+  html[data-theme="light"] .analytics-cockpit {
+    margin: 0 0 8px !important;
+  }
+  html[data-theme="dark"] .analytics-cockpit h1,
+  html[data-theme="light"] .analytics-cockpit h1 {
+    font-size: 20px !important;
+  }
 }
 html[data-theme="dark"] .page-hero h1,
 html[data-theme="light"] .page-hero h1,
