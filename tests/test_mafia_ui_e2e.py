@@ -235,7 +235,7 @@ async def run():
     print('== 4. Старт игры ==')
     inter3 = FakeInteraction(host, guild, text, bot)
     hp_start = MC.HostPanelView()
-    await MC.HostPanelView.start(hp_start, inter3)
+    await MC.HostPanelView.start(hp_start, inter3, hp_start.start)
     check(game.phase == PHASE_PLAYING, f'фаза playing ({game.phase})')
     check(any('началась' in str(s.get('content', '')).lower() for s in inter3.response.sent),
           'ответ о старте')
@@ -289,7 +289,7 @@ async def run():
     STORE.set(g4)
     hp = MC.HostPanelView()
     inter_p = FakeInteraction(host, guild, text, bot)
-    await MC.HostPanelView.pending(hp, inter_p)
+    await MC.HostPanelView.pending(hp, inter_p, hp.pending)
     check(inter_p.response.sent and '⏳' in str(inter_p.response.sent[0].get('content', '')),
           'pending список')
     kick = next(iter(g4.players))
