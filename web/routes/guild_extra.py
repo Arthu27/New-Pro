@@ -152,7 +152,8 @@ def register(ctx):
         """Статус Discord-панели /event-panel (data/event_panel_<gid>.json)."""
         try:
             from cogs.event_panel import (
-                EVENT_MOD_ROLE_ID, configured_panel_channel_id,
+                EVENT_ADMIN_ROLE_ID, EVENT_MOD_ROLE_ID,
+                configured_panel_channel_id,
                 load_panel_cfg, target_channel_id)
             cfg = load_panel_cfg(int(guild_id))
         except Exception as ex:
@@ -181,6 +182,7 @@ def register(ctx):
             'posted_at': cfg.get('posted_at') or '',
             'last_announce_by': str(cfg.get('last_announce_by') or ''),
             'last_announce_at': cfg.get('last_announce_at') or '',
+            'event_admin_role_id': str(EVENT_ADMIN_ROLE_ID),
             'event_mod_role_id': str(EVENT_MOD_ROLE_ID),
             'configured_channel_id': cfg_ch,
         })

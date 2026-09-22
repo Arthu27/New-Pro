@@ -1196,15 +1196,24 @@ async def on_ready():
     except Exception as _ex:
         _log.debug("on_ready(): role_seed: %s", _ex)
 
-    # Event Mod (852634463535759461) → /event-panel
+    # Event Admin + Event Mod → /event-panel
     try:
         from services.event_mod_acl_seed import apply_event_mod_acl_seed
         _em = apply_event_mod_acl_seed(guild_id=_seed_gid or None)
         if _em.get('applied') and _em.get('cmd_acl'):
-            print(f"[РОЛИ] Event Mod сид: cmd_acl event-panel "
-                  f"(роль {_em.get('role_id')})")
+            print(f"[РОЛИ] Event staff сид: cmd_acl event-panel "
+                  f"(роли {_em.get('role_ids') or _em.get('role_id')})")
     except Exception as _ex:
         _log.debug("on_ready(): event_mod_acl_seed: %s", _ex)
+
+    # Лестница варнов: 3 → бан 30 дней (если ещё не настроена)
+    try:
+        from services.warn_ladder_seed import apply_warn_ladder_seed
+        _wl = apply_warn_ladder_seed(guild_id=_seed_gid or None)
+        if _wl.get('seeded'):
+            print("[ВАРНЫ] Сид лестницы: 3 варна → бан 30 дней (авто-снятие)")
+    except Exception as _ex:
+        _log.debug("on_ready(): warn_ladder_seed: %s", _ex)
 
     # Связь с веб-панелью — САМОЕ ВАЖНОЕ в хвосте on_ready: без неё панель
     # показывает «бот выключен», хотя он в сети. Держим отдельно и защищённо.

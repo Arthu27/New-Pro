@@ -365,12 +365,20 @@ class warnings(commands.Cog):
                 await member.kick(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Кик'
             elif action == 'ban':
+                # Бан по лестнице: срок из ступени (по умолчанию 30 дней),
+                # потом авто-снятие — роль через punish_roles.add_temp,
+                # hard-ban через TempModeration._bans.
+                import time as _time
+                if not minutes or minutes <= 0:
+                    minutes = 30 * 1440  # 30 дней, если ступень без срока
+                until_ts = _time.time() + max(60, int(minutes) * 60)
                 rid = PR.role_for(guild.id, 'ban')
                 role = guild.get_role(rid) if rid else None
                 if role is not None:
                     # «бан» ролью: участник остаётся на сервере, апелляция —
-                    # в канале апелляции (если выбран)
+                    # в канале апелляции (если выбран); роль снимется по сроку
                     await member.add_roles(role, reason=f'Авто: {warn_count} предупреждений')
+                    PR.add_temp(guild.id, member.id, role.id, until_ts)
                     try:
                         from services.channel_routes import get_route
                         cid = int(get_route(guild.id, 'ban_appeal_channel') or 0)
@@ -380,9 +388,31 @@ class warnings(commands.Cog):
                                 member, view_channel=True, send_messages=True)
                     except Exception as _ex:
                         log.debug(f'бан-ролью: канал апелляции не открыт: {_ex}')
-                    return f'Бан: роль «{role.name}» + апелляция'
+                    days = max(1, int(round(minutes / 1440))) if minutes >= 1440 else 0
+                    if days:
+                        return (f'Бан: роль «{role.name}» на {days} дн. '
+                                f'(авто-снятие)')
+                    return (f'Бан: роль «{role.name}» {minutes} мин '
+                            f'(авто-снятие)')
                 await member.ban(reason=f'Авто-наказание: {warn_count} предупреждений')
-                return 'Бан'
+                try:
+                    tm = self.bot.get_cog('TempModeration') if self.bot else None
+                    if tm is not None:
+                        tm._bans.setdefault(str(guild.id), {})[str(member.id)] = {
+                            'until': until_ts,
+                            'reason': f'Авто: {warn_count} предупреждений',
+                            'mod_id': 0,
+                            'created_at': _time.time(),
+                            'duration': max(60, int(minutes) * 60),
+                            'user_name': str(getattr(member, 'display_name', member) or member.id),
+                        }
+                        tm._save('_bans', tm._bans_file())
+                except Exception as _tbe:
+                    log.debug('авто-бан: регистрация tempban: %s', _tbe)
+                days = max(1, int(round(minutes / 1440))) if minutes >= 1440 else 0
+                if days:
+                    return f'Бан на {days} дн. (авто-снятие)'
+                return f'Бан на {minutes} мин (авто-снятие)'
         except Exception as e:
             log.error(f'Ошибка авто-наказания: {e}')
         return None

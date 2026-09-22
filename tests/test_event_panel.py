@@ -31,11 +31,17 @@ def check(ok, msg):
 
 print('== constants ==')
 from services.event_mod_acl_seed import (  # noqa: E402
-    EVENT_MOD_ROLE_ID, apply_event_mod_acl_seed, SEED_VERSION)
+    EVENT_ADMIN_ROLE_ID, EVENT_MOD_ROLE_ID, EVENT_STAFF_ROLE_IDS,
+    apply_event_mod_acl_seed, SEED_VERSION)
 from cogs import event_panel as EP  # noqa: E402
 
 check(EVENT_MOD_ROLE_ID == 852634463535759461, 'EVENT_MOD_ROLE_ID')
-check(EP.EVENT_MOD_ROLE_ID == EVENT_MOD_ROLE_ID, 'cog использует тот же id')
+check(EVENT_ADMIN_ROLE_ID == 1551527644326002748, 'EVENT_ADMIN_ROLE_ID')
+check(EP.EVENT_MOD_ROLE_ID == EVENT_MOD_ROLE_ID, 'cog использует тот же mod id')
+check(EP.EVENT_ADMIN_ROLE_ID == EVENT_ADMIN_ROLE_ID, 'cog использует тот же admin id')
+check(set(EP.EVENT_STAFF_ROLE_IDS) == set(EVENT_STAFF_ROLE_IDS),
+      'EVENT_STAFF_ROLE_IDS совпадают')
+check(SEED_VERSION >= 2, f'seed v2+ (сейчас {SEED_VERSION})')
 check(callable(EP.configured_panel_channel_id), 'configured_panel_channel_id')
 check(callable(EP.resolve_panel_channel), 'resolve_panel_channel')
 check('EVENT_PANEL_CHANNEL_ID' in open(
@@ -55,8 +61,11 @@ check(rep.get('applied') is True, f'seed applied: {rep}')
 from services import permission_acl as pacl  # noqa: E402
 cmd = pacl.load_acl(111222333444555666)
 h = str(EVENT_MOD_ROLE_ID)
+ha = str(EVENT_ADMIN_ROLE_ID)
 check(h in [str(x) for x in cmd.get('event-panel', [])],
       'event-mod в cmd_acl event-panel')
+check(ha in [str(x) for x in cmd.get('event-panel', [])],
+      'event-admin в cmd_acl event-panel')
 
 print('== panel cfg ==')
 EP.save_panel_cfg(42, {'title': 'Тест', 'signups': ['1'], 'registration_open': True})
@@ -85,6 +94,7 @@ class _Member:
 
 
 check(EP.is_event_mod(_Member(1, [EVENT_MOD_ROLE_ID])), 'роль event mod → True')
+check(EP.is_event_mod(_Member(10, [EVENT_ADMIN_ROLE_ID])), 'роль event admin → True')
 check(EP.is_event_mod(_Member(2, [], manage=True)), 'manage_guild → True')
 check(not EP.is_event_mod(_Member(3, [999])), 'чужая роль → False')
 
@@ -96,6 +106,7 @@ sb = open(os.path.join(ROOT, 'slash_budget.py'), encoding='utf-8').read()
 check("'event-panel'" in sb, 'KEEP_SLASH содержит event-panel')
 main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('apply_event_mod_acl_seed' in main, 'on_ready зовёт event_mod seed')
+check('apply_warn_ladder_seed' in main, 'on_ready зовёт warn_ladder seed')
 menu = open(os.path.join(ROOT, 'services/panel_menu.py'), encoding='utf-8').read()
 check("'/events'" in menu, 'меню панели: /events')
 check(os.path.exists(os.path.join(ROOT, 'web/templates/events.html')),
@@ -111,6 +122,7 @@ ev_html = open(os.path.join(ROOT, 'web/templates/events.html'), encoding='utf-8'
 check('evKpis' in ev_html and 'ev-discord' in ev_html, 'events.html: KPI + Discord preview')
 check('page-head-copy' in ev_html and 'eyebrow' in ev_html, 'events.html: page-head polish')
 check('evPublish' in ev_html and 'evChannel' in ev_html, 'events.html: publish + channel select')
+check('1551527644326002748' in ev_html, 'events.html: Event Admin role id')
 check('event_panel_channel' in open(
     os.path.join(ROOT, 'services/channel_routes.py'), encoding='utf-8').read(),
     'маршрут event_panel_channel')

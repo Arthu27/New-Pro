@@ -55,8 +55,9 @@ def cfg_path(guild_id) -> str:
 
 def load_cfg(guild_id) -> dict:
     """Настройки репортов сервера: канал, роль модератора, лестница
-    рецидивов и срок давности. Без файла — дефолты (канал не привязан)."""
+    рецидивов, срок давности и КД повторного репорта на того же."""
     cfg = {'channel_id': '', 'mod_role_id': '', 'expiry_days': 90,
+           'reporter_target_cooldown_sec': 86400,
            'ladder': [dict(x) for x in DEFAULT_LADDER]}
     try:
         with open(cfg_path(guild_id), encoding='utf-8') as f:
@@ -66,6 +67,11 @@ def load_cfg(guild_id) -> dict:
                 cfg[k] = str(raw.get(k) or '')
             if isinstance(raw.get('expiry_days'), int):
                 cfg['expiry_days'] = max(1, raw['expiry_days'])
+            try:
+                cd = int(raw.get('reporter_target_cooldown_sec') or 86400)
+                cfg['reporter_target_cooldown_sec'] = max(60, cd)
+            except (TypeError, ValueError):
+                cfg['reporter_target_cooldown_sec'] = 86400
             if isinstance(raw.get('ladder'), list) and raw['ladder']:
                 lad = []
                 for step in raw['ladder']:
@@ -157,21 +163,35 @@ def ticket_list(guild_id, limit: int = 200) -> list:
 
 def has_recent_open_report(guild_id, reporter_id, accused_id,
                             window_sec=86400) -> bool:
-    """КД на репорт: этот reporter уже подавал ОТКРЫТУЮ жалобу на того же
-    accused за последние window_sec сек (по умолчанию 1 день). Повторную
-    жалобу на того же участника не плодим (заказ владельца: «чтобы команду
-    не использовали, когда уже 1 раз подали на одного и того же»)."""
-    edge = _now() - max(0, int(window_sec))
+    """КД на репорт одного и того же участника тем же жалующимся.
+
+    Блокирует, если:
+      1) есть ОТКРЫТЫЙ тикет на ту же пару (любой давности — жди разбора);
+      2) был любой тикет (в т.ч. закрытый) за последние window_sec сек
+         (по умолчанию 1 день) — не спамь сразу после закрытия.
+
+    Заказ владельца: «чтобы команду не использовали, когда уже 1 раз
+    подали на одного и того же».
+    """
     with db() as c:
-        row = c.execute(
+        open_row = c.execute(
+            """SELECT 1 FROM tickets
+               WHERE guild=? AND reporter_id=? AND accused_id=?
+                 AND (closed IS NULL OR closed=0)
+               LIMIT 1""",
+            (str(guild_id), str(reporter_id), str(accused_id))
+        ).fetchone()
+        if open_row:
+            return True
+        edge = _now() - max(0, int(window_sec or 0))
+        recent = c.execute(
             """SELECT 1 FROM tickets
                WHERE guild=? AND reporter_id=? AND accused_id=?
                  AND created >= ?
-                 AND (closed IS NULL OR closed=0)
                LIMIT 1""",
             (str(guild_id), str(reporter_id), str(accused_id), edge)
         ).fetchone()
-    return row is not None
+        return recent is not None
 
 
 def ticket_stats(guild_id) -> dict:

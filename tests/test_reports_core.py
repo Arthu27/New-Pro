@@ -69,9 +69,26 @@ check(RC.has_recent_open_report(777, 111, 999, 600) is False,
       'репорт на ДРУГОГО участника — не блокируется')
 check(RC.has_recent_open_report(777, 888, 222, 600) is False,
       'репорт на того же участника от ДРУГОГО жалующегося — не блокируется')
-RC.ticket_set(555, closed=RC._now())
+# открытый тикет старше окна — всё равно блок (жди разбора)
+with RC.db() as c:
+    c.execute('UPDATE tickets SET created = created - 999999 WHERE thread_id=?',
+              ('555',))
+check(RC.has_recent_open_report(777, 111, 222, 600) is True,
+      'открытый старый тикет на того же — всё равно КД')
+# закрыли только что: created вернём «сейчас», closed=now → КД по окну
+with RC.db() as c:
+    c.execute('UPDATE tickets SET created=?, closed=? WHERE thread_id=?',
+              (RC._now(), RC._now(), '555'))
+check(RC.has_recent_open_report(777, 111, 222, 600) is True,
+      'только что закрытый — КД по окну ещё держит')
+# сдвинем created за окно — после закрытия и истечения окна можно снова
+with RC.db() as c:
+    c.execute('UPDATE tickets SET created = created - 999999 WHERE thread_id=?',
+              ('555',))
 check(RC.has_recent_open_report(777, 111, 222, 600) is False,
-      'закрытый (разобранный) репорт — КД снимается')
+      'закрытый и старше окна — КД снят')
+check(RC.load_cfg(777).get('reporter_target_cooldown_sec') == 86400,
+      'в конфиге есть КД 1 день по умолчанию')
 
 print('== 3. Рецидивы ==')
 for _ in range(2):
