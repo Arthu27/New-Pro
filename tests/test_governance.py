@@ -161,7 +161,7 @@ check(not bad_cogs, f'PAGE_COGS ссылается на живые коги (б�
 check(all(isinstance(v, tuple) and v and all(isinstance(c, str) for c in v)
           for v in PM.PAGE_COGS.values()),
       'PAGE_COGS — непустые кортежи строк')
-check(len(PM.PAGE_COGS) >= 12, f'карта когов отражает живые страницы ({len(PM.PAGE_COGS)})')
+check(len(PM.PAGE_COGS) >= 11, f'карта когов отражает живые страницы ({len(PM.PAGE_COGS)})')
 
 print('== 4. Шаблоны: ссылки живые, синтаксис валиден ==')
 ref_re = re.compile(r"render_template\(\s*['\"]([^'\"]+)['\"]")
@@ -342,9 +342,10 @@ for gone in ('economy_shop.py', 'economy_cog.py', 'tag_jail.py',
           not os.path.exists(os.path.join(ROOT, 'cogs', gone)),
           f'{gone}: физически удалена, политика её не видит')
 check('moderation.py' in en and 'reports.py' in en
-      and 'afk.py' in en and 'ai_chat.py' in en
+      and 'afk.py' in en and 'ai_chat.py' not in en
+      and 'ai_moderation.py' in en
       and 'music_cog.py' not in en and 'voice_commands.py' not in en,
-      'lean по умолчанию: модерация/репорты/AFK/AI живы; музыка (/play) снята')
+      'lean по умолчанию: модерация/репорты/AFK/AI-мод живы; AI-чат и музыка сняты')
 check('security.py' in en and 'anti_alt.py' in en and 'impersonation.py' in en,
       'lean по умолчанию: ЩИТ в профиле — security/anti-alt/impersonation грузятся')
 

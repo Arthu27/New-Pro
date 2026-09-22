@@ -60,7 +60,7 @@
 | `ab_cog` | A/B Testing Cog |
 | `achievements` | Достижения (Achievements Cog) |
 | `afk` | AFK-система — /afk с причиной, уведомляет при упоминании |
-| `ai_chat` | AI Chat Cog — DM + channel sohbet |
+| `ai_chat` | ~~AI Chat~~ — снят с эксплуатации (RETIRED), файл на диске |
 | `anime_daily` | Ежедневное аниме-предложение — Jikan API + кнопка русского перевода |
 | `archive` | archive |
 | `autorole_join` | AutoRole Join — применяет автоматические роли из настроек панели. |

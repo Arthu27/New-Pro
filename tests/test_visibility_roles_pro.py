@@ -168,8 +168,10 @@ enabled, gone = select_cog_files(files, slim=True)
 sel = set(enabled)
 check({'moderation.py', 'reports.py', 'staff_apply.py',
        'voice_tracker.py',
-       'help.py', 'logs.py', 'impersonation.py', 'ai_chat.py'} <= sel,
-      'BOT_SLIM: модерация, репорты, заявки, войс-статистика, ядро и AI-чат загружены')
+       'help.py', 'logs.py', 'impersonation.py'} <= sel,
+      'BOT_SLIM: модерация, репорты, заявки, войс-статистика и ядро загружены')
+check('ai_chat.py' in gone,
+      'BOT_SLIM: AI-чат retired — не грузится')
 import os as _os
 check(not _os.path.exists(os.path.join(ROOT, 'cogs', 'music_cog.py'))
       and not _os.path.exists(os.path.join(ROOT, 'cogs', 'voice_commands.py')),

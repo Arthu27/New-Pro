@@ -106,12 +106,14 @@ warn = next((e for e in d if e.get('action', '').lower() == 'предупреж�
 check(warn is not None and warn.get('user_name') == 'из-аудита',
       'журнал: имя из аудита сохраняется (не перетирается картой)')
 
-print('== BOT_SLIM: AI-чат включён ==')
-from cogs_policy import select_cog_files, SLIM_COGS  # noqa: E402
-check('ai_chat.py' in SLIM_COGS, 'AI-чат входит в профиль SLIM')
-enabled, gone = select_cog_files(['ai_chat.py', 'economy_cog.py'], slim=True)
-check('ai_chat.py' in enabled and 'economy_cog.py' in gone,
-      'BOT_SLIM: ai_chat грузится, экономика — нет')
+print('== BOT_SLIM: AI-чат retired ==')
+from cogs_policy import select_cog_files, SLIM_COGS, RETIRED_COGS  # noqa: E402
+check('ai_chat.py' not in SLIM_COGS and 'ai_chat.py' in RETIRED_COGS,
+      'AI-чат не входит в SLIM (retired)')
+enabled, gone = select_cog_files(['ai_chat.py', 'economy_cog.py', 'voice_tracker.py'],
+                                 slim=True)
+check('ai_chat.py' in gone and 'voice_tracker.py' in enabled and 'economy_cog.py' in gone,
+      'BOT_SLIM: ai_chat retired, войс-статистика грузится, экономика — нет')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(0 if FAIL == 0 else 1)
