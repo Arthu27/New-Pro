@@ -30,8 +30,17 @@
         : fetch(gid === '_main' ? '/api/channels' : '/api/guild/' + gid + '/channels')
           .then(function (r) { return r.json(); }))
         .then(function (d) {
+          /* API отдаёт либо массив, либо {channels, online}. Раньше объект
+             с channels ошибочно считался «бот офлайн» — в нише селекта
+             светилось «бот…», а имя канала не подставлялось. */
           if (Array.isArray(d)) return { list: d, online: true };
-          return { list: (d && d.channels) || [], online: false };
+          if (d && Array.isArray(d.channels)) {
+            return {
+              list: d.channels,
+              online: d.online !== false && d.online !== 0
+            };
+          }
+          return { list: [], online: false };
         })
         .catch(function () { return { list: [], online: false }; });
       var roP = (warm && warm.roles ? Promise.resolve(warm.roles)
@@ -86,17 +95,22 @@
       if (!statusEl) return;
       var id = window.pickerExtractId(input.value);
       if (!id) { statusEl.innerHTML = ''; return; }
+      var hit = null;
+      source(data).forEach(function (it) { if (String(it.id) === id) hit = it; });
+      var prefix = kind === 'role' ? '@' : '#';
+      if (hit && hit.name) {
+        /* Имя канала/роли в нише — всегда, даже если бот «офлайн» по флагу. */
+        var chip = data.online
+          ? ('<span class="picker-chip ok"><i class="fas fa-circle-check"></i> ' + esc(prefix + hit.name) + '</span>')
+          : ('<span class="picker-chip warn"><i class="fas fa-hashtag"></i> ' + esc(prefix + hit.name) + '</span>');
+        statusEl.innerHTML = chip;
+        return;
+      }
       if (!data.online) {
         statusEl.innerHTML = '<span class="picker-chip warn"><i class="fas fa-satellite-dish"></i> бот офлайн — не проверить</span>';
         return;
       }
-      var hit = null;
-      source(data).forEach(function (it) { if (String(it.id) === id) hit = it; });
-      if (hit) {
-        statusEl.innerHTML = '<span class="picker-chip ok"><i class="fas fa-circle-check"></i> ' + esc((kind === 'role' ? '@' : '#') + hit.name) + '</span>';
-      } else {
-        statusEl.innerHTML = '<span class="picker-chip bad"><i class="fas fa-triangle-exclamation"></i> не найдено на сервере</span>';
-      }
+      statusEl.innerHTML = '<span class="picker-chip bad"><i class="fas fa-triangle-exclamation"></i> не найдено на сервере</span>';
     }
 
     window.pickerLoad(gid).then(render);

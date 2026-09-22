@@ -259,6 +259,13 @@ function render() {
           return '<option value="' + esc(c.id) + '"' + sel + '># ' + esc(c.name) + '</option>';
         }).join('')
       : '<option disabled>' + (CHS_ROUTES_LOADED ? 'нет текстовых каналов' : 'Загрузка каналов…') + '</option>';
+    /* Сохранённый канал вне текстового списка (удалён/голос) — всё равно
+       показываем имя в нише, а не пустой aes/sshd-ярлык. */
+    if (value && value !== '0' && CHS_CHANNELS.length &&
+        !CHS_CHANNELS.some(function (c) { return String(c.id) === value; })) {
+      var orphanNm = chName(value) || ('ID ' + value);
+      chanOpts += '<option value="' + esc(value) + '" selected># ' + esc(orphanNm) + ' (не текстовый/удалён)</option>';
+    }
     var opts = '<option value="0"' + (value === '0' ? ' selected' : '') + '>— Авто (по умолчанию) —</option>' + chanOpts;
     return '<div class="chs-row">' +
       '<div class="chs-ico"><i class="fas ' + esc(r.icon || 'fa-route') + '"></i></div>' +
@@ -273,6 +280,23 @@ function render() {
       '</div></div>';
   }).join('');
   updatePendingBar();
+  /* После перерисовки — обновить подписи кастомных селектов (aes/sshd),
+     иначе ниша остаётся пустой или со старым «Загрузка…». */
+  try {
+    requestAnimationFrame(function () {
+      document.querySelectorAll('#chsList select').forEach(function (sel) {
+        if (sel._sshdCtl && typeof sel._sshdCtl.syncLabel === 'function') {
+          sel._sshdCtl.syncLabel();
+        }
+        var shell = sel.closest && sel.closest('.aes');
+        if (shell) {
+          var val = shell.querySelector('.aes-value');
+          var opt = sel.selectedOptions && sel.selectedOptions[0];
+          if (val && opt) val.textContent = opt.textContent || '—';
+        }
+      });
+    });
+  } catch (e) { /* ignore */ }
 }
 
 /* Пользователь выбрал канал в строке — фиксируем как несохранённое.
