@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow">AI</div>
     <h1>AI-чат</h1>
-    <p class="lead">Короткие ответы по серверу: правила, команды, статус. Без воды.</p>
+    <p class="lead">Свой ассистент сервера: думает, смотрит досье, при необходимости вызывает инструменты — не набор триггеров.</p>
   </div>
   <div class="page-head-actions">
     <span class="badge security" id="model-badge"><i class="fas fa-robot"></i> Hakumo</span>
@@ -30,9 +30,13 @@
       <label class="ai-check"><input type="checkbox" id="ai-reply-bot" checked> Reply на бота</label>
       <label class="ai-check"><input type="checkbox" id="ai-require-mention"> Только @упоминание</label>
     </div>
+    <label class="ai-field">Свои инструкции для Hakumo (тон, правила сервера, что говорить)
+      <textarea class="form-input" id="ai-custom" rows="5" maxlength="4000"
+        placeholder="Например: отвечай коротко; если спрашивают про набор в стафф — направь в #набор; не шути про баны."></textarea>
+    </label>
     <div class="ai-grid3">
       <label class="ai-field">Модель
-        <input type="text" class="form-input" id="ai-model" placeholder="mistral-large-latest">
+        <input type="text" class="form-input" id="ai-model" placeholder="mistral-large-latest / llama3.1">
       </label>
       <label class="ai-field">Температура
         <input type="number" class="form-input" id="ai-temp" min="0" max="1" step="0.01" value="0.18">
@@ -41,6 +45,7 @@
         <input type="number" class="form-input" id="ai-tokens" min="256" max="4096" step="64" value="1600">
       </label>
     </div>
+    <p class="hint" style="margin:0">Свой ИИ: поставь Ollama на VDS (`OLLAMA_URL`) или ключ `MISTRAL_API_KEY`. Без модели останется только короткий запасной режим.</p>
     <button type="button" class="btn btn-primary" id="ai-settings-save"><i class="fas fa-save"></i> Сохранить</button>
   </div>
 </details>
@@ -209,6 +214,7 @@
     var rb = $('ai-reply-bot'); if (rb) rb.checked = !!s.reply_to_bot;
     var rm = $('ai-require-mention'); if (rm) rm.checked = !!s.require_mention;
     var md = $('ai-model'); if (md) md.value = s.model || '';
+    var cu = $('ai-custom'); if (cu) cu.value = s.custom_instructions || '';
     var tp = $('ai-temp'); if (tp) tp.value = s.temperature != null ? s.temperature : 0.18;
     var tk = $('ai-tokens'); if (tk) tk.value = s.max_tokens || 1600;
   }
@@ -234,6 +240,7 @@
         reply_to_bot: !!($('ai-reply-bot') && $('ai-reply-bot').checked),
         require_mention: !!($('ai-require-mention') && $('ai-require-mention').checked),
         model: ($('ai-model') && $('ai-model').value) || '',
+        custom_instructions: ($('ai-custom') && $('ai-custom').value) || '',
         temperature: parseFloat(($('ai-temp') && $('ai-temp').value) || '0.18'),
         max_tokens: parseInt(($('ai-tokens') && $('ai-tokens').value) || '1600', 10)
       };

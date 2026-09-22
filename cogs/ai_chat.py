@@ -555,6 +555,12 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
             if p .get ('style'):
                 context ['user_style']=p ['style']
 
+        # Свои инструкции владельца из настроек Discord AI
+        try :
+            context ['custom_instructions']=str (_cfg .get ('custom_instructions')or '')
+        except Exception :
+            pass 
+
         answer ,new_history ,model_name ,_ =ai_assistant (
         question ,context ,history ,
         temperature =float (_cfg .get ('temperature',0.18 )),
@@ -1241,6 +1247,46 @@ class AIChat (commands .Cog ):
             answer =(answer or '').strip ()
         if not answer :
             answer ='Не понял вопрос. Напиши короче: «правила» или «команды».'
+
+        # Hakumo Brain: если модель запросила инструменты — выполнить и доответить
+        if message .guild and answer :
+            try :
+                from services .hakumo_brain import (
+                extract_func_calls ,strip_func_calls ,build_tool_followup_message )
+                from web .ai_functions import AIFunctions 
+                from web .ai_helper import _call ,_sanitize_ai_reply as _san 
+                funcs =extract_func_calls (answer )
+                if funcs :
+                    ai_fns =AIFunctions (self .bot )
+                    chunks =[]
+                    for fc in funcs :
+                        try :
+                            res =await ai_fns .execute_function (fc ,message .guild )
+                            chunks .append (f'--- {fc} ---\n{res or "(пусто)"}')
+                        except Exception as _fe :
+                            chunks .append (f'--- {fc} ---\nошибка: {_fe}')
+                            log .info ('[AI] func %s: %s',fc ,_fe )
+                    if chunks :
+                        follow =build_tool_followup_message (content ,'\n'.join (chunks ))
+                        messages2 =[
+                        {'role':'system','content':
+                        'Ты Hakumo. Ответь пользователю по результатам инструментов. '
+                        'Только русский, коротко, без [FUNC:...], без выдумок.'},
+                        {'role':'user','content':follow },
+                        ]
+                        try :
+                            answer2 ,_model2 ,_ =await self .bot .loop .run_in_executor (
+                            None ,lambda :_call (messages2 ,max_tokens =1200 ,temperature =0.15 ))
+                            answer2 =_san (strip_func_calls (answer2 or ''))
+                            if answer2 :
+                                answer =answer2 
+                            else :
+                                answer =strip_func_calls (answer )
+                        except Exception as _c2 :
+                            log .info ('[AI] tool followup: %s',_c2 )
+                            answer =strip_func_calls (answer )
+            except Exception as _tool_ex :
+                log .debug ('[AI] tool loop: %s',_tool_ex )
 
         if _has_profanity (answer ):
             answer ="Я не могу это сказать."

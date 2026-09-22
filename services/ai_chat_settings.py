@@ -33,6 +33,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     'model': '',
     'temperature': 0.18,
     'max_tokens': 1600,
+    # Свои инструкции владельца для Hakumo Brain (тон, правила сервера, FAQ).
+    'custom_instructions': '',
 }
 
 
@@ -50,6 +52,10 @@ def _normalize(raw: dict | None) -> dict:
         cfg['require_mention'] = bool(raw['require_mention'])
     if 'model' in raw and raw['model'] is not None:
         cfg['model'] = str(raw['model']).strip()
+    if 'custom_instructions' in raw and raw['custom_instructions'] is not None:
+        cfg['custom_instructions'] = str(raw['custom_instructions'])[:4000]
+    elif 'system_prompt' in raw and raw['system_prompt'] is not None:
+        cfg['custom_instructions'] = str(raw['system_prompt'])[:4000]
     try:
         if 'temperature' in raw:
             t = float(raw['temperature'])
