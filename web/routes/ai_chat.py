@@ -1059,7 +1059,7 @@ def register(ctx):
         body =_safe_json_obj ()or {}
         cur =load_settings ()
         for key in ('enabled','reply_to_bot','respond_all','require_mention',
-        'model','temperature','max_tokens','channels'):
+        'model','temperature','max_tokens','channels','custom_instructions'):
             if key in body :
                 cur [key ]=body [key ]
         if not save_settings (cur ):
