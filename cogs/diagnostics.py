@@ -59,7 +59,7 @@ os .makedirs (DATA_DIR ,exist_ok =True )
 
 # Health thresholds
 THRESHOLDS ={
-"memory_mb":{"warn":400 ,"critical":700 },
+"memory_mb":{"warn":1200 ,"critical":2000 },
 "cpu_percent":{"warn":60 ,"critical":85 },
 "latency_ms":{"warn":300 ,"critical":800 },
 "error_rate_per_min":{"warn":5 ,"critical":15 },

@@ -526,14 +526,35 @@ body.dense .jl-cbody { gap: 3px; }
     var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
 
     /* лента — основной вид */
+    var emptyHint = '';
+    if (_logsLoaded && !slice.length) {
+      if (viewMode === 'punish' && allLogs.length > 0) {
+        emptyHint = '<span class="empty-hint-chip" id="jlEmptyShowAll" role="button" tabindex="0" style="cursor:pointer">' +
+          '<i class="fas fa-list"></i> Показать все события (' + allLogs.length + ')</span>' +
+          '<p style="margin:10px 0 0;opacity:.75;font-size:13px;max-width:36ch;line-height:1.4">' +
+          'Наказаний пока нет — журнал чистый после переезда. Новые баны/муты/варны появятся здесь автоматически.</p>';
+      } else if (viewMode === 'punish') {
+        emptyHint = '<p style="margin:10px 0 0;opacity:.75;font-size:13px;max-width:36ch;line-height:1.4">' +
+          'Пока пусто. Выдай наказание через /modpanel или панель — запись появится здесь.</p>';
+      } else {
+        emptyHint = '<span class="empty-hint-chip" data-focus="#search"><i class="fas fa-keyboard"></i> Enter — поиск</span>';
+      }
+    }
     $('logs-feed').innerHTML = slice.length ? renderFeed(slice, H) :
       '<div class="empty">' +
         (!_logsLoaded
           ? '<i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span>'
           : '<i class="fas fa-inbox"></i><span>' +
             (viewMode === 'punish' ? 'Наказаний не найдено' : 'Событий не найдено') + '</span>' +
-            '<span class="empty-hint-chip" data-focus="#search"><i class="fas fa-keyboard"></i> Enter — поиск</span>') +
+            emptyHint) +
       '</div>';
+    var showAllBtn = $('jlEmptyShowAll');
+    if (showAllBtn) {
+      showAllBtn.addEventListener('click', function () { setView('all'); });
+      showAllBtn.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView('all'); }
+      });
+    }
 
     /* таблица — компактный вид */
     $('logs-body').innerHTML = slice.map(function (l) {

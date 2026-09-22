@@ -3908,7 +3908,15 @@
   /* программные изменения value — подтягиваем подпись */
   setInterval(function () {
     doc.querySelectorAll('select[data-aes="1"]').forEach(function (o) {
-      if (o._aesValue !== o.value) { o._aesValue = o.value; syncLabel(o); }
+      /* Синхроним нишу и при смене value, и когда список option
+         перерисовался с тем же value (каналы догрузились — имя появилось). */
+      var opt = o.selectedOptions && o.selectedOptions[0];
+      var label = opt ? String(opt.textContent || '') : '';
+      if (o._aesValue !== o.value || o._aesLabel !== label) {
+        o._aesValue = o.value;
+        o._aesLabel = label;
+        syncLabel(o);
+      }
     });
   }, 500);
 
