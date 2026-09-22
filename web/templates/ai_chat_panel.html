@@ -47,13 +47,13 @@
       </label>
     </div>
     <div class="ai-need">
-      <b>Чтобы свой ИИ работал как нужно</b>
+      <b>Чтобы ИИ работал на малом VDS</b>
       <ol>
-        <li>На VDS: установить <code>Ollama</code></li>
-        <li><code>ollama pull llama3.1</code> (или qwen2.5:7b)</li>
-        <li>В <code>.env</code>: <code>OLLAMA_URL=http://127.0.0.1:11434</code> и <code>OLLAMA_MODEL=llama3.1</code></li>
-        <li>Опционально запас: <code>MISTRAL_API_KEY=...</code></li>
+        <li>В <code>.env</code> добавь <code>MISTRAL_API_KEY=...</code> (ключ на console.mistral.ai)</li>
+        <li>Опционально: <code>AI_MODEL=mistral-large-latest</code></li>
+        <li><b>Не ставь</b> Ollama/llama — мало места и RAM</li>
         <li>Рестарт бота. Канал AI: <code>1312434963941167134</code></li>
+        <li>Свои правила — в поле инструкций выше (это и есть «ваш» ИИ)</li>
       </ol>
     </div>
     <button type="button" class="btn btn-primary" id="ai-settings-save"><i class="fas fa-save"></i> Сохранить</button>

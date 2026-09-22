@@ -49,7 +49,8 @@ def build_brain_preamble(custom_instructions: str = '') -> list[str]:
     """Системные правила точного ассистента."""
     lines = [
         f'Ты Hakumo Brain ({BRAIN_VERSION}) — AI-ассистент ЭТОГО Discord-сервера.',
-        'Ты свой локальный помощник сервера. Не болтун и не набор ключевых слов.',
+        'Ты свой помощник сервера (логика, досье, инструменты, инструкции владельца).',
+        'Модель языка — только движок речи; решения и факты берёшь из данных сервера.',
         '',
         'ТОЧНОСТЬ (важнее красоты):',
         '• Факт о сервере (цифры, имена, роли, каналы, варны, онлайн) — ТОЛЬКО из досье/FUNC.',
@@ -135,16 +136,27 @@ def settings_custom_instructions(cfg: dict[str, Any] | None) -> str:
 
 
 def own_model_name(requested: str | None = None) -> str:
-    """Имя модели для своего ИИ (Ollama)."""
+    """Имя локальной модели Ollama. Пусто = локальный ИИ выключен (малый VDS)."""
     return (
         (os.getenv('OLLAMA_MODEL') or '').strip()
         or (os.getenv('AI_OWN_MODEL') or '').strip()
-        or 'llama3.1'
+        or ''
     )
 
 
+def ollama_enabled() -> bool:
+    """Локальную Ollama включаем только явно — на слабом VDS она не нужна."""
+    flag = (os.getenv('AI_USE_OLLAMA') or '').strip().lower()
+    if flag in ('0', 'false', 'no', 'off'):
+        return False
+    if flag in ('1', 'true', 'yes', 'on'):
+        return True
+    # Авто: только если задали OLLAMA_MODEL / AI_OWN_MODEL
+    return bool(own_model_name())
+
+
 def backup_model_name(requested: str | None = None) -> str:
-    """Имя модели для облачного запаса."""
+    """Имя модели для облачного движка (основной путь на малом VDS)."""
     return (
         (requested or '').strip()
         or (os.getenv('AI_MODEL') or '').strip()
@@ -153,18 +165,45 @@ def backup_model_name(requested: str | None = None) -> str:
 
 
 def check_own_ai() -> dict[str, Any]:
-    """Статус своего ИИ (Ollama) для панели."""
-    url = (os.getenv('OLLAMA_URL') or 'http://127.0.0.1:11434').rstrip('/')
-    model = own_model_name()
+    """Статус движка для панели: облако (рекомендуется) или Ollama (опционально)."""
+    mist = bool((os.getenv('MISTRAL_API_KEY') or '').strip())
+    other = bool(
+        (os.getenv('OPENROUTER_API_KEY') or os.getenv('DEEPSEEK_API_KEY')
+         or os.getenv('OPENAI_API_KEY') or os.getenv('AI_API_KEY') or '').strip()
+    )
     info: dict[str, Any] = {
         'own_ai': True,
-        'provider': 'ollama',
-        'url': url,
-        'model': model,
-        'online': False,
+        'provider': 'cloud' if (mist or other) else 'none',
+        'url': '',
+        'model': backup_model_name(),
+        'online': mist or other,
         'models': [],
         'hint': '',
+        'ollama_enabled': ollama_enabled(),
     }
+    if mist:
+        info['hint'] = (
+            'Движок: Mistral API (удобно на малом VDS). '
+            'Hakumo Brain ваш — модель только «говорит».'
+        )
+        info['provider'] = 'mistral'
+    elif other:
+        info['hint'] = 'Движок: облачный API. Hakumo Brain ваш — модель только «говорит».'
+        info['provider'] = 'api'
+    else:
+        info['hint'] = (
+            'Нужен ключ MISTRAL_API_KEY в .env (рекомендуется на малом VDS). '
+            'Ollama/llama не ставьте — мало RAM/места.'
+        )
+
+    if not ollama_enabled():
+        return info
+
+    # Опциональный локальный путь
+    url = (os.getenv('OLLAMA_URL') or 'http://127.0.0.1:11434').rstrip('/')
+    model = own_model_name() or 'llama3.1'
+    info['url'] = url
+    info['ollama_model'] = model
     try:
         req = urllib.request.Request(f'{url}/api/tags', method='GET')
         with urllib.request.urlopen(req, timeout=2.5) as resp:
@@ -175,20 +214,23 @@ def check_own_ai() -> dict[str, Any]:
             if name:
                 names.append(name)
         info['models'] = names[:30]
-        info['online'] = True
         have = any(model == n or n.startswith(model + ':') or model in n for n in names)
-        if not names:
-            info['hint'] = f'Ollama запущена, но моделей нет. Установи: ollama pull {model}'
-        elif not have:
-            info['hint'] = (
-                f'Ollama онлайн, модели «{model}» нет. '
-                f'Есть: {", ".join(names[:5])}. Поставь: ollama pull {model}'
-            )
+        if mist or other:
+            info['hint'] += f' Ollama тоже включена ({model}' + (', ок' if have else ', модель не скачана') + ').'
+        elif have:
+            info['online'] = True
+            info['provider'] = 'ollama'
+            info['model'] = model
+            info['hint'] = f'Локальный движок готов: {model}'
         else:
-            info['hint'] = f'Свой ИИ готов: {model}'
-    except Exception as ex:
-        info['hint'] = (
-            f'Ollama недоступна ({ex}). На VDS: установи Ollama, '
-            f'ollama pull {model}, в .env OLLAMA_URL={url}'
-        )
+            info['hint'] = (
+                f'Ollama онлайн, но нет «{model}». На малом VDS лучше MISTRAL_API_KEY, '
+                f'а не скачивание модели.'
+            )
+    except Exception:
+        if not (mist or other):
+            info['hint'] = (
+                'Локальная Ollama не запущена. На малом VDS поставьте MISTRAL_API_KEY — '
+                'без скачивания llama.'
+            )
     return info
