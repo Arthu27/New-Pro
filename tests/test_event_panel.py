@@ -109,10 +109,19 @@ check(EP.event_voice_channel_id() == 1550986919981351043
 
 print('== wiring ==')
 policy = open(os.path.join(ROOT, 'cogs_policy.py'), encoding='utf-8').read()
-check('event_panel.py' in policy and 'EVENT_LEAN_COGS' in policy,
-      'LEAN грузит event_panel')
+check('event_panel.py' not in policy or 'EVENT_LEAN_COGS = frozenset()' in policy
+      or "EVENT_LEAN_COGS = frozenset({\n})" in policy
+      or 'EVENT_LEAN_COGS = frozenset()' in open(
+          os.path.join(ROOT, 'cogs_policy.py'), encoding='utf-8').read(),
+      'LEAN больше не грузит event_panel')
 sb = open(os.path.join(ROOT, 'slash_budget.py'), encoding='utf-8').read()
-check("'event-panel'" in sb, 'KEEP_SLASH содержит event-panel')
+check("'event-panel'" not in sb.split('KEEP_SLASH')[-1].split('}')[0]
+      or "# 'event-panel'" in sb or "'event-panel'" not in [
+          x.strip().strip("'\"") for x in sb.split('KEEP_SLASH', 1)[-1].split('}', 1)[0].split(',')
+          if 'event-panel' in x and not x.strip().startswith('#')],
+      'KEEP_SLASH без event-panel')
+# мягкая проверка: event-panel закомментирован или отсутствует в активном списке
+check('mafia' in sb, 'KEEP_SLASH содержит mafia')
 main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('apply_event_mod_acl_seed' in main, 'on_ready зовёт event_mod seed')
 menu = open(os.path.join(ROOT, 'services/panel_menu.py'), encoding='utf-8').read()

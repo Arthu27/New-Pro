@@ -293,45 +293,36 @@ def _event_sync_guilds(bot: discord.Client) -> list:
 
 
 async def _load_and_sync_event_commands(bot) -> list[str]:
-    """Загрузить EventPanel + Mafia и синкнуть slash."""
+    """Загрузить только Мафию и синкнуть slash (без event-panel)."""
     global _commands_synced, _synced_command_names
     names: list[str] = []
-    try:
-        from cogs.event_panel import EventPanel, EventPanelView
-    except Exception as ex:
-        log.warning('event-bot: не удалось импортировать event_panel: %s', ex)
-        return names
-
-    # Persistent buttons после рестарта
-    try:
-        bot.add_view(EventPanelView({}))
-    except Exception as ex:
-        log.debug('event-bot add_view: %s', ex)
-
     guilds = _event_sync_guilds(bot)
-    try:
-        if bot.get_cog('EventPanel') is None:
-            if guilds:
-                await bot.add_cog(EventPanel(bot), guilds=guilds)
-            else:
-                await bot.add_cog(EventPanel(bot))
-            log.info('event-bot: cog EventPanel загружен (guilds=%s)',
-                     [getattr(g, 'id', g) for g in guilds] or 'global')
-    except Exception as ex:
-        log.warning('event-bot add_cog EventPanel: %s', ex)
-        return names
 
-    # Мафия на Event-боте
+    # Мафия на Event-боте — публичное лобби + /mafia для ведущего
     try:
         if bot.get_cog('mafia') is None:
-            from cogs.mafia import Mafia
+            from cogs.mafia import Mafia, PublicLobbyView, HostPanelView
             if guilds:
                 await bot.add_cog(Mafia(bot), guilds=guilds)
             else:
                 await bot.add_cog(Mafia(bot))
+            try:
+                bot.add_view(PublicLobbyView(0))
+                bot.add_view(HostPanelView())
+            except Exception:
+                pass
             log.info('event-bot: cog mafia загружен')
     except Exception as ex:
         log.warning('event-bot add_cog mafia: %s', ex)
+        return names
+
+    # Снять старый EventPanel, если вдруг остался в памяти
+    try:
+        if bot.get_cog('EventPanel') is not None:
+            await bot.remove_cog('EventPanel')
+            log.info('event-bot: EventPanel снят')
+    except Exception as ex:
+        log.debug('event-bot remove EventPanel: %s', ex)
 
     tree = getattr(bot, 'tree', None)
     if tree is None:
@@ -370,7 +361,7 @@ async def _load_and_sync_event_commands(bot) -> list[str]:
 
 
 def build_event_client():
-    """Bot: voice-stay + slash /event-panel (Event Admin/Mod)."""
+    """Bot: voice-stay + slash /mafia (ведущий). Без event-panel."""
     from discord.ext import commands
 
     intents = discord.Intents.none()
@@ -394,8 +385,8 @@ def build_event_client():
         except Exception as ex:
             log.debug('event-bot presence: %s', ex)
 
-        # Команды — чтобы /event-panel был виден у Event-бота
-        if not _commands_synced or bot.get_cog('EventPanel') is None:
+        # Команды — /mafia у Event-бота (без event-panel)
+        if not _commands_synced or bot.get_cog('mafia') is None:
             try:
                 names = await _load_and_sync_event_commands(bot)
                 if names:

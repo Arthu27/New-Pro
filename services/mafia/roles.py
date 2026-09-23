@@ -80,7 +80,12 @@ def preset_summary(n: int) -> str:
     parts = []
     for key, cnt in counts.items():
         if cnt:
-            parts.append(f'{ROLES[key].emoji} {ROLES[key].name} ×{cnt}')
+            try:
+                from services.mafia.ui_v2 import role_mark
+                mark = role_mark(key)
+            except Exception:
+                mark = ROLES[key].emoji
+            parts.append(f'{mark} {ROLES[key].name} ×{cnt}')
     return ' · '.join(parts)
 
 
