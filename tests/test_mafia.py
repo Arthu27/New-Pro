@@ -268,7 +268,8 @@ check('EventPanel' not in open(
 check('async def start_from_event' not in src, 'нет start_from_event')
 check('event_voice_channel_id' not in src, 'нет фолбэка на Event-войс')
 start_opt = next(o for o in MafiaActionSelect().options if o.value == 'start')
-check('Участвовать' in (start_opt.description or ''), f'start desc: {start_opt.description}')
+check('Участвовать' in (start_opt.description or '') or 'набора' in (start_opt.description or '').lower(),
+      f'start desc: {start_opt.description}')
 
 # lobby empty roster copy
 from cogs.mafia import lobby_embed, lobby_body_md  # noqa: E402

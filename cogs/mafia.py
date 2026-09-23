@@ -47,72 +47,38 @@ def _mention(uid: int) -> str:
     return f'<@{uid}>'
 
 
-def _roster_lines(game: Game, *, limit: int = 20) -> str:
-    """Нумерованный состав или «пусто»."""
+def _roster_lines(game: Game, *, limit: int = 16) -> str:
     players = list(game.players.values())
     if not players:
-        return '_пока никого — нажмите **Участвовать**_'
-    lines = []
-    for i, p in enumerate(players[:limit], 1):
-        lines.append(f'{i}. {_mention(p.user_id)}')
+        return '_пусто_'
+    lines = [f'{i}. {_mention(p.user_id)}' for i, p in enumerate(players[:limit], 1)]
     if len(players) > limit:
-        lines.append(f'… ещё {len(players) - limit}')
+        lines.append(f'… +{len(players) - limit}')
     return '\n'.join(lines)
 
 
 def lobby_embed(game: Game) -> discord.Embed:
+    """Фолбек без V2 — короткий черный эмбед."""
     n = len(game.players)
     need = max(0, 6 - n)
     e = discord.Embed(
-        title=f'Мафия · #{game.game_id}',
+        title='Мафия',
         description=(
             f'**Ведущий** {_mention(game.host_id)}\n'
             f'**Войс** <#{game.voice_channel_id}>\n'
-            f'**Игроков** {n}/6+\n'
-            f'**Фаза** {_phase_label(game.phase)}'
+            f'**Состав** {n}/6+'
+            + (f' · ещё {need}' if need else '')
         ),
         color=BLACK,
     )
-    if n >= 6:
-        e.add_field(name='Пресет', value=preset_summary(n), inline=False)
-        e.add_field(
-            name='Участникам',
-            value='Жмите **Участвовать**. Ведущий раздаст роли сам.',
-            inline=False,
-        )
-    else:
-        e.add_field(
-            name='Набор',
-            value=(
-                f'Минимум **6** · сейчас **{n}**'
-                + (f' · ещё **{need}**' if need else '')
-                + '.\nЗайдите в войс и нажмите **Участвовать**.'
-            ),
-            inline=False,
-        )
-    e.add_field(name='Состав', value=_roster_lines(game)[:1000], inline=False)
-    e.set_footer(text='Hakumo Mafia · V2 · участникам только запись')
+    e.add_field(name='Игроки', value=_roster_lines(game)[:1000], inline=False)
+    e.set_footer(text='Hakumo · Участвовать')
     return e
 
 
 def lobby_body_md(game: Game) -> str:
-    n = len(game.players)
-    need = max(0, 6 - n)
-    if n >= 6:
-        preset = preset_summary(n)
-        hint = 'Набор набран · ждите ведущего'
-    else:
-        preset = f'нужно ещё {need} (мин. 6)'
-        hint = 'Войс → Участвовать'
-    return (
-        f'**Ведущий** {_mention(game.host_id)}\n'
-        f'**Войс** <#{game.voice_channel_id}>\n'
-        f'**Игроков** {n} · **{_phase_label(game.phase)}**\n'
-        f'**Пресет** {preset}\n\n'
-        f'**Состав**\n{_roster_lines(game)}\n\n'
-        f'-# {hint}\n'
-        f'-# Участникам видна только кнопка записи'
-    )
+    from services.mafia.ui_v2 import lobby_status_md
+    return lobby_status_md(game)
 
 
 def host_summary_embed(game: Game) -> discord.Embed:
@@ -124,11 +90,10 @@ def host_summary_embed(game: Game) -> discord.Embed:
     if game.phase == PHASE_ENDED:
         color = GREEN if game.winner == 'town' else RED
     e = discord.Embed(
-        title=f'📋 Сводка ведущего · #{game.game_id}',
+        title=f'Сводка · #{game.game_id}',
         description=(
-            f'Игроков: **{total}**\n'
-            f'Подтвердили: **{conf}/{total}**\n'
-            f'Фаза: **{_phase_label(game.phase)}**'
+            f'**{_phase_label(game.phase)}** · '
+            f'{conf}/{total} подтвердили'
         ),
         color=color,
     )
@@ -142,17 +107,17 @@ def host_summary_embed(game: Game) -> discord.Embed:
             )
         except Exception:
             role = ROLES.get(p.role).label if p.role and p.role in ROLES else '—'
-        mark = '✅' if p.confirmed else '⏳'
-        alive = '' if p.alive else ' · 💀'
-        dm = '' if p.dm_ok else ' · ⚠️ DM закрыт'
-        lines.append(f'{_mention(p.user_id)} — {role} — {mark}{alive}{dm}')
-    e.add_field(name='Распределение', value='\n'.join(lines)[:1020] or '—', inline=False)
+        mark = '✓' if p.confirmed else '…'
+        alive = '' if p.alive else ' · out'
+        dm = '' if p.dm_ok else ' · DM'
+        lines.append(f'{mark} {_mention(p.user_id)} — {role}{alive}{dm}')
+    e.add_field(name='Стол', value='\n'.join(lines)[:1020] or '—', inline=False)
     if game.winner:
-        label = '🏆 Выиграл мирный город' if game.winner == 'town' else '🏆 Выиграла мафия'
+        label = 'Город победил' if game.winner == 'town' else 'Мафия победила'
         e.add_field(name='Финал', value=label, inline=False)
     if game.log:
-        e.add_field(name='Лог', value='\n'.join(game.log[-8:])[:1020], inline=False)
-    e.set_footer(text='Только для ведущего · обновляется автоматически')
+        e.add_field(name='Лог', value='\n'.join(game.log[-6:])[:1020], inline=False)
+    e.set_footer(text='Только ведущему')
     return e
 
 
@@ -164,17 +129,15 @@ def role_dm_embed(game: Game, player) -> discord.Embed:
     except Exception:
         mark = role.emoji
     e = discord.Embed(
-        title=f'Ваша роль: {role.name}',
+        title=role.name,
         description=(
             f'{mark} **{role.name}**\n\n'
             f'{role.description}\n\n'
-            f'Ведущий: {_mention(game.host_id)}\n'
-            f'Игра: **#{game.game_id}**\n\n'
-            'Ознакомьтесь с ролью и подтвердите участие кнопкой ниже.'
+            f'-# #{game.game_id} · ведущий {_mention(game.host_id)}'
         ),
         color=RED if role.team == 'mafia' else BLUE,
     )
-    e.set_footer(text='Никому не показывайте это сообщение · Hakumo')
+    e.set_footer(text='Секретно · подтвердите ниже')
     return e
 
 
@@ -252,128 +215,169 @@ def make_confirm_view(game: Game, user_id: int) -> ConfirmView:
     return ConfirmView(game.game_id, game.deal_token, user_id)
 
 
+# ── Public lobby buttons (persistent) ────────────────────────────────
+
+
+class _JoinBtn(discord.ui.Button):
+    def __init__(self):
+        try:
+            from services.mafia.ui_v2 import sticker
+            em = sticker('join')
+        except Exception:
+            em = '✋'
+        super().__init__(
+            label='Участвовать', style=discord.ButtonStyle.success,
+            emoji=em, custom_id='mafia:public:join')
+
+    async def callback(self, interaction: discord.Interaction):
+        await _public_join(interaction)
+
+
+class _LeaveBtn(discord.ui.Button):
+    def __init__(self):
+        try:
+            from services.mafia.ui_v2 import sticker
+            em = sticker('leave')
+        except Exception:
+            em = '🚪'
+        super().__init__(
+            label='Выйти', style=discord.ButtonStyle.secondary,
+            emoji=em, custom_id='mafia:public:leave')
+
+    async def callback(self, interaction: discord.Interaction):
+        await _public_leave(interaction)
+
+
+async def _public_join(interaction: discord.Interaction):
+    gid = interaction.guild_id
+    game = STORE.get(int(gid)) if gid else None
+    if not game or game.phase != PHASE_LOBBY:
+        await interaction.response.send_message('Набора нет.', ephemeral=True)
+        return
+    if interaction.user.id == game.host_id:
+        await interaction.response.send_message(
+            'Вы ведущий — в состав не входите.', ephemeral=True)
+        return
+    voice = getattr(getattr(interaction.user, 'voice', None), 'channel', None)
+    if voice is None or int(voice.id) != int(game.voice_channel_id):
+        await interaction.response.send_message(
+            f'Сначала <#{game.voice_channel_id}>, потом снова.',
+            ephemeral=True)
+        return
+    cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
+    try:
+        name = getattr(interaction.user, 'display_name', None) or str(interaction.user)
+        game.add_player(interaction.user.id, name)
+        STORE.persist(game)
+    except Exception as e:
+        await interaction.response.send_message(str(e), ephemeral=True)
+        return
+    kw = await cog.lobby_edit_kwargs(game)
+    await interaction.response.edit_message(**kw)
+    try:
+        await interaction.followup.send(
+            f'В составе · **{len(game.players)}**', ephemeral=True)
+    except Exception:
+        pass
+
+
+async def _public_leave(interaction: discord.Interaction):
+    gid = interaction.guild_id
+    game = STORE.get(int(gid)) if gid else None
+    if not game or game.phase != PHASE_LOBBY:
+        await interaction.response.send_message(
+            'Выйти можно только в наборе.', ephemeral=True)
+        return
+    cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
+    try:
+        game.leave_player(interaction.user.id)
+        STORE.persist(game)
+    except Exception as e:
+        await interaction.response.send_message(str(e), ephemeral=True)
+        return
+    kw = await cog.lobby_edit_kwargs(game)
+    await interaction.response.edit_message(**kw)
+    try:
+        await interaction.followup.send('Вышли.', ephemeral=True)
+    except Exception:
+        pass
+
+
+class MafiaLobbyLayout(discord.ui.LayoutView):
+    """Публичная V2-карточка: баннер + состав + Участвовать/Выйти."""
+
+    def __init__(self, game: Game):
+        super().__init__(timeout=None)
+        self.guild_id = int(game.guild_id)
+        self.game_id = game.game_id
+        self._banner_name = 'hakumo_events_banner_v15.png'
+        self._rebuild(game)
+
+    def _rebuild(self, game: Game):
+        self.clear_items()
+        from services.mafia.ui_v2 import (
+            V2_AVAILABLE, SHOW_MENU_BANNER, lobby_status_md, build_mafia_lobby_items,
+        )
+        join = _JoinBtn()
+        leave = _LeaveBtn()
+        row = discord.ui.ActionRow()
+        row.add_item(join)
+        row.add_item(leave)
+        body = lobby_status_md(game)
+        banner = self._banner_name if SHOW_MENU_BANNER else None
+        if V2_AVAILABLE:
+            items = build_mafia_lobby_items(
+                body=body, banner_filename=banner, action_row=row)
+            if items:
+                for it in items:
+                    self.add_item(it)
+                return
+        self.add_item(row)
+
+
 class PublicLobbyView(discord.ui.View):
-    """Публичное лобби: участникам только Участвовать / Выйти (+ стикеры)."""
+    """Фолбек без V2."""
 
     def __init__(self, guild_id: int = 0):
         super().__init__(timeout=None)
         self.guild_id = int(guild_id or 0)
-        try:
-            from services.mafia.ui_v2 import sticker
-            self.join.emoji = sticker('join')
-            self.leave.emoji = sticker('leave')
-        except Exception:
-            pass
-
-    def _game(self, interaction: discord.Interaction) -> Game | None:
-        gid = interaction.guild_id or self.guild_id
-        return STORE.get(int(gid)) if gid else None
-
-    @discord.ui.button(
-        label='Участвовать',
-        style=discord.ButtonStyle.success,
-        emoji='✋',
-        custom_id='mafia:public:join',
-    )
-    async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = self._game(interaction)
-        if not game or game.phase != PHASE_LOBBY:
-            await interaction.response.send_message(
-                'Набора нет или он уже закрыт.', ephemeral=True)
-            return
-        if interaction.user.id == game.host_id:
-            await interaction.response.send_message(
-                'Вы ведущий — в состав не входите.', ephemeral=True)
-            return
-        voice = getattr(getattr(interaction.user, 'voice', None), 'channel', None)
-        if voice is None or int(voice.id) != int(game.voice_channel_id):
-            await interaction.response.send_message(
-                f'Сначала зайдите в <#{game.voice_channel_id}>, затем снова «Участвовать».',
-                ephemeral=True,
-            )
-            return
-        if getattr(interaction.user, 'bot', False):
-            await interaction.response.send_message('Боты не играют.', ephemeral=True)
-            return
-        cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
-        try:
-            name = getattr(interaction.user, 'display_name', None) or str(interaction.user)
-            game.add_player(interaction.user.id, name)
-            STORE.persist(game)
-        except Exception as e:
-            await interaction.response.send_message(str(e), ephemeral=True)
-            return
-        await interaction.response.edit_message(**await cog.lobby_message_kwargs(game))
-        try:
-            await interaction.followup.send(
-                f'Вы в составе · сейчас **{len(game.players)}** игроков.',
-                ephemeral=True,
-            )
-        except Exception:
-            pass
-
-    @discord.ui.button(
-        label='Выйти',
-        style=discord.ButtonStyle.secondary,
-        emoji='🚪',
-        custom_id='mafia:public:leave',
-    )
-    async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = self._game(interaction)
-        if not game or game.phase != PHASE_LOBBY:
-            await interaction.response.send_message(
-                'Выйти можно только во время набора.', ephemeral=True)
-            return
-        cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
-        try:
-            game.leave_player(interaction.user.id)
-            STORE.persist(game)
-        except Exception as e:
-            await interaction.response.send_message(str(e), ephemeral=True)
-            return
-        await interaction.response.edit_message(**await cog.lobby_message_kwargs(game))
-        try:
-            await interaction.followup.send('Вы вышли из состава.', ephemeral=True)
-        except Exception:
-            pass
+        self.add_item(_JoinBtn())
+        self.add_item(_LeaveBtn())
 
 
 class HostToolsView(discord.ui.View):
-    """Эпhemeral-панель ведущего (не на публичном сообщении)."""
+    """Эпhemeral-кнопки ведущего."""
 
     def __init__(self, guild_id: int):
         super().__init__(timeout=900)
         self.guild_id = int(guild_id)
         try:
             from services.mafia.ui_v2 import sticker
-            self.refresh.emoji = sticker('refresh')
-            self.deal.emoji = sticker('deal')
-            self.cancel.emoji = sticker('cancel')
+            e_r, e_d, e_c = sticker('refresh'), sticker('deal'), sticker('cancel')
         except Exception:
-            pass
+            e_r = e_d = e_c = None
+        self.add_item(_HostSyncBtn(self.guild_id, e_r))
+        self.add_item(_HostDealBtn(self.guild_id, e_d))
+        self.add_item(_HostCancelBtn(self.guild_id, e_c))
 
-    async def _host_only(self, interaction: discord.Interaction) -> Game | None:
+
+class _HostSyncBtn(discord.ui.Button):
+    def __init__(self, guild_id: int, emoji=None):
+        super().__init__(
+            label='Синхр. войс', style=discord.ButtonStyle.secondary,
+            emoji=emoji or '🔄')
+        self.guild_id = guild_id
+
+    async def callback(self, interaction: discord.Interaction):
         game = STORE.get(self.guild_id)
-        if not game:
-            await interaction.response.send_message('Активной игры нет.', ephemeral=True)
-            return None
-        if interaction.user.id != game.host_id:
+        if not game or interaction.user.id != game.host_id:
             await interaction.response.send_message('Только ведущий.', ephemeral=True)
-            return None
-        return game
-
-    @discord.ui.button(label='Синхр. войс', style=discord.ButtonStyle.secondary, emoji='🔄')
-    async def refresh(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._host_only(interaction)
-        if not game:
             return
         cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
         host_voice = getattr(getattr(interaction.user, 'voice', None), 'channel', None)
         if host_voice is None or int(host_voice.id) != int(game.voice_channel_id):
             await interaction.response.send_message(
-                f'Зайдите в <#{game.voice_channel_id}>, затем снова.',
-                ephemeral=True,
-            )
+                f'Зайдите в <#{game.voice_channel_id}>.', ephemeral=True)
             return
         try:
             members = await cog.voice_members(
@@ -382,43 +386,97 @@ class HostToolsView(discord.ui.View):
             STORE.persist(game)
             await cog.refresh_lobby_message(game)
         except Exception as e:
-            await interaction.response.send_message(f'Не вышло: {e}', ephemeral=True)
+            await interaction.response.send_message(str(e), ephemeral=True)
             return
         await interaction.response.send_message(
-            f'Состав из войса: **{len(game.players)}**.', ephemeral=True)
+            f'Состав: **{len(game.players)}**', ephemeral=True)
 
-    @discord.ui.button(label='Раздать роли', style=discord.ButtonStyle.primary, emoji='🎭')
-    async def deal(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._host_only(interaction)
-        if not game:
+
+class _HostDealBtn(discord.ui.Button):
+    def __init__(self, guild_id: int, emoji=None):
+        super().__init__(
+            label='Раздать роли', style=discord.ButtonStyle.primary,
+            emoji=emoji or '🎭')
+        self.guild_id = guild_id
+
+    async def callback(self, interaction: discord.Interaction):
+        game = STORE.get(self.guild_id)
+        if not game or interaction.user.id != game.host_id:
+            await interaction.response.send_message('Только ведущий.', ephemeral=True)
             return
         cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
         await interaction.response.defer(ephemeral=True)
         try:
             await cog.deal_roles(interaction, game)
         except Exception as e:
-            await interaction.followup.send(f'Не вышло раздать: {e}', ephemeral=True)
+            await interaction.followup.send(str(e), ephemeral=True)
 
-    @discord.ui.button(label='Отменить', style=discord.ButtonStyle.danger, emoji='🗑️')
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._host_only(interaction)
-        if not game:
+
+class _HostCancelBtn(discord.ui.Button):
+    def __init__(self, guild_id: int, emoji=None):
+        super().__init__(
+            label='Отменить', style=discord.ButtonStyle.danger,
+            emoji=emoji or '🗑️')
+        self.guild_id = guild_id
+
+    async def callback(self, interaction: discord.Interaction):
+        game = STORE.get(self.guild_id)
+        if not game or interaction.user.id != game.host_id:
+            await interaction.response.send_message('Только ведущий.', ephemeral=True)
             return
         cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
         game.cancel()
         STORE.clear(game.guild_id, archive=True)
         try:
-            await cog.refresh_lobby_message(
-                game,
-                closed=True,
-            )
+            await cog.refresh_lobby_message(game, closed=True)
         except Exception:
             pass
         await interaction.response.send_message(
-            'Игра отменена. Новый стол — `/mafia` → Начать игру.', ephemeral=True)
+            'Отменено. `/mafia` → Начать игру.', ephemeral=True)
 
 
-# совместимость со старыми тестами / импортами
+class MafiaHostMenuLayout(discord.ui.LayoutView):
+    """Эпhemeral V2-меню `/mafia` — как модпанель."""
+
+    def __init__(self, cog: 'Mafia', guild_id: int, user_id: int, game: Game | None):
+        super().__init__(timeout=180)
+        self.cog = cog
+        self.guild_id = int(guild_id)
+        self.user_id = int(user_id)
+        self._banner_name = 'hakumo_events_banner_v15.png'
+        self._banner_file = None
+        self._rebuild(game)
+
+    def _rebuild(self, game: Game | None):
+        self.clear_items()
+        from services.mafia.ui_v2 import (
+            V2_AVAILABLE, SHOW_MENU_BANNER, menu_status_md, build_mafia_menu_items,
+            mafia_banner_file,
+        )
+        select = MafiaActionSelect()
+        # bind owner
+        row = discord.ui.ActionRow()
+        row.add_item(select)
+        body = menu_status_md(game, self.user_id)
+        banner = self._banner_name if SHOW_MENU_BANNER else None
+        if V2_AVAILABLE:
+            items = build_mafia_menu_items(
+                body=body, select_row=row, banner_filename=banner)
+            if items:
+                for it in items:
+                    self.add_item(it)
+                return
+        self.add_item(row)
+
+    def make_banner(self):
+        from services.mafia.ui_v2 import mafia_banner_file
+        self._banner_file, name = mafia_banner_file()
+        if name:
+            self._banner_name = name
+        return self._banner_file
+
+
+# совместимость
 LobbyView = PublicLobbyView
 
 
@@ -694,8 +752,8 @@ class Mafia(commands.Cog, name='mafia'):
 
     async def cog_load(self):
         n = STORE.restore_all()
-        # persistent: панель ведущего + публичные Участвовать/Выйти
         self.bot.add_view(HostPanelView())
+        # persistent join/leave (custom_id) — через legacy View-регистрацию
         self.bot.add_view(PublicLobbyView(0))
         for game in list(STORE._by_guild.values()):
             if game.deal_token:
@@ -708,10 +766,42 @@ class Mafia(commands.Cog, name='mafia'):
             pass
         log.info('Mafia: восстановлено активных игр: %s', n)
 
-    async def lobby_message_kwargs(self, game: Game) -> dict:
-        """Публичное лобби: только Участвовать/Выйти."""
-        view = PublicLobbyView(game.guild_id)
-        return {'embed': lobby_embed(game), 'view': view}
+    def _make_lobby_view(self, game: Game):
+        try:
+            from services.v2_layouts import V2_AVAILABLE
+            if V2_AVAILABLE:
+                return MafiaLobbyLayout(game)
+        except Exception:
+            pass
+        return PublicLobbyView(game.guild_id)
+
+    async def lobby_message_kwargs(self, game: Game, *, with_banner: bool = True) -> dict:
+        """Публичное лобби V2 (баннер + Участвовать)."""
+        view = self._make_lobby_view(game)
+        try:
+            from services.v2_layouts import V2_AVAILABLE
+            if V2_AVAILABLE and isinstance(view, discord.ui.LayoutView):
+                kw = {'view': view, 'embed': None, 'content': None}
+                if with_banner:
+                    from services.mafia.ui_v2 import mafia_banner_file
+                    file, _ = mafia_banner_file()
+                    if file is not None:
+                        kw['file'] = file
+                return kw
+        except Exception as ex:
+            log.debug('lobby v2 kw: %s', ex)
+        return {'embed': lobby_embed(game), 'view': PublicLobbyView(game.guild_id)}
+
+    async def lobby_edit_kwargs(self, game: Game) -> dict:
+        """Edit публичной карточки — только view= (как модпанель)."""
+        view = self._make_lobby_view(game)
+        try:
+            from services.v2_layouts import V2_AVAILABLE
+            if V2_AVAILABLE and isinstance(view, discord.ui.LayoutView):
+                return {'view': view}
+        except Exception:
+            pass
+        return {'embed': lobby_embed(game), 'view': PublicLobbyView(game.guild_id)}
 
     async def refresh_lobby_message(self, game: Game, *, closed: bool = False):
         if not game.lobby_message_id:
@@ -723,15 +813,16 @@ class Mafia(commands.Cog, name='mafia'):
             msg = await ch.fetch_message(int(game.lobby_message_id))
             if closed:
                 await msg.edit(
+                    content=None,
                     embed=discord.Embed(
-                        title='Игра отменена',
-                        description='Лобби закрыто. Новый стол — `/mafia` → Начать игру.',
+                        title='Мафия',
+                        description='Лобби закрыто.\n-# `/mafia` → Начать игру',
                         color=DARK,
                     ),
                     view=None,
                 )
             else:
-                await msg.edit(**await self.lobby_message_kwargs(game))
+                await msg.edit(**await self.lobby_edit_kwargs(game))
         except Exception as e:
             log.debug('refresh_lobby_message: %s', e)
 
@@ -919,15 +1010,36 @@ class Mafia(commands.Cog, name='mafia'):
 
     # ── slash: одна /mafia → выпадающее меню ─────────────────
 
-    @app_commands.command(name='mafia', description='Мафия — меню ведущего (старт, статус, роли…)')
+    @app_commands.command(name='mafia', description='Мафия — меню ведущего')
     async def mafia(self, interaction: discord.Interaction):
         if not interaction.guild:
             await interaction.response.send_message('Только на сервере.', ephemeral=True)
             return
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(self.bot)
+        except Exception:
+            pass
         game = STORE.get(interaction.guild.id)
+        try:
+            from services.v2_layouts import V2_AVAILABLE
+            if V2_AVAILABLE:
+                view = MafiaHostMenuLayout(
+                    self, interaction.guild.id, interaction.user.id, game)
+                banner = view.make_banner()
+                edit_kw = {'view': view, 'content': None, 'embed': None, 'embeds': []}
+                if banner is not None:
+                    edit_kw['attachments'] = [banner]
+                else:
+                    edit_kw['attachments'] = []
+                await interaction.edit_original_response(**edit_kw)
+                return
+        except Exception as ex:
+            log.debug('mafia menu v2: %s', ex)
         embed = menu_embed(game, interaction.user.id)
         view = MafiaMenuView(self, interaction.guild.id, interaction.user.id)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.edit_original_response(embed=embed, view=view)
 
     async def action_start(self, interaction: discord.Interaction) -> None:
         if not interaction.guild or not isinstance(interaction.user, discord.Member):
@@ -944,8 +1056,7 @@ class Mafia(commands.Cog, name='mafia'):
         voice = getattr(getattr(interaction.user, 'voice', None), 'channel', None)
         if voice is None or not isinstance(voice, discord.VoiceChannel):
             await interaction.response.send_message(
-                'Зайдите в голосовой канал, затем снова `/mafia` → «Начать игру».\n'
-                'Игроки сами жмут **Участвовать** на публичной карточке.',
+                'Зайдите в голосовой канал, затем снова «Начать игру».',
                 ephemeral=True,
             )
             return
@@ -954,15 +1065,9 @@ class Mafia(commands.Cog, name='mafia'):
             interaction, voice_id=voice.id, members=[])
         try:
             await interaction.followup.send(
-                embed=discord.Embed(
-                    title=f'Ведущий · #{game.game_id}',
-                    description=(
-                        f'Публичная карточка в канале — участникам только **Участвовать**.\n'
-                        f'Войс: <#{voice.id}>\n\n'
-                        f'Когда наберётся ≥6 — **Раздать роли**.\n'
-                        f'«Синхр. войс» подтянет тех, кто в войсе (без ботов).'
-                    ),
-                    color=BLACK,
+                content=(
+                    f'**#{game.game_id}** · <#{voice.id}>\n'
+                    f'-# Игроки жмут Участвовать · вам — кнопки ниже'
                 ),
                 view=HostToolsView(interaction.guild.id),
                 ephemeral=True,
@@ -1111,25 +1216,14 @@ class Mafia(commands.Cog, name='mafia'):
 
 
 def menu_embed(game: Game | None, user_id: int) -> discord.Embed:
-    if game is None:
-        desc = (
-            'Активной партии нет.\n\n'
-            '**Начать игру** — вы в войсе → публичная карточка для игроков.\n'
-            'Участники жмут **Участвовать**. Вы (ведущий) раздаёте роли через меню / эту панель.\n'
-            'Минимум **6** для раздачи.'
-        )
-        color = BLACK
-    else:
-        host_mark = ' · вы ведущий' if user_id == game.host_id else ''
-        desc = (
-            f'Игра **#{game.game_id}** · {_phase_label(game.phase)}{host_mark}\n'
-            f'Игроков: **{len(game.players)}** · '
-            f'подтвердили: **{game.confirmed_count()}/{len(game.players)}**\n'
-            f'Войс: <#{game.voice_channel_id}>'
-        )
-        color = GOLD if game.phase != PHASE_PLAYING else RED
-    e = discord.Embed(title='Мафия', description=desc, color=color)
-    e.set_footer(text='Hakumo Mafia · V2 · меню ведущего')
+    """Фолбек эмбед меню."""
+    from services.mafia.ui_v2 import menu_status_md
+    e = discord.Embed(
+        title='Мафия',
+        description=menu_status_md(game, user_id),
+        color=BLACK if game is None else GOLD,
+    )
+    e.set_footer(text='Hakumo · ведущий')
     return e
 
 
@@ -1162,31 +1256,31 @@ class MafiaActionSelect(discord.ui.Select):
         options = [
             discord.SelectOption(
                 label='Начать игру', value='start', emoji=e_start or '▶',
-                description='Публичная карточка · игроки жмут Участвовать'),
+                description='Карточка набора в канал'),
             discord.SelectOption(
                 label='Раздать роли', value='deal', emoji=e_deal or '🎭',
-                description='ЛС с ролями (мин. 6 в составе)'),
+                description='ЛС · минимум 6'),
             discord.SelectOption(
                 label='Синхр. из войса', value='sync', emoji=e_sync or '🔄',
-                description='Подтянуть состав из войса (без ботов)'),
+                description='Состав = кто в войсе'),
             discord.SelectOption(
                 label='Статус', value='status', emoji=e_status or '📊',
-                description='Фаза и прогресс текущей игры'),
+                description='Фаза и состав'),
             discord.SelectOption(
                 label='Сводка ведущему', value='panel', emoji=e_panel or '📋',
-                description='Прислать панель ролей в ЛС ещё раз'),
+                description='Панель ролей в ЛС'),
             discord.SelectOption(
                 label='Переслать роль', value='resend', emoji=e_resend or '📨',
-                description='Повторно отправить роль игроку'),
+                description='Повтор ЛС с ролью'),
             discord.SelectOption(
                 label='Добавить игрока', value='add', emoji=e_add or '➕',
-                description='Добавить участника вручную'),
+                description='Вручную в состав'),
             discord.SelectOption(
                 label='Отменить игру', value='cancel', emoji=e_cancel or '🗑️',
-                description='Сбросить текущую партию'),
+                description='Сбросить партию'),
             discord.SelectOption(
                 label='Пресеты ролей', value='presets', emoji=e_presets or '💋',
-                description='Состав по числу (мафия, путана, …)'),
+                description='Мафия · путана · …'),
         ]
         super().__init__(
             placeholder='Выберите действие…',
@@ -1197,12 +1291,16 @@ class MafiaActionSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        view: MafiaMenuView = self.view  # type: ignore
-        if interaction.user.id != view.user_id:
+        view = self.view
+        owner = getattr(view, 'user_id', None)
+        cog = getattr(view, 'cog', None)
+        if owner is not None and interaction.user.id != owner:
             await interaction.response.send_message('Это чужое меню.', ephemeral=True)
             return
+        if cog is None:
+            await interaction.response.send_message('Меню недоступно.', ephemeral=True)
+            return
         action = self.values[0]
-        cog = view.cog
         if action == 'start':
             await cog.action_start(interaction)
         elif action == 'deal':
@@ -1221,10 +1319,10 @@ class MafiaActionSelect(discord.ui.Select):
             game = STORE.get(view.guild_id)
             if not game or interaction.user.id != game.host_id:
                 await interaction.response.send_message(
-                    'Только ведущий активной игры.', ephemeral=True)
+                    'Только ведущий.', ephemeral=True)
                 return
             if not game.players:
-                await interaction.response.send_message('В составе никого нет.', ephemeral=True)
+                await interaction.response.send_message('Состав пуст.', ephemeral=True)
                 return
             await interaction.response.send_message(
                 'Кому переслать роль?',
@@ -1234,10 +1332,11 @@ class MafiaActionSelect(discord.ui.Select):
         elif action == 'add':
             game = STORE.get(view.guild_id)
             if not game or interaction.user.id != game.host_id:
-                await interaction.response.send_message('Только ведущий.', ephemeral=True)
+                await interaction.response.send_message(
+                    'Только ведущий.', ephemeral=True)
                 return
             await interaction.response.send_message(
-                'Кого добавить в состав?',
+                'Кого добавить?',
                 view=MafiaUserPickView(cog, view.guild_id, mode='add'),
                 ephemeral=True,
             )
