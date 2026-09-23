@@ -141,6 +141,10 @@ class Game:
         self.players = new
         self.add_event(f'Состав обновлён из войса · **{len(self.players)}**')
 
+    def set_players_from_ids(self, members: List[tuple]) -> None:
+        """Состав из списка (event signups): [(uid, name), ...]."""
+        self.set_players_from_voice(members)
+
     def deal(self, rng: random.Random | None = None) -> Dict[str, int]:
         if len(self.players) < 6:
             raise RuntimeError('Нужно минимум 6 игроков')
