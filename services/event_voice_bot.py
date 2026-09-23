@@ -29,10 +29,20 @@ log = get_logger('event_voice_bot')
 DEFAULT_EVENT_VOICE_CHANNEL_ID = 1550986919981351043
 _CFG_REL = 'config/event_voice_stay.json'
 
-# Opus для voice protocol (если есть в системе) — без play тоже полезно.
+# Opus для voice protocol — пробуем несколько имён .so
 try:
     if not discord.opus.is_loaded():
-        discord.opus.load_opus('libopus.so.0')
+        for _name in (
+            'libopus.so.0', 'libopus.so', 'opus',
+            '/usr/lib/x86_64-linux-gnu/libopus.so.0',
+            '/usr/lib/libopus.so.0',
+        ):
+            try:
+                discord.opus.load_opus(_name)
+                if discord.opus.is_loaded():
+                    break
+            except Exception:
+                continue
 except Exception:
     pass
 
