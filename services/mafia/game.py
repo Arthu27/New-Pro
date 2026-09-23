@@ -142,7 +142,7 @@ class Game:
         self.add_event(f'Состав обновлён из войса · **{len(self.players)}**')
 
     def set_players_from_ids(self, members: List[tuple]) -> None:
-        """Состав из списка (event signups): [(uid, name), ...]."""
+        """Состав из списка [(uid, name), ...] — только для тестов/ручного add."""
         self.set_players_from_voice(members)
 
     def deal(self, rng: random.Random | None = None) -> Dict[str, int]:

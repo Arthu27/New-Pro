@@ -83,7 +83,7 @@ def build_mafia_lobby_items(*, title: str, body: str, banner_filename: str = Non
     items = [black_container(*head, accent=accent)]
     if action_row is not None:
         items.append(black_container(
-            _ui.TextDisplay('**Ведущий**\n-# состав · раздача · отмена'),
+            _ui.TextDisplay('**Ведущий**\n-# обновить из войса · раздать · отмена'),
             action_row,
             accent=accent,
         ))

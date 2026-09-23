@@ -244,6 +244,24 @@ opts = {o.value for o in MafiaActionSelect().options}
 check(opts == {'start', 'status', 'panel', 'resend', 'add', 'cancel', 'presets'},
       f'меню действий: {sorted(opts)}')
 
+# старт только из войса ведущего — без Event-панели / signups
+src = open(os.path.join(_REPO, 'cogs/mafia.py'), encoding='utf-8').read()
+check('async def start_from_event' not in src, 'нет start_from_event')
+check('members_from_signups' not in src, 'нет members_from_signups')
+check('event_voice_channel_id' not in src, 'нет фолбэка на Event-войс')
+check('без Event-панели' in src or 'только' in src.lower(), 'меню/старт про чистый войс')
+start_opt = next(o for o in MafiaActionSelect().options if o.value == 'start')
+check('Event' not in (start_opt.description or ''), f'start desc без Event: {start_opt.description}')
+
+# lobby empty roster copy
+from cogs.mafia import lobby_embed, lobby_body_md  # noqa: E402
+empty = Game.create(1, 10, 99, 88, [])
+emb = lobby_embed(empty)
+check('0/6' in (emb.description or '') or 'сейчас **0**' in emb.fields[0].value,
+      'лобби показывает 0 игроков')
+check('никого' in lobby_body_md(empty).lower() or 'никого' in emb.fields[-1].value.lower(),
+      'пустой состав явно')
+
 
 print('\n== 12. LEAN + KEEP_SLASH ==')
 from cogs_policy import LEAN_COGS  # noqa: E402

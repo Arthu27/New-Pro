@@ -47,46 +47,71 @@ def _mention(uid: int) -> str:
     return f'<@{uid}>'
 
 
+def _roster_lines(game: Game, *, limit: int = 20) -> str:
+    """Нумерованный состав или «пусто»."""
+    players = list(game.players.values())
+    if not players:
+        return '_никого в войсе — зайдите и жмите «Обновить состав»_'
+    lines = []
+    for i, p in enumerate(players[:limit], 1):
+        lines.append(f'{i}. {_mention(p.user_id)}')
+    if len(players) > limit:
+        lines.append(f'… ещё {len(players) - limit}')
+    return '\n'.join(lines)
+
+
 def lobby_embed(game: Game) -> discord.Embed:
     n = len(game.players)
+    need = max(0, 6 - n)
     e = discord.Embed(
-        title=f'Мафия · игра #{game.game_id}',
+        title=f'Мафия · #{game.game_id}',
         description=(
-            f'Ведущий: {_mention(game.host_id)}\n'
-            f'Голос: <#{game.voice_channel_id}>\n'
-            f'Игроков: **{n}** (ведущий не в раздаче)\n'
-            f'Фаза: **{_phase_label(game.phase)}**\n\n'
-            '① Обновить состав из войса\n'
-            '② Раздать роли (ЛС)\n'
-            '③ Игроки подтверждают → **Начать игру** на сводке ведущего'
+            f'**Ведущий** {_mention(game.host_id)}\n'
+            f'**Войс** <#{game.voice_channel_id}>\n'
+            f'**Игроков** {n}/6+ · ведущий не в раздаче\n'
+            f'**Фаза** {_phase_label(game.phase)}'
         ),
         color=BLACK,
     )
     if n >= 6:
-        e.add_field(name='Пресет ролей', value=preset_summary(n), inline=False)
-    else:
+        e.add_field(name='Пресет', value=preset_summary(n), inline=False)
         e.add_field(
-            name='Нужно ещё игроков',
-            value=f'Минимум **6** · сейчас {n}. Зайдите в войс и жмите «Обновить состав».',
+            name='Дальше',
+            value='① Обновить состав · ② Раздать роли · ③ подтверждения в ЛС → Начать',
             inline=False,
         )
-    names = ', '.join(_mention(p.user_id) for p in game.players.values()) or '—'
-    e.add_field(name='Состав', value=names[:1000], inline=False)
-    e.set_footer(text='Hakumo Mafia · V2')
+    else:
+        e.add_field(
+            name='Ждём игроков',
+            value=(
+                f'Минимум **6** · сейчас **{n}**'
+                + (f' · ещё **{need}**' if need else '')
+                + '.\nСостав = только люди **сейчас** в войсе выше (без ботов и ведущего).'
+            ),
+            inline=False,
+        )
+    e.add_field(name='Состав', value=_roster_lines(game)[:1000], inline=False)
+    e.set_footer(text='Hakumo Mafia · V2 · состав только из войса')
     return e
 
 
 def lobby_body_md(game: Game) -> str:
     n = len(game.players)
-    preset = preset_summary(n) if n >= 6 else f'нужно ещё {max(0, 6 - n)} (мин. 6)'
-    names = ', '.join(_mention(p.user_id) for p in game.players.values()) or '—'
+    need = max(0, 6 - n)
+    if n >= 6:
+        preset = preset_summary(n)
+        next_step = '① Обновить · ② Раздать роли · ③ подтверждения → Начать'
+    else:
+        preset = f'нужно ещё {need} (мин. 6)'
+        next_step = 'Зайдите в войс → «Обновить состав»'
     return (
-        f'**Ведущий:** {_mention(game.host_id)}\n'
-        f'**Войс:** <#{game.voice_channel_id}>\n'
-        f'**Игроков:** {n} · фаза **{_phase_label(game.phase)}**\n'
-        f'**Пресет:** {preset}\n\n'
-        f'**Состав:** {names}\n\n'
-        '-# ① Обновить → ② Раздать роли → ③ подтверждения в ЛС → Начать'
+        f'**Ведущий** {_mention(game.host_id)}\n'
+        f'**Войс** <#{game.voice_channel_id}>\n'
+        f'**Игроков** {n} · **{_phase_label(game.phase)}**\n'
+        f'**Пресет** {preset}\n\n'
+        f'**Состав**\n{_roster_lines(game)}\n\n'
+        f'-# {next_step}\n'
+        f'-# Только кто в войсе сейчас · без ботов и ведущего'
     )
 
 
@@ -240,8 +265,18 @@ class LobbyView(discord.ui.View):
         if not game:
             return
         cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
+        # Ведущий должен быть в том же войсе, что привязан к лобби
+        host_voice = getattr(getattr(interaction.user, 'voice', None), 'channel', None)
+        if host_voice is None or int(host_voice.id) != int(game.voice_channel_id):
+            await interaction.response.send_message(
+                f'Зайдите в <#{game.voice_channel_id}> вместе с игроками, '
+                f'затем снова «Обновить состав».',
+                ephemeral=True,
+            )
+            return
         try:
-            members = await cog.voice_members(interaction.guild, game.voice_channel_id, game.host_id)
+            members = await cog.voice_members(
+                interaction.guild, game.voice_channel_id, game.host_id)
             game.set_players_from_voice(members)
             STORE.persist(game)
         except Exception as e:
@@ -249,6 +284,17 @@ class LobbyView(discord.ui.View):
             return
         await interaction.response.edit_message(
             **await cog.lobby_message_kwargs(game))
+        n = len(game.players)
+        hint = (
+            f'Состав: **{n}** из <#{game.voice_channel_id}>.'
+            if n else
+            f'В <#{game.voice_channel_id}> никого (кроме вас). '
+            f'Игроки заходят → снова «Обновить состав».'
+        )
+        try:
+            await interaction.followup.send(hint, ephemeral=True)
+        except Exception:
+            pass
 
     @discord.ui.button(label='Раздать роли', style=discord.ButtonStyle.primary, emoji='🎭')
     async def deal(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -586,32 +632,52 @@ class Mafia(commands.Cog, name='mafia'):
         return kw
 
     async def voice_members(self, guild: discord.Guild, voice_id: int, host_id: int):
-        ch = guild.get_channel(int(voice_id))
+        """Только живые люди сейчас в этом войсе (без ботов и ведущего)."""
+        voice_id = int(voice_id)
+        host_id = int(host_id)
+        ch = guild.get_channel(voice_id)
+        if ch is None:
+            try:
+                ch = await guild.fetch_channel(voice_id)
+            except Exception:
+                ch = None
         if ch is None or not isinstance(ch, discord.VoiceChannel):
             raise RuntimeError('Голосовой канал не найден')
-        out = []
-        for m in ch.members:
-            if m.bot:
-                continue
-            if m.id == host_id:
-                continue
-            out.append((m.id, m.display_name))
-        return out
 
-    async def members_from_signups(self, guild: discord.Guild, signups: list,
-                                   host_id: int) -> list:
-        """Состав из event-panel signups (без ведущего)."""
         out = []
-        for raw in signups or []:
-            try:
-                uid = int(raw)
-            except (TypeError, ValueError):
-                continue
-            if uid == int(host_id):
-                continue
-            member = guild.get_member(uid) if guild else None
-            name = member.display_name if member else str(uid)
-            out.append((uid, name))
+        seen = set()
+
+        def _add(member: discord.Member) -> None:
+            if member is None or member.bot:
+                return
+            if int(member.id) == host_id:
+                return
+            vs = member.voice
+            if vs is None or vs.channel is None or int(vs.channel.id) != voice_id:
+                return
+            if member.id in seen:
+                return
+            seen.add(member.id)
+            out.append((member.id, member.display_name))
+
+        # 1) кэш канала
+        for m in list(ch.members):
+            _add(m)
+        # 2) voice_states гильдии — надёжнее, если кэш members устарел
+        try:
+            for uid, vs in (guild.voice_states or {}).items():
+                if vs is None or vs.channel is None:
+                    continue
+                if int(vs.channel.id) != voice_id:
+                    continue
+                if int(uid) in seen or int(uid) == host_id:
+                    continue
+                member = guild.get_member(int(uid))
+                if member is None:
+                    continue
+                _add(member)
+        except Exception:
+            pass
         return out
 
     async def deal_roles(self, interaction: discord.Interaction, game: Game):
@@ -767,69 +833,32 @@ class Mafia(commands.Cog, name='mafia'):
         if existing and existing.phase != PHASE_ENDED:
             await interaction.response.send_message(
                 f'Уже есть игра **#{existing.game_id}** ({_phase_label(existing.phase)}). '
-                'Сначала выберите «Отменить игру» в меню `/mafia`.',
+                'Сначала «Отменить игру» в меню `/mafia`.',
                 ephemeral=True,
             )
             return
-        voice = interaction.user.voice.channel if interaction.user.voice else None
-        if voice is None:
-            # fallback: Event-войс
+        voice = getattr(getattr(interaction.user, 'voice', None), 'channel', None)
+        if voice is None or not isinstance(voice, discord.VoiceChannel):
+            await interaction.response.send_message(
+                'Зайдите в голосовой канал с игроками, затем снова `/mafia` → «Начать игру».\n'
+                'Состав берётся **только** из вашего текущего войса (без Event-панели).',
+                ephemeral=True,
+            )
+            return
+        members = await self.voice_members(
+            interaction.guild, voice.id, interaction.user.id)
+        game = await self._publish_lobby(
+            interaction, voice_id=voice.id, members=members)
+        n = len(game.players)
+        if n == 0:
             try:
-                from cogs.event_panel import event_voice_channel_id
-                vid = event_voice_channel_id()
-                ch = interaction.guild.get_channel(vid)
-                if isinstance(ch, discord.VoiceChannel):
-                    voice = ch
+                await interaction.followup.send(
+                    f'Лобби **#{game.game_id}** в <#{voice.id}>. '
+                    f'Пока никого в войсе — пусть зайдут и жмите «Обновить состав».',
+                    ephemeral=True,
+                )
             except Exception:
                 pass
-        if voice is None:
-            await interaction.response.send_message(
-                'Зайдите в голосовой канал с игроками, затем снова `/mafia` → «Начать игру».',
-                ephemeral=True,
-            )
-            return
-        members = await self.voice_members(interaction.guild, voice.id, interaction.user.id)
-        await self._publish_lobby(
-            interaction, voice_id=voice.id, members=members)
-
-    async def start_from_event(
-        self,
-        guild: discord.Guild,
-        *,
-        host: discord.abc.User,
-        channel: discord.abc.Messageable,
-        voice_channel_id: int,
-        signups: list,
-    ) -> Game:
-        """Создать лобби мафии из Event-панели (signups + войс Events)."""
-        existing = STORE.get(guild.id)
-        if existing and existing.phase != PHASE_ENDED:
-            raise RuntimeError(
-                f'Уже есть мафия #{existing.game_id} ({_phase_label(existing.phase)})')
-        members = await self.members_from_signups(guild, signups, host.id)
-        # дополнить теми, кто уже в войсе
-        try:
-            voice_m = await self.voice_members(guild, voice_channel_id, host.id)
-            have = {uid for uid, _ in members}
-            for uid, name in voice_m:
-                if uid not in have:
-                    members.append((uid, name))
-        except Exception:
-            pass
-        game = Game.create(
-            guild_id=guild.id,
-            host_id=host.id,
-            voice_channel_id=int(voice_channel_id),
-            text_channel_id=int(getattr(channel, 'id', 0) or 0),
-            members=members,
-        )
-        STORE.set(game)
-        kw = await self.lobby_message_kwargs(game)
-        msg = await channel.send(**kw)
-        game.lobby_message_id = msg.id
-        game.text_channel_id = int(getattr(channel, 'id', 0) or game.text_channel_id)
-        STORE.persist(game)
-        return game
 
     async def _publish_lobby(self, interaction: discord.Interaction, *,
                              voice_id: int, members: list) -> Game:
@@ -937,8 +966,9 @@ def menu_embed(game: Game | None, user_id: int) -> discord.Embed:
     if game is None:
         desc = (
             'Активной партии нет.\n\n'
-            '**Начать игру** — вы в войсе с игроками (или в Event-войсе).\n'
-            'Либо с Event-панели: Анонс «Мафия» → набор → **Старт**.'
+            '**Начать игру** — зайдите в войс с игроками, затем выберите действие.\n'
+            'Состав = кто **сейчас** в вашем войсе (без ботов и ведущего).\n'
+            'Минимум **6** для раздачи ролей.'
         )
         color = BLACK
     else:
@@ -982,7 +1012,7 @@ class MafiaActionSelect(discord.ui.Select):
         options = [
             discord.SelectOption(
                 label='Начать игру', value='start', emoji=e_start or '▶',
-                description='Лобби из войса / Event-войса'),
+                description='Лобби из вашего текущего войса'),
             discord.SelectOption(
                 label='Статус', value='status', emoji=e_status or '📊',
                 description='Фаза и прогресс текущей игры'),
