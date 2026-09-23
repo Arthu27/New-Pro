@@ -293,7 +293,7 @@ def _event_sync_guilds(bot: discord.Client) -> list:
 
 
 async def _load_and_sync_event_commands(bot) -> list[str]:
-    """Загрузить EventPanel + синкнуть /event-panel (чтобы команды были видны)."""
+    """Загрузить EventPanel + Mafia и синкнуть slash."""
     global _commands_synced, _synced_command_names
     names: list[str] = []
     try:
@@ -304,15 +304,13 @@ async def _load_and_sync_event_commands(bot) -> list[str]:
 
     # Persistent buttons после рестарта
     try:
-        bot.add_view(EventPanelView())
+        bot.add_view(EventPanelView({}))
     except Exception as ex:
         log.debug('event-bot add_view: %s', ex)
 
     guilds = _event_sync_guilds(bot)
     try:
         if bot.get_cog('EventPanel') is None:
-            # guilds=[] в discord.py = никуда не вешать → команды не видны.
-            # Пустой Config → вешаем на серверы бота; если и их нет — global.
             if guilds:
                 await bot.add_cog(EventPanel(bot), guilds=guilds)
             else:
@@ -322,6 +320,18 @@ async def _load_and_sync_event_commands(bot) -> list[str]:
     except Exception as ex:
         log.warning('event-bot add_cog EventPanel: %s', ex)
         return names
+
+    # Мафия на Event-боте
+    try:
+        if bot.get_cog('mafia') is None:
+            from cogs.mafia import Mafia
+            if guilds:
+                await bot.add_cog(Mafia(bot), guilds=guilds)
+            else:
+                await bot.add_cog(Mafia(bot))
+            log.info('event-bot: cog mafia загружен')
+    except Exception as ex:
+        log.warning('event-bot add_cog mafia: %s', ex)
 
     tree = getattr(bot, 'tree', None)
     if tree is None:
