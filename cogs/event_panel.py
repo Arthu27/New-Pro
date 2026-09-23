@@ -736,60 +736,9 @@ async def _handle_start(interaction: discord.Interaction, view):
             except Exception as ex:
                 log.warning('start announce: %s', ex)
 
-        # Мафия: если в названии «мафия»/mafia — сразу лобби из списка
-        try:
-            await _maybe_launch_mafia(
-                interaction, guild, channel, cfg, voice_id, signups)
-        except Exception as ex:
-            log.warning('mafia after event start: %s', ex)
-
     await interaction.followup.send(
         f'▶ Игра запущена. Зовём в <#{voice_id}> ({len(signups)} в списке).',
         ephemeral=True)
-
-
-def _title_wants_mafia(title: str) -> bool:
-    t = (title or '').lower()
-    return 'маф' in t or 'mafia' in t
-
-
-async def _maybe_launch_mafia(interaction, guild, channel, cfg, voice_id, signups):
-    """Если анонс — Мафия: открыть лобби из списка записавшихся."""
-    if not _title_wants_mafia(cfg.get('title') or ''):
-        return
-    bot = interaction.client
-    cog = bot.get_cog('mafia')
-    if cog is None:
-        # попробовать подгрузить
-        try:
-            from cogs.mafia import setup as mafia_setup
-            await mafia_setup(bot)
-            cog = bot.get_cog('mafia')
-        except Exception as ex:
-            log.warning('mafia load for event: %s', ex)
-            return
-    if cog is None:
-        return
-    try:
-        game = await cog.start_from_event(
-            guild,
-            host=interaction.user,
-            channel=channel,
-            voice_channel_id=voice_id,
-            signups=signups,
-        )
-        await channel.send(
-            f'🎲 Лобби мафии **#{game.game_id}** из списка ивента · '
-            f'игроков **{len(game.players)}** (нужно ≥6 для раздачи). '
-            f'Ведущий: {interaction.user.mention}',
-            delete_after=90,
-        )
-    except Exception as ex:
-        await channel.send(
-            f'⚠ Мафию из ивента не открыл: {ex}\n'
-            f'Можно вручную: `/mafia` → Начать игру.',
-            delete_after=60,
-        )
 
 
 async def _handle_toggle_reg(interaction: discord.Interaction, view):

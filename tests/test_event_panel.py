@@ -131,6 +131,9 @@ check('evKpis' in ev_html and 'ev-discord' in ev_html, 'events.html: KPI + Disco
 check('Старт' in ev_html, 'events.html: сценарий Старт')
 check('ev-btn-go' in ev_html or 'pub-opt-accent' in ev_html, 'events.html: акцент Старт')
 check('V2' in ev_html and 'pub-opt' in ev_html, 'events.html: V2 howto cards')
+check('лобби `/mafia` из списка' not in ev_html and '_maybe_launch_mafia' not in open(
+    os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read(),
+    'event-panel больше не автозапускает мафию')
 check('page-head-copy' in ev_html and 'eyebrow' in ev_html, 'events.html: page-head polish')
 check('evPublish' in ev_html and 'evChannel' in ev_html, 'events.html: publish + channel select')
 check('event_panel_channel' in open(
