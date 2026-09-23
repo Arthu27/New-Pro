@@ -77,9 +77,8 @@
       <input type="text" id="cbEvChannel" placeholder="1550986919981351043" inputmode="numeric" aria-label="Event voice channel id">
     </div>
     <div class="cb-row"><label>Держать войс</label>
-      <select id="cbEvStay" aria-label="Voice stay">
-        <option value="1">Вкл — заходить и держаться</option>
-        <option value="0">Выкл</option>
+      <select id="cbEvStay" aria-label="Voice stay" disabled title="Stay всегда включён">
+        <option value="1" selected>Всегда вкл — без лимитов</option>
       </select>
     </div>
     <div class="cb-actions">
@@ -128,7 +127,7 @@
       $('cbEvCmds').textContent = '—';
     }
     if (e.channel_id) $('cbEvChannel').value = e.channel_id;
-    $('cbEvStay').value = e.stay_enabled === false ? '0' : '1';
+    $('cbEvStay').value = '1';
     if (d.hint) $('cbHint').textContent = d.hint;
   }
   function load() {
@@ -143,7 +142,7 @@
   $('cbEvSave').onclick = function () {
     var body = {
       channel_id: $('cbEvChannel').value.trim(),
-      stay_enabled: $('cbEvStay').value === '1'
+      stay_enabled: true
     };
     var tok = $('cbEvTokenIn').value.trim();
     if (tok) body.token = tok;
