@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Отдельный Event-бот: войс 24/7 + слеш /event-panel.
+"""Отдельный Event-бот: войс 24/7 + слеш /mafia.
 
 Токен: EVENT_BOT_TOKEN в .env (НЕ коммитить) — правится из панели
-«Совместные боты». Канал/stay: config/event_voice_stay.json.
+«Совместные боты». Канал: config/event_voice_stay.json.
 
-Если кикнули/отвалился — сразу заходит обратно (voice_state_update +
-монитор каждые 5с). На ready синкает /event-panel (Event Admin/Mod),
-чтобы команда была видна у приложения Event-бота.
+Stay всегда включён — без выключателя и без лимита попыток.
+Если кикнули/отвалился — сразу и бесконечно заходит обратно
+(voice_state_update + монитор каждые 2с + daemon heartbeat).
 
 Запуск: start.bat → main.py (второй клиент) или
 scripts/run_event_voice_stay.py.
@@ -64,7 +64,7 @@ def event_bot_token() -> str:
 
 
 def load_event_voice_cfg() -> dict:
-    """channel_id + stay_enabled из JSON / env."""
+    """channel_id из JSON / env. Stay всегда включён (без выключателя)."""
     cfg = {
         'channel_id': str(DEFAULT_EVENT_VOICE_CHANNEL_ID),
         'stay_enabled': True,
@@ -78,34 +78,29 @@ def load_event_voice_cfg() -> dict:
                 cid = raw.get('channel_id') or raw.get('VOICE_CHANNEL_ID') or ''
                 if str(cid).strip() and str(cid).strip() not in ('0', 'none'):
                     cfg['channel_id'] = str(cid).strip()
-                if 'stay_enabled' in raw:
-                    cfg['stay_enabled'] = bool(raw.get('stay_enabled'))
     except Exception as ex:
         log.debug('event voice cfg load: %s', ex)
     env_cid = (os.environ.get('EVENT_VOICE_CHANNEL_ID') or '').strip()
     if env_cid and env_cid not in ('0', 'none', 'None'):
         cfg['channel_id'] = env_cid
-    env_stay = (os.environ.get('EVENT_VOICE_STAY_ENABLED') or '').strip().lower()
-    if env_stay in ('0', 'false', 'no', 'off'):
-        cfg['stay_enabled'] = False
-    elif env_stay in ('1', 'true', 'yes', 'on'):
-        cfg['stay_enabled'] = True
+    # Stay нельзя выключить — бот всегда в войсе
+    cfg['stay_enabled'] = True
+    os.environ['EVENT_VOICE_STAY_ENABLED'] = '1'
     return cfg
 
 
 def save_event_voice_cfg(channel_id: str | int | None = None,
                          stay_enabled: bool | None = None) -> dict:
-    """Сохранить канал/stay в JSON (без токена)."""
+    """Сохранить канал. stay_enabled игнорируется — всегда True."""
     cur = load_event_voice_cfg()
     if channel_id is not None:
         cur['channel_id'] = str(channel_id or '').strip()
-    if stay_enabled is not None:
-        cur['stay_enabled'] = bool(stay_enabled)
+    cur['stay_enabled'] = True
     payload = {
         'channel_id': cur['channel_id'],
-        'stay_enabled': cur['stay_enabled'],
-        'note': 'Event-бот заходит в этот голосовой канал при старте '
-                '(start.bat → main.py). Если кикнули — заходит снова. '
+        'stay_enabled': True,
+        'note': 'Event-бот всегда сидит в этом войсе (24/7). '
+                'Кикнули — сразу заходит обратно. Stay выключить нельзя. '
                 'Токен — только EVENT_BOT_TOKEN в .env.',
     }
     path = _cfg_path()
@@ -119,10 +114,10 @@ def save_event_voice_cfg(channel_id: str | int | None = None,
         _voice_channel_id = int(payload['channel_id']) if payload['channel_id'] else None
     except (TypeError, ValueError):
         _voice_channel_id = DEFAULT_EVENT_VOICE_CHANNEL_ID
-    _stay_enabled = bool(payload['stay_enabled'])
+    _stay_enabled = True
     if _voice_channel_id:
         os.environ['EVENT_VOICE_CHANNEL_ID'] = str(_voice_channel_id)
-    os.environ['EVENT_VOICE_STAY_ENABLED'] = '1' if _stay_enabled else '0'
+    os.environ['EVENT_VOICE_STAY_ENABLED'] = '1'
     return payload
 
 
@@ -139,10 +134,10 @@ def _resolve_event_voice_channel_id() -> Optional[int]:
 
 
 def _stay_on() -> bool:
+    """Stay всегда включён — без лимитов и выключателя."""
     global _stay_enabled
-    cfg = load_event_voice_cfg()
-    _stay_enabled = bool(cfg.get('stay_enabled', True))
-    return _stay_enabled
+    _stay_enabled = True
+    return True
 
 
 def _lock() -> asyncio.Lock:
@@ -154,7 +149,7 @@ def _lock() -> asyncio.Lock:
 
 async def ensure_voice_joined(client: discord.Client | None = None,
                               channel_id: int | None = None) -> tuple[bool, str]:
-    """Подключить event-бота к войсу (с замком). Кикнули — зови снова."""
+    """Подключить event-бота к войсу. Кикнули — зови снова (без лимитов)."""
     global _joining, _suppress_rejoin_until
     client = client or _event_client
     if client is None or client.is_closed():
@@ -164,13 +159,10 @@ async def ensure_voice_joined(client: discord.Client | None = None,
             return False, 'Event-бот ещё не ready'
     except Exception:
         return False, 'Event-бот не ready'
-    if not _stay_on():
-        return False, 'Voice stay выключен в настройках совместных ботов'
     cid = int(channel_id or _resolve_event_voice_channel_id() or 0)
     if not cid:
         return False, 'Не задан голосовой канал event-бота'
     async with _lock():
-        # уже в цели — не трогаем (нет disconnect → нет ложного leave)
         try:
             for v in list(client.voice_clients or []):
                 if (v.is_connected()
@@ -179,8 +171,7 @@ async def ensure_voice_joined(client: discord.Client | None = None,
         except Exception:
             pass
         _joining = True
-        # suppress только пока сами коннектимся (свой disconnect/move)
-        _suppress_rejoin_until = time.time() + 3.0
+        _suppress_rejoin_until = time.time() + 5.0
         try:
             channel = client.get_channel(cid)
             if channel is None:
@@ -190,7 +181,6 @@ async def ensure_voice_joined(client: discord.Client | None = None,
                     return False, f'Канал не найден: {ex}'
             if not isinstance(channel, discord.VoiceChannel):
                 return False, 'ID не голосовой канал'
-            # убрать мёртвые voice clients
             for stale in list(client.voice_clients or []):
                 try:
                     if not stale.is_connected():
@@ -211,59 +201,66 @@ async def ensure_voice_joined(client: discord.Client | None = None,
                     except Exception:
                         pass
             try:
-                # как мод-бот: self_deaf=False, без play; reconnect=True
-                await asyncio.wait_for(
-                    channel.connect(self_deaf=False, reconnect=True),
-                    timeout=45.0)
+                # self_deaf=True стабильнее для «просто сидеть» 24/7
+                await channel.connect(
+                    self_deaf=True, self_mute=True, reconnect=True)
                 log.info('event-bot joined voice %s', cid)
                 return True, f'Зашёл в <#{cid}>'
-            except asyncio.TimeoutError:
-                return False, 'Таймаут connect 45с'
             except Exception as ex:
-                # Already connected / race
                 msg = str(ex).lower()
                 if 'already' in msg and 'connected' in msg:
                     return True, f'Уже подключён (<#{cid}>)'
                 return False, f'Не удалось зайти: {ex}'
         finally:
             _joining = False
-            # сразу после connect разрешаем реагировать на кик
-            _suppress_rejoin_until = time.time() + 0.8
+            _suppress_rejoin_until = time.time() + 1.0
 
 
 def _schedule_rejoin(client: discord.Client, reason: str = '') -> None:
-    """Мгновенный возврат в войс после кика/обрыва (не ждём монитора)."""
+    """Бесконечный возврат в войс — без потолка попыток."""
     global _rejoin_task
-    if not _stay_on() or client.is_closed():
+    if client.is_closed():
+        return
+    if time.time() < _suppress_rejoin_until:
         return
     if _joining:
         return
 
     async def _go():
-        # Быстрый первый заход + retries (кик не должен оставлять бота снаружи)
-        delays = (0.4, 1.0, 2.0, 3.5, 6.0, 10.0)
-        for i, delay in enumerate(delays):
+        attempt = 0
+        # короткий старт, потом плато 5с — никогда не сдаёмся
+        while not client.is_closed() and not _stop_runner:
+            attempt += 1
+            delay = 0.3 if attempt == 1 else (1.0 if attempt < 5 else 5.0)
             await asyncio.sleep(delay)
-            if client.is_closed() or not _stay_on():
+            if client.is_closed() or _stop_runner:
                 return
             if _joining:
+                continue
+            if time.time() < _suppress_rejoin_until:
+                continue
+            try:
+                if not client.is_ready():
+                    continue
+            except Exception:
                 continue
             cid = _resolve_event_voice_channel_id()
             for v in list(client.voice_clients or []):
                 try:
                     if (v.is_connected()
                             and getattr(v.channel, 'id', None) == cid):
-                        log.info('event-bot rejoin skip — already in %s', cid)
+                        if attempt > 1:
+                            log.info('event-bot rejoin skip — already in %s', cid)
                         return
                 except Exception:
                     pass
             ok, msg = await ensure_voice_joined(client)
             if ok:
                 log.info('event-bot rejoin (%s try=%s): %s',
-                         reason or 'auto', i + 1, msg)
+                         reason or 'auto', attempt, msg)
                 return
             log.warning('event-bot rejoin fail (%s try=%s): %s',
-                        reason or 'auto', i + 1, msg)
+                        reason or 'auto', attempt, msg)
 
     if _rejoin_task is not None and not _rejoin_task.done():
         return
@@ -407,9 +404,7 @@ def build_event_client():
         except Exception:
             pass
 
-        if not _stay_on():
-            log.info('event-bot voice stay off')
-            return
+        # Stay всегда включён — сразу в войс + монитор
         cid = _resolve_event_voice_channel_id()
         if not cid:
             return
@@ -435,9 +430,7 @@ def build_event_client():
             return
         if int(getattr(member, 'id', 0) or 0) != int(me.id):
             return
-        if not _stay_on():
-            return
-        if _joining:
+        if _joining or time.time() < _suppress_rejoin_until:
             return
         target = _resolve_event_voice_channel_id()
         before_id = getattr(getattr(before, 'channel', None), 'id', None)
@@ -452,23 +445,27 @@ def build_event_client():
 
     @bot.event
     async def on_disconnect():
-        log.warning('event-bot gateway disconnect')
+        log.warning('event-bot gateway disconnect — schedule rejoin')
+        try:
+            _schedule_rejoin(bot, 'gateway-disconnect')
+        except Exception:
+            pass
 
     return bot
 
 
 async def _monitor_event_voice(client: discord.Client) -> None:
-    """Каждые 5с проверяем и заходим обратно (плотнее мод-бота)."""
+    """Каждые 2с проверяем войс — без backoff-потолка, всегда возвращаемся."""
     await client.wait_until_ready()
-    await asyncio.sleep(2)
-    backoff_until = 0.0
+    await asyncio.sleep(1)
     while not client.is_closed() and not _stop_runner:
-        await asyncio.sleep(5)
-        if not client.is_ready() or not _stay_on():
+        await asyncio.sleep(2)
+        if _joining or time.time() < _suppress_rejoin_until:
             continue
-        if _joining:
-            continue
-        if time.time() < backoff_until:
+        try:
+            if not client.is_ready():
+                continue
+        except Exception:
             continue
         cid = _resolve_event_voice_channel_id()
         if not cid:
@@ -485,11 +482,10 @@ async def _monitor_event_voice(client: discord.Client) -> None:
             continue
         ok, msg = await ensure_voice_joined(client, cid)
         if ok:
-            backoff_until = 0.0
             log.info('event-bot monitor: %s', msg)
         else:
-            backoff_until = time.time() + 12
             log.warning('event-bot monitor: %s', msg)
+            _schedule_rejoin(client, 'monitor-miss')
 
 
 async def start_event_bot() -> Optional[discord.Client]:
@@ -509,7 +505,7 @@ async def start_event_bot() -> Optional[discord.Client]:
 
     async def _runner():
         global _event_client, _commands_synced
-        delay = 5
+        delay = 2
         while not _stop_runner:
             client = _event_client
             if client is None or client.is_closed():
@@ -529,7 +525,8 @@ async def start_event_bot() -> Optional[discord.Client]:
             except Exception as ex:
                 log.warning('event-bot error: %s — retry in %ss', ex, delay)
             await asyncio.sleep(delay)
-            delay = min(60, delay * 2)
+            # без потолка — максимум 15с между перезапусками сессии
+            delay = min(15, max(2, delay + 1))
             if not _stop_runner:
                 _commands_synced = False
                 _event_client = build_event_client()

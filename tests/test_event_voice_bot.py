@@ -93,8 +93,16 @@ check(bool(ints.guilds) and bool(ints.voice_states),
       'intents: guilds + voice_states')
 check(not bool(getattr(ints, 'message_content', False)),
       'без message_content (лёгкий клиент)')
-check(callable(getattr(EV, '_load_and_sync_event_commands', None)),
-      'sync /mafia helper')
+check(EV._stay_on() is True, 'stay всегда on')
+# выключатель игнорируется
+EV.save_event_voice_cfg(stay_enabled=False)
+check(EV.load_event_voice_cfg().get('stay_enabled') is True, 'stay нельзя выключить')
+check('timeout=45' not in open(
+    os.path.join(ROOT, 'services', 'event_voice_bot.py'), encoding='utf-8').read(),
+    'нет таймаута connect 45с')
+check('backoff_until' not in open(
+    os.path.join(ROOT, 'services', 'event_voice_bot.py'), encoding='utf-8').read(),
+    'нет backoff-потолка монитора')
 
 print('== mafia on event-bot ==')
 ev_src = open(os.path.join(ROOT, 'services', 'event_voice_bot.py'), encoding='utf-8').read()
