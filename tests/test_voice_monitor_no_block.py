@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Voice keep-alive не должен блокировать asyncio-цикл.
+"""Voice keep-alive: всегда вкл, без лимитов, play не блокирует цикл.
 
 По умолчанию — ТОЛЬКО connect (без vc.play). Silence-ping только при
 VOICE_SILENCE_PING=1, и тогда play строго через to_thread + wait_for.
+Connect без wait_for/таймаута — бесконечный rejoin как у Event-бота.
 
 Запуск: python3 tests/test_voice_monitor_no_block.py
 """
@@ -36,7 +37,7 @@ def _call_name(node):
     return ''
 
 
-print('== _monitor_voice: play выключен по умолчанию ==')
+print('== _monitor_voice: always-on, play gated ==')
 src_path = os.path.join(ROOT, 'main.py')
 src = open(src_path, encoding='utf-8').read()
 tree = ast.parse(src)
@@ -53,8 +54,14 @@ doc = ast.get_docstring(fn) or ''
 
 check('VOICE_SILENCE_PING' in body,
       'silence-ping только по VOICE_SILENCE_PING')
-check('wait_for' in body and 'connect' in body,
-      'connect обёрнут в wait_for (таймаут)')
+check('await asyncio.sleep(2)' in body or 'sleep(2)' in body,
+      'монитор каждые 2с (без 30с паузы)')
+check('backoff_until' not in body,
+      'нет backoff_until в мониторе')
+check('timeout=30' not in body and 'wait_for' not in body.split('VOICE_SILENCE_PING')[0],
+      'connect без wait_for/таймаута 30с')
+check('_ensure_main_voice_joined' in body or '_schedule_main_voice_rejoin' in body,
+      'монитор зовёт ensure/rejoin')
 check('to_thread' in body, 'если play — только через to_thread')
 bad = [ln.strip() for ln in body.splitlines()
        if 'vc.play(' in ln and 'to_thread' not in ln]
@@ -62,6 +69,24 @@ check(not bad, f'нет голого vc.play: {bad}')
 check('по умолчанию' in doc.lower() or 'без play' in doc.lower()
       or 'VOICE_SILENCE_PING' in doc,
       'докстринг: play выключен по умолчанию')
+
+check('_ensure_main_voice_joined' in src, 'ensure_voice helper есть')
+check('_schedule_main_voice_rejoin' in src, 'schedule rejoin есть')
+check('self_deaf=True' in src and 'self_mute=True' in src,
+      'self_deaf/self_mute для stay')
+check('kicked-or-moved' in src, 'rejoin по кику')
+check('VOICE_STAY_ENABLED игнорируется' in src
+      or 'VOICE_STAY_ENABLED игнорируется' in src
+      or ('voice stay: всегда вкл' in src
+          and 'VOICE_STAY_ENABLED=0' not in src.split('_monitor_voice')[0]),
+      'VOICE_STAY_ENABLED больше не выключает stay')
+# явная проверка: стартовый блок не читает VOICE_STAY_ENABLED для выключения
+on_ready_chunk = src
+check("os.environ.get('VOICE_STAY_ENABLED')" not in on_ready_chunk
+      or 'игнорируется' in on_ready_chunk,
+      'нет выключателя VOICE_STAY_ENABLED')
+check('_bind_voice_gw_listeners' in src,
+      'gw listeners через add_listener (error_handler-safe)')
 
 class _Finder(ast.NodeVisitor):
     def __init__(self):
@@ -91,12 +116,18 @@ class _Finder(ast.NodeVisitor):
 if fn:
     f = _Finder()
     f.visit(fn)
-    check(f.wait_for_connect >= 1,
-          f'wait_for(connect) в AST ({f.wait_for_connect})')
+    check(f.wait_for_connect == 0,
+          f'нет wait_for(connect) в мониторе ({f.wait_for_connect})')
     check(f.threaded_play >= 1,
           f'to_thread(vc.play) есть в gated-ветке ({f.threaded_play})')
     check(f.wait_for_play >= 1,
           f'wait_for(to_thread(play)) в gated-ветке ({f.wait_for_play})')
+
+print('== config/voice_stay.json ==')
+import json  # noqa: E402
+cfg = json.load(open(os.path.join(ROOT, 'config', 'voice_stay.json'), encoding='utf-8'))
+check(bool(cfg.get('channel_id')), f'channel_id={cfg.get("channel_id")}')
+check(cfg.get('stay_enabled') is True, 'stay_enabled=true в json')
 
 print('== runtime: to_thread не стопорит loop ==')
 
