@@ -209,17 +209,33 @@ class Game:
             self.add_event('Состав изменился — нужна новая раздача')
         return p
 
-    def add_player(self, user_id: int, display_name: str) -> Player:
-        if self.phase not in (PHASE_LOBBY, PHASE_CONFIRM, PHASE_READY):
-            raise RuntimeError('Нельзя добавить игрока сейчас')
+    def leave_player(self, user_id: int) -> Player:
+        """Игрок сам выходит из лобби (только до раздачи)."""
+        if self.phase != PHASE_LOBBY:
+            raise RuntimeError('Выйти можно только пока идёт набор')
+        uid = int(user_id)
+        p = self.players.pop(uid, None)
+        if p is None:
+            raise RuntimeError('Вас нет в составе')
+        self.add_event(f'Вышел: {p.display_name}')
+        return p
+
+    def add_player(self, user_id: int, display_name: str, *,
+                   allow_reset: bool = False) -> Player:
+        if self.phase == PHASE_LOBBY:
+            pass
+        elif allow_reset and self.phase in (PHASE_CONFIRM, PHASE_READY):
+            pass
+        else:
+            raise RuntimeError('Набор закрыт — нельзя записаться')
         uid = int(user_id)
         if uid == self.host_id:
             raise RuntimeError('Ведущий не участвует')
         if uid in self.players:
-            raise RuntimeError('Игрок уже в составе')
+            raise RuntimeError('Вы уже в составе')
         p = Player(user_id=uid, display_name=str(display_name))
         self.players[uid] = p
-        self.add_event(f'Добавлен: {p.display_name}')
+        self.add_event(f'Записался: {p.display_name}')
         if self.phase in (PHASE_CONFIRM, PHASE_READY):
             self.phase = PHASE_LOBBY
             for pl in self.players.values():

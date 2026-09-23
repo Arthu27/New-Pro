@@ -152,10 +152,8 @@ WELCOME_LEAN_COGS = frozenset({
     'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
 })
 
-# События: Discord-панель ивентов (Event Mod).
-EVENT_LEAN_COGS = frozenset({
-    'event_panel.py',
-})
+# События: Discord-панель ивентов отключена — набор игр в /mafia.
+EVENT_LEAN_COGS = frozenset()
 
 # Игры за столом: бот Мафии (раздача ролей + стол ведущего по ТЗ).
 MAFIA_LEAN_COGS = frozenset({

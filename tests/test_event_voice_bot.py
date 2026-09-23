@@ -94,17 +94,16 @@ check(bool(ints.guilds) and bool(ints.voice_states),
 check(not bool(getattr(ints, 'message_content', False)),
       'без message_content (лёгкий клиент)')
 check(callable(getattr(EV, '_load_and_sync_event_commands', None)),
-      'sync /event-panel helper')
+      'sync /mafia helper')
 
-print('== event-panel roles ==')
-from cogs import event_panel as EP  # noqa: E402
-check(getattr(EP, 'EVENT_ADMIN_ROLE_ID', 0) == 1551527644326002748,
-      'Event Admin role')
-check(getattr(EP, 'EVENT_MOD_ROLE_ID', 0) == 852634463535759461,
-      'Event Mod role')
-check('event-panel' in open(
-    os.path.join(ROOT, 'cogs', 'event_panel.py'), encoding='utf-8').read(),
-      'команда event-panel в cog')
+print('== mafia on event-bot ==')
+ev_src = open(os.path.join(ROOT, 'services', 'event_voice_bot.py'), encoding='utf-8').read()
+check('cog mafia' in ev_src and 'EventPanel снят' in ev_src,
+      'event-bot грузит mafia, EventPanel снят')
+check('from cogs.mafia import Mafia' in ev_src, 'import Mafia')
+check("'event-panel'" not in ev_src or 'без event-panel' in ev_src.lower()
+      or 'Без event-panel' in ev_src,
+      'докстринг без event-panel как основной фичи')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

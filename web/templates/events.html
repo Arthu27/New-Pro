@@ -6,7 +6,7 @@
   <div class="page-head-copy">
     <div class="eyebrow">Сообщество</div>
     <h1>События</h1>
-    <p class="lead">Панель ивентов в Discord в формате <b>Components V2</b> (как модпанель): баннер, чёрные блоки и свои стикеры Hakumo. Сценарий: набор → <b>Старт</b> в войс → финиш.</p>
+    <p class="lead">Игры за столом — через бота <b>Events</b> команда <code>/mafia</code>. Участники видят только <b>Участвовать</b>; ведущий/мод ведёт раздачу из меню. Стикеры Hakumo на всех кнопках и ролях (включая путану).</p>
   </div>
   <div class="page-head-actions">
     <button type="button" class="btn btn-primary" id="evPublish" title="Опубликовать панель в Discord">
@@ -20,7 +20,7 @@
 
 <div class="card" id="evSetupCard" style="margin-bottom:14px">
   <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-hashtag"></i> Куда слать панель</div>
-  <p class="muted" style="margin:0 0 10px">Выбери текстовый канал Discord — туда уйдёт <code>/event-panel</code> и кнопка «Опубликовать». Можно также задать в «Каналах и маршрутах» или в <code>EVENT_PANEL_CHANNEL_ID</code>.</p>
+  <p class="muted" style="margin:0 0 10px">Event-panel убран. Набор игроков — в Discord у бота <b>Events</b>: <code>/mafia</code> → Начать игру. Ниже — статус войса Events-бота.</p>
   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
     <div style="flex:1;min-width:240px">
       <label class="muted" for="evChannel">Канал панели</label>
@@ -117,29 +117,25 @@
     <div class="panel-body">
       <div class="pub-options ev-steps">
         <div class="pub-opt">
-          <div class="pub-opt-head"><span class="ev-step-n">1</span> Опубликовать</div>
-          <div class="pub-opt-sub">Выбери канал слева и жми <b>Опубликовать</b>, либо в Discord у бота <b>Events</b> команду <code>/event-panel</code>. Появится V2-карточка с баннером.</div>
+          <div class="pub-opt-head"><span class="ev-step-n">1</span> Ведущий</div>
+          <div class="pub-opt-sub">В войсе → у бота <b>Events</b> команда <code>/mafia</code> → <b>Начать игру</b>. В канале появляется карточка набора.</div>
         </div>
         <div class="pub-opt">
-          <div class="pub-opt-head"><span class="ev-step-n">2</span> Анонс</div>
-          <div class="pub-opt-sub">Event Admin / Event Mod жмёт <b>Анонс</b>: название игры и время. Набор открывается, список очищается.</div>
-        </div>
-        <div class="pub-opt">
-          <div class="pub-opt-head"><span class="ev-step-n">3</span> Записаться</div>
-          <div class="pub-opt-sub">Игроки жмут <b>Записаться</b>. Счётчик на панели растёт. Повторно записаться нельзя.</div>
+          <div class="pub-opt-head"><span class="ev-step-n">2</span> Участники</div>
+          <div class="pub-opt-sub">Заходят в войс и жмут только <b>Участвовать</b> (стикер Hakumo). Анонс / Старт / Финиш им не показываются.</div>
         </div>
         <div class="pub-opt pub-opt-accent">
-          <div class="pub-opt-head"><span class="ev-step-n">4</span> Старт <span class="pub-tag new">главное</span></div>
-          <div class="pub-opt-sub">Ведущий жмёт <b>Старт</b>: запись закрывается, пинг всем из списка, карточка «▶ Старт» и зов в войс.</div>
+          <div class="pub-opt-head"><span class="ev-step-n">3</span> Раздача <span class="pub-tag new">ведущий</span></div>
+          <div class="pub-opt-sub">При ≥6 в составе ведущий в <code>/mafia</code> (или эпhemeral-панели) жмёт <b>Раздать роли</b>. Роли в ЛС со стикерами — мафия, шериф, доктор, <b>путана</b>, мирный.</div>
         </div>
         <div class="pub-opt">
-          <div class="pub-opt-head"><span class="ev-step-n">5</span> Финиш</div>
-          <div class="pub-opt-sub">После вечера — <b>Финиш</b> на панели ивентов. Новый набор снова через <b>Анонс</b>.</div>
+          <div class="pub-opt-head"><span class="ev-step-n">4</span> Стол</div>
+          <div class="pub-opt-sub">Подтверждения в ЛС → на сводке ведущего <b>Начать игру</b>. Дальше убийство / голос / проверки.</div>
         </div>
       </div>
       <div class="hint" style="margin-top:12px;margin-bottom:0">
         <i class="fas fa-circle-info"></i>
-        Стикеры на кнопках — те же neon-стики Hakumo, что в модпанели (application emoji). Event-бот сидит в войсе 24/7 и заходит обратно, если кикнули. Мафия отдельно: у бота Events команда <code>/mafia</code> — состав только из войса ведущего.
+        Event-panel снят. Везде neon-стики Hakumo (application emoji). Event-бот сидит в войсе 24/7.
       </div>
     </div>
   </div>
