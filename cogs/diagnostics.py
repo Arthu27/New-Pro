@@ -58,8 +58,10 @@ DATA_DIR ="data"
 os .makedirs (DATA_DIR ,exist_ok =True )
 
 # Health thresholds
+# Бот Hakumo стабильно живёт ~450–550 МБ RSS (много когов + панель).
+# Старый warn=400 спамил Auto-Repair каждые 5 мин и писал в ЛС владельцу.
 THRESHOLDS ={
-"memory_mb":{"warn":400 ,"critical":700 },
+"memory_mb":{"warn":750 ,"critical":1100 },
 "cpu_percent":{"warn":60 ,"critical":85 },
 "latency_ms":{"warn":300 ,"critical":800 },
 "error_rate_per_min":{"warn":5 ,"critical":15 },
@@ -68,12 +70,21 @@ THRESHOLDS ={
 
 # Auto-repair actions
 REPAIR_ACTIONS ={
-"high_memory":"Garbage collect + reload heaviest cog",
+"high_memory":"Garbage collect",
 "high_latency":"Reset websocket connection",
 "high_error_rate":"Identify failing cog + auto-reload",
 "memory_leak":"Periodic full cog reload (hourly)",
 "stuck_cog":"Unload + reload stuck cog",
 }
+
+# Не дёргать одну и ту же починку чаще (сек). high_memory — реже:
+# GC не снижает RSS у долгоживущего Python-процесса заметно.
+REPAIR_COOLDOWN = {
+    'high_memory': 3600,   # 1 час
+    'high_latency': 300,
+    'high_error_rate': 300,
+}
+DEFAULT_REPAIR_COOLDOWN = 300
 
 
 class Diagnostics (commands .Cog ):
@@ -308,8 +319,9 @@ class Diagnostics (commands .Cog ):
             await self ._trigger_repair ("high_error_rate","critical")
 
     async def _trigger_repair (self ,repair_type ,severity ):
-        """Throttle: don't trigger same repair within 5 minutes"""
-        if time .time ()-self .last_repair [repair_type ]<300 :
+        """Throttle: не повторять одну починку слишком часто."""
+        cooldown = REPAIR_COOLDOWN.get(repair_type, DEFAULT_REPAIR_COOLDOWN)
+        if time .time ()-self .last_repair [repair_type ]< cooldown :
             return 
         self .last_repair [repair_type ]=time .time ()
         self .repair_count [repair_type ]+=1 
@@ -319,7 +331,10 @@ class Diagnostics (commands .Cog ):
         if repair_type =="high_memory":
             import gc 
             gc .collect ()
-            # Optional: reload heaviest cog
+            # warn: только GC + лог, без ЛС (иначе спам каждые N мин при
+            # нормальном RSS ~500 МБ). critical — пишем владельцу.
+            if severity != "critical":
+                return
         elif repair_type =="high_latency":
         # Can't really reset websocket from here, but log it
             pass 
