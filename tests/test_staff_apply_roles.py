@@ -294,18 +294,20 @@ _p = (Config.STAFF_HELPER_CHANNEL_ID, Config.STAFF_MODERATOR_CHANNEL_ID,
 try:
     Config.STAFF_HELPER_CHANNEL_ID = 501
     Config.STAFF_MODERATOR_CHANNEL_ID = 502
-    Config.STAFF_HELPER_CURATOR_ROLE_ID = 601
-    Config.STAFF_MODERATOR_CURATOR_ROLE_ID = 602
+    # пинг/ACL — жёсткие ID из KNOWN_CURATOR_BY_KIND
+    from services import staff_roles as _SR
+    _hk = _SR.KNOWN_CURATOR_BY_KIND['helper']
+    _mk = _SR.KNOWN_CURATOR_BY_KIND['moderator']
     gch = FakeGuildCh([FakeChan(501), FakeChan(502), FakeChan(500)],
-                       roles=[FakeRoleCh(601), FakeRoleCh(602)])
+                       roles=[FakeRoleCh(_hk), FakeRoleCh(_mk)])
 
     ch, ping = apply_target('Хелпер', gch)
-    check(ch is not None and ch.id == 501 and ping == '<@&601>',
+    check(ch is not None and ch.id == 501 and ping == f'<@&{_hk}>',
           'заявка хелпера → ветка хелперов (501) + пинг куратора',
           f'→ канал {getattr(ch, "id", None)}, пинг {ping}')
     ch, ping = apply_target('Модератор', gch)
-    check(ch is not None and ch.id == 502 and ping == '<@&602>',
-          'заявка модератора → ветка (502) + свой куратор <@&602>')
+    check(ch is not None and ch.id == 502 and ping == f'<@&{_mk}>',
+          'заявка модератора → ветка (502) + свой куратор')
     ch, ping = apply_target('Chat Control', gch)
     check(ch.id == 502, 'легаси чат-контроль ведётся в ветку модераторов')
 
@@ -731,12 +733,15 @@ class _GCh:
         return FakeRole(cid, f'ch{cid}')
 
     def get_role(self, rid):
-        return FakeRole(607, 'куратор') if int(rid) == 607 else None
+        # пинг — только жёсткий ID куратора Helper
+        hk = SR.KNOWN_CURATOR_BY_KIND['helper']
+        return FakeRole(hk, 'куратор helper') if int(rid) == hk else None
 
 
 _ch, _ping = apply_target('Хелпер', _GCh())
-check(_ch is not None and _ch.id == 501 and _ping == '<@&607>',
-      'бот учитывает панель: ветка + пинг куратора (легаси-ключ)')
+_hk = SR.KNOWN_CURATOR_BY_KIND['helper']
+check(_ch is not None and _ch.id == 501 and _ping == f'<@&{_hk}>',
+      'бот: ветка + пинг куратора по жёсткому ID')
 
 from cogs.staff_apply import apply_target as _at  # noqa: E401
 

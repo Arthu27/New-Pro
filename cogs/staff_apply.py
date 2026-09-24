@@ -480,14 +480,35 @@ def find_app_for_kind(apps: dict, user_id, kind: str):
     return None, None
 
 
+def _member_has_branch_role(member, kind: str) -> bool:
+    """Есть ли у участника выданная роль этой ветки (Helper/Mod/…)."""
+    if member is None:
+        return False
+    try:
+        from services.staff_roles import resolve_staff_role
+        guild = getattr(member, 'guild', None)
+        role, _ = resolve_staff_role(guild, kind) if guild else (None, [])
+        if role is None:
+            return False
+        rid = int(getattr(role, 'id', 0) or 0)
+        if not rid:
+            return False
+        for r in list(getattr(member, 'roles', None) or []):
+            if int(getattr(r, 'id', 0) or 0) == rid:
+                return True
+    except Exception as _ex:
+        log.debug('member_has_branch_role: %s', _ex)
+    return False
+
+
 def apply_blocked_reason(user_id, kind: str, *, member=None) -> str:
     """Почему нельзя подать заявку на ветку (пусто = можно).
 
-    Блокируем: ЧС ветки, pending, approved, уже есть роль ветки.
+    Блокируем: ЧС ветки, pending, уже есть роль ветки.
+    approved без роли — можно снова (роль сняли / ушёл сам).
     Отклонённую можно подать снова.
     """
-    from services.staff_roles import (
-        normalize_position, position_label, resolve_staff_role)
+    from services.staff_roles import normalize_position, position_label
     want = normalize_position(kind)
     if not want:
         return 'Должность не указана.'
@@ -506,31 +527,23 @@ def apply_blocked_reason(user_id, kind: str, *, member=None) -> str:
                 f'Заявка на **{label}** уже на рассмотрении.\n'
                 'Повторно на эту ветку подать нельзя. Статус: `/my-application`'
             )
-        if st == 'approved':
-            return (
-                f'Вас уже приняли на **{label}**.\n'
-                'Повторная заявка на эту ветку не нужна.'
-            )
         if st == 'blacklisted':
             return (
                 f'Вы в чёрном списке ветки **{label}**.\n'
                 'Другие должности по-прежнему открыты.'
             )
-    # уже носит роль этой ветки на сервере
-    if member is not None:
-        try:
-            guild = getattr(member, 'guild', None)
-            role, _ = resolve_staff_role(guild, want) if guild else (None, [])
-            if role is not None:
-                rid = int(getattr(role, 'id', 0) or 0)
-                for r in list(getattr(member, 'roles', None) or []):
-                    if int(getattr(r, 'id', 0) or 0) == rid:
-                        return (
-                            f'У вас уже есть роль **{getattr(role, "name", label)}**.\n'
-                            'Повторная заявка на эту ветку не нужна.'
-                        )
-        except Exception as _ex:
-            log.debug('apply_blocked role check: %s', _ex)
+        # approved: блокируем только если роль ветки всё ещё на человеке
+        if st == 'approved' and _member_has_branch_role(member, want):
+            return (
+                f'У вас уже есть роль **{label}**.\n'
+                'Повторная заявка на эту ветку не нужна.'
+            )
+    # роль ветки на участнике (даже без записи approved)
+    if _member_has_branch_role(member, want):
+        return (
+            f'У вас уже есть роль **{label}**.\n'
+            'Повторная заявка на эту ветку не нужна.'
+        )
     return ''
 
 

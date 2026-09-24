@@ -396,12 +396,42 @@ check(deny_pend and 'рассмотрении' in deny_pend.lower(),
       'pending Events blocks re-apply', deny_pend)
 check(not SA.apply_blocked_reason(55, 'Helper'),
       'pending Events: Helper still open')
-# approved → тоже нельзя
+# approved без роли → можно снова (роль сняли)
 apps_pend['55:event']['status'] = 'approved'
 json.dump(apps_pend, open('data/staff_apps.json', 'w'))
-deny_ok = SA.apply_blocked_reason(55, 'Eventsmod')
-check(deny_ok and ('приняли' in deny_ok.lower() or 'принят' in deny_ok.lower()),
-      'approved Events blocks re-apply', deny_ok)
+check(not SA.apply_blocked_reason(55, 'Eventsmod', member=None),
+      'approved without role allows re-apply')
+
+
+class _RoleKeep:
+    id = SR.KNOWN_GRANT_BY_KIND['event']
+    name = '× Eventsmod'
+
+
+class _MemKeep:
+    roles = [_RoleKeep()]
+    guild = types.SimpleNamespace(
+        id=g.id,
+        roles=[_RoleKeep()],
+        get_role=lambda rid: _RoleKeep() if int(rid) == _RoleKeep.id else None,
+    )
+
+
+# resolve_staff_role uses guild roles / known ids — stub via monkey
+_orig_resolve = SR.resolve_staff_role
+
+
+def _fake_resolve(guild, kind):
+    if kind == 'event':
+        return _RoleKeep(), ['Eventsmod']
+    return None, []
+
+
+SR.resolve_staff_role = _fake_resolve
+deny_keep = SA.apply_blocked_reason(55, 'Eventsmod', member=_MemKeep())
+check(deny_keep and 'роль' in deny_keep.lower(),
+      'approved + still has role blocks re-apply', deny_keep)
+SR.resolve_staff_role = _orig_resolve
 # rejected → можно снова
 apps_pend['55:event']['status'] = 'rejected'
 json.dump(apps_pend, open('data/staff_apps.json', 'w'))

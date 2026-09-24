@@ -4418,13 +4418,23 @@ def api_public_apply ():
         with open (apps_file ,'r',encoding ='utf-8')as f :
             apps =json .load (f )
 
-            # Проверка: нельзя повторно на ту же ветку (pending/approved/ЧС)
+            # Проверка: нельзя повторно на ту же ветку (pending / роль / ЧС).
+            # approved без роли — можно снова.
     uid =str (data ['discord_id'])
     from services .staff_roles import normalize_position ,position_label 
     _kind =normalize_position (data .get ('role')) or 'moderator'
     try :
         from cogs .staff_apply import apply_blocked_reason ,app_storage_key 
-        _deny =apply_blocked_reason (uid ,_kind )
+        _member =None 
+        try :
+            _gid =int (data .get ('guild_id')or MAIN_GUILD_ID or 0 )
+            if bot_instance and _gid :
+                _g =bot_instance .get_guild (_gid )
+                if _g is not None :
+                    _member =_g .get_member (int (uid ))
+        except Exception :
+            _member =None 
+        _deny =apply_blocked_reason (uid ,_kind ,member =_member )
         if _deny :
             return jsonify ({'error':_deny .replace ('**','').replace ('\n',' ')}),400 
         app_id =app_storage_key (uid ,_kind )
