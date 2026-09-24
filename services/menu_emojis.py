@@ -24,8 +24,6 @@ STICKER_KEYS = (
     'warn', 'mute', 'ban', 'clear', 'unban',
     'appeal', 'helper', 'moderator', 'heart',
     'staff', 'user',  # /report: «На кого жалоба?» (Стафф/Участник)
-    # набор в команду
-    'accept', 'decline', 'eventsmod', 'broadcaster',
     # /event-panel (Events V2)
     'signup', 'announce', 'start', 'finish', 'elist',
 )
@@ -47,18 +45,18 @@ ACTION_STICKER = {
     'clear': 'clear',
 }
 
-# должность набора → стикер
+# должность набора → те же чёрные стикеры модпанели
 ROLE_STICKER = {
     'helper': 'helper',
     'moderator': 'moderator',
-    'event': 'eventsmod',
-    'broadcaster': 'broadcaster',
+    'event': 'elist',
+    'broadcaster': 'appeal',
 }
 
-# решение по заявке → стикер
+# решение по заявке → те же стикеры модпанели
 REVIEW_STICKER = {
-    'approve': 'accept',
-    'reject': 'decline',
+    'approve': 'unban',
+    'reject': 'ban',
 }
 
 # фолбек, пока эмодзи ещё не залиты
@@ -96,10 +94,7 @@ _sync_task = None  # asyncio.Task | None — один фоновый sync
 
 
 def _emoji_name(key: str) -> str:
-    # w2_ = модпанель pack; w3_ = набор (accept/decline/eventsmod/broadcaster)
-    # после смены арта на чёрный glass без цветных ореолов.
-    if key in ('accept', 'decline', 'eventsmod', 'broadcaster'):
-        return f'hakumo_w3_{key}'
+    # w2_ = чистый procedural-пак модпанели
     return f'hakumo_w2_{key}'
 
 
@@ -122,27 +117,20 @@ def emoji_for_action(action: str):
 
 
 def emoji_for_role(kind: str):
-    """Стикер должности набора (Helper/Moderator/Eventsmod/Broadcaster)."""
+    """Стикер должности — из пака модпанели (helper/moderator/elist/appeal)."""
     key = ROLE_STICKER.get(kind, kind)
     em = _cache.get(key)
     if em is not None:
         return em
-    # запасные уже залитые
-    alt = {'event': 'elist', 'broadcaster': 'announce'}.get(kind)
-    if alt and _cache.get(alt) is not None:
-        return _cache[alt]
     return _ROLE_UNICODE.get(kind, '🤍')
 
 
 def emoji_for_review(action: str):
-    """Стикер Принять / Отклонить на карточке заявки."""
+    """Принять/Отклонить — unban/ban из модпанели."""
     key = REVIEW_STICKER.get(action, action)
     em = _cache.get(key)
     if em is not None:
         return em
-    alt = {'approve': 'unban', 'reject': 'ban'}.get(action)
-    if alt and _cache.get(alt) is not None:
-        return _cache[alt]
     return _REVIEW_UNICODE.get(action, '🤍')
 
 

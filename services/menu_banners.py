@@ -92,11 +92,6 @@ STICKER_SPECS = {
     'helper':     {'accent': (240, 240, 245), 'icon': 'helper'},
     'moderator':  {'accent': (230, 230, 240), 'icon': 'mod'},
     'heart':      {'accent': (245, 245, 250), 'icon': 'heart'},
-    # Набор в команду — тот же чёрный glass, что у модпанели (без цветных ореолов)
-    'accept':     {'accent': (240, 240, 245), 'icon': 'accept'},
-    'decline':    {'accent': (235, 235, 240), 'icon': 'decline'},
-    'eventsmod':  {'accent': (230, 230, 240), 'icon': 'event'},
-    'broadcaster': {'accent': (230, 235, 240), 'icon': 'broadcast'},
     # Events /event-panel
     'signup':     {'accent': (80, 220, 160), 'icon': 'user'},
     'announce':   {'accent': (94, 200, 255), 'icon': 'helper'},
