@@ -157,7 +157,8 @@ ROLE_MAP_PATH = 'data/role_map.json'
 # master — между mod и curator (заказ владельца 2026-09-24).
 TIER_ORDER = ('mod', 'master', 'curator', 'admin', 'owner')
 
-# Тировые дефолты за окно (день). Хелпер = mod.
+# Тировые дефолты за окно (день).
+# Хелпер в role_map = mod (иерархия), но ACL/меню — только чат (helper_acl_seed).
 # Мут/размут: мод 3 / мастер 5 / куратор 7. Бан: мод 1 / мастер 1 / куратор 2.
 TIER_DEFAULT_LIMITS = {
     # тир владельца (owner) — ВСЁ без лимитов

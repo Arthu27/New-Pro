@@ -1193,6 +1193,18 @@ async def on_ready():
             print(f"[РОЛИ] Сид применён: персонал {_rep.get('role_map_added')}, "
                   f"роли наказаний {_rep.get('punish_added')}, "
                   f"разрешения действий {_rep.get('action_acl_actions')}")
+        # Хелпер — только чат (mute+purge), не полный ACL модера
+        try:
+            from services.helper_acl_seed import apply_helper_acl_seed
+            _href = apply_helper_acl_seed(guild_id=_seed_gid or None)
+            if _href.get('applied'):
+                print(f"[РОЛИ] Хелпер сид v3: чат mute/purge "
+                      f"(+{_href.get('actions_added')} "
+                      f"-{_href.get('actions_removed')})")
+            else:
+                _log.debug('helper_acl_seed: %s', _href.get('reason'))
+        except Exception as _hex:
+            _log.debug('on_ready(): helper_acl_seed: %s', _hex)
     except Exception as _ex:
         _log.debug("on_ready(): role_seed: %s", _ex)
 

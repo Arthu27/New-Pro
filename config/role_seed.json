@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "_comment": "Стартовые роли сервера. v4 (2026-09-24): × Master + Helper в role_map, тир master между mod и curator. Применяется один раз при старте; дальше правится в панели. role_map — роли персонала; punish_roles — роли наказаний; action_default — роли с ACL действий модерации. guild_id — из MAIN_GUILD_ID в .env.",
+  "version": 5,
+  "_comment": "Стартовые роли сервера. v5 (2026-09-24): Master в role_map; хелпер НЕ в полном action ACL (только чат через helper_acl_seed). Применяется один раз; дальше — панель. guild_id из MAIN_GUILD_ID.",
   "role_map": {
     "803553848396349510": "mod",
     "948969471916249119": "mod",
@@ -15,6 +15,6 @@
   },
   "action_default": {
     "tiers": ["mod", "master", "curator", "admin"],
-    "_comment": "Всем ролям этих тиров при старте разрешаются все действия из ACTIONS. Мастер без Helper/Moderator всё равно не применит наказания (гейтует staff_limits.master_punish_allowed)."
+    "_comment": "Полный ACL действий — Moderator/Master/Curator/Admin. Хелпер исключён в role_seed (чат mute+purge → helper_acl_seed). Мастер без Helper/Moderator не применит наказания (master_punish_allowed)."
   }
 }

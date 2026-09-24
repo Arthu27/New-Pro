@@ -110,11 +110,11 @@ def apply_role_seed(force=False, guild_id=None):
         role_map = _read_json(ROLE_MAP_PATH, {})
         if not isinstance(role_map, dict):
             role_map = {}
+        _VALID_TIERS = ('mod', 'master', 'curator', 'admin', 'owner')
         for rid, tier in seed_map.items():
             rid = str(rid).strip()
             tier = str(tier).strip()
-            if rid and tier in ('mod', 'curator', 'admin', 'owner') \
-                    and rid not in role_map:
+            if rid and tier in _VALID_TIERS and rid not in role_map:
                 role_map[rid] = tier
                 report['role_map_added'].append(f'{rid}={tier}')
         if report['role_map_added']:
@@ -123,18 +123,24 @@ def apply_role_seed(force=False, guild_id=None):
         # 2) action ACL: дефолтные разрешения действий для ролей персонала.
         # Строгая модель permission_acl — default-deny: на чистом сервере без
         # правил варн/мут/бан заблокированы («варны не работают»). Засеиваем
-        # все действия ролям указанных тиров (mod/curator/admin). Только
-        # ДОПИСЫВАЕМ роли к уже существующим спискам: ручные запреты владельца
-        # в панели не трогаем, пустые правила (явный запрет) не перетираем.
+        # все действия ролям указанных тиров (mod/master/curator/admin).
+        # Хелпер (KNOWN_HELPER) ИСКЛЮЧЁН — у него только чат (helper_acl_seed).
+        # Только ДОПИСЫВАЕМ роли к уже существующим спискам: ручные запреты
+        # владельца в панели не трогаем, пустые правила не перетираем.
         action_tiers = [str(t).strip() for t in
                         ((seed.get('action_default') or {}).get('tiers') or [])]
-        action_tiers = [t for t in action_tiers if t in ('mod', 'curator', 'admin', 'owner')]
+        action_tiers = [t for t in action_tiers if t in _VALID_TIERS]
         if action_tiers:
             try:
                 from services.permission_acl import ACTIONS, load_action_acl, save_action_acl
-                # Роли сидовых тиров (из итоговой role_map — её уже дополнили выше).
+                try:
+                    from services.staff_roles import KNOWN_HELPER_ROLE_ID
+                    _exclude = {str(int(KNOWN_HELPER_ROLE_ID))}
+                except Exception:
+                    _exclude = {'948969471916249119'}
+                # Роли сидовых тиров без хелпера (чат-only сидит отдельно).
                 seed_role_ids = [rid for rid, tier in role_map.items()
-                                 if tier in action_tiers]
+                                 if tier in action_tiers and rid not in _exclude]
                 gid = _main_guild_id(guild_id)
                 if seed_role_ids and gid:
                     acl = load_action_acl(gid)

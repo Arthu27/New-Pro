@@ -106,8 +106,8 @@ scoped = SL.role_scoped_actions(GID, [CURATOR, HELPER])
 check(scoped is None,
       f'куратор+хелпер → полное меню (None), got={scoped}')
 lm, _ = SL.effective_limits(GID, [CURATOR, HELPER])
-check(lm.get('mute') == 10,
-      f'куратор+хелпер mute=10 тира, не 3 ({lm.get("mute")})')
+check(lm.get('mute') == 7,
+      f'куратор+хелпер mute=7 тира, не 3 ({lm.get("mute")})')
 
 print('== 3. ACL: куратор наследует бан модеров, не теряет из‑за хелпера ==')
 # узкий хелперский ACL + бан у модов (кураторского id в ban нет — регресс)
