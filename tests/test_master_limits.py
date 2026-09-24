@@ -78,9 +78,9 @@ check(SL.TIER_ORDER.index('helper') < SL.TIER_ORDER.index('mod'),
 check('helper' in SL.TIER_ORDER, 'TIER_ORDER has helper')
 check(SL.TIER_ORDER.index('master') < SL.TIER_ORDER.index('curator'),
       'master ниже curator')
-check(SH.RANK['master'] == 2 and SH.RANK['mod'] == 1
-      and SH.RANK['helper'] == 1 and SH.RANK['curator'] == 3,
-      'hierarchy RANK')
+check(SH.RANK['helper'] == 1 and SH.RANK['mod'] == 2
+      and SH.RANK['master'] == 3 and SH.RANK['curator'] == 4,
+      'hierarchy RANK helper < mod < master < curator')
 
 print('== 2. Лимиты: хелпер варн 1 без бана; мастер варн 1; куратор варн 2 ==')
 mod_l = SL.TIER_DEFAULT_LIMITS['mod']

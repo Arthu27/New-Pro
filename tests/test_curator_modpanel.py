@@ -183,7 +183,7 @@ acts4 = [a[0] for a in actions_for_member(guild, cur_only)]
 check(set(acts4) <= {'mute', 'unmute', 'clear', 'warn'} or 'ban' not in acts4,
       f'чистый куратор со своими mute-лимитами не раздувается: {acts4}')
 
-print('== 8. Админ+хелпер: меню админа, не хелпера ==')
+print('== 8. Mapped admin+хелпер: меню админа; Discord-admin+хелпер: только хелпер ==')
 ADMIN_ROLE = 9000000000000000902
 with open('data/role_map.json', 'w', encoding='utf-8') as fh:
     json.dump({
@@ -199,8 +199,8 @@ check(scoped_ah is None,
       f'admin+helper → полное меню (None), got={scoped_ah}')
 acts_ah = [a[0] for a in actions_for_member(guild, admin_h)]
 check('ban' in acts_ah and 'warn' in acts_ah,
-      f'admin+helper видит полную панель: {acts_ah}')
-# Discord Administrator без admin в role_map + helper
+      f'mapped admin+helper видит полную панель: {acts_ah}')
+# Discord Administrator без admin в role_map + helper — НЕ видит бан/разбан
 class _AdminPerms(_Perms):
     administrator = True
 
@@ -209,14 +209,19 @@ admin_discord = _Member(47, [GID, HELPER], guild=guild)
 admin_discord.guild_permissions = _AdminPerms()
 check(SH.actor_panel_role(guild, admin_discord) == 'admin',
       f'Discord admin+helper → admin ({SH.actor_panel_role(guild, admin_discord)})')
-# Discord Administrator сам по себе прав в ACL не даёт (панель →
-# Классические разрешения). Тир «admin» — для иерархии/лимитов; меню
-# по ACL остаётся хелперским, пока админ не в role_map / ACL.
-acts_ad = [a[0] for a in actions_for_member(guild, admin_discord)]
-check('mute' in acts_ad,
-      f'Discord admin+helper: ACL хелпера (mute) жив: {acts_ad}')
 check(SH.best_mapped_tier(admin_discord) == 'helper',
       'mapped helper = helper, Discord admin выше только в actor_panel_role')
+acts_ad = [a[0] for a in actions_for_member(guild, admin_discord)]
+check(set(acts_ad) <= {'warn', 'mute', 'unmute', 'clear'},
+      f'Discord admin+helper: только хелпер-меню, got={acts_ad}')
+check('ban' not in acts_ad and 'unban' not in acts_ad and 'unwarn' not in acts_ad,
+      f'Discord admin+helper НЕ видит ban/unban/unwarn: {acts_ad}')
+check('mute' in acts_ad and 'warn' in acts_ad and 'clear' in acts_ad,
+      f'Discord admin+helper: warn/mute/clear живы: {acts_ad}')
+from cogs.moderation import mute_kinds_for  # noqa: E402
+kinds_ad = [k[0] for k in mute_kinds_for(GID, admin_discord)]
+check(kinds_ad == ['mute_chat'],
+      f'Discord admin+helper mute kinds только чат: {kinds_ad}')
 
 print('== 9. Финальный /modpanel V2 ==')
 from cogs.moderation import ModTargetSelect  # noqa: E402
