@@ -864,8 +864,9 @@ def start_tunnel():
 
 
 _synced = False
-# Голосовая комната, в которой бот остаётся 24/7 (0 / пусто = не заходить).
+# Голосовая комната 24/7. Stay всегда вкл, если задан канал.
 # Приоритет: env VOICE_CHANNEL_ID → config/voice_stay.json → None
+# VOICE_STAY_ENABLED игнорируется (как у Event-бота).
 def _resolve_voice_channel_id():
     raw = (os.environ.get('VOICE_CHANNEL_ID') or '').strip()
     if raw and raw not in ('0', 'none', 'None'):
@@ -886,69 +887,298 @@ def _resolve_voice_channel_id():
 
 VOICE_CHANNEL_ID = _resolve_voice_channel_id()
 
-async def _monitor_voice():
-    """Держим голосовое подключение живым — только connect, без play.
+# Opus для voice protocol (silence keepalive / reconnect)
+try:
+    if not discord.opus.is_loaded():
+        for _name in (
+            'libopus.so.0', 'libopus.so', 'opus',
+            '/usr/lib/x86_64-linux-gnu/libopus.so.0',
+            '/usr/lib/libopus.so.0',
+        ):
+            try:
+                discord.opus.load_opus(_name)
+                if discord.opus.is_loaded():
+                    break
+            except Exception:
+                continue
+except Exception:
+    pass
 
-    Раньше каждые 4 мин играли тишину через ``vc.play``. Даже в
-    ``asyncio.to_thread`` это давало гонки с gateway и на живом сервере
-    снова всплывало «Moderation не ответило вовремя» (цикл занят /
-    voice state machine). Подключение само держит сессию Discord.
+# Voice stay state — без лимита попыток, как у Event-бота
+_voice_joining = False
+_voice_suppress_rejoin_until = 0.0
+_voice_rejoin_task = None
+_voice_monitor_task = None
+_voice_last_join_ts = 0.0
+_voice_last_silence_ts = 0.0
 
-    Silence-ping только если явно: ``VOICE_SILENCE_PING=1`` (тогда play
-    строго через ``to_thread`` + ``wait_for``).
+
+async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
+    """Подключить основного бота к войсу. Кикнули — зови снова (без лимитов).
+
+    force=True — сбросить zombie VoiceClient и зайти заново
+    (resume / kick / soft-reconnect). Не доверяем одному is_connected().
     """
+    global _voice_joining, _voice_suppress_rejoin_until, VOICE_CHANNEL_ID
+    global _voice_last_join_ts
+    from services.voice_stay_health import (
+        really_in_channel, force_drop_voice, voice_client_alive)
+
+    cid = int(channel_id or VOICE_CHANNEL_ID or 0)
+    if not cid:
+        return False, 'канал не задан'
+    if bot.is_closed():
+        return False, 'бот офлайн'
+    try:
+        if not bot.is_ready():
+            return False, 'бот ещё не ready'
+    except Exception:
+        return False, 'бот не ready'
+
+    if not force:
+        ok, vc, reason = really_in_channel(bot, cid)
+        if ok:
+            return True, f'уже в <#{cid}>'
+        if reason == 'zombie-lib-in-discord-out':
+            force = True
+            _log.warning('main voice zombie (%s) — force reconnect', reason)
+
+    _voice_joining = True
+    _voice_suppress_rejoin_until = time.time() + 5.0
+    try:
+        channel = bot.get_channel(cid)
+        if channel is None:
+            try:
+                channel = await bot.fetch_channel(cid)
+            except Exception as ex:
+                return False, f'канал не найден: {ex}'
+        if not isinstance(channel, discord.VoiceChannel):
+            return False, 'ID не голосовой канал'
+
+        if force:
+            await force_drop_voice(bot, channel.guild)
+        else:
+            for stale in list(bot.voice_clients or []):
+                try:
+                    if not voice_client_alive(stale):
+                        await stale.disconnect(force=True)
+                except Exception:
+                    pass
+
+        vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
+        if vc and voice_client_alive(vc):
+            if getattr(vc.channel, 'id', None) == cid:
+                ok2, _, reason2 = really_in_channel(bot, cid)
+                if ok2:
+                    return True, f'уже в <#{cid}>'
+                # library думает «in», Discord — нет
+                try:
+                    await vc.disconnect(force=True)
+                except Exception:
+                    pass
+            else:
+                try:
+                    await vc.move_to(channel)
+                    _voice_last_join_ts = time.time()
+                    _log.info('main voice moved to %s', cid)
+                    return True, f'переехал в <#{cid}>'
+                except Exception:
+                    try:
+                        await vc.disconnect(force=True)
+                    except Exception:
+                        pass
+        try:
+            await asyncio.wait_for(
+                channel.connect(
+                    self_deaf=True, self_mute=True, reconnect=True,
+                    timeout=20.0),
+                timeout=25.0)
+            _voice_last_join_ts = time.time()
+            _log.info('main voice joined %s', cid)
+            return True, f'зашёл в <#{cid}>'
+        except Exception as ex:
+            msg = str(ex).lower() or type(ex).__name__
+            if 'already' in msg and 'connected' in msg:
+                # already connected часто = zombie — сброс и ещё раз
+                try:
+                    await force_drop_voice(bot, channel.guild)
+                    await asyncio.wait_for(
+                        channel.connect(
+                            self_deaf=True, self_mute=True, reconnect=True,
+                            timeout=20.0),
+                        timeout=25.0)
+                    _voice_last_join_ts = time.time()
+                    return True, f'перезашёл в <#{cid}>'
+                except Exception as ex2:
+                    return False, f'не удалось зайти: {ex2 or type(ex2).__name__}'
+            return False, f'не удалось зайти: {ex or type(ex).__name__}'
+    finally:
+        _voice_joining = False
+        # 3с suppress — свой VOICE_STATE after=None после reconnect не штормит
+        _voice_suppress_rejoin_until = time.time() + 3.0
+
+
+def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
+    """Бесконечный возврат в войс — без потолка попыток."""
+    global _voice_rejoin_task, _voice_suppress_rejoin_until
+    if not VOICE_CHANNEL_ID or bot.is_closed():
+        return
+    # при kick/resume/zombie — не ждём suppress
+    if force:
+        _voice_suppress_rejoin_until = 0.0
+    elif time.time() < _voice_suppress_rejoin_until:
+        return
+    if _voice_joining and not force:
+        return
+
+    async def _go():
+        from services.voice_stay_health import really_in_channel
+        attempt = 0
+        while not bot.is_closed():
+            attempt += 1
+            delay = 0.3 if attempt == 1 else (1.0 if attempt < 5 else 5.0)
+            await asyncio.sleep(delay)
+            if bot.is_closed():
+                return
+            if _voice_joining:
+                continue
+            if (not force) and time.time() < _voice_suppress_rejoin_until:
+                continue
+            try:
+                if not bot.is_ready():
+                    continue
+            except Exception:
+                continue
+            cid = VOICE_CHANNEL_ID
+            if not cid:
+                return
+            use_force = force or attempt > 1 or reason in (
+                'kicked-or-moved', 'resume', 'gateway-disconnect',
+                'soft-reconnect', 'zombie', 'daemon-heartbeat')
+            if not use_force:
+                ok, _, why = really_in_channel(bot, cid)
+                if ok:
+                    if attempt > 1:
+                        _log.info('main voice rejoin skip — healthy in %s', cid)
+                    return
+                if why.startswith('zombie'):
+                    use_force = True
+            ok, msg = await _ensure_main_voice_joined(cid, force=use_force)
+            if ok:
+                _log.info('main voice rejoin (%s try=%s force=%s): %s',
+                          reason or 'auto', attempt, use_force, msg)
+                return
+            _log.warning('main voice rejoin fail (%s try=%s): %s',
+                         reason or 'auto', attempt, msg)
+
+    # kick/force — отменить зависший rejoin и стартовать новый
+    if force and _voice_rejoin_task is not None and not _voice_rejoin_task.done():
+        try:
+            _voice_rejoin_task.cancel()
+        except Exception:
+            pass
+        _voice_rejoin_task = None
+    if _voice_rejoin_task is not None and not _voice_rejoin_task.done():
+        return
+    try:
+        _voice_rejoin_task = bot.loop.create_task(
+            _go(), name='main-voice-rejoin')
+    except Exception as ex:
+        _log.debug('schedule main voice rejoin: %s', ex)
+
+
+async def _monitor_voice():
+    """Держим войс 24/7 по Discord-truth + soft reconnect + silence keepalive.
+
+    Каждые 2с: me.voice и latency. Zombie → force rejoin. Раз в ~45 мин
+    soft reconnect. Silence ping по умолчанию ВКЛ (лёгкий UDP keepalive).
+    """
+    global _voice_last_silence_ts, _voice_last_join_ts
+    from services.voice_stay_health import (
+        really_in_channel, needs_soft_reconnect)
+
     await bot.wait_until_ready()
-    await asyncio.sleep(10)
-    last_ping = 0.0
-    backoff_until = 0.0
-    _silence = (os.environ.get('VOICE_SILENCE_PING') or '').strip().lower() in (
-        '1', 'true', 'yes', 'on')
+    await asyncio.sleep(1)
+    # Silence по умолчанию ON; выключить: VOICE_SILENCE_PING=0
+    _silence_env = (os.environ.get('VOICE_SILENCE_PING') or '1').strip().lower()
+    _silence = _silence_env not in ('0', 'false', 'no', 'off')
     if _silence:
-        _log.warning('_monitor_voice: VOICE_SILENCE_PING=1 — play включён '
-                     '(риск лагов); по умолчанию play ВЫКЛ')
+        _log.info('_monitor_voice: silence keepalive ON (VOICE_SILENCE_PING)')
     while not bot.is_closed():
-        await asyncio.sleep(30)
-        channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
-        if not channel or not isinstance(channel, discord.VoiceChannel):
+        await asyncio.sleep(2)
+        if not VOICE_CHANNEL_ID:
             continue
-        # Пока gateway не готов — не дёргаем voice.connect: иначе на обрывах
-        # сессии connect висит на цикле и усугубляет зависания.
+        if _voice_joining or time.time() < _voice_suppress_rejoin_until:
+            continue
         if not bot.is_ready():
             continue
-        if time.time() < backoff_until:
+        cid = VOICE_CHANNEL_ID
+        now = time.time()
+        ok, vc, why = really_in_channel(bot, cid)
+        if not ok:
+            force = why.startswith('zombie') or why == 'discord-in-lib-dead'
+            _log.warning('main voice monitor miss (%s) — rejoin force=%s',
+                         why, force)
+            ok2, msg = await _ensure_main_voice_joined(cid, force=force)
+            if ok2:
+                _log.info('main voice monitor: %s', msg)
+            else:
+                _log.warning('main voice monitor: %s', msg)
+                _schedule_main_voice_rejoin('monitor-miss', force=True)
             continue
-        vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
-
-        if not vc or not vc.is_connected():
+        if why == 'ok-latency-high' and needs_soft_reconnect(
+                _voice_last_join_ts, now, interval=120):
+            _log.warning('main voice latency bad >2min — soft heal')
+            _schedule_main_voice_rejoin('latency-heal', force=True)
+            continue
+        if needs_soft_reconnect(_voice_last_join_ts, now):
+            _log.info('main voice soft-reconnect after %.0f min',
+                      (now - _voice_last_join_ts) / 60.0)
+            _schedule_main_voice_rejoin('soft-reconnect', force=True)
+            continue
+        if _silence and (now - _voice_last_silence_ts) > 60:
             try:
-                vc = await asyncio.wait_for(
-                    channel.connect(self_deaf=False), timeout=30.0)
-                last_ping = time.time()
-                backoff_until = 0.0
-            except asyncio.TimeoutError:
-                backoff_until = time.time() + 60
-                _log.warning("_monitor_voice: connect не уложился в 30с — пауза 60с")
-            except Exception as _ex:
-                backoff_until = time.time() + 30
-                _log.debug("_monitor_voice(): подавлено: %s", _ex)
-        elif _silence and time.time() - last_ping > 240:
-            try:
-                if not vc.is_playing():
+                if vc and not vc.is_playing() and discord.opus.is_loaded():
                     import io
                     silence = io.BytesIO(b'\x00' * 3840)
                     source = discord.PCMAudio(silence)
                     await asyncio.wait_for(
-                        asyncio.to_thread(vc.play, source), timeout=15.0)
-                last_ping = time.time()
+                        asyncio.to_thread(vc.play, source), timeout=10.0)
+                _voice_last_silence_ts = now
             except asyncio.TimeoutError:
-                _log.warning("_monitor_voice: play timeout 15s (#%s)",
-                             getattr(channel, 'id', '?'))
-                last_ping = time.time()
+                _log.warning('_monitor_voice: silence timeout — force rejoin')
+                _schedule_main_voice_rejoin('silence-timeout', force=True)
             except Exception as _ex:
-                _log.debug("_monitor_voice(): подавлено: %s", _ex)
-        else:
-            # Без silence-ping просто считаем соединение живым.
-            last_ping = time.time()
+                _log.debug('_monitor_voice silence: %s', _ex)
+                _voice_last_silence_ts = now
+
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    """Кик/перенос основного бота из stay-канала → мгновенный force-rejoin."""
+    global _voice_suppress_rejoin_until
+    if not VOICE_CHANNEL_ID:
+        return
+    me = bot.user
+    if me is None or member is None:
+        return
+    if int(getattr(member, 'id', 0) or 0) != int(me.id):
+        return
+    # Свой disconnect во время connect/force_drop — не штормить
+    if _voice_joining or time.time() < _voice_suppress_rejoin_until:
+        return
+    target = VOICE_CHANNEL_ID
+    before_id = getattr(getattr(before, 'channel', None), 'id', None)
+    after_id = getattr(getattr(after, 'channel', None), 'id', None)
+    if after_id == target:
+        return
+    if before_id == target or after_id is None or after_id != target:
+        _log.warning(
+            'main left voice (before=%s after=%s) — FORCE return to %s',
+            before_id, after_id, target)
+        _voice_suppress_rejoin_until = 0.0
+        _schedule_main_voice_rejoin('kicked-or-moved', force=True)
+
 
 @bot.event
 async def on_disconnect():
@@ -958,6 +1188,7 @@ async def on_disconnect():
     # ЗАПАСНОЙ обработчик: когда загружен анти-краш (error_handler.py),
     # он перекрывает этот и ведёт ПОЛНЫЙ учёт (обрывы, resume, простой,
     # алерты). Здесь остаётся фолбэк на случай, если анти-краш не грузится.
+    # Voice rejoin — через add_listener (_voice_gw_*), не здесь.
     print("[СЕТЬ] Соединение с Discord потеряно — переподключаюсь...")
     _log.warning("Соединение с Discord потеряно (автопереподключение)")
 
@@ -966,6 +1197,46 @@ async def on_disconnect():
 async def on_resumed():
     print("[СЕТЬ] Соединение восстановлено (RESUME) — события не потеряны")
     _log.info("Соединение с Discord восстановлено (resume)")
+
+
+_voice_gw_listeners_bound = False
+
+
+def _bind_voice_gw_listeners():
+    """Rejoin на disconnect/resume через add_listener — переживает override error_handler."""
+    global _voice_gw_listeners_bound
+    if _voice_gw_listeners_bound:
+        return
+
+    async def _voice_on_disconnect():
+        # Gateway down — connect сейчас зависнет. Ждём resume.
+        _log.warning('main gateway disconnect — жду resume (без connect)')
+
+    async def _voice_on_resumed():
+        try:
+            async def _after():
+                for _ in range(20):
+                    try:
+                        if bot.is_ready():
+                            break
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.25)
+                await asyncio.sleep(0.5)
+                _schedule_main_voice_rejoin('resume', force=True)
+            bot.loop.create_task(_after(), name='main-voice-after-resume')
+        except Exception:
+            try:
+                _schedule_main_voice_rejoin('resume', force=True)
+            except Exception:
+                pass
+
+    try:
+        bot.add_listener(_voice_on_disconnect, 'on_disconnect')
+        bot.add_listener(_voice_on_resumed, 'on_resumed')
+        _voice_gw_listeners_bound = True
+    except Exception as ex:
+        _log.debug('bind voice gw listeners: %s', ex)
 
 
 # Сколько ждём синк команд, прежде чем признать его зависшим. Обычный
@@ -1071,14 +1342,17 @@ async def on_ready():
             gc_stabilize()
         except Exception as _ex:
             _log.warning("on_ready(): GC-стабилизация не удалась: %s", _ex)
-        # Voice stay: по умолчанию ВКЛ если задан канал. Полностью выключить:
-        # VOICE_STAY_ENABLED=0. Silence-ping по-прежнему только VOICE_SILENCE_PING=1.
-        _voice_stay = (os.environ.get('VOICE_STAY_ENABLED') or '1').strip().lower() \
-            not in ('0', 'false', 'no', 'off')
-        if VOICE_CHANNEL_ID and _voice_stay:
-            bot.loop.create_task(_monitor_voice())
+        # Voice stay всегда ВКЛ если задан канал (VOICE_STAY_ENABLED игнорируется).
+        # Silence-ping по-прежнему только VOICE_SILENCE_PING=1.
+        global _voice_monitor_task
+        if VOICE_CHANNEL_ID:
+            _bind_voice_gw_listeners()
+            if _voice_monitor_task is None or _voice_monitor_task.done():
+                _voice_monitor_task = bot.loop.create_task(
+                    _monitor_voice(), name='main-voice-monitor')
+            _log.info('voice stay: всегда вкл → канал %s', VOICE_CHANNEL_ID)
         else:
-            _log.info('voice stay: выключен (нет канала или VOICE_STAY_ENABLED=0)')
+            _log.info('voice stay: нет канала в VOICE_CHANNEL_ID / voice_stay.json')
         # Детектор зависания event loop: если callback >1с — пишем в лог.
         # Без этого «не ответило вовремя» выглядит как баг панели, хотя
         # виноват sync-код в другом коге.
@@ -1153,20 +1427,20 @@ async def on_ready():
         _log.warning("on_ready(): change_presence: %s", _ex)
 
     try:
-        channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
-        if channel and isinstance(channel, discord.VoiceChannel):
-            vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
-            if not vc:
-                try:
-                    await asyncio.wait_for(channel.connect(self_deaf=False),
-                                           timeout=60)
-                    print(f"[ОК] Подключен к голосовому каналу: {channel.name}")
-                except asyncio.TimeoutError:
-                    print("[ОШИБКА] Голосовой канал не ответил за 60с — пропускаю")
-                except Exception as e:
-                    print(f"[ОШИБКА] Ошибка подключения к голосу: {e}")
+        if VOICE_CHANNEL_ID:
+            ok, msg = await _ensure_main_voice_joined(VOICE_CHANNEL_ID)
+            if ok:
+                print(f"[ОК] Голосовой stay: {msg}")
+            else:
+                print(f"[ВОЙС] {msg} — rejoin без лимита")
+                _log.warning("on_ready(): voice: %s", msg)
+                _schedule_main_voice_rejoin('on_ready-fail')
     except Exception as _ex:
         _log.warning("on_ready(): голосовое подключение: %s", _ex)
+        try:
+            _schedule_main_voice_rejoin('on_ready-exc')
+        except Exception:
+            pass
 
     # Стартовые роли из config/role_seed.json — применяем один раз при старте
     # бота (роли персонала для уровней/лимитов + роль бана), чтобы выкатка
@@ -1626,6 +1900,19 @@ async def main():
                       "(443 закрыт или блокировка) — нужен фаервол/VPN на VDS")
         else:
             print(f"[СЕТЬ] Доступ к Discord есть ({', '.join(_reachable)}:443)")
+
+        # Event-бот (второй клиент): войсе-stay + статус Events.
+        # Токен — EVENT_BOT_TOKEN в .env; без токена просто пропускаем.
+        try:
+            from services.event_voice_bot import start_event_bot, event_bot_token
+            if event_bot_token():
+                await start_event_bot()
+                print("[EVENT-БОТ] Запущен (войсе-stay)")
+            else:
+                print("[EVENT-БОТ] EVENT_BOT_TOKEN не задан — пропуск")
+        except Exception as _ebx:
+            print(f"[EVENT-БОТ] не стартовал: {_ebx}")
+            log.warning("event_voice_bot start: %s", _ebx)
 
         # Anti-crash: автоперезапуск при сетевых сбоях, но с нарастающей паузой,
         # чтобы не долбить Discord во время сбоя (5 -> 10 -> 20 ... макс. 60 сек).

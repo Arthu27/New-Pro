@@ -10,6 +10,7 @@ from datetime import datetime ,timedelta ,timezone
 import json 
 import os 
 import time 
+import types
 from cogs .embed_utils import gif ,now_ts ,mod_dm_embed ,mod_log_embed ,success_embed ,error_embed 
 
 from logger import get_logger 
@@ -20,13 +21,28 @@ DIVIDER ="✦ ───────────────────── �
 
 
 async def _respond (interaction ,**kw ):
-    """Ответить на interaction максимально надёжно.
+    """Ответить на interaction: Components V2 notice, иначе embed.
 
-    Первый ответ — response.send_message; если уже был defer/ответ —
-    followup. Ошибки самой отправки глушим с записью в журнал: модератор
-    НИКОГДА не должен видеть «Приложение не отвечает» при выполненном
-    наказании.
+    Если передан embed=success/error — конвертим в LayoutView (без
+    одновременного embed+view). Модератор всегда видит V2-ответ.
     """
+    embed = kw.pop('embed', None)
+    view = kw.get('view')
+    # LayoutView нельзя мешать с embed=
+    if view is not None and embed is not None:
+        embed = None
+    if embed is not None and view is None:
+        try:
+            from services.v2_layouts import notice_from_embed, V2_AVAILABLE
+            if V2_AVAILABLE:
+                v2 = notice_from_embed(embed)
+                if v2 is not None:
+                    kw['view'] = v2
+                    embed = None
+        except Exception as _vx:
+            log.debug('[MODPANEL] v2 notice: %s', _vx)
+    if embed is not None:
+        kw['embed'] = embed
     try :
         if interaction .response .is_done ():
             await interaction .followup .send (**kw )
@@ -35,7 +51,14 @@ async def _respond (interaction ,**kw ):
     except Exception as _e :
         log .info (f'[MODPANEL] Ответ не доставлен: {_e}')
         try :
-            await interaction .followup .send (**kw )
+            # если V2 не приняли — фолбек на embed
+            if kw.get('view') is not None and embed is not None:
+                kw2 = dict(kw)
+                kw2.pop('view', None)
+                kw2['embed'] = embed
+                await interaction .followup .send (**kw2 )
+            else:
+                await interaction .followup .send (**kw )
         except Exception as _e2 :
             log .warning (f'[MODPANEL] Ответ не доставлен и через followup: {_e2}')
 
@@ -334,9 +357,25 @@ class Moderation (commands .Cog ):
 
     async def send_dm (self ,user ,embed ,view =None ):
         # DM — шаг best-effort: закрытые ЛС/сетевые сбои НЕ должны
-        # отменять наказание или превращать его в «ошибку» для модератора
+        # отменять наказание или превращать его в «ошибку» для модератора.
+        # V2 notice (как у апелляций), если нет отдельного view с кнопками.
         try :
-            await user .send (embed =embed ,view =view )
+            send_kw = {}
+            if view is not None:
+                # Кнопка апелляции и т.п. — классический View + embed
+                # (LayoutView нельзя смешивать с обычным View)
+                send_kw = {'embed': embed, 'view': view}
+            else:
+                try:
+                    from services.v2_layouts import notice_from_embed, V2_AVAILABLE
+                    v2 = notice_from_embed(embed) if V2_AVAILABLE else None
+                    if v2 is not None:
+                        send_kw = {'view': v2}
+                    else:
+                        send_kw = {'embed': embed}
+                except Exception:
+                    send_kw = {'embed': embed}
+            await user .send (**send_kw )
         except Exception as _ex:
             _log.debug("send_dm(): подавлено: %s", _ex)
 
@@ -732,9 +771,11 @@ class Moderation (commands .Cog ):
                 'Не нашёл участника по цели. Нужен @ник, ТОЧНОЕ имя или ID.'),
                 ephemeral =True )
                 return
+            # Реальный модератор (Member), не PanelActor — иначе роли/лимиты
+            # идут от id=0 и роль уровня варна может не выдаться.
             ok ,text =await self .apply_panel_action (
             guild ,(user if user is not None else uid ),'warn',
-            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            reason =reason ,actor =interaction .user )
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
@@ -806,6 +847,43 @@ class Moderation (commands .Cog ):
             # Срок наказания для дела (минуты): заполняют мут-ветки ниже,
             # «История решений» панели показывает его в колонке «Длительность»
             _case_minutes =None
+
+            # Повторный/параллельный мут одному человеку — запрещён
+            _mute_lock = None
+            if action in ('timeout', 'mute_chat', 'vmute') and hasattr(user, 'roles'):
+                try:
+                    from services import mute_state as _ms
+                    _active = _ms.active_mute_kinds(guild, user)
+                    _deny_m = _ms.already_muted_deny(action, _active)
+                    if _deny_m:
+                        await _respond(interaction,
+                                       embed=error_embed(_deny_m),
+                                       ephemeral=True)
+                        return
+                    _mute_lock = _ms.mute_apply_lock(guild.id, user.id)
+                    # если второй модер уже внутри — не ждём вечно
+                    import asyncio as _aio_ml
+                    try:
+                        await _aio_ml.wait_for(_mute_lock.acquire(), timeout=0.05)
+                    except _aio_ml.TimeoutError:
+                        await _respond(interaction, embed=error_embed(
+                            'Этот участник сейчас уже получает мут от другого '
+                            'модератора — подождите секунду.'),
+                            ephemeral=True)
+                        return
+                    # повторная проверка под локом
+                    _active2 = _ms.active_mute_kinds(guild, user)
+                    _deny2 = _ms.already_muted_deny(action, _active2)
+                    if _deny2:
+                        _mute_lock.release()
+                        _mute_lock = None
+                        await _respond(interaction,
+                                       embed=error_embed(_deny2),
+                                       ephemeral=True)
+                        return
+                except Exception as _mx:
+                    log.debug('[MODPANEL] mute guard: %s', _mx)
+                    _mute_lock = None
 
             try :
                 if action =="ban":
@@ -1078,6 +1156,12 @@ class Moderation (commands .Cog ):
                 import traceback as _tb
                 log .warning (f"[MODPANEL] Сбой действия: {_tb.format_exc()}")
                 await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
+            finally:
+                if _mute_lock is not None:
+                    try:
+                        _mute_lock.release()
+                    except Exception:
+                        pass
 
         elif action =="unban":
             uid =self ._parse_target_id (target )
@@ -1244,7 +1328,13 @@ class Moderation (commands .Cog ):
             return False ,'Неизвестное действие'
         if guild is None :
             return False ,'Сервер не найден'
-        _actor =PanelActor (actor )
+        # actor: реальный Member из Discord ИЛИ строка/PanelActor из веб-панели
+        if isinstance(actor, discord.Member) or (
+                hasattr(actor, 'id') and hasattr(actor, 'roles')
+                and not isinstance(actor, str)):
+            _actor = actor
+        else:
+            _actor = PanelActor(actor)
         target_str =str (getattr (target ,'id',target ))
         # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05: «модер наказывает модера
         # и куратора — беспредел»): персонал не наказывает персонал своего
@@ -1275,7 +1365,7 @@ class Moderation (commands .Cog ):
                         return False ,_derr
             except Exception as _pex :
                 _log .debug ('[MODPANEL] panel dur cap: %s',_pex )
-        # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
+        # варн — своя ветка
         if action =='warn':
             try :
                 from services .staff_limits import check_action 
@@ -1288,11 +1378,26 @@ class Moderation (commands .Cog ):
                 w =self .bot .get_cog ('warnings')
                 if w is None :
                     return False ,'Модуль варнов не загружен'
-                # add_warning сам пишет варн, ДМ участнику и лог в канал
-                res =await w .add_warning (target ,moderator =_actor ,
+                # Цель должна быть Member (роли уровня варна иначе не выдать)
+                _tm = target if isinstance(target, discord.Member) \
+                    else guild.get_member(int(target_str) or 0)
+                if _tm is None:
+                    return False, (
+                        'Участник не на сервере — варн с ролью уровня '
+                        'выдаётся только тем, кто сейчас на сервере.')
+                w._last_role_sync = (True, 'ok')
+                res =await w .add_warning (_tm ,moderator =_actor ,
                 reason =reason or None )
                 _total =res [1 ]if isinstance (res ,tuple )else None 
-                return True ,f'Варн выдан (всего: {_total if _total is not None else "?"})'
+                _txt = f'Варн выдан (всего: {_total if _total is not None else "?"})'
+                _rok, _rdet = getattr(w, '_last_role_sync', (True, 'ok'))
+                if not _rok:
+                    _txt += f'\n⚠️ Роль уровня не выдана: {_rdet}'
+                elif _rdet == 'no-levels':
+                    _txt += (
+                        '\nℹ️ Роли уровней варнов не настроены '
+                        '(панель → Роли наказаний → уровни варнов).')
+                return True ,_txt
             except Exception as _ex :
                 return False ,f'Не получилось: {_ex }'
         if action =='unwarn':
@@ -1858,18 +1963,32 @@ class PanelInteraction:
             async def defer(s, ephemeral=False, thinking=False, **kw):
                 s._done = True
 
-            async def send_message(s, embed=None, ephemeral=False, **kw):
+            async def send_message(s, embed=None, ephemeral=False, view=None, **kw):
                 if embed is not None:
                     self.msgs.append(embed)
+                elif view is not None:
+                    self.msgs.append(_view_msg_proxy(view))
                 s._done = True
 
         class _Follow:
-            async def send(s, embed=None, ephemeral=False, **kw):
+            async def send(s, embed=None, ephemeral=False, view=None, **kw):
                 if embed is not None:
                     self.msgs.append(embed)
+                elif view is not None:
+                    self.msgs.append(_view_msg_proxy(view))
 
         self.response = _Resp()
         self.followup = _Follow()
+
+
+def _view_msg_proxy(view):
+    """Прокси с .description для _embed_text (V2 LayoutView)."""
+    try:
+        from services.v2_layouts import layout_plain_text
+        text = layout_plain_text(view)
+    except Exception:
+        text = ''
+    return types.SimpleNamespace(description=text or 'Готово', title='')
 
 
 def _embed_text(e):
@@ -2284,9 +2403,9 @@ async def _push_panel_view(panel, interaction=None):
             try:
                 if want is not None and int(new_msg.id) != int(want):
                     log.warning(
-                        'modpanel push: ответили msg=%s, ждали %s — не переезжаем',
+                        'modpanel push: ответили msg=%s, ждали %s — FAIL',
                         getattr(new_msg, 'id', None), want)
-                    return True
+                    return False
             except Exception:
                 pass
             panel._panel_message = new_msg
@@ -2316,11 +2435,21 @@ async def _push_panel_view(panel, interaction=None):
             return await _ok(await fu.edit_message(int(mid), **kw))
         except Exception as ex:
             errors.append(f'fu.edit:{ex}')
+    # edit_original_response — только если ещё не было другого ответа
+    # (после tip send_message original = tip → нельзя сюда падать).
     if interaction is not None:
         try:
+            resp = getattr(interaction, 'response', None)
+            already = bool(resp and resp.is_done())
+            # если ACK был defer — original всё ещё панель; если send_message — нет
             edit_orig = getattr(interaction, 'edit_original_response', None)
-            if callable(edit_orig):
-                return await _ok(await edit_orig(**kw))
+            if callable(edit_orig) and already:
+                # безопаснее только когда panel message известен и совпадёт
+                got = await edit_orig(**kw)
+                ok = await _ok(got)
+                if ok:
+                    return True
+                errors.append('orig:wrong-msg')
         except Exception as ex:
             errors.append(f'orig:{ex}')
     log.warning('modpanel push FAILED: %s', '; '.join(errors) or 'no path')
@@ -2698,25 +2827,21 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Без участника — запомнить действие, попросить выбрать участника
+        # Без участника — запомнить действие и обновить ТУ ЖЕ панель.
+        # НЕ send_message tip: иначе original_response = tip, push правит
+        # не ту эфемерку → custom_id рассинхрон → наказания/лимиты мёртвые.
         if action != "clear" and not prefill and view is not None:
             view.pending_action = action
+            _bind_live_panel(view, interaction)
             try:
                 if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        content='Сначала выберите участника выше, затем действие.',
-                        ephemeral=True)
-                else:
-                    await interaction.followup.send(
-                        content='Сначала выберите участника выше, затем действие.',
-                        ephemeral=True)
-            except Exception:
-                try:
-                    await _ack(interaction, thinking=False)
-                except Exception:
-                    pass
+                    try:
+                        await interaction.response.defer(thinking=False)
+                    except TypeError:
+                        await interaction.response.defer()
+            except Exception as _ack_ex:
+                log.debug('modpanel action-no-target ACK: %s', _ack_ex)
             try:
-                _bind_live_panel(view, interaction)
                 await _silent_reset_panel(interaction, view)
             except Exception:
                 _schedule_panel_reset(
@@ -2898,7 +3023,7 @@ class ModPanelView(discord.ui.LayoutView):
     """
 
     def __init__(self, cog, member=None, allowed=None, preselect=None):
-        super().__init__(timeout=300)  # 5 минут — любые действия без нового окна
+        super().__init__(timeout=None)  # панель живёт, пока эфемерка видна
         self.cog = cog
         self.allowed = allowed
         self.member = member
@@ -3146,10 +3271,12 @@ class ModPanelView(discord.ui.LayoutView):
             from services.permission_acl import has_access
             guild = interaction.guild
             if guild and not has_access(guild.id, 'modpanel', user):
-                await interaction.response.send_message(
-                    embed=error_embed("Недостаточно прав: доступ к /modpanel "
-                                      "настраивает владелец (панель → Доступ → "
-                                      "Права команд)."),
+                from services.v2_layouts import reply_embed_v2
+                await reply_embed_v2(
+                    interaction,
+                    error_embed("Недостаточно прав: доступ к /modpanel "
+                                "настраивает владелец (панель → Доступ → "
+                                "Права команд)."),
                     ephemeral=True)
                 return False
         except Exception as _ex:

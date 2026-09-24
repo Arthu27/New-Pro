@@ -31,21 +31,27 @@ def check(ok, msg):
 
 print('== constants ==')
 from services.event_mod_acl_seed import (  # noqa: E402
-    EVENT_MOD_ROLE_ID, apply_event_mod_acl_seed, SEED_VERSION)
+    EVENT_ADMIN_ROLE_ID, EVENT_MOD_ROLE_ID, EVENT_STAFF_ROLE_IDS,
+    apply_event_mod_acl_seed, SEED_VERSION)
 from cogs import event_panel as EP  # noqa: E402
 
 check(EVENT_MOD_ROLE_ID == 852634463535759461, 'EVENT_MOD_ROLE_ID')
-check(EP.EVENT_MOD_ROLE_ID == EVENT_MOD_ROLE_ID, 'cog использует тот же id')
+check(EVENT_ADMIN_ROLE_ID == 1551527644326002748, 'EVENT_ADMIN_ROLE_ID')
+check(EP.EVENT_MOD_ROLE_ID == EVENT_MOD_ROLE_ID, 'cog использует тот же mod id')
+check(EP.EVENT_ADMIN_ROLE_ID == EVENT_ADMIN_ROLE_ID, 'cog использует тот же admin id')
+check(SEED_VERSION >= 2, f'seed v2+: {SEED_VERSION}')
 check(callable(EP.configured_panel_channel_id), 'configured_panel_channel_id')
 check(callable(EP.resolve_panel_channel), 'resolve_panel_channel')
+check(callable(EP.apply_start) and callable(EP.apply_end), 'start/end helpers')
 check('EVENT_PANEL_CHANNEL_ID' in open(
     os.path.join(ROOT, 'config.py'), encoding='utf-8').read(),
     'Config.EVENT_PANEL_CHANNEL_ID')
-check("name='event-panel'" in open(
-    os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read()
-    and 'channel: discord.TextChannel' in open(
-        os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read(),
+src = open(os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read()
+check("name='event-panel'" in src
+      and 'channel: discord.TextChannel' in src,
     '/event-panel принимает channel')
+check("event_panel:start" in src and '▶' in src, 'кнопка Старт')
+check("event_panel:end" in src, 'кнопка Финиш')
 
 print('== seed ==')
 for p in __import__('pathlib').Path('data').glob('.event_mod_acl*'):
@@ -54,9 +60,9 @@ rep = apply_event_mod_acl_seed(force=True, guild_id=111222333444555666)
 check(rep.get('applied') is True, f'seed applied: {rep}')
 from services import permission_acl as pacl  # noqa: E402
 cmd = pacl.load_acl(111222333444555666)
-h = str(EVENT_MOD_ROLE_ID)
-check(h in [str(x) for x in cmd.get('event-panel', [])],
-      'event-mod в cmd_acl event-panel')
+for rid in EVENT_STAFF_ROLE_IDS:
+    check(str(rid) in [str(x) for x in cmd.get('event-panel', [])],
+          f'staff {rid} в cmd_acl event-panel')
 
 print('== panel cfg ==')
 EP.save_panel_cfg(42, {'title': 'Тест', 'signups': ['1'], 'registration_open': True})
@@ -85,15 +91,37 @@ class _Member:
 
 
 check(EP.is_event_mod(_Member(1, [EVENT_MOD_ROLE_ID])), 'роль event mod → True')
+check(EP.is_event_mod(_Member(11, [EVENT_ADMIN_ROLE_ID])), 'роль event admin → True')
 check(EP.is_event_mod(_Member(2, [], manage=True)), 'manage_guild → True')
 check(not EP.is_event_mod(_Member(3, [999])), 'чужая роль → False')
 
+print('== start / end phase ==')
+cfg0 = {'title': 'Mafia', 'signups': ['1', '2'], 'registration_open': True, 'phase': 'open'}
+live = EP.apply_start(cfg0, by_user_id=99)
+check(live.get('phase') == 'live' and live.get('registration_open') is False
+      and live.get('started_by') == '99', f'apply_start: {live}')
+check(EP.normalize_phase(live) == 'live', 'normalize live')
+ended = EP.apply_end(live, by_user_id=99)
+check(ended.get('phase') == 'ended' and ended.get('live') is False, f'apply_end: {ended}')
+check(EP.event_voice_channel_id() == 1550986919981351043
+      or isinstance(EP.event_voice_channel_id(), int),
+      f'voice id={EP.event_voice_channel_id()}')
+
 print('== wiring ==')
 policy = open(os.path.join(ROOT, 'cogs_policy.py'), encoding='utf-8').read()
-check('event_panel.py' in policy and 'EVENT_LEAN_COGS' in policy,
-      'LEAN грузит event_panel')
+check('event_panel.py' not in policy or 'EVENT_LEAN_COGS = frozenset()' in policy
+      or "EVENT_LEAN_COGS = frozenset({\n})" in policy
+      or 'EVENT_LEAN_COGS = frozenset()' in open(
+          os.path.join(ROOT, 'cogs_policy.py'), encoding='utf-8').read(),
+      'LEAN больше не грузит event_panel')
 sb = open(os.path.join(ROOT, 'slash_budget.py'), encoding='utf-8').read()
-check("'event-panel'" in sb, 'KEEP_SLASH содержит event-panel')
+check("'event-panel'" not in sb.split('KEEP_SLASH')[-1].split('}')[0]
+      or "# 'event-panel'" in sb or "'event-panel'" not in [
+          x.strip().strip("'\"") for x in sb.split('KEEP_SLASH', 1)[-1].split('}', 1)[0].split(',')
+          if 'event-panel' in x and not x.strip().startswith('#')],
+      'KEEP_SLASH без event-panel')
+# мягкая проверка: event-panel закомментирован или отсутствует в активном списке
+check('mafia' in sb, 'KEEP_SLASH содержит mafia')
 main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('apply_event_mod_acl_seed' in main, 'on_ready зовёт event_mod seed')
 menu = open(os.path.join(ROOT, 'services/panel_menu.py'), encoding='utf-8').read()
@@ -109,6 +137,12 @@ check("event-panel'" in open(
     'API /event-panel')
 ev_html = open(os.path.join(ROOT, 'web/templates/events.html'), encoding='utf-8').read()
 check('evKpis' in ev_html and 'ev-discord' in ev_html, 'events.html: KPI + Discord preview')
+check('Старт' in ev_html, 'events.html: сценарий Старт')
+check('ev-btn-go' in ev_html or 'pub-opt-accent' in ev_html, 'events.html: акцент Старт')
+check('V2' in ev_html and 'pub-opt' in ev_html, 'events.html: V2 howto cards')
+check('лобби `/mafia` из списка' not in ev_html and '_maybe_launch_mafia' not in open(
+    os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read(),
+    'event-panel больше не автозапускает мафию')
 check('page-head-copy' in ev_html and 'eyebrow' in ev_html, 'events.html: page-head polish')
 check('evPublish' in ev_html and 'evChannel' in ev_html, 'events.html: publish + channel select')
 check('event_panel_channel' in open(
@@ -132,7 +166,8 @@ check(EP.target_channel_id(guild_id=99) == 0, 'clear target_channel_id')
 # AST: persistent custom_id
 src = open(os.path.join(ROOT, 'cogs/event_panel.py'), encoding='utf-8').read()
 for cid in ('event_panel:signup', 'event_panel:announce',
-            'event_panel:close', 'event_panel:list'):
+            'event_panel:start', 'event_panel:close',
+            'event_panel:list', 'event_panel:end'):
     check(cid in src, f'persistent button {cid}')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

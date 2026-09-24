@@ -288,6 +288,12 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
         self.role_name = role_name
 
     async def on_submit(self, interaction: discord.Interaction):
+        # defer сразу: доставка карточки кураторам может занять >3с
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
+        except Exception as _dex:
+            log.debug('staff apply defer: %s', _dex)
         # Сохраняем заявку
         apps = load_apps()
         user_id = str(interaction.user.id)
@@ -308,24 +314,6 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
             "message_id": None,
             "guild_id": interaction.guild.id if interaction.guild else None,
         }
-
-        # Подтверждение пользователю
-        embed = discord.Embed(
-            title="Заявка отправлена",
-            description=(
-                f"Ваша заявка на роль **{self.role_name}** успешно отправлена.\n"
-                "Ожидайте рассмотрения администрацией.\n"
-                "Статус можно проверить командой `/my-application`."
-            ),
-            color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
-        )
-        embed.add_field(name="Возраст", value=str(self.age), inline=True)
-        embed.add_field(name="Активность", value=str(self.activity), inline=True)
-        embed.add_field(name="Опыт", value=str(self.experience)[:200], inline=False)
-        embed.add_field(name="Причина", value=str(self.reason)[:200], inline=False)
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
         # Уведомление в ветку заявки: хелперы — кураторам хелперов,
         # модераторы — кураторам модераторов (свой канал + тег в карточке)
@@ -387,13 +375,34 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                             "настроен (панель → Каналы и маршруты)", user_id)
 
         save_apps(apps)
+        # Подтверждение пользователю — Components V2 (после доставки, чтобы
+        # честно сказать, если персонал не уведомлён).
+        body = (
+            f"Ваша заявка на роль **{self.role_name}** успешно отправлена.\n"
+            "Ожидайте рассмотрения администрацией.\n"
+            "Статус можно проверить командой `/my-application`.\n\n"
+            f"**Возраст:** {self.age}\n"
+            f"**Активность:** {self.activity}\n"
+            f"**Опыт:** {str(self.experience)[:200]}\n"
+            f"**Причина:** {str(self.reason)[:200]}"
+        )
         if not delivered:
-            # Честное сообщение: заявка сохранена, но персонал уведомить не вышло
-            embed.description += (
+            body += (
                 "\n\n⚠️ Заявка сохранена и видна администрации в панели "
                 "«Заявки в команду», но уведомление персоналу не доставлено "
                 "(не настроен канал заявок). Сообщи о себе администрации лично."
             )
+        try:
+            from services.v2_layouts import respond_v2
+            await respond_v2(
+                interaction, kind='ok', title='Заявка отправлена', body=body,
+                ephemeral=True)
+        except Exception as _vx:
+            log.debug('staff apply confirm v2: %s', _vx)
+            try:
+                await interaction.followup.send(body, ephemeral=True)
+            except Exception as _fx:
+                log.debug('staff apply confirm text: %s', _fx)
         log.info(f"Заявка от {interaction.user} на роль {self.role_name}"
                  + ("" if delivered else " (без уведомления персонала)"))
 
@@ -448,21 +457,26 @@ class StaffReviewView(discord.ui.View):
         return None, None, apps
 
     async def _review(self, interaction: discord.Interaction, action: str):
+        from services.v2_layouts import reply_text_v2, respond_v2, send_dm_v2
         if not (interaction.user.guild_permissions.manage_guild
                 or interaction.user.guild_permissions.administrator):
-            return await interaction.response.send_message(
-                "Рассматривать заявки может только администрация.", ephemeral=True)
+            return await reply_text_v2(
+                interaction,
+                "Рассматривать заявки может только администрация.",
+                kind='err', title='Нет доступа')
         await interaction.response.defer(ephemeral=True)
 
         key, app, apps = self._find_app_by_message(interaction.message.id)
         if not app:
-            return await interaction.followup.send(
-                "Заявка не найдена (возможно, данные удалены).", ephemeral=True)
+            return await reply_text_v2(
+                interaction,
+                "Заявка не найдена (возможно, данные удалены).",
+                kind='err')
         if app.get("status") != "pending":
             label = {"approved": "одобрена", "rejected": "отклонена"}.get(
                 app.get("status"), app.get("status", "?"))
-            return await interaction.followup.send(
-                f"Эта заявка уже {label}.", ephemeral=True)
+            return await reply_text_v2(
+                interaction, f"Эта заявка уже {label}.", kind='warn')
 
         app["status"] = "approved" if action == "approve" else "rejected"
         app["reviewed_by"] = str(interaction.user)
@@ -487,29 +501,29 @@ class StaffReviewView(discord.ui.View):
                 grant_note = role_hint(res)
         save_apps(apps)
 
-        # DM заявителю — именно этого уведомления не хватало
+        # DM заявителю — V2 notice
         dm_ok = False
         try:
             user = await interaction.client.fetch_user(int(app["user_id"]))
             if action == "approve":
                 emb = discord.Embed(
-                    title=" Заявка одобрена!",
+                    title="Заявка одобрена!",
                     description=("Поздравляем! Ваша заявка в команду сервера **одобрена**.\n"
                                  "Администрация свяжется с вами в ближайшее время."),
                     color=0x2ECC71)
             else:
                 emb = discord.Embed(
-                    title=" Заявка отклонена",
+                    title="Заявка отклонена",
                     description=("К сожалению, ваша заявка в команду сервера на этот раз "
                                  "**отклонена**.\nВы можете подать её снова позже."),
                     color=0xE74C3C)
-            emb.add_field(name=" Должность", value=app.get("role", "—"), inline=True)
-            emb.add_field(name=" Рассмотрел", value=interaction.user.display_name, inline=True)
+            emb.add_field(name="Должность", value=app.get("role", "—"), inline=True)
+            emb.add_field(name="Рассмотрел", value=interaction.user.display_name, inline=True)
             if granted:
-                emb.add_field(name=" Выдана роль", value=granted, inline=True)
+                emb.add_field(name="Выдана роль", value=granted, inline=True)
             emb.set_footer(text="Статус всегда можно проверить: /my-application")
             emb.timestamp = datetime.now(timezone.utc)
-            await user.send(embed=emb)
+            await send_dm_v2(user, emb)
             dm_ok = True
         except Exception as e:
             log.info(f"[STAFF] DM заявителю не доставлен: {e}")
@@ -524,7 +538,7 @@ class StaffReviewView(discord.ui.View):
                 if action == "approve" and granted:
                     verdict_line += f" · Роль: {granted}"
                 e0.add_field(
-                    name=" Решение: одобрена" if action == "approve" else " Решение: отклонена",
+                    name="Решение: одобрена" if action == "approve" else "Решение: отклонена",
                     value=verdict_line,
                     inline=False)
                 await src.edit(embed=e0, view=None)
@@ -536,9 +550,14 @@ class StaffReviewView(discord.ui.View):
         if action == "approve":
             role_line = (f" Роль выдана: **{granted}**."
                          if granted else f" Роль НЕ выдана: {grant_note}.")
-        await interaction.followup.send(
-            f"Заявка **{verdict}**.{role_line} Уведомление пользователю: "
-            f"{'отправлено в ЛС' if dm_ok else 'НЕ доставлено (у пользователя закрыты ЛС)'}",
+        await respond_v2(
+            interaction, kind='ok' if action == 'approve' else 'warn',
+            title=f'Заявка {verdict}',
+            body=(
+                f"Заявка **{verdict}**.{role_line}\n"
+                f"Уведомление пользователю: "
+                f"{'отправлено в ЛС' if dm_ok else 'НЕ доставлено (у пользователя закрыты ЛС)'}"
+            ),
             ephemeral=True)
 
     @discord.ui.select(
@@ -573,10 +592,32 @@ class StaffReviewButtonsView(discord.ui.View):
         await StaffReviewView()._review(interaction, "reject")
 
 
-class StaffApplyView(discord.ui.View):
-    def __init__(self):
+class StaffApplyView(discord.ui.LayoutView):
+    """Панель набора — Components V2 (баннер + select роли)."""
+
+    def __init__(self, *, banner_filename: str = 'staff_banner.png'):
         super().__init__(timeout=None)
-        self.add_item(RoleSelect())
+        from services.v2_layouts import (
+            V2_AVAILABLE, build_staff_menu_items, SHOW_MENU_BANNER)
+        sel = RoleSelect()
+        body = (
+            'Выберите должность ниже и заполните анкету.\n'
+            'Статус заявки — команда `/my-application`.')
+        show = bool(SHOW_MENU_BANNER and banner_filename)
+        if V2_AVAILABLE:
+            items = build_staff_menu_items(
+                banner_filename=banner_filename or '',
+                body=body,
+                role_select=sel,
+                show_banner=show,
+            )
+            if items:
+                for it in items:
+                    self.add_item(it)
+                return
+        row = discord.ui.ActionRow()
+        row.add_item(sel)
+        self.add_item(row)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -602,7 +643,9 @@ class StaffApply(commands.Cog):
             from services.system_readiness import readiness_block, staff_apply_missing
             block = readiness_block('Заявки в команду', staff_apply_missing(interaction.guild))
             if block:
-                await interaction.followup.send(block, ephemeral=True)
+                from services.v2_layouts import reply_text_v2
+                await reply_text_v2(
+                    interaction, block, kind='warn', title='Настройки')
                 return
         except Exception as _ex:
             log.debug('staff-panel readiness: %s', _ex)
@@ -653,12 +696,19 @@ class StaffApply(commands.Cog):
             )
             file = discord.File(img_buf, filename="staff_panel.png")
         
-        view = StaffApplyView()
-        
-        # Отправляем сам файл напрямую: без embed-контейнера и лишнего текста.
-        # Так Discord показывает фотографию в полном размере, а меню остаётся снизу.
+        view = StaffApplyView(banner_filename='staff_banner.png')
+
+        # Components V2 LayoutView + баннер attachment:// (как /modpanel).
         await interaction.channel.send(file=file, view=view)
-        await interaction.followup.send("✅ Панель заявок в персонал успешно создана!", ephemeral=True)
+        try:
+            from services.v2_layouts import respond_v2
+            await respond_v2(
+                interaction, kind='ok', title='Панель создана',
+                body='Панель заявок в персонал опубликована в этом канале.',
+                ephemeral=True)
+        except Exception:
+            await interaction.followup.send(
+                "✅ Панель заявок в персонал успешно создана!", ephemeral=True)
 
     @app_commands.command(name="my-application", description="Проверить статус моей заявки в персонал")
     async def my_application(self, interaction: discord.Interaction):
@@ -667,32 +717,34 @@ class StaffApply(commands.Cog):
         uid = str(interaction.user.id)
         mine = [a for a in apps.values() if str(a.get("user_id")) == uid]
         if not mine:
-            return await interaction.response.send_message(
+            from services.v2_layouts import reply_text_v2
+            return await reply_text_v2(
+                interaction,
                 "У вас пока нет заявок. Подать можно через панель набора в команду сервера.",
-                ephemeral=True)
+                kind='info', title='Заявки')
         mine.sort(key=lambda a: a.get("timestamp") or a.get("submitted_at") or "", reverse=True)
         a = mine[0]
-        status_map = {"pending": " На рассмотрении",
-                      "approved": " Одобрена",
-                      "rejected": " Отклонена"}
+        status_map = {"pending": "На рассмотрении",
+                      "approved": "Одобрена",
+                      "rejected": "Отклонена"}
         st = status_map.get(a.get("status"), a.get("status", "?"))
-        color = {"pending": 0xC8922A, "approved": 0x2ECC71, "rejected": 0xE74C3C}.get(
-            a.get("status"), 0xC8922A)
-        e = discord.Embed(title=" Моя заявка в команду", color=color,
-                          timestamp=datetime.now(timezone.utc))
+        kind = {"pending": "warn", "approved": "ok", "rejected": "err"}.get(
+            a.get("status"), "info")
         total = len(mine)
-        desc = (f"Статус: **{st}**\n"
+        body = (f"Статус: **{st}**\n"
                 f"Должность: **{a.get('role', '—')}**\n"
                 f"Подана: {(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}\n")
         if total > 1:
-            desc += f"Всего заявок: {total} (показана последняя)\n"
+            body += f"Всего заявок: {total} (показана последняя)\n"
         if a.get("reviewed_by"):
-            desc += f"Рассмотрел: **{a['reviewed_by']}**\n"
+            body += f"Рассмотрел: **{a['reviewed_by']}**\n"
         if a.get("review_note"):
-            desc += f"Комментарий: {a['review_note']}\n"
-        e.description = desc
-        e.set_footer(text="Решение также приходит в личные сообщения")
-        await interaction.response.send_message(embed=e, ephemeral=True)
+            body += f"Комментарий: {a['review_note']}\n"
+        body += "\nРешение также приходит в личные сообщения."
+        from services.v2_layouts import respond_v2
+        await respond_v2(
+            interaction, kind=kind, title='Моя заявка в команду', body=body,
+            ephemeral=True)
 
     @commands.Cog.listener()
     async def on_ready(self):

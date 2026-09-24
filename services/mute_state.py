@@ -83,3 +83,75 @@ async def clear_all_mutes(guild, user) -> None:
     """Снять и чат-, и голосовой мут разом (для untimeout/снятия всех мер)."""
     await clear_chat_mute(guild, user)
     await clear_voice_mute(guild, user)
+
+
+def active_mute_kinds(guild, member) -> set:
+    """Какие муты сейчас активны у участника: {'mute','vmute','timeout'}.
+
+    Смотрим роли, нативный таймаут и журнал temps (срок ещё не вышел).
+    """
+    kinds = set()
+    if member is None or guild is None:
+        return kinds
+    try:
+        from services import punish_roles as PR
+        import time as _t
+        mute_id = int(PR.role_for(guild.id, 'mute') or 0)
+        vmute_id = int(PR.role_for(guild.id, 'vmute') or 0)
+        have = {int(getattr(r, 'id', 0) or 0)
+                for r in (getattr(member, 'roles', None) or [])}
+        if mute_id and mute_id in have:
+            kinds.add('mute')
+        if vmute_id and vmute_id in have:
+            kinds.add('vmute')
+        temps = PR.temps_for(guild.id, getattr(member, 'id', 0) or 0)
+        now = _t.time()
+        if mute_id and float(temps.get(mute_id) or 0) > now:
+            kinds.add('mute')
+        if vmute_id and float(temps.get(vmute_id) or 0) > now:
+            kinds.add('vmute')
+    except Exception as _e:
+        log.debug('active_mute_kinds roles/temps: %s', _e)
+    try:
+        until = getattr(member, 'timed_out_until', None)
+        if until is not None:
+            kinds.add('timeout')
+    except Exception:
+        pass
+    return kinds
+
+
+def already_muted_deny(action: str, active: set) -> str | None:
+    """Текст отказа, если повторный/параллельный мут тому же человеку."""
+    if not active:
+        return None
+    action = str(action or '')
+    labels = {
+        'mute': 'чат-мут',
+        'vmute': 'войс-мут',
+        'timeout': 'таймаут',
+    }
+    active_txt = ', '.join(labels.get(k, k) for k in sorted(active))
+    # любой новый мут, если уже есть хоть один вид
+    if action in ('timeout', 'mute_chat', 'vmute'):
+        return (
+            f'Участник уже в муте ({active_txt}). '
+            f'Сначала снимите текущий мут — повторно двум модерам '
+            f'на одного человека нельзя.'
+        )
+    return None
+
+
+# Сериализация мута на (guild, user) — два модера не гонят clear+add параллельно
+_MUTE_LOCKS: dict = {}
+
+
+def mute_apply_lock(guild_id, user_id):
+    """asyncio.Lock на пару гильдия+цель."""
+    import asyncio
+    key = (int(guild_id or 0), int(user_id or 0))
+    lock = _MUTE_LOCKS.get(key)
+    if lock is None:
+        lock = asyncio.Lock()
+        _MUTE_LOCKS[key] = lock
+    return lock

@@ -62,14 +62,14 @@ import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
 # Сетап-команды (verify-setup, report-setup/settings) убраны в панель,
 # /afk-remove удалён (AFK спадает авто). /апелляция убрана 2026-09-08
-# («она у нас в кнопке»). /proof удалена 2026-09-04. /event-panel —
-# публикация панели событий (ивент-моды).
+# («она у нас в кнопке»). /proof удалена 2026-09-04. /event-panel снят —
+# набор игр в /mafia (кнопка Участвовать).
 check(set(keep) == {'modpanel', 'update',
-                    'afk', 'report', 'my-violations', 'event-panel'},
+                    'afk', 'report', 'my-violations', 'mafia'},
       f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'update', 'afk', 'report', 'my-violations',
-             'event-panel'):
+for name in ('modpanel', 'update', 'afk', 'report', 'my-violations', 'mafia'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
+check('event-panel' not in keep, '/event-panel снят — набор в /mafia')
 check('апелляция' not in keep, '/апелляция убрана из KEEP_SLASH (кнопка вместо команды)')
 for gone in ('afk-remove', 'verify-setup', 'report-setup', 'report-settings'):
     check(gone not in keep, f'{gone} убран из слеш-меню (настройка в панели/авто)')

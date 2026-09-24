@@ -130,6 +130,8 @@ MENU = [
     ]},
     {'group': 'Бот', 'key': 'bot', 'icon': 'fa-robot', 'pages': [
         {'path': '/bot-settings', 'label': 'Настройки бота', 'icon': 'fa-sliders-h'},
+        {'path': '/co-bots', 'label': 'Совместные боты', 'icon': 'fa-robot',
+         'min_role': 'owner', 'description': 'Основной + Event: токен и войс'},
         {'path': '/commands', 'label': 'Команды', 'icon': 'fa-terminal'},
 
         {'path': '/send-command', 'label': 'Отправить', 'icon': 'fa-paper-plane'},
@@ -249,6 +251,7 @@ PAGE_MIN_ROLE = {
     '/role-permissions': 'owner',
     '/chat': 'owner',
     '/bot-settings': 'owner',
+    '/co-bots': 'owner',
     '/cog-manager': 'owner',
     '/settings': 'owner',
     '/todo': 'owner',
