@@ -220,18 +220,14 @@ def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
 def can_review_position(member, position) -> tuple:
     """Может ли участник принять/отклонить заявку этой должности.
 
-    Да: Discord Administrator, × Administrator / admin|owner в role_map,
-    либо куратор этой ветки («× Отвечаю за …»). Чужие ветки — отказ
-    (кроме админов).
+    Да: × Administrator / admin|owner в role_map, владелец сервера/бота,
+    либо куратор ЭТОЙ ветки («× Отвечаю за …»).
+
+    Discord-бит administrator НЕ даёт доступ: на сервере декоративные роли
+    иногда имеют этот бит (куратор Helper иначе лезет в Events).
     """
     if member is None:
         return False, "Участник не найден."
-    try:
-        perms = getattr(member, "guild_permissions", None)
-        if perms is not None and getattr(perms, "administrator", False):
-            return True, ""
-    except Exception:
-        pass
 
     role_ids = set()
     try:
@@ -243,7 +239,19 @@ def can_review_position(member, position) -> tuple:
     except Exception:
         role_ids = set()
 
-    # × Administrator и выше по карте ролей (не только Discord admin-бит)
+    # владелец сервера / бота
+    try:
+        guild = getattr(member, "guild", None)
+        mid = int(getattr(member, "id", 0) or 0)
+        if guild is not None and mid and int(getattr(guild, "owner_id", 0) or 0) == mid:
+            return True, ""
+        from config import Config
+        if mid and mid in Config.all_owner_ids():
+            return True, ""
+    except Exception:
+        pass
+
+    # × Administrator и выше по карте ролей (не Discord admin-бит)
     try:
         from services.staff_hierarchy import RANK, best_mapped_tier
         tier = best_mapped_tier(member)

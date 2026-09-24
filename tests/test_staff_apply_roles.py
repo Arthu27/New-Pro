@@ -365,11 +365,23 @@ class FakeClient:
 
 class _GP:
     manage_guild = True
-    administrator = True
+    administrator = False  # бит не даёт доступ к ревью
+
+
+class _ReviewerRole:
+    def __init__(self, rid):
+        self.id = rid
 
 
 class FakeInter2:
-    user = type('U', (), {'guild_permissions': _GP(), 'display_name': 'Главный'})()
+    # куратор Helper — может принять заявку Helper
+    user = type('U', (), {
+        'guild_permissions': _GP(),
+        'display_name': 'Главный',
+        'id': 99,
+        'roles': [_ReviewerRole(SR.KNOWN_CURATOR_BY_KIND['helper'])],
+        'guild': type('G', (), {'id': 777, 'owner_id': 0})(),
+    })()
     display_name = 'Главный'
     message = FakeMsg()
     guild = None
@@ -384,8 +396,14 @@ class FakeInter2:
 
 
 g4 = FakeGuild([FakeRole(10, 'Хелпер')], {42: FakeMember(42)})
+# message.edit for decided card — на инстансе interaction.message
+async def _msg_edit(self, **kw):
+    self.edited = kw
+FakeMsg.edit = _msg_edit
+FakeMsg.content = None
 cl = FakeClient(g4)
 inter4 = FakeInter2(cl)
+inter4.message = FakeMsg()  # свежий инстанс с edit
 inter4.followup = type('F', (), {
     'send': (lambda s, *a, **k: s.msgs.append(a[0] if a else k) or asyncio.sleep(0))})()
 inter4.followup.msgs = []
@@ -395,6 +413,15 @@ data = json.load(open('data/staff_apps.json', encoding='utf-8'))
 check(data['42']['status'] == 'approved', 'заявка одобрена (статус в базе)')
 check(data['42'].get('granted_role') == 'Хелпер', 'в заявке записана выданная роль')
 check(g4._members[42].added == ['Хелпер'], 'участнику реально добавлена роль «Хелпер»')
+# после решения — карточка без select, статус ПРИНЯТО
+edited = getattr(inter4.message, 'edited', None) or {}
+done_view = edited.get('view')
+check(done_view is not None and type(done_view).__name__ == 'StaffAppDecidedView',
+      'после решения — StaffAppDecidedView без select',
+      type(done_view).__name__ if done_view else None)
+from services.v2_layouts import layout_plain_text
+done_txt = layout_plain_text(done_view) if done_view else ''
+check('ПРИНЯТО' in done_txt, 'на карточке статус ПРИНЯТО', done_txt[:200])
 
 
 def _followup_text(msgs):
@@ -436,6 +463,15 @@ with open('data/staff_apps.json', 'w', encoding='utf-8') as f:
     json.dump(apps, f, ensure_ascii=False)
 g5 = FakeGuild([FakeRole(10, 'Хелпер')], {42: FakeMember(42)})
 inter5 = FakeInter2(FakeClient(g5))
+# fresh message so edit is tracked
+class FakeMsg5:
+    id = 555
+    embeds = []
+    content = None
+    edited = None
+    async def edit(self, **kw):
+        self.edited = kw
+inter5.message = FakeMsg5()
 inter5.followup = type('F', (), {
     'send': (lambda s, *a, **k: s.msgs.append(a[0] if a else k) or asyncio.sleep(0))})()
 inter5.followup.msgs = []
@@ -444,6 +480,26 @@ data = json.load(open('data/staff_apps.json', encoding='utf-8'))
 check(data['42']['status'] == 'rejected'
       and g5._members[42].added == [],
       'отклонение: роль не выдаётся')
+rej_view = (inter5.message.edited or {}).get('view')
+rej_txt = layout_plain_text(rej_view) if rej_view else ''
+check(rej_view is not None and type(rej_view).__name__ == 'StaffAppDecidedView',
+      'отклонение: карточка без select')
+check('ОТКЛОНЕНО' in rej_txt, 'отклонение: статус ОТКЛОНЕНО на карточке', rej_txt[:200])
+# select отсутствует (нет ActionRow с Select)
+has_select = False
+try:
+    for child in list(getattr(rej_view, 'children', None) or []):
+        for it in list(getattr(child, 'children', None) or []) + list(getattr(child, 'items', None) or []):
+            if type(it).__name__ in ('Select', 'StaffReviewSelect', 'ActionRow'):
+                # ActionRow без select ок; ищем Select
+                if 'Select' in type(it).__name__:
+                    has_select = True
+                for sub in list(getattr(it, 'children', None) or []) + list(getattr(it, 'items', None) or []):
+                    if 'Select' in type(sub).__name__:
+                        has_select = True
+except Exception:
+    pass
+check(not has_select, 'отклонение: select убран')
 
 # ── 5. Панель: одобрение в «Заявках в команду» ──────────────────────
 print('== Панель: одобрение заявки ==')
@@ -549,22 +605,23 @@ check('<@&' in (deny or '') and ('принимает' in (deny or '') or 'review
 check('администратор' in (deny or '').lower(),
       f'отказ упоминает админа: {deny!r}')
 
-# админ (× Administrator) принимает любую ветку без Discord admin-бита
-ok_adm, _ = SR.can_review_position(
-    _CurMember(SR.KNOWN_ADMIN_ROLE_ID), 'Eventsmod')
-ok_adm2, _ = SR.can_review_position(
-    _CurMember(SR.KNOWN_ADMIN_ROLE_ID), 'Broadcaster')
-check(ok_adm and ok_adm2, '× Administrator принимает Event и Broadcaster')
-
-# Discord administrator — тоже любая ветка
+# Discord administrator-бит НЕ даёт доступ (декор-роли с admin-битом)
 class _AdmPerm:
     administrator = True
 class _AdmMember:
     guild_permissions = _AdmPerm()
     roles = []
-    guild = type('G', (), {'id': 777})()
-ok_da, _ = SR.can_review_position(_AdmMember(), 'Helper')
-check(ok_da, 'Discord administrator принимает Helper')
+    id = 1
+    guild = type('G', (), {'id': 777, 'owner_id': 0})()
+ok_da, deny_da = SR.can_review_position(_AdmMember(), 'Helper')
+check(not ok_da, 'Discord admin-бит без × Administrator — отказ', deny_da)
+
+# × Administrator — любая ветка
+ok_adm, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_ADMIN_ROLE_ID), 'Eventsmod')
+ok_adm2, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_ADMIN_ROLE_ID), 'Broadcaster')
+check(ok_adm and ok_adm2, '× Administrator принимает Event и Broadcaster')
 
 # легаси: старая раздельная настройка кураторов не теряется
 SR.save_setting(777, 'curator_role', 0)

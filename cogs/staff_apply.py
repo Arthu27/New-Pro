@@ -873,6 +873,41 @@ class StaffAppCardView(discord.ui.LayoutView):
         self.add_item(row)
 
 
+class StaffAppDecidedView(discord.ui.LayoutView):
+    """После решения: та же таблица заявки, без select, статус сверху."""
+
+    def __init__(self, *, title: str, body: str, status: str, note: str = '',
+                 accent: int = 0xE74C3C):
+        super().__init__(timeout=None)
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        from discord import SeparatorSpacing
+        from services.menu_emojis import emoji_for_role
+        from services.staff_roles import normalize_position
+        kind = normalize_position(title) or 'moderator'
+        try:
+            em = emoji_for_role(kind)
+            em_s = str(em) if em else ''
+        except Exception:
+            em_s = ''
+        head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
+        status_line = f'## {status}'
+        if note:
+            status_line = f'{status_line}\n-# {note}'
+        if V2_AVAILABLE:
+            from discord import ui as dui
+            children = [
+                dui.TextDisplay(head[:500]),
+                dui.TextDisplay('-# HAKUMO · заявка в команду'),
+                dui.Separator(spacing=SeparatorSpacing.large),
+                dui.TextDisplay(status_line[:500]),
+                dui.Separator(),
+                dui.TextDisplay(str(body)[:3500]),
+            ]
+            self.add_item(black_container(*children, accent=accent))
+            return
+        # без V2 — пустой view (select уже снят через edit view=None)
+
+
 class StaffReviewView(discord.ui.View):
     """Select под сообщением заявки: решение + DM заявителю.
 
@@ -892,8 +927,7 @@ class StaffReviewView(discord.ui.View):
 
     async def _review(self, interaction: discord.Interaction, action: str):
         from services.v2_layouts import (
-            reply_text_v2, respond_v2, send_dm_v2, notice_layout_view,
-            V2_AVAILABLE)
+            reply_text_v2, respond_v2, send_dm_v2, V2_AVAILABLE)
         from services.staff_roles import can_review_position, position_label
 
         key, app, apps = self._find_app_by_message(interaction.message.id)
@@ -998,10 +1032,10 @@ class StaffReviewView(discord.ui.View):
 
         try:
             src = interaction.message
-            verdict = {
-                "approve": "одобрена",
-                "reject": "отклонена",
-                "blacklist": "чёрный список",
+            status_label = {
+                "approve": "ПРИНЯТО",
+                "reject": "ОТКЛОНЕНО",
+                "blacklist": "ЧЁРНЫЙ СПИСОК",
             }[action]
             accent = {
                 "approve": 0x2ECC71,
@@ -1013,27 +1047,41 @@ class StaffReviewView(discord.ui.View):
             note = f"{who} · {when}"
             if granted:
                 note += f" · {granted}"
+            # сохранить таблицу ответов, убрать select
+            body = ''
+            try:
+                class _U:
+                    mention = f"<@{app.get('user_id')}>"
+                member = None
+                if interaction.guild:
+                    try:
+                        member = interaction.guild.get_member(int(app.get('user_id') or 0))
+                    except (TypeError, ValueError):
+                        member = None
+                body = build_application_body(
+                    user=_U(),
+                    user_id=str(app.get('user_id') or ''),
+                    age=str(app.get('age') or ''),
+                    activity=str(app.get('activity') or ''),
+                    experience=str(app.get('experience') or ''),
+                    reason=str(app.get('reason') or ''),
+                    extra=str(app.get('extra') or ''),
+                    member=member,
+                    kind=app.get('kind') or app.get('role'),
+                    answers=app.get('answers'),
+                )
+            except Exception as _bx:
+                log.debug('staff decided body: %s', _bx)
+                body = f"<@{app.get('user_id')}>"
             if V2_AVAILABLE:
-                done = notice_layout_view(
-                    title=f'{pos} — {verdict}',
-                    body=(f"<@{app.get('user_id')}>\n{note}"),
-                    footer='',
-                    accent=accent,
-                    brand='HAKUMO',
-                    timeout=None)
-                if done is not None:
-                    await src.edit(view=done, embed=None, content=src.content)
-                else:
-                    await src.edit(view=None)
+                done = StaffAppDecidedView(
+                    title=pos, body=body, status=status_label,
+                    note=note, accent=accent)
+                await src.edit(view=done, embed=None, content=src.content or None)
             elif src and src.embeds:
                 e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
                 e0.color = accent
-                field_name = {
-                    "approve": "Одобрена",
-                    "reject": "Отклонена",
-                    "blacklist": "Чёрный список",
-                }[action]
-                e0.add_field(name=field_name, value=note, inline=False)
+                e0.add_field(name=status_label, value=note, inline=False)
                 await src.edit(embed=e0, view=None)
             else:
                 await src.edit(view=None)
