@@ -188,25 +188,25 @@ check(SL.tier_for_roles([1003]) == 'admin', 'роль 1003 → тир admin')
 check(SL.tier_for_roles([1003, 1001]) == 'admin', 'несколько ролей → старший тир')
 check(SL.tier_for_roles([9999]) is None, 'немаркированная роль → тир нет')
 
-# Дефолты по тиру: бан 1/3/5, размут 3/5/5.
+# Дефолты по тиру: бан 1/2/5, мут/размут 3/7/10. Хелпер = mod.
 GT = 777099
 _lm_mod, _ = SL.effective_limits(GT, [1001])
 _lm_cur, _ = SL.effective_limits(GT, [1002])
 _lm_adm, _ = SL.effective_limits(GT, [1003])
 _lm_own, _ = SL.effective_limits(GT, [1004])
-check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 3 and _lm_adm['ban'] == 5,
+check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 2 and _lm_adm['ban'] == 5,
       f'бан по тирам: модер {_lm_mod["ban"]} / куратор {_lm_cur["ban"]} / админ {_lm_adm["ban"]}')
-check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 5 and _lm_adm['unmute'] == 5,
-      'размут по тирам: модер 3 / куратор 5 / админ 5')
+check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 7 and _lm_adm['unmute'] == 10,
+      'размут по тирам: модер 3 / куратор 7 / админ 10 (= мут)')
 check(_lm_mod['warn'] == 3 and _lm_cur['warn'] == 5 and _lm_adm['warn'] == 5,
       'варны по тирам: модер 3 / куратор 5 / админ 5')
-check(_lm_mod['mute'] == 3 and _lm_cur['mute'] == 10 and _lm_adm['mute'] == 10,
-      'муты по тирам: модер 3 / куратор 10 / админ 10')
+check(_lm_mod['mute'] == 3 and _lm_cur['mute'] == 7 and _lm_adm['mute'] == 10,
+      'муты по тирам: модер 3 / куратор 7 / админ 10')
 check(_lm_own.get('ban', 0) == 0, 'владелец — без лимита на бан')
 # Пер-рольный оверрайд важнее тирового дефолта.
 SL.set_role_limits(GT, 1002, who='Куратор', ban=9)
 _lm_cur2, _ = SL.effective_limits(GT, [1002])
-check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (3)')
+check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (2)')
 
 # Потолок длительности мута: 2 часа у всех (Sabotash 2026-09-02).
 check(SL.effective_max_duration(GT, 'mute', [1001]) == 2 * 3600,

@@ -78,26 +78,35 @@ check(SL.TIER_ORDER.index('master') < SL.TIER_ORDER.index('curator'),
 check(SH.RANK['master'] == 2 and SH.RANK['mod'] == 1 and SH.RANK['curator'] == 3,
       'hierarchy RANK')
 
-print('== 2. Лимиты Master = мод +2 (кроме варна/чистки), размут=мут ==')
+print('== 2. Лимиты Master: mute/unmute 5, ban 1; хелпер=мод ==')
 mod_l = SL.TIER_DEFAULT_LIMITS['mod']
 mst_l = SL.TIER_DEFAULT_LIMITS['master']
-check(mod_l['mute'] == 3, 'mod mute=3')
+cur_l = SL.TIER_DEFAULT_LIMITS['curator']
+check(mod_l['mute'] == 3 and mod_l['unmute'] == 3 and mod_l['ban'] == 1,
+      'хелпер/мод: mute/unmute 3, ban 1')
 expect = {
-    'warn': 3,    # без +2
-    'ban': 3,     # 1+2
+    'warn': 3,
+    'ban': 1,
     'unmute': 5,  # = mute
-    'mute': 5,    # 3+2
-    'clear': 10,  # без +2
+    'mute': 5,
+    'clear': 10,
 }
 for k, v in expect.items():
     check(mst_l[k] == v, f'master {k}={v}', mst_l.get(k))
-check(mst_l['unmute'] == mst_l['mute'], 'размут = мут')
+check(mst_l['unmute'] == mst_l['mute'], 'размут = мут (master)')
+check(cur_l['mute'] == 7 and cur_l['unmute'] == 7 and cur_l['ban'] == 2,
+      'куратор: mute/unmute 7, ban 2')
 
 # effective_limits для Master+Helper
 lim, _ = SL.effective_limits(1, [MASTER, HELPER])
-check(lim['warn'] == 3 and lim['ban'] == 3 and lim['mute'] == 5
+check(lim['warn'] == 3 and lim['ban'] == 1 and lim['mute'] == 5
       and lim['unmute'] == 5,
       f'effective Master+Helper: warn/ban/mute/unmute')
+
+# Helper alone = mod tier
+lim_h, _ = SL.effective_limits(1, [HELPER])
+check(lim_h['mute'] == 3 and lim_h['unmute'] == 3 and lim_h['ban'] == 1,
+      'Helper alone = мод: mute/unmute 3, ban 1')
 
 print('== 3. Гейт веток ==')
 # Master alone
@@ -142,7 +151,7 @@ check(ok is False and deny and 'Helper' in deny,
       'check_action Master+Event ban DENY')
 
 ok, deny = SL.check_action(g, Mem(11, [MASTER, HELPER]), 'ban')
-# ban limit 3, used 0 → allowed
+# ban limit 1, used 0 → allowed
 check(ok is True, 'check_action Master+Helper ban OK')
 
 print('== 5. actions_for_member пустое для чужой ветки ==')
@@ -156,12 +165,10 @@ check(acts2 == [], 'menu empty for Master+Broadcaster')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 # print limits card for owner
-print('\n--- Лимиты Master (за сутки) ---')
-print(f"  варн:   {mst_l['warn']}  (= мод, без +2)")
-print(f"  мут:    {mst_l['mute']}  (мод {mod_l['mute']} +2)")
-print(f"  размут: {mst_l['unmute']}  (= мут)")
-print(f"  бан:    {mst_l['ban']}  (мод {mod_l['ban']} +2)")
-print(f"  чистка: {mst_l['clear']}")
+print('\n--- Лимиты (за сутки) ---')
+print(f"  хелпер/мод:  варн {mod_l['warn']}  мут/размут {mod_l['mute']}  бан {mod_l['ban']}")
+print(f"  master:      варн {mst_l['warn']}  мут/размут {mst_l['mute']}  бан {mst_l['ban']}")
+print(f"  куратор:     варн {cur_l['warn']}  мут/размут {cur_l['mute']}  бан {cur_l['ban']}")
 print(f"  роль:   × Master ({MASTER})")
 print('  гейт:   нужна ещё роль Helper или Moderator')
 print('  размут персонала: только куратор+')
