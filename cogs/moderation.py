@@ -732,9 +732,11 @@ class Moderation (commands .Cog ):
                 'Не нашёл участника по цели. Нужен @ник, ТОЧНОЕ имя или ID.'),
                 ephemeral =True )
                 return
+            # Реальный модератор (Member), не PanelActor — иначе роли/лимиты
+            # идут от id=0 и роль уровня варна может не выдаться.
             ok ,text =await self .apply_panel_action (
             guild ,(user if user is not None else uid ),'warn',
-            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            reason =reason ,actor =interaction .user )
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
@@ -806,6 +808,43 @@ class Moderation (commands .Cog ):
             # Срок наказания для дела (минуты): заполняют мут-ветки ниже,
             # «История решений» панели показывает его в колонке «Длительность»
             _case_minutes =None
+
+            # Повторный/параллельный мут одному человеку — запрещён
+            _mute_lock = None
+            if action in ('timeout', 'mute_chat', 'vmute') and hasattr(user, 'roles'):
+                try:
+                    from services import mute_state as _ms
+                    _active = _ms.active_mute_kinds(guild, user)
+                    _deny_m = _ms.already_muted_deny(action, _active)
+                    if _deny_m:
+                        await _respond(interaction,
+                                       embed=error_embed(_deny_m),
+                                       ephemeral=True)
+                        return
+                    _mute_lock = _ms.mute_apply_lock(guild.id, user.id)
+                    # если второй модер уже внутри — не ждём вечно
+                    import asyncio as _aio_ml
+                    try:
+                        await _aio_ml.wait_for(_mute_lock.acquire(), timeout=0.05)
+                    except _aio_ml.TimeoutError:
+                        await _respond(interaction, embed=error_embed(
+                            'Этот участник сейчас уже получает мут от другого '
+                            'модератора — подождите секунду.'),
+                            ephemeral=True)
+                        return
+                    # повторная проверка под локом
+                    _active2 = _ms.active_mute_kinds(guild, user)
+                    _deny2 = _ms.already_muted_deny(action, _active2)
+                    if _deny2:
+                        _mute_lock.release()
+                        _mute_lock = None
+                        await _respond(interaction,
+                                       embed=error_embed(_deny2),
+                                       ephemeral=True)
+                        return
+                except Exception as _mx:
+                    log.debug('[MODPANEL] mute guard: %s', _mx)
+                    _mute_lock = None
 
             try :
                 if action =="ban":
@@ -1078,6 +1117,12 @@ class Moderation (commands .Cog ):
                 import traceback as _tb
                 log .warning (f"[MODPANEL] Сбой действия: {_tb.format_exc()}")
                 await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
+            finally:
+                if _mute_lock is not None:
+                    try:
+                        _mute_lock.release()
+                    except Exception:
+                        pass
 
         elif action =="unban":
             uid =self ._parse_target_id (target )
@@ -1244,7 +1289,13 @@ class Moderation (commands .Cog ):
             return False ,'Неизвестное действие'
         if guild is None :
             return False ,'Сервер не найден'
-        _actor =PanelActor (actor )
+        # actor: реальный Member из Discord ИЛИ строка/PanelActor из веб-панели
+        if isinstance(actor, discord.Member) or (
+                hasattr(actor, 'id') and hasattr(actor, 'roles')
+                and not isinstance(actor, str)):
+            _actor = actor
+        else:
+            _actor = PanelActor(actor)
         target_str =str (getattr (target ,'id',target ))
         # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05: «модер наказывает модера
         # и куратора — беспредел»): персонал не наказывает персонал своего
@@ -1275,7 +1326,7 @@ class Moderation (commands .Cog ):
                         return False ,_derr
             except Exception as _pex :
                 _log .debug ('[MODPANEL] panel dur cap: %s',_pex )
-        # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
+        # варн — своя ветка
         if action =='warn':
             try :
                 from services .staff_limits import check_action 
@@ -1288,11 +1339,26 @@ class Moderation (commands .Cog ):
                 w =self .bot .get_cog ('warnings')
                 if w is None :
                     return False ,'Модуль варнов не загружен'
-                # add_warning сам пишет варн, ДМ участнику и лог в канал
-                res =await w .add_warning (target ,moderator =_actor ,
+                # Цель должна быть Member (роли уровня варна иначе не выдать)
+                _tm = target if isinstance(target, discord.Member) \
+                    else guild.get_member(int(target_str) or 0)
+                if _tm is None:
+                    return False, (
+                        'Участник не на сервере — варн с ролью уровня '
+                        'выдаётся только тем, кто сейчас на сервере.')
+                w._last_role_sync = (True, 'ok')
+                res =await w .add_warning (_tm ,moderator =_actor ,
                 reason =reason or None )
                 _total =res [1 ]if isinstance (res ,tuple )else None 
-                return True ,f'Варн выдан (всего: {_total if _total is not None else "?"})'
+                _txt = f'Варн выдан (всего: {_total if _total is not None else "?"})'
+                _rok, _rdet = getattr(w, '_last_role_sync', (True, 'ok'))
+                if not _rok:
+                    _txt += f'\n⚠️ Роль уровня не выдана: {_rdet}'
+                elif _rdet == 'no-levels':
+                    _txt += (
+                        '\nℹ️ Роли уровней варнов не настроены '
+                        '(панель → Роли наказаний → уровни варнов).')
+                return True ,_txt
             except Exception as _ex :
                 return False ,f'Не получилось: {_ex }'
         if action =='unwarn':
