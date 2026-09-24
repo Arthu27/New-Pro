@@ -82,8 +82,8 @@ check(SL.effective_max_duration(G, 'mute', (501,)) == 3600,
 SL.set_durations(G, who='t', mute=0)
 check(SL.effective_max_duration(G, 'mute', (502,)) == 86400 and
       SL.effective_max_duration(G, 'mute', ()) == SL.DEFAULT_MUTE_DURATION_CAP,
-      'глобальный снят — роль живёт своим; без роли — дефолт 2 часа '
-      '(потолок 100000 минут больше невозможен)')
+      'глобальный снят — роль живёт своим; без роли — дефолт 1 час '
+      '(первый шаг прогрессии)')
 
 print('== 4. «Обновится через» ==')
 M = 555

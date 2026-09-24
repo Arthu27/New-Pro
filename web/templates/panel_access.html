@@ -271,6 +271,7 @@ loadVisibility();
 var PANEL_OPTS = [
   {v:'uye',     label:'Участник'},
   {v:'mod',     label:'Модератор'},
+  {v:'master',  label:'Мастер'},
   {v:'curator', label:'Куратор'},
   {v:'admin',   label:'Администратор'},
   {v:'owner',   label:'Владелец'}
@@ -279,6 +280,7 @@ var BADGE = {
   owner: '<span class="pa-badge p-owner"><i class="fas fa-crown"></i> Владелец</span>',
   admin: '<span class="pa-badge p-admin"><i class="fas fa-user-tie"></i> Администратор</span>',
   curator: '<span class="pa-badge p-curator"><i class="fas fa-graduation-cap"></i> Куратор</span>',
+  master: '<span class="pa-badge p-master"><i class="fas fa-star"></i> Мастер</span>',
   mod:   '<span class="pa-badge p-mod"><i class="fas fa-shield-halved"></i> Модератор</span>',
   uye:   '<span class="pa-badge p-uye"><i class="fas fa-user"></i> Участник</span>'
 };
@@ -315,7 +317,7 @@ function renderRoles(){
   var list = PA_ROLES.filter(function(r){ if(!q) return true; return (r.name||'').toLowerCase().indexOf(q) !== -1; });
   if(!list.length){ host.innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-search"></i>Ролей с таким названием нет</div>'; return; }
   // Показываем сверху важные (owner/admin/curator/mod), затем участники — по позиции
-  var order = {owner:0, admin:1, curator:2, mod:3, uye:4};
+  var order = {owner:0, admin:1, curator:2, master:3, mod:4, uye:5};
   list.sort(function(a,b){ return (order[panelOf(a.id)] - order[panelOf(b.id)]) || (b.position - a.position); });
   host.innerHTML = list.map(function(r){
     var cur = panelOf(r.id);

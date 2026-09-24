@@ -16,6 +16,8 @@
   • «снятия» (unwarn/untimeout/vunmute/unban) — по той же иерархии:
     нельзя трогать персонал своего уровня и выше (иначе модеры снимали бы
     наказания друг друга — тот же беспредел);
+  • размут персонала (хелпер/модер/мастер) — только куратор и выше
+    (мастер рангом выше мода, но размутить его всё равно нельзя);
   • варн (warn) — тоже наказание и подчиняется иерархии.
 
 Кто есть кто:
@@ -29,11 +31,14 @@ from logger import get_logger
 _log = get_logger('staff_hierarchy')
 
 # Панельные роли по старшинству (тот же порядок, что web/app.ROLES)
-RANK = {'uye': 0, 'mod': 1, 'curator': 2, 'admin': 3, 'owner': 4}
+# master между mod и curator (заказ 2026-09-24).
+RANK = {'uye': 0, 'helper': 1, 'mod': 1, 'master': 2, 'curator': 3, 'admin': 4, 'owner': 5}
 
 LABELS = {
     'uye': 'участник',
+    'helper': 'хелпер',
     'mod': 'модератор',
+    'master': 'мастер',
     'curator': 'куратор',
     'admin': 'администратор',
     'owner': 'владелец панели',
@@ -42,6 +47,11 @@ LABELS = {
 # Действия-«снятия»: к ним применяется та же иерархия (нельзя лезть в
 # наказания персонала своего уровня и выше).
 REMOVE_ACTIONS = ('unwarn', 'untimeout', 'vunmute', 'unmute_chat', 'unban', 'unmute')
+
+# Размут персонала (хелпер/модер): только куратор и выше
+# (заказ 2026-09-24: моды/хелперы не снимают мут друг другу).
+UNMUTE_ACTIONS = ('untimeout', 'vunmute', 'unmute_chat', 'unmute')
+STAFF_PEER_TIERS = frozenset({'helper', 'mod', 'master'})
 
 
 def _role_map_tiers():
@@ -64,9 +74,23 @@ def _role_map_tiers():
         from services.staff_roles import KNOWN_HELPER_ROLE_ID
         hid = str(int(KNOWN_HELPER_ROLE_ID))
         if hid not in out:
-            out[hid] = 'mod'
+            out[hid] = 'helper'
     except Exception as _ex:
         _log.debug('role_map_tiers helper fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_MODERATOR_ROLE_ID
+        mid = str(int(KNOWN_MODERATOR_ROLE_ID))
+        if mid not in out:
+            out[mid] = 'mod'
+    except Exception as _ex:
+        _log.debug('role_map_tiers moderator fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_MASTER_ROLE_ID
+        xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
+        if xid and xid != '0' and xid not in out:
+            out[xid] = 'master'
+    except Exception as _ex:
+        _log.debug('role_map_tiers master fallback: %s', _ex)
     return out
 
 
@@ -178,7 +202,7 @@ def explain(actor_role, target_role, label=None):
     t = LABELS.get(target_role, target_role)
     what = f' ({label})' if label else ''
     return (f'Нельзя{what}: {t} — персонал твоего уровня или выше. '
-            f'Иерархия: модератор → куратор → администратор → владелец. '
+            f'Иерархия: модератор → мастер → куратор → администратор → владелец. '
             f'Вопросы по правам — к владельцу панели.')
 
 
@@ -222,6 +246,16 @@ def check(guild, actor, target, action='', *, actor_role=None,
                 and RANK.get(a_role, 0) <= RANK.get(t_role, 0)):
             label = str(action or '')
             return (False, explain(a_role, t_role, label or None),
+                    a_role, t_role)
+        # Размут хелпера/модера/мастера — только куратор и выше
+        # (моды/хелперы не снимают мут друг другу; мастер тоже не может).
+        act = str(action or '')
+        if (act in UNMUTE_ACTIONS and t_role in STAFF_PEER_TIERS
+                and a_role != 'owner'
+                and RANK.get(a_role, 0) < RANK.get('curator', 3)):
+            return (False,
+                    'Размут персонала (хелпер/модер/мастер) — только '
+                    'куратор или выше.',
                     a_role, t_role)
         return True, None, a_role, t_role
     except Exception as _ex:

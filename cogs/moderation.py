@@ -691,13 +691,19 @@ class Moderation (commands .Cog ):
                     embed =error_embed (_txt),
                     ephemeral =True )
                     return
-                # Срок мута: 30 мин … 2 ч у всех (Sabotash 2026-09-02)
+                # Срок мута: 30 мин … прогрессия по участнику (1ч → +2ч)
                 if action in ('timeout','mute_chat','vmute'):
                     try :
                         from services .staff_limits import (
-                            effective_max_duration as _sl_cap,
+                            resolve_mute_cap as _sl_cap,
                             mute_duration_error as _sl_derr)
-                        _cap =_sl_cap (guild .id ,'mute',_sl_roles )
+                        _tgt_uid = None
+                        try :
+                            _tu ,_tuid =self ._resolve_member (guild ,target )
+                            _tgt_uid =getattr (_tu ,'id',None )or _tuid
+                        except Exception :
+                            _tgt_uid =None
+                        _cap =_sl_cap (guild .id ,_tgt_uid ,_sl_roles )
                         _minutes_req =parse_duration_minutes (amount ,30 )
                         _derr =_sl_derr (_minutes_req *60 ,cap_sec =_cap )
                         if _derr :
@@ -1007,6 +1013,13 @@ class Moderation (commands .Cog ):
                         _sl_rec (guild .id ,interaction .user .id ,_sl_rec_key ,1 )
                 except Exception as _slr :
                     log .debug (f'[STAFF_LIMIT] rec: {_slr}')
+                # Прогрессия мута по участнику: после мута step+1
+                if action in ('timeout', 'mute_chat', 'vmute') and user is not None:
+                    try:
+                        from services.mute_progression import bump_after_mute
+                        bump_after_mute(guild.id, user.id)
+                    except Exception as _bex:
+                        log.debug(f'[MUTE_PROG] bump: {_bex}')
                 try :
                     import asyncio as _aio_sc
                     # запись дела (файл) — в рабочем потоке, без блокировки loop
@@ -1207,6 +1220,13 @@ class Moderation (commands .Cog ):
         ходит — у неё свои проверки авторизации (apply_panel_action).
         """
         try:
+            from services.staff_limits import master_punish_allowed
+            _mok, _mdeny = master_punish_allowed(interaction.user)
+            if not _mok:
+                await _respond(interaction, embed=error_embed(
+                    _mdeny or 'Мастер без Helper/Moderator не может применять.'),
+                    ephemeral=True)
+                return False
             if action in ('mute', 'unmute'):
                 gid = getattr(interaction, 'guild_id', None) or getattr(
                     getattr(interaction, 'guild', None), 'id', None)
@@ -1259,14 +1279,14 @@ class Moderation (commands .Cog ):
                 return False ,_hdeny
         except Exception as _hex :
             _log .debug ('[MODPANEL] hierarchy: %s',_hex )
-        # Срок мута: 30 мин … 2 ч у всех (Sabotash 2026-09-02).
+        # Срок мута: 30 мин … прогрессия по участнику (1ч → +2ч до варна).
         if action in ('timeout','mute_chat','vmute') and amount :
             try :
                 from services .staff_limits import mute_duration_error as _pderr
                 _pc =duration_cap
                 if _pc is None :
-                    from services .staff_limits import effective_max_duration as _pcap
-                    _pc =_pcap (guild .id ,'mute')
+                    from services .staff_limits import resolve_mute_cap as _pcap
+                    _pc =_pcap (guild .id ,target_str ,[])
                 # 0 = без ограничения (владелец / явный skip) — срок не режем
                 if _pc :
                     _pm =parse_duration_minutes (amount ,30 )
@@ -1675,7 +1695,7 @@ class _CtxMuteModal(discord.ui.Modal):
     """Окно мута из ПКМ: срок + причина."""
 
     duration = discord.ui.TextInput(
-        label='Срок (30 мин … 2 ч)', placeholder='30, 60, 2ч',
+        label='Срок (30 мин … потолок по участнику)', placeholder='30, 60, 2ч',
         required=True, max_length=16)
     reason = discord.ui.TextInput(
         label='Причина', style=discord.TextStyle.paragraph,
@@ -1711,10 +1731,11 @@ class _CtxMuteModal(discord.ui.Modal):
             log.debug(f'[ПКМ] staff_limits: {_sx}')
         _dur_cap = None
         try:
-            from services.staff_limits import effective_max_duration as _pcap
+            from services.staff_limits import resolve_mute_cap as _pcap
             _roles = [r.id for r in (getattr(interaction.user, 'roles', None) or [])
                       if getattr(r, 'id', None) != getattr(interaction.guild, 'id', None)]
-            _dur_cap = _pcap(interaction.guild.id, 'mute', _roles)
+            _dur_cap = _pcap(interaction.guild.id,
+                             getattr(self._member, 'id', None), _roles)
         except Exception as _cx:
             log.debug(f'[ПКМ] duration cap: {_cx}')
         ok, text = await self._cog.apply_panel_action(
@@ -2023,6 +2044,14 @@ def actions_for_member(guild, member):
             return list(MODPANEL_ACTIONS)
     except Exception:
         log.debug('actions_for_member: owner-проверка не удалась')
+    # Мастер без Helper/Moderator — пустое меню (Eventsmod/Broadcaster)
+    try:
+        from services.staff_limits import master_punish_allowed
+        _mok, _ = master_punish_allowed(member)
+        if not _mok:
+            return []
+    except Exception as _mex:
+        log.debug('actions_for_member: master gate: %s', _mex)
     role_ids = []
     try:
         role_ids = [r.id for r in (getattr(member, "roles", None) or [])
@@ -2035,7 +2064,7 @@ def actions_for_member(guild, member):
     except Exception:
         scoped = None
     # Страховка: старший тир (куратор/админ) + хелпер — если scoped всё ещё
-    # «хелперский» (mute/unmute/clear), сбрасываем. Чистые лимиты старшей
+    # «хелперский» (mute/unmute/clear/warn), сбрасываем. Чистые лимиты старшей
     # роли без младшей не трогаем.
     try:
         from services.staff_hierarchy import actor_panel_role, RANK
@@ -2045,7 +2074,7 @@ def actions_for_member(guild, member):
         _rank = RANK.get(_tier, -1)
         if (_rank >= RANK.get('curator', 2)
                 and scoped is not None
-                and set(scoped) <= {'mute', 'unmute', 'clear'}):
+                and set(scoped) <= {'mute', 'unmute', 'clear', 'warn'}):
             _tmap = _role_tier_map()
             _helper = str(int(KNOWN_HELPER_ROLE_ID))
             _has_junior = False

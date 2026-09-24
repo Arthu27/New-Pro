@@ -284,15 +284,19 @@ def _panel_limit_record(gid, member, key, amount=1):
         _log.debug('_panel_limit_record(%s): %s', key, _ex)
 
 
-def _panel_mute_cap(bot, gid, member):
-    """Потолок длительности мута (сек) для участника; 0 — без потолка."""
+def _panel_mute_cap(bot, gid, member, target_id=None):
+    """Потолок длительности мута (сек) для участника; 0 — без потолка.
+
+    target_id — кого мутят (прогрессия 1ч → +2ч до варна).
+    """
     try:
         if member is None or bot is None:
             return 0
         from services import staff_limits as _SL
         role_ids = [r.id for r in (getattr(member, 'roles', None) or [])
                     if getattr(r, 'id', None) != int(gid)]
-        return int(_SL.effective_max_duration(int(gid), 'mute', role_ids) or 0)
+        return int(_SL.resolve_mute_cap(
+            int(gid), target_id, role_ids) or 0)
     except Exception as _ex:
         _log.debug('_panel_mute_cap: %s', _ex)
         return 0

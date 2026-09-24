@@ -47,20 +47,19 @@ _MAX_TS = 1000                  # сколько меток держать на 
 # («Щит сервера» → «Лимиты») не заданы свои, более высокие цифры. Так у
 # кураторов/админов лимит поднимается пер-рольным оверрайдом (ban 3/5,
 # unmute 5), а базовый модераторский уровень защищает сервер сразу.
-#   • бан/апелляция — 1/день (кураторы 3, админы 5 — через панель)
-#   • размут — модеры 3/день, кураторы/админы 5 (Sabotash 2026-09-02)
-#   • мут/таймаут — модеры 5/день, кураторы/админы 10 (тот же КД, что у тайма)
+#   • бан/апелляция — мод/хелпер 1, мастер 1, куратор 2 (заказ 2026-09-24)
+#   • мут/размут — мод/хелпер 3, мастер 5, куратор 7 (размут = мут)
 #   • варн — модеры 3/день, кураторы/админы 5
 #   • очистка — 10 чисток/день (одна операция = один хит)
-# Владелец всё это меняет в панели; 0 по-прежнему означает «без лимита».
+# Хелпер = тир helper (варн 1, без бана). Владелец меняет в панели; 0 = без лимита.
 DEFAULT_LIMITS = {
     # ── наказания ──
-    'warn': 3,       # предупреждений — 3/день у модеров (Sabotash 2026-09-02)
-    'mute': 5,       # мутов (таймаут/чат/войс) — 5/день у модеров
-    'unmute': 3,     # снятий мута — 3/день (кураторы/админы — 5)
+    'warn': 3,       # предупреждений — 3/день у модеров/хелперов
+    'mute': 3,       # мутов — 3/день у модеров/хелперов
+    'unmute': 3,     # снятий мута = мут (мод/хелпер 3)
     'kick': 0,       # киков (команда отключена — лимит на будущее)
     'vkick': 0,      # киков из голосового канала
-    'ban': 1,        # банов/апелляций — 1/день (кураторы 3, админы 5 — панель)
+    'ban': 1,        # банов — 1/день у мод/хелпер/мастер (куратор 2)
     'unban': 0,      # разбанов / снятий апелляции — без жёсткого дефолта
     # ── опасные операции ──
     'clear': 10,     # чисток (операций) /день у персонала; владелец — без лимита
@@ -155,25 +154,30 @@ def _roles_path(gid):
 ROLE_MAP_PATH = 'data/role_map.json'
 
 # Порядок старшинства: больший индекс — больше прав (мягче лимиты).
-TIER_ORDER = ('mod', 'curator', 'admin', 'owner')
+# helper < mod < master < curator (заказ 2026-09-24).
+TIER_ORDER = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
 
-# Тировые дефолты за окно (день). Sabotash 2026-09-02:
-# варны мод 3 / кур+адм 5; муты мод 5 / кур+адм 10;
-# размут мод 3 / кур+адм 5; бан мод 1 / кур 3 / адм 5.
+# Тировые дефолты за окно (день).
+# Ветка хелперов: варн 1/1/2, бана нет. Ветка модеров: варн 3+, бан 1/1/2/5.
+# Мут/размут: хелпер/мод 3, мастер 5, куратор 7, админ 10.
 TIER_DEFAULT_LIMITS = {
     # тир владельца (owner) — ВСЁ без лимитов
-    'mod':     {'warn': 3, 'ban': 1, 'unmute': 3, 'mute': 5, 'clear': 10},
-    'curator': {'warn': 5, 'ban': 3, 'unmute': 5, 'mute': 10, 'clear': 10},
-    'admin':   {'warn': 5, 'ban': 5, 'unmute': 5, 'mute': 10, 'clear': 10},
+    'helper':  {'warn': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
+    'mod':     {'warn': 3, 'ban': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
+    'master':  {'warn': 1, 'ban': 1, 'unmute': 5, 'mute': 5, 'clear': 10},
+    'curator': {'warn': 2, 'ban': 2, 'unmute': 7, 'mute': 7, 'clear': 10},
+    'admin':   {'warn': 2, 'ban': 5, 'unmute': 10, 'mute': 10, 'clear': 10},
     'owner':   {},   # владелец не ограничен ни в чём
 }
 
-# Потолок ДЛИТЕЛЬНОСТИ мута по тиру (секунды).
-# Sabotash 2026-09-02: «муты максимум от 30 минут до 2 часов у всех пока».
+# Потолок ДЛИТЕЛЬНОСТИ мута по тиру (секунды) — запасной, если прогрессия
+# недоступна. Боевой потолок: mute_progression (1ч → +2ч до варна).
 TIER_DEFAULT_DURATIONS = {
-    'mod':     2 * 3600,      # 2 часа
-    'curator': 2 * 3600,
-    'admin':   2 * 3600,
+    'helper':  3600,
+    'mod':     3600,          # 1 час (первый шаг)
+    'master':  3600,
+    'curator': 3600,
+    'admin':   3600,
     'owner':   0,             # без ограничения
 }
 
@@ -181,7 +185,7 @@ TIER_DEFAULT_DURATIONS = {
 def _role_tier_map(guild_id=None):
     """{role_id(str): tier} из data/role_map.json (та же настройка, что в
     панели «Панели и роли»). Сбой чтения — пустой словарь (не мешаем).
-    Известная роль куратора сервера всегда в карте (fallback)."""
+    Известные роли сервера всегда в карте (fallback)."""
     try:
         data = _load_json(ROLE_MAP_PATH, {})
         if not isinstance(data, dict):
@@ -199,15 +203,84 @@ def _role_tier_map(guild_id=None):
     try:
         from services.staff_roles import KNOWN_HELPER_ROLE_ID
         hid = str(int(KNOWN_HELPER_ROLE_ID))
-        out.setdefault(hid, 'mod')
+        out.setdefault(hid, 'helper')
+    except Exception:
+        pass
+    try:
+        from services.staff_roles import KNOWN_MODERATOR_ROLE_ID
+        mid = str(int(KNOWN_MODERATOR_ROLE_ID))
+        out.setdefault(mid, 'mod')
+    except Exception:
+        pass
+    try:
+        from services.staff_roles import KNOWN_MASTER_ROLE_ID
+        xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
+        if xid and xid != '0':
+            out.setdefault(xid, 'master')
     except Exception:
         pass
     return out
 
 
+def member_has_helper_or_moderator(member) -> bool:
+    """Есть ли у участника роль Helper или Moderator (ветки наказаний).
+
+    Мастер без одной из этих ролей (только Eventsmod/Broadcaster/Master)
+    применять наказания не может (заказ создателя 2026-09-24).
+    """
+    if member is None:
+        return False
+    try:
+        from services.staff_roles import (
+            KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID)
+        need = {
+            str(int(KNOWN_HELPER_ROLE_ID)),
+            str(int(KNOWN_MODERATOR_ROLE_ID)),
+        }
+    except Exception:
+        need = {'948969471916249119', '803553848396349510'}
+    tmap = _role_tier_map()
+    for role in (getattr(member, 'roles', None) or []):
+        rid = str(getattr(role, 'id', '') or '')
+        if not rid:
+            continue
+        if rid in need:
+            return True
+        if tmap.get(rid) in ('helper', 'mod'):
+            return True
+    return False
+
+
+def master_punish_allowed(member) -> tuple:
+    """(ok, deny_text). Мастер без Helper/Moderator — отказ.
+
+    Куратор/админ/owner выше master — гейт не трогает.
+    """
+    if member is None:
+        return True, None
+    try:
+        role_ids = [
+            getattr(r, 'id', None)
+            for r in (getattr(member, 'roles', None) or [])
+            if getattr(r, 'id', None)
+        ]
+        tier = tier_for_roles(role_ids)
+        if tier != 'master':
+            return True, None
+        if member_has_helper_or_moderator(member):
+            return True, None
+        return False, (
+            'Мастер без роли **Helper** или **Moderator** '
+            'не может применять наказания. '
+            'Ветки Eventsmod / Broadcaster — без наказаний.'
+        )
+    except Exception as ex:
+        _log.debug('master_punish_allowed: %s', ex)
+        return True, None
+
+
 def tier_for_roles(role_ids):
-    """Старший тир из набора ролей участника: 'owner' > 'admin' > 'curator'
-    > 'mod' > None (роль не помечена как стафф — действует общий дефолт)."""
+    """Старший тир: owner > admin > curator > master > mod > None."""
     tmap = _role_tier_map()
     best = None
     best_i = -1
@@ -463,11 +536,12 @@ def role_scoped_actions(guild_id, role_ids=()):
     return scoped
 
 
-# Срок одного мута ПО УМОЛЧАНИЮ у всех: от 30 минут до 2 часов
-# (Sabotash 2026-09-02: «от 30 минут до 120 / просто 2 часа»).
-# Роль в панели может поднять потолок; ниже 30 мин — нельзя.
+# Срок одного мута ПО УМОЛЧАНИЮ: минимум 30 мин.
+# Максимум — прогрессия по участнику (mute_progression):
+# первый мут 1 ч, каждый следующий +2 ч, до варна — сброс на 1 ч
+# (заказ владельца 2026-09-24). Тировые 2 ч больше не дефолт потолка.
 DEFAULT_MUTE_DURATION_MIN = 30 * 60
-DEFAULT_MUTE_DURATION_CAP = 2 * 3600
+DEFAULT_MUTE_DURATION_CAP = 3600   # первый шаг прогрессии (1 ч)
 
 
 def mute_duration_error(seconds, cap_sec=None, min_sec=None):
@@ -484,7 +558,7 @@ def mute_duration_error(seconds, cap_sec=None, min_sec=None):
     if mn and 0 < sec < mn:
         return (f'Мут короче разрешённого: минимум {mn // 60} мин, '
                 f'а запрошено {max(1, sec // 60)} мин. '
-                'Пока у всех муты от 30 минут до 2 часов.')
+                'Минимум — 30 минут.')
     cap = int(cap_sec or 0)
     if cap and sec > cap:
         cap_m = max(1, cap // 60)
@@ -494,9 +568,31 @@ def mute_duration_error(seconds, cap_sec=None, min_sec=None):
         req_txt = (f'{req_m // 60} ч' if req_m % 60 == 0 and req_m >= 60
                    else f'{req_m} мин')
         return (f'Мут дольше разрешённого: потолок — {cap_txt}, '
-                f'а запрошено {req_txt}. Потолок настраивается: панель → '
-                'Щит сервера → Лимиты.')
+                f'а запрошено {req_txt}. '
+                'Первый мут — до 1 ч, дальше +2 ч, после варна снова с 1 ч.')
     return None
+
+
+def resolve_mute_cap(guild_id, target_id=None, role_ids=(), *, unlimited=False):
+    """Потолок мута (сек) с прогрессией по цели. 0 = без ограничения.
+
+    У всех (кроме владельца): 1ч + step×2ч по участнику.
+    """
+    if unlimited:
+        return 0
+    try:
+        if tier_for_roles(role_ids) == 'owner':
+            return 0
+    except Exception:
+        pass
+    try:
+        from services import mute_progression as _MP
+        if target_id is not None:
+            return int(_MP.cap_seconds(guild_id, target_id))
+        return int(_MP.FIRST_CAP_SEC)
+    except Exception as ex:
+        _log.debug('resolve_mute_cap: %s', ex)
+        return int(DEFAULT_MUTE_DURATION_CAP)
 
 
 def effective_max_duration(guild_id, key, role_ids=()):
@@ -701,6 +797,10 @@ def check_action(guild, actor, key, amount=1):
             _log.debug('staff_limits: владелец бота не проверен: %s', _ex)
         if getattr(actor, 'bot', False):
             return True, None      # сам бот (панель/автоматика) — лимитами не грудим
+        # Мастер без Helper/Moderator — нельзя (Eventsmod/Broadcaster)
+        _mok, _mdeny = master_punish_allowed(actor)
+        if not _mok:
+            return False, _mdeny
         role_ids = [r.id for r in (getattr(actor, 'roles', None) or [])
                     if getattr(r, 'id', None) != getattr(guild, 'id', None)]
         lim_map, win_map = effective_limits(guild.id, role_ids)

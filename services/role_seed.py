@@ -74,6 +74,31 @@ def _main_guild_id(override=None):
     return None
 
 
+def ensure_known_helper_tier(report=None):
+    """Известный Helper в role_map: если ещё «mod» — перевести в helper.
+
+    Идемпотентно, без маркера версии: чинит старые установки, где роль
+    9489… осталась на тире mod до v6. Можно звать на каждом on_ready.
+    """
+    if report is None:
+        report = {'role_map_added': []}
+    try:
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        hid = str(int(KNOWN_HELPER_ROLE_ID))
+    except Exception as ex:
+        _log.debug('ensure_known_helper_tier id: %s', ex)
+        return report
+    role_map = _read_json(ROLE_MAP_PATH, {})
+    if not isinstance(role_map, dict):
+        role_map = {}
+    if role_map.get(hid) == 'mod':
+        role_map[hid] = 'helper'
+        _write_json(ROLE_MAP_PATH, role_map)
+        report.setdefault('role_map_added', []).append(f'{hid}=helper(upgrade)')
+        _log.info('role_map: %s mod→helper (ensure)', hid)
+    return report
+
+
 def apply_role_seed(force=False, guild_id=None):
     """Применить сид. Возвращает короткий отчёт-словарь (для логов/тестов).
 
@@ -102,6 +127,9 @@ def apply_role_seed(force=False, guild_id=None):
             version = 1
         marker = MARKER_FMT.format(version=version)
         if not force and os.path.exists(marker):
+            # Маркер есть — полный сид не трогаем, но тир хелпера чиним
+            # (старые VPS могли получить v6 без upgrade).
+            ensure_known_helper_tier(report)
             report['reason'] = f'already applied (v{version})'
             return report
 
@@ -110,31 +138,35 @@ def apply_role_seed(force=False, guild_id=None):
         role_map = _read_json(ROLE_MAP_PATH, {})
         if not isinstance(role_map, dict):
             role_map = {}
+        _VALID_TIERS = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
         for rid, tier in seed_map.items():
             rid = str(rid).strip()
             tier = str(tier).strip()
-            if rid and tier in ('mod', 'curator', 'admin', 'owner') \
-                    and rid not in role_map:
+            if rid and tier in _VALID_TIERS and rid not in role_map:
                 role_map[rid] = tier
                 report['role_map_added'].append(f'{rid}={tier}')
         if report['role_map_added']:
             _write_json(ROLE_MAP_PATH, role_map)
 
+        # v6+: известный Helper, если в карте ещё как «mod» — перевести в helper
+        ensure_known_helper_tier(report)
+
         # 2) action ACL: дефолтные разрешения действий для ролей персонала.
-        # Строгая модель permission_acl — default-deny: на чистом сервере без
-        # правил варн/мут/бан заблокированы («варны не работают»). Засеиваем
-        # все действия ролям указанных тиров (mod/curator/admin). Только
-        # ДОПИСЫВАЕМ роли к уже существующим спискам: ручные запреты владельца
-        # в панели не трогаем, пустые правила (явный запрет) не перетираем.
+        # Хелпер (тир helper / KNOWN_HELPER) ИСКЛЮЧЁН — ветка чата через helper_acl_seed.
         action_tiers = [str(t).strip() for t in
                         ((seed.get('action_default') or {}).get('tiers') or [])]
-        action_tiers = [t for t in action_tiers if t in ('mod', 'curator', 'admin', 'owner')]
+        action_tiers = [t for t in action_tiers if t in _VALID_TIERS and t != 'helper']
         if action_tiers:
             try:
                 from services.permission_acl import ACTIONS, load_action_acl, save_action_acl
-                # Роли сидовых тиров (из итоговой role_map — её уже дополнили выше).
+                try:
+                    from services.staff_roles import KNOWN_HELPER_ROLE_ID
+                    _exclude = {str(int(KNOWN_HELPER_ROLE_ID))}
+                except Exception:
+                    _exclude = {'948969471916249119'}
                 seed_role_ids = [rid for rid, tier in role_map.items()
-                                 if tier in action_tiers]
+                                 if tier in action_tiers and rid not in _exclude
+                                 and tier != 'helper']
                 gid = _main_guild_id(guild_id)
                 if seed_role_ids and gid:
                     acl = load_action_acl(gid)

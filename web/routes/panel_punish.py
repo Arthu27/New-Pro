@@ -168,6 +168,14 @@ def register(ctx):
         # ACL «Права команд»: каждому — только его действия.
         member = _viewer_member(bot, gid)
         actions_acl = [a for a in PANEL_ACTIONS if _acl_allows(gid, member, a[0])]
+        # Мастер без Helper/Moderator — пустой список наказаний
+        try:
+            from services.staff_limits import master_punish_allowed as _mpa
+            _mok, _ = _mpa(member)
+            if not _mok:
+                actions_acl = []
+        except Exception as _mex:
+            _log.debug('punish/options master gate: %s', _mex)
         hidden_by_acl = len(PANEL_ACTIONS) - len(actions_acl)
         # «Лимиты команды» (Щит сервера → Лимиты) для входа через
         # Discord-аккаунт: сколько у модератора осталось по каждому действию
@@ -253,6 +261,14 @@ def register(ctx):
             return jsonify({'success': False,
                             'error': 'Нет права: действие не разрешено вашей '
                                      'роли (настройка — «Права команд»)'}), 403
+        try:
+            from services.staff_limits import master_punish_allowed as _mpa
+            _mok, _mdeny = _mpa(member_viewer)
+            if not _mok:
+                return jsonify({'success': False,
+                                'error': _mdeny or 'Мастер без Helper/Moderator.'}), 403
+        except Exception as _mex:
+            _log.debug('punish master gate: %s', _mex)
 
         raw_uid = str(d.get('user_id') or '').strip().strip('<@!>')
         if not raw_uid.isdigit():
@@ -295,9 +311,10 @@ def register(ctx):
                 if not _okl:
                     return jsonify({'success': False,
                                     'error': _deny or 'Лимит исчерпан'}), 429
-                # потолок длительности мута (0/не задан — без ограничения)
+                # потолок длительности мута (прогрессия по цели)
                 if action in _DURATION_ACTIONS:
-                    _cap = _SL.effective_max_duration(guild.id, 'mute', role_ids)
+                    _cap = _SL.resolve_mute_cap(
+                        guild.id, getattr(target, 'id', target), role_ids)
                     from cogs.moderation import parse_duration_minutes as _pd
                     from services.staff_limits import mute_duration_error as _mde
                     _mins = _pd(duration, 30)
@@ -316,7 +333,8 @@ def register(ctx):
                 else:
                     from services import staff_limits as _SLC
                     _rids_v = _member_role_ids(member_viewer)
-                    _dur_cap = _SLC.effective_max_duration(int(gid), 'mute', _rids_v)
+                    _dur_cap = _SLC.resolve_mute_cap(
+                        int(gid), getattr(target, 'id', target), _rids_v)
             except Exception as _dcex:
                 _log.debug('punish duration cap: %s', _dcex)
         try:

@@ -454,6 +454,13 @@ class warnings(commands.Cog):
         guild = interaction.guild
         await self._sync_warn_level_roles(guild, user, total)
 
+        # Варн → сброс прогрессии мута (снова с 1 часа)
+        try:
+            from services.mute_progression import reset_on_warn
+            reset_on_warn(guild.id, user.id)
+        except Exception as _ex:
+            _log.debug("add_warn() mute_progression: %s", _ex)
+
         # Лимиты: фиксируем успешный варн в дневном счётчике
         try:
             from services.staff_limits import record_hit as _sl_rec
@@ -665,6 +672,13 @@ class warnings(commands.Cog):
 
         # Роли уровня варна (путь панели/AI-модератора — тот же переезд)
         await self._sync_warn_level_roles(user.guild, user, total)
+
+        # Варн → сброс прогрессии мута (снова с 1 часа)
+        try:
+            from services.mute_progression import reset_on_warn
+            reset_on_warn(guild.id, user.id)
+        except Exception as _ex:
+            _log.debug("add_warning() mute_progression: %s", _ex)
 
         # Лимиты: фиксируем успешный варн в дневном счётчике
         try:

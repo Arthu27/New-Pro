@@ -33,9 +33,9 @@ G, MOD, OTHER = 777001, 111, 222
 print('== 1. Дефолты: безопасные цифры включены (заказ владельца) ==')
 lim = SL.get_limits(G)
 # Защитные дефолты на опасные действия; 0 = «без лимита» для остального.
-check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 5
+check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 3
       and lim['clear'] == 10,
-      'из коробки: бан 1/день, мут 5, размут 3, очистка 10 чисток/день')
+      'из коробки: бан 1/день, мут 3, размут 3, очистка 10 чисток/день')
 check(lim['warn'] == 3 and lim['kick'] == 0,
       'варн 3/день у модеров (Sabotash 2026-09-02); кик — 0 = не ограничено')
 check('nuke' not in lim,
@@ -188,46 +188,52 @@ check(SL.tier_for_roles([1003]) == 'admin', 'роль 1003 → тир admin')
 check(SL.tier_for_roles([1003, 1001]) == 'admin', 'несколько ролей → старший тир')
 check(SL.tier_for_roles([9999]) is None, 'немаркированная роль → тир нет')
 
-# Дефолты по тиру: бан 1/3/5, размут 3/5/5.
+# Дефолты по тиру: бан 1/2/5, мут/размут 3/7/10. Хелпер = mod.
 GT = 777099
 _lm_mod, _ = SL.effective_limits(GT, [1001])
 _lm_cur, _ = SL.effective_limits(GT, [1002])
 _lm_adm, _ = SL.effective_limits(GT, [1003])
 _lm_own, _ = SL.effective_limits(GT, [1004])
-check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 3 and _lm_adm['ban'] == 5,
+check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 2 and _lm_adm['ban'] == 5,
       f'бан по тирам: модер {_lm_mod["ban"]} / куратор {_lm_cur["ban"]} / админ {_lm_adm["ban"]}')
-check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 5 and _lm_adm['unmute'] == 5,
-      'размут по тирам: модер 3 / куратор 5 / админ 5')
-check(_lm_mod['warn'] == 3 and _lm_cur['warn'] == 5 and _lm_adm['warn'] == 5,
-      'варны по тирам: модер 3 / куратор 5 / админ 5')
-check(_lm_mod['mute'] == 5 and _lm_cur['mute'] == 10 and _lm_adm['mute'] == 10,
-      'муты по тирам: модер 5 / куратор 10 / админ 10')
+check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 7 and _lm_adm['unmute'] == 10,
+      'размут по тирам: модер 3 / куратор 7 / админ 10 (= мут)')
+check(_lm_mod['warn'] == 3 and _lm_cur['warn'] == 2 and _lm_adm['warn'] == 2,
+      'варны по тирам: модер 3 / куратор 2 / админ 2')
+check(_lm_mod['mute'] == 3 and _lm_cur['mute'] == 7 and _lm_adm['mute'] == 10,
+      'муты по тирам: модер 3 / куратор 7 / админ 10')
 check(_lm_own.get('ban', 0) == 0, 'владелец — без лимита на бан')
 # Пер-рольный оверрайд важнее тирового дефолта.
 SL.set_role_limits(GT, 1002, who='Куратор', ban=9)
 _lm_cur2, _ = SL.effective_limits(GT, [1002])
-check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (3)')
+check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (2)')
 
-# Потолок длительности мута: 2 часа у всех (Sabotash 2026-09-02).
-check(SL.effective_max_duration(GT, 'mute', [1001]) == 2 * 3600,
-      'модер: мут максимум 2 часа')
-check(SL.effective_max_duration(GT, 'mute', [1002]) == 2 * 3600,
-      'куратор: мут максимум 2 часа')
-check(SL.effective_max_duration(GT, 'mute', [1003]) == 2 * 3600,
-      'админ: мут максимум 2 часа')
+# Потолок длительности: прогрессия (первый шаг 1 ч); effective_max — тир.
+check(SL.effective_max_duration(GT, 'mute', [1001]) == 3600,
+      'модер: тировый потолок 1 час (первый шаг)')
+check(SL.effective_max_duration(GT, 'mute', [1002]) == 3600,
+      'куратор: тировый потолок 1 час')
+check(SL.effective_max_duration(GT, 'mute', [1003]) == 3600,
+      'админ: тировый потолок 1 час')
 check(SL.effective_max_duration(GT, 'mute', [1004]) == 0,
       'владелец тира — без потолка длительности')
-check(SL.effective_max_duration(GT, 'mute', []) == 2 * 3600,
-      'без стафф-роли — дефолт 2 часа')
+check(SL.effective_max_duration(GT, 'mute', []) == 3600,
+      'без стафф-роли — дефолт 1 час')
 SL.set_role_durations(GT, 1001, who='t', role_name='Мод', mute=3 * 3600)
 check(SL.effective_max_duration(GT, 'mute', [1001]) == 3 * 3600,
-      'свой потолок роли (3 ч) перебивает тировые 2 часа')
-err_short = SL.mute_duration_error(15 * 60, cap_sec=2 * 3600)
-err_ok = SL.mute_duration_error(30 * 60, cap_sec=2 * 3600)
-err_long = SL.mute_duration_error(3 * 3600, cap_sec=2 * 3600)
+      'свой потолок роли (3 ч) перебивает тировые 1 час')
+err_short = SL.mute_duration_error(15 * 60, cap_sec=3600)
+err_ok = SL.mute_duration_error(30 * 60, cap_sec=3600)
+err_long = SL.mute_duration_error(2 * 3600, cap_sec=3600)
 check(err_short and 'короче' in err_short, '15 мин — отказ (минимум 30)')
-check(err_ok is None, '30 мин при потолке 2 ч — можно')
-check(err_long and 'дольше' in err_long, '3 ч при потолке 2 ч — отказ')
+check(err_ok is None, '30 мин при потолке 1 ч — можно')
+check(err_long and 'дольше' in err_long, '2 ч при потолке 1 ч — отказ')
+from services import mute_progression as MP
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3600, 'resolve: первый мут 1ч')
+MP.bump_after_mute(GT, 555)
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3 * 3600, 'resolve: после мута 3ч')
+MP.reset_on_warn(GT, 555)
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3600, 'resolve: после варна снова 1ч')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

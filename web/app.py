@@ -851,15 +851,17 @@ def _record_on_main_guild (record ):
 ROLES ={
 'uye':0 ,
 'mod':1 ,
-'curator':2 ,
-'admin':3 ,
-'owner':4 
+'master':2 ,
+'curator':3 ,
+'admin':4 ,
+'owner':5 
 }
 
 # Русские названия ролей — для шапки панели, логов и ИИ-помощника.
 ROLE_LABELS ={
 'uye':'Участник',
 'mod':'Модератор',
+'master':'Мастер',
 'curator':'Куратор',
 'admin':'Администратор',
 'owner':'Владелец'
@@ -1141,7 +1143,9 @@ def _get_role_from_discord (discord_id :str )->str :
                 best_mapped ='admin'
             elif mapped =='curator'and best_mapped not in ('admin','owner'):
                 best_mapped ='curator'
-            elif mapped =='mod'and best_mapped not in ('curator','admin','owner'):
+            elif mapped =='master'and best_mapped not in ('curator','admin','owner'):
+                best_mapped ='master'
+            elif mapped =='mod'and best_mapped not in ('master','curator','admin','owner'):
                 best_mapped ='mod'
         if best_mapped !='uye':
             return best_mapped 
