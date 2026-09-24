@@ -661,6 +661,25 @@ ok_ev_ev, _ = SR.can_review_position(
 check(not ok_ev_mod, 'админ ивентов не принимает Moderator', deny_ev_mod)
 check(ok_ev_ev, 'админ ивентов принимает свою ветку Events')
 
+# Жёсткие ID владельца — только эти роли открывают ветку
+_EXPECTED = {
+    'moderator': 1551524708552278036,
+    'helper': 1551525681207189504,
+    'event': 1551527644326002748,
+    'broadcaster': 1552639452713848912,
+}
+check(dict(SR.KNOWN_CURATOR_BY_KIND) == _EXPECTED,
+      'KNOWN_CURATOR_BY_KIND = ID владельца',
+      SR.KNOWN_CURATOR_BY_KIND)
+# панель не подменяет ACL: даже если settings указывают другой id
+SR.save_setting(777, 'moderator_curator_role', 999999)
+ok_fake, _ = SR.can_review_position(_CurMember(999999), 'Moderator')
+ok_real, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_BY_KIND['moderator']), 'Moderator')
+check(not ok_fake and ok_real,
+      'ACL только по жёсткому ID, не по панели')
+SR.save_setting(777, 'moderator_curator_role', 0)
+
 # легаси: старая раздельная настройка кураторов не теряется
 SR.save_setting(777, 'curator_role', 0)
 SR.save_setting(777, 'helper_curator_role', 0)

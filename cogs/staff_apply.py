@@ -212,32 +212,18 @@ def menu_channel(guild):
 
 
 def _curator_ping(guild, role_name: str = ''):
-    """Тег куратора СВОЕЙ ветки для карточки заявки.
-
-    Helper → × Отвечаю за Helper, Event → × Отвечаю за Eventsmod и т.д.
-    Общий × Curator не пингуем — иначе чужие ветки думают, что это их заявка.
-    """
+    """Тег куратора СВОЕЙ ветки (жёсткий ID из KNOWN_CURATOR_BY_KIND)."""
     from services.staff_roles import (
-        curator_role_id_for, normalize_position, KNOWN_CURATOR_BY_KIND)
+        normalize_position, KNOWN_CURATOR_BY_KIND)
     if not guild:
         return ''
     kind = normalize_position(role_name) or 'moderator'
-    cur = curator_role_id_for(guild.id, kind)
+    rid = int(KNOWN_CURATOR_BY_KIND.get(kind) or 0)
     get_role = getattr(guild, 'get_role', None)
-    if not callable(get_role):
+    if not callable(get_role) or not rid:
         return ''
-    fallbacks = [
-        cur,
-        int(KNOWN_CURATOR_BY_KIND.get(kind) or 0),
-    ]
-    for rid in fallbacks:
-        try:
-            rid = int(rid or 0)
-        except (TypeError, ValueError) as _e:
-            log.debug('staff_apply: id роли %r: %s', rid, _e)
-            continue
-        if rid and get_role(rid) is not None:
-            return f'<@&{rid}>'
+    if get_role(rid) is not None:
+        return f'<@&{rid}>'
     return ''
 
 

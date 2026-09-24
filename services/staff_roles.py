@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """Роли по должности заявки: Хелпер / Модератор / Event / Broadcaster.
 
-Заявку одобряют в Discord (select на карточке) и в панели
-(«Доступ → Заявки в команду»). Обе точки спрашивают этот сервис.
+Заявку одобряют в Discord (select на карточке) и в панели.
+Принимают ТОЛЬКО роли «× Отвечаю за …» своей ветки (жёсткие ID):
 
-Кураторы раздельные: ветка Helper не принимает Event/Moderator и
-наоборот — только роль «× Отвечаю за …» своей ветки (+ владелец
-сервера/бота). × Administrator чужие ветки НЕ открывает.
+  Moderator   1551524708552278036
+  Helper      1551525681207189504
+  Eventsmod   1551527644326002748
+  Broadcaster 1552639452713848912
+
+Чужая ветка / × Administrator / общий × Curator — отказ.
 """
 
 import json
@@ -44,12 +47,13 @@ LEGACY_CURATOR_KEYS = ("helper_curator_role", "moderator_curator_role")
 # Старый общий куратор (фолбек, если своей роли нет)
 KNOWN_CURATOR_ROLE_ID = 807030012301541377
 
-# «× Отвечаю за …» — кто принимает заявки своей ветки (Hakumo 2026-09-24)
+# «× Отвечаю за …» — ЕДИНСТВЕННЫЕ роли, кто принимает заявки своей ветки.
+# Владелец 2026-09-24: только эти ID, без × Administrator и без панели.
 KNOWN_CURATOR_BY_KIND = {
-    "helper": 1551525681207189504,       # × Отвечаю за Helper
     "moderator": 1551524708552278036,    # × Отвечаю за Moderator
+    "helper": 1551525681207189504,       # × Отвечаю за Helper
     "event": 1551527644326002748,        # × Отвечаю за Eventsmod
-    "broadcaster": 1552639452713848912,  # × Отвечаю за Broadcaster (не копия)
+    "broadcaster": 1552639452713848912,  # × Отвечаю за Broadcaster
 }
 
 # Роли, выдаваемые после одобрения (владелец 2026-09-24)
@@ -96,29 +100,29 @@ ROLE_SPECS = [
         "key": "helper_curator_role",
         "label": "Куратор Helper",
         "icon": "fa-user-check",
-        "what": "«× Отвечаю за Helper» — куратор ветки (+ админы) принимает заявки Helper.",
-        "empty": "По умолчанию: известная роль × Отвечаю за Helper.",
+        "what": "«× Отвечаю за Helper» — только эта роль принимает заявки Helper.",
+        "empty": "По умолчанию: 1551525681207189504.",
     },
     {
         "key": "moderator_curator_role",
         "label": "Куратор Moderator",
         "icon": "fa-user-shield",
-        "what": "«× Отвечаю за Moderator» — куратор ветки (+ админы) принимает заявки Moderator.",
-        "empty": "По умолчанию: известная роль × Отвечаю за Moderator.",
+        "what": "«× Отвечаю за Moderator» — только эта роль принимает заявки Moderator.",
+        "empty": "По умолчанию: 1551524708552278036.",
     },
     {
         "key": "event_curator_role",
         "label": "Куратор Eventsmod",
         "icon": "fa-user-clock",
-        "what": "«× Отвечаю за Eventsmod» — куратор ветки (+ админы) принимает заявки Eventsmod.",
-        "empty": "По умолчанию: известная роль × Отвечаю за Eventsmod.",
+        "what": "«× Отвечаю за Eventsmod» — только эта роль принимает заявки Eventsmod.",
+        "empty": "По умолчанию: 1551527644326002748.",
     },
     {
         "key": "broadcaster_curator_role",
         "label": "Куратор Broadcaster",
         "icon": "fa-podcast",
-        "what": "«× Отвечаю за Broadcaster» — куратор ветки (+ админы) принимает заявки Broadcaster.",
-        "empty": "По умолчанию: известная роль × Отвечаю за Broadcaster.",
+        "what": "«× Отвечаю за Broadcaster» — только эта роль принимает заявки Broadcaster.",
+        "empty": "По умолчанию: 1552639452713848912.",
     },
 ]
 
@@ -222,13 +226,14 @@ def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
 def can_review_position(member, position) -> tuple:
     """Может ли участник принять/отклонить заявку этой должности.
 
-    Да ТОЛЬКО:
-      • владелец сервера / бота;
-      • куратор ЭТОЙ ветки («× Отвечаю за …»).
+    Да ТОЛЬКО при роли из KNOWN_CURATOR_BY_KIND для этой ветки:
+      moderator  → 1551524708552278036
+      helper     → 1551525681207189504
+      event      → 1551527644326002748
+      broadcaster→ 1552639452713848912
 
-    Нет: × Administrator (иначе админ ивентов с этой ролью принимает
-    Moderator), Discord-бит administrator, role_map, общий × Curator,
-    куратор чужой ветки. Каждая ветка — только своей ролью.
+    Плюс владелец сервера/бота. Панель/.env/× Administrator/чужой
+    куратор — нет. Проверка по жёстким ID, без подмены из настроек.
     """
     if member is None:
         return False, "Участник не найден."
@@ -256,24 +261,15 @@ def can_review_position(member, position) -> tuple:
         pass
 
     kind = normalize_position(position)
-    if not kind:
+    if not kind or kind not in KNOWN_CURATOR_BY_KIND:
         return False, "В заявке не указана должность."
-    guild = getattr(member, "guild", None)
-    gid = getattr(guild, "id", 0) if guild else 0
-    rid = curator_role_id_for(gid, kind)
-    if not rid:
-        return False, "Куратор этой ветки не настроен."
-    # Общий × Curator никогда не считается куратором ветки
-    if int(rid) == int(KNOWN_CURATOR_ROLE_ID or 0):
-        return False, (
-            f"Куратор ветки не настроен — общий × Curator "
-            f"заявки на **{position_label(kind)}** не принимает."
-        )
-    if int(rid) in role_ids:
+    # Жёстко: только ID из таблицы владельца (не панель, не .env)
+    rid = int(KNOWN_CURATOR_BY_KIND[kind])
+    if rid in role_ids:
         return True, ""
     label = position_label(kind)
     return False, (
-        f"Только <@&{int(rid)}> принимает заявки на **{label}**."
+        f"Только <@&{rid}> принимает заявки на **{label}**."
     )
 
 
