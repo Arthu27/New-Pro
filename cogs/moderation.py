@@ -1227,6 +1227,13 @@ class Moderation (commands .Cog ):
                     _mdeny or 'Мастер без Helper/Moderator не может применять.'),
                     ephemeral=True)
                 return False
+            # Mapped helper (в т.ч. Discord Admin): бан/разбан/unwarn/войс —
+            # нельзя даже если пункт ещё на экране.
+            if (_mapped_is_helper(interaction.user)
+                    and not _helper_panel_action_ok(action)):
+                await _respond(interaction, embed=error_embed(
+                    'Это действие недоступно хелперу.'), ephemeral=True)
+                return False
             if action in ('mute', 'unmute'):
                 gid = getattr(interaction, 'guild_id', None) or getattr(
                     getattr(interaction, 'guild', None), 'id', None)
@@ -1966,6 +1973,27 @@ MODPANEL_ACL_KEYS = {
     "clear": "purge",
 }
 
+# Хелпер (mapped tier = helper): только эти пункты /modpanel.
+# Discord Administrator / admin в actor_panel_role НЕ раздувают меню —
+# смотрим best_mapped_tier, не Discord-права.
+HELPER_MODPANEL_KEYS = frozenset({'warn', 'mute', 'unmute', 'clear'})
+# После выбора «Мут»/«Снять мут» — только чат (без войс/таймаута).
+HELPER_MUTE_KIND_KEYS = frozenset({'mute_chat', 'unmute_chat'})
+
+
+def _mapped_is_helper(member):
+    """True, если высший mapped-тир — helper (даже при Discord Admin)."""
+    try:
+        from services.staff_hierarchy import best_mapped_tier
+        return best_mapped_tier(member) == 'helper'
+    except Exception:
+        return False
+
+
+def _helper_panel_action_ok(action):
+    """Пункт/вид мута разрешён хелперу (меню и _ensure_action_acl)."""
+    return action in HELPER_MODPANEL_KEYS or action in HELPER_MUTE_KIND_KEYS
+
 
 def mute_kinds_for(guild_id, member):
     """Какие виды мута доступны: чат / войс / оба."""
@@ -1979,6 +2007,8 @@ def mute_kinds_for(guild_id, member):
         out.append(('vmute', 'Войс', None))
     if both:
         out.append(('timeout', 'Чат и войс', None))
+    if _mapped_is_helper(member):
+        out = [k for k in out if k[0] in HELPER_MUTE_KIND_KEYS]
     return out
 
 
@@ -1995,6 +2025,8 @@ def unmute_kinds_for(guild_id, member):
         out.append(('vunmute', 'Войс', None))
     if chat and voice:
         out.append(('untimeout', 'Чат и войс', None))
+    if _mapped_is_helper(member):
+        out = [k for k in out if k[0] in HELPER_MUTE_KIND_KEYS]
     return out
 
 
@@ -2034,8 +2066,11 @@ def actions_for_member(guild, member):
     если у ролей модератора заданы лимиты только на часть действий, видит
     только их (пересечение с разрешениями).
 
-    Куратор/админ+хелпер: смотрим ВЫСШИЙ тир — хелперские лимиты mute/clear
-    не схлопывают /modpanel до хелперского меню.
+    Куратор/админ (mapped)+хелпер: смотрим ВЫСШИЙ mapped-тир — хелперские
+    лимиты mute/clear не схлопывают /modpanel до хелперского меню.
+
+    Хелпер (mapped=helper), в т.ч. с Discord Administrator: жёсткий clamp
+    HELPER_MODPANEL_KEYS — лишние кнопки не показываем вообще.
     """
     try:
         uid = getattr(member, "id", 0)
@@ -2063,16 +2098,16 @@ def actions_for_member(guild, member):
         scoped = _rsa(guild.id, role_ids)
     except Exception:
         scoped = None
-    # Страховка: старший тир (куратор/админ) + хелпер — если scoped всё ещё
-    # «хелперский» (mute/unmute/clear/warn), сбрасываем. Чистые лимиты старшей
-    # роли без младшей не трогаем.
+    # Страховка: старший MAPPED-тир (куратор/админ в role_map) + хелпер —
+    # если scoped всё ещё «хелперский», сбрасываем. Discord Administrator
+    # без admin в карте сюда НЕ попадает (иначе хелперы-админы видели всё).
     try:
-        from services.staff_hierarchy import actor_panel_role, RANK
+        from services.staff_hierarchy import best_mapped_tier, RANK
         from services.staff_limits import _role_tier_map
         from services.staff_roles import KNOWN_HELPER_ROLE_ID
-        _tier = actor_panel_role(guild, member)
-        _rank = RANK.get(_tier, -1)
-        if (_rank >= RANK.get('curator', 2)
+        _mapped = best_mapped_tier(member)
+        _rank = RANK.get(_mapped, -1)
+        if (_rank >= RANK.get('curator', 4)
                 and scoped is not None
                 and set(scoped) <= {'mute', 'unmute', 'clear', 'warn'}):
             _tmap = _role_tier_map()
@@ -2089,8 +2124,8 @@ def actions_for_member(guild, member):
                     break
             if _has_junior:
                 log.info(
-                    'actions_for_member: тир %s + младшая роль — '
-                    'игнор хелперского scoped %s', _tier, scoped)
+                    'actions_for_member: mapped %s + младшая роль — '
+                    'игнор хелперского scoped %s', _mapped, scoped)
                 scoped = None
     except Exception as _ex:
         log.debug('actions_for_member: tier-guard: %s', _ex)
@@ -2098,7 +2133,11 @@ def actions_for_member(guild, member):
         base = list(MODPANEL_ACTIONS)
     else:
         base = [a for a in MODPANEL_ACTIONS if a[3] in scoped]
-    return [a for a in base if _action_acl_allows(guild.id, member, a[0])]
+    out = [a for a in base if _action_acl_allows(guild.id, member, a[0])]
+    # Hard clamp: mapped helper — только warn/mute/unmute/clear.
+    if _mapped_is_helper(member):
+        out = [a for a in out if a[0] in HELPER_MODPANEL_KEYS]
+    return out
 
 
 class MuteKindSelect(discord.ui.Select):
