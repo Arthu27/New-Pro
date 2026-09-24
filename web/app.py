@@ -5761,7 +5761,8 @@ def _human_fallback_title(method, path):
     _known = {
         'ban_appeal_channel': 'канал апелляции', 'proof_channel': 'канал доказательств',
         'appeals_channel': 'канал апелляций', 'welcome_channel': 'канал приветствий',
-        'staff_apply_channel': 'канал заявок', 'appeal_menu_channel': 'меню апелляций',
+        'staff_apply_channel': 'канал заявок', 'staff_menu_channel': 'меню набора',
+        'appeal_menu_channel': 'меню апелляций',
         'guardian_channel': 'тревоги щита', 'security_channel': 'лог авто-защиты',
         'antiraid_channel': 'алерты анти-рейда', 'anticrash_channel': 'сводки анти-краша',
         'pagerduty_channel': 'канал PagerDuty', 'log_settings': 'настройки логов',

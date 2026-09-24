@@ -184,6 +184,7 @@ def _event_panel_set(gid, cid):
 ADAPTERS = {
     'ban_appeal_channel': (CHR.get_route, CHR.set_route),
     'appeal_menu_channel': (CHR.get_route, CHR.set_route),
+    'staff_menu_channel': (CHR.get_route, CHR.set_route),
     'pagerduty_channel': (CHR.get_route, CHR.set_route),
     'proof_channel': (CHR.get_route, CHR.set_route),
     'report_channel': (CHR.get_route, CHR.set_route),

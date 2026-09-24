@@ -22,7 +22,9 @@ log = get_logger("staff_apply")
 
 
 APPLY_CHANNEL_ID = Config.APPLY_CHANNEL_ID
+STAFF_MENU_CHANNEL_ID = getattr(Config, 'STAFF_MENU_CHANNEL_ID', 0)
 APPS_FILE = "data/staff_apps.json"
+BLACKLIST_FILE = "data/staff_blacklist.json"
 
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
@@ -155,11 +157,10 @@ def generate_staff_panel_bytes() -> io.BytesIO:
 
 
 def _apply_room(guild):
-    """Комната, куда идёт ВСЁ: апелляции и заявки в команду.
+    """Legacy-фолбек: комната апелляций, если канал заявок недоступен.
 
-    Маршрут «Комната апелляции» (1544483947705008188) — единая точка
-    «всё сюда, кроме логов» (владелец 2026-09-06). Синхронная: каналы
-    берём из кэша, без fetch — не нашли, значит комнаты нет на сервере.
+    Заявки в команду идут в APPLY_CHANNEL_ID / staff_apply_channel.
+    Эта комната — только запасной путь.
     """
     try:
         from services.channel_routes import (
@@ -179,6 +180,33 @@ def _apply_room(guild):
             return ch
     except Exception as _e:
         log.debug('staff_apply: канал #%s: %s', cid, _e)
+    getter = getattr(guild, 'get_channel', None)
+    return getter(cid) if callable(getter) else None
+
+
+def menu_channel(guild):
+    """Куда публиковать меню набора: панель → KNOWN → Config → None."""
+    if not guild:
+        return None
+    try:
+        from services.channel_routes import (
+            get_route, KNOWN_CHANNELS, channel_on_guild, STAFF_MENU_CHANNEL_ID as _KNOWN_MENU)
+        cid = int(get_route(guild.id, 'staff_menu_channel') or 0)
+        if not cid:
+            cid = int(KNOWN_CHANNELS.get('staff_menu_channel') or _KNOWN_MENU or 0)
+        if not cid:
+            cid = int(STAFF_MENU_CHANNEL_ID or 0)
+        if cid:
+            ch = channel_on_guild(guild, cid)
+            if ch is not None:
+                return ch
+            getter = getattr(guild, 'get_channel', None)
+            return getter(cid) if callable(getter) else None
+    except Exception as _ex:
+        log.debug('staff_apply: menu_channel: %s', _ex)
+    cid = int(STAFF_MENU_CHANNEL_ID or 0)
+    if not cid:
+        return None
     getter = getattr(guild, 'get_channel', None)
     return getter(cid) if callable(getter) else None
 
@@ -238,8 +266,8 @@ def apply_target(role_name: str, guild):
 
     Порядок канала:
       1) своя ветка должности (helper/moderator/event/broadcaster)
-      2) единая комната заявок/апелляций (если своей нет)
-      3) общий apply_channel / APPLY_CHANNEL_ID
+      2) общий apply_channel / APPLY_CHANNEL_ID (канал заявок)
+      3) комната апелляций (legacy-фолбек)
     """
     from services.staff_roles import normalize_position, setting
     if not guild:
@@ -250,14 +278,18 @@ def apply_target(role_name: str, guild):
     ch = _channel_for_kind(guild, kind)
     if ch is not None:
         return ch, tag
-    # 2) общая комната
+    # 2) общий канал заявок
+    common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
+    if common:
+        getter = getattr(guild, 'get_channel', None)
+        ch = getter(int(common)) if callable(getter) else None
+        if ch is not None:
+            return ch, tag
+    # 3) legacy: комната апелляций
     room = _apply_room(guild)
     if room is not None:
         return room, tag
-    # 3) общий канал заявок
-    common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
-    ch = guild.get_channel(common) if common else None
-    return ch, tag
+    return None, tag
 
 
 def load_apps():
@@ -271,6 +303,54 @@ def load_apps():
 def save_apps(data):
     with open(APPS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def load_blacklist():
+    os.makedirs("data", exist_ok=True)
+    if os.path.exists(BLACKLIST_FILE):
+        try:
+            with open(BLACKLIST_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError) as _ex:
+            log.debug('staff blacklist load: %s', _ex)
+    return {}
+
+
+def save_blacklist(data):
+    os.makedirs("data", exist_ok=True)
+    with open(BLACKLIST_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def is_blacklisted(user_id) -> bool:
+    return str(user_id) in load_blacklist()
+
+
+def add_to_blacklist(user_id, *, by: str = '', role: str = '',
+                     guild_id=None, reason: str = '') -> dict:
+    """Добавить в ЧС набора. Возвращает запись."""
+    bl = load_blacklist()
+    entry = {
+        'user_id': str(user_id),
+        'by': str(by or ''),
+        'role': str(role or ''),
+        'guild_id': int(guild_id) if guild_id else None,
+        'reason': str(reason or ''),
+        'at': datetime.now(timezone.utc).isoformat(),
+    }
+    bl[str(user_id)] = entry
+    save_blacklist(bl)
+    return entry
+
+
+def remove_from_blacklist(user_id) -> bool:
+    bl = load_blacklist()
+    if str(user_id) not in bl:
+        return False
+    del bl[str(user_id)]
+    save_blacklist(bl)
+    return True
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -313,8 +393,23 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
         except Exception as _dex:
             log.debug('staff apply defer: %s', _dex)
         from services.staff_roles import normalize_position, position_label
-        apps = load_apps()
         user_id = str(interaction.user.id)
+        if is_blacklisted(user_id):
+            try:
+                from services.v2_layouts import respond_v2
+                await respond_v2(
+                    interaction, kind='err', title='Чёрный список',
+                    body='Вы в чёрном списке набора — подать заявку нельзя.',
+                    ephemeral=True)
+            except Exception:
+                try:
+                    await interaction.followup.send(
+                        'Вы в чёрном списке набора — подать заявку нельзя.',
+                        ephemeral=True)
+                except Exception as _fx:
+                    log.debug('staff apply bl deny: %s', _fx)
+            return
+        apps = load_apps()
         submitted_ts = datetime.now(timezone.utc).isoformat()
         kind = normalize_position(self.role_name) or 'moderator'
         role_label = position_label(kind)
@@ -414,6 +509,12 @@ class RoleSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
+        if is_blacklisted(interaction.user.id):
+            from services.v2_layouts import reply_text_v2
+            return await reply_text_v2(
+                interaction,
+                'Вы в чёрном списке набора — подать заявку нельзя.',
+                kind='err', title='Чёрный список')
         role_name = self.values[0]
         modal = StaffApplyModal(role_name=role_name)
         await interaction.response.send_modal(modal)
@@ -438,6 +539,9 @@ class StaffReviewSelect(discord.ui.Select):
                 discord.SelectOption(
                     label=select_label("Отклонить"), value="reject",
                     emoji=emoji_for_review('reject')),
+                discord.SelectOption(
+                    label=select_label("Чёрный список"), value="blacklist",
+                    emoji=emoji_for_review('blacklist')),
             ],
             custom_id="staff_review_select_v2",
             min_values=1, max_values=1,
@@ -513,12 +617,24 @@ class StaffReviewView(discord.ui.View):
             await interaction.response.defer(ephemeral=True)
 
         if app.get("status") != "pending":
-            label = {"approved": "одобрена", "rejected": "отклонена"}.get(
-                app.get("status"), app.get("status", "?"))
+            label = {
+                "approved": "одобрена",
+                "rejected": "отклонена",
+                "blacklisted": "в чёрном списке",
+            }.get(app.get("status"), app.get("status", "?"))
             return await reply_text_v2(
                 interaction, f"Уже **{label}**.", kind='warn')
 
-        app["status"] = "approved" if action == "approve" else "rejected"
+        status_map = {
+            "approve": "approved",
+            "reject": "rejected",
+            "blacklist": "blacklisted",
+        }
+        if action not in status_map:
+            return await reply_text_v2(
+                interaction, "Неизвестное действие.", kind='err')
+
+        app["status"] = status_map[action]
         app["reviewed_by"] = str(interaction.user)
         if not app.get("timestamp"):
             app["timestamp"] = app.get("submitted_at")
@@ -538,6 +654,18 @@ class StaffReviewView(discord.ui.View):
                 app["granted_role"] = granted
             else:
                 grant_note = role_hint(res)
+        elif action == "blacklist":
+            try:
+                gid = int(app.get("guild_id") or 0)
+            except (TypeError, ValueError):
+                gid = 0
+            add_to_blacklist(
+                app.get("user_id"),
+                by=str(interaction.user),
+                role=app.get("role") or '',
+                guild_id=gid or (interaction.guild.id if interaction.guild else None),
+            )
+            app["blacklisted"] = True
         save_apps(apps)
 
         pos = position_label(app.get("role"))
@@ -549,6 +677,15 @@ class StaffReviewView(discord.ui.View):
                     title="Заявка одобрена",
                     description=f"Заявка на **{pos}** одобрена.",
                     color=0x2ECC71)
+            elif action == "blacklist":
+                emb = discord.Embed(
+                    title="Чёрный список набора",
+                    description=(
+                        f"Заявка на **{pos}** отклонена.\n"
+                        "Вы добавлены в чёрный список набора — "
+                        "повторно подать нельзя."
+                    ),
+                    color=0x2C2F33)
             else:
                 emb = discord.Embed(
                     title="Заявка отклонена",
@@ -565,7 +702,16 @@ class StaffReviewView(discord.ui.View):
 
         try:
             src = interaction.message
-            verdict = "одобрена" if action == "approve" else "отклонена"
+            verdict = {
+                "approve": "одобрена",
+                "reject": "отклонена",
+                "blacklist": "чёрный список",
+            }[action]
+            accent = {
+                "approve": 0x2ECC71,
+                "reject": 0xE74C3C,
+                "blacklist": 0x2C2F33,
+            }[action]
             who = interaction.user.display_name
             when = datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')
             note = f"{who} · {when}"
@@ -576,7 +722,7 @@ class StaffReviewView(discord.ui.View):
                     title=f'{pos} — {verdict}',
                     body=(f"<@{app.get('user_id')}>\n{note}"),
                     footer='',
-                    accent=0x2ECC71 if action == 'approve' else 0xE74C3C,
+                    accent=accent,
                     brand='HAKUMO',
                     timeout=None)
                 if done is not None:
@@ -585,23 +731,37 @@ class StaffReviewView(discord.ui.View):
                     await src.edit(view=None)
             elif src and src.embeds:
                 e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
-                e0.color = 0x2ECC71 if action == "approve" else 0xE74C3C
-                e0.add_field(
-                    name="Одобрена" if action == "approve" else "Отклонена",
-                    value=note, inline=False)
+                e0.color = accent
+                field_name = {
+                    "approve": "Одобрена",
+                    "reject": "Отклонена",
+                    "blacklist": "Чёрный список",
+                }[action]
+                e0.add_field(name=field_name, value=note, inline=False)
                 await src.edit(embed=e0, view=None)
             else:
                 await src.edit(view=None)
         except Exception as _ex:
             log.debug("_review(): подавлено: %s", _ex)
 
-        verdict = "одобрена" if action == "approve" else "отклонена"
+        verdict = {
+            "approve": "одобрена",
+            "reject": "отклонена",
+            "blacklist": "в чёрном списке",
+        }[action]
         role_line = ""
         if action == "approve":
             role_line = (f" Роль: **{granted}**."
                          if granted else f" Роль не выдана: {grant_note}.")
+        elif action == "blacklist":
+            role_line = " Повторные заявки заблокированы."
+        kind = {
+            "approve": "ok",
+            "reject": "warn",
+            "blacklist": "err",
+        }[action]
         await respond_v2(
-            interaction, kind='ok' if action == 'approve' else 'warn',
+            interaction, kind=kind,
             title=verdict.capitalize(),
             body=(
                 f"**{pos}** — **{verdict}**.{role_line}\n"
@@ -614,6 +774,7 @@ class StaffReviewView(discord.ui.View):
         options=[
             discord.SelectOption(label="› Принять", value="approve"),
             discord.SelectOption(label="› Отклонить", value="reject"),
+            discord.SelectOption(label="› Чёрный список", value="blacklist"),
         ],
         custom_id="staff_review_select_v1", min_values=1, max_values=1)
     async def review_select(self, interaction: discord.Interaction,
@@ -636,6 +797,11 @@ class StaffReviewButtonsView(discord.ui.View):
                        custom_id="staff_review_reject_v1")
     async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await StaffReviewView()._review(interaction, "reject")
+
+    @discord.ui.button(label="Чёрный список", style=discord.ButtonStyle.secondary,
+                       custom_id="staff_review_blacklist_v1")
+    async def blacklist_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await StaffReviewView()._review(interaction, "blacklist")
 
 
 class StaffApplyView(discord.ui.LayoutView):
@@ -800,8 +966,9 @@ class StaffApply(commands.Cog):
         from services.menu_banners import menu_banner_file
         bio, fname = await interaction.client.loop.run_in_executor(
             None, lambda: menu_banner_file('staff'))
+        target = menu_channel(interaction.guild) or interaction.channel
         ok, detail = await publish_staff_menu(
-            interaction.channel, banner_bio=bio, banner_name=fname)
+            target, banner_bio=bio, banner_name=fname)
         try:
             from services.v2_layouts import respond_v2
             await respond_v2(
@@ -828,13 +995,20 @@ class StaffApply(commands.Cog):
         a = mine[0]
         status_map = {"pending": "На рассмотрении",
                       "approved": "Одобрена",
-                      "rejected": "Отклонена"}
+                      "rejected": "Отклонена",
+                      "blacklisted": "Чёрный список"}
         st = status_map.get(a.get("status"), a.get("status", "?"))
-        kind = {"pending": "warn", "approved": "ok", "rejected": "err"}.get(
-            a.get("status"), "info")
+        kind = {
+            "pending": "warn",
+            "approved": "ok",
+            "rejected": "err",
+            "blacklisted": "err",
+        }.get(a.get("status"), "info")
         pos = position_label(a.get('role'))
         body = (f"**{st}** · **{pos}**\n"
                 f"Подана: {(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}")
+        if a.get("status") == "blacklisted" or is_blacklisted(uid):
+            body += "\nПовторно подать заявку нельзя."
         if a.get("reviewed_by"):
             body += f"\nРассмотрел: **{a['reviewed_by']}**"
         if a.get("review_note"):

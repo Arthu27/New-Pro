@@ -564,11 +564,19 @@ check(SR.curator_role_id(778, 999) == 999,
 src_cog_full = open(os.path.join(repo, 'cogs', 'staff_apply.py'),
                     encoding='utf-8').read()
 check('staff_review_select_v1' in src_cog_full
-      and 'Принять' in src_cog_full and 'Отклонить' in src_cog_full,
-      'решение по заявке — select Принять/Отклонить')
+      and 'Принять' in src_cog_full and 'Отклонить' in src_cog_full
+      and 'Чёрный список' in src_cog_full,
+      'решение по заявке — select Принять/Отклонить/Чёрный список')
 check('staff_review_approve_v1' in src_cog_full
       and 'StaffReviewButtonsView' in src_cog_full,
       'старые заявки с кнопками остаются рабочими')
+check('1312436222307860490' in open(os.path.join(repo, 'config.py'),
+                                    encoding='utf-8').read()
+      and '1312429743865335939' in open(os.path.join(repo, 'config.py'),
+                                        encoding='utf-8').read(),
+      'каналы наборов/заявок в Config')
+check('blacklist' in src_cog_full and 'is_blacklisted' in src_cog_full,
+      'чёрный список: блок повторных заявок')
 
 
 class _GCh:

@@ -234,6 +234,10 @@ sel = RoleSelect()
 check([o.value for o in sel.options] ==
       ['Helper', 'Moderator', 'Eventsmod', 'Broadcaster'], 'select EN')
 check(StaffAppCardView(title='Moderator', body='x').has_components_v2(), 'V2 card')
+from cogs.staff_apply import StaffReviewSelect  # noqa: E402
+rev = StaffReviewSelect()
+check([o.value for o in rev.options] == ['approve', 'reject', 'blacklist'],
+      'review: Принять/Отклонить/Чёрный список')
 for kind in SR.POSITIONS:
     tag = _curator_ping(
         types.SimpleNamespace(
@@ -242,6 +246,119 @@ for kind in SR.POSITIONS:
             get_role=g.get_role),
         SR.position_label(kind))
     check(tag == f"<@&{SR.KNOWN_CURATOR_BY_KIND[kind]}>", f'ping {kind}')
+
+print('== 7. Channels + blacklist ==')
+check(int(Config.APPLY_CHANNEL_ID) == 1312436222307860490, 'apps channel default')
+check(int(Config.STAFF_MENU_CHANNEL_ID) == 1312429743865335939, 'menu channel default')
+check(SA.APPLY_CHANNEL_ID == 1312436222307860490, 'SA.APPLY_CHANNEL_ID')
+from services.channel_routes import (  # noqa: E402
+    STAFF_MENU_CHANNEL_ID as _MENU, STAFF_APPLY_CHANNEL_ID as _APPS,
+    KNOWN_CHANNELS)
+check(_MENU == 1312429743865335939 and _APPS == 1312436222307860490,
+      'KNOWN staff channels')
+check(KNOWN_CHANNELS.get('staff_menu_channel') == _MENU, 'KNOWN menu route')
+
+# apply_target prefers apply channel over ban_appeal room
+apps_cid = 1312436222307860490
+room_cid = 1544483947705008188
+
+
+class _Chan:
+    def __init__(self, cid):
+        self.id = cid
+
+
+class _GRoute:
+    id = g.id
+
+    def __init__(self):
+        self._ch = {
+            apps_cid: _Chan(apps_cid),
+            room_cid: _Chan(room_cid),
+        }
+
+    def get_channel(self, cid):
+        return self._ch.get(int(cid)) if cid else None
+
+    def get_role(self, rid):
+        return g.get_role(rid)
+
+
+gr = _GRoute()
+ch, _ = SA.apply_target('Helper', gr)
+check(ch is not None and ch.id == apps_cid, 'apps before room')
+
+# blacklist action
+SA.BLACKLIST_FILE = 'data/staff_blacklist.json'
+apps = {'u2': {
+    'user_id': '77', 'role': 'Helper', 'status': 'pending',
+    'message_id': '888', 'guild_id': str(g.id),
+    'submitted_at': '2026-09-24T00:00:00', 'timestamp': '2026-09-24T00:00:00',
+}}
+json.dump(apps, open('data/staff_apps.json', 'w'))
+
+
+class FakeMsg2:
+    id = 888
+    embeds = []
+    content = None
+
+    async def edit(self, **kw):
+        pass
+
+
+helper_cur2 = CurMember(SR.KNOWN_CURATOR_BY_KIND['helper'])
+helper_cur2.display_name = 'HelperCur'
+inter3 = types.SimpleNamespace(
+    user=helper_cur2, message=FakeMsg2(), client=FakeClient(), guild=g,
+    response=FakeResp(), followup=FakeFollow())
+loop.run_until_complete(StaffReviewView()._review(inter3, 'blacklist'))
+data = json.load(open('data/staff_apps.json'))
+check(data['u2']['status'] == 'blacklisted', 'blacklist: status')
+check(SA.is_blacklisted(77), 'blacklist: in file')
+check(not SA.is_blacklisted(999), 'blacklist: other free')
+
+# blocked re-apply
+class BlResp:
+    def __init__(self):
+        self._done = False
+        self.modal = None
+
+    def is_done(self):
+        return self._done
+
+    async def send_message(self, *a, **k):
+        self._done = True
+
+    async def send_modal(self, modal):
+        self.modal = modal
+        self._done = True
+
+
+bl_inter = types.SimpleNamespace(
+    user=types.SimpleNamespace(id=77),
+    response=BlResp(), guild=g)
+loop.run_until_complete(RoleSelect().callback(bl_inter))
+check(bl_inter.response.modal is None, 'blacklist blocks modal')
+
+ok_inter = types.SimpleNamespace(
+    user=types.SimpleNamespace(id=999),
+    response=BlResp(), guild=g)
+# RoleSelect needs values — set via patch
+rs = RoleSelect()
+rs._values = ['Helper']  # may not work
+# call with values property
+class RS(RoleSelect):
+    @property
+    def values(self):
+        return ['Helper']
+
+
+ok_inter2 = types.SimpleNamespace(
+    user=types.SimpleNamespace(id=999),
+    response=BlResp(), guild=g)
+loop.run_until_complete(RS().callback(ok_inter2))
+check(ok_inter2.response.modal is not None, 'non-bl can open modal')
 
 loop.close()
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

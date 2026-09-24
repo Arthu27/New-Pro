@@ -25,7 +25,7 @@ STICKER_KEYS = (
     'appeal', 'helper', 'moderator', 'heart',
     'staff', 'user',  # /report: «На кого жалоба?» (Стафф/Участник)
     # набор в команду — свой арт, то же чёрное стекло что модпанель
-    'accept', 'decline', 'eventsmod', 'broadcaster',
+    'accept', 'decline', 'blacklist', 'eventsmod', 'broadcaster',
     # /event-panel (Events V2)
     'signup', 'announce', 'start', 'finish', 'elist',
 )
@@ -59,6 +59,7 @@ ROLE_STICKER = {
 REVIEW_STICKER = {
     'approve': 'accept',
     'reject': 'decline',
+    'blacklist': 'blacklist',
 }
 
 # фолбек, пока эмодзи ещё не залиты
@@ -88,6 +89,7 @@ _ROLE_UNICODE = {
 _REVIEW_UNICODE = {
     'approve': '✅',
     'reject': '❌',
+    'blacklist': '🚷',
 }
 
 _cache: Dict[str, Any] = {}
@@ -96,8 +98,8 @@ _sync_task = None  # asyncio.Task | None — один фоновый sync
 
 
 def _emoji_name(key: str) -> str:
-    # w2_ = модпанель; w4_ = набор (accept/decline/eventsmod/broadcaster)
-    if key in ('accept', 'decline', 'eventsmod', 'broadcaster'):
+    # w2_ = модпанель; w4_ = набор (accept/decline/blacklist/eventsmod/broadcaster)
+    if key in ('accept', 'decline', 'blacklist', 'eventsmod', 'broadcaster'):
         return f'hakumo_w4_{key}'
     return f'hakumo_w2_{key}'
 
@@ -133,12 +135,16 @@ def emoji_for_role(kind: str):
 
 
 def emoji_for_review(action: str):
-    """Принять / Отклонить — стикеры набора (то же стекло что модпанель)."""
+    """Принять / Отклонить / Чёрный список — стикеры набора."""
     key = REVIEW_STICKER.get(action, action)
     em = _cache.get(key)
     if em is not None:
         return em
-    alt = {'approve': 'unban', 'reject': 'ban'}.get(action)
+    alt = {
+        'approve': 'unban',
+        'reject': 'ban',
+        'blacklist': 'ban',
+    }.get(action)
     if alt and _cache.get(alt) is not None:
         return _cache[alt]
     return _REVIEW_UNICODE.get(action, '🤍')

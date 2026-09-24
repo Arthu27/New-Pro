@@ -137,12 +137,30 @@ check(ch is not None and ch.id == 501 and
 
 check(SA.apply_target('Moderator', None) == (None, ''), 'no guild')
 
-# without own branch → shared room
+# without own branch → apply channel (preferred) then room
 SR.save_setting(GID, 'moderator_channel', 0)
 SR.save_setting(GID, 'helper_channel', 0)
+APPS_CH = 1312436222307860490
+apps_ch = _Chan(APPS_CH, 'apps')
+g_apps = _Guild(
+    channels=(room_ch, mod_ch, help_ch, apps_ch),
+    roles=(_Role(CURATOR), _Role(SR.KNOWN_CURATOR_BY_KIND['moderator']),
+           _Role(SR.KNOWN_CURATOR_BY_KIND['helper'])))
+_saved_apply = SA.APPLY_CHANNEL_ID
+SA.APPLY_CHANNEL_ID = APPS_CH
+try:
+    ch, tag = SA.apply_target('Moderator', g_apps)
+    check(ch is not None and ch.id == APPS_CH,
+          'no branch → apply channel', getattr(ch, 'id', None))
+    check(tag == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
+          'still pings mod curator in apps channel', tag)
+finally:
+    SA.APPLY_CHANNEL_ID = _saved_apply
+
+# apply channel missing on guild → legacy room
 ch, tag = SA.apply_target('Moderator', g_room)
 check(ch is not None and ch.id == ROOM,
-      'no branch → shared room', getattr(ch, 'id', None))
+      'no apply channel on guild → shared room', getattr(ch, 'id', None))
 check(tag == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
       'still pings mod curator in room', tag)
 
