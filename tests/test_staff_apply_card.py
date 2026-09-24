@@ -218,8 +218,12 @@ asyncio.get_event_loop().run_until_complete(modal.on_submit(inter))
 check(len(room_ch.sent) == 1, 'card sent to shared room')
 check(len(mod_ch.sent) == 0 and len(help_ch.sent) == 0, 'own branches unused')
 sent = room_ch.sent[0]
-check(sent.get('content') == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
-      'content pings curator', sent.get('content'))
+cur_ping = f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>"
+content = str(sent.get('content') or '')
+check(cur_ping in content,
+      'content pings curator', content)
+check('<@777888999000111222>' in content,
+      'content tags applicant', content)
 view = sent.get('view')
 check(isinstance(view, SA.StaffAppCardView),
       'V2 StaffAppCardView', type(view))

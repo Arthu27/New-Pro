@@ -261,35 +261,111 @@ def _channel_for_kind(guild, kind: str):
     return getter(int(cid)) if callable(getter) else None
 
 
+def _bot_can_send(channel) -> bool:
+    """Бот реально может писать в канал (не только «канал есть в кэше»)."""
+    if channel is None:
+        return False
+    try:
+        guild = getattr(channel, 'guild', None)
+        me = getattr(guild, 'me', None) if guild is not None else None
+        if me is None:
+            return True  # нет me — пусть попробует отправить
+        perms = channel.permissions_for(me)
+        return bool(getattr(perms, 'view_channel', False)
+                    and getattr(perms, 'send_messages', False))
+    except Exception:
+        return False
+
+
 def apply_target(role_name: str, guild):
     """Куда отправить новую заявку + тег куратора СВОЕЙ ветки.
 
     Порядок канала:
       1) своя ветка должности (helper/moderator/event/broadcaster)
-      2) общий apply_channel / APPLY_CHANNEL_ID (канал заявок)
+      2) общий apply_channel / APPLY_CHANNEL_ID / staff_apply_channel (анкеты)
       3) комната апелляций (legacy-фолбек)
+    Канал без права send у бота пропускаем — иначе «сохранено, персонал
+    не уведомлён» при живом #・анкеты.
     """
     from services.staff_roles import normalize_position, setting
     if not guild:
         return None, ''
     kind = normalize_position(role_name) or 'moderator'
     tag = _curator_ping(guild, role_name)
+    candidates = []
     # 1) своя ветка
     ch = _channel_for_kind(guild, kind)
     if ch is not None:
-        return ch, tag
-    # 2) общий канал заявок
+        candidates.append(ch)
+    # 2) общий канал заявок (анкеты)
     common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
+    if not common:
+        try:
+            from services.channel_routes import (
+                get_route, KNOWN_CHANNELS, STAFF_APPLY_CHANNEL_ID)
+            common = (get_route(guild.id, 'staff_apply_channel')
+                      or KNOWN_CHANNELS.get('staff_apply_channel')
+                      or STAFF_APPLY_CHANNEL_ID)
+        except Exception:
+            common = APPLY_CHANNEL_ID
     if common:
         getter = getattr(guild, 'get_channel', None)
         ch = getter(int(common)) if callable(getter) else None
         if ch is not None:
-            return ch, tag
+            candidates.append(ch)
     # 3) legacy: комната апелляций
     room = _apply_room(guild)
     if room is not None:
-        return room, tag
+        candidates.append(room)
+    seen = set()
+    for ch in candidates:
+        cid = getattr(ch, 'id', None)
+        if cid in seen:
+            continue
+        seen.add(cid)
+        if _bot_can_send(ch):
+            return ch, tag
+        log.warning('STAFF: канал #%s (%s) без права send — пропуск',
+                    cid, getattr(ch, 'name', '?'))
     return None, tag
+
+
+def _format_join(member) -> str:
+    """Когда человек зашёл на сервер — для карточки куратору."""
+    joined = getattr(member, 'joined_at', None)
+    if joined is None:
+        return '—'
+    try:
+        if joined.tzinfo is None:
+            joined = joined.replace(tzinfo=timezone.utc)
+        ts = int(joined.timestamp())
+        return f'<t:{ts}:f> · <t:{ts}:R>'
+    except Exception:
+        return '—'
+
+
+def build_application_body(*, user, user_id: str, age: str, activity: str,
+                           experience: str, reason: str, member=None) -> str:
+    """Текст карточки заявки V2 — тег юзера, id, вход, ответы."""
+    mention = getattr(user, 'mention', None) or f'<@{user_id}>'
+    lines = [
+        f'**Пользователь** · {mention}',
+        f'**ID** · `{user_id}`',
+        f'**Присоединился** · {_format_join(member)}',
+        '',
+        f'**Возраст**',
+        f'> {str(age)[:200] or "—"}',
+        '',
+        f'**Активность**',
+        f'> {str(activity)[:300] or "—"}',
+        '',
+        f'**Опыт**',
+        f'> {str(experience)[:1000] or "—"}',
+        '',
+        f'**Почему Hakumo**',
+        f'> {str(reason)[:1000] or "—"}',
+    ]
+    return '\n'.join(lines)[:3500]
 
 
 def load_apps():
@@ -529,27 +605,38 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
         }
 
         delivered = False
+        delivery_ch = None
+        delivery_err = None
         if interaction.guild:
             ch, tag = apply_target(role_label, interaction.guild)
             if ch:
-                body = (
-                    f"{interaction.user.mention} · `{user_id}`\n\n"
-                    f"**Возраст** · {str(self.age)[:80] or '—'}\n"
-                    f"**Активность** · {str(self.activity)[:120] or '—'}\n\n"
-                    f"**Опыт**\n{str(self.experience)[:1000] or '—'}\n\n"
-                    f"**Почему Hakumo**\n{str(self.reason)[:1000] or '—'}"
-                )
+                member = None
                 try:
-                    card = StaffAppCardView(
-                        title=role_label,
-                        body=body,
-                    )
+                    member = interaction.guild.get_member(interaction.user.id)
+                except Exception:
+                    member = None
+                body = build_application_body(
+                    user=interaction.user, user_id=user_id,
+                    age=str(self.age), activity=str(self.activity),
+                    experience=str(self.experience), reason=str(self.reason),
+                    member=member)
+                # content: пинг куратора + тег заявителя (чтобы кликнуть профиль)
+                ping_bits = []
+                if tag:
+                    ping_bits.append(tag)
+                ping_bits.append(interaction.user.mention)
+                content = ' · '.join(ping_bits)
+                try:
+                    card = StaffAppCardView(title=role_label, body=body)
                     msg = await _send_staff_card(
-                        ch, content=tag or None, view=card)
+                        ch, content=content, view=card)
                     apps[user_id]["message_id"] = str(msg.id)
                     apps[user_id]["curator_tag"] = tag or None
+                    apps[user_id]["channel_id"] = str(getattr(ch, 'id', '') or '')
                     delivered = True
+                    delivery_ch = ch
                 except (discord.Forbidden, discord.HTTPException) as _ex:
+                    delivery_err = str(_ex)
                     log.warning("STAFF: карточка %s не ушла в %s: %s",
                                 user_id, getattr(ch, 'name', '?'), _ex)
                     apps[user_id]["delivery"] = "failed"
@@ -559,24 +646,41 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                             user_id)
 
         save_apps(apps)
-        body = (
-            f"Заявка на **{role_label}** отправлена.\n"
-            f"Статус: `/my-application`"
-        )
-        if not delivered:
-            body += (
-                "\n\nСохранено, но персонал не уведомлён "
-                "(не настроен канал заявок)."
+        if delivered and delivery_ch is not None:
+            ch_ref = f"#{getattr(delivery_ch, 'name', None) or 'анкеты'}"
+            try:
+                _m = getattr(delivery_ch, 'mention', None)
+                if _m:
+                    ch_ref = _m
+            except Exception:
+                pass
+            confirm = (
+                f"Заявка на **{role_label}** ушла в "
+                f"{ch_ref}.\n"
+                f"Кураторы ветки уже видят карточку.\n"
+                f"Статус: `/my-application`"
             )
+            confirm_kind = 'ok'
+            confirm_title = 'Заявка отправлена'
+        else:
+            confirm = (
+                f"Заявка на **{role_label}** сохранена, но в канал анкет "
+                f"не дошла"
+                + (f" ({delivery_err})" if delivery_err else
+                   " (нет канала или прав у бота).")
+                + "\nНапиши администрации."
+            )
+            confirm_kind = 'warn'
+            confirm_title = 'Не доставлено'
         try:
             from services.v2_layouts import respond_v2
             await respond_v2(
-                interaction, kind='ok', title='Отправлено', body=body,
-                ephemeral=True)
+                interaction, kind=confirm_kind, title=confirm_title,
+                body=confirm, ephemeral=True)
         except Exception as _vx:
             log.debug('staff apply confirm v2: %s', _vx)
             try:
-                await interaction.followup.send(body, ephemeral=True)
+                await interaction.followup.send(confirm, ephemeral=True)
             except Exception as _fx:
                 log.debug('staff apply confirm text: %s', _fx)
         log.info(f"Заявка от {interaction.user} на роль {role_label}"
@@ -601,7 +705,7 @@ class RoleSelect(discord.ui.Select):
                 emoji=emoji_for_role(kind),
             ))
         super().__init__(
-            placeholder="",
+            placeholder="Выберите должность",
             options=options,
             custom_id="staff_role_select_v2"
         )
@@ -652,26 +756,37 @@ class StaffReviewSelect(discord.ui.Select):
 
 
 class StaffAppCardView(discord.ui.LayoutView):
-    """Карточка заявки куратору — V2, чёрный блок, заголовок = должность (EN)."""
+    """Карточка заявки куратору — V2 webhook: должность, тег, ответы, select."""
 
     def __init__(self, *, title: str, body: str, footer: str = ''):
         super().__init__(timeout=None)
         from services.v2_layouts import V2_AVAILABLE, black_container
         from discord import SeparatorSpacing
+        from services.menu_emojis import emoji_for_role
+        from services.staff_roles import normalize_position
         sel = StaffReviewSelect()
+        kind = normalize_position(title) or 'moderator'
+        try:
+            em = emoji_for_role(kind)
+            em_s = str(em) if em else ''
+        except Exception:
+            em_s = ''
+        head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
+        foot = footer or 'HAKUMO · решение — меню ниже · только куратор этой ветки'
         if V2_AVAILABLE:
             from discord import ui as dui
             children = [
-                dui.TextDisplay(f'# {title}'[:500]),
+                dui.TextDisplay(head[:500]),
+                dui.TextDisplay('-# HAKUMO · заявка в команду'),
                 dui.Separator(spacing=SeparatorSpacing.large),
                 dui.TextDisplay(str(body)[:3500]),
+                dui.Separator(),
+                dui.TextDisplay(f'-# {foot}'[:400]),
             ]
-            if footer:
-                children.append(dui.TextDisplay(f'-# {footer}'[:400]))
             row = dui.ActionRow()
             row.add_item(sel)
             children.append(row)
-            self.add_item(black_container(*children))  # accent чёрный
+            self.add_item(black_container(*children))
             return
         row = discord.ui.ActionRow()
         row.add_item(sel)
@@ -973,8 +1088,11 @@ def _hook_avatar(guild):
 
 
 async def _send_staff_card(channel, *, content=None, view=None):
-    """Карточка заявки через webhook V2, иначе от бота."""
-    allowed = discord.AllowedMentions(roles=True)
+    """Карточка заявки через webhook V2, иначе от бота.
+
+    allowed_mentions: роли куратора + юзер заявителя (чтобы кликнуть профиль).
+    """
+    allowed = discord.AllowedMentions(roles=True, users=True)
     hook = await _channel_webhook(channel)
     if hook is not None:
         try:

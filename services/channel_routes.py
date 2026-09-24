@@ -34,6 +34,7 @@ KNOWN_CHANNELS = {
     'report_channel': MODS_CHANNEL_ID,
     'ban_appeal_channel': BAN_APPEAL_ROOM_ID,
     'staff_menu_channel': STAFF_MENU_CHANNEL_ID,
+    'staff_apply_channel': STAFF_APPLY_CHANNEL_ID,
 }
 
 # Имя-подсказка для комнаты апелляций в стиле сервера («эмодзи・слово»).

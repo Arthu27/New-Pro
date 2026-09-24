@@ -4455,17 +4455,20 @@ def api_public_apply ():
                     return 
                 kind =normalize_position (data .get ('role')) or 'moderator'
                 role_label =position_label (kind )
-                body =(
-                f"`{data ['discord_name']}` · `{uid}` · сайт\n\n"
-                f"**Возраст** · {data ['yas']}\n"
-                f"**Активность** · {data ['активен']}\n\n"
-                f"**Опыт**\n{str (data ['tecrube'])[:1000] or '—'}\n\n"
-                f"**Почему Hakumo**\n{str (data ['почему'])[:1000] or '—'}"
-                )
+                from cogs .staff_apply import build_application_body 
+                class _U :
+                    mention =f"<@{uid}>"
+                member =guild .get_member (int (uid )) if hasattr (guild ,'get_member') else None 
+                body =build_application_body (
+                user =_U (),user_id =str (uid ),
+                age =data ['yas'],activity =data ['активен'],
+                experience =str (data ['tecrube']),reason =str (data ['почему']),
+                member =member )
                 if data .get ('ekstra'):
-                    body +=f"\n\n**Дополнительно**\n{str (data ['ekstra'])[:800]}"
+                    body +=f"\n\n**Дополнительно**\n> {str (data ['ekstra'])[:800]}"
                 card =StaffAppCardView (title =role_label ,body =body )
-                msg =await _send_staff_card (channel ,content =ping or None ,view =card )
+                content =(f"{ping } · <@{uid}>" if ping else f"<@{uid}>")
+                msg =await _send_staff_card (channel ,content =content ,view =card )
                 apps [app_id ]['message_id']=str (msg .id )
                 apps [app_id ]['role']=role_label 
                 with open (apps_file ,'w',encoding ='utf-8')as f :
