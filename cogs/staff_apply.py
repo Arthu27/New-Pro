@@ -184,25 +184,28 @@ def _apply_room(guild):
     return getter(cid) if callable(getter) else None
 
 
-def _curator_ping(guild):
-    """Тег роли куратора для карточки заявки.
+def _curator_ping(guild, role_name: str = ''):
+    """Тег куратора СВОЕЙ ветки для карточки заявки.
 
-    Порядок: настройка панели/.env → известная роль куратора сервера
-    (владелец 2026-09-06). Тег ставим только если роль реально есть на
-    сервере — @несуществующая-роль в карточке не нужна."""
+    Helper → × Отвечаю за Helper, Event → × Отвечаю за Eventsmod и т.д.
+    Тег только если роль реально есть на сервере.
+    """
     from services.staff_roles import (
-        curator_role_id, KNOWN_CURATOR_ROLE_ID)
+        curator_role_id_for, normalize_position, KNOWN_CURATOR_BY_KIND,
+        KNOWN_CURATOR_ROLE_ID)
     if not guild:
         return ''
-    cur = curator_role_id(
-        guild.id,
-        Config.STAFF_CURATOR_ROLE_ID
-        or Config.STAFF_HELPER_CURATOR_ROLE_ID
-        or Config.STAFF_MODERATOR_CURATOR_ROLE_ID)
+    kind = normalize_position(role_name) or 'moderator'
+    cur = curator_role_id_for(guild.id, kind)
     get_role = getattr(guild, 'get_role', None)
     if not callable(get_role):
         return ''
-    for rid in (cur, KNOWN_CURATOR_ROLE_ID):
+    fallbacks = [
+        cur,
+        int(KNOWN_CURATOR_BY_KIND.get(kind) or 0),
+        int(KNOWN_CURATOR_ROLE_ID or 0),
+    ]
+    for rid in fallbacks:
         try:
             rid = int(rid or 0)
         except (TypeError, ValueError) as _e:
@@ -213,33 +216,49 @@ def _curator_ping(guild):
     return ''
 
 
-def apply_target(role_name: str, guild):
-    """Куда отправить новую заявку: «всё сюда» — комната заявок и апелляций.
+def _channel_for_kind(guild, kind: str):
+    """Канал ветки по должности (панель/.env)."""
+    from services.staff_roles import setting
+    key_env = {
+        'helper': ('helper_channel', Config.STAFF_HELPER_CHANNEL_ID),
+        'moderator': ('moderator_channel', Config.STAFF_MODERATOR_CHANNEL_ID),
+        'event': ('event_channel', getattr(Config, 'STAFF_EVENT_CHANNEL_ID', 0)),
+        'broadcaster': ('broadcaster_channel',
+                        getattr(Config, 'STAFF_BROADCASTER_CHANNEL_ID', 0)),
+    }.get(kind or 'moderator', ('moderator_channel', 0))
+    key, env_cid = key_env
+    cid = setting(guild.id, key, env_cid)
+    if not cid:
+        return None
+    getter = getattr(guild, 'get_channel', None)
+    return getter(int(cid)) if callable(getter) else None
 
-    Владелец 2026-09-06: заявки в команду идут в ту же комнату
-    (1544483947705008188), что и апелляции — «всё сюда, кроме логов».
-    Куратора тегаем в самой карточке. Комнаты нет на сервере — запасной
-    путь прежний: своя ветка на должность → общий канал заявок.
-    Возвращает (channel, тег_куратора) или (None, '')."""
+
+def apply_target(role_name: str, guild):
+    """Куда отправить новую заявку + тег куратора СВОЕЙ ветки.
+
+    Порядок канала:
+      1) своя ветка должности (helper/moderator/event/broadcaster)
+      2) единая комната заявок/апелляций (если своей нет)
+      3) общий apply_channel / APPLY_CHANNEL_ID
+    """
     from services.staff_roles import normalize_position, setting
     if not guild:
         return None, ''
-    # главный адресат — единая комната заявок и апелляций
+    kind = normalize_position(role_name) or 'moderator'
+    tag = _curator_ping(guild, role_name)
+    # 1) своя ветка
+    ch = _channel_for_kind(guild, kind)
+    if ch is not None:
+        return ch, tag
+    # 2) общая комната
     room = _apply_room(guild)
     if room is not None:
-        return room, _curator_ping(guild)
-    kind = normalize_position(role_name) or 'moderator'
-    if kind == 'helper':
-        cid = setting(guild.id, 'helper_channel', Config.STAFF_HELPER_CHANNEL_ID)
-    else:
-        cid = setting(guild.id, 'moderator_channel',
-                      Config.STAFF_MODERATOR_CHANNEL_ID)
-    ch = guild.get_channel(cid) if cid else None
-    if ch is None:
-        # общий канал: настройка панели главнее .env
-        common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
-        ch = guild.get_channel(common) if common else None
-    return ch, _curator_ping(guild)
+        return room, tag
+    # 3) общий канал заявок
+    common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
+    ch = guild.get_channel(common) if common else None
+    return ch, tag
 
 
 def load_apps():
@@ -325,7 +344,8 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                 role_label = self.role_name
                 body = (
                     f"**Пользователь:** {interaction.user.mention}\n"
-                    f"**ID:** `{user_id}`\n\n"
+                    f"**ID:** `{user_id}`\n"
+                    f"**Должность:** **{role_label}**\n\n"
                     f"**Возраст**\n{str(self.age)[:200] or '—'}\n\n"
                     f"**Активность**\n{str(self.activity)[:200] or '—'}\n\n"
                     f"**Опыт**\n{str(self.experience)[:1000] or '—'}\n\n"
@@ -335,7 +355,7 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                     card = StaffAppCardView(
                         title=f'Заявка — {role_label}',
                         body=body,
-                        footer='Hakumo · решение в меню ниже',
+                        footer='Hakumo · решение — только куратор этой ветки',
                     )
                     msg = await ch.send(
                         content=tag or None,
@@ -395,15 +415,17 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 
 class RoleSelect(discord.ui.Select):
     def __init__(self):
-        # Только Хелпер и Модератор — чат-контроль убран.
-        # Свои стикеры Hakumo (helper/moderator), без 🤍.
+        # 4 ветки: Хелпер / Модератор / Event / Broadcaster.
+        # Чат-контроль убран. Свои стикеры Hakumo.
         from services.menu_banners import select_label
         try:
             from services.menu_emojis import get_cached
             em_help = get_cached('helper')
             em_mod = get_cached('moderator')
+            em_event = get_cached('elist') or get_cached('announce')
+            em_bc = get_cached('announce') or get_cached('start')
         except Exception:
-            em_help = em_mod = None
+            em_help = em_mod = em_event = em_bc = None
         options = [
             discord.SelectOption(
                 label=select_label('Хелпер'),
@@ -416,6 +438,18 @@ class RoleSelect(discord.ui.Select):
                 value="Moderator",
                 description="Модерация сервера и участников",
                 emoji=em_mod or '🛡️',
+            ),
+            discord.SelectOption(
+                label=select_label('Event'),
+                value="Event",
+                description="Ивенты и Events-команда",
+                emoji=em_event or '📅',
+            ),
+            discord.SelectOption(
+                label=select_label('Broadcaster'),
+                value="Broadcaster",
+                description="Эфиры и трансляции",
+                emoji=em_bc or '📡',
             ),
         ]
         super().__init__(
@@ -505,21 +539,27 @@ class StaffReviewView(discord.ui.View):
         from services.v2_layouts import (
             reply_text_v2, respond_v2, send_dm_v2, notice_layout_view,
             V2_AVAILABLE)
-        if not (interaction.user.guild_permissions.manage_guild
-                or interaction.user.guild_permissions.administrator):
-            return await reply_text_v2(
-                interaction,
-                "Рассматривать заявки может только администрация.",
-                kind='err', title='Нет доступа')
-        if not interaction.response.is_done():
-            await interaction.response.defer(ephemeral=True)
+        from services.staff_roles import can_review_position, position_label
 
         key, app, apps = self._find_app_by_message(interaction.message.id)
         if not app:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
             return await reply_text_v2(
                 interaction,
                 "Заявка не найдена (возможно, данные удалены).",
                 kind='err')
+        # Права: только куратор СВОЕЙ ветки (или администратор)
+        position = app.get('role') or ''
+        ok, deny = can_review_position(interaction.user, position)
+        if not ok:
+            return await reply_text_v2(
+                interaction,
+                deny or "Рассматривать эту заявку может только куратор своей ветки.",
+                kind='err', title='Чужая ветка')
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=True)
+
         if app.get("status") != "pending":
             label = {"approved": "одобрена", "rejected": "отклонена"}.get(
                 app.get("status"), app.get("status", "?"))
@@ -531,7 +571,7 @@ class StaffReviewView(discord.ui.View):
         if not app.get("timestamp"):
             app["timestamp"] = app.get("submitted_at")
 
-        # Одобрена → сразу выдать роль по должности (Хелпер или Модератор)
+        # Одобрена → выдать роль по должности (Helper/Mod/Event/Broadcaster)
         granted = None
         grant_note = ""
         if action == "approve":
@@ -553,17 +593,20 @@ class StaffReviewView(discord.ui.View):
         dm_ok = False
         try:
             user = await interaction.client.fetch_user(int(app["user_id"]))
+            pos = position_label(app.get("role"))
             if action == "approve":
                 emb = discord.Embed(
                     title="Заявка одобрена!",
-                    description=("Поздравляем! Ваша заявка в команду сервера **одобрена**.\n"
-                                 "Администрация свяжется с вами в ближайшее время."),
+                    description=(
+                        f"Поздравляем! Ваша заявка на **{pos}** **одобрена**.\n"
+                        "Администрация свяжется с вами в ближайшее время."),
                     color=0x2ECC71)
             else:
                 emb = discord.Embed(
                     title="Заявка отклонена",
-                    description=("К сожалению, ваша заявка в команду сервера на этот раз "
-                                 "**отклонена**.\nВы можете подать её снова позже."),
+                    description=(
+                        f"К сожалению, заявка на **{pos}** на этот раз "
+                        "**отклонена**.\nВы можете подать её снова позже."),
                     color=0xE74C3C)
             emb.add_field(name="Должность", value=app.get("role", "—"), inline=True)
             emb.add_field(name="Рассмотрел", value=interaction.user.display_name, inline=True)
@@ -621,7 +664,8 @@ class StaffReviewView(discord.ui.View):
             interaction, kind='ok' if action == 'approve' else 'warn',
             title=f'Заявка {verdict}',
             body=(
-                f"Заявка **{verdict}**.{role_line}\n"
+                f"Заявка на **{position_label(app.get('role'))}** **{verdict}**."
+                f"{role_line}\n"
                 f"Уведомление пользователю: "
                 f"{'отправлено в ЛС' if dm_ok else 'НЕ доставлено (у пользователя закрыты ЛС)'}"
             ),

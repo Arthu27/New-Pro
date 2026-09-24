@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Роли по должности заявки: Хелпер или Модератор.
+"""Роли по должности заявки: Хелпер / Модератор / Event / Broadcaster.
 
-Заявку в команду одобряют в двух местах — кнопками в Discord и в панели
-(«Доступ → Заявки в команду»). Раньше панель брала «первую попавшуюся»
-роль из role_map.json, а кнопки вообще не выдавали ничего. Теперь обе
-точки спрашивают этот сервис: должность заявки → конкретная роль.
+Заявку одобряют в Discord (select на карточке) и в панели
+(«Доступ → Заявки в команду»). Обе точки спрашивают этот сервис.
 
-Откуда берётся роль (по порядку):
-  1. .env: STAFF_HELPER_ROLE_ID / STAFF_MODERATOR_ROLE_ID
-  2. data/staff_roles.json  {"helper": "id", "moderator": "id"}
-  3. Роль на сервере по имени: «Хелпер»/«Helper», «Модератор»/«Moderator»
-
-Должность «Чат-контроль» упразднена (заказ владельца 2026-08-27):
-старые заявки с ней проводим как модераторские.
+Кураторы раздельные (владелец 2026-09-24): ветка Helper не принимает
+Event/Broadcaster/Moderator и наоборот — у каждой должности своя роль
+«× Отвечаю за …».
 """
 
 import json
@@ -23,60 +17,99 @@ from logger import get_logger
 log = get_logger("staff_roles")
 
 STAFF_ROLES_FILE = "data/staff_roles.json"
-# Настройки заявок из панели: data/staff_apply_settings.json
-# { "<guild_id>": {"helper_channel": 0, "moderator_channel": 0, ...} }
 STAFF_SETTINGS_FILE = "data/staff_apply_settings.json"
 
+# Должности набора (порядок в select меню)
+POSITIONS = ("helper", "moderator", "event", "broadcaster")
+
 STAFF_SETTING_KEYS = (
-    "apply_channel",          # общий канал заявок (запасной)
-    "helper_channel",         # ветка заявок хелперов
-    "moderator_channel",      # ветка заявок модераторов
-    "helper_role",            # роль, выдаваемая хелперу
-    "moderator_role",         # роль, выдаваемая модератору
-    "curator_role",           # куратор заявок — ОДИН на обе ветки
+    "apply_channel",
+    "helper_channel",
+    "moderator_channel",
+    "event_channel",
+    "broadcaster_channel",
+    "helper_role",
+    "moderator_role",
+    "event_role",
+    "broadcaster_role",
+    "helper_curator_role",
+    "moderator_curator_role",
+    "event_curator_role",
+    "broadcaster_curator_role",
+    "curator_role",  # legacy: один на всех (фолбек)
 )
 
-# Кураторская роль раньше была раздельной (хелперы/модераторы) — читаем
-# старые ключи как запасное значение, чтобы настройки не потерялись.
 LEGACY_CURATOR_KEYS = ("helper_curator_role", "moderator_curator_role")
 
-# Роль куратора владельца (сервер Hakumo) — пингуется в карточке заявки,
-# если своя не задана ни панелью, ни .env (владелец 2026-09-06:
-# «807030012301541377 — это роль куратора, тег должен быть в самом анкете»).
-# Используем только когда такая роль реально есть на сервере.
+# Старый общий куратор (фолбек, если своей роли нет)
 KNOWN_CURATOR_ROLE_ID = 807030012301541377
 
-# Роль «Хелпер» на боевом сервере (заказ /modpanel 2026-09-12): урезанное
-# меню mute+purge. В role_map часто нет — тогда куратор/админ+хелпер ловил
-# хелперские лимиты. Считаем её тиром mod для иерархии overrides.
+# «× Отвечаю за …» — кто принимает заявки своей ветки (Hakumo 2026-09-24)
+KNOWN_CURATOR_BY_KIND = {
+    "helper": 1551525681207189504,       # × Отвечаю за Helper
+    "moderator": 1551524708552278036,    # × Отвечаю за Moderator
+    "event": 1551527644326002748,        # × Отвечаю за Eventsmod
+    "broadcaster": 1552640159051157576,  # × Отвечаю за Broadcaster
+}
+
 KNOWN_HELPER_ROLE_ID = 948969471916249119
 
-# Спецификации для панели («Настройки» → «Бот» → «Заявки в команду»)
 ROLE_SPECS = [
     {
         "key": "helper_role",
         "label": "Роль хелпера",
         "icon": "fa-hands-helping",
-        "what": "Эту роль бот выдаёт после одобрения заявки хелпера. "
-                "Не задана — бот ищет роль по имени «Хелпер»/«Helper».",
-        "empty": "Авто: поиск по имени на сервере.",
+        "what": "Выдаётся после одобрения заявки хелпера.",
+        "empty": "Авто: поиск по имени «Хелпер»/«Helper».",
     },
     {
         "key": "moderator_role",
         "label": "Роль модератора",
         "icon": "fa-shield-halved",
-        "what": "Выдаётся после одобрения заявки модератора. "
-                "Не задана — бот ищет роль по имени «Модератор»/«Moderator».",
-        "empty": "Авто: поиск по имени на сервере.",
+        "what": "Выдаётся после одобрения заявки модератора.",
+        "empty": "Авто: поиск по имени «Модератор»/«Moderator».",
     },
     {
-        "key": "curator_role",
-        "label": "Куратор заявок",
-        "icon": "fa-user-graduate",
-        "what": "Эту роль бот тегает прямо в карточке заявки (хелперы и "
-                "модераторы — куратор один на весь набор). Не задана — "
-                "используется роль куратора сервера по умолчанию.",
-        "empty": "По умолчанию: известная роль куратора сервера.",
+        "key": "event_role",
+        "label": "Роль Event",
+        "icon": "fa-calendar-star",
+        "what": "Выдаётся после одобрения заявки Event / Eventsmod.",
+        "empty": "Авто: поиск по имени «Event»/«Events»/«Eventsmod».",
+    },
+    {
+        "key": "broadcaster_role",
+        "label": "Роль Broadcaster",
+        "icon": "fa-tower-broadcast",
+        "what": "Выдаётся после одобрения заявки Broadcaster.",
+        "empty": "Авто: поиск по имени «Broadcaster»/«Бродкастер».",
+    },
+    {
+        "key": "helper_curator_role",
+        "label": "Куратор хелперов",
+        "icon": "fa-user-check",
+        "what": "«× Отвечаю за Helper» — только эта роль принимает заявки хелперов.",
+        "empty": "По умолчанию: известная роль × Отвечаю за Helper.",
+    },
+    {
+        "key": "moderator_curator_role",
+        "label": "Куратор модераторов",
+        "icon": "fa-user-shield",
+        "what": "«× Отвечаю за Moderator» — только эта роль принимает заявки модераторов.",
+        "empty": "По умолчанию: известная роль × Отвечаю за Moderator.",
+    },
+    {
+        "key": "event_curator_role",
+        "label": "Куратор Event",
+        "icon": "fa-user-clock",
+        "what": "«× Отвечаю за Eventsmod» — только эта роль принимает заявки Event.",
+        "empty": "По умолчанию: известная роль × Отвечаю за Eventsmod.",
+    },
+    {
+        "key": "broadcaster_curator_role",
+        "label": "Куратор Broadcaster",
+        "icon": "fa-podcast",
+        "what": "«× Отвечаю за Broadcaster» — только эта роль принимает заявки Broadcaster.",
+        "empty": "По умолчанию: известная роль × Отвечаю за Broadcaster.",
     },
 ]
 
@@ -89,11 +122,7 @@ def load_settings(guild_id) -> dict:
         with open(STAFF_SETTINGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         row = (data.get(str(guild_id)) or {}) if isinstance(data, dict) else {}
-        out = {k: row.get(k, 0) for k in STAFF_SETTING_KEYS}
-        for lk in LEGACY_CURATOR_KEYS:
-            if row.get(lk):
-                out["curator_role"] = out["curator_role"] or row.get(lk)
-        return out
+        return {k: row.get(k, 0) for k in STAFF_SETTING_KEYS}
     except Exception as e:
         log.warning(f"[staff_roles] load_settings: {e}")
         return {k: 0 for k in STAFF_SETTING_KEYS}
@@ -135,11 +164,7 @@ def setting(guild_id, key, env_value=0) -> int:
 
 
 def curator_role_id(guild_id, env_value=0) -> int:
-    """Роль куратора: панель → .env → известная роль владельца.
-
-    Известная роль — последняя, чтобы на чужих серверах не пинговать
-    несуществующий ID (в карточке тег ставится только если роль есть
-    на сервере — см. cogs/staff_apply.apply_target)."""
+    """Legacy: один общий куратор (фолбек). Предпочитай curator_role_id_for."""
     stored = load_settings(guild_id)
     for key in ("curator_role",) + LEGACY_CURATOR_KEYS:
         try:
@@ -152,11 +177,85 @@ def curator_role_id(guild_id, env_value=0) -> int:
         return int(env_value)
     return int(KNOWN_CURATOR_ROLE_ID)
 
-# Варианты имён ролей на сервере (регистр не важен)
+
+def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
+    """Куратор конкретной ветки: панель → .env → KNOWN_CURATOR_BY_KIND."""
+    kind = normalize_position(kind) or str(kind or "").lower()
+    key = f"{kind}_curator_role" if kind in POSITIONS else "curator_role"
+    try:
+        from config import Config
+        env_map = {
+            "helper": getattr(Config, "STAFF_HELPER_CURATOR_ROLE_ID", 0),
+            "moderator": getattr(Config, "STAFF_MODERATOR_CURATOR_ROLE_ID", 0),
+            "event": getattr(Config, "STAFF_EVENT_CURATOR_ROLE_ID", 0),
+            "broadcaster": getattr(Config, "STAFF_BROADCASTER_CURATOR_ROLE_ID", 0),
+        }
+        env_fallback = int(env_map.get(kind) or env_value or 0)
+        # общий STAFF_CURATOR_ROLE_ID — только если своей нет
+        common = int(getattr(Config, "STAFF_CURATOR_ROLE_ID", 0) or 0)
+    except Exception:
+        env_fallback = int(env_value or 0)
+        common = 0
+
+    rid = setting(guild_id, key, env_fallback)
+    if rid:
+        return int(rid)
+    known = int(KNOWN_CURATOR_BY_KIND.get(kind) or 0)
+    if known:
+        return known
+    if common:
+        return common
+    return int(KNOWN_CURATOR_ROLE_ID or 0)
+
+
+def can_review_position(member, position) -> tuple:
+    """Может ли участник принять/отклонить заявку этой должности.
+
+    Администратор сервера — да. Иначе только роль «× Отвечаю за …»
+    своей ветки. Чужие ветки — отказ.
+    """
+    if member is None:
+        return False, "Участник не найден."
+    try:
+        perms = getattr(member, "guild_permissions", None)
+        if perms is not None and getattr(perms, "administrator", False):
+            return True, ""
+    except Exception:
+        pass
+    kind = normalize_position(position)
+    if not kind:
+        return False, "В заявке не указана должность."
+    guild = getattr(member, "guild", None)
+    gid = getattr(guild, "id", 0) if guild else 0
+    rid = curator_role_id_for(gid, kind)
+    if not rid:
+        return False, "Куратор этой ветки не настроен."
+    role_ids = set()
+    try:
+        for r in list(getattr(member, "roles", None) or []):
+            try:
+                role_ids.add(int(getattr(r, "id", 0) or 0))
+            except (TypeError, ValueError):
+                pass
+    except Exception:
+        role_ids = set()
+    if int(rid) in role_ids:
+        return True, ""
+    label = position_label(kind)
+    return False, (
+        f"Заявки на **{label}** принимает только роль "
+        f"«× Отвечаю за {label}». Чужие ветки принимать нельзя."
+    )
+
+
 NAME_VARIANTS = {
     "helper": ["хелпер", "helper", "хелперы", "helpers", "хелпер команды"],
     "moderator": ["модератор", "moderator", "модераторы", "moderators",
                   "модератор команды", "мод"],
+    "event": ["event", "events", "eventsmod", "ивент", "ивенты",
+              "event mod", "eventmod", "event-mod"],
+    "broadcaster": ["broadcaster", "broadcast", "бродкастер", "бродкаст",
+                    "стример", "streamer"],
 }
 
 POSITION_ALIASES = {
@@ -166,34 +265,64 @@ POSITION_ALIASES = {
     "moderator": "moderator",
     "модератор": "moderator",
     "мод": "moderator",
-    "chat control": "moderator",      # должность упразднена — ведём как модератор
+    "chat control": "moderator",
     "chat-control": "moderator",
     "чат-контроль": "moderator",
     "чат контроль": "moderator",
     "чат контрольный": "moderator",
+    "event": "event",
+    "events": "event",
+    "eventsmod": "event",
+    "event mod": "event",
+    "event-mod": "event",
+    "ивент": "event",
+    "ивенты": "event",
+    "broadcaster": "broadcaster",
+    "broadcast": "broadcaster",
+    "бродкастер": "broadcaster",
+    "бродкаст": "broadcaster",
 }
 
 
-def normalize_position(value) -> str or None:
-    """Заявочная должность → 'helper' | 'moderator' | None."""
+def normalize_position(value):
+    """Заявочная должность → helper|moderator|event|broadcaster|None."""
     if not value:
         return None
     key = " ".join(str(value).lower().replace("—", "-").split())
     if key in POSITION_ALIASES:
         return POSITION_ALIASES[key]
-    if "хелп" in key or "help" in key:
+    if "бродк" in key or "broadcast" in key or "stream" in key:
+        return "broadcaster"
+    if "ивент" in key or "event" in key:
+        return "event"
+    if "хелп" in key or key == "help" or key.startswith("help"):
         return "helper"
-    if "модер" in key or "mod" in key or "чат" in key:
+    if "модер" in key or key in ("mod",) or "чат" in key:
         return "moderator"
     return None
 
 
 def position_label(kind: str) -> str:
-    return {None: "—", "helper": "Хелпер", "moderator": "Модератор"}.get(kind, kind)
+    return {
+        None: "—",
+        "helper": "Хелпер",
+        "moderator": "Модератор",
+        "event": "Event",
+        "broadcaster": "Broadcaster",
+    }.get(kind, kind or "—")
+
+
+def position_select_value(kind: str) -> str:
+    """Значение Select/value в заявке (английский ключ для grant)."""
+    return {
+        "helper": "Helper",
+        "moderator": "Moderator",
+        "event": "Event",
+        "broadcaster": "Broadcaster",
+    }.get(kind, kind or "Moderator")
 
 
 def load_role_map() -> dict:
-    """{"helper": "role_id", "moderator": "role_id"} — ручная привязка."""
     try:
         if os.path.exists(STAFF_ROLES_FILE):
             with open(STAFF_ROLES_FILE, "r", encoding="utf-8") as f:
@@ -218,31 +347,41 @@ def _norm_name(name: str) -> str:
     return " ".join(str(name or "").lower().replace("—", "-").split())
 
 
-def resolve_staff_role(guild, kind: str):
-    """Найти роль сервера для должности. Вернуть (role, искали_имена).
+def _panel_role_key(kind: str) -> str:
+    return f"{kind}_role"
 
-    Порядок: .env → data/staff_roles.json → имя роли на сервере."""
+
+def _env_role_id(kind: str) -> int:
+    try:
+        from config import Config
+        return int({
+            "helper": getattr(Config, "STAFF_HELPER_ROLE_ID", 0),
+            "moderator": getattr(Config, "STAFF_MODERATOR_ROLE_ID", 0),
+            "event": getattr(Config, "STAFF_EVENT_ROLE_ID", 0),
+            "broadcaster": getattr(Config, "STAFF_BROADCASTER_ROLE_ID", 0),
+        }.get(kind) or 0)
+    except Exception:
+        return 0
+
+
+def resolve_staff_role(guild, kind: str):
+    """Найти роль сервера для должности. Вернуть (role, искали_имена)."""
     if not guild or kind not in NAME_VARIANTS:
         return None, []
     variants = NAME_VARIANTS[kind]
 
-    # 1) Настройка из ПАНЕЛИ (Каналы и маршруты) — главнее всего
+    # 1) Панель / .env
     try:
-        from config import Config
-        env_id = (Config.STAFF_HELPER_ROLE_ID if kind == "helper"
-                  else Config.STAFF_MODERATOR_ROLE_ID)
         panel_id = setting(getattr(guild, "id", 0),
-                           "helper_role" if kind == "helper" else "moderator_role",
-                           env_id)
+                           _panel_role_key(kind), _env_role_id(kind))
         if panel_id:
             role = guild.get_role(int(panel_id))
             if role:
                 return role, []
     except Exception as _ex:
-        log.debug("staff_roles: подавлено: {_ex}", _ex)
-        pass
+        log.debug("staff_roles resolve panel: %s", _ex)
 
-    # 2) Ручная привязка из data/staff_roles.json
+    # 2) data/staff_roles.json
     mapped = str(load_role_map().get(kind, "") or "")
     if mapped.isdigit():
         role = guild.get_role(int(mapped))
@@ -257,12 +396,7 @@ def resolve_staff_role(guild, kind: str):
 
 
 async def grant_staff_role(guild, user_id, position, *, client=None):
-    """Выдать участнику роль по должности заявки.
-
-    Возвращает:
-      {"kind", "role_name", "reason", "searched"}
-      role_name = None, reason ∈ {no_guild, no_position, not_found,
-                                  member_left, no_member, forbidden}"""
+    """Выдать участнику роль по должности заявки."""
     kind = normalize_position(position)
     if not guild:
         return {"kind": kind, "role_name": None, "reason": "no_guild",
@@ -284,7 +418,11 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
         return {"kind": kind, "role_name": None, "reason": "member_left",
                 "searched": []}
 
-    role, searched = resolve_staff_role(guild, kind or "moderator")
+    if not kind:
+        return {"kind": None, "role_name": None, "reason": "no_position",
+                "searched": []}
+
+    role, searched = resolve_staff_role(guild, kind)
     if role is None:
         return {"kind": kind, "role_name": None, "reason": "not_found",
                 "searched": searched}
@@ -303,7 +441,7 @@ def role_hint(result: dict) -> str:
     """Человекочитаемая подсказка, почему роль не выдана."""
     reason = (result or {}).get("reason")
     kind = (result or {}).get("kind") or "moderator"
-    label = position_label("helper" if kind == "helper" else "moderator")
+    label = position_label(kind)
     searched = ", ".join(f"«{n}»" for n in (result or {}).get("searched") or [])
     if reason == "no_guild":
         return "сервер не найден ботом"
@@ -316,7 +454,12 @@ def role_hint(result: dict) -> str:
     if reason == "forbidden":
         return f"у бота нет прав выдать роль «{label}» (поставьте роль выше роли бота)"
     if reason == "not_found":
-        env = "STAFF_HELPER_ROLE_ID" if kind == "helper" else "STAFF_MODERATOR_ROLE_ID"
-        return (f"на сервере нет роли {searched} — создайте её "
-                f"или задайте {env} в .env")
-    return "неизвестная причина"
+        env = {
+            "helper": "STAFF_HELPER_ROLE_ID",
+            "moderator": "STAFF_MODERATOR_ROLE_ID",
+            "event": "STAFF_EVENT_ROLE_ID",
+            "broadcaster": "STAFF_BROADCASTER_ROLE_ID",
+        }.get(kind, "STAFF_MODERATOR_ROLE_ID")
+        return (f"на сервере нет роли {searched or f'«{label}»'} — "
+                f"создайте её или задайте {env} в .env")
+    return reason or "неизвестно"

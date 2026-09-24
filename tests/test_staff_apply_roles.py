@@ -156,8 +156,8 @@ check(emb is not None and any('упомянули' in (f.name or '') for f in (e
 check(not hasattr(cog, 'afk_remove') or not hasattr(getattr(cog, 'afk_remove', None), 'name'),
       'команда /afk-remove удалена (выход авто)')
 
-# ── 2. Чат-контроля нет, должности две ───────────────────────────────
-print('== Должности: только Хелпер и Модератор ==')
+# ── 2. Чат-контроля нет, четыре должности ───────────────────────────
+print('== Должности: Хелпер / Модератор / Event / Broadcaster ==')
 from cogs.staff_apply import RoleSelect, StaffReviewView
 
 opts = RoleSelect().options
@@ -165,17 +165,22 @@ labels = [o.label for o in opts]
 values = [o.value for o in opts]
 check('Chat Control' not in values and 'Чат-контроль' not in labels,
       'select-меню: чат-контроля нет')
-check(set(values) == {'Helper', 'Moderator'}, f'select-меню: ровно две должности {values}')
+check(set(values) == {'Helper', 'Moderator', 'Event', 'Broadcaster'},
+      f'select-меню: четыре должности {values}')
 check(any('Хелпер' in str(l) for l in labels) and any('Модератор' in str(l) for l in labels),
       'select-меню: подписи по-русски')
+check(any('Event' in str(l) for l in labels) and any('Broadcaster' in str(l) for l in labels),
+      'select-меню: Event и Broadcaster')
 
 repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 for tpl in ('web/templates/member_apply.html', 'web/templates/public_apply.html'):
     html = open(os.path.join(repo, tpl), encoding='utf-8').read()
     check('Чат-контроль' not in html and 'Chat Control' not in html,
           f'{tpl.split("/")[-1]}: карточки чат-контроля нет')
-    check(html.count('name="apply-role"') >= 2,
-          f'{tpl.split("/")[-1]}: выбор Хелпер/Модератор на месте')
+    check(html.count('name="apply-role"') >= 4,
+          f'{tpl.split("/")[-1]}: выбор 4 должностей на месте')
+    check('Event' in html and 'Broadcaster' in html,
+          f'{tpl.split("/")[-1]}: Event и Broadcaster в веб-форме')
 
 # ── 3. Роль по должности: поиск и выдача ─────────────────────────────
 print('== Роль по должности: откуда берётся ==')
@@ -213,8 +218,11 @@ g = FakeGuild([FakeRole(10, 'Хелпер'), FakeRole(20, 'Модератор')]
 check(SR.normalize_position('Helper') == 'helper'
       and SR.normalize_position('Хелпер') == 'helper'
       and SR.normalize_position('Moderator') == 'moderator'
-      and SR.normalize_position('Модератор') == 'moderator',
-      'должности нормализуются (ru/en)')
+      and SR.normalize_position('Модератор') == 'moderator'
+      and SR.normalize_position('Event') == 'event'
+      and SR.normalize_position('Eventsmod') == 'event'
+      and SR.normalize_position('Broadcaster') == 'broadcaster',
+      'должности нормализуются (ru/en + Event/Broadcaster)')
 check(SR.normalize_position('Chat Control') == 'moderator'
       and SR.normalize_position('Чат-контроль') == 'moderator',
       'легаси-заявки с чат-контролем ведём как модераторские')
@@ -294,8 +302,8 @@ try:
           'заявка хелпера → ветка хелперов (501) + пинг куратора',
           f'→ канал {getattr(ch, "id", None)}, пинг {ping}')
     ch, ping = apply_target('Модератор', gch)
-    check(ch is not None and ch.id == 502 and ping == '<@&601>',
-          'куратор ОДИН: пингуется та же роль и в ветке модераторов')
+    check(ch is not None and ch.id == 502 and ping == '<@&602>',
+          'заявка модератора → ветка (502) + свой куратор <@&602>')
     ch, ping = apply_target('Chat Control', gch)
     check(ch.id == 502, 'легаси чат-контроль ведётся в ветку модераторов')
 
@@ -511,11 +519,36 @@ check(SR.setting(888, 'helper_channel', 999) == 999,
       'нет настройки панели — берётся .env')
 check(SR.save_setting(777, 'нет_такого_ключа', 1) is False,
       'чужой ключ не пишется')
-check(SR.save_setting(777, 'helper_curator_role', 1) is False,
-      'раздельные кураторы упразднены — ключ больше не пишется')
+check(SR.save_setting(777, 'helper_curator_role', 1551525681207189504) is True,
+      'раздельные кураторы пишутся (helper_curator_role)')
+check(SR.curator_role_id_for(777, 'helper') == 1551525681207189504,
+      'куратор хелперов — своя роль')
+check(SR.curator_role_id_for(0, 'event') == SR.KNOWN_CURATOR_BY_KIND['event'],
+      'куратор Event по умолчанию (× Отвечаю за Eventsmod)')
+check(SR.curator_role_id_for(0, 'broadcaster') == SR.KNOWN_CURATOR_BY_KIND['broadcaster'],
+      'куратор Broadcaster по умолчанию')
+
+# изоляция веток: хелпер-куратор не принимает Event
+class _CurRole:
+    def __init__(self, rid): self.id = rid
+class _CurPerm:
+    administrator = False
+class _CurMember:
+    guild_permissions = _CurPerm()
+    def __init__(self, rid):
+        self.roles = [_CurRole(rid)]
+        self.guild = type('G', (), {'id': 777})()
+ok_h, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_BY_KIND['helper']), 'Helper')
+ok_cross, deny = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_BY_KIND['helper']), 'Event')
+check(ok_h and not ok_cross, 'хелпер-куратор не принимает Event')
+check('Отвечаю' in (deny or '') or 'ветк' in (deny or '').lower(),
+      f'отказ чужой ветки объяснён: {deny!r}')
 
 # легаси: старая раздельная настройка кураторов не теряется
 SR.save_setting(777, 'curator_role', 0)
+SR.save_setting(777, 'helper_curator_role', 0)
 with open(SR.STAFF_SETTINGS_FILE, 'r', encoding='utf-8') as f:
     _legacy = json.load(f)
 _legacy['777']['helper_curator_role'] = 607

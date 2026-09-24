@@ -58,13 +58,15 @@ from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 14 and len(set(keys)) == 14,
-      f'14 уникальных живых маршрутов ({len(keys)})')
+check(len(keys) == 17 and len(set(keys)) == 17,
+      f'17 уникальных живых маршрутов ({len(keys)})')
 need = {'ban_appeal_channel', 'appeal_menu_channel', 'pagerduty_channel',
         'proof_channel', 'report_channel', 'appeals_channel', 'welcome_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
-        'anticrash_channel',
-        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel'}
+        'anticrash_channel', 'event_panel_channel',
+        'staff_helper_channel', 'staff_moderator_channel',
+        'staff_event_channel', 'staff_broadcaster_channel',
+        'staff_apply_channel'}
 check(set(keys) == need, f'только живые системы на хабе ({len(need)})')
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')
 
