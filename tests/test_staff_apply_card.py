@@ -257,7 +257,7 @@ check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
 print('== 3b. Per-branch questions ==')
 for kind, needle in (
         ('Helper', 'предлагать идеи'),
-        ('Eventsmod', 'ивенты умеете'),
+        ('Eventsmod', 'ивентмоды'),
         ('Broadcaster', 'часовой пояс'),
 ):
     m = SA.StaffApplyModal(role_name=kind)
@@ -266,6 +266,18 @@ for kind, needle in (
           f'{kind} has branch question «{needle}»', labels)
     check(all(len(lab) <= 45 for lab in labels),
           f'{kind} labels ≤45 chars')
+
+# Events: 5 вопросов владельца
+m_ev = SA.StaffApplyModal(role_name='Eventsmod')
+ev_labels = [ti.label for ti in m_ev._inputs]
+check(len(ev_labels) == 5, f'Events has 5 fields', ev_labels)
+check('возраст' in ev_labels[0].lower(), 'Events Q1 age')
+check('пик активности' in ev_labels[1].lower(), 'Events Q2 peak')
+check('ивентмоды' in ev_labels[2].lower(), 'Events Q3 why')
+check('стаффе' in ev_labels[3].lower() or 'стафф' in ev_labels[3].lower(),
+      'Events Q4 staff exp')
+check('ивенты' in ev_labels[4].lower() and 'пример' in ev_labels[4].lower(),
+      'Events Q5 favorite events', ev_labels[4])
 
 # Broadcaster: точные 5 вопросов со скрина
 m_br = SA.StaffApplyModal(role_name='Broadcaster')
@@ -280,12 +292,14 @@ check('веб камера' in br_labels[4].lower()
       or 'вебкамера' in br_labels[4].lower().replace(' ', ''),
       'Broadcaster Q5 webcam', br_labels[4])
 
-# Event body labels (свои, не broadcaster)
+# Event body labels
 body_ev = SA.build_application_body(
-    user=_User(), user_id='1', age='Саша 20', activity='мафия',
-    experience='3ч', reason='квиз', kind='event')
-check('ивенты умеете' in body_ev.lower() and 'Идеи ивентов' in body_ev,
-      'Events body uses event questions', body_ev[:300])
+    user=_User(), user_id='1', age='19', activity='пт–вс 18–23',
+    experience='хочу вести', reason='да, helper', extra='мафия, квиз',
+    kind='event')
+check('возраст' in body_ev.lower() and 'ивентмоды' in body_ev.lower()
+      and 'пример' in body_ev.lower(),
+      'Events body uses event questions', body_ev[:400])
 body_br = SA.build_application_body(
     user=_User(), user_id='1', age='Лёша 22', activity='МСК',
     experience='да', reason='Да', extra='Да', kind='broadcaster')
