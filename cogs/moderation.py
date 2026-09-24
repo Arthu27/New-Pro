@@ -213,7 +213,9 @@ class Moderation (commands .Cog ):
             if self._recent_mute_count(guild.id, user.id, window_h) < threshold:
                 return
 
-            # Не дублировать уже выданный авто-варн после последнего мута.
+            # Не дублировать уже выданный авто-варн после последнего мута
+            # И не выдавать второй авто-варн, пока в окне уже есть авто-варн
+            # (гонка: 3 мута подряд успевали выдать 3 авто-варна).
             warns_cog = self.bot.get_cog('warnings')
             if warns_cog is None:
                 return
@@ -229,11 +231,18 @@ class Moderation (commands .Cog ):
                 last_mute_ts = max(_mine) if _mine else ''
             except Exception as _me:
                 log.debug(f"[MOD] auto-warn last-mute scan: {_me}")
+            from datetime import datetime, timezone, timedelta
+            _cut = (datetime.now(timezone.utc) - timedelta(hours=window_h)).isoformat()
             for w in warns:
-                if (w.get('mod_id') == str(self.bot.user.id)
-                        and 'автоматически' in (w.get('reason') or '').lower()
-                        and w.get('timestamp', '') >= last_mute_ts):
+                reason_l = (w.get('reason') or '').lower()
+                is_auto = (w.get('mod_id') == str(self.bot.user.id)
+                           and 'автоматически' in reason_l)
+                if not is_auto:
+                    continue
+                if w.get('timestamp', '') >= last_mute_ts:
                     return  # авто-варн за эту серию уже выдан
+                if w.get('timestamp', '') >= _cut:
+                    return  # в окне уже был авто-варн — не плодим
 
             bot_member = guild.me
             reason = (f'Автоматически: {threshold} мута за {window_h:.0f} ч '
