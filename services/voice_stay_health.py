@@ -20,8 +20,9 @@ from logger import get_logger
 
 log = get_logger('voice_stay_health')
 
-# Периодический force-reconnect, чтобы не копить zombie на 10+ часов
-SOFT_RECONNECT_SEC = 45 * 60  # 45 мин
+# Периодический force-reconnect только если сидим очень долго.
+# Частый soft-reconnect сам валил Event-бота (disconnect → fail → out).
+SOFT_RECONNECT_SEC = 3 * 60 * 60  # 3 часа
 
 
 def _member_voice_state(guild: discord.Guild, user_id: int):

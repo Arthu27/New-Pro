@@ -245,7 +245,7 @@ async def ensure_voice_joined(client: discord.Client | None = None,
         try:
             await asyncio.wait_for(
                 channel.connect(
-                    self_deaf=True, self_mute=True, reconnect=True,
+                    self_deaf=True, self_mute=True, reconnect=False,
                     timeout=20.0),
                 timeout=25.0)
             _last_join_ts = time.time()
@@ -258,7 +258,7 @@ async def ensure_voice_joined(client: discord.Client | None = None,
                     await force_drop_voice(client, channel.guild)
                     await asyncio.wait_for(
                         channel.connect(
-                            self_deaf=True, self_mute=True, reconnect=True,
+                            self_deaf=True, self_mute=True, reconnect=False,
                             timeout=20.0),
                         timeout=25.0)
                     _last_join_ts = time.time()
@@ -608,7 +608,7 @@ async def _monitor_event_voice(client: discord.Client) -> None:
                      (now - _last_join_ts) / 60.0)
             _schedule_rejoin(client, 'soft-reconnect', force=True)
             continue
-        if _silence and (now - _last_silence_ts) > 60:
+        if _silence and (now - _last_silence_ts) > 180:
             try:
                 if (vc and not vc.is_playing()
                         and discord.opus.is_loaded()):
@@ -616,7 +616,7 @@ async def _monitor_event_voice(client: discord.Client) -> None:
                     silence = io.BytesIO(b'\x00' * 3840)
                     source = discord.PCMAudio(silence)
                     await asyncio.wait_for(
-                        asyncio.to_thread(vc.play, source), timeout=10.0)
+                        asyncio.to_thread(vc.play, source), timeout=5.0)
                 _last_silence_ts = now
             except asyncio.TimeoutError:
                 log.warning('event-bot silence timeout — force rejoin')

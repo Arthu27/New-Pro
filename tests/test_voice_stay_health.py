@@ -120,6 +120,10 @@ check('soft-reconnect' in main, 'main soft-reconnect')
 check('really_in_channel' in ev and 'force=True' in ev,
       'event uses Discord-truth + force')
 check('timeout=20' in main and 'timeout=20' in ev, 'connect timeout=20')
+check('reconnect=False' in ev and 'reconnect=False' in main,
+      'connect reconnect=False (свой rejoin, без zombie auto-reconnect)')
+check(H.SOFT_RECONNECT_SEC >= 3 * 60 * 60,
+      f'soft-reconnect ≥3ч ({H.SOFT_RECONNECT_SEC})')
 check("VOICE_SILENCE_PING') or '1'" in main
       or "VOICE_SILENCE_PING') or \"1\"" in main
       or "or '1').strip()" in main,

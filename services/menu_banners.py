@@ -57,7 +57,8 @@ PRESETS = {
         'pill': 'Стань частью команды',
         'accent': (245, 245, 248),
         'tint': (8, 8, 10),
-        'bgs': ('staff.jpg', 'help_bg.png', 'hakumo_log_bg.png'),
+        # не тянем staff.jpg как фон без blur — там AI-мусор снизу
+        'bgs': ('help_bg.png', 'hakumo_log_bg.png'),
     },
     'events': {
         'headline': 'ИВЕНТЫ',
@@ -68,14 +69,14 @@ PRESETS = {
     },
 }
 
-# Только *_custom* — ручная подмена без перерисовки кода
+# Только *_custom* — ручная подмена без перерисовки кода.
+# staff_hakumo_banner / staff.jpg НЕ здесь: там AI-мусор снизу слева.
 _CUSTOM_NAMES = {
     'modpanel': ('modpanel_banner_custom.png', 'modpanel_banner_custom.jpg',
                  'modpanel_custom.png', 'modpanel_custom.jpg'),
     'appeals': ('appeals_banner_custom.png', 'appeals_banner_custom.jpg',
                 'appeals_custom.png', 'appeals_custom.jpg'),
-    'staff': ('staff_banner_custom.png', 'staff_hakumo_banner.png',
-              'staff_banner_custom.jpg'),
+    'staff': ('staff_banner_custom.png', 'staff_banner_custom.jpg'),
     'events': ('events_banner_custom.png', 'events_banner_custom.jpg',
                'events_banner.png'),
 }
@@ -728,10 +729,29 @@ def _render_banner_fresh(kind: str) -> Image.Image:
         staff_path = os.path.join(ASSETS, 'staff.jpg')
         if os.path.isfile(staff_path):
             try:
-                # staff.jpg — фото без нашего chrome; для меню нужна надпись
-                base = _cover(Image.open(staff_path).convert('RGBA'), ww, hh)
-                dark = Image.new('RGBA', (ww, hh), (0, 0, 0, 140))
+                # staff.jpg — только атмосфера. Низ с AI-мусором («STAFF HAKUMO»
+                # и кракозябры) обрезаем, остальное сильно блюрим.
+                raw = Image.open(staff_path).convert('RGBA')
+                rw, rh = raw.size
+                # отрезаем нижние 22% — там мусорные надписи
+                raw = raw.crop((0, 0, rw, int(rh * 0.78)))
+                base = _cover(raw, ww, hh)
+                base = base.filter(ImageFilter.GaussianBlur(max(36, ss * 14)))
+                base = ImageEnhance.Brightness(base).enhance(0.32)
+                base = ImageEnhance.Color(base).enhance(0.30)
+                dark = Image.new('RGBA', (ww, hh), (0, 0, 0, 195))
                 base = Image.alpha_composite(base, dark)
+                # лёгкие острые звёзды — без «странных надписей»
+                spark = Image.new('RGBA', (ww, hh), (0, 0, 0, 0))
+                sd = ImageDraw.Draw(spark)
+                rng = random.Random(0x5A17)
+                for _ in range(90):
+                    x = rng.randint(20, ww - 20)
+                    y = rng.randint(15, hh - 15)
+                    s = rng.choice((1, 1, 2, 2, 3))
+                    a = rng.randint(110, 220)
+                    sd.ellipse((x, y, x + s, y + s), fill=(255, 255, 255, a))
+                base = Image.alpha_composite(base, spark)
                 return _draw_banner_chrome(base, kind)
             except Exception:
                 pass

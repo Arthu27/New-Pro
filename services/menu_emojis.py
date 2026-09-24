@@ -68,8 +68,8 @@ _sync_task = None  # asyncio.Task | None — один фоновый sync
 
 
 def _emoji_name(key: str) -> str:
-    # w_ = белый неон-пак (v2); старые hakumo_* не трогаем
-    return f'hakumo_w_{key}'
+    # w2_ = чистый procedural-пак (без мусора curated-арта)
+    return f'hakumo_w2_{key}'
 
 
 def sticker_path(key: str) -> Optional[str]:

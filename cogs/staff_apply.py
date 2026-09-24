@@ -321,44 +321,26 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
         if interaction.guild:
             ch, tag = apply_target(self.role_name, interaction.guild)
             if ch:
-                # Карточка заявки: тег куратора — В САМОЙ АНКЕТЕ (владелец
-                # 2026-09-06), заявитель столбиком, ответы формы по полям.
-                notify = discord.Embed(
-                    title=f"Новая заявка — {self.role_name}",
-                    color=0xC8922A,
-                    timestamp=datetime.now(timezone.utc)
+                # Карточка заявки — Components V2 (без footer-стикера / мусора)
+                role_label = self.role_name
+                body = (
+                    f"**Пользователь:** {interaction.user.mention}\n"
+                    f"**ID:** `{user_id}`\n\n"
+                    f"**Возраст**\n{str(self.age)[:200] or '—'}\n\n"
+                    f"**Активность**\n{str(self.activity)[:200] or '—'}\n\n"
+                    f"**Опыт**\n{str(self.experience)[:1000] or '—'}\n\n"
+                    f"**Почему к нам**\n{str(self.reason)[:1000] or '—'}"
                 )
                 try:
-                    _av = (str(interaction.user.display_avatar.url)
-                           if interaction.user.display_avatar else None)
-                except Exception:
-                    _av = None
-                notify.set_author(
-                    name=f"{interaction.user} — заявка в команду",
-                    icon_url=_av)
-                notify.description = (
-                    (f"{tag} — заявка ждёт вашего взгляда\n" if tag else "")
-                    + f"Заявитель: {interaction.user.mention} · `{user_id}`"
-                )
-                notify.add_field(name="Возраст",
-                                 value=str(self.age)[:200] or "—", inline=True)
-                notify.add_field(name="Активность",
-                                 value=str(self.activity)[:200] or "—", inline=True)
-                notify.add_field(name="Опыт модерации",
-                                 value=str(self.experience)[:1000] or "—",
-                                 inline=False)
-                notify.add_field(name="Почему выбирает нас",
-                                 value=str(self.reason)[:1000] or "—",
-                                 inline=False)
-                notify.set_footer(
-                    text=f"ID заявителя: {user_id} · решение — меню под карточкой")
-                try:
-                    # content с тем же тегом — чтобы Discord реально прислал
-                    # уведомление роли (упоминание внутри embed не пингует)
-                    msg = await ch.send(content=tag or None, embed=notify,
-                                        view=StaffReviewView(),
-                                        allowed_mentions=discord.AllowedMentions(
-                                            roles=True))
+                    card = StaffAppCardView(
+                        title=f'Заявка — {role_label}',
+                        body=body,
+                        footer='Hakumo · решение в меню ниже',
+                    )
+                    msg = await ch.send(
+                        content=tag or None,
+                        view=card,
+                        allowed_mentions=discord.AllowedMentions(roles=True))
                     apps[user_id]["message_id"] = str(msg.id)
                     apps[user_id]["curator_tag"] = tag or None
                     delivered = True
@@ -413,21 +395,31 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 
 class RoleSelect(discord.ui.Select):
     def __init__(self):
-        # Должности: Хелпер и Модератор (чат-контроль упразднён 2026-08-27)
+        # Только Хелпер и Модератор — чат-контроль убран.
+        # Свои стикеры Hakumo (helper/moderator), без 🤍.
+        from services.menu_banners import select_label
+        try:
+            from services.menu_emojis import get_cached
+            em_help = get_cached('helper')
+            em_mod = get_cached('moderator')
+        except Exception:
+            em_help = em_mod = None
         options = [
             discord.SelectOption(
-                label="Хелпер",
+                label=select_label('Хелпер'),
                 value="Helper",
-                description="Помощь участникам сервера"
+                description="Помощь участникам сервера",
+                emoji=em_help or '⭐',
             ),
             discord.SelectOption(
-                label="Модератор",
+                label=select_label('Модератор'),
                 value="Moderator",
-                description="Модерация сервера и участников"
+                description="Модерация сервера и участников",
+                emoji=em_mod or '🛡️',
             ),
         ]
         super().__init__(
-            placeholder="Выберите желаемую должность",
+            placeholder="К кому хотите присоединиться?",
             options=options,
             custom_id="staff_role_select_v2"
         )
@@ -442,8 +434,61 @@ class RoleSelect(discord.ui.Select):
 # Рассмотрение заявки (persistent) — Select «Принять / Отклонить»
 # ═══════════════════════════════════════════════════════════════════
 
+class StaffReviewSelect(discord.ui.Select):
+    """Select решения — внутри V2-карточки заявки."""
+
+    def __init__(self):
+        super().__init__(
+            placeholder="Действие с заявкой",
+            options=[
+                discord.SelectOption(
+                    label="Принять", value="approve",
+                    description="Одобрить заявку и выдать роль"),
+                discord.SelectOption(
+                    label="Отклонить", value="reject",
+                    description="Отклонить заявку"),
+            ],
+            custom_id="staff_review_select_v2",
+            min_values=1, max_values=1,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await StaffReviewView()._review(interaction, self.values[0])
+
+
+class StaffAppCardView(discord.ui.LayoutView):
+    """Карточка заявки куратору — V2, без стикера/мусора в футере."""
+
+    def __init__(self, *, title: str, body: str, footer: str = ''):
+        super().__init__(timeout=None)
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        from discord import SeparatorSpacing
+        sel = StaffReviewSelect()
+        if V2_AVAILABLE:
+            from discord import ui as dui
+            head = f'# {title}\n-# HAKUMO'
+            children = [
+                dui.TextDisplay(head[:500]),
+                dui.Separator(spacing=SeparatorSpacing.large),
+                dui.TextDisplay(str(body)[:3500]),
+            ]
+            if footer:
+                children.append(dui.TextDisplay(f'-# {footer}'[:400]))
+            row = dui.ActionRow()
+            row.add_item(sel)
+            children.append(row)
+            self.add_item(black_container(*children, accent=0xC8922A))
+            return
+        row = discord.ui.ActionRow()
+        row.add_item(sel)
+        self.add_item(row)
+
+
 class StaffReviewView(discord.ui.View):
-    """Select под сообщением заявки: решение модератора + DM заявителю."""
+    """Select под сообщением заявки: решение модератора + DM заявителю.
+
+    Классический View — для старых карточек (embed) до перехода на V2.
+    """
 
     def __init__(self):
         super().__init__(timeout=None)  # select добавлен декоратором ниже
@@ -457,14 +502,17 @@ class StaffReviewView(discord.ui.View):
         return None, None, apps
 
     async def _review(self, interaction: discord.Interaction, action: str):
-        from services.v2_layouts import reply_text_v2, respond_v2, send_dm_v2
+        from services.v2_layouts import (
+            reply_text_v2, respond_v2, send_dm_v2, notice_layout_view,
+            V2_AVAILABLE)
         if not (interaction.user.guild_permissions.manage_guild
                 or interaction.user.guild_permissions.administrator):
             return await reply_text_v2(
                 interaction,
                 "Рассматривать заявки может только администрация.",
                 kind='err', title='Нет доступа')
-        await interaction.response.defer(ephemeral=True)
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=True)
 
         key, app, apps = self._find_app_by_message(interaction.message.id)
         if not app:
@@ -528,20 +576,39 @@ class StaffReviewView(discord.ui.View):
         except Exception as e:
             log.info(f"[STAFF] DM заявителю не доставлен: {e}")
 
-        # Снять кнопки и отметить решение на исходном сообщении
+        # Отметить решение на исходном сообщении (V2 или legacy embed)
         try:
             src = interaction.message
-            if src and src.embeds:
+            verdict = "одобрена" if action == "approve" else "отклонена"
+            who = interaction.user.display_name
+            when = datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')
+            note = f"Принял: {who} · {when}" if action == "approve" else f"Отклонил: {who} · {when}"
+            if granted:
+                note += f" · роль {granted}"
+            if V2_AVAILABLE:
+                done = notice_layout_view(
+                    title=f'Заявка {verdict}',
+                    body=(f"**Должность:** {app.get('role', '—')}\n"
+                          f"**Заявитель:** <@{app.get('user_id')}>\n\n"
+                          f"{note}"),
+                    footer='Hakumo · набор',
+                    accent=0x2ECC71 if action == 'approve' else 0xE74C3C,
+                    brand='HAKUMO',
+                    timeout=None)
+                if done is not None:
+                    await src.edit(view=done, embed=None, content=src.content)
+                else:
+                    await src.edit(view=None)
+            elif src and src.embeds:
                 e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
                 e0.color = 0x2ECC71 if action == "approve" else 0xE74C3C
-                verdict_line = f"Модератор: {interaction.user.display_name}"
-                if action == "approve" and granted:
-                    verdict_line += f" · Роль: {granted}"
                 e0.add_field(
                     name="Решение: одобрена" if action == "approve" else "Решение: отклонена",
-                    value=verdict_line,
+                    value=note,
                     inline=False)
                 await src.edit(embed=e0, view=None)
+            else:
+                await src.edit(view=None)
         except Exception as _ex:
             log.debug("_review(): подавлено: %s", _ex)
 
@@ -593,16 +660,18 @@ class StaffReviewButtonsView(discord.ui.View):
 
 
 class StaffApplyView(discord.ui.LayoutView):
-    """Панель набора — Components V2 (баннер + select роли)."""
+    """Панель набора — Components V2 (чистый баннер + select роли)."""
 
-    def __init__(self, *, banner_filename: str = 'staff_banner.png'):
+    def __init__(self, *, banner_filename: str = 'hakumo_staff_banner_v15.png'):
         super().__init__(timeout=None)
         from services.v2_layouts import (
             V2_AVAILABLE, build_staff_menu_items, SHOW_MENU_BANNER)
         sel = RoleSelect()
         body = (
-            'Выберите должность ниже и заполните анкету.\n'
-            'Статус заявки — команда `/my-application`.')
+            'Мы ищем людей, **готовых внести свой вклад** и помочь сделать '
+            'сообщество лучше. Независимо от опыта — отправьте заявку и '
+            'станьте частью команды.\n'
+            'Статус: `/my-application`.')
         show = bool(SHOW_MENU_BANNER and banner_filename)
         if V2_AVAILABLE:
             items = build_staff_menu_items(
@@ -630,15 +699,12 @@ class StaffApply(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="staff-panel", description="Создать панель заявок в персонал с баннером")
+    @app_commands.command(name="staff-panel",
+                          description="Опубликовать меню набора в этот канал")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def staff_panel(self, interaction: discord.Interaction):
-        """Отправляет баннер заявок в персонал с меню выбора роли"""
-        # Сразу подтверждаем interaction: загрузка удалённого баннера может занять больше 3 секунд.
+        """Просто скинуть V2-меню набора (баннер + select) в текущий канал."""
         await interaction.response.defer(ephemeral=True)
-
-        # «Настройки не все завершены»: панель создаём только когда заявки
-        # реально дойдут до персонала и роли находятся (заказ владельца).
         try:
             from services.system_readiness import readiness_block, staff_apply_missing
             block = readiness_block('Заявки в команду', staff_apply_missing(interaction.guild))
@@ -650,65 +716,22 @@ class StaffApply(commands.Cog):
         except Exception as _ex:
             log.debug('staff-panel readiness: %s', _ex)
 
-        # Пути к кастомным баннерам - приоритет у пользовательской фотки
-        custom_paths = [
-            # Пользовательская фотография имеет высший приоритет.
-            os.path.join(ROOT, 'assets', 'staff.jpg'),
-            os.path.join(ROOT, 'assets', 'diting_result_8b5912208df711f1ab51e63795c09448_1.jpeg'),
-            os.path.join(ROOT, 'assets', 'staff_custom.png'),
-            os.path.join(ROOT, 'assets', 'staff_custom.jpg'),
-            os.path.join(ROOT, 'assets', 'staff_custom.jpeg'),
-            os.path.join(ROOT, 'assets', 'staff_banner_custom.png'),
-            os.path.join(ROOT, 'assets', 'staff_hakumo_banner.png'),
-        ]
-        
-        file = None
-
-        # Сначала используем оригинальную фотографию по URL.
-        # Это намеренно имеет приоритет над старым локальным баннером.
-        try:
-            if any(os.path.exists(p) for p in custom_paths):
-                raise aiohttp.ClientError("локальный баннер уже доступен")
-            timeout = aiohttp.ClientTimeout(total=15)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(STAFF_REMOTE_BANNER_URL) as response:
-                    if response.status == 200:
-                        remote_banner = await response.read()
-                        if remote_banner:
-                            file = discord.File(
-                                io.BytesIO(remote_banner),
-                                filename="staff_banner.png"
-                            )
-        except (aiohttp.ClientError, OSError) as exc:
-            log.warning("Не удалось загрузить удалённый баннер STAFF: %s", exc)
-
-        # Если URL недоступен — использовать локальные файлы баннеров.
-        if not file:
-            for p in custom_paths:
-                if os.path.exists(p):
-                    file = discord.File(p, filename="staff_banner.png")
-                    break
-
-        # Если удалённый и локальный баннеры недоступны - старый fallback.
-        if not file:
-            img_buf = await interaction.client.loop.run_in_executor(
-                None, generate_staff_panel_bytes
-            )
-            file = discord.File(img_buf, filename="staff_panel.png")
-        
-        view = StaffApplyView(banner_filename='staff_banner.png')
-
-        # Components V2 LayoutView + баннер attachment:// (как /modpanel).
+        # Чистый фирменный баннер (без AI-мусора staff.jpg) + V2 LayoutView
+        from services.menu_banners import menu_banner_file
+        bio, fname = await interaction.client.loop.run_in_executor(
+            None, lambda: menu_banner_file('staff'))
+        file = discord.File(bio, filename=fname)
+        view = StaffApplyView(banner_filename=fname)
         await interaction.channel.send(file=file, view=view)
         try:
             from services.v2_layouts import respond_v2
             await respond_v2(
-                interaction, kind='ok', title='Панель создана',
-                body='Панель заявок в персонал опубликована в этом канале.',
+                interaction, kind='ok', title='Готово',
+                body='Меню набора опубликовано в этом канале.',
                 ephemeral=True)
         except Exception:
             await interaction.followup.send(
-                "✅ Панель заявок в персонал успешно создана!", ephemeral=True)
+                'Меню набора опубликовано.', ephemeral=True)
 
     @app_commands.command(name="my-application", description="Проверить статус моей заявки в персонал")
     async def my_application(self, interaction: discord.Interaction):
@@ -752,6 +775,9 @@ class StaffApply(commands.Cog):
         self.bot.add_view(StaffApplyView())
         self.bot.add_view(StaffReviewView())
         self.bot.add_view(StaffReviewButtonsView())  # старые заявки с кнопками
+        # V2-карточки заявок (select staff_review_select_v2)
+        self.bot.add_view(StaffAppCardView(
+            title='Заявка', body='…', footer=''))
 
 
 async def setup(bot):

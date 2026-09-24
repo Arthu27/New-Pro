@@ -990,7 +990,7 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
         try:
             await asyncio.wait_for(
                 channel.connect(
-                    self_deaf=True, self_mute=True, reconnect=True,
+                    self_deaf=True, self_mute=True, reconnect=False,
                     timeout=20.0),
                 timeout=25.0)
             _voice_last_join_ts = time.time()
@@ -1004,7 +1004,7 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
                     await force_drop_voice(bot, channel.guild)
                     await asyncio.wait_for(
                         channel.connect(
-                            self_deaf=True, self_mute=True, reconnect=True,
+                            self_deaf=True, self_mute=True, reconnect=False,
                             timeout=20.0),
                         timeout=25.0)
                     _voice_last_join_ts = time.time()

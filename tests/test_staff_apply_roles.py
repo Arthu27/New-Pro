@@ -166,7 +166,8 @@ values = [o.value for o in opts]
 check('Chat Control' not in values and 'Чат-контроль' not in labels,
       'select-меню: чат-контроля нет')
 check(set(values) == {'Helper', 'Moderator'}, f'select-меню: ровно две должности {values}')
-check('Хелпер' in labels and 'Модератор' in labels, 'select-меню: подписи по-русски')
+check(any('Хелпер' in str(l) for l in labels) and any('Модератор' in str(l) for l in labels),
+      'select-меню: подписи по-русски')
 
 repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 for tpl in ('web/templates/member_apply.html', 'web/templates/public_apply.html'):
