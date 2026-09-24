@@ -65,10 +65,10 @@ keep = slash_budget.KEEP_SLASH
 # («она у нас в кнопке»). /proof удалена 2026-09-04. /event-panel —
 # публикация панели событий (ивент-моды).
 check(set(keep) == {'modpanel', 'update',
-                    'afk', 'report', 'my-violations', 'event-panel'},
-      f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
+                    'afk', 'report', 'my-violations', 'event-panel', 'mafia'},
+      f'белый список слеш-меню = 7 команд (сейчас: {sorted(keep)})')
 for name in ('modpanel', 'update', 'afk', 'report', 'my-violations',
-             'event-panel'):
+             'event-panel', 'mafia'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
 check('апелляция' not in keep, '/апелляция убрана из KEEP_SLASH (кнопка вместо команды)')
 for gone in ('afk-remove', 'verify-setup', 'report-setup', 'report-settings'):
