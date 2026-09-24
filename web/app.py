@@ -4441,37 +4441,29 @@ def api_public_apply ():
     if bot_instance :
         async def send_to_discord ():
             try :
-                from cogs .staff_apply import apply_target ,StaffReviewView 
+                from cogs .staff_apply import apply_target ,StaffAppCardView ,_send_staff_card 
+                from services .staff_roles import normalize_position ,position_label 
                 guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
                 if not guild :
                     return 
                 channel ,ping =apply_target (data .get ('role'),guild )
                 if not channel :
                     return 
-                # Карточка заявки с сайта — тот же вид, что из Discord:
-                # тег куратора В САМОЙ АНКЕТЕ (владелец 2026-09-06)
-                embed =discord .Embed (
-                title =f"Новая заявка — {data ['role']}",
-                color =0xC8922A ,
-                timestamp =datetime.now(timezone.utc)
+                kind =normalize_position (data .get ('role')) or 'moderator'
+                role_label =position_label (kind )
+                body =(
+                f"`{data ['discord_name']}` · `{uid}` · web\n\n"
+                f"**Age** · {data ['yas']}\n"
+                f"**Activity** · {data ['активен']}\n\n"
+                f"**Experience**\n{str (data ['tecrube'])[:1000] or '—'}\n\n"
+                f"**Why Hakumo**\n{str (data ['почему'])[:1000] or '—'}"
                 )
-                embed .description =(
-                (f"{ping } — заявка ждёт вашего взгляда\n" if ping else "")
-                +f"Заявитель: `{data ['discord_name']}` · `{uid}` · подана с сайта"
-                )
-                embed .add_field (name ="Должность",value =data ['role'],inline =True )
-                embed .add_field (name ="Возраст",value =data ['yas'],inline =True )
-                embed .add_field (name ="Активность",value =data ['активен'],inline =True )
-                embed .add_field (name ="Опыт модерации",value =str (data ['tecrube'])[:1000] or "—",inline =False )
-                embed .add_field (name ="Почему выбирает нас",value =str (data ['почему'])[:1000] or "—",inline =False )
                 if data .get ('ekstra'):
-                    embed .add_field (name ="Дополнительно",value =str (data ['ekstra'])[:1000],inline =False )
-                embed .set_footer (text =f"Заявка ID: {app_id} • решение — меню под карточкой")
-                view =StaffReviewView ()
-                # content с тем же тегом — чтобы роль реально получила пинг
-                msg =await channel .send (content =ping or None ,embed =embed ,view =view ,
-                allowed_mentions =discord .AllowedMentions (roles =True ))
+                    body +=f"\n\n**Extra**\n{str (data ['ekstra'])[:800]}"
+                card =StaffAppCardView (title =role_label ,body =body )
+                msg =await _send_staff_card (channel ,content =ping or None ,view =card )
                 apps [app_id ]['message_id']=str (msg .id )
+                apps [app_id ]['role']=role_label 
                 with open (apps_file ,'w',encoding ='utf-8')as f :
                     json .dump (apps ,f ,indent =2 ,ensure_ascii =False )
             except Exception as e :

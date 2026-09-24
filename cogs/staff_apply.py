@@ -1,7 +1,6 @@
 """
-Staff Apply — Набор в команду сервера
-Select menu для выбора роли + модальное окно заявки
-Тёмная тема, без эмодзи, русский язык
+Staff Apply — recruitment menu (Helper / Moderator / Eventsmod / Broadcaster).
+Components V2 LayoutView + webhook publish. English position labels.
 """
 
 MENU_GIF = "https://media.tenor.com/x8v1oNUOmg4AAAAC/rain-dark.gif"
@@ -278,27 +277,27 @@ def save_apps(data):
 # Модальное окно заявки
 # ═══════════════════════════════════════════════════════════════════
 
-class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
+class StaffApplyModal(discord.ui.Modal, title="Staff Application"):
     age = discord.ui.TextInput(
-        label="Ваш возраст",
-        placeholder="Например: 18",
+        label="Age",
+        placeholder="e.g. 18",
         max_length=3
     )
     experience = discord.ui.TextInput(
-        label="Опыт модерации",
-        placeholder="Укажите сервер и вашу должность",
+        label="Moderation experience",
+        placeholder="Servers and roles you held",
         style=discord.TextStyle.paragraph,
         max_length=500
     )
     reason = discord.ui.TextInput(
-        label="Почему вы выбираете нас?",
-        placeholder="Расскажите, что вас привлекает в нашем сервере",
+        label="Why Hakumo?",
+        placeholder="What draws you to this server",
         style=discord.TextStyle.paragraph,
         max_length=500
     )
     activity = discord.ui.TextInput(
-        label="Ваша активность",
-        placeholder="Сколько часов в день вы онлайн?",
+        label="Daily activity",
+        placeholder="Hours online per day",
         max_length=100
     )
 
@@ -313,16 +312,18 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                 await interaction.response.defer(ephemeral=True)
         except Exception as _dex:
             log.debug('staff apply defer: %s', _dex)
-        # Сохраняем заявку
+        from services.staff_roles import normalize_position, position_label
         apps = load_apps()
         user_id = str(interaction.user.id)
         submitted_ts = datetime.now(timezone.utc).isoformat()
+        kind = normalize_position(self.role_name) or 'moderator'
+        role_label = position_label(kind)
         apps[user_id] = {
             "user_id": user_id,
             "username": str(interaction.user),
             "display_name": interaction.user.display_name,
             "avatar": str(interaction.user.display_avatar.url) if interaction.user.display_avatar else None,
-            "role": self.role_name,
+            "role": role_label,
             "age": str(self.age),
             "experience": str(self.experience),
             "reason": str(self.reason),
@@ -334,70 +335,49 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
             "guild_id": interaction.guild.id if interaction.guild else None,
         }
 
-        # Уведомление в ветку заявки: хелперы — кураторам хелперов,
-        # модераторы — кураторам модераторов (свой канал + тег в карточке)
         delivered = False
         if interaction.guild:
-            ch, tag = apply_target(self.role_name, interaction.guild)
+            ch, tag = apply_target(role_label, interaction.guild)
             if ch:
-                # Карточка заявки — Components V2 (без footer-стикера / мусора)
-                role_label = self.role_name
                 body = (
-                    f"**Пользователь:** {interaction.user.mention}\n"
-                    f"**ID:** `{user_id}`\n"
-                    f"**Должность:** **{role_label}**\n\n"
-                    f"**Возраст**\n{str(self.age)[:200] or '—'}\n\n"
-                    f"**Активность**\n{str(self.activity)[:200] or '—'}\n\n"
-                    f"**Опыт**\n{str(self.experience)[:1000] or '—'}\n\n"
-                    f"**Почему к нам**\n{str(self.reason)[:1000] or '—'}"
+                    f"{interaction.user.mention} · `{user_id}`\n\n"
+                    f"**Age** · {str(self.age)[:80] or '—'}\n"
+                    f"**Activity** · {str(self.activity)[:120] or '—'}\n\n"
+                    f"**Experience**\n{str(self.experience)[:1000] or '—'}\n\n"
+                    f"**Why Hakumo**\n{str(self.reason)[:1000] or '—'}"
                 )
                 try:
                     card = StaffAppCardView(
-                        title=f'Заявка — {role_label}',
+                        title=role_label,
                         body=body,
-                        footer='Hakumo · решение — только куратор этой ветки',
                     )
-                    msg = await ch.send(
-                        content=tag or None,
-                        view=card,
-                        allowed_mentions=discord.AllowedMentions(roles=True))
+                    msg = await _send_staff_card(
+                        ch, content=tag or None, view=card)
                     apps[user_id]["message_id"] = str(msg.id)
                     apps[user_id]["curator_tag"] = tag or None
                     delivered = True
                 except (discord.Forbidden, discord.HTTPException) as _ex:
-                    log.warning("STAFF: карточка заявки %s не ушла в %s: %s",
+                    log.warning("STAFF: card %s failed in %s: %s",
                                 user_id, getattr(ch, 'name', '?'), _ex)
                     apps[user_id]["delivery"] = "failed"
             else:
-                # ТИХАЯ ПОТЕРЯ ЗАЯВКИ — запрещена (жалоба владельца 2026-09-05
-                # «таблица опять не отправляется»): раньше канал не находился
-                # и карточка просто не отправлялась, заявитель ничего не знал.
                 apps[user_id]["delivery"] = "no_channel"
-                log.warning("STAFF: заявка %s сохранена, но канал заявок не "
-                            "настроен (панель → Каналы и маршруты)", user_id)
+                log.warning("STAFF: app %s saved, no apply channel", user_id)
 
         save_apps(apps)
-        # Подтверждение пользователю — Components V2 (после доставки, чтобы
-        # честно сказать, если персонал не уведомлён).
         body = (
-            f"Ваша заявка на роль **{self.role_name}** успешно отправлена.\n"
-            "Ожидайте рассмотрения администрацией.\n"
-            "Статус можно проверить командой `/my-application`.\n\n"
-            f"**Возраст:** {self.age}\n"
-            f"**Активность:** {self.activity}\n"
-            f"**Опыт:** {str(self.experience)[:200]}\n"
-            f"**Причина:** {str(self.reason)[:200]}"
+            f"**{role_label}** application submitted.\n"
+            f"Status: `/my-application`"
         )
         if not delivered:
             body += (
-                "\n\n⚠️ Заявка сохранена и видна администрации в панели "
-                "«Заявки в команду», но уведомление персоналу не доставлено "
-                "(не настроен канал заявок). Сообщи о себе администрации лично."
+                "\n\nSaved, but staff was not notified — "
+                "tell an admin (apply channel not set)."
             )
         try:
             from services.v2_layouts import respond_v2
             await respond_v2(
-                interaction, kind='ok', title='Заявка отправлена', body=body,
+                interaction, kind='ok', title='Submitted', body=body,
                 ephemeral=True)
         except Exception as _vx:
             log.debug('staff apply confirm v2: %s', _vx)
@@ -405,7 +385,7 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                 await interaction.followup.send(body, ephemeral=True)
             except Exception as _fx:
                 log.debug('staff apply confirm text: %s', _fx)
-        log.info(f"Заявка от {interaction.user} на роль {self.role_name}"
+        log.info(f"Заявка от {interaction.user} на роль {role_label}"
                  + ("" if delivered else " (без уведомления персонала)"))
 
 
@@ -415,45 +395,32 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 
 class RoleSelect(discord.ui.Select):
     def __init__(self):
-        # 4 ветки: Хелпер / Модератор / Event / Broadcaster.
-        # Чат-контроль убран. Свои стикеры Hakumo.
         from services.menu_banners import select_label
+        from services.staff_roles import POSITIONS, position_select_value
         try:
             from services.menu_emojis import get_cached
-            em_help = get_cached('helper')
-            em_mod = get_cached('moderator')
-            em_event = get_cached('elist') or get_cached('announce')
-            em_bc = get_cached('announce') or get_cached('start')
+            em_by = {
+                'helper': get_cached('helper'),
+                'moderator': get_cached('moderator'),
+                'event': get_cached('elist') or get_cached('announce'),
+                'broadcaster': get_cached('announce') or get_cached('start'),
+            }
         except Exception:
-            em_help = em_mod = em_event = em_bc = None
-        options = [
-            discord.SelectOption(
-                label=select_label('Хелпер'),
-                value="Helper",
-                description="Помощь участникам сервера",
-                emoji=em_help or '⭐',
-            ),
-            discord.SelectOption(
-                label=select_label('Модератор'),
-                value="Moderator",
-                description="Модерация сервера и участников",
-                emoji=em_mod or '🛡️',
-            ),
-            discord.SelectOption(
-                label=select_label('Event'),
-                value="Event",
-                description="Ивенты и Events-команда",
-                emoji=em_event or '📅',
-            ),
-            discord.SelectOption(
-                label=select_label('Broadcaster'),
-                value="Broadcaster",
-                description="Эфиры и трансляции",
-                emoji=em_bc or '📡',
-            ),
-        ]
+            em_by = {}
+        fallback = {
+            'helper': '⭐', 'moderator': '🛡️',
+            'event': '📅', 'broadcaster': '📡',
+        }
+        options = []
+        for kind in POSITIONS:
+            label = position_select_value(kind)
+            options.append(discord.SelectOption(
+                label=select_label(label),
+                value=label,
+                emoji=em_by.get(kind) or fallback.get(kind),
+            ))
         super().__init__(
-            placeholder="К кому хотите присоединиться?",
+            placeholder="Select a position",
             options=options,
             custom_id="staff_role_select_v2"
         )
@@ -465,7 +432,7 @@ class RoleSelect(discord.ui.Select):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Рассмотрение заявки (persistent) — Select «Принять / Отклонить»
+# Рассмотрение заявки (persistent) — Select «Accept / Decline»
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffReviewSelect(discord.ui.Select):
@@ -473,14 +440,10 @@ class StaffReviewSelect(discord.ui.Select):
 
     def __init__(self):
         super().__init__(
-            placeholder="Действие с заявкой",
+            placeholder="Review",
             options=[
-                discord.SelectOption(
-                    label="Принять", value="approve",
-                    description="Одобрить заявку и выдать роль"),
-                discord.SelectOption(
-                    label="Отклонить", value="reject",
-                    description="Отклонить заявку"),
+                discord.SelectOption(label="Accept", value="approve"),
+                discord.SelectOption(label="Decline", value="reject"),
             ],
             custom_id="staff_review_select_v2",
             min_values=1, max_values=1,
@@ -491,7 +454,7 @@ class StaffReviewSelect(discord.ui.Select):
 
 
 class StaffAppCardView(discord.ui.LayoutView):
-    """Карточка заявки куратору — V2, без стикера/мусора в футере."""
+    """Application card for curators — V2, one title, clean fields."""
 
     def __init__(self, *, title: str, body: str, footer: str = ''):
         super().__init__(timeout=None)
@@ -500,9 +463,8 @@ class StaffAppCardView(discord.ui.LayoutView):
         sel = StaffReviewSelect()
         if V2_AVAILABLE:
             from discord import ui as dui
-            head = f'# {title}\n-# HAKUMO'
             children = [
-                dui.TextDisplay(head[:500]),
+                dui.TextDisplay(f'# {title}'[:500]),
                 dui.Separator(spacing=SeparatorSpacing.large),
                 dui.TextDisplay(str(body)[:3500]),
             ]
@@ -546,32 +508,27 @@ class StaffReviewView(discord.ui.View):
             if not interaction.response.is_done():
                 await interaction.response.defer(ephemeral=True)
             return await reply_text_v2(
-                interaction,
-                "Заявка не найдена (возможно, данные удалены).",
-                kind='err')
-        # Права: только куратор СВОЕЙ ветки (или администратор)
+                interaction, "Application not found.", kind='err')
         position = app.get('role') or ''
         ok, deny = can_review_position(interaction.user, position)
         if not ok:
             return await reply_text_v2(
-                interaction,
-                deny or "Рассматривать эту заявку может только куратор своей ветки.",
-                kind='err', title='Чужая ветка')
+                interaction, deny or "Wrong branch curator.",
+                kind='err', title='Denied')
         if not interaction.response.is_done():
             await interaction.response.defer(ephemeral=True)
 
         if app.get("status") != "pending":
-            label = {"approved": "одобрена", "rejected": "отклонена"}.get(
+            label = {"approved": "accepted", "rejected": "declined"}.get(
                 app.get("status"), app.get("status", "?"))
             return await reply_text_v2(
-                interaction, f"Эта заявка уже {label}.", kind='warn')
+                interaction, f"Already **{label}**.", kind='warn')
 
         app["status"] = "approved" if action == "approve" else "rejected"
         app["reviewed_by"] = str(interaction.user)
         if not app.get("timestamp"):
             app["timestamp"] = app.get("submitted_at")
 
-        # Одобрена → выдать роль по должности (Helper/Mod/Event/Broadcaster)
         granted = None
         grant_note = ""
         if action == "approve":
@@ -589,52 +546,42 @@ class StaffReviewView(discord.ui.View):
                 grant_note = role_hint(res)
         save_apps(apps)
 
-        # DM заявителю — V2 notice
+        pos = position_label(app.get("role"))
         dm_ok = False
         try:
             user = await interaction.client.fetch_user(int(app["user_id"]))
-            pos = position_label(app.get("role"))
             if action == "approve":
                 emb = discord.Embed(
-                    title="Заявка одобрена!",
-                    description=(
-                        f"Поздравляем! Ваша заявка на **{pos}** **одобрена**.\n"
-                        "Администрация свяжется с вами в ближайшее время."),
+                    title="Accepted",
+                    description=f"Your **{pos}** application was accepted.",
                     color=0x2ECC71)
             else:
                 emb = discord.Embed(
-                    title="Заявка отклонена",
-                    description=(
-                        f"К сожалению, заявка на **{pos}** на этот раз "
-                        "**отклонена**.\nВы можете подать её снова позже."),
+                    title="Declined",
+                    description=f"Your **{pos}** application was declined.",
                     color=0xE74C3C)
-            emb.add_field(name="Должность", value=app.get("role", "—"), inline=True)
-            emb.add_field(name="Рассмотрел", value=interaction.user.display_name, inline=True)
             if granted:
-                emb.add_field(name="Выдана роль", value=granted, inline=True)
-            emb.set_footer(text="Статус всегда можно проверить: /my-application")
+                emb.add_field(name="Role", value=granted, inline=True)
+            emb.set_footer(text="/my-application")
             emb.timestamp = datetime.now(timezone.utc)
             await send_dm_v2(user, emb)
             dm_ok = True
         except Exception as e:
             log.info(f"[STAFF] DM заявителю не доставлен: {e}")
 
-        # Отметить решение на исходном сообщении (V2 или legacy embed)
         try:
             src = interaction.message
-            verdict = "одобрена" if action == "approve" else "отклонена"
+            verdict = "accepted" if action == "approve" else "declined"
             who = interaction.user.display_name
             when = datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')
-            note = f"Принял: {who} · {when}" if action == "approve" else f"Отклонил: {who} · {when}"
+            note = f"{who} · {when}"
             if granted:
-                note += f" · роль {granted}"
+                note += f" · {granted}"
             if V2_AVAILABLE:
                 done = notice_layout_view(
-                    title=f'Заявка {verdict}',
-                    body=(f"**Должность:** {app.get('role', '—')}\n"
-                          f"**Заявитель:** <@{app.get('user_id')}>\n\n"
-                          f"{note}"),
-                    footer='Hakumo · набор',
+                    title=f'{pos} — {verdict}',
+                    body=(f"<@{app.get('user_id')}>\n{note}"),
+                    footer='',
                     accent=0x2ECC71 if action == 'approve' else 0xE74C3C,
                     brand='HAKUMO',
                     timeout=None)
@@ -646,38 +593,33 @@ class StaffReviewView(discord.ui.View):
                 e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
                 e0.color = 0x2ECC71 if action == "approve" else 0xE74C3C
                 e0.add_field(
-                    name="Решение: одобрена" if action == "approve" else "Решение: отклонена",
-                    value=note,
-                    inline=False)
+                    name="Accepted" if action == "approve" else "Declined",
+                    value=note, inline=False)
                 await src.edit(embed=e0, view=None)
             else:
                 await src.edit(view=None)
         except Exception as _ex:
             log.debug("_review(): подавлено: %s", _ex)
 
-        verdict = "одобрена" if action == "approve" else "отклонена"
+        verdict = "accepted" if action == "approve" else "declined"
         role_line = ""
         if action == "approve":
-            role_line = (f" Роль выдана: **{granted}**."
-                         if granted else f" Роль НЕ выдана: {grant_note}.")
+            role_line = (f" Role: **{granted}**."
+                         if granted else f" Role not granted: {grant_note}.")
         await respond_v2(
             interaction, kind='ok' if action == 'approve' else 'warn',
-            title=f'Заявка {verdict}',
+            title=verdict.capitalize(),
             body=(
-                f"Заявка на **{position_label(app.get('role'))}** **{verdict}**."
-                f"{role_line}\n"
-                f"Уведомление пользователю: "
-                f"{'отправлено в ЛС' if dm_ok else 'НЕ доставлено (у пользователя закрыты ЛС)'}"
+                f"**{pos}** — **{verdict}**.{role_line}\n"
+                f"DM: {'sent' if dm_ok else 'failed'}"
             ),
             ephemeral=True)
 
     @discord.ui.select(
-        placeholder="Действие с заявкой",
+        placeholder="Review",
         options=[
-            discord.SelectOption(label="Принять", value="approve",
-                                 description="Одобрить заявку и выдать роль"),
-            discord.SelectOption(label="Отклонить", value="reject",
-                                 description="Отклонить заявку"),
+            discord.SelectOption(label="Accept", value="approve"),
+            discord.SelectOption(label="Decline", value="reject"),
         ],
         custom_id="staff_review_select_v1", min_values=1, max_values=1)
     async def review_select(self, interaction: discord.Interaction,
@@ -686,41 +628,35 @@ class StaffReviewView(discord.ui.View):
 
 
 class StaffReviewButtonsView(discord.ui.View):
-    """Старые кнопки: остаются живыми на заявках, отправленных до
-    перехода на select (persistent custom_id совпадает)."""
+    """Legacy Accept/Decline buttons for old cards."""
 
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Одобрить", style=discord.ButtonStyle.success,
+    @discord.ui.button(label="Accept", style=discord.ButtonStyle.success,
                        custom_id="staff_review_approve_v1")
     async def approve_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await StaffReviewView()._review(interaction, "approve")
 
-    @discord.ui.button(label="Отклонить", style=discord.ButtonStyle.danger,
+    @discord.ui.button(label="Decline", style=discord.ButtonStyle.danger,
                        custom_id="staff_review_reject_v1")
     async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await StaffReviewView()._review(interaction, "reject")
 
 
 class StaffApplyView(discord.ui.LayoutView):
-    """Панель набора — Components V2 (чистый баннер + select роли)."""
+    """Recruitment menu — banner + role select (no duplicate title text)."""
 
     def __init__(self, *, banner_filename: str = 'hakumo_staff_banner_v16.png'):
         super().__init__(timeout=None)
         from services.v2_layouts import (
             V2_AVAILABLE, build_staff_menu_items, SHOW_MENU_BANNER)
         sel = RoleSelect()
-        body = (
-            'Мы ищем людей, **готовых внести свой вклад** и помочь сделать '
-            'сообщество лучше. Независимо от опыта — отправьте заявку и '
-            'станьте частью команды.\n'
-            'Статус: `/my-application`.')
         show = bool(SHOW_MENU_BANNER and banner_filename)
         if V2_AVAILABLE:
             items = build_staff_menu_items(
                 banner_filename=banner_filename or '',
-                body=body,
+                body=None,
                 role_select=sel,
                 show_banner=show,
             )
@@ -733,53 +669,157 @@ class StaffApplyView(discord.ui.LayoutView):
         self.add_item(row)
 
 
+WEBHOOK_NAME = 'Наборы Hakumo'
+HOOK_USERNAME = 'Наборы'
+
+
+async def _channel_webhook(channel):
+    """Find or create bot-owned webhook for V2 menu publish."""
+    fetch = getattr(channel, 'webhooks', None)
+    if fetch is None:
+        return None
+    try:
+        hooks = await fetch()
+    except Exception as _ex:
+        log.debug('staff: webhooks(%s): %s', channel, _ex)
+        return None
+    me_id = None
+    try:
+        me_id = channel.guild.me.id
+    except Exception as _ex:
+        log.debug('staff: guild.me: %s', _ex)
+    for h in hooks or ():
+        try:
+            if me_id is None or h.user is None or h.user.id == me_id:
+                return h
+        except Exception as _ex:
+            log.debug('staff: skip webhook: %s', _ex)
+    create = getattr(channel, 'create_webhook', None)
+    if create is None:
+        return None
+    try:
+        return await create(name=WEBHOOK_NAME)
+    except Exception as _ex:
+        log.debug('staff: create_webhook: %s', _ex)
+        return None
+
+
+def _hook_avatar(guild):
+    try:
+        return guild.icon.url if guild.icon else None
+    except Exception:
+        return None
+
+
+async def _send_staff_card(channel, *, content=None, view=None):
+    """Send application card via webhook V2 when possible."""
+    allowed = discord.AllowedMentions(roles=True)
+    hook = await _channel_webhook(channel)
+    if hook is not None:
+        try:
+            return await hook.send(
+                content=content, view=view, wait=True,
+                username=HOOK_USERNAME,
+                avatar_url=_hook_avatar(getattr(channel, 'guild', None)),
+                allowed_mentions=allowed)
+        except Exception as _ex:
+            log.debug('staff: card webhook failed: %s', _ex)
+    return await channel.send(
+        content=content, view=view, allowed_mentions=allowed)
+
+
+async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
+    """Publish recruitment menu via webhook V2 (banner + select)."""
+    if channel is None:
+        return False, 'Channel not found'
+    fname = banner_name or 'hakumo_staff_banner_v16.png'
+    view = StaffApplyView(banner_filename=fname)
+    file = None
+    if banner_bio is not None:
+        try:
+            banner_bio.seek(0)
+        except Exception:
+            pass
+        file = discord.File(banner_bio, filename=fname)
+    avatar = _hook_avatar(getattr(channel, 'guild', None))
+    hook = await _channel_webhook(channel)
+    msg = None
+    used_hook = None
+    if hook is not None:
+        used_hook = hook
+        try:
+            kwargs = dict(
+                view=view, wait=True,
+                username=HOOK_USERNAME, avatar_url=avatar)
+            if file is not None:
+                kwargs['file'] = file
+            msg = await hook.send(**kwargs)
+        except Exception as _ex:
+            log.debug('staff: menu webhook failed: %s', _ex)
+            msg = None
+            used_hook = None
+            if banner_bio is not None:
+                try:
+                    banner_bio.seek(0)
+                    file = discord.File(banner_bio, filename=fname)
+                except Exception:
+                    file = None
+    if msg is None:
+        try:
+            if file is not None:
+                msg = await channel.send(file=file, view=view)
+            else:
+                msg = await channel.send(view=view)
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            return False, f'Cannot send: {_ex}'
+    how = 'webhook' if used_hook is not None else 'bot'
+    return True, f'Published in {channel.mention} ({how})'
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Cog
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffApply(commands.Cog):
-    """Набор в команду сервера"""
+    """Staff recruitment"""
 
     def __init__(self, bot):
         self.bot = bot
 
     @app_commands.command(name="staff-panel",
-                          description="Опубликовать меню набора в этот канал")
+                          description="Publish the staff recruitment menu")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def staff_panel(self, interaction: discord.Interaction):
-        """Просто скинуть V2-меню набора (баннер + select) в текущий канал."""
+        """Webhook V2 menu: banner + position select."""
         await interaction.response.defer(ephemeral=True)
         try:
             from services.system_readiness import readiness_block, staff_apply_missing
-            block = readiness_block('Заявки в команду', staff_apply_missing(interaction.guild))
+            block = readiness_block('Staff apply', staff_apply_missing(interaction.guild))
             if block:
                 from services.v2_layouts import reply_text_v2
                 await reply_text_v2(
-                    interaction, block, kind='warn', title='Настройки')
+                    interaction, block, kind='warn', title='Setup')
                 return
         except Exception as _ex:
             log.debug('staff-panel readiness: %s', _ex)
 
-        # Чистый фирменный баннер (без AI-мусора staff.jpg) + V2 LayoutView
         from services.menu_banners import menu_banner_file
         bio, fname = await interaction.client.loop.run_in_executor(
             None, lambda: menu_banner_file('staff'))
-        file = discord.File(bio, filename=fname)
-        view = StaffApplyView(banner_filename=fname)
-        await interaction.channel.send(file=file, view=view)
+        ok, detail = await publish_staff_menu(
+            interaction.channel, banner_bio=bio, banner_name=fname)
         try:
             from services.v2_layouts import respond_v2
             await respond_v2(
-                interaction, kind='ok', title='Готово',
-                body='Меню набора опубликовано в этом канале.',
-                ephemeral=True)
+                interaction, kind='ok' if ok else 'err',
+                title='Done' if ok else 'Failed',
+                body=detail, ephemeral=True)
         except Exception:
-            await interaction.followup.send(
-                'Меню набора опубликовано.', ephemeral=True)
+            await interaction.followup.send(detail, ephemeral=True)
 
-    @app_commands.command(name="my-application", description="Проверить статус моей заявки в персонал")
+    @app_commands.command(name="my-application",
+                          description="Check your staff application status")
     async def my_application(self, interaction: discord.Interaction):
-        """Пользователь видит, где его заявка: на рассмотрении / одобрена / отклонена."""
         apps = load_apps()
         uid = str(interaction.user.id)
         mine = [a for a in apps.values() if str(a.get("user_id")) == uid]
@@ -787,41 +827,35 @@ class StaffApply(commands.Cog):
             from services.v2_layouts import reply_text_v2
             return await reply_text_v2(
                 interaction,
-                "У вас пока нет заявок. Подать можно через панель набора в команду сервера.",
-                kind='info', title='Заявки')
+                "No applications yet. Use the recruitment menu.",
+                kind='info', title='Applications')
+        from services.staff_roles import position_label
         mine.sort(key=lambda a: a.get("timestamp") or a.get("submitted_at") or "", reverse=True)
         a = mine[0]
-        status_map = {"pending": "На рассмотрении",
-                      "approved": "Одобрена",
-                      "rejected": "Отклонена"}
+        status_map = {"pending": "Pending",
+                      "approved": "Accepted",
+                      "rejected": "Declined"}
         st = status_map.get(a.get("status"), a.get("status", "?"))
         kind = {"pending": "warn", "approved": "ok", "rejected": "err"}.get(
             a.get("status"), "info")
-        total = len(mine)
-        body = (f"Статус: **{st}**\n"
-                f"Должность: **{a.get('role', '—')}**\n"
-                f"Подана: {(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}\n")
-        if total > 1:
-            body += f"Всего заявок: {total} (показана последняя)\n"
+        pos = position_label(a.get('role'))
+        body = (f"**{st}** · **{pos}**\n"
+                f"Submitted: {(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}")
         if a.get("reviewed_by"):
-            body += f"Рассмотрел: **{a['reviewed_by']}**\n"
+            body += f"\nReviewed by: **{a['reviewed_by']}**"
         if a.get("review_note"):
-            body += f"Комментарий: {a['review_note']}\n"
-        body += "\nРешение также приходит в личные сообщения."
+            body += f"\nNote: {a['review_note']}"
         from services.v2_layouts import respond_v2
         await respond_v2(
-            interaction, kind=kind, title='Моя заявка в команду', body=body,
+            interaction, kind=kind, title='My application', body=body,
             ephemeral=True)
 
     @commands.Cog.listener()
     async def on_ready(self):
-        # Регистрируем persistent views
         self.bot.add_view(StaffApplyView())
         self.bot.add_view(StaffReviewView())
-        self.bot.add_view(StaffReviewButtonsView())  # старые заявки с кнопками
-        # V2-карточки заявок (select staff_review_select_v2)
-        self.bot.add_view(StaffAppCardView(
-            title='Заявка', body='…', footer=''))
+        self.bot.add_view(StaffReviewButtonsView())
+        self.bot.add_view(StaffAppCardView(title='Application', body='…'))
 
 
 async def setup(bot):

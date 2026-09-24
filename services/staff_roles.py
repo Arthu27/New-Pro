@@ -52,64 +52,71 @@ KNOWN_CURATOR_BY_KIND = {
     "broadcaster": 1552640159051157576,  # × Отвечаю за Broadcaster
 }
 
+# Роли, выдаваемые после одобрения
 KNOWN_HELPER_ROLE_ID = 948969471916249119
+KNOWN_GRANT_BY_KIND = {
+    "helper": KNOWN_HELPER_ROLE_ID,
+    "event": 852634463535759461,          # × Eventsmod
+    "broadcaster": 1551180629687664670,   # × Broadcaster
+    # moderator — ждём ID от владельца
+}
 
 ROLE_SPECS = [
     {
         "key": "helper_role",
-        "label": "Роль хелпера",
+        "label": "Helper",
         "icon": "fa-hands-helping",
-        "what": "Выдаётся после одобрения заявки хелпера.",
-        "empty": "Авто: поиск по имени «Хелпер»/«Helper».",
+        "what": "Granted on accept.",
+        "empty": "Default known Helper role / name match.",
     },
     {
         "key": "moderator_role",
-        "label": "Роль модератора",
+        "label": "Moderator",
         "icon": "fa-shield-halved",
-        "what": "Выдаётся после одобрения заявки модератора.",
-        "empty": "Авто: поиск по имени «Модератор»/«Moderator».",
+        "what": "Granted on accept.",
+        "empty": "Set role ID when ready / name match.",
     },
     {
         "key": "event_role",
-        "label": "Роль Event",
+        "label": "Eventsmod",
         "icon": "fa-calendar-star",
-        "what": "Выдаётся после одобрения заявки Event / Eventsmod.",
-        "empty": "Авто: поиск по имени «Event»/«Events»/«Eventsmod».",
+        "what": "Granted on accept.",
+        "empty": "Default known Eventsmod role.",
     },
     {
         "key": "broadcaster_role",
-        "label": "Роль Broadcaster",
+        "label": "Broadcaster",
         "icon": "fa-tower-broadcast",
-        "what": "Выдаётся после одобрения заявки Broadcaster.",
-        "empty": "Авто: поиск по имени «Broadcaster»/«Бродкастер».",
+        "what": "Granted on accept.",
+        "empty": "Default known Broadcaster role.",
     },
     {
         "key": "helper_curator_role",
-        "label": "Куратор хелперов",
+        "label": "Helper curator",
         "icon": "fa-user-check",
-        "what": "«× Отвечаю за Helper» — только эта роль принимает заявки хелперов.",
-        "empty": "По умолчанию: известная роль × Отвечаю за Helper.",
+        "what": "× Отвечаю за Helper — reviews Helper apps only.",
+        "empty": "Default curator role.",
     },
     {
         "key": "moderator_curator_role",
-        "label": "Куратор модераторов",
+        "label": "Moderator curator",
         "icon": "fa-user-shield",
-        "what": "«× Отвечаю за Moderator» — только эта роль принимает заявки модераторов.",
-        "empty": "По умолчанию: известная роль × Отвечаю за Moderator.",
+        "what": "× Отвечаю за Moderator — reviews Moderator apps only.",
+        "empty": "Default curator role.",
     },
     {
         "key": "event_curator_role",
-        "label": "Куратор Event",
+        "label": "Eventsmod curator",
         "icon": "fa-user-clock",
-        "what": "«× Отвечаю за Eventsmod» — только эта роль принимает заявки Event.",
-        "empty": "По умолчанию: известная роль × Отвечаю за Eventsmod.",
+        "what": "× Отвечаю за Eventsmod — reviews Eventsmod apps only.",
+        "empty": "Default curator role.",
     },
     {
         "key": "broadcaster_curator_role",
-        "label": "Куратор Broadcaster",
+        "label": "Broadcaster curator",
         "icon": "fa-podcast",
-        "what": "«× Отвечаю за Broadcaster» — только эта роль принимает заявки Broadcaster.",
-        "empty": "По умолчанию: известная роль × Отвечаю за Broadcaster.",
+        "what": "× Отвечаю за Broadcaster — reviews Broadcaster apps only.",
+        "empty": "Default curator role.",
     },
 ]
 
@@ -242,10 +249,7 @@ def can_review_position(member, position) -> tuple:
     if int(rid) in role_ids:
         return True, ""
     label = position_label(kind)
-    return False, (
-        f"Заявки на **{label}** принимает только роль "
-        f"«× Отвечаю за {label}». Чужие ветки принимать нельзя."
-    )
+    return False, f"Only <@&{int(rid)}> reviews **{label}**."
 
 
 NAME_VARIANTS = {
@@ -303,21 +307,21 @@ def normalize_position(value):
 
 
 def position_label(kind: str) -> str:
+    """English labels — как роли на сервере."""
     return {
         None: "—",
-        "helper": "Хелпер",
-        "moderator": "Модератор",
-        "event": "Event",
+        "helper": "Helper",
+        "moderator": "Moderator",
+        "event": "Eventsmod",
         "broadcaster": "Broadcaster",
     }.get(kind, kind or "—")
 
 
 def position_select_value(kind: str) -> str:
-    """Значение Select/value в заявке (английский ключ для grant)."""
     return {
         "helper": "Helper",
         "moderator": "Moderator",
-        "event": "Event",
+        "event": "Eventsmod",
         "broadcaster": "Broadcaster",
     }.get(kind, kind or "Moderator")
 
@@ -388,7 +392,17 @@ def resolve_staff_role(guild, kind: str):
         if role:
             return role, []
 
-    # 3) По имени на сервере
+    # 3) Известные grant-ID (Eventsmod / Broadcaster / Helper)
+    try:
+        known = int(KNOWN_GRANT_BY_KIND.get(kind) or 0)
+    except (TypeError, ValueError):
+        known = 0
+    if known:
+        role = guild.get_role(known)
+        if role:
+            return role, []
+
+    # 4) По имени на сервере
     for role in getattr(guild, "roles", []):
         if _norm_name(role.name) in variants:
             return role, variants
@@ -438,21 +452,21 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
 
 
 def role_hint(result: dict) -> str:
-    """Человекочитаемая подсказка, почему роль не выдана."""
+    """Short reason why the role was not granted."""
     reason = (result or {}).get("reason")
     kind = (result or {}).get("kind") or "moderator"
     label = position_label(kind)
     searched = ", ".join(f"«{n}»" for n in (result or {}).get("searched") or [])
     if reason == "no_guild":
-        return "сервер не найден ботом"
+        return "guild not found"
     if reason == "no_position":
-        return "в заявке не указана должность"
+        return "position missing"
     if reason == "member_left":
-        return "участник покинул сервер"
+        return "member left the server"
     if reason == "no_member":
-        return "участник не найден"
+        return "member not found"
     if reason == "forbidden":
-        return f"у бота нет прав выдать роль «{label}» (поставьте роль выше роли бота)"
+        return f"cannot grant **{label}** (bot role too low)"
     if reason == "not_found":
         env = {
             "helper": "STAFF_HELPER_ROLE_ID",
@@ -460,6 +474,5 @@ def role_hint(result: dict) -> str:
             "event": "STAFF_EVENT_ROLE_ID",
             "broadcaster": "STAFF_BROADCASTER_ROLE_ID",
         }.get(kind, "STAFF_MODERATOR_ROLE_ID")
-        return (f"на сервере нет роли {searched or f'«{label}»'} — "
-                f"создайте её или задайте {env} в .env")
-    return reason or "неизвестно"
+        return (f"role {searched or f'«{label}»'} not found — set {env}")
+    return reason or "unknown"

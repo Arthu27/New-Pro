@@ -188,11 +188,13 @@ class Config:
     # Куда /event-panel публикует панель ивентов (0 = канал из опции команды
     # или канал, где вызвали /event-panel). Задать snowflake ID текстового канала.
     EVENT_PANEL_CHANNEL_ID: int = _env_int('EVENT_PANEL_CHANNEL_ID', 0)
-    # Роли, выдаваемые после одобрения заявки в команду (0 = искать по имени)
-    STAFF_HELPER_ROLE_ID: int = _env_int('STAFF_HELPER_ROLE_ID', 0)
+    # Роли после одобрения (0 = имя на сервере / KNOWN_GRANT).
+    # Moderator ID — ждём от владельца.
+    STAFF_HELPER_ROLE_ID: int = _env_int('STAFF_HELPER_ROLE_ID', 948969471916249119)
     STAFF_MODERATOR_ROLE_ID: int = _env_int('STAFF_MODERATOR_ROLE_ID', 0)
-    STAFF_EVENT_ROLE_ID: int = _env_int('STAFF_EVENT_ROLE_ID', 0)
-    STAFF_BROADCASTER_ROLE_ID: int = _env_int('STAFF_BROADCASTER_ROLE_ID', 0)
+    STAFF_EVENT_ROLE_ID: int = _env_int('STAFF_EVENT_ROLE_ID', 852634463535759461)
+    STAFF_BROADCASTER_ROLE_ID: int = _env_int(
+        'STAFF_BROADCASTER_ROLE_ID', 1551180629687664670)
     # Ветки заявок: куда отправлять «новую заявку» по должности
     # (0 = общий канал APPLY_CHANNEL_ID / комната заявок)
     STAFF_HELPER_CHANNEL_ID: int = _env_int('STAFF_HELPER_CHANNEL_ID', 0)
