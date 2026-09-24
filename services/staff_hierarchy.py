@@ -31,8 +31,11 @@ from logger import get_logger
 _log = get_logger('staff_hierarchy')
 
 # Панельные роли по старшинству (тот же порядок, что web/app.ROLES)
-# master между mod и curator (заказ 2026-09-24).
-RANK = {'uye': 0, 'helper': 1, 'mod': 1, 'master': 2, 'curator': 3, 'admin': 4, 'owner': 5}
+# helper < mod < master < curator (заказ 2026-09-24).
+RANK = {
+    'uye': 0, 'helper': 1, 'mod': 2, 'master': 3,
+    'curator': 4, 'admin': 5, 'owner': 6,
+}
 
 LABELS = {
     'uye': 'участник',

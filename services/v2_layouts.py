@@ -425,6 +425,45 @@ def build_report_card_items(*, title: str, body: str = '', footer: str = '',
                                    buttons=buttons, accent=accent)
 
 
+def build_proof_review_items(*, title: str, body: str = '', footer: str = '',
+                             media_filenames=None, media_urls=None,
+                             select=None, accent: int = None):
+    """Карточка проверки демки V2: текст + MediaGallery + select.
+
+    media_filenames — attachment://… (первая отправка с files=).
+    media_urls — https://… (edit после решения, без повторной загрузки).
+    select — discord.ui.Select «Одобрить / Отклонить».
+    """
+    if not V2_AVAILABLE:
+        return None
+    from discord.components import MediaGalleryItem
+    children = []
+    head = f'# {title}' if title else '# Доказательство'
+    if body:
+        head = f'{head}\n{body}'
+    children.append(_ui.TextDisplay(head[:4000]))
+    children.append(_ui.Separator(spacing=SeparatorSpacing.large))
+    gallery_items = []
+    for u in (media_urls or [])[:10]:
+        if u:
+            gallery_items.append(MediaGalleryItem(str(u)))
+    if not gallery_items:
+        for n in (media_filenames or [])[:10]:
+            if n:
+                gallery_items.append(MediaGalleryItem(f'attachment://{n}'))
+    if gallery_items:
+        children.append(_ui.MediaGallery(*gallery_items))
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    if select is not None:
+        row = _ui.ActionRow()
+        row.add_item(select)
+        children.append(_ui.TextDisplay('**Решение**'))
+        children.append(row)
+    return [black_container(
+        *children, accent=accent if accent is not None else _BLACK)]
+
+
 def build_notice_items(*, title: str, body: str = '', footer: str = '',
                        accent: int = None, brand: str = 'HAKUMO'):
     """ЛС/уведомление V2: чёрный (или статусный) контейнер, бренд, текст."""

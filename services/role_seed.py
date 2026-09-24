@@ -193,12 +193,13 @@ def apply_role_seed(force=False, guild_id=None):
             except Exception as _ex:
                 _log.warning('role_seed action ACL: %s', _ex)
 
-        # 3) punish_roles: роли наказаний (ban/mute/vmute) для главного
+        # 3) punish_roles: роли наказаний (ban/mute/vmute/warn_N) для главного
         # сервера. Каждую роль ставим ТОЛЬКО если она ещё не задана — ручной
         # выбор владельца в панели («Роли за наказания») неприкосновенен.
         punish_seed = seed.get('punish_roles') or {}
         gid = _main_guild_id(guild_id)
         if punish_seed and gid:
+            from services.punish_roles import valid_kind
             punish = _read_json(PUNISH_PATH, {})
             if not isinstance(punish, dict):
                 punish = {}
@@ -209,14 +210,31 @@ def apply_role_seed(force=False, guild_id=None):
             if not isinstance(roles, dict):
                 roles = {}
             added = []
-            for kind in ('ban', 'mute', 'vmute'):
-                rid = int(punish_seed.get(kind) or 0)
+            levels = list(row.get('warn_levels') or [])
+            for kind, raw in punish_seed.items():
+                if str(kind).startswith('_'):
+                    continue
+                if not valid_kind(kind):
+                    continue
+                try:
+                    rid = int(raw or 0)
+                except (TypeError, ValueError):
+                    continue
                 if rid and not int(roles.get(kind) or 0):
                     roles[kind] = rid
                     added.append(kind)
+                    # warn_N → уровень N в списке карточек панели
+                    if str(kind).startswith('warn_'):
+                        try:
+                            lvl = int(str(kind).split('_', 1)[1])
+                            if lvl not in levels:
+                                levels.append(lvl)
+                        except (TypeError, ValueError):
+                            pass
             if added:
                 row['roles'] = roles
-                # сохраняем сопутствующую структуру (warn_levels/temps), если была
+                if levels:
+                    row['warn_levels'] = sorted(int(x) for x in levels)
                 punish[str(gid)] = row
                 _write_json(PUNISH_PATH, punish)
                 report['punish_added'] = added

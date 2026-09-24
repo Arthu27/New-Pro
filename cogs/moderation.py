@@ -213,7 +213,9 @@ class Moderation (commands .Cog ):
             if self._recent_mute_count(guild.id, user.id, window_h) < threshold:
                 return
 
-            # Не дублировать уже выданный авто-варн после последнего мута.
+            # Не дублировать уже выданный авто-варн после последнего мута
+            # И не выдавать второй авто-варн, пока в окне уже есть авто-варн
+            # (гонка: 3 мута подряд успевали выдать 3 авто-варна).
             warns_cog = self.bot.get_cog('warnings')
             if warns_cog is None:
                 return
@@ -229,11 +231,18 @@ class Moderation (commands .Cog ):
                 last_mute_ts = max(_mine) if _mine else ''
             except Exception as _me:
                 log.debug(f"[MOD] auto-warn last-mute scan: {_me}")
+            from datetime import datetime, timezone, timedelta
+            _cut = (datetime.now(timezone.utc) - timedelta(hours=window_h)).isoformat()
             for w in warns:
-                if (w.get('mod_id') == str(self.bot.user.id)
-                        and 'автоматически' in (w.get('reason') or '').lower()
-                        and w.get('timestamp', '') >= last_mute_ts):
+                reason_l = (w.get('reason') or '').lower()
+                is_auto = (w.get('mod_id') == str(self.bot.user.id)
+                           and 'автоматически' in reason_l)
+                if not is_auto:
+                    continue
+                if w.get('timestamp', '') >= last_mute_ts:
                     return  # авто-варн за эту серию уже выдан
+                if w.get('timestamp', '') >= _cut:
+                    return  # в окне уже был авто-варн — не плодим
 
             bot_member = guild.me
             reason = (f'Автоматически: {threshold} мута за {window_h:.0f} ч '
@@ -716,11 +725,11 @@ class Moderation (commands .Cog ):
         except Exception as _le :
             log .debug (f'[STAFF_LIMIT] {_le}')
 
-        # Наказания — только с доказательством (ссылкой на скрин/видео):
-        # модальные окна Discord не принимают вложения, поэтому через панель
-        # доказательство передаётся ссылкой.
+        # Мут: наказание УЖЕ выдано — демка собирается ПОСЛЕ (фото/видео в чат).
+        # Бан/прочее: старый gate по ссылке, если тумблер «обязательно» включён.
+        _mute_proof = ("timeout", "mute_chat", "vmute")
         _punish_actions =("ban","timeout","mute_chat","vmute")
-        if action in _punish_actions :
+        if action in _punish_actions and action not in _mute_proof:
             from cogs .proof_cog import require_proof
             _action_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
             if not await require_proof (interaction ,action_ru =_action_ru ,link =proof_link ):
@@ -1039,6 +1048,23 @@ class Moderation (commands .Cog ):
                     confirm .description +=f"\n\n⚠️ {' · '.join (aux_errors )}"
                 # Сначала ответ модератору — логи/ЛС/демка могут идти секундами.
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
+                # После мута — сбор фото/видео в чате → V2-карточка на проверку
+                if action in ('timeout', 'mute_chat', 'vmute') and user is not None:
+                    try:
+                        from cogs.proof_flow import start_proof_collection
+                        await start_proof_collection(
+                            bot=self.bot,
+                            guild=guild,
+                            channel=getattr(interaction, 'channel', None),
+                            moderator=interaction.user,
+                            target=user,
+                            mute_action=action,
+                            reason=reason,
+                            case_id=case_id,
+                            notify_interaction=interaction,
+                        )
+                    except Exception as _pf:
+                        log.warning(f'[MODPANEL] proof collect: {_pf}')
                 try :
                     dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
                     # ЛС о бане — с кнопкой «Подать апелляцию» внизу:
@@ -1226,6 +1252,13 @@ class Moderation (commands .Cog ):
                 await _respond(interaction, embed=error_embed(
                     _mdeny or 'Мастер без Helper/Moderator не может применять.'),
                     ephemeral=True)
+                return False
+            # Mapped helper (в т.ч. Discord Admin): бан/разбан/unwarn/войс —
+            # нельзя даже если пункт ещё на экране.
+            if (_mapped_is_helper(interaction.user)
+                    and not _helper_panel_action_ok(action)):
+                await _respond(interaction, embed=error_embed(
+                    'Это действие недоступно хелперу.'), ephemeral=True)
                 return False
             if action in ('mute', 'unmute'):
                 gid = getattr(interaction, 'guild_id', None) or getattr(
@@ -1966,6 +1999,27 @@ MODPANEL_ACL_KEYS = {
     "clear": "purge",
 }
 
+# Хелпер (mapped tier = helper): только эти пункты /modpanel.
+# Discord Administrator / admin в actor_panel_role НЕ раздувают меню —
+# смотрим best_mapped_tier, не Discord-права.
+HELPER_MODPANEL_KEYS = frozenset({'warn', 'mute', 'unmute', 'clear'})
+# После выбора «Мут»/«Снять мут» — только чат (без войс/таймаута).
+HELPER_MUTE_KIND_KEYS = frozenset({'mute_chat', 'unmute_chat'})
+
+
+def _mapped_is_helper(member):
+    """True, если высший mapped-тир — helper (даже при Discord Admin)."""
+    try:
+        from services.staff_hierarchy import best_mapped_tier
+        return best_mapped_tier(member) == 'helper'
+    except Exception:
+        return False
+
+
+def _helper_panel_action_ok(action):
+    """Пункт/вид мута разрешён хелперу (меню и _ensure_action_acl)."""
+    return action in HELPER_MODPANEL_KEYS or action in HELPER_MUTE_KIND_KEYS
+
 
 def mute_kinds_for(guild_id, member):
     """Какие виды мута доступны: чат / войс / оба."""
@@ -1979,6 +2033,8 @@ def mute_kinds_for(guild_id, member):
         out.append(('vmute', 'Войс', None))
     if both:
         out.append(('timeout', 'Чат и войс', None))
+    if _mapped_is_helper(member):
+        out = [k for k in out if k[0] in HELPER_MUTE_KIND_KEYS]
     return out
 
 
@@ -1995,6 +2051,8 @@ def unmute_kinds_for(guild_id, member):
         out.append(('vunmute', 'Войс', None))
     if chat and voice:
         out.append(('untimeout', 'Чат и войс', None))
+    if _mapped_is_helper(member):
+        out = [k for k in out if k[0] in HELPER_MUTE_KIND_KEYS]
     return out
 
 
@@ -2034,8 +2092,11 @@ def actions_for_member(guild, member):
     если у ролей модератора заданы лимиты только на часть действий, видит
     только их (пересечение с разрешениями).
 
-    Куратор/админ+хелпер: смотрим ВЫСШИЙ тир — хелперские лимиты mute/clear
-    не схлопывают /modpanel до хелперского меню.
+    Куратор/админ (mapped)+хелпер: смотрим ВЫСШИЙ mapped-тир — хелперские
+    лимиты mute/clear не схлопывают /modpanel до хелперского меню.
+
+    Хелпер (mapped=helper), в т.ч. с Discord Administrator: жёсткий clamp
+    HELPER_MODPANEL_KEYS — лишние кнопки не показываем вообще.
     """
     try:
         uid = getattr(member, "id", 0)
@@ -2063,16 +2124,16 @@ def actions_for_member(guild, member):
         scoped = _rsa(guild.id, role_ids)
     except Exception:
         scoped = None
-    # Страховка: старший тир (куратор/админ) + хелпер — если scoped всё ещё
-    # «хелперский» (mute/unmute/clear/warn), сбрасываем. Чистые лимиты старшей
-    # роли без младшей не трогаем.
+    # Страховка: старший MAPPED-тир (куратор/админ в role_map) + хелпер —
+    # если scoped всё ещё «хелперский», сбрасываем. Discord Administrator
+    # без admin в карте сюда НЕ попадает (иначе хелперы-админы видели всё).
     try:
-        from services.staff_hierarchy import actor_panel_role, RANK
+        from services.staff_hierarchy import best_mapped_tier, RANK
         from services.staff_limits import _role_tier_map
         from services.staff_roles import KNOWN_HELPER_ROLE_ID
-        _tier = actor_panel_role(guild, member)
-        _rank = RANK.get(_tier, -1)
-        if (_rank >= RANK.get('curator', 2)
+        _mapped = best_mapped_tier(member)
+        _rank = RANK.get(_mapped, -1)
+        if (_rank >= RANK.get('curator', 4)
                 and scoped is not None
                 and set(scoped) <= {'mute', 'unmute', 'clear', 'warn'}):
             _tmap = _role_tier_map()
@@ -2089,8 +2150,8 @@ def actions_for_member(guild, member):
                     break
             if _has_junior:
                 log.info(
-                    'actions_for_member: тир %s + младшая роль — '
-                    'игнор хелперского scoped %s', _tier, scoped)
+                    'actions_for_member: mapped %s + младшая роль — '
+                    'игнор хелперского scoped %s', _mapped, scoped)
                 scoped = None
     except Exception as _ex:
         log.debug('actions_for_member: tier-guard: %s', _ex)
@@ -2098,7 +2159,11 @@ def actions_for_member(guild, member):
         base = list(MODPANEL_ACTIONS)
     else:
         base = [a for a in MODPANEL_ACTIONS if a[3] in scoped]
-    return [a for a in base if _action_acl_allows(guild.id, member, a[0])]
+    out = [a for a in base if _action_acl_allows(guild.id, member, a[0])]
+    # Hard clamp: mapped helper — только warn/mute/unmute/clear.
+    if _mapped_is_helper(member):
+        out = [a for a in out if a[0] in HELPER_MODPANEL_KEYS]
+    return out
 
 
 class MuteKindSelect(discord.ui.Select):
@@ -2762,8 +2827,8 @@ class ModActionModal(discord.ui.Modal):
     """Модальное окно ввода — поля строго под выбранное действие.
 
     «Очистка» спрашивает только количество и причину (никакой демки),
-    разбан/размут — цель и причину, наказания — демку, НО только если
-    требование включено в панели.
+    разбан/размут — цель и причину, наказания — поле доказательства
+    необязательно (можно пусто).
     """
 
     def __init__(self, cog, action, guild=None, prefill_target="", user=None):
@@ -2810,32 +2875,14 @@ class ModActionModal(discord.ui.Modal):
             style=discord.TextStyle.short,
         )
         self.add_item(self.reason)
-        _need_proof = False
+        # Доказательство к наказанию — всегда НЕОБЯЗАТЕЛЬНОЕ поле
+        # (заказ владельца 2026-09-24). Можно приложить ссылку, можно пусто.
+        # Строгий режим панели (тумблер) больше не делает поле required=True.
         if action in _PUNISH_MODPANEL:
-            try:
-                from cogs.proof_cog import proof_is_required
-                _need_proof = proof_is_required(getattr(guild, 'id', 0) or 0)
-            except Exception:
-                _need_proof = True
-            # Белый список «без демки» (панель → Доказательства): доверенному
-            # модератору поле «Доказательство» не ставим ВООБЩЕ. Раньше
-            # список был, а модалка его игнорировала — обязательное поле
-            # оставалось у всех (владелец 2026-09-05).
-            if _need_proof and user is not None:
-                try:
-                    from cogs.proof_cog import proof_is_whitelisted
-                    _need_proof = not proof_is_whitelisted(
-                        getattr(guild, 'id', 0) or 0,
-                        user_id=getattr(user, 'id', 0),
-                        role_ids=[getattr(r, 'id', 0)
-                                  for r in getattr(user, 'roles', []) or []])
-                except Exception as _wlx:
-                    log.debug(f'_need_proof whitelist: {_wlx}')
-                    _need_proof = True
-        if _need_proof:
             self.proof = discord.ui.TextInput(
-                label="Доказательство (ссылка на скрин/видео)", required=True,
-                placeholder="https://… — без этого наказание не выдаётся",
+                label="Доказательство (ссылка, необязательно)",
+                required=False,
+                placeholder="https://… — можно оставить пустым",
                 max_length=500,
             )
             self.add_item(self.proof)
