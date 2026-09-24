@@ -295,17 +295,21 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
 
 def build_staff_menu_items(*, banner_filename: str, body: str = None,
                            role_select=None, show_banner: bool = None):
-    """Наборы V2: баннер (уже с НАБОРЫ) + select — без дубля заголовка."""
+    """Наборы V2: правило «одна должность» сверху + баннер + select."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
     head = []
+    # сверху — нельзя выбирать несколько, только одну должность
+    notice = body or (
+        '**Можно выбрать только одну должность.**\n'
+        '-# Нельзя подавать сразу на несколько — одна заявка.'
+    )
+    head.append(_ui.TextDisplay(notice))
     if show_banner and banner_filename:
         head.append(_gallery(banner_filename))
-    if body:
-        head.append(_ui.TextDisplay(body))
     if head:
         items.append(black_container(*head))
     if role_select is not None:

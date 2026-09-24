@@ -739,7 +739,7 @@ def remove_from_blacklist(user_id, position=None) -> bool:
 MENU_STATE_FILE = "data/staff_menu_state.json"
 # bump → при следующем on_ready меню перепубликуется в канал наборов
 # v3: 4 ветки (Helper/Mod/Event/Broadcaster) + V2 баннер НАБОРЫ (не Gojo STAFF)
-MENU_POST_VERSION = 5  # v5: Mod→Helper; строгая изоляция веток
+MENU_POST_VERSION = 6  # v6: сверху «только одна должность»
 
 
 def _load_menu_state():
@@ -963,7 +963,9 @@ class RoleSelect(discord.ui.Select):
                 emoji=emoji_for_role(kind),
             ))
         super().__init__(
-            placeholder="Выберите должность",
+            placeholder="Выберите одну должность",
+            min_values=1,
+            max_values=1,
             options=options,
             custom_id="staff_role_select_v2"
         )
