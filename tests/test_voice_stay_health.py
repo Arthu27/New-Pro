@@ -119,7 +119,7 @@ check('really_in_channel' in main and 'force=True' in main,
 check('soft-reconnect' in main, 'main soft-reconnect')
 check('really_in_channel' in ev and 'force=True' in ev,
       'event uses Discord-truth + force')
-check('timeout=90' in main and 'timeout=90' in ev, 'connect timeout=90')
+check('timeout=20' in main and 'timeout=20' in ev, 'connect timeout=20')
 check("VOICE_SILENCE_PING') or '1'" in main
       or "VOICE_SILENCE_PING') or \"1\"" in main
       or "or '1').strip()" in main,

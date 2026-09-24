@@ -988,29 +988,34 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
                     except Exception:
                         pass
         try:
-            await channel.connect(
-                self_deaf=True, self_mute=True, reconnect=True, timeout=90.0)
+            await asyncio.wait_for(
+                channel.connect(
+                    self_deaf=True, self_mute=True, reconnect=True,
+                    timeout=20.0),
+                timeout=25.0)
             _voice_last_join_ts = time.time()
             _log.info('main voice joined %s', cid)
             return True, f'зашёл в <#{cid}>'
         except Exception as ex:
-            msg = str(ex).lower()
+            msg = str(ex).lower() or type(ex).__name__
             if 'already' in msg and 'connected' in msg:
                 # already connected часто = zombie — сброс и ещё раз
                 try:
                     await force_drop_voice(bot, channel.guild)
-                    await channel.connect(
-                        self_deaf=True, self_mute=True, reconnect=True,
-                        timeout=90.0)
+                    await asyncio.wait_for(
+                        channel.connect(
+                            self_deaf=True, self_mute=True, reconnect=True,
+                            timeout=20.0),
+                        timeout=25.0)
                     _voice_last_join_ts = time.time()
                     return True, f'перезашёл в <#{cid}>'
                 except Exception as ex2:
-                    return False, f'не удалось зайти: {ex2}'
-            return False, f'не удалось зайти: {ex}'
+                    return False, f'не удалось зайти: {ex2 or type(ex2).__name__}'
+            return False, f'не удалось зайти: {ex or type(ex).__name__}'
     finally:
         _voice_joining = False
-        # 5с suppress — свой VOICE_STATE after=None после reconnect не штормит
-        _voice_suppress_rejoin_until = time.time() + 5.0
+        # 3с suppress — свой VOICE_STATE after=None после reconnect не штормит
+        _voice_suppress_rejoin_until = time.time() + 3.0
 
 
 def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
@@ -1204,16 +1209,27 @@ def _bind_voice_gw_listeners():
         return
 
     async def _voice_on_disconnect():
-        try:
-            _schedule_main_voice_rejoin('gateway-disconnect', force=True)
-        except Exception:
-            pass
+        # Gateway down — connect сейчас зависнет. Ждём resume.
+        _log.warning('main gateway disconnect — жду resume (без connect)')
 
     async def _voice_on_resumed():
         try:
-            _schedule_main_voice_rejoin('resume', force=True)
+            async def _after():
+                for _ in range(20):
+                    try:
+                        if bot.is_ready():
+                            break
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.25)
+                await asyncio.sleep(0.5)
+                _schedule_main_voice_rejoin('resume', force=True)
+            bot.loop.create_task(_after(), name='main-voice-after-resume')
         except Exception:
-            pass
+            try:
+                _schedule_main_voice_rejoin('resume', force=True)
+            except Exception:
+                pass
 
     try:
         bot.add_listener(_voice_on_disconnect, 'on_disconnect')
