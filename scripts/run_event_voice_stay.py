@@ -57,14 +57,34 @@ async def _run_once(stop: asyncio.Event) -> int:
             f'stay online={st.get("online")} voice={st.get("voice_connected")} '
             f'ch={st.get("voice_channel_id")} name={st.get("name")}',
             flush=True)
-        # если выпал из войса — пнуть ensure (stay всегда on)
+        # если выпал из войса — FORCE ensure (не верим zombie is_connected)
         if st.get('online') and not st.get('voice_connected'):
             try:
                 c = EV.get_event_client()
                 if c is not None and not c.is_closed():
-                    EV._schedule_rejoin(c, 'daemon-heartbeat')
+                    EV._schedule_rejoin(c, 'daemon-heartbeat', force=True)
             except Exception as ex:
                 print(f'heartbeat rejoin: {ex}', flush=True)
+        else:
+            # даже если status говорит ok — раз в цикл пнуть soft-check
+            try:
+                from services.voice_stay_health import (
+                    really_in_channel, needs_soft_reconnect)
+                c = EV.get_event_client()
+                target = int(st.get('channel_id') or 0) or EV.DEFAULT_EVENT_VOICE_CHANNEL_ID
+                if c is not None and not c.is_closed():
+                    ok, _, why = really_in_channel(c, target)
+                    if not ok:
+                        print(f'heartbeat discord-truth miss ({why}) — force',
+                              flush=True)
+                        EV._schedule_rejoin(c, 'daemon-heartbeat', force=True)
+                    elif needs_soft_reconnect(
+                            getattr(EV, '_last_join_ts', 0) or 0,
+                            __import__('time').time()):
+                        print('heartbeat soft-reconnect', flush=True)
+                        EV._schedule_rejoin(c, 'soft-reconnect', force=True)
+            except Exception as ex:
+                print(f'heartbeat health: {ex}', flush=True)
         # клиент закрыт — выходим из цикла, внешний loop перезапустит
         c = EV.get_event_client()
         if c is None or c.is_closed():

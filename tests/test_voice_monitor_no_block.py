@@ -52,38 +52,32 @@ check(fn is not None, '_monitor_voice найдена')
 body = ast.get_source_segment(src, fn) if fn else ''
 doc = ast.get_docstring(fn) or ''
 
-check('VOICE_SILENCE_PING' in body,
-      'silence-ping только по VOICE_SILENCE_PING')
+check('really_in_channel' in body or 'really_in_channel' in src,
+      'монитор через Discord-truth')
 check('await asyncio.sleep(2)' in body or 'sleep(2)' in body,
       'монитор каждые 2с (без 30с паузы)')
 check('backoff_until' not in body,
       'нет backoff_until в мониторе')
-check('timeout=30' not in body and 'wait_for' not in body.split('VOICE_SILENCE_PING')[0],
-      'connect без wait_for/таймаута 30с')
 check('_ensure_main_voice_joined' in body or '_schedule_main_voice_rejoin' in body,
       'монитор зовёт ensure/rejoin')
 check('to_thread' in body, 'если play — только через to_thread')
 bad = [ln.strip() for ln in body.splitlines()
        if 'vc.play(' in ln and 'to_thread' not in ln]
 check(not bad, f'нет голого vc.play: {bad}')
-check('по умолчанию' in doc.lower() or 'без play' in doc.lower()
-      or 'VOICE_SILENCE_PING' in doc,
-      'докстринг: play выключен по умолчанию')
+check('silence' in doc.lower() or 'VOICE_SILENCE_PING' in doc
+      or 'keepalive' in doc.lower(),
+      'докстринг: silence keepalive')
 
 check('_ensure_main_voice_joined' in src, 'ensure_voice helper есть')
 check('_schedule_main_voice_rejoin' in src, 'schedule rejoin есть')
 check('self_deaf=True' in src and 'self_mute=True' in src,
       'self_deaf/self_mute для stay')
 check('kicked-or-moved' in src, 'rejoin по кику')
-check('VOICE_STAY_ENABLED игнорируется' in src
-      or 'VOICE_STAY_ENABLED игнорируется' in src
-      or ('voice stay: всегда вкл' in src
-          and 'VOICE_STAY_ENABLED=0' not in src.split('_monitor_voice')[0]),
-      'VOICE_STAY_ENABLED больше не выключает stay')
-# явная проверка: стартовый блок не читает VOICE_STAY_ENABLED для выключения
-on_ready_chunk = src
-check("os.environ.get('VOICE_STAY_ENABLED')" not in on_ready_chunk
-      or 'игнорируется' in on_ready_chunk,
+check('force=True' in src, 'force rejoin на kick/resume')
+check('soft-reconnect' in src, 'soft reconnect против zombie')
+check('voice_stay_health' in src, 'общий health-модуль')
+check("os.environ.get('VOICE_STAY_ENABLED')" not in src
+      or 'игнорируется' in src,
       'нет выключателя VOICE_STAY_ENABLED')
 check('_bind_voice_gw_listeners' in src,
       'gw listeners через add_listener (error_handler-safe)')
@@ -119,9 +113,9 @@ if fn:
     check(f.wait_for_connect == 0,
           f'нет wait_for(connect) в мониторе ({f.wait_for_connect})')
     check(f.threaded_play >= 1,
-          f'to_thread(vc.play) есть в gated-ветке ({f.threaded_play})')
+          f'to_thread(vc.play) есть в keepalive ({f.threaded_play})')
     check(f.wait_for_play >= 1,
-          f'wait_for(to_thread(play)) в gated-ветке ({f.wait_for_play})')
+          f'wait_for(to_thread(play)) в keepalive ({f.wait_for_play})')
 
 print('== config/voice_stay.json ==')
 import json  # noqa: E402

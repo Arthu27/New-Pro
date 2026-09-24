@@ -115,8 +115,8 @@ check('_send_kind_menu' in mod_src and '_bind_live_panel' in mod_src
       'multi-use: kind-меню отдельно, основная панель сбрасывается')
 check('multi-fix-v16' in mod_src or 'multi-fix-v13' in mod_src,
       'build tag multi-fix для проверки деплоя')
-check('timeout=300' in mod_src,
-      'панель живёт 5 минут')
+check('timeout=None' in mod_src,
+      'панель без авто-timeout')
 check('_schedule_panel_reset' in launch or '_silent_reset_panel' in launch
       or '_reset_after_step' in launch
       or '_enter_kind_mode' in launch

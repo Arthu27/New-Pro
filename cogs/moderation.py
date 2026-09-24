@@ -2284,9 +2284,9 @@ async def _push_panel_view(panel, interaction=None):
             try:
                 if want is not None and int(new_msg.id) != int(want):
                     log.warning(
-                        'modpanel push: ответили msg=%s, ждали %s — не переезжаем',
+                        'modpanel push: ответили msg=%s, ждали %s — FAIL',
                         getattr(new_msg, 'id', None), want)
-                    return True
+                    return False
             except Exception:
                 pass
             panel._panel_message = new_msg
@@ -2316,11 +2316,21 @@ async def _push_panel_view(panel, interaction=None):
             return await _ok(await fu.edit_message(int(mid), **kw))
         except Exception as ex:
             errors.append(f'fu.edit:{ex}')
+    # edit_original_response — только если ещё не было другого ответа
+    # (после tip send_message original = tip → нельзя сюда падать).
     if interaction is not None:
         try:
+            resp = getattr(interaction, 'response', None)
+            already = bool(resp and resp.is_done())
+            # если ACK был defer — original всё ещё панель; если send_message — нет
             edit_orig = getattr(interaction, 'edit_original_response', None)
-            if callable(edit_orig):
-                return await _ok(await edit_orig(**kw))
+            if callable(edit_orig) and already:
+                # безопаснее только когда panel message известен и совпадёт
+                got = await edit_orig(**kw)
+                ok = await _ok(got)
+                if ok:
+                    return True
+                errors.append('orig:wrong-msg')
         except Exception as ex:
             errors.append(f'orig:{ex}')
     log.warning('modpanel push FAILED: %s', '; '.join(errors) or 'no path')
@@ -2698,25 +2708,21 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
-        # Без участника — запомнить действие, попросить выбрать участника
+        # Без участника — запомнить действие и обновить ТУ ЖЕ панель.
+        # НЕ send_message tip: иначе original_response = tip, push правит
+        # не ту эфемерку → custom_id рассинхрон → наказания/лимиты мёртвые.
         if action != "clear" and not prefill and view is not None:
             view.pending_action = action
+            _bind_live_panel(view, interaction)
             try:
                 if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        content='Сначала выберите участника выше, затем действие.',
-                        ephemeral=True)
-                else:
-                    await interaction.followup.send(
-                        content='Сначала выберите участника выше, затем действие.',
-                        ephemeral=True)
-            except Exception:
-                try:
-                    await _ack(interaction, thinking=False)
-                except Exception:
-                    pass
+                    try:
+                        await interaction.response.defer(thinking=False)
+                    except TypeError:
+                        await interaction.response.defer()
+            except Exception as _ack_ex:
+                log.debug('modpanel action-no-target ACK: %s', _ack_ex)
             try:
-                _bind_live_panel(view, interaction)
                 await _silent_reset_panel(interaction, view)
             except Exception:
                 _schedule_panel_reset(
@@ -2898,7 +2904,7 @@ class ModPanelView(discord.ui.LayoutView):
     """
 
     def __init__(self, cog, member=None, allowed=None, preselect=None):
-        super().__init__(timeout=300)  # 5 минут — любые действия без нового окна
+        super().__init__(timeout=None)  # панель живёт, пока эфемерка видна
         self.cog = cog
         self.allowed = allowed
         self.member = member
