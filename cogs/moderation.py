@@ -716,11 +716,11 @@ class Moderation (commands .Cog ):
         except Exception as _le :
             log .debug (f'[STAFF_LIMIT] {_le}')
 
-        # Наказания — только с доказательством (ссылкой на скрин/видео):
-        # модальные окна Discord не принимают вложения, поэтому через панель
-        # доказательство передаётся ссылкой.
+        # Мут: наказание УЖЕ выдано — демка собирается ПОСЛЕ (фото/видео в чат).
+        # Бан/прочее: старый gate по ссылке, если тумблер «обязательно» включён.
+        _mute_proof = ("timeout", "mute_chat", "vmute")
         _punish_actions =("ban","timeout","mute_chat","vmute")
-        if action in _punish_actions :
+        if action in _punish_actions and action not in _mute_proof:
             from cogs .proof_cog import require_proof
             _action_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
             if not await require_proof (interaction ,action_ru =_action_ru ,link =proof_link ):
@@ -1039,6 +1039,23 @@ class Moderation (commands .Cog ):
                     confirm .description +=f"\n\n⚠️ {' · '.join (aux_errors )}"
                 # Сначала ответ модератору — логи/ЛС/демка могут идти секундами.
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
+                # После мута — сбор фото/видео в чате → V2-карточка на проверку
+                if action in ('timeout', 'mute_chat', 'vmute') and user is not None:
+                    try:
+                        from cogs.proof_flow import start_proof_collection
+                        await start_proof_collection(
+                            bot=self.bot,
+                            guild=guild,
+                            channel=getattr(interaction, 'channel', None),
+                            moderator=interaction.user,
+                            target=user,
+                            mute_action=action,
+                            reason=reason,
+                            case_id=case_id,
+                            notify_interaction=interaction,
+                        )
+                    except Exception as _pf:
+                        log.warning(f'[MODPANEL] proof collect: {_pf}')
                 try :
                     dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
                     # ЛС о бане — с кнопкой «Подать апелляцию» внизу:

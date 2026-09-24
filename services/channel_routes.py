@@ -26,10 +26,13 @@ MODS_CHANNEL_ID = 1312434963941167134
 BAN_APPEAL_ROOM_ID = 1544483947705008188
 # Оценка рассмотрения апелляции (владелец 2026-09-06). Не выдуман.
 APPEAL_RATING_CHANNEL_ID = 1518751543329951904
+# Канал доказательств (владелец 2026-09-24): сюда V2-карточки на проверку.
+PROOF_CHANNEL_ID = 1552088029047423027
 KNOWN_CHANNELS = {
     'appeals_channel': MODS_CHANNEL_ID,
     'report_channel': MODS_CHANNEL_ID,
     'ban_appeal_channel': BAN_APPEAL_ROOM_ID,
+    'proof_channel': PROOF_CHANNEL_ID,
 }
 
 # Имя-подсказка для комнаты апелляций в стиле сервера («эмодзи・слово»).
