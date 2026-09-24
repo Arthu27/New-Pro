@@ -438,6 +438,118 @@ def save_apps(data):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def app_storage_key(user_id, kind: str) -> str:
+    """Ключ заявки: uid:kind — чтобы ветки не затирали друг друга."""
+    from services.staff_roles import normalize_position
+    k = normalize_position(kind) or str(kind or 'moderator').lower()
+    return f"{user_id}:{k}"
+
+
+def iter_user_apps(apps: dict, user_id) -> list:
+    """Все заявки пользователя (новый ключ uid:kind + legacy uid)."""
+    from services.staff_roles import normalize_position
+    uid = str(user_id)
+    out = []
+    seen = set()
+    for key, app in (apps or {}).items():
+        if not isinstance(app, dict):
+            continue
+        if str(app.get('user_id') or '') != uid and str(key) != uid:
+            continue
+        kind = normalize_position(app.get('kind') or app.get('role')) or ''
+        sig = f"{kind}:{app.get('submitted_at') or app.get('timestamp') or key}"
+        if sig in seen:
+            continue
+        seen.add(sig)
+        row = dict(app)
+        row['_key'] = key
+        row['_kind'] = kind
+        out.append(row)
+    return out
+
+
+def find_app_for_kind(apps: dict, user_id, kind: str):
+    """Актуальная заявка пользователя на эту ветку (или None)."""
+    from services.staff_roles import normalize_position
+    want = normalize_position(kind)
+    if not want:
+        return None, None
+    uid = str(user_id)
+    # новый ключ
+    k = app_storage_key(uid, want)
+    if k in apps and isinstance(apps[k], dict):
+        return k, apps[k]
+    # legacy: apps[uid] с этой должностью
+    legacy = apps.get(uid)
+    if isinstance(legacy, dict):
+        lk = normalize_position(legacy.get('kind') or legacy.get('role'))
+        if lk == want:
+            return uid, legacy
+    # поиск по всем записям user (на случай рассинхрона ключа)
+    for key, app in apps.items():
+        if not isinstance(app, dict):
+            continue
+        if str(app.get('user_id') or '') != uid:
+            continue
+        if normalize_position(app.get('kind') or app.get('role')) == want:
+            return key, app
+    return None, None
+
+
+def apply_blocked_reason(user_id, kind: str, *, member=None) -> str:
+    """Почему нельзя подать заявку на ветку (пусто = можно).
+
+    Блокируем: ЧС ветки, pending, approved, уже есть роль ветки.
+    Отклонённую можно подать снова.
+    """
+    from services.staff_roles import (
+        normalize_position, position_label, resolve_staff_role)
+    want = normalize_position(kind)
+    if not want:
+        return 'Должность не указана.'
+    label = position_label(want)
+    if is_blacklisted(user_id, want):
+        return (
+            f'Вы в чёрном списке ветки **{label}**.\n'
+            'Другие должности по-прежнему открыты.'
+        )
+    apps = load_apps()
+    _, existing = find_app_for_kind(apps, user_id, want)
+    if existing:
+        st = str(existing.get('status') or '')
+        if st == 'pending':
+            return (
+                f'Заявка на **{label}** уже на рассмотрении.\n'
+                'Повторно на эту ветку подать нельзя. Статус: `/my-application`'
+            )
+        if st == 'approved':
+            return (
+                f'Вас уже приняли на **{label}**.\n'
+                'Повторная заявка на эту ветку не нужна.'
+            )
+        if st == 'blacklisted':
+            return (
+                f'Вы в чёрном списке ветки **{label}**.\n'
+                'Другие должности по-прежнему открыты.'
+            )
+    # уже носит роль этой ветки на сервере
+    if member is not None:
+        try:
+            guild = getattr(member, 'guild', None)
+            role, _ = resolve_staff_role(guild, want) if guild else (None, [])
+            if role is not None:
+                rid = int(getattr(role, 'id', 0) or 0)
+                for r in list(getattr(member, 'roles', None) or []):
+                    if int(getattr(r, 'id', 0) or 0) == rid:
+                        return (
+                            f'У вас уже есть роль **{getattr(role, "name", label)}**.\n'
+                            'Повторная заявка на эту ветку не нужна.'
+                        )
+        except Exception as _ex:
+            log.debug('apply_blocked role check: %s', _ex)
+    return ''
+
+
 def load_blacklist():
     """ЧС по веткам: {user_id: {kind: {by, at, guild_id, reason}}}."""
     os.makedirs("data", exist_ok=True)
@@ -633,24 +745,26 @@ class StaffApplyModal(discord.ui.Modal):
         user_id = str(interaction.user.id)
         kind = normalize_position(self.role_name) or self.kind or 'moderator'
         role_label = position_label(kind)
-        if is_blacklisted(user_id, kind):
+        member = None
+        if interaction.guild:
+            try:
+                member = interaction.guild.get_member(interaction.user.id)
+            except Exception:
+                member = None
+        deny = apply_blocked_reason(user_id, kind, member=member)
+        if deny:
             try:
                 from services.v2_layouts import respond_v2
+                title = ('Чёрный список' if 'чёрном списке' in deny.lower()
+                         else 'Заявка недоступна')
                 await respond_v2(
-                    interaction, kind='err', title='Чёрный список',
-                    body=(
-                        f'Вы в чёрном списке ветки **{role_label}**.\n'
-                        'Другие должности по-прежнему открыты.'
-                    ),
-                    ephemeral=True)
+                    interaction, kind='err', title=title,
+                    body=deny, ephemeral=True)
             except Exception:
                 try:
-                    await interaction.followup.send(
-                        f'Вы в чёрном списке ветки **{role_label}**. '
-                        'Другие должности открыты.',
-                        ephemeral=True)
+                    await interaction.followup.send(deny, ephemeral=True)
                 except Exception as _fx:
-                    log.debug('staff apply bl deny: %s', _fx)
+                    log.debug('staff apply deny: %s', _fx)
             return
         vals = self._answer_values()
         v1 = vals[0] if vals else ''
@@ -665,7 +779,14 @@ class StaffApplyModal(discord.ui.Modal):
         ]
         apps = load_apps()
         submitted_ts = datetime.now(timezone.utc).isoformat()
-        apps[user_id] = {
+        store_key = app_storage_key(user_id, kind)
+        # убрать legacy apps[uid], если это была та же ветка
+        legacy = apps.get(user_id)
+        if isinstance(legacy, dict):
+            from services.staff_roles import normalize_position as _np
+            if _np(legacy.get('kind') or legacy.get('role')) == kind:
+                apps.pop(user_id, None)
+        apps[store_key] = {
             "user_id": user_id,
             "username": str(interaction.user),
             "display_name": interaction.user.display_name,
@@ -691,11 +812,6 @@ class StaffApplyModal(discord.ui.Modal):
         if interaction.guild:
             ch, tag = apply_target(role_label, interaction.guild)
             if ch:
-                member = None
-                try:
-                    member = interaction.guild.get_member(interaction.user.id)
-                except Exception:
-                    member = None
                 body = build_application_body(
                     user=interaction.user, user_id=user_id,
                     age=v1, activity=v2, experience=v3, reason=v4,
@@ -710,18 +826,18 @@ class StaffApplyModal(discord.ui.Modal):
                     card = StaffAppCardView(title=role_label, body=body)
                     msg = await _send_staff_card(
                         ch, content=content, view=card)
-                    apps[user_id]["message_id"] = str(msg.id)
-                    apps[user_id]["curator_tag"] = tag or None
-                    apps[user_id]["channel_id"] = str(getattr(ch, 'id', '') or '')
+                    apps[store_key]["message_id"] = str(msg.id)
+                    apps[store_key]["curator_tag"] = tag or None
+                    apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')
                     delivered = True
                     delivery_ch = ch
                 except (discord.Forbidden, discord.HTTPException) as _ex:
                     delivery_err = str(_ex)
                     log.warning("STAFF: карточка %s не ушла в %s: %s",
                                 user_id, getattr(ch, 'name', '?'), _ex)
-                    apps[user_id]["delivery"] = "failed"
+                    apps[store_key]["delivery"] = "failed"
             else:
-                apps[user_id]["delivery"] = "no_channel"
+                apps[store_key]["delivery"] = "no_channel"
                 log.warning("STAFF: заявка %s сохранена, канал не настроен",
                             user_id)
 
@@ -792,14 +908,19 @@ class RoleSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         role_name = self.values[0]
-        if is_blacklisted(interaction.user.id, role_name):
+        member = None
+        if interaction.guild:
+            try:
+                member = interaction.guild.get_member(interaction.user.id)
+            except Exception:
+                member = None
+        deny = apply_blocked_reason(interaction.user.id, role_name, member=member)
+        if deny:
             from services.v2_layouts import reply_text_v2
-            from services.staff_roles import position_label
+            title = ('Чёрный список' if 'чёрном списке' in deny.lower()
+                     else 'Заявка недоступна')
             return await reply_text_v2(
-                interaction,
-                (f'Вы в чёрном списке ветки **{position_label(role_name)}**.\n'
-                 'Другие должности по-прежнему открыты.'),
-                kind='err', title='Чёрный список')
+                interaction, deny, kind='err', title=title)
         modal = StaffApplyModal(role_name=role_name)
         await interaction.response.send_modal(modal)
 
@@ -1317,7 +1438,7 @@ class StaffApply(commands.Cog):
     async def my_application(self, interaction: discord.Interaction):
         apps = load_apps()
         uid = str(interaction.user.id)
-        mine = [a for a in apps.values() if str(a.get("user_id")) == uid]
+        mine = iter_user_apps(apps, uid)
         bl_kinds = blacklisted_kinds(uid)
         if not mine and not bl_kinds:
             from services.v2_layouts import reply_text_v2
@@ -1327,41 +1448,43 @@ class StaffApply(commands.Cog):
                 kind='info', title='Заявки')
         from services.staff_roles import position_label
         body_parts = []
+        status_map = {"pending": "На рассмотрении",
+                      "approved": "Одобрена",
+                      "rejected": "Отклонена",
+                      "blacklisted": "Чёрный список"}
         if mine:
             mine.sort(
                 key=lambda a: a.get("timestamp") or a.get("submitted_at") or "",
                 reverse=True)
-            a = mine[0]
-            status_map = {"pending": "На рассмотрении",
-                          "approved": "Одобрена",
-                          "rejected": "Отклонена",
-                          "blacklisted": "Чёрный список"}
-            st = status_map.get(a.get("status"), a.get("status", "?"))
-            pos = position_label(a.get('role'))
-            body_parts.append(
-                f"**{st}** · **{pos}**\n"
-                f"Подана: {(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}")
-            if a.get("reviewed_by"):
-                body_parts.append(f"Рассмотрел: **{a['reviewed_by']}**")
-            if a.get("review_note"):
-                body_parts.append(f"Комментарий: {a['review_note']}")
+            for a in mine[:8]:
+                st = status_map.get(a.get("status"), a.get("status", "?"))
+                pos = position_label(a.get('role') or a.get('_kind'))
+                line = (
+                    f"**{st}** · **{pos}** · "
+                    f"{(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}"
+                )
+                if a.get("reviewed_by"):
+                    line += f"\nРассмотрел: **{a['reviewed_by']}**"
+                if a.get("review_note"):
+                    line += f"\nКомментарий: {a['review_note']}"
+                body_parts.append(line)
             kind = {
                 "pending": "warn",
                 "approved": "ok",
                 "rejected": "err",
                 "blacklisted": "err",
-            }.get(a.get("status"), "info")
+            }.get(mine[0].get("status"), "info")
         else:
             kind = "err"
         if bl_kinds:
             labels = ", ".join(f"**{position_label(k)}**" for k in bl_kinds)
             body_parts.append(
                 f"Чёрный список веток: {labels}.\n"
-                "Другие должности открыты.")
+                "На эти должности повторно подать нельзя.")
         from services.v2_layouts import respond_v2
         await respond_v2(
-            interaction, kind=kind, title='Моя заявка',
-            body='\n'.join(body_parts), ephemeral=True)
+            interaction, kind=kind, title='Мои заявки',
+            body='\n\n'.join(body_parts), ephemeral=True)
 
     async def _ensure_staff_menu(self):
         """Один раз: меню набора в канал наборов (без slash-команды)."""

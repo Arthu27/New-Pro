@@ -373,10 +373,37 @@ ok_inter2 = types.SimpleNamespace(
 loop.run_until_complete(RSHelper().callback(ok_inter2))
 check(ok_inter2.response.modal is not None, 'non-bl can open modal')
 
+# pending на ветке → нельзя подать снова на ту же
+apps_pend = {
+    '55:event': {
+        'user_id': '55', 'role': 'Eventsmod', 'kind': 'event',
+        'status': 'pending', 'submitted_at': '2026-09-24T00:00:00',
+    }
+}
+json.dump(apps_pend, open('data/staff_apps.json', 'w'))
+deny_pend = SA.apply_blocked_reason(55, 'Eventsmod')
+check(deny_pend and 'рассмотрении' in deny_pend.lower(),
+      'pending Events blocks re-apply', deny_pend)
+check(not SA.apply_blocked_reason(55, 'Helper'),
+      'pending Events: Helper still open')
+# approved → тоже нельзя
+apps_pend['55:event']['status'] = 'approved'
+json.dump(apps_pend, open('data/staff_apps.json', 'w'))
+deny_ok = SA.apply_blocked_reason(55, 'Eventsmod')
+check(deny_ok and ('приняли' in deny_ok.lower() or 'принят' in deny_ok.lower()),
+      'approved Events blocks re-apply', deny_ok)
+# rejected → можно снова
+apps_pend['55:event']['status'] = 'rejected'
+json.dump(apps_pend, open('data/staff_apps.json', 'w'))
+check(not SA.apply_blocked_reason(55, 'Eventsmod'),
+      'rejected Events allows re-apply')
+
 # нет staff-panel команды
 src = open(os.path.join(ROOT, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
 check('name="staff-panel"' not in src and '_ensure_staff_menu' in src,
       'меню само, без /staff-panel')
+check('apply_blocked_reason' in src and 'app_storage_key' in src,
+      'повтор заявок на ветку блокируется')
 
 loop.close()
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

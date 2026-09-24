@@ -4399,13 +4399,24 @@ def api_public_apply ():
         with open (apps_file ,'r',encoding ='utf-8')as f :
             apps =json .load (f )
 
-            # Проверка ожидающей заявки
+            # Проверка: нельзя повторно на ту же ветку (pending/approved/ЧС)
     uid =str (data ['discord_id'])
-    for app_data in apps .values ():
-        if app_data .get ('user_id')==uid and app_data .get ('status')=='pending':
-            return jsonify ({'error':'У вас уже есть заявка на рассмотрении!'}),400 
-
-    app_id =str (int (datetime.now(timezone.utc).timestamp ()))
+    from services .staff_roles import normalize_position ,position_label 
+    _kind =normalize_position (data .get ('role')) or 'moderator'
+    try :
+        from cogs .staff_apply import apply_blocked_reason ,app_storage_key 
+        _deny =apply_blocked_reason (uid ,_kind )
+        if _deny :
+            return jsonify ({'error':_deny .replace ('**','').replace ('\n',' ')}),400 
+        app_id =app_storage_key (uid ,_kind )
+    except Exception :
+        # fallback: любая pending + ключ uid:kind
+        for app_data in apps .values ():
+            if app_data .get ('user_id')==uid and app_data .get ('status')=='pending':
+                _pk =normalize_position (app_data .get ('role')or app_data .get ('kind'))
+                if _pk ==_kind or not _pk :
+                    return jsonify ({'error':'У вас уже есть заявка на рассмотрении!'}),400 
+        app_id =f"{uid}:{_kind}"
     guild_id =str (data ['guild_id'])
 
     app_entry ={
@@ -4417,9 +4428,11 @@ def api_public_apply ():
     'guild_id':guild_id ,
     'guild_name':data .get ('guild_name',''),
     'timestamp':datetime.now(timezone.utc).isoformat (),
+    'submitted_at':datetime.now(timezone.utc).isoformat (),
     'status':'pending',
     'source':'web',
-    'role':data ['role'],
+    'role':position_label (_kind ),
+    'kind':_kind ,
     'answers':{
     'yas':data ['yas'],
     'tecrube':data ['tecrube'],

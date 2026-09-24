@@ -245,14 +245,21 @@ am = (ping_msg or {}).get('allowed_mentions')
 check(am is not None,
       'ping has allowed_mentions', am)
 apps = SA.load_apps()
-app = apps.get('777888999000111222')
-check(app is not None and app['status'] == 'pending', 'saved pending')
+app_key = '777888999000111222:moderator'
+app = apps.get(app_key) or apps.get('777888999000111222')
+check(app is not None and app['status'] == 'pending', 'saved pending', list(apps.keys()))
 check(app.get('role') == 'Moderator', 'role stored as Moderator', app.get('role'))
 check(app.get('message_id') == '555001', 'message_id saved')
 check(app.get('curator_tag') == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
       'curator_tag saved')
 check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
       'answers list saved with 4 Qs')
+# повтор на ту же ветку запрещён
+deny = SA.apply_blocked_reason('777888999000111222', 'Moderator')
+check(deny and 'уже' in deny.lower(), 'pending blocks re-apply', deny)
+# другая ветка свободна
+ok_other = SA.apply_blocked_reason('777888999000111222', 'Helper')
+check(not ok_other, 'other branch still open while Mod pending', ok_other)
 
 print('== 3b. Per-branch questions ==')
 for kind, needle in (
