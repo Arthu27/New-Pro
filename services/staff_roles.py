@@ -6,7 +6,9 @@
 
 Кураторы раздельные (владелец 2026-09-24): ветка Helper не принимает
 Event/Broadcaster/Moderator и наоборот — у каждой должности своя роль
-«× Отвечаю за …».
+«× Отвечаю за …». Принимают только куратор СВОЕЙ ветки или
+× Administrator (не общий × Curator, не Discord admin-бит, не
+панельный admin без роли).
 """
 
 import json
@@ -188,7 +190,11 @@ def curator_role_id(guild_id, env_value=0) -> int:
 
 
 def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
-    """Куратор конкретной ветки: панель → .env → KNOWN_CURATOR_BY_KIND."""
+    """Куратор конкретной ветки: панель → .env → KNOWN_CURATOR_BY_KIND.
+
+    Общий × Curator / STAFF_CURATOR_ROLE_ID для известных должностей
+    НЕ используется — иначе куратор Helper принимает все ветки.
+    """
     kind = normalize_position(kind) or str(kind or "").lower()
     key = f"{kind}_curator_role" if kind in POSITIONS else "curator_role"
     try:
@@ -200,11 +206,8 @@ def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
             "broadcaster": getattr(Config, "STAFF_BROADCASTER_CURATOR_ROLE_ID", 0),
         }
         env_fallback = int(env_map.get(kind) or env_value or 0)
-        # общий STAFF_CURATOR_ROLE_ID — только если своей нет
-        common = int(getattr(Config, "STAFF_CURATOR_ROLE_ID", 0) or 0)
     except Exception:
         env_fallback = int(env_value or 0)
-        common = 0
 
     rid = setting(guild_id, key, env_fallback)
     if rid:
@@ -212,19 +215,22 @@ def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
     known = int(KNOWN_CURATOR_BY_KIND.get(kind) or 0)
     if known:
         return known
-    if common:
-        return common
+    # Неизвестная должность — без общего фолбека (изоляция веток)
+    if kind in POSITIONS:
+        return 0
     return int(KNOWN_CURATOR_ROLE_ID or 0)
 
 
 def can_review_position(member, position) -> tuple:
     """Может ли участник принять/отклонить заявку этой должности.
 
-    Да: × Administrator / admin|owner в role_map, владелец сервера/бота,
-    либо куратор ЭТОЙ ветки («× Отвечаю за …»).
+    Да ТОЛЬКО:
+      • владелец сервера / бота;
+      • роль × Administrator (KNOWN_ADMIN_ROLE_ID);
+      • куратор ЭТОЙ ветки («× Отвечаю за …»).
 
-    Discord-бит administrator НЕ даёт доступ: на сервере декоративные роли
-    иногда имеют этот бит (куратор Helper иначе лезет в Events).
+    Нет: Discord-бит administrator, role_map admin, общий × Curator,
+    куратор чужой ветки. Helper-куратор не принимает Events и наоборот.
     """
     if member is None:
         return False, "Участник не найден."
@@ -251,14 +257,7 @@ def can_review_position(member, position) -> tuple:
     except Exception:
         pass
 
-    # × Administrator и выше по карте ролей (не Discord admin-бит)
-    try:
-        from services.staff_hierarchy import RANK, best_mapped_tier
-        tier = best_mapped_tier(member)
-        if tier and RANK.get(tier, -1) >= RANK.get("admin", 4):
-            return True, ""
-    except Exception:
-        pass
+    # Только явная роль × Administrator (не карта ролей, не Discord-бит)
     if int(KNOWN_ADMIN_ROLE_ID or 0) and int(KNOWN_ADMIN_ROLE_ID) in role_ids:
         return True, ""
 
@@ -270,11 +269,17 @@ def can_review_position(member, position) -> tuple:
     rid = curator_role_id_for(gid, kind)
     if not rid:
         return False, "Куратор этой ветки не настроен."
+    # Общий × Curator никогда не считается куратором ветки
+    if int(rid) == int(KNOWN_CURATOR_ROLE_ID or 0):
+        return False, (
+            f"Куратор ветки не настроен — общий × Curator "
+            f"заявки на **{position_label(kind)}** не принимает."
+        )
     if int(rid) in role_ids:
         return True, ""
     label = position_label(kind)
     return False, (
-        f"Только <@&{int(rid)}> или администратор "
+        f"Только <@&{int(rid)}> или <@&{int(KNOWN_ADMIN_ROLE_ID)}> "
         f"принимает заявки на **{label}**."
     )
 

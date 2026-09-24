@@ -535,15 +535,23 @@ class FakeBot:
 A.bot_instance = FakeBot(g6, bg_loop)
 A.MAIN_GUILD_ID = '777'
 c = A.app.test_client()
-# admin панели может любую ветку; mod без Discord-куратора — нет
+# mod без Discord-куратора — нет
 with c.session_transaction() as s:
-    s.update(logged_in=True, role='mod', username='tester')
+    s.update(logged_in=True, role='mod', username='tester', discord_id='1')
 r_deny = c.post('/api/staff-apps/42/review', json={'action': 'approve', 'note': 'ок'})
 check(r_deny.status_code == 403,
       f'панель: mod без куратора ветки → 403 ({r_deny.status_code})')
 
+# admin панели без Discord × Administrator / куратора ветки — тоже нет
 with c.session_transaction() as s:
-    s.update(logged_in=True, role='admin', username='tester')
+    s.update(logged_in=True, role='admin', username='tester', discord_id='1')
+r_admin_deny = c.post('/api/staff-apps/42/review', json={'action': 'approve', 'note': 'ок'})
+check(r_admin_deny.status_code == 403,
+      f'панель: admin без роли ветки → 403 ({r_admin_deny.status_code})')
+
+# owner панели — да (доверенный вход)
+with c.session_transaction() as s:
+    s.update(logged_in=True, role='owner', username='tester')
 
 r = c.post('/api/staff-apps/42/review', json={'action': 'approve', 'note': 'ок'})
 d = r.get_json() or {}
@@ -611,8 +619,8 @@ ok_cross, deny = SR.can_review_position(
 check(ok_h and not ok_cross, 'хелпер-куратор не принимает Event')
 check('<@&' in (deny or '') and ('принимает' in (deny or '') or 'reviews' in (deny or '').lower()),
       f'отказ чужой ветки объяснён: {deny!r}')
-check('администратор' in (deny or '').lower(),
-      f'отказ упоминает админа: {deny!r}')
+check(str(SR.KNOWN_ADMIN_ROLE_ID) in (deny or '') or 'Administrator' in (deny or ''),
+      f'отказ упоминает × Administrator: {deny!r}')
 
 # Discord administrator-бит НЕ даёт доступ (декор-роли с admin-битом)
 class _AdmPerm:
@@ -624,6 +632,14 @@ class _AdmMember:
     guild = type('G', (), {'id': 777, 'owner_id': 0})()
 ok_da, deny_da = SR.can_review_position(_AdmMember(), 'Helper')
 check(not ok_da, 'Discord admin-бит без × Administrator — отказ', deny_da)
+
+# общий × Curator тоже НЕ даёт доступ ни к одной ветке
+ok_leg, deny_leg = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_ROLE_ID), 'Helper')
+check(not ok_leg, 'общий × Curator не принимает Helper', deny_leg)
+ok_leg2, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_ROLE_ID), 'Eventsmod')
+check(not ok_leg2, 'общий × Curator не принимает Events')
 
 # × Administrator — любая ветка
 ok_adm, _ = SR.can_review_position(

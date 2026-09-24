@@ -215,11 +215,10 @@ def _curator_ping(guild, role_name: str = ''):
     """Тег куратора СВОЕЙ ветки для карточки заявки.
 
     Helper → × Отвечаю за Helper, Event → × Отвечаю за Eventsmod и т.д.
-    Тег только если роль реально есть на сервере.
+    Общий × Curator не пингуем — иначе чужие ветки думают, что это их заявка.
     """
     from services.staff_roles import (
-        curator_role_id_for, normalize_position, KNOWN_CURATOR_BY_KIND,
-        KNOWN_CURATOR_ROLE_ID)
+        curator_role_id_for, normalize_position, KNOWN_CURATOR_BY_KIND)
     if not guild:
         return ''
     kind = normalize_position(role_name) or 'moderator'
@@ -230,7 +229,6 @@ def _curator_ping(guild, role_name: str = ''):
     fallbacks = [
         cur,
         int(KNOWN_CURATOR_BY_KIND.get(kind) or 0),
-        int(KNOWN_CURATOR_ROLE_ID or 0),
     ]
     for rid in fallbacks:
         try:
@@ -672,7 +670,7 @@ def remove_from_blacklist(user_id, position=None) -> bool:
 MENU_STATE_FILE = "data/staff_menu_state.json"
 # bump → при следующем on_ready меню перепубликуется в канал наборов
 # v3: 4 ветки (Helper/Mod/Event/Broadcaster) + V2 баннер НАБОРЫ (не Gojo STAFF)
-MENU_POST_VERSION = 4  # v4: порядок Mod→Helper→Event→Broadcaster
+MENU_POST_VERSION = 5  # v5: Mod→Helper; строгая изоляция веток
 
 
 def _load_menu_state():
