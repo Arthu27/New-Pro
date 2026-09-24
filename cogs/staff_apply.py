@@ -398,30 +398,17 @@ class RoleSelect(discord.ui.Select):
     def __init__(self):
         from services.menu_banners import select_label
         from services.staff_roles import POSITIONS, position_select_value
-        try:
-            from services.menu_emojis import get_cached
-            em_by = {
-                'helper': get_cached('helper'),
-                'moderator': get_cached('moderator'),
-                'event': get_cached('elist') or get_cached('announce'),
-                'broadcaster': get_cached('announce') or get_cached('start'),
-            }
-        except Exception:
-            em_by = {}
-        fallback = {
-            'helper': '⭐', 'moderator': '🛡️',
-            'event': '📅', 'broadcaster': '📡',
-        }
+        from services.menu_emojis import emoji_for_role
         options = []
         for kind in POSITIONS:
             label = position_select_value(kind)
             options.append(discord.SelectOption(
                 label=select_label(label),
                 value=label,
-                emoji=em_by.get(kind) or fallback.get(kind),
+                emoji=emoji_for_role(kind),
             ))
         super().__init__(
-            placeholder="Выберите должность",
+            placeholder="",
             options=options,
             custom_id="staff_role_select_v2"
         )
@@ -437,14 +424,20 @@ class RoleSelect(discord.ui.Select):
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffReviewSelect(discord.ui.Select):
-    """Select решения — внутри V2-карточки заявки."""
+    """Select решения — внутри V2-карточки заявки, со стикерами."""
 
     def __init__(self):
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_review
         super().__init__(
-            placeholder="Решение",
+            placeholder="",
             options=[
-                discord.SelectOption(label="Принять", value="approve"),
-                discord.SelectOption(label="Отклонить", value="reject"),
+                discord.SelectOption(
+                    label=select_label("Принять"), value="approve",
+                    emoji=emoji_for_review('approve')),
+                discord.SelectOption(
+                    label=select_label("Отклонить"), value="reject",
+                    emoji=emoji_for_review('reject')),
             ],
             custom_id="staff_review_select_v2",
             min_values=1, max_values=1,
@@ -455,7 +448,7 @@ class StaffReviewSelect(discord.ui.Select):
 
 
 class StaffAppCardView(discord.ui.LayoutView):
-    """Карточка заявки куратору — V2, заголовок = должность (EN)."""
+    """Карточка заявки куратору — V2, чёрный блок, заголовок = должность (EN)."""
 
     def __init__(self, *, title: str, body: str, footer: str = ''):
         super().__init__(timeout=None)
@@ -474,7 +467,7 @@ class StaffAppCardView(discord.ui.LayoutView):
             row = dui.ActionRow()
             row.add_item(sel)
             children.append(row)
-            self.add_item(black_container(*children, accent=0xC8922A))
+            self.add_item(black_container(*children))  # accent чёрный
             return
         row = discord.ui.ActionRow()
         row.add_item(sel)
@@ -617,10 +610,10 @@ class StaffReviewView(discord.ui.View):
             ephemeral=True)
 
     @discord.ui.select(
-        placeholder="Решение",
+        placeholder="",
         options=[
-            discord.SelectOption(label="Принять", value="approve"),
-            discord.SelectOption(label="Отклонить", value="reject"),
+            discord.SelectOption(label="› Принять", value="approve"),
+            discord.SelectOption(label="› Отклонить", value="reject"),
         ],
         custom_id="staff_review_select_v1", min_values=1, max_values=1)
     async def review_select(self, interaction: discord.Interaction,
@@ -853,6 +846,11 @@ class StaffApply(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(self.bot)
+        except Exception as _ex:
+            log.debug('staff emojis: %s', _ex)
         self.bot.add_view(StaffApplyView())
         self.bot.add_view(StaffReviewView())
         self.bot.add_view(StaffReviewButtonsView())

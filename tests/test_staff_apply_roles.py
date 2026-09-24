@@ -625,8 +625,9 @@ check(int(Config.STAFF_HELPER_ROLE_ID) == 948969471916249119
 src_staff = open(os.path.join(repo, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
 check('publish_staff_menu' in src_staff and '_channel_webhook' in src_staff,
       'staff menu publishes via webhook V2')
-check('Выберите должность' in src_staff and 'Eventsmod' in src_staff,
-      'RU UI + EN название Eventsmod')
+check('emoji_for_role' in src_staff and 'emoji_for_review' in src_staff
+      and 'Eventsmod' in src_staff,
+      'стикеры в select должностей и Принять/Отклонить')
 style_css = open(os.path.join(repo, 'web', 'static', 'style.css'),
                  encoding='utf-8').read()
 check('color-scheme: dark' in style_css and 'select option' in style_css,

@@ -92,6 +92,11 @@ STICKER_SPECS = {
     'helper':     {'accent': (240, 240, 245), 'icon': 'helper'},
     'moderator':  {'accent': (230, 230, 240), 'icon': 'mod'},
     'heart':      {'accent': (245, 245, 250), 'icon': 'heart'},
+    # Набор в команду
+    'accept':     {'accent': (120, 220, 160), 'icon': 'accept'},
+    'decline':    {'accent': (235, 120, 130), 'icon': 'decline'},
+    'eventsmod':  {'accent': (180, 200, 240), 'icon': 'event'},
+    'broadcaster': {'accent': (160, 210, 255), 'icon': 'broadcast'},
     # Events /event-panel
     'signup':     {'accent': (80, 220, 160), 'icon': 'user'},
     'announce':   {'accent': (94, 200, 255), 'icon': 'helper'},
@@ -562,6 +567,23 @@ def _icon_layer(size: int, accent, kind: str) -> Image.Image:
         body = [(64, 30), (94, 44), (94, 72), (64, 100), (34, 72), (34, 44)]
         P(body)
         E((56, 54, 72, 70), fill=(*accent, 255), outline=None, width=1)
+    elif kind == 'accept':
+        L([(38, 66), (56, 86)], 9)
+        L([(56, 86), (92, 42)], 9)
+    elif kind == 'decline':
+        L([(42, 42), (86, 86)], 9)
+        L([(86, 42), (42, 86)], 9)
+    elif kind == 'event':
+        R((36, 40, 92, 96), fill=None, outline=ink, width=6, radius=12)
+        L([(36, 56), (92, 56)], 5)
+        E((48, 34, 56, 46), fill=ink, outline=None, width=1)
+        E((72, 34, 80, 46), fill=ink, outline=None, width=1)
+        R((48, 68, 60, 80), fill=ink, outline=None, radius=4)
+        R((68, 68, 80, 80), fill=ink, outline=None, radius=4)
+    elif kind == 'broadcast':
+        E((56, 56, 72, 72), fill=ink, outline=None, width=1)
+        E((46, 46, 82, 82), fill=None, outline=ink, width=5)
+        E((36, 36, 92, 92), fill=None, outline=ink, width=4)
     elif kind == 'heart':
         pts = []
         for t in range(0, 360, 3):

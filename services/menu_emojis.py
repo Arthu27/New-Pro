@@ -24,6 +24,8 @@ STICKER_KEYS = (
     'warn', 'mute', 'ban', 'clear', 'unban',
     'appeal', 'helper', 'moderator', 'heart',
     'staff', 'user',  # /report: «На кого жалоба?» (Стафф/Участник)
+    # набор в команду
+    'accept', 'decline', 'eventsmod', 'broadcaster',
     # /event-panel (Events V2)
     'signup', 'announce', 'start', 'finish', 'elist',
 )
@@ -45,6 +47,20 @@ ACTION_STICKER = {
     'clear': 'clear',
 }
 
+# должность набора → стикер
+ROLE_STICKER = {
+    'helper': 'helper',
+    'moderator': 'moderator',
+    'event': 'eventsmod',
+    'broadcaster': 'broadcaster',
+}
+
+# решение по заявке → стикер
+REVIEW_STICKER = {
+    'approve': 'accept',
+    'reject': 'decline',
+}
+
 # фолбек, пока эмодзи ещё не залиты
 _UNICODE = {
     'warn': '⚠️',
@@ -60,6 +76,18 @@ _UNICODE = {
     'ban': '⛔',
     'unban': '🔓',
     'clear': '🧹',
+}
+
+_ROLE_UNICODE = {
+    'helper': '⭐',
+    'moderator': '🛡️',
+    'event': '📅',
+    'broadcaster': '📡',
+}
+
+_REVIEW_UNICODE = {
+    'approve': '✅',
+    'reject': '❌',
 }
 
 _cache: Dict[str, Any] = {}
@@ -88,6 +116,31 @@ def emoji_for_action(action: str):
     if em is not None:
         return em
     return _UNICODE.get(action, '🤍')
+
+
+def emoji_for_role(kind: str):
+    """Стикер должности набора (Helper/Moderator/Eventsmod/Broadcaster)."""
+    key = ROLE_STICKER.get(kind, kind)
+    em = _cache.get(key)
+    if em is not None:
+        return em
+    # запасные уже залитые
+    alt = {'event': 'elist', 'broadcaster': 'announce'}.get(kind)
+    if alt and _cache.get(alt) is not None:
+        return _cache[alt]
+    return _ROLE_UNICODE.get(kind, '🤍')
+
+
+def emoji_for_review(action: str):
+    """Стикер Принять / Отклонить на карточке заявки."""
+    key = REVIEW_STICKER.get(action, action)
+    em = _cache.get(key)
+    if em is not None:
+        return em
+    alt = {'approve': 'unban', 'reject': 'ban'}.get(action)
+    if alt and _cache.get(alt) is not None:
+        return _cache[alt]
+    return _REVIEW_UNICODE.get(action, '🤍')
 
 
 def emoji_heart():
