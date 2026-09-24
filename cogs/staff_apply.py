@@ -362,14 +362,14 @@ POSITION_QUESTIONS = {
         {'label': 'Оцените свои знания правил сервера/платформы',
          'ph': 'например: 10/10', 'style': 'short', 'max': 100},
     ],
+    # Events — точные формулировки с скрина владельца (5 полей, Discord max)
     'event': [
-        {'label': 'Ваше имя и возраст', 'ph': 'например: Саша 20', 'style': 'short', 'max': 80},
-        {'label': 'Какие ивенты умеете проводить',
-         'ph': 'мафия, квиз, киноночь…', 'style': 'paragraph', 'max': 500},
-        {'label': 'Сколько часов в день готовы на ивенты',
-         'ph': 'например: 2–3 часа, вечер', 'style': 'short', 'max': 200},
-        {'label': 'Идеи ивентов для сервера',
-         'ph': '1–2 идеи коротко', 'style': 'paragraph', 'max': 500},
+        {'label': 'Ваше Имя и Возраст?', 'ph': 'например: Саша 20', 'style': 'short', 'max': 80},
+        {'label': 'Ваш часовой пояс?', 'ph': 'например: МСК / UTC+3', 'style': 'short', 'max': 80},
+        {'label': 'Был ли опыт в подобной сфере, если да – где?',
+         'ph': 'да, на сервере … / нет', 'style': 'paragraph', 'max': 500},
+        {'label': 'Есть ли у Вас ПК и микрофон?', 'ph': 'Да / нет', 'style': 'short', 'max': 100},
+        {'label': 'Есть ли у вас веб камера?', 'ph': 'Да / нет', 'style': 'short', 'max': 100},
     ],
     'broadcaster': [
         {'label': 'Ваше имя и возраст', 'ph': 'например: Лёша 22', 'style': 'short', 'max': 80},
@@ -384,7 +384,7 @@ POSITION_QUESTIONS = {
 
 
 def questions_for(kind: str) -> list:
-    """4 вопроса ветки; fallback — moderator."""
+    """Вопросы ветки (4–5); fallback — moderator."""
     from services.staff_roles import normalize_position
     k = normalize_position(kind) or str(kind or '').lower()
     return list(POSITION_QUESTIONS.get(k) or POSITION_QUESTIONS['moderator'])
@@ -392,7 +392,8 @@ def questions_for(kind: str) -> list:
 
 def build_application_body(*, user, user_id: str, age: str = '', activity: str = '',
                            experience: str = '', reason: str = '', member=None,
-                           kind: str = None, answers: list = None) -> str:
+                           kind: str = None, answers: list = None,
+                           extra: str = '') -> str:
     """Текст карточки заявки V2 — тег юзера, id, вход, ответы с лейблами ветки."""
     mention = getattr(user, 'mention', None) or f'<@{user_id}>'
     lines = [
@@ -411,8 +412,8 @@ def build_application_body(*, user, user_id: str, age: str = '', activity: str =
             pairs.append((lab, val))
     if not pairs:
         qs = questions_for(kind or 'moderator')
-        vals = [age, activity, experience, reason]
-        for i, q in enumerate(qs[:4]):
+        vals = [age, activity, experience, reason, extra]
+        for i, q in enumerate(qs[:5]):
             pairs.append((q['label'], str(vals[i] if i < len(vals) else '') or '—'))
     for lab, val in pairs:
         lines.append(f'**{lab}**')
@@ -581,7 +582,7 @@ def _save_menu_state(data):
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffApplyModal(discord.ui.Modal):
-    """4 поля TextInput с лейблами конкретной должности."""
+    """TextInput-поля с лейблами конкретной должности (до 5 — лимит Discord)."""
 
     def __init__(self, role_name: str):
         from services.staff_roles import normalize_position, position_label
@@ -593,7 +594,7 @@ class StaffApplyModal(discord.ui.Modal):
         self.kind = kind
         self.q_meta = qs
         self._inputs = []
-        for q in qs[:4]:
+        for q in qs[:5]:
             style = (discord.TextStyle.paragraph
                      if q.get('style') == 'paragraph'
                      else discord.TextStyle.short)
@@ -608,15 +609,15 @@ class StaffApplyModal(discord.ui.Modal):
             self.add_item(ti)
         # legacy aliases для тестов / старых путей
         self.age = self._inputs[0]
-        self.activity = self._inputs[1]
-        self.experience = self._inputs[2]
-        self.reason = self._inputs[3]
+        self.activity = self._inputs[1] if len(self._inputs) > 1 else self._inputs[0]
+        self.experience = self._inputs[2] if len(self._inputs) > 2 else self._inputs[0]
+        self.reason = self._inputs[3] if len(self._inputs) > 3 else self._inputs[0]
 
     def _answer_values(self):
         vals = [str(ti.value or '').strip() for ti in self._inputs]
         while len(vals) < 4:
             vals.append('')
-        return vals[:4]
+        return vals
 
     async def on_submit(self, interaction: discord.Interaction):
         # defer сразу: доставка карточки кураторам может занять >3с
@@ -648,10 +649,15 @@ class StaffApplyModal(discord.ui.Modal):
                 except Exception as _fx:
                     log.debug('staff apply bl deny: %s', _fx)
             return
-        v1, v2, v3, v4 = self._answer_values()
+        vals = self._answer_values()
+        v1 = vals[0] if vals else ''
+        v2 = vals[1] if len(vals) > 1 else ''
+        v3 = vals[2] if len(vals) > 2 else ''
+        v4 = vals[3] if len(vals) > 3 else ''
+        v5 = vals[4] if len(vals) > 4 else ''
         answers = [
             {'label': self.q_meta[i]['label'], 'value': val}
-            for i, val in enumerate((v1, v2, v3, v4))
+            for i, val in enumerate(vals)
             if i < len(self.q_meta)
         ]
         apps = load_apps()
@@ -667,6 +673,7 @@ class StaffApplyModal(discord.ui.Modal):
             "activity": v2,
             "experience": v3,
             "reason": v4,
+            "extra": v5,
             "answers": answers,
             "status": "pending",
             "submitted_at": submitted_ts,
@@ -689,7 +696,7 @@ class StaffApplyModal(discord.ui.Modal):
                 body = build_application_body(
                     user=interaction.user, user_id=user_id,
                     age=v1, activity=v2, experience=v3, reason=v4,
-                    member=member, kind=kind, answers=answers)
+                    extra=v5, member=member, kind=kind, answers=answers)
                 # content: пинг куратора + тег заявителя (чтобы кликнуть профиль)
                 ping_bits = []
                 if tag:

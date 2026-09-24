@@ -257,22 +257,34 @@ check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
 print('== 3b. Per-branch questions ==')
 for kind, needle in (
         ('Helper', 'предлагать идеи'),
-        ('Eventsmod', 'ивенты умеете'),
+        ('Eventsmod', 'часовой пояс'),
         ('Broadcaster', 'стримите'),
 ):
     m = SA.StaffApplyModal(role_name=kind)
     labels = [ti.label for ti in m._inputs]
-    check(any(needle in lab for lab in labels),
+    check(any(needle.lower() in lab.lower() for lab in labels),
           f'{kind} has branch question «{needle}»', labels)
     check(all(len(lab) <= 45 for lab in labels),
           f'{kind} labels ≤45 chars')
 
+# Events: точные 5 вопросов со скрина
+m_ev = SA.StaffApplyModal(role_name='Eventsmod')
+ev_labels = [ti.label for ti in m_ev._inputs]
+check(len(ev_labels) == 5, f'Events has 5 fields', ev_labels)
+check(ev_labels[0].startswith('Ваше Имя и Возраст'), 'Events Q1 name/age')
+check('часовой пояс' in ev_labels[1].lower(), 'Events Q2 timezone')
+check('опыт' in ev_labels[2].lower(), 'Events Q3 experience')
+check('ПК и микрофон' in ev_labels[3] or 'пк и микрофон' in ev_labels[3].lower(),
+      'Events Q4 PC+mic')
+check('веб камера' in ev_labels[4].lower() or 'вебкамера' in ev_labels[4].lower().replace(' ', ''),
+      'Events Q5 webcam', ev_labels[4])
+
 # Event body labels
 body_ev = SA.build_application_body(
-    user=_User(), user_id='1', age='Саша 20', activity='мафия',
-    experience='3ч', reason='квиз', kind='event')
-check('Какие ивенты умеете' in body_ev and 'Идеи ивентов' in body_ev,
-      'Events body uses event questions')
+    user=_User(), user_id='1', age='Саша 20', activity='МСК',
+    experience='да, сервер X', reason='Да', extra='Да', kind='event')
+check('часовой пояс' in body_ev.lower() and 'веб камера' in body_ev.lower(),
+      'Events body uses event questions', body_ev[:300])
 body_br = SA.build_application_body(
     user=_User(), user_id='1', age='Лёша 22', activity='Twitch',
     experience='игры', reason='8ч', kind='broadcaster')
