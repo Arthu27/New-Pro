@@ -647,11 +647,7 @@ class AppealView(discord.ui.LayoutView):
             'embed': None,
             'embeds': [],
         }
-        if banned_uid:
-            edit_kw['content'] = f'<@{banned_uid}>'
-            edit_kw['allowed_mentions'] = discord.AllowedMentions(users=True)
-        else:
-            edit_kw['content'] = None
+        # V2: без content
         try:
             await interaction.response.edit_message(**edit_kw)
         except Exception as _ed:
@@ -2169,8 +2165,9 @@ class Appeals(commands.Cog):
         if card_file is not None:
             kw['file'] = card_file
         if banned_uid:
-            kw['content'] = f'<@{banned_uid}>'
-            kw['allowed_mentions'] = discord.AllowedMentions(users=True)
+            # V2 запрещает content вместе с LayoutView — тег уже в body;
+            # отдельный пинг шлёт _ping_mod_role.
+            pass
         # снимок для add_view после рестарта — иначе claim сотрёт карточку
         item['card_v2'] = {
             'title': snap.get('title') or '',

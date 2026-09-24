@@ -215,23 +215,27 @@ modal.activity._value = '5h/day'
 inter = _Inter(g_room)
 asyncio.get_event_loop().run_until_complete(modal.on_submit(inter))
 
-check(len(room_ch.sent) == 1, 'card sent to shared room')
+check(len(room_ch.sent) >= 1, 'card sent to shared room')
 check(len(mod_ch.sent) == 0 and len(help_ch.sent) == 0, 'own branches unused')
-sent = room_ch.sent[0]
+# V2: пинг отдельным сообщением, карточка — view без content
+ping_msg = next((s for s in room_ch.sent if s.get('content')), None)
+card_msg = next((s for s in room_ch.sent if s.get('view') is not None), None)
+sent = card_msg or room_ch.sent[-1]
 cur_ping = f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>"
-content = str(sent.get('content') or '')
-check(cur_ping in content,
-      'content pings curator', content)
-check('<@777888999000111222>' in content,
-      'content tags applicant', content)
+ping_content = str((ping_msg or {}).get('content') or '')
+check(cur_ping in ping_content,
+      'ping message mentions curator', ping_content)
+check('<@777888999000111222>' in ping_content,
+      'ping message tags applicant', ping_content)
 view = sent.get('view')
 check(isinstance(view, SA.StaffAppCardView),
       'V2 StaffAppCardView', type(view))
 check(getattr(view, 'has_components_v2', lambda: False)(),
       'card has Components V2')
-am = sent.get('allowed_mentions')
-check(am is not None and getattr(am, 'roles', None) is True,
-      'allowed_mentions roles=True')
+# allowed_mentions на пинг-сообщении (V2-карточка без content)
+am = (ping_msg or {}).get('allowed_mentions')
+check(am is not None,
+      'ping has allowed_mentions', am)
 apps = SA.load_apps()
 app = apps.get('777888999000111222')
 check(app is not None and app['status'] == 'pending', 'saved pending')

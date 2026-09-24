@@ -1088,23 +1088,28 @@ def _hook_avatar(guild):
 
 
 async def _send_staff_card(channel, *, content=None, view=None):
-    """Карточка заявки через webhook V2, иначе от бота.
+    """Карточка заявки V2 (webhook или бот).
 
-    allowed_mentions: роли куратора + юзер заявителя (чтобы кликнуть профиль).
+    Components V2 запрещает поле content вместе с LayoutView — пинги
+    куратора/юзера либо в теле карточки, либо отдельным сообщением.
     """
     allowed = discord.AllowedMentions(roles=True, users=True)
+    # отдельный пинг (чтобы Discord реально уведомил роль/юзера)
+    if content:
+        try:
+            await channel.send(content, allowed_mentions=allowed)
+        except Exception as _ex:
+            log.debug('staff: ping before card: %s', _ex)
     hook = await _channel_webhook(channel)
     if hook is not None:
         try:
             return await hook.send(
-                content=content, view=view, wait=True,
+                view=view, wait=True,
                 username=HOOK_USERNAME,
-                avatar_url=_hook_avatar(getattr(channel, 'guild', None)),
-                allowed_mentions=allowed)
+                avatar_url=_hook_avatar(getattr(channel, 'guild', None)))
         except Exception as _ex:
             log.debug('staff: card webhook failed: %s', _ex)
-    return await channel.send(
-        content=content, view=view, allowed_mentions=allowed)
+    return await channel.send(view=view)
 
 
 async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
