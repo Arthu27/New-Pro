@@ -155,51 +155,59 @@ fb = ch.fetched.edits[0] if ch.fetched and ch.fetched.edits else {}
 check(set(fb.keys()) == {'view'}, f'fallback только view: {list(fb.keys())}')
 
 
-print('== 3. ensure menu публикует если menu пустой ==')
-published = []
+print('== 3. publish_appeal_menu больше не публикует (только ЛС) ==')
+purged = []
 
 
-async def _pub(channel):
-    published.append(channel.id)
-    return True, 'ok'
+async def _purge(guild):
+    purged.append(getattr(guild, 'id', 0))
+    return True
 
 
-cog.publish_appeal_menu = _pub
-cog._load = lambda gid: {'menu': {}, 'items': []}
+cog._purge_appeal_menu = _purge
+ch = SimpleNamespace(id=1544483947705008188, guild=SimpleNamespace(id=GID))
+ok3, info3 = _run(cog.publish_appeal_menu(ch))
+check(ok3 is False and 'ЛС' in info3, 'publish отказал, ссылка на ЛС', info3)
+check(purged == [GID], 'publish вызвал purge старого меню')
 
 
-async def _ach(guild):
-    return SimpleNamespace(id=1544483947705008188)
+print('== 4. purge снимает menu из state ==')
 
 
-cog._appeal_channel = _ach
-ok3 = _run(cog._ensure_appeal_menu(SimpleNamespace(id=GID)))
-check(ok3 is True and published == [1544483947705008188],
-      'ensure публикует меню когда его нет')
+class _MsgDel:
+    def __init__(self):
+        self.deleted = False
+
+    async def delete(self):
+        self.deleted = True
 
 
-print('== 4. ensure menu не трогает живое сообщение ==')
-published.clear()
-
-
-class _AliveCh:
+class _PurgeCh:
     id = 1544483947705008188
 
     async def fetch_message(self, mid):
-        return SimpleNamespace(id=mid)
+        return _MsgDel()
 
 
-async def _ach2(guild):
-    return _AliveCh()
+guild_p = SimpleNamespace(id=GID, get_channel=lambda cid: _PurgeCh())
+bot.get_channel = lambda cid: _PurgeCh()
+state_p = {'menu': {'message_id': 999, 'channel_id': 1544483947705008188},
+           'items': []}
+saved = {}
 
 
-cog._appeal_channel = _ach2
-cog._load = lambda gid: {
-    'menu': {'message_id': 999, 'channel_id': 1544483947705008188},
-    'items': []}
-ok4 = _run(cog._ensure_appeal_menu(SimpleNamespace(id=GID)))
-check(ok4 is True and published == [],
-      'ensure не пересоздаёт живое меню')
+def _save(gid, st):
+    saved['menu'] = st.get('menu')
+
+
+cog._load = lambda gid: state_p
+cog._save = _save
+# restore real purge (was stubbed)
+from cogs.appeals import Appeals as _A
+cog._purge_appeal_menu = _A._purge_appeal_menu.__get__(cog, Appeals)
+ok4 = _run(cog._purge_appeal_menu(guild_p))
+check(ok4 is True and saved.get('menu') is None,
+      'purge очистил menu в state')
 
 
 print('== 5. repair вызывает finalize для rejected ==')
