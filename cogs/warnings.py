@@ -249,19 +249,38 @@ class warnings(commands.Cog):
             log.error(f"Зеркалирование предупреждений в JSON: {e}")
 
     async def _sync_warn_level_roles(self, guild, member, warn_count):
-        """Роль уровня варна (панель → «Роли наказаний»).
+        """Роль уровня варна — только для стаффа (helper+), с 3 варнов.
 
-        Выдаёт роль ближайшего уровня (≤ warn_count) и снимает роли
-        предыдущих уровней; при снятии варна уровень падает — роль
-        пересчитывается. Нет выбранных warn-ролей — вообще ничего не делает.
+        Заказ 2026-09-24: роль warn не для обычных участников. Стаффу при
+        ≥3 варнах выдаём роль на неделю (temps), потом авто-снятие.
+        Не-стаффу любые warn-роли снимаем.
         """
         try:
             from services import punish_roles as PR
+            from services.staff_hierarchy import best_mapped_tier, RANK
+            mapped = best_mapped_tier(member)
+            is_staff = RANK.get(mapped, -1) >= RANK.get('helper', 1)
+            have = {getattr(r, 'id', None)
+                    for r in (getattr(member, 'roles', None) or [])}
+
+            if not is_staff:
+                # снять все warn-уровни у обычных
+                _add, remove_ids = PR.level_transition(guild.id, 0)
+                for rid in remove_ids or list(PR.warn_levels(PR.get(guild.id)).values()):
+                    if rid not in have:
+                        continue
+                    role = guild.get_role(int(rid))
+                    if role is None:
+                        continue
+                    await member.remove_roles(
+                        role, reason='Роль warn только для стаффа')
+                    log.info('[WARNS] снята warn-роль %s с не-стаффа %s',
+                             role.name, member)
+                return
+
             add_id, remove_ids = PR.level_transition(guild.id, warn_count)
             if not add_id and not remove_ids:
                 return
-            have = {getattr(r, 'id', None)
-                    for r in (getattr(member, 'roles', None) or [])}
             for rid in remove_ids:
                 if rid not in have:
                     continue
@@ -270,6 +289,10 @@ class warnings(commands.Cog):
                     continue
                 await member.remove_roles(
                     role, reason=f'Уровень варнов изменился ({warn_count})')
+                try:
+                    PR.clear(guild.id, member.id, rid)
+                except Exception:
+                    pass
                 log.info('[WARNS] снята роль уровня %s с %s (варнов: %s)',
                          role.name, member, warn_count)
             if add_id and add_id not in have:
@@ -277,8 +300,11 @@ class warnings(commands.Cog):
                 if role is None:
                     return
                 await member.add_roles(
-                    role, reason=f'Уровень варнов: {warn_count}')
-                log.info('[WARNS] выдана роль уровня %s → %s (варнов: %s)',
+                    role, reason=f'Стафф: {warn_count} варнов → роль на неделю')
+                import time as _time
+                PR.add_temp(guild.id, member.id, role.id,
+                            _time.time() + 7 * 86400)
+                log.info('[WARNS] выдана роль %s → %s (варнов: %s, 7 дн.)',
                          role.name, member, warn_count)
         except Exception as _ex:
             log.debug('[WARNS] роли уровней варна: %s', _ex)
@@ -454,7 +480,7 @@ class warnings(commands.Cog):
         guild = interaction.guild
         await self._sync_warn_level_roles(guild, user, total)
 
-        # Варн → сброс прогрессии мута (снова с 1 часа)
+        # Варн → сброс прогрессии мута (снова с 2 часов)
         try:
             from services.mute_progression import reset_on_warn
             reset_on_warn(guild.id, user.id)

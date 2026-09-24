@@ -700,7 +700,7 @@ class Moderation (commands .Cog ):
                     embed =error_embed (_txt),
                     ephemeral =True )
                     return
-                # Срок мута: 30 мин … прогрессия по участнику (1ч → +2ч)
+                # Срок мута: 30 мин … прогрессия по участнику (2ч → +2ч)
                 if action in ('timeout','mute_chat','vmute'):
                     try :
                         from services .staff_limits import (
@@ -1081,10 +1081,12 @@ class Moderation (commands .Cog ):
                     log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :
                     from cogs.logs import send_action_log
+                    # ссылку на демку в лог не пишем — файлы уходят отдельной
+                    # карточкой в канал доказательств после мута
                     await send_action_log(
                         guild, action, user, interaction.user,
                         reason=reason, case_id=case_id,
-                        duration=amount, proof=proof_link)
+                        duration=amount, proof=None)
                 except Exception as _log_e :
                     log .warning (f'[MODPANEL] send_log: {_log_e}')
 
@@ -1103,13 +1105,8 @@ class Moderation (commands .Cog ):
                 except Exception as _ex:
                     _log.debug("_execute_mod_action(): подавлено: %s", _ex)
 
-                try :
-                    if action in _punish_actions and (proof_link or '').strip ():
-                        from cogs .proof_cog import try_deliver_proof
-                        _p_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
-                        await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
-                except Exception as _pe :
-                    log .warning (f'[MODPANEL] демка: {_pe}')
+                # try_deliver_proof по ссылке больше не зовём — только файлы
+                # через start_proof_collection (меню после мута).
             except discord .Forbidden :
                 await _respond (interaction ,
                 embed =error_embed (await _forbidden_reason (guild ,user ,action ),"Не хватило прав у бота"),ephemeral =True )
@@ -1312,7 +1309,7 @@ class Moderation (commands .Cog ):
                 return False ,_hdeny
         except Exception as _hex :
             _log .debug ('[MODPANEL] hierarchy: %s',_hex )
-        # Срок мута: 30 мин … прогрессия по участнику (1ч → +2ч до варна).
+        # Срок мута: 30 мин … прогрессия по участнику (2ч → +2ч до варна).
         if action in ('timeout','mute_chat','vmute') and amount :
             try :
                 from services .staff_limits import mute_duration_error as _pderr
@@ -2867,7 +2864,7 @@ class ModActionModal(discord.ui.Modal):
             else:
                 self.amount = discord.ui.TextInput(
                     label="На сколько? (30 мин … 2 ч)", required=True,
-                    placeholder="30, 60, 2ч",
+                    placeholder="30, 60, 2ч — первый потолок 2 часа",
                 )
             self.add_item(self.amount)
         self.reason = discord.ui.TextInput(
@@ -2875,17 +2872,8 @@ class ModActionModal(discord.ui.Modal):
             style=discord.TextStyle.short,
         )
         self.add_item(self.reason)
-        # Доказательство к наказанию — всегда НЕОБЯЗАТЕЛЬНОЕ поле
-        # (заказ владельца 2026-09-24). Можно приложить ссылку, можно пусто.
-        # Строгий режим панели (тумблер) больше не делает поле required=True.
-        if action in _PUNISH_MODPANEL:
-            self.proof = discord.ui.TextInput(
-                label="Доказательство (ссылка, необязательно)",
-                required=False,
-                placeholder="https://… — можно оставить пустым",
-                max_length=500,
-            )
-            self.add_item(self.proof)
+        # Доказательство — НЕ в модалке (заказ 2026-09-24): после мута
+        # появляется меню с загрузкой файлов. Ссылок в наказании нет.
 
     async def on_submit(self, interaction: discord.Interaction):
         # thinking=True СРАЗУ — иначе Discord «не ответило», ACL/лимиты после.
@@ -2894,7 +2882,6 @@ class ModActionModal(discord.ui.Modal):
             return
         _t = getattr(self, 'target', None)
         _a = getattr(self, 'amount', None)
-        _p = getattr(self, 'proof', None)
         _reason = (self.reason.value or "").strip() or "Не указана"
         _target_value = self.fixed_target_id or ((_t.value or "").strip() if _t else "")
         await self.cog._execute_mod_action(
@@ -2903,7 +2890,7 @@ class ModActionModal(discord.ui.Modal):
             _target_value,
             _reason,
             (_a.value or "").strip() if _a else "5",
-            proof_link=(_p.value or "").strip() if _p else "",
+            proof_link="",
         )
 
 

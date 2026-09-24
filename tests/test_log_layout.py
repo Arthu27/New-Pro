@@ -246,9 +246,9 @@ lsrc = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
 check('def _duration_cell' in lsrc and 'def _profile_cell' in lsrc
       and 'def _history_cell' in lsrc,
       'срок / профиль / история собраны в столбик')
-check('duration=amount' in open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
-      and 'proof=proof_link' in open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read(),
-      '/modpanel передаёт срок и доказательство в лог')
+_msrc = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+check('duration=amount' in _msrc and 'proof=None' in _msrc,
+      '/modpanel передаёт срок; ссылку на демку в лог не пишет')
 asrc = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
 check('_styled_log_embed' in asrc and 'Оценка рассмотрения' in asrc
       and '_rate_log_embed' in asrc and '_rate_prompt_embed' in asrc

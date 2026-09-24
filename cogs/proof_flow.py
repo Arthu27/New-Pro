@@ -301,16 +301,138 @@ async def handle_review_decision(interaction: discord.Interaction,
 
 # ─── сборы медиа после мута ───────────────────────────────────────────────
 
+class ProofCollectView(discord.ui.LayoutView):
+    """Публичное меню после мута: скинь файлы → Готово / Отмена."""
+
+    def __init__(self, *, bot, session_key, moderator_id, target_mention,
+                 mute_label, minutes_left, file_count=0, expired=False,
+                 status_line=None):
+        super().__init__(timeout=None)
+        self.bot = bot
+        self.session_key = session_key
+        self.moderator_id = int(moderator_id)
+        self._target = target_mention
+        self._mute = mute_label
+        self._mins = minutes_left
+        self._n = file_count
+        self._expired = expired
+        self._status = status_line
+        self._rebuild()
+
+    def _rebuild(self):
+        self.clear_items()
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        if not V2_AVAILABLE:
+            return
+        from discord import ui as _ui
+        if self._expired:
+            body = (
+                f'# ⏰ Время вышло\n'
+                f'-# HAKUMO · доказательства\n\n'
+                f'Срок загрузки демки к муту **{self._target}** закончился.\n'
+                f'Наказание **остаётся**. Модератор может загрузить демку '
+                f'позже в панели «Доказательства».'
+            )
+            if self._status:
+                body = f'{body}\n\n{self._status}'
+            self.add_item(black_container(
+                _ui.TextDisplay(body),
+                accent=0x99AAB5,
+            ))
+            return
+        body = (
+            f'# 📎 Доказательство\n'
+            f'-# HAKUMO · после мута\n\n'
+            f'**{self._mute}** · {self._target}\n'
+            f'Скинь сюда **фото или видео** прямо файлами '
+            f'(можно несколько сообщений).\n'
+            f'Файлов: **{self._n}/{COLLECT_MAX_FILES}** · '
+            f'осталось ~**{self._mins}** мин.\n'
+            f'-# без ссылок — только вложения'
+        )
+        if self._status:
+            body = f'{body}\n\n{self._status}'
+        done = discord.ui.Button(
+            label='Готово', style=discord.ButtonStyle.success,
+            emoji='✅', custom_id=f'proofcol:done:{self.moderator_id}')
+        cancel = discord.ui.Button(
+            label='Отмена', style=discord.ButtonStyle.secondary,
+            emoji='✖️', custom_id=f'proofcol:cancel:{self.moderator_id}')
+        done.callback = self._on_done
+        cancel.callback = self._on_cancel
+        row = _ui.ActionRow()
+        row.add_item(done)
+        row.add_item(cancel)
+        self.add_item(black_container(
+            _ui.TextDisplay(body),
+            _ui.Separator(),
+            row,
+            accent=ACCENT_PENDING,
+        ))
+
+    async def _mod_only(self, interaction) -> bool:
+        if int(getattr(interaction.user, 'id', 0)) != self.moderator_id:
+            await interaction.response.send_message(
+                'Это меню другого модератора.', ephemeral=True)
+            return False
+        return True
+
+    async def _on_done(self, interaction: discord.Interaction):
+        if not await self._mod_only(interaction):
+            return
+        await interaction.response.defer()
+        sess = _COLLECTING.get(self.session_key)
+        if not sess:
+            await interaction.followup.send(
+                'Сессия уже закрыта.', ephemeral=True)
+            return
+        files = list(sess.get('files') or [])
+        if not files:
+            await interaction.followup.send(
+                'Сначала прикрепи фото или видео в этот канал.',
+                ephemeral=True)
+            return
+        task = sess.get('task')
+        if task and not task.done():
+            task.cancel()
+        _COLLECTING.pop(self.session_key, None)
+        guild = interaction.guild
+        mod = interaction.user
+        try:
+            self._expired = True
+            self._status = f'✅ **Отправлено на проверку** — {len(files)} файл(ов)'
+            self._n = len(files)
+            self._rebuild()
+            await interaction.message.edit(view=self)
+        except Exception as _ex:
+            log.debug('collect done edit: %s', _ex)
+        await _finalize_collection(self.bot, guild, mod, sess, files)
+
+    async def _on_cancel(self, interaction: discord.Interaction):
+        if not await self._mod_only(interaction):
+            return
+        await interaction.response.defer()
+        sess = _COLLECTING.pop(self.session_key, None)
+        if sess and sess.get('task') and not sess['task'].done():
+            sess['task'].cancel()
+        self._expired = True
+        self._status = f'✖️ **Отменено** — {interaction.user.mention}'
+        self._rebuild()
+        try:
+            await interaction.message.edit(view=self)
+        except Exception as _ex:
+            log.debug('collect cancel edit: %s', _ex)
+
+
 async def start_proof_collection(*, bot, guild, channel, moderator, target,
                                  mute_action: str, reason: str, case_id=0,
                                  notify_interaction=None):
-    """После успешного мута: попросить фото/видео в чате и собрать сессию."""
+    """После успешного мута: публичное меню + сбор фото/видео файлами."""
     if mute_action not in MUTE_PROOF_ACTIONS:
         return
-    if guild is None or moderator is None or target is None:
+    if guild is None or moderator is None or target is None or channel is None:
         return
     key = _session_key(guild.id, moderator.id)
-    # уже собираем — не дублируем
     if key in _COLLECTING:
         old = _COLLECTING[key]
         if old.get('task') and not old['task'].done():
@@ -325,34 +447,39 @@ async def start_proof_collection(*, bot, guild, channel, moderator, target,
         'mute_action': mute_action,
         'reason': (reason or '')[:900],
         'case_id': int(case_id or 0),
-        'files': [],  # list of {filename, data, content_type}
+        'files': [],
         'started': asyncio.get_event_loop().time(),
         'task': None,
+        'menu_msg_id': None,
     }
     _COLLECTING[key] = session
 
-    hint = (
-        f'**Доказательство к муту** · {getattr(target, "mention", target)}\n'
-        f'Скинь сюда **фото или видео** (можно несколько сообщений).\n'
-        f'Когда закончишь — напиши **`готово`**.\n'
-        f'-# ждём до {COLLECT_TIMEOUT_SEC // 60} мин · макс. {COLLECT_MAX_FILES} файлов'
+    mins = max(1, COLLECT_TIMEOUT_SEC // 60)
+    view = ProofCollectView(
+        bot=bot,
+        session_key=key,
+        moderator_id=moderator.id,
+        target_mention=getattr(target, 'mention', str(target)),
+        mute_label=action_label(mute_action),
+        minutes_left=mins,
+        file_count=0,
     )
+    menu_msg = None
     try:
-        if notify_interaction is not None:
-            # уже ответили confirm — followup
-            send = getattr(notify_interaction, 'followup', None)
-            if send is not None:
-                await send.send(hint, ephemeral=True)
-            else:
-                await channel.send(
-                    f'{moderator.mention} {hint}',
-                    delete_after=COLLECT_TIMEOUT_SEC)
-        else:
-            await channel.send(
-                f'{moderator.mention} {hint}',
-                delete_after=COLLECT_TIMEOUT_SEC)
+        menu_msg = await channel.send(
+            content=f'{moderator.mention}',
+            view=view,
+        )
+        session['menu_msg_id'] = getattr(menu_msg, 'id', None)
     except Exception as _ex:
-        log.debug('proof hint: %s', _ex)
+        log.warning('proof collect menu: %s', _ex)
+        try:
+            if notify_interaction is not None:
+                await notify_interaction.followup.send(
+                    f'Скинь фото/видео демки сюда, потом нажми **Готово** '
+                    f'(~{mins} мин).', ephemeral=True)
+        except Exception:
+            pass
 
     async def _timeout_watch():
         try:
@@ -364,21 +491,63 @@ async def start_proof_collection(*, bot, guild, channel, moderator, target,
             _COLLECTING.pop(key, None)
             if files:
                 await _finalize_collection(bot, guild, moderator, sess, files)
-            else:
+                return
+            # Время вышло — публично и красиво
+            expired = ProofCollectView(
+                bot=bot,
+                session_key=key,
+                moderator_id=moderator.id,
+                target_mention=f'<@{sess["target_id"]}>',
+                mute_label=action_label(sess.get('mute_action') or ''),
+                minutes_left=0,
+                file_count=0,
+                expired=True,
+                status_line=None,
+            )
+            mid = sess.get('menu_msg_id')
+            if mid and channel is not None:
                 try:
-                    await channel.send(
-                        f'{moderator.mention} время на демку вышло — '
-                        f'мут на <@{sess["target_id"]}> остаётся без проверки. '
-                        f'Загрузи демку позже в панели «Доказательства».',
-                        delete_after=60)
-                except Exception:
-                    pass
+                    msg = await channel.fetch_message(int(mid))
+                    await msg.edit(content=None, view=expired)
+                    return
+                except Exception as _ex:
+                    log.debug('timeout edit menu: %s', _ex)
+            try:
+                await channel.send(view=expired)
+            except Exception as _ex:
+                log.debug('timeout send: %s', _ex)
         except asyncio.CancelledError:
             return
         except Exception as _ex:
             log.warning('proof timeout watch: %s', _ex)
 
     session['task'] = asyncio.create_task(_timeout_watch())
+
+
+async def _refresh_collect_menu(channel, sess):
+    """Обновить счётчик файлов на публичном меню."""
+    mid = sess.get('menu_msg_id')
+    bot = sess.get('_bot')
+    if not mid or channel is None or bot is None:
+        return
+    try:
+        left = max(1, int(
+            (COLLECT_TIMEOUT_SEC - (
+                asyncio.get_event_loop().time() - sess.get('started', 0)
+            )) // 60))
+        view = ProofCollectView(
+            bot=bot,
+            session_key=_session_key(sess['guild_id'], sess['mod_id']),
+            moderator_id=sess['mod_id'],
+            target_mention=f'<@{sess["target_id"]}>',
+            mute_label=action_label(sess.get('mute_action') or ''),
+            minutes_left=left,
+            file_count=len(sess.get('files') or []),
+        )
+        msg = await channel.fetch_message(int(mid))
+        await msg.edit(view=view)
+    except Exception as _ex:
+        log.debug('refresh collect menu: %s', _ex)
 
 
 async def on_moderator_message(bot, message: discord.Message) -> bool:
@@ -389,16 +558,12 @@ async def on_moderator_message(bot, message: discord.Message) -> bool:
     sess = _COLLECTING.get(key)
     if not sess:
         return False
-    # только тот же текстовый канал, где выдали мут (или любой на сервере —
-    # удобнее разрешить весь гильд, но юзер сказал «в чате»)
+    sess['_bot'] = bot
     if sess.get('channel_id') and message.channel.id != sess['channel_id']:
-        # разрешим и proof-канал на всякий
         try:
             from services.channel_routes import resolve_route
             pc = resolve_route(message.guild.id, 'proof_channel', message.guild)
-            if pc and message.channel.id == int(pc):
-                pass
-            else:
+            if not (pc and message.channel.id == int(pc)):
                 return False
         except Exception:
             return False
@@ -420,8 +585,7 @@ async def on_moderator_message(bot, message: discord.Message) -> bool:
             if len(raw) > LOCAL_MEDIA_MAX:
                 try:
                     await message.reply(
-                        f'Файл `{att.filename}` слишком большой '
-                        f'(>{LOCAL_MEDIA_MAX // 1024 // 1024} МБ) — пропущен.',
+                        f'Файл `{att.filename}` слишком большой — пропущен.',
                         delete_after=20)
                 except Exception:
                     pass
@@ -438,15 +602,9 @@ async def on_moderator_message(bot, message: discord.Message) -> bool:
             await message.add_reaction('📎' if n < COLLECT_MAX_FILES else '✅')
         except Exception:
             pass
+        await _refresh_collect_menu(message.channel, sess)
         if n >= COLLECT_MAX_FILES or content in DONE_WORDS:
             return await _finish_session(bot, message, key, sess)
-        try:
-            await message.channel.send(
-                f'Принято **{n}/{COLLECT_MAX_FILES}**. '
-                f'Ещё файлы или напиши **`готово`**.',
-                delete_after=15)
-        except Exception:
-            pass
         return True
 
     if content in DONE_WORDS:
@@ -457,11 +615,20 @@ async def on_moderator_message(bot, message: discord.Message) -> bool:
         if task:
             task.cancel()
         _COLLECTING.pop(key, None)
-        try:
-            await message.reply(
-                'Сбор демки отменён. Мут остаётся.', delete_after=20)
-        except Exception:
-            pass
+        mid = sess.get('menu_msg_id')
+        if mid:
+            try:
+                msg = await message.channel.fetch_message(int(mid))
+                expired = ProofCollectView(
+                    bot=bot, session_key=key,
+                    moderator_id=sess['mod_id'],
+                    target_mention=f'<@{sess["target_id"]}>',
+                    mute_label=action_label(sess.get('mute_action') or ''),
+                    minutes_left=0, expired=True,
+                    status_line=f'✖️ **Отменено** — {message.author.mention}')
+                await msg.edit(content=None, view=expired)
+            except Exception:
+                pass
         return True
 
     return False

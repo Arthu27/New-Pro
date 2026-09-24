@@ -232,6 +232,11 @@ def apply_role_seed(force=False, guild_id=None):
                         except (TypeError, ValueError):
                             pass
             if added:
+                # миграция: warn_1 → warn_3 (роль для стаффа с 3 варнов)
+                if 'warn_3' in roles and 'warn_1' in roles:
+                    roles.pop('warn_1', None)
+                    if 1 in levels:
+                        levels = [x for x in levels if int(x) != 1]
                 row['roles'] = roles
                 if levels:
                     row['warn_levels'] = sorted(int(x) for x in levels)
@@ -240,6 +245,34 @@ def apply_role_seed(force=False, guild_id=None):
                 report['punish_added'] = added
                 if 'ban' in added:
                     report['ban_role'] = True
+            else:
+                # даже без новых ключей: убрать устаревший warn_1 если есть warn_3 в сиде
+                if (punish_seed.get('warn_3')
+                        and int((roles.get('warn_1') or 0))
+                        and not int((roles.get('warn_3') or 0))):
+                    roles['warn_3'] = int(punish_seed['warn_3'])
+                    roles.pop('warn_1', None)
+                    levels = sorted(set(
+                        [int(x) for x in (row.get('warn_levels') or []) if int(x) != 1]
+                        + [3]))
+                    row['roles'] = roles
+                    row['warn_levels'] = levels
+                    punish[str(gid)] = row
+                    _write_json(PUNISH_PATH, punish)
+                    report['punish_added'] = ['warn_3']
+                elif (punish_seed.get('warn_3')
+                      and int((roles.get('warn_1') or 0))
+                      and int((roles.get('warn_3') or 0))):
+                    roles.pop('warn_1', None)
+                    levels = [int(x) for x in (row.get('warn_levels') or [])
+                              if int(x) != 1]
+                    if 3 not in levels:
+                        levels.append(3)
+                    row['roles'] = roles
+                    row['warn_levels'] = sorted(levels)
+                    punish[str(gid)] = row
+                    _write_json(PUNISH_PATH, punish)
+                    report['punish_added'] = ['warn_1→dropped']
         elif punish_seed and not gid:
             _log.debug('punish-роли пропущены: боевой MAIN_GUILD_ID не задан')
 

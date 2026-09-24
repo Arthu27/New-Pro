@@ -1,6 +1,6 @@
 {
-  "version": 7,
-  "_comment": "v7: +warn_1 роль варнов (1545468739221327942). v6: helper/mod/master/curator.",
+  "version": 8,
+  "_comment": "v8: warn_3 для стаффа (не с 1). mute 2ч+. v7 warn_1 убран.",
   "role_map": {
     "803553848396349510": "mod",
     "948969471916249119": "helper",
@@ -12,7 +12,7 @@
     "ban": 1083106265422643251,
     "mute": 943510457833095208,
     "vmute": 943510458621632522,
-    "warn_1": 1545468739221327942
+    "warn_3": 1545468739221327942
   },
   "action_default": {
     "tiers": ["mod", "master", "curator", "admin"],

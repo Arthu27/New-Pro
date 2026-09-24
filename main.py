@@ -1208,6 +1208,21 @@ async def on_ready():
     except Exception as _ex:
         _log.debug("on_ready(): role_seed: %s", _ex)
 
+    # Снять устаревшие warn-роли со всех (теперь только стафф ≥3 / 7 дней)
+    try:
+        async def _strip_warns():
+            try:
+                from services.warn_role_strip import strip_warn_roles_once
+                _sr = await strip_warn_roles_once(bot, guild_id=_seed_gid or None)
+                if _sr.get('applied') and _sr.get('stripped'):
+                    print(f"[РОЛИ] Warn strip: снято {_sr.get('stripped')} "
+                          f"выдач ролей {_sr.get('roles')}")
+            except Exception as _sx:
+                _log.debug('on_ready(): warn_strip: %s', _sx)
+        bot.loop.create_task(_strip_warns())
+    except Exception as _ex:
+        _log.debug("on_ready(): warn_strip schedule: %s", _ex)
+
     # Event Mod (852634463535759461) → /event-panel
     try:
         from services.event_mod_acl_seed import apply_event_mod_acl_seed
