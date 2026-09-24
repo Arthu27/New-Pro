@@ -1630,16 +1630,42 @@ class Appeals(commands.Cog):
         """Починить карточки: select вместо мёртвых кнопок; решённые — без меню.
 
         После смены UI (кнопки → select) и сбоя V2-edit карточка оставалась
-        «новой» хотя в базе уже rejected.
+        «новой» хотя в базе уже rejected. Между правками — пауза, иначе
+        Discord 429 и часть карточек не обновляется.
         """
+        import asyncio
         state = self._load(guild.id)
         fixed = 0
+        skipped = 0
         appeal_ch = None
         try:
             appeal_ch = await self._appeal_channel(guild)
         except Exception as _ex:
             log.debug('appeals: repair channel: %s', _ex)
             appeal_ch = None
+
+        async def _fetch_with_retry(ch, mid, aid, tries=4):
+            for attempt in range(tries):
+                try:
+                    return await ch.fetch_message(mid)
+                except discord.NotFound:
+                    return None
+                except discord.HTTPException as _ex:
+                    # 429 / краткий сбой сети
+                    wait = 1.5 * (attempt + 1)
+                    try:
+                        if getattr(_ex, 'status', None) == 429:
+                            wait = float(getattr(_ex, 'retry_after', None) or wait)
+                    except Exception:
+                        pass
+                    log.debug('appeals: repair fetch #%s try=%s: %s (sleep %.1fs)',
+                              aid, attempt + 1, _ex, wait)
+                    await asyncio.sleep(wait)
+                except Exception as _ex:
+                    log.debug('appeals: repair fetch #%s: %s', aid, _ex)
+                    return None
+            return None
+
         for item in list(state.get('items') or []):
             mid = int(item.get('message_id') or 0)
             if not mid:
@@ -1654,10 +1680,9 @@ class Appeals(commands.Cog):
                     item['card_channel_id'] = int(appeal_ch.id)
             if ch is None:
                 continue
-            try:
-                msg = await ch.fetch_message(mid)
-            except Exception as _ex:
-                log.debug('appeals: repair fetch #%s: %s', item.get('id'), _ex)
+            msg = await _fetch_with_retry(ch, mid, item.get('id'))
+            if msg is None:
+                skipped += 1
                 continue
             status = str(item.get('status') or '')
             snap = dict(item.get('card_v2') or {})
@@ -1684,10 +1709,18 @@ class Appeals(commands.Cog):
                         message=msg,
                         closed=(status == 'closed'))
                     fixed += 1
+                # не долбить Discord подряд
+                await asyncio.sleep(0.75)
+            except discord.HTTPException as _ex:
+                wait = float(getattr(_ex, 'retry_after', None) or 2.0)
+                log.warning('appeals: repair #%s http: %s (sleep %.1fs)',
+                            item.get('id'), _ex, wait)
+                await asyncio.sleep(wait)
             except Exception as _ex:
                 log.debug('appeals: repair #%s: %s', item.get('id'), _ex)
-        if fixed:
-            log.info('appeals: починено карточек %s на guild=%s', fixed, guild.id)
+        if fixed or skipped:
+            log.info('appeals: починено карточек %s (пропуск %s) на guild=%s',
+                     fixed, skipped, guild.id)
         return fixed
 
     async def _appeal_channel(self, guild):
