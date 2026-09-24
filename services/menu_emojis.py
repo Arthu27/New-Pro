@@ -96,7 +96,10 @@ _sync_task = None  # asyncio.Task | None — один фоновый sync
 
 
 def _emoji_name(key: str) -> str:
-    # w2_ = чистый procedural-пак (без мусора curated-арта)
+    # w2_ = модпанель pack; w3_ = набор (accept/decline/eventsmod/broadcaster)
+    # после смены арта на чёрный glass без цветных ореолов.
+    if key in ('accept', 'decline', 'eventsmod', 'broadcaster'):
+        return f'hakumo_w3_{key}'
     return f'hakumo_w2_{key}'
 
 
