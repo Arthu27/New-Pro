@@ -577,6 +577,9 @@ check('1312436222307860490' in open(os.path.join(repo, 'config.py'),
       'каналы наборов/заявок в Config')
 check('blacklist' in src_cog_full and 'is_blacklisted' in src_cog_full,
       'чёрный список: блок повторных заявок')
+check('name="staff-panel"' not in src_cog_full
+      and '_ensure_staff_menu' in src_cog_full,
+      'меню набора публикуется само, без /staff-panel')
 
 
 class _GCh:

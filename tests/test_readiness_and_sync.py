@@ -96,7 +96,9 @@ g_full = Guild(roles=[Role(10, 'Хелпер'), Role(20, 'Модератор')],
 check(staff_apply_missing(g_full) == [], 'всё настроено — замечаний нет')
 
 src_cog = open(os.path.join(ROOT, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
-check('readiness_block' in src_cog, '/staff-panel подключён к проверке готовности')
+check('_ensure_staff_menu' in src_cog,
+      'меню набора публикуется само при старте')
+check('name="staff-panel"' not in src_cog, '/staff-panel убран')
 
 # ═══ 2. Выключенные команды исчезают из Discord ═══════════════════════════
 print('== выключенные команды не попадают в Discord ==')

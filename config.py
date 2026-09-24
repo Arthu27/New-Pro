@@ -186,7 +186,7 @@ class Config:
     REQUIRED_ROLE_ID: int = _env_int('REQUIRED_ROLE_ID', 1474866958758576309)
     # Канал, куда падают заявки в команду (карточки кураторам).
     APPLY_CHANNEL_ID: int = _env_int('APPLY_CHANNEL_ID', 1312436222307860490)
-    # Канал меню набора (/staff-panel → баннер + select должностей).
+    # Канал меню набора (бот публикует сам при старте).
     STAFF_MENU_CHANNEL_ID: int = _env_int('STAFF_MENU_CHANNEL_ID', 1312429743865335939)
     # Куда /event-panel публикует панель ивентов (0 = канал из опции команды
     # или канал, где вызвали /event-panel). Задать snowflake ID текстового канала.

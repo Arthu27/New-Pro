@@ -315,10 +315,12 @@ inter3 = types.SimpleNamespace(
 loop.run_until_complete(StaffReviewView()._review(inter3, 'blacklist'))
 data = json.load(open('data/staff_apps.json'))
 check(data['u2']['status'] == 'blacklisted', 'blacklist: status')
-check(SA.is_blacklisted(77), 'blacklist: in file')
-check(not SA.is_blacklisted(999), 'blacklist: other free')
+check(SA.is_blacklisted(77, 'Helper'), 'blacklist: Helper ветка')
+check(not SA.is_blacklisted(77, 'Moderator'), 'blacklist: Moderator свободна')
+check(not SA.is_blacklisted(999, 'Helper'), 'blacklist: other free')
+check(SA.blacklisted_kinds(77) == ['helper'], 'blacklist: kinds list')
 
-# blocked re-apply
+# blocked re-apply только своей ветки
 class BlResp:
     def __init__(self):
         self._done = False
@@ -335,30 +337,40 @@ class BlResp:
         self._done = True
 
 
-bl_inter = types.SimpleNamespace(
-    user=types.SimpleNamespace(id=77),
-    response=BlResp(), guild=g)
-loop.run_until_complete(RoleSelect().callback(bl_inter))
-check(bl_inter.response.modal is None, 'blacklist blocks modal')
-
-ok_inter = types.SimpleNamespace(
-    user=types.SimpleNamespace(id=999),
-    response=BlResp(), guild=g)
-# RoleSelect needs values — set via patch
-rs = RoleSelect()
-rs._values = ['Helper']  # may not work
-# call with values property
-class RS(RoleSelect):
+class RSHelper(RoleSelect):
     @property
     def values(self):
         return ['Helper']
 
 
+class RSMod(RoleSelect):
+    @property
+    def values(self):
+        return ['Moderator']
+
+
+bl_inter = types.SimpleNamespace(
+    user=types.SimpleNamespace(id=77),
+    response=BlResp(), guild=g)
+loop.run_until_complete(RSHelper().callback(bl_inter))
+check(bl_inter.response.modal is None, 'Helper BL blocks Helper modal')
+
+bl_other = types.SimpleNamespace(
+    user=types.SimpleNamespace(id=77),
+    response=BlResp(), guild=g)
+loop.run_until_complete(RSMod().callback(bl_other))
+check(bl_other.response.modal is not None, 'Helper BL: Moderator still open')
+
 ok_inter2 = types.SimpleNamespace(
     user=types.SimpleNamespace(id=999),
     response=BlResp(), guild=g)
-loop.run_until_complete(RS().callback(ok_inter2))
+loop.run_until_complete(RSHelper().callback(ok_inter2))
 check(ok_inter2.response.modal is not None, 'non-bl can open modal')
+
+# нет staff-panel команды
+src = open(os.path.join(ROOT, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
+check('name="staff-panel"' not in src and '_ensure_staff_menu' in src,
+      'меню само, без /staff-panel')
 
 loop.close()
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

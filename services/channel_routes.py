@@ -78,10 +78,10 @@ ROUTE_SPECS = [
         'access': 'Админ',
         'step': None,
         'required': False,
-        'create_hint': 'Куда /staff-panel публикует меню (баннер + select должностей).',
-        'what': 'Постоянное меню набора в команду. По умолчанию — канал '
-                f'наборов ({STAFF_MENU_CHANNEL_ID}).',
-        'empty': f'Не задан — /staff-panel пишет в канал наборов ({STAFF_MENU_CHANNEL_ID}) или в канал вызова.',
+        'create_hint': 'Куда бот сам публикует меню набора (баннер + select должностей).',
+        'what': 'Постоянное меню набора в команду. Бот публикует его сам '
+                f'в канал наборов ({STAFF_MENU_CHANNEL_ID}) — slash не нужен.',
+        'empty': f'Не задан — бот пишет в канал наборов ({STAFF_MENU_CHANNEL_ID}).',
     },
     {
         'key': 'report_channel',
