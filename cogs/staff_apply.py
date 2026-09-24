@@ -1,7 +1,6 @@
 """
-Staff Apply — Набор в команду сервера
-Select menu для выбора роли + модальное окно заявки
-Тёмная тема, без эмодзи, русский язык
+Staff Apply — recruitment menu (Helper / Moderator / Eventsmod / Broadcaster).
+Components V2 LayoutView + webhook publish. English position labels.
 """
 
 MENU_GIF = "https://media.tenor.com/x8v1oNUOmg4AAAAC/rain-dark.gif"
@@ -23,7 +22,9 @@ log = get_logger("staff_apply")
 
 
 APPLY_CHANNEL_ID = Config.APPLY_CHANNEL_ID
+STAFF_MENU_CHANNEL_ID = getattr(Config, 'STAFF_MENU_CHANNEL_ID', 0)
 APPS_FILE = "data/staff_apps.json"
+BLACKLIST_FILE = "data/staff_blacklist.json"
 
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
@@ -156,11 +157,10 @@ def generate_staff_panel_bytes() -> io.BytesIO:
 
 
 def _apply_room(guild):
-    """Комната, куда идёт ВСЁ: апелляции и заявки в команду.
+    """Legacy-фолбек: комната апелляций, если канал заявок недоступен.
 
-    Маршрут «Комната апелляции» (1544483947705008188) — единая точка
-    «всё сюда, кроме логов» (владелец 2026-09-06). Синхронная: каналы
-    берём из кэша, без fetch — не нашли, значит комнаты нет на сервере.
+    Заявки в команду идут в APPLY_CHANNEL_ID / staff_apply_channel.
+    Эта комната — только запасной путь.
     """
     try:
         from services.channel_routes import (
@@ -184,25 +184,55 @@ def _apply_room(guild):
     return getter(cid) if callable(getter) else None
 
 
-def _curator_ping(guild):
-    """Тег роли куратора для карточки заявки.
+def menu_channel(guild):
+    """Куда публиковать меню набора: панель → KNOWN → Config → None."""
+    if not guild:
+        return None
+    try:
+        from services.channel_routes import (
+            get_route, KNOWN_CHANNELS, channel_on_guild, STAFF_MENU_CHANNEL_ID as _KNOWN_MENU)
+        cid = int(get_route(guild.id, 'staff_menu_channel') or 0)
+        if not cid:
+            cid = int(KNOWN_CHANNELS.get('staff_menu_channel') or _KNOWN_MENU or 0)
+        if not cid:
+            cid = int(STAFF_MENU_CHANNEL_ID or 0)
+        if cid:
+            ch = channel_on_guild(guild, cid)
+            if ch is not None:
+                return ch
+            getter = getattr(guild, 'get_channel', None)
+            return getter(cid) if callable(getter) else None
+    except Exception as _ex:
+        log.debug('staff_apply: menu_channel: %s', _ex)
+    cid = int(STAFF_MENU_CHANNEL_ID or 0)
+    if not cid:
+        return None
+    getter = getattr(guild, 'get_channel', None)
+    return getter(cid) if callable(getter) else None
 
-    Порядок: настройка панели/.env → известная роль куратора сервера
-    (владелец 2026-09-06). Тег ставим только если роль реально есть на
-    сервере — @несуществующая-роль в карточке не нужна."""
+
+def _curator_ping(guild, role_name: str = ''):
+    """Тег куратора СВОЕЙ ветки для карточки заявки.
+
+    Helper → × Отвечаю за Helper, Event → × Отвечаю за Eventsmod и т.д.
+    Тег только если роль реально есть на сервере.
+    """
     from services.staff_roles import (
-        curator_role_id, KNOWN_CURATOR_ROLE_ID)
+        curator_role_id_for, normalize_position, KNOWN_CURATOR_BY_KIND,
+        KNOWN_CURATOR_ROLE_ID)
     if not guild:
         return ''
-    cur = curator_role_id(
-        guild.id,
-        Config.STAFF_CURATOR_ROLE_ID
-        or Config.STAFF_HELPER_CURATOR_ROLE_ID
-        or Config.STAFF_MODERATOR_CURATOR_ROLE_ID)
+    kind = normalize_position(role_name) or 'moderator'
+    cur = curator_role_id_for(guild.id, kind)
     get_role = getattr(guild, 'get_role', None)
     if not callable(get_role):
         return ''
-    for rid in (cur, KNOWN_CURATOR_ROLE_ID):
+    fallbacks = [
+        cur,
+        int(KNOWN_CURATOR_BY_KIND.get(kind) or 0),
+        int(KNOWN_CURATOR_ROLE_ID or 0),
+    ]
+    for rid in fallbacks:
         try:
             rid = int(rid or 0)
         except (TypeError, ValueError) as _e:
@@ -213,33 +243,53 @@ def _curator_ping(guild):
     return ''
 
 
-def apply_target(role_name: str, guild):
-    """Куда отправить новую заявку: «всё сюда» — комната заявок и апелляций.
+def _channel_for_kind(guild, kind: str):
+    """Канал ветки по должности (панель/.env)."""
+    from services.staff_roles import setting
+    key_env = {
+        'helper': ('helper_channel', Config.STAFF_HELPER_CHANNEL_ID),
+        'moderator': ('moderator_channel', Config.STAFF_MODERATOR_CHANNEL_ID),
+        'event': ('event_channel', getattr(Config, 'STAFF_EVENT_CHANNEL_ID', 0)),
+        'broadcaster': ('broadcaster_channel',
+                        getattr(Config, 'STAFF_BROADCASTER_CHANNEL_ID', 0)),
+    }.get(kind or 'moderator', ('moderator_channel', 0))
+    key, env_cid = key_env
+    cid = setting(guild.id, key, env_cid)
+    if not cid:
+        return None
+    getter = getattr(guild, 'get_channel', None)
+    return getter(int(cid)) if callable(getter) else None
 
-    Владелец 2026-09-06: заявки в команду идут в ту же комнату
-    (1544483947705008188), что и апелляции — «всё сюда, кроме логов».
-    Куратора тегаем в самой карточке. Комнаты нет на сервере — запасной
-    путь прежний: своя ветка на должность → общий канал заявок.
-    Возвращает (channel, тег_куратора) или (None, '')."""
+
+def apply_target(role_name: str, guild):
+    """Куда отправить новую заявку + тег куратора СВОЕЙ ветки.
+
+    Порядок канала:
+      1) своя ветка должности (helper/moderator/event/broadcaster)
+      2) общий apply_channel / APPLY_CHANNEL_ID (канал заявок)
+      3) комната апелляций (legacy-фолбек)
+    """
     from services.staff_roles import normalize_position, setting
     if not guild:
         return None, ''
-    # главный адресат — единая комната заявок и апелляций
+    kind = normalize_position(role_name) or 'moderator'
+    tag = _curator_ping(guild, role_name)
+    # 1) своя ветка
+    ch = _channel_for_kind(guild, kind)
+    if ch is not None:
+        return ch, tag
+    # 2) общий канал заявок
+    common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
+    if common:
+        getter = getattr(guild, 'get_channel', None)
+        ch = getter(int(common)) if callable(getter) else None
+        if ch is not None:
+            return ch, tag
+    # 3) legacy: комната апелляций
     room = _apply_room(guild)
     if room is not None:
-        return room, _curator_ping(guild)
-    kind = normalize_position(role_name) or 'moderator'
-    if kind == 'helper':
-        cid = setting(guild.id, 'helper_channel', Config.STAFF_HELPER_CHANNEL_ID)
-    else:
-        cid = setting(guild.id, 'moderator_channel',
-                      Config.STAFF_MODERATOR_CHANNEL_ID)
-    ch = guild.get_channel(cid) if cid else None
-    if ch is None:
-        # общий канал: настройка панели главнее .env
-        common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
-        ch = guild.get_channel(common) if common else None
-    return ch, _curator_ping(guild)
+        return room, tag
+    return None, tag
 
 
 def load_apps():
@@ -255,31 +305,173 @@ def save_apps(data):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def load_blacklist():
+    """ЧС по веткам: {user_id: {kind: {by, at, guild_id, reason}}}."""
+    os.makedirs("data", exist_ok=True)
+    if not os.path.exists(BLACKLIST_FILE):
+        return {}
+    try:
+        with open(BLACKLIST_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return {}
+    except (OSError, ValueError) as _ex:
+        log.debug('staff blacklist load: %s', _ex)
+        return {}
+    # миграция старого формата {uid: {user_id, role, by, at, ...}}
+    from services.staff_roles import normalize_position
+    migrated = False
+    out = {}
+    for uid, entry in data.items():
+        if not isinstance(entry, dict):
+            continue
+        # уже по веткам: ключи — kind (helper/moderator/…)
+        kinds = {}
+        legacy_role = entry.get('role') if 'by' in entry or 'at' in entry else None
+        if legacy_role is not None and not any(
+                k in entry for k in ('helper', 'moderator', 'event', 'broadcaster')):
+            kind = normalize_position(legacy_role) or 'moderator'
+            kinds[kind] = {
+                'by': str(entry.get('by') or ''),
+                'at': str(entry.get('at') or ''),
+                'guild_id': entry.get('guild_id'),
+                'reason': str(entry.get('reason') or ''),
+            }
+            migrated = True
+        else:
+            for kind, row in entry.items():
+                if kind in ('user_id', 'role', 'by', 'at', 'guild_id', 'reason'):
+                    continue
+                nk = normalize_position(kind) or str(kind or '').lower()
+                if not nk or not isinstance(row, dict):
+                    continue
+                kinds[nk] = {
+                    'by': str(row.get('by') or ''),
+                    'at': str(row.get('at') or ''),
+                    'guild_id': row.get('guild_id'),
+                    'reason': str(row.get('reason') or ''),
+                }
+        if kinds:
+            out[str(uid)] = kinds
+    if migrated:
+        try:
+            save_blacklist(out)
+        except Exception as _ex:
+            log.debug('staff blacklist migrate save: %s', _ex)
+    return out
+
+
+def save_blacklist(data):
+    os.makedirs("data", exist_ok=True)
+    with open(BLACKLIST_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def is_blacklisted(user_id, position=None) -> bool:
+    """ЧС только своей ветки. Без position — есть ли хоть одна ветка в ЧС."""
+    row = load_blacklist().get(str(user_id)) or {}
+    if not row:
+        return False
+    if position is None:
+        return True
+    from services.staff_roles import normalize_position
+    kind = normalize_position(position)
+    return bool(kind and kind in row)
+
+
+def blacklisted_kinds(user_id) -> list:
+    row = load_blacklist().get(str(user_id)) or {}
+    return sorted(row.keys())
+
+
+def add_to_blacklist(user_id, *, by: str = '', role: str = '',
+                     guild_id=None, reason: str = '') -> dict:
+    """Добавить в ЧС только ветки должности заявки."""
+    from services.staff_roles import normalize_position
+    kind = normalize_position(role) or 'moderator'
+    bl = load_blacklist()
+    row = bl.setdefault(str(user_id), {})
+    entry = {
+        'by': str(by or ''),
+        'role': kind,
+        'guild_id': int(guild_id) if guild_id else None,
+        'reason': str(reason or ''),
+        'at': datetime.now(timezone.utc).isoformat(),
+    }
+    row[kind] = entry
+    save_blacklist(bl)
+    return entry
+
+
+def remove_from_blacklist(user_id, position=None) -> bool:
+    """Снять ЧС: одну ветку или все."""
+    from services.staff_roles import normalize_position
+    bl = load_blacklist()
+    uid = str(user_id)
+    if uid not in bl:
+        return False
+    if position is None:
+        del bl[uid]
+        save_blacklist(bl)
+        return True
+    kind = normalize_position(position)
+    if not kind or kind not in bl[uid]:
+        return False
+    del bl[uid][kind]
+    if not bl[uid]:
+        del bl[uid]
+    save_blacklist(bl)
+    return True
+
+
+MENU_STATE_FILE = "data/staff_menu_state.json"
+# bump → при следующем on_ready меню перепубликуется в канал наборов
+# v3: 4 ветки (Helper/Mod/Event/Broadcaster) + V2 баннер НАБОРЫ (не Gojo STAFF)
+MENU_POST_VERSION = 3
+
+
+def _load_menu_state():
+    if os.path.exists(MENU_STATE_FILE):
+        try:
+            with open(MENU_STATE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            pass
+    return {}
+
+
+def _save_menu_state(data):
+    os.makedirs("data", exist_ok=True)
+    with open(MENU_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Модальное окно заявки
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
     age = discord.ui.TextInput(
-        label="Ваш возраст",
-        placeholder="Например: 18",
+        label="Возраст",
+        placeholder="например: 18",
         max_length=3
     )
     experience = discord.ui.TextInput(
         label="Опыт модерации",
-        placeholder="Укажите сервер и вашу должность",
+        placeholder="Серверы и должности",
         style=discord.TextStyle.paragraph,
         max_length=500
     )
     reason = discord.ui.TextInput(
-        label="Почему вы выбираете нас?",
-        placeholder="Расскажите, что вас привлекает в нашем сервере",
+        label="Почему Hakumo?",
+        placeholder="Что привлекает на сервере",
         style=discord.TextStyle.paragraph,
         max_length=500
     )
     activity = discord.ui.TextInput(
-        label="Ваша активность",
-        placeholder="Сколько часов в день вы онлайн?",
+        label="Активность",
+        placeholder="Часов в день онлайн",
         max_length=100
     )
 
@@ -288,16 +480,43 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
         self.role_name = role_name
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Сохраняем заявку
-        apps = load_apps()
+        # defer сразу: доставка карточки кураторам может занять >3с
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
+        except Exception as _dex:
+            log.debug('staff apply defer: %s', _dex)
+        from services.staff_roles import normalize_position, position_label
         user_id = str(interaction.user.id)
+        kind = normalize_position(self.role_name) or 'moderator'
+        role_label = position_label(kind)
+        if is_blacklisted(user_id, kind):
+            try:
+                from services.v2_layouts import respond_v2
+                await respond_v2(
+                    interaction, kind='err', title='Чёрный список',
+                    body=(
+                        f'Вы в чёрном списке ветки **{role_label}**.\n'
+                        'Другие должности по-прежнему открыты.'
+                    ),
+                    ephemeral=True)
+            except Exception:
+                try:
+                    await interaction.followup.send(
+                        f'Вы в чёрном списке ветки **{role_label}**. '
+                        'Другие должности открыты.',
+                        ephemeral=True)
+                except Exception as _fx:
+                    log.debug('staff apply bl deny: %s', _fx)
+            return
+        apps = load_apps()
         submitted_ts = datetime.now(timezone.utc).isoformat()
         apps[user_id] = {
             "user_id": user_id,
             "username": str(interaction.user),
             "display_name": interaction.user.display_name,
             "avatar": str(interaction.user.display_avatar.url) if interaction.user.display_avatar else None,
-            "role": self.role_name,
+            "role": role_label,
             "age": str(self.age),
             "experience": str(self.experience),
             "reason": str(self.reason),
@@ -309,92 +528,58 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
             "guild_id": interaction.guild.id if interaction.guild else None,
         }
 
-        # Подтверждение пользователю
-        embed = discord.Embed(
-            title="Заявка отправлена",
-            description=(
-                f"Ваша заявка на роль **{self.role_name}** успешно отправлена.\n"
-                "Ожидайте рассмотрения администрацией.\n"
-                "Статус можно проверить командой `/my-application`."
-            ),
-            color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
-        )
-        embed.add_field(name="Возраст", value=str(self.age), inline=True)
-        embed.add_field(name="Активность", value=str(self.activity), inline=True)
-        embed.add_field(name="Опыт", value=str(self.experience)[:200], inline=False)
-        embed.add_field(name="Причина", value=str(self.reason)[:200], inline=False)
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        # Уведомление в ветку заявки: хелперы — кураторам хелперов,
-        # модераторы — кураторам модераторов (свой канал + тег в карточке)
         delivered = False
         if interaction.guild:
-            ch, tag = apply_target(self.role_name, interaction.guild)
+            ch, tag = apply_target(role_label, interaction.guild)
             if ch:
-                # Карточка заявки: тег куратора — В САМОЙ АНКЕТЕ (владелец
-                # 2026-09-06), заявитель столбиком, ответы формы по полям.
-                notify = discord.Embed(
-                    title=f"Новая заявка — {self.role_name}",
-                    color=0xC8922A,
-                    timestamp=datetime.now(timezone.utc)
+                body = (
+                    f"{interaction.user.mention} · `{user_id}`\n\n"
+                    f"**Возраст** · {str(self.age)[:80] or '—'}\n"
+                    f"**Активность** · {str(self.activity)[:120] or '—'}\n\n"
+                    f"**Опыт**\n{str(self.experience)[:1000] or '—'}\n\n"
+                    f"**Почему Hakumo**\n{str(self.reason)[:1000] or '—'}"
                 )
                 try:
-                    _av = (str(interaction.user.display_avatar.url)
-                           if interaction.user.display_avatar else None)
-                except Exception:
-                    _av = None
-                notify.set_author(
-                    name=f"{interaction.user} — заявка в команду",
-                    icon_url=_av)
-                notify.description = (
-                    (f"{tag} — заявка ждёт вашего взгляда\n" if tag else "")
-                    + f"Заявитель: {interaction.user.mention} · `{user_id}`"
-                )
-                notify.add_field(name="Возраст",
-                                 value=str(self.age)[:200] or "—", inline=True)
-                notify.add_field(name="Активность",
-                                 value=str(self.activity)[:200] or "—", inline=True)
-                notify.add_field(name="Опыт модерации",
-                                 value=str(self.experience)[:1000] or "—",
-                                 inline=False)
-                notify.add_field(name="Почему выбирает нас",
-                                 value=str(self.reason)[:1000] or "—",
-                                 inline=False)
-                notify.set_footer(
-                    text=f"ID заявителя: {user_id} · решение — меню под карточкой")
-                try:
-                    # content с тем же тегом — чтобы Discord реально прислал
-                    # уведомление роли (упоминание внутри embed не пингует)
-                    msg = await ch.send(content=tag or None, embed=notify,
-                                        view=StaffReviewView(),
-                                        allowed_mentions=discord.AllowedMentions(
-                                            roles=True))
+                    card = StaffAppCardView(
+                        title=role_label,
+                        body=body,
+                    )
+                    msg = await _send_staff_card(
+                        ch, content=tag or None, view=card)
                     apps[user_id]["message_id"] = str(msg.id)
                     apps[user_id]["curator_tag"] = tag or None
                     delivered = True
                 except (discord.Forbidden, discord.HTTPException) as _ex:
-                    log.warning("STAFF: карточка заявки %s не ушла в %s: %s",
+                    log.warning("STAFF: карточка %s не ушла в %s: %s",
                                 user_id, getattr(ch, 'name', '?'), _ex)
                     apps[user_id]["delivery"] = "failed"
             else:
-                # ТИХАЯ ПОТЕРЯ ЗАЯВКИ — запрещена (жалоба владельца 2026-09-05
-                # «таблица опять не отправляется»): раньше канал не находился
-                # и карточка просто не отправлялась, заявитель ничего не знал.
                 apps[user_id]["delivery"] = "no_channel"
-                log.warning("STAFF: заявка %s сохранена, но канал заявок не "
-                            "настроен (панель → Каналы и маршруты)", user_id)
+                log.warning("STAFF: заявка %s сохранена, канал не настроен",
+                            user_id)
 
         save_apps(apps)
+        body = (
+            f"Заявка на **{role_label}** отправлена.\n"
+            f"Статус: `/my-application`"
+        )
         if not delivered:
-            # Честное сообщение: заявка сохранена, но персонал уведомить не вышло
-            embed.description += (
-                "\n\n⚠️ Заявка сохранена и видна администрации в панели "
-                "«Заявки в команду», но уведомление персоналу не доставлено "
-                "(не настроен канал заявок). Сообщи о себе администрации лично."
+            body += (
+                "\n\nСохранено, но персонал не уведомлён "
+                "(не настроен канал заявок)."
             )
-        log.info(f"Заявка от {interaction.user} на роль {self.role_name}"
+        try:
+            from services.v2_layouts import respond_v2
+            await respond_v2(
+                interaction, kind='ok', title='Отправлено', body=body,
+                ephemeral=True)
+        except Exception as _vx:
+            log.debug('staff apply confirm v2: %s', _vx)
+            try:
+                await interaction.followup.send(body, ephemeral=True)
+            except Exception as _fx:
+                log.debug('staff apply confirm text: %s', _fx)
+        log.info(f"Заявка от {interaction.user} на роль {role_label}"
                  + ("" if delivered else " (без уведомления персонала)"))
 
 
@@ -404,37 +589,33 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 
 class RoleSelect(discord.ui.Select):
     def __init__(self):
-        # Должности: Хелпер и Модератор (чат-контроль упразднён 2026-08-27)
-        # Стикеры из assets/stickers — без кнопок, только select.
-        try:
-            from services.menu_emojis import emoji_for_appeal
-            helper_em = emoji_for_appeal('helper')
-            mod_em = emoji_for_appeal('moderator')
-            signup_em = emoji_for_appeal('signup')
-        except Exception:
-            helper_em, mod_em, signup_em = '🛟', '🛡️', '📝'
-        options = [
-            discord.SelectOption(
-                label="Хелпер",
-                value="Helper",
-                description="Помощь участникам сервера",
-                emoji=helper_em or signup_em,
-            ),
-            discord.SelectOption(
-                label="Модератор",
-                value="Moderator",
-                description="Модерация сервера и участников",
-                emoji=mod_em or signup_em,
-            ),
-        ]
+        from services.menu_banners import select_label
+        from services.staff_roles import POSITIONS, position_select_value
+        from services.menu_emojis import emoji_for_role
+        options = []
+        for kind in POSITIONS:
+            label = position_select_value(kind)
+            options.append(discord.SelectOption(
+                label=select_label(label),
+                value=label,
+                emoji=emoji_for_role(kind),
+            ))
         super().__init__(
-            placeholder="Выберите желаемую должность",
+            placeholder="",
             options=options,
             custom_id="staff_role_select_v2"
         )
 
     async def callback(self, interaction: discord.Interaction):
         role_name = self.values[0]
+        if is_blacklisted(interaction.user.id, role_name):
+            from services.v2_layouts import reply_text_v2
+            from services.staff_roles import position_label
+            return await reply_text_v2(
+                interaction,
+                (f'Вы в чёрном списке ветки **{position_label(role_name)}**.\n'
+                 'Другие должности по-прежнему открыты.'),
+                kind='err', title='Чёрный список')
         modal = StaffApplyModal(role_name=role_name)
         await interaction.response.send_modal(modal)
 
@@ -443,11 +624,68 @@ class RoleSelect(discord.ui.Select):
 # Рассмотрение заявки (persistent) — Select «Принять / Отклонить»
 # ═══════════════════════════════════════════════════════════════════
 
-class StaffReviewView(discord.ui.View):
-    """Select под сообщением заявки: решение модератора + DM заявителю."""
+class StaffReviewSelect(discord.ui.Select):
+    """Select решения — внутри V2-карточки заявки, со стикерами."""
 
     def __init__(self):
-        super().__init__(timeout=None)  # select добавлен декоратором ниже
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_review
+        super().__init__(
+            placeholder="",
+            options=[
+                discord.SelectOption(
+                    label=select_label("Принять"), value="approve",
+                    emoji=emoji_for_review('approve')),
+                discord.SelectOption(
+                    label=select_label("Отклонить"), value="reject",
+                    emoji=emoji_for_review('reject')),
+                discord.SelectOption(
+                    label=select_label("Чёрный список"), value="blacklist",
+                    emoji=emoji_for_review('blacklist')),
+            ],
+            custom_id="staff_review_select_v2",
+            min_values=1, max_values=1,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await StaffReviewView()._review(interaction, self.values[0])
+
+
+class StaffAppCardView(discord.ui.LayoutView):
+    """Карточка заявки куратору — V2, чёрный блок, заголовок = должность (EN)."""
+
+    def __init__(self, *, title: str, body: str, footer: str = ''):
+        super().__init__(timeout=None)
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        from discord import SeparatorSpacing
+        sel = StaffReviewSelect()
+        if V2_AVAILABLE:
+            from discord import ui as dui
+            children = [
+                dui.TextDisplay(f'# {title}'[:500]),
+                dui.Separator(spacing=SeparatorSpacing.large),
+                dui.TextDisplay(str(body)[:3500]),
+            ]
+            if footer:
+                children.append(dui.TextDisplay(f'-# {footer}'[:400]))
+            row = dui.ActionRow()
+            row.add_item(sel)
+            children.append(row)
+            self.add_item(black_container(*children))  # accent чёрный
+            return
+        row = discord.ui.ActionRow()
+        row.add_item(sel)
+        self.add_item(row)
+
+
+class StaffReviewView(discord.ui.View):
+    """Select под сообщением заявки: решение + DM заявителю.
+
+    Классический View — для старых карточек (embed) до перехода на V2.
+    """
+
+    def __init__(self):
+        super().__init__(timeout=None)
 
     @staticmethod
     def _find_app_by_message(message_id):
@@ -458,35 +696,49 @@ class StaffReviewView(discord.ui.View):
         return None, None, apps
 
     async def _review(self, interaction: discord.Interaction, action: str):
-        # Кто видит канал заявок — может решить (как у апелляций).
-        # Не требуем manage_guild: иначе «не отвечает админам» без перма.
-        try:
-            ch = getattr(interaction, 'channel', None)
-            if ch is not None:
-                perms = ch.permissions_for(interaction.user)
-                if not getattr(perms, 'view_channel', True):
-                    return await interaction.response.send_message(
-                        "Нет доступа к каналу заявок.", ephemeral=True)
-        except Exception:
-            pass
-        await interaction.response.defer(ephemeral=True)
+        from services.v2_layouts import (
+            reply_text_v2, respond_v2, send_dm_v2, notice_layout_view,
+            V2_AVAILABLE)
+        from services.staff_roles import can_review_position, position_label
 
         key, app, apps = self._find_app_by_message(interaction.message.id)
         if not app:
-            return await interaction.followup.send(
-                "Заявка не найдена (возможно, данные удалены).", ephemeral=True)
-        if app.get("status") != "pending":
-            label = {"approved": "одобрена", "rejected": "отклонена"}.get(
-                app.get("status"), app.get("status", "?"))
-            return await interaction.followup.send(
-                f"Эта заявка уже {label}.", ephemeral=True)
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
+            return await reply_text_v2(
+                interaction, "Заявка не найдена.", kind='err')
+        position = app.get('role') or ''
+        ok, deny = can_review_position(interaction.user, position)
+        if not ok:
+            return await reply_text_v2(
+                interaction, deny or "Чужая ветка.",
+                kind='err', title='Нет доступа')
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=True)
 
-        app["status"] = "approved" if action == "approve" else "rejected"
+        if app.get("status") != "pending":
+            label = {
+                "approved": "одобрена",
+                "rejected": "отклонена",
+                "blacklisted": "в чёрном списке",
+            }.get(app.get("status"), app.get("status", "?"))
+            return await reply_text_v2(
+                interaction, f"Уже **{label}**.", kind='warn')
+
+        status_map = {
+            "approve": "approved",
+            "reject": "rejected",
+            "blacklist": "blacklisted",
+        }
+        if action not in status_map:
+            return await reply_text_v2(
+                interaction, "Неизвестное действие.", kind='err')
+
+        app["status"] = status_map[action]
         app["reviewed_by"] = str(interaction.user)
         if not app.get("timestamp"):
             app["timestamp"] = app.get("submitted_at")
 
-        # Одобрена → сразу выдать роль по должности (Хелпер или Модератор)
         granted = None
         grant_note = ""
         if action == "approve":
@@ -502,92 +754,137 @@ class StaffReviewView(discord.ui.View):
                 app["granted_role"] = granted
             else:
                 grant_note = role_hint(res)
+        elif action == "blacklist":
+            try:
+                gid = int(app.get("guild_id") or 0)
+            except (TypeError, ValueError):
+                gid = 0
+            add_to_blacklist(
+                app.get("user_id"),
+                by=str(interaction.user),
+                role=app.get("role") or '',
+                guild_id=gid or (interaction.guild.id if interaction.guild else None),
+            )
+            app["blacklisted"] = True
         save_apps(apps)
 
-        # DM заявителю — именно этого уведомления не хватало
+        pos = position_label(app.get("role"))
         dm_ok = False
         try:
             user = await interaction.client.fetch_user(int(app["user_id"]))
             if action == "approve":
                 emb = discord.Embed(
-                    title=" Заявка одобрена!",
-                    description=("Поздравляем! Ваша заявка в команду сервера **одобрена**.\n"
-                                 "Администрация свяжется с вами в ближайшее время."),
+                    title="Заявка одобрена",
+                    description=f"Заявка на **{pos}** одобрена.",
                     color=0x2ECC71)
+            elif action == "blacklist":
+                emb = discord.Embed(
+                    title="Чёрный список набора",
+                    description=(
+                        f"Заявка на **{pos}** отклонена.\n"
+                        f"Вы в чёрном списке ветки **{pos}** — "
+                        "повторно на эту должность нельзя.\n"
+                        "Другие должности по-прежнему открыты."
+                    ),
+                    color=0x2C2F33)
             else:
                 emb = discord.Embed(
-                    title=" Заявка отклонена",
-                    description=("К сожалению, ваша заявка в команду сервера на этот раз "
-                                 "**отклонена**.\nВы можете подать её снова позже."),
+                    title="Заявка отклонена",
+                    description=f"Заявка на **{pos}** отклонена.",
                     color=0xE74C3C)
-            emb.add_field(name=" Должность", value=app.get("role", "—"), inline=True)
-            emb.add_field(name=" Рассмотрел", value=interaction.user.display_name, inline=True)
             if granted:
-                emb.add_field(name=" Выдана роль", value=granted, inline=True)
-            emb.set_footer(text="Статус всегда можно проверить: /my-application")
+                emb.add_field(name="Роль", value=granted, inline=True)
+            emb.set_footer(text="/my-application")
             emb.timestamp = datetime.now(timezone.utc)
-            await user.send(embed=emb)
+            await send_dm_v2(user, emb)
             dm_ok = True
         except Exception as e:
             log.info(f"[STAFF] DM заявителю не доставлен: {e}")
 
-        # Снять кнопки и отметить решение на исходном сообщении
         try:
             src = interaction.message
-            if src and src.embeds:
+            verdict = {
+                "approve": "одобрена",
+                "reject": "отклонена",
+                "blacklist": "чёрный список",
+            }[action]
+            accent = {
+                "approve": 0x2ECC71,
+                "reject": 0xE74C3C,
+                "blacklist": 0x2C2F33,
+            }[action]
+            who = interaction.user.display_name
+            when = datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')
+            note = f"{who} · {when}"
+            if granted:
+                note += f" · {granted}"
+            if V2_AVAILABLE:
+                done = notice_layout_view(
+                    title=f'{pos} — {verdict}',
+                    body=(f"<@{app.get('user_id')}>\n{note}"),
+                    footer='',
+                    accent=accent,
+                    brand='HAKUMO',
+                    timeout=None)
+                if done is not None:
+                    await src.edit(view=done, embed=None, content=src.content)
+                else:
+                    await src.edit(view=None)
+            elif src and src.embeds:
                 e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
-                e0.color = 0x2ECC71 if action == "approve" else 0xE74C3C
-                verdict_line = f"Модератор: {interaction.user.display_name}"
-                if action == "approve" and granted:
-                    verdict_line += f" · Роль: {granted}"
-                e0.add_field(
-                    name=" Решение: одобрена" if action == "approve" else " Решение: отклонена",
-                    value=verdict_line,
-                    inline=False)
+                e0.color = accent
+                field_name = {
+                    "approve": "Одобрена",
+                    "reject": "Отклонена",
+                    "blacklist": "Чёрный список",
+                }[action]
+                e0.add_field(name=field_name, value=note, inline=False)
                 await src.edit(embed=e0, view=None)
+            else:
+                await src.edit(view=None)
         except Exception as _ex:
             log.debug("_review(): подавлено: %s", _ex)
 
-        verdict = "одобрена" if action == "approve" else "отклонена"
+        verdict = {
+            "approve": "одобрена",
+            "reject": "отклонена",
+            "blacklist": "в чёрном списке",
+        }[action]
         role_line = ""
         if action == "approve":
-            role_line = (f" Роль выдана: **{granted}**."
-                         if granted else f" Роль НЕ выдана: {grant_note}.")
-        await interaction.followup.send(
-            f"Заявка **{verdict}**.{role_line} Уведомление пользователю: "
-            f"{'отправлено в ЛС' if dm_ok else 'НЕ доставлено (у пользователя закрыты ЛС)'}",
+            role_line = (f" Роль: **{granted}**."
+                         if granted else f" Роль не выдана: {grant_note}.")
+        elif action == "blacklist":
+            role_line = f" Только ветка **{pos}**. Остальные открыты."
+        kind = {
+            "approve": "ok",
+            "reject": "warn",
+            "blacklist": "err",
+        }[action]
+        await respond_v2(
+            interaction, kind=kind,
+            title=verdict.capitalize(),
+            body=(
+                f"**{pos}** — **{verdict}**.{role_line}\n"
+                f"ЛС: {'отправлено' if dm_ok else 'не доставлено'}"
+            ),
             ephemeral=True)
 
     @discord.ui.select(
-        placeholder="Действие с заявкой",
+        placeholder="",
         options=[
-            discord.SelectOption(label="Принять", value="approve",
-                                 description="Одобрить заявку и выдать роль",
-                                 emoji="✅"),
-            discord.SelectOption(label="Отклонить", value="reject",
-                                 description="Отклонить заявку",
-                                 emoji="❌"),
+            discord.SelectOption(label="› Принять", value="approve"),
+            discord.SelectOption(label="› Отклонить", value="reject"),
+            discord.SelectOption(label="› Чёрный список", value="blacklist"),
         ],
         custom_id="staff_review_select_v1", min_values=1, max_values=1)
     async def review_select(self, interaction: discord.Interaction,
                             select: discord.ui.Select):
-        # Подставить стикеры, если залиты как application emoji.
-        try:
-            from services.menu_emojis import emoji_for_appeal, schedule_ensure_menu_emojis
-            schedule_ensure_menu_emojis(interaction.client)
-            for opt in select.options:
-                if opt.value == 'approve':
-                    opt.emoji = emoji_for_appeal('accept')
-                elif opt.value == 'reject':
-                    opt.emoji = emoji_for_appeal('reject')
-        except Exception:
-            pass
         await self._review(interaction, select.values[0])
 
 
 class StaffReviewButtonsView(discord.ui.View):
-    """Старые кнопки: остаются живыми на заявках, отправленных до
-    перехода на select (persistent custom_id совпадает)."""
+    """Старые кнопки — живут на заявках до перехода на select."""
 
     def __init__(self):
         super().__init__(timeout=None)
@@ -602,11 +899,142 @@ class StaffReviewButtonsView(discord.ui.View):
     async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await StaffReviewView()._review(interaction, "reject")
 
+    @discord.ui.button(label="Чёрный список", style=discord.ButtonStyle.secondary,
+                       custom_id="staff_review_blacklist_v1")
+    async def blacklist_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await StaffReviewView()._review(interaction, "blacklist")
 
-class StaffApplyView(discord.ui.View):
-    def __init__(self):
+
+class StaffApplyView(discord.ui.LayoutView):
+    """Меню набора — баннер + select (без дубля заголовка)."""
+
+    def __init__(self, *, banner_filename: str = 'hakumo_staff_banner_v16.png'):
         super().__init__(timeout=None)
-        self.add_item(RoleSelect())
+        from services.v2_layouts import (
+            V2_AVAILABLE, build_staff_menu_items, SHOW_MENU_BANNER)
+        sel = RoleSelect()
+        show = bool(SHOW_MENU_BANNER and banner_filename)
+        if V2_AVAILABLE:
+            items = build_staff_menu_items(
+                banner_filename=banner_filename or '',
+                body=None,
+                role_select=sel,
+                show_banner=show,
+            )
+            if items:
+                for it in items:
+                    self.add_item(it)
+                return
+        row = discord.ui.ActionRow()
+        row.add_item(sel)
+        self.add_item(row)
+
+
+WEBHOOK_NAME = 'Наборы Hakumo'
+HOOK_USERNAME = 'Наборы'
+
+
+async def _channel_webhook(channel):
+    """Найти/создать вебхук бота для V2-публикации."""
+    fetch = getattr(channel, 'webhooks', None)
+    if fetch is None:
+        return None
+    try:
+        hooks = await fetch()
+    except Exception as _ex:
+        log.debug('staff: webhooks(%s): %s', channel, _ex)
+        return None
+    me_id = None
+    try:
+        me_id = channel.guild.me.id
+    except Exception as _ex:
+        log.debug('staff: guild.me: %s', _ex)
+    for h in hooks or ():
+        try:
+            if me_id is None or h.user is None or h.user.id == me_id:
+                return h
+        except Exception as _ex:
+            log.debug('staff: skip webhook: %s', _ex)
+    create = getattr(channel, 'create_webhook', None)
+    if create is None:
+        return None
+    try:
+        return await create(name=WEBHOOK_NAME)
+    except Exception as _ex:
+        log.debug('staff: create_webhook: %s', _ex)
+        return None
+
+
+def _hook_avatar(guild):
+    try:
+        return guild.icon.url if guild.icon else None
+    except Exception:
+        return None
+
+
+async def _send_staff_card(channel, *, content=None, view=None):
+    """Карточка заявки через webhook V2, иначе от бота."""
+    allowed = discord.AllowedMentions(roles=True)
+    hook = await _channel_webhook(channel)
+    if hook is not None:
+        try:
+            return await hook.send(
+                content=content, view=view, wait=True,
+                username=HOOK_USERNAME,
+                avatar_url=_hook_avatar(getattr(channel, 'guild', None)),
+                allowed_mentions=allowed)
+        except Exception as _ex:
+            log.debug('staff: card webhook failed: %s', _ex)
+    return await channel.send(
+        content=content, view=view, allowed_mentions=allowed)
+
+
+async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
+    """Опубликовать меню набора через webhook V2 (баннер + select)."""
+    if channel is None:
+        return False, 'Канал не найден'
+    fname = banner_name or 'hakumo_staff_banner_v16.png'
+    view = StaffApplyView(banner_filename=fname)
+    file = None
+    if banner_bio is not None:
+        try:
+            banner_bio.seek(0)
+        except Exception:
+            pass
+        file = discord.File(banner_bio, filename=fname)
+    avatar = _hook_avatar(getattr(channel, 'guild', None))
+    hook = await _channel_webhook(channel)
+    msg = None
+    used_hook = None
+    if hook is not None:
+        used_hook = hook
+        try:
+            kwargs = dict(
+                view=view, wait=True,
+                username=HOOK_USERNAME, avatar_url=avatar)
+            if file is not None:
+                kwargs['file'] = file
+            msg = await hook.send(**kwargs)
+        except Exception as _ex:
+            log.debug('staff: menu webhook failed: %s', _ex)
+            msg = None
+            used_hook = None
+            if banner_bio is not None:
+                try:
+                    banner_bio.seek(0)
+                    file = discord.File(banner_bio, filename=fname)
+                except Exception:
+                    file = None
+    if msg is None:
+        try:
+            if file is not None:
+                msg = await channel.send(file=file, view=view)
+            else:
+                msg = await channel.send(view=view)
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            return False, f'Не могу писать в канал: {_ex}'
+    how = 'вебхуком' if used_hook is not None else 'от бота'
+    return True, f'Опубликовано в {channel.mention} ({how})'
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -614,127 +1042,122 @@ class StaffApplyView(discord.ui.View):
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffApply(commands.Cog):
-    """Набор в команду сервера"""
+    """Набор в команду"""
 
     def __init__(self, bot):
         self.bot = bot
+        self._menu_task_started = False
 
-    @app_commands.command(name="staff-panel", description="Создать панель заявок в персонал с баннером")
-    @app_commands.checks.has_permissions(manage_guild=True)
-    async def staff_panel(self, interaction: discord.Interaction):
-        """Отправляет баннер заявок в персонал с меню выбора роли"""
-        # Сразу подтверждаем interaction: загрузка удалённого баннера может занять больше 3 секунд.
-        await interaction.response.defer(ephemeral=True)
-
-        # «Настройки не все завершены»: панель создаём только когда заявки
-        # реально дойдут до персонала и роли находятся (заказ владельца).
-        try:
-            from services.system_readiness import readiness_block, staff_apply_missing
-            block = readiness_block('Заявки в команду', staff_apply_missing(interaction.guild))
-            if block:
-                await interaction.followup.send(block, ephemeral=True)
-                return
-        except Exception as _ex:
-            log.debug('staff-panel readiness: %s', _ex)
-
-        # Пути к кастомным баннерам - приоритет у пользовательской фотки
-        custom_paths = [
-            # Пользовательская фотография имеет высший приоритет.
-            os.path.join(ROOT, 'assets', 'staff.jpg'),
-            os.path.join(ROOT, 'assets', 'diting_result_8b5912208df711f1ab51e63795c09448_1.jpeg'),
-            os.path.join(ROOT, 'assets', 'staff_custom.png'),
-            os.path.join(ROOT, 'assets', 'staff_custom.jpg'),
-            os.path.join(ROOT, 'assets', 'staff_custom.jpeg'),
-            os.path.join(ROOT, 'assets', 'staff_banner_custom.png'),
-            os.path.join(ROOT, 'assets', 'staff_hakumo_banner.png'),
-        ]
-        
-        file = None
-
-        # Сначала используем оригинальную фотографию по URL.
-        # Это намеренно имеет приоритет над старым локальным баннером.
-        try:
-            if any(os.path.exists(p) for p in custom_paths):
-                raise aiohttp.ClientError("локальный баннер уже доступен")
-            timeout = aiohttp.ClientTimeout(total=15)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(STAFF_REMOTE_BANNER_URL) as response:
-                    if response.status == 200:
-                        remote_banner = await response.read()
-                        if remote_banner:
-                            file = discord.File(
-                                io.BytesIO(remote_banner),
-                                filename="staff_banner.png"
-                            )
-        except (aiohttp.ClientError, OSError) as exc:
-            log.warning("Не удалось загрузить удалённый баннер STAFF: %s", exc)
-
-        # Если URL недоступен — использовать локальные файлы баннеров.
-        if not file:
-            for p in custom_paths:
-                if os.path.exists(p):
-                    file = discord.File(p, filename="staff_banner.png")
-                    break
-
-        # Если удалённый и локальный баннеры недоступны - старый fallback.
-        if not file:
-            img_buf = await interaction.client.loop.run_in_executor(
-                None, generate_staff_panel_bytes
-            )
-            file = discord.File(img_buf, filename="staff_panel.png")
-        
-        view = StaffApplyView()
-        
-        # Отправляем сам файл напрямую: без embed-контейнера и лишнего текста.
-        # Так Discord показывает фотографию в полном размере, а меню остаётся снизу.
-        try:
-            from services.menu_emojis import schedule_ensure_menu_emojis
-            schedule_ensure_menu_emojis(interaction.client)
-        except Exception:
-            pass
-        await interaction.channel.send(file=file, view=view)
-        await interaction.followup.send("✅ Панель заявок в персонал успешно создана!", ephemeral=True)
-
-    @app_commands.command(name="my-application", description="Проверить статус моей заявки в персонал")
+    @app_commands.command(name="my-application",
+                          description="Статус моей заявки в команду")
     async def my_application(self, interaction: discord.Interaction):
-        """Пользователь видит, где его заявка: на рассмотрении / одобрена / отклонена."""
         apps = load_apps()
         uid = str(interaction.user.id)
         mine = [a for a in apps.values() if str(a.get("user_id")) == uid]
-        if not mine:
-            return await interaction.response.send_message(
-                "У вас пока нет заявок. Подать можно через панель набора в команду сервера.",
-                ephemeral=True)
-        mine.sort(key=lambda a: a.get("timestamp") or a.get("submitted_at") or "", reverse=True)
-        a = mine[0]
-        status_map = {"pending": " На рассмотрении",
-                      "approved": " Одобрена",
-                      "rejected": " Отклонена"}
-        st = status_map.get(a.get("status"), a.get("status", "?"))
-        color = {"pending": 0xC8922A, "approved": 0x2ECC71, "rejected": 0xE74C3C}.get(
-            a.get("status"), 0xC8922A)
-        e = discord.Embed(title=" Моя заявка в команду", color=color,
-                          timestamp=datetime.now(timezone.utc))
-        total = len(mine)
-        desc = (f"Статус: **{st}**\n"
-                f"Должность: **{a.get('role', '—')}**\n"
-                f"Подана: {(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}\n")
-        if total > 1:
-            desc += f"Всего заявок: {total} (показана последняя)\n"
-        if a.get("reviewed_by"):
-            desc += f"Рассмотрел: **{a['reviewed_by']}**\n"
-        if a.get("review_note"):
-            desc += f"Комментарий: {a['review_note']}\n"
-        e.description = desc
-        e.set_footer(text="Решение также приходит в личные сообщения")
-        await interaction.response.send_message(embed=e, ephemeral=True)
+        bl_kinds = blacklisted_kinds(uid)
+        if not mine and not bl_kinds:
+            from services.v2_layouts import reply_text_v2
+            return await reply_text_v2(
+                interaction,
+                "Заявок пока нет. Подать можно через меню набора.",
+                kind='info', title='Заявки')
+        from services.staff_roles import position_label
+        body_parts = []
+        if mine:
+            mine.sort(
+                key=lambda a: a.get("timestamp") or a.get("submitted_at") or "",
+                reverse=True)
+            a = mine[0]
+            status_map = {"pending": "На рассмотрении",
+                          "approved": "Одобрена",
+                          "rejected": "Отклонена",
+                          "blacklisted": "Чёрный список"}
+            st = status_map.get(a.get("status"), a.get("status", "?"))
+            pos = position_label(a.get('role'))
+            body_parts.append(
+                f"**{st}** · **{pos}**\n"
+                f"Подана: {(a.get('timestamp') or a.get('submitted_at') or '?')[:10]}")
+            if a.get("reviewed_by"):
+                body_parts.append(f"Рассмотрел: **{a['reviewed_by']}**")
+            if a.get("review_note"):
+                body_parts.append(f"Комментарий: {a['review_note']}")
+            kind = {
+                "pending": "warn",
+                "approved": "ok",
+                "rejected": "err",
+                "blacklisted": "err",
+            }.get(a.get("status"), "info")
+        else:
+            kind = "err"
+        if bl_kinds:
+            labels = ", ".join(f"**{position_label(k)}**" for k in bl_kinds)
+            body_parts.append(
+                f"Чёрный список веток: {labels}.\n"
+                "Другие должности открыты.")
+        from services.v2_layouts import respond_v2
+        await respond_v2(
+            interaction, kind=kind, title='Моя заявка',
+            body='\n'.join(body_parts), ephemeral=True)
+
+    async def _ensure_staff_menu(self):
+        """Один раз: меню набора в канал наборов (без slash-команды)."""
+        try:
+            await self.bot.wait_until_ready()
+        except Exception:
+            return
+        try:
+            from services.menu_emojis import ensure_menu_emojis
+            await ensure_menu_emojis(self.bot)
+        except Exception as _ex:
+            log.debug('staff ensure emojis: %s', _ex)
+        from services.menu_banners import menu_banner_file
+        state = _load_menu_state()
+        for guild in list(self.bot.guilds):
+            ch = menu_channel(guild)
+            if ch is None:
+                continue
+            key = f'{guild.id}:{ch.id}'
+            prev = state.get(key) or {}
+            # уже актуальная версия — не спамим при каждом рестарте
+            if int(prev.get('version') or 0) >= MENU_POST_VERSION:
+                continue
+            try:
+                bio, fname = await self.bot.loop.run_in_executor(
+                    None, lambda: menu_banner_file('staff'))
+                ok, detail = await publish_staff_menu(
+                    ch, banner_bio=bio, banner_name=fname)
+                if ok:
+                    state[key] = {
+                        'channel_id': ch.id,
+                        'guild_id': guild.id,
+                        'version': MENU_POST_VERSION,
+                        'at': datetime.now(timezone.utc).isoformat(),
+                    }
+                    _save_menu_state(state)
+                    log.info('STAFF: меню набора → #%s (%s)', ch.id, detail)
+                else:
+                    log.warning('STAFF: меню не ушло в #%s: %s', ch.id, detail)
+            except Exception as _ex:
+                log.warning('STAFF: ensure menu guild=%s: %s', guild.id, _ex)
 
     @commands.Cog.listener()
     async def on_ready(self):
-        # Регистрируем persistent views
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(self.bot)
+        except Exception as _ex:
+            log.debug('staff emojis: %s', _ex)
         self.bot.add_view(StaffApplyView())
         self.bot.add_view(StaffReviewView())
-        self.bot.add_view(StaffReviewButtonsView())  # старые заявки с кнопками
+        self.bot.add_view(StaffReviewButtonsView())
+        self.bot.add_view(StaffAppCardView(title='Заявка', body='…'))
+        if not self._menu_task_started:
+            self._menu_task_started = True
+            try:
+                import asyncio
+                asyncio.get_running_loop().create_task(self._ensure_staff_menu())
+            except Exception as _ex:
+                log.debug('staff menu task: %s', _ex)
 
 
 async def setup(bot):

@@ -47,12 +47,17 @@ from cogs.afk import AFK
 class FakeResp:
     def __init__(self):
         self.kw = None
+        self._done = False
+
+    def is_done(self):
+        return self._done
 
     async def send_message(self, content=None, **kw):
+        self._done = True
         self.kw = {'content': content, **kw}
 
     async def defer(self, **kw):
-        pass
+        self._done = True
 
 
 class FakeFollowup:
@@ -151,8 +156,8 @@ check(emb is not None and any('упомянули' in (f.name or '') for f in (e
 check(not hasattr(cog, 'afk_remove') or not hasattr(getattr(cog, 'afk_remove', None), 'name'),
       'команда /afk-remove удалена (выход авто)')
 
-# ── 2. Чат-контроля нет, должности две ───────────────────────────────
-print('== Должности: только Хелпер и Модератор ==')
+# ── 2. Чат-контроля нет, четыре должности ───────────────────────────
+print('== Должности: Хелпер / Модератор / Event / Broadcaster ==')
 from cogs.staff_apply import RoleSelect, StaffReviewView
 
 opts = RoleSelect().options
@@ -160,16 +165,22 @@ labels = [o.label for o in opts]
 values = [o.value for o in opts]
 check('Chat Control' not in values and 'Чат-контроль' not in labels,
       'select-меню: чат-контроля нет')
-check(set(values) == {'Helper', 'Moderator'}, f'select-меню: ровно две должности {values}')
-check('Хелпер' in labels and 'Модератор' in labels, 'select-меню: подписи по-русски')
+check(set(values) == {'Helper', 'Moderator', 'Eventsmod', 'Broadcaster'},
+      f'select-меню: четыре должности {values}')
+check(any('Helper' in str(l) for l in labels) and any('Moderator' in str(l) for l in labels),
+      'select-меню: Helper / Moderator')
+check(any('Eventsmod' in str(l) for l in labels) and any('Broadcaster' in str(l) for l in labels),
+      'select-меню: Eventsmod и Broadcaster')
 
 repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 for tpl in ('web/templates/member_apply.html', 'web/templates/public_apply.html'):
     html = open(os.path.join(repo, tpl), encoding='utf-8').read()
     check('Чат-контроль' not in html and 'Chat Control' not in html,
           f'{tpl.split("/")[-1]}: карточки чат-контроля нет')
-    check(html.count('name="apply-role"') >= 2,
-          f'{tpl.split("/")[-1]}: выбор Хелпер/Модератор на месте')
+    check(html.count('name="apply-role"') >= 4,
+          f'{tpl.split("/")[-1]}: выбор 4 должностей на месте')
+    check('Eventsmod' in html and 'Broadcaster' in html and 'Helper' in html,
+          f'{tpl.split("/")[-1]}: EN роли в веб-форме')
 
 # ── 3. Роль по должности: поиск и выдача ─────────────────────────────
 print('== Роль по должности: откуда берётся ==')
@@ -207,8 +218,11 @@ g = FakeGuild([FakeRole(10, 'Хелпер'), FakeRole(20, 'Модератор')]
 check(SR.normalize_position('Helper') == 'helper'
       and SR.normalize_position('Хелпер') == 'helper'
       and SR.normalize_position('Moderator') == 'moderator'
-      and SR.normalize_position('Модератор') == 'moderator',
-      'должности нормализуются (ru/en)')
+      and SR.normalize_position('Модератор') == 'moderator'
+      and SR.normalize_position('Event') == 'event'
+      and SR.normalize_position('Eventsmod') == 'event'
+      and SR.normalize_position('Broadcaster') == 'broadcaster',
+      'должности нормализуются (ru/en + Event/Broadcaster)')
 check(SR.normalize_position('Chat Control') == 'moderator'
       and SR.normalize_position('Чат-контроль') == 'moderator',
       'легаси-заявки с чат-контролем ведём как модераторские')
@@ -238,7 +252,7 @@ check(res['role_name'] is None and res['reason'] == 'member_left',
       'grant: участник ушёл — понятно почему не выдано')
 res = loop.run_until_complete(SR.grant_staff_role(FakeGuild([], {42: FakeMember(42)}), 42, 'Хелпер'))
 hint = SR.role_hint(res)
-check('STAFF_HELPER_ROLE_ID' in hint and 'хелпер' in hint.lower(),
+check('STAFF_HELPER_ROLE_ID' in hint,
       f'подсказка человеку: {hint}')
 
 # ── 3.5 Ветки заявок: хелперы — своим кураторам, модераторы — своим ──
@@ -288,8 +302,8 @@ try:
           'заявка хелпера → ветка хелперов (501) + пинг куратора',
           f'→ канал {getattr(ch, "id", None)}, пинг {ping}')
     ch, ping = apply_target('Модератор', gch)
-    check(ch is not None and ch.id == 502 and ping == '<@&601>',
-          'куратор ОДИН: пингуется та же роль и в ветке модераторов')
+    check(ch is not None and ch.id == 502 and ping == '<@&602>',
+          'заявка модератора → ветка (502) + свой куратор <@&602>')
     ch, ping = apply_target('Chat Control', gch)
     check(ch.id == 502, 'легаси чат-контроль ведётся в ветку модераторов')
 
@@ -310,7 +324,8 @@ finally:
 
 src_cog = open(os.path.join(repo, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
 src_web = open(os.path.join(repo, 'web', 'app.py'), encoding='utf-8').read()
-check('apply_target(self.role_name, interaction.guild)' in src_cog,
+check('apply_target(role_label, interaction.guild)' in src_cog
+      or 'apply_target(self.role_name, interaction.guild)' in src_cog,
       'Discord-заявка уходит в ветку по должности')
 check('apply_target (data .get' in src_web or 'apply_target(data' in src_web,
       'веб-заявка уходит в ту же ветку по должности')
@@ -380,7 +395,37 @@ data = json.load(open('data/staff_apps.json', encoding='utf-8'))
 check(data['42']['status'] == 'approved', 'заявка одобрена (статус в базе)')
 check(data['42'].get('granted_role') == 'Хелпер', 'в заявке записана выданная роль')
 check(g4._members[42].added == ['Хелпер'], 'участнику реально добавлена роль «Хелпер»')
-check(any('Роль выдана' in str(m) and 'Хелпер' in str(m) for m in inter4.followup.msgs),
+
+
+def _followup_text(msgs):
+    """Текст из классического followup или V2 LayoutView."""
+    parts = []
+    for m in msgs:
+        if isinstance(m, str):
+            parts.append(m)
+            continue
+        if isinstance(m, dict):
+            if m.get('content'):
+                parts.append(str(m['content']))
+            view = m.get('view')
+            if view is not None:
+                try:
+                    from services.v2_layouts import layout_plain_text
+                    parts.append(layout_plain_text(view))
+                except Exception:
+                    parts.append(str(view))
+            emb = m.get('embed')
+            if emb is not None:
+                parts.append(str(getattr(emb, 'description', '') or emb))
+            continue
+        parts.append(str(m))
+    return '\n'.join(parts)
+
+
+_fu4 = _followup_text(inter4.followup.msgs)
+if not _fu4 and getattr(inter4.response, 'kw', None):
+    _fu4 = _followup_text([inter4.response.kw])
+check(('Роль:' in _fu4 or 'Role:' in _fu4) and 'Хелпер' in _fu4,
       'нажавшему видно: роль выдана — какая')
 check(cl.fetched == [42], 'заявителю отправлено ЛС')
 
@@ -475,11 +520,36 @@ check(SR.setting(888, 'helper_channel', 999) == 999,
       'нет настройки панели — берётся .env')
 check(SR.save_setting(777, 'нет_такого_ключа', 1) is False,
       'чужой ключ не пишется')
-check(SR.save_setting(777, 'helper_curator_role', 1) is False,
-      'раздельные кураторы упразднены — ключ больше не пишется')
+check(SR.save_setting(777, 'helper_curator_role', 1551525681207189504) is True,
+      'раздельные кураторы пишутся (helper_curator_role)')
+check(SR.curator_role_id_for(777, 'helper') == 1551525681207189504,
+      'куратор хелперов — своя роль')
+check(SR.curator_role_id_for(0, 'event') == SR.KNOWN_CURATOR_BY_KIND['event'],
+      'куратор Event по умолчанию (× Отвечаю за Eventsmod)')
+check(SR.curator_role_id_for(0, 'broadcaster') == SR.KNOWN_CURATOR_BY_KIND['broadcaster'],
+      'куратор Broadcaster по умолчанию')
+
+# изоляция веток: хелпер-куратор не принимает Event
+class _CurRole:
+    def __init__(self, rid): self.id = rid
+class _CurPerm:
+    administrator = False
+class _CurMember:
+    guild_permissions = _CurPerm()
+    def __init__(self, rid):
+        self.roles = [_CurRole(rid)]
+        self.guild = type('G', (), {'id': 777})()
+ok_h, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_BY_KIND['helper']), 'Helper')
+ok_cross, deny = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_BY_KIND['helper']), 'Event')
+check(ok_h and not ok_cross, 'хелпер-куратор не принимает Event')
+check('<@&' in (deny or '') and ('принимает' in (deny or '') or 'reviews' in (deny or '').lower()),
+      f'отказ чужой ветки объяснён: {deny!r}')
 
 # легаси: старая раздельная настройка кураторов не теряется
 SR.save_setting(777, 'curator_role', 0)
+SR.save_setting(777, 'helper_curator_role', 0)
 with open(SR.STAFF_SETTINGS_FILE, 'r', encoding='utf-8') as f:
     _legacy = json.load(f)
 _legacy['777']['helper_curator_role'] = 607
@@ -494,11 +564,22 @@ check(SR.curator_role_id(778, 999) == 999,
 src_cog_full = open(os.path.join(repo, 'cogs', 'staff_apply.py'),
                     encoding='utf-8').read()
 check('staff_review_select_v1' in src_cog_full
-      and 'Принять' in src_cog_full and 'Отклонить' in src_cog_full,
-      'решение по заявке — select «Принять/Отклонить»')
+      and 'Принять' in src_cog_full and 'Отклонить' in src_cog_full
+      and 'Чёрный список' in src_cog_full,
+      'решение по заявке — select Принять/Отклонить/Чёрный список')
 check('staff_review_approve_v1' in src_cog_full
       and 'StaffReviewButtonsView' in src_cog_full,
       'старые заявки с кнопками остаются рабочими')
+check('1312436222307860490' in open(os.path.join(repo, 'config.py'),
+                                    encoding='utf-8').read()
+      and '1312429743865335939' in open(os.path.join(repo, 'config.py'),
+                                        encoding='utf-8').read(),
+      'каналы наборов/заявок в Config')
+check('blacklist' in src_cog_full and 'is_blacklisted' in src_cog_full,
+      'чёрный список: блок повторных заявок')
+check('name="staff-panel"' not in src_cog_full
+      and '_ensure_staff_menu' in src_cog_full,
+      'меню набора публикуется само, без /staff-panel')
 
 
 class _GCh:
@@ -542,6 +623,22 @@ check('renderRoles' not in tpl and 'chsRoles' not in tpl,
 check('"curator_role"' in open(os.path.join(repo, 'services', 'staff_roles.py'),
                                encoding='utf-8').read(),
       'куратор один: ключ curator_role')
+check(SR.KNOWN_GRANT_BY_KIND.get('helper') == 948969471916249119
+      and SR.KNOWN_GRANT_BY_KIND.get('moderator') == 803553848396349510
+      and SR.KNOWN_GRANT_BY_KIND.get('event') == 852634463535759461
+      and SR.KNOWN_GRANT_BY_KIND.get('broadcaster') == 1551180629687664670,
+      'grant IDs: Helper/Moderator/Eventsmod/Broadcaster')
+check(int(Config.STAFF_HELPER_ROLE_ID) == 948969471916249119
+      and int(Config.STAFF_MODERATOR_ROLE_ID) == 803553848396349510
+      and int(Config.STAFF_EVENT_ROLE_ID) == 852634463535759461
+      and int(Config.STAFF_BROADCASTER_ROLE_ID) == 1551180629687664670,
+      'config defaults for все 4 grant-роли')
+src_staff = open(os.path.join(repo, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
+check('publish_staff_menu' in src_staff and '_channel_webhook' in src_staff,
+      'staff menu publishes via webhook V2')
+check('emoji_for_role' in src_staff and 'emoji_for_review' in src_staff
+      and 'Eventsmod' in src_staff,
+      'стикеры в select должностей и Принять/Отклонить')
 style_css = open(os.path.join(repo, 'web', 'static', 'style.css'),
                  encoding='utf-8').read()
 check('color-scheme: dark' in style_css and 'select option' in style_css,

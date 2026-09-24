@@ -24,7 +24,12 @@ STICKER_KEYS = (
     'warn', 'mute', 'ban', 'clear', 'unban',
     'appeal', 'helper', 'moderator', 'heart',
     'staff', 'user',  # /report: «На кого жалоба?» (Стафф/Участник)
-    'accept', 'reject', 'claim', 'signup',  # апелляции + наборы
+    # набор в команду — свой арт, то же чёрное стекло что модпанель
+    'accept', 'decline', 'blacklist', 'eventsmod', 'broadcaster',
+    # апелляции: claim / reject (reject = alias decline)
+    'claim', 'reject',
+    # /event-panel (Events V2)
+    'signup', 'announce', 'start', 'finish', 'elist',
 )
 
 # действие /modpanel → ключ стикера
@@ -44,6 +49,21 @@ ACTION_STICKER = {
     'clear': 'clear',
 }
 
+# должность набора → стикеры набора (то же стекло что модпанель)
+ROLE_STICKER = {
+    'helper': 'helper',
+    'moderator': 'moderator',
+    'event': 'eventsmod',
+    'broadcaster': 'broadcaster',
+}
+
+# решение по заявке
+REVIEW_STICKER = {
+    'approve': 'accept',
+    'reject': 'decline',
+    'blacklist': 'blacklist',
+}
+
 # фолбек, пока эмодзи ещё не залиты
 _UNICODE = {
     'warn': '⚠️',
@@ -61,14 +81,29 @@ _UNICODE = {
     'clear': '🧹',
 }
 
+_ROLE_UNICODE = {
+    'helper': '⭐',
+    'moderator': '🛡️',
+    'event': '📅',
+    'broadcaster': '📡',
+}
+
+_REVIEW_UNICODE = {
+    'approve': '✅',
+    'reject': '❌',
+    'blacklist': '🚷',
+}
+
 _cache: Dict[str, Any] = {}
 _synced = False
 _sync_task = None  # asyncio.Task | None — один фоновый sync
 
 
 def _emoji_name(key: str) -> str:
-    # w_ = белый неон-пак (v2); старые hakumo_* не трогаем
-    return f'hakumo_w_{key}'
+    # w2_ = модпанель; w4_ = набор (accept/decline/blacklist/eventsmod/broadcaster)
+    if key in ('accept', 'decline', 'blacklist', 'eventsmod', 'broadcaster'):
+        return f'hakumo_w4_{key}'
+    return f'hakumo_w2_{key}'
 
 
 def sticker_path(key: str) -> Optional[str]:
@@ -87,6 +122,34 @@ def emoji_for_action(action: str):
     if em is not None:
         return em
     return _UNICODE.get(action, '🤍')
+
+
+def emoji_for_role(kind: str):
+    """Стикер должности набора (Helper/Moderator/Eventsmod/Broadcaster)."""
+    key = ROLE_STICKER.get(kind, kind)
+    em = _cache.get(key)
+    if em is not None:
+        return em
+    alt = {'event': 'elist', 'broadcaster': 'announce'}.get(kind)
+    if alt and _cache.get(alt) is not None:
+        return _cache[alt]
+    return _ROLE_UNICODE.get(kind, '🤍')
+
+
+def emoji_for_review(action: str):
+    """Принять / Отклонить / Чёрный список — стикеры набора."""
+    key = REVIEW_STICKER.get(action, action)
+    em = _cache.get(key)
+    if em is not None:
+        return em
+    alt = {
+        'approve': 'unban',
+        'reject': 'ban',
+        'blacklist': 'ban',
+    }.get(action)
+    if alt and _cache.get(alt) is not None:
+        return _cache[alt]
+    return _REVIEW_UNICODE.get(action, '🤍')
 
 
 def emoji_heart():
@@ -109,24 +172,55 @@ def emoji_for_report(kind: str):
     return _REPORT_UNICODE.get(kind, '❔')
 
 
-# Апелляции / наборы: select вместо кнопок — свои стикеры.
+# Апелляции: select вместо кнопок
 _APPEAL_UNICODE = {
     'accept': '✅',
     'reject': '❌',
     'claim': '✋',
     'appeal': '📋',
-    'signup': '📝',
-    'helper': '🛟',
-    'moderator': '🛡️',
 }
 
 
 def emoji_for_appeal(kind: str):
-    """Стикер для пункта меню апелляции / набора или unicode-фолбек."""
-    em = _cache.get(kind)
+    """Стикер пункта меню апелляции или unicode-фолбек."""
+    # reject → decline (общий арт набора)
+    key = 'decline' if kind == 'reject' else kind
+    em = _cache.get(key) or _cache.get(kind)
     if em is not None:
         return em
     return _APPEAL_UNICODE.get(kind, '❔')
+
+
+# /event-panel — свои стикеры на кнопках (V2 как у модпанели)
+_EVENT_UNICODE = {
+    'signup': '✋',
+    'announce': '📣',
+    'start': '▶',
+    'finish': '🏁',
+    'elist': '📋',
+    'reg': '🔓',
+}
+EVENT_STICKER = {
+    'signup': 'signup',
+    'announce': 'announce',
+    'start': 'start',
+    'finish': 'finish',
+    'elist': 'elist',
+    'reg': 'clear',
+}
+
+
+def emoji_for_event(kind: str):
+    """Стикер кнопки event-panel или unicode-фолбек."""
+    key = EVENT_STICKER.get(kind, kind)
+    em = _cache.get(key)
+    if em is not None:
+        return em
+    # запасные уже залитые ключи
+    alt = {'reg': 'clear', 'elist': 'moderator'}.get(kind)
+    if alt and _cache.get(alt) is not None:
+        return _cache[alt]
+    return _EVENT_UNICODE.get(kind, '🤍')
 
 
 def emojis_ready() -> bool:
