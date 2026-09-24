@@ -977,12 +977,25 @@ class StaffReviewView(discord.ui.View):
             except (TypeError, ValueError):
                 gid = 0
             guild = (interaction.client.get_guild(gid) if gid else None) or interaction.guild
-            res = await grant_staff_role(guild, app.get("user_id"), app.get("role"))
+            if guild is None and hasattr(interaction.client, 'fetch_guild') and gid:
+                try:
+                    guild = await interaction.client.fetch_guild(gid)
+                except Exception as _fg:
+                    log.warning('STAFF grant fetch_guild: %s', _fg)
+            res = await grant_staff_role(
+                guild, app.get("user_id"), app.get("role"),
+                client=interaction.client)
             granted = res.get("role_name")
             if granted:
                 app["granted_role"] = granted
+                app.pop("grant_error", None)
             else:
                 grant_note = role_hint(res)
+                app["grant_error"] = grant_note
+                log.warning(
+                    "STAFF: роль не выдана user=%s role=%s → %s (%s)",
+                    app.get("user_id"), app.get("role"),
+                    res.get("reason"), grant_note)
         elif action == "blacklist":
             try:
                 gid = int(app.get("guild_id") or 0)

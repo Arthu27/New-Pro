@@ -437,7 +437,11 @@ def resolve_staff_role(guild, kind: str):
 
 
 async def grant_staff_role(guild, user_id, position, *, client=None):
-    """Выдать участнику роль по должности заявки."""
+    """Выдать участнику роль по должности заявки.
+
+    После add_roles проверяем, что роль реально на участнике
+    (иначе в базе «выдано», а в Discord пусто).
+    """
     kind = normalize_position(position)
     if not guild:
         return {"kind": kind, "role_name": None, "reason": "no_guild",
@@ -453,7 +457,8 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
         if member is None and hasattr(guild, "fetch_member"):
             try:
                 member = await guild.fetch_member(uid)
-            except Exception:
+            except Exception as _fe:
+                log.warning("[staff_roles] fetch_member(%s): %s", uid, _fe)
                 member = None
     if member is None:
         return {"kind": kind, "role_name": None, "reason": "member_left",
@@ -468,12 +473,55 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
         return {"kind": kind, "role_name": None, "reason": "not_found",
                 "searched": searched}
 
+    # уже есть — считаем успехом
+    try:
+        if any(int(getattr(r, "id", 0) or 0) == int(role.id)
+               for r in (getattr(member, "roles", None) or [])):
+            return {"kind": kind, "role_name": role.name, "reason": None,
+                    "searched": searched, "already": True}
+    except Exception:
+        pass
+
     try:
         await member.add_roles(role, reason="Заявка в команду одобрена (Hakumo)")
     except Exception as e:
         log.warning(f"[staff_roles] add_roles({role.name}): {e}")
         return {"kind": kind, "role_name": None, "reason": "forbidden",
+                "searched": searched, "error": str(e)}
+
+    # проверка: роль реально повисла (только если fetch_member доступен)
+    has = False
+    verified = False
+    try:
+        fresh = None
+        if hasattr(guild, "fetch_member"):
+            try:
+                fresh = await guild.fetch_member(uid)
+                verified = fresh is not None
+            except Exception:
+                fresh = None
+        check_m = fresh or member
+        has = any(int(getattr(r, "id", 0) or 0) == int(role.id)
+                  for r in (getattr(check_m, "roles", None) or []))
+        # тестовые фейки пишут в .added, не обновляя .roles
+        if not has:
+            added = list(getattr(check_m, "added", None)
+                         or getattr(member, "added", None)
+                         or [])
+            if role.name in added or int(role.id) in {
+                    int(x) for x in added if str(x).isdigit()}:
+                has = True
+    except Exception as _ve:
+        log.debug("staff_roles verify: %s", _ve)
+
+    if verified and not has:
+        log.warning(
+            "[staff_roles] add_roles(%s) ок, но роли нет у %s — иерархия/права?",
+            role.name, uid)
+        return {"kind": kind, "role_name": None, "reason": "not_applied",
                 "searched": searched}
+
+    log.info("[staff_roles] выдана «%s» → %s (kind=%s)", role.name, uid, kind)
     return {"kind": kind, "role_name": role.name, "reason": None,
             "searched": searched}
 
@@ -494,6 +542,9 @@ def role_hint(result: dict) -> str:
         return "участник не найден"
     if reason == "forbidden":
         return f"нет прав выдать **{label}** (роль бота ниже)"
+    if reason == "not_applied":
+        return (f"роль **{label}** не повисла после выдачи "
+                "(проверьте иерархию ролей бота)")
     if reason == "not_found":
         env = {
             "helper": "STAFF_HELPER_ROLE_ID",
