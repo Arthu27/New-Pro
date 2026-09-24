@@ -257,8 +257,8 @@ check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
 print('== 3b. Per-branch questions ==')
 for kind, needle in (
         ('Helper', 'предлагать идеи'),
-        ('Eventsmod', 'часовой пояс'),
-        ('Broadcaster', 'стримите'),
+        ('Eventsmod', 'ивенты умеете'),
+        ('Broadcaster', 'часовой пояс'),
 ):
     m = SA.StaffApplyModal(role_name=kind)
     labels = [ti.label for ti in m._inputs]
@@ -267,28 +267,29 @@ for kind, needle in (
     check(all(len(lab) <= 45 for lab in labels),
           f'{kind} labels ≤45 chars')
 
-# Events: точные 5 вопросов со скрина
-m_ev = SA.StaffApplyModal(role_name='Eventsmod')
-ev_labels = [ti.label for ti in m_ev._inputs]
-check(len(ev_labels) == 5, f'Events has 5 fields', ev_labels)
-check(ev_labels[0].startswith('Ваше Имя и Возраст'), 'Events Q1 name/age')
-check('часовой пояс' in ev_labels[1].lower(), 'Events Q2 timezone')
-check('опыт' in ev_labels[2].lower(), 'Events Q3 experience')
-check('ПК и микрофон' in ev_labels[3] or 'пк и микрофон' in ev_labels[3].lower(),
-      'Events Q4 PC+mic')
-check('веб камера' in ev_labels[4].lower() or 'вебкамера' in ev_labels[4].lower().replace(' ', ''),
-      'Events Q5 webcam', ev_labels[4])
+# Broadcaster: точные 5 вопросов со скрина
+m_br = SA.StaffApplyModal(role_name='Broadcaster')
+br_labels = [ti.label for ti in m_br._inputs]
+check(len(br_labels) == 5, f'Broadcaster has 5 fields', br_labels)
+check(br_labels[0].startswith('Ваше Имя и Возраст'), 'Broadcaster Q1 name/age')
+check('часовой пояс' in br_labels[1].lower(), 'Broadcaster Q2 timezone')
+check('опыт' in br_labels[2].lower(), 'Broadcaster Q3 experience')
+check('ПК и микрофон' in br_labels[3] or 'пк и микрофон' in br_labels[3].lower(),
+      'Broadcaster Q4 PC+mic')
+check('веб камера' in br_labels[4].lower()
+      or 'вебкамера' in br_labels[4].lower().replace(' ', ''),
+      'Broadcaster Q5 webcam', br_labels[4])
 
-# Event body labels
+# Event body labels (свои, не broadcaster)
 body_ev = SA.build_application_body(
-    user=_User(), user_id='1', age='Саша 20', activity='МСК',
-    experience='да, сервер X', reason='Да', extra='Да', kind='event')
-check('часовой пояс' in body_ev.lower() and 'веб камера' in body_ev.lower(),
+    user=_User(), user_id='1', age='Саша 20', activity='мафия',
+    experience='3ч', reason='квиз', kind='event')
+check('ивенты умеете' in body_ev.lower() and 'Идеи ивентов' in body_ev,
       'Events body uses event questions', body_ev[:300])
 body_br = SA.build_application_body(
-    user=_User(), user_id='1', age='Лёша 22', activity='Twitch',
-    experience='игры', reason='8ч', kind='broadcaster')
-check('стримите' in body_br and 'часов в неделю' in body_br,
+    user=_User(), user_id='1', age='Лёша 22', activity='МСК',
+    experience='да', reason='Да', extra='Да', kind='broadcaster')
+check('часовой пояс' in body_br.lower() and 'веб камера' in body_br.lower(),
       'Broadcaster body uses broadcaster questions')
 
 print('== 4. Web send_to_discord uses V2 ==')
