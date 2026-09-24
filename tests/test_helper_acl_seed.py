@@ -28,7 +28,7 @@ from services.staff_roles import (  # noqa: E402
 from services import permission_acl as pacl  # noqa: E402
 from services import staff_limits as SL  # noqa: E402
 from services.helper_acl_seed import (  # noqa: E402
-    apply_helper_acl_seed, HELPER_ACTIONS, HELPER_LIMITS,
+    apply_helper_acl_seed, ensure_helper_acl, HELPER_ACTIONS, HELPER_LIMITS,
 )
 from services import role_seed as RS  # noqa: E402
 from cogs.moderation import actions_for_member  # noqa: E402
@@ -153,6 +153,37 @@ check(HELPER in [str(r) for r in (acl3.get('warn') or [])],
       'после helper_seed: хелпер в warn')
 check(HELPER not in [str(r) for r in (acl3.get('ban') or [])],
       'после helper_seed: хелпер всё ещё не в ban')
+
+print('== 5. ensure: чинит ban без force + marker ==')
+pacl.save_action_acl(GID, {
+    'ban': [HELPER, MOD], 'mute': [MOD], 'purge': [MOD], 'warn': [MOD],
+})
+with open('data/.helper_acl.v4', 'w') as fh:
+    fh.write('ok')
+rep4 = apply_helper_acl_seed(force=False, guild_id=GID)
+check(rep4.get('applied') is True, f'ensure applied ({rep4.get("reason")})')
+acl4 = pacl.load_action_acl(GID)
+check(HELPER not in [str(r) for r in (acl4.get('ban') or [])],
+      'ensure: хелпер снят с ban')
+check(HELPER in [str(r) for r in (acl4.get('mute') or [])],
+      'ensure: хелпер в mute')
+check(HELPER in [str(r) for r in (acl4.get('warn') or [])],
+      'ensure: хелпер в warn')
+rep5 = ensure_helper_acl(guild_id=GID)
+check(rep5.get('reason') == 'acl ok', f'повтор ensure idle ({rep5.get("reason")})')
+
+print('== 6. ensure_known_helper_tier: mod→helper при маркере ==')
+with open('data/role_map.json', 'w', encoding='utf-8') as fh:
+    json.dump({HELPER: 'mod', MOD: 'mod'}, fh)
+with open('data/.role_seed.v6', 'w') as fh:
+    fh.write('ok')
+rep6 = RS.apply_role_seed(force=False, guild_id=GID)
+check(rep6.get('reason', '').startswith('already applied'),
+      f'marker skip ({rep6.get("reason")})')
+check(f'{HELPER}=helper(upgrade)' in (rep6.get('role_map_added') or []),
+      f'upgrade despite marker: {rep6.get("role_map_added")}')
+rm6 = json.load(open('data/role_map.json'))
+check(rm6.get(HELPER) == 'helper', f'disk helper={rm6.get(HELPER)}')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 print('\n--- Хелпер ---')

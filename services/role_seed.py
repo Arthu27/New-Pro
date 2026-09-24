@@ -74,6 +74,31 @@ def _main_guild_id(override=None):
     return None
 
 
+def ensure_known_helper_tier(report=None):
+    """Известный Helper в role_map: если ещё «mod» — перевести в helper.
+
+    Идемпотентно, без маркера версии: чинит старые установки, где роль
+    9489… осталась на тире mod до v6. Можно звать на каждом on_ready.
+    """
+    if report is None:
+        report = {'role_map_added': []}
+    try:
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        hid = str(int(KNOWN_HELPER_ROLE_ID))
+    except Exception as ex:
+        _log.debug('ensure_known_helper_tier id: %s', ex)
+        return report
+    role_map = _read_json(ROLE_MAP_PATH, {})
+    if not isinstance(role_map, dict):
+        role_map = {}
+    if role_map.get(hid) == 'mod':
+        role_map[hid] = 'helper'
+        _write_json(ROLE_MAP_PATH, role_map)
+        report.setdefault('role_map_added', []).append(f'{hid}=helper(upgrade)')
+        _log.info('role_map: %s mod→helper (ensure)', hid)
+    return report
+
+
 def apply_role_seed(force=False, guild_id=None):
     """Применить сид. Возвращает короткий отчёт-словарь (для логов/тестов).
 
@@ -102,6 +127,9 @@ def apply_role_seed(force=False, guild_id=None):
             version = 1
         marker = MARKER_FMT.format(version=version)
         if not force and os.path.exists(marker):
+            # Маркер есть — полный сид не трогаем, но тир хелпера чиним
+            # (старые VPS могли получить v6 без upgrade).
+            ensure_known_helper_tier(report)
             report['reason'] = f'already applied (v{version})'
             return report
 
@@ -121,15 +149,7 @@ def apply_role_seed(force=False, guild_id=None):
             _write_json(ROLE_MAP_PATH, role_map)
 
         # v6+: известный Helper, если в карте ещё как «mod» — перевести в helper
-        try:
-            from services.staff_roles import KNOWN_HELPER_ROLE_ID
-            _hid = str(int(KNOWN_HELPER_ROLE_ID))
-            if role_map.get(_hid) == 'mod':
-                role_map[_hid] = 'helper'
-                report['role_map_added'].append(f'{_hid}=helper(upgrade)')
-                _write_json(ROLE_MAP_PATH, role_map)
-        except Exception as _uex:
-            _log.debug('helper tier upgrade: %s', _uex)
+        ensure_known_helper_tier(report)
 
         # 2) action ACL: дефолтные разрешения действий для ролей персонала.
         # Хелпер (тир helper / KNOWN_HELPER) ИСКЛЮЧЁН — ветка чата через helper_acl_seed.

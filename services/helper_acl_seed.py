@@ -44,6 +44,68 @@ def _main_guild_id(override=None):
     return None
 
 
+def _sync_helper_action_acl(gid, report):
+    """Выдать mute/purge/warn, снять тяжёлые. Пишет в report added/removed."""
+    from services.permission_acl import (
+        ACTIONS, load_action_acl, save_action_acl)
+    helper = str(HELPER_ROLE_ID)
+    acl = load_action_acl(gid)
+    if not isinstance(acl, dict):
+        acl = {}
+    for action in HELPER_ACTIONS:
+        cur = [str(r) for r in (acl.get(action) or [])]
+        if helper not in cur:
+            cur.append(helper)
+            acl[action] = cur
+            report['actions_added'].append(action)
+    for action in ACTIONS:
+        if action in HELPER_ACTIONS:
+            continue
+        cur = [str(r) for r in (acl.get(action) or [])]
+        if helper in cur:
+            acl[action] = [r for r in cur if r != helper]
+            report['actions_removed'].append(action)
+    if report['actions_added'] or report['actions_removed']:
+        save_action_acl(gid, acl)
+    return acl
+
+
+def ensure_helper_acl(guild_id=None):
+    """Подтянуть ACL хелпера без маркера (каждый on_ready / ручной прогон).
+
+    Если кто-то руками вернул хелпера в ban/vmute — снимем. Если пропали
+    mute/purge/warn — вернём. Лимиты и cmd_acl не трогаем (дорого/шумно).
+    """
+    report = {
+        'applied': False, 'reason': '', 'guild_id': 0,
+        'actions_added': [], 'actions_removed': [],
+        'cmd_acl': False, 'limits': False,
+    }
+    try:
+        if str(os.environ.get('DEMO_MODE', '')).strip().lower() in (
+                '1', 'true', 'yes', 'on'):
+            report['reason'] = 'demo mode'
+            return report
+        gid = _main_guild_id(guild_id)
+        if not gid:
+            report['reason'] = 'no MAIN_GUILD_ID'
+            return report
+        report['guild_id'] = gid
+        _sync_helper_action_acl(gid, report)
+        if report['actions_added'] or report['actions_removed']:
+            report['applied'] = True
+            report['reason'] = 'acl repaired'
+            _log.info(
+                'helper_acl ensure: guild=%s +%s -%s',
+                gid, report['actions_added'], report['actions_removed'])
+        else:
+            report['reason'] = 'acl ok'
+    except Exception as ex:
+        report['reason'] = f'error: {ex}'
+        _log.warning('ensure_helper_acl: %s', ex)
+    return report
+
+
 def apply_helper_acl_seed(force=False, guild_id=None):
     """Выдать хелперу права ветки чата. Возвращает отчёт."""
     report = {
@@ -57,8 +119,9 @@ def apply_helper_acl_seed(force=False, guild_id=None):
             report['reason'] = 'demo mode'
             return report
         if not force and os.path.exists(MARKER):
-            report['reason'] = f'already applied (v{SEED_VERSION})'
-            return report
+            # Маркер есть — полный сид не повторяем, но ACL подчистим
+            # (бан могли вернуть руками / старый сид без warn).
+            return ensure_helper_acl(guild_id)
 
         gid = _main_guild_id(guild_id)
         if not gid:
@@ -67,25 +130,7 @@ def apply_helper_acl_seed(force=False, guild_id=None):
         report['guild_id'] = gid
         helper = str(HELPER_ROLE_ID)
 
-        from services.permission_acl import (
-            ACTIONS, load_action_acl, save_action_acl)
-        acl = load_action_acl(gid)
-        if not isinstance(acl, dict):
-            acl = {}
-        for action in HELPER_ACTIONS:
-            cur = [str(r) for r in (acl.get(action) or [])]
-            if helper not in cur:
-                cur.append(helper)
-                acl[action] = cur
-                report['actions_added'].append(action)
-        for action in ACTIONS:
-            if action in HELPER_ACTIONS:
-                continue
-            cur = [str(r) for r in (acl.get(action) or [])]
-            if helper in cur:
-                acl[action] = [r for r in cur if r != helper]
-                report['actions_removed'].append(action)
-        save_action_acl(gid, acl)
+        _sync_helper_action_acl(gid, report)
 
         try:
             from services.permission_acl import load_acl, set_rule
