@@ -447,7 +447,13 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    name = filename or f'hakumo_{kind}_banner_v15.png'
+    # staff custom — v16 (CDN cache-bust после смены баннера)
+    if filename:
+        name = filename
+    elif kind == 'staff':
+        name = 'hakumo_staff_banner_v16.png'
+    else:
+        name = f'hakumo_{kind}_banner_v15.png'
     return bio, name
 
 

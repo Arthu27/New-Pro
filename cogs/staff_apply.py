@@ -662,7 +662,7 @@ class StaffReviewButtonsView(discord.ui.View):
 class StaffApplyView(discord.ui.LayoutView):
     """Панель набора — Components V2 (чистый баннер + select роли)."""
 
-    def __init__(self, *, banner_filename: str = 'hakumo_staff_banner_v15.png'):
+    def __init__(self, *, banner_filename: str = 'hakumo_staff_banner_v16.png'):
         super().__init__(timeout=None)
         from services.v2_layouts import (
             V2_AVAILABLE, build_staff_menu_items, SHOW_MENU_BANNER)
