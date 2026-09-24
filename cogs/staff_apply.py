@@ -344,28 +344,81 @@ def _format_join(member) -> str:
         return '—'
 
 
-def build_application_body(*, user, user_id: str, age: str, activity: str,
-                           experience: str, reason: str, member=None) -> str:
-    """Текст карточки заявки V2 — тег юзера, id, вход, ответы."""
+# Вопросы модалки по веткам (как на скринах Helper/Moderator).
+# Discord TextInput.label ≤ 45 символов.
+POSITION_QUESTIONS = {
+    'helper': [
+        {'label': 'Ваше имя и возраст', 'ph': 'например: Аня 21', 'style': 'short', 'max': 80},
+        {'label': 'Умеете ли вы предлагать идеи', 'ph': 'Умею / нет', 'style': 'short', 'max': 200},
+        {'label': 'Сможете ли вы приветствовать участников', 'ph': 'Смогу / нет', 'style': 'short', 'max': 200},
+        {'label': 'Умеете ли вы прописывать бамп команды', 'ph': 'Да / нет', 'style': 'short', 'max': 100},
+    ],
+    'moderator': [
+        {'label': 'Ваше имя и возраст', 'ph': 'например: 19', 'style': 'short', 'max': 80},
+        {'label': 'С чего вы сидите и пик активности в сутках',
+         'ph': 'например: пк, 2 часа', 'style': 'short', 'max': 200},
+        {'label': 'Расскажите о себе и о своем опыте',
+         'ph': 'кратко о себе и опыте', 'style': 'paragraph', 'max': 500},
+        {'label': 'Оцените свои знания правил сервера/платформы',
+         'ph': 'например: 10/10', 'style': 'short', 'max': 100},
+    ],
+    'event': [
+        {'label': 'Ваше имя и возраст', 'ph': 'например: Саша 20', 'style': 'short', 'max': 80},
+        {'label': 'Какие ивенты умеете проводить',
+         'ph': 'мафия, квиз, киноночь…', 'style': 'paragraph', 'max': 500},
+        {'label': 'Сколько часов в день готовы на ивенты',
+         'ph': 'например: 2–3 часа, вечер', 'style': 'short', 'max': 200},
+        {'label': 'Идеи ивентов для сервера',
+         'ph': '1–2 идеи коротко', 'style': 'paragraph', 'max': 500},
+    ],
+    'broadcaster': [
+        {'label': 'Ваше имя и возраст', 'ph': 'например: Лёша 22', 'style': 'short', 'max': 80},
+        {'label': 'Где стримите и с какого устройства',
+         'ph': 'Twitch/YouTube, ПК…', 'style': 'short', 'max': 200},
+        {'label': 'Опыт эфиров и тематика контента',
+         'ph': 'опыт и что стримите', 'style': 'paragraph', 'max': 500},
+        {'label': 'Сколько часов в неделю готовы стримить',
+         'ph': 'например: 6–8 часов', 'style': 'short', 'max': 200},
+    ],
+}
+
+
+def questions_for(kind: str) -> list:
+    """4 вопроса ветки; fallback — moderator."""
+    from services.staff_roles import normalize_position
+    k = normalize_position(kind) or str(kind or '').lower()
+    return list(POSITION_QUESTIONS.get(k) or POSITION_QUESTIONS['moderator'])
+
+
+def build_application_body(*, user, user_id: str, age: str = '', activity: str = '',
+                           experience: str = '', reason: str = '', member=None,
+                           kind: str = None, answers: list = None) -> str:
+    """Текст карточки заявки V2 — тег юзера, id, вход, ответы с лейблами ветки."""
     mention = getattr(user, 'mention', None) or f'<@{user_id}>'
     lines = [
         f'**Пользователь** · {mention}',
         f'**ID** · `{user_id}`',
         f'**Присоединился** · {_format_join(member)}',
         '',
-        f'**Возраст**',
-        f'> {str(age)[:200] or "—"}',
-        '',
-        f'**Активность**',
-        f'> {str(activity)[:300] or "—"}',
-        '',
-        f'**Опыт**',
-        f'> {str(experience)[:1000] or "—"}',
-        '',
-        f'**Почему Hakumo**',
-        f'> {str(reason)[:1000] or "—"}',
     ]
-    return '\n'.join(lines)[:3500]
+    pairs = []
+    if answers and isinstance(answers, list):
+        for row in answers:
+            if not isinstance(row, dict):
+                continue
+            lab = str(row.get('label') or '').strip() or 'Ответ'
+            val = str(row.get('value') or '').strip() or '—'
+            pairs.append((lab, val))
+    if not pairs:
+        qs = questions_for(kind or 'moderator')
+        vals = [age, activity, experience, reason]
+        for i, q in enumerate(qs[:4]):
+            pairs.append((q['label'], str(vals[i] if i < len(vals) else '') or '—'))
+    for lab, val in pairs:
+        lines.append(f'**{lab}**')
+        lines.append(f'> {val[:1000]}')
+        lines.append('')
+    return '\n'.join(lines).rstrip()[:3500]
 
 
 def load_apps():
@@ -524,36 +577,46 @@ def _save_menu_state(data):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Модальное окно заявки
+# Модальное окно заявки — вопросы зависят от ветки
 # ═══════════════════════════════════════════════════════════════════
 
-class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
-    age = discord.ui.TextInput(
-        label="Возраст",
-        placeholder="например: 18",
-        max_length=3
-    )
-    experience = discord.ui.TextInput(
-        label="Опыт модерации",
-        placeholder="Серверы и должности",
-        style=discord.TextStyle.paragraph,
-        max_length=500
-    )
-    reason = discord.ui.TextInput(
-        label="Почему Hakumo?",
-        placeholder="Что привлекает на сервере",
-        style=discord.TextStyle.paragraph,
-        max_length=500
-    )
-    activity = discord.ui.TextInput(
-        label="Активность",
-        placeholder="Часов в день онлайн",
-        max_length=100
-    )
+class StaffApplyModal(discord.ui.Modal):
+    """4 поля TextInput с лейблами конкретной должности."""
 
     def __init__(self, role_name: str):
-        super().__init__()
+        from services.staff_roles import normalize_position, position_label
+        kind = normalize_position(role_name) or 'moderator'
+        label = position_label(kind)
+        qs = questions_for(kind)
+        super().__init__(title=f'Заявка · {label}'[:45])
         self.role_name = role_name
+        self.kind = kind
+        self.q_meta = qs
+        self._inputs = []
+        for q in qs[:4]:
+            style = (discord.TextStyle.paragraph
+                     if q.get('style') == 'paragraph'
+                     else discord.TextStyle.short)
+            ti = discord.ui.TextInput(
+                label=str(q['label'])[:45],
+                placeholder=str(q.get('ph') or '')[:100],
+                style=style,
+                max_length=int(q.get('max') or 200),
+                required=True,
+            )
+            self._inputs.append(ti)
+            self.add_item(ti)
+        # legacy aliases для тестов / старых путей
+        self.age = self._inputs[0]
+        self.activity = self._inputs[1]
+        self.experience = self._inputs[2]
+        self.reason = self._inputs[3]
+
+    def _answer_values(self):
+        vals = [str(ti.value or '').strip() for ti in self._inputs]
+        while len(vals) < 4:
+            vals.append('')
+        return vals[:4]
 
     async def on_submit(self, interaction: discord.Interaction):
         # defer сразу: доставка карточки кураторам может занять >3с
@@ -564,7 +627,7 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
             log.debug('staff apply defer: %s', _dex)
         from services.staff_roles import normalize_position, position_label
         user_id = str(interaction.user.id)
-        kind = normalize_position(self.role_name) or 'moderator'
+        kind = normalize_position(self.role_name) or self.kind or 'moderator'
         role_label = position_label(kind)
         if is_blacklisted(user_id, kind):
             try:
@@ -585,6 +648,12 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                 except Exception as _fx:
                     log.debug('staff apply bl deny: %s', _fx)
             return
+        v1, v2, v3, v4 = self._answer_values()
+        answers = [
+            {'label': self.q_meta[i]['label'], 'value': val}
+            for i, val in enumerate((v1, v2, v3, v4))
+            if i < len(self.q_meta)
+        ]
         apps = load_apps()
         submitted_ts = datetime.now(timezone.utc).isoformat()
         apps[user_id] = {
@@ -593,10 +662,12 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
             "display_name": interaction.user.display_name,
             "avatar": str(interaction.user.display_avatar.url) if interaction.user.display_avatar else None,
             "role": role_label,
-            "age": str(self.age),
-            "experience": str(self.experience),
-            "reason": str(self.reason),
-            "activity": str(self.activity),
+            "kind": kind,
+            "age": v1,
+            "activity": v2,
+            "experience": v3,
+            "reason": v4,
+            "answers": answers,
             "status": "pending",
             "submitted_at": submitted_ts,
             "timestamp": submitted_ts,
@@ -617,9 +688,8 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                     member = None
                 body = build_application_body(
                     user=interaction.user, user_id=user_id,
-                    age=str(self.age), activity=str(self.activity),
-                    experience=str(self.experience), reason=str(self.reason),
-                    member=member)
+                    age=v1, activity=v2, experience=v3, reason=v4,
+                    member=member, kind=kind, answers=answers)
                 # content: пинг куратора + тег заявителя (чтобы кликнуть профиль)
                 ping_bits = []
                 if tag:
@@ -657,7 +727,7 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
             confirm = (
                 f"Заявка на **{role_label}** ушла в "
                 f"{ch_ref}.\n"
-                f"Кураторы ветки уже видят карточку.\n"
+                f"Кураторы ветки и админы уже видят карточку.\n"
                 f"Статус: `/my-application`"
             )
             confirm_kind = 'ok'
@@ -772,7 +842,7 @@ class StaffAppCardView(discord.ui.LayoutView):
         except Exception:
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
-        foot = footer or 'HAKUMO · решение — меню ниже · только куратор этой ветки'
+        foot = footer or 'HAKUMO · решение — меню ниже · куратор этой ветки или админ'
         if V2_AVAILABLE:
             from discord import ui as dui
             children = [

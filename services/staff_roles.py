@@ -55,6 +55,7 @@ KNOWN_CURATOR_BY_KIND = {
 # Роли, выдаваемые после одобрения (владелец 2026-09-24)
 KNOWN_HELPER_ROLE_ID = 948969471916249119
 KNOWN_MODERATOR_ROLE_ID = 803553848396349510
+KNOWN_ADMIN_ROLE_ID = 1189999426631122964  # × Administrator
 KNOWN_GRANT_BY_KIND = {
     "helper": KNOWN_HELPER_ROLE_ID,
     "moderator": KNOWN_MODERATOR_ROLE_ID,
@@ -95,28 +96,28 @@ ROLE_SPECS = [
         "key": "helper_curator_role",
         "label": "Куратор Helper",
         "icon": "fa-user-check",
-        "what": "«× Отвечаю за Helper» — только эта роль принимает заявки Helper.",
+        "what": "«× Отвечаю за Helper» — куратор ветки (+ админы) принимает заявки Helper.",
         "empty": "По умолчанию: известная роль × Отвечаю за Helper.",
     },
     {
         "key": "moderator_curator_role",
         "label": "Куратор Moderator",
         "icon": "fa-user-shield",
-        "what": "«× Отвечаю за Moderator» — только эта роль принимает заявки Moderator.",
+        "what": "«× Отвечаю за Moderator» — куратор ветки (+ админы) принимает заявки Moderator.",
         "empty": "По умолчанию: известная роль × Отвечаю за Moderator.",
     },
     {
         "key": "event_curator_role",
         "label": "Куратор Eventsmod",
         "icon": "fa-user-clock",
-        "what": "«× Отвечаю за Eventsmod» — только эта роль принимает заявки Eventsmod.",
+        "what": "«× Отвечаю за Eventsmod» — куратор ветки (+ админы) принимает заявки Eventsmod.",
         "empty": "По умолчанию: известная роль × Отвечаю за Eventsmod.",
     },
     {
         "key": "broadcaster_curator_role",
         "label": "Куратор Broadcaster",
         "icon": "fa-podcast",
-        "what": "«× Отвечаю за Broadcaster» — только эта роль принимает заявки Broadcaster.",
+        "what": "«× Отвечаю за Broadcaster» — куратор ветки (+ админы) принимает заявки Broadcaster.",
         "empty": "По умолчанию: известная роль × Отвечаю за Broadcaster.",
     },
 ]
@@ -219,8 +220,9 @@ def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
 def can_review_position(member, position) -> tuple:
     """Может ли участник принять/отклонить заявку этой должности.
 
-    Администратор сервера — да. Иначе только роль «× Отвечаю за …»
-    своей ветки. Чужие ветки — отказ.
+    Да: Discord Administrator, × Administrator / admin|owner в role_map,
+    либо куратор этой ветки («× Отвечаю за …»). Чужие ветки — отказ
+    (кроме админов).
     """
     if member is None:
         return False, "Участник не найден."
@@ -230,14 +232,7 @@ def can_review_position(member, position) -> tuple:
             return True, ""
     except Exception:
         pass
-    kind = normalize_position(position)
-    if not kind:
-        return False, "В заявке не указана должность."
-    guild = getattr(member, "guild", None)
-    gid = getattr(guild, "id", 0) if guild else 0
-    rid = curator_role_id_for(gid, kind)
-    if not rid:
-        return False, "Куратор этой ветки не настроен."
+
     role_ids = set()
     try:
         for r in list(getattr(member, "roles", None) or []):
@@ -247,10 +242,33 @@ def can_review_position(member, position) -> tuple:
                 pass
     except Exception:
         role_ids = set()
+
+    # × Administrator и выше по карте ролей (не только Discord admin-бит)
+    try:
+        from services.staff_hierarchy import RANK, best_mapped_tier
+        tier = best_mapped_tier(member)
+        if tier and RANK.get(tier, -1) >= RANK.get("admin", 4):
+            return True, ""
+    except Exception:
+        pass
+    if int(KNOWN_ADMIN_ROLE_ID or 0) and int(KNOWN_ADMIN_ROLE_ID) in role_ids:
+        return True, ""
+
+    kind = normalize_position(position)
+    if not kind:
+        return False, "В заявке не указана должность."
+    guild = getattr(member, "guild", None)
+    gid = getattr(guild, "id", 0) if guild else 0
+    rid = curator_role_id_for(gid, kind)
+    if not rid:
+        return False, "Куратор этой ветки не настроен."
     if int(rid) in role_ids:
         return True, ""
     label = position_label(kind)
-    return False, f"Только <@&{int(rid)}> принимает заявки на **{label}**."
+    return False, (
+        f"Только <@&{int(rid)}> или администратор "
+        f"принимает заявки на **{label}**."
+    )
 
 
 NAME_VARIANTS = {

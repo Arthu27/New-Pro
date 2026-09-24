@@ -546,6 +546,25 @@ ok_cross, deny = SR.can_review_position(
 check(ok_h and not ok_cross, 'хелпер-куратор не принимает Event')
 check('<@&' in (deny or '') and ('принимает' in (deny or '') or 'reviews' in (deny or '').lower()),
       f'отказ чужой ветки объяснён: {deny!r}')
+check('администратор' in (deny or '').lower(),
+      f'отказ упоминает админа: {deny!r}')
+
+# админ (× Administrator) принимает любую ветку без Discord admin-бита
+ok_adm, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_ADMIN_ROLE_ID), 'Eventsmod')
+ok_adm2, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_ADMIN_ROLE_ID), 'Broadcaster')
+check(ok_adm and ok_adm2, '× Administrator принимает Event и Broadcaster')
+
+# Discord administrator — тоже любая ветка
+class _AdmPerm:
+    administrator = True
+class _AdmMember:
+    guild_permissions = _AdmPerm()
+    roles = []
+    guild = type('G', (), {'id': 777})()
+ok_da, _ = SR.can_review_position(_AdmMember(), 'Helper')
+check(ok_da, 'Discord administrator принимает Helper')
 
 # легаси: старая раздельная настройка кураторов не теряется
 SR.save_setting(777, 'curator_role', 0)

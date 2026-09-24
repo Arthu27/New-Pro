@@ -146,6 +146,12 @@ for cur_kind in SR.POSITIONS:
               f'{cur_kind} × {app_kind} → {"OK" if should else "DENY"}',
               f'ok={ok} deny={deny!r}')
 
+print('== 3b. Admin reviews all branches ==')
+for app_kind in SR.POSITIONS:
+    ok, deny = SR.can_review_position(
+        CurMember(SR.KNOWN_ADMIN_ROLE_ID), SR.position_label(app_kind))
+    check(ok, f'admin × {app_kind} → OK', f'deny={deny!r}')
+
 print('== 4. Discord review: deny wrong branch (no grant) ==')
 apps = {'u1': {
     'user_id': '42', 'role': 'Eventsmod', 'status': 'pending',

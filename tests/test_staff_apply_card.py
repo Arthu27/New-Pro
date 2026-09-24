@@ -209,9 +209,9 @@ class _Inter:
 # restore own branches empty → room
 modal = SA.StaffApplyModal(role_name='Moderator')
 modal.age._value = '19'
-modal.experience._value = 'Mod on server X for 2y'
-modal.reason._value = 'Like the community'
-modal.activity._value = '5h/day'
+modal.activity._value = 'пк, 2 часа'
+modal.experience._value = 'zxc гуль'
+modal.reason._value = '10/10'
 inter = _Inter(g_room)
 asyncio.get_event_loop().run_until_complete(modal.on_submit(inter))
 
@@ -232,6 +232,14 @@ check(isinstance(view, SA.StaffAppCardView),
       'V2 StaffAppCardView', type(view))
 check(getattr(view, 'has_components_v2', lambda: False)(),
       'card has Components V2')
+# body uses moderator question labels
+from services.v2_layouts import layout_plain_text  # noqa: E402
+card_text = layout_plain_text(view) if view else ''
+check('С чего вы сидите' in card_text and 'знания правил' in card_text,
+      'moderator question labels on card', card_text[:200])
+check('куратор этой ветки или админ' in card_text.lower()
+      or 'куратор этой ветки или админ' in str(getattr(view, '', '')),
+      'footer allows admin', card_text[-120:])
 # allowed_mentions на пинг-сообщении (V2-карточка без content)
 am = (ping_msg or {}).get('allowed_mentions')
 check(am is not None,
@@ -243,7 +251,33 @@ check(app.get('role') == 'Moderator', 'role stored as Moderator', app.get('role'
 check(app.get('message_id') == '555001', 'message_id saved')
 check(app.get('curator_tag') == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
       'curator_tag saved')
+check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
+      'answers list saved with 4 Qs')
 
+print('== 3b. Per-branch questions ==')
+for kind, needle in (
+        ('Helper', 'предлагать идеи'),
+        ('Eventsmod', 'ивенты умеете'),
+        ('Broadcaster', 'стримите'),
+):
+    m = SA.StaffApplyModal(role_name=kind)
+    labels = [ti.label for ti in m._inputs]
+    check(any(needle in lab for lab in labels),
+          f'{kind} has branch question «{needle}»', labels)
+    check(all(len(lab) <= 45 for lab in labels),
+          f'{kind} labels ≤45 chars')
+
+# Event body labels
+body_ev = SA.build_application_body(
+    user=_User(), user_id='1', age='Саша 20', activity='мафия',
+    experience='3ч', reason='квиз', kind='event')
+check('Какие ивенты умеете' in body_ev and 'Идеи ивентов' in body_ev,
+      'Events body uses event questions')
+body_br = SA.build_application_body(
+    user=_User(), user_id='1', age='Лёша 22', activity='Twitch',
+    experience='игры', reason='8ч', kind='broadcaster')
+check('стримите' in body_br and 'часов в неделю' in body_br,
+      'Broadcaster body uses broadcaster questions')
 
 print('== 4. Web send_to_discord uses V2 ==')
 web_src = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()

@@ -4463,7 +4463,7 @@ def api_public_apply ():
                 user =_U (),user_id =str (uid ),
                 age =data ['yas'],activity =data ['активен'],
                 experience =str (data ['tecrube']),reason =str (data ['почему']),
-                member =member )
+                member =member ,kind =kind )
                 if data .get ('ekstra'):
                     body +=f"\n\n**Дополнительно**\n> {str (data ['ekstra'])[:800]}"
                 card =StaffAppCardView (title =role_label ,body =body )
