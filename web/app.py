@@ -4452,14 +4452,14 @@ def api_public_apply ():
                 kind =normalize_position (data .get ('role')) or 'moderator'
                 role_label =position_label (kind )
                 body =(
-                f"`{data ['discord_name']}` · `{uid}` · web\n\n"
-                f"**Age** · {data ['yas']}\n"
-                f"**Activity** · {data ['активен']}\n\n"
-                f"**Experience**\n{str (data ['tecrube'])[:1000] or '—'}\n\n"
-                f"**Why Hakumo**\n{str (data ['почему'])[:1000] or '—'}"
+                f"`{data ['discord_name']}` · `{uid}` · сайт\n\n"
+                f"**Возраст** · {data ['yas']}\n"
+                f"**Активность** · {data ['активен']}\n\n"
+                f"**Опыт**\n{str (data ['tecrube'])[:1000] or '—'}\n\n"
+                f"**Почему Hakumo**\n{str (data ['почему'])[:1000] or '—'}"
                 )
                 if data .get ('ekstra'):
-                    body +=f"\n\n**Extra**\n{str (data ['ekstra'])[:800]}"
+                    body +=f"\n\n**Дополнительно**\n{str (data ['ekstra'])[:800]}"
                 card =StaffAppCardView (title =role_label ,body =body )
                 msg =await _send_staff_card (channel ,content =ping or None ,view =card )
                 apps [app_id ]['message_id']=str (msg .id )

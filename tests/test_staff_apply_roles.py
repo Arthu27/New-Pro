@@ -425,7 +425,7 @@ def _followup_text(msgs):
 _fu4 = _followup_text(inter4.followup.msgs)
 if not _fu4 and getattr(inter4.response, 'kw', None):
     _fu4 = _followup_text([inter4.response.kw])
-check(('Role:' in _fu4 or 'role' in _fu4.lower()) and 'Хелпер' in _fu4,
+check(('Роль:' in _fu4 or 'Role:' in _fu4) and 'Хелпер' in _fu4,
       'нажавшему видно: роль выдана — какая')
 check(cl.fetched == [42], 'заявителю отправлено ЛС')
 
@@ -544,7 +544,7 @@ ok_h, _ = SR.can_review_position(
 ok_cross, deny = SR.can_review_position(
     _CurMember(SR.KNOWN_CURATOR_BY_KIND['helper']), 'Event')
 check(ok_h and not ok_cross, 'хелпер-куратор не принимает Event')
-check('<@&' in (deny or '') or 'reviews' in (deny or '').lower(),
+check('<@&' in (deny or '') and ('принимает' in (deny or '') or 'reviews' in (deny or '').lower()),
       f'отказ чужой ветки объяснён: {deny!r}')
 
 # легаси: старая раздельная настройка кураторов не теряется
@@ -564,8 +564,8 @@ check(SR.curator_role_id(778, 999) == 999,
 src_cog_full = open(os.path.join(repo, 'cogs', 'staff_apply.py'),
                     encoding='utf-8').read()
 check('staff_review_select_v1' in src_cog_full
-      and 'Accept' in src_cog_full and 'Decline' in src_cog_full,
-      'решение по заявке — select Accept/Decline')
+      and 'Принять' in src_cog_full and 'Отклонить' in src_cog_full,
+      'решение по заявке — select Принять/Отклонить')
 check('staff_review_approve_v1' in src_cog_full
       and 'StaffReviewButtonsView' in src_cog_full,
       'старые заявки с кнопками остаются рабочими')
@@ -612,17 +612,21 @@ check('renderRoles' not in tpl and 'chsRoles' not in tpl,
 check('"curator_role"' in open(os.path.join(repo, 'services', 'staff_roles.py'),
                                encoding='utf-8').read(),
       'куратор один: ключ curator_role')
-check(SR.KNOWN_GRANT_BY_KIND.get('event') == 852634463535759461
+check(SR.KNOWN_GRANT_BY_KIND.get('helper') == 948969471916249119
+      and SR.KNOWN_GRANT_BY_KIND.get('moderator') == 803553848396349510
+      and SR.KNOWN_GRANT_BY_KIND.get('event') == 852634463535759461
       and SR.KNOWN_GRANT_BY_KIND.get('broadcaster') == 1551180629687664670,
-      'grant IDs: Eventsmod + Broadcaster')
-check(int(Config.STAFF_EVENT_ROLE_ID) == 852634463535759461
+      'grant IDs: Helper/Moderator/Eventsmod/Broadcaster')
+check(int(Config.STAFF_HELPER_ROLE_ID) == 948969471916249119
+      and int(Config.STAFF_MODERATOR_ROLE_ID) == 803553848396349510
+      and int(Config.STAFF_EVENT_ROLE_ID) == 852634463535759461
       and int(Config.STAFF_BROADCASTER_ROLE_ID) == 1551180629687664670,
-      'config defaults for Eventsmod/Broadcaster')
+      'config defaults for все 4 grant-роли')
 src_staff = open(os.path.join(repo, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
 check('publish_staff_menu' in src_staff and '_channel_webhook' in src_staff,
       'staff menu publishes via webhook V2')
-check('Select a position' in src_staff and 'Eventsmod' in src_staff,
-      'EN select placeholder + Eventsmod')
+check('Выберите должность' in src_staff and 'Eventsmod' in src_staff,
+      'RU UI + EN название Eventsmod')
 style_css = open(os.path.join(repo, 'web', 'static', 'style.css'),
                  encoding='utf-8').read()
 check('color-scheme: dark' in style_css and 'select option' in style_css,
