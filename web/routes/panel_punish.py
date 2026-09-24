@@ -311,9 +311,10 @@ def register(ctx):
                 if not _okl:
                     return jsonify({'success': False,
                                     'error': _deny or 'Лимит исчерпан'}), 429
-                # потолок длительности мута (0/не задан — без ограничения)
+                # потолок длительности мута (прогрессия по цели)
                 if action in _DURATION_ACTIONS:
-                    _cap = _SL.effective_max_duration(guild.id, 'mute', role_ids)
+                    _cap = _SL.resolve_mute_cap(
+                        guild.id, getattr(target, 'id', target), role_ids)
                     from cogs.moderation import parse_duration_minutes as _pd
                     from services.staff_limits import mute_duration_error as _mde
                     _mins = _pd(duration, 30)
@@ -332,7 +333,8 @@ def register(ctx):
                 else:
                     from services import staff_limits as _SLC
                     _rids_v = _member_role_ids(member_viewer)
-                    _dur_cap = _SLC.effective_max_duration(int(gid), 'mute', _rids_v)
+                    _dur_cap = _SLC.resolve_mute_cap(
+                        int(gid), getattr(target, 'id', target), _rids_v)
             except Exception as _dcex:
                 _log.debug('punish duration cap: %s', _dcex)
         try:

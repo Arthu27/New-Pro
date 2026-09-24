@@ -208,26 +208,32 @@ SL.set_role_limits(GT, 1002, who='Куратор', ban=9)
 _lm_cur2, _ = SL.effective_limits(GT, [1002])
 check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (2)')
 
-# Потолок длительности мута: 2 часа у всех (Sabotash 2026-09-02).
-check(SL.effective_max_duration(GT, 'mute', [1001]) == 2 * 3600,
-      'модер: мут максимум 2 часа')
-check(SL.effective_max_duration(GT, 'mute', [1002]) == 2 * 3600,
-      'куратор: мут максимум 2 часа')
-check(SL.effective_max_duration(GT, 'mute', [1003]) == 2 * 3600,
-      'админ: мут максимум 2 часа')
+# Потолок длительности: прогрессия (первый шаг 1 ч); effective_max — тир.
+check(SL.effective_max_duration(GT, 'mute', [1001]) == 3600,
+      'модер: тировый потолок 1 час (первый шаг)')
+check(SL.effective_max_duration(GT, 'mute', [1002]) == 3600,
+      'куратор: тировый потолок 1 час')
+check(SL.effective_max_duration(GT, 'mute', [1003]) == 3600,
+      'админ: тировый потолок 1 час')
 check(SL.effective_max_duration(GT, 'mute', [1004]) == 0,
       'владелец тира — без потолка длительности')
-check(SL.effective_max_duration(GT, 'mute', []) == 2 * 3600,
-      'без стафф-роли — дефолт 2 часа')
+check(SL.effective_max_duration(GT, 'mute', []) == 3600,
+      'без стафф-роли — дефолт 1 час')
 SL.set_role_durations(GT, 1001, who='t', role_name='Мод', mute=3 * 3600)
 check(SL.effective_max_duration(GT, 'mute', [1001]) == 3 * 3600,
-      'свой потолок роли (3 ч) перебивает тировые 2 часа')
-err_short = SL.mute_duration_error(15 * 60, cap_sec=2 * 3600)
-err_ok = SL.mute_duration_error(30 * 60, cap_sec=2 * 3600)
-err_long = SL.mute_duration_error(3 * 3600, cap_sec=2 * 3600)
+      'свой потолок роли (3 ч) перебивает тировые 1 час')
+err_short = SL.mute_duration_error(15 * 60, cap_sec=3600)
+err_ok = SL.mute_duration_error(30 * 60, cap_sec=3600)
+err_long = SL.mute_duration_error(2 * 3600, cap_sec=3600)
 check(err_short and 'короче' in err_short, '15 мин — отказ (минимум 30)')
-check(err_ok is None, '30 мин при потолке 2 ч — можно')
-check(err_long and 'дольше' in err_long, '3 ч при потолке 2 ч — отказ')
+check(err_ok is None, '30 мин при потолке 1 ч — можно')
+check(err_long and 'дольше' in err_long, '2 ч при потолке 1 ч — отказ')
+from services import mute_progression as MP
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3600, 'resolve: первый мут 1ч')
+MP.bump_after_mute(GT, 555)
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3 * 3600, 'resolve: после мута 3ч')
+MP.reset_on_warn(GT, 555)
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3600, 'resolve: после варна снова 1ч')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

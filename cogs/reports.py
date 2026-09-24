@@ -1181,8 +1181,8 @@ class Reports(commands.Cog):
                 hours = v.get('hours') or 2
                 try:
                     from services import staff_limits as _SL
-                    _cap = _SL.effective_max_duration(
-                        guild.id, 'mute',
+                    _cap = _SL.resolve_mute_cap(
+                        guild.id, member.id,
                         [r.id for r in getattr(interaction.user, 'roles', [])
                          if getattr(r, 'id', None) != getattr(guild, 'id', None)])
                     _sec = int(float(hours) * 3600)
@@ -1199,6 +1199,11 @@ class Reports(commands.Cog):
                 except Exception as _mse:
                     _log.debug('вердикт mute: очистка войс-мута: %s', _mse)
                 await member.timeout(until, reason=reason)
+                try:
+                    from services.mute_progression import bump_after_mute
+                    bump_after_mute(guild.id, member.id)
+                except Exception as _bex:
+                    _log.debug('вердикт mute bump: %s', _bex)
                 applied = f'Мут до {until:%d.%m %H:%M} UTC.'
             elif v['kind'] == 'kick' and member:
                 await member.kick(reason=reason)

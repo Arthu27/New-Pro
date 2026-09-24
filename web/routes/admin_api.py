@@ -208,17 +208,6 @@ def register(ctx):
         _lim_denied =_panel_limit_deny (bot ,guild.id if guild else int (session .get ('selected_guild')or MAIN_GUILD_ID ),_acl_m ,'mute')
         if _lim_denied :
             return jsonify ({'error':_lim_denied }),429
-        if _acl_m is not None :
-            _mute_cap =_panel_mute_cap (bot ,guild.id if guild else 0 ,_acl_m)
-            try :
-                from services .staff_limits import mute_duration_error as _mde
-                _derr =_mde (sec ,cap_sec =_mute_cap )
-                if _derr :
-                    return jsonify ({'error':_derr }),429
-            except Exception as _dex :
-                _log .debug ('api_temp_mod_mute duration: %s',_dex )
-                if _mute_cap and sec >_mute_cap :
-                    return jsonify ({'error':f'Мут дольше разрешённого вашей ролью (потолок {_mute_cap //60 } мин)'}),429
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
             # Resolve user
@@ -229,12 +218,29 @@ def register(ctx):
             return jsonify ({'error':'Пользователь не найден'}),404 
         if not member :
             return jsonify ({'error':'Пользователь не найден'}),404 
+        if _acl_m is not None :
+            _mute_cap =_panel_mute_cap (bot ,guild.id ,_acl_m ,
+                                         target_id =member .id )
+            try :
+                from services .staff_limits import mute_duration_error as _mde
+                _derr =_mde (sec ,cap_sec =_mute_cap )
+                if _derr :
+                    return jsonify ({'error':_derr }),429
+            except Exception as _dex :
+                _log .debug ('api_temp_mod_mute duration: %s',_dex )
+                if _mute_cap and sec >_mute_cap :
+                    return jsonify ({'error':f'Мут дольше разрешённого вашей ролью (потолок {_mute_cap //60 } мин)'}),429
         from datetime import datetime ,timedelta 
         until =datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (seconds =sec )
         try :
             _run_async (member .timeout (until ,reason =f"[Panel] {session.get('username')}: {d.get('reason', '')}"))
         except Exception as e :
             return jsonify ({'error':str (e )}),400 
+        try :
+            from services .mute_progression import bump_after_mute
+            bump_after_mute (guild .id ,member .id )
+        except Exception as _bex :
+            _log .debug ('api_temp_mod_mute bump: %s',_bex )
         cog ._mutes .setdefault (str (guild .id ),{})[str (member .id )]={
         'until':time .time ()+sec ,'reason':d .get ('reason',''),
         'mod_id':session .get ('username',''),'created_at':time .time (),'duration':sec ,
