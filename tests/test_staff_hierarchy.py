@@ -175,6 +175,35 @@ async def main():
     ok, _ = run(curator, mod, action='unwarn', session_role='curator')
     check(ok, 'куратор снимает варн модератору: можно')
 
+    print('== 3b. Размут персонала — только куратор+ (заказ 2026-09-24) ==')
+    ok, deny = run(mod, mod2, action='unmute', session_role='mod')
+    check(not ok, 'хелпер/модер НЕ размучивает другого модера')
+    ok, deny = run(mod, mod2, action='vunmute', session_role='mod')
+    check(not ok, 'модер НЕ войс-размучивает модера')
+    # Master рангом выше mod — мут можно, размут персонала нельзя
+    ok, deny, _ar, _tr = SH.check(
+        guild, mod, mod2, 'timeout', actor_role='master')
+    check(ok, 'мастер мутит модера: можно (иерархия)')
+    ok, deny, _ar, _tr = SH.check(
+        guild, mod, mod2, 'unmute', actor_role='master')
+    check(not ok and deny and 'куратор' in deny.lower(),
+          'мастер НЕ размучивает модера — только куратор+', f'→ {deny}')
+    ok, deny, _ar, _tr = SH.check(
+        guild, mod, mod2, 'untimeout', actor_role='master')
+    check(not ok, 'мастер НЕ снимает таймаут модеру')
+    ok, _deny, _ar, _tr = SH.check(
+        guild, curator, mod, 'unmute', actor_role='curator')
+    check(ok, 'куратор размучивает модера: можно')
+    ok, _deny, _ar, _tr = SH.check(
+        guild, admin, mod, 'unmute', actor_role='admin')
+    check(ok, 'админ размучивает модера: можно')
+    ok, _deny, _ar, _tr = SH.check(
+        guild, mod, user1, 'unmute', actor_role='master')
+    check(ok, 'мастер размучивает обычного участника: можно')
+    ok, _deny, _ar, _tr = SH.check(
+        guild, mod, user1, 'unmute', actor_role='mod')
+    check(ok, 'модер размучивает участника: можно')
+
     print('== 4. Панельная роль из Discord: цель определяется сам ==')
     tr = SH.target_panel_role(guild, user1)
     check(tr == 'uye', 'участник без ролей/прав → uye')

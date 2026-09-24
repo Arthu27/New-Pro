@@ -33,9 +33,9 @@ G, MOD, OTHER = 777001, 111, 222
 print('== 1. Дефолты: безопасные цифры включены (заказ владельца) ==')
 lim = SL.get_limits(G)
 # Защитные дефолты на опасные действия; 0 = «без лимита» для остального.
-check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 5
+check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 3
       and lim['clear'] == 10,
-      'из коробки: бан 1/день, мут 5, размут 3, очистка 10 чисток/день')
+      'из коробки: бан 1/день, мут 3, размут 3, очистка 10 чисток/день')
 check(lim['warn'] == 3 and lim['kick'] == 0,
       'варн 3/день у модеров (Sabotash 2026-09-02); кик — 0 = не ограничено')
 check('nuke' not in lim,
@@ -200,8 +200,8 @@ check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 5 and _lm_adm['unmute'] ==
       'размут по тирам: модер 3 / куратор 5 / админ 5')
 check(_lm_mod['warn'] == 3 and _lm_cur['warn'] == 5 and _lm_adm['warn'] == 5,
       'варны по тирам: модер 3 / куратор 5 / админ 5')
-check(_lm_mod['mute'] == 5 and _lm_cur['mute'] == 10 and _lm_adm['mute'] == 10,
-      'муты по тирам: модер 5 / куратор 10 / админ 10')
+check(_lm_mod['mute'] == 3 and _lm_cur['mute'] == 10 and _lm_adm['mute'] == 10,
+      'муты по тирам: модер 3 / куратор 10 / админ 10')
 check(_lm_own.get('ban', 0) == 0, 'владелец — без лимита на бан')
 # Пер-рольный оверрайд важнее тирового дефолта.
 SL.set_role_limits(GT, 1002, who='Куратор', ban=9)

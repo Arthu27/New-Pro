@@ -16,6 +16,8 @@
   • «снятия» (unwarn/untimeout/vunmute/unban) — по той же иерархии:
     нельзя трогать персонал своего уровня и выше (иначе модеры снимали бы
     наказания друг друга — тот же беспредел);
+  • размут персонала (хелпер/модер/мастер) — только куратор и выше
+    (мастер рангом выше мода, но размутить его всё равно нельзя);
   • варн (warn) — тоже наказание и подчиняется иерархии.
 
 Кто есть кто:
@@ -44,6 +46,11 @@ LABELS = {
 # Действия-«снятия»: к ним применяется та же иерархия (нельзя лезть в
 # наказания персонала своего уровня и выше).
 REMOVE_ACTIONS = ('unwarn', 'untimeout', 'vunmute', 'unmute_chat', 'unban', 'unmute')
+
+# Размут персонала (хелпер/модер): только куратор и выше
+# (заказ 2026-09-24: моды/хелперы не снимают мут друг другу).
+UNMUTE_ACTIONS = ('untimeout', 'vunmute', 'unmute_chat', 'unmute')
+STAFF_PEER_TIERS = frozenset({'mod', 'master'})  # кого нельзя размутить ниже куратора
 
 
 def _role_map_tiers():
@@ -238,6 +245,16 @@ def check(guild, actor, target, action='', *, actor_role=None,
                 and RANK.get(a_role, 0) <= RANK.get(t_role, 0)):
             label = str(action or '')
             return (False, explain(a_role, t_role, label or None),
+                    a_role, t_role)
+        # Размут хелпера/модера/мастера — только куратор и выше
+        # (моды/хелперы не снимают мут друг другу; мастер тоже не может).
+        act = str(action or '')
+        if (act in UNMUTE_ACTIONS and t_role in STAFF_PEER_TIERS
+                and a_role != 'owner'
+                and RANK.get(a_role, 0) < RANK.get('curator', 3)):
+            return (False,
+                    'Размут персонала (хелпер/модер/мастер) — только '
+                    'куратор или выше.',
                     a_role, t_role)
         return True, None, a_role, t_role
     except Exception as _ex:
