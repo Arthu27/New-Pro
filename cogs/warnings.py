@@ -414,41 +414,12 @@ class warnings(commands.Cog):
             log.error(f'Ошибка авто-наказания: {e}')
         return None
 
-    # ── /warn ────────────────────────────────────────────────────────────
-    @app_commands.command(name="warn",
-                          description="Выдать предупреждение (куратор/админ своей ветки)")
-    @app_commands.describe(user="Кому выдать", reason="Причина")
-    async def warn_slash(self, interaction: discord.Interaction,
-                         user: discord.Member, reason: str = None):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            from services.warn_acl import manual_warn_check
-            ok, deny = manual_warn_check(
-                interaction.guild, interaction.user, user)
-            if not ok:
-                from cogs.embed_utils import error_embed as _err
-                await interaction.followup.send(
-                    embed=_err(deny or 'Нет права на варн.'), ephemeral=True)
-                return
-        except Exception as _ex:
-            log.debug('[WARNS] /warn acl: %s', _ex)
-        warn_id, total, punishment = await self.add_warn(
-            interaction, user, reason)
-        if not warn_id:
-            return
-        from cogs.embed_utils import success_embed as _ok
-        extra = f'\nАвто: {punishment}' if punishment else ''
-        await interaction.followup.send(
-            embed=_ok(
-                'Предупреждение выдано',
-                f'{user.mention} · варн **#{warn_id}** · всего **{total}**'
-                f'{extra}'),
-            ephemeral=True)
-
+    # ── ядро варна (из /modpanel; участникам — только авто-бот) ───────────
     async def add_warn(self, interaction, user: discord.Member, reason: str = None):
         """Общее ядро warn: запись + DM + автоматическое наказание.
 
-        Команду /warn и /modpanel используют её.
+        Вызов из /modpanel (куратор/админ ветки → стафф своей ветки).
+        Обычным участникам варн ставит бот автоматически.
         Ответ НЕ отправляет — отвечает вызывающая сторона.
         Возвращает: (warn_id, total, punishment_result)
         """

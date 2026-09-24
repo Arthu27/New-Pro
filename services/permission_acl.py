@@ -44,7 +44,7 @@ COMMAND_CATEGORIES = {
     # бан/кик/мут — это действия внутри /modpanel, а не отдельные
     # команды, а ticket-*/sla-*/schedule-*/filter-*/aimod-* удалены
     # вместе со своими когами.
-    "Модерация": ["modpanel", "warn", "unwarn", "warnings"],
+    "Модерация": ["modpanel", "unwarn", "warnings"],
     "Жалобы": ["report", "my-violations", "witness"],
     "Логи": ["logs-setup"],
     "Служебные": ["ladder", "ladder-add", "ladder-remove", "ladder-test",
