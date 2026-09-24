@@ -967,8 +967,7 @@ class StaffAppCardView(discord.ui.LayoutView):
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
         foot = footer or (
-            'HAKUMO · решение — меню ниже · только куратор этой ветки '
-            'или × Administrator'
+            'HAKUMO · решение — меню ниже · только куратор этой ветки'
         )
         if V2_AVAILABLE:
             from discord import ui as dui

@@ -232,9 +232,8 @@ from services.v2_layouts import layout_plain_text  # noqa: E402
 card_text = layout_plain_text(view) if view else ''
 check('С чего вы сидите' in card_text and 'знания правил' in card_text,
       'moderator question labels on card', card_text[:200])
-check('× Administrator' in card_text or 'administrator' in card_text.lower()
-      or 'куратор этой ветки' in card_text.lower(),
-      'footer names curator/Administrator', card_text[-160:])
+check('куратор этой ветки' in card_text.lower(),
+      'footer names branch curator', card_text[-160:])
 apps = SA.load_apps()
 app_key = '777888999000111222:moderator'
 app = apps.get(app_key) or apps.get('777888999000111222')

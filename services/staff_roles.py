@@ -4,11 +4,9 @@
 Заявку одобряют в Discord (select на карточке) и в панели
 («Доступ → Заявки в команду»). Обе точки спрашивают этот сервис.
 
-Кураторы раздельные (владелец 2026-09-24): ветка Helper не принимает
-Event/Broadcaster/Moderator и наоборот — у каждой должности своя роль
-«× Отвечаю за …». Принимают только куратор СВОЕЙ ветки или
-× Administrator (не общий × Curator, не Discord admin-бит, не
-панельный admin без роли).
+Кураторы раздельные: ветка Helper не принимает Event/Moderator и
+наоборот — только роль «× Отвечаю за …» своей ветки (+ владелец
+сервера/бота). × Administrator чужие ветки НЕ открывает.
 """
 
 import json
@@ -226,11 +224,11 @@ def can_review_position(member, position) -> tuple:
 
     Да ТОЛЬКО:
       • владелец сервера / бота;
-      • роль × Administrator (KNOWN_ADMIN_ROLE_ID);
       • куратор ЭТОЙ ветки («× Отвечаю за …»).
 
-    Нет: Discord-бит administrator, role_map admin, общий × Curator,
-    куратор чужой ветки. Helper-куратор не принимает Events и наоборот.
+    Нет: × Administrator (иначе админ ивентов с этой ролью принимает
+    Moderator), Discord-бит administrator, role_map, общий × Curator,
+    куратор чужой ветки. Каждая ветка — только своей ролью.
     """
     if member is None:
         return False, "Участник не найден."
@@ -257,10 +255,6 @@ def can_review_position(member, position) -> tuple:
     except Exception:
         pass
 
-    # Только явная роль × Administrator (не карта ролей, не Discord-бит)
-    if int(KNOWN_ADMIN_ROLE_ID or 0) and int(KNOWN_ADMIN_ROLE_ID) in role_ids:
-        return True, ""
-
     kind = normalize_position(position)
     if not kind:
         return False, "В заявке не указана должность."
@@ -279,8 +273,7 @@ def can_review_position(member, position) -> tuple:
         return True, ""
     label = position_label(kind)
     return False, (
-        f"Только <@&{int(rid)}> или <@&{int(KNOWN_ADMIN_ROLE_ID)}> "
-        f"принимает заявки на **{label}**."
+        f"Только <@&{int(rid)}> принимает заявки на **{label}**."
     )
 
 

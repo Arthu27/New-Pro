@@ -609,9 +609,10 @@ class _CurPerm:
     administrator = False
 class _CurMember:
     guild_permissions = _CurPerm()
-    def __init__(self, rid):
-        self.roles = [_CurRole(rid)]
+    def __init__(self, *rids):
+        self.roles = [_CurRole(r) for r in rids]
         self.guild = type('G', (), {'id': 777})()
+        self.id = 1
 ok_h, _ = SR.can_review_position(
     _CurMember(SR.KNOWN_CURATOR_BY_KIND['helper']), 'Helper')
 ok_cross, deny = SR.can_review_position(
@@ -619,10 +620,10 @@ ok_cross, deny = SR.can_review_position(
 check(ok_h and not ok_cross, 'хелпер-куратор не принимает Event')
 check('<@&' in (deny or '') and ('принимает' in (deny or '') or 'reviews' in (deny or '').lower()),
       f'отказ чужой ветки объяснён: {deny!r}')
-check(str(SR.KNOWN_ADMIN_ROLE_ID) in (deny or '') or 'Administrator' in (deny or ''),
-      f'отказ упоминает × Administrator: {deny!r}')
+check(str(SR.KNOWN_CURATOR_BY_KIND['event']) in (deny or ''),
+      f'отказ указывает куратора Events: {deny!r}')
 
-# Discord administrator-бит НЕ даёт доступ (декор-роли с admin-битом)
+# Discord administrator-бит НЕ даёт доступ
 class _AdmPerm:
     administrator = True
 class _AdmMember:
@@ -631,7 +632,7 @@ class _AdmMember:
     id = 1
     guild = type('G', (), {'id': 777, 'owner_id': 0})()
 ok_da, deny_da = SR.can_review_position(_AdmMember(), 'Helper')
-check(not ok_da, 'Discord admin-бит без × Administrator — отказ', deny_da)
+check(not ok_da, 'Discord admin-бит без куратора ветки — отказ', deny_da)
 
 # общий × Curator тоже НЕ даёт доступ ни к одной ветке
 ok_leg, deny_leg = SR.can_review_position(
@@ -641,12 +642,24 @@ ok_leg2, _ = SR.can_review_position(
     _CurMember(SR.KNOWN_CURATOR_ROLE_ID), 'Eventsmod')
 check(not ok_leg2, 'общий × Curator не принимает Events')
 
-# × Administrator — любая ветка
-ok_adm, _ = SR.can_review_position(
+# × Administrator тоже НЕ открывает чужие ветки
+# (иначе админ ивентов с × Admin принимает Moderator)
+ok_adm, deny_adm = SR.can_review_position(
     _CurMember(SR.KNOWN_ADMIN_ROLE_ID), 'Eventsmod')
 ok_adm2, _ = SR.can_review_position(
     _CurMember(SR.KNOWN_ADMIN_ROLE_ID), 'Broadcaster')
-check(ok_adm and ok_adm2, '× Administrator принимает Event и Broadcaster')
+check(not ok_adm and not ok_adm2,
+      '× Administrator без куратора ветки — отказ', deny_adm)
+
+# админ ивентов (= Events curator + × Admin) не принимает Moderator
+ok_ev_mod, deny_ev_mod = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_BY_KIND['event'], SR.KNOWN_ADMIN_ROLE_ID),
+    'Moderator')
+ok_ev_ev, _ = SR.can_review_position(
+    _CurMember(SR.KNOWN_CURATOR_BY_KIND['event'], SR.KNOWN_ADMIN_ROLE_ID),
+    'Eventsmod')
+check(not ok_ev_mod, 'админ ивентов не принимает Moderator', deny_ev_mod)
+check(ok_ev_ev, 'админ ивентов принимает свою ветку Events')
 
 # легаси: старая раздельная настройка кураторов не теряется
 SR.save_setting(777, 'curator_role', 0)

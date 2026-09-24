@@ -130,10 +130,11 @@ class CurPerm:
 class CurMember:
     guild_permissions = CurPerm()
 
-    def __init__(self, rid):
-        self.roles = [CurRole(rid)]
+    def __init__(self, *rids):
+        self.roles = [CurRole(r) for r in rids]
         self.guild = types.SimpleNamespace(id=g.id)
         self.display_name = 'cur'
+        self.id = 1
 
 
 for cur_kind in SR.POSITIONS:
@@ -146,11 +147,20 @@ for cur_kind in SR.POSITIONS:
               f'{cur_kind} × {app_kind} → {"OK" if should else "DENY"}',
               f'ok={ok} deny={deny!r}')
 
-print('== 3b. Admin reviews all branches ==')
+print('== 3b. × Administrator / Events+Admin cannot cross branches ==')
 for app_kind in SR.POSITIONS:
     ok, deny = SR.can_review_position(
         CurMember(SR.KNOWN_ADMIN_ROLE_ID), SR.position_label(app_kind))
-    check(ok, f'admin × {app_kind} → OK', f'deny={deny!r}')
+    check(not ok, f'admin-only × {app_kind} → DENY', f'deny={deny!r}')
+
+# sonja-like: Events curator + × Administrator → only Events
+ev_admin = CurMember(
+    SR.KNOWN_CURATOR_BY_KIND['event'], SR.KNOWN_ADMIN_ROLE_ID)
+ok_m, _ = SR.can_review_position(ev_admin, 'Moderator')
+ok_e, _ = SR.can_review_position(ev_admin, 'Eventsmod')
+ok_h, _ = SR.can_review_position(ev_admin, 'Helper')
+check(not ok_m and not ok_h and ok_e,
+      'Events+Admin: only Events, not Mod/Helper')
 
 print('== 4. Discord review: deny wrong branch (no grant) ==')
 apps = {'u1': {
