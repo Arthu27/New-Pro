@@ -522,6 +522,249 @@ def notice_layout_view(*, title: str, body: str = '', footer: str = '',
     return view
 
 
+# Акценты ответов (как у success/error embed)
+ACCENT_OK = 0x2ECC71
+ACCENT_ERR = 0xE74C3C
+ACCENT_INFO = 0x3498DB
+ACCENT_WARN = 0xF39C12
+
+
+def success_notice_view(title: str, body: str = '', *, footer: str = '',
+                        brand: str = 'HAKUMO'):
+    return notice_layout_view(
+        title=f'✅ {title}' if title and not str(title).startswith('✅') else (title or 'Готово'),
+        body=body, footer=footer, accent=ACCENT_OK, brand=brand, timeout=None)
+
+
+def error_notice_view(body: str, title: str = 'Ошибка', *, footer: str = '',
+                      brand: str = 'HAKUMO'):
+    t = title or 'Ошибка'
+    if not str(t).startswith('❌'):
+        t = f'❌ {t}'
+    return notice_layout_view(
+        title=t, body=body, footer=footer, accent=ACCENT_ERR, brand=brand,
+        timeout=None)
+
+
+def info_notice_view(title: str, body: str = '', *, footer: str = '',
+                     brand: str = 'HAKUMO'):
+    t = title or 'Инфо'
+    if not str(t).startswith('ℹ️'):
+        t = f'ℹ️ {t}'
+    return notice_layout_view(
+        title=t, body=body, footer=footer, accent=ACCENT_INFO, brand=brand,
+        timeout=None)
+
+
+def notice_from_embed(embed):
+    """Классический success/error/info Embed → V2 LayoutView (или None)."""
+    if embed is None or not V2_AVAILABLE:
+        return None
+    import re
+    desc = str(getattr(embed, 'description', None) or '').strip()
+    title = str(getattr(embed, 'title', None) or '').strip()
+    footer = ''
+    try:
+        ft = getattr(embed, 'footer', None)
+        footer = str(getattr(ft, 'text', None) or '') if ft else ''
+    except Exception:
+        footer = ''
+    # поля Embed → строки в body
+    field_lines = []
+    try:
+        for f in list(getattr(embed, 'fields', None) or []):
+            name = str(getattr(f, 'name', None) or '').strip()
+            value = str(getattr(f, 'value', None) or '').strip()
+            if name and value:
+                field_lines.append(f'**{name}:** {value}')
+            elif value:
+                field_lines.append(value)
+    except Exception:
+        field_lines = []
+    colour = getattr(embed, 'colour', None) or getattr(embed, 'color', None)
+    try:
+        accent = int(getattr(colour, 'value', None) or _BLACK)
+    except Exception:
+        accent = _BLACK
+    body = desc
+    # ## ✅ Title\nbody  /  ## ❌ Title\nbody
+    m = re.match(r'^##\s*([✅❌ℹ️⚠️])?\s*(.+?)(?:\n+([\s\S]*))?$', desc)
+    if m:
+        mark, ttl, rest = m.group(1), (m.group(2) or '').strip(), (m.group(3) or '').strip()
+        # убрать хвост-разделитель ✦
+        if rest:
+            rest = re.sub(r'\n*✦[^\n]*$', '', rest).strip()
+        title = f'{mark} {ttl}'.strip() if mark else ttl
+        body = rest
+    elif title and desc:
+        body = desc
+    elif desc and not title:
+        title = 'Сообщение'
+        body = desc
+    if field_lines:
+        extra = '\n'.join(field_lines)
+        body = f'{body}\n\n{extra}'.strip() if body else extra
+    if not title and not body:
+        return None
+    # убрать DIVIDER из body
+    if body:
+        body = re.sub(r'\n*✦[^\n]*$', '', body).strip()
+    return notice_layout_view(
+        title=title or 'Сообщение', body=body or '', footer=footer,
+        accent=accent, brand='HAKUMO', timeout=None)
+
+
+def layout_plain_text(view) -> str:
+    """Собрать видимый текст из LayoutView (для PanelInteraction / логов)."""
+    if view is None:
+        return ''
+    parts = []
+
+    def _walk(node):
+        content = getattr(node, 'content', None)
+        if isinstance(content, str) and content.strip():
+            parts.append(content.strip())
+        for ch in list(getattr(node, 'children', None) or []):
+            _walk(ch)
+        # Container / ActionRow иногда держат items
+        for ch in list(getattr(node, 'items', None) or []):
+            _walk(ch)
+
+    try:
+        for child in list(getattr(view, 'children', None) or []):
+            _walk(child)
+    except Exception:
+        pass
+    return '\n'.join(parts)
+
+
+async def _send_interaction(interaction, kw):
+    """response.send_message или followup — без смешения embed+LayoutView."""
+    try:
+        resp = getattr(interaction, 'response', None)
+        done = bool(resp and callable(getattr(resp, 'is_done', None)) and resp.is_done())
+        if done:
+            await interaction.followup.send(**kw)
+        else:
+            await interaction.response.send_message(**kw)
+        return True
+    except Exception as ex:
+        _log.info('respond_v2: %s — followup', ex)
+        try:
+            await interaction.followup.send(**kw)
+            return True
+        except Exception as ex2:
+            _log.warning('respond_v2 followup: %s', ex2)
+            return False
+
+
+async def respond_v2(interaction, *, kind: str = 'info', title: str = '',
+                     body: str = '', footer: str = '', ephemeral: bool = True,
+                     brand: str = 'HAKUMO', fallback_embed=None):
+    """Единый ответ на interaction: V2 notice, иначе классический embed.
+
+    kind: 'ok' | 'err' | 'info' | 'warn'
+    Никогда не шлёт embed= вместе с LayoutView.
+    """
+    kind = (kind or 'info').lower()
+    if kind in ('ok', 'success', 'done'):
+        view = success_notice_view(title or 'Готово', body, footer=footer, brand=brand)
+        accent = ACCENT_OK
+        mark = '✅'
+    elif kind in ('err', 'error', 'fail'):
+        view = error_notice_view(body, title=title or 'Ошибка', footer=footer, brand=brand)
+        accent = ACCENT_ERR
+        mark = '❌'
+    elif kind in ('warn', 'warning'):
+        view = notice_layout_view(
+            title=f'⚠️ {title}' if title and '⚠️' not in title else (title or 'Внимание'),
+            body=body, footer=footer, accent=ACCENT_WARN, brand=brand)
+        accent = ACCENT_WARN
+        mark = '⚠️'
+    else:
+        view = info_notice_view(title or 'Инфо', body, footer=footer, brand=brand)
+        accent = ACCENT_INFO
+        mark = 'ℹ️'
+
+    kw = {'ephemeral': bool(ephemeral)}
+    if view is not None and V2_AVAILABLE:
+        kw['view'] = view
+    else:
+        if fallback_embed is not None:
+            kw['embed'] = fallback_embed
+        else:
+            # локальный фолбек без циклического импорта embed_utils
+            e = discord.Embed(color=accent)
+            e.description = f'## {mark} {title or kind}\n{body or ""}'
+            if footer:
+                e.set_footer(text=footer[:200])
+            kw['embed'] = e
+
+    return await _send_interaction(interaction, kw)
+
+
+async def reply_embed_v2(interaction, embed, *, ephemeral: bool = True):
+    """Классический Embed → V2 LayoutView reply (без смеси embed+view)."""
+    kw = {'ephemeral': bool(ephemeral)}
+    v2 = None
+    if V2_AVAILABLE and embed is not None:
+        try:
+            v2 = notice_from_embed(embed)
+        except Exception as ex:
+            _log.debug('reply_embed_v2 convert: %s', ex)
+            v2 = None
+    if v2 is not None:
+        kw['view'] = v2
+    elif embed is not None:
+        kw['embed'] = embed
+    else:
+        return False
+    ok = await _send_interaction(interaction, kw)
+    if not ok and kw.get('view') is not None and embed is not None:
+        return await _send_interaction(interaction, {
+            'ephemeral': bool(ephemeral), 'embed': embed})
+    return ok
+
+
+async def reply_text_v2(interaction, text, *, kind: str = 'info',
+                        title: str = '', ephemeral: bool = True):
+    """Короткий текстовый ответ как V2 notice."""
+    body = str(text or '').strip()
+    if not title:
+        if kind in ('err', 'error', 'fail'):
+            title = 'Ошибка'
+        elif kind in ('ok', 'success', 'done'):
+            title = 'Готово'
+        elif kind in ('warn', 'warning'):
+            title = 'Внимание'
+        else:
+            title = 'Сообщение'
+    return await respond_v2(
+        interaction, kind=kind, title=title, body=body, ephemeral=ephemeral)
+
+
+async def send_dm_v2(user, embed=None, *, view=None, content=None):
+    """DM: V2 notice из embed, либо embed+view (кнопки апелляции и т.п.)."""
+    send_kw = {}
+    if content is not None:
+        send_kw['content'] = content
+    if view is not None:
+        # обычный View с кнопками — только вместе с embed (не LayoutView)
+        if embed is not None:
+            send_kw['embed'] = embed
+        send_kw['view'] = view
+    elif embed is not None:
+        v2 = notice_from_embed(embed) if V2_AVAILABLE else None
+        if v2 is not None:
+            send_kw['view'] = v2
+        else:
+            send_kw['embed'] = embed
+    if not send_kw:
+        return False
+    await user.send(**send_kw)
+    return True
+
+
 async def send_v2_or_embed(target, *, view, embed, fallback_view=None,
                            v2_items=None):
     """Отправить V2-раскладку, а если её нет/клиент старый — эмбед.

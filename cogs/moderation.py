@@ -10,6 +10,7 @@ from datetime import datetime ,timedelta ,timezone
 import json 
 import os 
 import time 
+import types
 from cogs .embed_utils import gif ,now_ts ,mod_dm_embed ,mod_log_embed ,success_embed ,error_embed 
 
 from logger import get_logger 
@@ -20,13 +21,28 @@ DIVIDER ="✦ ───────────────────── �
 
 
 async def _respond (interaction ,**kw ):
-    """Ответить на interaction максимально надёжно.
+    """Ответить на interaction: Components V2 notice, иначе embed.
 
-    Первый ответ — response.send_message; если уже был defer/ответ —
-    followup. Ошибки самой отправки глушим с записью в журнал: модератор
-    НИКОГДА не должен видеть «Приложение не отвечает» при выполненном
-    наказании.
+    Если передан embed=success/error — конвертим в LayoutView (без
+    одновременного embed+view). Модератор всегда видит V2-ответ.
     """
+    embed = kw.pop('embed', None)
+    view = kw.get('view')
+    # LayoutView нельзя мешать с embed=
+    if view is not None and embed is not None:
+        embed = None
+    if embed is not None and view is None:
+        try:
+            from services.v2_layouts import notice_from_embed, V2_AVAILABLE
+            if V2_AVAILABLE:
+                v2 = notice_from_embed(embed)
+                if v2 is not None:
+                    kw['view'] = v2
+                    embed = None
+        except Exception as _vx:
+            log.debug('[MODPANEL] v2 notice: %s', _vx)
+    if embed is not None:
+        kw['embed'] = embed
     try :
         if interaction .response .is_done ():
             await interaction .followup .send (**kw )
@@ -35,7 +51,14 @@ async def _respond (interaction ,**kw ):
     except Exception as _e :
         log .info (f'[MODPANEL] Ответ не доставлен: {_e}')
         try :
-            await interaction .followup .send (**kw )
+            # если V2 не приняли — фолбек на embed
+            if kw.get('view') is not None and embed is not None:
+                kw2 = dict(kw)
+                kw2.pop('view', None)
+                kw2['embed'] = embed
+                await interaction .followup .send (**kw2 )
+            else:
+                await interaction .followup .send (**kw )
         except Exception as _e2 :
             log .warning (f'[MODPANEL] Ответ не доставлен и через followup: {_e2}')
 
@@ -334,9 +357,25 @@ class Moderation (commands .Cog ):
 
     async def send_dm (self ,user ,embed ,view =None ):
         # DM — шаг best-effort: закрытые ЛС/сетевые сбои НЕ должны
-        # отменять наказание или превращать его в «ошибку» для модератора
+        # отменять наказание или превращать его в «ошибку» для модератора.
+        # V2 notice (как у апелляций), если нет отдельного view с кнопками.
         try :
-            await user .send (embed =embed ,view =view )
+            send_kw = {}
+            if view is not None:
+                # Кнопка апелляции и т.п. — классический View + embed
+                # (LayoutView нельзя смешивать с обычным View)
+                send_kw = {'embed': embed, 'view': view}
+            else:
+                try:
+                    from services.v2_layouts import notice_from_embed, V2_AVAILABLE
+                    v2 = notice_from_embed(embed) if V2_AVAILABLE else None
+                    if v2 is not None:
+                        send_kw = {'view': v2}
+                    else:
+                        send_kw = {'embed': embed}
+                except Exception:
+                    send_kw = {'embed': embed}
+            await user .send (**send_kw )
         except Exception as _ex:
             _log.debug("send_dm(): подавлено: %s", _ex)
 
@@ -1924,18 +1963,32 @@ class PanelInteraction:
             async def defer(s, ephemeral=False, thinking=False, **kw):
                 s._done = True
 
-            async def send_message(s, embed=None, ephemeral=False, **kw):
+            async def send_message(s, embed=None, ephemeral=False, view=None, **kw):
                 if embed is not None:
                     self.msgs.append(embed)
+                elif view is not None:
+                    self.msgs.append(_view_msg_proxy(view))
                 s._done = True
 
         class _Follow:
-            async def send(s, embed=None, ephemeral=False, **kw):
+            async def send(s, embed=None, ephemeral=False, view=None, **kw):
                 if embed is not None:
                     self.msgs.append(embed)
+                elif view is not None:
+                    self.msgs.append(_view_msg_proxy(view))
 
         self.response = _Resp()
         self.followup = _Follow()
+
+
+def _view_msg_proxy(view):
+    """Прокси с .description для _embed_text (V2 LayoutView)."""
+    try:
+        from services.v2_layouts import layout_plain_text
+        text = layout_plain_text(view)
+    except Exception:
+        text = ''
+    return types.SimpleNamespace(description=text or 'Готово', title='')
 
 
 def _embed_text(e):
@@ -3218,10 +3271,12 @@ class ModPanelView(discord.ui.LayoutView):
             from services.permission_acl import has_access
             guild = interaction.guild
             if guild and not has_access(guild.id, 'modpanel', user):
-                await interaction.response.send_message(
-                    embed=error_embed("Недостаточно прав: доступ к /modpanel "
-                                      "настраивает владелец (панель → Доступ → "
-                                      "Права команд)."),
+                from services.v2_layouts import reply_embed_v2
+                await reply_embed_v2(
+                    interaction,
+                    error_embed("Недостаточно прав: доступ к /modpanel "
+                                "настраивает владелец (панель → Доступ → "
+                                "Права команд)."),
                     ephemeral=True)
                 return False
         except Exception as _ex:

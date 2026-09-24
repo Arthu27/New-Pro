@@ -47,12 +47,17 @@ from cogs.afk import AFK
 class FakeResp:
     def __init__(self):
         self.kw = None
+        self._done = False
+
+    def is_done(self):
+        return self._done
 
     async def send_message(self, content=None, **kw):
+        self._done = True
         self.kw = {'content': content, **kw}
 
     async def defer(self, **kw):
-        pass
+        self._done = True
 
 
 class FakeFollowup:
@@ -380,7 +385,37 @@ data = json.load(open('data/staff_apps.json', encoding='utf-8'))
 check(data['42']['status'] == 'approved', 'заявка одобрена (статус в базе)')
 check(data['42'].get('granted_role') == 'Хелпер', 'в заявке записана выданная роль')
 check(g4._members[42].added == ['Хелпер'], 'участнику реально добавлена роль «Хелпер»')
-check(any('Роль выдана' in str(m) and 'Хелпер' in str(m) for m in inter4.followup.msgs),
+
+
+def _followup_text(msgs):
+    """Текст из классического followup или V2 LayoutView."""
+    parts = []
+    for m in msgs:
+        if isinstance(m, str):
+            parts.append(m)
+            continue
+        if isinstance(m, dict):
+            if m.get('content'):
+                parts.append(str(m['content']))
+            view = m.get('view')
+            if view is not None:
+                try:
+                    from services.v2_layouts import layout_plain_text
+                    parts.append(layout_plain_text(view))
+                except Exception:
+                    parts.append(str(view))
+            emb = m.get('embed')
+            if emb is not None:
+                parts.append(str(getattr(emb, 'description', '') or emb))
+            continue
+        parts.append(str(m))
+    return '\n'.join(parts)
+
+
+_fu4 = _followup_text(inter4.followup.msgs)
+if not _fu4 and getattr(inter4.response, 'kw', None):
+    _fu4 = _followup_text([inter4.response.kw])
+check('Роль выдана' in _fu4 and 'Хелпер' in _fu4,
       'нажавшему видно: роль выдана — какая')
 check(cl.fetched == [42], 'заявителю отправлено ЛС')
 

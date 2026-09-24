@@ -908,7 +908,8 @@ class AppealRateModal(discord.ui.Modal):
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: скрыть меню оценки #%s: %s',
                       self.appeal_id, _ex)
-        await interaction.response.send_message(embed=thanks, ephemeral=True)
+        from services.v2_layouts import reply_embed_v2
+        await reply_embed_v2(interaction, thanks, ephemeral=True)
 
 
 class AppealModal(discord.ui.Modal):
@@ -926,20 +927,26 @@ class AppealModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
+        from services.v2_layouts import reply_text_v2, reply_embed_v2
         if not await self.cog._is_banned(self.guild, interaction.user):
-            await interaction.followup.send(
-                ' Вы не забанены на этом сервере — апелляция не нужна.', ephemeral=True)
+            await reply_text_v2(
+                interaction,
+                'Вы не забанены на этом сервере — апелляция не нужна.',
+                kind='info', title='Апелляция')
             return
         item, err = await self.cog._submit_appeal(
             interaction.user, self.guild, self.text.value)
         if err:
-            await interaction.followup.send(f' Не получилось: {err}.', ephemeral=True)
+            await reply_text_v2(
+                interaction, f'Не получилось: {err}.', kind='err')
             return
         from cogs.embed_utils import hakumo_embed as _ae
-        await interaction.followup.send(
-            embed=_ae('appeal', f'Апелляция #{item["id"]} отправлена',
-                      f'Модераторы сервера **{self.guild.name}** уже получили её. '
-                      'Ответ придёт сюда, в личку.'), ephemeral=True)
+        await reply_embed_v2(
+            interaction,
+            _ae('appeal', f'Апелляция #{item["id"]} отправлена',
+                f'Модераторы сервера **{self.guild.name}** уже получили её. '
+                'Ответ придёт сюда, в личку.'),
+            ephemeral=True)
 
 
 # (выбора сервера больше нет: апелляция всегда идёт на главный сервер
@@ -965,15 +972,19 @@ class AppealChannelModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
+        from services.v2_layouts import reply_text_v2
         item, err = await self.cog._submit_channel_appeal(
             interaction.user, self.guild, self.text.value,
             channel=interaction.channel)
         if err:
-            await interaction.followup.send(f'Не получилось: {err}.', ephemeral=True)
+            await reply_text_v2(
+                interaction, f'Не получилось: {err}.', kind='err')
             return
-        await interaction.followup.send(
+        await reply_text_v2(
+            interaction,
             f'Апелляция **#{item["id"]}** принята — обсуждение в треде. '
-            'Модераторы уже видят её.', ephemeral=True)
+            'Модераторы уже видят её.',
+            kind='ok', title='Апелляция принята')
 
 
 class AppealMenuSelect(discord.ui.Select):
@@ -1047,12 +1058,36 @@ def _hook_avatar(guild):
         return None
 
 
-class AppealMenuView(discord.ui.View):
-    """Обёртка меню (persistent — переживает рестарт)."""
+class AppealMenuView(discord.ui.LayoutView):
+    """Меню апелляций Components V2 (persistent — переживает рестарт)."""
 
-    def __init__(self):
+    def __init__(self, *, banner_filename: str = ''):
         super().__init__(timeout=None)
-        self.add_item(AppealMenuSelect())
+        from services.v2_layouts import (
+            V2_AVAILABLE, build_appeals_menu_items, black_container)
+        sel = AppealMenuSelect()
+        body = (
+            'Несогласны с наказанием — варном, мутом или баном?\n'
+            'Выберите ниже **«Подать апелляцию»**: откроется окно — '
+            'расскажите свою версию.\n\n'
+            'Для вашей апелляции создастся отдельный тред — '
+            'модераторы ответят прямо в нём.')
+        if V2_AVAILABLE:
+            items = build_appeals_menu_items(
+                banner_filename=banner_filename or '',
+                body=body,
+                footer='Hakumo · апелляции',
+                menu_select=sel,
+                show_banner=bool(banner_filename),
+            )
+            if items:
+                for it in items:
+                    self.add_item(it)
+                return
+        # крайний фолбек без V2 — один select в контейнере не собрать
+        row = discord.ui.ActionRow()
+        row.add_item(sel)
+        self.add_item(row)
 
 
 DM_APPEAL_CUSTOM_ID = 'appeal:dm:open'
@@ -1076,22 +1111,25 @@ class AppealDMView(discord.ui.View):
         self.add_item(btn)
 
     async def _open(self, interaction):
+        from services.v2_layouts import reply_text_v2
         cog = None
         try:
             cog = interaction.client.get_cog('Appeals')
         except Exception as _ex:
             log.debug('appeals dm: cog: %s', _ex)
         if cog is None:
-            await interaction.response.send_message(
+            await reply_text_v2(
+                interaction,
                 'Бот только что перезапускался — нажмите кнопку ещё раз.',
-                ephemeral=True)
+                kind='warn')
             return
         guild = cog._main_guild()
         if guild is None:
-            await interaction.response.send_message(
+            await reply_text_v2(
+                interaction,
                 'Бот ещё не настроен: владелец не указал главный сервер. '
                 'Напишите администрации сервера другим способом.',
-                ephemeral=True)
+                kind='err')
             return
         try:
             banned = await cog._is_banned(guild, interaction.user)
@@ -1099,9 +1137,11 @@ class AppealDMView(discord.ui.View):
             log.debug('appeals dm: бан-чек: %s', _ex)
             banned = True   # не отпугнуть человека сбоем проверки
         if not banned:
-            await interaction.response.send_message(
+            await reply_text_v2(
+                interaction,
                 f'Вы не забанены на сервере **{guild.name}** — '
-                'апелляция не нужна.', ephemeral=True)
+                'апелляция не нужна.',
+                kind='info', title='Апелляция')
             return
         await interaction.response.send_modal(AppealModal(cog, guild))
 
@@ -1377,28 +1417,18 @@ class Appeals(commands.Cog):
         """Опубликовать меню подачи апелляций в канал (из панели).
 
         Возвращает (ok, сообщение). Повторная публикация обновляет сообщение.
+        Components V2 LayoutView — без embed= (Discord не принимает смесь).
         """
         if channel is None:
             return False, 'Канал не найден'
         guild = channel.guild
         state = self._load(guild.id)
-        embed = discord.Embed(
-            title='⚖ Апелляции на наказания',
-            description=(
-                'Несогласны с наказанием — варном, мутом или баном?\n'
-                'Выберите ниже **«Подать апелляцию»**: откроется окно — '
-                'расскажите свою версию.\n\n'
-                'Для вашей апелляции создастся отдельный тред — '
-                'модераторы ответят прямо в нём.'),
-            color=0xF1C40F,
-            timestamp=datetime.now(UTC))
-        embed.set_footer(text=f'{guild.name} · апелляции',
-                         icon_url=guild.icon.url if guild.icon else None)
+        view = AppealMenuView()
         old = (state.get('menu') or {})
         avatar = _hook_avatar(guild)
         msg = None
         used_hook = None
-        # главный путь — вебхук: имя «⚖ Апелляции», кнопки работают как раньше
+        # главный путь — вебхук: имя «⚖ Апелляции»
         hook = await _channel_webhook(channel)
         if hook is not None:
             used_hook = hook
@@ -1407,24 +1437,28 @@ class Appeals(commands.Cog):
                         and int(old.get('webhook_id') or 0) == hook.id
                         and int(old.get('channel_id') or 0) == channel.id):
                     msg = await hook.edit_message(
-                        int(old['message_id']), embed=embed, view=AppealMenuView())
+                        int(old['message_id']), view=view, embed=None,
+                        content=None)
                 else:
                     msg = await hook.send(
-                        embed=embed, view=AppealMenuView(), wait=True,
+                        view=view, wait=True,
                         username=HOOK_USERNAME, avatar_url=avatar)
             except Exception as _ex:
                 log.debug('appeals: меню через вебхук не ушло: %s', _ex)
                 msg = None
-        # фолбэк — обычная отправка от бота (вебхука нет или не вышло)
+        # фолбэк — обычная отправка от бота
         if msg is None:
             try:
                 if (old.get('message_id')
                         and int(old.get('channel_id') or 0) == channel.id
                         and not int(old.get('webhook_id') or 0)):
-                    msg = await channel.edit_message(
-                        int(old['message_id']), embed=embed, view=AppealMenuView())
+                    try:
+                        old_msg = await channel.fetch_message(int(old['message_id']))
+                        msg = await old_msg.edit(view=view, embed=None, content=None)
+                    except Exception:
+                        msg = None
                 if msg is None:
-                    msg = await channel.send(embed=embed, view=AppealMenuView())
+                    msg = await channel.send(view=view)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 return False, f'Бот не может писать в этот канал: {_ex}'
         state['menu'] = {'channel_id': channel.id, 'message_id': msg.id,

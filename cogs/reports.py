@@ -269,7 +269,8 @@ class ModeSelectView(discord.ui.View):
         e = discord.Embed(title='Режим обсуждения',
                           description=f'**{labels[mode]}**\n{who}',
                           color=0x5865F2)
-        await interaction.response.send_message(embed=e)
+        from services.v2_layouts import reply_embed_v2
+        await reply_embed_v2(interaction, e, ephemeral=False)
         try:
             await interaction.channel.edit(auto_archive_duration=10080)
         except Exception as _ae:

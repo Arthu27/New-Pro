@@ -1591,10 +1591,8 @@ class ErrorHandler:
 
     async def _respond(self, interaction: discord.Interaction, embed: discord.Embed):
         try:
-            if interaction.response.is_done():
-                await interaction.followup.send(embed=embed, ephemeral=True)
-            else:
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            from services.v2_layouts import reply_embed_v2
+            await reply_embed_v2(interaction, embed, ephemeral=True)
         except Exception as _ex:
             _log.debug("_respond(): подавлено: %s", _ex)
 

@@ -319,7 +319,8 @@ class warnings(commands.Cog):
     async def send_dm(self, user, embed):
         # DM — best-effort: закрытые ЛС/сетевой сбой не роняют команду
         try:
-            await user.send(embed=embed)
+            from services.v2_layouts import send_dm_v2
+            await send_dm_v2(user, embed)
         except Exception as _ex:
             _log.debug("send_dm(): подавлено: %s", _ex)
 
@@ -436,9 +437,9 @@ class warnings(commands.Cog):
             from services.staff_hierarchy import check as _hchk
             _hok, _hdeny, _a, _t = _hchk(guild, interaction.user, user, 'warn')
             if not _hok:
+                from services.v2_layouts import reply_embed_v2
                 from cogs.embed_utils import error_embed as _err
-                await interaction.followup.send(embed=_err(_hdeny),
-                                                ephemeral=True)
+                await reply_embed_v2(interaction, _err(_hdeny), ephemeral=True)
                 return (0, len(self._get_warns(guild.id, user.id)), None)
         except Exception as _hex:
             log.debug(f"[WARNS] warn hierarchy: {_hex}")
@@ -462,10 +463,12 @@ class warnings(commands.Cog):
                 _sl_ok, _sl_used, _sl_lim = _sl_check(guild.id, interaction.user.id,
                                                       'warn', 1, role_ids=_sl_roles)
                 if not _sl_ok:
+                    from services.v2_layouts import reply_embed_v2
                     from cogs.embed_utils import error_embed as _err
-                    await interaction.followup.send(
-                        embed=_err(f'Лимит варнов исчерпан: {_sl_lim} '
-                                   f'(уже {_sl_used}). Период настраивается в «Лимитах команды».'),
+                    await reply_embed_v2(
+                        interaction,
+                        _err(f'Лимит варнов исчерпан: {_sl_lim} '
+                             f'(уже {_sl_used}). Период настраивается в «Лимитах команды».'),
                         ephemeral=True)
                     return (0, len(self._get_warns(guild.id, user.id)), None)
         except Exception as _ex:
@@ -572,7 +575,8 @@ class warnings(commands.Cog):
 
         e.set_thumbnail(url=user.display_avatar.url)
         e.set_footer(text=f"{interaction.guild.name}")
-        await interaction.response.send_message(embed=e, ephemeral=True)
+        from services.v2_layouts import reply_embed_v2
+        await reply_embed_v2(interaction, e, ephemeral=True)
 
     # ── /unwarn ─────────────────────────────────────────────────────────
     @app_commands.command(name="unwarn", description="Снять последнее предупреждение у пользователя")
@@ -592,10 +596,12 @@ class warnings(commands.Cog):
                     getattr(interaction.user, 'guild_permissions', None),
                     'moderate_members', False)
                 if not _ok:
-                    await interaction.response.send_message(
+                    from services.v2_layouts import reply_text_v2
+                    await reply_text_v2(
+                        interaction,
                         '🚫 Снятие варнов тебе не выдано (панель → Доступ → '
                         'Права команд → Классические разрешения → «Снять варн»).',
-                        ephemeral=True)
+                        kind='err', title='Нет доступа')
                     return
         except Exception as _acl_e:
             log.debug(f"[WARNS] unwarn acl: {_acl_e}")
@@ -605,7 +611,8 @@ class warnings(commands.Cog):
             _hok, _hdeny, _a, _t = _hchk(interaction.guild,
                                          interaction.user, user, 'unwarn')
             if not _hok:
-                await interaction.response.send_message(_hdeny, ephemeral=True)
+                from services.v2_layouts import reply_text_v2
+                await reply_text_v2(interaction, _hdeny, kind='err')
                 return
         except Exception as _hex:
             log.debug(f"[WARNS] unwarn hierarchy: {_hex}")
@@ -619,7 +626,8 @@ class warnings(commands.Cog):
                 f"{DIVIDER}"
             )
             e.set_footer(text=f"{interaction.guild.name}")
-            await interaction.response.send_message(embed=e, ephemeral=True)
+            from services.v2_layouts import reply_embed_v2
+            await reply_embed_v2(interaction, e, ephemeral=True)
             return
 
         removed = warns.pop()
@@ -650,7 +658,8 @@ class warnings(commands.Cog):
         )
         e.set_thumbnail(url=user.display_avatar.url)
         e.set_footer(text=f"{interaction.guild.name}")
-        await interaction.response.send_message(embed=e, ephemeral=True)
+        from services.v2_layouts import reply_embed_v2
+        await reply_embed_v2(interaction, e, ephemeral=True)
 
     async def remove_last_warning(self, user, moderator):
         """Снять ПОСЛЕДНИЙ варн (панель/бот): роль уровня пересчитывается,
