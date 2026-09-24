@@ -1250,13 +1250,24 @@ class Moderation (commands .Cog ):
                     _mdeny or 'Мастер без Helper/Moderator не может применять.'),
                     ephemeral=True)
                 return False
-            # Mapped helper (в т.ч. Discord Admin): бан/разбан/unwarn/войс —
+            # Mapped helper (в т.ч. Discord Admin): бан/разбан/unwarn/войс/варн —
             # нельзя даже если пункт ещё на экране.
             if (_mapped_is_helper(interaction.user)
                     and not _helper_panel_action_ok(action)):
                 await _respond(interaction, embed=error_embed(
                     'Это действие недоступно хелперу.'), ephemeral=True)
                 return False
+            # Варн — только куратор/админ ветки
+            if action == 'warn':
+                try:
+                    from services.warn_acl import can_issue_manual_warn
+                    if not can_issue_manual_warn(interaction.user):
+                        await _respond(interaction, embed=error_embed(
+                            'Варн вручную выдают только куратор и админ ветки.'),
+                            ephemeral=True)
+                        return False
+                except Exception as _wex:
+                    log.debug('[MODPANEL] warn issuer: %s', _wex)
             if action in ('mute', 'unmute'):
                 gid = getattr(interaction, 'guild_id', None) or getattr(
                     getattr(interaction, 'guild', None), 'id', None)
@@ -1325,8 +1336,17 @@ class Moderation (commands .Cog ):
                         return False ,_derr
             except Exception as _pex :
                 _log .debug ('[MODPANEL] panel dur cap: %s',_pex )
-        # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
+        # варн — куратор/админ ветки; участникам только бот
         if action =='warn':
+            try :
+                from services .warn_acl import manual_warn_check
+                _tm =target if isinstance (target ,discord .Member ) \
+                else guild .get_member (int (target_str )or 0 )
+                _wok ,_wdeny =manual_warn_check (guild ,_actor ,_tm )
+                if not _wok :
+                    return False ,_wdeny or 'Нет права на варн'
+            except Exception as _wx :
+                _log .debug ('[MODPANEL] warn_acl: %s',_wx )
             try :
                 from services .staff_limits import check_action 
                 _okw ,_deny =check_action (guild ,_actor ,'warn')
@@ -1999,9 +2019,10 @@ MODPANEL_ACL_KEYS = {
 # Хелпер (mapped tier = helper): только эти пункты /modpanel.
 # Discord Administrator / admin в actor_panel_role НЕ раздувают меню —
 # смотрим best_mapped_tier, не Discord-права.
-HELPER_MODPANEL_KEYS = frozenset({'warn', 'mute', 'unmute', 'clear'})
+HELPER_MODPANEL_KEYS = frozenset({'mute', 'unmute', 'clear'})
 # После выбора «Мут»/«Снять мут» — только чат (без войс/таймаута).
 HELPER_MUTE_KIND_KEYS = frozenset({'mute_chat', 'unmute_chat'})
+# Варн в /modpanel — только куратор/админ ветки (не helper/mod/master).
 
 
 def _mapped_is_helper(member):
@@ -2157,9 +2178,15 @@ def actions_for_member(guild, member):
     else:
         base = [a for a in MODPANEL_ACTIONS if a[3] in scoped]
     out = [a for a in base if _action_acl_allows(guild.id, member, a[0])]
-    # Hard clamp: mapped helper — только warn/mute/unmute/clear.
+    # Hard clamp: mapped helper — только mute/unmute/clear (без варна).
     if _mapped_is_helper(member):
         out = [a for a in out if a[0] in HELPER_MODPANEL_KEYS]
+    # Варн в меню — только куратор/админ/owner (не мод/мастер/хелпер)
+    try:
+        from services.warn_acl import filter_modpanel_actions
+        out = filter_modpanel_actions(member, out)
+    except Exception as _wex:
+        log.debug('actions_for_member: warn filter: %s', _wex)
     return out
 
 

@@ -162,9 +162,9 @@ TIER_ORDER = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
 # Мут/размут: хелпер/мод 3, мастер 5, куратор 7, админ 10.
 TIER_DEFAULT_LIMITS = {
     # тир владельца (owner) — ВСЁ без лимитов
-    'helper':  {'warn': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
-    'mod':     {'warn': 3, 'ban': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
-    'master':  {'warn': 1, 'ban': 1, 'unmute': 5, 'mute': 5, 'clear': 10},
+    'helper':  {'unmute': 3, 'mute': 3, 'clear': 10},  # без warn
+    'mod':     {'ban': 1, 'unmute': 3, 'mute': 3, 'clear': 10},  # без warn
+    'master':  {'ban': 1, 'unmute': 5, 'mute': 5, 'clear': 10},  # без warn
     'curator': {'warn': 2, 'ban': 2, 'unmute': 7, 'mute': 7, 'clear': 10},
     'admin':   {'warn': 2, 'ban': 5, 'unmute': 10, 'mute': 10, 'clear': 10},
     'owner':   {},   # владелец не ограничен ни в чём

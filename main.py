@@ -1198,13 +1198,21 @@ async def on_ready():
             from services.helper_acl_seed import apply_helper_acl_seed
             _href = apply_helper_acl_seed(guild_id=_seed_gid or None)
             if _href.get('applied'):
-                print(f"[РОЛИ] Хелпер сид v4: mute/purge/warn "
+                print(f"[РОЛИ] Хелпер сид v5: mute/purge "
                       f"(+{_href.get('actions_added')} "
                       f"-{_href.get('actions_removed')})")
             else:
                 _log.debug('helper_acl_seed: %s', _href.get('reason'))
         except Exception as _hex:
             _log.debug('on_ready(): helper_acl_seed: %s', _hex)
+        try:
+            from services.warn_acl_seed import apply_warn_acl_seed
+            _wref = apply_warn_acl_seed(guild_id=_seed_gid or None)
+            if _wref.get('applied'):
+                print(f"[РОЛИ] Warn ACL: только curator/admin "
+                      f"(+{_wref.get('added')} -{_wref.get('removed')})")
+        except Exception as _wex:
+            _log.debug('on_ready(): warn_acl_seed: %s', _wex)
     except Exception as _ex:
         _log.debug("on_ready(): role_seed: %s", _ex)
 

@@ -2,11 +2,12 @@
 """Сид прав роли «Хелпер» — ветка чата (заказ владельца 2026-09-24).
 
 Роль 948969471916249119:
-  • /modpanel: мут чата, размут, очистка, варн;
-  • бана / войс-мута / таймаута — нет;
-  • лимиты: варн 1, мут/размут 3, чистка 10 /день.
+  • /modpanel: мут чата, размут, очистка;
+  • варн / бан / войс-мут / таймаут — нет;
+  • лимиты: мут/размут 3, чистка 10 /день.
 
-v4: +warn; бан по-прежнему снят. Снимает хелпера с тяжёлых ACL.
+v5: варн снят (только куратор/админ ветки). v4 имел warn.
+Снимает хелпера с тяжёлых ACL и с warn.
 
 Идемпотентно: маркер data/.helper_acl.v<N>.
 """
@@ -20,10 +21,12 @@ from logger import get_logger
 _log = get_logger('helper_acl_seed')
 
 HELPER_ROLE_ID = 948969471916249119
-# Чат + варн. Бан / войс / таймаут — нет.
-HELPER_ACTIONS = ('mute', 'purge', 'warn')
-HELPER_LIMITS = {'clear': 10, 'mute': 3, 'unmute': 3, 'warn': 1}
-SEED_VERSION = 4
+# Чат без варна. Бан / войс / таймаут / варн — нет.
+HELPER_ACTIONS = ('mute', 'purge')
+HELPER_LIMITS = {'clear': 10, 'mute': 3, 'unmute': 3}
+# Явно снимаем с хелпера (могли остаться с v4).
+HELPER_REVOKE = ('warn', 'ban', 'vmute', 'timeout', 'kick', 'unwarn')
+SEED_VERSION = 5
 MARKER = f'data/.helper_acl.v{SEED_VERSION}'
 _DEMO_GUILD = 987654321098765432
 
@@ -45,7 +48,7 @@ def _main_guild_id(override=None):
 
 
 def _sync_helper_action_acl(gid, report):
-    """Выдать mute/purge/warn, снять тяжёлые. Пишет в report added/removed."""
+    """Выдать mute/purge, снять warn/тяжёлые. Пишет в report added/removed."""
     from services.permission_acl import (
         ACTIONS, load_action_acl, save_action_acl)
     helper = str(HELPER_ROLE_ID)
@@ -58,9 +61,8 @@ def _sync_helper_action_acl(gid, report):
             cur.append(helper)
             acl[action] = cur
             report['actions_added'].append(action)
-    for action in ACTIONS:
-        if action in HELPER_ACTIONS:
-            continue
+    revoke = set(HELPER_REVOKE) | (set(ACTIONS) - set(HELPER_ACTIONS))
+    for action in revoke:
         cur = [str(r) for r in (acl.get(action) or [])]
         if helper in cur:
             acl[action] = [r for r in cur if r != helper]
@@ -73,8 +75,8 @@ def _sync_helper_action_acl(gid, report):
 def ensure_helper_acl(guild_id=None):
     """Подтянуть ACL хелпера без маркера (каждый on_ready / ручной прогон).
 
-    Если кто-то руками вернул хелпера в ban/vmute — снимем. Если пропали
-    mute/purge/warn — вернём. Лимиты и cmd_acl не трогаем (дорого/шумно).
+    Если кто-то руками вернул хелпера в ban/vmute/warn — снимем. Если пропали
+    mute/purge — вернём. Лимиты и cmd_acl не трогаем (дорого/шумно).
     """
     report = {
         'applied': False, 'reason': '', 'guild_id': 0,
