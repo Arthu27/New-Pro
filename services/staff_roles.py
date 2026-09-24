@@ -19,8 +19,8 @@ log = get_logger("staff_roles")
 STAFF_ROLES_FILE = "data/staff_roles.json"
 STAFF_SETTINGS_FILE = "data/staff_apply_settings.json"
 
-# Должности набора (порядок в select меню)
-POSITIONS = ("helper", "moderator", "event", "broadcaster")
+# Должности набора (порядок в select меню: Mod → Helper → Event → Broadcaster)
+POSITIONS = ("moderator", "helper", "event", "broadcaster")
 
 STAFF_SETTING_KEYS = (
     "apply_channel",
@@ -49,7 +49,7 @@ KNOWN_CURATOR_BY_KIND = {
     "helper": 1551525681207189504,       # × Отвечаю за Helper
     "moderator": 1551524708552278036,    # × Отвечаю за Moderator
     "event": 1551527644326002748,        # × Отвечаю за Eventsmod
-    "broadcaster": 1552640159051157576,  # × Отвечаю за Broadcaster
+    "broadcaster": 1552639452713848912,  # × Отвечаю за Broadcaster (не копия)
 }
 
 # Роли, выдаваемые после одобрения (владелец 2026-09-24)

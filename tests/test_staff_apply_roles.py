@@ -167,6 +167,8 @@ check('Chat Control' not in values and 'Чат-контроль' not in labels,
       'select-меню: чат-контроля нет')
 check(set(values) == {'Helper', 'Moderator', 'Eventsmod', 'Broadcaster'},
       f'select-меню: четыре должности {values}')
+check(values == ['Moderator', 'Helper', 'Eventsmod', 'Broadcaster'],
+      f'select порядок Mod→Helper→Event→BC: {values}')
 check(any('Helper' in str(l) for l in labels) and any('Moderator' in str(l) for l in labels),
       'select-меню: Helper / Moderator')
 check(any('Eventsmod' in str(l) for l in labels) and any('Broadcaster' in str(l) for l in labels),
@@ -533,8 +535,15 @@ class FakeBot:
 A.bot_instance = FakeBot(g6, bg_loop)
 A.MAIN_GUILD_ID = '777'
 c = A.app.test_client()
+# admin панели может любую ветку; mod без Discord-куратора — нет
 with c.session_transaction() as s:
     s.update(logged_in=True, role='mod', username='tester')
+r_deny = c.post('/api/staff-apps/42/review', json={'action': 'approve', 'note': 'ок'})
+check(r_deny.status_code == 403,
+      f'панель: mod без куратора ветки → 403 ({r_deny.status_code})')
+
+with c.session_transaction() as s:
+    s.update(logged_in=True, role='admin', username='tester')
 
 r = c.post('/api/staff-apps/42/review', json={'action': 'approve', 'note': 'ок'})
 d = r.get_json() or {}

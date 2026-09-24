@@ -4019,6 +4019,21 @@ def api_review_staff_app (app_id ):
         return jsonify ({'error':'Заявка не найдена'}),404
     if not _record_on_main_guild (data [app_id ]):
         return jsonify ({'error':'Эта заявка с другого сервера — здесь её рассматривать нельзя.'}),404
+    # Изоляция веток: куратор Helper не принимает Events и т.д.
+    # Панельный admin/owner — да; иначе — Discord can_review_position.
+    _sess_role =session .get ('role')or ''
+    if _sess_role not in ('owner','admin'):
+        try :
+            from services .staff_roles import can_review_position 
+            from web .routes ._common import viewer_member 
+            _gid =int (data [app_id ].get ('guild_id')or MAIN_GUILD_ID or 0 )
+            _member =viewer_member (bot_instance ,_gid )if bot_instance else None 
+            _ok ,_deny =can_review_position (_member ,data [app_id ].get ('role')or '')
+            if not _ok :
+                return jsonify ({'error':(_deny or 'Чужая ветка — принимать нельзя.').replace ('**','')}),403 
+        except Exception as _acl_ex :
+            print (f'[staff-apps review ACL]: {_acl_ex}')
+            return jsonify ({'error':'Не удалось проверить доступ к ветке'}),403 
     req =_safe_json_obj()
     action =req .get ('action')# 'approve' or 'reject'
     note =req .get ('note','')

@@ -213,7 +213,7 @@ class Config:
     STAFF_EVENT_CURATOR_ROLE_ID: int = _env_int(
         'STAFF_EVENT_CURATOR_ROLE_ID', 1551527644326002748)
     STAFF_BROADCASTER_CURATOR_ROLE_ID: int = _env_int(
-        'STAFF_BROADCASTER_CURATOR_ROLE_ID', 1552640159051157576)
+        'STAFF_BROADCASTER_CURATOR_ROLE_ID', 1552639452713848912)
 
     @classmethod
     def data_path(cls, *parts: str) -> str:

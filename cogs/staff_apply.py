@@ -672,7 +672,7 @@ def remove_from_blacklist(user_id, position=None) -> bool:
 MENU_STATE_FILE = "data/staff_menu_state.json"
 # bump → при следующем on_ready меню перепубликуется в канал наборов
 # v3: 4 ветки (Helper/Mod/Event/Broadcaster) + V2 баннер НАБОРЫ (не Gojo STAFF)
-MENU_POST_VERSION = 3
+MENU_POST_VERSION = 4  # v4: порядок Mod→Helper→Event→Broadcaster
 
 
 def _load_menu_state():
@@ -1058,7 +1058,17 @@ class StaffReviewView(discord.ui.View):
             return await reply_text_v2(
                 interaction, "Заявка не найдена.", kind='err')
         position = app.get('role') or ''
-        ok, deny = can_review_position(interaction.user, position)
+        # interaction.user иногда User без roles — берём Member
+        reviewer = interaction.user
+        try:
+            if interaction.guild is not None:
+                mid = int(getattr(reviewer, 'id', 0) or 0)
+                mem = interaction.guild.get_member(mid) if mid else None
+                if mem is not None:
+                    reviewer = mem
+        except Exception as _mx:
+            log.debug('staff review member resolve: %s', _mx)
+        ok, deny = can_review_position(reviewer, position)
         if not ok:
             return await reply_text_v2(
                 interaction, deny or "Чужая ветка.",

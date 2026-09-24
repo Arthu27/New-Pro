@@ -88,7 +88,7 @@ live_roles = [
     R(1551525681207189504, '× Отвечаю за Helper'),
     R(1551524708552278036, '× Отвечаю за Moderator'),
     R(1551527644326002748, '× Отвечаю за Eventsmod'),
-    R(1552640159051157576, '× Отвечаю за Broadcaster'),
+    R(1552639452713848912, '× Отвечаю за Broadcaster'),
 ]
 g = G(live_roles)
 loop = asyncio.new_event_loop()
@@ -238,7 +238,7 @@ check(data['u1'].get('granted_role') == '× Eventsmod', 'granted_role в баз�
 print('== 6. UI + curator pings ==')
 sel = RoleSelect()
 check([o.value for o in sel.options] ==
-      ['Helper', 'Moderator', 'Eventsmod', 'Broadcaster'], 'select EN')
+      ['Moderator', 'Helper', 'Eventsmod', 'Broadcaster'], 'select EN')
 check(StaffAppCardView(title='Moderator', body='x').has_components_v2(), 'V2 card')
 from cogs.staff_apply import StaffReviewSelect  # noqa: E402
 rev = StaffReviewSelect()
