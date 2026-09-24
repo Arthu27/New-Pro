@@ -111,7 +111,8 @@
     </div>
     <div class="panel-body ev-howto">
       <ol>
-        <li>Выдай роль Event Mod <code id="evRoleCode">852634463535759461</code> ведущим ивентов.</li>
+        <li>Выдай роль Event Admin <code id="evAdminRoleCode">1551527644326002748</code>
+            и Event Mod <code id="evRoleCode">852634463535759461</code> ведущим ивентов.</li>
         <li>На странице <b>События</b> выбери канал и жми <b>Опубликовать</b> — или в Discord выполни <code>/event-panel</code>.</li>
         <li>Панель уйдёт в выбранный канал (или <code>EVENT_PANEL_CHANNEL_ID</code> / опцию <code>channel</code>).</li>
         <li>Участники жмут <b>Записаться</b>. Event Mod — <b>Анонс</b>, <b>Запись</b> (вкл/выкл), <b>Список</b>.</li>
@@ -208,6 +209,7 @@
       ['Канал назначения', d.target_channel_id ? chLabel(d.target_channel_id) : '<span class="ev-pill muted">не задан в панели</span>'],
       ['Канал панели (пост)', posted ? chLabel(d.channel_id) : '<span class="ev-pill muted">ещё не опубликована</span>'],
       ['EVENT_PANEL_CHANNEL_ID', cfgCh ? chLabel(cfgCh) : '<span class="ev-pill muted">0 — запасной .env</span>'],
+      ['Роль Event Admin', '<code>' + esc(d.event_admin_role_id || '1551527644326002748') + '</code>'],
       ['Роль Event Mod', '<code>' + esc(d.event_mod_role_id) + '</code>'],
       ['Сообщение', d.message_id ? '<code>' + esc(d.message_id) + '</code>' : '—'],
       ['Опубликовал', d.posted_by ? esc(d.posted_by) + ' · ' + fmtWhen(d.posted_at) : '—']
@@ -233,12 +235,14 @@
     }
 
     $('evPvTitle').textContent = d.title || 'События сервера';
-    var desc = (d.description || 'Здесь публикуются ивенты команды.\nНажми Записаться, чтобы отметить интерес.').replace(/<@&\d+>/g, '@Event Mod');
+    var desc = (d.description || 'Здесь публикуются ивенты команды.\nНажми Записаться, чтобы отметить интерес.').replace(/<@&\d+>/g, '@Event Staff');
     $('evPvDesc').textContent = desc;
     $('evPvReg').textContent = open ? 'Открыта' : 'Закрыта';
     $('evPvCount').textContent = String(count);
     $('evPvTime').textContent = d.posted_at ? fmtWhen(d.posted_at) : 'ожидает публикации';
     if (d.event_mod_role_id) $('evRoleCode').textContent = d.event_mod_role_id;
+    if (d.event_admin_role_id && $('evAdminRoleCode'))
+      $('evAdminRoleCode').textContent = d.event_admin_role_id;
   }
 
   function setMsg(text, ok) {
