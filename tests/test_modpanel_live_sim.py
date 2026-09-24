@@ -347,6 +347,13 @@ async def _order():
     check(view_o.pending_action == 'mute', 'действие запомнено без участника')
     check(inter_a.response.done, 'ACK без модалки')
     check(not inter_a.response.modal, 'модалки ещё нет')
+    check(not inter_a.response.sent,
+          'без tip ephemeral (не ломает original_response)')
+    check(inter_a.response.deferred or inter_a.response.done,
+          'ACK defer на ту же панель')
+    check('Выберите участника' in view_o._status_text()
+          and 'Мут' in view_o._status_text(),
+          'статус панели просит участника под выбранное действие')
 
     class _U:
         id = target.id
@@ -435,9 +442,9 @@ async def _preselect_open():
 asyncio.run(_preselect_open())
 
 
-print('== LIVE 5. 5 минут, без нового окна, Collector нет ==')
+print('== LIVE 5. Без timeout, без нового окна, Collector нет ==')
 src = open(os.path.join(ROOT, 'cogs/moderation.py'), encoding='utf-8').read()
-check('timeout=300' in src, 'панель на 5 минут')
+check('timeout=None' in src, 'панель без авто-timeout')
 check('prefer_resend=True' not in src, 'нигде не форсим resend')
 check('class ModActionSelect' in src and 'class ModActionButton' not in src,
       'действия — селект, не кнопки')
@@ -449,8 +456,8 @@ check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
 check("await _reset_after_step(interaction, panel, prefer_resend=False)" in src
       or '_reset_after_step(interaction, panel' in src,
       'после модалки — edit той же панели')
-check(int(M.ModPanelView(None, opener, allowed=allowed).timeout) == 300,
-      'ModPanelView.timeout == 300')
+check(M.ModPanelView(None, opener, allowed=allowed).timeout is None,
+      'ModPanelView.timeout is None')
 
 
 print('== LIVE 6. Серия: clear → ban → clear на одном message ==')

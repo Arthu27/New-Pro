@@ -167,13 +167,12 @@ def rules_embed(title: str, items: list, footer: str = ''):
 
 def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
     """Подпись под баннером в шапке панели (без «порядок любой»)."""
-    bits = []
+    if selected_uid and pending_label:
+        return f'участник <@{selected_uid}> · «{pending_label}»'
     if selected_uid:
-        bits.append(f'участник <@{selected_uid}>')
+        return f'участник <@{selected_uid}>'
     if pending_label:
-        bits.append(f'«{pending_label}»')
-    if bits:
-        return ' · '.join(bits)
+        return f'Выберите участника · «{pending_label}»'
     return 'Выберите участника и действие ниже.'
 
 

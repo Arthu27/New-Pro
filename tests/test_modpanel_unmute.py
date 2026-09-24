@@ -504,8 +504,8 @@ async def _msg_identity():
           'участник сохранён для серии действий')
     check(getattr(view_a._panel_message, 'id', None) == 444,
           'остаёмся на том же сообщении панели')
-    check(int(getattr(view_a, 'timeout', 0) or 0) == 300,
-          'панель живёт 5 минут (timeout=300)')
+    check(getattr(view_a, 'timeout', 'x') is None,
+          'панель без авто-timeout (timeout=None)')
 
 asyncio.run(_msg_identity())
 
