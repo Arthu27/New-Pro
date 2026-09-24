@@ -814,16 +814,11 @@ class StaffApplyModal(discord.ui.Modal):
                     user=interaction.user, user_id=user_id,
                     age=v1, activity=v2, experience=v3, reason=v4,
                     extra=v5, member=member, kind=kind, answers=answers)
-                # content: пинг куратора + тег заявителя (чтобы кликнуть профиль)
-                ping_bits = []
-                if tag:
-                    ping_bits.append(tag)
-                ping_bits.append(interaction.user.mention)
-                content = ' · '.join(ping_bits)
                 try:
                     card = StaffAppCardView(title=role_label, body=body)
-                    msg = await _send_staff_card(
-                        ch, content=content, view=card)
+                    # Без отдельного пинга (@роль / «Moderation — …»):
+                    # карточка сама в канале, доступ по роли куратора ветки.
+                    msg = await _send_staff_card(ch, view=card)
                     apps[store_key]["message_id"] = str(msg.id)
                     apps[store_key]["curator_tag"] = tag or None
                     apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')
@@ -971,7 +966,10 @@ class StaffAppCardView(discord.ui.LayoutView):
         except Exception:
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
-        foot = footer or 'HAKUMO · решение — меню ниже · куратор этой ветки или админ'
+        foot = footer or (
+            'HAKUMO · решение — меню ниже · только куратор этой ветки '
+            'или × Administrator'
+        )
         if V2_AVAILABLE:
             from discord import ui as dui
             children = [
@@ -1056,18 +1054,26 @@ class StaffReviewView(discord.ui.View):
             return await reply_text_v2(
                 interaction, "Заявка не найдена.", kind='err')
         position = app.get('role') or ''
-        # interaction.user иногда User без roles — берём Member
+        # interaction.user иногда User без roles — берём Member (кэш → fetch)
         reviewer = interaction.user
         try:
             if interaction.guild is not None:
                 mid = int(getattr(reviewer, 'id', 0) or 0)
                 mem = interaction.guild.get_member(mid) if mid else None
+                if mem is None and mid and hasattr(interaction.guild, 'fetch_member'):
+                    try:
+                        mem = await interaction.guild.fetch_member(mid)
+                    except Exception as _fm:
+                        log.debug('staff review fetch_member: %s', _fm)
                 if mem is not None:
                     reviewer = mem
         except Exception as _mx:
             log.debug('staff review member resolve: %s', _mx)
         ok, deny = can_review_position(reviewer, position)
         if not ok:
+            log.info(
+                'STAFF review DENY user=%s pos=%s: %s',
+                getattr(reviewer, 'id', '?'), position, deny)
             return await reply_text_v2(
                 interaction, deny or "Чужая ветка.",
                 kind='err', title='Нет доступа')
@@ -1360,12 +1366,12 @@ def _hook_avatar(guild):
 async def _send_staff_card(channel, *, content=None, view=None):
     """Карточка заявки V2 (webhook или бот).
 
-    Components V2 запрещает поле content вместе с LayoutView — пинги
-    куратора/юзера либо в теле карточки, либо отдельным сообщением.
+    Пинги ролей/юзеров перед карточкой отключены (шум «Moderation — …»).
+    content оставлен для совместимости вызовов, но по умолчанию не шлётся.
     """
-    allowed = discord.AllowedMentions(roles=True, users=True)
-    # отдельный пинг (чтобы Discord реально уведомил роль/юзера)
     if content:
+        # Явно переданный content (тесты/legacy) — отдельным сообщением.
+        allowed = discord.AllowedMentions(roles=True, users=True)
         try:
             await channel.send(content, allowed_mentions=allowed)
         except Exception as _ex:

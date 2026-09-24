@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Staff apply card: curator ping + V2 LayoutView (owner 2026-09-06 / 09-24).
+"""Staff apply card: V2 LayoutView without role ping (owner 2026-09-24).
 
   1) curator role: panel → .env → known server role;
-  2) V2 card with Accept/Decline; content pings curator;
+  2) V2 card with Accept/Decline; NO separate curator ping message;
   3) web path uses same StaffAppCardView.
 
 Run: python3 tests/test_staff_apply_card.py
@@ -128,12 +128,12 @@ ch, tag = SA.apply_target('Moderator', g_room)
 check(ch is not None and ch.id == 502,
       'Moderator → own branch 502', getattr(ch, 'id', None))
 check(tag == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
-      'Moderator pings own curator', tag)
+      'Moderator curator tag for branch', tag)
 
 ch, tag = SA.apply_target('Helper', g_room)
 check(ch is not None and ch.id == 501 and
       tag == f"<@&{SR.KNOWN_CURATOR_BY_KIND['helper']}>",
-      'Helper → branch 501 + curator')
+      'Helper → branch 501 + curator tag')
 
 check(SA.apply_target('Moderator', None) == (None, ''), 'no guild')
 
@@ -153,7 +153,7 @@ try:
     check(ch is not None and ch.id == APPS_CH,
           'no branch → apply channel', getattr(ch, 'id', None))
     check(tag == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
-          'still pings mod curator in apps channel', tag)
+          'curator tag still computed for apps channel', tag)
 finally:
     SA.APPLY_CHANNEL_ID = _saved_apply
 
@@ -162,7 +162,7 @@ ch, tag = SA.apply_target('Moderator', g_room)
 check(ch is not None and ch.id == ROOM,
       'no apply channel on guild → shared room', getattr(ch, 'id', None))
 check(tag == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
-      'still pings mod curator in room', tag)
+      'curator tag still computed for room', tag)
 
 
 print('== 3. Modal submits V2 card ==')
@@ -217,16 +217,11 @@ asyncio.get_event_loop().run_until_complete(modal.on_submit(inter))
 
 check(len(room_ch.sent) >= 1, 'card sent to shared room')
 check(len(mod_ch.sent) == 0 and len(help_ch.sent) == 0, 'own branches unused')
-# V2: пинг отдельным сообщением, карточка — view без content
-ping_msg = next((s for s in room_ch.sent if s.get('content')), None)
+# Без пинга: только карточка (view), content-сообщений нет
+ping_msgs = [s for s in room_ch.sent if s.get('content')]
 card_msg = next((s for s in room_ch.sent if s.get('view') is not None), None)
 sent = card_msg or room_ch.sent[-1]
-cur_ping = f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>"
-ping_content = str((ping_msg or {}).get('content') or '')
-check(cur_ping in ping_content,
-      'ping message mentions curator', ping_content)
-check('<@777888999000111222>' in ping_content,
-      'ping message tags applicant', ping_content)
+check(not ping_msgs, 'no separate ping before card', ping_msgs)
 view = sent.get('view')
 check(isinstance(view, SA.StaffAppCardView),
       'V2 StaffAppCardView', type(view))
@@ -237,13 +232,9 @@ from services.v2_layouts import layout_plain_text  # noqa: E402
 card_text = layout_plain_text(view) if view else ''
 check('С чего вы сидите' in card_text and 'знания правил' in card_text,
       'moderator question labels on card', card_text[:200])
-check('куратор этой ветки или админ' in card_text.lower()
-      or 'куратор этой ветки или админ' in str(getattr(view, '', '')),
-      'footer allows admin', card_text[-120:])
-# allowed_mentions на пинг-сообщении (V2-карточка без content)
-am = (ping_msg or {}).get('allowed_mentions')
-check(am is not None,
-      'ping has allowed_mentions', am)
+check('× Administrator' in card_text or 'administrator' in card_text.lower()
+      or 'куратор этой ветки' in card_text.lower(),
+      'footer names curator/Administrator', card_text[-160:])
 apps = SA.load_apps()
 app_key = '777888999000111222:moderator'
 app = apps.get(app_key) or apps.get('777888999000111222')
@@ -251,7 +242,7 @@ check(app is not None and app['status'] == 'pending', 'saved pending', list(apps
 check(app.get('role') == 'Moderator', 'role stored as Moderator', app.get('role'))
 check(app.get('message_id') == '555001', 'message_id saved')
 check(app.get('curator_tag') == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
-      'curator_tag saved')
+      'curator_tag saved (metadata, без пинга)')
 check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
       'answers list saved with 4 Qs')
 # повтор на ту же ветку запрещён

@@ -4499,8 +4499,8 @@ def api_public_apply ():
                 if data .get ('ekstra'):
                     body +=f"\n\n**Дополнительно**\n> {str (data ['ekstra'])[:800]}"
                 card =StaffAppCardView (title =role_label ,body =body )
-                content =(f"{ping } · <@{uid}>" if ping else f"<@{uid}>")
-                msg =await _send_staff_card (channel ,content =content ,view =card )
+                # Без пинга роли/«Moderation — новая заявка …»
+                msg =await _send_staff_card (channel ,view =card )
                 apps [app_id ]['message_id']=str (msg .id )
                 apps [app_id ]['role']=role_label 
                 with open (apps_file ,'w',encoding ='utf-8')as f :
