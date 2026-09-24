@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 """Апелляции на баны (Appeals Cog)
 =================================
-Забаненный не может написать на сервере — но может написать боту в личку.
-Команды /апелляция больше НЕТ (владелец 2026-09-08: «она у нас в кнопке»):
-единственные пути подачи —
-  • кнопка «Подать апелляцию» под карточкой о бане в ЛС бота;
-  • меню «Подать апелляцию» в канале (публикуется из панели);
-  • кнопка «Подать апелляция» в «своих наказаниях» (/my-violations).
+Забаненный не может писать на сервере — бот пишет ему в ЛС.
+Команды /апелляция больше НЕТ (владелец 2026-09-08: «она у нас в кнопке»).
+Единственный путь подачи —
+  • кнопка «Подать апелляцию» под карточкой о бане в ЛС бота.
+
+Публичного меню в канале апелляций НЕТ (владелец 2026-09-24): канал —
+только для карточек модерации после подачи из ЛС.
 
 Модераторы получают карточку с select «Принять / Отклонить / Взять в работу»
-(стикеры, без кнопок — владелец 2026-09-24). Принят — пользователь
-разбанен и получает добрую весть в ЛС. Отклонён — отказ в ЛС.
+(стикеры). Принят — пользователь разбанен и получает добрую весть в ЛС.
+Отклонён — отказ в ЛС.
 
 Хранилище — SQLite (GuildData 'appeals'). Select живёт в persistent view
 и переживает рестарт бота. Метки — aware UTC.
@@ -1302,7 +1303,7 @@ class Appeals(commands.Cog):
             log.info('appeals: восстановлено %s rate-view после рестарта', rated)
         if restored:
             log.info('appeals: восстановлено %s view после рестарта', restored)
-        # меню + починка карточек (кнопки→select, «решённые» визуально)
+        # починка карточек + убрать публичное меню из канала (подача только в ЛС)
         try:
             import asyncio
 
@@ -1310,9 +1311,9 @@ class Appeals(commands.Cog):
                 await asyncio.sleep(3)
                 for g in list(self.bot.guilds):
                     try:
-                        await self._ensure_appeal_menu(g)
+                        await self._purge_appeal_menu(g)
                     except Exception as _ex:
-                        log.warning('appeals: boot menu %s: %s', g.id, _ex)
+                        log.warning('appeals: boot purge menu %s: %s', g.id, _ex)
                     try:
                         await self._repair_appeal_cards(g)
                     except Exception as _ex:
@@ -1534,97 +1535,65 @@ class Appeals(commands.Cog):
         except Exception as _ex:
             log.debug('appeals: on_member_unban: %s', _ex)
 
-    # ---- меню апелляций в канале ----
+    # ---- меню апелляций в канале (ОТКЛЮЧЕНО: подача только в ЛС) ----
     async def publish_appeal_menu(self, channel):
-        """Опубликовать меню подачи апелляций в канал (из панели).
+        """Публичное меню в канале больше не публикуем.
 
-        Возвращает (ok, сообщение). Повторная публикация обновляет сообщение.
+        Владелец 2026-09-24: апелляция — только кнопка в ЛС после бана,
+        канал апелляций не витрина. Если старое меню ещё висит — снимаем.
         """
-        if channel is None:
-            return False, 'Канал не найден'
-        guild = channel.guild
-        state = self._load(guild.id)
-        embed = discord.Embed(
-            title='⚖ Апелляции на наказания',
-            description=(
-                'Несогласны с наказанием — варном, мутом или баном?\n'
-                'Выберите ниже **«Подать апелляцию»**: откроется окно — '
-                'расскажите свою версию.\n\n'
-                'Для вашей апелляции создастся отдельный тред — '
-                'модераторы ответят прямо в нём.'),
-            color=0xF1C40F,
-            timestamp=datetime.now(UTC))
-        embed.set_footer(text=f'{guild.name} · апелляции',
-                         icon_url=guild.icon.url if guild.icon else None)
-        old = (state.get('menu') or {})
-        avatar = _hook_avatar(guild)
-        msg = None
-        used_hook = None
-        # главный путь — вебхук: имя «⚖ Апелляции», кнопки работают как раньше
-        hook = await _channel_webhook(channel)
-        if hook is not None:
-            used_hook = hook
+        guild = getattr(channel, 'guild', None) if channel is not None else None
+        if guild is not None:
             try:
-                if (old.get('message_id')
-                        and int(old.get('webhook_id') or 0) == hook.id
-                        and int(old.get('channel_id') or 0) == channel.id):
-                    msg = await hook.edit_message(
-                        int(old['message_id']), embed=embed, view=AppealMenuView())
-                else:
-                    msg = await hook.send(
-                        embed=embed, view=AppealMenuView(), wait=True,
-                        username=HOOK_USERNAME, avatar_url=avatar)
+                await self._purge_appeal_menu(guild)
             except Exception as _ex:
-                log.debug('appeals: меню через вебхук не ушло: %s', _ex)
-                msg = None
-        # фолбэк — обычная отправка от бота (вебхука нет или не вышло)
-        if msg is None:
-            try:
-                if (old.get('message_id')
-                        and int(old.get('channel_id') or 0) == channel.id
-                        and not int(old.get('webhook_id') or 0)):
-                    try:
-                        prev = await channel.fetch_message(int(old['message_id']))
-                        msg = await prev.edit(embed=embed, view=AppealMenuView())
-                    except Exception as _ed:
-                        log.debug('appeals: edit menu msg: %s', _ed)
-                        msg = None
-                if msg is None:
-                    msg = await channel.send(embed=embed, view=AppealMenuView())
-            except (discord.Forbidden, discord.HTTPException) as _ex:
-                return False, f'Бот не может писать в этот канал: {_ex}'
-        state['menu'] = {'channel_id': channel.id, 'message_id': msg.id,
-                         'webhook_id': getattr(used_hook, 'id', 0) or 0}
-        self._save(guild.id, state)
-        how = 'вебхуком' if used_hook is not None else 'от бота'
-        return True, f'Меню опубликовано в {channel.mention} ({how})'
+                log.debug('appeals: publish→purge: %s', _ex)
+        return False, (
+            'Меню в канал не публикуем: апелляцию подают кнопкой в ЛС '
+            'после бана. Канал — только для карточек модерации.')
 
-    async def _ensure_appeal_menu(self, guild):
-        """Меню «Подать апелляцию» в комнате — само после рестарта.
+    async def _purge_appeal_menu(self, guild):
+        """Удалить публичное меню «Подать апелляцию» из канала апелляций.
 
-        Без меню канал пустой / только карточки — подать нельзя.
+        Подача — только из ЛС. Старое меню (если осталось после рестарта)
+        убираем, чтобы канал не выглядел как публичная витрина.
         """
         try:
-            ch = await self._appeal_channel(guild)
-            if ch is None:
-                return False
             state = self._load(guild.id)
             menu = state.get('menu') or {}
             mid = int(menu.get('message_id') or 0)
             cid = int(menu.get('channel_id') or 0)
-            if mid and cid == int(ch.id):
-                try:
-                    await ch.fetch_message(mid)
-                    return True  # меню на месте
-                except Exception as _ex:
-                    log.debug('appeals: menu msg gone %s: %s', mid, _ex)
-            ok, info = await self.publish_appeal_menu(ch)
-            log.info('appeals: ensure menu guild=%s → %s (%s)',
-                     guild.id, ok, info)
-            return bool(ok)
+            deleted = False
+            if mid and cid:
+                ch = guild.get_channel(cid) or self.bot.get_channel(cid)
+                if ch is None:
+                    try:
+                        ch = await self._appeal_channel(guild)
+                    except Exception:
+                        ch = None
+                if ch is not None:
+                    try:
+                        msg = await ch.fetch_message(mid)
+                        await msg.delete()
+                        deleted = True
+                    except discord.NotFound:
+                        deleted = True  # уже нет
+                    except Exception as _ex:
+                        log.debug('appeals: purge menu msg: %s', _ex)
+            if menu:
+                state['menu'] = None
+                self._save(guild.id, state)
+            if deleted or menu:
+                log.info('appeals: публичное меню снято guild=%s (deleted=%s)',
+                         guild.id, deleted)
+            return True
         except Exception as _ex:
-            log.warning('appeals: ensure menu: %s', _ex)
+            log.warning('appeals: purge menu: %s', _ex)
             return False
+
+    async def _ensure_appeal_menu(self, guild):
+        """Совместимость: больше не публикуем — только чистим старое меню."""
+        return await self._purge_appeal_menu(guild)
 
     async def _repair_appeal_cards(self, guild):
         """Починить карточки: select вместо мёртвых кнопок; решённые — без меню.
