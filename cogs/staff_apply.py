@@ -501,12 +501,48 @@ def _member_has_branch_role(member, kind: str) -> bool:
     return False
 
 
+# Одновременно — одна заявка; после решения — пауза перед следующей.
+APPLY_COOLDOWN_HOURS = 72
+
+
+def _parse_app_time(raw):
+    """ISO-время заявки → aware UTC datetime или None."""
+    if not raw:
+        return None
+    try:
+        s = str(raw).strip()
+        if s.endswith('Z'):
+            s = s[:-1] + '+00:00'
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _fmt_cd_left(seconds: float) -> str:
+    """Человекочитаемый остаток кулдауна."""
+    sec = max(0, int(seconds))
+    h = sec // 3600
+    m = (sec % 3600) // 60
+    if h >= 48:
+        d = h // 24
+        rh = h % 24
+        return f'{d} д. {rh} ч.' if rh else f'{d} д.'
+    if h > 0:
+        return f'{h} ч. {m} мин.' if m else f'{h} ч.'
+    return f'{m} мин.' if m else 'меньше минуты'
+
+
 def apply_blocked_reason(user_id, kind: str, *, member=None) -> str:
     """Почему нельзя подать заявку на ветку (пусто = можно).
 
-    Блокируем: ЧС ветки, pending, уже есть роль ветки.
-    approved без роли — можно снова (роль сняли / ушёл сам).
-    Отклонённую можно подать снова.
+    Правила набора (одна заявка + кулдаун):
+      • одновременно только одна pending — на любую ветку;
+      • ЧС ветки / роль ветки — блок;
+      • после решения (reject/approve) — пауза APPLY_COOLDOWN_HOURS.
+    approved без роли — можно снова после кулдауна.
     """
     from services.staff_roles import normalize_position, position_label
     want = normalize_position(kind)
@@ -519,14 +555,26 @@ def apply_blocked_reason(user_id, kind: str, *, member=None) -> str:
             'Другие должности по-прежнему открыты.'
         )
     apps = load_apps()
+    # 1) уже есть заявка на рассмотрении — вторая нельзя (любая ветка)
+    for row in iter_user_apps(apps, user_id):
+        if str(row.get('status') or '') != 'pending':
+            continue
+        pend_kind = row.get('_kind') or normalize_position(
+            row.get('kind') or row.get('role')) or ''
+        pend_label = position_label(pend_kind) if pend_kind else 'штат'
+        if pend_kind == want:
+            return (
+                f'Заявка на **{pend_label}** уже на рассмотрении.\n'
+                'Повторно подать нельзя. Статус: `/my-application`'
+            )
+        return (
+            f'У вас уже есть заявка на **{pend_label}** на рассмотрении.\n'
+            'Одновременно можно подать **только одну** заявку.\n'
+            'Дождитесь решения: `/my-application`'
+        )
     _, existing = find_app_for_kind(apps, user_id, want)
     if existing:
         st = str(existing.get('status') or '')
-        if st == 'pending':
-            return (
-                f'Заявка на **{label}** уже на рассмотрении.\n'
-                'Повторно на эту ветку подать нельзя. Статус: `/my-application`'
-            )
         if st == 'blacklisted':
             return (
                 f'Вы в чёрном списке ветки **{label}**.\n'
@@ -544,6 +592,28 @@ def apply_blocked_reason(user_id, kind: str, *, member=None) -> str:
             f'У вас уже есть роль **{label}**.\n'
             'Повторная заявка на эту ветку не нужна.'
         )
+    # 2) кулдаун после последней заявки (любая ветка, кроме ЧС-записи)
+    last_dt = None
+    for row in iter_user_apps(apps, user_id):
+        st = str(row.get('status') or '')
+        if st in ('blacklisted', 'pending'):
+            continue
+        for key in ('reviewed_at', 'submitted_at', 'timestamp'):
+            dt = _parse_app_time(row.get(key))
+            if dt is not None and (last_dt is None or dt > last_dt):
+                last_dt = dt
+                break
+    if last_dt is not None and APPLY_COOLDOWN_HOURS > 0:
+        now = datetime.now(timezone.utc)
+        elapsed = (now - last_dt).total_seconds()
+        need = APPLY_COOLDOWN_HOURS * 3600
+        if elapsed < need:
+            left = _fmt_cd_left(need - elapsed)
+            return (
+                f'Кулдаун набора: следующую заявку можно через **{left}**.\n'
+                f'Одновременно — только одна заявка '
+                f'(пауза {APPLY_COOLDOWN_HOURS} ч. после решения).'
+            )
     return ''
 
 
@@ -1098,6 +1168,7 @@ class StaffReviewView(discord.ui.View):
 
         app["status"] = status_map[action]
         app["reviewed_by"] = str(interaction.user)
+        app["reviewed_at"] = datetime.now(timezone.utc).isoformat()
         if not app.get("timestamp"):
             app["timestamp"] = app.get("submitted_at")
 

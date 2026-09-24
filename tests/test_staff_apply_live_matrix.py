@@ -16,6 +16,7 @@ import os
 import sys
 import tempfile
 import types
+from datetime import datetime, timezone
 
 TMP = tempfile.mkdtemp(prefix='hakumo_staff_matrix_')
 os.chdir(TMP)
@@ -394,13 +395,18 @@ json.dump(apps_pend, open('data/staff_apps.json', 'w'))
 deny_pend = SA.apply_blocked_reason(55, 'Eventsmod')
 check(deny_pend and 'рассмотрении' in deny_pend.lower(),
       'pending Events blocks re-apply', deny_pend)
-check(not SA.apply_blocked_reason(55, 'Helper'),
-      'pending Events: Helper still open')
-# approved без роли → можно снова (роль сняли)
+deny_other = SA.apply_blocked_reason(55, 'Helper')
+check(deny_other and ('только одну' in deny_other.lower()
+                      or 'уже есть заявка' in deny_other.lower()),
+      'pending Events blocks Helper too (одна заявка)', deny_other)
+# approved без роли → можно снова после кулдауна (старая дата)
 apps_pend['55:event']['status'] = 'approved'
+apps_pend['55:event']['reviewed_at'] = '2020-01-01T00:00:00+00:00'
+apps_pend['55:event']['submitted_at'] = '2020-01-01T00:00:00+00:00'
 json.dump(apps_pend, open('data/staff_apps.json', 'w'))
 check(not SA.apply_blocked_reason(55, 'Eventsmod', member=None),
-      'approved without role allows re-apply')
+      'approved without role + CD passed allows re-apply')
+
 
 
 class _RoleKeep:
@@ -432,11 +438,19 @@ deny_keep = SA.apply_blocked_reason(55, 'Eventsmod', member=_MemKeep())
 check(deny_keep and 'роль' in deny_keep.lower(),
       'approved + still has role blocks re-apply', deny_keep)
 SR.resolve_staff_role = _orig_resolve
-# rejected → можно снова
+# rejected → кулдаун, потом можно
 apps_pend['55:event']['status'] = 'rejected'
+apps_pend['55:event']['reviewed_at'] = datetime.now(timezone.utc).isoformat()
+json.dump(apps_pend, open('data/staff_apps.json', 'w'))
+deny_cd = SA.apply_blocked_reason(55, 'Eventsmod')
+check(deny_cd and 'кулдаун' in deny_cd.lower(),
+      'rejected recent → кулдаун', deny_cd)
+apps_pend['55:event']['reviewed_at'] = '2020-01-01T00:00:00+00:00'
+apps_pend['55:event']['submitted_at'] = '2020-01-01T00:00:00+00:00'
 json.dump(apps_pend, open('data/staff_apps.json', 'w'))
 check(not SA.apply_blocked_reason(55, 'Eventsmod'),
-      'rejected Events allows re-apply')
+      'rejected + CD passed allows re-apply')
+
 
 # нет staff-panel команды
 src = open(os.path.join(ROOT, 'cogs', 'staff_apply.py'), encoding='utf-8').read()

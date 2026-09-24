@@ -246,10 +246,13 @@ check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
       'answers list saved with 4 Qs')
 # повтор на ту же ветку запрещён
 deny = SA.apply_blocked_reason('777888999000111222', 'Moderator')
-check(deny and 'уже' in deny.lower(), 'pending blocks re-apply', deny)
-# другая ветка свободна
-ok_other = SA.apply_blocked_reason('777888999000111222', 'Helper')
-check(not ok_other, 'other branch still open while Mod pending', ok_other)
+check(deny and ('уже' in deny.lower() or 'рассмотрении' in deny.lower()),
+      'pending blocks re-apply', deny)
+# другая ветка тоже закрыта — только одна заявка
+deny_other = SA.apply_blocked_reason('777888999000111222', 'Helper')
+check(deny_other and ('только одну' in deny_other.lower()
+                      or 'уже есть заявка' in deny_other.lower()),
+      'other branch blocked while Mod pending', deny_other)
 
 print('== 3b. Per-branch questions ==')
 for kind, needle in (
