@@ -39,7 +39,7 @@ os.environ['EVENT_VOICE_STAY_ENABLED'] = '1'
 from services import event_voice_bot as EV  # noqa: E402
 
 # Сколько подряд heartbeat'ов с voice=False → hard restart клиента
-_MISS_LIMIT = 2  # 2 × 10с ≈ 20с без войса → перезапуск сессии
+_MISS_LIMIT = 1  # 1 × 10с без войса → перезапуск сессии
 
 
 async def _hard_restart_client(reason: str) -> None:

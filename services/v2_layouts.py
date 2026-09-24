@@ -295,28 +295,23 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
 
 def build_staff_menu_items(*, banner_filename: str, body: str = None,
                            role_select=None, show_banner: bool = None):
-    """Наборы: шапка с баннером + select роли."""
+    """Наборы V2: баннер (уже с НАБОРЫ) + select — без дубля заголовка."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    head = [
-        _ui.TextDisplay('# Наборы\n-# HAKUMO'),
-        _ui.Separator(spacing=SeparatorSpacing.large),
-    ]
+    head = []
     if show_banner and banner_filename:
         head.append(_gallery(banner_filename))
     if body:
         head.append(_ui.TextDisplay(body))
-    items.append(black_container(*head))
+    if head:
+        items.append(black_container(*head))
     if role_select is not None:
         row = _ui.ActionRow()
         row.add_item(role_select)
-        items.append(black_container(
-            _ui.TextDisplay('**Роль**\n-# на какую подать'),
-            row,
-        ))
+        items.append(black_container(row))
     return items
 
 
