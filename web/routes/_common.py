@@ -287,7 +287,7 @@ def _panel_limit_record(gid, member, key, amount=1):
 def _panel_mute_cap(bot, gid, member, target_id=None):
     """Потолок длительности мута (сек) для участника; 0 — без потолка.
 
-    target_id — кого мутят (прогрессия 1ч → +2ч до варна).
+    target_id — кого мутят (прогрессия 2ч → +2ч до варна).
     """
     try:
         if member is None or bot is None:

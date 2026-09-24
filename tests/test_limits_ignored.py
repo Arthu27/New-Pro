@@ -2,8 +2,8 @@
 """Лимиты длительности + игнорируемые роли (владелец, 2026-09-05).
 
 1) «Модер дал 100000 минут мута» — потолок действует ВСЕГДА:
-   прогрессия по участнику: первый мут 1 ч, дальше +2 ч, после варна
-   снова с 1 ч (заказ 2026-09-24). Минимум 30 мин.
+   прогрессия по участнику: первый мут 2 ч, дальше +2 ч, после варна
+   снова с 2 ч (заказ 2026-09-24). Минимум 30 мин.
 2) «Облачная» роль 1192970051821772890 НЕ учитывается никак: с правами
    на ней человек не становится модератором/админом; модератор с ней —
    обычный модератор. Список настраивается в панели (Доступ).
@@ -44,12 +44,12 @@ from services import staff_hierarchy as SH  # noqa: E402
 GID = 1484574976580391004
 CLOUD_ROLE = 1192970051821772890
 
-print('== 1. Потолок длительности: первый мут 1 час ==')
+print('== 1. Потолок длительности: первый мут 2 часа ==')
 cap = SL.effective_max_duration(GID, 'mute', [])
-check(cap == 3600,
-      f'без настройки тировый потолок = 1 час ({cap} сек)', f'→ {cap}')
-check(SL.resolve_mute_cap(GID, 3000000000000000300, []) == 3600,
-      'прогрессия: первый мут 1ч')
+check(cap == 2 * 3600,
+      f'без настройки тировый потолок = 2 часа ({cap} сек)', f'→ {cap}')
+check(SL.resolve_mute_cap(GID, 3000000000000000300, []) == 2 * 3600,
+      'прогрессия: первый мут 2ч')
 check(SL.effective_max_duration(GID, 'warn', []) == 0,
       'у варнов потолка длительности нет (не мут)')
 
@@ -160,32 +160,32 @@ async def cap_test():
         guild, target, 'timeout', reason='тест', amount='100000',
         actor='Модер', duration_cap=None)
     check(not ok and 'дольше разрешённого' in text,
-          '100000 минут — отказ с потолком (1ч первый мут)', f'→ {text[:90]}')
+          '100000 минут — отказ с потолком (2ч первый мут)', f'→ {text[:90]}')
     check(not target.added, 'роли не выданы')
     ok, text = await cog.apply_panel_action(
         guild, target, 'timeout', reason='тест', amount='3д',
         actor='Модер', duration_cap=None)
     check(not ok and 'дольше разрешённого' in text,
-          '3 дня при потолке 1ч — отказ', f'→ {text[:80]}')
+          '3 дня при потолке 2ч — отказ', f'→ {text[:80]}')
     ok, text = await cog.apply_panel_action(
         guild, target, 'timeout', reason='тест', amount='15м',
         actor='Модер', duration_cap=None)
     check(not ok and 'короче' in text,
           '15 минут — отказ (минимум 30 мин)', f'→ {text[:80]}')
     ok, text = await cog.apply_panel_action(
-        guild, target, 'timeout', reason='тест', amount='2ч',
+        guild, target, 'timeout', reason='тест', amount='3ч',
         actor='Модер', duration_cap=None)
     check(not ok and 'дольше разрешённого' in text,
-          '2 часа при первом муте (потолок 1ч) — отказ', f'→ {text[:80]}')
-    ok, text = await cog.apply_panel_action(
-        guild, target, 'timeout', reason='тест', amount='1ч',
-        actor='Модер', duration_cap=None)
-    check(ok, '1 час — первый мут, выдан', f'→ {text[:80]}')
-    # после мута прогрессия +2ч → потолок 3ч
+          '3 часа при первом муте (потолок 2ч) — отказ', f'→ {text[:80]}')
     ok, text = await cog.apply_panel_action(
         guild, target, 'timeout', reason='тест', amount='2ч',
         actor='Модер', duration_cap=None)
-    check(ok, '2 часа после первого мута (потолок 3ч) — можно', f'→ {text[:80]}')
+    check(ok, '2 часа — первый мут, выдан', f'→ {text[:80]}')
+    # после мута прогрессия +2ч → потолок 4ч
+    ok, text = await cog.apply_panel_action(
+        guild, target, 'timeout', reason='тест', amount='3ч',
+        actor='Модер', duration_cap=None)
+    check(ok, '3 часа после первого мута (потолок 4ч) — можно', f'→ {text[:80]}')
     ok, text = await cog.apply_panel_action(
         guild, target, 'timeout', reason='тест', amount='30м',
         actor='Модер', duration_cap=None)

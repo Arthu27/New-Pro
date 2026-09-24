@@ -1,6 +1,6 @@
 {
-  "version": 6,
-  "_comment": "v6: хелпер → тир helper (варн 1, без бана); модер → mod. Master/Curator warn 1/2. guild_id из MAIN_GUILD_ID.",
+  "version": 8,
+  "_comment": "v8: warn_3 для стаффа (не с 1). mute 2ч+. v7 warn_1 убран.",
   "role_map": {
     "803553848396349510": "mod",
     "948969471916249119": "helper",
@@ -11,7 +11,8 @@
   "punish_roles": {
     "ban": 1083106265422643251,
     "mute": 943510457833095208,
-    "vmute": 943510458621632522
+    "vmute": 943510458621632522,
+    "warn_3": 1545468739221327942
   },
   "action_default": {
     "tiers": ["mod", "master", "curator", "admin"],

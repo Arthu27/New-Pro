@@ -341,8 +341,9 @@ _PROOF_REQ_TTL = 45.0
 def proof_is_required(gid):
     """Обязательна ли демка к наказаниям на сервере.
 
-    По умолчанию — НЕТ (заказ владельца 2026-08-27: ничего не требовать,
-    пока сам не включишь в панели → «Доказательства»)."""
+    По умолчанию — НЕТ (заказ владельца 2026-09-24: доказательство
+    необязательно; тумблер в панели → «Доказательства» может включить
+    строгий режим, но поле в /modpanel остаётся optional)."""
     try:
         key = int(gid or 0)
     except (TypeError, ValueError):
@@ -380,14 +381,27 @@ class ProofCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def _proof_channel(self, guild):
-        """Канал доказательств: явный выбор в панели («Каналы и маршруты»),
-        иначе автосоздание через систему логов."""
+    async def cog_load(self):
         try:
-            from services.channel_routes import get_route
-            cid = get_route(guild.id, 'proof_channel')
+            from cogs.proof_flow import register_pending_views
+            register_pending_views(self.bot)
+        except Exception as _ex:
+            log.debug('proof cog_load views: %s', _ex)
+
+    async def _proof_channel(self, guild):
+        """Канал доказательств: route / KNOWN 1552… / лог-фолбэк."""
+        try:
+            from cogs.proof_flow import resolve_proof_channel
+            ch = await resolve_proof_channel(guild)
+            if ch is not None:
+                return ch
+        except Exception as _ex:
+            _log.debug("_proof_channel flow: %s", _ex)
+        try:
+            from services.channel_routes import resolve_route, channel_on_guild
+            cid = resolve_route(guild.id, 'proof_channel', guild)
             if cid:
-                ch = guild.get_channel(cid)
+                ch = channel_on_guild(guild, cid) or guild.get_channel(cid)
                 if ch is not None:
                     return ch
                 log.warning('[PROOF] маршрут proof_channel=%s не найден — фолбэк', cid)
@@ -399,6 +413,15 @@ class ProofCog(commands.Cog):
         except Exception as e:
             log.warning(f'[PROOF] канал доказательств: {e}')
             return None
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        """Сбор фото/видео после мута (сессия модератора)."""
+        try:
+            from cogs.proof_flow import on_moderator_message
+            await on_moderator_message(self.bot, message)
+        except Exception as _ex:
+            log.debug('proof on_message: %s', _ex)
 
     def _proof_embed(self, user, entry, extra_note=None):
         color = ACTION_COLORS.get(entry['action'].lower(), PURPLE)

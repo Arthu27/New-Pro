@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """Прогрессия срока мута по участнику (заказ владельца 2026-09-24).
 
-Первый мут — максимум 1 час. Каждый следующий — +2 часа
-(1 → 3 → 5 → 7 …). Когда участник получает варн — прогрессия
-сбрасывается, снова с 1 часа.
+Первый мут — максимум 2 часа. Каждый следующий — +2 часа
+(2 → 4 → 6 → 8 …). Когда участник получает варн — прогрессия
+сбрасывается, снова с 2 часов.
 
 Хранится per-target: data/mute_progression_<gid>.json
-  { "<uid>": {"step": 0} }   # step 0 = первый мут (1ч)
+  { "<uid>": {"step": 0} }   # step 0 = первый мут (2ч)
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from logger import get_logger
 
 _log = get_logger('mute_progression')
 
-FIRST_CAP_SEC = 3600          # 1 час
+FIRST_CAP_SEC = 2 * 3600      # 2 часа
 STEP_SEC = 2 * 3600           # +2 часа за шаг
 MAX_CAP_SEC = 28 * 86400      # потолок Discord
 
@@ -58,7 +58,7 @@ def step_for(guild_id, target_id) -> int:
 
 
 def cap_seconds(guild_id, target_id) -> int:
-    """Потолок мута в секундах: 1ч + step×2ч (клэмп 28 дн.)."""
+    """Потолок мута в секундах: 2ч + step×2ч (клэмп 28 дн.)."""
     step = step_for(guild_id, target_id)
     return min(MAX_CAP_SEC, FIRST_CAP_SEC + step * STEP_SEC)
 
@@ -79,7 +79,7 @@ def bump_after_mute(guild_id, target_id) -> int:
 
 
 def reset_on_warn(guild_id, target_id) -> None:
-    """Варн → прогрессия с нуля (снова 1 час)."""
+    """Варн → прогрессия с нуля (снова 2 часа)."""
     try:
         uid = str(int(target_id))
         data = _load(guild_id)
