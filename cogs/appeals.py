@@ -1737,6 +1737,15 @@ class Appeals(commands.Cog):
                 channel_on_guild as _on_g)
             _cid = int(_get_route(guild.id, 'ban_appeal_channel') or 0)
             if not _cid:
+                # known ID — только для основного сервера; на чужих гильдиях
+                # fetch даёт «Guild ID resolved to a different guild».
+                try:
+                    from config import Config
+                    main = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+                except Exception:
+                    main = 0
+                if main and int(getattr(guild, 'id', 0) or 0) != main:
+                    return None
                 _cid = int(_KNOWN.get('ban_appeal_channel') or 0)
         except Exception as _ex:
             log.debug('appeals: маршрут канала апелляции: %s', _ex)
@@ -1755,7 +1764,12 @@ class Appeals(commands.Cog):
         fetch = getattr(guild, 'fetch_channel', None)
         if callable(fetch):
             try:
-                return await fetch(_cid)
+                ch = await fetch(_cid)
+                # защита: канал должен принадлежать этой гильдии
+                g_id = int(getattr(getattr(ch, 'guild', None), 'id', 0) or 0)
+                if g_id and g_id != int(getattr(guild, 'id', 0) or 0):
+                    return None
+                return ch
             except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
                 log.debug('appeals: fetch_channel %s: %s', _cid, _ex)
         return None
