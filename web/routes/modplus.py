@@ -333,7 +333,9 @@ def register(ctx):
             return jsonify ({'success':False ,'error':'Укажите участника: выберите из подсказок или впишите ник/ID'}),400
         if not uname :
             uname =f'ID {uid}'
-        entry =proof_add (gid ,int (uid ),uname ,0 ,session .get ('username','панель'),action ,reason )
+        entry =proof_add (gid ,int (uid ),uname ,
+        int (session .get ('discord_id')or 0 )or 0 ,
+        session .get ('username','панель'),action ,reason )
         media =proof_save_media (gid ,entry ['id'],f .filename ,data ,f .mimetype )
         if not media :
             # файл не фото/видео (или пустой/слишком большой) — убираем пустышку

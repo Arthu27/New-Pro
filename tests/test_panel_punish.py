@@ -6,7 +6,8 @@
 снятие мута). API: options + punish (успех, отказ, чужое действие, бот-цель).
 ACL «Права команд»: действия отрезаются по Discord-ролям входящего через
 Discord-аккаунт модератора (options — фильтр, POST — 403); статический вход
-и owner — полный набор. Шаблон «Пользователи»: форма без доказательств.
+и owner — полный набор. Шаблон «Пользователи»: форма с прямой загрузкой доказательства
+(фото/видео или ссылка) → канал демок.
 
 Запуск: python3 tests/test_panel_punish.py
 """
@@ -145,6 +146,11 @@ class _Bot:
 
 print('== 1. apply_panel_action: мут с длительностью ==')
 import cogs.moderation as M  # noqa: E402
+from cogs.proof_cog import proof_set_required  # noqa: E402
+
+# Эти юниты проверяют сами наказания, не гейт доказательств —
+# демку для гильдии теста выключаем (по умолчанию она обязательна).
+proof_set_required(G, False)
 
 guild = _Guild(G)
 target = _Member(TID)
@@ -263,6 +269,10 @@ check(ok and 'Лимит исчерпан' not in text,
 
 print('== 7. API панели ==')
 from web.app import app as _flask_app, set_bot_instance  # noqa: E402
+
+# API-секции ниже бьют по гильдии 777; демку отключаем, чтобы не
+# мешать проверкам ACL/лимитов/иерархии. Отдельный кейс с proof — §11.
+proof_set_required(777, False)
 
 
 class _WebMember(_Member):
@@ -519,16 +529,16 @@ r = client.get('/api/guild/777/punish/options')
 check(len((r.get_json() or {}).get('actions', [])) == 9,
       'owner панели: ACL его не режет')
 
-print('== 9. Шаблон «Пользователи»: форма без доказательств, новая разметка ==')
+print('== 9. Шаблон «Пользователи»: форма с прямой загрузкой доказательства ==')
 _utpl = open(os.path.join(ROOT, 'web', 'templates', 'users.html'), encoding='utf-8').read()
-# Панель доказательств НЕ СПРАШИВАЕТ: ни поля ввода, ни id pnProof.
-# Показывать уже приложенное доказательство из варна/дела можно — это чтение
-# чужой записи, а не запрос нового файла у модератора.
-check('pnProof' not in _utpl, 'в форме наказания нет поля доказательств')
-check(not re.search(r'<(?:input|textarea|select)[^>]*proof', _utpl, re.I),
-      'панель не спрашивает доказательств ни в одном поле ввода')
-check(_utpl.lower().count('proof') == 4,
-      'proof встречается только при чтении варнов и дел (4 места, все в выводе)')
+check('id="pnProofBlock"' in _utpl and 'id="pnProofFile"' in _utpl and 'id="pnProof"' in _utpl,
+      'форма наказания: файл + ссылка доказательства')
+check('accept="image/*,video/*"' in _utpl,
+      'файл принимает только фото/видео')
+check('канал доказательств' in _utpl.lower() or 'кто выдал' in _utpl.lower(),
+      'подсказка: демка уйдёт в канал (кто/кому/за что)')
+check(re.search(r'<input[^>]*id="pnProofFile"', _utpl) is not None,
+      'input type=file для прямой загрузки с устройства')
 check('id="pnGrid"' in _utpl and 'id="pnPresets"' in _utpl and 'id="pnReasonCnt"' in _utpl,
       'новая форма: сетка действий, пресеты срока, счётчик причины')
 check('id="uStats"' in _utpl and 'id="uRole"' in _utpl and 'id="uSort"' in _utpl and
@@ -607,6 +617,121 @@ _utpl10 = open(os.path.join(ROOT, 'web', 'templates', 'users.html'),
 check('pnLimits' in _utpl10 and 'pnLimitExempt' in _utpl10 and
       'лимит исчерпан' in _utpl10,
       'шаблон: лимиты и остатки в форме наказания понятны интерфейсу')
+
+print('== 11. Доказательство обязательно + файл уходит в канал демок ==')
+from cogs.proof_cog import ProofCog, proof_is_required, _PROOF_REQ_CACHE  # noqa: E402
+from services import channel_routes as _CHR2  # noqa: E402
+
+_PROOF_REQ_CACHE.pop(777, None)
+proof_set_required(777, True)
+check(proof_is_required(777) is True, 'для гильдии 777 демка обязательна')
+
+# без файла и ссылки — отказ
+with client.session_transaction() as sess:
+    sess.clear()
+    sess['logged_in'] = True
+    sess['username'] = 'ProofMod'
+    sess['role'] = 'owner'
+    sess['discord_id'] = str(TID)
+    sess['selected_guild'] = '777'
+    sess['_role_checked'] = _t.time()
+# цель — другой участник (не сам себе)
+_proof_tgt = TID + 77
+class _PT(_WebMember):
+    def __init__(s):
+        super().__init__(_proof_tgt)
+        s.guild = wg
+        s.roles = []
+wg.members = [m for m in wg.members if getattr(m, 'id', 0) != _proof_tgt] + [_PT()]
+_PR.set_roles(777, ban=606)
+
+r = client.post('/api/guild/777/punish', json={
+    'user_id': str(_proof_tgt), 'action': 'timeout', 'duration': '30м',
+    'reason': 'спам без демки'})
+d = r.get_json()
+check(r.status_code == 400 and not d.get('success') and
+      'доказательств' in (d.get('error') or '').lower(),
+      f'без демки — 400 ({d.get("error", "")[:80]})')
+
+# ссылка — проходит гейт; доставка в канал (мок ProofCog)
+class _ProofCh:
+    id = _CHR2.PROOF_CHANNEL_ID
+    sent = []
+
+    async def send(s, embed=None, file=None):
+        s.sent.append({'embed': embed, 'file': file})
+        class _Msg:
+            id = 4242
+            attachments = [type('A', (), {'url': 'https://cdn.example/demo.png'})()] if file else []
+        return _Msg()
+
+
+_pch = _ProofCh()
+_pcog = ProofCog(wbot)
+wbot._proof = _pcog
+_orig_get_cog = wbot.get_cog
+
+
+def _get_cog_proof(name):
+    if name == 'ProofCog':
+        return _pcog
+    return _orig_get_cog(name)
+
+
+wbot.get_cog = _get_cog_proof
+
+
+async def _fake_pch(guild):
+    return _pch
+
+
+_pcog._proof_channel = _fake_pch  # type: ignore
+
+r = client.post('/api/guild/777/punish', json={
+    'user_id': str(_proof_tgt), 'action': 'timeout', 'duration': '30м',
+    'reason': 'спам со ссылкой',
+    'proof': 'https://cdn.example.com/shot.png'})
+d = r.get_json()
+check(r.status_code == 200 and d.get('success'),
+      f'со ссылкой — наказание ок ({str(d)[:100]})')
+check(len(_pch.sent) == 1, f'ссылка ушла в канал доказательств ({len(_pch.sent)} постов)')
+if _pch.sent:
+    _emb = _pch.sent[-1]['embed']
+    _names = [f.name for f in _emb.fields]
+    check('Кто выдал' in _names and 'Кому' in _names and 'За что' in _names,
+          f'карточка кто/кому/за что: {_names}')
+
+# multipart: файл с устройства
+_pch.sent.clear()
+png = (b'\x89PNG\r\n\x1a\n' + b'\x00' * 128)
+from io import BytesIO  # noqa: E402
+r = client.post(
+    '/api/guild/777/punish',
+    data={
+        'user_id': str(_proof_tgt),
+        'action': 'timeout',
+        'duration': '30м',
+        'reason': 'спам с фото',
+        'proof': (BytesIO(png), 'shot.png'),
+    },
+)
+d = r.get_json()
+_msg = (d.get('message') or d.get('error') or '')
+check(r.status_code == 200 and d.get('success') and 'нужен скрин' not in _msg.lower(),
+      f'multipart файл — наказание ок ({str(d)[:120]})')
+check(any(x.get('file') for x in _pch.sent),
+      f'фото ушло вложением в канал ({len(_pch.sent)} постов)')
+check('Демка #' in _msg or 'доказательств' in _msg.lower(),
+      f'ответ панели упоминает демку ({_msg[:80]})')
+if _pch.sent:
+    _emb2 = _pch.sent[-1]['embed']
+    _who = next((f.value for f in _emb2.fields if f.name == 'Кто выдал'), '')
+    _what = next((f.value for f in _emb2.fields if f.name == 'За что'), '')
+    check('ProofMod' in _who or str(TID) in _who, f'кто выдал в карточке: {_who}')
+    check('спам с фото' in _what, f'за что в карточке: {_what}')
+
+check(_CHR2.PROOF_CHANNEL_ID == 1552088029047423027,
+      'целевой канал доказательств 1552088029047423027')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

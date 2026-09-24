@@ -643,8 +643,13 @@ class Moderation (commands .Cog ):
         return ('Проверьте: роль бота выше роли нарушителя и у бота есть нужное '
                 'право (Настройки сервера → Роли).')
 
-    async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ,proof_link =None ):
-        """Выполнить выбранное действие модерации."""
+    async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ,proof_link =None ,proof_ok =False ):
+        """Выполнить выбранное действие модерации.
+
+        proof_ok — панель уже приняла файл/ссылку (multipart); require_proof
+        тогда не дублируем: модалка Discord вложений не принимает, а файл
+        с панели уходит в канал через try_deliver_proof_bytes.
+        """
         # 3с-окно Discord закрываем ДО ролей/DM/логов: иначе наказание
         # уже выдано, а клиент рисует «приложение не ответило».
         await _ack (interaction )
@@ -717,10 +722,10 @@ class Moderation (commands .Cog ):
             log .debug (f'[STAFF_LIMIT] {_le}')
 
         # Наказания — только с доказательством (ссылкой на скрин/видео):
-        # модальные окна Discord не принимают вложения, поэтому через панель
-        # доказательство передаётся ссылкой.
+        # модальные окна Discord не принимают вложения, поэтому через
+        # /modpanel — ссылка; через веб-панель — файл или ссылка (proof_ok).
         _punish_actions =("ban","timeout","mute_chat","vmute")
-        if action in _punish_actions :
+        if action in _punish_actions and not proof_ok :
             from cogs .proof_cog import require_proof
             _action_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
             if not await require_proof (interaction ,action_ru =_action_ru ,link =proof_link ):
@@ -1078,7 +1083,10 @@ class Moderation (commands .Cog ):
                     _log.debug("_execute_mod_action(): подавлено: %s", _ex)
 
                 try :
-                    if action in _punish_actions and (proof_link or '').strip ():
+                    # Веб-панель сама постит демку (файл/ссылка) после apply —
+                    # здесь только Discord /modpanel, иначе двойной пост.
+                    if (action in _punish_actions and (proof_link or '').strip ()
+                            and not isinstance (interaction ,PanelInteraction )):
                         from cogs .proof_cog import try_deliver_proof
                         _p_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
                         await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
@@ -1253,10 +1261,12 @@ class Moderation (commands .Cog ):
         return True
 
     async def apply_panel_action (self ,guild ,target ,action ,reason ='' ,
-    amount =None ,proof_link =None ,actor ='Панель' ,duration_cap =None ):
+    amount =None ,proof_link =None ,actor ='Панель' ,duration_cap =None ,
+    proof_ok =False ):
         """Наказание из веб-панели («Пользователи») — единый путь с /modpanel.
 
         target — discord.Member (на сервере) или строка-ID (ушёл с сервера).
+        proof_ok — API панели уже принял файл/ссылку доказательства.
         Возвращает (ok, текст ответа для панели).
         """
         from cogs .embed_utils import error_embed as _err ,success_embed as _ok 
@@ -1348,7 +1358,9 @@ class Moderation (commands .Cog ):
         _it =PanelInteraction (guild ,_actor )
         try :
             await self ._execute_mod_action (_it ,action ,target_str ,
-            reason or 'не указана',amount ,proof_link =(proof_link or '').strip ()or None )
+            reason or 'не указана',amount ,
+            proof_link =(proof_link or '').strip ()or None ,
+            proof_ok =bool (proof_ok ))
         except Exception as _ex :
             return False ,f'Не получилось: {_ex }'
         if not _it .msgs :
