@@ -91,6 +91,12 @@ STICKER_SPECS = {
     'helper':     {'accent': (240, 240, 245), 'icon': 'helper'},
     'moderator':  {'accent': (230, 230, 240), 'icon': 'mod'},
     'heart':      {'accent': (245, 245, 250), 'icon': 'heart'},
+    'accept':     {'accent': (120, 220, 160), 'icon': 'accept'},
+    'reject':     {'accent': (230, 100, 110), 'icon': 'reject'},
+    'claim':      {'accent': (230, 230, 240), 'icon': 'claim'},
+    'signup':     {'accent': (235, 235, 240), 'icon': 'signup'},
+    'staff':      {'accent': (240, 240, 245), 'icon': 'staff'},
+    'user':       {'accent': (230, 230, 240), 'icon': 'user'},
 }
 
 

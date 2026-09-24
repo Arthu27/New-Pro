@@ -405,16 +405,26 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 class RoleSelect(discord.ui.Select):
     def __init__(self):
         # Должности: Хелпер и Модератор (чат-контроль упразднён 2026-08-27)
+        # Стикеры из assets/stickers — без кнопок, только select.
+        try:
+            from services.menu_emojis import emoji_for_appeal
+            helper_em = emoji_for_appeal('helper')
+            mod_em = emoji_for_appeal('moderator')
+            signup_em = emoji_for_appeal('signup')
+        except Exception:
+            helper_em, mod_em, signup_em = '🛟', '🛡️', '📝'
         options = [
             discord.SelectOption(
                 label="Хелпер",
                 value="Helper",
-                description="Помощь участникам сервера"
+                description="Помощь участникам сервера",
+                emoji=helper_em or signup_em,
             ),
             discord.SelectOption(
                 label="Модератор",
                 value="Moderator",
-                description="Модерация сервера и участников"
+                description="Модерация сервера и участников",
+                emoji=mod_em or signup_em,
             ),
         ]
         super().__init__(
@@ -448,10 +458,17 @@ class StaffReviewView(discord.ui.View):
         return None, None, apps
 
     async def _review(self, interaction: discord.Interaction, action: str):
-        if not (interaction.user.guild_permissions.manage_guild
-                or interaction.user.guild_permissions.administrator):
-            return await interaction.response.send_message(
-                "Рассматривать заявки может только администрация.", ephemeral=True)
+        # Кто видит канал заявок — может решить (как у апелляций).
+        # Не требуем manage_guild: иначе «не отвечает админам» без перма.
+        try:
+            ch = getattr(interaction, 'channel', None)
+            if ch is not None:
+                perms = ch.permissions_for(interaction.user)
+                if not getattr(perms, 'view_channel', True):
+                    return await interaction.response.send_message(
+                        "Нет доступа к каналу заявок.", ephemeral=True)
+        except Exception:
+            pass
         await interaction.response.defer(ephemeral=True)
 
         key, app, apps = self._find_app_by_message(interaction.message.id)
@@ -545,13 +562,26 @@ class StaffReviewView(discord.ui.View):
         placeholder="Действие с заявкой",
         options=[
             discord.SelectOption(label="Принять", value="approve",
-                                 description="Одобрить заявку и выдать роль"),
+                                 description="Одобрить заявку и выдать роль",
+                                 emoji="✅"),
             discord.SelectOption(label="Отклонить", value="reject",
-                                 description="Отклонить заявку"),
+                                 description="Отклонить заявку",
+                                 emoji="❌"),
         ],
         custom_id="staff_review_select_v1", min_values=1, max_values=1)
     async def review_select(self, interaction: discord.Interaction,
                             select: discord.ui.Select):
+        # Подставить стикеры, если залиты как application emoji.
+        try:
+            from services.menu_emojis import emoji_for_appeal, schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(interaction.client)
+            for opt in select.options:
+                if opt.value == 'approve':
+                    opt.emoji = emoji_for_appeal('accept')
+                elif opt.value == 'reject':
+                    opt.emoji = emoji_for_appeal('reject')
+        except Exception:
+            pass
         await self._review(interaction, select.values[0])
 
 
@@ -657,6 +687,11 @@ class StaffApply(commands.Cog):
         
         # Отправляем сам файл напрямую: без embed-контейнера и лишнего текста.
         # Так Discord показывает фотографию в полном размере, а меню остаётся снизу.
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(interaction.client)
+        except Exception:
+            pass
         await interaction.channel.send(file=file, view=view)
         await interaction.followup.send("✅ Панель заявок в персонал успешно создана!", ephemeral=True)
 

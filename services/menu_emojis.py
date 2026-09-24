@@ -24,6 +24,7 @@ STICKER_KEYS = (
     'warn', 'mute', 'ban', 'clear', 'unban',
     'appeal', 'helper', 'moderator', 'heart',
     'staff', 'user',  # /report: «На кого жалоба?» (Стафф/Участник)
+    'accept', 'reject', 'claim', 'signup',  # апелляции + наборы
 )
 
 # действие /modpanel → ключ стикера
@@ -106,6 +107,26 @@ def emoji_for_report(kind: str):
     if em is not None:
         return em
     return _REPORT_UNICODE.get(kind, '❔')
+
+
+# Апелляции / наборы: select вместо кнопок — свои стикеры.
+_APPEAL_UNICODE = {
+    'accept': '✅',
+    'reject': '❌',
+    'claim': '✋',
+    'appeal': '📋',
+    'signup': '📝',
+    'helper': '🛟',
+    'moderator': '🛡️',
+}
+
+
+def emoji_for_appeal(kind: str):
+    """Стикер для пункта меню апелляции / набора или unicode-фолбек."""
+    em = _cache.get(kind)
+    if em is not None:
+        return em
+    return _APPEAL_UNICODE.get(kind, '❔')
 
 
 def emojis_ready() -> bool:

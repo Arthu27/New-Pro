@@ -396,8 +396,8 @@ def build_log_card_view(*, title: str, rows=None, footer: str = '',
 
 def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
                             image_filename: str = None, buttons=None,
-                            accent: int = None):
-    """Карточка апелляции V2: текст/фото + ActionRow с кнопками."""
+                            select=None, accent: int = None):
+    """Карточка апелляции V2: текст/фото + select (без кнопок) или legacy buttons."""
     if not V2_AVAILABLE:
         return None
     children = []
@@ -409,7 +409,12 @@ def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
         children.append(_full_bleed_gallery(image_filename))
     if footer:
         children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
-    if buttons:
+    # Select предпочтительнее кнопок (владелец 2026-09-24: «кнопки не нужны»).
+    if select is not None:
+        row = _ui.ActionRow()
+        row.add_item(select)
+        children.append(row)
+    elif buttons:
         row = _ui.ActionRow()
         for btn in buttons:
             row.add_item(btn)
