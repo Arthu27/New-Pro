@@ -51,7 +51,7 @@ _MAX_TS = 1000                  # сколько меток держать на 
 #   • мут/размут — мод/хелпер 3, мастер 5, куратор 7 (размут = мут)
 #   • варн — модеры 3/день, кураторы/админы 5
 #   • очистка — 10 чисток/день (одна операция = один хит)
-# Хелпер = тир mod (та же карта ролей). Владелец меняет в панели; 0 = без лимита.
+# Хелпер = тир helper (варн 1, без бана). Владелец меняет в панели; 0 = без лимита.
 DEFAULT_LIMITS = {
     # ── наказания ──
     'warn': 3,       # предупреждений — 3/день у модеров/хелперов
@@ -154,24 +154,26 @@ def _roles_path(gid):
 ROLE_MAP_PATH = 'data/role_map.json'
 
 # Порядок старшинства: больший индекс — больше прав (мягче лимиты).
-# master — между mod и curator (заказ владельца 2026-09-24).
-TIER_ORDER = ('mod', 'master', 'curator', 'admin', 'owner')
+# helper < mod < master < curator (заказ 2026-09-24).
+TIER_ORDER = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
 
 # Тировые дефолты за окно (день).
-# Хелпер в role_map = mod (иерархия), но ACL/меню — только чат (helper_acl_seed).
-# Мут/размут: мод 3 / мастер 5 / куратор 7. Бан: мод 1 / мастер 1 / куратор 2.
+# Ветка хелперов: варн 1/1/2, бана нет. Ветка модеров: варн 3+, бан 1/1/2/5.
+# Мут/размут: хелпер/мод 3, мастер 5, куратор 7, админ 10.
 TIER_DEFAULT_LIMITS = {
     # тир владельца (owner) — ВСЁ без лимитов
+    'helper':  {'warn': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
     'mod':     {'warn': 3, 'ban': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
-    'master':  {'warn': 3, 'ban': 1, 'unmute': 5, 'mute': 5, 'clear': 10},
-    'curator': {'warn': 5, 'ban': 2, 'unmute': 7, 'mute': 7, 'clear': 10},
-    'admin':   {'warn': 5, 'ban': 5, 'unmute': 10, 'mute': 10, 'clear': 10},
+    'master':  {'warn': 1, 'ban': 1, 'unmute': 5, 'mute': 5, 'clear': 10},
+    'curator': {'warn': 2, 'ban': 2, 'unmute': 7, 'mute': 7, 'clear': 10},
+    'admin':   {'warn': 2, 'ban': 5, 'unmute': 10, 'mute': 10, 'clear': 10},
     'owner':   {},   # владелец не ограничен ни в чём
 }
 
 # Потолок ДЛИТЕЛЬНОСТИ мута по тиру (секунды) — запасной, если прогрессия
 # недоступна. Боевой потолок: mute_progression (1ч → +2ч до варна).
 TIER_DEFAULT_DURATIONS = {
+    'helper':  3600,
     'mod':     3600,          # 1 час (первый шаг)
     'master':  3600,
     'curator': 3600,
@@ -201,7 +203,7 @@ def _role_tier_map(guild_id=None):
     try:
         from services.staff_roles import KNOWN_HELPER_ROLE_ID
         hid = str(int(KNOWN_HELPER_ROLE_ID))
-        out.setdefault(hid, 'mod')
+        out.setdefault(hid, 'helper')
     except Exception:
         pass
     try:
@@ -244,7 +246,7 @@ def member_has_helper_or_moderator(member) -> bool:
             continue
         if rid in need:
             return True
-        if tmap.get(rid) == 'mod':
+        if tmap.get(rid) in ('helper', 'mod'):
             return True
     return False
 

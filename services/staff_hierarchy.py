@@ -32,10 +32,11 @@ _log = get_logger('staff_hierarchy')
 
 # Панельные роли по старшинству (тот же порядок, что web/app.ROLES)
 # master между mod и curator (заказ 2026-09-24).
-RANK = {'uye': 0, 'mod': 1, 'master': 2, 'curator': 3, 'admin': 4, 'owner': 5}
+RANK = {'uye': 0, 'helper': 1, 'mod': 1, 'master': 2, 'curator': 3, 'admin': 4, 'owner': 5}
 
 LABELS = {
     'uye': 'участник',
+    'helper': 'хелпер',
     'mod': 'модератор',
     'master': 'мастер',
     'curator': 'куратор',
@@ -50,7 +51,7 @@ REMOVE_ACTIONS = ('unwarn', 'untimeout', 'vunmute', 'unmute_chat', 'unban', 'unm
 # Размут персонала (хелпер/модер): только куратор и выше
 # (заказ 2026-09-24: моды/хелперы не снимают мут друг другу).
 UNMUTE_ACTIONS = ('untimeout', 'vunmute', 'unmute_chat', 'unmute')
-STAFF_PEER_TIERS = frozenset({'mod', 'master'})  # кого нельзя размутить ниже куратора
+STAFF_PEER_TIERS = frozenset({'helper', 'mod', 'master'})
 
 
 def _role_map_tiers():
@@ -73,7 +74,7 @@ def _role_map_tiers():
         from services.staff_roles import KNOWN_HELPER_ROLE_ID
         hid = str(int(KNOWN_HELPER_ROLE_ID))
         if hid not in out:
-            out[hid] = 'mod'
+            out[hid] = 'helper'
     except Exception as _ex:
         _log.debug('role_map_tiers helper fallback: %s', _ex)
     try:

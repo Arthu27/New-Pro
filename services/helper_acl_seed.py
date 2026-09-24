@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Сид прав роли «Хелпер» — только чат (заказ владельца 2026-09-24).
+"""Сид прав роли «Хелпер» — ветка чата (заказ владельца 2026-09-24).
 
 Роль 948969471916249119:
-  • может вызывать /modpanel;
-  • в меню видит ТОЛЬКО «Мут» (чат) и «Очистка» — без бана, варна,
-    войс-мута и таймаута;
-  • лимиты: мут 3/день, размут 3/день, очистка 10/день.
+  • /modpanel: мут чата, размут, очистка, варн;
+  • бана / войс-мута / таймаута — нет;
+  • лимиты: варн 1, мут/размут 3, чистка 10 /день.
 
-v3: не только ДОПИСЫВАЕТ mute/purge, но и СНИМАЕТ хелпера с тяжёлых
-действий (ban/warn/vmute/timeout/…), если role_seed раньше выдал ему
-полный ACL как «mod».
+v4: +warn; бан по-прежнему снят. Снимает хелпера с тяжёлых ACL.
 
 Идемпотентно: маркер data/.helper_acl.v<N>.
 """
@@ -23,10 +20,10 @@ from logger import get_logger
 _log = get_logger('helper_acl_seed')
 
 HELPER_ROLE_ID = 948969471916249119
-# action_acl: mute = чат-мут, purge = очистка. Войс/таймаут/бан — нет.
-HELPER_ACTIONS = ('mute', 'purge')
-HELPER_LIMITS = {'clear': 10, 'mute': 3, 'unmute': 3}
-SEED_VERSION = 3
+# Чат + варн. Бан / войс / таймаут — нет.
+HELPER_ACTIONS = ('mute', 'purge', 'warn')
+HELPER_LIMITS = {'clear': 10, 'mute': 3, 'unmute': 3, 'warn': 1}
+SEED_VERSION = 4
 MARKER = f'data/.helper_acl.v{SEED_VERSION}'
 _DEMO_GUILD = 987654321098765432
 
@@ -48,7 +45,7 @@ def _main_guild_id(override=None):
 
 
 def apply_helper_acl_seed(force=False, guild_id=None):
-    """Выдать хелперу только чат-права /modpanel. Возвращает отчёт."""
+    """Выдать хелперу права ветки чата. Возвращает отчёт."""
     report = {
         'applied': False, 'reason': '', 'guild_id': 0,
         'actions_added': [], 'actions_removed': [],
@@ -70,7 +67,6 @@ def apply_helper_acl_seed(force=False, guild_id=None):
         report['guild_id'] = gid
         helper = str(HELPER_ROLE_ID)
 
-        # 1) Action ACL: только mute + purge; с остальных — снять
         from services.permission_acl import (
             ACTIONS, load_action_acl, save_action_acl)
         acl = load_action_acl(gid)
@@ -91,7 +87,6 @@ def apply_helper_acl_seed(force=False, guild_id=None):
                 report['actions_removed'].append(action)
         save_action_acl(gid, acl)
 
-        # 2) Command ACL: /modpanel
         try:
             from services.permission_acl import load_acl, set_rule
             cmd = load_acl(gid)
@@ -109,7 +104,8 @@ def apply_helper_acl_seed(force=False, guild_id=None):
                     with open('data/role_map.json', encoding='utf-8') as fh:
                         rm = json.load(fh) or {}
                     for rid, tier in rm.items():
-                        if tier in ('mod', 'master', 'curator', 'admin', 'owner'):
+                        if tier in ('helper', 'mod', 'master', 'curator',
+                                    'admin', 'owner'):
                             roles.append(str(rid))
                 except Exception:
                     pass
@@ -123,7 +119,6 @@ def apply_helper_acl_seed(force=False, guild_id=None):
         except Exception as ex:
             _log.warning('helper cmd_acl: %s', ex)
 
-        # 3) Лимиты → role_scoped_actions сузит меню до mute/unmute/clear
         try:
             from services.staff_limits import set_role_limits
             set_role_limits(

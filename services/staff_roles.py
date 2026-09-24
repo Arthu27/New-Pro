@@ -46,9 +46,7 @@ LEGACY_CURATOR_KEYS = ("helper_curator_role", "moderator_curator_role")
 # Используем только когда такая роль реально есть на сервере.
 KNOWN_CURATOR_ROLE_ID = 807030012301541377
 
-# Роль «Хелпер» на боевом сервере: только чат (mute+purge), не полный мод.
-# В role_map тир mod для иерархии; ACL узкий через helper_acl_seed.
-# Иначе куратор/админ+хелпер ловил хелперские лимиты без known-fallback.
+# Роль «Хелпер»: тир helper — варн+чат, без бана (helper_acl_seed).
 KNOWN_HELPER_ROLE_ID = 948969471916249119
 
 # Роль «× Moderator» (Hakumo).

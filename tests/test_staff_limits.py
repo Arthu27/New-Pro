@@ -198,8 +198,8 @@ check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 2 and _lm_adm['ban'] == 5,
       f'бан по тирам: модер {_lm_mod["ban"]} / куратор {_lm_cur["ban"]} / админ {_lm_adm["ban"]}')
 check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 7 and _lm_adm['unmute'] == 10,
       'размут по тирам: модер 3 / куратор 7 / админ 10 (= мут)')
-check(_lm_mod['warn'] == 3 and _lm_cur['warn'] == 5 and _lm_adm['warn'] == 5,
-      'варны по тирам: модер 3 / куратор 5 / админ 5')
+check(_lm_mod['warn'] == 3 and _lm_cur['warn'] == 2 and _lm_adm['warn'] == 2,
+      'варны по тирам: модер 3 / куратор 2 / админ 2')
 check(_lm_mod['mute'] == 3 and _lm_cur['mute'] == 7 and _lm_adm['mute'] == 10,
       'муты по тирам: модер 3 / куратор 7 / админ 10')
 check(_lm_own.get('ban', 0) == 0, 'владелец — без лимита на бан')

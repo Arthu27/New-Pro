@@ -1,9 +1,9 @@
 {
-  "version": 5,
-  "_comment": "Стартовые роли сервера. v5 (2026-09-24): Master в role_map; хелпер НЕ в полном action ACL (только чат через helper_acl_seed). Применяется один раз; дальше — панель. guild_id из MAIN_GUILD_ID.",
+  "version": 6,
+  "_comment": "v6: хелпер → тир helper (варн 1, без бана); модер → mod. Master/Curator warn 1/2. guild_id из MAIN_GUILD_ID.",
   "role_map": {
     "803553848396349510": "mod",
-    "948969471916249119": "mod",
+    "948969471916249119": "helper",
     "1552637932907667466": "master",
     "807030012301541377": "curator",
     "1189999426631122964": "admin"
@@ -15,6 +15,6 @@
   },
   "action_default": {
     "tiers": ["mod", "master", "curator", "admin"],
-    "_comment": "Полный ACL действий — Moderator/Master/Curator/Admin. Хелпер исключён в role_seed (чат mute+purge → helper_acl_seed). Мастер без Helper/Moderator не применит наказания (master_punish_allowed)."
+    "_comment": "Полный ACL — Moderator/Master/Curator/Admin. Хелпер (тир helper) не здесь — mute+purge+warn через helper_acl_seed."
   }
 }

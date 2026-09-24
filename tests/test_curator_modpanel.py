@@ -98,9 +98,9 @@ check(SH.target_panel_role(guild, cur_h) == 'curator',
       'target_panel_role → curator')
 
 print('== 2. Хелперские лимиты НЕ сужают меню куратора ==')
-# как helper_acl_seed: mute/unmute/clear на роли хелпера
-SL.set_role_limits(GID, HELPER, who='test', mute=3, unmute=3, clear=10)
-check(SL.role_scoped_actions(GID, [HELPER]) == {'mute', 'unmute', 'clear'},
+# как helper_acl_seed: mute/unmute/clear/warn на роли хелпера
+SL.set_role_limits(GID, HELPER, who='test', mute=3, unmute=3, clear=10, warn=1)
+check(SL.role_scoped_actions(GID, [HELPER]) == {'mute', 'unmute', 'clear', 'warn'},
       'хелпер alone → узкое меню')
 scoped = SL.role_scoped_actions(GID, [CURATOR, HELPER])
 check(scoped is None,
@@ -108,6 +108,8 @@ check(scoped is None,
 lm, _ = SL.effective_limits(GID, [CURATOR, HELPER])
 check(lm.get('mute') == 7,
       f'куратор+хелпер mute=7 тира, не 3 ({lm.get("mute")})')
+check(lm.get('warn') == 2,
+      f'куратор+хелпер warn=2 ({lm.get("warn")})')
 
 print('== 3. ACL: куратор наследует бан модеров, не теряет из‑за хелпера ==')
 # узкий хелперский ACL + бан у модов (кураторского id в ban нет — регресс)
@@ -115,7 +117,7 @@ pacl.save_action_acl(GID, {
     'mute': [str(HELPER), str(MOD), str(CURATOR)],
     'purge': [str(HELPER), str(MOD), str(CURATOR)],
     'ban': [str(MOD)],          # куратора нет — раньше бан пропадал из меню
-    'warn': [str(MOD), str(CURATOR)],
+    'warn': [str(HELPER), str(MOD), str(CURATOR)],
     'kick': [str(MOD), str(CURATOR)],
     'timeout': [str(MOD), str(CURATOR)],
     'unban': [str(MOD), str(CURATOR)],
@@ -130,6 +132,8 @@ check(pacl.check_action(GID, helper_only, 'ban') is False,
       'чистый хелпер бан НЕ может')
 check(pacl.check_action(GID, helper_only, 'mute') is True,
       'чистый хелпер mute может')
+check(pacl.check_action(GID, helper_only, 'warn') is True,
+      'чистый хелпер warn может')
 
 print('== 4. actions_for_member: кураторская панель, не хелперская ==')
 acts = [a[0] for a in actions_for_member(guild, cur_h)]
@@ -137,13 +141,14 @@ check('ban' in acts, f'куратор+хелпер видит ban: {acts}')
 check('warn' in acts, f'куратор+хелпер видит warn: {acts}')
 check('mute' in acts, f'куратор+хелпер видит mute: {acts}')
 check('clear' in acts, f'куратор+хелпер видит clear: {acts}')
-check(acts != ['mute', 'unmute', 'clear'] and set(acts) != {'mute', 'unmute', 'clear'},
+check(acts != ['mute', 'unmute', 'clear', 'warn']
+      and set(acts) != {'mute', 'unmute', 'clear', 'warn'},
       f'это НЕ хелперское меню: {acts}')
 
 h_acts = [a[0] for a in actions_for_member(guild, helper_only)]
 check('ban' not in h_acts, f'хелпер без ban: {h_acts}')
-check('mute' in h_acts and 'clear' in h_acts,
-      f'хелпер видит mute/clear: {h_acts}')
+check('mute' in h_acts and 'clear' in h_acts and 'warn' in h_acts,
+      f'хелпер видит mute/clear/warn: {h_acts}')
 
 print('== 5. Заголовок /modpanel · Куратор ==')
 view = ModPanelView(None, cur_h, actions_for_member(guild, cur_h))
@@ -167,7 +172,7 @@ print('== 7. Страховка: куратор+хелпер при ошибоч
 # Намеренно повесим те же лимиты на роль КУРАТОРА (как будто сид/руками
 # скопировали хелперские) + хелпер — меню всё равно не должно быть
 # хелперским: есть младшая роль → guard сбрасывает scoped.
-SL.set_role_limits(GID, CURATOR, who='test', mute=3, unmute=3, clear=10)
+SL.set_role_limits(GID, CURATOR, who='test', mute=3, unmute=3, clear=10, warn=1)
 acts3 = [a[0] for a in actions_for_member(guild, cur_h)]
 check('ban' in acts3 and 'warn' in acts3,
       f'страховка: куратор+хелпер при curator-limits mute/clear → полная '
@@ -175,7 +180,7 @@ check('ban' in acts3 and 'warn' in acts3,
 # Чистый куратор без хелпера — свои mute/clear лимиты ОСТАЮТСЯ (не трогаем)
 cur_only = _Member(45, [GID, CURATOR], guild=guild)
 acts4 = [a[0] for a in actions_for_member(guild, cur_only)]
-check(set(acts4) <= {'mute', 'unmute', 'clear'} or 'ban' not in acts4,
+check(set(acts4) <= {'mute', 'unmute', 'clear', 'warn'} or 'ban' not in acts4,
       f'чистый куратор со своими mute-лимитами не раздувается: {acts4}')
 
 print('== 8. Админ+хелпер: меню админа, не хелпера ==')
@@ -210,8 +215,8 @@ check(SH.actor_panel_role(guild, admin_discord) == 'admin',
 acts_ad = [a[0] for a in actions_for_member(guild, admin_discord)]
 check('mute' in acts_ad,
       f'Discord admin+helper: ACL хелпера (mute) жив: {acts_ad}')
-check(SH.best_mapped_tier(admin_discord) == 'mod',
-      'mapped helper = mod, Discord admin выше только в actor_panel_role')
+check(SH.best_mapped_tier(admin_discord) == 'helper',
+      'mapped helper = helper, Discord admin выше только в actor_panel_role')
 
 print('== 9. Финальный /modpanel V2 ==')
 from cogs.moderation import ModTargetSelect  # noqa: E402

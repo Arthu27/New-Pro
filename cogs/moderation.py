@@ -2064,7 +2064,7 @@ def actions_for_member(guild, member):
     except Exception:
         scoped = None
     # Страховка: старший тир (куратор/админ) + хелпер — если scoped всё ещё
-    # «хелперский» (mute/unmute/clear), сбрасываем. Чистые лимиты старшей
+    # «хелперский» (mute/unmute/clear/warn), сбрасываем. Чистые лимиты старшей
     # роли без младшей не трогаем.
     try:
         from services.staff_hierarchy import actor_panel_role, RANK
@@ -2074,7 +2074,7 @@ def actions_for_member(guild, member):
         _rank = RANK.get(_tier, -1)
         if (_rank >= RANK.get('curator', 2)
                 and scoped is not None
-                and set(scoped) <= {'mute', 'unmute', 'clear'}):
+                and set(scoped) <= {'mute', 'unmute', 'clear', 'warn'}):
             _tmap = _role_tier_map()
             _helper = str(int(KNOWN_HELPER_ROLE_ID))
             _has_junior = False
