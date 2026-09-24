@@ -2801,8 +2801,8 @@ class ModActionModal(discord.ui.Modal):
     """Модальное окно ввода — поля строго под выбранное действие.
 
     «Очистка» спрашивает только количество и причину (никакой демки),
-    разбан/размут — цель и причину, наказания — демку, НО только если
-    требование включено в панели.
+    разбан/размут — цель и причину, наказания — поле доказательства
+    необязательно (можно пусто).
     """
 
     def __init__(self, cog, action, guild=None, prefill_target="", user=None):
@@ -2849,32 +2849,14 @@ class ModActionModal(discord.ui.Modal):
             style=discord.TextStyle.short,
         )
         self.add_item(self.reason)
-        _need_proof = False
+        # Доказательство к наказанию — всегда НЕОБЯЗАТЕЛЬНОЕ поле
+        # (заказ владельца 2026-09-24). Можно приложить ссылку, можно пусто.
+        # Строгий режим панели (тумблер) больше не делает поле required=True.
         if action in _PUNISH_MODPANEL:
-            try:
-                from cogs.proof_cog import proof_is_required
-                _need_proof = proof_is_required(getattr(guild, 'id', 0) or 0)
-            except Exception:
-                _need_proof = True
-            # Белый список «без демки» (панель → Доказательства): доверенному
-            # модератору поле «Доказательство» не ставим ВООБЩЕ. Раньше
-            # список был, а модалка его игнорировала — обязательное поле
-            # оставалось у всех (владелец 2026-09-05).
-            if _need_proof and user is not None:
-                try:
-                    from cogs.proof_cog import proof_is_whitelisted
-                    _need_proof = not proof_is_whitelisted(
-                        getattr(guild, 'id', 0) or 0,
-                        user_id=getattr(user, 'id', 0),
-                        role_ids=[getattr(r, 'id', 0)
-                                  for r in getattr(user, 'roles', []) or []])
-                except Exception as _wlx:
-                    log.debug(f'_need_proof whitelist: {_wlx}')
-                    _need_proof = True
-        if _need_proof:
             self.proof = discord.ui.TextInput(
-                label="Доказательство (ссылка на скрин/видео)", required=True,
-                placeholder="https://… — без этого наказание не выдаётся",
+                label="Доказательство (ссылка, необязательно)",
+                required=False,
+                placeholder="https://… — можно оставить пустым",
                 max_length=500,
             )
             self.add_item(self.proof)
