@@ -1207,6 +1207,13 @@ class Moderation (commands .Cog ):
         ходит — у неё свои проверки авторизации (apply_panel_action).
         """
         try:
+            from services.staff_limits import master_punish_allowed
+            _mok, _mdeny = master_punish_allowed(interaction.user)
+            if not _mok:
+                await _respond(interaction, embed=error_embed(
+                    _mdeny or 'Мастер без Helper/Moderator не может применять.'),
+                    ephemeral=True)
+                return False
             if action in ('mute', 'unmute'):
                 gid = getattr(interaction, 'guild_id', None) or getattr(
                     getattr(interaction, 'guild', None), 'id', None)
@@ -2023,6 +2030,14 @@ def actions_for_member(guild, member):
             return list(MODPANEL_ACTIONS)
     except Exception:
         log.debug('actions_for_member: owner-проверка не удалась')
+    # Мастер без Helper/Moderator — пустое меню (Eventsmod/Broadcaster)
+    try:
+        from services.staff_limits import master_punish_allowed
+        _mok, _ = master_punish_allowed(member)
+        if not _mok:
+            return []
+    except Exception as _mex:
+        log.debug('actions_for_member: master gate: %s', _mex)
     role_ids = []
     try:
         role_ids = [r.id for r in (getattr(member, "roles", None) or [])

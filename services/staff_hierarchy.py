@@ -29,11 +29,13 @@ from logger import get_logger
 _log = get_logger('staff_hierarchy')
 
 # Панельные роли по старшинству (тот же порядок, что web/app.ROLES)
-RANK = {'uye': 0, 'mod': 1, 'curator': 2, 'admin': 3, 'owner': 4}
+# master между mod и curator (заказ 2026-09-24).
+RANK = {'uye': 0, 'mod': 1, 'master': 2, 'curator': 3, 'admin': 4, 'owner': 5}
 
 LABELS = {
     'uye': 'участник',
     'mod': 'модератор',
+    'master': 'мастер',
     'curator': 'куратор',
     'admin': 'администратор',
     'owner': 'владелец панели',
@@ -67,6 +69,20 @@ def _role_map_tiers():
             out[hid] = 'mod'
     except Exception as _ex:
         _log.debug('role_map_tiers helper fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_MODERATOR_ROLE_ID
+        mid = str(int(KNOWN_MODERATOR_ROLE_ID))
+        if mid not in out:
+            out[mid] = 'mod'
+    except Exception as _ex:
+        _log.debug('role_map_tiers moderator fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_MASTER_ROLE_ID
+        xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
+        if xid and xid != '0' and xid not in out:
+            out[xid] = 'master'
+    except Exception as _ex:
+        _log.debug('role_map_tiers master fallback: %s', _ex)
     return out
 
 
@@ -178,7 +194,7 @@ def explain(actor_role, target_role, label=None):
     t = LABELS.get(target_role, target_role)
     what = f' ({label})' if label else ''
     return (f'Нельзя{what}: {t} — персонал твоего уровня или выше. '
-            f'Иерархия: модератор → куратор → администратор → владелец. '
+            f'Иерархия: модератор → мастер → куратор → администратор → владелец. '
             f'Вопросы по правам — к владельцу панели.')
 
 

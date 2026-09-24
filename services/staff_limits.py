@@ -155,14 +155,17 @@ def _roles_path(gid):
 ROLE_MAP_PATH = 'data/role_map.json'
 
 # Порядок старшинства: больший индекс — больше прав (мягче лимиты).
-TIER_ORDER = ('mod', 'curator', 'admin', 'owner')
+# master — между mod и curator (заказ владельца 2026-09-24).
+TIER_ORDER = ('mod', 'master', 'curator', 'admin', 'owner')
 
 # Тировые дефолты за окно (день). Sabotash 2026-09-02:
 # варны мод 3 / кур+адм 5; муты мод 5 / кур+адм 10;
 # размут мод 3 / кур+адм 5; бан мод 1 / кур 3 / адм 5.
+# Master = среднее между mod и curator (заказ создателя 2026-09-24).
 TIER_DEFAULT_LIMITS = {
     # тир владельца (owner) — ВСЁ без лимитов
     'mod':     {'warn': 3, 'ban': 1, 'unmute': 3, 'mute': 5, 'clear': 10},
+    'master':  {'warn': 4, 'ban': 2, 'unmute': 4, 'mute': 8, 'clear': 10},
     'curator': {'warn': 5, 'ban': 3, 'unmute': 5, 'mute': 10, 'clear': 10},
     'admin':   {'warn': 5, 'ban': 5, 'unmute': 5, 'mute': 10, 'clear': 10},
     'owner':   {},   # владелец не ограничен ни в чём
@@ -172,6 +175,7 @@ TIER_DEFAULT_LIMITS = {
 # Sabotash 2026-09-02: «муты максимум от 30 минут до 2 часов у всех пока».
 TIER_DEFAULT_DURATIONS = {
     'mod':     2 * 3600,      # 2 часа
+    'master':  2 * 3600,
     'curator': 2 * 3600,
     'admin':   2 * 3600,
     'owner':   0,             # без ограничения
@@ -181,7 +185,7 @@ TIER_DEFAULT_DURATIONS = {
 def _role_tier_map(guild_id=None):
     """{role_id(str): tier} из data/role_map.json (та же настройка, что в
     панели «Панели и роли»). Сбой чтения — пустой словарь (не мешаем).
-    Известная роль куратора сервера всегда в карте (fallback)."""
+    Известные роли сервера всегда в карте (fallback)."""
     try:
         data = _load_json(ROLE_MAP_PATH, {})
         if not isinstance(data, dict):
@@ -202,12 +206,81 @@ def _role_tier_map(guild_id=None):
         out.setdefault(hid, 'mod')
     except Exception:
         pass
+    try:
+        from services.staff_roles import KNOWN_MODERATOR_ROLE_ID
+        mid = str(int(KNOWN_MODERATOR_ROLE_ID))
+        out.setdefault(mid, 'mod')
+    except Exception:
+        pass
+    try:
+        from services.staff_roles import KNOWN_MASTER_ROLE_ID
+        xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
+        if xid and xid != '0':
+            out.setdefault(xid, 'master')
+    except Exception:
+        pass
     return out
 
 
+def member_has_helper_or_moderator(member) -> bool:
+    """Есть ли у участника роль Helper или Moderator (ветки наказаний).
+
+    Мастер без одной из этих ролей (только Eventsmod/Broadcaster/Master)
+    применять наказания не может (заказ создателя 2026-09-24).
+    """
+    if member is None:
+        return False
+    try:
+        from services.staff_roles import (
+            KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID)
+        need = {
+            str(int(KNOWN_HELPER_ROLE_ID)),
+            str(int(KNOWN_MODERATOR_ROLE_ID)),
+        }
+    except Exception:
+        need = {'948969471916249119', '803553848396349510'}
+    tmap = _role_tier_map()
+    for role in (getattr(member, 'roles', None) or []):
+        rid = str(getattr(role, 'id', '') or '')
+        if not rid:
+            continue
+        if rid in need:
+            return True
+        if tmap.get(rid) == 'mod':
+            return True
+    return False
+
+
+def master_punish_allowed(member) -> tuple:
+    """(ok, deny_text). Мастер без Helper/Moderator — отказ.
+
+    Куратор/админ/owner выше master — гейт не трогает.
+    """
+    if member is None:
+        return True, None
+    try:
+        role_ids = [
+            getattr(r, 'id', None)
+            for r in (getattr(member, 'roles', None) or [])
+            if getattr(r, 'id', None)
+        ]
+        tier = tier_for_roles(role_ids)
+        if tier != 'master':
+            return True, None
+        if member_has_helper_or_moderator(member):
+            return True, None
+        return False, (
+            'Мастер без роли **Helper** или **Moderator** '
+            'не может применять наказания. '
+            'Ветки Eventsmod / Broadcaster — без наказаний.'
+        )
+    except Exception as ex:
+        _log.debug('master_punish_allowed: %s', ex)
+        return True, None
+
+
 def tier_for_roles(role_ids):
-    """Старший тир из набора ролей участника: 'owner' > 'admin' > 'curator'
-    > 'mod' > None (роль не помечена как стафф — действует общий дефолт)."""
+    """Старший тир: owner > admin > curator > master > mod > None."""
     tmap = _role_tier_map()
     best = None
     best_i = -1
@@ -701,6 +774,10 @@ def check_action(guild, actor, key, amount=1):
             _log.debug('staff_limits: владелец бота не проверен: %s', _ex)
         if getattr(actor, 'bot', False):
             return True, None      # сам бот (панель/автоматика) — лимитами не грудим
+        # Мастер без Helper/Moderator — нельзя (Eventsmod/Broadcaster)
+        _mok, _mdeny = master_punish_allowed(actor)
+        if not _mok:
+            return False, _mdeny
         role_ids = [r.id for r in (getattr(actor, 'roles', None) or [])
                     if getattr(r, 'id', None) != getattr(guild, 'id', None)]
         lim_map, win_map = effective_limits(guild.id, role_ids)
