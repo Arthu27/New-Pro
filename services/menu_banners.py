@@ -91,6 +91,12 @@ STICKER_SPECS = {
     'helper':     {'accent': (240, 240, 245), 'icon': 'helper'},
     'moderator':  {'accent': (230, 230, 240), 'icon': 'mod'},
     'heart':      {'accent': (245, 245, 250), 'icon': 'heart'},
+    # Events /event-panel
+    'signup':     {'accent': (80, 220, 160), 'icon': 'user'},
+    'announce':   {'accent': (94, 200, 255), 'icon': 'helper'},
+    'start':      {'accent': (240, 162, 2), 'icon': 'heart'},
+    'finish':     {'accent': (160, 170, 185), 'icon': 'appeal'},
+    'elist':      {'accent': (220, 225, 235), 'icon': 'mod'},
 }
 
 

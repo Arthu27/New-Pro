@@ -1639,6 +1639,19 @@ async def main():
         else:
             print(f"[СЕТЬ] Доступ к Discord есть ({', '.join(_reachable)}:443)")
 
+        # Event-бот (второй клиент): войсе-stay + статус Events.
+        # Токен — EVENT_BOT_TOKEN в .env; без токена просто пропускаем.
+        try:
+            from services.event_voice_bot import start_event_bot, event_bot_token
+            if event_bot_token():
+                await start_event_bot()
+                print("[EVENT-БОТ] Запущен (войсе-stay)")
+            else:
+                print("[EVENT-БОТ] EVENT_BOT_TOKEN не задан — пропуск")
+        except Exception as _ebx:
+            print(f"[EVENT-БОТ] не стартовал: {_ebx}")
+            log.warning("event_voice_bot start: %s", _ebx)
+
         # Anti-crash: автоперезапуск при сетевых сбоях, но с нарастающей паузой,
         # чтобы не долбить Discord во время сбоя (5 -> 10 -> 20 ... макс. 60 сек).
         _delay = 5

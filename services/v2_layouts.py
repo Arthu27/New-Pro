@@ -346,6 +346,73 @@ def build_events_menu_items(*, banner_filename: str, status: str,
     return items
 
 
+def build_event_panel_items(*, banner_filename: str, title: str, body: str,
+                            phase_line: str = '', voice_line: str = '',
+                            howto: str = '',
+                            player_row=None, staff_row=None, staff_row2=None,
+                            show_banner: bool = None, accent: int = None):
+    """Публичная панель /event-panel — V2 как модпанель: баннер + чёрные блоки."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    head_bits = [
+        _ui.TextDisplay(f'# {title}\n-# HAKUMO · EVENTS'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
+    if show_banner and banner_filename:
+        head_bits.append(_gallery(banner_filename))
+    status_parts = []
+    if phase_line:
+        status_parts.append(phase_line)
+    if voice_line:
+        status_parts.append(voice_line)
+    if body:
+        status_parts.append(body)
+    if howto:
+        status_parts.append(howto)
+    if status_parts:
+        head_bits.append(_ui.TextDisplay('\n'.join(status_parts)[:3900]))
+    items.append(black_container(*head_bits, accent=accent))
+
+    if player_row is not None:
+        items.append(black_container(
+            _ui.TextDisplay('**Игроки**\n-# записаться в список'),
+            player_row,
+            accent=accent,
+        ))
+    if staff_row is not None:
+        items.append(black_container(
+            _ui.TextDisplay('**Ведущие**\n-# анонс · старт · запись'),
+            staff_row,
+            accent=accent,
+        ))
+    if staff_row2 is not None:
+        items.append(black_container(
+            _ui.TextDisplay('**Ещё**\n-# список · финиш'),
+            staff_row2,
+            accent=accent,
+        ))
+    return items
+
+
+def build_event_start_items(*, title: str, body: str, footer: str = '',
+                            accent: int = 0xF0A202):
+    """Карточка «▶ Старт» — V2-анонс начала игры."""
+    if not V2_AVAILABLE:
+        return None
+    children = [
+        _ui.TextDisplay(f'# ▶ Старт · {title}'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+        _ui.TextDisplay(body[:3900]),
+    ]
+    if footer:
+        children.append(_ui.Separator())
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    return [black_container(*children, accent=accent)]
+
+
 def _full_bleed_gallery(banner_filename: str):
     """Совместимость: MediaGallery (раньше full-bleed)."""
     return _gallery(banner_filename)

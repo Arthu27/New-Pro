@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Совместные боты — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-robot"></i> Совместные боты{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот</div>
+    <h1>Совместные боты</h1>
+    <p class="lead">Основной бот и Event-бот стартуют вместе через <code>start.bat</code>.
+      Токен Event — только в локальном <code>.env</code>, канал войса — здесь.</p>
+  </div>
+</div>
+
+<style>
+.cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.cb-card{background:linear-gradient(165deg,color-mix(in srgb,var(--ac) 3%,transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px}
+.cb-head{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.cb-icon{width:42px;height:42px;border-radius:11px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.cb-title{font-weight:800;color:var(--text);font-size:15px}
+.cb-sub{font-size:11.5px;color:var(--text-3);font-weight:600;margin-top:2px;line-height:1.45}
+.cb-row{display:flex;align-items:center;gap:10px;margin-top:9px}
+.cb-row label{font-size:11.5px;font-weight:700;color:var(--text-3);min-width:110px}
+.cb-row input,.cb-row select{flex:1;min-width:0}
+.cb-meta{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.cb-meta-row{display:flex;gap:8px;font-size:12.5px;align-items:center}
+.cb-meta-row .k{color:var(--text-3);font-weight:700;min-width:120px}
+.cb-meta-row .v{color:var(--text);font-weight:700}
+.cb-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;background:var(--text-3)}
+.cb-dot.on{background:var(--ok);box-shadow:0 0 8px color-mix(in srgb,var(--ok) 60%,transparent)}
+.cb-dot.off{background:var(--err)}
+.cb-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.cb-out{margin-top:12px;font-size:12px;font-weight:700;display:none;padding:10px 12px;border-radius:10px}
+.cb-out.show{display:block}
+.cb-out.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 8%,transparent);border:1px solid color-mix(in srgb,var(--ok) 25%,transparent)}
+.cb-out.err{color:var(--err);background:color-mix(in srgb,var(--err) 8%,transparent);border:1px solid color-mix(in srgb,var(--err) 25%,transparent)}
+.cb-hint{font-size:12px;color:var(--text-3);margin-top:14px;line-height:1.5}
+</style>
+
+<div class="cb-grid">
+
+  <div class="cb-card" data-reveal>
+    <div class="cb-head">
+      <div class="cb-icon"><i class="fas fa-shield-halved"></i></div>
+      <div>
+        <div class="cb-title">Основной бот</div>
+        <div class="cb-sub">Модерация, панель, slash. Токен — <code>TOKEN</code> в .env.</div>
+      </div>
+    </div>
+    <div class="cb-meta" id="cbMainMeta">
+      <div class="cb-meta-row"><span class="k">Статус</span><span class="v" id="cbMainStatus">…</span></div>
+      <div class="cb-meta-row"><span class="k">Имя</span><span class="v" id="cbMainName">—</span></div>
+      <div class="cb-meta-row"><span class="k">Токен</span><span class="v" id="cbMainToken">—</span></div>
+      <div class="cb-meta-row"><span class="k">Войс</span><span class="v" id="cbMainVoice">—</span></div>
+    </div>
+  </div>
+
+  <div class="cb-card" data-reveal>
+    <div class="cb-head">
+      <div class="cb-icon"><i class="fas fa-calendar-star"></i></div>
+      <div>
+        <div class="cb-title">Event-бот</div>
+        <div class="cb-sub">Войс 24/7 + <code>/event-panel</code>. Токен — <code>EVENT_BOT_TOKEN</code>.</div>
+      </div>
+    </div>
+    <div class="cb-meta">
+      <div class="cb-meta-row"><span class="k">Статус</span><span class="v" id="cbEvStatus">…</span></div>
+      <div class="cb-meta-row"><span class="k">Имя</span><span class="v" id="cbEvName">—</span></div>
+      <div class="cb-meta-row"><span class="k">Токен</span><span class="v" id="cbEvToken">—</span></div>
+      <div class="cb-meta-row"><span class="k">Войс сейчас</span><span class="v" id="cbEvVoiceNow">—</span></div>
+      <div class="cb-meta-row"><span class="k">Команды</span><span class="v" id="cbEvCmds">—</span></div>
+    </div>
+
+    <div class="cb-row"><label>Новый токен</label>
+      <input type="password" id="cbEvTokenIn" placeholder="оставьте пустым — не менять" autocomplete="off" aria-label="Event bot token">
+    </div>
+    <div class="cb-row"><label>Канал войса</label>
+      <input type="text" id="cbEvChannel" placeholder="1550986919981351043" inputmode="numeric" aria-label="Event voice channel id">
+    </div>
+    <div class="cb-row"><label>Держать войс</label>
+      <select id="cbEvStay" aria-label="Voice stay">
+        <option value="1">Вкл — заходить и держаться</option>
+        <option value="0">Выкл</option>
+      </select>
+    </div>
+    <div class="cb-actions">
+      <button type="button" class="btn" id="cbEvSave"><i class="fas fa-save"></i> Сохранить</button>
+      <button type="button" class="btn btn-ghost" id="cbEvJoin"><i class="fas fa-headphones"></i> Зайти в войс сейчас</button>
+      <button type="button" class="btn btn-ghost" id="cbEvClear" title="Удалить EVENT_BOT_TOKEN из .env"><i class="fas fa-trash"></i> Сбросить токен</button>
+    </div>
+    <div class="cb-out" id="cbOut"></div>
+  </div>
+</div>
+
+<p class="cb-hint" id="cbHint">Запуск: <code>start.bat</code> поднимает основной бот и Event-бот (если токен задан) одним процессом.</p>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function out(ok, text) {
+    var el = $('cbOut');
+    el.className = 'cb-out show ' + (ok ? 'ok' : 'err');
+    el.textContent = text || '';
+  }
+  function dot(on) {
+    return '<span class="cb-dot ' + (on ? 'on' : 'off') + '"></span>' + (on ? 'онлайн' : 'офлайн');
+  }
+  function fill(d) {
+    var m = d.main || {}, e = d.event || {};
+    $('cbMainStatus').innerHTML = dot(!!m.online);
+    $('cbMainName').textContent = m.name ? (m.name + (m.id ? ' · ' + m.id : '')) : '—';
+    $('cbMainToken').textContent = m.token_set ? (m.token_hint || 'задан') : 'не задан';
+    $('cbMainVoice').textContent = m.voice_connected
+      ? ('в канале ' + (m.voice_channel_id || '?'))
+      : (m.voice_channel_id ? ('цель ' + m.voice_channel_id) : '—');
+
+    $('cbEvStatus').innerHTML = dot(!!e.online);
+    $('cbEvName').textContent = e.name ? (e.name + (e.id ? ' · ' + e.id : '')) : '—';
+    $('cbEvToken').textContent = e.token_set ? (e.token_hint || 'задан') : 'не задан';
+    $('cbEvVoiceNow').textContent = e.voice_connected
+      ? ('в канале ' + (e.voice_channel_id || '?'))
+      : 'не в войсе';
+    if (e.commands_synced && (e.commands || []).length) {
+      $('cbEvCmds').textContent = '/' + (e.commands || []).join(', /');
+    } else if (e.online) {
+      $('cbEvCmds').textContent = 'синк… (перезапусти start.bat)';
+    } else {
+      $('cbEvCmds').textContent = '—';
+    }
+    if (e.channel_id) $('cbEvChannel').value = e.channel_id;
+    $('cbEvStay').value = e.stay_enabled === false ? '0' : '1';
+    if (d.hint) $('cbHint').textContent = d.hint;
+  }
+  function load() {
+    return fetch('/api/co-bots', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) throw new Error(d.error || 'ошибка');
+        fill(d);
+      })
+      .catch(function (err) { out(false, String(err.message || err)); });
+  }
+  $('cbEvSave').onclick = function () {
+    var body = {
+      channel_id: $('cbEvChannel').value.trim(),
+      stay_enabled: $('cbEvStay').value === '1'
+    };
+    var tok = $('cbEvTokenIn').value.trim();
+    if (tok) body.token = tok;
+    fetch('/api/co-bots/event', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      out(!!d.ok, d.hint || d.error || (d.ok ? 'Сохранено' : 'Ошибка'));
+      if (d.ok) { $('cbEvTokenIn').value = ''; load(); }
+    }).catch(function (e) { out(false, String(e)); });
+  };
+  $('cbEvClear').onclick = function () {
+    if (!confirm('Удалить EVENT_BOT_TOKEN из .env? Event-бот не поднимется до нового токена.')) return;
+    fetch('/api/co-bots/event', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token_clear: true })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      out(!!d.ok, d.hint || d.error || 'Сброшено');
+      if (d.ok) load();
+    });
+  };
+  $('cbEvJoin').onclick = function () {
+    fetch('/api/co-bots/event/voice-join', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: $('cbEvChannel').value.trim() })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      out(!!d.ok, d.message || d.error || (d.ok ? 'OK' : 'Ошибка'));
+      if (d.ok) load();
+    }).catch(function (e) { out(false, String(e)); });
+  };
+  load();
+  setInterval(load, 15000);
+})();
+</script>
+{% endblock %}

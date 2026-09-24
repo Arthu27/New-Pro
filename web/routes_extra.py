@@ -25,6 +25,7 @@ from web.routes import (
     autofilter,
     todo,
     bot_settings,
+    co_bots,
     status,
     pages,
     modplus,
