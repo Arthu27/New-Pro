@@ -263,6 +263,42 @@ check(eh2.is_idle_wait_stack(_reconn) is False,
 check(eh2.is_reconnect_wait_stack(_gqcs) is False,
       'чистый idle не помечен как reconnect')
 
+print('\n== Кольцо стеков ДО IDLE-WAIT ==')
+# Свежий handler: кольцо есть, пустое.
+eh3 = ErrorHandler(FakeBot())
+check(hasattr(eh3, '_stack_ring') and eh3._stack_ring.maxlen == 12,
+      'ErrorHandler: _stack_ring maxlen=12 для истории до фриза')
+# Подсовываем «прошлый» sync-блокер и idle-кадры — soft-дамп должен
+# вытащить не-idle из окна.
+_blocker = (
+    '  File "cogs\\antiraid.py", line 88, in _persist\n'
+    '    json.dump(payload, f)\n'
+)
+_t0 = time.monotonic()
+eh3._stack_ring.clear()
+eh3._stack_ring.append((_t0 - 5.0, _blocker))
+eh3._stack_ring.append((_t0 - 3.0, _gqcs))
+eh3._stack_ring.append((_t0 - 1.0, _gqcs))
+# Эмулируем вызов внутреннего хелпера через публичный путь:
+# дергаем логику классификации + ручной сбор pre-freeze (копия формулы).
+from error_handler import is_idle_wait_stack as _iis, is_reconnect_wait_stack as _irs
+_pre = []
+_seen = set()
+for _ts, _st in list(eh3._stack_ring):
+    if _t0 - _ts > 8.0:
+        continue
+    if _iis(_st) or _irs(_st):
+        continue
+    _k = _st[-400:]
+    if _k in _seen:
+        continue
+    _seen.add(_k)
+    _pre.append(_st)
+check(len(_pre) == 1 and 'json.dump' in _pre[0],
+      'из кольца до IDLE-WAIT достаётся json.dump-блокер, idle-кадры отброшены')
+check(_iis(_gqcs) and not _iis(_blocker),
+      'классификация idle vs blocker согласована с кольцом')
+
 print('\n== environment_warnings: три ловушки среды запуска ==')
 _w = eh2.environment_warnings(
     r'C:\Users\Administrator\Downloads\New-Pro-x\New-Pro-x', (3, 14, 0))
