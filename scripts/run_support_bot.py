@@ -52,11 +52,27 @@ async def amain():
     intents.message_content = False
 
     bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
+    boot = {'done': False}
+
+    async def _setup_guild(g: discord.Guild):
+        try:
+            await SV.ensure_infra(g)
+        except Exception as ex:
+            log.warning('infra guild=%s: %s', g.id, ex)
+        try:
+            bot.tree.copy_global_to(guild=discord.Object(id=g.id))
+            synced = await bot.tree.sync(guild=discord.Object(id=g.id))
+            log.info('slash synced guild=%s n=%s', g.id, len(synced))
+        except Exception as ex:
+            log.warning('slash sync guild=%s: %s', g.id, ex)
 
     @bot.event
     async def on_ready():
         log.info('support online as %s | guilds=%s | token=%s',
                  bot.user, len(bot.guilds), _mask(token))
+        if boot['done']:
+            return
+        boot['done'] = True
         try:
             await EMO.ensure_support_emojis(bot)
         except Exception as ex:
@@ -67,22 +83,27 @@ async def amain():
             g = bot.guilds[0]
             log.warning('guild %s not found — using %s', gid, g.id)
         if g is not None:
+            await _setup_guild(g)
+        else:
+            log.warning(
+                'бот ещё не в гильдии %s — ждём invite; синхронизирую /verify глобально',
+                gid)
             try:
-                await SV.ensure_infra(g)
+                synced = await bot.tree.sync()
+                log.info('slash synced global n=%s', len(synced))
             except Exception as ex:
-                log.warning('infra: %s', ex)
-            try:
-                bot.tree.copy_global_to(guild=discord.Object(id=g.id))
-                synced = await bot.tree.sync(guild=discord.Object(id=g.id))
-                log.info('slash synced guild=%s n=%s', g.id, len(synced))
-            except Exception as ex:
-                log.warning('slash sync: %s', ex)
+                log.warning('slash global sync: %s', ex)
         try:
             await bot.change_presence(
                 activity=discord.Activity(
                     type=discord.ActivityType.watching, name='verify · support'))
         except Exception:
             pass
+
+    @bot.event
+    async def on_guild_join(guild: discord.Guild):
+        log.info('joined guild %s (%s)', guild.name, guild.id)
+        await _setup_guild(guild)
 
     await bot.add_cog(SV.SupportVerify(bot))
     log.info('starting support bot…')
