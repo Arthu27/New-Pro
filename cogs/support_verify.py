@@ -86,26 +86,43 @@ async def resolve_member(guild: discord.Guild, query: str) -> Optional[discord.M
         except Exception:
             return None
     qn = q.lower().lstrip('@')
-    exact, starts, contains = [], [], []
-    for m in guild.members:
-        names = {
-            (m.name or '').lower(),
-            (m.display_name or '').lower(),
-            (getattr(m, 'global_name', None) or '').lower(),
-            (m.nick or '').lower() if m.nick else '',
-        }
-        names.discard('')
-        if qn in names:
-            exact.append(m)
-        elif any(n.startswith(qn) for n in names):
-            starts.append(m)
-        elif any(qn in n for n in names):
-            contains.append(m)
-    for bucket in (exact, starts, contains):
-        if len(bucket) == 1:
-            return bucket[0]
-        if len(bucket) > 1:
-            return sorted(bucket, key=lambda x: x.id)[0]
+
+    def _score_pool(members):
+        exact, starts, contains = [], [], []
+        for m in members:
+            names = {
+                (m.name or '').lower(),
+                (m.display_name or '').lower(),
+                (getattr(m, 'global_name', None) or '').lower(),
+                (m.nick or '').lower() if m.nick else '',
+            }
+            names.discard('')
+            if qn in names:
+                exact.append(m)
+            elif any(n.startswith(qn) for n in names):
+                starts.append(m)
+            elif any(qn in n for n in names):
+                contains.append(m)
+        for bucket in (exact, starts, contains):
+            if len(bucket) == 1:
+                return bucket[0]
+            if len(bucket) > 1:
+                return sorted(bucket, key=lambda x: x.id)[0]
+        return None
+
+    hit = _score_pool(list(guild.members))
+    if hit:
+        return hit
+    # Без Members Intent кэш пуст — Discord query_members (префикс).
+    try:
+        found = await guild.query_members(query=qn[:100], limit=10)
+        hit = _score_pool(found or [])
+        if hit:
+            return hit
+        if found and len(found) == 1:
+            return found[0]
+    except Exception as ex:
+        log.debug('query_members: %s', ex)
     return None
 
 

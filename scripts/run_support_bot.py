@@ -45,7 +45,10 @@ async def amain():
     cfg = CFG.load_config()
     intents = discord.Intents.default()
     intents.guilds = True
-    intents.members = True  # resolve nick / roles
+    # Server Members Intent — только если включён в Dev Portal.
+    # Иначе PrivilegedIntentsRequired. Резолв ника → query_members / fetch.
+    intents.members = (os.environ.get('SUPPORT_MEMBERS_INTENT') or '0').strip() in (
+        '1', 'true', 'yes', 'on')
     intents.message_content = False
 
     bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
