@@ -403,16 +403,8 @@ def build_event_client():
                                 '(проверь, что бот на сервере + scopes)')
             except Exception as ex:
                 log.warning('event-bot commands setup: %s', ex)
-        try:
-            from services.menu_emojis import schedule_ensure_menu_emojis
-            schedule_ensure_menu_emojis(bot)
-        except Exception:
-            pass
-        try:
-            from services.menu_banners import ensure_sticker_pack
-            ensure_sticker_pack()
-        except Exception:
-            pass
+        # menu_emojis / sticker pack — только у основного бота.
+        # На Event при старте не трогаем (иначе дубли эмодзи на гильдии).
 
         # Stay всегда включён — сразу в войс + монитор
         cid = _resolve_event_voice_channel_id()
