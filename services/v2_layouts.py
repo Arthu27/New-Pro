@@ -293,21 +293,30 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
     return items
 
 
+# Текст меню набора (V2 TextDisplay). Одна должность — сверху.
+STAFF_MENU_BODY = (
+    '**Можно выбрать только одну должность.**\n'
+    '-# Нельзя подавать сразу на несколько — одна заявка.\n\n'
+    '# Набор в команду сервера\n'
+    '> Мы ищем людей, **готовых внести свой вклад** и **помочь** нам '
+    '**сделать наше сообщество лучше.** Независимо от **вашего опыта,** '
+    '**у нас найдется место** для вас. **Отправляйте заявку,** чтобы '
+    '**стать частью** нашей **дружной команды и весело провести время вместе!**'
+)
+
+
 def build_staff_menu_items(*, banner_filename: str, body: str = None,
                            role_select=None, show_banner: bool = None):
-    """Наборы V2: правило «одна должность» сверху + баннер + select."""
+    """Наборы V2: правило + текст набора сверху + баннер + select."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
     head = []
-    # сверху — нельзя выбирать несколько, только одну должность
-    notice = body or (
-        '**Можно выбрать только одну должность.**\n'
-        '-# Нельзя подавать сразу на несколько — одна заявка.'
-    )
-    head.append(_ui.TextDisplay(notice))
+    notice = (body if body is not None else STAFF_MENU_BODY).strip()
+    if notice:
+        head.append(_ui.TextDisplay(notice))
     if show_banner and banner_filename:
         head.append(_gallery(banner_filename))
     if head:
