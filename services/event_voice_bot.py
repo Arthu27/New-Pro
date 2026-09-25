@@ -300,7 +300,7 @@ def _event_sync_guilds(bot: discord.Client) -> list:
 
 
 async def _load_and_sync_event_commands(bot) -> list[str]:
-    """Загрузить только Мафию и синкнуть slash (без event-panel)."""
+    """Загрузить Мафию + /eventstart lifecycle и синкнуть slash."""
     global _commands_synced, _synced_command_names
     names: list[str] = []
     guilds = _event_sync_guilds(bot)
@@ -321,7 +321,18 @@ async def _load_and_sync_event_commands(bot) -> list[str]:
             log.info('event-bot: cog mafia загружен')
     except Exception as ex:
         log.warning('event-bot add_cog mafia: %s', ex)
-        return names
+
+    # TZ: /eventstart · анонс · запись · напоминания · статистика
+    try:
+        if bot.get_cog('EventLifecycle') is None:
+            from cogs.event_lifecycle import EventLifecycle
+            if guilds:
+                await bot.add_cog(EventLifecycle(bot), guilds=guilds)
+            else:
+                await bot.add_cog(EventLifecycle(bot))
+            log.info('event-bot: cog EventLifecycle загружен')
+    except Exception as ex:
+        log.warning('event-bot add_cog EventLifecycle: %s', ex)
 
     # Снять старый EventPanel, если вдруг остался в памяти
     try:
@@ -368,7 +379,7 @@ async def _load_and_sync_event_commands(bot) -> list[str]:
 
 
 def build_event_client():
-    """Bot: voice-stay + slash /mafia (ведущий). Без event-panel."""
+    """Bot: voice-stay + /mafia + /eventstart (TZ). Без старого event-panel."""
     from discord.ext import commands
 
     intents = discord.Intents.none()
@@ -392,8 +403,10 @@ def build_event_client():
         except Exception as ex:
             log.debug('event-bot presence: %s', ex)
 
-        # Команды — /mafia у Event-бота (без event-panel)
-        if not _commands_synced or bot.get_cog('mafia') is None:
+        # Команды — /mafia + /eventstart у Event-бота
+        if (not _commands_synced
+                or bot.get_cog('mafia') is None
+                or bot.get_cog('EventLifecycle') is None):
             try:
                 names = await _load_and_sync_event_commands(bot)
                 if names:

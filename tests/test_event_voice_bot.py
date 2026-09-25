@@ -115,8 +115,10 @@ ev_src = open(os.path.join(ROOT, 'services', 'event_voice_bot.py'), encoding='ut
 check('cog mafia' in ev_src and 'EventPanel снят' in ev_src,
       'event-bot грузит mafia, EventPanel снят')
 check('from cogs.mafia import Mafia' in ev_src, 'import Mafia')
+check('EventLifecycle' in ev_src and 'event_lifecycle' in ev_src,
+      'event-bot грузит EventLifecycle (/eventstart)')
 check("'event-panel'" not in ev_src or 'без event-panel' in ev_src.lower()
-      or 'Без event-panel' in ev_src,
+      or 'Без event-panel' in ev_src or 'Без старого event-panel' in ev_src,
       'докстринг без event-panel как основной фичи')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
