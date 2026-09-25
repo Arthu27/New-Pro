@@ -1,0 +1,26 @@
+# Hakumo Event-бот: всегда в войсе 24/7 (отдельный процесс).
+# Установка:
+#   sudo cp deploy/hakumo-event-voice.service /etc/systemd/system/
+#   # в /opt/hakumo/.env: EVENT_BOT_TOKEN=... и EVENT_VOICE_STANDALONE=1
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hakumo-event-voice
+#
+# Логи: journalctl -u hakumo-event-voice -f
+[Unit]
+Description=Hakumo Event bot voice stay (24/7)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hakumo
+Environment=EVENT_VOICE_STANDALONE=1
+Environment=EVENT_VOICE_STAY_ENABLED=1
+ExecStart=/opt/hakumo/.venv/bin/python scripts/run_event_voice_stay.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1639,6 +1639,26 @@ async def main():
         else:
             print(f"[СЕТЬ] Доступ к Discord есть ({', '.join(_reachable)}:443)")
 
+        # Event-бот (второй клиент): войсе-stay 24/7.
+        # Токен — EVENT_BOT_TOKEN в .env. Если Event крутится отдельным
+        # systemd (EVENT_VOICE_STANDALONE=1) — здесь не стартуем, иначе
+        # два gateway-сеанса будут выбивать друг друга из войса.
+        _ev_standalone = (os.environ.get('EVENT_VOICE_STANDALONE') or '').strip().lower() in (
+            '1', 'true', 'yes', 'on')
+        if not _ev_standalone:
+            try:
+                from services.event_voice_bot import start_event_bot, event_bot_token
+                if event_bot_token():
+                    await start_event_bot()
+                    print("[EVENT-БОТ] Запущен (войсе-stay)")
+                else:
+                    print("[EVENT-БОТ] EVENT_BOT_TOKEN не задан — пропуск")
+            except Exception as _ebx:
+                print(f"[EVENT-БОТ] не стартовал: {_ebx}")
+                log.warning("event_voice_bot start: %s", _ebx)
+        else:
+            print("[EVENT-БОТ] EVENT_VOICE_STANDALONE=1 — ждём отдельный сервис")
+
         # Anti-crash: автоперезапуск при сетевых сбоях, но с нарастающей паузой,
         # чтобы не долбить Discord во время сбоя (5 -> 10 -> 20 ... макс. 60 сек).
         _delay = 5

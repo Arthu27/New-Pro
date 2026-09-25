@@ -36,6 +36,24 @@ journalctl -u hakumo -f          # живой поток
 journalctl -u hakumo --since today | grep -i сеть
 ```
 
+## Event-бот всегда в войсе (отдельная служба)
+
+Events#8741 держит канал `1550986919981351043` 24/7. На VDS лучше
+отдельный systemd — не зависит от рестартов основного `hakumo`:
+
+```bash
+# в /opt/hakumo/.env:
+#   EVENT_BOT_TOKEN=...
+#   EVENT_VOICE_STANDALONE=1
+sudo cp deploy/hakumo-event-voice.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now hakumo-event-voice
+journalctl -u hakumo-event-voice -f
+```
+
+Без `EVENT_VOICE_STANDALONE=1` Event стартует из `main.py` (второй клиент).
+Не запускай оба способа сразу — два сеанса выбьют друг друга из войса.
+
 ## Как понять, от чего падало
 
 ```bash
