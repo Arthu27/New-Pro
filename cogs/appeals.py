@@ -1107,7 +1107,11 @@ class AppealChannelModal(discord.ui.Modal):
 
 
 class AppealMenuSelect(discord.ui.Select):
-    """Select «Подать апелляцию» в канале (persistent)."""
+    """Select «Подать апелляцию» в канале — УСТАРЕЛ (подача только в ЛС).
+
+    View остаётся persistent, чтобы клик по старому меню не «молчал»:
+    отвечаем подсказкой и просим бота снять витрину.
+    """
 
     def __init__(self):
         super().__init__(
@@ -1120,13 +1124,22 @@ class AppealMenuSelect(discord.ui.Select):
                 emoji='⚖️')])
 
     async def callback(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog('Appeals')
-        if cog is None:
+        # Публичное меню отключено (владелец 2026-09-24/25): только ЛС.
+        try:
             await interaction.response.send_message(
-                'Модуль апелляций не загружен.', ephemeral=True)
+                'Публичное меню апелляций отключено.\n'
+                'Если вам выдали бан — откройте **ЛС с ботом** и нажмите '
+                'кнопку **«Подать апелляцию»** под карточкой о бане.',
+                ephemeral=True)
+        except Exception:
             return
-        await interaction.response.send_modal(
-            AppealChannelModal(cog, interaction.guild))
+        cog = interaction.client.get_cog('Appeals')
+        guild = interaction.guild
+        if cog is not None and guild is not None:
+            try:
+                await cog._purge_appeal_menu(guild)
+            except Exception as _ex:
+                log.debug('appeals: purge после клика по старому меню: %s', _ex)
 
 
 WEBHOOK_NAME = 'Апелляции Hakumo'
@@ -1246,6 +1259,7 @@ class Appeals(commands.Cog):
         self.db = GuildData('appeals')
         self._views_restored = False
         self._stale_started = False
+        self._retention_started = False
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -1334,6 +1348,38 @@ class Appeals(commands.Cog):
                 asyncio.get_event_loop().create_task(self._stale_loop())
             except Exception as _ex:
                 log.debug('appeals: старт _stale_loop: %s', _ex)
+        # хранение 14 дней: прогон при старте + суточный цикл
+        if not self._retention_started:
+            self._retention_started = True
+            try:
+                import asyncio
+
+                async def _retention_boot():
+                    await asyncio.sleep(8)
+                    try:
+                        from services.data_retention import run_retention
+                        # сначала dry-run в лог, затем apply
+                        run_retention(dry_run=True)
+                        report = run_retention(dry_run=False)
+                        log.info('appeals: retention startup ok days=%s parts=%s',
+                                 report.get('days'), list((report.get('parts') or {})))
+                    except Exception as _ex:
+                        log.warning('appeals: retention startup: %s', _ex)
+                    while True:
+                        await asyncio.sleep(24 * 3600)
+                        try:
+                            from services.data_retention import run_retention
+                            run_retention(dry_run=False)
+                        except Exception as _ex:
+                            log.warning('appeals: retention daily: %s', _ex)
+
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = self.bot.loop
+                loop.create_task(_retention_boot())
+            except Exception as _ex:
+                log.debug('appeals: старт retention: %s', _ex)
 
     def _load(self, guild_id):
         return self.db.get(guild_id, 'state', empty_state()) or empty_state()
@@ -1555,41 +1601,163 @@ class Appeals(commands.Cog):
     async def _purge_appeal_menu(self, guild):
         """Удалить публичное меню «Подать апелляцию» из канала апелляций.
 
-        Подача — только из ЛС. Старое меню (если осталось после рестарта)
-        убираем, чтобы канал не выглядел как публичная витрина.
+        Подача — только из ЛС. Чистим:
+          1) сообщение из state.menu (если ещё есть);
+          2) orphan-сообщения бота/вебхука в канале с жёлтым embed
+             «⚖ Апелляции на наказания» или select custom_id appeal:menu:open
+             (после Auto-Repair/рестарта старые ветки могли переопубликовать
+             меню без записи в state — сканируем историю).
         """
         try:
             state = self._load(guild.id)
             menu = state.get('menu') or {}
             mid = int(menu.get('message_id') or 0)
             cid = int(menu.get('channel_id') or 0)
-            deleted = False
-            if mid and cid:
-                ch = guild.get_channel(cid) or self.bot.get_channel(cid)
-                if ch is None:
+            deleted = 0
+            channels = []
+
+            async def _resolve_ch(channel_id):
+                if not channel_id:
+                    return None
+                ch = guild.get_channel(channel_id) or self.bot.get_channel(channel_id)
+                if ch is not None:
+                    return ch
+                fetch = getattr(guild, 'fetch_channel', None)
+                if callable(fetch):
                     try:
-                        ch = await self._appeal_channel(guild)
+                        return await fetch(int(channel_id))
                     except Exception:
-                        ch = None
+                        return None
+                return None
+
+            # каналы-кандидаты: state.menu + ban_appeal + appeal_menu_channel
+            seen = set()
+            for raw_id in (cid,):
+                ch = await _resolve_ch(raw_id)
+                if ch is not None and int(ch.id) not in seen:
+                    channels.append(ch)
+                    seen.add(int(ch.id))
+            try:
+                ch_appeal = await self._appeal_channel(guild)
+                if ch_appeal is not None and int(ch_appeal.id) not in seen:
+                    channels.append(ch_appeal)
+                    seen.add(int(ch_appeal.id))
+            except Exception:
+                pass
+            try:
+                from services.channel_routes import get_route
+                for key in ('appeal_menu_channel', 'ban_appeal_channel'):
+                    rid = int(get_route(guild.id, key) or 0)
+                    ch = await _resolve_ch(rid)
+                    if ch is not None and int(ch.id) not in seen:
+                        channels.append(ch)
+                        seen.add(int(ch.id))
+            except Exception as _ex:
+                log.debug('appeals: purge route channels: %s', _ex)
+
+            # 1) точечное удаление по state.menu (это точно наше меню)
+            if mid and cid:
+                ch = await _resolve_ch(cid)
                 if ch is not None:
                     try:
                         msg = await ch.fetch_message(mid)
-                        await msg.delete()
-                        deleted = True
+                        try:
+                            await msg.delete()
+                            deleted += 1
+                        except discord.NotFound:
+                            pass
                     except discord.NotFound:
-                        deleted = True  # уже нет
+                        pass
                     except Exception as _ex:
                         log.debug('appeals: purge menu msg: %s', _ex)
+
+            # 2) скан истории на orphan-меню
+            for ch in channels:
+                try:
+                    deleted += await self._scan_purge_menu_in_channel(ch)
+                except Exception as _ex:
+                    log.debug('appeals: scan purge %s: %s', getattr(ch, 'id', '?'), _ex)
+
             if menu:
                 state['menu'] = None
                 self._save(guild.id, state)
             if deleted or menu:
-                log.info('appeals: публичное меню снято guild=%s (deleted=%s)',
-                         guild.id, deleted)
+                log.info('appeals: публичное меню снято guild=%s deleted=%s channels=%s',
+                         guild.id, deleted, [c.id for c in channels])
             return True
         except Exception as _ex:
             log.warning('appeals: purge menu: %s', _ex)
             return False
+
+    @staticmethod
+    def _msg_looks_like_appeal_menu(msg) -> bool:
+        """Жёлтый embed «Апелляции на наказания» или select appeal:menu:open."""
+        try:
+            for emb in (getattr(msg, 'embeds', None) or ()):
+                title = str(getattr(emb, 'title', '') or '')
+                desc = str(getattr(emb, 'description', '') or '')
+                if 'Апелляции на наказания' in title:
+                    return True
+                if ('Несогласны с наказанием' in desc
+                        and 'Подать апелляцию' in desc):
+                    return True
+        except Exception:
+            pass
+        try:
+            for row in (getattr(msg, 'components', None) or ()):
+                children = getattr(row, 'children', None)
+                if children is None:
+                    children = getattr(row, 'components', None) or ()
+                for child in children or ():
+                    cid = str(getattr(child, 'custom_id', '') or '')
+                    if cid == MENU_CUSTOM_ID or cid.startswith('appeal:menu:'):
+                        return True
+                    for nested in (getattr(child, 'children', None) or ()):
+                        ncid = str(getattr(nested, 'custom_id', '') or '')
+                        if ncid == MENU_CUSTOM_ID or ncid.startswith('appeal:menu:'):
+                            return True
+        except Exception:
+            pass
+        return False
+
+    async def _safe_delete_menu_msg(self, msg) -> bool:
+        """Удалить только меню апелляций от бота/его вебхука."""
+        if msg is None or not self._msg_looks_like_appeal_menu(msg):
+            return False
+        try:
+            me = getattr(getattr(msg, 'guild', None), 'me', None)
+            author = getattr(msg, 'author', None)
+            webhook_id = getattr(msg, 'webhook_id', None)
+            mine = bool(webhook_id)
+            if me is not None and author is not None:
+                if getattr(author, 'id', None) == getattr(me, 'id', None):
+                    mine = True
+                if getattr(author, 'bot', False) and webhook_id:
+                    mine = True
+            if not mine:
+                return False
+            await msg.delete()
+            return True
+        except discord.NotFound:
+            return True
+        except Exception as _ex:
+            log.debug('appeals: safe delete menu: %s', _ex)
+            return False
+
+    async def _scan_purge_menu_in_channel(self, channel, *, limit: int = 80) -> int:
+        """Пройти историю канала и снять orphan-меню апелляций."""
+        if channel is None or not hasattr(channel, 'history'):
+            return 0
+        deleted = 0
+        try:
+            async for msg in channel.history(limit=limit):
+                if not self._msg_looks_like_appeal_menu(msg):
+                    continue
+                if await self._safe_delete_menu_msg(msg):
+                    deleted += 1
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.debug('appeals: history scan %s: %s', getattr(channel, 'id', '?'), _ex)
+        return deleted
 
     async def _ensure_appeal_menu(self, guild):
         """Совместимость: больше не публикуем — только чистим старое меню."""

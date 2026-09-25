@@ -92,11 +92,11 @@
 </div>
 
 <div class="ms-panel" style="margin-top:14px">
-  <h3><i class="fas fa-scale-balanced"></i> Меню апелляций в канале</h3>
-  <div class="ms-sub">Роли наказаний (мут чата, войс-мут, роль бана и роли уровней варнов)
-    настраиваются <b>в одном месте</b> — на странице «Роли наказаний». Здесь — только публикация
-    постоянного меню «Подать апелляцию».
-    <span id="msBotWarn" class="ms-warn" style="display:none">Бот офлайн — список каналов недоступен, публикация применится после его запуска.</span>
+  <h3><i class="fas fa-scale-balanced"></i> Апелляции</h3>
+  <div class="ms-sub">Подача апелляций — <b>только в ЛС бота</b> (кнопка под карточкой о бане).
+    Публичное меню в канале отключено: при старте и ремонте бот сам снимает старые
+    жёлтые embed «Апелляции на наказания». Роли наказаний — на странице «Роли наказаний».
+    <span id="msBotWarn" class="ms-warn" style="display:none">Бот офлайн — список каналов недоступен.</span>
   </div>
   {% if '/role-settings' in panel_visible_paths %}
   <a class="ms-link" href="/role-settings" style="margin:4px 0 12px;display:inline-flex">
@@ -105,17 +105,17 @@
   {% endif %}
   <div class="ms-role-grid">
     <div class="ms-role" data-ms-role="menu">
-      <div class="ms-role-name"><i class="fas fa-scale-balanced"></i> Меню апелляций</div>
-      {% if '/channel-settings' in panel_visible_paths %}<a href="/channel-settings" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ac);text-decoration:none;margin:6px 0;"><i class="fas fa-route"></i> Канал меню — в «Каналах и маршрутах»</a>{% endif %}
+      <div class="ms-role-name"><i class="fas fa-comment-dots"></i> Подача только в ЛС</div>
+      {% if '/channel-settings' in panel_visible_paths %}<a href="/channel-settings" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ac);text-decoration:none;margin:6px 0;"><i class="fas fa-route"></i> Канал карточек апелляций — в «Каналах и маршрутах»</a>{% endif %}
       <input type="hidden" id="msMenuChannel" value="0">
-      <div class="ms-role-hint">Постоянное меню «Подать апелляцию» — апелляция тредом, без ЛС боту. Кнопка ниже опубликует меню в выбранный канал.</div>
+      <div class="ms-role-hint">Кнопка ниже снимет старое публичное меню из канала (если ещё висит после рестарта). Новое меню больше не публикуется.</div>
     </div>
   </div>
   <div class="ms-savebar">
-    <button type="button" class="btn" id="msPublishMenu" aria-label="Апелляции только в ЛС" title="Публичное меню в канал отключено: апелляцию подают кнопкой в ЛС после бана">
-      <i class="fas fa-comment-dots"></i> Апелляции — только в ЛС
+    <button type="button" class="btn" id="msPublishMenu" aria-label="Снять старое меню апелляций" title="Публичное меню отключено — кнопка только чистит старые сообщения">
+      <i class="fas fa-broom"></i> Снять старое меню из канала
     </button>
-    <span class="ms-save-note">Меню переживёт перезапуск бота: выбор и кнопки остаются жить в канале.</span>
+    <span class="ms-save-note">Апелляцию подают кнопкой в ЛС после бана. Канал — только карточки модерации.</span>
   </div>
 </div>
 
@@ -203,20 +203,22 @@ document.getElementById('msSaveWl').addEventListener('click', function () { msSa
 document.getElementById('msPublishMenu').addEventListener('click', async function () {
   var btn = this;
   var ch = MENU_CH || document.getElementById('msMenuChannel').value;
-  if (!ch || ch === '0' || ch === 0) { toast('Сначала задайте канал меню в разделе «Каналы и маршруты»', false); return; }
-  ch = String(ch);
   btn.disabled = true;
   try {
+    var body = { publish_menu: true };
+    if (ch && ch !== '0' && ch !== 0) body.appeal_menu_channel = String(ch);
     var r = await fetch('/api/guild/' + GUILD_ID + '/mod-settings', {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appeal_menu_channel: ch, publish_menu: true })
+      body: JSON.stringify(body)
     });
     var d = await r.json().catch(function () { return {}; });
     if (r.ok && d.success) {
-      toast(d.message || 'Меню опубликовано', true);
+      toast(d.message || d.error || 'Старое меню снято (подача только в ЛС)', true);
+    } else if (d.error && /ЛС|не публикуем|только/i.test(String(d.error))) {
+      toast(d.error, true);
     } else {
-      toast(d.error || 'Не получилось опубликовать', false);
+      toast(d.error || 'Не получилось снять меню', false);
     }
   } catch (e) { toast('Ошибка сети', false); }
   btn.disabled = false;
