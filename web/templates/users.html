@@ -835,6 +835,13 @@
     var gid = $('guild-select').value;
     var btn = $('pnGo');
     if (btn.disabled) return;
+    var needRule = ['warn', 'ban', 'timeout', 'mute_chat', 'vmute'].indexOf(pnSel) >= 0;
+    var reasonCode = $('pnReason').value.trim();
+    if (needRule && !reasonCode) {
+      $('pnMsg').textContent = 'Выберите правило 1.1–1.9';
+      $('pnMsg').style.color = 'var(--warn)';
+      return;
+    }
     /* бан — с подтверждением: первый клик «взводит», второй (5 сек) применяет */
     if (pnSel === 'ban' && Date.now() > pnArm) {
       pnArm = Date.now() + 5000;
@@ -855,7 +862,7 @@
         user_id: pnUid,
         action: pnSel,
         duration: $('pnDurBlock').hidden ? '' : $('pnDur').value.trim(),
-        reason: $('pnReason').value.trim()
+        reason: reasonCode
       })
     }).then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false;
