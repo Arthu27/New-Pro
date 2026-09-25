@@ -5,9 +5,11 @@
   повторы букв (мусооор), залго/диакритика и раздельный ввод (м у с о р)
   нарушителя не спасают, а «архитектура» за слово «хит» не сгорает.
 - 🔗 Анти-ссылки: любой линк или инвайт вне whitelist — удаляем.
+- 🛑 Анти-реклама серверов: «Залетай на наш Discord-сервер», инвайты
+  discord.gg и похожие фразы (как в #знакомства / #тиммейты).
 - 🔠 Анти-капс: доля ЗАГЛАВНЫХ выше порога на достаточно длинных сообщениях.
 - 🌊 Анти-флуд: N сообщений за M секунд или N одинаковых подряд →
-  очистка последних сообщений автора + таймаут.
+    очистка последних сообщений автора + таймаут.
 
 Настройки за сервер лежат в data/autofilter_{gid}.json и живо
 перечитываются (кеш по mtime): панель /autofilter и /filter пишут
@@ -41,20 +43,23 @@ from json_store import load_json as _js_load, save_json as _js_save
 GOLD = 0xD4AF37
 
 FILTER_NAMES = {'words': 'Запрещённые слова', 'links': 'Ссылки',
-                'caps': 'Капс', 'flood': 'Флуд/спам'}
+                'caps': 'Капс', 'flood': 'Флуд/спам', 'ads': 'Реклама серверов'}
 ACTION_LABELS = {'delete': 'Удаление сообщения', 'warn': 'Удаление + варн',
                  'timeout': 'Очистка + таймаут'}
 FILTER_ACTIONS = {'words': ('delete', 'warn'), 'links': ('delete', 'warn'),
-                  'caps': ('delete', 'warn'), 'flood': ('delete', 'warn', 'timeout')}
+                  'caps': ('delete', 'warn'), 'flood': ('delete', 'warn', 'timeout'),
+                  'ads': ('delete', 'warn')}
 
 NOTICE_TEXT = {'words': 'такие слова здесь запрещены 🚫',
                'links': 'ссылки можно только из разрешённого списка 🔗',
                'caps': 'поменьше КАПСА, пожалуйста 🔠',
-               'flood': 'флуд/спам запрещён, притормози 🌊'}
+               'flood': 'флуд/спам запрещён, притормози 🌊',
+               'ads': 'реклама чужих Discord-серверов здесь запрещена 🚫'}
 
 MAX_WORDS = 200        # максимум запрещённых слов
 MAX_WORD_LEN = 60      # и whitelist-доменов не длиннее
 MAX_IDS = 60           # каналов-исключений / иммунных ролей
+MAX_AD_PHRASES = 80
 
 DEFAULT_FILTER = {
     'enabled': False,  # opt-in: весь фильтр выключен, включает владелец
@@ -63,6 +68,11 @@ DEFAULT_FILTER = {
     'caps': {'enabled': False, 'action': 'delete', 'percent': 70, 'min_length': 12},
     'flood': {'enabled': False, 'action': 'timeout', 'limit': 5, 'seconds': 5,
               'dupe_count': 3, 'timeout_minutes': 10},
+    # Анти-реклама чужих Discord-серверов («Залетай на наш Discord-сервер…»).
+    # builtin=True — встроенные фразы + discord-инвайты; phrases — доп. список.
+    # apply_channels: пусто = весь сервер; иначе только эти каналы.
+    'ads': {'enabled': False, 'action': 'delete', 'builtin': True,
+            'phrases': [], 'apply_channels': []},
     'ignore_channels': [],
     'immune_roles': [],
 }
@@ -98,6 +108,25 @@ SEPARATORS = r'[^0-9a-zа-яё]{0,3}'          # «м у с о р» / «м-у-с
 LINK_RE = re.compile(r'(?:https?://[^\s<>\)\]]+|www\.[^\s<>\)\]]+'
                      r'|(?:discord\.gg|discord(?:app)?\.com/invite)/[A-Za-z0-9-]+)',
                      re.IGNORECASE)
+
+# Инвайт Discord (схема необязательна) — ядро анти-рекламы серверов.
+INVITE_RE = re.compile(
+    r'(?:discord(?:app)?\.com/invite/|discord\.gg/|discord\.me/)[A-Za-z0-9-]+',
+    re.IGNORECASE,
+)
+
+# Встроенные триггеры «Залетай на наш Discord-сервер» и аналоги.
+# Срабатывают по нормализованному тексту (нижний регистр, без залго).
+_BUILTIN_AD_RES = (
+    re.compile(r'залетай\s+на\s+(?:наш\s+)?(?:discord|дискорд)', re.I),
+    re.compile(r'заход(?:и|ите)\s+на\s+(?:наш\s+)?(?:discord|дискорд|сервер)', re.I),
+    re.compile(r'вступай(?:те)?\s+на\s+(?:наш\s+)?(?:discord|дискорд|сервер)', re.I),
+    re.compile(r'приглашаю\s+(?:вас\s+|всех\s+)?на\s+(?:наш\s+)?сервер', re.I),
+    re.compile(r'(?:мой|наш)\s+(?:discord|дискорд)[\s\-]*сервер', re.I),
+    re.compile(r'(?:discord|дискорд)[\s\-]*сервер\s*[:：]', re.I),
+    re.compile(r'join\s+(?:my|our|this)\s+discord', re.I),
+    re.compile(r'invite\s+(?:to\s+)?(?:my|our)\s+(?:discord|server)', re.I),
+)
 
 
 def normalize_text(text: str) -> str:
@@ -163,6 +192,40 @@ def link_allowed(link: str, whitelist) -> bool:
     return any(w and w.lower() in l for w in (whitelist or []))
 
 
+def extract_invites(text: str):
+    """Только discord-инвайты (не любые URL)."""
+    if not text:
+        return []
+    return INVITE_RE.findall(str(text))
+
+
+def find_server_ad(text: str, phrases=None, *, builtin: bool = True, whitelist=None):
+    """Первое совпадение рекламы чужого Discord-сервера или None.
+
+    Ловит:
+      • discord.gg / discord.com/invite вне whitelist;
+      • встроенные фразы («залетай на наш discord-сервер» и аналоги);
+      • доп. фразы из конфига (через find_bad_word / фолдинг).
+    """
+    raw = str(text or '')
+    if not raw.strip():
+        return None
+    wl = whitelist or []
+    for inv in extract_invites(raw):
+        if not link_allowed(inv, wl):
+            return inv
+    norm = normalize_text(raw)
+    if builtin:
+        for rx in _BUILTIN_AD_RES:
+            m = rx.search(norm)
+            if m:
+                return m.group(0)
+    hit = find_bad_word(raw, phrases or [])
+    if hit:
+        return hit
+    return None
+
+
 def caps_ratio(text: str) -> float:
     """Процент заглавных среди букв, у которых вообще есть регистр."""
     letters = [c for c in str(text) if c.lower() != c.upper()]
@@ -187,6 +250,20 @@ def classify_message(cfg: dict, text: str) -> list:
         bad = [u for u in extract_links(text) if not link_allowed(u, l.get('whitelist'))]
         if bad:
             out.append({'filter': 'links', 'detail': bad[0]})
+    a = cfg.get('ads', {})
+    if a.get('enabled'):
+        # whitelist инвайтов: ads.whitelist, иначе общий links.whitelist
+        wl = a.get('whitelist')
+        if wl is None:
+            wl = (cfg.get('links') or {}).get('whitelist') or []
+        hit = find_server_ad(
+            text,
+            a.get('phrases'),
+            builtin=bool(a.get('builtin', True)),
+            whitelist=wl,
+        )
+        if hit:
+            out.append({'filter': 'ads', 'detail': hit})
     c = cfg.get('caps', {})
     if c.get('enabled'):
         text = str(text or '')
@@ -297,6 +374,14 @@ def merge_config(saved: dict) -> dict:
     cfg['words']['list'] = sanitize_words((saved.get('words') or {}).get('list'))
     cfg['links']['whitelist'] = [w.lower() for w in
                                  sanitize_words((saved.get('links') or {}).get('whitelist'), limit=50)]
+    ads_src = saved.get('ads') or {}
+    if isinstance(ads_src, dict):
+        cfg['ads']['builtin'] = bool(ads_src.get('builtin', cfg['ads']['builtin']))
+        cfg['ads']['phrases'] = sanitize_words(ads_src.get('phrases'), limit=MAX_AD_PHRASES)
+        cfg['ads']['apply_channels'] = _sanitize_ids(ads_src.get('apply_channels'))
+        if 'whitelist' in ads_src:
+            cfg['ads']['whitelist'] = [w.lower() for w in
+                                       sanitize_words(ads_src.get('whitelist'), limit=50)]
     cfg['ignore_channels'] = _sanitize_ids(saved.get('ignore_channels'))
     cfg['immune_roles'] = _sanitize_ids(saved.get('immune_roles'))
     return cfg
@@ -337,12 +422,24 @@ def save_config(gid, cfg: dict):
 # Ког
 # ─────────────────────────────────────────────────────────────
 class AutoFilter(commands.Cog):
-    """🧹 Автофильтр чата: слова, ссылки, капс, флуд."""
-
+    """🧹 Автофильтр чата: слова, ссылки, реклама серверов, капс, флуд."""
 
     def __init__(self, bot):
         self.bot = bot
         self.tracker = FloodTracker()
+        self._lfg_synced = False
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        if self._lfg_synced:
+            return
+        self._lfg_synced = True
+        try:
+            from services import lfg_channels as LFG
+            LFG.ensure_autofilter_ads()
+            await LFG.sync_teammates_channel(self.bot)
+        except Exception as e:
+            log.warning('AutoFilter: LFG sync: %s', e)
 
     # ── инфраструктура ────────────────────────────────────────
     def _card(self, title: str, desc: str, color=None) -> discord.Embed:
@@ -400,6 +497,10 @@ class AutoFilter(commands.Cog):
             return
 
         violations = classify_message(cfg, message.content or '')
+        # ads.apply_channels: если задан список — рекламу ловим только там
+        apply_ads = list((cfg.get('ads') or {}).get('apply_channels') or [])
+        if apply_ads and str(getattr(message.channel, 'id', '')) not in set(apply_ads):
+            violations = [v for v in violations if v.get('filter') != 'ads']
         flood_kind = None
         if cfg['flood']['enabled']:
             f = cfg['flood']
@@ -465,6 +566,11 @@ class AutoFilter(commands.Cog):
                 extra = f" · слов: **{len(part['list'])}**"
             elif f == 'links':
                 extra = f" · whitelist: **{len(part['whitelist'])}**"
+            elif f == 'ads':
+                n_ch = len(part.get('apply_channels') or [])
+                scope = f' · каналов: **{n_ch}**' if n_ch else ' · весь сервер'
+                extra = (f" · builtin: **{'да' if part.get('builtin', True) else 'нет'}**"
+                         f" · фраз: **{len(part.get('phrases') or [])}**{scope}")
             elif f == 'caps':
                 extra = f" · ≥{part['percent']}% от {part['min_length']} симв."
             elif f == 'flood':

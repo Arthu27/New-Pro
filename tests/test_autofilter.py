@@ -88,6 +88,32 @@ cfg['words']['enabled'] = False
 check(af.classify_message(cfg, 'казино это слово') == [], 'classify: отдельный фильтр глушится')
 cfg['words']['enabled'] = True
 
+# ═══ 3b. Реклама Discord-серверов ════════════════════════════════════════
+print('== ads ==')
+check(af.find_server_ad('Залетай на наш Discord-сервер друзья') is not None,
+      'ads: «Залетай на наш Discord-сервер» ловится')
+check(af.find_server_ad('привет, ищу тиммейта в доту') is None,
+      'ads: обычный поиск тиммейта не ловится')
+check(af.find_server_ad('заходи discord.gg/evilpack') is not None,
+      'ads: discord.gg инвайт ловится')
+check(af.find_server_ad('discord.gg/hakumo', whitelist=['discord.gg/hakumo']) is None,
+      'ads: whitelist инвайта пропускает')
+check(af.find_server_ad('Join my Discord for free nitro!') is not None,
+      'ads: английский join my discord')
+cfg_ads = af.merge_config({})
+cfg_ads['enabled'] = True
+cfg_ads['ads']['enabled'] = True
+v = af.classify_message(cfg_ads, 'Залетай на наш Discord-сервер https://discord.gg/spam')
+check(any(x['filter'] == 'ads' for x in v), 'classify: ads срабатывает')
+cfg_ads['ads']['enabled'] = False
+check(af.classify_message(cfg_ads, 'Залетай на наш Discord-сервер') == [],
+      'classify: ads выкл — тишина')
+d_ads = af.merge_config({'ads': {'enabled': True, 'phrases': ['мой пак'],
+                                 'apply_channels': ['1312552287360516207']}})
+check(d_ads['ads']['enabled'] is True and d_ads['ads']['phrases'] == ['мой пак'],
+      'merge: ads phrases')
+check(d_ads['ads']['apply_channels'] == ['1312552287360516207'], 'merge: ads apply_channels')
+
 # ═══ 4. FloodTracker ═════════════════════════════════════════════════════
 print('== FloodTracker ==')
 tr = af.FloodTracker()

@@ -55,7 +55,7 @@ check(guardian.guardian_default().get('enabled') is False, 'guardian: дефол
 
 fc = auto_filter.merge_config({})
 check(fc['enabled'] is False, 'auto_filter: дефолт ВЫКЛ')
-check(all(fc[s]['enabled'] is False for s in ('words', 'links', 'caps', 'flood')),
+check(all(fc[s]['enabled'] is False for s in ('words', 'links', 'caps', 'flood', 'ads')),
       'auto_filter: все секции дефолт ВЫКЛ')
 
 aim = ai_moderation.AIModeration._default_config(object())
@@ -91,7 +91,9 @@ _w(f'data/autofilter_{GID}.json', {'enabled': True,
                                    'words': {'enabled': True, 'action': 'timeout', 'list': ['казино']},
                                    'links': {'enabled': True, 'action': 'delete', 'whitelist': ['ok.ru']},
                                    'caps': {'enabled': True, 'action': 'delete', 'percent': 50, 'min_length': 5},
-                                   'flood': {'enabled': True, 'action': 'timeout', 'limit': 3, 'seconds': 4}})
+                                   'flood': {'enabled': True, 'action': 'timeout', 'limit': 3, 'seconds': 4},
+                                   'ads': {'enabled': True, 'action': 'delete', 'builtin': True,
+                                           'phrases': ['залетай'], 'apply_channels': ['1']}})
 _w(f'data/guardian_{GID}.json', {**guardian.guardian_default(), 'enabled': True})
 _w(f'data/ai_mod_config_{GID}.json', {**aim, 'enabled': True})
 from db import GuildData
@@ -111,10 +113,12 @@ check(cfg['enabled'] is False and cfg['action'] == 'jail', 'antifake: выкл, 
 
 cfg = json.load(open(f'data/autofilter_{GID}.json', encoding='utf-8'))
 check(cfg['enabled'] is False
-      and all(cfg[s]['enabled'] is False for s in ('words', 'links', 'caps', 'flood')),
+      and all(cfg[s]['enabled'] is False for s in ('words', 'links', 'caps', 'flood', 'ads')),
       'auto_filter: корень и все секции погашены')
 check(cfg['words']['list'] == ['казино'] and cfg['links']['whitelist'] == ['ok.ru'],
       'auto_filter: списки/вайтлист сохранились')
+check(cfg['ads']['phrases'] == ['залетай'] and cfg['ads']['apply_channels'] == ['1'],
+      'auto_filter: ads phrases/каналы сохранились')
 
 cfg = json.load(open(f'data/guardian_{GID}.json', encoding='utf-8'))
 check(cfg['enabled'] is False and cfg['punishment'] == 'strip', 'guardian: выкл, мера сохранена')
