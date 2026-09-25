@@ -163,6 +163,18 @@ class Moderation (commands .Cog ):
     def _recent_mute_count(self, guild_id, user_id, hours: float = 48.0) -> int:
         """Сколько мутов (таймаут/чат/войс) получил пользователь за окно.
         Источник — data/mod_data.json (те же дела, что пишет save_case)."""
+        return self._recent_case_count(
+            guild_id, user_id, hours,
+            actions=('timeout', 'mute_chat', 'vmute'))
+
+    def _recent_punish_count(self, guild_id, user_id, hours: float = 48.0) -> int:
+        """Сколько наказаний (мут/бан/кик) за окно — для авто-варна."""
+        return self._recent_case_count(
+            guild_id, user_id, hours,
+            actions=('timeout', 'mute_chat', 'vmute', 'ban', 'kick'))
+
+    def _recent_case_count(self, guild_id, user_id, hours: float,
+                           actions) -> int:
         try:
             filepath = 'data/mod_data.json'
             if not os.path.exists(filepath):
@@ -171,11 +183,12 @@ class Moderation (commands .Cog ):
                 data = json.load(f)
             cases = (data.get('cases') or {}).get(str(guild_id)) or []
             horizon = datetime.now(timezone.utc).timestamp() - hours * 3600
+            want = set(actions)
             n = 0
             for c in cases:
                 if str(c.get('user_id')) != str(user_id):
                     continue
-                if c.get('action') not in ('timeout', 'mute_chat', 'vmute'):
+                if c.get('action') not in want:
                     continue
                 ts = c.get('timestamp')
                 if not ts:
@@ -183,20 +196,20 @@ class Moderation (commands .Cog ):
                 try:
                     when = datetime.fromisoformat(ts).timestamp()
                 except Exception as _te:
-                    log.debug(f"[MOD] _recent_mute_count bad ts {ts}: {_te}")
+                    log.debug(f"[MOD] _recent_case_count bad ts {ts}: {_te}")
                     continue
                 if when >= horizon:
                     n += 1
             return n
         except Exception as e:
-            log.info(f"[MOD] _recent_mute_count: {e}")
+            log.info(f"[MOD] _recent_case_count: {e}")
             return 0
 
     async def _maybe_auto_warn(self, guild, user):
-        """Авто-варн от бота: 3 мута за 48 ч → 1 предупреждение.
+        """Авто-варн от бота: 3 мута за 48 ч ИЛИ 3 наказания за 48 ч → варн.
         Порог настраивается через mod-настройки (по умолчанию 3/48ч).
         Не дублируем: если у пользователя уже есть авто-варн, поставленный
-        ПОСЛЕ его последнего мута — повторно не выдаём."""
+        ПОСЛЕ его последнего наказания — повторно не выдаём."""
         try:
             threshold = 3
             window_h = 48.0
@@ -210,34 +223,41 @@ class Moderation (commands .Cog ):
             except Exception as _ce:
                 log.debug(f"[MOD] auto-warn cfg: {_ce}")
 
-            if self._recent_mute_count(guild.id, user.id, window_h) < threshold:
+            mute_n = self._recent_mute_count(guild.id, user.id, window_h)
+            punish_n = self._recent_punish_count(guild.id, user.id, window_h)
+            if mute_n < threshold and punish_n < threshold:
                 return
 
-            # Не дублировать уже выданный авто-варн после последнего мута.
+            # Не дублировать уже выданный авто-варн после последнего мута/кары.
             warns_cog = self.bot.get_cog('warnings')
             if warns_cog is None:
                 return
             warns = warns_cog._get_warns(guild.id, user.id)
-            last_mute_ts = ''
+            last_case_ts = ''
             try:
                 from services.async_io import load_json_async
                 _md = await load_json_async('data/mod_data.json', {}, log=log) or {}
                 _cs = (_md.get('cases') or {}).get(str(guild.id)) or []
                 _mine = [c.get('timestamp', '') for c in _cs
                          if str(c.get('user_id')) == str(user.id)
-                         and c.get('action') in ('timeout', 'mute_chat', 'vmute')]
-                last_mute_ts = max(_mine) if _mine else ''
+                         and c.get('action') in (
+                             'timeout', 'mute_chat', 'vmute', 'ban', 'kick')]
+                last_case_ts = max(_mine) if _mine else ''
             except Exception as _me:
-                log.debug(f"[MOD] auto-warn last-mute scan: {_me}")
+                log.debug(f"[MOD] auto-warn last-case scan: {_me}")
             for w in warns:
                 if (w.get('mod_id') == str(self.bot.user.id)
                         and 'автоматически' in (w.get('reason') or '').lower()
-                        and w.get('timestamp', '') >= last_mute_ts):
+                        and w.get('timestamp', '') >= last_case_ts):
                     return  # авто-варн за эту серию уже выдан
 
             bot_member = guild.me
-            reason = (f'Автоматически: {threshold} мута за {window_h:.0f} ч '
-                      f'(правило рецидива). Выдано ботом.')
+            if mute_n >= threshold:
+                reason = (f'Автоматически: {threshold} мута за {window_h:.0f} ч '
+                          f'(правило рецидива). Выдано ботом.')
+            else:
+                reason = (f'Автоматически: {threshold} наказания за '
+                          f'{window_h:.0f} ч (правило рецидива). Выдано ботом.')
             await warns_cog.add_warning(user, bot_member, reason)
         except Exception as _aw_e:
             log.info(f'[MOD] auto-warn: {_aw_e}')
@@ -691,7 +711,7 @@ class Moderation (commands .Cog ):
                     embed =error_embed (_txt),
                     ephemeral =True )
                     return
-                # Срок мута: 30 мин … прогрессия по участнику (1ч → +2ч)
+                # Срок мута: 30 мин … фиксированный потолок (без +2)
                 if action in ('timeout','mute_chat','vmute'):
                     try :
                         from services .staff_limits import (
@@ -1013,7 +1033,7 @@ class Moderation (commands .Cog ):
                         _sl_rec (guild .id ,interaction .user .id ,_sl_rec_key ,1 )
                 except Exception as _slr :
                     log .debug (f'[STAFF_LIMIT] rec: {_slr}')
-                # Прогрессия мута по участнику: после мута step+1
+                # Прогрессия +2 отключена (bump — no-op, оставлен для совместимости)
                 if action in ('timeout', 'mute_chat', 'vmute') and user is not None:
                     try:
                         from services.mute_progression import bump_after_mute
@@ -1062,7 +1082,7 @@ class Moderation (commands .Cog ):
                 except Exception as _log_e :
                     log .warning (f'[MODPANEL] send_log: {_log_e}')
 
-                if action in ('timeout', 'mute_chat', 'vmute'):
+                if action in ('timeout', 'mute_chat', 'vmute', 'ban'):
                     try :
                         await self ._maybe_auto_warn (guild ,user )
                     except Exception as _aw_e :
@@ -1301,7 +1321,7 @@ class Moderation (commands .Cog ):
                 return False ,_hdeny
         except Exception as _hex :
             _log .debug ('[MODPANEL] hierarchy: %s',_hex )
-        # Срок мута: 30 мин … прогрессия по участнику (1ч → +2ч до варна).
+        # Срок мута: 30 мин … фиксированный потолок (без +2).
         if action in ('timeout','mute_chat','vmute') and amount :
             try :
                 from services .staff_limits import mute_duration_error as _pderr
@@ -1765,14 +1785,11 @@ PANEL_ACTIONS = ('warn', 'unwarn', 'timeout', 'mute_chat', 'vmute', 'ban',
 #  что у /modpanel и панели — единый путь apply_panel_action.
 # ═══════════════════════════════════════════════════════════════════════════
 class _CtxMuteModal(discord.ui.Modal):
-    """Окно мута из ПКМ: срок + причина."""
+    """Окно мута из ПКМ: срок + правило 1.1–1.9."""
 
     duration = discord.ui.TextInput(
-        label='Срок (30 мин … потолок по участнику)', placeholder='30, 60, 2ч',
+        label='Срок (30 мин … 2 ч)', placeholder='30, 60, 2ч',
         required=True, max_length=16)
-    reason = discord.ui.TextInput(
-        label='Причина', style=discord.TextStyle.paragraph,
-        max_length=300, required=False)
 
     def __init__(self, cog, member, action, acl_key, limit_key, label):
         super().__init__(timeout=180)
@@ -1782,6 +1799,17 @@ class _CtxMuteModal(discord.ui.Modal):
         self._acl_key = acl_key
         self._limit_key = limit_key
         self._label = label
+        from services import mod_reasons as _MR
+        opts = [
+            discord.SelectOption(
+                label=o['label'], value=o['value'],
+                description=o['description'])
+            for o in _MR.select_options_data()
+        ]
+        self.reason_select = discord.ui.Select(
+            required=True, options=opts, min_values=1, max_values=1)
+        self.add_item(discord.ui.Label(
+            text='Правило (причина)', component=self.reason_select))
 
     async def on_submit(self, interaction):
         await _ack(interaction, thinking=True)
@@ -1811,10 +1839,12 @@ class _CtxMuteModal(discord.ui.Modal):
                              getattr(self._member, 'id', None), _roles)
         except Exception as _cx:
             log.debug(f'[ПКМ] duration cap: {_cx}')
+        from services import mod_reasons as _MR
+        _code = (self.reason_select.values or [''])[0]
+        _reason = _MR.format_reason(_code)
         ok, text = await self._cog.apply_panel_action(
             interaction.guild, self._member, self._action,
-            reason=(str(self.reason.value or '').strip()
-                    or 'Причина не указана'),
+            reason=_reason,
             amount=str(self.duration.value or '').strip(),
             actor=getattr(interaction.user, 'display_name', None)
             or str(interaction.user),
@@ -2829,14 +2859,15 @@ class ModActionSelect(discord.ui.Select):
 
 
 _PUNISH_MODPANEL = ("ban", "timeout", "mute_chat", "vmute")
+_REASON_RULE_ACTIONS = ("warn", "ban", "timeout", "mute_chat", "vmute")
 
 
 class ModActionModal(discord.ui.Modal):
     """Модальное окно ввода — поля строго под выбранное действие.
 
     «Очистка» спрашивает только количество и причину (никакой демки),
-    разбан/размут — цель и причину, наказания — демку, НО только если
-    требование включено в панели.
+    разбан/размут — цель и причину, наказания — правило 1.1–1.9 и демку,
+    НО только если требование демки включено в панели.
     """
 
     def __init__(self, cog, action, guild=None, prefill_target="", user=None):
@@ -2878,11 +2909,29 @@ class ModActionModal(discord.ui.Modal):
                     placeholder="30, 60, 2ч",
                 )
             self.add_item(self.amount)
-        self.reason = discord.ui.TextInput(
-            label="Причина", required=False, placeholder="За что? (необязательно)",
-            style=discord.TextStyle.short,
-        )
-        self.add_item(self.reason)
+        # Наказания: причина = правило 1.1–1.9 (номер + текст запрета).
+        # Снятие/чистка — свободный текст как раньше.
+        self.reason_select = None
+        self.reason = None
+        if action in _REASON_RULE_ACTIONS:
+            from services import mod_reasons as _MR
+            opts = [
+                discord.SelectOption(
+                    label=o['label'], value=o['value'],
+                    description=o['description'])
+                for o in _MR.select_options_data()
+            ]
+            self.reason_select = discord.ui.Select(
+                required=True, options=opts, min_values=1, max_values=1)
+            self.add_item(discord.ui.Label(
+                text='Правило (причина)', component=self.reason_select))
+        else:
+            self.reason = discord.ui.TextInput(
+                label="Причина", required=False,
+                placeholder="За что? (необязательно)",
+                style=discord.TextStyle.short,
+            )
+            self.add_item(self.reason)
         _need_proof = False
         if action in _PUNISH_MODPANEL:
             try:
@@ -2921,7 +2970,13 @@ class ModActionModal(discord.ui.Modal):
         _t = getattr(self, 'target', None)
         _a = getattr(self, 'amount', None)
         _p = getattr(self, 'proof', None)
-        _reason = (self.reason.value or "").strip() or "Не указана"
+        if self.reason_select is not None:
+            from services import mod_reasons as _MR
+            _code = (self.reason_select.values or [''])[0]
+            _reason = _MR.format_reason(_code)
+        else:
+            _r = getattr(self, 'reason', None)
+            _reason = ((_r.value if _r else '') or "").strip() or "Не указана"
         _target_value = self.fixed_target_id or ((_t.value or "").strip() if _t else "")
         await self.cog._execute_mod_action(
             interaction,
