@@ -163,7 +163,7 @@ check(hasattr(client, 'tree') and hasattr(client, 'add_cog'),
 ints = client.intents
 check(bool(ints.guilds) and bool(ints.voice_states),
       'intents guilds+voice')
-check(bool(getattr(ints, 'members', False)), 'members intent')
+check(not bool(getattr(ints, 'members', False)), 'без privileged members')
 check(not bool(getattr(ints, 'message_content', False)),
       'без message_content')
 st = LR.love_bot_status()

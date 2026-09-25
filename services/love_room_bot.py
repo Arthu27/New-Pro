@@ -133,7 +133,9 @@ def build_love_client():
     intents = discord.Intents.none()
     intents.guilds = True
     intents.voice_states = True
-    intents.members = True  # move/roster; enable in Dev Portal
+    # members is privileged — skip so bot can connect without Dev Portal
+    # toggle; move/roster uses fetch_member when cache miss.
+    intents.members = False
     bot = commands.Bot(command_prefix=commands.when_mentioned,
                        intents=intents,
                        help_command=None)
