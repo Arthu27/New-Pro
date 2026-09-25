@@ -302,7 +302,11 @@ async def handle_review_decision(interaction: discord.Interaction,
 # ─── сборы медиа после мута ───────────────────────────────────────────────
 
 class ProofCollectView(discord.ui.LayoutView):
-    """Публичное меню после мута: скинь файлы → Готово / Отмена."""
+    """Меню после мута: скинь файлы → Готово / Отмена.
+
+    «Время вышло» в общий чат НЕ пишем — только ЛС модератору
+    (заказ 2026-09-24).
+    """
 
     def __init__(self, *, bot, session_key, moderator_id, target_mention,
                  mute_label, minutes_left, file_count=0, expired=False,
@@ -326,17 +330,10 @@ class ProofCollectView(discord.ui.LayoutView):
             return
         from discord import ui as _ui
         if self._expired:
-            body = (
-                f'# ⏰ Время вышло\n'
-                f'-# HAKUMO · доказательства\n\n'
-                f'Срок загрузки демки к муту **{self._target}** закончился.\n'
-                f'Наказание **остаётся**. Модератор может загрузить демку '
-                f'позже в панели «Доказательства».'
-            )
-            if self._status:
-                body = f'{body}\n\n{self._status}'
+            # Закрыто (готово/отмена) — коротко, без «время вышло»
+            body = self._status or 'Закрыто.'
             self.add_item(black_container(
-                _ui.TextDisplay(body),
+                _ui.TextDisplay(f'-# HAKUMO · доказательства\n\n{body}'),
                 accent=0x99AAB5,
             ))
             return
@@ -492,30 +489,35 @@ async def start_proof_collection(*, bot, guild, channel, moderator, target,
             if files:
                 await _finalize_collection(bot, guild, moderator, sess, files)
                 return
-            # Время вышло — публично и красиво
-            expired = ProofCollectView(
-                bot=bot,
-                session_key=key,
-                moderator_id=moderator.id,
-                target_mention=f'<@{sess["target_id"]}>',
-                mute_label=action_label(sess.get('mute_action') or ''),
-                minutes_left=0,
-                file_count=0,
-                expired=True,
-                status_line=None,
-            )
+            # Время вышло — публичное меню убираем; пишет ТОЛЬКО модератору
             mid = sess.get('menu_msg_id')
             if mid and channel is not None:
                 try:
                     msg = await channel.fetch_message(int(mid))
-                    await msg.edit(content=None, view=expired)
-                    return
+                    await msg.delete()
                 except Exception as _ex:
-                    log.debug('timeout edit menu: %s', _ex)
+                    log.debug('timeout delete menu: %s', _ex)
+                    try:
+                        msg = await channel.fetch_message(int(mid))
+                        await msg.edit(content='·', view=None)
+                    except Exception:
+                        pass
             try:
-                await channel.send(view=expired)
+                note = (
+                    f'⏰ **Время вышло** — демка к муту '
+                    f'<@{sess["target_id"]}> не загружена.\n'
+                    f'Наказание **остаётся**. Можно скинуть файлы позже '
+                    f'в панели «Доказательства».'
+                )
+                await moderator.send(note)
             except Exception as _ex:
-                log.debug('timeout send: %s', _ex)
+                log.debug('timeout DM mod: %s', _ex)
+                try:
+                    if notify_interaction is not None:
+                        await notify_interaction.followup.send(
+                            note, ephemeral=True)
+                except Exception:
+                    pass
         except asyncio.CancelledError:
             return
         except Exception as _ex:

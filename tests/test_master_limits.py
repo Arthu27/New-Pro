@@ -82,17 +82,17 @@ check(SH.RANK['helper'] == 1 and SH.RANK['mod'] == 2
       and SH.RANK['master'] == 3 and SH.RANK['curator'] == 4,
       'hierarchy RANK helper < mod < master < curator')
 
-print('== 2. Лимиты: хелпер варн 1 без бана; мастер варн 1; куратор варн 2 ==')
+print('== 2. Лимиты: хелпер/мод/мастер без warn; куратор варн 2 ==')
 mod_l = SL.TIER_DEFAULT_LIMITS['mod']
 mst_l = SL.TIER_DEFAULT_LIMITS['master']
 cur_l = SL.TIER_DEFAULT_LIMITS['curator']
 hlp_l = SL.TIER_DEFAULT_LIMITS['helper']
-check(hlp_l.get('warn') == 1 and 'ban' not in hlp_l,
-      'хелпер: варн 1, бана нет')
-check(mod_l['mute'] == 3 and mod_l['unmute'] == 3 and mod_l['ban'] == 1,
-      'мод: mute/unmute 3, ban 1')
+check('warn' not in hlp_l and 'ban' not in hlp_l,
+      'хелпер: без варна и бана')
+check(mod_l['mute'] == 3 and mod_l['unmute'] == 3 and mod_l['ban'] == 1
+      and 'warn' not in mod_l,
+      'мод: mute/unmute 3, ban 1, без warn')
 expect = {
-    'warn': 1,
     'ban': 1,
     'unmute': 5,
     'mute': 5,
@@ -100,6 +100,7 @@ expect = {
 }
 for k, v in expect.items():
     check(mst_l[k] == v, f'master {k}={v}', mst_l.get(k))
+check('warn' not in mst_l, 'master без warn')
 check(mst_l['unmute'] == mst_l['mute'], 'размут = мут (master)')
 check(cur_l['mute'] == 7 and cur_l['unmute'] == 7 and cur_l['ban'] == 2
       and cur_l['warn'] == 2,
@@ -107,17 +108,22 @@ check(cur_l['mute'] == 7 and cur_l['unmute'] == 7 and cur_l['ban'] == 2
 
 # effective_limits для Master+Helper
 lim, _ = SL.effective_limits(1, [MASTER, HELPER])
-check(lim['warn'] == 1 and lim['ban'] == 1 and lim['mute'] == 5
-      and lim['unmute'] == 5,
+check(lim.get('ban') == 1 and lim['mute'] == 5 and lim['unmute'] == 5,
       f'effective Master+Helper')
 
 # Helper alone = helper tier
 lim_h, _ = SL.effective_limits(1, [HELPER])
-check(lim_h['mute'] == 3 and lim_h['unmute'] == 3 and lim_h['warn'] == 1,
-      'Helper alone: mute/unmute 3, warn 1')
+check(lim_h['mute'] == 3 and lim_h['unmute'] == 3,
+      'Helper alone: mute/unmute 3')
 check(SL.tier_for_roles([HELPER]) == 'helper', 'Helper → тир helper')
 check('ban' not in SL.TIER_DEFAULT_LIMITS['helper'],
       'в тире helper нет бана')
+check('warn' not in SL.TIER_DEFAULT_LIMITS['helper'],
+      'в тире helper нет warn')
+check('warn' not in SL.TIER_DEFAULT_LIMITS['mod'],
+      'в тире mod нет warn')
+check('warn' not in SL.TIER_DEFAULT_LIMITS['master'],
+      'в тире master нет warn')
 
 print('== 3. Гейт веток ==')
 # Master alone
@@ -177,11 +183,12 @@ check(acts2 == [], 'menu empty for Master+Broadcaster')
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 # print limits card for owner
 print('\n--- Лимиты (за сутки) ---')
-print(f"  хелпер:  варн {hlp_l['warn']}  мут/размут {hlp_l['mute']}  (бан —)")
-print(f"  модер:   варн {mod_l['warn']}  мут/размут {mod_l['mute']}  бан {mod_l['ban']}")
-print(f"  master:  варн {mst_l['warn']}  мут/размут {mst_l['mute']}  бан {mst_l['ban']}")
+print(f"  хелпер:  мут/размут {hlp_l['mute']}  (варн/бан —)")
+print(f"  модер:   мут/размут {mod_l['mute']}  бан {mod_l['ban']}  (варн —)")
+print(f"  master:  мут/размут {mst_l['mute']}  бан {mst_l['ban']}  (варн —)")
 print(f"  куратор: варн {cur_l['warn']}  мут/размут {cur_l['mute']}  бан {cur_l['ban']}")
 print(f"  роль:   × Master ({MASTER})")
 print('  гейт:   нужна ещё роль Helper или Moderator')
 print('  размут персонала: только куратор+')
+print('  варн вручную: только куратор/админ своей ветки')
 sys.exit(1 if FAIL else 0)

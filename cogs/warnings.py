@@ -249,22 +249,19 @@ class warnings(commands.Cog):
             log.error(f"Зеркалирование предупреждений в JSON: {e}")
 
     async def _sync_warn_level_roles(self, guild, member, warn_count):
-        """Роль уровня варна — только для стаффа (helper+), с 3 варнов.
+        """Роль warn — только куратору/админу при ≥3 варнах (на неделю).
 
-        Заказ 2026-09-24: роль warn не для обычных участников. Стаффу при
-        ≥3 варнах выдаём роль на неделю (temps), потом авто-снятие.
-        Не-стаффу любые warn-роли снимаем.
+        Заказ 2026-09-24: хелпер/мод/мастер/участники роль не получают.
+        Не-eligible — снимаем любые warn-роли.
         """
         try:
             from services import punish_roles as PR
-            from services.staff_hierarchy import best_mapped_tier, RANK
-            mapped = best_mapped_tier(member)
-            is_staff = RANK.get(mapped, -1) >= RANK.get('helper', 1)
+            from services.warn_acl import warn_role_eligible
+            eligible = warn_role_eligible(member)
             have = {getattr(r, 'id', None)
                     for r in (getattr(member, 'roles', None) or [])}
 
-            if not is_staff:
-                # снять все warn-уровни у обычных
+            if not eligible:
                 _add, remove_ids = PR.level_transition(guild.id, 0)
                 for rid in remove_ids or list(PR.warn_levels(PR.get(guild.id)).values()):
                     if rid not in have:
@@ -273,8 +270,12 @@ class warnings(commands.Cog):
                     if role is None:
                         continue
                     await member.remove_roles(
-                        role, reason='Роль warn только для стаффа')
-                    log.info('[WARNS] снята warn-роль %s с не-стаффа %s',
+                        role, reason='Роль warn только куратору/админу')
+                    try:
+                        PR.clear(guild.id, member.id, rid)
+                    except Exception:
+                        pass
+                    log.info('[WARNS] снята warn-роль %s с %s (не curator/admin)',
                              role.name, member)
                 return
 
@@ -300,7 +301,7 @@ class warnings(commands.Cog):
                 if role is None:
                     return
                 await member.add_roles(
-                    role, reason=f'Стафф: {warn_count} варнов → роль на неделю')
+                    role, reason=f'Куратор/админ: {warn_count} варнов → роль на неделю')
                 import time as _time
                 PR.add_temp(guild.id, member.id, role.id,
                             _time.time() + 7 * 86400)
@@ -413,28 +414,29 @@ class warnings(commands.Cog):
             log.error(f'Ошибка авто-наказания: {e}')
         return None
 
-    # ── /warn ────────────────────────────────────────────────────────────
+    # ── ядро варна (из /modpanel; участникам — только авто-бот) ───────────
     async def add_warn(self, interaction, user: discord.Member, reason: str = None):
         """Общее ядро warn: запись + DM + автоматическое наказание.
 
-        Команду /warn И контекстные меню правого клика (mod_tools) используют её.
+        Вызов из /modpanel (куратор/админ ветки → стафф своей ветки).
+        Обычным участникам варн ставит бот автоматически.
         Ответ НЕ отправляет — отвечает вызывающая сторона.
         Возвращает: (warn_id, total, punishment_result)
         """
         guild = interaction.guild
 
-        # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05): не варним персонал своего
-        # уровня и выше — модеры не варят модеров/кураторов/админов.
+        # Куратор/админ ветки; нельзя через ветку; участникам — только бот
         try:
-            from services.staff_hierarchy import check as _hchk
-            _hok, _hdeny, _a, _t = _hchk(guild, interaction.user, user, 'warn')
-            if not _hok:
+            from services.warn_acl import manual_warn_check
+            _ok, _deny = manual_warn_check(guild, interaction.user, user)
+            if not _ok:
                 from cogs.embed_utils import error_embed as _err
-                await interaction.followup.send(embed=_err(_hdeny),
-                                                ephemeral=True)
+                await interaction.followup.send(
+                    embed=_err(_deny or 'Нет права на варн.'),
+                    ephemeral=True)
                 return (0, len(self._get_warns(guild.id, user.id)), None)
         except Exception as _hex:
-            log.debug(f"[WARNS] warn hierarchy: {_hex}")
+            log.debug(f"[WARNS] warn acl: {_hex}")
 
         # Лимиты стаффа (владельца не трогаем): пер-рольные лимиты на варны
         try:
@@ -670,20 +672,32 @@ class warnings(commands.Cog):
             log.debug(f"[WARNS] лог снятия (общий): {_ulog_e}")
         return removed, total
 
-    # ── add_warning (для AI-модератора, без interaction) ─────────────────
+    # ── add_warning (для AI-модератора / авто-бота, без interaction) ─────
     async def add_warning(self, user: discord.Member, moderator: discord.Member, reason: str = None):
-        """Добавить предупреждение без interaction"""
+        """Добавить предупреждение без interaction.
+
+        Бот (авто-мут, автофильтр, AI) — без ручных ACL.
+        Человек — только куратор/админ своей ветки, не участникам.
+        """
         guild = user.guild
-        # Лимиты стаффа: этот путь используют ⚡-варн реакцией и AI-модератор —
-        # без гейта они обходили бы дневной лимит варнов.
-        try:
-            from services.staff_limits import check_action
-            _ok, _deny = check_action(guild, moderator, 'warn')
-            if not _ok:
-                _log.info("add_warning(): лимит варнов — пропуск (%s)", _deny)
-                return (0, len(self._get_warns(guild.id, user.id)), None)
-        except Exception as _ex:
-            _log.debug("add_warning() staff_limit: %s", _ex)
+        _is_bot = bool(getattr(moderator, 'bot', False))
+        if not _is_bot:
+            try:
+                from services.warn_acl import manual_warn_check
+                _wok, _wdeny = manual_warn_check(guild, moderator, user)
+                if not _wok:
+                    _log.info("add_warning(): отказ ACL — %s", _wdeny)
+                    return (0, len(self._get_warns(guild.id, user.id)), None)
+            except Exception as _ex:
+                _log.debug("add_warning() warn_acl: %s", _ex)
+            try:
+                from services.staff_limits import check_action
+                _ok, _deny = check_action(guild, moderator, 'warn')
+                if not _ok:
+                    _log.info("add_warning(): лимит варнов — пропуск (%s)", _deny)
+                    return (0, len(self._get_warns(guild.id, user.id)), None)
+            except Exception as _ex:
+                _log.debug("add_warning() staff_limit: %s", _ex)
         warns = self._get_warns(guild.id, user.id)
         warn_id = len(warns) + 1
         warns.append({
@@ -699,7 +713,7 @@ class warnings(commands.Cog):
         # Роли уровня варна (путь панели/AI-модератора — тот же переезд)
         await self._sync_warn_level_roles(user.guild, user, total)
 
-        # Варн → сброс прогрессии мута (снова с 1 часа)
+        # Варн → сброс прогрессии мута (снова с 2 часов)
         try:
             from services.mute_progression import reset_on_warn
             reset_on_warn(guild.id, user.id)

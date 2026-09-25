@@ -147,8 +147,8 @@ check(acts != ['mute', 'unmute', 'clear', 'warn']
 
 h_acts = [a[0] for a in actions_for_member(guild, helper_only)]
 check('ban' not in h_acts, f'хелпер без ban: {h_acts}')
-check('mute' in h_acts and 'clear' in h_acts and 'warn' in h_acts,
-      f'хелпер видит mute/clear/warn: {h_acts}')
+check('mute' in h_acts and 'clear' in h_acts and 'warn' not in h_acts,
+      f'хелпер видит mute/clear, без warn: {h_acts}')
 
 print('== 5. Заголовок /modpanel · Куратор ==')
 view = ModPanelView(None, cur_h, actions_for_member(guild, cur_h))
@@ -216,8 +216,8 @@ check(set(acts_ad) <= {'warn', 'mute', 'unmute', 'clear'},
       f'Discord admin+helper: только хелпер-меню, got={acts_ad}')
 check('ban' not in acts_ad and 'unban' not in acts_ad and 'unwarn' not in acts_ad,
       f'Discord admin+helper НЕ видит ban/unban/unwarn: {acts_ad}')
-check('mute' in acts_ad and 'warn' in acts_ad and 'clear' in acts_ad,
-      f'Discord admin+helper: warn/mute/clear живы: {acts_ad}')
+check('mute' in acts_ad and 'clear' in acts_ad and 'warn' not in acts_ad,
+      f'Discord admin+helper: mute/clear живы, warn нет: {acts_ad}')
 from cogs.moderation import mute_kinds_for  # noqa: E402
 kinds_ad = [k[0] for k in mute_kinds_for(GID, admin_discord)]
 check(kinds_ad == ['mute_chat'],

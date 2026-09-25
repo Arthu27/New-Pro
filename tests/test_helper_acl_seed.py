@@ -90,34 +90,33 @@ check(set(rep.get('actions_removed') or ()) >= {
 acl = pacl.load_action_acl(GID)
 check(HELPER in [str(r) for r in acl.get('mute', [])], 'хелпер в mute')
 check(HELPER in [str(r) for r in acl.get('purge', [])], 'хелпер в purge')
-check(HELPER in [str(r) for r in acl.get('warn', [])], 'хелпер в warn')
+check(HELPER not in [str(r) for r in acl.get('warn', [])], 'хелпер НЕ в warn')
 check(HELPER not in [str(r) for r in acl.get('ban', [])], 'хелпер НЕ в ban')
 check(HELPER not in [str(r) for r in acl.get('vmute', [])], 'хелпер НЕ в vmute')
 check(HELPER not in [str(r) for r in acl.get('timeout', [])],
       'хелпер НЕ в timeout')
 check(MOD in [str(r) for r in acl.get('ban', [])], 'модер остался в ban')
 
-print('== 2. Лимиты хелпера → меню mute/clear/warn ==')
+print('== 2. Лимиты хелпера → меню mute/clear (без warn) ==')
 check(rep.get('limits') is True, 'limits seeded')
 scoped = SL.role_scoped_actions(GID, [int(HELPER)])
-check(scoped == {'mute', 'unmute', 'clear', 'warn'}, f'scoped={scoped}')
+check(scoped == {'mute', 'unmute', 'clear'}, f'scoped={scoped}')
 lm, _ = SL.effective_limits(GID, [int(HELPER)])
-check(lm.get('mute') == 3 and lm.get('unmute') == 3 and lm.get('clear') == 10
-      and lm.get('warn') == 1,
-      f'хелпер limits warn/mute/unmute/clear')
+check(lm.get('mute') == 3 and lm.get('unmute') == 3 and lm.get('clear') == 10,
+      f'хелпер limits mute/unmute/clear')
 
 print('== 3. /modpanel меню ==')
 g = _Guild(GID)
 h = _Member(10, [GID, HELPER])
 m = _Member(11, [GID, MOD])
 h_acts = [a[0] for a in actions_for_member(g, h)]
-check(set(h_acts) <= {'mute', 'unmute', 'clear', 'warn'},
+check(set(h_acts) <= {'mute', 'unmute', 'clear'},
       f'хелпер меню: {h_acts}')
 check('ban' not in h_acts, f'хелпер без ban: {h_acts}')
-check('warn' in h_acts and 'mute' in h_acts,
-      f'хелпер видит warn/mute: {h_acts}')
+check('warn' not in h_acts and 'mute' in h_acts,
+      f'хелпер без warn, с mute: {h_acts}')
 check(pacl.check_action(GID, h, 'mute') is True, 'хелпер check mute OK')
-check(pacl.check_action(GID, h, 'warn') is True, 'хелпер check warn OK')
+check(pacl.check_action(GID, h, 'warn') is False, 'хелпер check warn DENY')
 check(pacl.check_action(GID, h, 'ban') is False, 'хелпер check ban DENY')
 check(pacl.check_action(GID, m, 'ban') is True, 'модер check ban OK')
 check(pacl.check_action(GID, m, 'vmute') is True, 'модер check vmute OK')
@@ -125,7 +124,10 @@ check(pacl.check_action(GID, m, 'warn') is True, 'модер check warn OK')
 
 print('== 4. role_seed исключает хелпера из полного ACL ==')
 # чистый прогон с хелпером в role_map
-os.remove('data/.helper_acl.v4') if os.path.exists('data/.helper_acl.v4') else None
+for ver in (4, 5):
+    p = f'data/.helper_acl.v{ver}'
+    if os.path.exists(p):
+        os.remove(p)
 for p in ('data/.role_seed.v6', 'data/.role_seed.v5'):
     if os.path.exists(p):
         os.remove(p)
@@ -149,16 +151,16 @@ rep3 = apply_helper_acl_seed(force=True, guild_id=GID)
 acl3 = pacl.load_action_acl(GID)
 check(HELPER in [str(r) for r in (acl3.get('mute') or [])],
       'после helper_seed: хелпер в mute')
-check(HELPER in [str(r) for r in (acl3.get('warn') or [])],
-      'после helper_seed: хелпер в warn')
+check(HELPER not in [str(r) for r in (acl3.get('warn') or [])],
+      'после helper_seed: хелпер НЕ в warn')
 check(HELPER not in [str(r) for r in (acl3.get('ban') or [])],
       'после helper_seed: хелпер всё ещё не в ban')
 
-print('== 5. ensure: чинит ban без force + marker ==')
+print('== 5. ensure: чинит ban/warn без force + marker ==')
 pacl.save_action_acl(GID, {
-    'ban': [HELPER, MOD], 'mute': [MOD], 'purge': [MOD], 'warn': [MOD],
+    'ban': [HELPER, MOD], 'mute': [MOD], 'purge': [MOD], 'warn': [HELPER, MOD],
 })
-with open('data/.helper_acl.v4', 'w') as fh:
+with open('data/.helper_acl.v5', 'w') as fh:
     fh.write('ok')
 rep4 = apply_helper_acl_seed(force=False, guild_id=GID)
 check(rep4.get('applied') is True, f'ensure applied ({rep4.get("reason")})')
@@ -167,8 +169,8 @@ check(HELPER not in [str(r) for r in (acl4.get('ban') or [])],
       'ensure: хелпер снят с ban')
 check(HELPER in [str(r) for r in (acl4.get('mute') or [])],
       'ensure: хелпер в mute')
-check(HELPER in [str(r) for r in (acl4.get('warn') or [])],
-      'ensure: хелпер в warn')
+check(HELPER not in [str(r) for r in (acl4.get('warn') or [])],
+      'ensure: хелпер снят с warn')
 rep5 = ensure_helper_acl(guild_id=GID)
 check(rep5.get('reason') == 'acl ok', f'повтор ensure idle ({rep5.get("reason")})')
 
@@ -188,10 +190,10 @@ check(rm6.get(HELPER) == 'helper', f'disk helper={rm6.get(HELPER)}')
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 print('\n--- Хелпер ---')
 print(f'  права:  {", ".join(HELPER_ACTIONS)}')
-print(f'  лимиты: warn {HELPER_LIMITS["warn"]}, mute/unmute {HELPER_LIMITS["mute"]}, clear {HELPER_LIMITS["clear"]}')
+print(f'  лимиты: mute/unmute {HELPER_LIMITS["mute"]}, clear {HELPER_LIMITS["clear"]}')
 print('--- Модератор ---')
-print('  права:  полный ACL')
+print('  права:  полный ACL (warn в меню — нет, только curator+)')
 mod_l = SL.TIER_DEFAULT_LIMITS['mod']
 print(f'  лимиты: mute/unmute {mod_l["mute"]}, ban {mod_l["ban"]}, '
-      f'warn {mod_l["warn"]}, clear {mod_l["clear"]}')
+      f'clear {mod_l["clear"]}')
 sys.exit(1 if FAIL else 0)
