@@ -54,6 +54,29 @@ journalctl -u hakumo-event-voice -f
 Без `EVENT_VOICE_STANDALONE=1` Event стартует из `main.py` (второй клиент).
 Не запускай оба способа сразу — два сеанса выбьют друг друга из войса.
 
+## Love Room бот (отдельная служба)
+
+Временные войсы на двоих + панель V2. Токен только в `.env`
+(`LOVE_ROOM_BOT_TOKEN`). Пока category/panel ID = 0 — сервис может
+стартовать и ждать конфиг (бот idle, без создания каналов).
+
+```bash
+# в /opt/hakumo/.env:
+#   LOVE_ROOM_BOT_TOKEN=...
+#   LOVE_ROOM_STANDALONE=1
+#   LOVE_ROOM_CATEGORY_ID=0
+#   LOVE_ROOM_PANEL_CHANNEL_ID=0
+#   VEDUSHIY_ROLE_ID=0
+sudo cp deploy/hakumo-love-room.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now hakumo-love-room
+journalctl -u hakumo-love-room -f
+```
+
+После инвайта бота: создай категорию + текстовый канал панели, роль
+«Ведущий» (Move/Mute/Deafen Members), пропиши ID в `.env` /
+`config/love_room.json`, перезапусти службу, выполни `/love-room-panel`.
+
 ## Как понять, от чего падало
 
 ```bash

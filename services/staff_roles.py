@@ -177,6 +177,8 @@ POSITION_ALIASES = {
     "чат-контроль": "moderator",
     "чат контроль": "moderator",
     "чат контрольный": "moderator",
+    # «Ведущий» / broadcaster — не helper/mod; love-room host (see vedushiy_role_seed).
+    # Не мапим в moderator, чтобы не выдать punish ACL через staff-apply.
 }
 
 

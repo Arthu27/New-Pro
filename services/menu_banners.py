@@ -66,6 +66,13 @@ PRESETS = {
         'tint': (8, 8, 10),
         'bgs': ('help_bg.png', 'hakumo_log_bg.png', 'staff.jpg'),
     },
+    'loveroom': {
+        'headline': 'LOVE ROOM',
+        'pill': 'войти в love room',
+        'accent': (255, 210, 230),
+        'tint': (10, 6, 10),
+        'bgs': ('help_bg.png', 'hakumo_log_bg.png', 'staff.jpg'),
+    },
 }
 
 # Только *_custom* — ручная подмена без перерисовки кода
@@ -78,6 +85,8 @@ _CUSTOM_NAMES = {
               'staff_banner_custom.jpg'),
     'events': ('events_banner_custom.png', 'events_banner_custom.jpg',
                'events_banner.png'),
+    'loveroom': ('loveroom_banner_custom.png', 'loveroom_banner_custom.jpg',
+                 'love_room_banner.png', 'events_banner.png'),
 }
 
 # Стикеры действий → серебристый акцент (чёрная тема)
