@@ -1,0 +1,14 @@
+{
+  "guild_id": "793336829280780331",
+  "category_id": "0",
+  "panel_channel_id": "0",
+  "host_role_ids": [],
+  "vedushiy_role_id": "0",
+  "source_stage_channel_id": "0",
+  "user_limit": 2,
+  "pair_cooldown_sec": 10,
+  "empty_delete_debounce_sec": 1.5,
+  "name_prefix": "love room",
+  "heart_emojis": ["💕", "💖", "💗", "💓", "💞", "💝"],
+  "note": "Fill IDs after invite; token only in .env as LOVE_ROOM_BOT_TOKEN. Discord role «Ведущий» needs Move Members, Mute Members, Deafen Members (Stage: raise/lower via suppress)."
+}

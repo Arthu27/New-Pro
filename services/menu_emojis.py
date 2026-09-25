@@ -26,6 +26,12 @@ STICKER_KEYS = (
     'staff', 'user',  # /report: «На кого жалоба?» (Стафф/Участник)
 )
 
+# Love Room bot only — не заливать на основной бот (квота application emoji)
+LOVE_STICKER_KEYS = (
+    'love_enter', 'love_pair', 'love_room',
+    'love_raise', 'love_lower', 'love_close', 'love_heart',
+)
+
 # действие /modpanel → ключ стикера
 ACTION_STICKER = {
     'warn': 'warn',
@@ -178,3 +184,66 @@ def schedule_ensure_menu_emojis(bot) -> None:
             _log.debug('menu_emojis background: %s', ex)
 
     _sync_task = loop.create_task(_run())
+
+
+_LOVE_UNICODE = {
+    'love_enter': '🚪',
+    'love_pair': '💞',
+    'love_room': '🏠',
+    'love_raise': '⬆️',
+    'love_lower': '⬇️',
+    'love_close': '✖️',
+    'love_heart': '🤍',
+    'enter': '🚪',
+    'pair': '💞',
+    'room': '🏠',
+    'raise': '⬆️',
+    'lower': '⬇️',
+    'close': '✖️',
+    'heart': '🤍',
+}
+
+
+def emoji_for_love(kind: str):
+    """PartialEmoji для Love Room кнопок или unicode-фолбек."""
+    key = kind if kind.startswith('love_') else f'love_{kind}'
+    # accept bare aliases
+    if kind in LOVE_STICKER_KEYS:
+        key = kind
+    elif f'love_{kind}' in LOVE_STICKER_KEYS:
+        key = f'love_{kind}'
+    em = _cache.get(key)
+    if em is not None:
+        return em
+    return _LOVE_UNICODE.get(kind) or _LOVE_UNICODE.get(key) or '🤍'
+
+
+async def ensure_love_room_emojis(bot) -> Dict[str, Any]:
+    """Залить love_* стикеры только на Love Room application."""
+    try:
+        existing = {e.name: e for e in await bot.fetch_application_emojis()}
+    except Exception as ex:
+        _log.warning('love_emojis: fetch_application_emojis: %s', ex)
+        existing = {}
+
+    for key in LOVE_STICKER_KEYS:
+        name = _emoji_name(key)
+        if name in existing:
+            _cache[key] = existing[name]
+            continue
+        path = sticker_path(key)
+        if not path:
+            _log.warning('love_emojis: нет файла %s', key)
+            continue
+        try:
+            with open(path, 'rb') as f:
+                image = f.read()
+            em = await bot.create_application_emoji(name=name, image=image)
+            _cache[key] = em
+            existing[name] = em
+            _log.info('love_emojis: создан %s id=%s', name, em.id)
+        except Exception as ex:
+            _log.warning('love_emojis: create %s: %s', name, ex)
+            if name in existing:
+                _cache[key] = existing[name]
+    return {k: _cache[k] for k in LOVE_STICKER_KEYS if k in _cache}

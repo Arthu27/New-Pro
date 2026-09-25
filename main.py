@@ -1659,6 +1659,24 @@ async def main():
         else:
             print("[EVENT-БОТ] EVENT_VOICE_STANDALONE=1 — ждём отдельный сервис")
 
+        # Love Room бот (второй/третий клиент): панель + temp VC.
+        # На VDS — systemd hakumo-love-room + LOVE_ROOM_STANDALONE=1.
+        _lr_standalone = (os.environ.get('LOVE_ROOM_STANDALONE') or '').strip().lower() in (
+            '1', 'true', 'yes', 'on')
+        if not _lr_standalone:
+            try:
+                from services.love_room_bot import start_love_room_bot, love_bot_token
+                if love_bot_token():
+                    await start_love_room_bot()
+                    print("[LOVE-ROOM] Запущен (панель / temp VC)")
+                else:
+                    print("[LOVE-ROOM] LOVE_ROOM_BOT_TOKEN не задан — пропуск")
+            except Exception as _lrx:
+                print(f"[LOVE-ROOM] не стартовал: {_lrx}")
+                log.warning("love_room_bot start: %s", _lrx)
+        else:
+            print("[LOVE-ROOM] LOVE_ROOM_STANDALONE=1 — ждём отдельный сервис")
+
         # Anti-crash: автоперезапуск при сетевых сбоях, но с нарастающей паузой,
         # чтобы не долбить Discord во время сбоя (5 -> 10 -> 20 ... макс. 60 сек).
         _delay = 5
