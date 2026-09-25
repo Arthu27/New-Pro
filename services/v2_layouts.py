@@ -167,13 +167,12 @@ def rules_embed(title: str, items: list, footer: str = ''):
 
 def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
     """Подпись под баннером в шапке панели (без «порядок любой»)."""
-    bits = []
+    if selected_uid and pending_label:
+        return f'участник <@{selected_uid}> · «{pending_label}»'
     if selected_uid:
-        bits.append(f'участник <@{selected_uid}>')
+        return f'участник <@{selected_uid}>'
     if pending_label:
-        bits.append(f'«{pending_label}»')
-    if bits:
-        return ' · '.join(bits)
+        return f'Выберите участника · «{pending_label}»'
     return 'Выберите участника и действие ниже.'
 
 
@@ -294,30 +293,38 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
     return items
 
 
+# Текст меню набора (V2 TextDisplay). Одна должность — сверху.
+STAFF_MENU_BODY = (
+    '**Можно выбрать только одну должность.**\n'
+    '-# Нельзя подавать сразу на несколько — одна заявка.\n\n'
+    '# Набор в команду сервера\n'
+    '> Мы ищем людей, **готовых внести свой вклад** и **помочь** нам '
+    '**сделать наше сообщество лучше.** Независимо от **вашего опыта,** '
+    '**у нас найдется место** для вас. **Отправляйте заявку,** чтобы '
+    '**стать частью** нашей **дружной команды и весело провести время вместе!**'
+)
+
+
 def build_staff_menu_items(*, banner_filename: str, body: str = None,
                            role_select=None, show_banner: bool = None):
-    """Наборы: шапка с баннером + select роли."""
+    """Наборы V2: правило + текст набора сверху + баннер + select."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    head = [
-        _ui.TextDisplay('# Наборы\n-# HAKUMO'),
-        _ui.Separator(spacing=SeparatorSpacing.large),
-    ]
+    head = []
+    notice = (body if body is not None else STAFF_MENU_BODY).strip()
+    if notice:
+        head.append(_ui.TextDisplay(notice))
     if show_banner and banner_filename:
         head.append(_gallery(banner_filename))
-    if body:
-        head.append(_ui.TextDisplay(body))
-    items.append(black_container(*head))
+    if head:
+        items.append(black_container(*head))
     if role_select is not None:
         row = _ui.ActionRow()
         row.add_item(role_select)
-        items.append(black_container(
-            _ui.TextDisplay('**Роль**\n-# на какую подать'),
-            row,
-        ))
+        items.append(black_container(row))
     return items
 
 
@@ -344,6 +351,73 @@ def build_events_menu_items(*, banner_filename: str, status: str,
             action_row,
         ))
     return items
+
+
+def build_event_panel_items(*, banner_filename: str, title: str, body: str,
+                            phase_line: str = '', voice_line: str = '',
+                            howto: str = '',
+                            player_row=None, staff_row=None, staff_row2=None,
+                            show_banner: bool = None, accent: int = None):
+    """Публичная панель /event-panel — V2 как модпанель: баннер + чёрные блоки."""
+    if not V2_AVAILABLE:
+        return None
+    if show_banner is None:
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    head_bits = [
+        _ui.TextDisplay(f'# {title}\n-# HAKUMO · EVENTS'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+    ]
+    if show_banner and banner_filename:
+        head_bits.append(_gallery(banner_filename))
+    status_parts = []
+    if phase_line:
+        status_parts.append(phase_line)
+    if voice_line:
+        status_parts.append(voice_line)
+    if body:
+        status_parts.append(body)
+    if howto:
+        status_parts.append(howto)
+    if status_parts:
+        head_bits.append(_ui.TextDisplay('\n'.join(status_parts)[:3900]))
+    items.append(black_container(*head_bits, accent=accent))
+
+    if player_row is not None:
+        items.append(black_container(
+            _ui.TextDisplay('**Игроки**\n-# записаться в список'),
+            player_row,
+            accent=accent,
+        ))
+    if staff_row is not None:
+        items.append(black_container(
+            _ui.TextDisplay('**Ведущие**\n-# анонс · старт · запись'),
+            staff_row,
+            accent=accent,
+        ))
+    if staff_row2 is not None:
+        items.append(black_container(
+            _ui.TextDisplay('**Ещё**\n-# список · финиш'),
+            staff_row2,
+            accent=accent,
+        ))
+    return items
+
+
+def build_event_start_items(*, title: str, body: str, footer: str = '',
+                            accent: int = 0xF0A202):
+    """Карточка «▶ Старт» — V2-анонс начала игры."""
+    if not V2_AVAILABLE:
+        return None
+    children = [
+        _ui.TextDisplay(f'# ▶ Старт · {title}'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
+        _ui.TextDisplay(body[:3900]),
+    ]
+    if footer:
+        children.append(_ui.Separator())
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    return [black_container(*children, accent=accent)]
 
 
 def _full_bleed_gallery(banner_filename: str):
@@ -396,8 +470,8 @@ def build_log_card_view(*, title: str, rows=None, footer: str = '',
 
 def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
                             image_filename: str = None, buttons=None,
-                            accent: int = None):
-    """Карточка апелляции V2: текст/фото + ActionRow с кнопками."""
+                            select=None, accent: int = None):
+    """Карточка апелляции V2: текст/фото + select (без кнопок) или legacy buttons."""
     if not V2_AVAILABLE:
         return None
     children = []
@@ -409,7 +483,11 @@ def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
         children.append(_full_bleed_gallery(image_filename))
     if footer:
         children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
-    if buttons:
+    if select is not None:
+        row = _ui.ActionRow()
+        row.add_item(select)
+        children.append(row)
+    elif buttons:
         row = _ui.ActionRow()
         for btn in buttons:
             row.add_item(btn)
@@ -454,6 +532,249 @@ def notice_layout_view(*, title: str, body: str = '', footer: str = '',
     for it in items:
         view.add_item(it)
     return view
+
+
+# Акценты ответов (как у success/error embed)
+ACCENT_OK = 0x2ECC71
+ACCENT_ERR = 0xE74C3C
+ACCENT_INFO = 0x3498DB
+ACCENT_WARN = 0xF39C12
+
+
+def success_notice_view(title: str, body: str = '', *, footer: str = '',
+                        brand: str = 'HAKUMO'):
+    return notice_layout_view(
+        title=f'✅ {title}' if title and not str(title).startswith('✅') else (title or 'Готово'),
+        body=body, footer=footer, accent=ACCENT_OK, brand=brand, timeout=None)
+
+
+def error_notice_view(body: str, title: str = 'Ошибка', *, footer: str = '',
+                      brand: str = 'HAKUMO'):
+    t = title or 'Ошибка'
+    if not str(t).startswith('❌'):
+        t = f'❌ {t}'
+    return notice_layout_view(
+        title=t, body=body, footer=footer, accent=ACCENT_ERR, brand=brand,
+        timeout=None)
+
+
+def info_notice_view(title: str, body: str = '', *, footer: str = '',
+                     brand: str = 'HAKUMO'):
+    t = title or 'Инфо'
+    if not str(t).startswith('ℹ️'):
+        t = f'ℹ️ {t}'
+    return notice_layout_view(
+        title=t, body=body, footer=footer, accent=ACCENT_INFO, brand=brand,
+        timeout=None)
+
+
+def notice_from_embed(embed):
+    """Классический success/error/info Embed → V2 LayoutView (или None)."""
+    if embed is None or not V2_AVAILABLE:
+        return None
+    import re
+    desc = str(getattr(embed, 'description', None) or '').strip()
+    title = str(getattr(embed, 'title', None) or '').strip()
+    footer = ''
+    try:
+        ft = getattr(embed, 'footer', None)
+        footer = str(getattr(ft, 'text', None) or '') if ft else ''
+    except Exception:
+        footer = ''
+    # поля Embed → строки в body
+    field_lines = []
+    try:
+        for f in list(getattr(embed, 'fields', None) or []):
+            name = str(getattr(f, 'name', None) or '').strip()
+            value = str(getattr(f, 'value', None) or '').strip()
+            if name and value:
+                field_lines.append(f'**{name}:** {value}')
+            elif value:
+                field_lines.append(value)
+    except Exception:
+        field_lines = []
+    colour = getattr(embed, 'colour', None) or getattr(embed, 'color', None)
+    try:
+        accent = int(getattr(colour, 'value', None) or _BLACK)
+    except Exception:
+        accent = _BLACK
+    body = desc
+    # ## ✅ Title\nbody  /  ## ❌ Title\nbody
+    m = re.match(r'^##\s*([✅❌ℹ️⚠️])?\s*(.+?)(?:\n+([\s\S]*))?$', desc)
+    if m:
+        mark, ttl, rest = m.group(1), (m.group(2) or '').strip(), (m.group(3) or '').strip()
+        # убрать хвост-разделитель ✦
+        if rest:
+            rest = re.sub(r'\n*✦[^\n]*$', '', rest).strip()
+        title = f'{mark} {ttl}'.strip() if mark else ttl
+        body = rest
+    elif title and desc:
+        body = desc
+    elif desc and not title:
+        title = 'Сообщение'
+        body = desc
+    if field_lines:
+        extra = '\n'.join(field_lines)
+        body = f'{body}\n\n{extra}'.strip() if body else extra
+    if not title and not body:
+        return None
+    # убрать DIVIDER из body
+    if body:
+        body = re.sub(r'\n*✦[^\n]*$', '', body).strip()
+    return notice_layout_view(
+        title=title or 'Сообщение', body=body or '', footer=footer,
+        accent=accent, brand='HAKUMO', timeout=None)
+
+
+def layout_plain_text(view) -> str:
+    """Собрать видимый текст из LayoutView (для PanelInteraction / логов)."""
+    if view is None:
+        return ''
+    parts = []
+
+    def _walk(node):
+        content = getattr(node, 'content', None)
+        if isinstance(content, str) and content.strip():
+            parts.append(content.strip())
+        for ch in list(getattr(node, 'children', None) or []):
+            _walk(ch)
+        # Container / ActionRow иногда держат items
+        for ch in list(getattr(node, 'items', None) or []):
+            _walk(ch)
+
+    try:
+        for child in list(getattr(view, 'children', None) or []):
+            _walk(child)
+    except Exception:
+        pass
+    return '\n'.join(parts)
+
+
+async def _send_interaction(interaction, kw):
+    """response.send_message или followup — без смешения embed+LayoutView."""
+    try:
+        resp = getattr(interaction, 'response', None)
+        done = bool(resp and callable(getattr(resp, 'is_done', None)) and resp.is_done())
+        if done:
+            await interaction.followup.send(**kw)
+        else:
+            await interaction.response.send_message(**kw)
+        return True
+    except Exception as ex:
+        _log.info('respond_v2: %s — followup', ex)
+        try:
+            await interaction.followup.send(**kw)
+            return True
+        except Exception as ex2:
+            _log.warning('respond_v2 followup: %s', ex2)
+            return False
+
+
+async def respond_v2(interaction, *, kind: str = 'info', title: str = '',
+                     body: str = '', footer: str = '', ephemeral: bool = True,
+                     brand: str = 'HAKUMO', fallback_embed=None):
+    """Единый ответ на interaction: V2 notice, иначе классический embed.
+
+    kind: 'ok' | 'err' | 'info' | 'warn'
+    Никогда не шлёт embed= вместе с LayoutView.
+    """
+    kind = (kind or 'info').lower()
+    if kind in ('ok', 'success', 'done'):
+        view = success_notice_view(title or 'Готово', body, footer=footer, brand=brand)
+        accent = ACCENT_OK
+        mark = '✅'
+    elif kind in ('err', 'error', 'fail'):
+        view = error_notice_view(body, title=title or 'Ошибка', footer=footer, brand=brand)
+        accent = ACCENT_ERR
+        mark = '❌'
+    elif kind in ('warn', 'warning'):
+        view = notice_layout_view(
+            title=f'⚠️ {title}' if title and '⚠️' not in title else (title or 'Внимание'),
+            body=body, footer=footer, accent=ACCENT_WARN, brand=brand)
+        accent = ACCENT_WARN
+        mark = '⚠️'
+    else:
+        view = info_notice_view(title or 'Инфо', body, footer=footer, brand=brand)
+        accent = ACCENT_INFO
+        mark = 'ℹ️'
+
+    kw = {'ephemeral': bool(ephemeral)}
+    if view is not None and V2_AVAILABLE:
+        kw['view'] = view
+    else:
+        if fallback_embed is not None:
+            kw['embed'] = fallback_embed
+        else:
+            # локальный фолбек без циклического импорта embed_utils
+            e = discord.Embed(color=accent)
+            e.description = f'## {mark} {title or kind}\n{body or ""}'
+            if footer:
+                e.set_footer(text=footer[:200])
+            kw['embed'] = e
+
+    return await _send_interaction(interaction, kw)
+
+
+async def reply_embed_v2(interaction, embed, *, ephemeral: bool = True):
+    """Классический Embed → V2 LayoutView reply (без смеси embed+view)."""
+    kw = {'ephemeral': bool(ephemeral)}
+    v2 = None
+    if V2_AVAILABLE and embed is not None:
+        try:
+            v2 = notice_from_embed(embed)
+        except Exception as ex:
+            _log.debug('reply_embed_v2 convert: %s', ex)
+            v2 = None
+    if v2 is not None:
+        kw['view'] = v2
+    elif embed is not None:
+        kw['embed'] = embed
+    else:
+        return False
+    ok = await _send_interaction(interaction, kw)
+    if not ok and kw.get('view') is not None and embed is not None:
+        return await _send_interaction(interaction, {
+            'ephemeral': bool(ephemeral), 'embed': embed})
+    return ok
+
+
+async def reply_text_v2(interaction, text, *, kind: str = 'info',
+                        title: str = '', ephemeral: bool = True):
+    """Короткий текстовый ответ как V2 notice."""
+    body = str(text or '').strip()
+    if not title:
+        if kind in ('err', 'error', 'fail'):
+            title = 'Ошибка'
+        elif kind in ('ok', 'success', 'done'):
+            title = 'Готово'
+        elif kind in ('warn', 'warning'):
+            title = 'Внимание'
+        else:
+            title = 'Сообщение'
+    return await respond_v2(
+        interaction, kind=kind, title=title, body=body, ephemeral=ephemeral)
+
+
+async def send_dm_v2(user, embed=None, *, view=None, content=None):
+    """DM: V2 notice из embed, либо embed+view (кнопки апелляции и т.п.)."""
+    send_kw = {}
+    if content is not None:
+        send_kw['content'] = content
+    if view is not None:
+        # обычный View с кнопками — только вместе с embed (не LayoutView)
+        if embed is not None:
+            send_kw['embed'] = embed
+        send_kw['view'] = view
+    elif embed is not None:
+        v2 = notice_from_embed(embed) if V2_AVAILABLE else None
+        if v2 is not None:
+            send_kw['view'] = v2
+        else:
+            send_kw['embed'] = embed
+    if not send_kw:
+        return False
+    await user.send(**send_kw)
+    return True
 
 
 async def send_v2_or_embed(target, *, view, embed, fallback_view=None,
