@@ -1236,6 +1236,30 @@ def favicon ():
     return send_from_directory (os .path .join (app .root_path ,'static'),
     'favicon.ico',mimetype ='image/vnd.microsoft.icon')
 
+# Публичная галерея макетов профилей (создатель сервера).
+# Flask не отдаёт index для папки /static/profiles/ → был Not Found.
+@app .route ('/profiles')
+@app .route ('/profiles/')
+@app .route ('/static/profiles')
+@app .route ('/static/profiles/')
+def profiles_gallery ():
+    return send_from_directory (
+        os .path .join (app .root_path ,'static','profiles'),
+        'index.html',mimetype ='text/html')
+
+@app .route ('/profiles/<path:filename>')
+def profiles_file (filename ):
+    """Короткие ссылки: /profiles/couple-card.png → тот же PNG."""
+    folder =os .path .join (app .root_path ,'static','profiles')
+    safe =os .path .normpath (filename ).lstrip ('/\\')
+    if '..' in safe .split (os .sep )or safe .startswith (('/','\\')):
+        return 'Not Found',404
+    full =os .path .join (folder ,safe )
+    if not os .path .isfile (full ):
+        return 'Not Found',404
+    return send_from_directory (folder ,safe )
+
+
 # security.txt (RFC 9116): internet.nl требует файл в /.well-known/security.txt
 # с полями Contact и Expires. Без него исследователю, нашедшему уязвимость,
 # некуда написать. Файл публичный — без @login_required.
