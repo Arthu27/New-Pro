@@ -8,12 +8,12 @@
   • меню «Подать апелляцию» в канале (публикуется из панели);
   • кнопка «Подать апелляция» в «своих наказаниях» (/my-violations).
 
-Модераторы получают карточку с кнопками «Принять» / «Отклонить».
-Принят — пользователь разбанен и получает добрую весть в ЛС.
-Отклонён — получает отказ (с опциональным комментарием модератора).
+Модераторы получают карточку с select «Принять / Отклонить / Взять в работу»
+(стикеры, без кнопок — владелец 2026-09-24). Принят — пользователь
+разбанен и получает добрую весть в ЛС. Отклонён — отказ в ЛС.
 
-Хранилище — SQLite (GuildData 'appeals'). Кнопки живут в persistent view
-и переживают рестарт бота. Метки — aware UTC.
+Хранилище — SQLite (GuildData 'appeals'). Select живёт в persistent view
+и переживает рестарт бота. Метки — aware UTC.
 """
 import io
 import re
@@ -352,18 +352,47 @@ def fmt_card_text(item):
     return body
 
 
-# ─── view с кнопками ────────────────────────────────────────────────────────
+# ─── view: select со стикерами (кнопки не нужны) ───────────────────────────
+
+def _appeal_staff_ok(interaction) -> bool:
+    """Кто видит канал апелляций — может решать карточку.
+
+    Discord уже режет видимость канала; ACL «Бан» здесь не ставим —
+    иначе админы/кураторы без явного ban в панели получали тишину
+    (владелец 2026-09-24: «не отвечает админа · всем кто видит канал»).
+    """
+    try:
+        ch = getattr(interaction, 'channel', None)
+        user = getattr(interaction, 'user', None)
+        if ch is None or user is None:
+            return True
+        perms = ch.permissions_for(user)
+        return bool(getattr(perms, 'view_channel', True))
+    except Exception:
+        return True
+
+
+def _appeal_select_emoji(kind: str):
+    try:
+        from services.menu_emojis import emoji_for_appeal, schedule_ensure_menu_emojis
+        # фон: при первом клике стикеры уже могут быть в кэше
+        return emoji_for_appeal(kind)
+    except Exception:
+        return {'accept': '✅', 'reject': '❌', 'claim': '✋'}.get(kind, '❔')
+
 
 class AppealView(discord.ui.LayoutView):
-    """Persistent-кнопки под апелляцией — Components V2 LayoutView.
+    """Persistent-select под апелляцией — Components V2 LayoutView.
 
-    custom_id уникален для каждой апелляции ('appeal:accept:7'), поэтому
-    view можно перерегистрировать после рестарта бота (on_ready ниже) —
-    кнопки не умирают, пока апелляция ждёт решения.
+    custom_id уникален для каждой апелляции ('appeal:menu:7'), поэтому
+    view можно перерегистрировать после рестарта бота (on_ready ниже).
+    Старые кнопки appeal:accept/reject/claim переживают через
+    AppealLegacyButtonsView.
     """
 
     def __init__(self, cog, guild_id, appeal_id, *, title='', body='',
-                 footer='', image_filename=None, accent=None):
+                 footer='', image_filename=None, accent=None,
+                 banned_user_id=None):
         super().__init__(timeout=None)
         self.cog = cog
         self.guild_id = guild_id
@@ -373,7 +402,9 @@ class AppealView(discord.ui.LayoutView):
         self._card_footer = footer
         self._image_filename = image_filename
         self._accent = accent
+        self._banned_user_id = banned_user_id
         self._resolved = False
+        # Legacy button refs — только для старых карточек / тестов claim.
         self._accept_btn = discord.ui.Button(
             label='Принять', style=discord.ButtonStyle.success,
             custom_id=f'appeal:accept:{appeal_id}')
@@ -386,13 +417,52 @@ class AppealView(discord.ui.LayoutView):
             label='Взять в работу', style=discord.ButtonStyle.primary,
             emoji='✋', custom_id=f'appeal:claim:{appeal_id}')
         self._claim_btn_ref.callback = self._claim
+        self._action_select = None
         self._rebuild_card()
 
+    def _make_select(self):
+        """Select «Принять / Отклонить / Взять в работу» со стикерами."""
+        try:
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(getattr(self.cog, 'bot', None))
+        except Exception:
+            pass
+        claim_label = 'Взять в работу'
+        try:
+            state = self.cog._load(self.guild_id)
+            item = get_appeal(state, self.appeal_id) if state else None
+            claim = (item or {}).get('claimed_by') or None
+            if claim:
+                claim_label = f'В работе: {str(claim.get("name") or "")[:40]}'
+        except Exception:
+            pass
+        opts = [
+            discord.SelectOption(
+                label='Принять', value='accept',
+                description='Разбанить и закрыть апелляцию',
+                emoji=_appeal_select_emoji('accept')),
+            discord.SelectOption(
+                label='Отклонить', value='reject',
+                description='Отказать в апелляции',
+                emoji=_appeal_select_emoji('reject')),
+            discord.SelectOption(
+                label=claim_label[:100], value='claim',
+                description='Взять в работу / снять с себя',
+                emoji=_appeal_select_emoji('claim')),
+        ]
+        sel = discord.ui.Select(
+            placeholder='Действие с апелляцией',
+            options=opts,
+            custom_id=f'appeal:menu:{self.appeal_id}',
+            min_values=1, max_values=1)
+        sel.callback = self._on_select
+        self._action_select = sel
+        return sel
+
     def _rebuild_card(self):
-        """Собрать V2-карточку (с кнопками или без — после решения)."""
+        """Собрать V2-карточку (select со стикерами; после решения — без меню)."""
         self.clear_items()
-        buttons = None if self._resolved else [
-            self._accept_btn, self._reject_btn, self._claim_btn_ref]
+        select = None if self._resolved else self._make_select()
         from services.v2_layouts import V2_AVAILABLE, build_appeal_card_items, black_container
         if V2_AVAILABLE and (self._card_title or self._card_body or self._image_filename):
             items = build_appeal_card_items(
@@ -400,7 +470,7 @@ class AppealView(discord.ui.LayoutView):
                 body=self._card_body,
                 footer=self._card_footer,
                 image_filename=self._image_filename,
-                buttons=buttons,
+                select=select,
                 accent=self._accent,
             )
             if items:
@@ -409,18 +479,16 @@ class AppealView(discord.ui.LayoutView):
                 return
         if self._resolved:
             return
-        if V2_AVAILABLE:
+        if V2_AVAILABLE and select is not None:
             from discord import ui as _ui
             row = _ui.ActionRow()
-            for btn in buttons or ():
-                row.add_item(btn)
+            row.add_item(select)
             self.add_item(black_container(row))
-        else:
-            for btn in buttons or ():
-                self.add_item(btn)
+        elif select is not None:
+            self.add_item(select)
 
     def apply_resolved(self, *, title, body, footer, accent):
-        """Пересобрать карточку после решения — без кнопок."""
+        """Пересобрать карточку после решения — без меню."""
         self._resolved = True
         self._card_title = title
         self._card_body = body
@@ -432,19 +500,44 @@ class AppealView(discord.ui.LayoutView):
     def _claim_btn(self):
         return self._claim_btn_ref
 
+    async def _on_select(self, interaction):
+        """Маршрутизация select → claim / accept / reject."""
+        values = []
+        try:
+            data = getattr(interaction, 'data', None) or {}
+            values = list(data.get('values') or [])
+        except Exception:
+            values = []
+        if not values:
+            try:
+                values = list(getattr(self._action_select, 'values', None) or [])
+            except Exception:
+                values = []
+        action = (values[0] if values else '') or ''
+        if action == 'claim':
+            await self._claim(interaction)
+        elif action == 'accept':
+            await self._resolve(interaction, True)
+        elif action == 'reject':
+            await self._resolve(interaction, False)
+        else:
+            try:
+                await interaction.response.send_message(
+                    'Неизвестное действие — выберите пункт меню ещё раз.',
+                    ephemeral=True)
+            except Exception as _ex:
+                log.debug('appeals: unknown select: %s', _ex)
+
     async def _claim(self, interaction):
         """Взять апелляцию в работу / снять с себя (повторный клик)."""
-        # Права решает владелец (панель → Права команд → «Бан»), Discord-права
-        # не при чём — та же строгая модель, что у /modpanel.
-        try:
-            from services.permission_acl import check_action as _acl
-            if not _acl(self.guild_id, interaction.user, 'ban'):
+        # Кто видит канал — может взять в работу (без ACL «Бан»).
+        if not _appeal_staff_ok(interaction):
+            try:
                 await interaction.response.send_message(
-                    'Апелляции тебе не дал владелец (панель → Доступ → '
-                    'Права команд → Классические разрешения).', ephemeral=True)
-                return
-        except Exception as _ex:
-            log.debug('appeals claim acl: %s', _ex)
+                    'Нет доступа к каналу апелляций.', ephemeral=True)
+            except Exception:
+                pass
+            return
         gid = self.guild_id
         state = self.cog._load(gid)
         item = get_appeal(state, self.appeal_id)
@@ -542,19 +635,19 @@ class AppealView(discord.ui.LayoutView):
                 log.debug('appeals: снятие с работы, комната #%s: %s',
                           item['id'], _uncl_ex)
         # LayoutView нельзя смешивать с embed — Discord отклонит payload.
-        # Кнопки уже обновлены in-place; карточку пересобираем только если
-        # есть сохранённый контент (иначе после add_view сотрём V2-текст).
+        # Select обновляем через пересборку карточки.
         self._card_footer = (
             f'В работе: {item["claimed_by"]["name"]}'
             if item.get('claimed_by') else 'Очередь общая')
         if self._card_title or self._card_body or self._image_filename:
             self._rebuild_card()
+        banned_uid = int(item.get('user_id') or self._banned_user_id or 0)
         edit_kw = {
             'view': self,
-            'content': None,
             'embed': None,
             'embeds': [],
         }
+        # V2: без content
         try:
             await interaction.response.edit_message(**edit_kw)
         except Exception as _ed:
@@ -564,7 +657,10 @@ class AppealView(discord.ui.LayoutView):
                     await interaction.response.defer(ephemeral=True)
             except Exception as _df:
                 log.debug('appeals claim defer: %s', _df)
-        await interaction.followup.send(note, ephemeral=True)
+        try:
+            await interaction.followup.send(note, ephemeral=True)
+        except Exception as _fu:
+            log.debug('appeals claim followup: %s', _fu)
 
     def _make_cb(self, accept):
         async def _cb(interaction):
@@ -572,19 +668,16 @@ class AppealView(discord.ui.LayoutView):
         return _cb
 
     async def _resolve(self, interaction, accept):
-        # Права решает владелец (панель → Права команд → «Бан»), а не
-        # Discord-права: «своя система, Discord не при чём» (строгая модель
-        # permission_acl). Одно действие «Бан» открывает и решение апелляций.
+        # Кто видит канал апелляций — может решить карточку.
+        # ACL «Бан» больше не блокирует (владелец 2026-09-24).
         gid = self.guild_id
-        try:
-            from services.permission_acl import check_action
-            if not check_action(gid, interaction.user, 'ban'):
+        if not _appeal_staff_ok(interaction):
+            try:
                 await interaction.response.send_message(
-                    '🚫 Апелляции тебе не дал владелец (панель → Доступ → '
-                    'Права команд → Классические разрешения).', ephemeral=True)
-                return
-        except Exception as _ex:
-            log.debug('appeals: acl resolve: %s', _ex)
+                    'Нет доступа к каналу апелляций.', ephemeral=True)
+            except Exception:
+                pass
+            return
         if accept:
             # Лимиты стаффа: принятие апелляции = разбан, расходка «unban»
             # (та же, что у /unban и панели). Проверяем ДО решения и только
@@ -691,6 +784,42 @@ class AppealView(discord.ui.LayoutView):
         except Exception as _ex2:
             log.debug('appeals: followup решения: %s', _ex2)
 
+
+class AppealLegacyButtonsView(discord.ui.View):
+    """Старые кнопки на карточках до перехода на select.
+
+    custom_id совпадает (appeal:accept/reject/claim:N) — после рестарта
+    бот продолжает отвечать на клики по старым сообщениям.
+    """
+
+    def __init__(self, cog, guild_id, appeal_id, *, snap=None):
+        super().__init__(timeout=None)
+        snap = dict(snap or {})
+        self._inner = AppealView(
+            cog, guild_id, appeal_id,
+            title=str(snap.get('title') or ''),
+            body=str(snap.get('body') or ''),
+            footer=str(snap.get('footer') or ''),
+            image_filename=snap.get('image') or None,
+            accent=snap.get('accent'),
+            banned_user_id=snap.get('user_id'),
+        )
+        # LayoutView уже собрал select — нам нужны только кнопки-колбэки.
+        accept = discord.ui.Button(
+            label='Принять', style=discord.ButtonStyle.success,
+            custom_id=f'appeal:accept:{appeal_id}')
+        accept.callback = self._inner._make_cb(True)
+        reject = discord.ui.Button(
+            label='Отклонить', style=discord.ButtonStyle.danger,
+            custom_id=f'appeal:reject:{appeal_id}')
+        reject.callback = self._inner._make_cb(False)
+        claim = discord.ui.Button(
+            label='Взять в работу', style=discord.ButtonStyle.primary,
+            emoji='✋', custom_id=f'appeal:claim:{appeal_id}')
+        claim.callback = self._inner._claim
+        self.add_item(accept)
+        self.add_item(reject)
+        self.add_item(claim)
 
 
 def _rate_cell(*lines):
@@ -1137,8 +1266,17 @@ class Appeals(commands.Cog):
                             footer=str(snap.get('footer') or ''),
                             image_filename=snap.get('image') or None,
                             accent=snap.get('accent'),
+                            banned_user_id=item.get('user_id'),
                         ),
                         message_id=item['message_id'])
+                    # старые карточки с кнопками — тот же custom_id
+                    try:
+                        self.bot.add_view(AppealLegacyButtonsView(
+                            self, guild.id, item['id'], snap={
+                                **snap, 'user_id': item.get('user_id')}))
+                    except Exception as _leg:
+                        log.debug('appeals: legacy buttons #%s: %s',
+                                  item['id'], _leg)
                     restored += 1
         try:
             self.bot.add_view(AppealMenuView())
@@ -1164,6 +1302,29 @@ class Appeals(commands.Cog):
             log.info('appeals: восстановлено %s rate-view после рестарта', rated)
         if restored:
             log.info('appeals: восстановлено %s view после рестарта', restored)
+        # меню + починка карточек (кнопки→select, «решённые» визуально)
+        try:
+            import asyncio
+
+            async def _boot_fix():
+                await asyncio.sleep(3)
+                for g in list(self.bot.guilds):
+                    try:
+                        await self._ensure_appeal_menu(g)
+                    except Exception as _ex:
+                        log.warning('appeals: boot menu %s: %s', g.id, _ex)
+                    try:
+                        await self._repair_appeal_cards(g)
+                    except Exception as _ex:
+                        log.warning('appeals: boot repair %s: %s', g.id, _ex)
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = self.bot.loop
+            loop.create_task(_boot_fix())
+        except Exception as _ex:
+            log.warning('appeals: boot_fix task: %s', _ex)
         # цикл напоминаний о висящих апелляциях — один раз (on_ready бывает повторно)
         if not self._stale_started:
             self._stale_started = True
@@ -1220,8 +1381,9 @@ class Appeals(commands.Cog):
             return None
         try:
             return await target_channel.send(
-                f'<@&{rid}> — новая апелляция **#{item["id"]}** ожидает решения.',
-                allowed_mentions=discord.AllowedMentions(roles=True))
+                f'<@&{rid}> — новая апелляция **#{item.get("id")}** от '
+                f'<@{item.get("user_id")}> ожидает решения.',
+                allowed_mentions=discord.AllowedMentions(roles=True, users=True))
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: пинг роли #%s: %s', item.get('id'), _ex)
             return None
@@ -1421,8 +1583,12 @@ class Appeals(commands.Cog):
                 if (old.get('message_id')
                         and int(old.get('channel_id') or 0) == channel.id
                         and not int(old.get('webhook_id') or 0)):
-                    msg = await channel.edit_message(
-                        int(old['message_id']), embed=embed, view=AppealMenuView())
+                    try:
+                        prev = await channel.fetch_message(int(old['message_id']))
+                        msg = await prev.edit(embed=embed, view=AppealMenuView())
+                    except Exception as _ed:
+                        log.debug('appeals: edit menu msg: %s', _ed)
+                        msg = None
                 if msg is None:
                     msg = await channel.send(embed=embed, view=AppealMenuView())
             except (discord.Forbidden, discord.HTTPException) as _ex:
@@ -1432,6 +1598,130 @@ class Appeals(commands.Cog):
         self._save(guild.id, state)
         how = 'вебхуком' if used_hook is not None else 'от бота'
         return True, f'Меню опубликовано в {channel.mention} ({how})'
+
+    async def _ensure_appeal_menu(self, guild):
+        """Меню «Подать апелляцию» в комнате — само после рестарта.
+
+        Без меню канал пустой / только карточки — подать нельзя.
+        """
+        try:
+            ch = await self._appeal_channel(guild)
+            if ch is None:
+                return False
+            state = self._load(guild.id)
+            menu = state.get('menu') or {}
+            mid = int(menu.get('message_id') or 0)
+            cid = int(menu.get('channel_id') or 0)
+            if mid and cid == int(ch.id):
+                try:
+                    await ch.fetch_message(mid)
+                    return True  # меню на месте
+                except Exception as _ex:
+                    log.debug('appeals: menu msg gone %s: %s', mid, _ex)
+            ok, info = await self.publish_appeal_menu(ch)
+            log.info('appeals: ensure menu guild=%s → %s (%s)',
+                     guild.id, ok, info)
+            return bool(ok)
+        except Exception as _ex:
+            log.warning('appeals: ensure menu: %s', _ex)
+            return False
+
+    async def _repair_appeal_cards(self, guild):
+        """Починить карточки: select вместо мёртвых кнопок; решённые — без меню.
+
+        После смены UI (кнопки → select) и сбоя V2-edit карточка оставалась
+        «новой» хотя в базе уже rejected. Между правками — пауза, иначе
+        Discord 429 и часть карточек не обновляется.
+        """
+        import asyncio
+        state = self._load(guild.id)
+        fixed = 0
+        skipped = 0
+        appeal_ch = None
+        try:
+            appeal_ch = await self._appeal_channel(guild)
+        except Exception as _ex:
+            log.debug('appeals: repair channel: %s', _ex)
+            appeal_ch = None
+
+        async def _fetch_with_retry(ch, mid, aid, tries=4):
+            for attempt in range(tries):
+                try:
+                    return await ch.fetch_message(mid)
+                except discord.NotFound:
+                    return None
+                except discord.HTTPException as _ex:
+                    # 429 / краткий сбой сети
+                    wait = 1.5 * (attempt + 1)
+                    try:
+                        if getattr(_ex, 'status', None) == 429:
+                            wait = float(getattr(_ex, 'retry_after', None) or wait)
+                    except Exception:
+                        pass
+                    log.debug('appeals: repair fetch #%s try=%s: %s (sleep %.1fs)',
+                              aid, attempt + 1, _ex, wait)
+                    await asyncio.sleep(wait)
+                except Exception as _ex:
+                    log.debug('appeals: repair fetch #%s: %s', aid, _ex)
+                    return None
+            return None
+
+        for item in list(state.get('items') or []):
+            mid = int(item.get('message_id') or 0)
+            if not mid:
+                continue
+            ch_id = int(item.get('card_channel_id') or item.get('thread_id') or 0)
+            ch = None
+            if ch_id:
+                ch = guild.get_channel(ch_id) or self.bot.get_channel(ch_id)
+            if ch is None and appeal_ch is not None:
+                ch = appeal_ch
+                if not ch_id:
+                    item['card_channel_id'] = int(appeal_ch.id)
+            if ch is None:
+                continue
+            msg = await _fetch_with_retry(ch, mid, item.get('id'))
+            if msg is None:
+                skipped += 1
+                continue
+            status = str(item.get('status') or '')
+            snap = dict(item.get('card_v2') or {})
+            try:
+                if status == 'pending':
+                    view = AppealView(
+                        self, guild.id, item['id'],
+                        title=str(snap.get('title') or f'Апелляция #{item["id"]}'),
+                        body=str(snap.get('body') or item.get('text') or ''),
+                        footer=str(snap.get('footer') or ''),
+                        image_filename=snap.get('image'),
+                        accent=snap.get('accent'),
+                        banned_user_id=item.get('user_id'),
+                    )
+                    await msg.edit(view=view)
+                    fixed += 1
+                elif status in ('accepted', 'rejected', 'closed'):
+                    # решённая в базе, но на дискорде ещё «новая» с кнопками
+                    await self._finalize_appeal_card(
+                        guild, state, item,
+                        accept=(status == 'accepted'),
+                        unbanned=False,
+                        reviewer=item.get('reviewed_by') or '—',
+                        message=msg,
+                        closed=(status == 'closed'))
+                    fixed += 1
+                # не долбить Discord подряд
+                await asyncio.sleep(0.75)
+            except discord.HTTPException as _ex:
+                wait = float(getattr(_ex, 'retry_after', None) or 2.0)
+                log.warning('appeals: repair #%s http: %s (sleep %.1fs)',
+                            item.get('id'), _ex, wait)
+                await asyncio.sleep(wait)
+            except Exception as _ex:
+                log.debug('appeals: repair #%s: %s', item.get('id'), _ex)
+        if fixed or skipped:
+            log.info('appeals: починено карточек %s (пропуск %s) на guild=%s',
+                     fixed, skipped, guild.id)
+        return fixed
 
     async def _appeal_channel(self, guild):
         """Канал апелляции: сохранённый маршрут → известный ID → fetch.
@@ -1447,6 +1737,15 @@ class Appeals(commands.Cog):
                 channel_on_guild as _on_g)
             _cid = int(_get_route(guild.id, 'ban_appeal_channel') or 0)
             if not _cid:
+                # known ID — только для основного сервера; на чужих гильдиях
+                # fetch даёт «Guild ID resolved to a different guild».
+                try:
+                    from config import Config
+                    main = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+                except Exception:
+                    main = 0
+                if main and int(getattr(guild, 'id', 0) or 0) != main:
+                    return None
                 _cid = int(_KNOWN.get('ban_appeal_channel') or 0)
         except Exception as _ex:
             log.debug('appeals: маршрут канала апелляции: %s', _ex)
@@ -1465,7 +1764,12 @@ class Appeals(commands.Cog):
         fetch = getattr(guild, 'fetch_channel', None)
         if callable(fetch):
             try:
-                return await fetch(_cid)
+                ch = await fetch(_cid)
+                # защита: канал должен принадлежать этой гильдии
+                g_id = int(getattr(getattr(ch, 'guild', None), 'id', 0) or 0)
+                if g_id and g_id != int(getattr(guild, 'id', 0) or 0):
+                    return None
+                return ch
             except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
                 log.debug('appeals: fetch_channel %s: %s', _cid, _ex)
         return None
@@ -1744,20 +2048,25 @@ class Appeals(commands.Cog):
             edit_view._resolved = True
             edit_view._rebuild_card()
 
-        edit_kw = {
-            'view': edit_view,
-            'content': None,
-            'embed': None,
-            'embeds': [],
-        }
+        edit_kw = {'view': edit_view}
+        # V2-карточки нельзя править через content/embeds — Discord 400,
+        # карточка остаётся «новая» с кнопками (баг на #14).
+        is_v2 = bool(item.get('card_v2')) or bool(
+            getattr(message, 'flags', None)
+            and getattr(message.flags, 'is_components_v2', False))
+        if not is_v2:
+            edit_kw.update({'content': None, 'embed': None, 'embeds': []})
         # 1) сообщение из интеракции
+        edited = False
         if message is not None:
             try:
                 await message.edit(**edit_kw)
+                edited = True
             except Exception as _ex:
-                log.debug('appeals: finalize edit message: %s', _ex)
-        else:
-            # 2) панель / автозакрытие — fetch по message_id
+                log.warning('appeals: finalize edit message #%s: %s',
+                            item.get('id'), _ex)
+        if not edited:
+            # 2) панель / автозакрытие / повтор после сбоя — fetch по message_id
             try:
                 mid = int(item.get('message_id') or 0)
                 ch_id = int(item.get('card_channel_id')
@@ -1769,9 +2078,15 @@ class Appeals(commands.Cog):
                     ch = getattr(message, 'channel', None)
                 if ch is not None and mid:
                     msg = await ch.fetch_message(mid)
-                    await msg.edit(**edit_kw)
+                    # повторно: только view для V2
+                    await msg.edit(view=edit_view)
+                    edited = True
             except Exception as _ex:
-                log.debug('appeals: finalize fetch/edit: %s', _ex)
+                log.warning('appeals: finalize fetch/edit #%s: %s',
+                            item.get('id'), _ex)
+        if not edited:
+            log.error('appeals: карточка #%s не обновлена после решения',
+                      item.get('id'))
 
         # пинг роли больше не нужен — убираем только его
         try:
@@ -1996,10 +2311,23 @@ class Appeals(commands.Cog):
 
     def _appeal_v2_send_kw(self, guild_id, item, embed, card_file=None,
                            *, snap=None):
-        """kwargs для отправки карточки апелляции: V2 LayoutView (+файл)."""
+        """kwargs для отправки карточки апелляции: V2 LayoutView (+файл).
+
+        content тегает забаненного — модератор может кликнуть и проверить
+        профиль (владелец 2026-09-24).
+        """
         snap = dict(snap or self._appeal_card_text_from_embed(embed))
         image_name = getattr(card_file, 'filename', None) if card_file else None
         snap['image'] = image_name
+        banned_uid = int(item.get('user_id') or 0)
+        # в теле карточки — кликабельный тег, не голый ник
+        body = str(snap.get('body') or '')
+        if banned_uid and f'<@{banned_uid}>' not in body:
+            who = f'<@{banned_uid}>'
+            name = str(item.get('user_name') or '')
+            mention_line = f'от {who}' + (f' (**{name}**)' if name else '')
+            body = (mention_line + ('\n\n' + body if body else '')).strip()
+            snap['body'] = body[:3500]
         view = AppealView(
             self, guild_id, item['id'],
             title=snap.get('title') or f'Апелляция #{item["id"]}',
@@ -2007,10 +2335,15 @@ class Appeals(commands.Cog):
             footer=snap.get('footer') or '',
             image_filename=image_name,
             accent=snap.get('accent'),
+            banned_user_id=banned_uid or None,
         )
         kw = {'view': view}
         if card_file is not None:
             kw['file'] = card_file
+        if banned_uid:
+            # V2 запрещает content вместе с LayoutView — тег уже в body;
+            # отдельный пинг шлёт _ping_mod_role.
+            pass
         # снимок для add_view после рестарта — иначе claim сотрёт карточку
         item['card_v2'] = {
             'title': snap.get('title') or '',
@@ -2018,6 +2351,7 @@ class Appeals(commands.Cog):
             'footer': snap.get('footer') or '',
             'image': image_name,
             'accent': snap.get('accent'),
+            'user_id': banned_uid or None,
         }
         return kw
 
@@ -2145,10 +2479,12 @@ class Appeals(commands.Cog):
                               timestamp=datetime.now(UTC))
         embed.set_author(name=str(user), icon_url=user.display_avatar.url
                          if getattr(user, 'display_avatar', None) else None)
+        embed.add_field(name='Участник',
+                        value=f'{user.mention} · `{user.id}`', inline=False)
         embed.add_field(name='Контекст модератора',
                         value=self._mod_context(state, guild.id, user.id),
                         inline=False)
-        embed.set_footer(text=f'user_id: {item["user_id"]} · appeal #{item["id"]}')
+        embed.set_footer(text=f'user_id: {item["user_id"]} · appeal #{item["id"]} · меню под карточкой')
         # «всё сюда, кроме логов»: карточка живёт в комнате апелляции;
         # нет комнаты — запасной канал карточек (владелец 2026-09-06)
         channel, use_thread = await self._card_channel(guild, state)

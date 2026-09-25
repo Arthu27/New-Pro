@@ -227,7 +227,8 @@ def register(ctx):
         os.makedirs(os.path.dirname(VOICE_STAY_PATH), exist_ok=True)
         payload = {
             'channel_id': str(channel_id or '').strip(),
-            'note': 'Бот заходит в этот голосовой канал при старте (main.py).',
+            'stay_enabled': True,
+            'note': 'Основной бот всегда сидит в этом войсе (24/7). Stay выключить нельзя.',
         }
         with open(VOICE_STAY_PATH, 'w', encoding='utf-8') as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
@@ -253,15 +254,20 @@ def register(ctx):
         if raw and (not raw.isdigit() or len(raw) < 5 or len(raw) > 22):
             return jsonify({'ok': False, 'error': 'ID канала — только цифры Discord snowflake'}), 400
         saved = _voice_stay_save(raw)
-        # Обновить in-process значение у main, если бот загружен в том же процессе
+        # Обновить in-process значение у main и сразу вернуть в войс
         try:
             import main as _main
             _main.VOICE_CHANNEL_ID = int(raw) if raw else None
+            if raw and getattr(_main, 'bot', None) and not _main.bot.is_closed():
+                try:
+                    _main._schedule_main_voice_rejoin('panel-save')
+                except Exception as _ex2:
+                    _log.debug('voice_stay schedule rejoin: %s', _ex2)
         except Exception as _ex:
             _log.debug('voice_stay live update: %s', _ex)
         return jsonify({
             'ok': True,
             'channel_id': saved.get('channel_id') or '',
-            'hint': 'Сохранено. При следующем старте main.py бот зайдёт в этот канал. '
-                    '«Подключиться сейчас» — если бот уже онлайн.',
+            'stay_enabled': True,
+            'hint': 'Сохранено. Stay всегда вкл — бот сразу вернётся в канал, если онлайн.',
         })

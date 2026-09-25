@@ -149,6 +149,8 @@ from services import staff_roles as _SR
 _STAFF_CHANNEL_KEYS = {
     'staff_helper_channel': 'helper_channel',
     'staff_moderator_channel': 'moderator_channel',
+    'staff_event_channel': 'event_channel',
+    'staff_broadcaster_channel': 'broadcaster_channel',
     'staff_apply_channel': 'apply_channel',
 }
 
@@ -182,6 +184,7 @@ def _event_panel_set(gid, cid):
 ADAPTERS = {
     'ban_appeal_channel': (CHR.get_route, CHR.set_route),
     'appeal_menu_channel': (CHR.get_route, CHR.set_route),
+    'staff_menu_channel': (CHR.get_route, CHR.set_route),
     'pagerduty_channel': (CHR.get_route, CHR.set_route),
     'proof_channel': (CHR.get_route, CHR.set_route),
     'report_channel': (CHR.get_route, CHR.set_route),
@@ -194,6 +197,8 @@ ADAPTERS = {
     'anticrash_channel': (_anticrash_get, _anticrash_set),
     'staff_helper_channel': (_staff_get('staff_helper_channel'), _staff_set('staff_helper_channel')),
     'staff_moderator_channel': (_staff_get('staff_moderator_channel'), _staff_set('staff_moderator_channel')),
+    'staff_event_channel': (_staff_get('staff_event_channel'), _staff_set('staff_event_channel')),
+    'staff_broadcaster_channel': (_staff_get('staff_broadcaster_channel'), _staff_set('staff_broadcaster_channel')),
     'staff_apply_channel': (_staff_get('staff_apply_channel'), _staff_set('staff_apply_channel')),
 }
 
