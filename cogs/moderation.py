@@ -1785,11 +1785,7 @@ PANEL_ACTIONS = ('warn', 'unwarn', 'timeout', 'mute_chat', 'vmute', 'ban',
 #  что у /modpanel и панели — единый путь apply_panel_action.
 # ═══════════════════════════════════════════════════════════════════════════
 class _CtxMuteModal(discord.ui.Modal):
-    """Окно мута из ПКМ: срок + правило 1.1–1.9."""
-
-    duration = discord.ui.TextInput(
-        label='Срок (30 мин … 2 ч)', placeholder='30, 60, 2ч',
-        required=True, max_length=16)
+    """Окно мута из ПКМ: сверху вниз правило 1.1–1.9 → срок."""
 
     def __init__(self, cog, member, action, acl_key, limit_key, label):
         super().__init__(timeout=180)
@@ -1807,9 +1803,14 @@ class _CtxMuteModal(discord.ui.Modal):
             for o in _MR.select_options_data()
         ]
         self.reason_select = discord.ui.Select(
-            required=True, options=opts, min_values=1, max_values=1)
+            required=True, options=opts, min_values=1, max_values=1,
+            placeholder='1.1 … 1.9')
         self.add_item(discord.ui.Label(
             text='Правило (причина)', component=self.reason_select))
+        self.duration = discord.ui.TextInput(
+            label='Срок (30 мин … 2 ч)', placeholder='30, 60, 2ч',
+            required=True, max_length=16)
+        self.add_item(self.duration)
 
     async def on_submit(self, interaction):
         await _ack(interaction, thinking=True)
@@ -2071,7 +2072,7 @@ MODPANEL_ACL_KEYS = {
 
 
 def mute_kinds_for(guild_id, member):
-    """Какие виды мута доступны: чат / войс / оба."""
+    """Виды мута сверху вниз: Чат → Войс → Чат и войс."""
     chat = _action_acl_allows(guild_id, member, 'mute_chat')
     voice = _action_acl_allows(guild_id, member, 'vmute')
     both = _action_acl_allows(guild_id, member, 'timeout')
@@ -2086,7 +2087,7 @@ def mute_kinds_for(guild_id, member):
 
 
 def unmute_kinds_for(guild_id, member):
-    """Какие виды размута доступны: чат / войс / оба."""
+    """Виды размута сверху вниз: Чат → Войс → Чат и войс."""
     chat = _action_acl_allows(guild_id, member, 'mute_chat') \
         or _action_acl_allows(guild_id, member, 'timeout')
     voice = _action_acl_allows(guild_id, member, 'vmute') \
@@ -2886,17 +2887,46 @@ class ModActionModal(discord.ui.Modal):
         }
         super().__init__(title=titles.get(action, "Модерация"))
 
-        # Цель, выбранная мышкой в панели, приходит как fixed_target_id —
-        # поле ввода НИКА в модалку не ставим вовсе (жалоба владельца:
-        # «выбрал участника — просит ник ещё раз, убери»). Поле остаётся
-        # только для ручного пути (ник/ID вписываются руками).
+        # Порядок полей сверху вниз (заказ):
+        #   1) цель (только если не выбрана в панели)
+        #   2) правило 1.1–1.9
+        #   3) срок / кол-во
+        #   4) доказательство
         self.fixed_target_id = str(prefill_target or "").strip() or None
+        self.reason_select = None
+        self.reason = None
+        self.amount = None
+        self.proof = None
+
         if action != "clear" and not self.fixed_target_id:
             self.target = discord.ui.TextInput(
                 label="Цель (@ник, точное имя или ID)", required=True,
                 placeholder="@упоминание, ник или 15-22 цифры ID",
             )
             self.add_item(self.target)
+
+        if action in _REASON_RULE_ACTIONS:
+            from services import mod_reasons as _MR
+            opts = [
+                discord.SelectOption(
+                    label=o['label'], value=o['value'],
+                    description=o['description'])
+                for o in _MR.select_options_data()
+            ]
+            self.reason_select = discord.ui.Select(
+                required=True, options=opts, min_values=1, max_values=1,
+                placeholder='1.1 … 1.9')
+            self.add_item(discord.ui.Label(
+                text='Правило (причина)', component=self.reason_select))
+        elif action != "clear":
+            # Снятие бана/мута — свободный текст; очистка без причины-селекта
+            self.reason = discord.ui.TextInput(
+                label="Причина", required=False,
+                placeholder="За что? (необязательно)",
+                style=discord.TextStyle.short,
+            )
+            self.add_item(self.reason)
+
         if action in ("timeout", "mute_chat", "vmute", "clear"):
             if action == "clear":
                 _lbl, _ph = "Сколько сообщений удалить?", "1-100"
@@ -2909,29 +2939,14 @@ class ModActionModal(discord.ui.Modal):
                     placeholder="30, 60, 2ч",
                 )
             self.add_item(self.amount)
-        # Наказания: причина = правило 1.1–1.9 (номер + текст запрета).
-        # Снятие/чистка — свободный текст как раньше.
-        self.reason_select = None
-        self.reason = None
-        if action in _REASON_RULE_ACTIONS:
-            from services import mod_reasons as _MR
-            opts = [
-                discord.SelectOption(
-                    label=o['label'], value=o['value'],
-                    description=o['description'])
-                for o in _MR.select_options_data()
-            ]
-            self.reason_select = discord.ui.Select(
-                required=True, options=opts, min_values=1, max_values=1)
-            self.add_item(discord.ui.Label(
-                text='Правило (причина)', component=self.reason_select))
-        else:
+        if action == "clear":
             self.reason = discord.ui.TextInput(
                 label="Причина", required=False,
                 placeholder="За что? (необязательно)",
                 style=discord.TextStyle.short,
             )
             self.add_item(self.reason)
+
         _need_proof = False
         if action in _PUNISH_MODPANEL:
             try:
