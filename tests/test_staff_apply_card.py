@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Staff apply card: V2 LayoutView without role ping (owner 2026-09-24).
+"""Staff apply card: V2 LayoutView + curator ping + «На рассмотрении».
 
-  1) curator role: panel → .env → known server role;
-  2) V2 card with Accept/Decline; NO separate curator ping message;
-  3) web path uses same StaffAppCardView.
+  1) curator role: KNOWN_CURATOR_BY_KIND for branch;
+  2) V2 card with Accept/Decline and status «На рассмотрении»;
+  3) separate curator role ping before the card;
+  4) role granted only on accept — not on submit.
 
 Run: python3 tests/test_staff_apply_card.py
 """
@@ -217,11 +218,17 @@ asyncio.get_event_loop().run_until_complete(modal.on_submit(inter))
 
 check(len(room_ch.sent) >= 1, 'card sent to shared room')
 check(len(mod_ch.sent) == 0 and len(help_ch.sent) == 0, 'own branches unused')
-# Без пинга: только карточка (view), content-сообщений нет
+# Пинг куратора ветки + карточка
+mod_tag = f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>"
 ping_msgs = [s for s in room_ch.sent if s.get('content')]
 card_msg = next((s for s in room_ch.sent if s.get('view') is not None), None)
 sent = card_msg or room_ch.sent[-1]
-check(not ping_msgs, 'no separate ping before card', ping_msgs)
+check(len(ping_msgs) == 1, 'one curator ping before card', ping_msgs)
+ping_text = str(ping_msgs[0].get('content') or '')
+check(mod_tag in ping_text and 'на рассмотрении' in ping_text.lower(),
+      'ping tags branch curator + under review', ping_text)
+am = ping_msgs[0].get('allowed_mentions')
+check(am is not None, 'ping allows role mentions')
 view = sent.get('view')
 check(isinstance(view, SA.StaffAppCardView),
       'V2 StaffAppCardView', type(view))
@@ -232,16 +239,21 @@ from services.v2_layouts import layout_plain_text  # noqa: E402
 card_text = layout_plain_text(view) if view else ''
 check('С чего вы сидите' in card_text and 'знания правил' in card_text,
       'moderator question labels on card', card_text[:200])
-check('куратор этой ветки' in card_text.lower(),
-      'footer names branch curator', card_text[-160:])
+check('на рассмотрении' in card_text.lower(),
+      'pending card shows «На рассмотрении»', card_text[:400])
+check('роль не выдана' in card_text.lower() or 'после «принять»' in card_text.lower()
+      or 'после "принять"' in card_text.lower()
+      or 'только куратор этой ветки' in card_text.lower(),
+      'card explains role after accept', card_text[-200:])
 apps = SA.load_apps()
 app_key = '777888999000111222:moderator'
 app = apps.get(app_key) or apps.get('777888999000111222')
 check(app is not None and app['status'] == 'pending', 'saved pending', list(apps.keys()))
 check(app.get('role') == 'Moderator', 'role stored as Moderator', app.get('role'))
 check(app.get('message_id') == '555001', 'message_id saved')
-check(app.get('curator_tag') == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
-      'curator_tag saved (metadata, без пинга)')
+check(app.get('curator_tag') == mod_tag,
+      'curator_tag saved', app.get('curator_tag'))
+check(not app.get('granted_role'), 'no role granted on submit', app.get('granted_role'))
 check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
       'answers list saved with 4 Qs')
 # повтор на ту же ветку запрещён
@@ -313,6 +325,15 @@ check('StaffAppCardView' in web_src and '_send_staff_card' in web_src,
 check('apply_target' in web_src, 'web routes via apply_target')
 check('Новая заявка — ' not in web_src.split('send_to_discord')[1][:2000],
       'web no longer builds classic embed title')
+web_send = web_src.split('send_to_discord')[1][:3500]
+check('content =ping_content' in web_send.replace(' ', '')
+      or 'content=ping_content' in web_send.replace(' ', ''),
+      'web pings curator on new application')
+check('на рассмотрении' in web_send.lower(),
+      'web ping mentions under review')
+check("['status']='pending'" in web_send.replace(' ', '')
+      or "['status'] = 'pending'" in web_send,
+      'web keeps status pending (no instant grant)')
 
 CR.get_route = _prev_get
 CR.KNOWN_CHANNELS.clear()

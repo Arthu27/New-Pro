@@ -885,9 +885,16 @@ class StaffApplyModal(discord.ui.Modal):
                     extra=v5, member=member, kind=kind, answers=answers)
                 try:
                     card = StaffAppCardView(title=role_label, body=body)
-                    # Без отдельного пинга (@роль / «Moderation — …»):
-                    # карточка сама в канале, доступ по роли куратора ветки.
-                    msg = await _send_staff_card(ch, view=card)
+                    # Пинг куратора СВОЕЙ ветки + карточка со статусом
+                    # «На рассмотрении». Роль НЕ выдаём здесь — только после
+                    # явного «Принять» куратором.
+                    ping_content = (
+                        f"{tag} — новая заявка на **{role_label}**"
+                        f" · на рассмотрении"
+                        if tag else None
+                    )
+                    msg = await _send_staff_card(
+                        ch, content=ping_content, view=card)
                     apps[store_key]["message_id"] = str(msg.id)
                     apps[store_key]["curator_tag"] = tag or None
                     apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')
@@ -915,11 +922,12 @@ class StaffApplyModal(discord.ui.Modal):
             confirm = (
                 f"Заявка на **{role_label}** ушла в "
                 f"{ch_ref}.\n"
-                f"Кураторы ветки и админы уже видят карточку.\n"
-                f"Статус: `/my-application`"
+                f"Статус: **На рассмотрении** — роль выдадут "
+                f"только после решения куратора.\n"
+                f"Проверить: `/my-application`"
             )
             confirm_kind = 'ok'
-            confirm_title = 'Заявка отправлена'
+            confirm_title = 'Заявка на рассмотрении'
         else:
             confirm = (
                 f"Заявка на **{role_label}** сохранена, но в канал анкет "
@@ -1021,7 +1029,13 @@ class StaffReviewSelect(discord.ui.Select):
 
 
 class StaffAppCardView(discord.ui.LayoutView):
-    """Карточка заявки куратору — V2 webhook: должность, тег, ответы, select."""
+    """Карточка заявки куратору — V2: статус «На рассмотрении» + select.
+
+    Роль ещё не выдана: куратор ветки принимает/отклоняет через меню.
+    """
+
+    # Янтарный — заявка ждёт решения (как /my-application pending).
+    PENDING_ACCENT = 0xC8922A
 
     def __init__(self, *, title: str, body: str, footer: str = ''):
         super().__init__(timeout=None)
@@ -1038,7 +1052,8 @@ class StaffAppCardView(discord.ui.LayoutView):
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
         foot = footer or (
-            'HAKUMO · решение — меню ниже · только куратор этой ветки'
+            'HAKUMO · на рассмотрении · роль после «Принять» · '
+            'только куратор этой ветки'
         )
         if V2_AVAILABLE:
             from discord import ui as dui
@@ -1046,6 +1061,10 @@ class StaffAppCardView(discord.ui.LayoutView):
                 dui.TextDisplay(head[:500]),
                 dui.TextDisplay('-# HAKUMO · заявка в команду'),
                 dui.Separator(spacing=SeparatorSpacing.large),
+                dui.TextDisplay('## На рассмотрении'),
+                dui.TextDisplay(
+                    '-# Роль не выдана — решение куратора ниже'),
+                dui.Separator(),
                 dui.TextDisplay(str(body)[:3500]),
                 dui.Separator(),
                 dui.TextDisplay(f'-# {foot}'[:400]),
@@ -1053,7 +1072,8 @@ class StaffAppCardView(discord.ui.LayoutView):
             row = dui.ActionRow()
             row.add_item(sel)
             children.append(row)
-            self.add_item(black_container(*children))
+            self.add_item(black_container(
+                *children, accent=self.PENDING_ACCENT))
             return
         row = discord.ui.ActionRow()
         row.add_item(sel)
@@ -1437,16 +1457,15 @@ def _hook_avatar(guild):
 async def _send_staff_card(channel, *, content=None, view=None):
     """Карточка заявки V2 (webhook или бот).
 
-    Пинги ролей/юзеров перед карточкой отключены (шум «Moderation — …»).
-    content оставлен для совместимости вызовов, но по умолчанию не шлётся.
+    content — пинг куратора ветки (<@&…>) отдельным сообщением бота
+    (webhook надёжно не тегает роли; allowed_mentions(roles=True)).
     """
     if content:
-        # Явно переданный content (тесты/legacy) — отдельным сообщением.
         allowed = discord.AllowedMentions(roles=True, users=True)
         try:
             await channel.send(content, allowed_mentions=allowed)
         except Exception as _ex:
-            log.debug('staff: ping before card: %s', _ex)
+            log.debug('staff: curator ping before card: %s', _ex)
     hook = await _channel_webhook(channel)
     if hook is not None:
         try:
