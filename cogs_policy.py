@@ -224,6 +224,11 @@ RETIRED_COGS = frozenset({
     # music_cog.py / voice_commands.py снесены с диска вместе с веб-страницей
     # /music, ffmpeg-бутстрапом и тестами. voice_tracker.py (статистика
     # голоса для панели) НЕ относится к музыке и остаётся боевым.
+    #
+    # support_verify.py — отдельный support-бот (SUPPORT_BOT_TOKEN,
+    # scripts/run_support_bot.py). На основном боте не грузить: иначе
+    # дубль /verify и путаница application emoji.
+    'support_verify.py',
 })
 
 
