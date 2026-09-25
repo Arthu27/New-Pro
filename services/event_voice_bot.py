@@ -308,16 +308,23 @@ async def _load_and_sync_event_commands(bot) -> list[str]:
     # Мафия на Event-боте — публичное лобби + /mafia для ведущего
     try:
         if bot.get_cog('mafia') is None:
-            from cogs.mafia import Mafia, PublicLobbyView, HostPanelView
+            from cogs import mafia as mafia_mod
+            Mafia = mafia_mod.Mafia
             if guilds:
                 await bot.add_cog(Mafia(bot), guilds=guilds)
             else:
                 await bot.add_cog(Mafia(bot))
-            try:
-                bot.add_view(PublicLobbyView(0))
-                bot.add_view(HostPanelView())
-            except Exception:
-                pass
+            for view_name in ('PublicLobbyView', 'HostPanelView'):
+                ViewCls = getattr(mafia_mod, view_name, None)
+                if ViewCls is None:
+                    continue
+                try:
+                    bot.add_view(ViewCls(0) if view_name == 'PublicLobbyView' else ViewCls())
+                except Exception:
+                    try:
+                        bot.add_view(ViewCls())
+                    except Exception:
+                        pass
             log.info('event-bot: cog mafia загружен')
     except Exception as ex:
         log.warning('event-bot add_cog mafia: %s', ex)

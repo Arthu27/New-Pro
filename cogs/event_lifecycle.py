@@ -579,7 +579,21 @@ async def create_full_event(
                 category=cat,
                 reason=f'eventstart by {organizer.id}')
         except Exception as ex:
-            raise RuntimeError(f'Не удалось создать войс: {ex}') from ex
+            log.warning('create voice failed (%s) — fallback stay channel', ex)
+            # fallback: event stay voice
+            try:
+                from services.event_voice_bot import _resolve_event_voice_channel_id
+                fid = int(_resolve_event_voice_channel_id() or 0)
+            except Exception:
+                fid = 0
+            if fid:
+                voice = guild.get_channel(fid)
+            if not isinstance(voice, discord.VoiceChannel):
+                raise RuntimeError(
+                    f'Не удалось создать войс ({ex}). '
+                    f'Выдайте боту Manage Channels или укажите voice в /eventstart.'
+                ) from ex
+            preferred_voice_id = voice.id
 
     event = STORE.create_event(
         guild_id=guild.id,

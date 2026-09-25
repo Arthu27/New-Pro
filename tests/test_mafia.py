@@ -241,8 +241,44 @@ check(not is_group, '/mafia — одна команда с меню, не гру
 # меню содержит все действия ТЗ
 from cogs.mafia import MafiaActionSelect  # noqa: E402
 opts = {o.value for o in MafiaActionSelect().options}
-check(opts == {'start', 'status', 'panel', 'resend', 'add', 'cancel', 'presets'},
+check(opts == {'start', 'deal', 'sync', 'status', 'panel', 'resend', 'add', 'cancel', 'presets'},
       f'меню действий: {sorted(opts)}')
+
+# публичное лобби — только Участвовать/Выйти
+from cogs.mafia import PublicLobbyView, HostToolsView  # noqa: E402
+pub_labels = {i.label for i in PublicLobbyView(1).children if hasattr(i, 'label')}
+check(pub_labels == {'Участвовать', 'Выйти'}, f'публичные кнопки: {pub_labels}')
+check('Анонс' not in pub_labels and 'Старт' not in pub_labels, 'нет анонс/старт у участников')
+host_labels = {i.label for i in HostToolsView(1).children if hasattr(i, 'label')}
+check('Раздать роли' in host_labels, f'хост-панель: {host_labels}')
+
+# стикеры ролей включая путану
+from services.mafia.ui_v2 import sticker, role_sticker  # noqa: E402
+check(sticker('join') is not None and sticker('courtesan') is not None, 'стикеры join+путана')
+check(role_sticker('courtesan') is not None, 'role_sticker путана')
+
+# старт только из войса ведущего — без Event-панели / signups
+src = open(os.path.join(_REPO, 'cogs/mafia.py'), encoding='utf-8').read()
+check('PublicLobbyView' in src and 'mafia:public:join' in src, 'public join custom_id')
+check('EventPanel' not in open(
+    os.path.join(_REPO, 'services/event_voice_bot.py'), encoding='utf-8').read()
+    or 'EventPanel снят' in open(
+        os.path.join(_REPO, 'services/event_voice_bot.py'), encoding='utf-8').read(),
+    'event-bot без EventPanel (или снят)')
+check('async def start_from_event' not in src, 'нет start_from_event')
+check('event_voice_channel_id' not in src, 'нет фолбэка на Event-войс')
+start_opt = next(o for o in MafiaActionSelect().options if o.value == 'start')
+check('Участвовать' in (start_opt.description or '') or 'набора' in (start_opt.description or '').lower(),
+      f'start desc: {start_opt.description}')
+
+# lobby empty roster copy
+from cogs.mafia import lobby_embed, lobby_body_md  # noqa: E402
+empty = Game.create(1, 10, 99, 88, [])
+emb = lobby_embed(empty)
+check('Участвовать' in emb.fields[0].value or 'Участвовать' in (emb.footer.text or ''),
+      'лобби зовёт Участвовать')
+check('никого' in lobby_body_md(empty).lower() or 'Участвовать' in lobby_body_md(empty),
+      'пустой состав явно')
 
 
 print('\n== 12. LEAN + KEEP_SLASH ==')
