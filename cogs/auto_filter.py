@@ -526,10 +526,21 @@ class AutoFilter(commands.Cog):
             await message.delete()
         except Exception as _ex:
             _log.debug("_punish(): подавлено: %s", _ex)
-        try:
-            await message.channel.send(f'{author.mention} {NOTICE_TEXT[fname]}', delete_after=6)
-        except Exception as _ex:
-            _log.debug("_punish(): подавлено: %s", _ex)
+
+        # Реклама серверов (LFG): V2 чёрные правила — только нарушителю в ЛС.
+        if fname == 'ads':
+            try:
+                from services import lfg_channels as LFG
+                await LFG.send_rules_private(
+                    author, channel_id=getattr(message.channel, 'id', None))
+            except Exception as _ex:
+                _log.debug("_punish ads dm: %s", _ex)
+        else:
+            try:
+                await message.channel.send(
+                    f'{author.mention} {NOTICE_TEXT[fname]}', delete_after=6)
+            except Exception as _ex:
+                _log.debug("_punish(): подавлено: %s", _ex)
 
         if flood_kind and action == 'timeout':
             try:  # зачистка последних сообщений автора в этом канале
