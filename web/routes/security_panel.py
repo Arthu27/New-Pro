@@ -98,7 +98,7 @@ def protection_reset_all(gid):
         from cogs import auto_filter as AF
         cfg = AF.load_config(gid_i)
         cfg['enabled'] = False
-        for sect in ('words', 'links', 'caps', 'flood'):
+        for sect in ('words', 'links', 'caps', 'flood', 'ads'):
             if isinstance(cfg.get(sect), dict):
                 cfg[sect]['enabled'] = False
         AF.save_config(gid_i, cfg)

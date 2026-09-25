@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow"> Защита </div>
     <h1>Автофильтр</h1>
-    <p class="lead">Слова, ссылки, капс и флуд как прозрачные политики. Изменения применяются мгновенно.</p>
+    <p class="lead">Слова, ссылки, реклама серверов, капс и флуд как прозрачные политики. Изменения применяются мгновенно.</p>
   </div>
   <div class="page-head-actions">
     <span class="badge" id="hero-state">…</span>
@@ -52,6 +52,22 @@
           <button type="button" class="btn" id="wl-add"><i class="fas fa-plus"></i> Разрешить</button>
         </div>
         <div class="chip-row" id="wl-chips"></div>
+      </div>
+
+      <!-- Реклама серверов -->
+      <div class="card" id="card-ads">
+        <div class="card-head"><label class="switch"><input type="checkbox" id="fa-tog"><span class="track"></span></label>
+          <div><h3>Реклама серверов</h3><div class="sub">«Залетай на наш Discord-сервер», discord.gg и похожие фразы — как в знакомствах.</div></div>
+          <select class="form-input" id="fa-action" aria-label="Действие за рекламу серверов" style="width:auto;margin-left:auto"><option value="delete">Удалить</option><option value="warn">Удалить + варн</option></select></div>
+        <div class="row" style="margin-bottom:10px;align-items:center;gap:12px">
+          <label class="switch"><input type="checkbox" id="fa-builtin"><span class="track"></span> Встроенные фразы</label>
+          <span class="hint" id="fa-scope">Каналы: весь сервер</span>
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <input class="form-input" id="fa-input" placeholder="доп. фраза-триггер" style="flex:1">
+          <button type="button" class="btn" id="fa-add"><i class="fas fa-plus"></i> Добавить</button>
+        </div>
+        <div class="chip-row" id="fa-chips"></div>
       </div>
 
       <!-- Капс -->
@@ -177,23 +193,30 @@
     $('hero-state').className = 'badge ' + (CFG.enabled ? 'ok' : 'neutral');
 
     var chips = '';
-    [['words', 'fa-ban', 'слова'], ['links', 'fa-link', 'ссылки'], ['caps', 'fa-text-height', 'капс'], ['flood', 'fa-water', 'флуд']].forEach(function (p) {
-      var part = CFG[p[0]];
+    [['words', 'fa-ban', 'слова'], ['links', 'fa-link', 'ссылки'], ['ads', 'fa-bullhorn', 'реклама'], ['caps', 'fa-text-height', 'капс'], ['flood', 'fa-water', 'флуд']].forEach(function (p) {
+      var part = CFG[p[0]] || { enabled: false };
       chips += '<span class="chip ' + (CFG.enabled && part.enabled ? '' : '') + '"><i class="fas ' + p[1] + '" style="color:' + (CFG.enabled && part.enabled ? 'var(--ok)' : 'var(--text-3)') + '"></i> ' + p[2] + '</span>';
     });
     chips += '<span class="chip"><i class="fas fa-list"></i> слов: <b>' + CFG.words.list.length + '</b></span>';
     $('hero-chips').innerHTML = chips;
 
+    if (!CFG.ads) CFG.ads = { enabled: false, action: 'delete', builtin: true, phrases: [], apply_channels: [] };
     $('fw-tog').checked = CFG.words.enabled;
     $('fl-tog').checked = CFG.links.enabled;
+    $('fa-tog').checked = !!CFG.ads.enabled;
     $('fc-tog').checked = CFG.caps.enabled;
     $('ff-tog').checked = CFG.flood.enabled;
     $('card-words').style.opacity = CFG.words.enabled ? '' : '0.65';
     $('card-links').style.opacity = CFG.links.enabled ? '' : '0.65';
+    $('card-ads').style.opacity = CFG.ads.enabled ? '' : '0.65';
     $('card-caps').style.opacity = CFG.caps.enabled ? '' : '0.65';
     $('card-flood').style.opacity = CFG.flood.enabled ? '' : '0.65';
     $('fw-action').value = CFG.words.action;
     $('fl-action').value = CFG.links.action;
+    $('fa-action').value = CFG.ads.action || 'delete';
+    $('fa-builtin').checked = CFG.ads.builtin !== false;
+    var nCh = (CFG.ads.apply_channels || []).length;
+    $('fa-scope').textContent = nCh ? ('Каналы: ' + nCh) : 'Каналы: весь сервер';
     $('fc-action').value = CFG.caps.action;
     $('ff-action').value = CFG.flood.action;
     $('fc-percent').value = CFG.caps.percent;
@@ -205,6 +228,7 @@
     $('ff-timeout').value = CFG.flood.timeout_minutes;
     paintChips('fw-chips', CFG.words.list, false);
     paintChips('wl-chips', CFG.links.whitelist, true);
+    paintChips('fa-chips', CFG.ads.phrases || [], false);
     $('fw-count').textContent = CFG.words.list.length + ' / 200';
     $('wl-count').textContent = CFG.links.whitelist.length + ' / 50';
     if (window._afChannels) paintPick('af-channels', window._afChannels, CFG.ignore_channels);
@@ -258,7 +282,7 @@
         out.className = 'alert alert-ok';
         out.innerHTML = '<i class="fas fa-check-circle"></i> Чисто — ни один фильтр не сработал';
       } else {
-        var names = { words: 'Слова', links: 'Ссылки', caps: 'Капс', flood: 'Флуд' };
+        var names = { words: 'Слова', links: 'Ссылки', ads: 'Реклама серверов', caps: 'Капс', flood: 'Флуд' };
         out.className = 'alert alert-err';
         out.innerHTML = v.map(function (x) {
           return '<div><b>' + (names[x.filter] || x.filter) + '</b> — совпадение: <code>' + esc(x.detail) + '</code></div>';
@@ -275,6 +299,7 @@
       var i = parseInt(parts[1], 10);
       if (boxId === 'fw-chips') { CFG.words.list.splice(i, 1); }
       else if (boxId === 'wl-chips') { CFG.links.whitelist.splice(i, 1); }
+      else if (boxId === 'fa-chips') { (CFG.ads.phrases || []).splice(i, 1); }
       DIRTY = true;
       render();
     }
@@ -283,10 +308,13 @@
   bindSwitch('master-switch', function () { return CFG.enabled; }, function (v) { CFG.enabled = v; });
   bindSwitch('fw-tog', function () { return CFG.words.enabled; }, function (v) { CFG.words.enabled = v; });
   bindSwitch('fl-tog', function () { return CFG.links.enabled; }, function (v) { CFG.links.enabled = v; });
+  bindSwitch('fa-tog', function () { return CFG.ads.enabled; }, function (v) { CFG.ads.enabled = v; });
+  bindSwitch('fa-builtin', function () { return CFG.ads.builtin !== false; }, function (v) { CFG.ads.builtin = v; });
   bindSwitch('fc-tog', function () { return CFG.caps.enabled; }, function (v) { CFG.caps.enabled = v; });
   bindSwitch('ff-tog', function () { return CFG.flood.enabled; }, function (v) { CFG.flood.enabled = v; });
   $('fw-action').addEventListener('change', function () { CFG.words.action = this.value; DIRTY = true; note(); });
   $('fl-action').addEventListener('change', function () { CFG.links.action = this.value; DIRTY = true; note(); });
+  $('fa-action').addEventListener('change', function () { CFG.ads.action = this.value; DIRTY = true; note(); });
   $('fc-action').addEventListener('change', function () { CFG.caps.action = this.value; DIRTY = true; note(); });
   $('ff-action').addEventListener('change', function () { CFG.flood.action = this.value; DIRTY = true; note(); });
   $('fc-percent').addEventListener('input', function () { $('fc-percent-val').textContent = this.value + '%'; });
@@ -300,6 +328,17 @@
   $('fw-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addWord('fw-input', CFG.words.list, 200); } });
   $('wl-add').addEventListener('click', function () { addWord('wl-input', CFG.links.whitelist, 50, 'Домен разрешён'); });
   $('wl-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addWord('wl-input', CFG.links.whitelist, 50, 'Домен разрешён'); } });
+  $('fa-add').addEventListener('click', function () {
+    if (!CFG.ads.phrases) CFG.ads.phrases = [];
+    addWord('fa-input', CFG.ads.phrases, 80);
+  });
+  $('fa-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!CFG.ads.phrases) CFG.ads.phrases = [];
+      addWord('fa-input', CFG.ads.phrases, 80);
+    }
+  });
   $('saveBtn').addEventListener('click', save);
   $('af-test-btn').addEventListener('click', runTest);
   $('af-test-text').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); runTest(); } });

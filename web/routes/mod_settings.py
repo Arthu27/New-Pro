@@ -468,23 +468,35 @@ def register(ctx):
             bot = _app.bot_instance
             cog = bot.get_cog('Appeals') if bot else None
             g = bot.get_guild(int(gid)) if bot else None
-            channel = g.get_channel(int(get_route(gid, 'appeal_menu_channel') or 0)) \
-                if g is not None else None
+            # Канал больше не обязателен: publish_appeal_menu только чистит
+            # старое меню (подача — в ЛС). Если канал задан — чистим его;
+            # иначе — purge по гильдии (state + известные каналы).
+            channel = None
+            if g is not None:
+                try:
+                    channel = g.get_channel(int(get_route(gid, 'appeal_menu_channel') or 0))
+                except Exception:
+                    channel = None
             if cog is None or g is None:
                 return jsonify({'success': False,
                                 'error': 'Бот офлайн или модуль апелляций не загружен'}), 503
-            if channel is None:
-                return jsonify({'success': False,
-                                'error': 'Сначала выберите канал меню апелляций'}), 400
             try:
-                ok, text = _run_async(cog.publish_appeal_menu(channel))
+                if channel is not None:
+                    ok, text = _run_async(cog.publish_appeal_menu(channel))
+                else:
+                    _run_async(cog._purge_appeal_menu(g))
+                    ok, text = False, (
+                        'Меню в канал не публикуем: апелляцию подают кнопкой в ЛС '
+                        'после бана. Старое меню снято (если было).')
             except Exception as _ex:
                 _log.warning('mod-settings publish_menu: %s', _ex)
                 return jsonify({'success': False,
                                 'error': f'Не получилось: {_ex}'}), 200
-            if not ok:
-                return jsonify({'success': False, 'error': text}), 200
-            _fire_panel_notification(
-                'mod_settings', 'Меню апелляций опубликовано',
-                f'{who}: {text}')
+            # ok=False — ожидаемо (меню отключено); для UI это успех очистки
+            return jsonify({
+                'success': True,
+                'message': text,
+                'published': bool(ok),
+                'cfg': mod_view(gid),
+            })
         return jsonify({'success': True, 'cfg': mod_view(gid)})
