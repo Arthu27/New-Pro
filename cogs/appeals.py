@@ -1721,7 +1721,7 @@ class Appeals(commands.Cog):
         return False
 
     async def _safe_delete_menu_msg(self, msg) -> bool:
-        """Удалить только меню апелляций от бота/его вебхука."""
+        """Удалить меню апелляций: наше сообщение, вебхук или любой бот с этим embed."""
         if msg is None or not self._msg_looks_like_appeal_menu(msg):
             return False
         try:
@@ -1732,8 +1732,9 @@ class Appeals(commands.Cog):
             if me is not None and author is not None:
                 if getattr(author, 'id', None) == getattr(me, 'id', None):
                     mine = True
-                if getattr(author, 'bot', False) and webhook_id:
-                    mine = True
+            # Любой бот с этим точным меню — сносим (иначе orphan после смены кода)
+            if author is not None and getattr(author, 'bot', False):
+                mine = True
             if not mine:
                 return False
             await msg.delete()
@@ -1741,10 +1742,11 @@ class Appeals(commands.Cog):
         except discord.NotFound:
             return True
         except Exception as _ex:
-            log.debug('appeals: safe delete menu: %s', _ex)
+            log.warning('appeals: safe delete menu fail id=%s: %s',
+                        getattr(msg, 'id', '?'), _ex)
             return False
 
-    async def _scan_purge_menu_in_channel(self, channel, *, limit: int = 80) -> int:
+    async def _scan_purge_menu_in_channel(self, channel, *, limit: int = 200) -> int:
         """Пройти историю канала и снять orphan-меню апелляций."""
         if channel is None or not hasattr(channel, 'history'):
             return 0
@@ -1756,7 +1758,7 @@ class Appeals(commands.Cog):
                 if await self._safe_delete_menu_msg(msg):
                     deleted += 1
         except (discord.Forbidden, discord.HTTPException) as _ex:
-            log.debug('appeals: history scan %s: %s', getattr(channel, 'id', '?'), _ex)
+            log.warning('appeals: history scan %s: %s', getattr(channel, 'id', '?'), _ex)
         return deleted
 
     async def _ensure_appeal_menu(self, guild):
