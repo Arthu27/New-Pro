@@ -1788,7 +1788,7 @@ class _CtxMuteModal(discord.ui.Modal):
     """Окно мута из ПКМ: сверху вниз правило 1.1–1.9 → срок."""
 
     def __init__(self, cog, member, action, acl_key, limit_key, label):
-        super().__init__(timeout=180)
+        super().__init__(title=label or 'Мут', timeout=180)
         self._cog = cog
         self._member = member
         self._action = action
