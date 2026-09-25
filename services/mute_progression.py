@@ -1,89 +1,45 @@
 # -*- coding: utf-8 -*-
-"""Прогрессия срока мута по участнику (заказ владельца 2026-09-24).
+"""Потолок срока мута (без прогрессии «+2»).
 
-Первый мут — максимум 1 час. Каждый следующий — +2 часа
-(1 → 3 → 5 → 7 …). Когда участник получает варн — прогрессия
-сбрасывается, снова с 1 часа.
+Раньше: первый мут 1 ч, каждый следующий +2 ч до варна.
+Заказ владельца 2026-09-25: систему «+2» отменяем — срок выбирает
+персонал в UI (мин. 30 мин, потолок FIXED_CAP_SEC), без авто-эскалации.
 
-Хранится per-target: data/mute_progression_<gid>.json
-  { "<uid>": {"step": 0} }   # step 0 = первый мут (1ч)
+Модуль оставлен для совместимости импортов (bump/reset — no-op).
 """
 from __future__ import annotations
-
-import json
-import os
 
 from logger import get_logger
 
 _log = get_logger('mute_progression')
 
-FIRST_CAP_SEC = 3600          # 1 час
-STEP_SEC = 2 * 3600           # +2 часа за шаг
-MAX_CAP_SEC = 28 * 86400      # потолок Discord
+# Фиксированный потолок без прогрессии (совпадает с подсказкой UI «… 2 ч»)
+FIRST_CAP_SEC = 2 * 3600
+STEP_SEC = 0                  # +2 отключён
+FIXED_CAP_SEC = 2 * 3600
+MAX_CAP_SEC = 28 * 86400
+ENABLED = False               # прогрессия выключена
 
 
 def _path(gid):
     return f'data/mute_progression_{int(gid)}.json'
 
 
-def _load(gid):
-    path = _path(gid)
-    if not os.path.exists(path):
-        return {}
-    try:
-        with open(path, 'r', encoding='utf-8') as fh:
-            data = json.load(fh)
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError) as ex:
-        _log.debug('mute_progression load: %s', ex)
-        return {}
-
-
-def _save(gid, data):
-    os.makedirs('data', exist_ok=True)
-    path = _path(gid)
-    tmp = path + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as fh:
-        json.dump(data, fh, ensure_ascii=False)
-    os.replace(tmp, path)
-
-
 def step_for(guild_id, target_id) -> int:
-    """0-based шаг прогрессии цели."""
-    try:
-        row = _load(guild_id).get(str(int(target_id))) or {}
-        return max(0, int(row.get('step') or 0))
-    except (TypeError, ValueError):
-        return 0
+    """Всегда 0 — прогрессия отключена."""
+    return 0
 
 
 def cap_seconds(guild_id, target_id) -> int:
-    """Потолок мута в секундах: 1ч + step×2ч (клэмп 28 дн.)."""
-    step = step_for(guild_id, target_id)
-    return min(MAX_CAP_SEC, FIRST_CAP_SEC + step * STEP_SEC)
+    """Фиксированный потолок (2 ч), без +2 по участнику."""
+    return min(MAX_CAP_SEC, FIXED_CAP_SEC)
 
 
 def bump_after_mute(guild_id, target_id) -> int:
-    """После успешного мута: step += 1. Возвращает новый step."""
-    try:
-        uid = str(int(target_id))
-        data = _load(guild_id)
-        row = data.get(uid) if isinstance(data.get(uid), dict) else {}
-        step = max(0, int(row.get('step') or 0)) + 1
-        data[uid] = {'step': step}
-        _save(guild_id, data)
-        return step
-    except Exception as ex:
-        _log.debug('bump_after_mute: %s', ex)
-        return 0
+    """No-op: систему +2 отменили."""
+    return 0
 
 
 def reset_on_warn(guild_id, target_id) -> None:
-    """Варн → прогрессия с нуля (снова 1 час)."""
-    try:
-        uid = str(int(target_id))
-        data = _load(guild_id)
-        data[uid] = {'step': 0}
-        _save(guild_id, data)
-    except Exception as ex:
-        _log.debug('reset_on_warn: %s', ex)
+    """No-op: прогрессии больше нет."""
+    return None
