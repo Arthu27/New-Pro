@@ -213,7 +213,9 @@ class Moderation (commands .Cog ):
             if self._recent_mute_count(guild.id, user.id, window_h) < threshold:
                 return
 
-            # Не дублировать уже выданный авто-варн после последнего мута.
+            # Не дублировать уже выданный авто-варн после последнего мута
+            # И не выдавать второй авто-варн, пока в окне уже есть авто-варн
+            # (гонка: 3 мута подряд успевали выдать 3 авто-варна).
             warns_cog = self.bot.get_cog('warnings')
             if warns_cog is None:
                 return
@@ -229,11 +231,18 @@ class Moderation (commands .Cog ):
                 last_mute_ts = max(_mine) if _mine else ''
             except Exception as _me:
                 log.debug(f"[MOD] auto-warn last-mute scan: {_me}")
+            from datetime import datetime, timezone, timedelta
+            _cut = (datetime.now(timezone.utc) - timedelta(hours=window_h)).isoformat()
             for w in warns:
-                if (w.get('mod_id') == str(self.bot.user.id)
-                        and 'автоматически' in (w.get('reason') or '').lower()
-                        and w.get('timestamp', '') >= last_mute_ts):
+                reason_l = (w.get('reason') or '').lower()
+                is_auto = (w.get('mod_id') == str(self.bot.user.id)
+                           and 'автоматически' in reason_l)
+                if not is_auto:
+                    continue
+                if w.get('timestamp', '') >= last_mute_ts:
                     return  # авто-варн за эту серию уже выдан
+                if w.get('timestamp', '') >= _cut:
+                    return  # в окне уже был авто-варн — не плодим
 
             bot_member = guild.me
             reason = (f'Автоматически: {threshold} мута за {window_h:.0f} ч '
@@ -427,11 +436,18 @@ class Moderation (commands .Cog ):
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
         banner = view._banner_file or view._make_banner_file()
+        # Тег участника ДО/вместе с панелью: Discord резолвит Member,
+        # кэш ролей свежий — иначе add_roles иногда молча мимо.
+        _tag = None
+        if target is not None and getattr(target, 'id', None):
+            _tag = f'Цель: {target.mention}'
         edit_kw = {
             'view': view,
-            'content': None,
+            'content': _tag,
             'embed': None,
             'embeds': [],
+            'allowed_mentions': discord.AllowedMentions(
+                users=True, roles=False, everyone=False),
         }
         if banner is not None:
             edit_kw['attachments'] = [banner]
@@ -732,9 +748,11 @@ class Moderation (commands .Cog ):
                 'Не нашёл участника по цели. Нужен @ник, ТОЧНОЕ имя или ID.'),
                 ephemeral =True )
                 return
+            # Реальный модератор (Member), не строка — иначе роли/лимиты
+            # идут мимо и роль уровня варна может не выдаться.
             ok ,text =await self .apply_panel_action (
             guild ,(user if user is not None else uid ),'warn',
-            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            reason =reason ,actor =interaction .user )
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
@@ -828,7 +846,12 @@ class Moderation (commands .Cog ):
                         'Бан из панели работает только с участниками сервера.'),
                         ephemeral =True )
                         return
-                    await user .add_roles (_brole ,reason =reason or 'бан')
+                    _bok ,_bdet =await self ._give_punish_role (
+                    guild ,user ,_brole ,reason or 'бан')
+                    if not _bok :
+                        await _respond (interaction ,embed =error_embed (
+                        f'Роль бана не выдана: {_bdet }'),ephemeral =True )
+                        return 
                     # Если человек в войсе — выкинуть сразу (роль бана
                     # каналы закрывает, но из голосового сам не выйдет).
                     try :
@@ -870,15 +893,26 @@ class Moderation (commands .Cog ):
                     except Exception as _mse:
                         log.debug(f'[MODPANEL] timeout clear all: {_mse}')
                     _extra_roles = []
+                    _role_fails = []
                     for _kind in ('mute', 'vmute'):
-                        try:
-                            _r = self._punish_role(guild, _kind)
-                            if _r is not None and _r not in user.roles:
-                                await user.add_roles(_r, reason=reason or 'мут')
-                                self._remember_temp(guild, user, _r, minutes * 60)
+                        _r = self._punish_role(guild, _kind)
+                        if _r is None:
+                            continue
+                        _ok_r, _det_r = await self._give_punish_role(
+                            guild, user, _r, reason or 'мут')
+                        if _ok_r:
+                            self._remember_temp(guild, user, _r, minutes * 60)
+                            if _det_r != 'already':
                                 _extra_roles.append(_r.name)
-                        except Exception as _tre:
-                            log.debug(f'[MODPANEL] timeout роль {_kind}: {_tre}')
+                        else:
+                            _role_fails.append(f'{_kind}: {_det_r}')
+                            log.warning('[MODPANEL] timeout роль %s: %s',
+                                        _kind, _det_r)
+                    if _role_fails and not _extra_roles:
+                        await _respond(interaction, embed=error_embed(
+                            'Роли мута не выданы: ' + '; '.join(_role_fails)),
+                            ephemeral=True)
+                        return
                     # микрофон: закрыть сразу, если человек в голосовом канале
                     try:
                         if getattr(getattr(user, 'voice', None), 'channel', None) \
@@ -919,7 +953,12 @@ class Moderation (commands .Cog ):
                         await mute_state.clear_all_mutes(guild, user)
                     except Exception as _mse:
                         log.debug(f'[MODPANEL] mute_chat clear all: {_mse}')
-                    await user.add_roles(_mrole, reason=reason or 'мут чата')
+                    _mok, _mdet = await self._give_punish_role(
+                        guild, user, _mrole, reason or 'мут чата')
+                    if not _mok:
+                        await _respond(interaction, embed=error_embed(
+                            f'Роль мута не выдана: {_mdet}'), ephemeral=True)
+                        return
                     self._remember_temp(guild, user, _mrole, minutes * 60)
                     msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
                            f"(роль «{_mrole.name}»); голос не тронут")
@@ -937,7 +976,13 @@ class Moderation (commands .Cog ):
                         # микрофон закрыт (владелец 2026-09-05: «микрофон
                         # должен закрываться, а в войсы он заходить может»)
                         await self ._clear_chat_mute (guild ,user )
-                        await user .add_roles (_vrole ,reason =reason or 'войс-мут')
+                        _vok ,_vdet =await self ._give_punish_role (
+                        guild ,user ,_vrole ,reason or 'войс-мут')
+                        if not _vok :
+                            await _respond (interaction ,embed =error_embed (
+                            f'Роль войс-мута не выдана: {_vdet }'),
+                            ephemeral =True )
+                            return 
                         self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
                         try :
                             if getattr (getattr (user ,'voice',None ),'channel',None ) \
@@ -1244,7 +1289,14 @@ class Moderation (commands .Cog ):
             return False ,'Неизвестное действие'
         if guild is None :
             return False ,'Сервер не найден'
-        _actor =PanelActor (actor )
+        # actor: реальный Member из Discord ИЛИ строка/PanelActor из веб-панели
+        if isinstance(actor, discord.Member) or (
+                hasattr(actor, 'id') and hasattr(actor, 'roles')
+                and not isinstance(actor, str)
+                and not isinstance(actor, PanelActor)):
+            _actor = actor
+        else:
+            _actor = PanelActor(actor)
         target_str =str (getattr (target ,'id',target ))
         # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05: «модер наказывает модера
         # и куратора — беспредел»): персонал не наказывает персонал своего
@@ -1275,7 +1327,7 @@ class Moderation (commands .Cog ):
                         return False ,_derr
             except Exception as _pex :
                 _log .debug ('[MODPANEL] panel dur cap: %s',_pex )
-        # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
+        # варн — своя ветка
         if action =='warn':
             try :
                 from services .staff_limits import check_action 
@@ -1288,11 +1340,30 @@ class Moderation (commands .Cog ):
                 w =self .bot .get_cog ('warnings')
                 if w is None :
                     return False ,'Модуль варнов не загружен'
-                # add_warning сам пишет варн, ДМ участнику и лог в канал
-                res =await w .add_warning (target ,moderator =_actor ,
+                # Цель должна быть Member (роли уровня варна иначе не выдать)
+                _tm = target if isinstance(target, discord.Member)                     else guild.get_member(int(target_str) or 0)
+                if _tm is None:
+                    try:
+                        _tm = await guild.fetch_member(int(target_str) or 0)
+                    except Exception:
+                        _tm = None
+                if _tm is None:
+                    return False, (
+                        'Участник не на сервере — варн с ролью уровня '
+                        'выдаётся только тем, кто сейчас на сервере.')
+                w._last_role_sync = (True, 'ok')
+                res =await w .add_warning (_tm ,moderator =_actor ,
                 reason =reason or None )
                 _total =res [1 ]if isinstance (res ,tuple )else None 
-                return True ,f'Варн выдан (всего: {_total if _total is not None else "?"})'
+                _txt = f'Варн выдан (всего: {_total if _total is not None else "?"})'
+                _rok, _rdet = getattr(w, '_last_role_sync', (True, 'ok'))
+                if not _rok:
+                    _txt += f'\n⚠️ Роль уровня не выдана: {_rdet}'
+                elif _rdet == 'no-levels':
+                    _txt += (
+                        '\nℹ️ Роли уровней варнов не настроены '
+                        '(панель → Роли наказаний → уровни варнов).')
+                return True ,_txt
             except Exception as _ex :
                 return False ,f'Не получилось: {_ex }'
         if action =='unwarn':
@@ -1434,6 +1505,48 @@ class Moderation (commands .Cog ):
         except Exception as _ex :
             log .debug (f'[MODPANEL] punish_role {kind }: {_ex}')
             return None 
+
+    async def _give_punish_role (self ,guild ,user ,role ,reason ,retries =2 ):
+        """Выдать роль наказания сразу, с refresh Member и ретраями.
+
+        Раньше add_roles иногда глотался debug-логом («роли не выдаёт») —
+        здесь явный warning + до 3 попыток. Возвращает (ok, detail).
+        """
+        if role is None or user is None :
+            return False ,'нет роли/участника'
+        try :
+            mid =int (getattr (user ,'id',0 )or 0 )
+            fresh =guild .get_member (mid )if guild is not None else None 
+            if fresh is None and guild is not None :
+                try :
+                    fresh =await guild .fetch_member (mid )
+                except Exception :
+                    fresh =None 
+            if fresh is not None :
+                user =fresh 
+            if role in (getattr (user ,'roles',None )or []):
+                return True ,'already'
+        except Exception as _fe :
+            log .debug ('[MODPANEL] give_role refresh: %s',_fe )
+        last =None 
+        for attempt in range (max (1 ,int (retries )+1 )):
+            try :
+                await user .add_roles (role ,reason =reason or 'наказание')
+                return True ,'ok'
+            except discord .Forbidden as _fe :
+                log .warning ('[MODPANEL] нет прав выдать «%s»: %s',
+                             getattr (role ,'name',role ),_fe )
+                return False ,f'нет прав выдать «{getattr (role ,"name",role )}»'
+            except Exception as _ae :
+                last =_ae 
+                log .warning ('[MODPANEL] add_roles «%s» try %s: %s',
+                             getattr (role ,'name',role ),attempt +1 ,_ae )
+                try :
+                    import asyncio as _aio_gr
+                    await _aio_gr .sleep (0.35 *(attempt +1 ))
+                except Exception :
+                    pass 
+        return False ,str (last or 'add_roles failed')
 
     def _remember_temp (self ,guild ,user ,role ,seconds ):
         """Запомнить срок выдачи роли — loop снимет её вовремя."""

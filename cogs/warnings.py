@@ -254,12 +254,30 @@ class warnings(commands.Cog):
         Выдаёт роль ближайшего уровня (≤ warn_count) и снимает роли
         предыдущих уровней; при снятии варна уровень падает — роль
         пересчитывается. Нет выбранных warn-ролей — вообще ничего не делает.
+
+        Returns: (ok, detail) — ok=False если роль настроена, но выдать
+        не удалось (права/иерархия/роль удалена).
         """
         try:
             from services import punish_roles as PR
             add_id, remove_ids = PR.level_transition(guild.id, warn_count)
             if not add_id and not remove_ids:
-                return
+                log.info('[WARNS] уровни варнов не настроены (guild=%s count=%s)',
+                         getattr(guild, 'id', '?'), warn_count)
+                return True, 'no-levels'
+            # свежий Member — кэш ролей после предыдущих действий мог устареть
+            try:
+                mid = int(getattr(member, 'id', 0) or 0)
+                fresh = guild.get_member(mid)
+                if fresh is None:
+                    try:
+                        fresh = await guild.fetch_member(mid)
+                    except Exception:
+                        fresh = None
+                if fresh is not None:
+                    member = fresh
+            except Exception as _fe:
+                log.debug('[WARNS] refresh member: %s', _fe)
             have = {getattr(r, 'id', None)
                     for r in (getattr(member, 'roles', None) or [])}
             for rid in remove_ids:
@@ -268,20 +286,51 @@ class warnings(commands.Cog):
                 role = guild.get_role(rid)
                 if role is None:
                     continue
-                await member.remove_roles(
-                    role, reason=f'Уровень варнов изменился ({warn_count})')
-                log.info('[WARNS] снята роль уровня %s с %s (варнов: %s)',
-                         role.name, member, warn_count)
+                try:
+                    await member.remove_roles(
+                        role, reason=f'Уровень варнов изменился ({warn_count})')
+                except Exception as _re:
+                    log.warning('[WARNS] remove_roles %s: %s', getattr(role, 'name', rid), _re)
+                else:
+                    log.info('[WARNS] снята роль уровня %s с %s (варнов: %s)',
+                             role.name, member, warn_count)
             if add_id and add_id not in have:
                 role = guild.get_role(add_id)
                 if role is None:
-                    return
-                await member.add_roles(
-                    role, reason=f'Уровень варнов: {warn_count}')
+                    log.warning('[WARNS] роль уровня id=%s не найдена на сервере',
+                                add_id)
+                    return False, f'роль уровня (id={add_id}) не найдена на сервере'
+                # до 2 повторов: Discord иногда отвечает 429/сетевой сбой
+                last_err = None
+                for _attempt in range(3):
+                    try:
+                        await member.add_roles(
+                            role, reason=f'Уровень варнов: {warn_count}')
+                        last_err = None
+                        break
+                    except discord.Forbidden as _fe:
+                        log.warning('[WARNS] нет прав выдать роль %s: %s',
+                                    role.name, _fe)
+                        return False, (
+                            f'нет прав выдать роль «{role.name}» '
+                            f'(иерархия / Manage Roles)')
+                    except Exception as _ae:
+                        last_err = _ae
+                        log.warning('[WARNS] add_roles %s try %s: %s',
+                                    role.name, _attempt + 1, _ae)
+                        try:
+                            import asyncio as _aio
+                            await _aio.sleep(0.35 * (_attempt + 1))
+                        except Exception:
+                            pass
+                if last_err is not None:
+                    return False, str(last_err)
                 log.info('[WARNS] выдана роль уровня %s → %s (варнов: %s)',
                          role.name, member, warn_count)
+            return True, 'ok'
         except Exception as _ex:
-            log.debug('[WARNS] роли уровней варна: %s', _ex)
+            log.warning('[WARNS] роли уровней варна: %s', _ex)
+            return False, str(_ex)
 
     async def send_dm(self, user, embed):
         # DM — best-effort: закрытые ЛС/сетевой сбой не роняют команду
@@ -452,7 +501,11 @@ class warnings(commands.Cog):
 
         # Роли уровня варна: вырос уровень — предыдущая роль слетает сама
         guild = interaction.guild
-        await self._sync_warn_level_roles(guild, user, total)
+        _role_ok, _role_detail = await self._sync_warn_level_roles(
+            guild, user, total)
+        if not _role_ok:
+            log.warning('[WARNS] варн записан, роль не выдана: %s', _role_detail)
+        self._last_role_sync = (_role_ok, _role_detail)
 
         # Лимиты: фиксируем успешный варн в дневном счётчике
         try:
@@ -664,7 +717,11 @@ class warnings(commands.Cog):
         total = len(warns)
 
         # Роли уровня варна (путь панели/AI-модератора — тот же переезд)
-        await self._sync_warn_level_roles(user.guild, user, total)
+        _role_ok, _role_detail = await self._sync_warn_level_roles(
+            user.guild, user, total)
+        if not _role_ok:
+            log.warning('[WARNS] варн записан, роль не выдана: %s', _role_detail)
+        self._last_role_sync = (_role_ok, _role_detail)
 
         # Лимиты: фиксируем успешный варн в дневном счётчике
         try:
