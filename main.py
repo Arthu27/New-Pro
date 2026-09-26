@@ -647,29 +647,37 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_on_exit)
 
+def _panel_discord_channel_enabled() -> bool:
+    """Писать ссылку панели в Discord-канал hakumo-panel.
+
+    По умолчанию ВЫКЛ: канал не создаём и ничего туда не шлём
+    (ни ссылку панели, ни «support/event»-шум). Панель живёт на
+    PANEL_URL / hakumods.xyz. Вкл: PANEL_DISCORD_CHANNEL=1.
+    """
+    raw = (os.getenv('PANEL_DISCORD_CHANNEL') or '0').strip().lower()
+    return raw in ('1', 'true', 'yes', 'on')
+
+
 async def send_panel_link(url):
-    import json as _json
     panel_url = url
+    if not _panel_discord_channel_enabled():
+        print(f"[ИНФО] Ссылка панели в Discord отключена "
+              f"(PANEL_DISCORD_CHANNEL=0): {panel_url}")
+        return
 
     for guild in bot.guilds:
         try:
             panel_ch = discord.utils.get(guild.text_channels, name="hakumo-panel")
             if not panel_ch:
-                for old_name in ["panel-link", "hakumo-panel", "Hakumo-panel"]:
+                for old_name in ["panel-link", "Hakumo-panel"]:
                     panel_ch = discord.utils.get(guild.text_channels, name=old_name)
                     if panel_ch:
-                        await panel_ch.edit(name="hakumo-panel")
                         break
+                # Канал НЕ создаём — только пишем, если уже есть.
                 if not panel_ch:
-                    overwrites = {
-                        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                        guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-                    }
-                    role = guild.get_role(ALERT_ROLE_ID) if ALERT_ROLE_ID else None
-                    if role:
-                        overwrites[role] = discord.PermissionOverwrite(read_messages=True)
-                    panel_ch = await guild.create_text_channel("hakumo-panel", overwrites=overwrites)
-                    print(f"[ИНФО] Канал hakumo-panel создан: {guild.name}")
+                    print(f"[ИНФО] Канал hakumo-panel нет на {guild.name} — "
+                          f"пропуск (автосоздание выключено)")
+                    continue
             async for msg in panel_ch.history(limit=10):
                 if msg.author == bot.user:
                     await msg.delete()
