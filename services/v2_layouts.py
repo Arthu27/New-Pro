@@ -199,8 +199,12 @@ SHOW_MENU_BANNER = True
 def build_modpanel_items(*, banner_filename: str, status: str,
                          footer: str = '',
                          target_select=None, action_select=None,
-                         show_banner: bool = None):
-    """Финальный /modpanel: шапка + баннер + два чёрных блока с селектами."""
+                         show_banner: bool = None,
+                         banner_url: str = None):
+    """Финальный /modpanel: шапка + баннер + два чёрных блока с селектами.
+
+    banner_url — опционально (старые вызовы); MediaGallery берёт filename.
+    """
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
