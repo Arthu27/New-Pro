@@ -478,10 +478,14 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
+        try:
+            _open_ms = (datetime.now(timezone.utc) - _t_open).total_seconds() * 1000
+        except Exception:
+            _open_ms = -1
         log.info('modpanel ready msg=%s build=multi-form-v16 url=%s open_ms=%.0f',
                  getattr(panel_msg, 'id', None),
                  getattr(view, '_banner_url', None),
-                 (datetime.now(timezone.utc) - _t_open).total_seconds() * 1000)
+                 _open_ms)
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
