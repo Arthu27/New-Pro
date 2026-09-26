@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Утилиты <span class="sep">·</span> Справка</div>
+    <div class="eyebrow"> Утилиты </div>
     <h1>Справка и руководство</h1>
     <p class="lead">Всё о панели Hakumo: инструменты с описаниями, горячие клавиши и ответы на частые вопросы.</p>
   </div>
@@ -195,10 +195,10 @@
 <div class="sp-wrap">
 
 {% set _tones = {
-  'main': '#4f46e5', 'mod': '#dc2626', 'members': '#0284c7', 'roles': '#7c3aed',
+  'main': '#4d9fff', 'mod': '#dc2626', 'members': '#0284c7', 'roles': '#7c3aed',
   'access': '#d97706', 'tickets': '#0891b2', 'bot': '#64748b', 'community': '#db2777',
   'logs': '#475569', 'content': '#0ea5e9', 'ai': '#8b5cf6', 'ops': '#16a34a',
-  'utility': '#4f46e5'
+  'utility': '#4d9fff'
 } %}
 
 
@@ -223,7 +223,7 @@
   <div class="sp-grid" id="sp-grid">
     {% for grp in panel_menu|default([], true) %}
       {% for p in grp.pages %}
-      <a class="sp-card" href="{{ p.path }}" data-grp="{{ grp.key }}" style="--sp-tone: {{ _tones.get(grp.key, '#4f46e5') }}" data-search="{{ p.label|lower }} {{ grp.group|lower }} {{ p.description|default('', true)|lower }}">
+      <a class="sp-card" href="{{ p.path }}" data-grp="{{ grp.key }}" style="--sp-tone: {{ _tones.get(grp.key, '#4d9fff') }}" data-search="{{ p.label|lower }} {{ grp.group|lower }} {{ p.description|default('', true)|lower }}">
         <span class="sp-icon"><i class="fas {{ p.icon }}"></i></span>
         <span class="sp-title">{{ p.label }}</span>
         <span class="sp-desc">{{ p.description|default(grp.group ~ ' — раздел панели «' ~ p.label ~ '»', true) }}</span>
@@ -273,7 +273,7 @@
     <div class="sp-faq">
       <details>
         <summary><span class="q-ico"><i class="fas fa-robot"></i></span> Бот не отвечает на команды<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Проверьте статус бота на <a href="/bot-stats">Статистике бота</a> — зелёная точка означает «онлайн». Затем убедитесь, что у бота есть права на чтение и отправку сообщений в канале, где вы пишете команды.</div>
+        <div class="faq-body">Проверьте статус бота{% if '/bot-stats' in panel_visible_paths %} на <a href="/bot-stats">Статистике бота</a>{% endif %} — зелёная точка означает «онлайн». Затем убедитесь, что у бота есть права на чтение и отправку сообщений в канале, где вы пишете команды.</div>
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-key"></i></span> Как сменить пароль от панели?<i class="fas fa-chevron-down chev"></i></summary>
@@ -281,7 +281,7 @@
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-shield-halved"></i></span> Куда писать, если участник нарушает правила?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Модераторы работают через <a href="/mod-center">Центр модерации</a>: варны — в <a href="/warnings">Варнах</a>, мьюты и баны — в <a href="/temp-moderation">Временных мерах</a>. Решения можно обжаловать через <a href="/appeals">Апелляции</a>.</div>
+        <div class="faq-body">Модераторы работают через {% if '/mod-center' in panel_visible_paths %}<a href="/mod-center">Центр модерации</a>{% else %}Центр модерации{% endif %}: варны — {% if '/warnings' in panel_visible_paths %}в <a href="/warnings">Варнах</a>{% else %}в Варнах{% endif %}, мьюты и баны — {% if '/temp-moderation' in panel_visible_paths %}в <a href="/temp-moderation">Временных мерах</a>{% else %}во Временных мерах{% endif %}. Решения можно обжаловать{% if '/appeals' in panel_visible_paths %} через <a href="/appeals">Апелляции</a>{% endif %}.</div>
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-file-signature"></i></span> Как подать заявку в команду?<i class="fas fa-chevron-down chev"></i></summary>
@@ -289,22 +289,22 @@
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-database"></i></span> Где хранятся данные?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Все данные лежат в файлах <code>data/*.json</code> рядом с панелью. Настройте регулярные <a href="/backups">Резервные копии</a>, чтобы ничего не потерять.</div>
+        <div class="faq-body">Все данные лежат в файлах <code>data/*.json</code> рядом с панелью.{% if '/backups' in panel_visible_paths %} Настройте регулярные <a href="/backups">Резервные копии</a>, чтобы ничего не потерять.{% endif %}</div>
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-headset"></i></span> Как связаться с поддержкой?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Создайте обращение в <a href="/ai-tickets">AI Тикетах</a> — ответ придёт в панель и в Discord. Для срочного — напишите владельцу напрямую.</div>
+        <div class="faq-body">Отправьте жалобу через <a href="/reports">Репорты</a> — она уйдёт в закрытый канал модерации со скрином или видео. Для срочного — напишите владельцу напрямую.</div>
       </details>
       <details>
         <summary><span class="q-ico"><i class="fas fa-eye-slash"></i></span> Можно ли скрыть лишние каналы из панели?<i class="fas fa-chevron-down chev"></i></summary>
-        <div class="faq-body">Да! На странице <a href="/channels">Каналы</a> у каждой строки и категории есть кнопка с глазом — скрытые каналы исчезают из панели и чата, а вернуть их можно тумблером «Скрытые».</div>
+        <div class="faq-body">Да! На странице {% if '/channels' in panel_visible_paths %}<a href="/channels">Каналы</a>{% else %}Каналы{% endif %} у каждой строки и категории есть кнопка с глазом — скрытые каналы исчезают из панели и чата, а вернуть их можно тумблером «Скрытые».</div>
       </details>
     </div>
   </div>
 
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   var input = document.getElementById('sp-search');

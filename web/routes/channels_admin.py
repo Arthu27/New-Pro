@@ -2,14 +2,14 @@
 """CRUD каналов (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -30,7 +30,7 @@ def register(ctx):
         if not bot :
             if _app ._demo_mode ():return jsonify ({'success':True ,'demo':True })
             return jsonify ({'error':'Бот офлайн — запусти его через start.bat и попробуй ещё раз'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             t =data .get ('type','text')
@@ -86,7 +86,7 @@ def register(ctx):
         if not bot :
             if _app ._demo_mode ():return jsonify ({'success':True ,'demo':True })
             return jsonify ({'error':'Бот офлайн — запусти его через start.bat и попробуй ещё раз'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             ch =guild .get_channel (int (channel_id ))

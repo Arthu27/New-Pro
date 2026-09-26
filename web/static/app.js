@@ -45,17 +45,15 @@
   function bootTheme() {
     var t = '';
     try { t = localStorage.getItem('hakumo_theme') || ''; } catch (e) {}
-    if (!t) {
-      // первый визит — следуем за системной темой
-      try {
-        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      } catch (e) { t = 'light'; }
-    }
-    if (t !== 'light' && t !== 'dark') t = 'light';
+    /* Панель всегда тёмная/чёрная по умолчанию — не светлая Soft Neu. */
+    if (t !== 'light' && t !== 'dark') t = 'dark';
+    if (t === 'light') t = 'dark';
     doc.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {}
   }
 
   window.toggleTheme = function () {
+    /* Переключатель оставляем, но «светлая» тоже чёрная (Nova). */
     var cur = doc.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     var next = cur === 'dark' ? 'light' : 'dark';
     doc.documentElement.setAttribute('data-theme', next);
@@ -86,7 +84,7 @@
     st.setProperty('--ac-line', rgba(0.28));
     /* применяем и градиент кнопок/лого — перекраска полная, без индиго-хвостов */
     st.setProperty('--ac-grad', 'linear-gradient(135deg, #' + s + ', ' + light(0.18) + ' 55%, ' + dark(0.62) + ')');
-    try { localStorage.setItem('hakumo_accent', hex); } catch (e) {}
+    try { localStorage.setItem('hakumo_accent_v2', hex); } catch (e) {}
   };
 
   /* ── 3. Тосты ───────────────────────────────────────────── */
@@ -283,11 +281,108 @@
     return false;
   };
 
-  window.setLiveRefresh = function (fn, ms) {
+  /* Живые обновления: задания бывают двух режимов.
+     • timer (как раньше) — опрос раз в e.ms;
+     • push  — обновляются ПУШЕМ через SSE (services/live_bus.py → /api/live),
+               когда бэкенд реально сообщил об изменении; таймер тут лишь редкая
+               подстраховка (e.safety, по умолчанию 30с), чтобы не опрашивать
+               вхолостую. Это и убирает нагрузку «по секундам».
+     topics — массив масок (поддержка '*'), например ['g*:channels', 'g*:guardian']. */
+  /* Живые обновления. Любое задание работает в push-режиме: при изменении
+     данных на сервере бэк шлёт SSE-сигнал (services/live_bus.py → /api/live),
+     и страница обновляется сразу — без опроса по таймеру.
+     • topics заданы — задание обновляется ТОЛЬКО по своим топикам;
+     • topics нет (старые страницы) — ловит любое событие активного сервера
+       ('g*:*') и глобальные сигналы; таймер остаётся лишь редкой подстраховкой.
+     Опрос по таймеру в обоих случаях отступает на PUSH_SAFETY_MS, чтобы в
+     простое панель не молотила запросами (это и держит пинг бота низким). */
+  var PUSH_SAFETY_MS = 20000;   // подстраховка, если SSE не поднялся
+  window.setLiveRefresh = function (fn, ms, topics) {
     if (typeof fn !== 'function') return;
-    liveFns.push({ fn: fn, ms: ms || 1500, last: 0 });
-    if (liveFns.length > 60) liveFns.shift();
+    var e = {
+      fn: fn,
+      ms: Math.max(ms || 1500, PUSH_SAFETY_MS),
+      last: 0,
+      push: true,
+      topics: null,
+      pending: false
+    };
+    if (topics) {
+      e.topics = (Array.isArray(topics) ? topics : [String(topics)]);
+    } else {
+      // страница без явных топиков — обновляется по любому событию сервера
+      e.topics = ['g*:*', 'dashboard', 'global'];
+    }
+    liveFns.push(e);
+    if (liveFns.length > 80) liveFns.shift();
+    return e;
   };
+
+  /* Простейший glob-матчер масок ('*' и '?') */
+  function globMatch(pattern, text) {
+    if (pattern === '*' || pattern === text) return true;
+    var rx = '^' + String(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\?/g, '.').replace(/\*/g, '.*') + '$';
+    try { return new RegExp(rx).test(text); } catch (e) { return false; }
+  }
+
+  function jobMatches(e, topic) {
+    if (!e.topics) return false;
+    for (var i = 0; i < e.topics.length; i++) {
+      if (globMatch(e.topics[i], topic)) return true;
+    }
+    return false;
+  }
+
+  /* Слить пачку сигналов в один аккуратный прогон (rAF ~ кадр) */
+  function _schedulePushRun() {
+    if (livePaused || document.hidden) return;
+    if (_pushRaf) return;
+    _pushRaf = (window.requestAnimationFrame || function (f) { return setTimeout(f, 120); })(function () {
+      _pushRaf = 0;
+      var now = Date.now();
+      liveFns.forEach(function (e) {
+        if (e.push && e.pending) { e.pending = false; e.last = now; try { e.fn(); } catch (err) {} }
+      });
+    });
+  }
+  var _pushRaf = 0;
+
+  function _liveOnTick(topic) {
+    var hit = false;
+    liveFns.forEach(function (e) {
+      if (e.push && jobMatches(e, topic)) { e.pending = true; hit = true; }
+    });
+    if (hit) _schedulePushRun();
+  }
+
+  /* Один общий SSE-коннект на всю страницу. Если он не поднялся —
+     push-задания тихо живут на редкой страховке (e.safety). */
+  var _liveES = null, _liveESon = false;
+  function _liveConnect() {
+    if (_liveESon || typeof EventSource === 'undefined') return;
+    try {
+      var url = '/api/live?topics=*';
+      var es = new EventSource(url, { withCredentials: true });
+      _liveES = es; _liveESon = true;
+      es.addEventListener('tick', function (ev) {
+        var topic = '';
+        try { topic = (JSON.parse(ev.data || '{}') || {}).topic || ''; } catch (e) {}
+        if (topic) _liveOnTick(topic);
+      });
+      es.addEventListener('hello', function () {
+        // соединение (пере)открылось — могли пропустить сигнал, догоним всё
+        liveFns.forEach(function (e) { if (e.push) { e.pending = true; } });
+        _schedulePushRun();
+      });
+      es.onerror = function () {
+        // EventSource сам переподключится; тут ничего не спамим.
+        _liveESon = false;
+      };
+      es.onopen = function () { _liveESon = true; };
+    } catch (e) { _liveESon = false; }
+  }
+  window.__liveConnect = _liveConnect;
 
   setInterval(function () {
     if (livePaused) return;
@@ -298,7 +393,12 @@
     var now = Date.now();
     if (now < liveHoldUntil) return;
     liveFns.forEach(function (e) {
-      if (now - e.last >= e.ms) { e.last = now; try { e.fn(); } catch (err) {} }
+      // push-задания по короткому таймеру НЕ дёргаем — только по сигналу;
+      // их страховка срабатывает редко (e.ms у push = safety, ~30с).
+      if (now - e.last >= e.ms) {
+        e.last = now;
+        try { e.fn(); } catch (err) {}
+      }
     });
   }, 500);
 
@@ -386,7 +486,67 @@
       var node = doc.getElementById('palette-data');
       if (node) paletteData = JSON.parse(node.textContent || '[]');
     } catch (e) { paletteData = []; }
+    var vis = {};
+    paletteData.forEach(function (grp) {
+      (grp.pages || []).forEach(function (p) {
+        if (p && p.path) vis[p.path] = 1;
+      });
+    });
+    window.__panelVisiblePaths = vis;
+    var all = {};
+    try {
+      var n2 = doc.getElementById('menu-all-paths');
+      if (n2) JSON.parse(n2.textContent || '[]').forEach(function (p) { all[p] = 1; });
+    } catch (e) {}
+    window.__panelAllPaths = all;
   }
+
+  function menuPathOf(href) {
+    var p = String(href || '').split('?')[0];
+    if (p === '/logs/export') p = '/logs';
+    return p;
+  }
+
+  window.panelPathVisible = function (href) {
+    var vis = window.__panelVisiblePaths || {};
+    return !!vis[menuPathOf(href)];
+  };
+
+  /* Известный пункт MENU, спрятанный лэйаутом — не показываем ссылку. */
+  window.panelPathHidden = function (href) {
+    var p = menuPathOf(href);
+    if (p === '/lockdown') return false; /* FAB-only, не пункт меню */
+    var all = window.__panelAllPaths || {};
+    if (!all[p]) return false;
+    return !window.panelPathVisible(p);
+  };
+
+  /* Страховка: скрытый пункт не остаётся плиткой/ссылкой нигде на странице. */
+  window.stripHiddenMenuLinks = function (root) {
+    if (!window.panelPathHidden) return;
+    root = root || doc;
+    if (!root.querySelectorAll) return;
+    Array.prototype.forEach.call(root.querySelectorAll('a[href]'), function (a) {
+      var href = a.getAttribute('href') || '';
+      if (!window.panelPathHidden(href)) return;
+      var cls = ' ' + (a.className || '') + ' ';
+      var chrome = / (cc-tile|btn|btn-link|nav-link|set-link|ms-link|k-task|welcome-card|fab-item|ac-link|sp-card|mf-act|k-feed-row) /.test(cls)
+        || !!(a.closest && a.closest('.cc-quick, .mobile-nav, .user-menu, .sidebar, .ms-links, .ac-links'));
+      if (chrome) { if (a.parentNode) a.parentNode.removeChild(a); return; }
+      var s = doc.createElement('span');
+      s.innerHTML = a.innerHTML;
+      if (a.parentNode) a.parentNode.replaceChild(s, a);
+    });
+  };
+
+  doc.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    if (window.panelPathHidden && window.panelPathHidden(a.getAttribute('href'))) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
 
   function paletteBuild() {
     if (paletteEl) return paletteEl;
@@ -535,17 +695,17 @@
   /* ── Действия палитры (команды, а не только страницы) ── */
   var PALETTE_ACTIONS = [
     { label: 'Сменить тему', icon: 'fa-circle-half-stroke', sub: 'переключить светлая/тёмная', run: function () { window.toggleTheme(); window.showToast('Тема переключена', true); } },
-    { label: 'Светлая тема', icon: 'fa-sun', sub: 'включить светлый режим', run: function () { document.documentElement.setAttribute('data-theme', 'light'); try { localStorage.setItem('hakumo_theme', 'light'); } catch (e) {} } },
-    { label: 'Тёмная тема', icon: 'fa-moon', sub: 'включить тёмный режим', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {} } },
+    { label: 'Светлая тема', icon: 'fa-sun', sub: 'панель остаётся чёрной', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {} } },
+    { label: 'Тёмная тема', icon: 'fa-moon', sub: 'чёрная панель', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {} } },
     { label: 'Скопировать ссылку страницы', icon: 'fa-link', sub: 'в буфер обмена', run: function () {
       var done = function () { window.showToast('Ссылка скопирована', true); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(window.location.href).then(done, function () {});
       else done();
     } },
-    { label: 'Журнал: выгрузка CSV', icon: 'fa-file-csv', sub: 'последние 7 дней', run: function () { window.open('/logs/export?days=7', '_self'); } },
+    { label: 'Журнал: выгрузка CSV', icon: 'fa-file-csv', sub: 'последние 7 дней', href: '/logs', run: function () { window.open('/logs/export?days=7', '_self'); } },
     { label: 'Отчёт модерации: CSV', icon: 'fa-file-csv', sub: 'статистика команды', run: function () { window.open('/api/mod-report.csv?days=7', '_self'); } },
-    { label: 'Досье участника', icon: 'fa-id-card', sub: 'аналитика рисков по ID', run: function () { window.location.href = '/mod-insights'; } },
-    { label: 'Центр безопасности', icon: 'fa-shield-halved', sub: 'политики и лаборатория', run: function () { window.location.href = '/security'; } },
+    { label: 'Досье участника', icon: 'fa-id-card', sub: 'аналитика рисков по ID', href: '/mod-insights', run: function () { window.location.href = '/mod-insights'; } },
+    { label: 'Центр безопасности', icon: 'fa-shield-halved', sub: 'политики и лаборатория', href: '/security', run: function () { window.location.href = '/security'; } },
     { label: 'Справка по горячим клавишам', icon: 'fa-keyboard', sub: 'все сочетания панели', run: function () { if (typeof window.openHelp === 'function') window.openHelp(); } },
     { label: 'Фокус-режим', icon: 'fa-eye', sub: 'только контент, без панелей', run: function () { document.body.classList.toggle('zen'); } },
     { label: 'Тур по панели', icon: 'fa-route', sub: 'знакомство с интерфейсом за минуту', run: function () { if (typeof window.tourStart === 'function') window.tourStart(); } },
@@ -560,6 +720,7 @@
 
   function paletteActionMatches(q) {
     return PALETTE_ACTIONS.filter(function (a) {
+      if (a.href && window.panelPathHidden && window.panelPathHidden(a.href)) return false;
       if (!q) return true;
       return (a.label + ' ' + (a.sub || '')).toLowerCase().indexOf(q.toLowerCase()) !== -1;
     }).map(function (a) {
@@ -586,6 +747,7 @@
           ((d && d.groups) || []).forEach(function (grp) {
             if (grp.key === 'pages') return; // локальные страницы уже показаны
             (grp.items || []).forEach(function (it) {
+              if (it.href && window.panelPathHidden && window.panelPathHidden(it.href)) return;
               remote.push({
                 group: grp.title || 'Результаты',
                 path: it.href || '/',
@@ -645,12 +807,12 @@
         }
       });
     });
-    // Подгруппы (раздел модерации): активную раскрываем сразу
+    // Подгруппы (раздел модерации и защиты): пункты ВИДНЫ сразу —
+    // «весь состав меню на виду» (заказ владельца). Клик сворачивает.
     Array.prototype.forEach.call(nav.querySelectorAll('.nav-subgroup'), function (sub) {
       var btn = sub.querySelector('.nav-subgroup-title');
       if (!btn) return;
-      if (sub.classList.contains('has-active')) sub.classList.add('open');
-      btn.addEventListener('click', function () { sub.classList.toggle('open'); });
+      btn.addEventListener('click', function () { sub.classList.toggle('closed'); });
     });
     // Поиск-фильтр по меню: подсветка совпадений, авто-раскрытие групп,
     // счётчик у группы, «ничего не найдено», Esc и хоткей «/»
@@ -690,7 +852,17 @@
           var span = l.querySelector('span');
           var label = span ? span.textContent : l.textContent;
           var hay = (label + ' ' + (l.getAttribute('title') || '')).toLowerCase();
+          /* «комната» в UI = страница/канал меню; иначе поиск «комнат» пустел */
           var hit = !q || hay.indexOf(q) !== -1;
+          if (!hit && q.length >= 4) {
+            var syn = '';
+            if (q.indexOf('комнат') === 0 || 'комнат'.indexOf(q) === 0) syn = 'канал';
+            else if (q.indexOf('room') === 0) syn = 'канал';
+            else if (q.indexOf('welcome') === 0 || q.indexOf('привет') === 0) syn = 'приветствие';
+            else if (q.indexOf('уведом') === 0 || q.indexOf('notif') === 0) syn = 'уведомления';
+            else if (q.indexOf('event') === 0 || q.indexOf('ивент') === 0 || q.indexOf('событ') === 0) syn = 'события';
+            if (syn && hay.indexOf(syn) !== -1) hit = true;
+          }
           l.classList.toggle('nav-hide', !!q && !hit);
           if (q && hit && span) hl(span, q);
           else if (span) unhl(span);
@@ -770,12 +942,17 @@
       paintPing();
       setInterval(paintPing, 2000);
       pingPill.addEventListener('click', function () {
+        if (window.panelPathHidden && window.panelPathHidden('/bot-stats')) return;
         window.location.href = '/bot-stats';
       });
     }
 
-    // Сохранение пинга из /api/stats
+    // Сохранение пинга из /api/stats. Раньше опрос шёл каждые 3 сек с КАЖДОЙ
+    // открытой вкладки (а эндпоинт перебирает участников всех серверов) —
+    // теперь 15 сек и только на видимой вкладке; бэкенд вдобавок кэширует
+    // ответ на 5 сек. Пилюля пинга остаётся живой, нагрузка падает в разы.
     function trackPing() {
+      if (document.hidden) return;
       fetch('/api/stats', { guardSilent: true })
         .then(function (r) { return r.json(); })
         .then(function (d) {
@@ -786,7 +963,8 @@
         .catch(function () {});
     }
     trackPing();
-    setInterval(trackPing, 3000);
+    setInterval(trackPing, 15000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) trackPing(); });
     var tick = function () {
       var t = new Date().toLocaleTimeString('ru-RU');
       if (clock) clock.textContent = t;
@@ -825,13 +1003,71 @@
     }
     var mobile = doc.getElementById('mobileMenu');
     var sidebar = doc.getElementById('sidebar');
+    var backdrop = doc.getElementById('sidebarBackdrop');
+    function setSidebarOpen(on) {
+      if (!sidebar) return;
+      sidebar.classList.toggle('open', !!on);
+      doc.body.classList.toggle('sidebar-open', !!on);
+      if (backdrop) {
+        backdrop.classList.toggle('show', !!on);
+        backdrop.hidden = !on;
+      }
+      if (mobile) {
+        mobile.setAttribute('aria-expanded', on ? 'true' : 'false');
+        mobile.setAttribute('aria-label', on ? 'Закрыть меню' : 'Открыть меню');
+      }
+    }
     if (mobile && sidebar) {
-      mobile.addEventListener('click', function () { sidebar.classList.toggle('open'); });
-      doc.addEventListener('click', function (e) {
-        if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== mobile && !mobile.contains(e.target)) {
-          sidebar.classList.remove('open');
+      mobile.addEventListener('click', function (e) {
+        e.stopPropagation();
+        setSidebarOpen(!sidebar.classList.contains('open'));
+      });
+      if (backdrop) backdrop.addEventListener('click', function () { setSidebarOpen(false); });
+      sidebar.addEventListener('click', function (e) {
+        var a = e.target && e.target.closest ? e.target.closest('a.nav-link') : null;
+        if (a && window.matchMedia && window.matchMedia('(max-width: 1080px)').matches) {
+          setSidebarOpen(false);
         }
       });
+      doc.addEventListener('click', function (e) {
+        if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== mobile && !mobile.contains(e.target) && !(backdrop && backdrop.contains(e.target))) {
+          setSidebarOpen(false);
+        }
+      });
+      doc.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) setSidebarOpen(false);
+      });
+    }
+    /* Телефонный ящик/клавиатура не должны перекрывать кнопки на компе:
+       при ширине >1080 снимаем overlay, keyboard-open — только ≤860. */
+    if (window.matchMedia) {
+      var mqShell = window.matchMedia('(max-width: 1080px)');
+      var onShell = function () { if (!mqShell.matches) setSidebarOpen(false); };
+      if (mqShell.addEventListener) mqShell.addEventListener('change', onShell);
+      else if (mqShell.addListener) mqShell.addListener(onShell);
+      if (!mqShell.matches) setSidebarOpen(false);
+    }
+    if (window.visualViewport) {
+      var vv = window.visualViewport;
+      var phoneKb = function () {
+        return window.matchMedia && window.matchMedia('(max-width: 860px)').matches;
+      };
+      var syncKb = function () {
+        if (!phoneKb()) {
+          doc.body.classList.remove('keyboard-open');
+          return;
+        }
+        var covered = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
+        doc.body.classList.toggle('keyboard-open', covered > 90);
+      };
+      vv.addEventListener('resize', syncKb);
+      vv.addEventListener('scroll', syncKb);
+      if (window.matchMedia) {
+        var mqKb = window.matchMedia('(max-width: 860px)');
+        var onKb = function () { if (!mqKb.matches) doc.body.classList.remove('keyboard-open'); };
+        if (mqKb.addEventListener) mqKb.addEventListener('change', onKb);
+        else if (mqKb.addListener) mqKb.addListener(onKb);
+      }
     }
     var searchBtn = doc.getElementById('globalSearchBtn');
     if (searchBtn) searchBtn.addEventListener('click', paletteOpen);
@@ -924,7 +1160,8 @@
         var ownItems = own.map(function (n) {
           return {
             title: n.title || n.action || 'Уведомление',
-            body: n.body || n.detail || '',
+            /* API отдаёт message; старые записи могли писать body/detail */
+            body: n.body || n.message || n.detail || '',
             icon: /^fa-/.test(n.icon || '') ? n.icon : 'fa-bell',
             ts: n.ts || n.created_at || n.timestamp || 0,
             kind: 'personal',
@@ -932,6 +1169,9 @@
           };
         });
         var all = sysItems.concat(ownItems).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+        all.forEach(function (n) {
+          if (n.link && window.panelPathHidden && window.panelPathHidden(n.link)) n.link = '';
+        });
         var list = notifTab === 'system' ? sysItems : notifTab === 'personal' ? ownItems : all;
         if (!list.length) {
           body.innerHTML = '<div class="empty"><i class="fas fa-bell-slash"></i><span>Уведомлений нет</span></div>';
@@ -983,7 +1223,14 @@
     });
 
     loadNotifs();
-    setInterval(loadNotifs, 30000);
+    /* Колокольчик: новые уведомления прилетают пушем (топик notifications),
+       таймер 60с — лишь подстраховка. */
+    if (window.setLiveRefresh) {
+      window.setLiveRefresh(function () { if (!document.hidden) loadNotifs(); }, 60000,
+                            ['notifications', 'global']);
+    } else {
+      setInterval(loadNotifs, 30000);
+    }
   }
 
   function activityInit() {
@@ -1022,6 +1269,9 @@
             body.innerHTML = '<div class="empty"><i class="fas fa-stream"></i><span>Событий пока нет</span></div>';
             return;
           }
+          items.forEach(function (it) {
+            if (it.link && window.panelPathHidden && window.panelPathHidden(it.link)) it.link = '';
+          });
           body.innerHTML = items.slice(0, 40).map(function (it) {
             var ic = /^fa-/.test(it.icon || '') ? it.icon : 'fa-circle';
             var inner =
@@ -1084,11 +1334,6 @@
       window.wsClient = ws;
       ws.on('connected', function () {
         try { ws.sendPresence('online'); } catch (e) {}
-      });
-      ws.on('ticket_update', function (d) { if (typeof window.handleTicketUpdate === 'function') window.handleTicketUpdate(d); });
-      ws.on('new_ticket', function (d) {
-        window.showToast('Новый тикет создан', true);
-        if (typeof window.handleNewTicket === 'function') window.handleNewTicket(d);
       });
       ws.on('stats_update', function (d) {
         if (typeof window.handleStatsUpdate === 'function') window.handleStatsUpdate(d);
@@ -1275,12 +1520,13 @@
      при каждой перезагрузке страницы / смене канала. */
   (function bootAccent() {
     try {
-      var acc = localStorage.getItem('hakumo_accent');
-      if (acc && acc !== '#4f46e5') window.applyAccent(acc);
+      var acc = localStorage.getItem('hakumo_accent_v2');
+      if (acc) window.applyAccent(acc);
     } catch (e) {}
   })();
   ready(function () {
     paletteInitData();
+    if (window.stripHiddenMenuLinks) window.stripHiddenMenuLinks();
     topbarInit();
     sidebarInit();
     notifInit();
@@ -1292,6 +1538,7 @@
     autoSearchInit();
     revealInit();
     wsInit();
+    if (window.__liveConnect) window.__liveConnect();
   });
 })();
 
@@ -1454,7 +1701,7 @@
     var s = String(hex || '').replace('#', '');
     if (s.length === 3) s = s.split('').map(function (c) { return c + c; }).join('');
     var n = parseInt(s, 16);
-    if (isNaN(n)) return 'rgba(79,70,229,' + alpha + ')';
+    if (isNaN(n)) return 'rgba(77,159,255,' + alpha + ')';
     return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
   }
 
@@ -1653,6 +1900,7 @@
 
   /* ── Пресеты акцентов + попап ────────────────────────── */
   var ACCENTS = [
+    { name: 'Неон', hex: '#4d9fff' },
     { name: 'Индиго', hex: '#4f46e5' },
     { name: 'Фиолет', hex: '#7c3aed' },
     { name: 'Небо', hex: '#0284c7' },
@@ -1686,7 +1934,11 @@
     });
     function paint() {
       var cur = '';
-      try { cur = localStorage.getItem('hakumo_accent') || '#4f46e5'; } catch (e) {}
+      try {
+        cur = localStorage.getItem('hakumo_accent_v2')
+          || (getComputedStyle(doc.documentElement).getPropertyValue('--ac') || '').trim()
+          || '#4d9fff';
+      } catch (e) {}
       cur = String(cur).toLowerCase();
       Array.prototype.forEach.call(grid.children, function (sw, i) {
         sw.classList.toggle('active', ACCENTS[i].hex.toLowerCase() === cur);
@@ -1888,13 +2140,13 @@
 
   function accentRGB() {
     try {
-      var v = getComputedStyle(doc.documentElement).getPropertyValue('--ac').trim() || '#4f46e5';
+      var v = getComputedStyle(doc.documentElement).getPropertyValue('--ac').trim() || '#4d9fff';
       v = v.replace('#', '');
       if (v.length === 3) v = v.split('').map(function (c) { return c + c; }).join('');
       var n = parseInt(v, 16);
-      if (isNaN(n)) return { r: 79, g: 70, b: 229 };
+      if (isNaN(n)) return { r: 77, g: 159, b: 255 };
       return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-    } catch (e) { return { r: 79, g: 70, b: 229 }; }
+    } catch (e) { return { r: 77, g: 159, b: 255 }; }
   }
 
   /* ── 1. Созвездие частиц на фоне ───────────────────────── */
@@ -2183,7 +2435,7 @@
   /* ── 3. Конфетти ───────────────────────────────────────── */
   window.celebrate = function () {
     if (reduced) return;
-    var colors = ['#4f46e5', '#7c3aed', '#0284c7', '#059669', '#e11d48', '#d97706', '#16a34a', '#ec4899'];
+    var colors = ['#4d9fff', '#7ab5ff', '#e8b64c', '#7c3aed', '#0284c7', '#059669', '#e11d48', '#d97706', '#16a34a', '#ec4899'];
     var host = doc.createElement('div');
     host.className = 'confetti-host';
     doc.body.appendChild(host);
@@ -2635,34 +2887,58 @@
     if (!host) return;
 
     var backdrop = doc.createElement('div');
-    backdrop.className = 'fab backdrop';
+    /* НЕ вешаем класс .fab на backdrop — иначе он наследует layout FAB
+       (right/bottom/flex) и перекрывает «+» непредсказуемо. */
+    backdrop.className = 'fab-backdrop';
     doc.body.appendChild(backdrop);
 
     var wrap = doc.createElement('div');
     wrap.className = 'fab';
+    // min_role: пункты только для админа+ скрыты от мода/куратора (страница
+    // всё равно отдала бы 403 — не показываем ведущую в никуда ссылку).
+    var FAB_LEVELS = { uye: 0, mod: 1, curator: 2, admin: 3, owner: 4 };
+    var fabRole = (host.getAttribute('data-panel-role') || 'uye');
+    var fabLvl = FAB_LEVELS[fabRole] != null ? FAB_LEVELS[fabRole] : 0;
     var items = [
-      { icon: 'fa-clock', label: 'Новая мера', href: '/temp-moderation', tone: 'tone-info' },
-      { icon: 'fa-triangle-exclamation', label: 'Выдать варн', href: '/warnings', tone: 'tone-warn' },
-      { icon: 'fa-table-columns', label: 'Задача команде', href: '/team-board', tone: '' },
-      { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err' },
-      { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '' },
-      { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok' }
-    ];
+      { icon: 'fa-clock', label: 'Новая мера', href: '/temp-moderation', tone: 'tone-info', min: 1 },
+      { icon: 'fa-triangle-exclamation', label: 'Выдать варн', href: '/warnings', tone: 'tone-warn', min: 1 },
+      { icon: 'fa-table-columns', label: 'Задача команде', href: '/team-board', tone: '', min: 1 },
+      { icon: 'fa-calendar-days', label: 'События', href: '/events', tone: 'tone-ok', min: 1 },
+      { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err', min: 3 },
+      { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '', min: 1 },
+      { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok', min: 0 }
+    ].filter(function (it) {
+      if (fabLvl < (it.min || 0)) return false;
+      if (window.panelPathHidden && window.panelPathHidden(it.href)) return false;
+      return true;
+    });
+    if (!items.length) {
+      /* хоть один пункт — иначе «+» открывает пустоту и кажется сломанным */
+      items = [{ icon: 'fa-house', label: 'Обзор', href: '/', tone: '', min: 0 }];
+    }
     wrap.innerHTML = items.map(function (it) {
       return '<a class="fab-item ' + it.tone + '" href="' + esc0(it.href) + '">' +
         '<span class="ico"><i class="fas ' + it.icon + '"></i></span>' + esc0(it.label) + '</a>';
     }).join('') +
-    '<button type="button" class="fab-main" aria-label="Быстрые действия"><i class="fas fa-plus"></i></button>';
+    '<button type="button" class="fab-main" aria-label="Быстрые действия" aria-expanded="false"><i class="fas fa-plus"></i></button>';
     host.appendChild(wrap);
 
     var mainBtn = wrap.querySelector('.fab-main');
     function close() {
       wrap.classList.remove('open');
       backdrop.classList.remove('show');
+      if (mainBtn) mainBtn.setAttribute('aria-expanded', 'false');
     }
-    mainBtn.addEventListener('click', function () {
-      var open = wrap.classList.toggle('open');
-      backdrop.classList.toggle('show', open);
+    function openFab() {
+      wrap.classList.add('open');
+      backdrop.classList.add('show');
+      if (mainBtn) mainBtn.setAttribute('aria-expanded', 'true');
+    }
+    mainBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (wrap.classList.contains('open')) close();
+      else openFab();
     });
     backdrop.addEventListener('click', close);
     doc.addEventListener('keydown', function (e) {
@@ -2877,7 +3153,7 @@
   var win = window;
   var reduced = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var narrow = function () { return win.innerWidth < 900; };
-  var PALETTE = ['#4f46e5', '#7c3aed', '#a78bfa', '#22d3ee', '#818cf8', '#c7d2fe'];
+  var PALETTE = ['#4d9fff', '#7ab5ff', '#2f7df6', '#a8c8ff', '#e8b64c', '#22d3ee'];
 
   /* ── 1. Регистрация @property для вращения градиента ── */
   function fxRegisterAngle() {
@@ -2929,6 +3205,7 @@
     cv.id = 'fx-confetti';
     doc.body.appendChild(cv);
     var ctx = cv.getContext('2d');
+    if (!ctx) { cv.remove(); return; }   /* нет 2d-контекста — иначе каждый кадр падает */
     var W = cv.width = win.innerWidth;
     var H = cv.height = win.innerHeight;
     var parts = [];
@@ -3287,21 +3564,24 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /* Ключи — ровно те, что живут в services/panel_menu.py. Раньше здесь
+     были tickets/fun/leveling/economy/admin (таких разделов нет) и не было
+     семи настоящих — у них показывалась общая заглушка «Раздел … панели». */
   var GROUP_LEADS = {
     main: 'Главный обзор сервера и ключевые показатели.',
     mod: 'Инструменты модерации: реагирование, расследование, защита и команда.',
+    protection: 'Защита сервера: рейды, антиспам и автоматические меры.',
     members: 'Работа с участниками: профили, поиск, заметки и наблюдение.',
     roles: 'Роли и права: управление, автоматизация и выдача.',
     access: 'Доступы: кто видит какие разделы панели.',
-    tickets: 'Тикеты и обращения: очереди, ответы и SLA.',
-    fun: 'Развлечения и игровые механики сервера.',
-    leveling: 'Уровни, опыт и карьерные системы.',
-    economy: 'Экономика: валюта, магазины и награды.',
-    admin: 'Администрирование сервера и бота.',
-    logs: 'Журналы, история и расследования.',
-    music: 'Музыкальные комнаты и плейлисты.',
+    bot: 'Бот: присутствие, команды, бэкапы и модули.',
     settings: 'Настройки панели и сервера.',
-    other: 'Дополнительные инструменты панели Hakumo.'
+    community: 'Активность сообщества: голос и общение.',
+    logs: 'Журналы, история и расследования.',
+    content: 'Контент: каналы и объявления для участников.',
+    ai: 'ИИ-помощники: чат и автоматическая модерация.',
+    ops: 'Состояние системы: диагностика и флаги функций.',
+    utility: 'Вспомогательные инструменты: команда, задачи и справка.'
   };
 
   function pageHeadAuto() {
@@ -3334,10 +3614,11 @@
     var head = doc.createElement('div');
     head.className = 'page-head fx-built';
     head.setAttribute('data-fx-head', (grp && grp.key) || 'auto');
+    /* eyebrow — только раздел; название живёт в <h1>, без дубля через «·» */
     head.innerHTML =
       '<div class="page-head-icon"><i class="fas ' + icon + '"></i></div>' +
       '<div class="page-head-copy">' +
-        '<div class="eyebrow">' + esc((grp && grp.group) || 'Панель') + ' <span class="sep">·</span> ' + esc(found.label) + '</div>' +
+        '<div class="eyebrow">' + esc((grp && grp.group) || 'Панель') + '</div>' +
         '<h1>' + esc(title) + '</h1>' +
         '<p class="lead">' + esc(lead) + '</p>' +
       '</div>';
@@ -3482,6 +3763,8 @@
     panel.style.top = top + 'px';
     var left = Math.min(rect.left, win.innerWidth - (panel.offsetWidth || 260) - 10);
     panel.style.left = Math.max(8, left) + 'px';
+    panel.style.right = 'auto';
+    panel.style.width = Math.max(rect.width, 230) + 'px';
   }
 
   function closePanel() {
@@ -3550,6 +3833,9 @@
     if (orig.getAttribute('data-aes') === '1') return;
     if (orig.matches('[multiple], [size], [data-no-aes]')) return;
     if (orig.closest('.aes')) return;
+    /* pickers.js (sshd) уже построил кастомный контрол — второй виджет
+       (aes-кнопка + sshd-кнопка) = «дубликаты выборов» у Sticky и других. */
+    if (orig.classList.contains('sshd-src') || orig.closest('.sshd')) return;
     var inline = !!orig.closest('.analytics-server-control');
     var cs = getComputedStyle(orig);
     var full = cs.display === 'block';
@@ -3563,7 +3849,7 @@
     btn.type = 'button';
     btn.className = 'aes-btn';
     btn.setAttribute('aria-haspopup', 'listbox');
-    btn.innerHTML = '<span class="aes-value"></span><span class="aes-arrow"></span>';
+    btn.innerHTML = '<span class="aes-value"></span><span class="aes-arrow"><i class="fas fa-chevron-down"></i></span>';
     shell.appendChild(btn);
     var parent = orig.parentNode;
     if (!parent) return;
@@ -3590,7 +3876,9 @@
   }
   function scan(root) {
     (root || doc).querySelectorAll('select').forEach(function (el) {
-      if (!el.closest('.aes') && !el.matches('[multiple], [size], [data-no-aes]')) tryEnhance(el);
+      if (el.closest('.aes') || el.closest('.sshd')) return;
+      if (el.matches('[multiple], [size], [data-no-aes], .sshd-src')) return;
+      tryEnhance(el);
     });
   }
 
@@ -3693,8 +3981,8 @@
     overlay.className = 'modal-overlay at-finder';
     overlay.innerHTML =
       '<div class="modal-box" style="max-width:580px">' +
-        '<div class="modal-head"><b><i class="fas fa-magnifying-glass"></i> Поиск по панели</b>' +
-        '<button type="button" class="icon-btn" id="atFinderClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>' +
+        '<div class="modal-head"><div><h3><i class="fas fa-magnifying-glass"></i> Поиск по панели</h3></div>' +
+        '<button type="button" class="close" id="atFinderClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>' +
         '<div class="modal-body">' +
           '<input type="text" id="atFinderInput" class="form-input" placeholder="@ страница, участник, канал…" style="font-size:15px;padding:12px 14px" autocomplete="off" aria-label="Быстрый поиск">' +
           '<div id="atFinderList" style="margin-top:10px;max-height:46vh;overflow:auto"></div>' +
@@ -3788,6 +4076,7 @@
           (g.items || []).forEach(function (it) {
             var href = pickHref(it);
             if (!href) return;
+            if (window.panelPathHidden && window.panelPathHidden(href)) return;
             items.push(itemHtml(it.label || it.name || it.title || '—', it.sub || it.description || '', href, it.icon || 'fa-file'));
             found++;
           });
@@ -3797,7 +4086,7 @@
     } catch (e) { /* офлайн — только каналы ниже */ }
 
     /* Каналы сервера — быстрое дополнение к поиску */
-    try {
+    if (!(window.panelPathHidden && window.panelPathHidden('/chat'))) try {
       var cr = await fetch('/api/channels', { headers: { 'Accept': 'application/json' } });
       if (cr.ok) {
         var chans = await cr.json();

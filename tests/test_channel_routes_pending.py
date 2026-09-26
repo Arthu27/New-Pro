@@ -45,8 +45,10 @@ TPL = open(os.path.join(ROOT, 'web', 'templates', 'channel_settings.html'),
 print('== статические проверки шаблона ==')
 check('var PENDING = {};' in TPL,
       'карта несохранённых изменений (PENDING) на месте')
-check('onchange="chsPending(' in TPL,
-      'смена канала в строке фиксируется как несохранённая')
+# 2026-09-08: инлайн-onchange убран (строгий CSP панели) — смена канала
+# фиксируется через data-act-делегирование (диспетчер в base.html).
+check('data-act="chsPending"' in TPL,
+      'смена канала в строке фиксируется как несохранённая (data-act)')
 check('chsSaveAll' in TPL and 'Сохранить всё' in TPL,
       'кнопка «Сохранить всё» — настраиваем много, сохраняем разом')
 check('chsResetPending' in TPL and 'Сбросить' in TPL,
@@ -56,14 +58,24 @@ check("beforeunload" in TPL,
 check(TPL.find('delete PENDING[key]') != -1 and 'render()' in TPL,
       'структура сохранения/перерисовки на месте')
 
-m = re.search(r'<script>(.*?)</script>', TPL, re.S)
+m = re.search(r'<script(?:\s[^>]*)?>(.*?)</script>', TPL, re.S)
 check(m is not None, 'скрипт страницы найден для харнесса')
 
 if m:
     script = m.group(1)
     script = script.replace(
+        "{% if role == 'owner' %}true{% else %}false{% endif %}",
+        'true')
+    script = script.replace(
         "{% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %}",
         'true')
+    # Каркас маршрутов рендерится сервером через {{ route_specs | tojson }} —
+    # в Node-харнессе подставляем валидный JS-скелет (как реальный Flask).
+    script = re.sub(r'\{\{\s*route_specs\s*\|\s*tojson\s*\}\}',
+                    '[{"key":"proof_channel","label":"Доказательства","icon":"","what":"","empty":"","access":"Админ"},'
+                    '{"key":"appeals_channel","label":"Апелляции","icon":"","what":"","empty":"","access":"Админ"},'
+                    '{"key":"welcome_channel","label":"Приветствия","icon":"","what":"","empty":"","access":"Админ"}]',
+                    script)
 
     harness = r"""
 // Node-харнесс: исполняем настоящий JS страницы с DOM-стабами

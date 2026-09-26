@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Меню панели — Панель Hakumo{% endblock %}
+{% block title %}Меню панели — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-bars"></i> Меню панели{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Доступ <span class="sep">·</span> Меню панели</div>
+    <div class="eyebrow"> Доступ </div>
     <h1>Меню панели</h1>
     <p class="lead">Что видит каждая панель в боковом меню: выберите панель — Модератор, Куратор или Администратор — и отметьте разделы и страницы.</p>
   </div>
@@ -57,15 +57,15 @@
 
   .pm-item { display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:10px; margin-bottom:6px; background:color-mix(in srgb, var(--text) 3%, transparent); border:1px solid color-mix(in srgb, var(--text) 6%, transparent); transition:.12s; }
   .pm-item:hover { background:color-mix(in srgb, var(--text) 5%, transparent); }
-  .pm-item .pname { flex:1; font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pm-item .pname { flex:1; font-size:13px; font-weight:500; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
   .pm-item .pname i { margin-right:8px; opacity:.7; font-size:12px; }
   .pm-item .ppath { font-size:11px; opacity:.4; font-family:monospace; }
 
   .switch { position:relative; width:42px; height:22px; flex-shrink:0; }
   .switch input { opacity:0; width:0; height:0; }
-  .switch .sl { position:absolute; inset:0; background:color-mix(in srgb, var(--text) 15%, transparent); border-radius:22px; transition:.2s; cursor:pointer; }
-  .switch .sl:before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#1a1a1a; border-radius:50%; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
-  .switch input:checked + .sl { background:linear-gradient(90deg,var(--ok),#27ae60); }
+  .switch .sl { position:absolute; inset:0; background:rgba(0,0,0,.4); border-radius:22px; transition:.2s; cursor:pointer; box-shadow:inset 2px 2px 6px rgba(0,0,0,.5); }
+  .switch .sl:before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+  .switch input:checked + .sl { background:linear-gradient(90deg,var(--ac),#5aa0ff); box-shadow:0 0 16px color-mix(in srgb, var(--ac) 50%, transparent); }
   .switch input:checked + .sl:before { transform:translateX(20px); }
 
   .pm-ico-btn { width:36px; height:36px; border-radius:8px; border:1px solid color-mix(in srgb, var(--text) 14%, transparent); background:color-mix(in srgb, var(--text) 4%, transparent); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:12px; color:inherit; flex-shrink:0; transition:.12s; }
@@ -131,7 +131,7 @@
 
 <div class="pm-toast" id="pm-toast"></div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var MENU = [];
 var CFG = {};
 var curRole = 'mod';
@@ -235,23 +235,27 @@ function renderLayout(){
     var open = !!openGroups[g.key];
     var itemsHtml = items.map(function(it){
       var hid = !!LAY.hidden[it.path];
+      var prot = PROTECTED_PATHS.indexOf(it.path) !== -1;
+      var eye = prot
+        ? '<span class="pm-ico-btn" style="opacity:.4;cursor:not-allowed" title="Эту страницу скрыть нельзя — пульт управления «Доступом»"><i class="fas fa-lock"></i></span>'
+        : '<button type="button" class="pm-ico-btn'+(hid?' pm-off':'')+'" title="'+(hid?'Показать':'Скрыть')+'" aria-label="'+(hid?'Показать страницу':'Скрыть страницу')+'" data-act="layoutHide" data-a1="'+it.path+'"><i class="fas '+(hid?'fa-eye-slash':'fa-eye')+'"></i></button>';
       return '<div class="pm-item'+(hid?' pm-hidden':'')+'">'
-        + '<button type="button" class="pm-ico-btn" title="Выше" aria-label="Поднять выше" onclick="layoutMove(\''+g.key+'\',\''+it.path+'\',-1)"><i class="fas fa-arrow-up"></i></button>'
-        + '<button type="button" class="pm-ico-btn" title="Ниже" aria-label="Опустить ниже" onclick="layoutMove(\''+g.key+'\',\''+it.path+'\',1)"><i class="fas fa-arrow-down"></i></button>'
+        + '<button type="button" class="pm-ico-btn" title="Выше" aria-label="Поднять выше" data-act="layoutMove" data-a1="'+g.key+'" data-a2="'+it.path+'" data-a3="-1"><i class="fas fa-arrow-up"></i></button>'
+        + '<button type="button" class="pm-ico-btn" title="Ниже" aria-label="Опустить ниже" data-act="layoutMove" data-a1="'+g.key+'" data-a2="'+it.path+'" data-a3="1"><i class="fas fa-arrow-down"></i></button>'
         + '<span class="pname"><i class="fas '+it.icon+'"></i>'+it.label+'</span>'
         + '<span class="ppath">'+it.path+'</span>'
-        + '<button type="button" class="pm-ico-btn'+(hid?' pm-off':'')+'" title="'+(hid?'Показать':'Скрыть')+'" aria-label="'+(hid?'Показать страницу':'Скрыть страницу')+'" onclick="layoutHide(\''+it.path+'\')"><i class="fas '+(hid?'fa-eye-slash':'fa-eye')+'"></i></button>'
+        + eye
         + '</div>';
     }).join('');
     html += '<div class="pm-group '+(open?'open':'')+(catHidden?' pm-cathidden':'')+'" id="pmg-'+g.key+'">'
       + '<div class="pm-group-head">'
       + '<span class="gio"><i class="fas '+g.icon+'"></i></span>'
-      + '<span class="gname" onclick="toggleGroupOpen(\''+g.key+'\')">'+g.group+'</span>'
-      + '<span class="gcount" onclick="toggleGroupOpen(\''+g.key+'\')">'+(catHidden?'категория скрыта':(hiddenCount?hiddenCount+' скрыто':'порядок'))+'</span>'
-      + '<button type="button" class="pm-ico-btn" title="Категорию выше" aria-label="Сдвинуть категорию выше" onclick="groupMove(\''+g.key+'\',-1)"><i class="fas fa-arrow-up-wide-short" style="transform:rotate(180deg)"></i></button>'
-      + '<button type="button" class="pm-ico-btn" title="Категорию ниже" aria-label="Сдвинуть категорию ниже" onclick="groupMove(\''+g.key+'\',1)"><i class="fas fa-arrow-up-wide-short"></i></button>'
-      + '<button type="button" class="pm-ico-btn'+(catHidden?' pm-off':'')+'" title="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию сразу')+'" aria-label="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию')+'" onclick="layoutHideGroup(\''+g.key+'\')"><i class="fas '+(catHidden?'fa-eye':'fa-eye-slash')+'"></i></button>'
-      + '<span class="gcaret" onclick="toggleGroupOpen(\''+g.key+'\')"><i class="fas fa-chevron-down"></i></span>'
+      + '<span class="gname" data-act="toggleGroupOpen" data-a1="'+g.key+'">'+g.group+'</span>'
+      + '<span class="gcount" data-act="toggleGroupOpen" data-a1="'+g.key+'">'+(catHidden?'категория скрыта':(hiddenCount?hiddenCount+' скрыто':'порядок'))+'</span>'
+      + '<button type="button" class="pm-ico-btn" title="Категорию выше" aria-label="Сдвинуть категорию выше" data-act="groupMove" data-a1="'+g.key+'" data-a2="-1"><i class="fas fa-arrow-up-wide-short" style="transform:rotate(180deg)"></i></button>'
+      + '<button type="button" class="pm-ico-btn" title="Категорию ниже" aria-label="Сдвинуть категорию ниже" data-act="groupMove" data-a1="'+g.key+'" data-a2="1"><i class="fas fa-arrow-up-wide-short"></i></button>'
+      + '<button type="button" class="pm-ico-btn'+(catHidden?' pm-off':'')+'" title="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию сразу')+'" aria-label="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию')+'" data-act="layoutHideGroup" data-a1="'+g.key+'"><i class="fas '+(catHidden?'fa-eye':'fa-eye-slash')+'"></i></button>'
+      + '<span class="gcaret" data-act="toggleGroupOpen" data-a1="'+g.key+'"><i class="fas fa-chevron-down"></i></span>'
       + '</div>'
       + '<div class="pm-group-body">'+itemsHtml+'</div>'
       + '</div>';
@@ -268,8 +272,13 @@ function layoutMove(gkey, path, dir){
   render();
 }
 
+/* Страницы, скрыть которые нельзя: это пульт управления самим меню и
+   правами («Доступ»). Иначе одним глазиком владелец отрезал бы себе
+   управление ролями/командами и не мог вернуть всё обратно. */
+var PROTECTED_PATHS = ['/panel-menu', '/panel-access', '/role-permissions'];
+
 function layoutHide(path){
-  if(path === '/panel-menu'){ toast('Эту страницу скрыть нельзя', false); return; }
+  if(PROTECTED_PATHS.indexOf(path) !== -1){ toast('Эту страницу скрыть нельзя', false); return; }
   if(LAY.hidden[path]) delete LAY.hidden[path]; else LAY.hidden[path] = true;
   render();
 }
@@ -279,9 +288,9 @@ function layoutHideGroup(gkey){
   var g = MENU.find(function(x){ return x.key === gkey; });
   if(!g) return;
   var pages = layoutOrdered(g);
-  var allHidden = pages.length > 0 && pages.every(function(it){ return LAY.hidden[it.path] || it.path === '/panel-menu'; });
+  var allHidden = pages.length > 0 && pages.every(function(it){ return LAY.hidden[it.path] || PROTECTED_PATHS.indexOf(it.path) !== -1; });
   pages.forEach(function(it){
-    if(it.path === '/panel-menu') return;      // эту страницу прятать нельзя
+    if(PROTECTED_PATHS.indexOf(it.path) !== -1) return;   // «Доступ» не прячем
     if(allHidden) delete LAY.hidden[it.path];  // всё скрыто → показываем
     else LAY.hidden[it.path] = true;           // иначе прячем всё разом
   });
@@ -316,10 +325,16 @@ function saveLayout(){
   }).catch(function(){ toast('Ошибка сети', false); });
 }
 
+var _pmLoading = true;
 function render(){
   if (curRole === 'layout') { renderLayout(); return; }
   var el = document.getElementById('pm-list');
-  if(!MENU.length){ el.innerHTML = '<div class="pm-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'; return; }
+  if(!MENU.length){
+    el.innerHTML = _pmLoading
+      ? '<div class="pm-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'
+      : '<div class="pm-empty"><i class="fas fa-triangle-exclamation"></i>Не удалось загрузить меню. Обновите страницу.</div>';
+    return;
+  }
   var q = (document.getElementById('pm-search-input').value || '').toLowerCase().trim();
   var html = '';
   MENU.forEach(function(g){
@@ -340,9 +355,9 @@ function render(){
     }).join('');
     var groupOn = !!checkedGroups[g.key];
     html += '<div class="pm-group '+(open?'open':'')+'" id="pmg-'+g.key+'">'
-      + '<div class="pm-group-head" onclick="toggleGroupOpen(\''+g.key+'\')">'
+      + '<div class="pm-group-head" data-act="toggleGroupOpen" data-a1="'+g.key+'">'
       + '<label class="switch pm-cat-switch" title="'+(groupOn?'Категория включена целиком':'Категория выключена — щёлкни, чтобы включить всю')+'" onclick="event.stopPropagation()">'
-      + '<input type="checkbox" '+(groupOn?'checked':'')+' onchange="toggleGroupAll(\''+g.key+'\', this.checked)"><span class="sl"></span></label>'
+      + '<input type="checkbox" '+(groupOn?'checked':'')+' data-tga="'+g.key+'"><span class="sl"></span></label>'
       + '<span class="gio"><i class="fas '+g.icon+'"></i></span>'
       + '<span class="gname">'+g.group+'</span>'
       + '<span class="gcount">'+(groupOn?'вкл ':'')+onCount+'/'+items.length+'</span>'
@@ -440,10 +455,13 @@ function savePanel(){
 }
 
 function load(){
+  _pmLoading = true;
+  render();
   fetch('/api/panel-menu')
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if(!d.success){ toast('Не удалось загрузить', false); return; }
+      _pmLoading = false;
+      if(!d.success){ toast('Не удалось загрузить', false); render(); return; }
       MENU = d.menu || [];
       CFG = d.config || {};
       var lay = d.layout || {hidden_pages:[], order:{}, group_order:[]};
@@ -457,9 +475,20 @@ function load(){
       refreshState();
       render();
     })
-    .catch(function(){ toast('Ошибка загрузки', false); });
+    .catch(function(){
+      _pmLoading = false;
+      toast('Ошибка загрузки', false);
+      render();
+    });
 }
 
 load();
+
+  /* Чекбокс «вся категория»: строгий CSP — слушателем вместо инлайн-
+     onchange; передаём (ключ, отмеченность), как функция и ждёт. */
+  document.addEventListener('change', function (e) {
+    var el = e.target.closest ? e.target.closest('[data-tga]') : null;
+    if (el) toggleGroupAll(el.getAttribute('data-tga'), el.checked);
+  });
 </script>
 {% endblock %}

@@ -181,16 +181,65 @@ r = client.post('/api/guild/777/welcome-card/appearance',
                 json={'mode': 'url', 'url': 'http://127.0.0.1/x.png'})
 check(r.status_code == 400, 'локальный адрес картинки отвергнут')
 
-r = client.post('/api/guild/777/welcome-card/appearance',
-                json={'mode': 'url', 'url': 'https://cdn.example.com/welcome.png'})
-d = r.get_json()
-check(r.status_code == 200 and d['success'] and d['appearance']['mode'] == 'url',
-      'свой https URL принят')
+# 2026-09: URL скачивается панелью (Pinterest-страницы и битые ссылки больше
+# не молчат) — в тесте подменяем сеть картинкой; неп-download-able → 400.
+import io as _io
+from PIL import Image as _PImg
+_b = _io.BytesIO()
+_PImg.new('RGB', (6, 6), (90, 200, 120)).save(_b, 'PNG')
+_FAKE_IMG = _b.getvalue()
+
+
+def _fake_get(url, **kw):
+    if url.startswith('https://dead.example'):
+        def _dead(u):
+            class _D:
+                status_code = 404
+
+                def __init__(self):
+                    self.headers = {'Content-Type': 'text/html'}
+                    self.url = u
+
+                def iter_content(self, n):
+                    yield b'gone'
+            return _D()
+        return _dead(url)
+    def _make(u):
+        class _R:
+            status_code = 200
+
+            def __init__(self):
+                self.headers = {'Content-Type': 'image/png'}
+                self.url = u
+
+            def iter_content(self, n):
+                yield _FAKE_IMG
+        return _R()
+    return _make(url)
+
+
+import requests as _rqmod
+_orig_get = _rqmod.get
+_rqmod.get = _fake_get
+try:
+    r = client.post('/api/guild/777/welcome-card/appearance',
+                    json={'mode': 'url', 'url': 'https://cdn.example.com/welcome.png'})
+    d = r.get_json()
+    check(r.status_code == 200 and d['success'] and d['appearance']['mode'] == 'file',
+          'свой https URL принят: скачан и сохранён как файл')
+    r = client.post('/api/guild/777/welcome-card/appearance',
+                    json={'mode': 'url', 'url': 'https://dead.example/nope.png'})
+    check(r.status_code == 400 and ('404' in r.get_json().get('error', '') or 'недоступ' in r.get_json().get('error', '')),
+          'недоступный сайт → 400 с понятной ошибкой')
+finally:
+    _rqmod.get = _orig_get
 r = client.post('/api/guild/777/welcome-card/appearance',
                 json={'mode': 'AUTO', 'theme': 'FOREST'})
 d = r.get_json()
-check(d['success'] and d['appearance'] == {'mode': 'auto', 'theme': 'forest',
-                                           'url': '', 'file': ''},
+# файл фона остаётся сохранённым (владелец сможет вернуться к нему),
+# поэтому сравниваем только режим/тему/ссылку
+check(d['success'] and {k: v for k, v in d['appearance'].items() if k != 'file'}
+      == {'mode': 'auto', 'theme': 'forest', 'url': ''},
       'режим/тема нормализуются (регистр)')
 check('Лес' in d['message'], 'понятное сообщение о сохранении')
 check(WCG.get_appearance('777')['theme'] == 'forest', 'тема записалась в файл кога')

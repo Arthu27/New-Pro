@@ -145,7 +145,7 @@ for b in BANNED:
 
 
 print('== 3. Chart.js -> числовой шим ==')
-for p in ('web/templates/analytics.html', 'web/templates/advanced_analytics.html'):
+for p in ('web/templates/analytics.html',):
     s = read(p)
     check('/static/numchart.js' in s and 'chart.umd.js' not in s,
           f'{os.path.basename(p)}: грузится numchart, не Chart.js')

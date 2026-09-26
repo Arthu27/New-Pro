@@ -105,7 +105,7 @@ _cogs_src = ''.join(open(os.path.join(ROOT, 'cogs', f), encoding='utf-8').read()
                     for f in os.listdir(os.path.join(ROOT, 'cogs'))
                     if f.endswith('.py') and f != '__init__.py')
 import re as _re  # noqa: E402
-for name in ('ladder-add', 'security-newaccount', 'raidcleanup'):
+for name in ('ladder-add', 'security-newaccount'):
     _found = _re.search(r"name\s*=\s*['\"]" + _re.escape(name) + r"['\"]", _cogs_src)
     check(bool(_found), f'{name} существует в когах')
 

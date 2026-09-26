@@ -230,7 +230,7 @@ check(by_key0['autofilter']['status'] == 'warn'
       and by_key0['autofilter']['detail'] == 'По умолчанию', 'автофильтр на дефолтах — заметка')
 check(by_key0['antiraid']['status'] == 'missing'
       and by_key0['audit_fresh']['status'] == 'missing', 'антирейд и журнал отсутствуют')
-check(by_key0['warn_steps']['link'] == '/warn-config'
+check(by_key0['warn_steps']['link'] == '/ladder'
       and by_key0['warn_reasons']['link'] == '/mod-control', 'ссылки ведут на настройку')
 
 jdump('data/autofilter_998.json', {'enabled': False})
@@ -324,7 +324,14 @@ check(client.get(OV + '?days=30').get_json()['effectiveness']['days'] == 30,
 check(client.get(OV + '?days=бред').get_json()['effectiveness']['days'] == 90,
       'мусорное окно — дефолт без падения')
 clj = ovj['checklist']
-check((clj['ok'], clj['warn'], clj['missing']) == (5, 0, 0), 'чек-лист полностью зелёный')
+# Четыре конфиг-проверки (пороги/причины/автофильтр/антирейд) живут от файлов
+# настройки и зелёные; «свежесть журнала» сравнивается с реальной датой, а
+# данные теста датированы фиксированным NOW=2026-08-16 — поэтому в API она
+# честно «тихо N дней», полную зелёную карточку с now=NOW проверяет секция 4.
+_status = {c['key']: c['status'] for c in clj['items']}
+check(all(_status[k] == 'ok' for k in ('warn_steps', 'warn_reasons', 'autofilter', 'antiraid')),
+      'чек-лист: все 4 конфиг-проверки зелёные (' + str(clj['ok']) + ' ok)')
+check(_status['audit_fresh'] in ('ok', 'warn'), 'свежесть журнала посчитана без падения')
 check({c['key'] for c in clj['items']} == {'warn_steps', 'warn_reasons', 'autofilter',
                                            'antiraid', 'audit_fresh'}, 'все пять проверок на месте')
 dsj = client.get(DS + '?user_id=<@100>').get_json()

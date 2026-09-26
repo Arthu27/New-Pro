@@ -54,12 +54,11 @@ check(item is None and err == 'слишком коротко — напишит�
 item, err = AP.create_appeal(st, 1, 'Длинный', 'х' * 501, T)
 check(item is None and err == 'максимум 500 символов', 'перебор — слова кога')
 st = AP.empty_state()
-for i in range(3):
-    AP.create_appeal(st, 1, 'Настырный', f'апелляция номер {i} прошу разбана', T)
+AP.create_appeal(st, 1, 'Настырный', 'апелляция номер один прошу разбана', T)
 item, err = AP.create_appeal(st, 1, 'Настырный', 'ещё одна просьба о разбане', T)
-check(item is None and err == 'уже есть 3 открытых — дождитесь решения',
-      'не больше трёх открытых')
-check(st['next_id'] == 4 and len(AP.pending_items(st)) == 3, 'конвейер цел')
+check(item is None and err == 'апелляция #1 уже на рассмотрении — дождитесь по ней решения',
+      'дубль заявки не проходит: одна на рассмотрении')
+check(st['next_id'] == 2 and len(AP.pending_items(st)) == 1, 'конвейер цел')
 
 print('== 2. Фикстура журнала ==')
 st = AP.empty_state()
@@ -163,7 +162,11 @@ check([p['id'] for p in ov['pending']] == [], 'очередь в JSON — пус
 r = client.get('/api/guild/777/appeals/history?status=rejected')
 check(len(r.get_json()['items']) == 2, 'история по API с фильтром')
 r = client.post('/api/guild/777/appeals/resolve', json={'appeal_id': '3', 'accept': True})
-check(r.status_code == 403, 'mod не решает')
+# С 2026-09-05 решение из панели регулирует ACL «Бан» (как кнопки под
+# карточкой), а не панельная роль: mod допущен, и честный ответ на уже
+# рассмотренную апелляцию — 409.
+check(r.status_code == 409,
+      f'mod допущен к решению (право решает ACL «Бан») [{r.status_code}]')
 login('admin')
 r = client.post('/api/guild/777/appeals/resolve', json={'appeal_id': 'ку', 'accept': True})
 check(r.status_code == 400 and r.get_json()['error'] == 'Некорректный номер апелляции', 'битый ID')
@@ -241,7 +244,7 @@ client.post('/api/guild/777/appeals/appearance',
 from services import appeal_card as ABC  # noqa: E402
 png = ABC.render_appeal_card(appeal_id=7, user_name='Кипарис',
                              text='Меня забанили по ошибке: ссылку на гайд приняли за рекламу.',
-                             link='https://i.imgur.com/demo.png', theme='violet')
+                             theme='violet')
 check(png and png[:8].startswith(b'\x89PNG'), 'карточка апелляции рисуется')
 seen = {ABC.render_appeal_card(appeal_id=1, user_name='u', text='текст', theme=t)
         for t in ABC.APPEAL_THEME_ORDER}
@@ -446,9 +449,12 @@ tpl = open(os.path.join(ROOT, 'web/templates/appeals.html'), encoding='utf-8').r
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
 base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
 check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
-for fid in ('apQueue', 'apHistory', 'apReady', 'apCsv', 'apChanSave', 'apKpis'):
+for fid in ('apQueue', 'apHistory', 'apCsv', 'apKpis'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check("'/overview'" in tpl and "'/resolve'" in tpl and "'/channel'" in tpl
+check('apChanSave' not in tpl and 'apChanSel' not in tpl,
+      'на странице апелляций нет выбора каналов')
+check('/channel-settings' in tpl, 'ссылка на «Каналы и маршруты»')
+check("'/overview'" in tpl and "'/resolve'" in tpl
       and '/export.csv' in tpl, 'API-пути в шаблоне')
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 import services.panel_menu as PM
@@ -457,8 +463,8 @@ check('/appeals' in mod_pages, 'пункт меню «Апелляции» в «
 check(PM.PAGE_COGS.get('/appeals') == ('appeals',), 'appeals-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('appeals_panel') >= 1, 'модуль зарегистрирован в routes_extra')
-check('/апелляция' in tpl and 'fa-circle-info' in tpl,
-      'подсказка «как подать апелляцию» видна на странице')
+check('кнопка в ЛС о бане' in tpl and 'fa-circle-info' in tpl,
+      'подсказка «как подать апелляцию» видна на странице (без команды)')
 for fid in ('apLookBox', 'apLookMode', 'apLookTheme', 'apLookUrl', 'apLookSave',
             'apLookMsg', 'apLookPv'):
     check(('id="' + fid + '"') in tpl, f'панель оформления: {fid} на месте')

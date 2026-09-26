@@ -2,14 +2,14 @@
 """Sticky/ghost/пруфы/паника (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -58,7 +58,7 @@ def register(ctx):
     @role_required ('mod')
     def api_sticky_create ():
         from cogs .mod_plus import _sticky_path ,_load_json ,_save_json 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         cid =str (data .get ('channel_id','')).strip ()
         text =(data .get ('text')or '').strip ()
         if not cid .isdigit ()or not text or len (text )>1900 :
@@ -94,7 +94,7 @@ def register(ctx):
     @role_required ('mod')
     def api_sticky_delete ():
         from cogs .mod_plus import _sticky_path ,_load_json ,_save_json 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         cid =str (data .get ('channel_id','')).strip ()
         if not cid .isdigit ():
             return jsonify ({'success':False ,'error':'Нужен channel_id'}),400 
@@ -144,7 +144,7 @@ def register(ctx):
     @role_required ('mod')
     def api_ghost_add ():
         from cogs .mod_plus import ghost_add ,parse_ghost_duration
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         uid =str (data .get ('user_id','')).strip ()
         reason =(data .get ('reason')or 'Через панель')[:300 ]
         if not uid .isdigit ():
@@ -186,7 +186,7 @@ def register(ctx):
     @role_required ('mod')
     def api_ghost_remove ():
         from cogs .mod_plus import ghost_remove
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         uid =str (data .get ('user_id','')).strip ()
         if not uid .isdigit ():
             return jsonify ({'success':False ,'error':'Нужен user_id'}),400
@@ -400,7 +400,7 @@ def register(ctx):
     @role_required ('admin')
     def api_proof_whitelist_add ():
         from cogs .proof_cog import proof_whitelist_add
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         kind =str (d .get ('kind','')).strip ()
         ident =str (d .get ('id','')).strip ()
         if kind not in ('user','role'):
@@ -422,7 +422,7 @@ def register(ctx):
     @role_required ('admin')
     def api_proof_whitelist_remove ():
         from cogs .proof_cog import proof_whitelist_remove
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         kind =str (d .get ('kind','')).strip ()
         ident =str (d .get ('id','')).strip ()
         if kind not in ('user','role'):
@@ -454,7 +454,7 @@ def register(ctx):
     def api_proof_required_set ():
         # Переключить «доказательство обязательно» одним движением.
         from cogs .proof_cog import proof_set_required
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         on =bool (d .get ('required',True ))
         guild =_active_guild ()
         gid =guild .id if guild else int (active_guild_id ()or 0 )
@@ -480,7 +480,7 @@ def register(ctx):
     @role_required ('admin')
     def api_panic_toggle ():
         # ВНИМАНИЕ: только admin+ — это локдаун всего сервера
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         action =str (data .get ('action','')).lower ()
         reason =(data .get ('reason')or 'Через панель')[:300 ]
         boost =bool (data .get ('boost_verification'))

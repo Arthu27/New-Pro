@@ -29,14 +29,14 @@ PASS = 0
 FAIL = 0
 
 
-def check(ok, msg):
+def check(ok, msg, extra=''):
     global PASS, FAIL
     if ok:
         PASS += 1
         print(f'  PASS: {msg}')
     else:
         FAIL += 1
-        print(f'  FAIL: {msg}')
+        print(f'  FAIL: {msg} {extra}')
 
 
 print('== 1. Слеш-переезд: в боевом составе нет префиксных команд ==')
@@ -46,21 +46,36 @@ cat = catalog(force=True)
 pref = [c['name'] for c in cat['commands'] if c['kind'] == 'prefix']
 check(cat.get('prefix', 1) == 0 and not pref,
       f'боевой состав без «!»-команд (осталось: {pref})')
-for name, kind in (('modpanel', 'slash'), ('play', 'slash'),
-                   ('апелляция', 'slash'), ('update', 'slash')):
+for name, kind in (('modpanel', 'slash'), ('report', 'slash'),
+                   ('update', 'slash')):
     hit = next((c for c in cat['commands'] if c['name'] == name), None)
     check(hit is not None and hit['kind'] == kind,
           f'{name} — слеш-команда')
+# /апелляция удалена (владелец 2026-09-08: «она у нас в кнопке»)
+check(not next((c for c in cat['commands'] if c['name'] == 'апелляция'), None),
+      '/апелляции в боевом составе больше нет — только кнопки')
+# Музыка снята 2026-09-01 — /play больше нет в боевом составе
+check(not next((c for c in cat['commands'] if c['name'] == 'play'), None),
+      '/play снят — музыкальная система выведена из боевого состава')
 
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
-check(set(keep) == {'modpanel', 'play', 'апелляция', 'update',
-                    'afk', 'afk-remove',
-                    'ticket-panel'},
-      f'белый список слеш-меню = 7 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'play', 'апелляция', 'update', 'afk', 'afk-remove',
-             'ticket-panel'):
+# Сетап-команды (verify-setup, report-setup/settings) убраны в панель,
+# /afk-remove удалён (AFK спадает авто). /апелляция убрана 2026-09-08
+# («она у нас в кнопке»). /proof удалена 2026-09-04. /event-panel —
+# публикация панели событий (ивент-моды).
+check(set(keep) == {'modpanel', 'update',
+                    'afk', 'report', 'my-violations', 'event-panel'},
+      f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'update', 'afk', 'report', 'my-violations',
+             'event-panel'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
+check('апелляция' not in keep, '/апелляция убрана из KEEP_SLASH (кнопка вместо команды)')
+for gone in ('afk-remove', 'verify-setup', 'report-setup', 'report-settings'):
+    check(gone not in keep, f'{gone} убран из слеш-меню (настройка в панели/авто)')
+check('play' not in keep, '/play снят — музыка выведена из боевого состава')
+# Тикет-система снята 2026-08-31 — ticket-panel не должен вернуться
+check('ticket-panel' not in keep, 'ticket-panel снят — жалобы идут через /report')
 
 # Урезанные из меню имена НЕ должны вернуться в KEEP_SLASH незаметно
 for gone in ('backup', 'backup-list', 'diagnose', 'health', 'hotreload',
@@ -69,14 +84,14 @@ for gone in ('backup', 'backup-list', 'diagnose', 'health', 'hotreload',
 
 # warn живёт ВНУТРИ /modpanel (а не отдельной командой)
 src_mod = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
-check('("warn", "Варн (предупреждение)"' in src_mod,
+check('("warn", "Варн"' in src_mod,
       'варн — пункт выпадающего меню /modpanel')
-check('allowed_contexts' in open(os.path.join(ROOT, 'cogs', 'diagnostics.py'),
-                                 encoding='utf-8').read(),
-      '/update спрятан в ЛС — на сервере его не видит никто, кроме владельца')
-
+src_diag = open(os.path.join(ROOT, 'cogs', 'diagnostics.py'), encoding='utf-8').read()
+check('keep_global' not in src_diag,
+      '/update не keep_global — гильдовая копия админам, в ЛС её нет ни у кого')
 src_appeals = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
-check("keep_global" in src_appeals, '/апелляция помечена keep_global (работает в ЛС)')
+check('keep_global' not in src_appeals,
+      'в appeals нет keep_global-команд — глобальных команд в боте не осталось')
 src_sync = open(os.path.join(ROOT, 'services', 'sync_filtered.py'), encoding='utf-8').read()
 check('keep_global' in src_sync, 'sync не вычищает глобальные ЛС-команды')
 
@@ -115,8 +130,9 @@ from cogs.moderation import actions_for_member, MODPANEL_ACTIONS  # noqa: E402
 
 
 class _Role:
-    def __init__(self, i):
+    def __init__(self, i, name=None):
         self.id = i
+        self.name = name or f'Роль{i}'
 
 
 class _Guild:
@@ -137,19 +153,40 @@ class _Member:
 
 
 g = _Guild(G)
+# Строгая модель: видно только то, что владелец РАЗРЕШИЛ роли в панели.
+# Discord-админ/владелец сервера прав не дают; владелец БОТА (OWNER_ID) — всё.
+import os as _os  # noqa: E402
+from services.permission_acl import set_action_rule, save_action_acl  # noqa: E402
+_os.environ['OWNER_ID'] = '1'   # член с id=1 — владелец бота, видит всё
+save_action_acl(G, {})
 check(actions_for_member(g, _Member(1, [])) == MODPANEL_ACTIONS,
-      'владелец сервера видит все действия')
+      'владелец БОТА (OWNER_ID) видит все действия')
+# Без единого разрешения модератор не видит ничего (default-deny).
+check(actions_for_member(g, _Member(77, [_Role(G), _Role(601)])) == [],
+      'модератор без выданных разрешений не видит ни одного действия')
+
+# Разрешаем ролям действия (как владелец в панели) — ЛИМИТЫ остаются вторым,
+# пересекающим фильтром: мут-роль (лимит на мут) + разрешения mute/vmute/timeout
+# видит мут-семейство; бан срезан лимитом мута.
+set_action_rule(G, 'mute', [601, 604])
+set_action_rule(G, 'vmute', [601, 604])
+set_action_rule(G, 'timeout', [601, 604])
+set_action_rule(G, 'ban', [601, 602])
+set_action_rule(G, 'purge', [603])
 m_mute = actions_for_member(g, _Member(7, [_Role(G), _Role(601)]))
-check([a[0] for a in m_mute] == ['timeout', 'mute_chat', 'vmute'],
-      f'мут-роль видит только муты: {[a[0] for a in m_mute]}')
+check([a[0] for a in m_mute] == ['mute'],
+      f'мут-роль: лимит мута ∩ разрешения = только пункт «Мут»: {[a[0] for a in m_mute]}')
 m_ban = actions_for_member(g, _Member(8, [_Role(602)]))
-check([a[0] for a in m_ban] == ['ban'], 'бан-роль видит только бан')
+check([a[0] for a in m_ban] == ['ban'], f'бан-роль видит только бан: {[a[0] for a in m_ban]}')
 m_none = actions_for_member(g, _Member(9, [_Role(603)]))
 check([a[0] for a in m_none] == ['clear'], 'роль с окном чистки видит только чистку')
+# роль без настроек лимитов и БЕЗ разрешений — ничего (default-deny)
 m_free = actions_for_member(g, _Member(10, [_Role(699)]))
-check(m_free == MODPANEL_ACTIONS, 'роль без настроек — модер видит всё')
+check(m_free == [], 'роль без настроек и без разрешений — не видит ничего')
+save_action_acl(G, {})
+_os.environ.pop('OWNER_ID', None)
 
-print('== 4. «Бан» живьём: без канала — отказ, с каналом — изоляция ==')
+print('== 4. «Бан» живьём: роль бана, каналы не трогаем ==')
 
 
 class _Ch:
@@ -173,6 +210,11 @@ class _Target:
     display_name = 'BadGuy'
     bot = False
     mention = f'<@{TID}>'
+    roles = [_Role(7)]
+    given = []                   # сюда падает выданная роль бана
+
+    async def add_roles(self, *roles, reason=None):
+        self.given.extend(roles)
 
     def __str__(self):
         return 'BadGuy'
@@ -184,9 +226,18 @@ class _GuildBig(_Guild):
         self.channels = [_Ch(100 + k) for k in range(5)]
         self.text_channels = self.channels
         self.members = [_Target()]
+        self.default_role = _Role(1)
+        self.ban_role = _Role(606, 'Бан')   # роль бана (владелец 2026-09-08)
 
     def get_channel(self, cid):
         return next((c for c in self.channels if c.id == cid), None)
+
+    def get_role(self, rid):
+        if rid == 1:
+            return self.default_role
+        if rid == 606:
+            return self.ban_role
+        return _Role(rid)
 
 
 SENT = {}
@@ -250,29 +301,40 @@ async def _run(action, amount, proof='https://proof'):
         return 'API', type(ex).__name__
 
 
-ok, txt = asyncio.run(_run('ban', None))
-check(ok is True and 'Настройки не завершены' in txt and 'канал апелляции' in txt,
-      f'без канала — отказ с перечислением незавершённого ({txt[:80]}…)')
-check('мут' not in txt.lower() or 'мут' not in txt.split('.')[0],
-      'в отказе только НЕЗАВЕРШЁННОЕ, лишнего нет')
+from services import punish_roles as _PR  # noqa: E402
 
-CHR.set_route(G, 'ban_appeal_channel', 102)     # канал №102 — уже существует
-gb.channels = [_Ch(100), _Ch(101), _Ch(102), _Ch(103), _Ch(104)]
+# роль бана для тестового сервера
+_PR.set_roles(G, ban=606)
+_tg = gb.members[0]
 ok, txt = asyncio.run(_run('ban', None))
-closed = sum(1 for c in gb.channels if TID in c.overwrites and c.id != 102)
-iso_ch = gb.get_channel(102)
-iso_open = TID in iso_ch.overwrites
-check(ok in (True, 'API'), 'с настроенным каналом «бан» выполняется')
-check(closed == 4, f'все каналы, кроме апелляции, закрыты ({closed} из 4)')
-check(iso_open, 'в канале апелляции доступ открыт')
+check(ok is True and [r.id for r in _tg.given] == [606],
+      f'«бан» выдаёт роль бана, каналы не трогает → {[r.id for r in _tg.given]}')
+check('роль бана' in (txt or '') and 'Апелляция' in (txt or ''),
+      f'модератору сказано: роль бана + апелляция в ЛС ({txt[:60]}…)')
+closed = sum(1 for c in gb.channels if TID in c.overwrites)
+check(closed == 0, f'каналы бот не закрывает сам ({closed} закрыто)')
+check('доступ закрыт' in (txt or ''), 'в сообщении: доступ закрыт самой ролью')
 
-print('== 5. /апелляция — слеш-команда, ЛС ==')
+# без роли бана — вежливый отказ с подсказкой
+_PR.set_roles(G, ban=0)
+_tg.given.clear()
+_inter = _Inter(_User(43, ()), gb)      # другой модератор: лимит штаба не мешает
+ok, txt = asyncio.run(_run('ban', None))
+check(ok is True and 'Не выбрана роль бана' in (txt or '') and 'Роли наказаний' in (txt or ''),
+      f'без роли — отказ с подсказкой, где настроить ({str(txt)[:70]}…)')
+check([r.id for r in _tg.given] == [], 'роль при отказе не выдаётся')
+_PR.set_roles(G, ban=606)
+
+print('== 5. /апелляция удалена — кнопка вместо команды ==')
 import cogs.appeals as AP  # noqa: E402
 
-check(hasattr(AP.Appeals, 'cmd_appeal'), 'метод команды на месте')
+check(not hasattr(AP.Appeals, 'cmd_appeal'),
+      'метода команды в коге больше нет (владелец 2026-09-08: «она у нас в кнопке»)')
 src = src_appeals
-check("@commands.command" not in src and 'app_commands.command' in src,
-      'в appeals больше нет префиксной команды')
+check("@commands.command" not in src and "name='апелляция'" not in src,
+      'в appeals нет ни префиксной, ни слеш-команды апелляции')
+check('DM_APPEAL_CUSTOM_ID' in src and 'MENU_CUSTOM_ID' in src,
+      'пути подачи: кнопка в ЛС и меню в канале — обе живы')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

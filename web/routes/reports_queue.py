@@ -10,12 +10,67 @@
 """
 
 from web.routes._common import (
+    _safe_json_obj,
     _log,
-    render_template, session, jsonify,
+    render_template, session, request, jsonify,
 )
 
-KIND_META = {'report': ('Репорт', 'fa-flag', 'danger'),
+KIND_META = {'card': ('Вызов модератора', 'fa-bell', 'danger'),
+             'report': ('Репорт', 'fa-flag', 'danger'),
              'appeal': ('Апелляция', 'fa-scale-balanced', 'info')}
+
+
+def _verdict_display(raw):
+    """Человеческий текст вердикта из SQLite.
+
+    В БД часто лежит JSON ``{"kind","label",...}`` (в т.ч. с ``\\uXXXX``).
+    Панель раньше показывала сырой blob — «невозможно понять».
+    """
+    text = str(raw or '').strip()
+    if not text:
+        return '', ''
+    kind = ''
+    label = text
+    if text.startswith('{'):
+        try:
+            import json as _json
+            obj = _json.loads(text)
+            if isinstance(obj, dict):
+                kind = str(obj.get('kind') or '').strip()
+                label = str(obj.get('label') or '').strip()
+                if not label:
+                    try:
+                        from services.reports_core import KIND_LABELS
+                        label = KIND_LABELS.get(kind, '') or kind or 'Решено'
+                    except Exception:
+                        label = kind or 'Решено'
+                # hours в label уже обычно есть; если нет и hours > 0 — допишем
+                try:
+                    hours = float(obj.get('hours') or 0)
+                except (TypeError, ValueError):
+                    hours = 0.0
+                if hours and '·' not in label and kind in ('mute', 'timeout', 'ban'):
+                    if hours < 1:
+                        label = f'{label} · {int(hours * 60)} мин'
+                    elif hours < 24:
+                        label = f'{label} · {hours:g} ч'
+                    else:
+                        label = f'{label} · {hours / 24:g} дн'
+        except Exception:
+            label = text
+    return label[:200], kind
+
+
+def _guild_channels_roles(gid):
+    """Списки текстовых каналов и ролей гильдии (для пикеров настройки).
+
+    Делегируем общему резолверу: раньше здесь был только bot.get_guild(),
+    который в бою регулярно промахивается (кэш гильдий ещё не наполнен),
+    и пикеры «Канал для вызовов»/«Роль модераторов» оставались с одной
+    строкой «— не задан —», хотя /api/channels те же данные отдавал.
+    """
+    from web.routes.guild_admin import guild_channels_roles
+    return guild_channels_roles(gid)
 
 
 def queue_payload(gid, names=None):
@@ -42,6 +97,7 @@ def queue_payload(gid, names=None):
         except (TypeError, ValueError):
             age_min = 0
         verdict = str(t.get('verdict') or '').strip()
+        verdict_label, verdict_kind = _verdict_display(verdict)
         items.append({
             'thread_id': t['thread_id'],
             'kind': t['kind'],
@@ -53,7 +109,9 @@ def queue_payload(gid, names=None):
             'created_readable': _fmt(t['created']),
             'closed': bool(t.get('closed')),
             'closed_readable': _fmt(t.get('closed') or 0),
-            'verdict': verdict[:300],
+            # только человеческий текст — UI больше не видит сырой JSON
+            'verdict': verdict_label,
+            'verdict_kind': verdict_kind,
         })
     return {'stats': RC.ticket_stats(gid), 'items': items}
 
@@ -90,3 +148,65 @@ def register(ctx):
         payload = queue_payload(gid)
         payload['success'] = True
         return jsonify(payload)
+
+    @app.route('/api/guild/<gid>/report-settings', methods=['GET', 'POST'])
+    @login_required
+    @role_required('admin')
+    def api_report_settings(gid):
+        """Канал репортов и роль модераторов — владелец выбирает в панели.
+
+        Хранится в data/reports_<gid>.json (тот же конфиг, что /report-setup).
+        """
+        from services import reports_core as RC
+
+        def _valid_id(x):
+            try:
+                return str(int(str(x).strip()))
+            except (TypeError, ValueError):
+                return ''
+
+        gid = active_guild_id()
+        if request.method == 'GET':
+            cfg = RC.load_cfg(gid)
+            # Показываем ЕДИНЫЙ источник роли модераторов (если в конфиге
+            # репортов пусто, подтянется значение из старых страниц).
+            try:
+                from services.mod_role import get_mod_role_id
+                unified_rid = get_mod_role_id(gid)
+            except Exception:
+                unified_rid = ''
+            channels, roles = _guild_channels_roles(gid)
+            return jsonify({'success': True,
+                            'channel_id': cfg.get('channel_id', ''),
+                            'mod_role_id': cfg.get('mod_role_id') or unified_rid,
+                            'expiry_days': cfg.get('expiry_days', 90),
+                            'channels': channels, 'roles': roles})
+
+        data = _safe_json_obj()
+        cfg = RC.load_cfg(gid)
+        cid = _valid_id(data.get('channel_id'))
+        rid = _valid_id(data.get('mod_role_id'))
+        # пустая строка = «не задано»; валидируем, что канал/роль существуют
+        channels, roles = _guild_channels_roles(gid)
+        ch_ids = {c['id'] for c in channels}
+        role_ids = {r['id'] for r in roles}
+        if cid and ch_ids and cid not in ch_ids:
+            return jsonify({'success': False,
+                            'error': f'Канал {cid} не найден на сервере'}), 400
+        if rid and role_ids and rid not in role_ids:
+            return jsonify({'success': False,
+                            'error': f'Роль {rid} не найдена на сервере'}), 400
+        cfg['channel_id'] = cid
+        cfg['mod_role_id'] = rid
+        RC.save_cfg(gid, cfg)
+        # Единый источник роли модераторов: зеркалим выбор во все системы,
+        # которые исторически хранили свою роль (призыв модеров, заявки),
+        # чтобы «настроил тут — работает везде».
+        try:
+            from services.mod_role import set_mod_role_id
+            set_mod_role_id(gid, rid)
+        except Exception as _ex:
+            _log.debug('reports: зеркалирование роли модераторов: %s', _ex)
+        return jsonify({'success': True,
+                        'channel_id': cid, 'mod_role_id': rid,
+                        'channels': channels, 'roles': roles})

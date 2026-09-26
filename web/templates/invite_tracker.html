@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Участники <span class="sep">·</span> Приглашения</div>
+    <div class="eyebrow"> Участники </div>
     <h1>Приглашения</h1>
     <p class="lead">Отслеживание приглашений: кто кого пригласил и активность.</p>
   </div>
@@ -82,7 +82,7 @@
   <div id="invites-list"><div class="inv-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function showTab(tab, btn) {
   ['leaderboard','joins','invites'].forEach(function(t){ document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none'; });
@@ -157,7 +157,10 @@ function start() {
     if (!sel.value && MAIN_GID) sel.value = MAIN_GID;
     loadInvites();
   });
-  if (window.setLiveRefresh) window.setLiveRefresh(loadInvites, 1500);
+  /* live: по событию «создан/удалён инвайт» (топик invites — его шлёт бот
+     в on_invite_create), а не опросом каждые полторы секунды. Таймер
+     5 минут — страховка, если SSE не поднялся. */
+  if (window.setLiveRefresh) window.setLiveRefresh(loadInvites, 300000, ['invites']);
   else setInterval(loadInvites, 30000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

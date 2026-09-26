@@ -75,35 +75,6 @@ class WebSocketServer:
         room_id = self.user_connections[user_id]
         await self.broadcast_to_room(room_id, message)
     
-    async def broadcast_ticket_update(self, ticket_id: str, update_type: str, data: dict):
-        """Отправить обновление тикета"""
-        message = {
-            'type': 'ticket_update',
-            'ticket_id': ticket_id,
-            'update_type': update_type,
-            'data': data,
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        }
-        
-        # Отправить в комнату тикета
-        room_id = f'ticket_{ticket_id}'
-        await self.broadcast_to_room(room_id, message)
-        
-        # Отправить в общую комнату (для dashboard)
-        await self.broadcast_to_room('dashboard', message)
-    
-    async def broadcast_new_ticket(self, ticket_data: dict):
-        """Отправить уведомление о новом тикете"""
-        message = {
-            'type': 'new_ticket',
-            'data': ticket_data,
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        }
-        
-        # Отправить всем администраторам
-        await self.broadcast_to_room('админ', message)
-        await self.broadcast_to_room('dashboard', message)
-    
     async def broadcast_stats_update(self, stats: dict):
         """Отправить обновление статистики"""
         message = {
@@ -261,16 +232,6 @@ def start_websocket_thread(host: str = 'localhost', port: int = 8765):
 
 
 # ── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
-async def notify_ticket_created(ticket_data: dict):
-    """Уведомление о создании тикета"""
-    await ws_server.broadcast_new_ticket(ticket_data)
-
-
-async def notify_ticket_updated(ticket_id: str, update_type: str, data: dict):
-    """Уведомление об обновлении тикета"""
-    await ws_server.broadcast_ticket_update(ticket_id, update_type, data)
-
-
 async def notify_stats_updated(stats: dict):
     """Уведомление об обновлении статистики"""
     await ws_server.broadcast_stats_update(stats)

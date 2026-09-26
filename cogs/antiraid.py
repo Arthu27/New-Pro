@@ -117,8 +117,33 @@ class AntiRaid(commands.Cog):
             cfg.reload()
         return cfg
 
-    @tasks.loop(seconds=5.0)
+    # Настройки анти-рейда меняются редко (сохранение из панели раз в день),
+    # поэтому опрос диска не нужен каждые 5 секунд: reload() и так делает
+    # дешёвую проверку mtime (stat без чтения файла), а немедленный подхват
+    # изменений обеспечивает live-шина — при сохранении настроек Щита в
+    # очередь подписки падает сигнал, и watcher перечитывает конфиг тут же.
+    # 20с — только страховка на случай, если шина молчит.
+    @tasks.loop(seconds=20.0)
     async def config_watcher(self):
+        import queue as _queue
+        try:
+            from services import live_bus
+            if getattr(self, "_wakeq", None) is None:
+                self._wakeq, self._wake_unsub = live_bus.subscribe(
+                    ["g*:guardian", "g*:security"])
+            drained = False
+            while True:
+                try:
+                    self._wakeq.get_nowait()
+                    drained = True
+                except _queue.Empty:
+                    break
+            if drained:
+                # сигнал был — reload() ниже сразу подхватит новый mtime;
+                # короткий сон не нужен, конфиг уже на диске.
+                pass
+        except Exception as _ex:
+            log.debug("antiraid watcher: live-шина недоступна: %s", _ex)
         for guild_id in list(self.configs.keys()):
             try:
                 self.configs[guild_id].reload()

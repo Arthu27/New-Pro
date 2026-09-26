@@ -211,7 +211,7 @@ class FakeGuild:
 
 
 class FakePanelBot:
-    guilds = [FakeGuild(4242)]
+    guilds = [FakeGuild(777)]
     latency = 0.03
     users = []
 
@@ -265,7 +265,7 @@ login_as('mod')
 r = client.get('/api/autofilter')
 d = r.get_json()
 check(r.status_code == 200 and d.get('ok') is True, 'API: GET отдаёт конфиг (mod)')
-check(d.get('guild_id') == '4242', 'API: guild_id определён по серверу бота')
+check(d.get('guild_id') == '777', 'API: guild_id — активный сервер панели (MAIN_GUILD_ID)')
 cfg_keys = set(af.DEFAULT_FILTER)
 check(set(d['config']) >= cfg_keys, 'API: все секции конфига в ответе')
 
@@ -282,7 +282,7 @@ r = client.post('/api/autofilter/save',
                       'links': {'enabled': True, 'action': 'delete', 'whitelist': ['my.gg']}})
 d = r.get_json()
 check(r.status_code == 200 and d.get('ok') is True, 'save: валидный конфиг принят (admin)')
-save_path = af.cfg_path('4242')
+save_path = af.cfg_path('777')
 on_disk = json.load(open(save_path, encoding='utf-8')) if os.path.exists(save_path) else {}
 check(on_disk.get('words', {}).get('list') == ['бонус'], 'save: слова реально записаны в файл')
 r = client.get('/api/autofilter').get_json()

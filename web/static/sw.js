@@ -1,8 +1,13 @@
 // Hakumo Panel Service Worker (Light Edition)
-const CACHE_NAME = 'Hakumo-light-v5';
+const CACHE_NAME = 'Hakumo-nova-v21-aurora';
 const STATIC_ASSETS = [
   '/static/style.css',
+  '/static/panel-nova.css',
+  '/static/panel-aurora.css',
+  '/static/auth.css',
+  '/static/welcome.css',
   '/static/app.js',
+  '/static/aurora-fx.js',
   '/static/pickers.js',
   '/static/api-guard.js',
   '/static/websocket-client.js',

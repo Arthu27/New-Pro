@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Участники <span class="sep">·</span> Re-Join роли</div>
+    <div class="eyebrow"> Участники </div>
     <h1>Re-Join роли</h1>
     <p class="lead">Автоматическое восстановление ролей участникам, покинувшим сервер и вернувшимся.</p>
   </div>
@@ -211,7 +211,7 @@
   .log-item .status.partial { background: rgba(230,126,34,0.18); color: #e67e22; }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   var currentGuildId = null;

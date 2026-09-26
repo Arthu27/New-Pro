@@ -29,7 +29,52 @@ def _load_dotenv():
 
 _load_dotenv()
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+def _dotenv_values():
+    """Прочитать свежие значения .env с диска (без os.environ).
+
+    Демон живёт долго, а .env могли отредактировать уже ПОСЛЕ его запуска:
+    os.environ.setdefault в _load_dotenv() сработал один раз при старте.
+    Читаем файл заново при каждом обращении за токеном.
+    """
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    vals = {}
+    try:
+        with open(env_path, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                vals[k.strip()] = v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return vals
+
+
+def _update_token():
+    """Токен GitHub для доступа к ПРИВАТНОМУ репозиторию (чтение кода).
+
+    Приватный репозиторий анонимно отдаёт 404 — без токена обновление
+    невозможно. Сначала перечитываем .env с диска (его могли поправить уже
+    после запуска демона — os.environ в памяти устарел), затем окружение.
+    Принимаем GITHUB_TOKEN / UPDATE_TOKEN / GH_TOKEN / GITHUB_PAT / GH_PAT.
+    Публичному репозиторию токен не нужен — запросы идут анонимно.
+    """
+    _env = _dotenv_values()
+    for _k in ("GITHUB_TOKEN", "UPDATE_TOKEN", "GH_TOKEN",
+               "GITHUB_PAT", "GH_PAT"):
+        _v = (_env.get(_k) or "").strip()
+        if _v:
+            return _v
+    for _k in ("GITHUB_TOKEN", "UPDATE_TOKEN", "GH_TOKEN",
+               "GITHUB_PAT", "GH_PAT"):
+        _v = (os.getenv(_k) or "").strip()
+        if _v:
+            return _v
+    return ""
+
+
+GITHUB_TOKEN = _update_token()
 
 # Автоматически определить директорию скрипта (VSCode workspace)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -39,16 +84,49 @@ BOT_LOG = os.path.join(BOT_DIR, "bot_output.log")
 EVENTS_LOG = os.path.join(BOT_DIR, "data", "auto_update_events.json")
 
 
+def _git_bin():
+    """Путь к исполняемому git или '' — если git не установлен/нет в PATH.
+
+    Раньше наличие git-режима определялось только папкой .git: скачанная с
+    GitHub ZIP-папка с распакованным .git (или машина без git в PATH) вела к
+    вызовам `git ...`, которые на Windows падали с [WinError 2]. Теперь
+    сперва проверяем сам бинарь — нет git, честно уходим в ZIP-режим.
+    """
+    import shutil
+    exe = shutil.which("git")
+    if exe:
+        return exe
+    # Типичные места установки git на Windows, если его нет в PATH
+    if os.name == "nt":
+        for cand in (
+            r"C:\Program Files\Git\cmd\git.exe",
+            r"C:\Program Files (x86)\Git\cmd\git.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Git\cmd\git.exe"),
+        ):
+            if cand and os.path.exists(cand):
+                return cand
+    return ""
+
+
+def _run_git(args, timeout=30):
+    """Запустить git, только если он реально есть. Иначе — None (без падения)."""
+    gbin = _git_bin()
+    if not gbin:
+        return None
+    try:
+        return subprocess.run([gbin] + list(args), cwd=BOT_DIR,
+                              capture_output=True, text=True, timeout=timeout)
+    except FileNotFoundError:
+        return None
+    except Exception:
+        return None
+
+
 def _detect_branch():
     """Рабочая ветка git-репозитория (или '' — не git/не получилось)."""
-    try:
-        r = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=BOT_DIR, capture_output=True, text=True, timeout=10)
-        if r.returncode == 0:
-            return (r.stdout or "").strip()
-    except Exception:
-        pass
+    r = _run_git(["rev-parse", "--abbrev-ref", "HEAD"], timeout=10)
+    if r is not None and r.returncode == 0:
+        return (r.stdout or "").strip()
     return ""
 
 
@@ -82,8 +160,24 @@ def _repo_api():
 
 
 def _zip_url():
+    """Публичная ссылка на zip ветки (github.com/codeload, только public)."""
     repo, branch = _source()
     return f"https://github.com/{repo}/archive/refs/heads/{branch}.zip"
+
+
+def _zipball_url():
+    """Авторизованная ссылка api.github.com на zip ветки (приватный репозиторий)."""
+    repo, branch = _source()
+    return f"https://api.github.com/repos/{repo}/zipball/{branch}"
+
+
+def _api_headers():
+    """Заголовки для api.github.com: Accept + Authorization, если есть токен."""
+    h = {"Accept": "application/vnd.github+json"}
+    token = _update_token()
+    if token:
+        h["Authorization"] = "token " + token
+    return h
 
 # АВТООБНОВЛЕНИЕ — только по явному флагу AUTO_UPDATE=1/true/yes.
 # По умолчанию ВЫКЛЮЧЕНО: демон лишь присматривает за живым процессом
@@ -138,7 +232,7 @@ def log_event(event, **extra):
 def get_remote_commit():
     """GitHub API'den son commit hash'ini al"""
     try:
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        headers = _api_headers()
         r = requests.get(_repo_api(), headers=headers, timeout=10)
         if r.status_code == 200:
             return r.json()["sha"]
@@ -148,16 +242,10 @@ def get_remote_commit():
 
 
 def get_local_commit():
-    """Local git repo'dan HEAD commit hash'ini al"""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=BOT_DIR, capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except Exception:
-        pass
+    """Local git repo'dan HEAD commit hash'ini al (None — git недоступен)."""
+    result = _run_git(["rev-parse", "HEAD"], timeout=10)
+    if result is not None and result.returncode == 0:
+        return result.stdout.strip()
     return None
 
 
@@ -197,6 +285,53 @@ def note_zip_commit(sha):
             f.write(sha.strip())
     except OSError as e:
         лог(f"[AUTO-UPDATE] Не записать маркер версии: {e}")
+
+
+def note_zip_branch(branch):
+    """Запомнить ветку, с которой распакован ZIP (data/.update_branch).
+
+    Критично для установок «скачал ZIP ветки без .git»: иначе демон и /update
+    не знают, откуда обновляться, и сваливаются на main (старый код без
+    фиксов). Та же логика, что в services/self_update.running_branch.
+    """
+    branch = (branch or "").strip()
+    if not branch:
+        return
+    try:
+        os.makedirs(os.path.join(BOT_DIR, "data"), exist_ok=True)
+        with open(os.path.join(BOT_DIR, "data", ".update_branch"), "w",
+                  encoding="utf-8") as f:
+            f.write(branch)
+    except OSError as e:
+        лог(f"[AUTO-UPDATE] Не записать маркер ветки: {e}")
+
+
+def running_branch_local():
+    """Ветка текущей установки БЕЗ git (ZIP), как self_update.running_branch:
+    1) маркер data/.update_branch (записан прошлой раскаткой);
+    2) имя папки дистрибутива «New-Pro-arena-01a05c7b-new-pro» →
+       ветка arena/01a05c7b-new-pro (в zip-имени слэши → дефисы);
+    3) '' — неизвестно.
+    """
+    try:
+        with open(os.path.join(BOT_DIR, "data", ".update_branch"),
+                  encoding="utf-8") as f:
+            name = f.read().strip()
+            if name:
+                return name
+    except OSError:
+        pass
+    try:
+        base = os.path.basename(os.path.abspath(BOT_DIR))
+        if base.lower().startswith("new-pro-") and len(base) > len("new-pro-"):
+            cand = base[len("New-Pro-"):]
+            if cand.lower().startswith("arena-"):
+                cand = "arena/" + cand[len("arena-"):]
+            if cand and cand != "main":
+                return cand
+    except Exception:
+        pass
+    return ""
 
 
 def _archive_root(names):
@@ -345,24 +480,26 @@ def start_bot():
 
 
 def git_pull():
-    """Обновить репозиторий через git pull"""
+    """Обновить репозиторий через git pull (если git реально доступен)."""
     _branch = _source()[1]
+    if not _git_bin():
+        лог("[AUTO-UPDATE] git недоступен в PATH — обновляюсь через ZIP-архив")
+        download_and_extract()
+        return
     лог(f"[AUTO-UPDATE] Выполняется git pull ({_branch})...")
     try:
-        result = subprocess.run(
-            ["git", "pull", "origin", _branch],
-            cwd=BOT_DIR,
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
+        result = _run_git(["pull", "origin", _branch], timeout=60)
+        if result is None:
+            лог("[AUTO-UPDATE] git pull не запустился — обновляюсь через ZIP")
+            download_and_extract()
+            return
         лог(f"[AUTO-UPDATE] git pull stdout: {result.stdout.strip()}")
         if result.returncode != 0:
             лог(f"[AUTO-UPDATE] git pull stderr: {result.stderr.strip()}")
             # Conflict varsa force reset yap
             лог("[AUTO-UPDATE] Обнаружен конфликт, выполняется force reset...")
-            subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR, capture_output=True, timeout=30)
-            subprocess.run(["git", "reset", "--hard", f"origin/{_branch}"], cwd=BOT_DIR, capture_output=True, timeout=30)
+            _run_git(["fetch", "origin"], timeout=30)
+            _run_git(["reset", "--hard", f"origin/{_branch}"], timeout=30)
             лог(f"[AUTO-UPDATE] Force reset на origin/{_branch} завершено")
         else:
             лог("[AUTO-UPDATE] Файлы обновлены")
@@ -370,14 +507,13 @@ def git_pull():
         # ТОЛЬКО СВЕЖЕЕ: ничего лишнего помимо дерева origin/main —
         # убираем неотслеживаемые хвосты (бывшие модули, временные файлы).
         # Сохраняем: данные, логи, секреты, окружение, ручной контент.
-        clean_res = subprocess.run(
-            ["git", "clean", "-fd",
+        clean_res = _run_git(
+            ["clean", "-fd",
              "-e", "data/", "-e", "logs/", "-e", ".env", "-e", ".env.local",
              "-e", ".venv", "-e", "venv", "-e", "env", "-e", "node_modules",
              "-e", "bot_output.log", "-e", "last_commit.txt",
-             "-e", "UPDATE.bat", "-e", "config-local.py"],
-            cwd=BOT_DIR, capture_output=True, text=True, timeout=60)
-        cleaned = [x.strip() for x in clean_res.stdout.splitlines()
+             "-e", "UPDATE.bat", "-e", "config-local.py"], timeout=60)
+        cleaned = [x.strip() for x in (clean_res.stdout.splitlines() if clean_res else [])
                    if x.strip().startswith(('Removing', 'Удаляется', 'Удалён'))]
         if cleaned:
             лог(f"[AUTO-UPDATE] убрано устаревшего: {len(cleaned)} шт — только самое свежее")
@@ -407,11 +543,26 @@ def _zip_target_ok(bot_dir, target_path):
 
 
 def download_and_extract():
-    """Скачать ZIP с GitHub и распаковать в BOT_DIR (fallback)"""
+    """Скачать ZIP с GitHub и распаковать в BOT_DIR (fallback)."""
+    _dl_branch = _source()[1]
     лог("[AUTO-UPDATE] Файлы загружаются...")
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-    r = requests.get(_zip_url(), headers=headers, timeout=60)
+    token = _update_token()
+    if token:
+        url = _zipball_url()          # приватный репозиторий — только с токеном
+        headers = _api_headers()
+    else:
+        url = _zip_url()              # публичный — анонимно
+        headers = None
+    r = requests.get(url, headers=headers, timeout=60)
     if r.status_code != 200:
+        if not token and r.status_code == 404:
+            raise Exception("Ошибка загрузки HTTP 404 — репозиторий приватный? "
+                            "Добавьте GITHUB_TOKEN (или UPDATE_TOKEN) с доступом "
+                            "на чтение кода в .env и повторите обновление")
+        if token and r.status_code in (401, 403):
+            raise Exception("Ошибка загрузки HTTP %d — GITHUB_TOKEN не подходит: "
+                            "нужен токен с доступом на чтение содержимого "
+                            "репозитория" % r.status_code)
         raise Exception(f"Ошибка загрузки HTTP {r.status_code}")
 
     zip_path = os.path.join(BOT_DIR, "hakumo-update.zip")
@@ -448,11 +599,63 @@ def download_and_extract():
     os.remove(zip_path)
     лог("[AUTO-UPDATE] Файлы обновлены (ZIP)")
 
+    # Запоминаем ветку, с которой распаковались: установка без .git должна и
+    # дальше обновляться с ТОЙ ЖЕ ветки (иначе демон свалится на main со
+    # старым кодом). Источник — запрошенная ветка, иначе — имя папки архива.
+    try:
+        _mark_branch = _dl_branch or running_branch_local()
+        if _mark_branch and _mark_branch != "main":
+            note_zip_branch(_mark_branch)
+            лог(f"[AUTO-UPDATE] ветка установки зафиксирована: {_mark_branch}")
+    except Exception as _be:
+        лог(f"[AUTO-UPDATE] не удалось зафиксировать ветку: {_be}")
+
+    # git-режим убирает неотслеживаемые хвосты через `git clean -fd`; в
+    # ZIP-режиме этого шага нет — старые файлы вырезанных фич оставались бы
+    # на диске. Сносим только заведомо мёртвый КОД (коги вырезанных систем):
+    # его не грузит ни один профиль cogs_policy, так что команды/дублям взяться
+    # неоткуда, а удаление гарантирует, что их не подхватит даже вручную.
+    # Данные (data/), .env, логи, venv — не трогаем.
+    _prune_dead_code()
+
     env_path = os.path.join(BOT_DIR, ".env")
     if not os.path.exists(env_path):
         with open(env_path, "w", encoding="utf-8") as f:
             f.write(ENV_CONTENT)
         лог("[AUTO-UPDATE] .env создано")
+
+
+# Код модулей, удалённых из боевого состава (вырезанные/снятые с эксплуатации
+# системы). Распространяется только на файлы когов в ZIP-режиме — чтобы старые
+# копии не оставались на машине после обновления архивом.
+_DEAD_COG_FILES = (
+    "cogs/ticket.py",          # тикет-система снята (RETired)
+    "cogs/counting.py",        # считалка
+    "cogs/starboard.py",       # доска славы
+    "cogs/tag_jail.py",        # tag jail
+    "cogs/staff_shifts.py",    # смены персонала
+    "cogs/night_report.py",    # ночные сводки
+    "cogs/mod_digest.py",      # дайджест модерации
+    "cogs/music.py",           # музыка /play снесена
+)
+
+
+def _prune_dead_code():
+    """Удалить файлы вырезанных модулей (ZIP-режим). Безопасно: их не грузят."""
+    removed = 0
+    for rel in _DEAD_COG_FILES:
+        fp = os.path.join(BOT_DIR, rel)
+        # не даём пути выйти за пределы BOT_DIR (тот же принцип, что Zip Slip)
+        if not _zip_target_ok(BOT_DIR, fp):
+            continue
+        try:
+            if os.path.isfile(fp):
+                os.remove(fp)
+                removed += 1
+        except OSError as e:
+            лог(f"[AUTO-UPDATE] не удалось убрать устаревший {rel}: {e}")
+    if removed:
+        лог(f"[AUTO-UPDATE] убрано устаревших модулей: {removed} шт (ZIP)")
 
 
 def update_bot(reason="new_commit", remote_sha=None, local_sha=None):
@@ -472,12 +675,15 @@ def update_bot(reason="new_commit", remote_sha=None, local_sha=None):
     лог("[AUTO-UPDATE] === ОБНОВЛЕНИЕ НАЧАТО ===")
     try:
         kill_bot()
-        # Сначала пробуем git pull; если это не git-репозиторий — скачиваем ZIP
+        # git pull — только если есть и репозиторий .git, и сам бинарь git.
+        # Иначе (нет .git или git не установлен/нет в PATH) — ZIP-архив, это
+        # убирает [WinError 2] на машинах без git.
         git_dir = os.path.join(BOT_DIR, ".git")
-        if os.path.isdir(git_dir):
+        if os.path.isdir(git_dir) and _git_bin():
             git_pull()
         else:
-            лог("[AUTO-UPDATE] .git не найден — обновляемся из ZIP-архива...")
+            лог("[AUTO-UPDATE] git недоступен (.git нет или git не в PATH) — "
+                "обновляемся из ZIP-архива...")
             download_and_extract()
             note_zip_commit(remote_sha)   # иначе на следующем круге снова «новое»
         time.sleep(2)
@@ -494,14 +700,15 @@ def update_bot(reason="new_commit", remote_sha=None, local_sha=None):
 
 
 def _tree_is_clean():
-    """git status --porcelain пуст — только тогда обновлять (reset безопасен)."""
-    try:
-        r = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=BOT_DIR, capture_output=True, text=True, timeout=20)
-        return r.returncode == 0 and not (r.stdout or "").strip()
-    except Exception:
-        return False
+    """git status --porcelain пуст — только тогда обновлять (reset безопасен).
+
+    Если git недоступен (нет бинаря) — возвращаем True, т.к. в ZIP-режиме
+    reset --hard не используется вовсе (обновление идёт распаковкой архива).
+    """
+    r = _run_git(["status", "--porcelain"], timeout=20)
+    if r is None:
+        return True
+    return r.returncode == 0 and not (r.stdout or "").strip()
 
 
 def main():
@@ -531,9 +738,32 @@ def main():
             return
         time.sleep(5)
 
-    _is_git = os.path.isdir(os.path.join(BOT_DIR, ".git"))
+    # git-режим — только если есть И папка .git, И сам бинарь git в PATH.
+    # Скачанная ZIP-папка с распакованным .git на машине без git больше не
+    # роняет цикл с [WinError 2] — честно уходим в ZIP-режим.
+    _has_git_dir = os.path.isdir(os.path.join(BOT_DIR, ".git"))
+    _has_git_bin = bool(_git_bin())
+    _is_git = _has_git_dir and _has_git_bin
+    if _has_git_dir and not _has_git_bin:
+        лог("[AUTO-UPDATE] .git есть, но git не установлен/нет в PATH — "
+            "перехожу на ZIP-режим (обновление распаковкой архива, без git)")
+        log_event("zip_mode_fallback", reason="git_binary_missing")
     if not _is_git:
-        лог("[AUTO-UPDATE] .git нет — ZIP-режим: версию смотрю в GitHub API "
+        # ZIP-установка без .git: ветку берём не из «main по умолчанию», а из
+        # самой установки — маркер data/.update_branch (после первой раскатки)
+        # или имя папки «New-Pro-arena-01a05c7b-new-pro». Так скачанный ZIP
+        # ветки продолжает обновляться с ЭТОЙ ЖЕ ветки, а не откатывается.
+        _auto_branch = running_branch_local()
+        if _auto_branch:
+            try:
+                sys.path.insert(0, BOT_DIR)
+                from services.update_source import set_source, get_repo
+                set_source(get_repo(), _auto_branch)
+                лог(f"[AUTO-UPDATE] ZIP-режим: ветка установки определена как {_auto_branch}")
+            except Exception as _ab:
+                os.environ["UPDATE_BRANCH"] = _auto_branch
+                лог(f"[AUTO-UPDATE] ZIP-режим: ветка из папки/маркера: {_auto_branch} ({_ab})")
+        лог("[AUTO-UPDATE] ZIP-режим: версию смотрю в GitHub API "
             f"и маркере data/.update_sha (опрос раз в {ZIP_API_POLL_SEC // 60} мин)")
         log_event("zip_mode", poll_sec=ZIP_API_POLL_SEC)
     _last_api_check = 0.0
@@ -541,15 +771,19 @@ def main():
     while True:
         try:
             _dyn_branch = _source()[1]
+            # ZIP-режим без явной настройки панели: ветка установки важнее main.
+            # Выставляем и UPDATE_BRANCH — это fallback _source(), если файл
+            # update_source.json недоступен (например, services/ не прочитались).
+            if not _is_git and (not _dyn_branch or _dyn_branch == "main"):
+                _auto = running_branch_local()
+                if _auto and _auto != "main":
+                    _dyn_branch = _auto
+                    os.environ["UPDATE_BRANCH"] = _auto
             remote_hash = None
             if _is_git:
-                subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR,
-                               capture_output=True, timeout=30)
-                result = subprocess.run(
-                    ["git", "rev-parse", f"origin/{_dyn_branch}"],
-                    cwd=BOT_DIR, capture_output=True, text=True, timeout=10
-                )
-                remote_hash = result.stdout.strip() if result.returncode == 0 else None
+                _run_git(["fetch", "origin"], timeout=30)
+                result = _run_git(["rev-parse", f"origin/{_dyn_branch}"], timeout=10)
+                remote_hash = result.stdout.strip() if (result is not None and result.returncode == 0) else None
             else:
                 # ZIP-режим: git не работает — спрашиваем GitHub API.
                 # Реже, чем git-режим: анонимный лимит API — 60 запросов/час.

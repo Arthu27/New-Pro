@@ -45,6 +45,15 @@ def check(ok, msg):
 print('== 1. Палитры и рендер ==')
 from services import log_card as LC  # noqa: E402
 
+# cfg лог-карточек лежит в data/ репозитория (не в TMP): сбрасываем свои
+# gid-файлы, чтобы прогон не зависел от прошлого запуска — иначе
+# delivery='photo' из секции 3 прилипает к «дефолтному» чеку ниже
+for _gid in ('424242', '424243', '424244', '424245', '424246'):
+    try:
+        os.remove(LC.log_cards_cfg_path(_gid))
+    except OSError:
+        pass
+
 check(set(LC.LOG_CARD_THEME_ORDER) == set(LC.LOG_CARD_THEMES),
       'порядок тем = реестру')
 check(LC.DEFAULT_LOG_THEME == 'hakumo', 'дефолт — фирменное золото (как было)')
@@ -77,27 +86,191 @@ check(pal['gold'] == (255, 136, 0) and pal['bright'] != pal['gold'],
       'акцент заменяет золотую гамму (основную и светлую)')
 
 print('== 2. Настройки cfg ==')
+_CFG_SKIP = ('theme_by_cat', 'bg_url', 'bg_url_by_cat', 'form', 'form_color', 'delivery')
 cfg = LC.get_log_cards_cfg('424242')
-check(cfg == {'enabled': True, 'theme': 'hakumo', 'accent': ''}, 'нет файла → дефолт')
+check({k: v for k, v in cfg.items() if k not in _CFG_SKIP} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+      and cfg['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT and cfg['bg_url'] == ''
+      and cfg['form'] == 'glass' and cfg['form_color'] == ''
+      and cfg['delivery'] == 'embed',
+      'нет файла → дефолт (эмбед Discord, образы по категориям, фон пустой, форма стекло)')
 saved = LC.save_log_cards_cfg('424242', {'enabled': False, 'theme': 'ocean', 'accent': '#22d3ee'})
-check(saved == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'},
-      'сохранение нормализует (accent без #)')
+check({k: v for k, v in saved.items() if k not in _CFG_SKIP} == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'}
+      and saved['bg_url'] == '', 'сохранение нормализует (accent без #)')
 check(LC.get_log_cards_cfg('424242') == saved, 'читается обратно один в один')
 saved2 = LC.save_log_cards_cfg('424242', {'enabled': 'yes', 'theme': 'bad', 'accent': 'bad'})
-check(saved2 == {'enabled': True, 'theme': 'hakumo', 'accent': ''},
+check({k: v for k, v in saved2.items() if k not in _CFG_SKIP} == {'enabled': True, 'theme': 'hakumo', 'accent': ''}
+      and saved2['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT,
       'мусор в POST не пролезает: enabled bool, тема/акцент по реестру')
 os.remove(LC.log_cards_cfg_path('424242'))
+check(LC._valid_delivery('PHOTO') == 'photo' and LC._valid_delivery('nope') == 'embed',
+      'delivery: photo/embed, мусор → эмбед')
+ph = LC.save_log_cards_cfg('424246', {'delivery': 'photo'})
+check(ph['delivery'] == 'photo', 'delivery=photo сохраняется')
+LC.save_log_cards_cfg('424246', {'theme': 'ocean'})
+check(LC.get_log_cards_cfg('424246')['delivery'] == 'photo'
+      and LC.get_log_cards_cfg('424246')['theme'] == 'ocean',
+      'смена темы не сносит вид лога')
+junk_d = LC.save_log_cards_cfg('424246', {'delivery': 'postcard'})
+check(junk_d['delivery'] == 'embed', 'мусорный delivery → эмбед')
+os.remove(LC.log_cards_cfg_path('424246'))
+
+print('== 2в. Форма и цвет плашек ==')
+check(set(LC.CARD_FORMS) == {'glass', 'rounded', 'pill', 'sharp'},
+      'четыре формы плашек')
+check(LC._valid_form('nope') == 'glass' and LC._valid_form('PILL') == 'pill',
+      'мусорная форма → стекло, регистр не мешает')
+pill = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', form='pill',
+                          form_color='112233')
+glass = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', form='glass')
+check(pill and glass and pill != glass, 'форма и цвет меняют карточку')
+from PIL import Image as _Im
+_bg = __import__('io').BytesIO()
+_Im.new('RGB', (960, 540), (220, 160, 70)).save(_bg, 'JPEG')
+on_photo = LC.render_log_card('mod', 'Выдано предупреждение', rows,
+                              cat_name='модерация', bg_bytes=_bg.getvalue(),
+                              form='glass', form_color='0c101c')
+check(on_photo and on_photo[:2] == b'\xff\xd8' and len(on_photo) > 20000,
+      'плашки рисуются поверх фото-фона без падения')
+saved_f = LC.save_log_cards_cfg('424244', {'form': 'pill', 'form_color': '#aabbcc'})
+check(saved_f['form'] == 'pill' and saved_f['form_color'] == 'aabbcc',
+      'форма и цвет сохраняются')
+LC.save_log_cards_cfg('424244', {'theme': 'ocean'})
+check(LC.get_log_cards_cfg('424244')['form'] == 'pill'
+      and LC.get_log_cards_cfg('424244')['form_color'] == 'aabbcc',
+      'смена темы не сносит форму и цвет')
+junk_f = LC.save_log_cards_cfg('424244', {'form': 'blob', 'form_color': 'zz'})
+check(junk_f['form'] == 'glass' and junk_f['form_color'] == '',
+      'мусорная форма/цвет → дефолт')
+os.remove(LC.log_cards_cfg_path('424244'))
+
+print('== 2б. Фон по категории (merge-on-save) ==')
+LC.save_log_cards_cfg('424243', {'enabled': True, 'theme': 'ocean',
+                                 'bg_url': 'https://example.com/all.jpg'})
+LC.save_log_cards_cfg('424243', {'bg_url_by_cat': {
+    'mod': 'https://example.com/mod.jpg',
+    'voice': 'https://pin.it/abc',
+    'junk': 'not-a-url',
+}})
+cfg3 = LC.get_log_cards_cfg('424243')
+check(cfg3['theme'] == 'ocean' and cfg3['bg_url'] == 'https://example.com/all.jpg',
+      'POST только bg_url_by_cat не затирает тему и общий фон')
+check(cfg3['bg_url_by_cat'].get('mod') == 'https://example.com/mod.jpg'
+      and cfg3['bg_url_by_cat'].get('voice') == 'https://pin.it/abc'
+      and 'junk' not in cfg3['bg_url_by_cat'],
+      'URL по категориям сохраняется, мусор отсекается')
+check(LC.bg_url_for_cat(cfg3, 'mod') == 'https://example.com/mod.jpg'
+      and LC.bg_url_for_cat(cfg3, 'member') == 'https://example.com/all.jpg',
+      'bg_url_for_cat: свой URL категории, иначе общий')
+LC.save_log_cards_cfg('424243', {'theme': 'forest'})
+cfg4 = LC.get_log_cards_cfg('424243')
+check(cfg4['theme'] == 'forest'
+      and cfg4['bg_url_by_cat'].get('mod') == 'https://example.com/mod.jpg',
+      'смена темы не стирает URL по категориям')
+os.remove(LC.log_cards_cfg_path('424243'))
 
 print('== 3. Склейка с ботом ==')
 logs_src = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
 flat = re.sub(r'\s+', '', logs_src)
-check('get_log_cards_cfg' in flat and '_cfg.get(\'enabled\',True)' in flat.replace('"', "'"),
+check('get_log_cards_cfg' in flat and "_cfg.get('enabled',True)" in flat.replace('"', "'"),
       '_safe_send читает cfg сервера')
-check("theme=_cfg.get('theme')" in flat and "accent=_cfg.get('accent')" in flat,
-      'тема/акцент проброшены из cfg вrender')
-check("ifnot_cfg.get('enabled',True)" in flat.replace('"', "'")
-      and "_png=None" in flat,
-      'enabled=False выключает картинку, текст остаётся')
+check('bg_url_for_cat' in logs_src,
+      '_safe_send берёт фон категории, а не только общий bg_url')
+check('render_log_card' in logs_src and 'hakumo_log.jpg' in logs_src,
+      '_safe_send рисует лог на фото владельца и шлёт файл')
+check("pop ('embed'" in logs_src or "pop('embed'" in logs_src,
+      'фото-режим прячет эмбед Discord, в канал уходит файл')
+check('compact_log_photo' not in logs_src and 'hakumo_log_photo.jpg' not in logs_src,
+      'полоска без текста в канал не уходит')
+check("if_cfg.get('enabled',True)and_deliv=='photo'" in flat.replace('"', "'")
+      or "if_cfg.get('enabled',True)and_deliv==\"photo\"" in flat,
+      'фото только если delivery=photo; иначе эмбед')
+
+print('== 3б. Отправка: эмбед по умолчанию, фото — по выбору ==')
+import asyncio
+from cogs.logs import _safe_send, _styled_log_embed  # noqa: E402
+
+_bgbuf = __import__('io').BytesIO()
+_Im.new('RGB', (960, 540), (40, 28, 18)).save(_bgbuf, 'JPEG')
+_fake_bg = _bgbuf.getvalue()
+_orig_bg = LC.get_bg_bytes_sync
+LC.get_bg_bytes_sync = lambda url, ttl=300: _fake_bg if url else None
+
+
+class _G:
+    id = 424245
+    name = 'Hakumo'
+    icon = None
+
+    def get_member(self, *a):
+        return None
+
+    def get_role(self, *a):
+        return None
+
+    def get_channel(self, *a):
+        return None
+
+
+class _Ch:
+    def __init__(self):
+        self.guild = _G()
+        self.name = 'модерация'
+        self.sent = []
+
+    async def send(self, **kw):
+        self.sent.append(kw)
+
+
+LC.save_log_cards_cfg('424245', {'enabled': True,
+                                 'bg_url': 'https://example.com/bg.jpg'})
+_ch = _Ch()
+_e = _styled_log_embed(_G(), 'mod', 'Выдано предупреждение',
+                       fields=[('Пользователь', 'GhostBlade'),
+                               ('Причина', 'спам')])
+asyncio.run(_safe_send(_ch, embed=_e))
+_kw = _ch.sent[-1] if _ch.sent else {}
+check('embed' in _kw and 'file' not in _kw,
+      'по умолчанию в канал уходит эмбед Discord, без фото')
+
+LC.save_log_cards_cfg('424245', {'enabled': True, 'delivery': 'photo',
+                                 'bg_url': 'https://example.com/bg.jpg'})
+_chp = _Ch()
+asyncio.run(_safe_send(_chp, embed=_e))
+_kwp = _chp.sent[-1] if _chp.sent else {}
+check('file' in _kwp and 'embed' not in _kwp,
+      'delivery=photo: в канал уходит только фото')
+check(getattr(_kwp.get('file'), 'filename', '') == 'hakumo_log.jpg',
+      'файл hakumo_log.jpg')
+
+LC.save_log_cards_cfg('424245', {'enabled': False, 'delivery': 'photo',
+                                 'bg_url': 'https://example.com/bg.jpg'})
+_ch2 = _Ch()
+_e2 = _styled_log_embed(_G(), 'mod', 'Выдано предупреждение',
+                        fields=[('Пользователь', 'GhostBlade')])
+asyncio.run(_safe_send(_ch2, embed=_e2))
+_kw2 = _ch2.sent[-1] if _ch2.sent else {}
+check('embed' in _kw2 and 'file' not in _kw2,
+      'enabled=False: текстовый эмбед, без фото')
+
+os.remove(LC.log_cards_cfg_path('424245'))
+_ch3 = _Ch()
+_e3 = _styled_log_embed(_G(), 'mod', 'Событие', fields=[('А', 'б')])
+asyncio.run(_safe_send(_ch3, embed=_e3))
+_kw3 = _ch3.sent[-1] if _ch3.sent else {}
+check('embed' in _kw3 and 'file' not in _kw3,
+      'нет файла настроек: эмбед Discord')
+LC.save_log_cards_cfg('424245', {'delivery': 'photo'})
+_ch4 = _Ch()
+asyncio.run(_safe_send(_ch4, embed=_e3))
+_kw4 = _ch4.sent[-1] if _ch4.sent else {}
+check('file' in _kw4 and 'embed' not in _kw4,
+      'photo без URL: фото со стеклом на стандартном фоне')
+# не оставляем delivery='photo' следующим прогонам (файл общий на репозиторий)
+try:
+    os.remove(LC.log_cards_cfg_path('424245'))
+except OSError:
+    pass
+LC.get_bg_bytes_sync = _orig_bg
 
 print('== 4. API панели ==')
 appmod = importlib.import_module('web.app')
@@ -122,26 +295,31 @@ check(guest.status_code in (302, 401, 403), 'гостю настройки за�
 
 login('mod')
 r = client.post('/api/guild/777/log-cards/settings', json={'theme': 'night'})
-check(r.status_code == 403, 'мод не меняет оформление (admin+)')
+check(r.status_code == 403, 'мод не меняет оформление')
 r = client.get('/api/guild/777/log-cards/preview.png')
-check(r.status_code == 200 and r.mimetype == 'image/png', 'мод смотрит предпросмотр')
-check(r.headers.get('Cache-Control') == 'no-store', 'предпросмотр не кэшируется')
+check(r.status_code == 403, 'мод не смотрит предпросмотр оформления')
+r = client.get('/api/guild/777/log-cards/settings')
+check(r.status_code == 403, 'мод не читает оформление карточек')
 
 login('admin')
+r = client.post('/api/guild/777/log-cards/settings', json={'theme': 'forest'})
+check(r.status_code == 403, 'админ не меняет оформление — только владелец')
+
+login('owner')
 r = client.post('/api/guild/777/log-cards/settings',
                 json={'enabled': True, 'theme': 'forest', 'accent': '#22ff88'})
 d = r.get_json()
 check(r.status_code == 200 and d['success'] and d['cfg']['theme'] == 'forest',
-      'админ сохранил forest + акцент')
+      'владелец сохранил forest + акцент')
 check(d['cfg']['accent'] == '22ff88', 'акцент сохранён без решётки')
 check(LC.get_log_cards_cfg('777')['theme'] == 'forest', 'файл на диске — forest')
 r = client.get('/api/guild/777/log-cards/settings').get_json()
-check(r['cfg']['theme'] == 'forest' and len(r['themes']) == 5,
-      'GET отдаёт cfg и 5 тем')
+check(r['cfg']['theme'] == 'forest' and len(r['themes']) == len(LC.LOG_CARD_THEMES),
+      'GET отдаёт cfg и все темы реестра')
 r = client.get('/api/guild/777/log-cards/preview.png?theme=ocean&accent=22d3ee&cat=voice')
 body = r.get_data()
-check(body[:8].startswith(b'\x89PNG') and len(body) > 30000,
-      f'предпросмотр голосовой категории ({len(body)} байт)')
+check(body[:8].startswith(b'\x89PNG') and len(body) > 2000,
+      f'предпросмотр фото-полосы ({len(body)} байт)')
 r = client.get('/api/guild/777/log-cards/preview.png?theme=zzz&cat=unknown')
 check(r.status_code == 200, 'мусорные theme/cat → дефолты, не 500')
 LC.save_log_cards_cfg('777', {'enabled': True, 'theme': 'hakumo', 'accent': ''})
@@ -152,8 +330,8 @@ for f in ('data/log_cards_777.json',):
 print('== 5. Шаблон ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'message_logs.html'),
            encoding='utf-8').read()
-for fid in ('lcSetBox', 'lcOn', 'lcTheme', 'lcCat', 'lcAccent', 'lcSave',
-            'lcPreview', 'lcMsg'):
+for fid in ('lcSetBox', 'lcDelivery', 'lcTheme', 'lcCat', 'lcAccent', 'lcSave',
+            'lcPreview', 'lcMsg', 'lcForm'):
     check(f'id="{fid}"' in tpl, f'контрол {fid} на месте')
 check('/log-cards/settings\' + ' in tpl or 'log-cards/settings' in tpl,
       'API настроек подключён в шаблоне')

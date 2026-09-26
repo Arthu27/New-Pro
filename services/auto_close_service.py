@@ -166,8 +166,15 @@ class AutoCloseService:
                         f"{msg.author.display_name}: {msg.content}"
                     )
             
-            # Отправить в лог-канал
-            log_channel = discord.utils.get(channel.guild.text_channels, name="ticket-log")
+            # Отправить в лог-канал (🎫・тикеты; старое имя ticket-log тоже находится)
+            log_channel = None
+            try:
+                from cogs.logs import find_log_channel as _find_ticket_log
+                log_channel = _find_ticket_log(channel.guild, 'ticket-log')
+            except Exception:
+                log_channel = None
+            if log_channel is None:
+                log_channel = discord.utils.get(channel.guild.text_channels, name="ticket-log")
             if log_channel:
                 import io
                 transcript = "\n".join(messages) if messages else "Сообщений не найдено."

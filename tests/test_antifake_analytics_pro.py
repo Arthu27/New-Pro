@@ -119,17 +119,14 @@ check(d.get('success') and d.get('catch') and d['matches'][0]['score_pct'] == 10
 r = client.post(f'/api/guild/{GID}/antifake/lab', json={'text': ''})
 check(r.status_code == 400, 'лаборатория с пустым текстом — 400')
 
-# ═══ 3. Про-аналитика: демо-тикеты и цвета темы ════════════════════════
+# ═══ 3. Про-аналитика удалена ═══════════════════════════════════════════
 print('== Про-аналитика ==')
-import glob as _g  # noqa: E402
-seed = open(os.path.join(ROOT, 'scripts', 'seed_demo_panel.py'), encoding='utf-8').read()
-check('ai_tickets_demo.json' in seed, 'сид пишет демо-тикеты для Про-аналитики')
-t_adv = open(os.path.join(ROOT, 'web', 'templates', 'advanced_analytics.html'), encoding='utf-8').read()
-check("color: '#fff'" not in t_adv and "color: '#888'" not in t_adv,
-      'графики Про-аналитики без захардкоженных белых/серых цветов (было невидимо на светлой теме)')
-check('chartTick()' in t_adv and 'chartGrid()' in t_adv,
-      'цвета графиков берутся из темы (chartTick/chartGrid)')
-check('fa-chart-simple' in t_adv, 'честная заглушка при недоступном canvas')
+import glob as _g  # noqa: E402  (нужен секции «русский текст» ниже)
+# /advanced-analytics целиком читала data/ai_tickets_*.json — данные
+# тикет-системы, снятой владельцем. Страница, маршрут и шаблон удалены.
+check(not os.path.exists(os.path.join(ROOT, 'web', 'templates', 'advanced_analytics.html')),
+      'шаблон Про-аналитики удалён вместе с тикетами')
+
 
 # ═══ 4. Аналитика сервера: нет var()/color-mix в Chart.js-конфигах ══════
 print('== Аналитика сервера ==')

@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Варны</div>
+    <div class="eyebrow"> Модерация </div>
     <h1>Варны</h1>
     <p class="lead">Предупреждения, причины и история участника в одной очереди. Поиск работает по участнику, причине и модератору.</p>
   </div>
@@ -45,7 +45,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
@@ -139,7 +139,7 @@
           (uidName ? '<b>' + esc(uidName) + '</b> <span class="id-pill" title="ID участника">' + esc(uid) + '</span>' : '<span class="id-pill">' + esc(uid) + '</span>') +
           ' <span class="badge danger">' + list.length + '</span></td>' +
           '<td colspan="2">' + reasons + more + '</td>' +
-          '<td><a class="btn btn-sm" href="/mod-insights?user=' + esc(uid) + '"><i class="fas fa-id-card"></i> Досье</a></td></tr>';
+          '<td>' + ((window.panelPathHidden && window.panelPathHidden('/mod-insights')) ? '' : '<a class="btn btn-sm" href="/mod-insights?user=' + esc(uid) + '"><i class="fas fa-id-card"></i> Досье</a>') + '</td></tr>';
       }).join('');
       return;
     }

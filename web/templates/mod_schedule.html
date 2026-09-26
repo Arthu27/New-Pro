@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Расписание наказаний - Hakumo{% endblock %}
+{% block title %}Расписание наказаний — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-calendar-check"></i> Расписание{% endblock %}
 {% block content %}
 <style>
@@ -25,9 +25,9 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Расписание</div>
+    <div class="eyebrow"> Модерация </div>
     <h1>Расписание наказаний</h1>
-    <p class="lead">Когда что истекает — и что будет исполнено позже. Календарь живой: обновляется сам.</p>
+    <p class="lead">Сроки наказаний и запланированные действия. Обновляется автоматически.</p>
   </div>
 </div>
 
@@ -83,7 +83,7 @@
   <div id="msSchedList" style="margin-top:10px"><div class="empty"><i class="fas fa-hourglass-start"></i><span>Загрузка…</span></div></div>
 </div>
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 attachMemberPicker(document.getElementById('msUserId'), { gid: GID, statusEl: document.getElementById('msUserIdStatus') });
 var API = '/api/guild/' + GID + '/mod-schedule';

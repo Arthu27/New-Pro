@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""AI-апгрейд: личка выключена, панель — слабая модель, чат прокачан.
+"""AI-апгрейд: личка выключена, панель и чат — сильные.
 
 Заказ владельца:
 1. В личке (DM) ИИ не работает — только серверные каналы (перехват reply
    владельца и его операционные команды — это не ИИ-чат, они живы).
-2. В панели — заведомо слабая (дешёвая) модель mistral-small-latest,
-   переопределяется AI_PANEL_MODEL в .env; оба вызова _call её используют.
-3. Серверный чат прокачан: детерминированная температура 0.25, полные
-   ответы (1408 токенов), слепок сервера (каналы/роли/состав команды),
+2. В панели — сильная модель mistral-large-latest (переопределяется
+   AI_PANEL_MODEL в .env); оба вызова _call её используют.
+3. Серверный чат прокачан: температура 0.18, полные ответы (1600 токенов),
+   слепок сервера (каналы/роли/состав команды),
    договор «никогда не отказываться фразами про доступ к данным»,
    запрет выдумывать факты сервера сохранён.
 
@@ -49,7 +49,9 @@ flat = re.sub(r'\s+', '', cog)
 check('ИИ-чат теперь работает только на сервере' in cog,
       'в DM уходит вежливое уведомление вместо ответа ИИ')
 idx_dm = cog.find('if is_dm :\n            try :')
-idx_gate = cog.find('if not (is_dm or is_ai_channel ):')
+idx_gate = cog.find('if not is_ai_channel :')
+if idx_gate < 0:
+    idx_gate = cog.find('if not (is_dm or is_ai_channel ):')
 check(0 < idx_dm < idx_gate,
       'DM-барьер стоит ДО общего AI-ответа')
 check('_detect_owner_intent' in cog and cog.find('_detect_owner_intent') < idx_dm,
@@ -57,14 +59,15 @@ check('_detect_owner_intent' in cog and cog.find('_detect_owner_intent') < idx_d
 check("'[AI] DM notice Ошибки: {_dm_ex}'" in cog,
       'отказ в DM без молчаливого except (лог есть)')
 
-print('== 2. Панель — слабая модель ==')
+print('== 2. Панель — сильная модель ==')
 panel = open(os.path.join(ROOT, 'web', 'routes', 'ai_chat.py'),
              encoding='utf-8').read()
-check("AI_PANEL_MODEL','mistral-small-latest'" in panel.replace(' ', ''),
-      'дефолт панели — mistral-small-latest (дешёвая), через .env меняется')
+check("AI_PANEL_MODEL','mistral-large-latest'" in panel.replace(' ', ''),
+      'дефолт панели — mistral-large-latest (сильная), через .env меняется')
 check(panel.count('model =_AI_PANEL_MODEL') >= 2,
-      'оба вызова _call панели идут со слабой моделью')
-check('заведомо СЛАБАЯ' in panel, 'намерение задокументировано в коде')
+      'оба вызова _call панели идут с сильной моделью')
+check('сильная по умолчанию' in panel or 'mistral-large-latest' in panel,
+      'намерение задокументировано в коде')
 
 print('== 3. Серверный чат прокачан ==')
 captured = {}
@@ -110,9 +113,9 @@ finally:
 
 sys_prompt = captured['msg'][0]['content']
 check(ans == 'ок' and hist[-1]['content'] == 'ок', 'ответ проходит сквозь')
-check(captured['temperature'] == 0.25,
-      'температура 0.25 — детерминированные ответы')
-check(captured['max_tokens'] == 1408, 'полные ответы (1408 токенов)')
+check(captured['temperature'] == 0.18,
+      'температура 0.18 — точные ответы')
+check(captured['max_tokens'] == 1600, 'полные ответы (1600 токенов)')
 check(captured['model'] is None,
       'модель чата не задана жёстко — сильная дефолтная (large)')
 for probe in ('эксперт высшего класса', 'рассудительный', 'на ЛЮБОЙ вопрос',
@@ -133,7 +136,7 @@ for probe in ('МЕТОД РАБОТЫ', 'мысленно разбери воп
               'РЕАЛЬНЫЕ слеш-команды', '/modpanel',
               '[12:00] Люк: привет', '[12:01] Лина: кто шарит по тикетам?',
               '[11:50] в #общее: всем хай', '[11:55] в #оффтоп: мне бы роль',
-              'Хелпер', 'музыка'):
+              'Хелпер', 'музыка', 'ПРОСТЫЕ ВОПРОСЫ', 'REPLY-ДИАЛОГ'):
     check(probe in sys_prompt, f'умный движок: {probe}')
 check('Роли спрашивающего: Хелпер, Участник' in sys_prompt,
       'роли спрашивающего в контексте')

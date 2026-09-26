@@ -2,14 +2,14 @@
 """Индекс угроз и локдаун (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -46,7 +46,7 @@ def register(ctx):
             try :
                 with open ('data/mod_data.json','r',encoding ='utf-8')as _fp :
                     _md =_json .load (_fp )
-                mod_count =len (_md .get ('case',{}).get (str (guild_id ),[]))
+                mod_count =len ((md2 :=(_md .get ('cases')or _md .get ('case')or {})).get (str (guild_id ),[]))
             except Exception as _ex:
                 _log.debug("api_threat_index(): подавлено: %s", _ex)
 
@@ -105,7 +105,7 @@ def register(ctx):
     @role_required ('admin')
     def api_toggle_lockdown ():
         import json as _json 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         guild_id =str (data .get ('guild_id',MAIN_GUILD_ID ))
         lockdown_file =f'data/lockdown_{guild_id}.json'
         os .makedirs ('data',exist_ok =True )

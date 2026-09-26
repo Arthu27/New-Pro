@@ -30,12 +30,19 @@ from services import staff_limits as SL  # noqa: E402
 
 G, MOD, OTHER = 777001, 111, 222
 
-print('== 1. Дефолты: ВСЁ ВЫКЛЮЧЕНО (opt-in) ==')
+print('== 1. Дефолты: безопасные цифры включены (заказ владельца) ==')
 lim = SL.get_limits(G)
-check(all(v == 0 for v in lim.values()),
-      'из коробки лимитов нет — персонал не ограничен ничем')
-ok0, used0, lim0 = SL.check_limit(G, MOD, 'ban', 999)
-check(ok0 and lim0 == 0, 'без заданных цифр — любое количество действий')
+# Защитные дефолты на опасные действия; 0 = «без лимита» для остального.
+check(lim['ban'] == 1 and lim['unmute'] == 3 and lim['mute'] == 3
+      and lim['clear'] == 10,
+      'из коробки: бан 1/день, мут 3, размут 3, очистка 10 чисток/день')
+check(lim['warn'] == 3 and lim['kick'] == 0,
+      'варн 3/день у модеров (Sabotash 2026-09-02); кик — 0 = не ограничено')
+check('nuke' not in lim,
+      'nuke из лимитов убран (владелец: «нету такого»)')
+# Дефолтный бан-лимит (1/день) срабатывает, пока владелец не поднял цифру.
+ok0, _u0, lim0 = SL.check_limit(G, MOD + 9000, 'ban', 2)
+check((not ok0) and lim0 == 1, 'по умолчанию больше 1 бана/день запрещено')
 SL.set_limits(G, ban=8, clear=500)   # дальше тестируем с заданными цифрами
 lim = SL.get_limits(G)
 check(lim['ban'] == 8 and lim['clear'] == 500, 'владелец задал: 8 банов и 500 сообщений')
@@ -54,12 +61,28 @@ check(used3 == 8 and not ok3, f'9-й бан запрещён (потрачено
 ok4, used4, _l = SL.check_limit(G, OTHER, 'ban', 1)
 check(ok4 and used4 == 0, 'другой модератор не affected — счётчики личные')
 
-print('== 4. Чистка считает СООБЩЕНИЯ, не вызовы ==')
+print('== 4. API amount — произвольные единицы (движок) ==')
 SL.record_hit(G, MOD, 'clear', 480)
 ok5, used5, lim5 = SL.check_limit(G, MOD, 'clear', 25)
 check(used5 == 480 and not ok5, 'чистка +25 сверх 480/500 запрещена')
 ok6, _u, _l = SL.check_limit(G, MOD, 'clear', 20)
 check(ok6, 'чистка +20 ровно до 500 разрешена')
+
+print('== 4b. /modpanel считает ОПЕРАЦИИ; отказ не врёт «исчерпан» ==')
+# как /modpanel: amount=1 при нулевом счётчике и лимите 10 — можно
+G3, U3 = G + 3, 4242
+ok_op, u_op, l_op = SL.check_limit(G3, U3, 'clear', 1)
+check(ok_op and u_op == 0 and l_op == 10,
+      'первая чистка (amount=1) при нуле и лимите 10 — можно')
+ok_big, u_big, _ = SL.check_limit(G3, U3, 'clear', 25)
+check((not ok_big) and u_big == 0,
+      'amount=25 при лимите 10 — отказ API, used по-прежнему 0')
+txt_left = SL.limit_deny_text('clear', 0, 10, amount=25)
+check('исчерпан' not in txt_left.lower() and 'осталось 10' in txt_left,
+      f'used=0: не «исчерпан», а «осталось»: {txt_left}')
+txt_out = SL.limit_deny_text('clear', 10, 10, amount=1)
+check('исчерпан' in txt_out.lower(),
+      f'остаток 0 — «исчерпан»: {txt_out}')
 
 print('== 5. Переопределение лимитов живёт на диске ==')
 new_lim = SL.set_limits(G, ban=3, clear=100)
@@ -71,9 +94,12 @@ check(not ok7 and lim7 == 3, 'под новый лимит 3: уже потра�
 
 print('== 6. status_text для модератора ==')
 st = SL.status_text(G, MOD)
-check('баны 8/3' in st and 'чистка 480/100 сообщ.' in st,
+check('баны 8/3' in st and 'чистки 480/100' in st,
       f'status_text показывает только заданное: {st}')
-check('варны' not in st, 'незаданные лимиты не показываются')
+# варн теперь лимитирован «у всех» (владелец 2026-09-05) — показывается;
+# кик/нюк остались без лимитов — в статусе их нет
+check('варны' in st and 'кики' not in st and 'nuke' not in st,
+      'варны показываются (лимит 3/день у модеров), кик/нюк — нет')
 
 print('== 7. Битые файлы не роняют сервис ==')
 import json
@@ -142,6 +168,72 @@ for _ in range(11):
     SL.record_hit(gA.id, mA.id, 'ban', 1)
 check(ok_a is False and '10' in (last_text or ''),
       f'check_action: 11-й бан сверх лимита роли 10 запрещён ({last_text})')
+
+print('== 9. Тиры персонала из data/role_map.json (модер/куратор/админ) ==')
+# role_map.json: роль → tier (та же настройка, что «Панели и роли»).
+import json as _json
+_rmap = {
+    '1001': 'mod',      # роль модератора
+    '1002': 'curator',  # роль куратора
+    '1003': 'admin',    # роль администратора
+    '1004': 'owner',    # роль владельца
+}
+with open(os.path.join(_TMP, 'role_map.json'), 'w', encoding='utf-8') as _rf:
+    _json.dump(_rmap, _rf)
+SL.ROLE_MAP_PATH = os.path.join(_TMP, 'role_map.json')
+
+check(SL.tier_for_roles([1001]) == 'mod', 'роль 1001 → тир mod')
+check(SL.tier_for_roles([1002]) == 'curator', 'роль 1002 → тир curator')
+check(SL.tier_for_roles([1003]) == 'admin', 'роль 1003 → тир admin')
+check(SL.tier_for_roles([1003, 1001]) == 'admin', 'несколько ролей → старший тир')
+check(SL.tier_for_roles([9999]) is None, 'немаркированная роль → тир нет')
+
+# Дефолты по тиру: бан 1/2/5, мут/размут 3/7/10. Хелпер = mod.
+GT = 777099
+_lm_mod, _ = SL.effective_limits(GT, [1001])
+_lm_cur, _ = SL.effective_limits(GT, [1002])
+_lm_adm, _ = SL.effective_limits(GT, [1003])
+_lm_own, _ = SL.effective_limits(GT, [1004])
+check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 2 and _lm_adm['ban'] == 5,
+      f'бан по тирам: модер {_lm_mod["ban"]} / куратор {_lm_cur["ban"]} / админ {_lm_adm["ban"]}')
+check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 7 and _lm_adm['unmute'] == 10,
+      'размут по тирам: модер 3 / куратор 7 / админ 10 (= мут)')
+check(_lm_mod['warn'] == 3 and _lm_cur['warn'] == 2 and _lm_adm['warn'] == 2,
+      'варны по тирам: модер 3 / куратор 2 / админ 2')
+check(_lm_mod['mute'] == 3 and _lm_cur['mute'] == 7 and _lm_adm['mute'] == 10,
+      'муты по тирам: модер 3 / куратор 7 / админ 10')
+check(_lm_own.get('ban', 0) == 0, 'владелец — без лимита на бан')
+# Пер-рольный оверрайд важнее тирового дефолта.
+SL.set_role_limits(GT, 1002, who='Куратор', ban=9)
+_lm_cur2, _ = SL.effective_limits(GT, [1002])
+check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (2)')
+
+# Потолок длительности: прогрессия (первый шаг 1 ч); effective_max — тир.
+check(SL.effective_max_duration(GT, 'mute', [1001]) == 3600,
+      'модер: тировый потолок 1 час (первый шаг)')
+check(SL.effective_max_duration(GT, 'mute', [1002]) == 3600,
+      'куратор: тировый потолок 1 час')
+check(SL.effective_max_duration(GT, 'mute', [1003]) == 3600,
+      'админ: тировый потолок 1 час')
+check(SL.effective_max_duration(GT, 'mute', [1004]) == 0,
+      'владелец тира — без потолка длительности')
+check(SL.effective_max_duration(GT, 'mute', []) == 3600,
+      'без стафф-роли — дефолт 1 час')
+SL.set_role_durations(GT, 1001, who='t', role_name='Мод', mute=3 * 3600)
+check(SL.effective_max_duration(GT, 'mute', [1001]) == 3 * 3600,
+      'свой потолок роли (3 ч) перебивает тировые 1 час')
+err_short = SL.mute_duration_error(15 * 60, cap_sec=3600)
+err_ok = SL.mute_duration_error(30 * 60, cap_sec=3600)
+err_long = SL.mute_duration_error(2 * 3600, cap_sec=3600)
+check(err_short and 'короче' in err_short, '15 мин — отказ (минимум 30)')
+check(err_ok is None, '30 мин при потолке 1 ч — можно')
+check(err_long and 'дольше' in err_long, '2 ч при потолке 1 ч — отказ')
+from services import mute_progression as MP
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3600, 'resolve: первый мут 1ч')
+MP.bump_after_mute(GT, 555)
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3 * 3600, 'resolve: после мута 3ч')
+MP.reset_on_warn(GT, 555)
+check(SL.resolve_mute_cap(GT, 555, [1001]) == 3600, 'resolve: после варна снова 1ч')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

@@ -54,8 +54,11 @@ for f in glob.glob(os.path.join(ROOT, 'web/templates/*.html')):
         if w <= 360:
             continue
         line_txt = src[src.rfind('\n', 0, m.start()) + 1:src.find('\n', m.end())]
-        # легитимные паттерны: max-width-контейнер, адаптивный контекст, clamp/min
-        if 'max-width' in line_txt or 'clamp' in line_txt or 'min(' in line_txt:
+        # легитимные паттерны: max-width-контейнер, адаптивный контекст,
+        # clamp/min. min-width — это БРЕЙКПОИНТ (адаптив), в т.ч. в JS
+        # matchMedia('(min-width: 1121px)') — не фиксированная ширина блока
+        if ('max-width' in line_txt or 'clamp' in line_txt or 'min(' in line_txt
+                or 'min-width' in line_txt or 'matchMedia' in line_txt):
             continue
         ctx = src[max(0, m.start() - 1200):m.start()]
         if '@media' in ctx or 'min-width' in ctx:

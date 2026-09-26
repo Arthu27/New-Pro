@@ -17,7 +17,7 @@ config.Config.DB_PATH = os.path.abspath('data/bot.db')  # изолированн
 
 from services.permission_acl import (_candidates, has_access, roles_for_command,
                                      set_rule, clear_rule, load_acl, save_acl,
-                                     COMMAND_CATEGORIES)
+                                     COMMAND_CATEGORIES, all_categories)
 
 PASS = 0; FAIL = 0
 def check(ok, msg):
@@ -36,7 +36,7 @@ class Member:
         self.guild_permissions = Perms(administrator)
         self.bot = bot
 
-GID = 424242
+GID = 777
 save_acl(GID, {})  # чистый лист
 
 print('== резолвер имён ==')
@@ -47,21 +47,33 @@ check(_candidates('ticket sla create') == ['ticket-sla-create', 'ticket-sla', 't
       'три уровня -> цепочка предков')
 
 print('== has_access: база ==')
-check(has_access(GID, 'ban', Member(roles=[1])), 'нет правил -> всем можно')
-set_rule(GID, 'ban', ['555'])
-check(not has_access(GID, 'ban', Member(roles=[1])), 'правило ban -> чужому нельзя')
-check(has_access(GID, 'ban', Member(roles=[555])), 'правило ban -> роли 555 можно')
-check(has_access(GID, 'ban', Member(roles=[1], administrator=True)), 'админ обходит правило')
+# Строгая модель: команда ban выполняет действие «ban» (COMMAND_ACTIONS), а
+# действия по умолчанию ЗАПРЕЩЕНЫ (default-deny), пока роль не разрешена в
+# панели. Discord-админ права НЕ даёт (своя система доступа).
+from services.permission_acl import save_action_acl as _saa, check_action as _ca  # noqa: E402
+_saa(GID, {'ban': ['555']})
+check(not has_access(GID, 'ban', Member(roles=[1])), 'без разрешённой роли ban -> нельзя (default-deny)')
+check(has_access(GID, 'ban', Member(roles=[555])), 'разрешённая роль 555 может ban')
+check(not has_access(GID, 'ban', Member(roles=[1], administrator=True)),
+      'Discord-админ НЕ обходит правило (своя система, права Discord игнорируются)')
 check(has_access(GID, 'ban', Member(bot=True)), 'боты пропускаются')
-clear_rule(GID, 'ban')
-check(has_access(GID, 'ban', Member(roles=[1])), 'clear_rule -> снова всем можно')
+_saa(GID, {})
+check(not has_access(GID, 'ban', Member(roles=[1])),
+      'сняли разрешение -> снова нельзя (default-deny сохраняется)')
 
-print('== правило на категорию ==')
+print('== правило на категорию (командный ACL; действия разрешены отдельно) ==')
+# Команду берём из ЖИВОГО каталога: ban/kick — это действия внутри
+# /modpanel, а не отдельные команды. Раньше проверка висела на имени-
+# призраке и «проходила» лишь потому, что призрак лежал в категории.
+_saa(GID, {'kick': ['777', '1']})          # действие kick разрешено ролям 777 и 1
+_CAT_CMD = next(iter(all_categories().get('Модерация', [])), 'modpanel')
 set_rule(GID, 'Модерация', ['777'])
-check(not has_access(GID, 'kick', Member(roles=[1])), 'категория Модерация закрыта (kick)')
-check(has_access(GID, 'kick', Member(roles=[777])), 'роль 777 может (kick)')
+check(not has_access(GID, _CAT_CMD, Member(roles=[1])),
+      f'категория Модерация закрыта для роли 1 ({_CAT_CMD})')
+check(has_access(GID, _CAT_CMD, Member(roles=[777])),
+      f'роль 777 может ({_CAT_CMD})')
 check(has_access(GID, '8ball', Member(roles=[1])), 'другая категория не затронута (8ball)')
-save_acl(GID, {})
+save_acl(GID, {}); _saa(GID, {})
 
 print('== КЛЮЧЕВОЙ БАГ: сабкоманды групп ==')
 set_rule(GID, 'j2c', ['900'])
@@ -91,12 +103,16 @@ check(not has_access(GID, 'report stats', Member(roles=[1])),
 save_acl(GID, {})
 
 print('== несколько правил сразу (AND-семантика) ==')
+# Командный ACL: категория И команда — пускает только при наличии обеих
+# ролей. Команда — из живого каталога (ban отдельной командой не бывает).
+_CAT2 = next(iter(all_categories().get('Модерация', [])), 'modpanel')
 set_rule(GID, 'Модерация', ['10'])
-set_rule(GID, 'ban', ['20'])
-check(not has_access(GID, 'ban', Member(roles=[10])), 'есть роль категории, нет роли команды -> нельзя')
-check(not has_access(GID, 'ban', Member(roles=[20])), 'есть роль команды, нет роли категории -> нельзя')
-check(has_access(GID, 'ban', Member(roles=[10, 20])), 'обе роли -> можно')
-check(has_access(GID, 'ban', Member(roles=[10, 20, 99])), 'обе роли + лишняя -> можно')
+set_rule(GID, _CAT2, ['20'])
+check(not has_access(GID, _CAT2, Member(roles=[10])), 'есть роль категории, нет роли команды -> нельзя')
+check(not has_access(GID, _CAT2, Member(roles=[20])), 'есть роль команды, нет роли категории -> нельзя')
+check(has_access(GID, _CAT2, Member(roles=[10, 20])), 'обе роли -> можно')
+check(has_access(GID, _CAT2, Member(roles=[10, 20, 99])), 'обе роли + лишняя -> можно')
+save_acl(GID, {}); _saa(GID, {})
 save_acl(GID, {})
 
 print('== roles_for_command ==')
@@ -122,7 +138,7 @@ class _AnyMod(types.ModuleType):
         return cls
 for _m in ['flask_session', 'gunicorn', 'nacl', 'psutil', 'duckduckgo_search',
            'edge_tts', 'faster_whisper', 'voice_recv', 'deep_translator', 'colorama',
-           'requests', 'yt_dlp', 'websockets', 'PIL', 'Pillow', 'pyotp', 'qrcode']:
+           'requests', 'websockets', 'PIL', 'Pillow', 'pyotp', 'qrcode']:
     try:
         if importlib.util.find_spec(_m) is None:
             sys.modules[_m] = _AnyMod(_m)
@@ -209,28 +225,42 @@ r = client.get(f'/api/role-permissions/{GID}')
 body = r.get_json()
 check(r.status_code == 200 and body.get('success'), f'GET категории -> {r.status_code}')
 cats = body.get('categories', {})
-# категории = ЖИВОЙ каталог бота (не хардкод): призраков удалённых команд нет
-from services import command_registry as CR
-from services.permission_acl import command_categories as live_cats
-live = live_cats()
-check(cats == live, 'категории панели = живой каталог бота (1:1)')
+# Страница «Права команд» отдаёт ПОЛНЫЙ список команд (all_categories):
+# живые видимые slash + реальные префиксные/мод-команды (staff-stats и т.п.),
+# чтобы владелец мог разрешить ЛЮБУЮ рабочую команду, а не только 6 в «/».
+from services.permission_acl import all_categories as full_cats
+full = full_cats()
+check(cats == full, 'категории панели = полный каталог команд (all_categories)')
 check('Модерация' in cats and 'modpanel' in cats.get('Модерация', []),
       'категория Модерация содержит живую команду modpanel')
-check('ban' not in cats.get('Модерация', []) and 'kick' not in cats.get('Модерация', []),
-      'удалённые ban/kick НЕ показываются как призраки')
+# Команда статистики видна в правах, если её модуль вообще загружен
+# (жалоба владельца: её не было). В лёгком профиле модуль спит — тогда
+# честно не показываем: несуществующую команду разрешать нечего.
+from services.command_registry import catalog as _reg_cat
+_live = {c['name'] for c in _reg_cat().get('commands', [])}
+if 'staff-stats' in _live:
+    check(any('staff-stats' in v for v in cats.values()),
+          'команда staff-stats (статистика) присутствует в правах команд')
+else:
+    check(not any('staff-stats' in v for v in cats.values()),
+          'staff-stats не показан: модуль спит в этом профиле')
+# ban — это ДЕЙСТВИЕ (внутри /modpanel action=ban): настраивается в блоке
+# «Действия», а не в каталоге команд.
+check('ban' in (body.get('actions') or {}),
+      'действие «ban» настраивается в блоке действий панели')
 total_cmds = sum(len(v) for v in cats.values())
-cat_total = CR.catalog()['total']
-check(total_cmds == cat_total, f'всего команд в панели: {total_cmds} == каталогу {cat_total}')
+check(total_cmds > 0 and total_cmds == sum(len(v) for v in full.values()),
+      f'каталог = живые команды бота ({total_cmds} шт.; сколько их — решает профиль модулей)')
 
 r = client.post(f'/api/role-permissions/{GID}/set',
-                data=json.dumps({'command': 'j2c', 'role_ids': ['900']}),
+                data=json.dumps({'command': 'report', 'role_ids': ['900']}),
                 content_type='application/json')
-check(r.status_code == 200 and r.get_json().get('success'), 'POST set j2c -> ok')
-check(load_acl(GID).get('j2c') == ['900'], 'правило записалось в sqlite')
+check(r.status_code == 200 and r.get_json().get('success'), 'POST set report -> ok')
+check(load_acl(GID).get('report') == ['900'], 'правило записалось в sqlite')
 r = client.post(f'/api/role-permissions/{GID}/set',
-                data=json.dumps({'command': 'j2c', 'role_ids': []}),
+                data=json.dumps({'command': 'report', 'role_ids': []}),
                 content_type='application/json')
-check(r.status_code == 200 and 'j2c' not in load_acl(GID), 'POST set пустой -> правило снято')
+check(r.status_code == 200 and 'report' not in load_acl(GID), 'POST set пустой -> правило снято')
 r = client.post(f'/api/role-permissions/{GID}/clear', data='{}', content_type='application/json')
 check(r.status_code == 200 and load_acl(GID) == {}, 'POST clear -> все правила сняты')
 

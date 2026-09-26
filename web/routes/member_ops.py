@@ -2,14 +2,15 @@
 """Массовые операции и заметки по участникам (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _panel_limit_deny, _panel_limit_record,
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -70,7 +71,7 @@ def register(ctx):
                         avatar =str (m .display_avatar .url )
                         break 
             data [member_id ]={'name':name ,'avatar':avatar ,'notes':[]}
-        note ={'id':str (int (datetime.now(timezone.utc).timestamp ())),'text':request .get_json (silent =True ).get ('text',''),
+        note ={'id':str (int (datetime.now(timezone.utc).timestamp ())),'text':_safe_json_obj().get ('text',''),
         'author':session .get ('username'),'created_at':datetime.now(timezone.utc).isoformat ()}
         data [member_id ]['notes'].append (note )
         with open (f ,'w',encoding ='utf-8')as fp :json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
@@ -100,18 +101,35 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'purge'):
             return jsonify({'error': 'Нет права: «Очистка сообщений» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        # Лимит «чистка»: 1 хит за операцию, не за каждое сообщение.
+        # Раньше в квоту писали count — первая чистка 25 сообщений при
+        # лимите 10 сразу давала «Лимит исчерпан … использовано 0».
+        try :
+            _purge_amt =max (1 ,min (int ((data .get ('count')or 10 )),200 ))
+        except (TypeError ,ValueError ):
+            _purge_amt =10
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'clear',1)
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
+        _need =[k for k in ('channel_id',) if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
-                deleted =await (ch .purge (limit =int (data .get ('count',10 ))))
+                deleted =await (ch .purge (limit =_purge_amt ))
                 result ['count']=len (deleted )
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =30 )
+        try :
+            if int (result .get ('count')or 0 )>0 :
+                _panel_limit_record (int (guild_id ),_acl_m ,'clear',1)
+        except Exception as _rex :
+            _log .debug ('purge record: %s',_rex )
         return jsonify ({'success':True ,'count':result ['count']})
 
 
@@ -122,12 +140,17 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
+        _need =[k for k in ('target_role', 'action_role', 'action') if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'roles'):
             return jsonify({'error': 'Нет права: «Роли» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        # mass-смена ролей не лимитируется: ключа «роли» в лимитах нет
 
+        _need =[k for k in ('target_role', 'action_role', 'action') if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             target_role =guild .get_role (int (data ['target_role']))
@@ -151,7 +174,9 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
+        _need =[k for k in ('role_id', 'message') if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         result ={'count':0 }
         async def do ():
             guild =bot .get_guild (int (guild_id ))
@@ -177,18 +202,31 @@ def register(ctx):
         import asyncio ,discord 
         from datetime import timedelta 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'mute'):
             return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'mute')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
+        _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
             duration =int (data .get ('duration',60 ))
+            # ИЕРАРХИЯ: персонал не мутит персонал своего уровня и выше —
+            # таких молча пропускаем (bulk по роли, а не по человеку)
+            from services .staff_hierarchy import check as _hchk
+            _sess_role =session .get ('role')
             for member in role .members :
+                _hok ,_hdeny ,_ ,_ =_hchk (guild ,_acl_m ,member ,'mute',
+                session_role =_sess_role )
+                if not _hok :
+                    continue
                 try :
                     await (member .timeout (datetime.now(timezone.utc)+timedelta (minutes =duration ),reason ='Bulk mute'))
                     result ['count']+=1 
@@ -205,17 +243,29 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'kick'):
             return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'kick')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
+        _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
+            # ИЕРАРХИЯ: не кикаем персонал своего уровня и выше
+            from services .staff_hierarchy import check as _hchk
+            _sess_role =session .get ('role')
             for member in role .members :
+                _hok ,_hdeny ,_ ,_ =_hchk (guild ,_acl_m ,member ,'kick',
+                session_role =_sess_role )
+                if not _hok :
+                    continue
                 try :
                     await (member .kick (reason ='Bulk kick'))
                     result ['count']+=1 
@@ -232,17 +282,29 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'ban'):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'ban')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
 
+        _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
+            # ИЕРАРХИЯ: не банрим персонал своего уровня и выше
+            from services .staff_hierarchy import check as _hchk
+            _sess_role =session .get ('role')
             for member in role .members :
+                _hok ,_hdeny ,_ ,_ =_hchk (guild ,_acl_m ,member ,'ban',
+                session_role =_sess_role )
+                if not _hok :
+                    continue
                 try :
                     await (guild .ban (member ,reason ='Bulk ban'))
                     result ['count']+=1 
@@ -255,20 +317,18 @@ def register(ctx):
         # ── WARN CONFIG API ───────────────────────────────────────────────────────
 
     @app .route ('/api/guild/<guild_id>/warn-config',methods =['GET','POST'])
-    @login_required 
+    @login_required
     @role_required ('admin')
     def api_warn_config (guild_id ):
-        f =f'data/warn_config_{guild_id}.json'
+        # Канонический писатель ступеней — «Лестница наказаний» (ladder_panel,
+        # ключ 'steps'). Сырую запись в файл здесь больше не делаем, чтобы
+        # формат 'thresholds' не перетирал боевой 'steps'.
+        from web .routes import ladder_panel as LP
         if request .method =='GET':
-            if not os .path .exists (f ):
-                return jsonify ({'steps':[]})
-            with open (f ,'r',encoding ='utf-8')as fp :
-                return jsonify (json .load (fp ))
-        data =request .get_json (silent =True )or {}
-        os .makedirs ('data',exist_ok =True )
-        with open (f ,'w',encoding ='utf-8')as fp :
-            json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
-        return jsonify ({'success':True })
+            cfg =LP .load_cfg (str (guild_id ))
+            return jsonify ({'steps':LP .steps_of (cfg )})
+        return jsonify ({'success':False ,
+            'error':'Настройка ступеней переехала на страницу «Лестница наказаний» (/ladder)'}),409
 
 
         # ── WARN DM НАСТРОЙКА ─────────────────────────────────────────────────────────
@@ -283,7 +343,7 @@ def register(ctx):
                 return jsonify ({'message':''})
             with open (f ,'r',encoding ='utf-8')as fp :
                 return jsonify (json .load (fp ))
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         os .makedirs ('data',exist_ok =True )
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump ({'message':data .get ('message','')},fp ,ensure_ascii =False )

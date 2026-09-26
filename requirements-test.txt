@@ -10,3 +10,6 @@ requests>=2.31.0
 psutil>=5.9.0
 websockets>=11.0
 colorama>=0.4.6
+# подмножество FontAwesome: tests/test_fontawesome_subset.py проверяет глифы
+fonttools>=4.40.0
+brotli>=1.1.0

@@ -2,14 +2,14 @@
 """Публичный статус и консоль/логи (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -46,6 +46,55 @@ def register(ctx):
                 'updated': datetime.now(timezone.utc).isoformat(),
             })
         bot = _app.bot_instance
+        # Панель отдельным процессом от бота: публичная статус-страница
+        # показывает правду по пульсу бота (data/bot_state.json).
+        if bot is None:
+            try:
+                from services import bot_bridge as _bb
+                _st = _bb.read_state()
+                _s = _bb.state_status(_st)
+                if _s in ('online', 'starting'):
+                    _guilds = _bb.guild_ids(_st)
+                    _users_cached = 0
+                    for _g in (_st.get('guilds') or []):
+                        try:
+                            _users_cached += int(_g.get('member_count') or 0)
+                        except Exception as _mcex:
+                            _log.debug('status-public member_count: %s', _mcex)
+                    _uptime_sec = 0
+                    try:
+                        _rlp = os.path.join(_REPO_ROOT, 'data', 'run_log.json')
+                        if os.path.exists(_rlp):
+                            with open(_rlp, encoding='utf-8') as _rf:
+                                _rows = json.load(_rf)
+                            for _row in _rows or []:
+                                if _row.get('event') == 'start' and _row.get('ts'):
+                                    _started = datetime.fromisoformat(_row['ts'])
+                                    _uptime_sec = max(
+                                        0, int((datetime.now(timezone.utc)
+                                                - _started).total_seconds()))
+                                    break
+                    except Exception as _uex:
+                        _log.debug('status-public uptime: %s', _uex)
+                    _h, _m, _s2 = (_uptime_sec // 3600,
+                                   (_uptime_sec % 3600) // 60, _uptime_sec % 60)
+                    _days = _uptime_sec // 86400
+                    _up_human = (f'{_days}д {_h % 24}ч {_m}м' if _days
+                                 else f'{_h}ч {_m}м {_s2}с')
+                    return jsonify({
+                        'ok': True,
+                        'online': _s == 'online',
+                        'latency_ms': _st.get('latency_ms') or 0,
+                        'guilds': len(_guilds),
+                        'users_cached': _users_cached,
+                        'uptime_sec': _uptime_sec,
+                        'uptime_human': _up_human,
+                        'version': '2.0',
+                        'remote': True,
+                        'updated': datetime.now(timezone.utc).isoformat(),
+                    })
+            except Exception as _sex:
+                _log.debug('status-public: remote bridge: %s', _sex)
         online = False
         latency_ms = 0
         guilds = 0
@@ -125,7 +174,7 @@ def register(ctx):
     @role_required('mod')
     def api_team_board_add():
         from services.team_board import add_task
-        payload = request.get_json(silent=True) or {}
+        payload = _safe_json_obj()
         task, err = add_task(
             title=payload.get('title', ''),
             status=payload.get('status', 'todo'),
@@ -133,8 +182,7 @@ def register(ctx):
             assignee=payload.get('assignee', ''),
             due=payload.get('due', ''),
             note=payload.get('note', ''),
-            author=session.get('username', ''),
-        )
+            author=session.get('username', ''))
         if err:
             return jsonify({'ok': False, 'error': err}), 400
         return jsonify({'ok': True, 'task': task})
@@ -145,7 +193,7 @@ def register(ctx):
     @role_required('mod')
     def api_team_board_patch(task_id):
         from services.team_board import update_task
-        patch = request.get_json(silent=True) or {}
+        patch = _safe_json_obj()
         task, err = update_task(task_id, patch)
         if err:
             return jsonify({'ok': False, 'error': err}), 400
@@ -168,7 +216,7 @@ def register(ctx):
     @role_required('mod')
     def api_team_board_reorder():
         from services.team_board import reorder
-        payload = request.get_json(silent=True) or {}
+        payload = _safe_json_obj()
         ok, err = reorder(payload.get('columns', {}))
         if err:
             return jsonify({'ok': False, 'error': err}), 400
@@ -228,8 +276,8 @@ def register(ctx):
                      'HEALTH | uptime 2ч 40м 4с | guilds 1 | ping 159ms | errors 0 (hour 0, crit 0, filtered 0, repeats 0) | warn 0 | dc 2 | webhook 0/0 | lag max 0.0s | alerts 0'),
                     (_now - 50, 'INFO', 'hakumo',
                      'Команды синхронизированы · слэш-команд: 84'),
-                    (_now - 41, 'WARNING', 'music',
-                     'Трек пропущен: источник вернул пустой аудиопоток'),
+                    (_now - 41, 'WARNING', 'autofilter',
+                     'Сообщение скрыто: сработал фильтр запрещённых слов'),
                     (_now - 25, 'INFO', 'moderation',
                      'Варн выдан участнику toxicguy (причина: спам)'),
                     (_now - 11, 'ERROR', 'api',

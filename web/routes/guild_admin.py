@@ -2,14 +2,23 @@
 """Админка гильдии: роли, каналы, инфо, мод-история (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _notify_discord_sender, _fire_panel_notification,
+    _live_publish, _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT, role_member_counts,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone, timedelta,
-)
+    os, json, time, math, discord, datetime, timezone, timedelta)
+
+class _NoGuild (Exception ):
+    """Сервер не выбран (MAIN_GUILD_ID пуст и бот офлайн).
+
+    Не ошибка, а штатное состояние «данных ещё неоткуда взять»: отличаем
+    его от настоящих сбоев, чтобы не сорить трейсбеками в консоль
+    (инцидент 30.08: лог был полон «invalid literal for int() with base 10»).
+    """
+
 
 def _hidden_store ():
     path =os .path .join (_REPO_ROOT ,'data','hidden_channels.json')
@@ -63,6 +72,34 @@ def _demo_roles_store (guild_id ,roles ):
         _log.debug("_demo_roles_store(): подавлено: %s", _ex)
 
 
+def _dedupe_by_id (items ):
+    """Один id — один пункт в любом списке/селекте панели.
+
+    Всеми пикерами каналов (объявления, настройки, чат) и ролей (репорты,
+    логи, доступы) правят списки из API. Если источник вернул запись
+    дважды (повтор id в кэше/демо-данных), в селекте появляются
+    «2 одинаковых выбора». Оставляем только первый экземпляр каждого id.
+    """
+    if not isinstance (items ,list ):
+        return items or []
+    seen =set ()
+    out =[]
+    for it in items :
+        if not isinstance (it ,dict ):
+            continue
+        iid =it .get ('id')
+        if iid is None or iid in seen :
+            continue
+        seen .add (iid )
+        out .append (it )
+    return out
+
+
+def _dedupe_channels (channels ):
+    """см. _dedupe_by_id — специализация для каналов (историческое имя)."""
+    return _dedupe_by_id (channels )
+
+
 def _hidden_save (store ):
     path =os .path .join (_REPO_ROOT ,'data','hidden_channels.json')
     with open (path ,'w',encoding ='utf-8')as fp :
@@ -77,6 +114,196 @@ def _annotate_hidden (guild_id ,channels ):
     for ch in channels :
         ch ['hidden']=(str (ch .get ('id',''))in hch )or (str (ch .get ('category_id')or '')in hcat )
     return channels
+
+
+def _visible_channels (channels ,role =None ):
+    """Скрытые каналы — только владельцу (страница «Каналы» с глазиком).
+
+    Кэш/снимок хранит полный аннотированный список; фильтр — на ответе,
+    чтобы пикеры и чат модераторов не видели спрятанное.
+    """
+    if not isinstance (channels ,list ):
+        return channels or []
+    if role is None :
+        try :
+            role =session .get ('role')
+        except Exception :
+            role =None
+    if role =='owner':
+        return channels
+    return [c for c in channels if not (isinstance (c ,dict )and c .get ('hidden'))]
+
+
+def _channels_respond (channels ,sig ):
+    """JSON/ETag ответа /channels: кэш полный, тело — по роли."""
+    role =''
+    try :
+        role =str (session .get ('role')or '')
+    except Exception :
+        role =''
+    out =_visible_channels (channels ,role )
+    etag ='"ch%d-%s-%s"'%(len (channels or []),sig ,role )
+    if etag in request .headers .get ('If-None-Match',''):
+        from flask import Response as _Resp
+        return _Resp (status =304 ,headers ={'ETag':etag ,'Cache-Control':'no-cache'})
+    from flask import Response as _Resp
+    return _Resp (json .dumps (out ,ensure_ascii =False ),
+    mimetype ='application/json',
+    headers ={'ETag':etag ,'Cache-Control':'no-cache'})
+
+
+def _demo_channels_seed ():
+    """Встроенная демо-структура каналов (тот же состав, что data/demo_channels.json)."""
+    return [
+        {'id':'1001','name':'правила','type':'text','position':0,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'1002','name':'новости','type':'text','position':1,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'1003','name':'FAQ','type':'text','position':2,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'1015','name':'журнал-модерации','type':'forum','position':0,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'2102','name':'разбор','type':'thread','position':0,'category':'ИНФОРМАЦИЯ','category_id':'900','parent_id':'1015','hidden':False},
+        {'id':'1004','name':'флудилка','type':'text','position':0,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
+        {'id':'2101','name':'ивент','type':'thread','position':0,'category':'ОБЩЕНИЕ','category_id':'901','parent_id':'1004','hidden':False},
+        {'id':'1005','name':'мемы','type':'text','position':1,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
+        {'id':'1006','name':'музыка-чат','type':'text','position':2,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
+        {'id':'1007','name':'предложения','type':'text','position':0,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1008','name':'розыгрыши','type':'text','position':1,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1010','name':'варны','type':'text','position':2,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1016','name':'анонс-бота','type':'text','position':3,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1017','name':'рекруты','type':'text','position':4,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1018','name':'стата-недель','type':'text','position':5,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1009','name':'тикет-логи','type':'text','position':6,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1011','name':'общий-голос-1','type':'voice','position':0,'category':'ГОЛОСОВЫЕ','category_id':'903','bitrate':64,'user_limit':0,'hidden':False},
+        {'id':'1012','name':'общий-голос-2','type':'voice','position':1,'category':'ГОЛОСОВЫЕ','category_id':'903','bitrate':64,'user_limit':0,'hidden':False},
+        {'id':'1013','name':'афк','type':'voice','position':2,'category':'ГОЛОСОВЫЕ','category_id':'903','bitrate':32,'user_limit':99,'hidden':False},
+        {'id':'1014','name':'сцена','type':'stage','position':0,'category':'ГОЛОСОВЫЕ','category_id':'903','bitrate':128,'user_limit':0,'hidden':False},
+        # Сами КАТЕГОРИИ — это тоже каналы (type category): без них на
+        # странице «Каналы» пустуют селекты «Категория» (создание/правка).
+        {'id':'900','name':'ИНФОРМАЦИЯ','type':'category','position':0,'category_id':None,'category_pos':-1,'hidden':False},
+        {'id':'901','name':'ОБЩЕНИЕ','type':'category','position':1,'category_id':None,'category_pos':-1,'hidden':False},
+        {'id':'902','name':'РАЗНОЕ','type':'category','position':2,'category_id':None,'category_pos':-1,'hidden':False},
+        {'id':'903','name':'ГОЛОСОВЫЕ','type':'category','position':3,'category_id':None,'category_pos':-1,'hidden':False},
+    ]
+
+
+def _demo_channels_sort (demo ):
+    """Порядок категорий/позиций — как в живом списке каналов."""
+    return sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
+
+
+def _fill_category_names (rows ):
+    """Проставить 'category' (ИМЯ категории) по category_id, где имени нет.
+
+    Живой /api/channels всегда отдаёт имя категории; демо-структура и
+    старые data/demo_channels.json содержали только category_id — из-за
+    этого страница «Каналы» показывала «undefined» вместо категории,
+    группы категорий пустовали («В этой категории пока нет каналов»),
+    а все каналы сваливались в «Без категории».
+    """
+    if not isinstance (rows ,list ):
+        return rows
+    by_id ={}
+    for r in rows :
+        if isinstance (r ,dict )and r .get ('type')=='category'and r .get ('id'):
+            by_id [str (r ['id'])]=r .get ('name')or ''
+    for r in rows :
+        if isinstance (r ,dict )and not r .get ('category')and r .get ('category_id'):
+            r ['category']=by_id .get (str (r ['category_id']))or None
+        # Демо-сид и старые data/demo_channels.json не содержали числовых
+        # полей — страница «Каналы» показывала «undefined kbps» у голосовых.
+        if isinstance (r ,dict ):
+            for k in ('bitrate','connected','slowmode','user_limit','position'):
+                if not isinstance (r .get (k),(int ,float )):
+                    r [k]=0
+            r .setdefault ('topic','')
+            for k in ('nsfw','news','stage','forum','hidden'):
+                r .setdefault (k ,False )
+    return rows
+
+
+def demo_channels_list (guild_id ):
+    """Демо-каналы: data/demo_channels.json, а если не засеян — встроенный список."""
+    demo_file =os .path .join (_REPO_ROOT ,'data','demo_channels.json')
+    if os .path .exists (demo_file ):
+        try :
+            with open (demo_file ,'r',encoding ='utf-8')as fp :
+                demo =json .load (fp )
+            if isinstance (demo ,list )and demo :
+                return _demo_channels_sort (_fill_category_names (demo ))
+        except Exception as _ex :
+            _log.debug ("demo_channels_list(): подавлено: %s", _ex)
+    return _demo_channels_sort (_fill_category_names (_demo_channels_seed ()))
+
+
+def resolve_guild (guild_id ):
+    """Живая гильдия бота или None.
+
+    Тот же порядок, что у /api/channels: get_guild(int), затем обход
+    bot.guilds по str(id). Один только get_guild в бою регулярно промахивается
+    (кэш гильдий ещё не наполнен) — отсюда «пустые» селекты на живом сервере.
+    """
+    import web .app as _app
+    bot =getattr (_app ,'bot_instance',None )
+    if not bot or not guild_id :
+        return None
+    guild =None
+    try :
+        guild =bot .get_guild (int (guild_id ))
+    except (TypeError ,ValueError ):
+        guild =None
+    if guild is None :
+        for g in getattr (bot ,'guilds',[])or []:
+            if str (getattr (g ,'id',''))==str (guild_id ):
+                guild =g
+                break
+    return guild
+
+
+def guild_channels_roles (guild_id ):
+    """(текстовые каналы, роли) гильдии для пикеров настроек.
+
+    Порядок источников:
+    1) живая гильдия бота в этом процессе;
+    2) бот в ОТДЕЛЬНОМ процессе — реальные снимки из моста
+       (data/bot_roles_<gid>.json + panel_channels_cache_<gid>.json);
+    3) иначе — известный состав-плейсхолдер (тот же, что /api/channels и
+       /api/roles): живой гильдии нет, а пикер обязан оставаться живым
+       (историческое поведение — селект с одной строкой «— не задан —»
+       выглядел сломанным при холодном кэше гильдий).
+    """
+    guild =resolve_guild (guild_id )
+    if guild is not None :
+        channels =[]
+        for c in getattr (guild ,'text_channels',[])or []:
+            cat =getattr (c ,'category',None )
+            channels .append ({'id':str (c .id ),'name':c .name ,
+            'category_id':str (cat .id )if cat else None })
+        roles =[{'id':str (r .id ),'name':r .name }
+                for r in getattr (guild ,'roles',[])or []
+                if r .id !=guild .id ]
+        # Общий резолвер питает пикеры многих страниц (репорты, логи и т.д.):
+        # дубли id в кэше гильдии = «2 одинаковых выбора» в селектах.
+        channels =_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (channels )))
+        return channels ,_dedupe_channels (roles )
+    # Панель отдельным процессом от бота: снимки, которые бот пишет в data/
+    # (services.bot_bridge) — реальные роли и текстовые каналы сервера.
+    from services import bot_bridge as _bb
+    if _bb .bot_alive_for (guild_id ):
+        channels =[{'id':str (c .get ('id','')),'name':c .get ('name',''),
+                    'category_id':c .get ('category_id')}
+                  for c in (_bb .read_channels (guild_id )or [])
+                  if c .get ('type')=='text']
+        roles =[{'id':r ['id'],'name':r ['name']}
+                for r in (_bb .read_roles (guild_id )or [])
+                if not r .get ('managed')and str (r .get ('id',''))!=str (guild_id )]
+        channels =_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (channels )))
+        return channels ,_dedupe_channels (roles )
+    channels =[{'id':str (c .get ('id','')),'name':c .get ('name',''),
+                'category_id':c .get ('category_id')}
+              for c in demo_channels_list (guild_id )
+              if c .get ('type')=='text']
+    roles =[{'id':str (r .get ('id','')),'name':r .get ('name','')}
+            for r in _demo_roles_load (guild_id )]
+    channels =_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (channels )))
+    return channels ,_dedupe_channels (roles )
 
 
 def register(ctx):
@@ -211,13 +438,28 @@ def register(ctx):
         if _mg :guild_id =_mg 
         all_events =[]
 
+        # Срок наказания → минуты: 120, '120', '2h', '1д6ч', '45м'.
+        # Бот пишет в дела int-минуты, но понимаем и строки на случай
+        # легаси-записей.
+        def _dur_min (v ):
+            import re as _re 
+            if v is None or isinstance (v ,bool ):return 0 
+            if isinstance (v ,(int ,float )):return max (0 ,int (v ))
+            sv =str (v ).strip ().lower ().replace (' ','')
+            if not sv :return 0 
+            if sv .isdigit ():return max (0 ,int (sv ))
+            mm =_re .match (r'^(?:(\d+)[дd])?(?:(\d+)[чh])?(?:(\d+)(?:[мm]|мин)?)?$',sv )
+            if not mm or not any (mm .groups ()):return 0 
+            d ,h ,mi =(int (x or 0 )for x in mm .groups ())
+            return d *1440 +h *60 +mi 
+
         # ── 1. mod_data.json — bot'un сохран case'ler ────────────────────
         mod_file ='data/mod_data.json'
         if os .path .exists (mod_file ):
             try :
                 with open (mod_file ,'r',encoding ='utf-8')as fp :
                     md =json .load (fp )
-                case =md .get ('case',{})
+                case =md .get ('cases')or md .get ('case')or {}
                 for gid ,case_list in case .items ():
                     if guild_id and gid !=guild_id :
                         continue 
@@ -226,17 +468,29 @@ def register(ctx):
                     for case in case_list :
                         uid =str (case .get ('user_id',''))
                         mid =str (case .get ('mod_id',''))
-                        all_events .append ({
+                        _reason =str (case .get ('reason','')or '').strip ()
+                        if _reason .lower ()in ('','belirtilmedi'):  # турецкий легаси-дефолт
+                            _reason ='Не указана'
+                        _ev ={
                         'guild_id':gid ,
                         'category':'mod',
                         'action':case .get ('action','warn'),
                         'target_name':uid ,
                         'target_id':uid ,
-                        'mod_name':mid ,
-                        'reason':case .get ('reason','Belirtilmedi'),
+                        # Имя модератора — из дела (его пишет save_case),
+                        # иначе резолвер ниже подставит имя по ID
+                        'mod_name':str (case .get ('mod_name')or ''),
+                        'mod_id':mid ,
+                        'reason':_reason ,
                         'created_at':case .get ('timestamp',''),
                         'source':'bot',
-                        })
+                        }
+                        # Срок наказания («насколько дали мут») и «до какого
+                        # времени» — их пишет /modpanel и слушатель мутов
+                        _dmin =_dur_min (case .get ('duration_minutes')if 'duration_minutes'in case else case .get ('duration'))
+                        if _dmin >0 :_ev ['duration']=_dmin 
+                        if case .get ('until'):_ev ['until']=case .get ('until')
+                        all_events .append (_ev)
             except Exception as _e :
                 print (f'[MOD-HISTORY] Ошибка данных модерации: {_e}')
 
@@ -253,9 +507,15 @@ def register(ctx):
                         continue 
                     for ev in events :
                         if ev .get ('action')in mod_cats :
-                            ev ['guild_id']=gid 
-                            ev ['created_at']=ev .get ('timestamp','')
-                            all_events .append (ev )
+                            _ev =dict (ev )
+                            _ev ['guild_id']=gid 
+                            _ev ['created_at']=ev .get ('timestamp','')
+                            # срок мута из аудита («до какого» + минуты)
+                            _dmin =_dur_min (_ev .get ('duration_minutes')if 'duration_minutes'in _ev else _ev .get ('duration'))
+                            _ev .pop ('duration_minutes',None )
+                            _ev .pop ('duration',None )
+                            if _dmin >0 :_ev ['duration']=_dmin 
+                            all_events .append (_ev)
             except Exception as _e :
                 print (f'[MOD-HISTORY] Cache okuma Ошибки: {_e}')
 
@@ -286,6 +546,7 @@ def register(ctx):
                             'target_name':name ,
                             'target_id':uid ,
                             'mod_name':w .get ('mod',w .get ('moderator','?')),
+                            'mod_id':str (w .get ('mod_id','')or ''),
                             'reason':w .get ('reason',''),
                             'created_at':w .get ('timestamp',''),
                             'source':'bot',
@@ -294,22 +555,155 @@ def register(ctx):
                 print (f'[MOD-HISTORY] Ошибка чтения предупреждений: {_e}')
 
         # Имена вместо ID: цель и модератор резолвятся из карты имён гильдии.
+        # ВАЖНО: здесь нужен guild_id (сервер из запроса/MAIN_GUILD_ID), а НЕ
+        # gid — тот был переменной ЦИКЛА выше. Если ни один цикл не отработал
+        # (файлов mod_data.json/warnings.json ещё нет — чистая установка),
+        # имя gid вообще не определено, и весь блок падал с
+        # «cannot access local variable 'gid'» → имена не резолвились,
+        # в истории модерации вместо ников торчали голые ID.
+        # Дополнительно: uid → имя собирается из самих событий — участник мог
+        # уже выйти, но его имя осталось в старых записях аудита.
+        _ev_names ={}
+        for _ev in all_events :
+            for _idk ,_nk in (('target_id','target_name'),('user_id','user_name'),
+            ('mod_id','mod_name')):
+                _i =str (_ev .get (_idk )or '').strip ()
+                _n =str (_ev .get (_nk )or '').strip ()
+                if _i and _n and _n !=_i and not _n .isdigit ():
+                    _ev_names .setdefault (_i ,_n )
+        _target_gid = str(guild_id or '')
         try :
             import web .app as _appm
-            _nm =_appm ._guild_name_map (gid )if gid else {}
+            _nm =_appm ._guild_name_map (_target_gid )if _target_gid else {}
             for _ev in all_events :
                 _gid =str (_ev .get ('guild_id')or '')
-                if _gid and _gid !=gid :
+                if _gid and _target_gid and _gid !=_target_gid :
                     continue 
                 _map =_nm
                 _uid =str (_ev .get ('target_id')or _ev .get ('user_id')or '').strip ()
                 if _uid and (not str (_ev .get ('target_name')or '').strip ()or str (_ev .get ('target_name'))==_uid ):
-                    _ev ['target_name']=_map .get (_uid )or _uid
+                    _ev ['target_name']=_map .get (_uid )or _ev_names .get (_uid )or _uid
                 _mid =str (_ev .get ('mod_id')or '').strip ()
                 if _mid and not str (_ev .get ('mod_name')or '').strip ():
-                    _ev ['mod_name']=_map .get (_mid )or _mid
+                    _ev ['mod_name']=_map .get (_mid )or _ev_names .get (_mid )or _mid
         except Exception as _ex :
             print (f'[MOD-HISTORY] Имена: {_ex }')
+
+        # Старые панельные дела: модератор спрятан в причине
+        # («[Panel] username: причина») — вытаскиваем из бота-исполнителя.
+        try :
+            _pn ,_pi =_app ._bot_exec_identity ()
+            if _pn :
+                import re as _re_p 
+                for _ev in all_events :
+                    if str (_ev .get ('mod_name')or '').strip ().lower ()not in _pn :
+                        continue 
+                    _m =_re_p .match (r'^\[Panel\]\s*(.+?)\s*:\s*(.*)$',
+                    str (_ev .get ('reason')or ''),_re_p .S )
+                    if _m :
+                        _ev ['mod_name']='Панель: '+_m .group (1 )
+                        if _m .group (2 ).strip ():
+                            _ev ['reason']=_m .group (2 ).strip ()
+        except Exception as _pex2 :
+            print (f'[MOD-HISTORY] Panel-актор: {_pex2 }')
+
+        # ── Склейка дублей: одно наказание — одна строка ──────────────────
+        # Мут из /modpanel попадает в историю дважды: делом из mod_data.json
+        # и записью аудита Discord (исполнителем там сам бот). Ручной мут из
+        # интерфейса Discord раньше вдобавок порождал дело-заглушку
+        # «С Discord» без причины и срока. Склеиваем записи одного наказания
+        # (тот же человек, тот же тип, время в пределах 3 минут), оставляя
+        # лучшую версию: настоящий модератор и причина из дела панели,
+        # срок добираем из аудита, если дела его не знают.
+        def _act_class (a ):
+            a =str (a or '').lower ()
+            if 'unban' in a or 'бан снят' in a or 'разбан' in a :return 'unban'
+            if 'unmute' in a or 'мут снят' in a or 'мьют снят' in a or 'размут' in a :return 'unmute'
+            if 'ban' in a or 'бан' in a :return 'ban'
+            if 'kick' in a or 'кик' in a :return 'kick'
+            if 'warn' in a or 'варн' in a or 'предупреж' in a :return 'warn'
+            if 'mute' in a or 'timeout' in a or 'мут' in a or 'мьют' in a or 'таймаут' in a :return 'mute'
+            return a 
+
+        _junk_reasons ={'','не указана','причина не указана','без причины',
+        'belirtilmedi','с discord','—','-'}
+
+        def _parse_ts (v ):
+            try :
+                _dt =datetime .fromisoformat (str (v or '').replace ('Z','+00:00'))
+            except Exception :
+                return None 
+            if _dt .tzinfo is None :_dt =_dt .replace (tzinfo =timezone .utc )
+            return _dt .astimezone (timezone .utc )
+
+        def _ev_score (ev ):
+            s =0 
+            if str (ev .get ('reason')or '').strip ().lower ()not in _junk_reasons :s +=4 
+            # исполнитель-робот (сам бот, «Moderation») — не выигрывает у
+            # настоящего модератора (жалоба 2026-09-07 «кто выдал»)
+            _b_names ,_b_ids =_app ._bot_exec_identity ()
+            _bot_exec =(str (ev .get ('mod_id')or '').strip ()in _b_ids
+            or str (ev .get ('mod_name')or '').strip ().lower ()in _b_names )
+            if ev .get ('source')=='bot'and str (ev .get ('mod_id')or '')not in ('','system','discord','0','?')and not _bot_exec :s +=2 
+            if ev .get ('duration'):s +=2 
+            if ev .get ('until'):s +=1 
+            return s 
+
+        try :
+            _buckets ={}
+            for _ev in all_events :
+                _buckets .setdefault ((str (_ev .get ('guild_id')or ''),
+                str (_ev .get ('target_id')or ''),_act_class (_ev .get ('action'))),[]).append (_ev )
+            _merged =[]
+            for _group in _buckets .values ():
+                if len (_group )==1 :
+                    _merged .extend (_group )
+                    continue 
+                _group .sort (key =lambda e :_parse_ts (e .get ('created_at'))or datetime .min .replace (tzinfo =timezone .utc ))
+                _clusters =[]
+                for _ev in _group :
+                    _ts =_parse_ts (_ev .get ('created_at'))
+                    _placed =False 
+                    for _cl in _clusters :
+                        if _ts is not None and _cl ['last_ts']is not None \
+                        and abs ((_ts -_cl ['last_ts']).total_seconds ())<=180 :
+                            _cl ['events'].append (_ev )
+                            _cl ['last_ts']=max (_cl ['last_ts'],_ts )
+                            _placed =True 
+                            break 
+                    if not _placed :
+                        _clusters .append ({'events':[_ev ],'last_ts':_ts })
+                for _cl in _clusters :
+                    _evs =_cl ['events']
+                    if len (_evs )==1 :
+                        _merged .extend (_evs )
+                        continue 
+                    # Склейка — только для дублей: разные источники (дело
+                    # панели + аудит) или запись-заглушка без причины.
+                    # Два настоящих варна/мута одним модом подряд не трогаем.
+                    _sources ={e .get ('source')for e in _evs }
+                    _poor =any (str (e .get ('reason')or '').strip ().lower ()in _junk_reasons for e in _evs )
+                    if len (_sources )==1 and not _poor :
+                        _merged .extend (_evs )
+                        continue 
+                    _evs .sort (key =_ev_score ,reverse =True )
+                    _base =dict (_evs [0 ])
+                    _b_names2 ,_b_ids2 =_app ._bot_exec_identity ()
+                    for _other in _evs [1 :]:
+                        for _k in ('duration','until','reason','mod_name','mod_id','target_name'):
+                            if _base .get (_k )in (None ,'')and _other .get (_k ):
+                                if _k =='reason'and str (_other .get ('reason')or '').strip ().lower ()in _junk_reasons :
+                                    continue 
+                                _base [_k ]=_other .get (_k )
+                        # исполнитель-робот уступает настоящему модератору
+                        if _base .get ('mod_name')and str (_base ['mod_name']).strip ().lower ()in _b_names2 \
+                        and _other .get ('mod_name')and str (_other ['mod_name']).strip ().lower ()not in _b_names2 :
+                            _base ['mod_name']=_other ['mod_name']
+                    _merged .append (_base )
+            all_events =_merged 
+        except Exception as _ex :
+            print (f'[MOD-HISTORY] Склейка дублей: {_ex }')
+
         all_events .sort (key =lambda x :x .get ('created_at',''),reverse =True )
         return jsonify (all_events [:500 ])
 
@@ -370,7 +764,7 @@ def register(ctx):
         if os .path .exists (mod_file ):
             try :
                 with open (mod_file ,'r',encoding ='utf-8')as fp :md =json .load (fp )
-                cases =md .get ('case',{})if isinstance (md ,dict )else {}
+                cases =(md .get ('cases')or md .get ('case')or {})if isinstance (md ,dict )else {}
                 for cgid ,case_list in cases .items ():
                     if gid and str (cgid )!=str (gid ):continue 
                     if not isinstance (case_list ,list ):continue 
@@ -413,12 +807,20 @@ def register(ctx):
         # 4. Сообщения и голос за неделю
         msg_map ={}
         voice_map ={}
+        # Сервер может быть НЕ выбран (MAIN_GUILD_ID пуст + бот офлайн) —
+        # тогда gid = '' и источники ниже падают на int(''). Это не ошибка
+        # данных, а «сервера ещё нет»: считаем метрики пустыми и не сорим
+        # трейсбеками в консоль (инцидент 30.08: лог полон
+        # «invalid literal for int() with base 10: ''»).
+        if gid :
+            try :
+                from services .mod_activity import message_counts as _mc
+                msg_map =_mc (gid ,days =7 )
+            except Exception as _ex :
+                print (f'[MOD-STATS] Ошибка счётчика сообщений: {_ex }')
         try :
-            from services .mod_activity import message_counts as _mc
-            msg_map =_mc (gid ,days =7 )
-        except Exception as _ex :
-            print (f'[MOD-STATS] Ошибка счётчика сообщений: {_ex }')
-        try :
+            if not gid :
+                raise _NoGuild ('сервер не выбран')
             from cogs .voice_tracker import voice_view as _vv
             vv =_vv (gid )
             users =vv .get ('users',{})if isinstance (vv ,dict )else {}
@@ -431,6 +833,9 @@ def register(ctx):
                     try :secs +=max (0 ,int (daily .get (dkey ,0 )or 0 ))
                     except Exception as _ex :_log.debug("api_mod_stats(): голосовой день %s: %s", dkey, _ex )
                 voice_map [str (uid )]={'name':rec .get ('name')or str (uid ),'seconds':secs ,'avatar':rec .get ('avatar')or ''}
+        except _NoGuild as _ex :
+            # сервер не выбран — голосовых метрик просто нет (не ошибка)
+            _log .debug ('api_mod_stats(): голос пропущен: %s',_ex )
         except Exception as _ex :
             print (f'[MOD-STATS] Ошибка голосового трекера: {_ex }')
 
@@ -514,26 +919,46 @@ def register(ctx):
         return jsonify ({'success':True ,'guild_id':str (gid ),'generated_at':now .isoformat (),'kpis':kpis ,'rows':final })
 
 
+    def _roles_cache_drop (guild_id ):
+        """Сбросить живой кэш списка ролей ТОЛЬКО этого сервера.
+
+        Раньше после создания/удаления роли обнуляли весь кэш целиком — и
+        следующий запрос по каждому остальному серверу шёл мимо кэша.
+        """
+        live =getattr (api_guild_roles ,'_live_cache',None )
+        if not isinstance (live ,dict ):
+            return
+        for k in [k for k in live if str (k [0 ])==str (guild_id )]:
+            live .pop (k ,None )
+
     @app .route ('/api/roles')
     @login_required 
     def api_roles_default ():
-        if not MAIN_GUILD_ID :
+        import web .app as _app
+        _gid =MAIN_GUILD_ID or ('777'if _app ._demo_mode ()else 0 )
+        if not _gid :
             return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
-        return api_guild_roles (str (MAIN_GUILD_ID ))
+        return api_guild_roles (str (_gid ))
 
 
     @app .route ('/api/channels')
     @login_required 
     def api_channels_default ():
-        if not MAIN_GUILD_ID :
+        # Демо-витрина без MAIN_GUILD_ID показывает демо-сервер 777, а не 503:
+        # пикеры каналов на страницах настроек не должны пустовать.
+        import web .app as _app
+        _gid =MAIN_GUILD_ID or ('777'if _app ._demo_mode ()else 0 )
+        if not _gid :
             return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
-        return api_guild_channels (str (MAIN_GUILD_ID ))
+        return api_guild_channels (str (_gid ))
 
 
     @app .route ('/api/members')
     @login_required 
     def api_members_default ():
-        if not MAIN_GUILD_ID :
+        import web .app as _app
+        _gid =MAIN_GUILD_ID or ('777'if _app ._demo_mode ()else 0 )
+        if not _gid :
             return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
         from web .app import api_guild_members 
         return api_guild_members (str (MAIN_GUILD_ID ))
@@ -542,18 +967,61 @@ def register(ctx):
     @app .route ('/api/guild/<guild_id>/roles')
     @login_required 
     def api_guild_roles (guild_id ):
-        import web .app as _app 
-        bot =_app .bot_instance 
+        import web .app as _app
+        bot =_app .bot_instance
         if not bot :
             # демо: типичный набор ролей (пустой список = страница «не листается»)
             if _app ._demo_mode ():
-                return jsonify (sorted (_demo_roles_load (guild_id ),key =lambda x :-x ['members']))
+                return jsonify (_dedupe_by_id (sorted (_demo_roles_load (guild_id ),key =lambda x :-x ['members'])))
+            # панель отдельным процессом, бот жив по пульсу: реальные роли из
+            # снимка (id/имя/цвет) — пикеры «роль сервера» по всей панели живые.
+            from services import bot_bridge as _bb
+            if _bb .bot_alive_for (guild_id ):
+                rows =[{'id':r .get ('id'),'name':r .get ('name'),
+                        'color':r .get ('color')or '','members':0}
+                       for r in (_bb .read_roles (guild_id )or [])
+                       if r .get ('id')]
+                return jsonify (_dedupe_by_id (rows))
             return jsonify ([])
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ([])
-        roles =[{'id':str (r .id ),'name':r .name ,'color':str (r .color ),'members':len (r .members )}
+        # Живой кэш + ETag/304 (как у каналов): состав ролей меняется редко,
+        # а настройки/пикеры опрашивают список часто. len(roles) в сигнатуре
+        # даёт мгновенный промах при создании/удалении роли.
+        def _rl_respond (_payload ,_sig ):
+            _etag ='"rl%d-%d"'%(len (_payload ),_sig )
+            if _etag in request .headers .get ('If-None-Match',''):
+                from flask import Response as _Resp
+                return _Resp (status =304 ,headers ={'ETag':_etag ,'Cache-Control':'no-cache'})
+            from flask import Response as _Resp
+            return _Resp (json .dumps (_payload ,ensure_ascii =False ),
+            mimetype ='application/json',
+            headers ={'ETag':_etag ,'Cache-Control':'no-cache'})
+        import time as _time
+        _now =_time .time ()
+        _live =getattr (api_guild_roles ,'_live_cache',{})
+        _ckey =(str (guild_id ),len (getattr (guild ,'roles',[])or []))
+        _hit =_live .get (_ckey )
+        if _hit and (_now -_hit [0 ])<10.0 :
+            return _rl_respond (_hit [1 ],_ckey [1 ])
+        # Число участников в роли — одним проходом по составу сервера.
+        # Было len(r.members) на каждую роль, а Role.members в discord.py
+        # копирует и фильтрует ВЕСЬ список участников (discord/role.py:415) —
+        # на 250 ролях и 20 000 участников это 5 млн итераций и [SLOW] 2.95 с
+        # в логе, из-за чего туннель рвал соединение (context canceled).
+        _counts =role_member_counts (guild )
+        roles =[{'id':str (r .id ),'name':r .name ,'color':str (r .color ),
+        'members':_counts .get (r .id ,0 )}
         for r in guild .roles if r .name !='@everyone']
-        return jsonify (sorted (roles ,key =lambda x :-x ['members']))
+        roles =_dedupe_by_id (sorted (roles ,key =lambda x :-x ['members']))
+        try :
+            api_guild_roles ._live_cache =getattr (api_guild_roles ,'_live_cache',{})
+            api_guild_roles ._live_cache [_ckey ]=(_now ,roles )
+            for _k in [k for k ,v in api_guild_roles ._live_cache .items ()if _now -v [0 ]>60.0 ]:
+                api_guild_roles ._live_cache .pop (_k ,None )
+        except Exception as _rce :
+            _log .debug ('roles live-cache: %s',_rce )
+        return _rl_respond (roles ,_ckey [1 ])
 
 
     @app .route ('/api/guild/<guild_id>/roles/create',methods =['POST'])
@@ -562,10 +1030,14 @@ def register(ctx):
     def api_create_role (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         name =(data .get ('name')or '').strip ()
         if not name :
             return jsonify ({'error':'Требуется название роли'}),400 
+        if len (name )>100 :
+            # Discord режет имена ролей на 100 символах и отвечает на это
+            # невнятной 400 — говорим по-человечески сами
+            return jsonify ({'error':'Название роли длиннее 100 символов — Discord такое не принимает'}),400 
         if not bot :
             # демо: роль создаётся в локальном хранилище превью
             if _app ._demo_mode ():
@@ -598,11 +1070,15 @@ def register(ctx):
             await (guild .create_role (name =name ,color =color ,reason ='Создано через панель Hakumo'))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+            _roles_cache_drop (guild_id )
+            _live_publish (gid ,'roles')
             return jsonify ({'success':True })
         except discord .Forbidden :
             return jsonify ({'error':'У меня нет прав создавать роли на этом сервере'}),403 
         except discord .HTTPException as e :
             return jsonify ({'error':f'Ошибка Discord: {e}'}),500 
+        except TimeoutError :
+            return jsonify ({'error':'Discord не ответил за 10 секунд — попробуйте ещё раз'}),504 
         except Exception as e :
             return jsonify ({'error':str (e )}),500 
 
@@ -622,12 +1098,44 @@ def register(ctx):
                     return jsonify ({'error':'Роль не найдена'}),404 
                 _demo_roles_store (guild_id ,kept )
                 return jsonify ({'success':True })
-            return jsonify ({'error':'Бот офлайн'})
+            return jsonify ({'error':'Бот офлайн'}),503 
+        try :
+            gid =int (guild_id )
+        except (TypeError ,ValueError ):
+            return jsonify ({'error':'Неверный ID сервера'}),400 
+        if not str (role_id ).isdigit ():
+            # было int(role_id) без проверки → 500 с трейсбеком на «/delete»
+            return jsonify ({'error':'Неверный ID роли'}),400 
+        guild =resolve_guild (guild_id )
+        if guild is None :
+            return jsonify ({'error':f'Бот не состоит на этом сервере (id={guild_id})'}),404 
+        role =guild .get_role (int (role_id ))
+        if role is None :
+            # раньше роль «не найдена» тоже считалась успехом: панель писала
+            # «Роль удалена», а роль оставалась на сервере
+            return jsonify ({'error':'Роль не найдена — возможно, её уже удалили'}),404 
+        if int (role .id )==int (guild .id ):
+            # то же самое, что role.is_default(), но не требует метода
+            # (discord.Role.is_default — это ровно id == guild.id)
+            return jsonify ({'error':'Роль @everyone удалить нельзя'}),400 
+        if getattr (role ,'managed',False ):
+            return jsonify ({'error':'Эту роль выдаёт интеграция (бот или подписка) — Discord не даёт её удалить'}),403 
+
         async def do ():
-            guild =bot .get_guild (int (guild_id ))
-            role =guild .get_role (int (role_id ))
-            if role :await (role .delete ())
-        asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+            await role .delete (reason ='Удалено через панель Hakumo')
+
+        try :
+            asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+        except discord .Forbidden :
+            return jsonify ({'error':'У меня нет прав удалить эту роль: она стоит выше моей в иерархии'}),403 
+        except discord .HTTPException as e :
+            return jsonify ({'error':f'Ошибка Discord: {e}'}),500 
+        except TimeoutError :
+            return jsonify ({'error':'Discord не ответил за 10 секунд — попробуйте ещё раз'}),504 
+        except Exception as e :
+            return jsonify ({'error':str (e )}),500 
+        _roles_cache_drop (guild_id )
+        _live_publish (gid ,'roles')
         return jsonify ({'success':True })
 
 
@@ -645,33 +1153,18 @@ def register(ctx):
                         with open (demo_file ,'r',encoding ='utf-8')as fp :
                             demo =json .load (fp )
                         demo =sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
-                        return jsonify (_annotate_hidden (guild_id ,demo ))
+                        return jsonify (_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (demo )))))
                     except Exception as e :
                         print (f'[WEB][WARN] /channels: demo_channels.json ошибка: {e}')
                 # Демо-структура не засеяна — отдаём полный встроенный список
                 # (тот же состав, что жил в data/demo_channels.json), чтобы
                 # селекты каналов и чат не пустовали в превью.
-                _fallback =[
-                {'id':'1001','name':'правила','type':'text','position':0,'category_id':'900','hidden':False},
-                {'id':'1002','name':'новости','type':'text','position':1,'category_id':'900','hidden':False},
-                {'id':'1003','name':'FAQ','type':'text','position':2,'category_id':'900','hidden':False},
-                {'id':'1015','name':'журнал-модерации','type':'forum','position':0,'category_id':'900','hidden':False},
-                {'id':'1004','name':'флудилка','type':'text','position':0,'category_id':'901','hidden':False},
-                {'id':'1005','name':'мемы','type':'text','position':1,'category_id':'901','hidden':False},
-                {'id':'1006','name':'музыка-чат','type':'text','position':2,'category_id':'901','hidden':False},
-                {'id':'1007','name':'предложения','type':'text','position':0,'category_id':'902','hidden':False},
-                {'id':'1008','name':'розыгрыши','type':'text','position':1,'category_id':'902','hidden':False},
-                {'id':'1010','name':'варны','type':'text','position':2,'category_id':'902','hidden':False},
-                {'id':'1016','name':'анонс-бота','type':'text','position':3,'category_id':'902','hidden':False},
-                {'id':'1017','name':'рекруты','type':'text','position':4,'category_id':'902','hidden':False},
-                {'id':'1018','name':'стата-недель','type':'text','position':5,'category_id':'902','hidden':False},
-                {'id':'1009','name':'тикет-логи','type':'text','position':6,'category_id':'902','hidden':False},
-                {'id':'1011','name':'общий-голос-1','type':'voice','position':0,'category_id':'903','hidden':False},
-                {'id':'1012','name':'общий-голос-2','type':'voice','position':1,'category_id':'903','hidden':False},
-                {'id':'1013','name':'афк','type':'voice','position':2,'category_id':'903','hidden':False},
-                {'id':'1014','name':'сцена','type':'stage','position':0,'category_id':'903','hidden':False},
-                ]
-                return jsonify (_annotate_hidden (guild_id ,_fallback ))
+                return jsonify (_visible_channels (_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (_demo_channels_seed ())))))
+            cached =_channels_offline_cache (guild_id )
+            if cached :
+                print (f'[WEB] /channels bot offline — отдаём кэш ({len(cached)} кан.)')
+                cached =_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (cached )))
+                return jsonify (_visible_channels (cached ))
             print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Бот офлайн','channels':[]})
 
@@ -679,11 +1172,34 @@ def register(ctx):
         if not guild :
             for g in bot .guilds :
                 if str (g .id )==str (guild_id ):
-                    guild =g 
-                    break 
+                    guild =g
+                    break
         if not guild :
             print (f'[WEB][WARN] /channels: guild {guild_id} не найден. Bot guilds: {[str(g.id) for g in bot.guilds]}')
             return jsonify ({'error':f'Сервер {guild_id} не найден — бот не состоит на нём','channels':[]})
+
+        # Короткий in-memory кэш живого списка: страницы настроек и опросы
+        # дёргают /channels часто, а пересборка с обходом каналов и подсчётом
+        # участников в голосовых — лишняя работа на каждый тик. 3 сек свежести
+        # достаточно. В ключе — число каналов сервера: при создании/удалении
+        # канала состав меняется и кэш промахивается мгновенно (без ожидания
+        # TTL), при неизменном составе — попадает и экономит пересборку.
+        import time as _time
+        _now = _time.time()
+        _live = getattr(api_guild_channels, '_live_cache', {})
+        _ckey = (str(guild_id), len(getattr(guild, 'channels', []) or [])
+                 + len(getattr(guild, 'threads', []) or []))
+        _hit = _live.get(_ckey)
+        # TTL поднят с 3 до 10с: настройки и пикеры опрашивают список часто,
+        # состав каналов меняется редко (а при создании/удалении сигнатура
+        # с числом каналов меняется → промах мгновенно, без ожидания TTL).
+        if _hit and (_now - _hit[0]) < 10.0:
+            _payload = _hit[1]
+            # Скрытые каналы могли смениться, пока жил кэш — переаннотируем
+            # и отдаём через _channels_respond: модератор не видит закрытое
+            # даже на втором запросе (кэш хранит полный список для владельца).
+            _annotate_hidden (guild_id ,_payload )
+            return _channels_respond (_payload ,_ckey [1 ])
 
         type_map ={
         _discord .ChannelType .text :'text',
@@ -725,7 +1241,16 @@ def register(ctx):
                         stage =True 
                     if c .type ==discord .ChannelType .forum :
                         forum =True 
-                if hasattr (c ,'members'):
+                # «Подключено» имеет смысл только для голосового канала —
+                # сколько людей сейчас в нём сидит. Раньше c.members звали у
+                # КАЖДОГО канала, а в discord.py у текстового канала members —
+                # это «все, кто канал видит»: [m for m in guild.members if
+                # permissions_for(m).read_messages] (discord/channel.py:419).
+                # На сервере в 20 000 участников это 20 000 проверок прав на
+                # КАЖДЫЙ текстовый канал — десятки секунд на один /api/channels.
+                # У голосового members берётся из guild._voice_states
+                # (discord/channel.py:1132) и стоит копейки.
+                if ch_type in ('voice', 'stage'):
                     try :
                         connected =len ([m for m in c .members if not getattr (m ,'bot',False )])
                     except Exception :
@@ -754,17 +1279,90 @@ def register(ctx):
                 # один проблемный канал не должен ронять весь список панели
                 print (f'[WEB][WARN] channels: канал {getattr(c, "id", "?")} пропущен: {e}')
 
+        # Ветки (threads): в пикеры логов/апелляций — как текстовые цели.
+        # Страница «Каналы» их пропускает (type === 'thread').
+        try :
+            for tch in getattr (guild ,'threads',None ) or []:
+                try :
+                    parent =getattr (tch ,'parent',None )
+                    pname =getattr (parent ,'name',None ) or ''
+                    pcat =getattr (parent ,'category',None ) if parent is not None else None
+                    channels_data .append ({
+                    'id':str (tch .id ),
+                    'name':((pname + ' › ' + tch .name ) if pname else tch .name ),
+                    'type':'thread',
+                    'position':int (getattr (tch ,'position',0 ) or 0 ),
+                    'category':(getattr (pcat ,'name',None ) or pname or None ),
+                    'category_id':(str (pcat .id ) if pcat is not None
+                                   else (str (parent .id ) if parent is not None else None )),
+                    'category_pos':(pcat .position if pcat is not None else -1 ),
+                    'topic':'',
+                    'nsfw':False ,
+                    'slowmode':0 ,
+                    'bitrate':0 ,
+                    'user_limit':0 ,
+                    'news':False ,
+                    'stage':False ,
+                    'forum':False ,
+                    'thread':True ,
+                    'connected':0 ,
+                    'created_at':(tch .created_at .isoformat ()
+                                  if getattr (tch ,'created_at',None ) else None ),
+                    'mention':getattr (tch ,'mention',''),
+                    'parent_id':str (getattr (tch ,'parent_id','') or
+                                     (getattr (parent ,'id','') if parent is not None else '')),
+                    })
+                except Exception as e :
+                    print (f'[WEB][WARN] channels: ветка {getattr(tch, "id", "?")} пропущена: {e}')
+        except Exception as e :
+            print (f'[WEB][WARN] channels: threads: {e}')
+
         sorted_channels =sorted (channels_data ,key =lambda x :(x ['category_pos'],x ['position']))
+        # Защита от дублей на источнике (см. _dedupe_channels): все пикеры
+        # каналов берут список отсюда — дублей в селектах быть не должно.
+        sorted_channels =_dedupe_channels (sorted_channels )
         _annotate_hidden (guild_id ,sorted_channels )
-        print (f'[WEB] /channels guild={guild_id} returned {len(sorted_channels)} channels')
-        return jsonify (sorted_channels )
+        # Кладём в короткий in-memory кэш (следующие 10 сек отдаём без пересборки).
+        try :
+            api_guild_channels ._live_cache =getattr (api_guild_channels ,'_live_cache',{})
+            api_guild_channels ._live_cache [_ckey ] =(_now ,sorted_channels )
+            # Лёгкая уборка протухших ключей (разные числа каналов со временем),
+            # чтобы словарь не рос вечно.
+            for _k in [k for k ,v in api_guild_channels ._live_cache .items ()if _now -v [0 ] >60.0 ]:
+                api_guild_channels ._live_cache .pop (_k ,None )
+        except Exception as _cce :
+            _log .debug ('channels live-cache: %s',_cce )
+        # Запоминаем живой список: при кратком офлайне/перезапуске бота
+        # пикеры каналов не пустуют и имена не превращаются в голые ID.
+        try :
+            os .makedirs ('data',exist_ok =True )
+            with open (f'data/panel_channels_cache_{guild_id}.json','w',encoding ='utf-8')as _cf :
+                json .dump ({'channels':sorted_channels },_cf ,ensure_ascii =False )
+        except Exception as _ce :
+            _log .debug ('channels cache save: %s',_ce )
+        return _channels_respond (sorted_channels ,_ckey [1 ])
+
+    def _channels_offline_cache (guild_id ):
+        """Последний известный список каналов (имена + id) при офлайн-боте."""
+        try :
+            p =f'data/panel_channels_cache_{guild_id}.json'
+            if os .path .exists (p ):
+                with open (p ,encoding ='utf-8')as fh :
+                    data =json .load (fh )
+                chans =data .get ('channels')if isinstance (data ,dict )else None
+                good =[c for c in (chans or [])if c .get ('id')and c .get ('name')]
+                if good :
+                    return good
+        except Exception as _ce :
+            print (f'[WEB][WARN] channels cache load: {_ce}')
+        return None
 
     # ── Владелец: скрыть канал/категорию из панели ─────────────────────────
     @app .route ('/api/guild/<guild_id>/channels-visibility',methods =['POST'])
     @login_required
     @role_required ('owner')
     def api_channels_visibility (guild_id ):
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         target =str (data .get ('id')or '').strip ()
         kind =str (data .get ('kind')or 'channel')
         hidden =bool (data .get ('hidden'))
@@ -782,4 +1380,16 @@ def register(ctx):
             lst .remove (target )
         g [key ]=lst
         _hidden_save (store )
+        try :
+            live =getattr (api_guild_channels ,'_live_cache',None )
+            if isinstance (live ,dict ):
+                for k in [k for k in live if str (k [0 ])==str (guild_id )]:
+                    live .pop (k ,None )
+        except Exception as _cex :
+            _log .debug ('channels live-cache drop: %s',_cex )
+        try :
+            from services .live_bus import publish as _lpub
+            _lpub (str (guild_id ),'channels')
+        except Exception as _live_ex :
+            print (f'[WEB][WARN] hidden-channel live-push: {_live_ex}')
         return jsonify ({'success':True ,'hidden':hidden ,'id':target ,'kind':kind })

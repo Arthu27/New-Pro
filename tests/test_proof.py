@@ -195,13 +195,14 @@ check(_is_link('https://x') and not _is_link('просто текст'), 'link c
 # ═══ 2. ЯДРО — _create_and_post (общая точка панели, /warn и /moderate) ══
 print('== _create_and_post ==')
 cog = ProofCog(bot=object())
-check(hasattr(ProofCog, 'proof'), 'команда /proof вернулась: демки грузятся прямо ботом')
+# 2026-09-04, заказ владельца: «/proof убери вообще» — демки через /report
+# и панель. Проверяем, что команды больше НЕТ (и в коде, и в меню).
+check(not hasattr(ProofCog, 'proof'), 'команды /proof больше нет (убрана по заказу владельца)')
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _src = open(os.path.join(_root, 'cogs', 'proof_cog.py'), encoding='utf-8').read()
-check('demo: discord.Attachment' in _src and 'defer(ephemeral=True)' in _src,
-      '/proof принимает файл и отвечает сразу (defer)')
-check("name='proof'" in _src and 'app_commands.Choice' in _src,
-      'наказание выбирается из списка (варн/мут/кик/бан…)')
+check("name='proof'" not in _src, 'в коге не регистрируется слеш-команда proof')
+import slash_budget as _sb
+check('proof' not in _sb.KEEP_SLASH, '/proof нет и в белом списке меню')
 
 # без вложения и ссылки — разрешено (фото не обязательно, владелец просил)
 before0 = len(proof_list(GUILD.id))
@@ -365,10 +366,16 @@ mod_cog = Moderation(botx)
 # /modpanel — единственный пункт наказаний; select содержит изоляцию
 _opts = ModActionSelect(mod_cog)
 _labels = {o.label for o in _opts.options}
-check('Бан (апелляция)' in _labels, 'select: «Бан (апелляция)» есть')
-check('Снять апелляцию / разбан' in _labels, 'select: «Снять апелляцию / разбан» есть')
-check({'ban', 'unban', 'timeout', 'clear'} <= {o.value for o in _opts.options},
-      'select: действия ban/unban/timeout/clear на месте')
+_ban_opt = next(o for o in _opts.options if o.value == 'ban')
+check(any('Бан' in str(l) for l in _labels),
+      'select: пункт «Бан» есть')
+check('оль бана' in (_ban_opt.description or ''),
+      'select: «Бан» — роль бана, а не обход каналов')
+check(any('Снять бан' in str(l) for l in _labels),
+      'select: «Снять бан» есть')
+
+check({'ban', 'unban', 'mute', 'clear'} <= {o.value for o in _opts.options},
+      'select: действия ban/unban/mute/clear на месте')
 check('kick' not in {o.value for o in _opts.options},
       'select: система kick убрана из меню (решение владельца)')
 
@@ -411,13 +418,14 @@ _m = _M(9090)
 _appeal = _Ch(9, 'апелляция')
 _g.channels.append(_appeal)
 iso, closed = run(mod_cog._isolate_member(_g, _m, _appeal))
-check(closed == 3, 'апелляция: закрыты все каналы, кроме канала апелляции')
+check(closed == 4, 'апелляция: закрыты ВСЕ каналы, включая канал апелляции')
 check(iso is _appeal and iso.name == 'апелляция', 'апелляция: канал апелляции передан и возвращён')
-_denied = [c for c in _g.channels if c is not iso]
-check(all(c.perm is not None and c.perm[1] is not None and c.perm[1].view_channel is False for c in _denied),
-      'апелляция: на закрытых каналах view_channel=False')
-check(iso.perm is not None and iso.perm[1].view_channel is True,
-      'апелляция: канал апелляции открыт (view_channel=True)')
+check(all(c.perm is not None and c.perm[1] is not None and c.perm[1].view_channel is False for c in _g.channels),
+      'апелляция: на всех каналах view_channel=False')
+# канал апелляции открывает ПОДАЧА апелляции в ЛС боту (cogs/appeals.py),
+# не бан: заказ владельца 2026-09-05 — до подачи всё закрыто
+check(iso.perm is not None and iso.perm[1].view_channel is False,
+      'апелляция: канал апелляции при бане ЗАКРЫТ (откроется после подачи в ЛС)')
 
 run(mod_cog._unisolate_member(_g, _m))
 check(all(c.perm is not None and c.perm[1] is None for c in _g.channels),

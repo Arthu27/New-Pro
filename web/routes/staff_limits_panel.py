@@ -8,6 +8,7 @@
 каким разрешено СОЗДАВАТЬ канал самим (по умолчанию — никаким).
 """
 from web.routes._common import (
+    _safe_json_obj,
     _log, render_template, session, request, jsonify, redirect,
 )
 
@@ -84,11 +85,21 @@ def _guild_channels(bot, guild_id):
     live = _guild_channels_live(bot, guild_id)
     if live:
         _channels_cache_save(guild_id, live)
-        return live, 'bot'
+        return _hide_staff_channels(guild_id, live), 'bot'
     cached = _channels_cache_load(guild_id)
     if cached:
-        return cached, 'cache'
-    return _guild_channels_fallback(guild_id), 'settings'
+        return _hide_staff_channels(guild_id, cached), 'cache'
+    return _hide_staff_channels(guild_id, _guild_channels_fallback(guild_id)), 'settings'
+
+
+def _hide_staff_channels(guild_id, channels):
+    """Спрятанные владельцем каналы — только ему, не модерам в пикере."""
+    try:
+        from web.routes.guild_admin import _annotate_hidden, _visible_channels
+        return _visible_channels(_annotate_hidden(guild_id, list(channels or [])))
+    except Exception as ex:
+        _log.debug('hide_staff_channels: %s', ex)
+        return channels or []
 
 
 def _guild_channels_live(bot, guild_id):
@@ -111,8 +122,38 @@ def _guild_channels_live(bot, guild_id):
         channels = [{'id': str(c.id),
                      'name': (f'{c.name} · форум'
                               if c.type == _dc.ChannelType.forum
-                              else f'#{c.name}')}
-                    for c in sorted(pool, key=lambda x: x.position)]
+                              else f'#{c.name}'),
+                     'type': ('forum' if c.type == _dc.ChannelType.forum
+                              else 'text'),
+                     'category_id': str(getattr(c, 'category_id', None) or '') or None}
+                    for c in sorted(pool, key=lambda x: getattr(x, 'position', 0))]
+        by_parent, leftover = {}, []
+        for th in getattr(guild, 'threads', None) or []:
+            pid = getattr(th, 'parent_id', None)
+            parent = getattr(th, 'parent', None)
+            if parent is None and pid:
+                try:
+                    parent = guild.get_channel(pid)
+                except Exception:
+                    parent = None
+            pname = getattr(parent, 'name', None) or ''
+            row = {'id': str(th.id),
+                   'name': (f'#{pname} › ветка {th.name}' if pname
+                            else f'ветка {th.name}'),
+                   'type': 'thread',
+                   'parent': pname}
+            if pid:
+                by_parent.setdefault(str(pid), []).append(row)
+            else:
+                leftover.append(row)
+        out = []
+        for ch in channels:
+            out.append(ch)
+            out.extend(by_parent.pop(ch['id'], []))
+        for rest in by_parent.values():
+            out.extend(rest)
+        out.extend(leftover)
+        channels = out
     else:
         import web.app as _app
         if _app._demo_mode():
@@ -125,26 +166,39 @@ def _guild_channels_live(bot, guild_id):
                         for c in _json.load(fh):
                             _t = c.get('type')
                             _is_forum = _t == 'forum' or bool(c.get('forum'))
-                            if _t in ('text', '') or _is_forum:
+                            _is_thread = _t == 'thread'
+                            if _t in ('text', '', 'thread') or _is_forum:
+                                _nm = str(c.get('name', ''))
+                                if _is_forum:
+                                    _label = _nm + ' · форум'
+                                elif _is_thread:
+                                    _par = str(c.get('parent') or c.get('category') or '')
+                                    _label = (f'#{_par} › ветка {_nm}' if _par
+                                              else f'ветка {_nm}')
+                                else:
+                                    _label = '#' + _nm
                                 channels.append({
                                     'id': str(c.get('id')),
-                                    'name': (str(c.get('name', '')) + ' · форум')
-                                            if _is_forum
-                                            else '#' + str(c.get('name', ''))})
+                                    'name': _label,
+                                    'type': ('forum' if _is_forum
+                                             else ('thread' if _is_thread
+                                                   else 'text'))})
             except Exception as ex:
                 _log.debug('staff_limits_panel: демо-каналы: %s', ex)
             # файла нет (пересборка/чистый data) — вшитый демо-набор, чтобы
             # селекты «куда писать логи» не пустовали в превью
             if not channels:
                 channels = [
-                    {'id': '1001', 'name': '#правила'},
-                    {'id': '1002', 'name': '#новости'},
-                    {'id': '1004', 'name': '#флудилка'},
-                    {'id': '1005', 'name': '#мемы'},
-                    {'id': '1015', 'name': 'журнал-модерации · форум'},
-                    {'id': '1010', 'name': '#варны'},
-                    {'id': '1009', 'name': '#тикет-логи'},
-                    {'id': '1016', 'name': '#анонс-бота'},
+                    {'id': '1001', 'name': '#правила', 'type': 'text'},
+                    {'id': '1002', 'name': '#новости', 'type': 'text'},
+                    {'id': '1004', 'name': '#флудилка', 'type': 'text'},
+                    {'id': '2101', 'name': '#флудилка › ветка ивент', 'type': 'thread'},
+                    {'id': '1005', 'name': '#мемы', 'type': 'text'},
+                    {'id': '1015', 'name': 'журнал-модерации · форум', 'type': 'forum'},
+                    {'id': '2102', 'name': 'журнал-модерации › ветка разбор', 'type': 'thread'},
+                    {'id': '1010', 'name': '#варны', 'type': 'text'},
+                    {'id': '1009', 'name': '#тикет-логи', 'type': 'text'},
+                    {'id': '1016', 'name': '#анонс-бота', 'type': 'text'},
                 ]
     return channels
 
@@ -211,12 +265,25 @@ def register(ctx):
 
     @app.route('/log-settings')
     @login_required
-    @role_required('admin')
+    @role_required('owner')
     def log_settings_page():
+        # main_guild_id мог не сохраниться в старых сессиях (до 2026-09-05):
+        # страница тогда дёргала /api/guild//log-settings и ловила 404 —
+        # «Логи сервера не работает ничего вообще». Запасные источники ID:
+        # selected_guild сессии и MAIN_GUILD_ID приложения.
+        import web.app as _app
+        _gid = (session.get('main_guild_id')
+                or session.get('selected_guild')
+                or getattr(_app, 'MAIN_GUILD_ID', '') or '')
+        # Канонические имена родительских каналов — из сервиса (в шаблонах
+        # эмодзи-литералы запрещены, имена приходят переменными)
+        _parents = getattr(LS, 'LOG_PARENT_CHANNELS', {})
         return render_template('log_settings.html',
                                role=session.get('role'),
                                username=session.get('username'),
-                               main_guild_id=session.get('main_guild_id', ''))
+                               main_guild_id=str(_gid),
+                               parent_logs=_parents.get('logs', 'логи'),
+                               parent_reports=_parents.get('reports', 'отчеты'))
 
     # ── API: лимиты ────────────────────────────────────────────────────
     @app.route('/api/guild/<guild_id>/staff-limits')
@@ -248,7 +315,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_staff_limits_set(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         limits = data.get('limits')
         if (not isinstance(limits, dict) and not isinstance(data.get('windows'), dict)
                 and not isinstance(data.get('durations'), dict)):
@@ -281,7 +348,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_staff_limits_role_set(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         role_id = str(data.get('role_id') or '').strip()
         limits = data.get('limits')
         if not role_id or (not isinstance(limits, dict)
@@ -325,7 +392,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_staff_limits_role_delete(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         role_id = str(data.get('role_id') or '').strip()
         if not role_id:
             return jsonify({'success': False, 'error': 'Не указана роль'}), 400
@@ -348,7 +415,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_staff_limits_revert(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         cid = str(data.get('id') or '').strip()
         if not cid:
             return jsonify({'success': False,
@@ -364,21 +431,41 @@ def register(ctx):
     # ── API: настройки логов ───────────────────────────────────────────
     @app.route('/api/guild/<guild_id>/log-settings')
     @login_required
-    @role_required('mod')
+    @role_required('owner')
     def api_log_settings_get(guild_id):
         channels, src = _guild_channels(_app.bot_instance, guild_id)
+        from services import log_card as LC
         return jsonify({'success': True,
                         'settings': LS.get_log_settings(guild_id),
                         'channels': channels,
                         'channels_source': src,
+                        'looks': LC.get_log_cards_cfg(guild_id),
                         'categories': [{'key': k, 'label': l, 'emoji': e}
-                                       for k, l, e in LS.LOG_CATEGORIES]})
+                                       for k, l, e in LS.LOG_CATEGORIES],
+                        'groups': [{'id': gid, 'label': gl, 'emoji': ge,
+                                    'hint': gh,
+                                    'keys': [k for k, _l, _e in cats]}
+                                   for gid, gl, ge, gh, cats in LS.LOG_GROUPS]})
 
     @app.route('/api/guild/<guild_id>/log-settings', methods=['POST'])
     @login_required
     @role_required('owner')
     def api_log_settings_set(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
+        looks = None
+        if isinstance(data.get('bg_url_by_cat'), dict):
+            from services import log_card as LC
+            cur = LC.get_log_cards_cfg(guild_id)
+            by = dict(cur.get('bg_url_by_cat') or {})
+            for k, v in data['bg_url_by_cat'].items():
+                k = str(k).strip().lower()
+                u = LC._valid_bg_url(v)
+                if u:
+                    by[k] = u
+                else:
+                    by.pop(k, None)
+            cur['bg_url_by_cat'] = by
+            looks = LC.save_log_cards_cfg(guild_id, cur)
         settings = LS.set_log_settings(guild_id,
                                        enabled=data.get('enabled'),
                                        autocreate=data.get('autocreate'),
@@ -395,4 +482,7 @@ def register(ctx):
                     _LS.autocreate_forget(guild_id, cat)
         except Exception as _ex:
             _log.debug('log-settings: autocreate_forget подавлено: %s', _ex)
-        return jsonify({'success': True, 'settings': settings})
+        payload = {'success': True, 'settings': settings}
+        if looks is not None:
+            payload['looks'] = looks
+        return jsonify(payload)

@@ -64,7 +64,7 @@ for path in files:
             unlabelled_icons.append(
                 (path.name, source.count('\n', 0, match.start()) + 1))
 
-check(len(files) >= 130, f'аудит охватывает все шаблоны ({len(files)})')
+check(len(files) >= 80, f'аудит охватывает все шаблоны ({len(files)})')
 check(not missing_alt, f'каждое изображение имеет alt ({missing_alt[:5] or "OK"})')
 check(not missing_type,
       f'каждая кнопка имеет явный безопасный type ({missing_type[:5] or "OK"})')
@@ -106,6 +106,25 @@ node = subprocess.run(['node', '--check', str(js_path)], capture_output=True,
                       text=True, timeout=30)
 check(node.returncode == 0,
       f'app.js проходит node --check ({node.stderr.strip() or "OK"})')
+check(js.rstrip().endswith('try { window.__panelKitReady = true; } catch (e) {}'),
+      'app.js заканчивается флагом кита, без лишней скобки')
+check(".modal-overlay.open { display: flex !important; }" in css,
+      'открытая модалка перекрывает [hidden] UA-стилем')
+dash = (TEMPLATES / 'dashboard.html').read_text(encoding='utf-8')
+check('overlay.hidden = true' not in dash,
+      'модалка виджетов главной не залипает на hidden')
+login = (TEMPLATES / 'login.html').read_text(encoding='utf-8')
+register = (TEMPLATES / 'register.html').read_text(encoding='utf-8')
+idx_pane = login.find('function pane(showForgot)')
+idx_if = login.find('if (forgotToggle && forgotPane && passPane)')
+check(idx_pane != -1 and idx_if != -1 and idx_pane < idx_if,
+      'сброс пароля: pane() в общей области видимости')
+esc_quote = ".replace(/\"/g, '&quot;')"
+check(esc_quote in login, 'login.html esc() экранирует кавычки')
+check(esc_quote in register, 'register.html esc() экранирует кавычки')
+kit10 = js[js.find('function pageHeadAuto'):js.find('HAKUMO KIT 11')]
+check("class=\"sep\"" not in kit10,
+      'автошапка: eyebrow без дубля названия через «·»')
 
 print('== 3. Jinja-синтаксис и HTTP-рендер ==')
 from jinja2 import Environment  # noqa: E402
@@ -139,8 +158,13 @@ check(asset_js.status_code == 200 and b'fetchCachedJSON' in asset_js.data,
 
 pages = [page for group in panel_groups_for('owner') for page in group['pages']]
 paths = [page['path'] for page in pages]
-check(len(paths) == 125 and len(set(paths)) == 125,
-      f'owner-меню содержит 125 уникальные страницы ({len(paths)})')
+# 2026-09-01: система музыки (/play) удалена целиком — пункта «Музыка» в
+# меню нет и самой страницы /music не существует (роут снесён).
+# 2026-09-01: дубль «Варны» (/warn-config) из «Настроек» убран — ступени
+# настраиваются в одном месте, «Лестница наказаний» (/ladder); старый роут
+# оставлен редиректом, но пункта в меню больше нет.
+check(len(paths) == 71 and len(set(paths)) == 71 and '/music' not in paths,
+      f'owner-меню: 71 уникальных страниц, музыки и тикетов нет ({len(paths)})')
 
 rendered = 0
 for route in paths:

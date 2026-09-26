@@ -266,7 +266,7 @@ class CustomFieldManager:
         for field_id, field in self.fields.items():
             value = ticket_data.get(field_id)
             
-            # Показатьnip показатьnmeyeceгini проверить et
+            # Определяем, показывать ли поле
             if not field.should_display(ticket_data):
                 continue
             

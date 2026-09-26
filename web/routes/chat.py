@@ -2,14 +2,14 @@
 """Чат сервера + DM как бот (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def _chat_demo_store ():
     path =os .path .join (_REPO_ROOT ,'data','chat_demo.json')
@@ -150,7 +150,7 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
         if not bot :
-            d =request .get_json (silent =True )or {}
+            d =_safe_json_obj()
             content =str (d .get ('content','')).strip ()
             if not content :return jsonify ({'error':'Сообщение пусто'}),400
             store =_chat_demo_store ()
@@ -170,7 +170,7 @@ def register(ctx):
             return jsonify ({'ok':True })
         channel =bot .get_channel (int (channel_id ))
         if not channel :return jsonify ({'error':'Канал не найден'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         content =d .get ('content','').strip ()
         if not content :return jsonify ({'error':'Сообщение пусто'}),400 
         def _send ():
@@ -197,9 +197,11 @@ def register(ctx):
             return jsonify ({'ok':True })
         channel =bot .get_channel (int (channel_id ))
         if not channel :return jsonify ({'error':'Канал не найден'}),404 
-        def _delete ():
-            msg =_run_async (channel .fetch_message (int (message_id )))
-            _run_async (msg .delete ())
+        async def _delete ():
+            # мы уже на лупе бота: fetch/delete — корутины discord.py,
+            # _run_async внутри корутины + sync-обёртка давали вечный 500
+            msg =await (channel .fetch_message (int (message_id )))
+            await (msg .delete ())
         try :
             asyncio .run_coroutine_threadsafe (_delete (),bot .loop ).result (timeout =10 )
             return jsonify ({'ok':True })
@@ -313,7 +315,7 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio as _asyncio ,datetime as _dt2 
         if not bot :
-            d =request .get_json (silent =True )or {}
+            d =_safe_json_obj()
             content =str (d .get ('content','')).strip ()
             if not content :return jsonify ({'error':'Сообщение пусто'}),400
             log =_load_dm_log ()
@@ -323,7 +325,7 @@ def register(ctx):
             log [user_id ]=msgs 
             _save_dm_log (log )
             return jsonify ({'ok':True }) 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         content =data .get ('content','').strip ()
         if not content :return jsonify ({'error':'Сообщение пусто'}),400 
 

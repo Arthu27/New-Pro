@@ -23,6 +23,7 @@ import time
 from datetime import datetime, timezone
 
 from web.routes._common import (
+    _safe_json_obj,
     _log,
     render_template, session, request, jsonify,
 )
@@ -476,7 +477,7 @@ def register(ctx):
     active_guild_id = ctx.active_guild_id
 
     def _json():
-        return request.get_json(silent=True) or {}
+        return _safe_json_obj()
 
     @app.route('/mod-control')
     @login_required

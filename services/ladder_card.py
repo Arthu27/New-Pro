@@ -32,8 +32,9 @@ MUTED          = (143, 163, 200, 255)
 DIM            = (124, 141, 176, 255)
 
 ACTIONS = {
-    'mute':    ('МУТ', (230, 126, 34), 'log_mod_256.png'),
-    'timeout': ('МУТ', (230, 126, 34), 'log_mod_256.png'),
+    'mute':    ('МУТ ЧАТА', (230, 126, 34), 'log_mod_256.png'),
+    'timeout': ('МУТ ЧАТА', (230, 126, 34), 'log_mod_256.png'),
+    'vmute':   ('ВОЙС-МУТ', (52, 152, 219), 'log_mod_256.png'),
     'kick':    ('КИК', (231, 76, 60), 'log_mod_256.png'),
     'ban':     ('БАН', (192, 57, 43), 'log_mod_256.png'),
 }
@@ -223,7 +224,7 @@ def render_ladder_card(steps, guild_name=''):
                brand, font=_font(24, True), fill=GOLD_BRIGHT)
 
         buf = io.BytesIO()
-        img.convert('RGB').save(buf, 'PNG', optimize=True)
+        img.convert('RGB').save(buf, 'PNG')
         return buf.getvalue()
     except Exception:
         return None

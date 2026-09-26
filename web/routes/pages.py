@@ -3,13 +3,12 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _notify_discord_sender, _fire_panel_notification,
+    _process_action, _log, _json_snow,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -30,10 +29,22 @@ def register(ctx):
 
 
     @app .route ('/channels')
-    @login_required 
+    @login_required
     @role_required ('admin')
     def channels_page ():
-        return render_template ('channels.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
+        # Первый рендер — каналы вшиваем прямо в HTML из того же источника,
+        # что и /api/guild/<gid>/channels: список виден сразу, даже если
+        # JS-цепочка загрузки (api/guilds → loadChannels) не добежала.
+        initial =[]
+        try :
+            _fn =app .view_functions .get ('api_guild_channels')
+            if _fn and MAIN_GUILD_ID :
+                _data =_fn (str (MAIN_GUILD_ID )).get_json ()
+                initial =_data if isinstance (_data ,list )else ((_data or {}).get ('channels')or [])
+        except Exception as _ex :
+            _log .debug ('channels_page: первый рендер каналов: %s',_ex )
+        # Snowflake-safe для Jinja tojson: большие id — строками
+        return render_template ('channels.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID ,initial_channels =_json_snow (initial ))
 
 
     @app .route ('/mod-history')
@@ -48,108 +59,27 @@ def register(ctx):
     @role_required ('admin')
     def welcome_editor_page ():
         return render_template ('welcome_editor.html',role =session .get ('role'),username =session .get ('username'),
-        main_guild_id =MAIN_GUILD_ID )
+        main_guild_id =active_guild_id ())
 
 
-    @app .route ('/reaction-roles')
-    @login_required 
-    @role_required ('admin')
-    def reaction_roles_page ():
-        return render_template ('reaction_roles.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
-
-
-    @app .route ('/giveaway')
-    @login_required 
-    @role_required ('admin')
-    def giveaway_page ():
-        return render_template ('giveaway.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id (),main_guild_id =MAIN_GUILD_ID )
-
-
-    @app .route ('/polls')
-    @login_required 
+    @app .route ('/events')
+    @login_required
     @role_required ('mod')
-    def polls_page ():
-        return render_template ('polls.html',role =session .get ('role'),username =session .get ('username'))
+    def events_page ():
+        gid = active_guild_id()
+        return render_template('events.html', role=session.get('role'),
+                               username=session.get('username'),
+                               main_guild_id=gid, guild_id=gid)
 
 
-    @app .route ('/autorole')
-    @login_required 
-    @role_required ('admin')
-    def autorole_page ():
-        return render_template ('autorole.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/leveling')
-    @login_required 
-    @role_required ('owner')
-    def leveling_page ():
-        return render_template ('leveling.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/ai-tickets')
-    @login_required 
-    @role_required ('mod')
-    def ai_tickets_page ():
-        """Показать диалоги AI-тикетов"""
-        try :
-            guild_id =int (session .get ('guild_id',MAIN_GUILD_ID )or 0 )
-        except (TypeError ,ValueError ):
-            guild_id =0 
-        tickets_data =_load_ai_tickets (guild_id )if guild_id else {}
-
-        # Bot instance'dan channel информация al
-        import web .app as _app ;bot =_app .bot_instance 
-        tickets_list =[]
-
-        for channel_id ,ticket in tickets_data .items ():
-            try :
-                guild =bot .get_guild (int (guild_id ))
-                channel =guild .get_channel (int (channel_id ))if guild else None 
-                user =guild .get_member (ticket ['user_id'])if guild and ticket .get ('user_id')else None 
-
-                tickets_list .append ({
-                'channel_id':channel_id ,
-                'channel_name':channel .name if channel else f"ticket-{channel_id}",
-                'user_name':user .display_name if user else 'Неизвестно',
-                'user_id':ticket .get ('user_id'),
-                'status':ticket .get ('status','unknown'),
-                'category':ticket .get ('category','общий'),
-                'ai_message_count':ticket .get ('ai_message_count',0 ),
-                'history':ticket .get ('history',[]),
-                'escalated_at':ticket .get ('escalated_at'),
-                'staff_notified':ticket .get ('staff_notified',False )
-                })
-            except Exception as _ex:
-                _log.debug("ai_tickets_page(): подавлено: %s", _ex)
-
-        return render_template (
-        'ai_tickets.html',
-        role =session .get ('role'),
-        username =session .get ('username'),
-        tickets =tickets_list 
-        )
 
 
-    @app .route ('/economy')
-    @login_required 
-    @role_required ('admin')
-    def economy_page ():
-        return render_template ('economy.html',role =session .get ('role'),username =session .get ('username'))
 
 
-    @app .route ('/scheduled-messages')
-    @login_required 
-    @role_required ('owner')
-    def scheduled_messages_page ():
-        return render_template ('scheduled_messages.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
-
-
-    @app .route ('/custom-commands')
-    @login_required 
-    @role_required ('owner')
-    def custom_commands_page ():
-        return render_template ('custom_commands.html',role =session .get ('role'),username =session .get ('username'),
-        main_guild_id =MAIN_GUILD_ID )
 
 
     @app .route ('/member-notes')
@@ -173,18 +103,8 @@ def register(ctx):
         return render_template ('invite_tracker.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/suggestions')
-    @login_required 
-    @role_required ('mod')
-    def suggestions_page ():
-        return render_template ('suggestions.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/starboard')
-    @login_required 
-    @role_required ('mod')
-    def starboard_page ():
-        return render_template ('starboard.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
     @app .route ('/spravka')
@@ -217,11 +137,6 @@ def register(ctx):
         return render_template ('bot_diagnostics.html',role =session .get ('role'),username =session .get ('username'))
 
 
-    @app .route ('/leveling-admin')
-    @login_required 
-    @role_required ('admin')
-    def leveling_admin_page ():
-        return render_template ('leveling_admin.html',role =session .get ('role'),username =session .get ('username'))
 
 
     @app .route ('/ai-moderation')
@@ -246,17 +161,14 @@ def register(ctx):
 
 
     @app .route ('/warn-config')
-    @login_required 
+    @login_required
     @role_required ('admin')
     def warn_config_page ():
-        return render_template ('warn_config.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
+        # Настройка ступеней варнов живёт в одном месте — «Лестница наказаний».
+        # Старая страница с конфликтующим форматом закрыта: редирект туда же.
+        return redirect (url_for ('ladder_page'))
 
 
-    @app .route ('/duty-panel-web')
-    @login_required 
-    @role_required ('admin')
-    def duty_panel_web_page ():
-        return render_template ('duty_panel.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
 
 
     @app .route ('/member-search')

@@ -74,8 +74,8 @@ client = appmod.app.test_client()
 with client.session_transaction() as sess:
     sess.clear()
     sess['logged_in'] = True
-    sess['username'] = 'admin'
-    sess['role'] = 'admin'
+    sess['username'] = 'owner'
+    sess['role'] = 'owner'   # хаб Каналов и его API — только владелец
 
 CH = str(1384282749317152878)
 r = client.get('/api/channel-routes').get_json()
@@ -120,6 +120,15 @@ src = open(os.path.join(ROOT, 'web', 'templates', 'antifake.html'),
            encoding='utf-8').read()
 check('Number(uid)' not in src and 'user_id: String(uid)' in src,
       'antifake: user_id строкой при очистке страйков')
+
+base = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('digits.length >= 16' in base,
+      'base.html data-act: snowflake ≥16 цифр остаётся строкой')
+check("if (/^-?\\d+$/.test(v)) return parseInt(v, 10);" not in base,
+      'base.html: нет слепого parseInt всех цифр')
+chat = open(os.path.join(ROOT, 'web', 'templates', 'chat.html'), encoding='utf-8').read()
+check("id = String(id == null ? '' : id)" in chat,
+      'chat.selectChannel: id принудительно строкой')
 
 print('== 4. MAIN_GUILD_ID: нормализация цифр ==')
 import web.app as _wa  # noqa: E402
@@ -184,7 +193,7 @@ with c.session_transaction() as s:
     s["role"] = "owner"
 ok = True
 for url in ("/guardian", "/mod-settings", "/pagerduty", "/role-settings",
-            "/temp-moderation", "/proofs", "/automation"):
+            "/temp-moderation", "/proofs", "/antifake"):
     r = c.get(url)
     body = r.get_data(as_text=True)
     quoted = ('var GUILD_ID = "1484574976580391345";' in body
@@ -203,7 +212,7 @@ print("PAGES_OK")
 out = subprocess.run([sys.executable, '-c', code], capture_output=True,
                      text=True, timeout=300)
 check('PAGES_OK' in out.stdout,
-      'guardian/mod-settings/pagerduty/role-settings/temp-mod/proofs/automation: id строкой')
+      'guardian/mod-settings/pagerduty/role-settings/temp-mod/proofs/antifake: id строкой')
 if out.returncode != 0 or 'PAGES_OK' not in out.stdout:
     print(out.stdout[-600:], out.stderr[-600:])
 

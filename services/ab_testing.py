@@ -24,7 +24,7 @@ class ABTestVariant:
         self.name = name
         self.description = description
         self.config = {}
-        self.weight = 1.0  # Trafik aгыrlыгы
+        self.weight = 1.0  # вес трафика
         self.enabled = True
     
     def set_config(self, config: Dict[str, Any]):
@@ -72,7 +72,7 @@ class ABTest:
         self.start_time = None
         self.end_time = None
         self.target_sample_size = None
-        self.metrics = []  # Ёlчюlecek metrikler
+        self.metrics = []  # метрики для отслеживания
         self.created_at = datetime.now()
         self.created_by = None
         self.tags = {}
@@ -135,11 +135,11 @@ class ABTest:
         if not enabled_variants:
             return None
         
-        # Deterministik seчim (aynы пользователь her zaman aynы вариантовы alыr)
+        # Детерминированный выбор: один пользователь всегда попадает в один и тот же вариант
         hash_input = f"{self.test_id}:{user_id}"
         hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16)
         
-        # Весlы seчim
+        # Взвешенный выбор
         total_weight = sum(v.weight for v in enabled_variants)
         
         if total_weight == 0:
@@ -440,7 +440,7 @@ class ABTestAnalytics:
                 'metrics': {}
             }
             
-            # Her metrik для dёnюшюm соотношение
+            # Каждая метрика — доля конверсии
             for metric in test.metrics:
                 metric_name = metric['name']
                 conversions = self.tracking.get_variant_conversions(test_id, variant_id, metric_name)
@@ -489,7 +489,7 @@ class ABTestAnalytics:
         rate_a = conversions_a / impressions_a
         rate_b = conversions_b / impressions_b
         
-        # Basit z-test (gerчek uygulamada более sofistike test kullanыlmalы)
+        # Простой z-тест (в продакшене стоил бы использовать более строгий метод)
         pooled_rate = (conversions_a + conversions_b) / (impressions_a + impressions_b)
         
         se = (pooled_rate * (1 - pooled_rate) * (1/impressions_a + 1/impressions_b)) ** 0.5
@@ -499,8 +499,8 @@ class ABTestAnalytics:
         
         z_score = (rate_a - rate_b) / se
         
-        # Basit p-value hesaplama (gerчek uygulamada scipy.stats kullanыlmalы)
-        p_value = 2 * (1 - abs(z_score) / 3)  # Yaklaшыk
+        # Простая оценка p-value (в продакшене стоил бы использовать scipy.stats)
+        p_value = 2 * (1 - abs(z_score) / 3)  # приблизительная оценка
         
         p_value = max(0, min(1, p_value))
         

@@ -248,7 +248,7 @@ check(r.status_code == 200 and 'CAN_MANAGE = false' in html_u, 'участник
 
 src = open(os.path.join(ROOT, 'web', 'templates', 'announcements.html'), encoding='utf-8').read()
 for token in ('ann-chip', 'data-retry', '/api/announcements/retry', "box.className = 'ann-grid'",
-              'redelivered_by', 'fa-rotate-right', 'setInterval'):
+              'redelivered_by', 'fa-rotate-right', 'setLiveRefresh'):
     assert token in src, token
 check(True, 'шаблон: чипы, кнопка «Дослать», живое обновление — на месте')
 import re

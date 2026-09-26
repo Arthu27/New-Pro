@@ -2,11 +2,14 @@
 """
 Hakumo — Система репортов (ТЗ 2026-08-26)
 ------------------------------------------
-/report -> приватная ветка в канале репортов с панелью управления:
-Select-меню для режима обсуждения, слова, вынесения решения (дефолт
-по рецидивам / индивидуальное + срок). Переписка при закрытии сжимается
-zlib и уходит в архив (services/reports_core). /my_violations — мои
-нарушения (обжалование наказаний — глобальная /апелляция в ЛС боту).
+/report -> «Позвать модератора»: сигнал модерации уходит карточкой
+в канал модерации (тег роли), модераторы разбирают его прямо там
+(Принять / Отклонить / «Открыть разбор» — отдельная ветка с панелью:
+режим обсуждения, слова, вынесение решения). Доказательства НЕ собираем
+(решение владельца 2026-09-05: «/report — это позвать модератора»).
+Переписка при закрытии сжимается zlib и уходит в архив
+(services/reports_core). /my_violations — мои нарушения (обжалование
+наказаний — кнопка апелляции: в ЛС боту и в «своих наказаниях»).
 
 Хранение: SQLite data/reports.db + data/reports_<gid>.json (без Postgres —
 его на VDS нет, данных мизер). Оформление: чистые эмбеды без эмодзи.
@@ -29,10 +32,22 @@ _word_hint_ts = {}
 
 
 def _fire_new_event(event, body):
-    """Событие в колокольчик панели (веб). fail-safe: уведомления — не ядро."""
+    """Событие в колокольчик панели (веб). fail-safe: уведомления — не ядро.
+
+    notify_event делает синхронный HTTP (webhook) и запись файла; вызывается
+    из async-команд, поэтому тяжёлую часть уводим в рабочий поток — без
+    блокировки event loop."""
     try:
+        import asyncio as _asyncio
         from services.notification_dispatcher import notify_event
-        notify_event(event, None, body)
+        try:
+            _asyncio.get_running_loop()
+        except RuntimeError:
+            # нет активного loop'а (вызов из синхронного кода) — шлём напрямую
+            notify_event(event, None, body)
+        else:
+            _asyncio.get_running_loop().run_in_executor(
+                None, lambda: notify_event(event, None, body))
     except Exception as _ex:
         _log.debug('reports: событие %s: %s', event, _ex)
 
@@ -64,6 +79,36 @@ def _verdict_allowed(guild, user, kind) -> bool:
         return True
 
 
+def _verdict_limit_denied(guild, user, kind):
+    """Лимиты стаффа для вердикта: None — можно, иначе готовый текст отказа.
+
+    Тот же счётчик, что у /mute, /ban и /kick: вердикт по репорту —
+    полноценное наказание и списывает расходку модератора.
+    """
+    key = _VERDICT_ACL.get(kind)
+    if not key or guild is None or user is None:
+        return None
+    try:
+        from services import staff_limits as _SL
+        ok, deny = _SL.check_action(guild, user, key)
+        return None if ok else deny
+    except Exception as _ex:
+        _log.debug('reports: verdict limit: %s', _ex)
+        return None
+
+
+def _record_verdict(guild, user, kind):
+    """Успешный вердикт — в счётчик лимитов модератора."""
+    key = _VERDICT_ACL.get(kind)
+    if not key or guild is None or user is None:
+        return
+    try:
+        from services import staff_limits as _SL
+        _SL.record_hit(guild.id, user.id, key, 1)
+    except Exception as _ex:
+        _log.debug('reports: verdict record: %s', _ex)
+
+
 def _any_verdict_allowed(guild, user) -> bool:
     """Есть ли у модератора хоть одно действие для решения репорта."""
     return any(_verdict_allowed(guild, user, k) for k in _VERDICT_ACL)
@@ -71,6 +116,14 @@ def _any_verdict_allowed(guild, user) -> bool:
 
 def _cfg(guild_id) -> dict:
     return RC.load_cfg(guild_id)
+
+
+def _fill_select(view, options):
+    """Опции у @ui.select живут на children, не на self.select."""
+    for child in view.children:
+        if isinstance(child, discord.ui.Select):
+            child.options = list(options)[:25]
+            return
 
 
 async def _dm(user, embed) -> bool:
@@ -138,14 +191,23 @@ class ReportPanelView(discord.ui.View):
         if not await self._mod_only(interaction):
             return
         cfg = _cfg(interaction.guild_id)
-        rid = cfg.get('mod_role_id')
-        ping = f'<@&{rid}> ' if rid else ''
+        roles = _mod_ping_roles(interaction.guild)
+        ping = ' '.join(r.mention for r in roles)
         e = discord.Embed(
-            title='Запрошен дополнительный модератор',
-            description=f'Ветку вызвал {interaction.user.mention}. '
-                        'Подключайтесь к рассмотрению.',
+            title='Нужен ещё модератор',
+            description=f'{interaction.user.mention} просит подключиться к разбору.',
             color=0x5865F2)
-        await interaction.response.send(f'{ping}', embed=e)
+        try:
+            _kw = {'embed': e}
+            if ping:
+                _kw['content'] = ping
+            await _deliver_mod_ping(interaction.channel, roles, **_kw)
+        except Exception as _ex:
+            _log.debug('rpt_call ping: %s', _ex)
+            return await interaction.response.send_message(
+                'Не удалось тегнуть модераторов.', ephemeral=True)
+        await interaction.response.send_message(
+            'Модераторов позвали.', ephemeral=True)
 
     @discord.ui.button(label='Вынести решение', style=discord.ButtonStyle.primary,
                        custom_id='rpt_verdict')
@@ -225,7 +287,7 @@ class WordSelectView(discord.ui.View):
             opts.append(discord.SelectOption(label=label, value=str(uid)))
         for uid in ticket.get('witnesses', [])[:3]:
             opts.append(discord.SelectOption(label=f'Свидетель {uid}', value=str(uid)))
-        self.select.options = opts[:25]
+        _fill_select(self, opts[:25])
 
     @discord.ui.select(cls=discord.ui.Select, placeholder='Кому дать слово')
     async def choose(self, interaction, select):
@@ -310,17 +372,17 @@ class DurationSelectView(discord.ui.View):
     def __init__(self, kind):
         super().__init__(timeout=180)
         self.kind = kind
-        self.select.options = [
+        _fill_select(self, [
             discord.SelectOption(label=name,
-                                 value=str(int(hours)) if hours else '0',
+                                 value=str(hours),
                                  description='До развотда' if not hours else '')
-            for name, hours in RC.DURATIONS]
+            for name, hours in RC.DURATIONS])
 
     @discord.ui.select(cls=discord.ui.Select, placeholder='Срок')
     async def choose(self, interaction, select):
         hours = float(select.values[0])
         name = next((n for n, h in RC.DURATIONS
-                     if int(h) == int(hours)), 'срок')
+                     if abs(float(h) - hours) < 1e-9), 'срок')
         label = f"{RC.KIND_LABELS[self.kind]} · {name}"
         pending = {'kind': self.kind, 'hours': hours, 'label': label,
                    'source': 'custom'}
@@ -365,6 +427,702 @@ class CloseConfirmView(discord.ui.View):
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  ЖАЛОБЫ КАРТОЧКОЙ В КАНАЛ МОДЕРАЦИИ (заказ владельца 2026-08-31)
+#  ─────────────────────────────────────────────────────────────────
+#  /report отправляет карточку (скрин/видео вложением) в выбранный
+#  владельцем канал репортов (панель или /report-setup). Если канал не
+#  задан — бот создаёт закрытый #модерация как запасной вариант.
+#  Под карточкой кнопки: Принять / Отклонить / Открыть разбор.
+#  Карточка сразу тегает роль модераторов — это и есть «позвать
+#  модератора»: сигнал в канале модерации, разбор там же.
+# ═══════════════════════════════════════════════════════════════════
+MOD_CHANNEL_NAME = '🛡・модерация'
+# Заказ владельца 2026-09-05: вызовы модератора (/report) идут в ЭТОТ канал.
+# Право «Управление каналами» боту для этого НЕ нужно — канал уже существует.
+DEFAULT_REPORT_CHANNEL_ID = 1312434963941167134
+
+
+async def _ensure_mod_channel(guild, mod_role):
+    """Канал модерации: найти по имени/конфигу или создать закрытый.
+
+    Возвращает (channel, created:bool). Канал видят только модераторы и
+    бот; @everyone прав на чтение не имеет.
+    """
+    # 1) уже настроенный канал репортов из конфига
+    cfg = _cfg(guild.id)
+    cid = cfg.get('channel_id')
+    if cid:
+        ch = guild.get_channel(int(cid))
+        if ch is not None:
+            return ch, False
+    # 2) канал со старым прямым именем «модерация» (exact, как раньше)
+    ch = discord.utils.get(guild.text_channels, name='модерация')
+    if ch is not None:
+        return ch, False
+    # 2.5) маршрут из панели «Маршруты каналов» (заказ владельца 2026-09-05):
+    # канал уже существует, пишем туда — «Управление каналами» не требуется.
+    try:
+        from services import channel_routes as _CR
+        _rid = _CR.get_route(guild.id, 'report_channel')
+        if _rid:
+            ch = guild.get_channel(int(_rid))
+            if ch is not None:
+                return ch, False
+    except Exception as _ex:
+        _log.debug('reports: маршрут report_channel: %s', _ex)
+    # 2.6) канал репортов владельца по умолчанию (заказ 2026-09-05) —
+    # /report больше не ломается от отсутствия «Управления каналами».
+    ch = guild.get_channel(DEFAULT_REPORT_CHANNEL_ID)
+    if ch is not None:
+        return ch, False
+    # 2.7) канонический лог-канал 🛡・модерация (или старые -модерация,
+    # mod-log …) — раньше exact-поиск по голому «модерация» его не видел
+    # и на таких серверах плодился канал-дубликат.
+    try:
+        from cogs.logs import find_log_channel as _find_mod_log
+        ch = _find_mod_log(guild, 'mod')
+        if ch is not None:
+            return ch, False
+    except Exception as _ex:
+        _log.debug('reports: поиск канала модерации: %s', _ex)
+    # 3) создаём закрытый канал модерации (крайний случай)
+    over = {
+        guild.default_role: discord.PermissionOverwrite(
+            view_channel=False, read_messages=False),
+        guild.me: discord.PermissionOverwrite(
+            view_channel=True, read_messages=True, send_messages=True,
+            embed_links=True, attach_files=True, manage_messages=True,
+            manage_channels=True, read_message_history=True,
+            create_private_threads=True, manage_threads=True),
+    }
+    if mod_role is not None:
+        over[mod_role] = discord.PermissionOverwrite(
+            view_channel=True, read_messages=True, send_messages=True,
+            manage_messages=True, read_message_history=True,
+            create_private_threads=True, manage_threads=True)
+    try:
+        ch = await guild.create_text_channel(
+            MOD_CHANNEL_NAME, overwrites=over,
+            topic='Жалобы участников и их разбор. Видно только модерации.',
+            reason='Система репортов: канал модерации не найден — создан')
+        return ch, True
+    except Exception as ex:
+        _log.warning('reports: не удалось создать канал модерации: %s', ex)
+        return None, False
+
+
+def _mod_role_from_cfg(guild):
+    """Роль модераторов из конфига репортов (панель/`/report-setup`)."""
+    rid = str(_cfg(guild.id).get('mod_role_id') or '')
+    if rid.isdigit():
+        role = guild.get_role(int(rid))
+        if role is not None:
+            return role
+    return None
+
+
+def _mod_ping_roles(guild):
+    """Кого тегать в карточке /report: ТОЛЬКО модераторы.
+
+    Не кураторы и не админы (заказ владельца: «тегает кураторов и админов —
+    надо только модеров»). Источник: каноническая роль панели (единая роль
+    модераторов) + роли с меткой ``mod`` в role_map.json. Авто-подхват
+    всего, у кого ban/manage_messages, убран — оттуда как раз летели
+    админские и кураторские роли, а Discord рисовал «тег» без уведомления.
+    """
+    out = []
+    seen = set()
+
+    def _add(role):
+        if role is None:
+            return
+        rid = getattr(role, 'id', None)
+        if rid is None or rid in seen:
+            return
+        if getattr(role, 'managed', False):
+            return
+        _isdef = getattr(role, 'is_default', None)
+        if callable(_isdef) and _isdef():
+            return
+        seen.add(rid)
+        out.append(role)
+
+    try:
+        from services.mod_role import resolve_mod_role
+        _add(resolve_mod_role(guild))
+    except Exception as _ex:
+        _log.debug('reports: resolve_mod_role: %s', _ex)
+    _add(_mod_role_from_cfg(guild))
+    try:
+        from services import ignored_roles as _IR
+        import json as _json
+        with open('data/role_map.json', encoding='utf-8') as _f:
+            _rm = _json.load(_f)
+        for _rid, _pr in (_rm.items() if isinstance(_rm, dict) else []):
+            if str(_pr) != 'mod' or not str(_rid).isdigit():
+                continue
+            if _IR.is_ignored_role(_rid, guild.id):
+                continue
+            _add(guild.get_role(int(_rid)))
+    except Exception as _ex:
+        _log.debug('reports: role_map: %s', _ex)
+    return out
+
+
+# Роль «Стафф админ» (заказ владельца 2026-09-21) — последний рубеж
+# эскалации: жалоба на администратора (или выше) уходит именно ей.
+STAFF_ESCALATION_ROLE_ID = 1549118975110152263
+
+# тир цели жалобы → тиры, которые её разбирают (не тегаем персонал,
+# который по staff_hierarchy и так не может судить равного/старшего)
+_ESCALATION_TIERS = {
+    'mod': ({'curator', 'admin', 'owner'}, 'Кураторы и выше'),
+    'curator': ({'admin', 'owner'}, 'Администраторы и выше'),
+}
+
+
+def _roles_by_tiers(guild, tiers, tmap):
+    out = []
+    seen = set()
+    for role in getattr(guild, 'roles', None) or []:
+        rid = str(getattr(role, 'id', ''))
+        if tmap.get(rid) in tiers and rid not in seen:
+            seen.add(rid)
+            out.append(role)
+    return out
+
+
+def _staff_escalation(guild, target):
+    """Жалоба на стафф — кого звать (владелец 2026-09-21, эскалация вверх):
+
+      на модератора → кураторы и выше
+      на куратора   → администраторы и выше
+      на админа/владельца панели → фиксированная роль «Стафф админ»
+
+    Возвращает (roles, target_tier, escalation_label). target_tier == 'uye',
+    если жалоба помечена «Стафф», а цель на деле стаффом не значится —
+    тогда эскалации нет, зовём обычных модераторов (см. _deliver_report).
+    """
+    from services.staff_hierarchy import target_panel_role
+    tier = target_panel_role(guild, target)
+    try:
+        from services.staff_limits import _role_tier_map
+        tmap = _role_tier_map()
+    except Exception as _ex:
+        _log.debug('reports: escalation tier_map: %s', _ex)
+        tmap = {}
+    fixed = guild.get_role(STAFF_ESCALATION_ROLE_ID) if guild else None
+    spec = _ESCALATION_TIERS.get(tier)
+    if spec is not None:
+        tiers, label = spec
+        roles = _roles_by_tiers(guild, tiers, tmap)
+        if not roles and fixed is not None:
+            roles = [fixed]  # на сервере нет тировых ролей — фиксированная
+        return roles, tier, label
+    if tier in ('admin', 'owner'):
+        return ([fixed] if fixed is not None else []), tier, 'Стафф-админ'
+    return [], tier, ''
+
+
+async def _deliver_mod_ping(channel, roles, **kwargs):
+    """Отправить сообщение так, чтобы тег роли РЕАЛЬНО прилетел.
+
+    Discord рисует <@&id> цветным именем роли даже без уведомления, если
+    роль не mentionable и у бота нет «Упоминать @everyone, @here и все
+    роли». Тогда модеры видят «как будто тег», а пуш не приходит.
+
+    Делаем: явный AllowedMentions(roles=[...]); если роль нельзя упомянуть —
+    на секунду включаем mentionable; если и это нельзя — тегаем самих
+    участников с этой ролью (только моды, не кураторы/админы).
+    """
+    roles = [r for r in (roles or []) if r is not None]
+    extra_users = []
+    flipped = []
+    me = getattr(getattr(channel, 'guild', None), 'me', None)
+    perms = None
+    if me is not None:
+        try:
+            perms = channel.permissions_for(me)
+        except Exception:
+            perms = getattr(me, 'guild_permissions', None)
+    can_all = bool(perms and (getattr(perms, 'mention_everyone', False)
+                              or getattr(perms, 'administrator', False)))
+    need_users = False
+    for role in roles:
+        if can_all or getattr(role, 'mentionable', True):
+            continue
+        edited = False
+        edit = getattr(role, 'edit', None)
+        if callable(edit):
+            try:
+                await edit(mentionable=True,
+                           reason='Вызов модератора /report: живой тег')
+                flipped.append(role)
+                edited = True
+            except Exception as _ex:
+                _log.debug('reports: mentionable on: %s', _ex)
+        if not edited:
+            need_users = True
+    if need_users:
+        seen_u = set()
+        for role in roles:
+            for m in list(getattr(role, 'members', None) or []):
+                if m is None or getattr(m, 'bot', False):
+                    continue
+                uid = getattr(m, 'id', None)
+                if uid is None or uid in seen_u:
+                    continue
+                seen_u.add(uid)
+                extra_users.append(m)
+                if len(extra_users) >= 12:
+                    break
+            if len(extra_users) >= 12:
+                break
+        if extra_users:
+            extra = ' '.join(u.mention for u in extra_users)
+            prev = (kwargs.get('content') or '').strip()
+            kwargs['content'] = (prev + ' ' + extra).strip()
+    kwargs['allowed_mentions'] = discord.AllowedMentions(
+        everyone=False,
+        users=extra_users if extra_users else False,
+        roles=roles if roles else False,
+    )
+    try:
+        return await channel.send(**kwargs)
+    finally:
+        for role in flipped:
+            try:
+                await role.edit(mentionable=False,
+                                reason='Вызов модератора /report: вернули как было')
+            except Exception as _ex:
+                _log.debug('reports: mentionable off: %s', _ex)
+
+
+def _report_card_body(*, caller, target, against: str, location: str,
+                      voice_name: str, channel_mention: str, reason: str,
+                      violations_text: str, days, target_tier: str = '',
+                      escalation_label: str = '') -> str:
+    """Текст V2-карточки вызова — секции вместо полей эмбеда."""
+    from services.staff_hierarchy import LABELS as _TIER_LABELS
+    against_label = ('🛡️ Состав модерации (стафф)' if against == 'staff'
+                     else '👤 Обычный участник')
+    location_label = ('🔊 Голосовой канал' if location == 'voice'
+                      else '💬 Чат')
+    lines = []
+    if against == 'staff':
+        tier_label = _TIER_LABELS.get(target_tier, '') if target_tier else ''
+        who = f' ({tier_label})' if tier_label else ''
+        lines.append(f'⚠️ **Жалоба касается персонала{who}** — конфликт '
+                     'интересов, разбирает старший состав.')
+        if escalation_label:
+            lines.append(f'**Кто разбирает:** {escalation_label}')
+        lines.append('')
+    lines += [
+        f'**Кто вызвал:** {caller.mention}',
+        f'**Из-за кого:** {target.mention} · `{target.id}`',
+        f'**Категория:** {against_label}',
+        f'**Где произошло:** {location_label}',
+    ]
+    if voice_name:
+        lines.append(f'**Сейчас в войсе:** {voice_name}')
+    lines.append(f'**Откуда вызов:** {channel_mention}')
+    lines.append('')
+    lines.append(f'**Что случилось**\n{reason}')
+    lines.append('')
+    lines.append(f'**Прошлые нарушения ({days} дн.)**\n{violations_text}')
+    return '\n'.join(lines)
+
+
+class ReportCardView(discord.ui.LayoutView):
+    """Карточка вызова в канале модерации — Components V2, чёрный блок.
+
+    Один generic persistent view (диспетчер по custom_id, как раньше):
+    состояние читаем из RC.ticket_get(interaction.message.id), а не из
+    атрибутов view — поэтому регистрация после рестарта (cog_load) не
+    требует ни per-message снимка, ни повторной отправки.
+    """
+
+    def __init__(self, *, title: str = None, body: str = '',
+                footer: str = '', accent: int = None):
+        super().__init__(timeout=None)
+        self._title = title or '🛎️ Вызов модератора'
+        self._body = body or ''
+        self._footer = footer or ''
+        self._accent = accent if accent is not None else 0xE74C3C
+        self._resolved = False
+        self._status_line = None
+        self._accept_btn = discord.ui.Button(
+            label='Принять', style=discord.ButtonStyle.success,
+            emoji='✅', custom_id='rcard_accept')
+        self._accept_btn.callback = self.accept
+        self._reject_btn = discord.ui.Button(
+            label='Отклонить', style=discord.ButtonStyle.danger,
+            emoji='❌', custom_id='rcard_reject')
+        self._reject_btn.callback = self.reject
+        self._thread_btn = discord.ui.Button(
+            label='Открыть разбор', style=discord.ButtonStyle.primary,
+            emoji='🧵', custom_id='rcard_thread')
+        self._thread_btn.callback = self.open_thread
+        self._rebuild()
+
+    def _rebuild(self):
+        self.clear_items()
+        from services.v2_layouts import V2_AVAILABLE, build_report_card_items
+        if not V2_AVAILABLE:
+            return
+        buttons = None if self._resolved else [
+            self._accept_btn, self._reject_btn, self._thread_btn]
+        body = self._body
+        if self._status_line:
+            body = f'{body}\n\n{self._status_line}' if body else self._status_line
+        items = build_report_card_items(
+            title=self._title, body=body, footer=self._footer,
+            buttons=buttons, accent=self._accent)
+        for it in (items or []):
+            self.add_item(it)
+
+    async def _mod_only(self, interaction) -> bool:
+        if not _is_mod(interaction.user, _cfg(interaction.guild_id)):
+            await interaction.response.send_message(
+                'Разобрать вызов могут модераторы.', ephemeral=True)
+        else:
+            return True
+        return False
+
+    async def _card_state(self, interaction):
+        """Запись вызова по сообщению-карточке (kind='card')."""
+        return RC.ticket_get(interaction.message.id)
+
+    async def accept(self, interaction: discord.Interaction):
+        if not await self._mod_only(interaction):
+            return
+        await self._card_state(interaction)
+        RC.ticket_set(interaction.message.id,
+                      verdict=_json.dumps({'kind': 'accepted',
+                                           'label': 'Вызов принят'}),
+                      closed=datetime.now(timezone.utc).timestamp())
+        self._resolved = True
+        self._status_line = f'✅ **Принято** — {interaction.user.mention}'
+        self._accent = 0x2ECC71
+        self._rebuild()
+        # V2: edit только view= — content/embed в edit ломают компоненты.
+        await interaction.response.edit_message(view=self)
+        await interaction.followup.send(
+            f'Вызов принят {interaction.user.mention}. Откройте разбор '
+            'кнопкой «Открыть разбор», если нужна отдельная ветка.',
+            ephemeral=True)
+
+    async def reject(self, interaction: discord.Interaction):
+        if not await self._mod_only(interaction):
+            return
+        RC.ticket_set(interaction.message.id,
+                      verdict=_json.dumps({'kind': 'none',
+                                           'label': 'Отклонено'}),
+                      closed=datetime.now(timezone.utc).timestamp())
+        self._resolved = True
+        self._status_line = f'❌ **Отклонено** — {interaction.user.mention}'
+        self._accent = 0x99AAB5
+        self._rebuild()
+        await interaction.response.edit_message(view=self)
+
+    async def open_thread(self, interaction: discord.Interaction):
+        if not await self._mod_only(interaction):
+            return
+        await interaction.response.defer(ephemeral=True)
+        t = await self._card_state(interaction)
+        accused_name = ''
+        if t:
+            member = interaction.guild.get_member(int(t['accused_id']))
+            accused_name = member.display_name if member else 'участник'
+        _perm_hint = (
+            'Не могу создать ветку разбора: у бота нет права '
+            '«Создавать публичные ветки» в этом канале. Админу: в настройках '
+            'канала → Права доступа → роль бота → включи «Создавать публичные '
+            'ветки» и «Создавать приватные ветки» (или «Управление ветками»). '
+            'Вызов уже принят — разбор можно вести прямо в канале.')
+        _p = (interaction.channel.permissions_for(interaction.guild.me)
+              if interaction.channel else None)
+        if _p is not None and not (_p.administrator
+                                   or _p.create_public_threads
+                                   or _p.manage_threads):
+            return await interaction.followup.send(_perm_hint, ephemeral=True)
+        try:
+            thread = await interaction.message.create_thread(
+                name=f'разбор · {accused_name[:40]}',
+                auto_archive_duration=10080,
+                reason=f'Разбор вызова модератора {interaction.user}')
+        except discord.Forbidden:
+            return await interaction.followup.send(_perm_hint, ephemeral=True)
+        except Exception as ex:
+            return await interaction.followup.send(
+                f'Не удалось создать ветку: {ex}', ephemeral=True)
+        if t:
+            for uid in (t.get('reporter_id'), t.get('accused_id')):
+                try:
+                    m = await interaction.guild.fetch_member(int(uid))
+                    await thread.add_user(m)
+                except Exception as _sx:
+                    _log.debug('rcard add_user: %s', _sx)
+            # карточка → ветка: панель в ветке ищет тикет по channel_id
+            RC.ticket_rekey(interaction.message.id, thread.id)
+        await thread.send(
+            f'Ветка разбора вызова. {interaction.user.mention} ведёт '
+            'модерацию. Здесь доступна полная панель: режим слова, '
+            'решение (варн/мут/кик/бан) и архивация.',
+            view=ReportPanelView())
+        await interaction.followup.send(
+            f'Ветка разбора создана: {thread.mention}', ephemeral=True)
+
+
+class _LegacyReportCardView(discord.ui.View):
+    """Фолбек без Components V2 (старый клиент/discord.py) — тот же эмбед,
+    что раньше. Регистрируется вместо ReportCardView, если V2 недоступен."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    async def _mod_only(self, interaction) -> bool:
+        if not _is_mod(interaction.user, _cfg(interaction.guild_id)):
+            await interaction.response.send_message(
+                'Разобрать вызов могут модераторы.', ephemeral=True)
+        else:
+            return True
+        return False
+
+    async def _card_state(self, interaction):
+        return RC.ticket_get(interaction.message.id)
+
+    @discord.ui.button(label='Принять', style=discord.ButtonStyle.success,
+                       emoji='✅', custom_id='rcard_accept')
+    async def accept(self, interaction, button):
+        if not await self._mod_only(interaction):
+            return
+        await self._card_state(interaction)
+        RC.ticket_set(interaction.message.id,
+                      verdict=_json.dumps({'kind': 'accepted',
+                                           'label': 'Вызов принят'}),
+                      closed=datetime.now(timezone.utc).timestamp())
+        e = interaction.message.embeds[0] if interaction.message.embeds else None
+        if e is not None:
+            e.color = discord.Color(0x2ECC71)
+            e.add_field(name='Статус',
+                        value=f'✅ Принято — {interaction.user.mention}',
+                        inline=False)
+        for b in self.children:
+            b.disabled = b.custom_id not in ('rcard_thread',)
+        await interaction.response.edit_message(embed=e, view=self)
+        await interaction.followup.send(
+            f'Вызов принят {interaction.user.mention}. Откройте разбор '
+            'кнопкой «Открыть разбор», если нужна отдельная ветка.',
+            ephemeral=True)
+
+    @discord.ui.button(label='Отклонить', style=discord.ButtonStyle.danger,
+                       emoji='❌', custom_id='rcard_reject')
+    async def reject(self, interaction, button):
+        if not await self._mod_only(interaction):
+            return
+        RC.ticket_set(interaction.message.id,
+                      verdict=_json.dumps({'kind': 'none',
+                                           'label': 'Отклонено'}),
+                      closed=datetime.now(timezone.utc).timestamp())
+        e = interaction.message.embeds[0] if interaction.message.embeds else None
+        if e is not None:
+            e.color = discord.Color(0x99AAB5)
+            e.add_field(name='Статус',
+                        value=f'❌ Отклонено — {interaction.user.mention}',
+                        inline=False)
+        for b in self.children:
+            b.disabled = True
+        await interaction.response.edit_message(embed=e, view=self)
+
+    @discord.ui.button(label='Открыть разбор', style=discord.ButtonStyle.primary,
+                       emoji='🧵', custom_id='rcard_thread')
+    async def open_thread(self, interaction, button):
+        await ReportCardView.open_thread(self, interaction)
+
+
+class ReportModal(discord.ui.Modal, title='Позвать модератора'):
+    """Одна форма вместо трёх слеш-параметров — Components V2 (Label +
+    UserSelect/Select/TextInput внутри модалки, discord.py 2.6+).
+
+    Порядок полей = порядок общения с модератором: кого выбрали,
+    на кого жалоба (пользователь/стафф), где случилось, почему.
+    """
+
+    def __init__(self):
+        super().__init__()
+        from services.menu_emojis import emoji_for_report
+        self.target_select = discord.ui.UserSelect(required=True)
+        self.against_select = discord.ui.Select(
+            required=True,
+            options=[
+                discord.SelectOption(label='Пользователь', value='user',
+                                     emoji=emoji_for_report('user'),
+                                     description='Обычный участник сервера'),
+                discord.SelectOption(label='Стафф', value='staff',
+                                     emoji=emoji_for_report('staff'),
+                                     description='Модератор, куратор или админ'),
+            ])
+        self.location_select = discord.ui.Select(
+            required=True,
+            options=[
+                discord.SelectOption(label='Чат', value='chat', emoji='💬'),
+                discord.SelectOption(label='Голосовой канал', value='voice',
+                                     emoji='🔊'),
+            ])
+        self.reason_input = discord.ui.TextInput(
+            style=discord.TextStyle.paragraph, required=True,
+            max_length=1000, placeholder='Опишите причину жалобы...')
+        self.add_item(discord.ui.Label(text='Выберите нарушителя',
+                                       component=self.target_select))
+        self.add_item(discord.ui.Label(text='На кого жалоба?',
+                                       component=self.against_select))
+        self.add_item(discord.ui.Label(text='Где происходило нарушение?',
+                                       component=self.location_select))
+        self.add_item(discord.ui.Label(text='Причина жалобы',
+                                       component=self.reason_input))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        vals = list(self.target_select.values or [])
+        target = vals[0] if vals else None
+        if target is None:
+            return await interaction.followup.send(
+                'Нарушитель не выбран — попробуйте ещё раз.', ephemeral=True)
+        if getattr(target, 'bot', False) or target.id == interaction.user.id:
+            return await interaction.followup.send(
+                'На себя и ботов вызывать модератора нельзя.', ephemeral=True)
+        against = (self.against_select.values or ['user'])[0]
+        location = (self.location_select.values or ['chat'])[0]
+        reason = (self.reason_input.value or '').strip() or 'Не указана'
+        await _deliver_report(interaction, target, reason, against, location)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        _log.warning('report modal on_submit: %s', error)
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(
+                    'Не удалось отправить жалобу — попробуйте ещё раз.',
+                    ephemeral=True)
+            else:
+                await interaction.response.send_message(
+                    'Не удалось отправить жалобу — попробуйте ещё раз.',
+                    ephemeral=True)
+        except Exception as ex2:
+            _log.debug('report modal on_error fallback: %s', ex2)
+
+
+async def _deliver_report(interaction, target, reason: str, against: str,
+                          location: str):
+    """Собрать V2-карточку и отправить в канал модерации + тег роли.
+
+    Вынесено из /report в отдельную функцию: модалка (ReportModal) и
+    команда зовут один и тот же путь, без дублирования логики.
+    """
+    guild = interaction.guild
+    cfg = _cfg(guild.id)
+
+    # КД на повторный вызов ОДНОГО И ТОГО ЖЕ участника: если открытый
+    # вызов от этого пользователя на эту же цель уже есть (окно из cfg,
+    # по умолчанию 1 день) — команду использовать нельзя (заказ владельца).
+    try:
+        _cd = int(cfg.get('reporter_target_cooldown_sec') or 86400)
+    except (TypeError, ValueError):
+        _cd = 86400
+    if RC.has_recent_open_report(guild.id, interaction.user.id, target.id, _cd):
+        return await interaction.followup.send(
+            'Ты уже звал модератора из-за этого участника — жди, пока '
+            'разберут предыдущий вызов, и не дублируй сигнал.',
+            ephemeral=True)
+    mod_role = _mod_role_from_cfg(guild)
+
+    # Канал модерации: берём настроенный/по имени, иначе создаём закрытый.
+    ch, created = await _ensure_mod_channel(guild, mod_role)
+    if ch is None:
+        return await interaction.followup.send(
+            'Не нашёл канал для вызовов и не смог создать свой (нет права '
+            '«Управление каналами»). Админу: укажи канал в панели → '
+            '«Маршруты каналов» → «Канал вызовов модератора (/report)» '
+            '— или проверь, что бот видит канал репортов.',
+            ephemeral=True)
+
+    # Голосовой канал вызывавшего: модераторы сразу видят, куда идти.
+    _voice = getattr(interaction.user, 'voice', None)
+    vc = getattr(_voice, 'channel', None) if _voice is not None else None
+
+    days = cfg.get('expiry_days', 90)
+
+    # Жалоба на стафф — эскалация ВВЕРХ по иерархии (владелец 2026-09-21):
+    # модератора судят кураторы+, куратора — админы+, админа — «Стафф админ».
+    # Обычных модераторов на такую жалобу не зовём (конфликт интересов).
+    target_tier = ''
+    escalation_label = ''
+    if against == 'staff':
+        esc_roles, target_tier, escalation_label = _staff_escalation(guild, target)
+        ping_roles = esc_roles or _mod_ping_roles(guild)
+        if not esc_roles:
+            escalation_label = ''  # цель не стафф в системе — обычный тег
+        if target_tier == 'uye':
+            target_tier = ''  # не значится стаффом — без «(участник)» в тексте
+    else:
+        ping_roles = _mod_ping_roles(guild)
+
+    body = _report_card_body(
+        caller=interaction.user, target=target, against=against,
+        location=location, voice_name=(vc.name if vc is not None else ''),
+        channel_mention=interaction.channel.mention,
+        reason=reason[:1500], days=days,
+        violations_text=_violations_field(guild.id, target.id, cfg),
+        target_tier=target_tier, escalation_label=escalation_label)
+    accent = 0xF39C12 if against == 'staff' else 0xE74C3C
+    card_view = ReportCardView(
+        title='🛎️ Вызов модератора', body=body,
+        footer=f'{guild.name} · /report', accent=accent)
+
+    ping = ' '.join(r.mention for r in ping_roles)
+    if not ping:
+        _fire_new_event(
+            'report_new',
+            'Роль модераторов не найдена — вызовы уходят без тега. '
+            'Укажи её в панели → Репорты → роль модераторов.')
+    try:
+        card = await ch.send(view=card_view)
+        if ping:
+            # Отдельным сообщением: V2-карточка + content в одной посылке
+            # рискует потерять «живой» пуш — тег роли уходит своей строкой
+            # (тот же приём, что у карточек апелляций).
+            await _deliver_mod_ping(ch, ping_roles, content=ping)
+    except discord.Forbidden:
+        return await interaction.followup.send(
+            'Бот не может отправить вызов в канал модерации — не хватает '
+            'прав (просмотр/отправка/вложения). Выдайте их роли бота.',
+            ephemeral=True)
+    except Exception as ex:
+        _log.warning('report card send: %s', ex)
+        return await interaction.followup.send(
+            'Не удалось отправить вызов модератору — попробуйте ещё раз.',
+            ephemeral=True)
+
+    # Привязываем запись вызова к сообщению-карточке (id сообщения = ключ).
+    RC.ticket_create(guild.id, card.id, interaction.user.id, target.id,
+                     kind='card')
+    _fire_new_event('report_new',
+                    f'**{interaction.user.display_name}** вызвал '
+                    f'модератора из-за **{target.display_name}**: {reason[:120]}')
+
+    note = (f'Модератор вызван: сигнал ушёл в {ch.mention} — модерация '
+            'уже видит его и разберёт прямо там.')
+    if vc is not None:
+        note += f' Если ты в голосовом канале «{vc.name}» — к тебе зайдут.'
+    if created:
+        note += ' Канал модерации создан автоматически.'
+    if not mod_role:
+        note += (' Роль модераторов не настроена — задайте её в панели, '
+                 'чтобы бот тегал модерацию при вызове.')
+    await interaction.followup.send(note, ephemeral=True)
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  КОГ
 # ═══════════════════════════════════════════════════════════════════
 class Reports(commands.Cog):
@@ -373,8 +1131,16 @@ class Reports(commands.Cog):
 
     async def cog_load(self):
         RC.db()  # создать таблицы
-        self.bot.add_view(ReportPanelView())  # персистентная панель
-        _log.info('Reports: панель зарегистрирована')
+        self.bot.add_view(ReportPanelView())   # панель в ветке разбора
+        # карточки вызовов в канале модерации: V2 (Components V2) или
+        # классический эмбед-фолбек — генерик-диспетчер по custom_id,
+        # состояние живёт в RC.ticket_get(message.id), не во view.
+        from services.v2_layouts import V2_AVAILABLE
+        if V2_AVAILABLE:
+            self.bot.add_view(ReportCardView())
+        else:
+            self.bot.add_view(_LegacyReportCardView())
+        _log.info('Reports: панели зарегистрированы')
 
     # ── применение решения ──────────────────────────────────────────
     @classmethod
@@ -400,20 +1166,51 @@ class Reports(commands.Cog):
                 f'Действие «{RC.KIND_LABELS.get(v["kind"], v["kind"])}» тебе '
                 'не дал владелец (панель → Доступ → Права команд → '
                 'Классические разрешения).', ephemeral=True)
+        _lim = _verdict_limit_denied(guild, interaction.user, v['kind'])
+        if _lim:
+            return await interaction.response.send_message(f'🚫 {_lim}', ephemeral=True)
+        # ACK до Discord API (timeout/kick/ban) — иначе 3с-окно сгорает на сети.
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(thinking=False)
+        except Exception as _dx:
+            _log.debug('apply_verdict defer: %s', _dx)
         applied = 'Применено.'
         try:
             if v['kind'] == 'mute' and member:
-                hours = v.get('hours') or 24
+                hours = v.get('hours') or 2
+                try:
+                    from services import staff_limits as _SL
+                    _cap = _SL.resolve_mute_cap(
+                        guild.id, member.id,
+                        [r.id for r in getattr(interaction.user, 'roles', [])
+                         if getattr(r, 'id', None) != getattr(guild, 'id', None)])
+                    _sec = int(float(hours) * 3600)
+                    _derr = _SL.mute_duration_error(_sec, cap_sec=_cap)
+                    if _derr:
+                        return await interaction.followup.send(_derr, ephemeral=True)
+                except Exception as _ex:
+                    _log.debug('вердикт mute cap: %s', _ex)
                 until = datetime.now(timezone.utc) + timedelta(
                     minutes=1, hours=min(hours, 672))  # лимит Discord — 28 дней
+                try:  # таймаут глушит чат И голос — сначала снимаем отдельный войс-мут
+                    from services import mute_state
+                    await mute_state.clear_voice_mute(guild, member)
+                except Exception as _mse:
+                    _log.debug('вердикт mute: очистка войс-мута: %s', _mse)
                 await member.timeout(until, reason=reason)
+                try:
+                    from services.mute_progression import bump_after_mute
+                    bump_after_mute(guild.id, member.id)
+                except Exception as _bex:
+                    _log.debug('вердикт mute bump: %s', _bex)
                 applied = f'Мут до {until:%d.%m %H:%M} UTC.'
             elif v['kind'] == 'kick' and member:
                 await member.kick(reason=reason)
                 applied = 'Кик выполнен.'
             elif v['kind'] == 'ban':
-                await guild.ban(int(t['accused_id']), reason=reason,
-                                delete_message_seconds=0)
+                await guild.ban(discord.Object(id=int(t['accused_id'])),
+                                reason=reason, delete_message_seconds=0)
                 applied = 'Бан выдан.'
                 if v.get('hours'):
                     async def _unban_later():
@@ -429,8 +1226,11 @@ class Reports(commands.Cog):
             elif v['kind'] == 'none':
                 applied = 'Нарушений не зафиксировано.'
         except Exception as ex:
-            return await interaction.response.send_message(
+            return await interaction.followup.send(
                 f'Discord не принял наказание: {ex}', ephemeral=True)
+
+        if v['kind'] in ('mute', 'kick', 'ban'):
+            _record_verdict(guild, interaction.user, v['kind'])
 
         if v['kind'] != 'none':
             RC.add_violation(guild.id, t['accused_id'], v['kind'],
@@ -440,7 +1240,16 @@ class Reports(commands.Cog):
                           description=(f"**{v['label']}**\nОбвиняемый: <@{t['accused_id']}>\n"
                                        f"Модератор: {interaction.user.mention}\n{applied}"),
                           color=0x2ECC71 if v['kind'] == 'none' else 0xE74C3C)
-        await interaction.response.edit_message(content='', embed=None, view=None)
+        try:
+            await interaction.edit_original_response(content='', embed=None, view=None)
+        except Exception as _ex:
+            _log.debug('apply_verdict edit_original: %s', _ex)
+            try:
+                msg = getattr(interaction, 'message', None)
+                if msg is not None:
+                    await msg.edit(content='', embed=None, view=None)
+            except Exception as _ex2:
+                _log.debug('apply_verdict msg.edit: %s', _ex2)
         await interaction.channel.send(embed=e)
         for uid in (t['reporter_id'], t['accused_id']):
             user = interaction.client.get_user(int(uid)) or \
@@ -454,7 +1263,7 @@ class Reports(commands.Cog):
         t = RC.ticket_get(interaction.channel_id)
         if not t:
             return await interaction.response.send_message(
-                'Это не ветка репорта.', ephemeral=True)
+                'Это не ветка разбора вызова.', ephemeral=True)
         await interaction.response.defer()
         msgs = []
         try:
@@ -493,74 +1302,24 @@ class Reports(commands.Cog):
                                             ephemeral=True)
 
     # ── команды ─────────────────────────────────────────────────────
-    @app_commands.command(name='report', description='Подать жалобу на участника')
-    @app_commands.describe(user='На кого жалоба', reason='Причина',
-                           proof_file='Скрин/видео-доказательство — грузится в ветку сразу',
-                           proof='Ссылка на доказательства (если файл не нужен)')
-    async def report_slash(self, interaction, user: discord.Member,
-                           reason: str, proof_file: discord.Attachment = None,
-                           proof: str = ''):
-        cfg = _cfg(interaction.guild_id)
-        if not cfg.get('channel_id'):
-            return await interaction.response.send_message(
-                'Канал репортов не привязан — админ должен выполнить /report-setup.',
-                ephemeral=True)
-        if user.bot or user.id == interaction.user.id:
-            return await interaction.response.send_message(
-                'На себя и ботов жаловаться нельзя.', ephemeral=True)
-        ch = interaction.guild.get_channel(int(cfg['channel_id']))
-        if ch is None:
-            return await interaction.response.send_message(
-                'Канал репортов не найден.', ephemeral=True)
-        await interaction.response.defer(ephemeral=True)
+    @app_commands.command(name='report', description='Позвать модератора')
+    async def report_slash(self, interaction):
         try:
-            thread = await ch.create_thread(
-                name=f'репорт · {user.display_name[:40]}',
-                type=discord.ChannelType.private_thread,
-                auto_archive_duration=10080,
-                reason=f'Жалоба от {interaction.user}')
+            from services.menu_emojis import schedule_ensure_menu_emojis
+            schedule_ensure_menu_emojis(interaction.client)
+        except Exception as _ee:
+            _log.debug('report emoji sync: %s', _ee)
+        try:
+            await interaction.response.send_modal(ReportModal())
         except Exception as ex:
-            return await interaction.followup.send(
-                f'Не удалось создать ветку: {ex}', ephemeral=True)
-        for uid in (interaction.user.id, user.id):
+            _log.warning('report modal: %s', ex)
             try:
-                m = await interaction.guild.fetch_member(uid)
-                await thread.add_user(m)
-            except Exception as _sx3:
-                _log.debug('подавлено: %s', _sx3)
-        RC.ticket_create(interaction.guild_id, thread.id,
-                         interaction.user.id, user.id)
-        _fire_new_event('report_new',
-                        f'На **{user.display_name}** пожаловался '
-                        f'{interaction.user.display_name}: {reason[:120]}')
-        proof_bits = []
-        if proof:
-            proof_bits.append(f'Ссылка: {proof[:200]}')
-        if proof_file is not None:
-            proof_bits.append(f'Файл: {proof_file.filename} '
-                              f'({proof_file.size // 1024} КБ) — вложением ниже')
-        proof_line = '\n'.join(proof_bits) if proof_bits else '—'
-        e = discord.Embed(
-            title='Репорт',
-            color=0xE74C3C,
-            description=(f"Обвиняемый: **{user.display_name}** · `{user.id}`\n"
-                         f"Подал: {interaction.user.mention}\n\n"
-                         f"**Причина:** {reason[:1000]}\n"
-                         f"**Доказательства:** {proof_line}\n\n"
-                         f"**Прошлые нарушения ({cfg.get('expiry_days', 90)} дн):**\n"
-                         + _violations_field(interaction.guild_id, user.id, cfg)),
-            timestamp=datetime.now(timezone.utc))
-        e.set_thumbnail(url=user.display_avatar.url)
-        e.set_footer(text=f'{interaction.guild.name} · до выбора режима пишут модератор и обвинитель')
-        send_kw = {'embed': e, 'view': ReportPanelView()}
-        if proof_file is not None:
-            try:
-                send_kw['file'] = await proof_file.to_file()
-            except Exception as ex:
-                _log.warning('report proof_file: %s', ex)
-        await thread.send(**send_kw)
-        await interaction.followup.send(
-            f'Репорт создан: {thread.mention}', ephemeral=True)
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        'Не удалось открыть форму жалобы. Попробуйте ещё раз.',
+                        ephemeral=True)
+            except Exception as ex2:
+                _log.debug('report modal fallback: %s', ex2)
 
     @app_commands.command(name='witness',
                           description='Пригласить свидетеля в ветку репорта')
@@ -584,104 +1343,27 @@ class Reports(commands.Cog):
                                 description=f'{user.mention} присоединился к рассмотрению.',
                                 color=0x5865F2))
 
-    @app_commands.command(name='my_violations', description='Мои нарушения')
+    @app_commands.command(name='my-violations', description='Мои нарушения')
     async def my_violations_slash(self, interaction):
+        if interaction.guild_id is None:
+            return await interaction.response.send_message(
+                'Команда работает на сервере.', ephemeral=True)
         cfg = _cfg(interaction.guild_id)
         field = _violations_field(interaction.guild_id, interaction.user.id, cfg)
         has = field != 'Нарушений не было'
         e = discord.Embed(title='Мои нарушения',
                           description=field, color=0x99AAB5)
-        await interaction.response.send_message(
-            embed=e, view=MyViolationsView() if has else None, ephemeral=True)
+        # ВАЖНО: discord.py send_message падает на view=None (ждёт MISSING),
+        # поэтому view передаём только когда реально есть.
+        kwargs = {'embed': e, 'ephemeral': True}
+        if has:
+            kwargs['view'] = MyViolationsView()
+        await interaction.response.send_message(**kwargs)
 
-    @app_commands.command(name='report-setup',
-                          description='Настроить систему репортов: канал + роль + права')
-    @app_commands.describe(mod_role='Роль модераторов',
-                           channel='Канал веток (не указан — создам закрытый #репорты)')
-    @app_commands.checks.has_permissions(administrator=True)
-    async def report_setup_slash(self, interaction,
-                                 mod_role: discord.Role,
-                                 channel: discord.TextChannel = None):
-        guild = interaction.guild
-        if channel is None:
-            # ТЗ 1.8: канал репортов видят только модераторы и менеджеры —
-            # создаём сразу с закрытыми правами, ничего руками делать не надо
-            over = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                mod_role: discord.PermissionOverwrite(
-                    read_messages=True, send_messages=True,
-                    manage_threads=True, read_message_history=True),
-                guild.me: discord.PermissionOverwrite(
-                    read_messages=True, send_messages=True,
-                    manage_threads=True, create_private_threads=True,
-                    manage_messages=True, embed_links=True, attach_files=True,
-                    read_message_history=True),
-            }
-            try:
-                channel = await guild.create_text_channel(
-                    'репорты', overwrites=over,
-                    reason='Настройка системы репортов')
-            except Exception as ex:
-                return await interaction.response.send_message(
-                    f'Канал создать не вышло: {ex}. Укажите готовый канал '
-                    'параметром channel.', ephemeral=True)
-            made = True
-        else:
-            # существующий канал закрываем от @everyone и открываем модам
-            # (точечно, чужие оверрайты не трогаем)
-            try:
-                await channel.set_permissions(
-                    guild.default_role, read_messages=False,
-                    reason='Система репортов: канал только для модерации')
-                await channel.set_permissions(
-                    mod_role, read_messages=True, send_messages=True,
-                    manage_threads=True, read_message_history=True,
-                    reason='Система репортов')
-                await channel.set_permissions(
-                    guild.me, read_messages=True, send_messages=True,
-                    manage_threads=True, create_private_threads=True,
-                    manage_messages=True, embed_links=True, attach_files=True,
-                    read_message_history=True,
-                    reason='Система репортов')
-            except Exception as ex:
-                _log.warning('report-setup perms: %s', ex)
-            made = False
-        cfg = _cfg(interaction.guild_id)
-        cfg['channel_id'] = str(channel.id)
-        cfg['mod_role_id'] = str(mod_role.id)
-        RC.save_cfg(interaction.guild_id, cfg)
-        perms = channel.permissions_for(guild.me)
-        e = discord.Embed(
-            title='Система репортов настроена',
-            description=(f"Канал: {channel.mention}"
-                         f"{' · создан и закрыт от участников' if made else ' · права обновлены: только модерация'}\n"
-                         f"Роль модератора: {mod_role.mention}\n\n"
-                         f"Создание приватных веток: "
-                         f"{'ок' if perms.create_private_threads else 'НЕТ ПРАВА'} · "
-                         f"Управление ветками: "
-                         f"{'ок' if perms.manage_threads else 'НЕТ ПРАВА'}\n"
-                         f"Лестница рецидивов: " + ' → '.join(
-                             s['label'] for s in cfg['ladder']) +
-                         f"\nСрок давности: {cfg['expiry_days']} дн"),
-            color=0x2ECC71)
-        await interaction.response.send_message(embed=e, ephemeral=True)
-
-    @app_commands.command(name='report-settings',
-                          description='Настройки рецидивов репортов')
-    @app_commands.checks.has_permissions(administrator=True)
-    async def report_settings_slash(self, interaction,
-                                    expiry_days: app_commands.Range[int, 1, 365] = None):
-        cfg = _cfg(interaction.guild_id)
-        if expiry_days:
-            cfg['expiry_days'] = expiry_days
-            RC.save_cfg(interaction.guild_id, cfg)
-        e = discord.Embed(
-            title='Настройки рецидивов',
-            description=('Лестница (по порядку нарушений):\n' + '\n'.join(
-                f"{s['n']}-е → {s['label']}" for s in cfg['ladder']) +
-                f"\nСрок давности: {cfg['expiry_days']} дн"),
-            color=0x5865F2)
-        await interaction.response.send_message(embed=e, ephemeral=True)
+    # Команды /report-setup и /report-settings удалены (2026-09-01):
+    # канал веток, роль модераторов и срок давности настраиваются в
+    # веб-панели (страница «Репорты», /api/guild/<gid>/report-settings).
+    # Слеш-команды в Discord больше не регистрируются.
 
     # ── фильтр слова ────────────────────────────────────────────────
     @commands.Cog.listener()
@@ -701,7 +1383,7 @@ class Reports(commands.Cog):
         allowed = {'free': None, 'wait': t['reporter_id'],
                    'turn': t.get('word_id'), 'manual': t.get('word_id')}
         uid = str(message.author.id)
-        if mode == 'free' or allowed.get(mode) == uid:
+        if mode == 'free' or str(allowed.get(mode) or '') == uid:
             return
         try:
             await message.delete()
@@ -727,9 +1409,36 @@ class MyViolationsView(discord.ui.View):
     @discord.ui.button(label='Подать апелляцию', style=discord.ButtonStyle.primary,
                        custom_id='rpt_my_appeal')
     async def appeal(self, interaction, button):
-        await interaction.response.send_message(
-            'Апелляция подаётся через /апелляция в ЛС боту.',
-            ephemeral=True)
+        """Кнопка — единственный путь (владелец 2026-09-08: команду
+        /апелляция убрали). Открываем ту же форму, что кнопка в ЛС."""
+        cog = None
+        try:
+            cog = interaction.client.get_cog('Appeals')
+        except Exception as _ex:
+            _log.debug('my-violations appeal: cog: %s', _ex)
+        if cog is None:
+            await interaction.response.send_message(
+                'Бот только что перезапускался — нажмите кнопку ещё раз.',
+                ephemeral=True)
+            return
+        guild = cog._main_guild()
+        if guild is None:
+            await interaction.response.send_message(
+                'Бот ещё не настроен: владелец не указал главный сервер.',
+                ephemeral=True)
+            return
+        try:
+            banned = await cog._is_banned(guild, interaction.user)
+        except Exception as _ex:
+            _log.debug('my-violations appeal: бан-чек: %s', _ex)
+            banned = True   # не отпугнуть человека сбоем проверки
+        if not banned:
+            await interaction.response.send_message(
+                f'Вы не забанены на сервере **{guild.name}** — апелляция не нужна.',
+                ephemeral=True)
+            return
+        from cogs.appeals import AppealModal
+        await interaction.response.send_modal(AppealModal(cog, guild))
 
 
 async def setup(bot):

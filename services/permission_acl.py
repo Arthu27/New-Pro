@@ -38,29 +38,17 @@ log = get_logger("cmd_acl")
 # Набор урезан до ядра: модерация, тикеты, логи и AI — остальные модули
 # (экономика, уровни, развлечения, музыка и т.д.) не управляются здесь.
 COMMAND_CATEGORIES = {
-    "Модерация": ["ban", "kick", "unban", "warn", "warnings", "unwarn", "clearwarns",
-                   "mute", "unmute", "clear", "slowmode", "lock", "unlock",
-                   "moderate", "modpanel", "temp-mute", "temp-unmute", "tempban",
-                   "temp-unban", "tempkick", "vmute", "vunmute", "schedule", "unschedule",
-                   "schedule-add", "schedule-list", "schedule-remove", "schedule-test",
-                   "schedule-toggle", "pw", "history", "case", "cases", "note", "notes",
-                   "watchlist", "banlist", "massrole", "modstats",
-                   "mod-stats", "activemods", "modwhitelist", "tempmod", "voice-status",
-                   "role", "utility", "report-panel",
-                   "weekly-report", "report-setup", "report-role-add", "report-role-remove",
-                   "meeting", "meeting-role-add", "meeting-role-remove", "staff-stats",
-                   "filter", "filter-status", "filter-add", "filter-remove",
-                   "filter-words", "filter-toggle", "filter-test", "filter-ignore",
-                   "reactionrole", "removereactionrole",
-                   "replay", "ladder", "ladder-add", "ladder-remove", "ladder-test"],
-    "Тикеты": ["ticket-panel", "ticket-config",
-                "ticket-auto-close", "ticket-ai-toggle", "ticket-ai-stats",
-                "ticket-force-escalate", "ticket-rate-limit-info", "ticket-reset-rate-limit",
-                "ticket-feedback-stats", "sla-status", "sla-info", "sla-create", "sla-breaches"],
-    "Логи": ["logs", "modlogs", "logmenu", "setup-logs", "logs-setup", "logs-center"],
-    "AI-система": ["aimod", "aimod-escalate", "aimod-fp", "aimod-languages",
-                    "aimod-logchannel", "aimod-sensitivity", "aimod-stats", "aimod-test",
-                    "aimod-whitelist", "proactive-stats"],
+    # Запасной список: используется, только если живой реестр
+    # services.command_registry недоступен. Урезан до имён, которые
+    # проверены на реальной загрузке когов (36 модулей, BOT_FULL):
+    # бан/кик/мут — это действия внутри /modpanel, а не отдельные
+    # команды, а ticket-*/sla-*/schedule-*/filter-*/aimod-* удалены
+    # вместе со своими когами.
+    "Модерация": ["modpanel", "unwarn", "warnings"],
+    "Жалобы": ["report", "my-violations", "witness"],
+    "Логи": ["logs-setup"],
+    "Служебные": ["ladder", "ladder-add", "ladder-remove", "ladder-test",
+                  "staff-stats"],
 }
 
 # ─── Классические разрешения (действия) ────────────────────────────────────
@@ -68,9 +56,11 @@ COMMAND_CATEGORIES = {
 ACTIONS = {
     "ban": "Бан (апелляция)",
     "kick": "Кик",
-    "mute": "Мут",
+    "mute": "Мут чата",
+    "vmute": "Войс-мут",
     "timeout": "Таймаут",
     "warn": "Варн",
+    "unwarn": "Снять варн",
     "purge": "Очистка сообщений",
     "lockdown": "Локдаун",
     "roles": "Роли",
@@ -122,10 +112,13 @@ COMMAND_ACTIONS = {
 }
 
 # значение опции action в slash-командах (/moderate, /utility) -> ключ действия.
+# Чат-мут и войс-мут — РАЗНЫЕ разрешения: vmute/vunmute проверяются отдельно
+# от чат-мута (требование владельца разделить их и в настройках, и в боте).
 ACTION_VALUES = {
     "ban": "ban", "unban": "ban", "softban": "ban",
     "kick": "kick",
-    "mute": "mute", "unmute": "mute", "vmute": "mute", "vunmute": "mute",
+    "mute": "mute", "unmute": "mute",
+    "vmute": "vmute", "vunmute": "vmute",
     "timeout": "timeout", "untimeout": "timeout",
     "warn": "warn",
     "clear": "purge", "purge": "purge",
@@ -141,6 +134,10 @@ def _acl_db():
 def _action_acl_db():
     from db import GuildData
     return GuildData("action_acl")
+
+
+_CATS_CACHE = {'ts': 0.0, 'data': None}
+_CATS_TTL = 10.0   # сек: каталог меняется только с профилем/файлами когов
 
 
 def command_categories():
@@ -163,25 +160,75 @@ def command_categories():
         return {k: list(v) for k, v in COMMAND_CATEGORIES.items()}
 
 
+def _command_categories_cached():
+    """command_categories() с коротким TTL-кэшем.
+
+    «Права команд» дергает список при каждой сборке payload и на каждую
+    правку категории — скан AST по всем когам там не нужен (открытие
+    страницы должно быть мгновенным, жалоба владельца 2026-09-05).
+    """
+    import time as _t
+    if _CATS_CACHE['data'] is not None and _t.time() - _CATS_CACHE['ts'] < _CATS_TTL:
+        return _CATS_CACHE['data']
+    try:
+        data = command_categories()
+    except Exception:
+        data = {k: list(v) for k, v in COMMAND_CATEGORIES.items()}
+    _CATS_CACHE['data'] = data
+    _CATS_CACHE['ts'] = _t.time()
+    return data
+
+
 def all_categories():
-    """Живые категории + legacy (правила на старые продолжают работать)."""
-    merged = {k: list(v) for k, v in COMMAND_CATEGORIES.items()}
-    for k, v in command_categories().items():
-        bucket = merged.setdefault(k, [])
-        for name in v:
-            if name not in bucket:
-                bucket.append(name)
-    return merged
+    """Каталог для панели «Права команд» — ТОЛЬКО живые команды.
+
+    Раньше сюда домешивался жёсткий COMMAND_CATEGORIES «чтобы правила
+    на старые продолжали работать», но из 104 имён того списка у бота
+    реально существуют только 12: панель показывала 92 команды-призрака
+    (ticket-*, sla-*, ban/kick/mute как отдельные команды, schedule-*,
+    filter-*, aimod-* …). Правило на несуществующую команду inert и до,
+    и после — показывать его значит только путать владельца.
+    Источник — services.command_registry: он сканирует включённые
+    модули и живые команды, а при своей недоступности сам откатывается
+    на COMMAND_CATEGORIES (уже урезанный до проверенных имён).
+    """
+    return {k: list(v) for k, v in _command_categories_cached().items()}
+
+
+# Короткий кэш cmd_acl: has_access на каждый slash / interaction_check.
+_CMD_ACL_CACHE = {}  # gid -> (acl: dict, mono_ts)
+_CMD_ACL_TTL = 20.0
 
 
 def load_acl(guild_id: int) -> dict:
     """Вернуть ограничения: {command_or_category: [role_ids]}"""
     try:
-        acl = _acl_db().get(int(guild_id), "acl", {})
-        return acl if isinstance(acl, dict) else {}
+        key = int(guild_id)
+    except (TypeError, ValueError):
+        return {}
+    import time as _time
+    now = _time.monotonic()
+    hit = _CMD_ACL_CACHE.get(key)
+    if hit and (now - hit[1]) < _CMD_ACL_TTL:
+        return dict(hit[0]) if isinstance(hit[0], dict) else {}
+    try:
+        acl = _acl_db().get(key, "acl", {})
+        if not isinstance(acl, dict):
+            acl = {}
     except Exception as e:
         log.warning(f"[cmd_acl] load error: {e}")
-        return {}
+        acl = {}
+    _CMD_ACL_CACHE[key] = (acl, now)
+    return dict(acl)
+
+
+def save_acl(guild_id: int, acl: dict):
+    try:
+        key = int(guild_id)
+        _CMD_ACL_CACHE.pop(key, None)
+        _acl_db().set(key, "acl", acl or {})
+    except Exception as e:
+        log.warning(f"[cmd_acl] save error: {e}")
 
 
 def effective_acl(guild_id: int) -> dict:
@@ -221,13 +268,6 @@ def materialize_category(acl: dict, cat: str) -> dict:
     return acl
 
 
-def save_acl(guild_id: int, acl: dict):
-    try:
-        _acl_db().set(int(guild_id), "acl", acl or {})
-    except Exception as e:
-        log.warning(f"[cmd_acl] save error: {e}")
-
-
 def set_rule(guild_id: int, command: str, role_ids: list):
     """Установить разрешённые роли для команды/категории."""
     acl = load_acl(guild_id)
@@ -243,19 +283,40 @@ def clear_rule(guild_id: int, command: str):
 
 
 # ─── Классические разрешения (Action ACL) ──────────────────────────────────
+# Короткий кэш: /modpanel → mute_kinds_for дергает check_action 3× до
+# send_modal/send_message (<3с Discord). Повторные SQLite-чтения на
+# Windows Defender съедают окно.
+_ACTION_ACL_CACHE = {}  # gid -> (acl: dict, mono_ts)
+_ACTION_ACL_TTL = 20.0
+
+
 def load_action_acl(guild_id: int) -> dict:
     """Вернуть ограничения действий: {action: [role_ids]}"""
     try:
-        acl = _action_acl_db().get(int(guild_id), "acl", {})
-        return acl if isinstance(acl, dict) else {}
+        key = int(guild_id)
+    except (TypeError, ValueError):
+        return {}
+    import time as _time
+    now = _time.monotonic()
+    hit = _ACTION_ACL_CACHE.get(key)
+    if hit and (now - hit[1]) < _ACTION_ACL_TTL:
+        return dict(hit[0]) if isinstance(hit[0], dict) else {}
+    try:
+        acl = _action_acl_db().get(key, "acl", {})
+        if not isinstance(acl, dict):
+            acl = {}
     except Exception as e:
         log.warning(f"[action_acl] load error: {e}")
-        return {}
+        acl = {}
+    _ACTION_ACL_CACHE[key] = (acl, now)
+    return dict(acl)
 
 
 def save_action_acl(guild_id: int, acl: dict):
     try:
-        _action_acl_db().set(int(guild_id), "acl", acl or {})
+        key = int(guild_id)
+        _ACTION_ACL_CACHE.pop(key, None)
+        _action_acl_db().set(key, "acl", acl or {})
     except Exception as e:
         log.warning(f"[action_acl] save error: {e}")
 
@@ -271,40 +332,87 @@ def set_action_rule(guild_id: int, action: str, role_ids: list):
 
 
 def clear_action_rules(guild_id: int):
-    """Снять все ограничения действий (всё можно всем)."""
+    """Снять ВСЕ правила действий. В строгой модели это значит default-deny:
+    без единого разрешённого действия модераторы не видят в /modpanel ничего
+    (кроме владельца бота). Раньше означало «всё можно всем» — семантика
+    изменена по требованию владельца (права только те, что выданы явно)."""
     save_action_acl(guild_id, {})
 
 
 def allowed_roles_for_action(guild_id: int, action: str) -> list:
-    """Какие роли разрешены для действия (пусто = все)."""
+    """Какие роли разрешены для действия как СТРОКИ id.
+
+    Роли в БД могут храниться как int (прямой save_action_acl из тестов) или
+    как str (через панель) — нормализуем к строкам, иначе пересечение с ролями
+    участника (они сравниваются как str) давало бы ложный запрет.
+    """
     acl = load_action_acl(guild_id)
-    return acl.get(str(action), []) or []
+    return [str(r) for r in (acl.get(str(action), []) or [])]
+
+
+def _is_bot_owner(member) -> bool:
+    """Только ВЛАДЕЛЕЦ БОТА (OWNER_ID/OWNER_IDS из .env) имеет всё. Это НЕ
+    Discord-право и не роль сервера — это владелец самого бота. Discord-админ
+    или владелец сервера сюда НЕ попадают: у нас отдельная система прав, к
+    ролям/правам Discord она не привязана (требование владельца)."""
+    try:
+        from config import Config
+        return int(getattr(member, "id", 0) or 0) in Config.all_owner_ids()
+    except Exception as _ex:
+        log.debug(f'owner-скип ACL: {_ex}')
+        return False
 
 
 def check_action(guild_id: int, member, action: str) -> bool:
     """Может ли member выполнять действие action (бан/кик/мут/таймаут…).
 
-    Действие не привязано к команде: правило «ban» блокирует ЛЮБУЮ команду,
-    которая банит (ban, tempban, unban, /moderate action=ban…). По умолчанию
-    (правила нет) — можно. Админ/бот — всегда можно, панель (is_panel) —
-    отдельная авторизация, ролевые правила её не касаются.
+    СТРОГАЯ МОДЕЛЬ (требование владельца — «своя система, Discord не при чём»):
+      • бот/панель/владелец БОТА — можно;
+      • Discord-админ и владелец СЕРВЕРА прав НЕ дают (guild_permissions больше
+        не проверяются);
+      • по умолчанию действие ЗАПРЕЩЕНО: нужно явно разрешить его роли в панели
+        (Доступ → Права команд → Классические разрешения). Нет ни одной
+        разрешённой роли → действие недоступно (и кнопка в /modpanel скрыта).
+    Разрешённые роли хранятся в action_acl (namespace «action_acl», ключ —
+    действие). Панель (is_panel) авторизуется отдельно — ролевые правила её
+    не касаются.
     """
     if member is None or getattr(member, "bot", False) \
             or getattr(member, "is_panel", False):
         return True
-    if getattr(member, "guild_permissions", None) and member.guild_permissions.administrator:
+    if _is_bot_owner(member):
         return True
-    try:  # владелец бота — действия не проверяем
-        from config import Config
-        if int(getattr(member, "id", 0) or 0) in Config.all_owner_ids():
-            return True
-    except Exception as _ex:
-        log.debug(f'владелец-скип ACL: {_ex}')
+    # Discord-права (administrator/owner сервера) умышленно ИГНОРИРУЮТСЯ:
+    # разрешения выдаёт только владелец бота через панель.
     allowed = allowed_roles_for_action(guild_id, action)
     if not allowed:
-        return True
+        # нет явного правила → запрет (default-deny для действий модерации)
+        return False
     user_roles = {str(r.id) for r in getattr(member, "roles", [])}
-    return bool(user_roles.intersection(set(allowed)))
+    if user_roles.intersection(set(allowed)):
+        return True
+    # Старший тир наследует ACL младших mapped-ролей.
+    # Куратор+хелпер: бан выдан модерам → куратор тоже видит бан в /modpanel.
+    # Не наследует от ролей ВЫШЕ себя (warn только админам → куратор без warn).
+    try:
+        from services.staff_hierarchy import RANK, best_mapped_tier
+        from services.staff_limits import _role_tier_map
+        best = best_mapped_tier(member)
+        best_rank = RANK.get(best, -1)
+        if best_rank < RANK.get('mod', 1):
+            return False
+        tmap = _role_tier_map()
+        for rid in allowed:
+            tier = tmap.get(str(rid))
+            if not tier:
+                continue
+            r = RANK.get(tier, -1)
+            # строго младше: куратор ← mod; сам mod чужие mod-роли не ест
+            if 0 < r < best_rank:
+                return True
+    except Exception as _ex:
+        log.debug('check_action senior inherit: %s', _ex)
+    return False
 
 
 def _candidates(command: str) -> list:
@@ -344,16 +452,12 @@ def has_access(guild_id: int, command: str, member) -> bool:
     """
     if member is None or getattr(member, "bot", False):
         return True
-    if getattr(member, "guild_permissions", None) and member.guild_permissions.administrator:
+    # Discord-админ/владелец СЕРВЕРА умышленно НЕ даёт прав: система доступа
+    # собственная, к правам Discord не привязана (требование владельца).
+    # Владелец БОТА (OWNER_ID/OWNER_IDS из .env) — команды не проверяем вовсе:
+    # бот принадлежит ему, ограничения ролей его не касаются.
+    if _is_bot_owner(member):
         return True
-    # Владелец бота (OWNER_ID/OWNER_IDS) — команды не проверяем вовсе:
-    # бот принадлежит ему, ограничения ролей его не касаются
-    try:
-        from config import Config
-        if int(getattr(member, "id", 0) or 0) in Config.all_owner_ids():
-            return True
-    except Exception as _ex:
-        log.debug(f'владелец-скип ACL (вторая ветка): {_ex}')
 
     acl = load_acl(guild_id)
     user_roles = {str(r.id) for r in getattr(member, "roles", [])}

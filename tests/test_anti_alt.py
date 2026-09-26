@@ -43,8 +43,8 @@ s = aa.merge_settings({'enabled': True, 'action': 'kick', 'мусор': 1})
 check(s['enabled'] is True and s['action'] == 'kick' and 'мусор' not in s,
       'неизвестные ключи выбрасываются')
 s = aa.merge_settings({'action': 'взорвать', 'min_age_days': 'старая', 'whitelist': 'да'})
-check(s['action'] == 'alert' and s['min_age_days'] == 7 and s['whitelist'] == [],
-      'битые типы откатываются к безопасному дефолту')
+check(s['action'] == 'appeal' and s['min_age_days'] == 2 and s['whitelist'] == [],
+      'битые типы откатываются к безопасному дефолту (appeal/2 дня)')
 s = aa.merge_settings({'min_age_days': -5})
 check(s['min_age_days'] == 0, 'отрицательный порог зажат в ноль')
 
@@ -75,6 +75,13 @@ check(not trig and why == 'в белом списке', 'белый список
 trig, action, age, why = aa.decide(wl, 43, NOW - timedelta(hours=1), NOW)
 check(trig and action == 'ban', 'другой свежий — бан по настройке')
 
+# Действие appeal (изоляция + апелляция для молодого аккаунта) распознаётся.
+ap = aa.merge_settings({'enabled': True, 'min_age_days': 2, 'action': 'appeal'})
+trig, action, age, why = aa.decide(ap, 77, NOW - timedelta(hours=20), NOW)
+check(trig and action == 'appeal', 'аккаунт <2 дней при action=appeal — срабатывает')
+check('appeal' in aa.ACTIONS and aa.ACTION_NAMES['appeal'],
+      'действие appeal есть в списке и имеет название')
+
 edge = aa.merge_settings({'enabled': True, 'min_age_days': 0})
 trig, action, age, why = aa.decide(edge, 1, NOW - timedelta(seconds=30), NOW)
 check(not trig, 'порог 0 дней — выключен по смыслу (все аккаунты старше)')
@@ -94,8 +101,8 @@ back = aa.merge_settings(db.get(4242, 'settings', {}))
 check(back['enabled'] is True and back['action'] == 'ban' and back['min_age_days'] == 14,
       'настройки переживают roundtrip через SQLite')
 check(aa.merge_settings(db.get(8888, 'settings', {}))['enabled'] is False
-      and aa.merge_settings(db.get(8888, 'settings', {}))['action'] == 'alert',
-      'чужой сервер -> дефолт (щит выключен — opt-in, безопасное действие alert)')
+      and aa.merge_settings(db.get(8888, 'settings', {}))['action'] == 'appeal',
+      'чужой сервер -> дефолт (щит выключен — opt-in; действие по умолчанию appeal)')
 
 print('== 6. линт модуля ==')
 src = open(os.path.join(ROOT, 'cogs', 'anti_alt.py'), encoding='utf-8').read()

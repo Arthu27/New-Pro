@@ -2,14 +2,39 @@
 """Управление ботом: health, temp-mod, коги (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log, viewer_member, acl_action_allowed,
+    _notify_discord_sender, _fire_panel_notification,
+    _process_action, _log, _live_publish, viewer_member, acl_action_allowed,
+    _panel_limit_deny, _panel_limit_record, _panel_mute_cap,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
+
+
+def _journal_panel_action(guild_id, action_title, action_code, user_id,
+                          user_name, mod_name, reason='', **extra):
+    """Запись действия из панели в журнал — с НАСТОЯЩИМ модератором.
+
+    Мут/размьют/бан из панели исполняет бот: аудит Discord показывает
+    исполнителем самого бота (его имя на сервере — «Moderation»), а владелец
+    спрашивает «кто выдал» (жалоба 2026-09-07). Панель знает пользователя —
+    пишем его; склейка дублей отдаст эту копию приоритетом боту.
+    """
+    try:
+        from cogs.logs import save_event as _se
+        _se(guild_id, 'mod', action_title, dict({
+            'user_id': str(user_id or ''),
+            'user_name': str(user_name or ''),
+            'action': action_code,
+            'mod_id': '',
+            'mod_name': ('Панель: ' + str(mod_name)) if mod_name else '',
+            'reason': str(reason or ''),
+        }, **extra))
+    except Exception as _ex:
+        _log.debug('journal_panel_action: %s', _ex)
+
 
 def register(ctx):
     app = ctx.app
@@ -98,7 +123,7 @@ def register(ctx):
         for filename in os .listdir ('cogs'):
             if filename .endswith ('.py')and filename !='__init__.py':
                 cog_name =filename [:-3 ]
-                if cog_name in ('embed_utils',):continue 
+                if cog_name in ('embed_utils'):continue 
                 filepath =f'cogs/{filename}'
                 with open (filepath ,'rb')as f :
                     h =hashlib .md5 (f .read ()).hexdigest ()
@@ -170,7 +195,7 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         sec =parse_duration (d .get ('duration','1h'))
         if not sec :
             return jsonify ({'error':'Неверный формат времени'}),400 
@@ -178,27 +203,56 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
             return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        # Лимиты стаффа: у вошедшего через Discord то же ограничение мутов,
+        # что и в командах (доверенный вход владельца — без лимитов).
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else int (session .get ('selected_guild')or MAIN_GUILD_ID ),_acl_m ,'mute')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
             # Resolve user
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
-            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+            member =_resolve_member_async (guild ,int (user_id ))
         except Exception :
             return jsonify ({'error':'Пользователь не найден'}),404 
         if not member :
             return jsonify ({'error':'Пользователь не найден'}),404 
+        if _acl_m is not None :
+            _mute_cap =_panel_mute_cap (bot ,guild.id ,_acl_m ,
+                                         target_id =member .id )
+            try :
+                from services .staff_limits import mute_duration_error as _mde
+                _derr =_mde (sec ,cap_sec =_mute_cap )
+                if _derr :
+                    return jsonify ({'error':_derr }),429
+            except Exception as _dex :
+                _log .debug ('api_temp_mod_mute duration: %s',_dex )
+                if _mute_cap and sec >_mute_cap :
+                    return jsonify ({'error':f'Мут дольше разрешённого вашей ролью (потолок {_mute_cap //60 } мин)'}),429
         from datetime import datetime ,timedelta 
         until =datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (seconds =sec )
         try :
             _run_async (member .timeout (until ,reason =f"[Panel] {session.get('username')}: {d.get('reason', '')}"))
         except Exception as e :
             return jsonify ({'error':str (e )}),400 
+        try :
+            from services .mute_progression import bump_after_mute
+            bump_after_mute (guild .id ,member .id )
+        except Exception as _bex :
+            _log .debug ('api_temp_mod_mute bump: %s',_bex )
         cog ._mutes .setdefault (str (guild .id ),{})[str (member .id )]={
         'until':time .time ()+sec ,'reason':d .get ('reason',''),
         'mod_id':session .get ('username',''),'created_at':time .time (),'duration':sec ,
         }
         cog ._save ('_mutes',cog ._mutes_file ())
+        # журнал: настоящий модератор — пользователь панели, не бот
+        _journal_panel_action (guild .id ,'Мут','timeout',member .id ,
+        member .display_name ,session .get ('username'),d .get ('reason',''),
+        until =until .replace (tzinfo =timezone .utc ).isoformat (),
+        duration_minutes =max (1 ,sec //60 ))
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
+        _panel_limit_record (guild.id ,_acl_m ,'mute',1)
         return jsonify ({'ok':True })
 
 
@@ -213,7 +267,7 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         sec =parse_duration (d .get ('duration','1d'))
         if not sec :
             return jsonify ({'error':'Неверный формат'}),400 
@@ -221,9 +275,12 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'ban'):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else 0 ,_acl_m ,'ban')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
-            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+            member =_resolve_member_async (guild ,int (user_id ))
         except Exception :
             return jsonify ({'error':'Пользователь не найден'}),404 
         if not member :
@@ -232,12 +289,17 @@ def register(ctx):
             _run_async (guild .ban (member ,reason =f"[Panel] {session.get('username')}: {d.get('reason', '')}"))
         except Exception as e :
             return jsonify ({'error':str (e )}),400 
+        _panel_limit_record (guild.id ,_acl_m ,'ban',1)
         cog ._bans .setdefault (str (guild .id ),{})[str (member .id )]={
         'until':time .time ()+sec ,'reason':d .get ('reason',''),
         'mod_id':session .get ('username',''),'created_at':time .time (),'duration':sec ,
         'user_name':str (member ),
         }
         cog ._save ('_bans',cog ._bans_file ())
+        # журнал: настоящий модератор — пользователь панели, не бот
+        _journal_panel_action (guild .id ,'Бан','ban',member .id ,
+        member .display_name ,session .get ('username'),d .get ('reason',''))
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
 
@@ -252,7 +314,7 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         sec =parse_duration (d .get ('duration','5m'))
         if not sec :
             return jsonify ({'error':'Неверный формат'}),400 
@@ -260,9 +322,12 @@ def register(ctx):
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'kick'):
             return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else 0 ,_acl_m ,'kick')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
-            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+            member =_resolve_member_async (guild ,int (user_id ))
         except Exception :
             return jsonify ({'error':'Пользователь не найден'}),404 
         if not member :
@@ -277,6 +342,11 @@ def register(ctx):
         'user_name':str (member ),
         }
         cog ._save ('_kicks',cog ._kicks_file ())
+        # журнал: настоящий модератор — пользователь панели, не бот
+        _journal_panel_action (guild .id ,'Кик','kick',member .id ,
+        member .display_name ,session .get ('username'),d .get ('reason',''))
+        _panel_limit_record (guild.id ,_acl_m ,'kick',1)
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
 
@@ -291,12 +361,17 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
             return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else 0 ,_acl_m ,'unmute')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
+        if not user_id .isdigit ():
+            return jsonify ({'error':'Неверный ID пользователя'}),400
         member =guild .get_member (int (user_id ))
         if member and member .is_timed_out ():
             try :
@@ -305,6 +380,13 @@ def register(ctx):
                 _log.debug("api_temp_mod_unmute(): подавлено: %s", _ex)
         cog ._mutes .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_mutes',cog ._mutes_file ())
+        # журнал: кто снял мут — пользователь панели (жалоба 2026-09-07:
+        # «Размьют: Moderation — не надо название бота, нужно кто выдал»)
+        _journal_panel_action (guild .id ,'Мут снят','untimeout',user_id ,
+        getattr (member ,'display_name',''),session .get ('username'),
+        'Снят через панель (временные меры)')
+        _live_publish (str (guild .id ),'moderation')
+        _panel_limit_record (guild.id ,_acl_m ,'unmute',1)
         return jsonify ({'ok':True })
 
 
@@ -319,12 +401,15 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'ban'):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        _lim_denied =_panel_limit_deny (bot ,guild.id if guild else 0 ,_acl_m ,'unban')
+        if _lim_denied :
+            return jsonify ({'error':_lim_denied }),429
         try :
             user =_run_async (bot .fetch_user (int (user_id )))
             _run_async (guild .unban (user ))
@@ -332,6 +417,12 @@ def register(ctx):
             return jsonify ({'error':str (e )}),400 
         cog ._bans .get (str (guild .id ),{}).pop (user_id ,None )
         cog ._save ('_bans',cog ._bans_file ())
+        # журнал: кто снял бан — пользователь панели, не бот
+        _journal_panel_action (guild .id ,'Бан снят','unban',user_id ,
+        getattr (user ,'name',''),session .get ('username'),
+        'Снят через панель (временные меры)')
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
+        _panel_limit_record (guild.id ,_acl_m ,'unban',1)
         return jsonify ({'ok':True })
 
 
@@ -346,16 +437,17 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         eid =d .get ('id','')
         cog ._scheduled =[s for s in cog ._scheduled if s ['id']!=eid ]
         cog ._save ('_scheduled',cog ._scheduled_file ())
+        _live_publish (str (session .get ('selected_guild')or MAIN_GUILD_ID ),'moderation')
         return jsonify ({'ok':True })
 
 
         # ── API ROUTES ────────────────────────────────────────────────────────────
 
-        # ── НОВЫЙ API ENDPOINT'LERИ ────────────────────────────────────────────────
+        # ── НОВЫЕ API ENDPOINT'Ы ────────────────────────────────────────────────
 
     @app .route ('/api/bot/status',methods =['POST'])
     @login_required 
@@ -364,16 +456,19 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
         if not bot :return jsonify ({'error':'Бот офлайн'}),503 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         status_map ={'online':discord .Status .online ,'idle':discord .Status .idle ,'dnd':discord .Status .dnd ,'invisible':discord .Status .invisible }
         type_map ={'listening':discord .ActivityType .listening ,'playing':discord .ActivityType .playing ,'watching':discord .ActivityType .watching ,'competing':discord .ActivityType .competing }
         status =status_map .get (d .get ('status','online'),discord .Status .online )
         atype =type_map .get (d .get ('activity_type','watching'),discord .ActivityType .watching )
         atext =str (d .get ('activity_text','Hakumo')or '').strip ()[:80]or 'Hakumo'
-        def _set ():
-            _run_async (bot .change_presence (status =status ,activity =discord .Activity (type =atype ,name =atext )))
+        async def _set ():
+            # change_presence — корутина discord.py; мы уже на лупе бота,
+            # лишний _run_async здесь невозможен (а sync-функцию вообще
+            # нельзя запускать как корутину — был вечный 500).
+            await (bot .change_presence (status =status ,activity =discord .Activity (type =atype ,name =atext )))
         asyncio .run_coroutine_threadsafe (_set (),bot .loop ).result (timeout =5 )
-        # Config'e сохранить — bot новыйden baшlayыnca da hatыrlasыn
+        # Сохраняем в конфиг — бот вспомнит это и после перезапуска
         os .makedirs ('data',exist_ok =True )
         cfg ={}
         cfg_file ='data/bot_config.json'
@@ -390,11 +485,64 @@ def register(ctx):
         return jsonify ({'ok':True })
 
 
+    @app .route ('/api/bot/voice-join', methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_bot_voice_join ():
+        """Подключить бота к голосовому каналу (VOICE_CHANNEL_ID / body.channel_id)."""
+        import web.app as _app
+        import asyncio
+        bot = _app.bot_instance
+        if not bot:
+            return jsonify({'error': 'Бот офлайн — запусти python main.py с TOKEN в .env'}), 503
+        d = _safe_json_obj()
+        raw = d.get('channel_id') or os.environ.get('VOICE_CHANNEL_ID') or 0
+        if not raw:
+            try:
+                with open(os.path.join(_REPO_ROOT, 'config', 'voice_stay.json'), encoding='utf-8') as f:
+                    raw = (json.load(f) or {}).get('channel_id') or 0
+            except Exception:
+                raw = 0
+        try:
+            cid = int(str(raw).strip() or 0)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Некорректный channel_id'}), 400
+        if not cid:
+            return jsonify({'error': 'Не задан VOICE_CHANNEL_ID'}), 400
+
+        async def _join():
+            ch = bot.get_channel(cid)
+            if ch is None:
+                try:
+                    ch = await bot.fetch_channel(cid)
+                except Exception as ex:
+                    return {'error': f'Канал не найден: {ex}'}
+            if not isinstance(ch, discord.VoiceChannel):
+                return {'error': 'Это не голосовой канал'}
+            vc = discord.utils.get(bot.voice_clients, guild=ch.guild)
+            if vc and vc.is_connected():
+                if vc.channel and vc.channel.id == ch.id:
+                    return {'ok': True, 'already': True, 'channel': ch.name, 'id': str(ch.id)}
+                await vc.move_to(ch)
+            else:
+                await ch.connect(self_deaf=False)
+            return {'ok': True, 'channel': ch.name, 'id': str(ch.id)}
+
+        try:
+            fut = asyncio.run_coroutine_threadsafe(_join(), bot.loop)
+            result = fut.result(timeout=60)
+        except Exception as ex:
+            return jsonify({'error': str(ex)}), 500
+        if result.get('error'):
+            return jsonify(result), 400
+        return jsonify(result)
+
+
     @app .route ('/api/bot/prefix',methods =['POST'])
     @login_required 
     @role_required ('owner')
     def api_bot_prefix ():
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         prefix =d .get ('prefix','!').strip ()
         if not prefix :return jsonify ({'error':'Пустой префикс'}),400 
         if len (prefix )>10 :return jsonify ({'error':'префикс слишком длинный'}),400 
@@ -409,7 +557,7 @@ def register(ctx):
                 _log.debug("api_bot_prefix(): подавлено: %s", _ex)
         if not isinstance (cfg ,dict ):
             cfg ={}
-            # Mevcut status/activity alanlarыnы KORU
+            # Сохраняем текущие поля status/activity
         cfg ['prefix']=prefix 
         with open (cfg_file ,'w',encoding ='utf-8')as f :
             json .dump (cfg ,f ,indent =2 ,ensure_ascii =False )
@@ -422,7 +570,7 @@ def register(ctx):
     def api_cog_load ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not bot :
             if _app ._demo_mode ()and name :
@@ -463,7 +611,7 @@ def register(ctx):
     def api_cog_unload ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not bot :
             if _app ._demo_mode ()and name :
@@ -491,7 +639,7 @@ def register(ctx):
     def api_cog_reload ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not bot :
             if _app ._demo_mode ()and name :

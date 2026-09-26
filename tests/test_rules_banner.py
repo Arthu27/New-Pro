@@ -88,18 +88,15 @@ def login(role='owner'):
 
 
 BANNER_URL = '/api/guild/777/rules/banner'
-# Гость без сессии: проверяем вне DEMO_MODE — с ним before_request
-# сознательно входит владельцем, иначе живой предпросмотр панели не работал бы.
-os.environ['DEMO_MODE'] = '0'
-try:
-    r_guest = client.get(BANNER_URL)
-finally:
-    os.environ['DEMO_MODE'] = '1'
+# Гость без сессии: демо-автологина больше нет (безопасность 2026-09-08),
+# поэтому гость закрыт ВСЕГДА — и в бою, и в демо-витрине.
+r_guest = client.get(BANNER_URL)
 check(r_guest.status_code in (302, 401, 403), 'гостю баннер закрыт (вне демо)')
-# В самом демо баннер наоборот должен открываться — иначе предпросмотр сломан.
+# Демо-витрина после входа владельцем (пароль PANEL_PASSWORD) жива как раньше.
+login('owner')
 r_demo = client.get(BANNER_URL + '?text=Демо')
 check(r_demo.status_code == 200 and r_demo.mimetype == 'image/png',
-      'в DEMO_MODE предпросмотр открыт (авто-вход владельцем)')
+      'в DEMO_MODE предпросмотр открыт вошедшему владельцу')
 login('mod')
 check(client.get(BANNER_URL).status_code == 403, 'mod не рисует (admin+)')
 login('admin')

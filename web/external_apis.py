@@ -129,7 +129,7 @@ class ExternalAPIs :
                 results ['confidence']=nsfw_data .get ('confidence',0.0 )
                 results ['categories']=nsfw_data .get ('categories',[])
 
-                # 2. Fallback — контроль по hesu (если есть veritabanы)
+                # 2. Fallback — проверка по базе (если она есть)
         if not results ['is_nsfw']:
             hash_check =await self ._check_image_hash (image_url )
             if hash_check :
@@ -293,7 +293,7 @@ class ExternalAPIs :
         try :
             session =await self ._get_session ()
 
-            # До alыyoruz rapor
+            # Забираем отчёт
             url_id =hashlib .sha256 (url .encode ()).hexdigest ()
             api_url =f"https://www.virustotal.com/api/v3/urls/{url_id}"
             headers ={'x-apikey':self .api_keys ['virustotal_key']}
@@ -330,7 +330,7 @@ class ExternalAPIs :
         return None 
 
 
-        # Kюresel пример
+        # Глобальный кэш
 _external_apis =None 
 
 async def get_external_apis ()->ExternalAPIs :

@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 """Proof — «демки» к наказаниям: доказательства в одном канале.
 
-Идея: модератор выдал наказание → одной командой прикладывает демку
-(/proof). Она падает в канал #-доказательства (создаётся автоматически в
-категории «Логи»): кто наказал, кого, за что — и сам скрин/видео прямо в
-сообщении. Админ скроллит канал — и видит все доказательства, ничего искать
-не надо.
+Идея: модератор выдал наказание → демка падает в канал
+#-доказательства (создаётся автоматически в категории «Логи»): кто наказал,
+кого, за что — и сам скрин/видео прямо в сообщении. Админ скроллит канал —
+и видит все доказательства, ничего искать не надо.
 
-Команды (mod+):
-  Демки грузятся прямо ботом — /proof файлом (или ссылкой), из
-  веб-панели («Модерация» → «Доказательства») или автоматически из
-  /warn и /moderate (вложение перезаливается).
-      Прикрепить демку. Вложение перезаливается в канал (ссылки CDN Discord
-      протухают — в канале файл живёт вечно). Большие файлы (>8 МБ) не
-      перезальются — тогда кидаем ссылку.
+Откуда грузятся демки (команды /proof больше нет — заказ владельца
+2026-09-04):
+  • панель «Доказательства» (из /report вложения убраны 2026-09-05);
+  • веб-панель («Модерация» → «Доказательства» → загрузить напрямую);
+  • автоматически из /warn и /moderate (вложение перезаливается; ссылки
+    CDN Discord протухают — в канале файл живёт вечно).
   /proofs [юзер]   — все демки (по конкретному юзеру или последние 10).
   /proofdel <№>    — удалить демку (admin+), включая сообщение в канале.
 
@@ -46,9 +44,15 @@ RED = 0xE74C3C
 # больше этого размера бот не сможет перезалить файл (лимит Discord без Nitro)
 MAX_REUPLOAD_BYTES = 8 * 1024 * 1024
 
-ACTIONS = ('варн', 'мут', 'таймаут', 'кик', 'бан', 'разбан', 'тихий мут')
+# В выборе НЕТ ни «таймаута», ни «тихого мута»: дубликаты (жалоба владельца
+# 2026-09-04). Мут в боте — нативный таймаут Discord, а «тихий мут» для
+# метки демки неотличим от обычного мута. В выборе: варн, мут, кик, бан,
+# разбан. Старые записи («таймаут», «тихий мут») показываем как «мут» —
+# их цвет оставлен в ACTION_COLORS для карточек в Discord.
+ACTIONS = ('варн', 'мут', 'кик', 'бан', 'разбан')
 ACTION_COLORS = {
-    'варн': GOLD, 'мут': 0xE67E22, 'таймаут': 0xE67E22, 'кик': 0xE74C3C,
+    'варн': GOLD, 'мут': 0xE67E22, 'таймаут': 0xE67E22,  # таймаут — старые записи
+    'кик': 0xE74C3C,
     'бан': RED, 'разбан': GREEN, 'тихий мут': PURPLE,
 }
 IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp')
@@ -232,26 +236,57 @@ def _proof_whitelist_path(gid):
     return f'data/proof_whitelist_{int(gid)}.json'
 
 
+# Кэш whitelist: ModActionModal.__init__ читает его до send_modal (<3с).
+_PROOF_WL_CACHE = {}  # gid -> (wl: dict, mono_ts)
+_PROOF_WL_TTL = 45.0
+
+
 def proof_whitelist(gid):
     """{'users': [...], 'roles': [...]} — кто освобождён от обязательной демки."""
-    data = _load_json(_proof_whitelist_path(gid), {})
+    try:
+        key = int(gid or 0)
+    except (TypeError, ValueError):
+        key = 0
+    import time as _time
+    now = _time.monotonic()
+    hit = _PROOF_WL_CACHE.get(key)
+    if hit and (now - hit[1]) < _PROOF_WL_TTL:
+        wl = hit[0]
+        return {'users': list(wl.get('users') or []),
+                'roles': list(wl.get('roles') or [])}
+    empty = {'users': [], 'roles': []}
+    try:
+        data = _load_json(_proof_whitelist_path(key), {})
+    except Exception as _ex:
+        log.debug(f'[PROOF] whitelist: чтение пропущено: {_ex}')
+        _PROOF_WL_CACHE[key] = (empty, now)
+        return dict(empty)
     if isinstance(data, dict):
         users = data.get('users')
         roles = data.get('roles')
-        return {
+        result = {
             'users': [int(u) for u in (users if isinstance(users, list) else [])
                       if str(u).isdigit()],
             'roles': [int(r) for r in (roles if isinstance(roles, list) else [])
                       if str(r).isdigit()],
         }
-    # старый плоский формат [ids...] — трактуем как список участников
-    if isinstance(data, list):
-        return {'users': [int(u) for u in data if str(u).isdigit()], 'roles': []}
-    return {'users': [], 'roles': []}
+    elif isinstance(data, list):
+        # старый плоский формат [ids...] — трактуем как список участников
+        result = {'users': [int(u) for u in data if str(u).isdigit()],
+                  'roles': []}
+    else:
+        result = dict(empty)
+    _PROOF_WL_CACHE[key] = (result, now)
+    return {'users': list(result['users']), 'roles': list(result['roles'])}
 
 
 def _save_proof_whitelist(gid, wl):
-    _save_json(_proof_whitelist_path(gid),
+    try:
+        key = int(gid or 0)
+        _PROOF_WL_CACHE.pop(key, None)
+    except (TypeError, ValueError):
+        key = gid
+    _save_json(_proof_whitelist_path(key),
                {'users': [int(u) for u in wl['users']],
                 'roles': [int(r) for r in wl['roles']]})
 
@@ -297,24 +332,44 @@ def _proof_cfg_path(gid):
     return f'data/proof_config_{int(gid)}.json'
 
 
+# Короткий кэш: /modpanel → send_modal должен уложиться в 3с Discord.
+# Чтение JSON с диска (Windows Defender) иначе съедает окно.
+_PROOF_REQ_CACHE = {}  # gid -> (required: bool, mono_ts)
+_PROOF_REQ_TTL = 45.0
+
+
 def proof_is_required(gid):
     """Обязательна ли демка к наказаниям на сервере.
 
     По умолчанию — НЕТ (заказ владельца 2026-08-27: ничего не требовать,
     пока сам не включишь в панели → «Доказательства»)."""
     try:
-        data = _load_json(_proof_cfg_path(gid), {})
+        key = int(gid or 0)
+    except (TypeError, ValueError):
+        key = 0
+    import time as _time
+    now = _time.monotonic()
+    hit = _PROOF_REQ_CACHE.get(key)
+    if hit and (now - hit[1]) < _PROOF_REQ_TTL:
+        return bool(hit[0])
+    required = False
+    try:
+        data = _load_json(_proof_cfg_path(key), {})
         if isinstance(data, dict):
-            return bool(data.get('required', False))
+            required = bool(data.get('required', False))
     except Exception as _ex:
         log.debug(f'[PROOF] конфиг: чтение пропущено: {_ex}')
-    return False
+        required = False
+    _PROOF_REQ_CACHE[key] = (required, now)
+    return required
 
 
 def proof_set_required(gid, on):
     """Переключить требование доказательства из панели. Возвращает итог."""
     try:
-        _save_json(_proof_cfg_path(gid), {'required': bool(on)})
+        key = int(gid or 0)
+        _PROOF_REQ_CACHE.pop(key, None)
+        _save_json(_proof_cfg_path(key), {'required': bool(on)})
     except Exception as _ex:
         log.debug(f'[PROOF] конфиг: запись пропущена: {_ex}')
     return proof_is_required(gid)
@@ -447,59 +502,10 @@ class ProofCog(commands.Cog):
                                     image_inline=image_inline, note=note)
         return ok, entry, note
 
-    # ── /proof ────────────────────────────────────────────────────────────
-    @app_commands.command(name='proof', description='Загрузить демку файлом (или ссылкой)')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    @app_commands.describe(
-        user='Кого наказали',
-        action='Какое наказание',
-        reason='За что наказание',
-        demo='Файл демки: видео или скрин',
-        link='Ссылка на демку (Medal, YouTube…), если файла нет')
-    @app_commands.choices(action=[
-        app_commands.Choice(name='варн', value='варн'),
-        app_commands.Choice(name='мут', value='мут'),
-        app_commands.Choice(name='таймаут', value='таймаут'),
-        app_commands.Choice(name='кик', value='кик'),
-        app_commands.Choice(name='бан', value='бан'),
-        app_commands.Choice(name='разбан', value='разбан'),
-        app_commands.Choice(name='тихий мут', value='тихий мут'),
-    ])
-    async def proof(self, interaction: discord.Interaction,
-                    user: discord.Member, action: app_commands.Choice[str],
-                    reason: str, demo: discord.Attachment = None,
-                    link: str = None):
-        if demo is None and not (link or '').strip():
-            return await interaction.response.send_message(
-                'Приложите файл демки (demo) или укажите ссылку (link).',
-                ephemeral=True)
-        # файл может быть тяжёлым: чтение+перезалив занимают время —
-        # отвечаем сразу, докладываем по готовности
-        await interaction.response.defer(ephemeral=True)
-        try:
-            ok, entry, note = await self._create_and_post(
-                interaction.guild, interaction.user, user,
-                action.value, reason, attachment=demo, link=link)
-        except Exception as ex:
-            log.warning(f'[PROOF] /proof: {ex}')
-            return await interaction.followup.send(
-                f'Не получилось записать демку: {ex}', ephemeral=True)
-        e = discord.Embed(
-            title=f'Демка #{entry["id"]} записана' if ok else f'Демка #{entry["id"]} записана (без канала)',
-            color=GREEN if ok else 0xE67E22, timestamp=_now())
-        e.add_field(name='Нарушитель', value=f'{user} (`{user.id}`)', inline=True)
-        e.add_field(name='Наказание', value=action.value, inline=True)
-        e.add_field(name='Файл', value=(
-            f'{demo.filename} · {demo.size // 1024 // 1024 or 1} МБ'
-            if demo else 'ссылка'), inline=True)
-        if not ok:
-            e.description = ('Канал доказательств недоступен — проверьте права '
-                             'бота. Демка видна в /proofs и в панели.')
-        if note:
-            e.add_field(name='Внимание', value=note[:400], inline=False)
-        e.set_footer(text='Всё в одном канале доказательств · /proofs — список')
-        await interaction.followup.send(embed=e, ephemeral=True)
-        log.info(f'[PROOF] /proof #{entry["id"]} от {interaction.user}')
+    # Команды /proof больше НЕТ (заказ владельца 2026-09-04: «/proof убери
+    # вообще»): демки грузятся через панель (из /report вложения убраны)
+    # («Доказательства»). Ядро _create_and_post выше осталось — им пользуются
+    # /warn, /moderate и прямая загрузка в панели.
 
     # ── /proofs ───────────────────────────────────────────────────────────
     @app_commands.command(name='proofs', description='Все демки сервера (или конкретного юзера)')
@@ -514,7 +520,7 @@ class ProofCog(commands.Cog):
             title=f'Демки — {user.display_name}' if user else 'Демки сервера',
             color=PURPLE, timestamp=_now())
         if not items:
-            e.description = 'Пока пусто. Загрузите первую: /proof файлом (или в панели, «Доказательства»).'
+            e.description = 'Пока пусто. Загрузите первую через панель «Доказательства».'
         else:
             lines = []
             ch_id = items[0].get('channel_id')

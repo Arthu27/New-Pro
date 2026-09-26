@@ -65,6 +65,21 @@ check(closed1['verdict'].startswith('Нарушение') and closed1['kind'] ==
       'решённый тикет несёт вердикт и вид')
 check(open1['age_min'] >= 0 and open1['created_readable'], 'возраст и дата человеческие')
 
+print('== 1b. JSON-вердикт → человеческий текст ==')
+raw_json = json.dumps({'kind': 'none', 'label': 'Отклонено'}, ensure_ascii=True)
+RC.ticket_set('t2', verdict=raw_json)
+py2 = RQ.queue_payload('777', {'44': 'Апеллянт'})
+c2 = [i for i in py2['items'] if i['thread_id'] == 't2'][0]
+check(c2['verdict'] == 'Отклонено' and '{' not in c2['verdict'],
+      f'JSON verdict → label «Отклонено» (не сырой blob): {c2["verdict"]!r}')
+check(c2.get('verdict_kind') == 'none', f'verdict_kind=none: {c2.get("verdict_kind")!r}')
+raw_u = '{"kind": "accepted", "label": "\\u041f\\u0440\\u0438\\u043d\\u044f\\u0442\\u043e"}'
+lab, kind = RQ._verdict_display(raw_u)
+check(lab == 'Принято' and kind == 'accepted',
+      f'unicode escapes → «Принято»: {lab!r}')
+lab2, _ = RQ._verdict_display('Просто текст')
+check(lab2 == 'Просто текст', 'plain-string verdict без JSON остаётся как есть')
+
 print('== 2. события диспетчера ==')
 check('appeal_new' in ND.EVENTS and 'report_new' in ND.EVENTS,
       'новые события зарегистрированы')
@@ -114,10 +129,20 @@ check(r.status_code == 200, 'страница открывается модер�
 html = r.get_data(as_text=True)
 check('id="rqKpis"' in html and 'id="rqChips"' in html and 'id="rqList"' in html,
       'KPI, фильтры и список в шаблоне')
+check('rq-verdict' in html and 'rq-setup-grid' in html,
+      'свежая вёрстка очереди (verdict chip + setup grid)')
+check('Вердикт:' not in html or 'rq-verdict' in html,
+      'нет сырого префикса «Вердикт:» без chip')
+# API не отдаёт сырой JSON в поле verdict
+RC.ticket_set('t2', verdict=json.dumps(
+    {'kind': 'none', 'label': 'Без наказания'}, ensure_ascii=True))
 r = client.get('/api/guild/777/reports-queue').get_json()
 check(r.get('success') and r['stats']['open'] == 1
       and any(i['thread_id'] == 't2' and i['verdict'] for i in r['items']),
       'API: сводка и элементы')
+hit = next(i for i in r['items'] if i['thread_id'] == 't2')
+check(hit['verdict'] == 'Без наказания' and '{' not in hit['verdict'],
+      f'API verdict человеческий: {hit["verdict"]!r}')
 r = client.get('/api/guild/555/reports-queue').get_json()
 check(r.get('success') and all(i['thread_id'] != 't3' for i in r['items']),
       'изоляция: /555 отвечает данными главного сервера')
@@ -134,6 +159,76 @@ paths = [i['path'] for g in PM.MENU for i in g.get('pages', [])]
 check('/reports-queue' in paths, 'пункт меню «Репорты» зарегистрирован')
 check(PM.PAGE_COGS.get('/reports-queue') == ('reports',),
       'страница привязана к когу репортов')
+
+print('== 5. списки каналов/ролей для пикеров настройки ==')
+# Баг: пикеры «Канал для жалоб» и «Роль модераторов» оставались с одной
+# строкой «— не задан —», потому что _guild_channels_roles() знал только
+# bot.get_guild() и при промахе молча отдавал ([], []). Проверяем все ветки.
+from web.routes.guild_admin import guild_channels_roles, resolve_guild  # noqa: E402
+
+
+class _FakeChan:
+    def __init__(self, cid, name):
+        self.id = cid
+        self.name = name
+
+
+class _FakeRole:
+    def __init__(self, rid, name):
+        self.id = rid
+        self.name = name
+
+
+class _FakeGuild:
+    def __init__(self, gid):
+        self.id = gid
+        self.text_channels = [_FakeChan(11, 'живой-канал')]
+        self.roles = [_FakeRole(gid, '@everyone'), _FakeRole(22, 'Живая роль')]
+
+
+class _FakeBot:
+    """get_guild() промахивается — как в бою, когда кэш гильдий не наполнен."""
+
+    def __init__(self, guilds):
+        self.guilds = guilds
+
+    def get_guild(self, gid):
+        return None
+
+
+_saved_bot = getattr(appmod, 'bot_instance', None)
+try:
+    appmod.bot_instance = None
+    ch, ro = guild_channels_roles('777')
+    check(len(ch) > 0 and len(ro) > 0,
+          f'бота нет: списки не пустые ({len(ch)} кан. / {len(ro)} ролей)')
+
+    # БОЕВОЙ режим: бот есть, но гильдии в кэше нет — раньше давало ([], [])
+    appmod.bot_instance = _FakeBot([])
+    ch, ro = guild_channels_roles('793336829280780331')
+    check(len(ch) > 0 and len(ro) > 0,
+          f'бот есть, гильдии в кэше нет: списки не пустые ({len(ch)}/{len(ro)})')
+
+    # get_guild() промахнулся, но гильдия есть в bot.guilds — находим по str(id)
+    live = _FakeGuild(793336829280780331)
+    appmod.bot_instance = _FakeBot([live])
+    check(resolve_guild('793336829280780331') is live,
+          'resolve_guild находит гильдию обходом bot.guilds')
+    ch, ro = guild_channels_roles('793336829280780331')
+    check([c['name'] for c in ch] == ['живой-канал'],
+          'живая гильдия: каналы с сервера')
+    check([r['name'] for r in ro] == ['Живая роль'],
+          'живая гильдия: роль @everyone исключена')
+
+    # эндпоинт отдаёт те же списки в JSON (пикер на странице заполнится)
+    appmod.bot_instance = _FakeBot([])
+    login('owner')  # /report-settings закрыт для mod (нужен admin+)
+    r = client.get('/api/guild/777/report-settings').get_json()
+    check(r.get('success') and len(r.get('channels') or []) > 0
+          and len(r.get('roles') or []) > 0,
+          'report-settings: channels/roles не пустые')
+finally:
+    appmod.bot_instance = _saved_bot
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

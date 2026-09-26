@@ -75,7 +75,7 @@ fresh = now.replace(tzinfo=None).isoformat()                      # naive UTC (�
 old_naive = (now - datetime.timedelta(hours=2)).replace(tzinfo=None).isoformat()
 old_aware = (now - datetime.timedelta(hours=1)).isoformat()       # aware UTC
 os.makedirs('data', exist_ok=True)
-json.dump({'42': [
+json.dump({'777777777777777777': [
     {'action': 'Ban', 'user_name': 'Nagibator', 'mod_name': 'admin',
      'reason': 'спам', 'timestamp': old_naive},
     {'action': 'Kick', 'user_name': 'Vredina', 'mod_name': 'admin',
@@ -123,7 +123,7 @@ check(events[0]['action'] == 'Мут', 'свежее событие — перв
 
 # ═══ 3. /api/warnings: та же болезнь, та же прививка ═══════════════════
 print('== /api/warnings ==')
-json.dump({'123456789012345678': {'987654321098765432': [
+json.dump({'777777777777777777': {'987654321098765432': [
     {'reason': 'мат', 'mod': 'admin', 'timestamp': fresh},
 ]}}, open('data/warnings.json', 'w', encoding='utf-8'), ensure_ascii=False)
 

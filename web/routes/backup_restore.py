@@ -2,14 +2,14 @@
 """Бэкапы: создание/скачивание/восстановление + логи сообщений (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -29,7 +29,7 @@ def register(ctx):
         if not bot :return jsonify ({'error':'Бот офлайн'})
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ({'error':'Сервер не найден'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         backup ={'guild_name':guild .name ,'guild_id':str (guild .id ),
         'created_at':datetime.now(timezone.utc).replace(tzinfo=None).strftime ('%Y-%m-%d %H:%M'),'size':'0 KB'}
         if data .get ('role'):
@@ -112,7 +112,7 @@ def register(ctx):
             except Exception :
                 return jsonify ({'error':'Неверный JSON-файл'})
         else :
-            data =request .get_json (silent =True )or {}
+            data =_safe_json_obj()
             backup_id =data .get ('backup_id')
             bf ='data/backups.json'
             if not os .path .exists (bf ):return jsonify ({'error':'Резервная копия не найдена'})
@@ -120,7 +120,9 @@ def register(ctx):
                 with open (bf ,encoding ='utf-8')as fp :backups =json .load (fp )
             except Exception :
                 return jsonify ({'error':'Файл резервной копии повреждён'})
-            backup_data =next ((b for b in backups if b .get ('id')==backup_id ),None )
+            if not isinstance (backups ,list ):
+                return jsonify ({'error':'Файл резервной копии повреждён'})
+            backup_data =next ((b for b in backups if isinstance (b ,dict )and b .get ('id')==backup_id ),None )
             if not backup_data :return jsonify ({'error':'Резервная копия не найдена'})
 
         result ={'roles_created':0 ,'channels_created':0 ,'errors':[]}
@@ -169,7 +171,22 @@ def register(ctx):
                     except Exception as e :
                         result ['errors'].append (f"Канал '{ch_data['name']}': {str(e)}")
 
-        asyncio .run_coroutine_threadsafe (do_restore (),bot .loop ).result (timeout =120 )
+        # do_restore — синхронная (внутри _run_async на каждый вызов Discord),
+        # поэтому её нельзя загонять в event-loop бота: гоняем в отдельном потоке.
+        _restore_err = {}
+        def _restore_runner ():
+            try :
+                do_restore ()
+            except Exception as _e :
+                _restore_err ['e'] = str (_e)
+        import threading as _th
+        _restore_t = _th .Thread (target =_restore_runner ,daemon =True )
+        _restore_t .start ()
+        _restore_t .join (timeout =120 )
+        if _restore_t .is_alive ():
+            return jsonify ({'error':'Восстановление не завершилось за 120 с'}),504
+        if _restore_err :
+            return jsonify ({'error':_restore_err ['e']}),500
         return jsonify ({'success':True ,'result':result })
 
 
@@ -189,16 +206,37 @@ def register(ctx):
         # Только message kategorisi
         msg_type =request .args .get ('type')# 'deleted' или 'edited'
         result =[]
+        try :
+            import web.app as _app
+            _iso =_app ._ts_to_utc_iso
+            _key =_app ._ts_sort_key
+        except Exception :
+            _iso =None
+            _key =None
         for ev in events :
+            if not isinstance (ev ,dict ):
+                continue
             if ev .get ('category')!='message':
                 continue 
-            action =ev .get ('action','').lower ()
-            if msg_type =='deleted'and 'удалить'not in action and 'delete'not in action :
+            action =(ev .get ('action')or '').lower ()
+            if msg_type =='deleted'and 'удал'not in action and 'delete'not in action :
                 continue 
-            if msg_type =='edited'and 'dюzenl'not in action and 'edit'not in action :
+            if msg_type =='edited'and 'измен'not in action and 'редакт'not in action and 'edit'not in action :
                 continue 
-            result .append (ev )
-        result .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
+            row =dict (ev )
+            if not row .get ('channel_name')and row .get ('channel'):
+                row ['channel_name']=row ['channel']
+            if _iso is not None :
+                try :
+                    ts =row .get ('timestamp')
+                    row ['timestamp']=_iso (ts if isinstance (ts ,str )else ('' if ts is None else str (ts )))
+                except Exception as _ex :
+                    _log .debug ('backup: метка %r: %s',ts ,_ex )
+            result .append (row )
+        if _key is not None :
+            result .sort (key =_key ,reverse =True )
+        else :
+            result .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
         return jsonify (result [:300 ])
 
 
@@ -238,7 +276,7 @@ def register(ctx):
             filtered =[m for m in logs 
             if str (m .get ('author_id',''))==user_id 
             and (channel_id is None or str (m .get ('channel_id',''))==channel_id )]
-            # En новыйden старыйye
+            # От новых к старым
             filtered .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
             filtered =filtered [:limit ]
             return jsonify ({
@@ -268,4 +306,4 @@ def register(ctx):
             'raw':data 
             })
         except Exception as e :
-            return jsonify ({'error':f'Неверный dosya: {str(e)}'})
+            return jsonify ({'error':f'Неверный файл: {str(e)}'})

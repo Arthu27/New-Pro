@@ -1,44 +1,151 @@
 {% extends "base.html" %}
-{% block title %}Репорты - Hakumo{% endblock %}
-{% block page_title %}<i class="fas fa-flag"></i> Репорты{% endblock %}
+{% block title %}Модерация — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-shield-halved"></i> Модерация{% endblock %}
+{% block styles %}
+<style nonce="{{ csp_nonce }}">
+/* Страница с нуля: одна колонка, понятные вердикты, телефон без наложений */
+.rq-page { display: flex; flex-direction: column; gap: 16px; max-width: 920px; }
+.rq-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rq-stat {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.rq-stat-ico {
+  width: 40px; height: 40px; border-radius: 12px; flex: none;
+  display: grid; place-items: center; font-size: 15px;
+  background: var(--surface-3); color: var(--text-2);
+}
+.rq-stat.tone-warn .rq-stat-ico { background: var(--warn-soft); color: var(--warn); }
+.rq-stat.tone-ok .rq-stat-ico { background: var(--ok-soft); color: var(--ok); }
+.rq-stat.tone-info .rq-stat-ico { background: var(--info-soft); color: var(--info); }
+.rq-stat-num { font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--text); }
+.rq-stat-lbl { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+.rq-setup .rq-setup-grid {
+  display: grid; grid-template-columns: 1fr 1fr auto;
+  gap: 12px; align-items: end;
+}
+.rq-setup label { display: block; font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+.rq-setup select.form-input { width: 100%; min-height: 44px; }
+.rq-setup #rsSave { min-height: 44px; white-space: nowrap; }
+
+.rq-queue-head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 12px;
+}
+.rq-list { display: flex; flex-direction: column; gap: 8px; }
+.rq-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 12px; align-items: start;
+  padding: 14px; border-radius: 16px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.rq-row-ico {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: grid; place-items: center; background: var(--surface-3); color: var(--text-2);
+}
+.rq-row-title { font-weight: 650; color: var(--text); font-size: 14px; word-break: break-word; }
+.rq-row-meta { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.rq-verdict {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 8px; padding: 5px 10px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600;
+  background: var(--ok-soft); color: var(--ok);
+  max-width: 100%; word-break: break-word; white-space: normal;
+}
+.rq-verdict.kind-none { background: var(--surface-3); color: var(--text-2); }
+.rq-verdict.kind-warn { background: var(--warn-soft); color: var(--warn); }
+.rq-verdict.kind-mute,
+.rq-verdict.kind-ban,
+.rq-verdict.kind-kick { background: var(--err-soft); color: var(--err); }
+.rq-verdict.kind-accepted { background: var(--ok-soft); color: var(--ok); }
+.rq-badge {
+  flex: none; align-self: start; padding: 5px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; text-transform: lowercase;
+}
+.rq-badge.open { background: var(--warn-soft); color: var(--warn); }
+.rq-badge.done { background: var(--ok-soft); color: var(--ok); }
+
+@media (max-width: 760px) {
+  .rq-stats { grid-template-columns: 1fr; }
+  .rq-setup .rq-setup-grid { grid-template-columns: 1fr; }
+  .rq-setup #rsSave { width: 100%; justify-content: center; }
+  .rq-row { grid-template-columns: 36px minmax(0, 1fr); }
+  .rq-badge { grid-column: 2; justify-self: start; }
+  .seg { width: 100%; }
+  .seg-btn { flex: 1; justify-content: center; min-height: 42px; }
+}
+</style>
+{% endblock %}
 {% block content %}
-<div class="page-head">
-  <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Репорты</div>
-    <h1>Репорты участников</h1>
-    <p class="lead">Очередь жалоб из <b>/report</b>: кто пожаловался, на кого, и что решили. Решение принимается в приватной ветке Discord — здесь живой мониторинг.</p>
+<div class="rq-page">
+  <div class="page-head">
+    <div class="page-head-copy">
+      <div class="eyebrow">Модерация</div>
+      <h1>Репорты</h1>
+      <p class="lead">Очередь <b>/report</b>: кто позвал, кого вызвали и чем закончилось. Разбор — в Discord, здесь только мониторинг. Настройки канала и роли сохраняются как раньше.</p>
+    </div>
+  </div>
+
+  <div class="rq-stats" id="rqKpis">
+    <div class="rq-stat"><div class="rq-stat-ico"><i class="fas fa-circle-notch fa-spin"></i></div><div><div class="rq-stat-num">…</div><div class="rq-stat-lbl">Загрузка</div></div></div>
+  </div>
+
+  {% if role == 'admin' or role == 'owner' %}
+  <div class="card rq-setup" id="reportSetupCard">
+    <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-sliders"></i> Настройки вызовов</div>
+    <p class="muted" style="margin:0 0 12px">Куда бот шлёт карточки <b>/report</b> и какая роль — модераторская (единая для бота). Пустой канал → бот создаст закрытый <b>#модерация</b>.</p>
+    <div class="rq-setup-grid">
+      <div>
+        <label for="rsChannel">Канал для вызовов</label>
+        <select id="rsChannel" class="form-input"><option value="">— не задан (создастся #модерация) —</option></select>
+      </div>
+      <div>
+        <label for="rsRole">Роль модераторов</label>
+        <select id="rsRole" class="form-input"><option value="">— не задана —</option></select>
+      </div>
+      <button type="button" class="btn btn-primary" id="rsSave"><i class="fas fa-save"></i> Сохранить</button>
+    </div>
+    <div id="rsMsg" style="margin-top:10px"></div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="rq-queue-head">
+      <div class="bs-title" style="margin:0"><i class="fas fa-inbox"></i> Очередь</div>
+      <div class="seg" id="rqChips">
+        <button type="button" class="seg-btn active" data-st="open"><i class="fas fa-fire"></i> Открытые</button>
+        <button type="button" class="seg-btn" data-st="closed"><i class="fas fa-check"></i> Решённые</button>
+        <button type="button" class="seg-btn" data-st=""><i class="fas fa-list"></i> Все</button>
+      </div>
+    </div>
+    <div id="rqList" class="rq-list"><div class="empty"><i class="fas fa-mug-hot"></i><span>Загрузка…</span></div></div>
   </div>
 </div>
 
-<div class="kpi-row" id="rqKpis">
-  <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
-</div>
-
-<div class="card">
-  <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-inbox"></i> Очередь</div>
-  <div class="seg" id="rqChips">
-    <button type="button" class="seg-btn active" data-st="open"><i class="fas fa-fire"></i> Открытые</button>
-    <button type="button" class="seg-btn" data-st="closed"><i class="fas fa-check"></i> Решённые</button>
-    <button type="button" class="seg-btn" data-st=""><i class="fas fa-list"></i> Все</button>
-  </div>
-  <div id="rqList" style="margin-top:10px"><div class="empty"><i class="fas fa-mug-hot"></i><span>Загрузка…</span></div></div>
-</div>
-<script>
+<script nonce="{{ csp_nonce }}">
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/reports-queue';
 var STATUS = 'open';
 var ITEMS = [];
 
 function $(id) { return document.getElementById(id); }
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function kpi(icon, num, label, tone) {
-  return '<div class="kpi ' + (tone || '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
-    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 function ageHuman(min) {
   if (min < 60) return min + ' мин';
   if (min < 1440) return Math.round(min / 60) + ' ч';
   return Math.round(min / 1440) + ' дн';
+}
+function statCard(icon, num, label, tone) {
+  return '<div class="rq-stat ' + (tone || '') + '"><div class="rq-stat-ico"><i class="fas ' + icon +
+    '"></i></div><div><div class="rq-stat-num">' + num + '</div><div class="rq-stat-lbl">' +
+    esc(label) + '</div></div></div>';
 }
 
 function render() {
@@ -50,20 +157,29 @@ function render() {
   });
   if (!rows.length) {
     box.innerHTML = '<div class="empty"><i class="fas fa-mug-hot"></i><span>' +
-      (STATUS === 'open' ? 'Открытых репортов нет — очередь чиста.' : 'Здесь пусто') + '</span></div>';
+      (STATUS === 'open' ? 'Открытых вызовов нет — очередь чиста.' : 'Здесь пока пусто') +
+      '</span></div>';
     return;
   }
   box.innerHTML = rows.map(function (t) {
     var side = t.same
-      ? esc(t.reporter) + ' · апелляция на нарушение'
+      ? esc(t.reporter) + ' · апелляция'
       : esc(t.reporter) + ' → ' + esc(t.accused);
-    var verdict = (t.closed && t.verdict)
-      ? '<div class="feed-item-sub" style="white-space:normal">Вердикт: ' + esc(t.verdict) + '</div>' : '';
-    var when = t.closed ? ('закрыт ' + t.closed_readable) : ('ждёт ' + ageHuman(t.age_min));
-    return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas ' + t.icon + '"></i></div>' +
-      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(t.kind_label) + ' · ' + side + '</div>' + verdict +
-      '<div class="feed-item-time">' + esc(when) + '</div></div>' +
-      '<span class="badge ' + (t.closed ? 'ok' : 'tone-warning') + '">' + (t.closed ? 'решён' : 'открыт') + '</span></div>';
+    var when = t.closed
+      ? ('закрыт ' + esc(t.closed_readable || ''))
+      : ('ждёт ' + ageHuman(t.age_min || 0));
+    var verdict = '';
+    if (t.closed && t.verdict) {
+      var vk = String(t.verdict_kind || '').replace(/[^a-z0-9_-]/gi, '');
+      verdict = '<div class="rq-verdict kind-' + esc(vk || 'none') + '">' +
+        '<i class="fas fa-gavel"></i> ' + esc(t.verdict) + '</div>';
+    }
+    return '<article class="rq-row">' +
+      '<div class="rq-row-ico"><i class="fas ' + esc(t.icon || 'fa-bell') + '"></i></div>' +
+      '<div><div class="rq-row-title">' + esc(t.kind_label || 'Тикет') + ' · ' + side + '</div>' +
+      '<div class="rq-row-meta">' + when + '</div>' + verdict + '</div>' +
+      '<span class="rq-badge ' + (t.closed ? 'done' : 'open') + '">' +
+      (t.closed ? 'решён' : 'открыт') + '</span></article>';
   }).join('');
 }
 
@@ -75,9 +191,9 @@ function load() {
     ITEMS = d.items || [];
     var s = d.stats || {};
     $('rqKpis').innerHTML =
-      kpi('fa-fire', s.open, 'открытых репортов', s.open ? 'tone-warn' : 'tone-ok') +
-      kpi('fa-circle-check', s.closed_week, 'решено за 7 дней', 'tone-ok') +
-      kpi('fa-flag', s.total, 'всего тикетов', 'tone-info');
+      statCard('fa-fire', s.open || 0, 'открытых', s.open ? 'tone-warn' : 'tone-ok') +
+      statCard('fa-circle-check', s.closed_week || 0, 'решено за 7 дней', 'tone-ok') +
+      statCard('fa-flag', s.total || 0, 'всего вызовов', 'tone-info');
     render();
   }).catch(function () {});
 }
@@ -91,6 +207,44 @@ document.addEventListener('click', function (e) {
   render();
 });
 
+var SETUP_API = '/api/guild/' + GID + '/report-settings';
+function setupMsg(text, ok) {
+  var el = $('rsMsg');
+  if (!el) return;
+  el.innerHTML = '<span class="badge ' + (ok ? 'ok' : 'tone-danger') + '">' + esc(text) + '</span>';
+}
+function loadSetup() {
+  if (!$('rsChannel')) return;
+  fetch(SETUP_API).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    var ch = $('rsChannel'), ro = $('rsRole');
+    (d.channels || []).forEach(function (c) {
+      var o = document.createElement('option'); o.value = c.id; o.textContent = '#' + c.name; ch.appendChild(o);
+    });
+    (d.roles || []).forEach(function (r) {
+      var o = document.createElement('option'); o.value = r.id; o.textContent = r.name; ro.appendChild(o);
+    });
+    ch.value = d.channel_id || '';
+    ro.value = d.mod_role_id || '';
+  }).catch(function () {});
+}
+function saveSetup() {
+  if (!$('rsChannel')) return;
+  setupMsg('Сохранение…', true);
+  fetch(SETUP_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel_id: $('rsChannel').value, mod_role_id: $('rsRole').value })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) setupMsg('Сохранено. Новые вызовы пойдут в выбранный канал.', true);
+    else setupMsg(d.error || 'Не удалось сохранить', false);
+  }).catch(function () { setupMsg('Ошибка сети', false); });
+}
+document.addEventListener('click', function (e) {
+  if (e.target.closest('#rsSave')) saveSetup();
+});
+
+loadSetup();
 load();
 if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); }, 1500);
 </script>

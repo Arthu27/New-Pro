@@ -165,8 +165,12 @@ check(body.get('delivered') is False and 'не найден' in (body.get('deliv
 print('== 6. Статика страниц ==')
 dash = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'), encoding='utf-8').read()
 check('id="ann-channel"' in dash, 'дашборд: селектор канала анонса есть')
-check('loadAnnChannels' in dash and "opt.value = c.id" in dash or 'o.value = c.id' in dash,
-      'дашборд: каналы подгружаются из API')
+# Каналы берутся из API и раскладываются в <option> с пометкой сервера
+# (её читает sendAnnouncement). Раньше проверяли буквальный «opt.value =
+# c.id» — список теперь собирается строкой и вставляется разом.
+check('loadAnnChannels' in dash and "/channels'" in dash
+      and 'insertAdjacentHTML' in dash and 'data-guild=' in dash,
+      'дашборд: каналы подгружаются из API и попадают в селект с id сервера')
 page = open(os.path.join(ROOT, 'web', 'templates', 'send_command.html'), encoding='utf-8').read()
 check("fetch('/api/guilds')" in page, 'send-command v2: реальный выбор сервера из /api/guilds')
 check('id="char-counter"' in page and '/ 2000' in page, 'счётчик символов до 2000')

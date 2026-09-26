@@ -52,40 +52,92 @@ def _read_audit(guild_id):
 
 
 def load_message_events(guild_id):
-    """События сообщений сервера: [(автор, канал, datetime|None)].
+    """События сообщений сервера: [(автор, канал, datetime|None, uid|None)].
 
-    Порядок источников 1:1 с базовой аналитикой: audit_log, а если там
-    сообщений нет — message_logs_<gid>.json.
+    Объединяем ОБА источника, а не выбираем один:
+      • data/message_logs_<gid>.json — основной полный поток (его ведёт ког
+        activity_stats на КАЖДОЕ сообщение, не ботов/вебхуков/ЛС);
+      • audit_log.json (category=message, 'message написано') — редкое
+        историческое дополнение.
+    Раньше был фолбэк «audit, а если он не пуст — message_logs не читаем»:
+    одного старого audit-сообщения хватало, чтобы весь message_logs
+    (тысячи реальных сообщений) проигнорировался, и heatmap/недельная
+    сводка/рекорды/детализация каналов выходили пустыми.
     """
     gid = str(guild_id)
     events = []
+
+    # 1) Основной источник — message_logs (полные реальные данные).
+    log_file = f'data/message_logs_{gid}.json'
+    if os.path.exists(log_file):
+        try:
+            with open(log_file, 'r', encoding='utf-8') as fh:
+                msgs = json.load(fh)
+        except (OSError, json.JSONDecodeError) as _ex:
+            _log.debug("analytics_plus: message_logs не прочитан: %s", _ex)
+            msgs = []
+        for m in msgs or []:
+            if not isinstance(m, dict):
+                continue
+            author = m.get('author') or m.get('author_name') or m.get('user_name') or m.get('user_id')
+            if not author:
+                continue
+            # uid — личность автора: топы и «уникальные» клеятся по нему,
+            # смена ника не дробит человека (владелец 2026-09-05).
+            uid = str(m.get('uid') or m.get('author_id') or '') or None
+            events.append((
+                str(author),
+                str(m.get('channel') or m.get('channel_name') or '?'),
+                _parse_ts(m.get('timestamp')),
+                uid,
+            ))
+
+    # 1b) Если activity_stats ещё не писал message_logs_ — берём AI-журнал
+    #     (message_log_ без s): те же метаданные, без текста в агрегатах.
+    if not events:
+        ai_file = f'data/message_log_{gid}.json'
+        if os.path.exists(ai_file):
+            try:
+                with open(ai_file, 'r', encoding='utf-8') as fh:
+                    msgs = json.load(fh)
+            except (OSError, json.JSONDecodeError) as _ex:
+                _log.debug("analytics_plus: message_log не прочитан: %s", _ex)
+                msgs = []
+            for m in msgs or []:
+                if not isinstance(m, dict):
+                    continue
+                author = (m.get('author') or m.get('author_name')
+                          or m.get('user_name') or m.get('user_id'))
+                if not author:
+                    continue
+                uid = str(m.get('uid') or m.get('author_id') or '') or None
+                events.append((
+                    str(author),
+                    str(m.get('channel') or m.get('channel_name') or '?'),
+                    _parse_ts(m.get('timestamp')),
+                    uid,
+                ))
+
+    # 2) Дополнение из audit_log (message-события). Дедуплицируем по ключу
+    #    (автор, канал, дата-время до секунды), чтобы не задвоить совпадения.
+    seen = {(str(a), str(c), d.isoformat() if d else None) for a, c, d, _u in events}
     for ev in _read_audit(gid):
         if (ev.get('category') or '').lower() != 'message':
             continue
         if (ev.get('action') or '').lower() != 'message написано':
             continue
-        events.append((
-            ev.get('user_name') or ev.get('user_id', '?'),
-            ev.get('channel') or ev.get('channel_name', '?'),
-            _parse_ts(ev.get('timestamp')),
-        ))
-    if not events:
-        log_file = f'data/message_logs_{gid}.json'
-        if os.path.exists(log_file):
-            try:
-                with open(log_file, 'r', encoding='utf-8') as fh:
-                    msgs = json.load(fh)
-            except (OSError, json.JSONDecodeError) as _ex:
-                _log.debug("analytics_plus: message_logs не прочитан: %s", _ex)
-                msgs = []
-            for m in msgs or []:
-                if not isinstance(m, dict):
-                    continue
-                events.append((
-                    m.get('author') or m.get('user_name', '?'),
-                    m.get('channel', '?'),
-                    _parse_ts(m.get('timestamp')),
-                ))
+        author = ev.get('user_name') or ev.get('user_id')
+        if not author:
+            continue
+        dt = _parse_ts(ev.get('timestamp'))
+        key = (str(author), str(ev.get('channel') or ev.get('channel_name') or '?'),
+               dt.isoformat() if dt else None)
+        if key in seen:
+            continue
+        seen.add(key)
+        events.append((str(author), key[1], dt,
+                       str(ev.get('user_id') or '') or None))
+
     return events
 
 
@@ -93,7 +145,7 @@ def heatmap_matrix(events):
     """7×24 (день недели × час): [[cnt]*24]*7 плюс максимум для шкалы."""
     matrix = [[0] * 24 for _ in range(7)]
     total = 0
-    for _author, _channel, dt in events:
+    for _author, _channel, dt, _uid in events:
         if dt is None:
             continue
         matrix[dt.weekday()][dt.hour] += 1
@@ -117,7 +169,7 @@ def heatmap_matrix(events):
 def daily_series(events, days=30):
     """[(iso-дата, сообщений)] за последние N дней, включая нулевые."""
     counts = Counter()
-    for _author, _channel, dt in events:
+    for _author, _channel, dt, _uid in events:
         if dt is not None:
             counts[dt.date().isoformat()] += 1
     today = date.today()
@@ -129,6 +181,67 @@ def daily_series(events, days=30):
 def top_counter(events, idx, limit=20):
     cnt = Counter(str(ev[idx]) for ev in events)
     return cnt.most_common(limit)
+
+
+def _identity_key(author, uid):
+    """Личность автора: uid, а без него — само имя (старые записи)."""
+    return ('u:' + str(uid)) if uid else ('n:' + str(author))
+
+
+def top_members_counter(events, limit=20):
+    """Топ авторов ПО ЛИЧНОСТИ (uid); подпись — из самой свежей записи.
+
+    Смена ника не дробит человека в CSV и «детализации канала»
+    (владелец 2026-09-05: «один и тот же человек, имя поменял»).
+    Список хронологический, поэтому последний ник просто побеждает.
+    """
+    counts, labels = {}, {}
+    for author, _ch, _dt, uid in events:
+        key = _identity_key(author, uid)
+        counts[key] = counts.get(key, 0) + 1
+        labels[key] = str(author)
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
+    return [(labels[k], c) for k, c in ranked]
+
+
+def unique_members(events):
+    """Сколько РАЗНЫХ людей в событиях (по uid, не по никам)."""
+    return len({_identity_key(a, u) for a, _c, _dt, u in events})
+
+
+def channels_with_counts(events):
+    """Каналы, где ЕСТЬ сообщения: [{name, messages}] по убыванию.
+
+    Работает офлайн (источник — file message_logs): селект «Детализации
+    по каналу» больше не мёртв без бота.
+    """
+    cnt = Counter(str(c) for _a, c, _dt, _u in events if str(c) != '?')
+    return [{'name': n, 'messages': c} for n, c in cnt.most_common()]
+
+
+def member_activity(events, uid, limit=6):
+    """Мини-профиль из событий сообщений: по ЛИЧНОСТИ (uid).
+
+    {found, name, messages, top_channels, first_active, last_active}.
+    Смена ника не мешает: записи склеены по uid, подпись — свежайший ник.
+    """
+    uid = str(uid or '').strip()
+    own = [ev for ev in events if str(ev[3] or '') == uid and uid] \
+        if uid else []
+    if not own:
+        return {'found': False, 'name': '', 'messages': 0,
+                'top_channels': [], 'first_active': None, 'last_active': None}
+    own.sort(key=lambda ev: (ev[2] is None, ev[2]))
+    stamps = [ev[2] for ev in own if ev[2] is not None]
+    cnt = Counter(str(ev[1]) for ev in own if str(ev[1]) != '?')
+    return {
+        'found': True,
+        'name': str(own[-1][0]),
+        'messages': len(own),
+        'top_channels': cnt.most_common(limit),
+        'first_active': stamps[0].isoformat() if stamps else None,
+        'last_active': stamps[-1].isoformat() if stamps else None,
+    }
 
 
 def load_member_events(guild_id):
@@ -222,7 +335,7 @@ def analytics_full_csv(guild_id, days=30):
         w.writerow([day, cnt])
     w.writerow([])
     w.writerow(['Участник', 'Сообщений'])
-    for name, cnt in top_counter(events, 0):
+    for name, cnt in top_members_counter(events):
         w.writerow([name, cnt])
     w.writerow([])
     w.writerow(['Канал', 'Сообщений'])
@@ -272,12 +385,38 @@ def member_flow(guild_id, days=14):
     }
 
 
+def member_count_series(current_count, flow, days=None):
+    """Ряд «число участников на конец каждого дня» по реальным приходам/уходам.
+
+    current_count — члены сервера СЕЙЧАС (после всех событий окна), это
+    последняя точка (сегодня). Идём назад по дням: если в день i пришло
+    joins[i] и ушло leaves[i], то на конец предыдущего дня было
+    count[i-1] = count[i] - joins[i] + leaves[i].
+
+    Раньше community.py считал одной формулой со срезом joins[i:]/leaves[i:],
+    что давало сдвиг на день (событие дня i относилось к дню i-1) и рисовало
+    линию роста неверно.
+    """
+    joins = flow.get('joins') or []
+    leaves = flow.get('leaves') or []
+    n = days or len(joins) or len(leaves) or 7
+    if len(joins) < n:
+        joins = joins + [0] * (n - len(joins))
+    if len(leaves) < n:
+        leaves = leaves + [0] * (n - len(leaves))
+    counts = [0] * n
+    counts[n - 1] = max(0, int(current_count or 0))
+    for i in range(n - 1, 0, -1):
+        counts[i - 1] = max(0, counts[i] - int(joins[i] or 0) + int(leaves[i] or 0))
+    return counts
+
+
 def channel_drill(events, name, days=30):
     """Детализация по каналу: ряд по дням, топ авторов, всего сообщений."""
     name = (name or '').strip()
     own = [ev for ev in events if str(ev[1]) == name]
     days_row = []
-    counts = Counter(dt.date().isoformat() for _a, _c, dt in own if dt is not None)
+    counts = Counter(dt.date().isoformat() for _a, _c, dt, _u in own if dt is not None)
     today = date.today()
     for i in range(days - 1, -1, -1):
         day = (today - timedelta(days=i)).isoformat()
@@ -286,14 +425,14 @@ def channel_drill(events, name, days=30):
         'name': name,
         'total': len(own),
         'days': days_row,
-        'top_authors': top_counter(own, 0, limit=5),
-        'unique_authors': len({str(a) for a, _c, _dt in own}),
+        'top_authors': top_members_counter(own, limit=5),
+        'unique_authors': unique_members(own),
     }
 
 
 def record_days(events, limit=3):
     """Рекордные дни сервера по сообщениям: [(дата, кол-во)] по убыванию."""
-    counts = Counter(dt.date().isoformat() for _a, _c, dt in events if dt is not None)
+    counts = Counter(dt.date().isoformat() for _a, _c, dt, _u in events if dt is not None)
     return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
 
 
@@ -306,15 +445,16 @@ def week_summary(events, now=None):
     prev_msgs = 0
     cur_users = set()
     prev_users = set()
-    for author, _channel, dt in events:
+    for author, _channel, dt, uid in events:
         if dt is None:
             continue
+        _key = _identity_key(author, uid)
         if dt >= week_start:
             cur_msgs += 1
-            cur_users.add(str(author))
+            cur_users.add(_key)
         elif dt >= prev_start:
             prev_msgs += 1
-            prev_users.add(str(author))
+            prev_users.add(_key)
 
     def _delta(cur, prev):
         if prev == 0:
@@ -341,7 +481,7 @@ def analytics_csv(guild_id, days=30):
         w.writerow([day, cnt])
     w.writerow([])
     w.writerow(['Участник', 'Сообщений'])
-    for name, cnt in top_counter(events, 0):
+    for name, cnt in top_members_counter(events):
         w.writerow([name, cnt])
     w.writerow([])
     w.writerow(['Канал', 'Сообщений'])
@@ -402,6 +542,25 @@ def register(ctx):
         body['success'] = True
         return jsonify(body)
 
+    @app.route('/api/guild/<guild_id>/analytics/drill-channels')
+    @login_required
+    @role_required('mod')
+    def api_guild_drill_channels(guild_id):
+        """Каналы, где есть сообщения (офлайн-источник для «Детализации»)."""
+        body = channels_with_counts(load_message_events(guild_id))
+        return jsonify({'success': True, 'channels': body})
+
+    @app.route('/api/guild/<guild_id>/analytics/member/<uid>')
+    @login_required
+    @role_required('mod')
+    def api_guild_member_activity(guild_id, uid):
+        """Мини-профиль автора из «Самых активных» (клик по строке)."""
+        if not str(uid).isdigit():
+            return jsonify({'success': False, 'error': 'Некорректный ID'}), 400
+        body = member_activity(load_message_events(guild_id), uid)
+        body['success'] = True
+        return jsonify(body)
+
     @app.route('/api/guild/<guild_id>/analytics/records')
     @login_required
     @role_required('mod')
@@ -410,7 +569,7 @@ def register(ctx):
         recs = record_days(events)
         today_iso = date.today().isoformat()
         counts_ser = Counter(
-            dt.date().isoformat() for _a, _c, dt in events if dt is not None
+            dt.date().isoformat() for _a, _c, dt, _u in events if dt is not None
         )
         rank = None
         if counts_ser.get(today_iso):

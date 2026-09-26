@@ -47,10 +47,10 @@ PRESETS = [
 ]
 
 # Парсинг времени: 1h, 30m, 1d, 1д, 30мин, 1час, 1день, etc.
-TIME_REGEX = re.compile(r'(\d+)\s*(s|sec|secs|second|seconds|м|мин|min|mins|minute|minutes|ч|час|часа|часов|h|hr|hrs|hour|hours|д|день|дня|дней|d|day|days|w|week|weeks|нед|неделя|недели|недель|мес|месяц|месяца|месяцев|mo|month|months)\b', re.IGNORECASE)
+TIME_REGEX = re.compile(r'(\d+)\s*(s|sec|secs|second|seconds|m|м|мин|min|mins|minute|minutes|ч|час|часа|часов|h|hr|hrs|hour|hours|д|день|дня|дней|d|day|days|w|week|weeks|нед|неделя|недели|недель|мес|месяц|месяца|месяцев|mo|month|months)\b', re.IGNORECASE)
 
 TIME_ALIASES = {
-    's': 1, 'sec': 1, 'secs': 1, 'second': 1, 'seconds': 1,
+    's': 1, 'sec': 1, 'secs': 1, 'second': 1, 'seconds': 1, 'm': 60,
     'м': 60, 'мин': 60, 'min': 60, 'mins': 60, 'minute': 60, 'minutes': 60,
     'ч': 3600, 'час': 3600, 'часа': 3600, 'часов': 3600, 'h': 3600, 'hr': 3600, 'hrs': 3600, 'hour': 3600, 'hours': 3600,
     'д': 86400, 'день': 86400, 'дня': 86400, 'дней': 86400, 'd': 86400, 'day': 86400, 'days': 86400,
@@ -307,8 +307,9 @@ class TempModeration(commands.Cog):
         # тик — иначе запланированное из панели увидело бы выполнение только
         # после рестарта бота, а отмена из панели не сработала бы вовсе.
         try:
-            with open(self._scheduled_file(), "r", encoding="utf-8") as f:
-                disk = json.load(f)
+            # перечитывание файла раз в 30с — в рабочем потоке (event loop не встаёт)
+            from services.async_io import load_json_async
+            disk = await load_json_async(self._scheduled_file(), [], log=log)
             if isinstance(disk, list):
                 mem = {str(e.get("id")): e for e in self._scheduled
                        if isinstance(e, dict)}
@@ -339,6 +340,11 @@ class TempModeration(commands.Cog):
                 try:
                     if action == "mute":
                         if member:
+                            try:  # таймаут глушит чат И голос — снимаем отдельный войс-мут
+                                from services import mute_state
+                                await mute_state.clear_voice_mute(guild, member)
+                            except Exception as _mse:
+                                log.debug('[TempMod] очистка войс-мута: %s', _mse)
                             until = datetime.now(timezone.utc) + timedelta(seconds=duration)
                             await member.timeout(until, reason=reason)
                             self._mutes.setdefault(entry["guild_id"], {})[entry["user_id"]] = {

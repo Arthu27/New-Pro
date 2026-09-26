@@ -371,7 +371,7 @@ def readiness_checklist(gid, now=None):
         'status': 'ok' if steps else 'missing',
         'detail': '%d пор.' % len(steps) if steps else 'Не заданы',
         'hint': 'Бот сам накажет при достижении порога варнов.',
-        'link': '/warn-config', 'link_label': 'Настроить',
+        'link': '/ladder', 'link_label': 'Настроить',
     })
 
     reasons = load_reasons(gid).get('warn') or []

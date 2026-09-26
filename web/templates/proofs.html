@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Доказательства</div>
+    <div class="eyebrow"> Модерация </div>
     <h1>Доказательства</h1>
     <p class="lead">Демки, привязанные к наказаниям: фото и видео смотрятся прямо здесь —
       файлы хранятся у нас и не протухают, как ссылки Discord.</p>
@@ -42,8 +42,8 @@
       <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
         Наказание
         <select id="pf-action" aria-label="Наказание">
-          <option>варн</option><option>мут</option><option>тихий мут</option>
-          <option>таймаут</option><option>кик</option><option>бан</option><option>разбан</option>
+          <option>варн</option><option>мут</option>
+          <option>кик</option><option>бан</option><option>разбан</option>
         </select>
       </label>
       <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600;flex-basis:240px">
@@ -82,12 +82,7 @@
         к наказанию (по участнику или по роли). Управление — Админ и выше.</span>
     </div>
     <div class="row" style="gap:8px;flex-wrap:wrap" id="pf-wl-addrow">
-      <select id="pf-wl-kind" aria-label="Тип записи белого списка" style="max-width:150px">
-        <option value="user">Участник</option><option value="role">Роль</option>
-      </select>
-      <input type="text" id="pf-wl-id" placeholder="Имя участника — выберите из списка"
-             style="flex:1;min-width:200px" aria-label="Участник для белого списка">
-      <select id="pf-wl-role" style="flex:1;min-width:200px;display:none" aria-label="Роль для белого списка"></select>
+      <select id="pf-wl-what" aria-label="Участник или роль" style="flex:1;min-width:260px"></select>
       <span id="pf-wl-status"></span>
       <button type="button" class="btn btn-sm" id="pf-wl-add-btn"><i class="fas fa-plus"></i> Добавить</button>
     </div>
@@ -139,7 +134,7 @@
 </div>
 
 <script src="/static/pickers.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
@@ -160,6 +155,13 @@
   }
 
   var TONE = { 'варн': 'tone-warning', 'мут': 'tone-warning', 'тихий мут': 'neutral', 'таймаут': 'tone-warning', 'кик': 'tone-warning', 'бан': 'danger', 'разбан': 'ok' };
+
+  /* Без дублей в выборе и фильтре: «таймаут» и «тихий мут» в старых
+     записях показываем как «мут» (мут = нативный таймаут Discord). */
+  function _act(a) {
+    a = (a || '').toLowerCase();
+    return (a === 'таймаут' || a === 'тихий мут') ? 'мут' : a;
+  }
 
   function fmt(ts) {
     if (!ts) return '—';
@@ -187,7 +189,7 @@
   function renderChips() {
     var acts = [];
     all.forEach(function (it) {
-      var a = (it.action || '').toLowerCase();
+      var a = _act(it.action);
       if (a && acts.indexOf(a) === -1) acts.push(a);
     });
     var box = $('pf-chips');
@@ -239,21 +241,21 @@
     var q = $('pf-q').value.trim();
     var items = all.filter(function (it) {
       var okType = (mtype === 'all') || (it.media && it.media.kind === mtype);
-      return matches(it, q) && okType && (!chip || (it.action || '').toLowerCase() === chip) && inPeriod(it.set_at);
+      return matches(it, q) && okType && (!chip || _act(it.action) === chip) && inPeriod(it.set_at);
     });
     $('pf-count').textContent = items.length === all.length ? String(all.length) : (items.length + ' из ' + all.length);
     var grid = $('pf-grid');
     if (!items.length) {
       grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-folder-open"></i><span>' +
-        (all.length ? 'Ничего не подходит под фильтр.' : 'Демок пока нет. Добавьте демку через /proof или параметр «демка» в /warn и /moderate.') + '</span></div>';
+        (all.length ? 'Ничего не подходит под фильтр.' : 'Демок пока нет. Загрузите напрямую формой выше, вложением в /report или при выдаче наказания через /modpanel.') + '</span></div>';
       return;
     }
     grid.innerHTML = items.map(function (it) {
-      var tone = TONE[(it.action || '').toLowerCase()] || 'neutral';
+      var tone = TONE[_act(it.action)] || 'neutral';
       return '<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">' +
         mediaBlock(it) +
         '<div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1">' +
-          '<div class="row"><span class="badge ' + tone + '">' + esc(it.action || '—') + '</span>' + mediaBadge(it) +
+          '<div class="row"><span class="badge ' + tone + '">' + esc(_act(it.action) || '—') + '</span>' + mediaBadge(it) +
             '<span class="mono muted" style="font-size:11px">#' + esc(it.id) + '</span></div>' +
           '<div class="feed-item-title" style="cursor:pointer" data-q="' + esc(it.user_name || '') + '" title="Показать все демки этого участника">' + esc(it.user_name || '—') + ' <span class="id-pill">' + esc(it.user_id || '') + '</span></div>' +
           '<div class="feed-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(it.reason || '') + '">' + esc(it.reason || '—') + '</div>' +
@@ -432,6 +434,17 @@
   /* ── Белый список «без демки» ── */
   if (!CAN_DEL) { $('pf-wl-addrow').style.display = 'none'; }
 
+  /* Единый стиль выбора на всей странице (владелец 2026-09-05: «выборы
+     select две штуки там и тут»): нативный select «Наказание» выглядел
+     чужим рядом с кастомными пикерами — теперь тот же вид, один контрол. */
+  (function () {
+    var act = $('pf-action');
+    if (act && !act._sshd && window.sshdEnhance) {
+      window.sshdEnhance(act, {});
+      if (act._sshdCtl) act._sshdCtl.refresh();
+    }
+  })();
+
   /* ── Тумблер «требовать доказательство» ── */
   var pfReqOn = true;
   function pfReqRender() {
@@ -473,27 +486,107 @@
     var users = (d && d.users) || [];
     var roles = (d && d.roles) || [];
     var xStyle = 'background:none;border:none;color:inherit;cursor:pointer;padding:0 0 0 2px;display:inline-flex';
+    wlExisting = {};
     var html = '';
+    var shown = {};
     users.forEach(function (id) {
-      html += '<span class="chip" style="gap:6px"><i class="fas fa-user" style="color:var(--ac)"></i> ' + esc(id) +
-        (CAN_DEL ? ' <button type="button" data-wldel="user:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать участника ' + esc(id) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
+      var v = 'u:' + id;
+      if (shown[v]) return;          /* без дублей в чипсах */
+      shown[v] = true;
+      wlExisting[v] = true;
+      var nm = wlNames[v] || id;
+      html += '<span class="chip" style="gap:6px"><i class="fas fa-user" style="color:var(--ac)"></i> ' + esc(nm) +
+        (CAN_DEL ? ' <button type="button" data-wldel="user:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать участника ' + esc(nm) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
     });
     roles.forEach(function (id) {
-      html += '<span class="chip" style="gap:6px"><i class="fas fa-user-tag" style="color:var(--ok)"></i> ' + esc(id) +
-        (CAN_DEL ? ' <button type="button" data-wldel="role:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать роль ' + esc(id) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
+      var v = 'r:' + id;
+      if (shown[v]) return;
+      shown[v] = true;
+      wlExisting[v] = true;
+      var nm = wlNames[v] || ('@ ' + id);
+      html += '<span class="chip" style="gap:6px"><i class="fas fa-user-tag" style="color:var(--ok)"></i> ' + esc(nm) +
+        (CAN_DEL ? ' <button type="button" data-wldel="role:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать роль ' + esc(nm) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
     });
     if (!html) html = '<span class="badge neutral">пусто — демку бот просит у всех</span>';
     box.innerHTML = html;
+    wlFill();   /* пересобрать список с метками «уже в списке» */
   }
 
   var WL_GID = '{{ main_guild_id }}';
-  attachMemberPicker($('pf-wl-id'), { gid: WL_GID, statusEl: $('pf-wl-status') });
-  attachSelectPicker($('pf-wl-role'), { gid: WL_GID, kind: 'role', noneLabel: 'не выбрана' });
-  $('pf-wl-kind').addEventListener('change', function () {
-    var isRole = $('pf-wl-kind').value === 'role';
-    $('pf-wl-id').style.display = isRole ? 'none' : '';
-    $('pf-wl-role').style.display = isRole ? '' : 'none';
-  });
+  /* Один выбор вместо трёх контролов (дубликат выбора — жалоба владельца):
+     участники и роли живут в ОДНОМ списке с поиском; префикс значения
+     u:/r: говорит, кого добавили. */
+  var wlSel = $('pf-wl-what');
+  sshdEnhance(wlSel, { search: true, searchPlaceholder: 'Участник или роль…' });
+  /* подпись пустого выбора — на кнопке, ВНУТРИ списка заглушки нет */
+  (function () {
+    var b = wlSel._sshd && wlSel._sshd.querySelector('.sshd-lbl');
+    if (b) b.textContent = '— выберите участника или роль —';
+  })();
+
+  /* Чистый выбор БЕЗ дублей (жалоба владельца 2026-09-04):
+     • никакого пункта-заглушки внутри списка — он выглядел вторым выбором;
+     • каждый участник/роль встречается в списке ОДИН раз;
+     • уже добавленные помечены «уже в списке» и второй раз не добавятся;
+     • чипсы ниже показывают те же имена, что и список (а не голые ID) —
+       один человек больше не выглядит двумя разными записями. */
+  var wlNames = {};      /* 'u:123' -> 'Имя', 'r:45' -> '@ Роль' */
+  var wlExisting = {};   /* 'u:123' -> true — уже в белом списке */
+
+  function wlSyncLabel() {
+    var btn = wlSel._sshd ? wlSel._sshd.querySelector('.sshd-lbl') : null;
+    if (btn && !wlSel.value) btn.textContent = '— выберите участника или роль —';
+  }
+
+  function wlFill() {
+    var rolesP = window.pickerLoad(WL_GID).then(function (d) { return d.roles || []; })
+      .catch(function () { return []; });
+    var memP = fetch('/api/guild/' + WL_GID + '/member-card/suggest?q=&limit=50')
+      .then(function (r) { return r.json(); })
+      .then(function (d) { return (d && d.items) || []; })
+      .catch(function () { return []; });
+    Promise.all([rolesP, memP]).then(function (res) {
+      var keep = wlSel.value;
+      wlNames = {};
+      wlExisting = {};
+      /* участники: один id — один пункт */
+      var seen = {}, mems = [];
+      (res[1] || []).forEach(function (m) {
+        var uid = String(m.user_id || m.id || '');
+        if (!uid || seen[uid]) return;
+        seen[uid] = true;
+        var nm = m.name || m.display_name || uid;
+        mems.push({ uid: uid, nm: nm });
+        wlNames['u:' + uid] = nm;
+      });
+      /* роли: один id — один пункт */
+      var rseen = {}, roles = [];
+      (res[0] || []).forEach(function (r) {
+        var rid = String(r.id || '');
+        if (!rid || rseen[rid]) return;
+        rseen[rid] = true;
+        roles.push({ rid: rid, nm: r.name || rid });
+        wlNames['r:' + rid] = '@ ' + (r.name || rid);
+      });
+      var g1 = '<optgroup label="Участники">' + mems.map(function (m) {
+        var v = 'u:' + m.uid;
+        var done = wlExisting[v] ? ' · уже в списке' : '';
+        return '<option value="' + esc(v) + '">' + esc(m.nm) + done + '</option>';
+      }).join('') + '</optgroup>';
+      var g2 = '<optgroup label="Роли">' + roles.map(function (r) {
+        var v = 'r:' + r.rid;
+        var done = wlExisting[v] ? ' · уже в списке' : '';
+        return '<option value="' + esc(v) + '">@ ' + esc(r.nm) + done + '</option>';
+      }).join('') + '</optgroup>';
+      wlSel.innerHTML = g1 + g2;
+      if (keep && wlSel.querySelector('option[value="' + keep.replace(/"/g, '\\"') + '"]')) {
+        wlSel.value = keep;
+      }
+      if (wlSel._sshdCtl) wlSel._sshdCtl.refresh();
+      wlSyncLabel();
+    });
+  }
+  wlFill();
 
   function wlLoad() {
     fetch('/api/proof-whitelist').then(function (r) { return r.json(); })
@@ -501,14 +594,19 @@
   }
 
   $('pf-wl-add-btn').addEventListener('click', function () {
-    var isRole = $('pf-wl-kind').value === 'role';
-    var id = (isRole ? $('pf-wl-role').value : $('pf-wl-id').value.trim());
-    if (!/^\d{5,25}$/.test(id)) { window.showToast(isRole ? 'Выберите роль из списка' : 'Выберите участника из подсказок', false); return; }
+    var v = String(wlSel.value || '');
+    var mm = /^(u|r):(\d{5,25})$/.exec(v);
+    if (!mm) { window.showToast('Выберите участника или роль из списка', false); return; }
+    if (wlExisting[v]) {
+      window.showToast('Уже в белом списке — второй раз не добавляю', false);
+      return;
+    }
+    var kind = mm[1] === 'u' ? 'user' : 'role';
     fetch('/api/proof-whitelist', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kind: $('pf-wl-kind').value, id: id })
+      body: JSON.stringify({ kind: kind, id: mm[2] })
     }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d && d.success) { window.showToast('Добавлено в белый список', true); $('pf-wl-id').value = ''; $('pf-wl-role').value = ''; wlRender(d); }
+      if (d && d.success) { window.showToast('Добавлено в белый список', true); wlSel.value = ''; if (wlSel._sshdCtl) wlSel._sshdCtl.refresh(); wlSyncLabel(); wlRender(d); }
       else window.showToast((d && d.error) || 'Ошибка', false);
     }).catch(function () { window.showToast('Сеть не отвечает', false); });
   });

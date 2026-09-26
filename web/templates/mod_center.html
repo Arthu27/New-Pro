@@ -5,9 +5,9 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Центр модерации</div>
+    <div class="eyebrow"> Модерация </div>
     <h1>Центр модерации</h1>
-    <p class="lead">Вся модерация с одного экрана: живые метрики, тренды нарушений и быстрый вход в любой из инструментов.</p>
+    <p class="lead">Сводка модерации: метрики, тренды нарушений и переходы к инструментам.</p>
   </div>
   <div class="page-head-actions">
     <a class="btn" href="/mod-kiosk" title="Полноэкранная живая стена для штаба (Esc — назад)"><i class="fas fa-tv"></i> Экран дежурного</a>
@@ -74,7 +74,7 @@
 .mod-bar-row:nth-child(1) .mod-bar-rank { background: linear-gradient(135deg, #fbbf24, #d97706); color: #fff; }
 .mod-bar-row:nth-child(2) .mod-bar-rank { background: linear-gradient(135deg, #94a3b8, #64748b); color: #fff; }
 .mod-bar-row:nth-child(3) .mod-bar-rank { background: linear-gradient(135deg, #d97706, #92400e); color: #fff; }
-.mod-bar-name { flex: 0 0 150px; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mod-bar-name { flex: 0 0 150px; min-width: 0; font-size: 12.5px; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .mod-bar-track { flex: 1; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
 .mod-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--ac), #7c3aed); transition: width .5s var(--ease-out); }
 .mod-bar-count { flex: 0 0 auto; font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--ac); min-width: 26px; text-align: right; }
@@ -143,14 +143,19 @@
 </div>
 <div class="quick-cmd-suggest" id="quickCmdSuggest" style="display:none;margin:-6px 0 14px"></div>
 
-<!-- Быстрые действия -->
+<!-- Быстрые действия: плитки фильтруются по тиру — закрытое ролью не показываем,
+     чтобы мод/куратор не видели админский Анти-рейд (его страница отдаёт 403). -->
+{% set _lvl = {'uye':0,'mod':1,'curator':2,'admin':3,'owner':4} %}
+{% set _role_lvl = _lvl.get(panel_role or role or 'uye', 0) %}
 <div class="cc-quick" style="margin-bottom:14px">
-  <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Новая мера</b><small>Мьют или бан с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-warn" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Выдать варн</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-err" href="/lockdown"><span class="cc-ico"><i class="fas fa-house-lock"></i></span><span><b>Локдаун</b><small>Экстренное закрытие</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile" href="/antifake"><span class="cc-ico"><i class="fas fa-user-secret"></i></span><span><b>Скан профиля</b><small>Проверка на подделку</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Проверить текст</b><small>Тест автофильтра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-ok" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  {% if '/temp-moderation' in panel_visible_paths %}<a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Новая мера</b><small>Мьют или бан с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/warnings' in panel_visible_paths %}<a class="cc-tile tone-warn" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Выдать варн</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if _role_lvl >= 3 and '/antiraid' in panel_visible_paths %}
+  <a class="cc-tile tone-err" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Экстренная защита от волн</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  {% endif %}
+  {% if '/antifake' in panel_visible_paths %}<a class="cc-tile" href="/antifake"><span class="cc-ico"><i class="fas fa-user-secret"></i></span><span><b>Скан профиля</b><small>Проверка на подделку</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/autofilter' in panel_visible_paths %}<a class="cc-tile tone-info" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Проверить текст</b><small>Тест автофильтра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
+  {% if '/appeals' in panel_visible_paths %}<a class="cc-tile tone-ok" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>{% endif %}
 </div>
 
 <!-- Аналитика -->
@@ -158,7 +163,7 @@
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-chart-area"></i> Активность за 7 дней</h2>
       <div class="sub">Все мод-действия команды.</div></div>
-      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a></div>
+      {% if '/mod-insights' in panel_visible_paths %}<a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
     <div class="panel-body"><div class="chart-box" id="mcArea"></div></div>
   </div>
   <div class="panel">
@@ -182,13 +187,13 @@
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-user-slash"></i> ТОП нарушителей</h2>
       <div class="sub">Больше всего мер за последние 7 дней.</div></div>
-      <a class="btn-link" href="/warnings" style="margin-left:auto">Варны <i class="fas fa-arrow-right"></i></a></div>
+      {% if '/warnings' in panel_visible_paths %}<a class="btn-link" href="/warnings" style="margin-left:auto">Варны <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
     <div class="panel-body" id="mcTopOffenders"><div class="sk-line" style="height:12px"></div></div>
   </div>
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-people-group"></i> Нагрузка команды</h2>
       <div class="sub">Кто сколько мер вынес за 7 дней.</div></div>
-      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a></div>
+      {% if '/mod-insights' in panel_visible_paths %}<a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
     <div class="panel-body" id="mcTeamLoad"><div class="sk-line" style="height:12px"></div></div>
   </div>
 </div>
@@ -210,7 +215,7 @@
     <div class="panel-head"><div><h2><i class="fas fa-clipboard-list"></i> Последние действия</h2>
       <div class="sub">Хвост журнала модерации: действие, цель, модератор и причина.</div></div>
       <span class="badge neutral mono" id="mcFeedCount">0</span>
-      <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a></div>
+      {% if '/logs' in panel_visible_paths %}<a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
     <div class="panel-body mc-feed-body" id="mcFeed">
       <div class="empty-tip"><i class="fas fa-circle-notch fa-spin"></i> Загружаем последние действия…</div>
     </div>
@@ -230,7 +235,7 @@
         <div class="cc-quick" style="margin-bottom:8px">
           {% for it in section.pages %}
           <a class="cc-tile tone-{{ it.tone }} tool-card" href="{{ it.path }}">
-            <span class="cc-ico"><i class="fas {{ it.icon }}"></i></span>
+            <span class="cc"><i class="fas {{ it.icon }}"></i></span>
             <span style="min-width:0"><b>{{ it.label }}</b><small style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.description }}</small></span>
             <span class="badge neutral" style="flex:0 0 auto">{{ it.access }}</span>
           </a>
@@ -242,10 +247,11 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
+  var LOGS_HREF = {{ ('/logs' if '/logs' in panel_visible_paths else '')|tojson }};
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
     if (!iso) return '—';
@@ -423,7 +429,9 @@
           var target = log.user_name || log.target_name || log.user_id || '—';
           var mod = log.mod_name || log.mod_id || '—';
           var reason = log.reason || '';
-          return '<a class="mc-feed-item" href="/logs" title="Открыть журнал">' +
+          var tag = LOGS_HREF ? 'a' : 'div';
+          var href = LOGS_HREF ? ' href="' + LOGS_HREF + '" title="Открыть журнал"' : '';
+          return '<' + tag + ' class="mc-feed-item"' + href + '>' +
             '<span class="mc-feed-ico ' + tone + '"><i class="fas ' + icon + '"></i></span>' +
             '<span class="mc-feed-copy">' +
               '<span class="mc-feed-line"><b>' + esc(log.action || '?') + '</b>' +
@@ -432,7 +440,7 @@
               (reason ? '<span class="mc-feed-reason" title="' + esc(reason) + '">' + esc(reason) + '</span>' : '') +
             '</span>' +
             '<span class="mc-feed-time">' + esc(fmtDate(log.timestamp)) + '</span>' +
-          '</a>';
+          '</' + tag + '>';
         }).join('') + '</div>';
       }
     } catch (e) { /* графики опциональны */ }
@@ -475,8 +483,20 @@
       var icon = TICKER_ICON[k] || 'fa-circle';
       var when = '';
       try { when = new Date(ev.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) {}
-      return '<span class="mod-ticker-chip ' + tone + '"><i class="fas ' + icon + '"></i><b>' + esc(ev.action || '?') + '</b> ' +
-        esc(ev.target || '—') + ' <span class="t-time">' + esc(when) + '</span></span>';
+      /* причина и срок — из полей /api/mod-history (duration в минутах) */
+      var tail = '';
+      var d = Number(ev.duration) || 0;
+      if (d) {
+        var dTxt = d + ' мин';
+        if (d % 1440 === 0) dTxt = (d / 1440) + ' д';
+        else if (d % 60 === 0) dTxt = (d / 60) + ' ч';
+        tail += ' · ' + dTxt;
+      }
+      var reason = String(ev.reason || '').trim();
+      var tip = (ev.target || '—') + (reason ? ' — ' + reason : '');
+      if (reason) tail += ' · ' + esc(reason.length > 34 ? reason.slice(0, 33) + '…' : reason);
+      return '<span class="mod-ticker-chip ' + tone + '" title="' + esc(tip) + '"><i class="fas ' + icon + '"></i><b>' + esc(ev.action || '?') + '</b> ' +
+        esc(ev.target || '—') + tail + ' <span class="t-time">' + esc(when) + '</span></span>';
     }).join('');
     /* живая лента: если чипов больше ширины — плавный дрейф с паузой при наведении */
     box.innerHTML = '<div class="mod-ticker-inner">' + chips + '</div>';
@@ -503,21 +523,25 @@
         });
       } catch (e) {}
     }
-    var fp = events.length + ':' + (events.length ? events[0].at : '');
+    var fp = events.length + ':' + (events.length ? (events[0].created_at || events[0].at || '') : '');
     if (fp === _peopleFp) return;
     _peopleFp = fp;
     var since = Date.now() - 7 * 86400000;
-    var offenders = {}, mods = {};
-    var ticker = [];
+    var offenders = {}, mods = {}, ticker = [];
     events.forEach(function (ev) {
-      if (ev.at) {
-        var t = new Date(ev.at).getTime();
+      /* /api/mod-history отдаёт target_name/mod_name/created_at (старые
+         поля target/mod/at — легаси /api/logs, оставляем как запасные) */
+      var who = ev.target_name || ev.target || '—';
+      var mod = ev.mod_name || ev.mod || '—';
+      var at = ev.created_at || ev.at;
+      if (at) {
+        var t = new Date(at).getTime();
         if (!isNaN(t)) {
           if (t >= since) {
-            offenders[String(ev.target || '—')] = (offenders[String(ev.target || '—')] || 0) + 1;
-            mods[String(ev.mod || '—')] = (mods[String(ev.mod || '—')] || 0) + 1;
+            offenders[String(who)] = (offenders[String(who)] || 0) + 1;
+            mods[String(mod)] = (mods[String(mod)] || 0) + 1;
           }
-          ticker.push({ action: ev.action, target: ev.target, at: ev.at });
+          ticker.push({ action: ev.action, target: who, at: at });
         }
       }
     });

@@ -5,9 +5,9 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Студия темы</div>
+    <div class="eyebrow"> Настройки </div>
     <h1>Студия темы</h1>
-    <p class="lead">Соберите панель под себя: цвет акцента, скругления, плотность и масштаб интерфейса. Всё сохраняется за вашей учёткой и применяется мгновенно.</p>
+    <p class="lead">Настройка интерфейса: цвет акцента, скругления, плотность и масштаб. Настройки сохраняются для учётной записи.</p>
   </div>
   <div class="page-head-actions">
     <button type="button" class="btn" id="studioReset"><i class="fas fa-rotate-left"></i> Сбросить</button>
@@ -33,7 +33,7 @@
       <div class="studio-control">
         <div class="lbl"><span>Акцент</span><span class="val" id="accentVal">—</span></div>
         <div class="studio-color-wheel" id="accentGrid"></div>
-        <input type="color" class="studio-custom" id="accentCustom" value="#4f46e5" aria-label="Свой цвет акцента">
+        <input type="color" class="studio-custom" id="accentCustom" value="#4d9fff" aria-label="Свой цвет акцента">
       </div>
 
       <!-- Скругления -->
@@ -82,18 +82,18 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
 
   var ACCENTS = [
-    ['#4f46e5', 'Индиго'], ['#7c3aed', 'Фиолет'], ['#0284c7', 'Небо'],
+    ['#4d9fff', 'Неон'], ['#4f46e5', 'Индиго'], ['#7c3aed', 'Фиолет'], ['#0284c7', 'Небо'],
     ['#059669', 'Изумруд'], ['#e11d48', 'Роза'], ['#d97706', 'Янтарь'],
     ['#ea580c', 'Оранж'], ['#0d9488', 'Бирюза']
   ];
 
-  var state = { theme: 'light', accent: '#4f46e5', radius: 10, scale: 1, compact: false };
+  var state = { theme: 'light', accent: '#4d9fff', radius: 10, scale: 1, compact: false };
   var saving = false;
 
   function save() {
@@ -202,7 +202,7 @@
     save();
   });
   $('studioReset').addEventListener('click', function () {
-    state = { theme: 'light', accent: '#4f46e5', radius: 10, scale: 1, compact: false };
+    state = { theme: 'light', accent: '#4d9fff', radius: 10, scale: 1, compact: false };
     paintControls();
     apply();
     save();

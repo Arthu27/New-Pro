@@ -89,6 +89,16 @@ async def main():
     check('Права команд' in e4.description,
           'проверка не пройдена молча — бот объясняет, где настраивается доступ')
 
+    it5 = FakeInteraction()
+    await h.handle_app_command_error(
+        it5, app_commands.CommandNotFound('modpanel', []))
+    check(it5.response.done_flag and it5.response.sent,
+          'CommandNotFound: бот ответил (не «приложение не отвечает»)')
+    e5 = it5.response.sent[0]
+    check('modpanel' in (e5.description or '')
+          and 'обновл' in ((e5.title or '') + (e5.description or '')).lower(),
+          'CommandNotFound: честно говорит, что /modpanel обновляется')
+
 
 asyncio.run(main())
 

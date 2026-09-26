@@ -36,10 +36,10 @@ def _parse_ts (value ):
 class SentimentAnalyzer :
     """Анализатор настроения сервера"""
 
-    # Kalыplar для opredeleniya duygular
+    # Шаблоны для определения эмоций
     EMOTION_PATTERNS ={
     'positive':[
-    r'\b(teшekkюrler|blagodaryu|отлично|kruto|супер|klass|zdorovo|prekrasno|zamesohbettelno)\b',
+    r'\b(teşekkürler|благодарю|отлично|круто|супер|класс|здорово|прекрасно|замечательно)\b',
     r'\b(хорошо|normal|ok|oky|ladno|ponyal|prinyal)\b',
     r'\b(lyublyu|nravitsya|obojayu|kayf|vostorg)\b',
     r'\b(rad|rada|scastliv|scastliva|dovolen|dovolna)\b',
@@ -47,10 +47,10 @@ class SentimentAnalyzer :
     ],
     'negative':[
     r'\b(besit|zlyus|nenaviju|razdrajaet|dostalo|zadolbalo)\b',
-    r'\b(kёtю|ujasno|otvratitelno|kosmar|jvar)\b',
+    r'\b(ужасно|отвратительно|кошмар|жуть|kötü)\b',
     r'\b(grustno|pecalno|tosklivo|biroko|depressiya)\b',
-    r'\b(ustal|ustala|vimotalsya|vimotalas|bez удалить)\b',
-    r'\b(aptal|aptal|aptal|aptal|durak)\b',
+    r'\b(устал|устала|вымотался|вымоталась|нет сил)\b',
+    r'\b(глупый|тупой|дурак|дурацкий)\b',
     r'[:\(]+|[:\[]+|[😢😭😡🤬💔👎]+',
     ],
     'neutral':[
@@ -78,13 +78,13 @@ class SentimentAnalyzer :
         """Analiz ediyor bir сообщение"""
         content =message .content .lower ()
 
-        # Belirliyoruz duygular
+        # Определяем эмоции
         emotions =self ._detect_emotions (content )
 
-        # Belirliyoruz dominiruyusuyu emociyu
+        # Определяем доминирующую эмоцию
         dominant =max (emotions ,key =emotions .get )if emotions else 'neutral'
 
-        # Hesaplыyoruz skor
+        # Считаем оценку
         score =sum (
         emotions [emotion ]*self .EMOTION_WEIGHTS [emotion ]
         for emotion in emotions 
@@ -96,7 +96,7 @@ class SentimentAnalyzer :
         'author_name':str (message .author ),
         'channel_id':message .channel .id ,
         'channel_name':message .channel .name ,
-        'content':message .content [:200 ],# Ограничиваем длинныйluгu
+        'content':message .content [:200 ],  # Ограничиваем длину
         'emotions':emotions ,
         'dominant_emotion':dominant ,
         'sentiment_score':score ,
@@ -152,7 +152,7 @@ class SentimentAnalyzer :
             'trend':'stable'
             }
 
-            # Hesaplыyoruz ortalama duygu
+            # Считаем среднее настроение
         avg_sentiment =sum (msg ['sentiment_score']for msg in recent )/len (recent )
 
         # Podscitivaem duygular
@@ -160,7 +160,7 @@ class SentimentAnalyzer :
         for msg in recent :
             emotion_counts [msg ['dominant_emotion']]+=1 
 
-            # Belirliyoruz trend (sravnivaem pervuyu ve vtoruyu polovinu)
+            # Определяем тренд (сравниваем первую и вторую половину)
         mid =len (recent )//2 
         if mid >0 :
             first_half_avg =sum (msg ['sentiment_score']for msg in recent [:mid ])/mid 
@@ -209,13 +209,13 @@ class SentimentAnalyzer :
             'channels':{}
             }
 
-            # Hesaplыyoruz ortalama по на сервер
+            # Считаем среднее по серверу
         total_messages =sum (s ['message_count']for s in channel_sentiments )
         avg_sentiment =sum (
         s ['avg_sentiment']*s ['message_count']for s in channel_sentiments 
         )/total_messages 
 
-        # Belirliyoruz общий duygu
+        # Определяем общий тон
         if avg_sentiment >0.3 :
             mood ='very_positive'
         elif avg_sentiment >0.1 :
@@ -268,7 +268,7 @@ class SentimentAnalyzer :
                     import asyncio 
                     asyncio .create_task (self ._reset_alert (alert_key ,delay =600 ))
 
-                    # Предупреждение если чakышma (очень negativa для korotkoe время)
+                    # Предупреждаем при всплеске негатива за короткое время
             recent_10min =self .get_channel_sentiment (channel .id ,window_minutes =10 )
             if recent_10min ['emotion_breakdown']['negative']>=5 :
                 alert_key =f"{channel.id}_conflict"
@@ -292,7 +292,7 @@ class SentimentAnalyzer :
         self .alerts_sent .discard (alert_key )
 
     def _load_history (self ):
-        """Загруз история из dosyaya"""
+        """Загрузить историю из файла."""
         history_file ='data/sentiment_history.json'
         if os .path .exists (history_file ):
             try :
@@ -304,7 +304,7 @@ class SentimentAnalyzer :
                 _log.debug("_load_history(): подавлено: %s", _ex)
 
     def _save_history (self ):
-        """Сохран история в dosya"""
+        """Сохранить историю разборов в файл."""
         try :
             os .makedirs ('data',exist_ok =True )
             history_file ='data/sentiment_history.json'
@@ -321,7 +321,7 @@ class SentimentAnalyzer :
             _log.debug("_save_history(): подавлено: %s", _ex)
 
 
-            # Kюresel пример
+            # Глобальный кэш
 _sentiment_analyzer =None 
 
 def get_sentiment_analyzer ()->SentimentAnalyzer :

@@ -37,6 +37,17 @@ def run_audit(env):
     return proc.returncode, proc.stdout.decode('utf-8', errors='replace')
 
 
+# Зонд п.3/3 кладёт web/routes/_audit_probe.py. Если прошлый запуск был
+# прерван жёстко (kill/сбой), файл мог остаться — тогда аудит п.1 уже
+# падает («незащищённый роут») и весь набор краснеет без причины.
+# Подчищаем осиротевший зонд ДО чистого прогона.
+_STALE_PROBE = os.path.join(ROOT, 'web', 'routes', '_audit_probe.py')
+try:
+    os.remove(_STALE_PROBE)
+except OSError:
+    pass
+
+
 print('[1/3] Чистый прогон scripts/check_health.py (изолированный HOME):')
 env = dict(os.environ)
 env['HOME'] = tempfile.mkdtemp(prefix='hakumo_health_audit_')

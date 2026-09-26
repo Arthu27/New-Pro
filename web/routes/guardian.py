@@ -9,7 +9,7 @@
 Канал тревог настраивается на хабе «Каналы и маршруты» (guardian_channel).
 """
 from web.routes._common import (
-    _log, _fire_panel_notification,
+    _log, _fire_panel_notification, _live_publish,
     render_template, session, request, jsonify,
 )
 
@@ -212,9 +212,17 @@ def register(ctx):
     def api_guardian(gid):
         gid = _gid(ctx) or _int_gid(gid)
         if request.method == 'GET':
-            return jsonify({'success': True, 'cfg': guardian_view(gid),
-                            'roles': _roles_for_pick(gid),
-                            'members': _members_for_pick(gid)})
+            # Тяжёлые списки (роли/участники) нужны только пикерам и почти не
+            # меняются. Частый live-опрос (каждые несколько секунд) ходит с
+            # ?light=1 и получает ТОЛЬКО конфиг — раньше каждый тик собирал до
+            # 1000 участников, чем грузил event-loop бота и тормозил страницу.
+            # Первый (без light) ответ приносит роли/участники для пикеров.
+            light = str(request.args.get('light', '')).lower() in ('1', 'true', 'yes')
+            body = {'success': True, 'cfg': guardian_view(gid)}
+            if not light:
+                body['roles'] = _roles_for_pick(gid)
+                body['members'] = _members_for_pick(gid)
+            return jsonify(body)
 
         # POST: принять витрину, нормализовать, сохранить (файл бота)
         data = request.get_json(silent=True)
@@ -241,6 +249,8 @@ def register(ctx):
             'guardian', 'Щит сервера: настройки обновлены',
             f'{who}: мера — {G.PUNISH_LABELS.get(cfg["punishment"], "?")}, '
             f'событий активно — {sum(1 for e in (cfg.get("events") or {}).values() if e.get("enabled"))}')
+        _live_publish(gid, 'guardian')   # живой пуш: страница Щита обновится сразу
+        _live_publish(gid, 'security')   # и Центр безопасности (он показывает статус Щита)
         return jsonify({'success': True, 'cfg': guardian_view(gid)})
 
     @app.route('/api/guild/<gid>/guardian/summary')

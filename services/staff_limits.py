@@ -40,40 +40,42 @@ _MAX_TS = 1000                  # сколько меток держать на 
 
 # Лимиты по умолчанию (за окно, по умолчанию — день). Подобраны так, чтобы
 # обычной модерации хватало с запасом, а «рейдера в правах» останавливали.
-# Все лимиты по умолчанию ВЫКЛЮЧЕНЫ (0) — заказ владельца 2026-08-27:
-# «вообще все настройки сами сделаем». Пока цифра не задана в панели
-# («Щит сервера» → «Лимиты»), персонал не ограничен ничем.
+#
+# Дефолты ВКЛЮЧЕНЫ по просьбе владельца (2026-09-02, переписка с Sabotash):
+# «это так для безопасности… авто настроишь — я потом поменяю». Это нижний,
+# МОДЕРАТОРСКИЙ порог — он же применяется, пока для конкретных ролей в панели
+# («Щит сервера» → «Лимиты») не заданы свои, более высокие цифры. Так у
+# кураторов/админов лимит поднимается пер-рольным оверрайдом (ban 3/5,
+# unmute 5), а базовый модераторский уровень защищает сервер сразу.
+#   • бан/апелляция — мод/хелпер 1, мастер 1, куратор 2 (заказ 2026-09-24)
+#   • мут/размут — мод/хелпер 3, мастер 5, куратор 7 (размут = мут)
+#   • варн — модеры 3/день, кураторы/админы 5
+#   • очистка — 10 чисток/день (одна операция = один хит)
+# Хелпер = тир helper (варн 1, без бана). Владелец меняет в панели; 0 = без лимита.
 DEFAULT_LIMITS = {
     # ── наказания ──
-    'warn': 0,       # предупреждений (/warn и ПКМ-варн)
-    'mute': 0,       # мутов (таймаут/чат/войс/тихий ghostmute)
-    'unmute': 0,     # снятий мута
+    'warn': 3,       # предупреждений — 3/день у модеров/хелперов
+    'mute': 3,       # мутов — 3/день у модеров/хелперов
+    'unmute': 3,     # снятий мута = мут (мод/хелпер 3)
     'kick': 0,       # киков (команда отключена — лимит на будущее)
     'vkick': 0,      # киков из голосового канала
-    'ban': 0,        # банов/апелляций
-    'unban': 0,      # разбанов / снятий апелляции
+    'ban': 1,        # банов — 1/день у мод/хелпер/мастер (куратор 2)
+    'unban': 0,      # разбанов / снятий апелляции — без жёсткого дефолта
     # ── опасные операции ──
-    'clear': 0,      # сообщений, удалённых очисткой
-    'nuke': 0,       # пересозданий канала начисто (/nuke)
-    'raid': 0,       # массовых зачисток недавних входов (/raidcleanup)
-    'lockdown': 0,   # каналов, закрытых локдауном
-    'dehoist': 0,    # массовых переименований ников (/dehoist)
+    'clear': 10,     # чисток (операций) /день у персонала; владелец — без лимита
 }
 
 # Человеческие названия для сообщений и панели.
 ACTION_TITLES = {
     'warn': 'варнов',
+    'unwarn': 'снятий варна',
     'mute': 'мутов',
     'unmute': 'снятий мута',
     'kick': 'киков',
     'vkick': 'киков из войса',
     'ban': 'банов',
     'unban': 'разбанов',
-    'clear': 'сообщений чисткой',
-    'nuke': 'пересозданий канала',
-    'raid': 'массовых зачисток',
-    'lockdown': 'локдаунов',
-    'dehoist': 'массовых переименований',
+    'clear': 'чисток',
 }
 
 # Подсказки к полям в панели (что именно считается).
@@ -85,22 +87,27 @@ ACTION_HINTS = {
     'vkick': 'выгонок из голоса',
     'ban': 'банов/апелляций',
     'unban': 'разбанов',
-    'clear': 'сообщений чисткой',
-    'nuke': 'пересозданий канала',
-    'raid': 'массовых зачисток входов',
-    'lockdown': 'закрытых каналов',
-    'dehoist': 'массовых переименований',
+    'clear': 'чисток (за раз — сколько угодно сообщений)',
 }
 
 # Порядок и группировка полей в панели.
+# Показываем ТОЛЬКО действия, которые бот реально гейтит лимитами (модерация
+# их вызывает через check_limit/record_hit): предупреждения, муты, снятие
+# мутов, баны и очистка сообщений. Действия, которых нет в боте (nuke и пр.),
+# убраны совсем (владелец 2026-09-05: «нету такого»); kick/vkick/unban
+# считаются, но в форму не выводятся, пока не подключим к ним поля.
 ACTION_GROUPS = [
-    ('punish', 'Наказания', ['warn', 'mute', 'unmute', 'kick', 'vkick', 'ban', 'unban']),
-    ('heavy', 'Опасные операции', ['clear', 'nuke', 'raid', 'lockdown', 'dehoist']),
+    ('punish', 'Наказания', ['warn', 'mute', 'unmute', 'ban']),
+    ('heavy', 'Опасные операции', ['clear']),
 ]
+
+# Полный список действий, которые панель лимитов реально предлагает настроить
+# (для тестов и проверок согласованности с ACTION_GROUPS).
+PANEL_ACTION_KEYS = ('warn', 'mute', 'unmute', 'ban', 'clear')
 
 
 def action_meta():
-    """Метаданные всех действий для панели: группы с полями."""
+    """Метаданные действий для панели: только рабочие группы с полями."""
     return [
         {'key': gkey, 'label': label,
          'items': [{'key': k, 'title': ACTION_TITLES.get(k, k),
@@ -137,6 +144,165 @@ def _cnt_path(gid):
 
 def _roles_path(gid):
     return f'data/staff_limit_roles_{int(gid)}.json'
+
+
+# ── Тиры персонала по ролям (заказ владельца 2026-09-02) ──────────────
+# Роли персонала настраиваются в панели «Настройки → Панели и роли»
+# (data/role_map.json): role_id → 'mod' | 'curator' | 'admin' | 'owner'.
+# staff_limits читает ТОТ ЖЕ файл и по нему назначает тировые дефолты —
+# отдельные роли «модер/куратор/админ» заводить не нужно.
+ROLE_MAP_PATH = 'data/role_map.json'
+
+# Порядок старшинства: больший индекс — больше прав (мягче лимиты).
+# helper < mod < master < curator (заказ 2026-09-24).
+TIER_ORDER = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
+
+# Тировые дефолты за окно (день).
+# Ветка хелперов: варн 1/1/2, бана нет. Ветка модеров: варн 3+, бан 1/1/2/5.
+# Мут/размут: хелпер/мод 3, мастер 5, куратор 7, админ 10.
+TIER_DEFAULT_LIMITS = {
+    # тир владельца (owner) — ВСЁ без лимитов
+    'helper':  {'warn': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
+    'mod':     {'warn': 3, 'ban': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
+    'master':  {'warn': 1, 'ban': 1, 'unmute': 5, 'mute': 5, 'clear': 10},
+    'curator': {'warn': 2, 'ban': 2, 'unmute': 7, 'mute': 7, 'clear': 10},
+    'admin':   {'warn': 2, 'ban': 5, 'unmute': 10, 'mute': 10, 'clear': 10},
+    'owner':   {},   # владелец не ограничен ни в чём
+}
+
+# Потолок ДЛИТЕЛЬНОСТИ мута по тиру (секунды) — запасной, если прогрессия
+# недоступна. Боевой потолок: mute_progression (1ч → +2ч до варна).
+TIER_DEFAULT_DURATIONS = {
+    'helper':  3600,
+    'mod':     3600,          # 1 час (первый шаг)
+    'master':  3600,
+    'curator': 3600,
+    'admin':   3600,
+    'owner':   0,             # без ограничения
+}
+
+
+def _role_tier_map(guild_id=None):
+    """{role_id(str): tier} из data/role_map.json (та же настройка, что в
+    панели «Панели и роли»). Сбой чтения — пустой словарь (не мешаем).
+    Известные роли сервера всегда в карте (fallback)."""
+    try:
+        data = _load_json(ROLE_MAP_PATH, {})
+        if not isinstance(data, dict):
+            data = {}
+        out = {str(rid): str(tier) for rid, tier in data.items()
+               if str(tier) in TIER_ORDER}
+    except Exception:
+        out = {}
+    try:
+        from services.staff_roles import KNOWN_CURATOR_ROLE_ID
+        kid = str(int(KNOWN_CURATOR_ROLE_ID))
+        out.setdefault(kid, 'curator')
+    except Exception as _ex:
+        _log.debug('staff_limits: except@201: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        hid = str(int(KNOWN_HELPER_ROLE_ID))
+        out.setdefault(hid, 'helper')
+    except Exception as _ex:
+        _log.debug('staff_limits: except@207: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_MODERATOR_ROLE_ID
+        mid = str(int(KNOWN_MODERATOR_ROLE_ID))
+        out.setdefault(mid, 'mod')
+    except Exception as _ex:
+        _log.debug('staff_limits: except@213: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_MASTER_ROLE_ID
+        xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
+        if xid and xid != '0':
+            out.setdefault(xid, 'master')
+    except Exception as _ex:
+        _log.debug('staff_limits: except@220: %s', _ex)
+    return out
+
+
+def member_has_helper_or_moderator(member) -> bool:
+    """Есть ли у участника роль Helper или Moderator (ветки наказаний).
+
+    Мастер без одной из этих ролей (только Eventsmod/Broadcaster/Master)
+    применять наказания не может (заказ создателя 2026-09-24).
+    """
+    if member is None:
+        return False
+    try:
+        from services.staff_roles import (
+            KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID)
+        need = {
+            str(int(KNOWN_HELPER_ROLE_ID)),
+            str(int(KNOWN_MODERATOR_ROLE_ID)),
+        }
+    except Exception:
+        need = {'948969471916249119', '803553848396349510'}
+    tmap = _role_tier_map()
+    for role in (getattr(member, 'roles', None) or []):
+        rid = str(getattr(role, 'id', '') or '')
+        if not rid:
+            continue
+        if rid in need:
+            return True
+        if tmap.get(rid) in ('helper', 'mod'):
+            return True
+    return False
+
+
+def master_punish_allowed(member) -> tuple:
+    """(ok, deny_text). Мастер без Helper/Moderator — отказ.
+
+    Куратор/админ/owner выше master — гейт не трогает.
+    """
+    if member is None:
+        return True, None
+    try:
+        role_ids = [
+            getattr(r, 'id', None)
+            for r in (getattr(member, 'roles', None) or [])
+            if getattr(r, 'id', None)
+        ]
+        tier = tier_for_roles(role_ids)
+        if tier != 'master':
+            return True, None
+        if member_has_helper_or_moderator(member):
+            return True, None
+        return False, (
+            'Мастер без роли **Helper** или **Moderator** '
+            'не может применять наказания. '
+            'Ветки Eventsmod / Broadcaster — без наказаний.'
+        )
+    except Exception as ex:
+        _log.debug('master_punish_allowed: %s', ex)
+        return True, None
+
+
+def tier_for_roles(role_ids):
+    """Старший тир: owner > admin > curator > master > mod > None."""
+    tmap = _role_tier_map()
+    best = None
+    best_i = -1
+    for rid in role_ids or ():
+        tier = tmap.get(str(rid))
+        if tier and TIER_ORDER.index(tier) > best_i:
+            best, best_i = tier, TIER_ORDER.index(tier)
+    return best
+
+
+def _tier_defaults(role_ids):
+    """Лимиты старшего тира участника (или {} если стафф-ролей нет).
+
+    Для owner — ЯВНЫЕ нули по всем действиям: владелец (тир, владелец
+    сервера и владелец бота) не ограничен ВООБЩЕ ничем. Ноль = без
+    лимита и перекрывает базовые дефолты персонала."""
+    tier = tier_for_roles(role_ids)
+    if not tier:
+        return {}
+    if tier == 'owner':
+        return {k: 0 for k in DEFAULT_LIMITS}
+    return dict(TIER_DEFAULT_LIMITS.get(tier) or {})
 
 
 def _load_json(path, default):
@@ -318,17 +484,50 @@ def set_role_durations(guild_id, role_id, who=None, role_name=None, **kw):
     return dict(row.get('durations') or {})
 
 
+def _tier_rank(tier):
+    try:
+        return TIER_ORDER.index(tier)
+    except (ValueError, TypeError):
+        return -1
+
+
+def _role_ids_for_overrides(role_ids):
+    """Роли, чьи лимиты/меню учитываются при нескольких стафф-ролях.
+
+    Старший тир главнее: у куратора+хелпера (mod) хелперские overrides
+    не сужают меню и не бьют mute:3. Роли вне role_map тоже игнор, если
+    у человека уже есть стафф-тир.
+    """
+    tmap = _role_tier_map()
+    staff_tier = tier_for_roles(role_ids)
+    staff_rank = _tier_rank(staff_tier)
+    out = []
+    for rid in role_ids or ():
+        rid_s = str(rid)
+        mapped = tmap.get(rid_s)
+        if staff_tier in TIER_ORDER:
+            if mapped is None:
+                continue
+            if _tier_rank(mapped) < staff_rank:
+                continue
+        out.append(rid_s)
+    return out
+
+
 def role_scoped_actions(guild_id, role_ids=()):
     """Какие действия доступны модератору через /modpanel.
 
     По умолчанию ограничений нет → None (видно всё). Если хоть у одной
     роли модератора есть свои настройки (лимиты/окна/потолки), доступны
     ТОЛЬКО настроенные действия — объединение по всем таким ролям.
+
+    Старший тир (куратор > хелпер/mod) ГЛАВНЕЕ: override младших ролей
+    не сужает меню куратору.
     """
     overrides = get_role_overrides(guild_id)
     scoped = None
-    for rid in role_ids or ():
-        ov = overrides.get(str(rid)) or {}
+    for rid_s in _role_ids_for_overrides(role_ids):
+        ov = overrides.get(rid_s) or {}
         keys = (set(ov.get('limits') or ())
                 | set(ov.get('windows') or ())
                 | set(ov.get('durations') or ()))
@@ -337,21 +536,114 @@ def role_scoped_actions(guild_id, role_ids=()):
     return scoped
 
 
+# Срок одного мута ПО УМОЛЧАНИЮ: минимум 30 мин.
+# Максимум — прогрессия по участнику (mute_progression):
+# первый мут 1 ч, каждый следующий +2 ч, до варна — сброс на 1 ч
+# (заказ владельца 2026-09-24). Тировые 2 ч больше не дефолт потолка.
+DEFAULT_MUTE_DURATION_MIN = 30 * 60
+DEFAULT_MUTE_DURATION_CAP = 3600   # первый шаг прогрессии (1 ч)
+
+
+def mute_duration_error(seconds, cap_sec=None, min_sec=None):
+    """Текст отказа по сроку мута или None, если срок в диапазоне.
+
+    seconds — сколько просят (сек). min по умолчанию 30 мин, max —
+    cap_sec (0/None = без верхней границы, кроме владельца).
+    """
+    try:
+        sec = int(seconds or 0)
+    except (TypeError, ValueError):
+        sec = 0
+    mn = DEFAULT_MUTE_DURATION_MIN if min_sec is None else int(min_sec or 0)
+    if mn and 0 < sec < mn:
+        return (f'Мут короче разрешённого: минимум {mn // 60} мин, '
+                f'а запрошено {max(1, sec // 60)} мин. '
+                'Минимум — 30 минут.')
+    cap = int(cap_sec or 0)
+    if cap and sec > cap:
+        cap_m = max(1, cap // 60)
+        req_m = max(1, sec // 60)
+        cap_txt = (f'{cap_m // 60} ч' if cap_m % 60 == 0 and cap_m >= 60
+                   else f'{cap_m} мин')
+        req_txt = (f'{req_m // 60} ч' if req_m % 60 == 0 and req_m >= 60
+                   else f'{req_m} мин')
+        return (f'Мут дольше разрешённого: потолок — {cap_txt}, '
+                f'а запрошено {req_txt}. '
+                'Первый мут — до 1 ч, дальше +2 ч, после варна снова с 1 ч.')
+    return None
+
+
+def resolve_mute_cap(guild_id, target_id=None, role_ids=(), *, unlimited=False):
+    """Потолок мута (сек) с прогрессией по цели. 0 = без ограничения.
+
+    У всех (кроме владельца): 1ч + step×2ч по участнику.
+    Если в панели задан свой потолок роли/сервера (set_durations) —
+    берём минимум из прогрессии и этого потолка (жёстче побеждает).
+    """
+    if unlimited:
+        return 0
+    try:
+        if tier_for_roles(role_ids) == 'owner':
+            return 0
+    except Exception as _ex:
+        _log.debug('staff_limits: except@586: %s', _ex)
+    try:
+        from services import mute_progression as _MP
+        if target_id is not None:
+            prog = int(_MP.cap_seconds(guild_id, target_id))
+        else:
+            prog = int(_MP.FIRST_CAP_SEC)
+    except Exception as ex:
+        _log.debug('resolve_mute_cap: %s', ex)
+        prog = int(DEFAULT_MUTE_DURATION_CAP)
+    try:
+        # Свой потолок из панели (роль/сервер) — без тирового дефолта:
+        # effective_max_duration при пустых настройках возвращает
+        # DEFAULT_MUTE_DURATION_CAP (1ч), что ломало бы прогрессию 3ч+.
+        overrides = get_role_overrides(guild_id)
+        configured = 0
+        for rid_s in _role_ids_for_overrides(role_ids):
+            ov = overrides.get(rid_s) or {}
+            v = int((ov.get('durations') or {}).get('mute') or 0)
+            if v > configured:
+                configured = v
+        if not configured:
+            configured = int(get_durations(guild_id).get('mute') or 0)
+        if configured > 0:
+            return min(prog, configured) if prog > 0 else configured
+    except Exception as _cex:
+        _log.debug('resolve_mute_cap configured: %s', _cex)
+    return prog
+
+
 def effective_max_duration(guild_id, key, role_ids=()):
     """Потолок длительности в секундах (0 = без ограничения).
 
     Свой потолок роли ГЛАВНЕЕ общего; несколько ролей — мягчайший.
+    Ничего не настроено — 2 часа у всех (кроме тира владельца).
+    Старший тир игнорирует duration-override младших ролей (хелпер).
     """
+    if key not in DURATION_KEYS:
+        return 0
     overrides = get_role_overrides(guild_id)
     best = 0
-    for rid in role_ids or ():
-        ov = overrides.get(str(rid)) or {}
+    for rid_s in _role_ids_for_overrides(role_ids):
+        ov = overrides.get(rid_s) or {}
         v = int((ov.get('durations') or {}).get(key) or 0)
         if v > best:
             best = v
     if best:
         return best
-    return int(get_durations(guild_id).get(key) or 0)
+    _v = int(get_durations(guild_id).get(key) or 0)
+    if _v:
+        return _v
+    tier = tier_for_roles(role_ids)
+    if tier == 'owner':
+        return 0
+    if tier and tier in TIER_DEFAULT_DURATIONS:
+        return int(TIER_DEFAULT_DURATIONS[tier] or 0)
+    cap = DEFAULT_MUTE_DURATION_CAP if key == 'mute' else 0
+    return cap
 
 
 def refresh_in_text(guild_id, user_id, key):
@@ -460,8 +752,7 @@ def status_text(guild_id, user_id):
     win = get_windows(guild_id)
     short = {'warn': 'варны', 'mute': 'муты', 'unmute': 'размуты',
              'kick': 'кики', 'vkick': 'войс-кики', 'ban': 'баны',
-             'unban': 'разбаны', 'nuke': 'nuke', 'raid': 'зачистки',
-             'lockdown': 'локдауны', 'dehoist': 'dehoist'}
+             'unban': 'разбаны'}
     parts = []
     for key, name in short.items():
         if lim.get(key):
@@ -471,11 +762,40 @@ def status_text(guild_id, user_id):
     if lim.get('clear'):
         hits, _d = _hits(guild_id, user_id, 'clear')
         used = _count_within(hits, win.get('clear', DEFAULT_WINDOW))
-        parts.append(f'чистка {used}/{lim["clear"]} сообщ.')
+        parts.append(f'чистки {used}/{lim["clear"]}')
     return ' · '.join(parts) if parts else 'без лимитов'
 
 
 # ─── Гейт для когов ─────────────────────────────────────────────────────
+
+def limit_deny_text(key, used, limit, amount=1, window=None, refresh=None):
+    """Текст отказа по лимиту.
+
+    «Лимит исчерпан» — только когда остатка нет (used >= limit).
+    Если запросили больше, чем осталось, но квота ещё жива — говорим
+    прямо: «запросили N, осталось M». Иначе модератор видит
+    «исчерпан … использовано 0, осталось 10» на первой же чистке
+    (жалоба 2026-09-05: очистка «не работает», хотя не пользовались).
+    """
+    what = ACTION_TITLES.get(key, 'действий')
+    try:
+        used_n = int(used or 0)
+        limit_n = int(limit or 0)
+        amount_n = max(1, int(amount or 1))
+    except (TypeError, ValueError):
+        used_n, limit_n, amount_n = 0, 0, 1
+    left = max(0, limit_n - used_n)
+    win = f' за {human_window(window)}' if window else ''
+    if left <= 0:
+        txt = (f'Лимит исчерпан: {limit_n} {what}{win} '
+               f'(использовано {used_n}).')
+    else:
+        txt = (f'Запросили {amount_n} {what}, а осталось {left} из {limit_n}{win}. '
+               'Уменьшите число.')
+    if refresh:
+        txt += f' Обновится через {refresh}.'
+    return txt
+
 
 def check_action(guild, actor, key, amount=1):
     """(allowed, deny_text). deny_text готов для показа модератору.
@@ -493,10 +813,15 @@ def check_action(guild, actor, key, amount=1):
             if int(getattr(actor, 'id', 0) or 0) in Config.all_owner_ids():
                 return True, None
         except Exception as _ex:
-            log.debug("staff_limits: подавлено: {_ex}", _ex)
-            pass
+            # НЕ глотаем молча: ошибка здесь (например, недоступен config)
+            # не должна превращать проверку лимита в «разрешено всем»
+            _log.debug('staff_limits: владелец бота не проверен: %s', _ex)
         if getattr(actor, 'bot', False):
             return True, None      # сам бот (панель/автоматика) — лимитами не грудим
+        # Мастер без Helper/Moderator — нельзя (Eventsmod/Broadcaster)
+        _mok, _mdeny = master_punish_allowed(actor)
+        if not _mok:
+            return False, _mdeny
         role_ids = [r.id for r in (getattr(actor, 'roles', None) or [])
                     if getattr(r, 'id', None) != getattr(guild, 'id', None)]
         lim_map, win_map = effective_limits(guild.id, role_ids)
@@ -508,13 +833,9 @@ def check_action(guild, actor, key, amount=1):
         used = _count_within(hits, window)
         if used + amount <= limit:
             return True, None
-        what = ACTION_TITLES.get(key, 'действий')
-        left = max(0, limit - used)
-        txt = (f'Лимит исчерпан: {limit} {what} за {human_window(window)} '
-               f'(использовано {used}, осталось {left}).')
         when = refresh_in_text(guild.id, actor.id, key)
-        if when:
-            txt += f' Обновится через {when}.'
+        txt = limit_deny_text(key, used, limit, amount=amount,
+                              window=window, refresh=when)
         return False, txt
     except Exception as ex:
         _log.debug('check_action(%s): %s', key, ex)
@@ -724,13 +1045,19 @@ def effective_limits(guild_id, role_ids=()):
     общего или меньше — неважно. Общего лимита нет, а у роли есть —
     действует лимит роли. Несколько ролей со своими лимитами — побеждает
     самая мягкая (роль дают осознанно, наказывать за вторую роль странно).
+
+    Младший тир (хелпер/mod при кураторе) overrides не применяет.
     """
     lim = dict(get_limits(guild_id))
     win = dict(get_windows(guild_id))
+    # Тировые дефолты (модер/куратор/админ из data/role_map.json) ВАЖНЕЕ
+    # общих модераторских дефолтов: куратору 3 бана, админу 5 и т.д.
+    for _k, _v in _tier_defaults(role_ids).items():
+        lim[_k] = _v
     overrides = get_role_overrides(guild_id)
     best = {}          # ключ → (лимит, окно) — лучший из СВОИХ лимитов ролей
-    for rid in role_ids or ():
-        ov = overrides.get(str(rid))
+    for rid_s in _role_ids_for_overrides(role_ids):
+        ov = overrides.get(rid_s)
         if not ov:
             continue
         for k, v in (ov.get('limits') or {}).items():

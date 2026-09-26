@@ -79,9 +79,53 @@ LOG_CARD_THEMES = {
                'bg_top': (8, 22, 16), 'bg_bot': (16, 36, 24),
                'stars': ((90, 220, 150), (190, 250, 200), (255, 255, 255)),
                'label': 'Лес'},
+    'sakura': {'gold': (255, 130, 190), 'bright': (255, 190, 225),
+               'soft': (205, 95, 155), 'dim': (140, 65, 105),
+               'bg_top': (26, 12, 22), 'bg_bot': (44, 20, 36),
+               'stars': ((255, 130, 190), (255, 200, 230), (255, 255, 255)),
+               'label': 'Сакура'},
+    'crimson': {'gold': (255, 75, 85), 'bright': (255, 150, 155),
+                'soft': (200, 50, 60), 'dim': (135, 35, 42),
+                'bg_top': (24, 8, 12), 'bg_bot': (40, 14, 20),
+                'stars': ((255, 75, 85), (255, 190, 120), (255, 255, 255)),
+                'label': 'Багровый неон'},
+    'steel': {'gold': (170, 190, 215), 'bright': (225, 235, 248),
+              'soft': (120, 140, 165), 'dim': (80, 95, 115),
+              'bg_top': (13, 16, 22), 'bg_bot': (24, 30, 40),
+              'stars': ((170, 190, 215), (225, 235, 248), (255, 255, 255)),
+              'label': 'Сталь'},
+    'aurora': {'gold': (95, 235, 210), 'bright': (175, 255, 240),
+               'soft': (70, 180, 165), 'dim': (48, 120, 112),
+               'bg_top': (8, 18, 26), 'bg_bot': (20, 30, 52),
+               'stars': ((95, 235, 210), (170, 160, 255), (255, 255, 255)),
+               'label': 'Аврора'},
+}
+
+# «Разными образами» (заказ владельца): каждой категории логов — свой образ
+# по умолчанию. Владелец может перекрыть любую в панели (Логи → оформление).
+DEFAULT_THEME_BY_CAT = {
+    'mod': 'hakumo', 'automod': 'crimson', 'punish': 'crimson', 'message': 'ocean',
+    'voice': 'violet', 'member': 'forest', 'nick': 'sakura',
+    'role': 'aurora', 'channel': 'steel', 'invite': 'aurora',
+    'сервер': 'hakumo', 'guild': 'hakumo', 'ticket': 'ocean',
+    'proof': 'steel', 'welcome': 'sakura',
+    'ban': 'crimson', 'mute': 'night', 'warn': 'crimson',
+    'staff': 'violet', 'rest': 'steel',
 }
 LOG_CARD_THEME_ORDER = tuple(LOG_CARD_THEMES)
 DEFAULT_LOG_THEME = 'hakumo'
+
+# Форма плашек поверх фото: стекло читается на любом фоне.
+CARD_FORMS = {
+    'glass': 'Стекло',
+    'rounded': 'Мягкая',
+    'pill': 'Пилюля',
+    'sharp': 'Прямая',
+}
+DEFAULT_FORM = 'glass'
+DEFAULT_FORM_RGB = (12, 16, 28)
+LOG_DELIVERIES = ('embed', 'photo')
+DEFAULT_DELIVERY = 'embed'
 
 
 def _clamp(v):
@@ -131,9 +175,69 @@ def log_cards_cfg_path(gid):
     return os.path.join(ROOT, 'data', f'log_cards_{gid}.json')
 
 
+def _valid_theme_by_cat(raw):
+    """dict категория→тема: ключи из CATEGORY_STYLES, значения из тем."""
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for k, v in raw.items():
+        k = str(k).strip().lower()
+        v = str(v).strip().lower()
+        if k in CATEGORY_STYLES and v in LOG_CARD_THEMES:
+            out[k] = v
+    return out
+
+
+def _valid_bg_url(raw):
+    """Свой фон-фото карточек: только http(s), без локальных адресов."""
+    u = str(raw or '').strip()
+    if not u.startswith(('https://', 'http://')):
+        return ''
+    if any(bad in u.lower() for bad in ('//localhost', '//127.0.0.1',
+                                        '//0.0.0.0', '//[::1]')):
+        return ''
+    return u
+
+
+def _valid_bg_url_by_cat(raw):
+    """dict категория → URL фона. Пустые/мусорные ссылки выкидываем."""
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for k, v in raw.items():
+        k = str(k).strip().lower()
+        u = _valid_bg_url(v)
+        if k in CATEGORY_STYLES and u:
+            out[k] = u
+    return out
+
+
+def bg_url_for_cat(cfg, cat):
+    """Фон этой категории: свой URL, иначе общий bg_url сервера."""
+    cfg = cfg if isinstance(cfg, dict) else {}
+    cat = str(cat or '').strip().lower()
+    by = cfg.get('bg_url_by_cat') or {}
+    return str(by.get(cat) or cfg.get('bg_url') or '')
+
+
+def _valid_form(raw):
+    s = str(raw or '').strip().lower()
+    return s if s in CARD_FORMS else DEFAULT_FORM
+
+
+def _valid_delivery(raw):
+    s = str(raw or '').strip().lower()
+    return s if s in LOG_DELIVERIES else DEFAULT_DELIVERY
+
+
 def get_log_cards_cfg(gid):
-    """{'enabled': bool, 'theme': str, 'accent': ''} — с валидацией мусора."""
-    cfg = {'enabled': True, 'theme': DEFAULT_LOG_THEME, 'accent': ''}
+    """{'enabled': bool, 'theme': str, 'accent': '', 'bg_url': '',
+    'theme_by_cat': {}, 'bg_url_by_cat': {}, 'form': str, 'form_color': '',
+    'delivery': 'embed'|'photo'}."""
+    cfg = {'enabled': True, 'theme': DEFAULT_LOG_THEME, 'accent': '',
+           'bg_url': '', 'theme_by_cat': dict(DEFAULT_THEME_BY_CAT),
+           'bg_url_by_cat': {}, 'form': DEFAULT_FORM, 'form_color': '',
+           'delivery': DEFAULT_DELIVERY}
     try:
         path = log_cards_cfg_path(gid)
         if os.path.exists(path):
@@ -149,26 +253,73 @@ def get_log_cards_cfg(gid):
                 acc = str(raw.get('accent') or '').strip().lstrip('#')
                 if not acc or _ui_color(acc):
                     cfg['accent'] = acc
+                if 'theme_by_cat' in raw:
+                    cfg['theme_by_cat'] = _valid_theme_by_cat(raw.get('theme_by_cat'))
+                cfg['bg_url'] = _valid_bg_url(raw.get('bg_url'))
+                cfg['bg_url_by_cat'] = _valid_bg_url_by_cat(raw.get('bg_url_by_cat'))
+                if 'form' in raw:
+                    cfg['form'] = _valid_form(raw.get('form'))
+                acc_f = str(raw.get('form_color') or '').strip().lstrip('#')
+                if not acc_f or _ui_color(acc_f):
+                    cfg['form_color'] = acc_f
+                if 'delivery' in raw:
+                    cfg['delivery'] = _valid_delivery(raw.get('delivery'))
     except Exception as _ex:
         _log.debug('get_log_cards_cfg(): %s', _ex)
     return cfg
 
 
 def save_log_cards_cfg(gid, data):
-    """Записать настройки после валидации. Возвращает нормализованный dict."""
+    """Записать настройки после валидации. Возвращает нормализованный dict.
+
+    Поля, которых нет в data, не затираем (merge-on-save): POST оформления
+    логов без bg_url_by_cat не должен сносить URL по категориям, а POST
+    «Логи сервера» с одним URL категории не должен сносить тему.
+    """
     if not isinstance(data, dict):
         data = {}
+    prev = {}
+    try:
+        path = log_cards_cfg_path(gid)
+        if os.path.exists(path):
+            import json as _json
+            with open(path, 'r', encoding='utf-8') as fp:
+                raw = _json.load(fp)
+            if isinstance(raw, dict):
+                prev = raw
+    except Exception as _ex:
+        _log.debug('save_log_cards_cfg prev: %s', _ex)
+        prev = {}
+    _theme_src = (data.get('theme_by_cat') if 'theme_by_cat' in data
+                  else DEFAULT_THEME_BY_CAT)
+    _bg = data.get('bg_url') if 'bg_url' in data else prev.get('bg_url')
+    _by = (data.get('bg_url_by_cat') if 'bg_url_by_cat' in data
+           else prev.get('bg_url_by_cat'))
+    _form = data.get('form') if 'form' in data else prev.get('form')
+    _fc = data.get('form_color') if 'form_color' in data else prev.get('form_color')
+    _deliv = data.get('delivery') if 'delivery' in data else prev.get('delivery')
     cfg = {
-        'enabled': bool(data.get('enabled', True)),
+        'enabled': bool(data.get('enabled', True if 'enabled' not in prev
+                                 else prev.get('enabled', True))),
         'theme': DEFAULT_LOG_THEME,
         'accent': '',
+        'bg_url': _valid_bg_url(_bg),
+        'theme_by_cat': _valid_theme_by_cat(_theme_src),
+        'bg_url_by_cat': _valid_bg_url_by_cat(_by),
+        'form': _valid_form(_form),
+        'form_color': '',
+        'delivery': _valid_delivery(_deliv),
     }
-    theme = str(data.get('theme') or '').strip().lower()
+    theme = str(data.get('theme') or prev.get('theme') or '').strip().lower()
     if theme in LOG_CARD_THEMES:
         cfg['theme'] = theme
-    acc = str(data.get('accent') or '').strip().lstrip('#')
+    acc = str(data.get('accent') if 'accent' in data else prev.get('accent') or '')
+    acc = acc.strip().lstrip('#')
     if _ui_color(acc):
         cfg['accent'] = acc
+    fc = str(_fc or '').strip().lstrip('#')
+    if _ui_color(fc):
+        cfg['form_color'] = fc
     try:
         os.makedirs(os.path.dirname(log_cards_cfg_path(gid)), exist_ok=True)
         import json as _json
@@ -243,6 +394,12 @@ def _load_icon(category, size=156):
         'сервер': 'guild',
         'welcome': 'welcome',
         'ai': 'ai',
+        'ban': 'mod',
+        'mute': 'mod',
+        'warn': 'mod',
+        'punish': 'mod',
+        'staff': 'role',
+        'rest': 'guild',
     }
     key = aliases.get(category, category)
     path = os.path.join(ICONS_DIR, f'log_{key}_256.png')
@@ -274,6 +431,46 @@ CATEGORY_STYLES = {
     'automod': {
         'tag': '✦ HAKUMO · АВТОМОДЕРАЦИЯ',
         'glow_color': (255, 90, 45),
+        'type': 'mod',
+    },
+    'nick': {
+        'tag': '✦ HAKUMO · НИКНЕЙМЫ',
+        'glow_color': (185, 130, 255),
+        'type': 'message',
+    },
+    'proof': {
+        'tag': '✦ HAKUMO · ДОКАЗАТЕЛЬСТВА',
+        'glow_color': (200, 120, 255),
+        'type': 'member',
+    },
+    'ban': {
+        'tag': '✦ HAKUMO · БАНЫ',
+        'glow_color': (192, 57, 43),
+        'type': 'mod',
+    },
+    'mute': {
+        'tag': '✦ HAKUMO · МУТЫ',
+        'glow_color': (230, 126, 34),
+        'type': 'mod',
+    },
+    'warn': {
+        'tag': '✦ HAKUMO · ВАРНЫ',
+        'glow_color': (231, 76, 60),
+        'type': 'mod',
+    },
+    'staff': {
+        'tag': '✦ HAKUMO · СТАФФ',
+        'glow_color': (142, 68, 173),
+        'type': 'role',
+    },
+    'rest': {
+        'tag': '✦ HAKUMO · ОСТАЛЬНОЕ',
+        'glow_color': (149, 165, 166),
+        'type': 'guild',
+    },
+    'punish': {
+        'tag': '✦ HAKUMO · НАКАЗАНИЯ',
+        'glow_color': (255, 110, 60),
         'type': 'mod',
     },
     'message': {
@@ -472,165 +669,382 @@ def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
     return base
 
 
+def _photo_bg(w, h, data):
+    """Фото как фон: cover-масштаб, почти без затемнения —
+    читаемость на плашках, не на мытье всего кадра."""
+    ph = Image.open(io.BytesIO(data)).convert('RGB')
+    scale = max(w / ph.width, h / ph.height)
+    nw = max(w, int(ph.width * scale + 0.5))
+    nh = max(h, int(ph.height * scale + 0.5))
+    ph = ph.resize((nw, nh), Image.LANCZOS)
+    left, top = (nw - w) // 2, (nh - h) // 2
+    ph = ph.crop((left, top, left + w, top + h)).convert('RGBA')
+    vig = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    vd = ImageDraw.Draw(vig)
+    vd.rectangle([0, 0, w, h], fill=(6, 8, 14, 28))
+    band = max(24, h // 16)
+    for i in range(band):
+        a = int(64 * (1 - i / band))
+        vd.line([(0, i), (w, i)], fill=(0, 0, 0, a))
+        vd.line([(0, h - 1 - i), (w, h - 1 - i)], fill=(0, 0, 0, a))
+    ph.alpha_composite(vig)
+    return ph
+
+
+def _form_fill(raw):
+    return _ui_color(raw) or DEFAULT_FORM_RGB
+
+
+def _ink_on(rgb):
+    y = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+    if y < 155:
+        return (250, 252, 255), (168, 178, 196)
+    return (18, 22, 30), (78, 86, 98)
+
+
+def _form_radius(form, h):
+    if form == 'pill':
+        return max(10, int(h // 2))
+    if form == 'sharp':
+        return 6
+    if form == 'rounded':
+        return 18
+    return 26
+
+
+def _glass_veil(form):
+    """Белая дымка + тёмная вуаль: бесцветное стекло, фото чуть просвечивает."""
+    return {
+        'glass': (56, 96),
+        'rounded': (48, 110),
+        'pill': (42, 118),
+        'sharp': (38, 128),
+    }.get(form, (56, 96))
+
+
+def _frost_plate(img, box, radius, fill_rgb=None, alpha=None, outline=None, form='glass'):
+    """Матовое стекло без краски: блюр фона + белая/тёмная вуаль."""
+    x0, y0, x1, y1 = int(box[0]), int(box[1]), int(box[2]), int(box[3])
+    x0 = max(0, min(x0, img.width - 2))
+    y0 = max(0, min(y0, img.height - 2))
+    x1 = max(x0 + 4, min(x1, img.width))
+    y1 = max(y0 + 4, min(y1, img.height))
+    w, h = x1 - x0, y1 - y0
+    crop = img.crop((x0, y0, x1, y1)).convert('RGBA')
+    wa, da = _glass_veil(form)
+    plate = Image.alpha_composite(
+        crop.filter(ImageFilter.GaussianBlur(16)),
+        Image.new('RGBA', (w, h), (255, 255, 255, wa)),
+    )
+    plate = Image.alpha_composite(
+        plate, Image.new('RGBA', (w, h), (8, 10, 16, da)))
+    rad = max(2, min(int(radius), w // 2, h // 2))
+    mask = Image.new('L', (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (0, 0, w - 1, h - 1), radius=rad, fill=255)
+    img.paste(plate, (x0, y0), mask)
+    d = ImageDraw.Draw(img)
+    rim = outline or (255, 255, 255, 64)
+    d.rounded_rectangle((x0, y0, x1 - 1, y1 - 1), radius=rad,
+                        outline=rim, width=1)
+
+
+def _put_text(d, xy, text, font, fill):
+    """Текст с плотной тенью — Discord сжимает фото, без тени буквы плывут."""
+    x, y = xy
+    d.text((x + 1, y + 2), text, font=font, fill=(0, 0, 0, 210))
+    d.text((x, y + 1), text, font=font, fill=(0, 0, 0, 160))
+    d.text((x, y), text, font=font, fill=fill)
+
+
+def _og_image_from_html(html, base=''):
+    """og:image / twitter:image со страницы (pin.it и т.п.)."""
+    html = str(html or '')
+    m = re.search(
+        r'<meta[^>]+(?:property|name)=["\']'
+        r'(?:og:image(?::secure_url)?|twitter:image(?:src)?)["\']'
+        r'[^>]+content=["\']([^"\']+)["\']', html, re.I)
+    if not m:
+        m = re.search(
+            r'content=["\']([^"\']+\.(?:jpg|jpeg|png|webp)[^"\']*)["\']'
+            r'[^>]*(?:property|name)=["\']'
+            r'(?:og:image|twitter:image)["\']', html, re.I)
+    if not m:
+        return None
+    cand = m.group(1).replace('&amp;', '&').strip()
+    if not cand:
+        return None
+    if base:
+        from urllib.parse import urljoin
+        return urljoin(str(base), cand)
+    return cand
+
+
+def _looks_like_image(head):
+    if not head or len(head) < 8:
+        return False
+    png = bytes([0x89]) + b'PNG' + bytes([0x0D, 0x0A, 0x1A, 0x0A])
+    if head[:8] == png:
+        return True
+    if head[:3] == bytes([0xFF, 0xD8, 0xFF]):
+        return True
+    if head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+        return True
+    if head[:6] in (b'GIF87a', b'GIF89a'):
+        return True
+    return False
+
+
+def fetch_bg_direct(url, max_bytes=8 * 1024 * 1024):
+    """Скачать фон-фото без кэша (панель-превью). None — не вышло.
+
+    Страница (pin.it / соцсеть) — вытаскиваем og:image и качаем её.
+    """
+    import requests as _rq
+    url = str(url or '').strip()
+    if not url.lower().startswith(('https://', 'http://')):
+        return None
+    try:
+        r = _rq.get(url, timeout=(6, 15), allow_redirects=True,
+                    headers={'User-Agent': 'Mozilla/5.0 (compatible; HakumoBot)'})
+        if r.status_code >= 400:
+            _log.debug('лог-фон: хост ответил %s', r.status_code)
+            return None
+        data = r.content or b''
+        if len(data) > max_bytes:
+            _log.debug('лог-фон: файл больше 8 МБ')
+            return None
+        ctype = (r.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+        if ctype.startswith('text/html') or not _looks_like_image(data):
+            og = _og_image_from_html(r.text, str(r.url or url))
+            if not og:
+                return None
+            r2 = _rq.get(og, timeout=(6, 15), allow_redirects=True,
+                         headers={'User-Agent': 'Mozilla/5.0 (compatible; HakumoBot)'})
+            if r2.status_code >= 400:
+                return None
+            data = r2.content or b''
+            if len(data) > max_bytes:
+                return None
+        Image.open(io.BytesIO(data)).verify()
+        return data
+    except Exception as _ex:
+        _log.debug('лог-фон: %s', _ex)
+        return None
+
+
+_PHOTO_BG_CACHE = {}
+
+
+# Компактная полоса в эмбеде Discord (~400px ширина канала).
+# 3:1 — не полное фото, но не тонкая лента. Не апскейлим исходник.
+LOG_PHOTO_W = 1200
+LOG_PHOTO_H = 400
+
+
+def compact_log_photo(data, width=None, height=None, fmt='jpeg'):
+    """Только фото владельца: cover-кроп в компактную полосу.
+
+    Без текста, стекла и плашек. JPEG 95 / полный chroma.
+    Высокие кадры кропаем чуть выше центра, чтобы лица не срезались.
+    Мелкое фото не растягиваем — качество важнее пикселей.
+    None — нет данных или Pillow не открыл файл.
+    """
+    if not LOG_CARD_OK or not data:
+        return None
+    try:
+        tw = int(width or LOG_PHOTO_W)
+        th = int(height or LOG_PHOTO_H)
+        if tw < 160 or th < 80:
+            tw, th = LOG_PHOTO_W, LOG_PHOTO_H
+        ratio = tw / float(th)
+        ph = Image.open(io.BytesIO(data)).convert('RGB')
+        sw, sh = ph.size
+        if sw < 2 or sh < 2:
+            return None
+        src_ratio = sw / float(sh)
+        if src_ratio > ratio:
+            # шире цели — режем бока, центр
+            new_w = max(1, int(sh * ratio + 0.5))
+            x0 = max(0, (sw - new_w) // 2)
+            ph = ph.crop((x0, 0, x0 + new_w, sh))
+        else:
+            # выше цели — режем верх/низ, смещение к лицам
+            new_h = max(1, int(sw / ratio + 0.5))
+            extra = max(0, sh - new_h)
+            y0 = int(extra * 0.28)
+            ph = ph.crop((0, y0, sw, y0 + new_h))
+        if ph.width > tw:
+            ph = ph.resize((tw, th), Image.LANCZOS)
+        buf = io.BytesIO()
+        if str(fmt).lower() == 'png':
+            ph.save(buf, 'PNG')
+        else:
+            ph.save(buf, 'JPEG', quality=95, optimize=False, subsampling=0)
+        return buf.getvalue()
+    except Exception as _ex:
+        _log.debug('compact_log_photo: %s', _ex)
+        return None
+
+
+def preview_log_banner(bg_bytes=None, theme=None, accent=None):
+    """Панель: полоса фото лога. Своё фото — кроп; иначе тёмный фон без текста."""
+    if bg_bytes:
+        out = compact_log_photo(bg_bytes, fmt='png')
+        if out:
+            return out
+    if not LOG_CARD_OK:
+        return None
+    try:
+        pal = _palette(theme, accent)
+        img = _load_celestial_bg(LOG_PHOTO_W, LOG_PHOTO_H, pal=pal, use_asset=True)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        buf = io.BytesIO()
+        img.save(buf, 'PNG')
+        return buf.getvalue()
+    except Exception as _ex:
+        _log.debug('preview_log_banner: %s', _ex)
+        return None
+
+
+def get_bg_bytes_sync(url, ttl=300):
+    """Фото лога с кэшем 5 минут (бот качает на каждый лог — без кэша
+    дёргать хост нельзя). None — фото не задано / не скачалось."""
+    import time as _t
+    url = str(url or '').strip()
+    if not url.lower().startswith(('https://', 'http://')):
+        return None
+    now = _t.time()
+    hit = _PHOTO_BG_CACHE.get(url)
+    if hit and hit[0] and now - hit[1] < ttl:
+        return hit[0]
+    data = fetch_bg_direct(url)
+    if data:
+        _PHOTO_BG_CACHE[url] = (data, now)
+        if len(_PHOTO_BG_CACHE) > 32:
+            oldest = min(_PHOTO_BG_CACHE.items(), key=lambda kv: kv[1][1])
+            _PHOTO_BG_CACHE.pop(oldest[0], None)
+    return data
+
+
 def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
                     guild_name='', time_str='', theme=None, accent=None,
-                    fmt='jpeg'):
-    """Нарисовать премиальную карточку лога в единой стилистике HAKUMO.
+                    fmt='jpeg', bg_bytes=None, form=None, form_color=None):
+    """Карточка лога: фото на весь кадр, поверх — бесцветное стекло-сообщения.
 
-    theme — одна из LOG_CARD_THEMES ('hakumo' — исторический фирменный вид,
-    ровно как было); accent ('#rrggbb'/int) заменяет золотую гамму своим
-    цветом. Оба параметра пробрасывает бот из настроек панели
-    (data/log_cards_<gid>.json, get_log_cards_cfg).
+    form — glass|rounded|pill|sharp. Цвет плашек больше не красит стекло:
+    читаемость даёт вуаль, а не заливка. bg_bytes — своё фото (bg_url).
     """
     if not LOG_CARD_OK:
         return None
     try:
+        # Discord в чате жмёт картинку до ~500px по ширине. Шрифт считаем
+        # от этого: 36px на холсте 1440px → ~12px на экране (не читается).
         W = 1440
-        PAD = 52
+        PAD = 44
         pal = _palette(theme, accent)
-        gold, bright, soft = pal['gold'], pal['bright'], pal['soft']
-        cell_border = gold + (65,)
         cat_key = str(category or 'guild').lower().strip()
         cstyle = CATEGORY_STYLES.get(cat_key, CATEGORY_STYLES.get('guild'))
+        form = _valid_form(form)
+        ink = (255, 255, 255)
+        ink_dim = (228, 232, 240)
+        has_photo = bool(bg_bytes)
 
         clean_rows = [(n, v) for n, v in (rows or []) if v not in (None, '')][:7]
-        # «Ссылка»/«Перейти» на картинке не имеет смысла — ссылку не кликнуть
         clean_rows = [(n, v) for n, v in clean_rows
                       if _clean(n).strip().lower() not in ('ссылка', 'link')]
-        header_h = 248
-        row_h = 72
-        footer_h = 82
-        H = header_h + max(1, len(clean_rows)) * row_h + footer_h
+        header_inner = 156
+        header_top = 28
+        row_h = 124
+        row_gap = 12
+        footer_h = 56
+        gap = 16
+        n = max(1, len(clean_rows))
+        H = (header_top + header_inner + gap
+             + n * row_h + max(0, n - 1) * row_gap
+             + gap + footer_h)
 
-        # 1. Полноценная фоновая звёздная иллюстрация с неоновым свечением
         cat_glow = cstyle['glow_color']
-        # Фирменный PNG-фон золотой: берём его только для родной темы
-        # без своего акцента — иначе строим градиент палитры темы.
         use_asset = (str(theme or DEFAULT_LOG_THEME).strip().lower() == DEFAULT_LOG_THEME
                      and not _ui_color(accent))
-        img = _load_celestial_bg(W, H, cat_tint=cat_glow, pal=pal, use_asset=use_asset)
+        if bg_bytes:
+            try:
+                img = _photo_bg(W, H, bg_bytes)
+            except Exception as _ex:
+                _log.debug('лог-карточка: свой фон не открылся: %s', _ex)
+                img = _load_celestial_bg(W, H, cat_tint=cat_glow, pal=pal,
+                                         use_asset=use_asset)
+                has_photo = False
+        else:
+            img = _load_celestial_bg(W, H, cat_tint=cat_glow, pal=pal,
+                                     use_asset=use_asset)
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        if not has_photo:
+            img = _draw_stardust(img, W, H, pal)
+
+        hx0, hy0 = PAD, header_top
+        hx1, hy1 = W - PAD, header_top + header_inner
+        head_r = _form_radius(form, header_inner)
+        _frost_plate(img, (hx0, hy0, hx1, hy1), head_r, form=form)
         d = ImageDraw.Draw(img)
 
-        # 4. Двойная рамка по контуру карточки
-        d.rectangle((10, 10, W - 10, H - 10), outline=gold + (90,), width=2)
-        d.rectangle((16, 16, W - 16, H - 16), outline=soft + (40,), width=1)
-
-        # Левая неоновая полоса
-        d.rectangle((0, 0, 10, H), fill=gold + (255,))
-        d.rectangle((10, 0, 14, H), fill=bright + (140,))
-
-        # 5. Время (в правом верхнем углу шапки)
         time_clean = _clean(time_str)
-        t_font = _font(22, True)
-        time_w = d.textlength(time_clean, font=t_font) if time_clean else 0
-        right_limit = W - PAD
-
+        t_font = _font(28, False)
         if time_clean:
-            t_pad_w = time_w + 24
-            t_box_x = W - PAD - t_pad_w
-            d.rounded_rectangle((t_box_x, 48, W - PAD, 48 + 36), radius=10,
-                                fill=(20, 28, 48, 220), outline=gold + (100,), width=1)
-            d.text((t_box_x + 12, 54), time_clean, font=t_font, fill=bright)
-            right_limit = t_box_x - 18
+            tw = d.textlength(time_clean, font=t_font)
+            _put_text(d, (hx1 - 32 - tw, hy0 + 24), time_clean, t_font, ink_dim)
 
-        # 6. Графический виджет категории в шапке (слева от плашки времени)
-        _draw_category_widget(d, cstyle['type'], W, H, PAD, right_limit, pal)
+        raw_tag = cstyle.get('tag') or str(cat_name or cat_key)
+        cat_badge = raw_tag.split('·')[-1].strip() if '·' in raw_tag else raw_tag
+        cat_badge = cat_badge.replace('✦', '').strip().title()
+        badge_font = _font(28, False)
+        _put_text(d, (hx0 + 32, hy0 + 24),
+                  _ellipsize(d, cat_badge, badge_font, W - PAD * 2 - 280),
+                  badge_font, ink_dim)
 
-        # 7. Фирменная иконка категории
-        icon = _load_icon(cat_key, size=154)
-        tx = PAD
-        if icon is not None:
-            # Тень под иконкой
-            d.rounded_rectangle((PAD + 4, 46 + 4, PAD + 154 + 4, 46 + 154 + 4), radius=26,
-                                fill=(0, 0, 0, 110))
-            img.paste(icon, (PAD, 46), icon)
-            d.rounded_rectangle((PAD, 46, PAD + 154, 46 + 154), radius=26,
-                                outline=gold + (210,), width=3)
-            tx = PAD + 154 + 32
+        title_font = _font(58, True)
+        title_txt = _ellipsize(d, _clean(title), title_font, W - PAD * 2 - 72)
+        _put_text(d, (hx0 + 32, hy0 + 70), title_txt, title_font, ink)
 
-        # 8. Бейдж категории в шапке (акцент + мягкий фон)
-        cat_badge = cstyle.get('tag') or f'✦ HAKUMO · {str(cat_name or cat_key).upper()}'
-        badge_font = _font(22, True)
-        bw = d.textlength(cat_badge, font=badge_font) + 28
-        bh = 38
-        d.rounded_rectangle((tx, 48, tx + bw, 48 + bh), radius=12,
-                            fill=(20, 28, 48, 220), outline=gold + (120,), width=1)
-        d.text((tx + 14, 55), cat_badge, font=badge_font, fill=bright)
-
-        # Заголовок события (крупный акцентный / белый)
-        title_font = _font(44, True)
-        title_txt = _ellipsize(d, _clean(title), title_font, W - tx - PAD - 20)
-        d.text((tx, 98), title_txt, font=title_font, fill=C_TEXT_WHITE)
-
-        # Разделитель шапки с градиентным акцентным штрихом
-        sep_y = header_h - 22
-        d.line([(PAD, sep_y), (W - PAD, sep_y)], fill=gold + (80,), width=1)
-        d.line([(PAD, sep_y), (PAD + 240, sep_y)], fill=bright + (230,), width=2)
-
-        # 9. Строки данных — полупрозрачные плашки в золотых рамках
-        y = header_h
+        y = hy1 + gap
         card_w = W - PAD * 2
-        name_col_w = 280
+        plate_r = _form_radius(form, row_h)
 
-        for name, value in clean_rows:
-            clean_n = _clean(name).upper()
-            clean_v = _clean(value)
-            is_reason = clean_n in ('ПРИЧИНА', 'REASON', 'ПРИЧИНА НАКАЗАНИЯ')
+        def _bubble(yy, label, value):
+            _frost_plate(img, (PAD, yy, PAD + card_w, yy + row_h),
+                         plate_r, form=form)
+            dd = ImageDraw.Draw(img)
+            lab_f = _font(26, False)
+            val_f = _font(44, True)
+            lab = _ellipsize(dd, label, lab_f, card_w - 64)
+            val = _ellipsize(dd, value, val_f, card_w - 64)
+            _put_text(dd, (PAD + 32, yy + 18), lab, lab_f, ink_dim)
+            _put_text(dd, (PAD + 32, yy + 56), val, val_f, ink)
 
-            # Плашка строки
-            box_fill = (45, 22, 28, 220) if is_reason else (18, 26, 44, 210)
-            box_outline = (235, 75, 85, 160) if is_reason else cell_border
-
-            d.rounded_rectangle((PAD, y + 4, PAD + card_w, y + row_h - 8), radius=14,
-                                fill=box_fill, outline=box_outline, width=1)
-
-            # Левый акцентный штрих плашки (тема или рубин для причины)
-            bar_color = (255, 80, 90, 255) if is_reason else gold + (255,)
-            d.rounded_rectangle((PAD + 3, y + 10, PAD + 8, y + row_h - 14), radius=3,
-                                fill=bar_color)
-
-            # Название поля
-            n_font = _font(22, True)
-            d.text((PAD + 24, y + 20), _ellipsize(d, clean_n, n_font, name_col_w - 30),
-                   font=n_font, fill=bright if not is_reason else (255, 145, 155, 255))
-
-            # Разделитель
-            d.text((PAD + name_col_w, y + 18), '›', font=_font(26, True), fill=gold + (170,))
-
-            # Значение поля
-            v_font = _font(26, False) if not is_reason else _font(26, True)
-            val_x = PAD + name_col_w + 24
-            max_val_w = W - PAD - val_x - 20
-            val_txt = _ellipsize(d, clean_v, v_font, max_val_w)
-            val_color = C_TEXT_WHITE if not is_reason else (255, 235, 235, 255)
-            d.text((val_x, y + 19), val_txt, font=v_font, fill=val_color)
-
+        if clean_rows:
+            for i, (name, value) in enumerate(clean_rows):
+                _bubble(y, _clean(name), _clean(value))
+                y += row_h + (row_gap if i < len(clean_rows) - 1 else 0)
+        else:
+            _bubble(y, 'Событие', 'Нет дополнительных параметров')
             y += row_h
 
-        if not clean_rows:
-            d.text((PAD + 24, y + 18), 'Нет дополнительных параметров', font=_font(26), fill=C_TEXT_DIM)
-
-        # 10. Фирменный футер с акцентным разделителем
-        fy = H - footer_h + 16
-        d.line([(PAD, fy), (W - PAD, fy)], fill=gold + (80,), width=1)
-
-        f_txt = f"HAKUMO LOG · {str(cat_name or cat_key).upper()}"
+        fy = H - footer_h + 8
+        foot_r = _form_radius(form, 40)
+        _frost_plate(img, (PAD, fy, W - PAD, fy + 40), foot_r, form=form)
+        d = ImageDraw.Draw(img)
+        f_txt = str(cat_name or cat_badge or cat_key)
         if guild_name:
-            f_txt += f" · {_clean(guild_name)}"
-        d.text((PAD, fy + 18), _ellipsize(d, f_txt, _font(22), W - PAD * 2 - 200),
-               font=_font(22), fill=C_TEXT_DIM)
-
-        brand = "✦ HAKUMO"
-        bw = d.textlength(brand, font=_font(24, True))
-        d.text((W - PAD - bw, fy + 16), brand, font=_font(24, True), fill=bright)
+            f_txt = f"{_clean(guild_name)}  ·  {f_txt}"
+        _put_text(d, (PAD + 24, fy + 10),
+                  _ellipsize(d, f_txt, _font(16), W - PAD * 2 - 48),
+                  _font(16), ink_dim)
 
         buf = io.BytesIO()
-        # JPEG вместо PNG: кодирование PNG жрало ~1.2 секунды НА КАЖДЫЙ лог
-        # («логи медленные»), JPEG делает то же за ~5-20 мс и файл в 4 раза
-        # меньше — Discord быстрее грузит. Качество 90 — артефактов нет.
-        # fmt='png' остаётся для превью панели (эндпоинт .../preview.png).
         if str(fmt).lower() == 'png':
-            img.convert('RGB').save(buf, 'PNG', optimize=True)
+            img.convert('RGB').save(buf, 'PNG')
         else:
             img.convert('RGB').save(buf, 'JPEG', quality=90, optimize=False)
         return buf.getvalue()

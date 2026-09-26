@@ -26,15 +26,15 @@ class ComplaintAnalyzer :
         r'\b(дурак|дура|идиот|тупой|тупица|дебил|кретин|олух|болван|придурок)\b',
         r'\b(пошёл|пошла|пошли|иди|идите)\s*(на\s*хер|на\s*хуй|в\s*жопу|в\s*задницу)\b',
         r'\b(сука|блядь|блять|нахер|нахуй|пиздец|ебать|ебаный|ебанутый|хуй|хуя|хую)\w*',
-        r'\b(мудак|мудak|гондон|пидор|пидорас|шлюха|блядина)\w*',
+        r'\b(мудак|гондон|пидор|пидорас|шлюха|блядина)\w*',
         r'\b(урод|мразотный|дрянь|сволота|скотина|гадина|тварь)\b',
         r'\b(ты\s+чмо|ты\s+лох|ты\s+конченый|ты\s+тупой|ты\s+идиот)\b',
         # === ТУРЕЦКИЙ ===
-        r'\b(amk|amq|orospu|piч|yarrak|siktir|gёt|amcыk|salak|aptal|gerizekalы)\b',
-        r'\b(ananы|bacыnы|karыnы|kыzыnы|karыnы)\s*(sikeyim|becereyim|sikim)\b',
-        r'\b(aqыlsыz|ahmak|шerefsiz|namussuz|orospu|pezevenk)\b',
-        r'\b(siktir\s*git|defol|ibne|top\s*senin|gёt\s*veren)\b',
-        r'\b(lan|aq|aлиna|koyim|amcыгыnы|yarram)\w*',
+        r'\b(amk|amq|orospu|piç|yarrak|siktir|göt|amcık|salak|aptal|gerizekali)\b',
+        r'\b(ananı|bacını|karını|kızını)\s*(sikeyim|becereyim|sikim)\b',
+        r'\b(akılsız|ahmak|şerefsiz|namussuz|orospu|pezevenk)\b',
+        r'\b(siktir\s*git|defol|ibne|top\s*senin|göt\s*veren)\b',
+        r'\b(lan|aq|alına|koyim|amcığını|yarram)\w*',
         # === АНГЛИЙСКИЙ ===
         r'\b(stupid|idiot|moron|fool|dumb|loser|asshole|jerk|dickhead)\b',
         r'\b(shut\s*up|fuck\s*you|go\s*to\s*hell|piece\s*of\s*shit)\b',
@@ -43,7 +43,7 @@ class ComplaintAnalyzer :
         # === УГРОЗЫ (RU/TR/EN) ===
         r'\b(убью|убить|зарежу|прирежу|прибью|пристрелю|закопаю|утоплю)\b',
         r'\b(повешу|отрежу|разорву|сломаю|разобью)\w*',
-        r'\b(ёldюreceгim|ёldюr|gebert|vuracaгыm|keseceгim)\b',
+        r'\b(öldüreceğim|öldür|gebert|vuracağım|keseceğim)\b',
         r'\b(kill\s*you|will\s*kill|i\s*will\s*kill|murder\s*you)\b',
         ]
 
@@ -74,14 +74,14 @@ class ComplaintAnalyzer :
         # 2. Analiz ediyoruz история сообщение
         message_history =await self ._get_message_history (guild ,complainant_id ,accused_id )
 
-        # 3. Контроль ediyoruz itibarы каждый ikisi
+        # 3. Проверяем репутацию обоих участников
         complainant_rep =await self ._get_reputation (guild ,complainant_id )
         accused_rep =await self ._get_reputation (guild ,accused_id )
 
         # 4. Analiz ediyoruz predostavlennie сообщения
         provided_analysis =self ._analyze_provided_messages (provided_messages or [])
 
-        # 5. Контроль ediyoruz baгlam (bila ли provokasyon)
+        # 5. Проверяем контекст (была ли провокация)
         context_analysis =await self ._analyze_context (guild ,message_history ,complainant_id ,accused_id )
 
         # 6. Ocenivaem ciddiyet
@@ -212,9 +212,9 @@ class ComplaintAnalyzer :
         'ебанутый','хуй','хуя','хую','мудак','гондон','пидор','пидорас',
         'шлюха','блядина','конченый','гнида','мразь',
         # Турецкий
-        'amk','amq','orospu','piч','yarrak','siktir','salak','aptal',
-        'gerizekalы','aqыlsыz','ahmak','шerefsiz','namussuz','pezevenk',
-        'ibne','lan','aq','amcыk',
+        'amk','amq','orospu','piç','yarrak','siktir','salak','aptal',
+        'gerizekali','akılsız','ahmak','şerefsiz','namussuz','pezevenk',
+        'ibne','lan','aq','amcık',
         # Английский
         'stupid','idiot','moron','fool','dumb','loser','asshole','jerk',
         'dickhead','bastard','bitch','whore','slut','cunt','wanker',
@@ -253,7 +253,7 @@ class ComplaintAnalyzer :
                     # Проверяем на угрозы (русские + турецкие + английские ключевые слова)
             threat_patterns =[
             r'\b(убью|убить|зарежу|прирежу|прибью|пристрелю|закопаю|утоплю|повешу|отрежу|разорву|грохну)\b',
-            r'\b(ёldюreceгim|ёldюr|gebert|vuracaгыm|keseceгim|seni\s*ёldюr)\b',
+            r'\b(öldüreceğim|öldür|gebert|vuracağım|keseceğim|seni\s*öldür)\b',
             r'\b(kill\s*you|will\s*kill|i\s*will\s*kill|murder\s*you|i\s*will\s*end\s*you)\b',
             ]
             if any (re .search (p ,msg_lower ,re .IGNORECASE )for p in threat_patterns ):
@@ -289,8 +289,7 @@ class ComplaintAnalyzer :
         'сам такой','отвечай','а ты кто','заткнись','закрой рот','ты кто',
         'ответь мне','что молчишь','сам дурак','ты тупой','ты идиот',
         # Турецкий
-        'kendi takoy','otvecu','a sen кто','zatknis','kapa чeneni','sen кто',
-        'sen aptalsin','salak','gerizekalы',
+        'kapa çeneni','sen aptalsin','salak','gerizekali',
         # Английский
         'shut up','stupid','idiot','fool',
         ]

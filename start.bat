@@ -49,11 +49,14 @@ if not exist ".env" (
 echo [OK] Configuration found
 echo.
 
+:: FFmpeg-блок убран вместе с системой музыки /play (2026-09-01).
+echo.
+
 :: Start bot
 echo [3/3] Starting bot...
 echo ============================================================
 echo.
-python main.py
+python -X utf8 main.py
 
 :: If bot crashed
 echo.

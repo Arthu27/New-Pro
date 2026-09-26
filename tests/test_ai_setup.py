@@ -59,8 +59,8 @@ from web.ai_knowledge import (build_panel_knowledge, build_setup_digest,  # noqa
                               build_setup_faq)
 
 faq_warn = build_setup_faq('как настроить варны')
-check('/warn-config' in faq_warn and '/mod-settings' in faq_warn,
-      'варны: гайд ведёт на /warn-config и /mod-settings')
+check('/ladder' in faq_warn and '/mod-settings' in faq_warn,
+      'варны: гайд ведёт на /ladder (лестница) и /mod-settings (исключения)')
 check('лестница' in faq_warn.lower() and 'по шагам' in faq_warn.lower(),
       'варны: гайд пошаговый и про лестницу наказаний')
 
@@ -75,19 +75,20 @@ check('/channel-settings' in faq_routes and '14' in faq_routes,
       'каналы: гайд про хаб 14 маршрутов')
 
 faq_tickets = build_setup_faq('как настроить тикеты?')
-check('/ticket-settings' in faq_tickets and '/ai-tickets' in faq_tickets,
-      'тикеты: гайд ведёт на /ticket-settings и /ai-tickets')
+check('/ai-tickets' in faq_tickets,
+      'тикеты: гайд ведёт на живые AI-тикеты /ai-tickets')
 
 faq_raid = build_setup_faq('как включить антирейд')
 check('/antiraid' in faq_raid and '/antifake' in faq_raid,
       'антирейд: гайд ведёт на /antiraid и /antifake')
 
+# Автороль/экономика/уровни — выключенные и удалённые модули:
+# гайдов по ним больше нет (проверка фантомных путей ниже это стережёт).
 faq_autorole = build_setup_faq('как сделать роль при входе новичкам')
-check('/autorole' in faq_autorole, 'автороль: гайд ведёт на /autorole')
-
+check('/autorole' not in faq_autorole, 'автороль: удалённый гайд не воскрес')
 faq_eco = build_setup_faq('как настроить экономику и магазин')
-check('/economy' in faq_eco and '/shop' in faq_eco,
-      'экономика: гайд ведёт на /economy и /shop')
+check('/economy' not in faq_eco and '/shop' not in faq_eco,
+      'экономика: удалённые гайды не воскресли')
 
 overview = build_setup_faq('помоги настроить сервер')
 check('главные' in overview.lower() and overview.count('▸') >= 10,
@@ -125,7 +126,7 @@ def fallback(q):
     return _local_moebius_fallback([{'role': 'user', 'content': q}])[0]
 
 
-check('/ticket-settings' in fallback('как настроить тикеты?'),
+check('/ai-tickets' in fallback('как настроить тикеты?'),
       '«как настроить тикеты» → гайд, а не общий блок тикетов')
 check('/mod-settings' in fallback('помоги настроить варны'),
       '«помоги настроить варны» → гайд по лестнице')
@@ -166,7 +167,11 @@ check('body { -webkit-tap-highlight-color: transparent; }' in css,
 check('@media (hover: none) and (pointer: coarse)' in css,
       'есть media-блок под тач-устройства')
 coarse = css[css.index('@media (hover: none) and (pointer: coarse)'):]
-check('.btn { min-height: 42px' in coarse, 'тач: .btn не ниже 42px')
+# «не ниже 42px» — нижняя граница тач-таргета; в CSS может быть и больше
+# (сейчас 44px — просторнее пальца), ловим значение, а не устаревший литерал
+_m42 = re.search(r'\.btn \{ min-height: (\d+)px', coarse)
+check(_m42 and int(_m42.group(1)) >= 42,
+      f'тач: .btn не ниже 42px (сейчас {_m42.group(0) if _m42 else "нет"})')
 check('.btn-icon { width: 44px; height: 44px; }' in coarse,
       'тач: иконочные кнопки 44px')
 check('.pm-ico-btn { width: 42px !important' in coarse,

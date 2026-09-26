@@ -5,9 +5,9 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Логи <span class="sep">·</span> Чат</div>
+    <div class="eyebrow"> Логи </div>
     <h1>Чат</h1>
-    <p class="lead">Живой обзор каналов и личных сообщений — пиши, отвечай и модерируй прямо из панели.</p>
+    <p class="lead">Обзор каналов и личных сообщений: ответы и модерация из панели.</p>
   </div>
   <div class="page-head-actions">
     <button type="button" class="btn" onclick="loadMessages()" title="Обновить сообщения"><i class="fas fa-sync-alt"></i> Обновить</button>
@@ -52,7 +52,7 @@
 .guild-icon::before {
   content: ''; position: absolute; left: -10px; top: 50%; transform: translateY(-50%);
   width: 5px; height: 0; border-radius: 4px;
-  background: linear-gradient(180deg, var(--ac), #a78bfa);
+  background: linear-gradient(180deg, var(--ac), #2f7df6);
   transition: height .18s var(--ease);
 }
 .guild-icon img { width: 100%; height: 100%; object-fit: cover; }
@@ -202,7 +202,7 @@
 .msg-avatar, .msg-avatar-placeholder {
   width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, var(--ac-soft), color-mix(in srgb, #a78bfa 14%, transparent));
+  background: linear-gradient(135deg, var(--ac-soft), color-mix(in srgb, #4d9fff 14%, transparent));
   font-size: 18px; color: var(--ac);
   border: 2px solid transparent;
 }
@@ -356,12 +356,12 @@
 .mention-av-wrap img, .mention-av-fb {
   width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, var(--ac-soft), color-mix(in srgb, #a78bfa 14%, transparent));
+  background: linear-gradient(135deg, var(--ac-soft), color-mix(in srgb, #4d9fff 14%, transparent));
   color: var(--ac); font-size: 13px;
 }
 .mention-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.mention-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mention-sub { font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mention-name { font-weight: 600; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+.mention-sub { font-size: 11px; color: var(--text-3); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .mention-name mark, .mention-sub mark { background: var(--ac-soft); color: var(--ac); border-radius: 4px; padding: 0 2px; }
 .mention-bot {
   align-self: flex-start; font-size: 8.5px; font-weight: 800; letter-spacing: .05em;
@@ -399,10 +399,10 @@
 .member-av, .member-av-placeholder {
   width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, var(--ac-soft), color-mix(in srgb, #a78bfa 14%, transparent));
+  background: linear-gradient(135deg, var(--ac-soft), color-mix(in srgb, #4d9fff 14%, transparent));
   font-size: 14px; color: var(--ac);
 }
-.member-name { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-name { font-size: 12.5px; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .member-name.is-bot { color: var(--ac); font-weight: var(--fw-semibold); }
 .status-dot {
   position: absolute; bottom: -1px; right: -1px; width: 11px; height: 11px;
@@ -535,14 +535,70 @@
 .chat-modal-btn.red { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent); }
 .chat-modal-btn.red:hover { background: var(--err); color: #fff; border-color: var(--err); }
 
-/* ── Адаптив ── */
+/* ── Адаптив: боковые колонки становятся выезжающими ящиками ── */
+.chat-drawer-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 65;
+  background: rgba(15, 23, 42, 0.42);
+  border: 0; padding: 0; margin: 0;
+  cursor: pointer;
+  pointer-events: none;
+}
+.hdr-btn.chat-mob-ch, .hdr-btn.chat-mob-mem { display: none; }
 @media (max-width: 1120px) {
   .chat-wrap { grid-template-columns: 58px 236px 1fr; }
-  .members-panel { display: none; }
+  .members-panel {
+    display: none;
+    position: fixed; right: 0; top: var(--topbar-h, 56px); bottom: 0;
+    width: min(280px, 86vw);
+    z-index: 80;
+    border-radius: 0;
+    box-shadow: var(--shadow-3);
+  }
+  .chat-wrap.members-open .members-panel { display: flex; }
+  .hdr-btn.chat-mob-mem { display: flex; }
+  .chat-drawer-backdrop.show {
+    display: block;
+    pointer-events: auto;
+  }
+}
+@media (min-width: 1121px) {
+  .chat-drawer-backdrop,
+  .chat-drawer-backdrop.show {
+    display: none;
+    pointer-events: none;
+  }
+}
+@media (max-width: 860px) {
+  .members-panel {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
 }
 @media (max-width: 820px) {
-  .chat-wrap { grid-template-columns: 50px 1fr; height: calc(100vh - 260px); }
-  .chat-sidebar { display: none; }
+  .chat-wrap {
+    grid-template-columns: 1fr;
+    height: calc(100dvh - 210px);
+    min-height: 320px;
+  }
+  .guild-bar {
+    display: none;
+    position: fixed; left: 0; top: var(--topbar-h, 56px); bottom: 0;
+    width: 58px; z-index: 81;
+    border-radius: 0;
+    box-shadow: var(--shadow-3);
+  }
+  .chat-sidebar {
+    display: none;
+    position: fixed; left: 58px; top: var(--topbar-h, 56px); bottom: 0;
+    width: min(280px, calc(100vw - 58px));
+    z-index: 81;
+    border-radius: 0;
+    box-shadow: var(--shadow-3);
+  }
+  .chat-wrap.channels-open .guild-bar,
+  .chat-wrap.channels-open .chat-sidebar { display: flex; }
+  .hdr-btn.chat-mob-ch { display: flex; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -550,8 +606,192 @@
   .unread-dot { animation: none; }
   .guild-icon, .ch-item, .member-item, .send-btn, .dm-btn, .profs-action-btn, .chat-modal-btn, .hdr-btn { transition: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ПОЛИРОВКА ЧАТА (визуальный проход поверх базовых стилей, JS не трогаем)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Общая поверхность: чуть мягче карточки и тени ── */
+.chat-wrap { gap: 14px; }
+.guild-bar, .chat-sidebar, .chat-main, .members-panel {
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 30px -22px rgba(15,23,42,.35);
+}
+
+/* ── Гилд-бар: единый «рельс» как в Discord ── */
+.guild-bar { padding: 14px 8px; gap: 12px; }
+.guild-icon { width: 46px; height: 46px; border-radius: 16px; font-size: 14px; }
+.guild-icon.active { border-radius: 18px; }
+.guild-sep { width: 30px; opacity: .7; }
+
+/* ── Сайдбар: заголовок и пункты каналов ── */
+.sidebar-guild-name { padding: 16px 16px; font-size: 14.5px; letter-spacing: .01em; }
+.ch-item {
+  padding: 9px 11px; margin-bottom: 3px; border-radius: 10px;
+  font-weight: var(--fw-medium);
+}
+.ch-item.active {
+  background: linear-gradient(90deg, var(--ac-soft), color-mix(in srgb, var(--ac) 7%, transparent));
+  box-shadow: inset 3px 0 0 var(--ac);
+  border-radius: 6px 10px 10px 6px;
+}
+.ch-item .ch-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+.sidebar-section { font-weight: var(--fw-bold); letter-spacing: .09em; }
+.dm-search { padding: 10px 13px; border-radius: 10px; }
+
+/* ── Шапка чата ── */
+.chat-header { padding: 13px 18px; gap: 12px; backdrop-filter: blur(6px); }
+.chat-header-icon {
+  width: 38px; height: 38px; border-radius: 11px; font-size: 15px;
+  box-shadow: 0 6px 16px -6px var(--ac-glow);
+}
+.chat-header-name { font-size: 15.5px; letter-spacing: .01em; }
+.chat-header-topic {
+  max-width: 46%; padding: 5px 12px; border-radius: 20px;
+  font-weight: var(--fw-medium);
+}
+.hdr-btn { width: 36px; height: 36px; border-radius: 10px; }
+.chat-search { border-radius: 12px; padding: 7px 12px; }
+
+/* ── Лента сообщений: воздух и типографика ── */
+.chat-messages { padding: 18px 20px 8px; }
+.msg-group { padding: 8px 12px; margin: 1px 0; border-radius: 12px; }
+.msg-group:hover { background: color-mix(in srgb, var(--ac) 6%, transparent); }
+.msg-group.continued { padding: 2px 12px; }
+.msg-avatar, .msg-avatar-placeholder { width: 42px; height: 42px; }
+.msg-avatar-wrap { flex: 0 0 42px; }
+.msg-meta { gap: 9px; margin-bottom: 3px; }
+.msg-author { font-size: 14.5px; letter-spacing: .01em; }
+.msg-time { font-size: 11px; font-weight: var(--fw-medium); }
+.msg-content { font-size: 14px; line-height: 1.62; }
+.msg-content code {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  padding: 1.5px 6px; border-radius: 6px; font-size: 12.5px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.etiket, .msg-content .etiket {
+  padding: 1px 6px; border-radius: 6px; font-weight: var(--fw-semibold);
+  transition: background .15s;
+}
+.etiket:hover { background: color-mix(in srgb, var(--ac) 22%, transparent); }
+.bot-badge { padding: 2px 7px; border-radius: 20px; font-size: 9.5px; }
+.msg-reply-ref {
+  border-left-width: 3px; padding: 5px 12px; border-radius: 4px 8px 8px 4px;
+  margin-bottom: 6px; max-width: 70%;
+}
+.date-divider { margin: 20px 0 14px; }
+.date-divider span { padding: 4px 14px; font-size: 11.5px; border-radius: 20px; }
+
+/* ── Ховер-тулбар действий: аккуратная «пилюля» над сообщением ── */
+.msg-actions {
+  top: -14px; right: 14px; border-radius: 10px; padding: 4px; gap: 1px;
+  box-shadow: 0 8px 24px -8px rgba(15,23,42,.35);
+}
+.msg-act-btn { width: 30px; height: 30px; border-radius: 8px; font-size: 12.5px; }
+
+/* ── Вложения ── */
+.msg-img { max-width: min(460px, 100%); border-radius: 14px; }
+.msg-file { padding: 8px 14px; border-radius: 12px; font-size: 12.5px; }
+
+/* ── Композер: мягкое «поле» с внутренней обводкой при фокусе ── */
+.chat-input-wrap { padding: 12px 16px 14px; }
+.chat-input {
+  border-radius: 16px; padding: 13px 16px; font-size: 14px; min-height: 48px;
+  background: color-mix(in srgb, var(--bg) 70%, var(--surface));
+}
+.chat-input:focus {
+  box-shadow: 0 0 0 3px var(--ac-soft), 0 8px 24px -16px var(--ac-glow);
+}
+.send-btn { height: 48px; min-width: 48px; border-radius: 16px; font-size: 15px; }
+.dm-btn { height: 48px; border-radius: 16px; }
+.reply-bar { border-radius: 14px 14px 0 0; }
+.input-hint { margin-top: 9px; font-size: 11px; letter-spacing: .02em; }
+
+/* ── Панель участников ── */
+.members-panel-hdr { padding: 16px; font-size: 14px; }
+.member-item { padding: 7px 10px; border-radius: 10px; margin-bottom: 2px; }
+.member-item:hover { background: color-mix(in srgb, var(--ac) 6%, transparent); }
+.member-name { font-size: 13px; font-weight: var(--fw-medium); }
+.member-section { font-weight: var(--fw-bold); letter-spacing: .08em; }
+
+/* ── Пустое состояние — спокойный центр-плейсхолдер ── */
+.chat-empty i { font-size: 46px; opacity: .28; }
+.chat-empty { gap: 14px; }
+.chat-empty span { font-weight: var(--fw-semibold); font-size: 14.5px; }
+
+/* ── Кнопка «вниз» — мягче и крупнее ── */
+.scroll-down-btn { width: 44px; height: 44px; border-radius: 50%; bottom: 18px; right: 20px; }
+
+/* ── Профиль: баннер и аватар чуть премиальнее ── */
+.profs-popup { border-radius: 20px; }
+.profs-banner { height: 84px; }
+.profs-av, .profs-av-placeholder { width: 72px; height: 72px; margin-top: -46px; border-width: 4px; }
+.profs-action-btn { padding: 9px; border-radius: 11px; }
+
+/* ── Тосты/модалка — единый радиус ── */
+.chat-toast { border-radius: 16px; padding: 14px 24px; }
+.chat-modal-box { border-radius: 22px; }
+.chat-modal-btn { border-radius: 12px; padding: 11px 20px; }
+
+/* ── Скроллбары — тоньше и в тон теме ── */
+.chat-messages::-webkit-scrollbar { width: 9px; }
+.chat-messages::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 8px; border: 2px solid transparent; background-clip: padding-box;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text) 28%, transparent); background-clip: padding-box;
+}
+
+/* ── Микро-адаптив: на узких экранах композер не сжимается ── */
+@media (max-width: 820px) {
+  .chat-header-topic { display: none; }
+  .chat-messages { padding: 12px; }
+  .input-hint { display: none; }
+  .chat-search input { width: 108px; }
+  .chat-wrap {
+    height: calc(100dvh - var(--topbar-h, 56px) - 92px - env(safe-area-inset-bottom, 0px));
+    min-height: 280px;
+    gap: 8px;
+  }
+  .guild-bar, .chat-sidebar, .chat-main, .members-panel { border-radius: 16px; }
+  .guild-bar, .chat-sidebar {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+  .members-panel {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    width: min(300px, 88vw);
+  }
+  .chat-empty::after { content: 'Нажмите список каналов в шапке'; }
+  .chat-toast { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+  .chat-modal { align-items: flex-end; padding: 0; }
+  .chat-modal-box {
+    max-width: 100%;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  }
+  .send-btn, .dm-btn { min-width: 48px; height: 48px; }
+  .chat-input { font-size: 16px; min-height: 48px; }
+}
+@media (max-width: 820px) {
+  .main-content:has(.chat-wrap) > .navbar,
+  .main-content:has(.chat-wrap) > .page-head { display: none; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .msg-actions {
+    display: flex;
+    position: static;
+    margin-top: 6px;
+    box-shadow: none;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .msg-act-btn { width: 36px; height: 36px; }
+}
 </style>
 
+<button type="button" class="chat-drawer-backdrop" id="chatDrawerBackdrop" hidden aria-label="Закрыть список"></button>
 <div class="chat-wrap">
 
   <!-- Guild bar -->
@@ -584,6 +824,8 @@
       <div class="chat-header-sep" id="ch-sep"></div>
       <span class="chat-header-topic" id="ch-topic"></span>
       <div class="chat-header-actions">
+        <button type="button" class="hdr-btn chat-mob-ch" id="chatChannelsBtn" title="Каналы" aria-label="Каналы"><i class="fas fa-list"></i></button>
+        <button type="button" class="hdr-btn chat-mob-mem" id="chatMembersBtn" title="Участники" aria-label="Участники"><i class="fas fa-users"></i></button>
         <div class="chat-search" id="chat-search" style="display:none">
           <i class="fas fa-magnifying-glass"></i>
           <input id="chat-search-input" placeholder="Поиск в сообщениях…" aria-label="Поиск в сообщениях">
@@ -685,7 +927,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var _confirmCb = null;
 function toast(msg, ok){
   var t = document.getElementById('chat-toast');
@@ -710,10 +952,60 @@ document.getElementById('cm-confirm').addEventListener('click', function(){
 });
 document.getElementById('chat-confirm').addEventListener('click', function(e){ if(e.target===this) closeConfirmModal(); });
 </script>
-<script>
+<script nonce="{{ csp_nonce }}">
 var _activeGuildId = '{{ guild_id }}';
 var _guilds = [];
 var _channelId = null, _dmMode = false, _dmUserId = null;
+(function chatDrawers() {
+  var wrap = document.querySelector('.chat-wrap');
+  var bd = document.getElementById('chatDrawerBackdrop');
+  var chBtn = document.getElementById('chatChannelsBtn');
+  var memBtn = document.getElementById('chatMembersBtn');
+  if (!wrap) return;
+  function phoneCh() {
+    return window.matchMedia && window.matchMedia('(max-width: 820px)').matches;
+  }
+  function phoneMem() {
+    return window.matchMedia && window.matchMedia('(max-width: 1120px)').matches;
+  }
+  function setBd(on) {
+    if (!bd) return;
+    bd.classList.toggle('show', !!on);
+    bd.hidden = !on;
+  }
+  function close() {
+    wrap.classList.remove('channels-open', 'members-open');
+    setBd(false);
+  }
+  window.__chatCloseDrawers = close;
+  if (chBtn) chBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (!phoneCh()) return;
+    var on = !wrap.classList.contains('channels-open');
+    wrap.classList.toggle('channels-open', on);
+    wrap.classList.remove('members-open');
+    setBd(on);
+  });
+  if (memBtn) memBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (!phoneMem()) return;
+    var on = !wrap.classList.contains('members-open');
+    wrap.classList.toggle('members-open', on);
+    wrap.classList.remove('channels-open');
+    setBd(on);
+  });
+  if (bd) bd.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') close();
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(min-width: 1121px)');
+    var onMq = function () { if (mq.matches) close(); };
+    if (mq.addEventListener) mq.addEventListener('change', onMq);
+    else if (mq.addListener) mq.addListener(onMq);
+    if (mq.matches) close();
+  }
+})();
 var _members = [], _mentionIdx = 0, _mentionMatches = [];
 var _lastMsgId = null, _autoRefresh = null, _replyTo = null, _fetchSeq = 0;
 
@@ -745,18 +1037,20 @@ async function loadGuilds() {
       var initials = (g.name || '?').split(/\s+/).map(function(word) { return word[0]; }).join('').slice(0, 2).toUpperCase();
       var active = g.id === _activeGuildId ? ' active' : '';
       var image = g.icon ? '<img src="' + g.icon + '" alt="">' : initials;
-      return (i ? '<div class="guild-sep"></div>' : '') + '<div class="guild-icon' + active + '" id="gi-' + g.id + '" onclick="selectGuild(\'' + g.id + '\', true)" title="' + escHtml(g.name) + '">' + image + '</div>';
+      return (i ? '<div class="guild-sep"></div>' : '') + '<div class="guild-icon' + active + '" id="gi-' + g.id + '" data-act="selectGuild" data-a1="' + g.id + '" data-a2="true" title="' + escHtml(g.name) + '">' + image + '</div>';
     }).join('');
     selectGuild(_activeGuildId, true);
   } catch (e) { console.error('Ошибка загрузки серверов:', e); }
 }
 
 function selectGuild(gid, scrollTo) {
+  gid = String(gid == null ? '' : gid);
+  if (!gid) return;
   _activeGuildId = gid;
   document.querySelectorAll('.guild-icon').forEach(function(el){ el.classList.remove('active'); });
   var gi = document.getElementById('gi-' + gid);
   if (gi) gi.classList.add('active');
-  var g = _guilds.find(function(x){ return x.id === gid; });
+  var g = _guilds.find(function(x){ return String(x.id) === gid; });
   document.getElementById('sidebar-guild-name').textContent = g ? g.name : gid;
   _channelId = null; _dmMode = false; _lastMsgId = null; _fetchSeq++;
   _seenIds = {}; _unreadNew = 0; _lastMsgData = null; _lastDmData = null;
@@ -779,7 +1073,10 @@ function selectGuild(gid, scrollTo) {
 // ── КАНАЛЫ ──────────────────────────────────────────────────────────────
 async function loadChannels(gid) {
   try {
-    var chs = await fetch('/api/guild/' + gid + '/channels').then(r => r.json());
+    var chRaw = await fetch('/api/guild/' + gid + '/channels').then(r => r.json());
+    /* API отдаёт и массив, и {error, channels: []} (бот офлайн) — принимаем
+       оба формата, иначе страница падает и список каналов пустует */
+    var chs = Array.isArray(chRaw) ? chRaw : ((chRaw && chRaw.channels) || []);
     /* скрытые владельцем каналы/категории не показываем в панели */
     var text = chs.filter(function(c){ return c.type === 'text' && !c.hidden; });
     /* порядок: каналы по позиции, категории по алфавиту, «Без категории» в конце */
@@ -802,7 +1099,7 @@ async function loadChannels(gid) {
     el.innerHTML = groups.map(function(g){
       var head = g.name ? '<div class="sidebar-section"><span>' + escHtml(g.name) + '</span></div>' : '';
       return head + g.items.map(function(c) {
-        return '<div class="ch-item" id="ch-' + c.id + '" onclick="selectChannel(\'' + c.id + '\',\'' + escJs(c.name) + '\')">' +
+        return '<div class="ch-item" id="ch-' + c.id + '" data-act="selectChannel" data-a1="' + c.id + '" data-a2="' + escJs(c.name) + '">' +
           '<i class="fas fa-hashtag ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
       }).join('');
     }).join('');
@@ -820,12 +1117,22 @@ async function loadChannels(gid) {
             return '<div class="ch-item ch-muted" title="Голосовой канал — слушать можно в Discord">' +
               '<i class="fas ' + icon + ' ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
           }
-          return '<div class="ch-item" id="ch-' + c.id + '" onclick="selectChannel(\'' + c.id + '\',\'' + escJs(c.name) + '\')">' +
+          return '<div class="ch-item" id="ch-' + c.id + '" data-act="selectChannel" data-a1="' + c.id + '" data-a2="' + escJs(c.name) + '">' +
             '<i class="fas ' + icon + ' ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
         }).join('');
     }
-    if (text.length) selectChannel(text[0].id, text[0].name);
-    else hookChatScroll();
+    if (text.length) {
+      var want = '';
+      try { want = String(new URLSearchParams(location.search).get('channel') || ''); } catch (e) {}
+      var pick = null;
+      if (want) {
+        for (var i = 0; i < text.length; i++) {
+          if (String(text[i].id) === want) { pick = text[i]; break; }
+        }
+      }
+      if (!pick) pick = text[0];
+      selectChannel(pick.id, pick.name);
+    } else hookChatScroll();
   } catch(e) {}
 }
 
@@ -834,6 +1141,10 @@ async function loadMembers(gid) {
 }
 
 function selectChannel(id, name) {
+  id = String(id == null ? '' : id);
+  name = String(name == null ? '' : name);
+  if (!id) return;
+  if (typeof window.__chatCloseDrawers === 'function') window.__chatCloseDrawers();
   _channelId = id; _dmMode = false; _lastMsgId = null; _fetchSeq++;
   _seenIds = {}; _unreadNew = 0; _lastMsgData = null; _lastDmData = null;
   clearChatSearchSilently();
@@ -854,6 +1165,11 @@ function selectChannel(id, name) {
   loadMessages();
   if (_autoRefresh) clearInterval(_autoRefresh);
   _autoRefresh = setInterval(loadMessages, 2000);
+  try {
+    var u = new URL(location.href);
+    u.searchParams.set('channel', id);
+    history.replaceState(null, '', u.pathname + u.search);
+  } catch (e) {}
 }
 
 // ── СООБЩЕНИЯ ──────────────────────────────────────────────────────────────
@@ -1000,13 +1316,25 @@ function renderMsgsIntoDom(msgs) {
     : '<div class="chat-empty"><i class="fas fa-comment-slash"></i>Сообщений пока нет</div>';
 }
 
+/* Аватар не загрузился — заменяем картинку плейсхолдером. Вынесено в
+   функцию: прежний инлайн-onerror содержал вложенные кавычки и ломался
+   («Invalid or unexpected token» в консоли на каждом сообщении). */
+window.msgAvatarFallback = function (img) {
+  try {
+    var d = document.createElement('div');
+    d.className = 'msg-avatar-placeholder';
+    d.innerHTML = '<i class="fas fa-user"></i>';
+    if (img && img.parentNode) img.parentNode.replaceChild(d, img);
+  } catch (e) {}
+};
+
 function renderMsg(m, continued) {
   var d = new Date(m.timestamp);
   var time = d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
   var content = parseContent(m.content);
 
   var avatarHtml = m.avatar
-    ? '<img alt="" class="msg-avatar" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=msg-avatar-placeholder><i class="fas fa-user"></i></div>\'">'
+    ? '<img alt="" class="msg-avatar" src="' + m.avatar + '" onerror="msgAvatarFallback(this)">'
     : (m.bot ? '<div class="msg-avatar-placeholder" ><i class="fas fa-robot"></i></div>'
              : '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>');
 
@@ -1021,7 +1349,7 @@ function renderMsg(m, continued) {
       if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) {
         var isGif = /\.gif(\?|$)/i.test(url);
         attachHtml += '<div   style="position: relative;">' +
-          '<img alt="Вложение сообщения" class="msg-img" src="' + url + '" loading="lazy" onclick="openLightbox(\'' + url + '\')">' +
+          '<img alt="Вложение сообщения" class="msg-img" src="' + url + '" loading="lazy" data-act="openLightbox" data-a1="' + url + '">' +
           (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div>';
       } else {
         var fname = url.split('/').pop().split('?')[0];
@@ -1037,14 +1365,14 @@ function renderMsg(m, continued) {
     if (urlMatch) {
       var isGif = /\.gif(\?|$)/i.test(urlMatch[0]);
       inlineMedia = '<div class="msg-attachments"><div   style="position: relative;">' +
-        '<img alt="Вложение сообщения" class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
+        '<img alt="Вложение сообщения" class="msg-img" src="' + urlMatch[0] + '" loading="lazy" data-act="openLightbox" data-a1="' + urlMatch[0] + '">' +
         (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>';
     }
   }
 
   var safeAuthor = escJs(m.author);
   var canDm = m.author_id && !m.bot && String(m.author_id) !== '0';
-  var dmAttr = canDm ? ' onclick="openDm(\'' + String(m.author_id) + '\',\'' + safeAuthor + '\')" title="Написать в личные сообщения — как в Discord"' : '';
+  var dmAttr = canDm ? ' data-act="openDm" data-a1="' + String(m.author_id) + '" data-a2="' + safeAuthor + '" title="Написать в личные сообщения — как в Discord"' : '';
 
   var metaHtml = continued ? '' :
     '<div class="msg-meta">' +
@@ -1062,10 +1390,10 @@ function renderMsg(m, continued) {
       attachHtml + inlineMedia +
     '</div>' +
     '<div class="msg-actions">' +
-      (canDm ? '<button type="button" class="msg-act-btn dm" onclick="openDm(\'' + String(m.author_id) + '\',\'' + safeAuthor + '\')" aria-label="Написать в ЛС" title="Написать в ЛС"><i class="fas fa-paper-plane"></i></button>' : '') +
-      '<button type="button" class="msg-act-btn" onclick="copyMsg(\'' + escAttr(String(m.content || '').slice(0, 200)) + '\')" aria-label="Копировать текст" title="Копировать текст"><i class="fas fa-copy"></i></button>' +
-      '<button type="button" class="msg-act-btn" onclick="startReply(\'' + m.id + '\',\'' + safeAuthor + '\',\'' + safeContent + '\')" aria-label="Ответить"><i class="fas fa-reply"></i></button>' +
-      '<button type="button" class="msg-act-btn del" onclick="deleteMsg(\'' + m.id + '\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
+      (canDm ? '<button type="button" class="msg-act-btn dm" data-act="openDm" data-a1="' + String(m.author_id) + '" data-a2="' + safeAuthor + '" aria-label="Написать в ЛС" title="Написать в ЛС"><i class="fas fa-paper-plane"></i></button>' : '') +
+      '<button type="button" class="msg-act-btn" data-act="copyMsg" data-a1="' + escAttr(String(m.content || '').slice(0, 200)) + '" aria-label="Копировать текст" title="Копировать текст"><i class="fas fa-copy"></i></button>' +
+      '<button type="button" class="msg-act-btn" data-act="startReply" data-a1="' + m.id + '" data-a2="' + safeAuthor + '" data-a3="' + safeContent + '" aria-label="Ответить"><i class="fas fa-reply"></i></button>' +
+      '<button type="button" class="msg-act-btn del" data-act="deleteMsg" data-a1="' + m.id + '" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
     '</div>' +
   '</div>';
 }
@@ -1133,10 +1461,16 @@ async function deleteMsg(msgId) {
   });
 }
 async function doDeleteMsg(msgId) {
+  // Ответ раньше не читался, а catch(e){} глушил сетевой сбой: список
+  // перезагружался в любом случае, и удаление выглядело успешным даже
+  // когда Discord его не дал (нет прав, сообщения уже нет, таймаут —
+  // сервер отвечает 404 «Канал не найден» или 500 с текстом ошибки).
   try {
-    await fetch('/api/chat/' + _activeGuildId + '/' + _channelId + '/delete/' + msgId, {method:'POST'});
-    _lastMsgId = null; loadMessages();
-  } catch(e) {}
+    var r = await fetch('/api/chat/' + _activeGuildId + '/' + _channelId + '/delete/' + msgId, {method:'POST'});
+    var d = await r.json();
+    if (r.status === 200 && d.ok) { _lastMsgId = null; loadMessages(); }
+    else toast('Не удалось удалить сообщение: ' + (d.error || ('ошибка ' + r.status)), false);
+  } catch(e) { toast('Ошибка сети — сообщение не удалено', false); }
 }
 
 // ── DM ────────────────────────────────────────────────────────────────────
@@ -1149,7 +1483,7 @@ async function loadRecentDms(gid) {
       try { t = new Date(u.timestamp).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); } catch(e){}
       var avIcon = u.avatar ? '<img alt="" src="' + u.avatar + '" style="width:20px;height:20px;border-radius:50%;flex-shrink:0;">'
                             : '<i class="fas fa-user ch-icon"></i>';
-      return '<div class="ch-item" id="dm-' + u.id + '" onclick="openDm(\'' + u.id + '\',\'' + escJs(u.name) + '\')">' +
+      return '<div class="ch-item" id="dm-' + u.id + '" data-act="openDm" data-a1="' + u.id + '" data-a2="' + escJs(u.name) + '">' +
         avIcon +
         '<span style="flex:1;min-width:0;overflow:hidden;">' +
         '<span class="ch-name" style="display:block;">' + escHtml(u.name) + '</span>' +
@@ -1169,7 +1503,7 @@ async function searchDmUser(q) {
       return (m.display_name||'').toLowerCase().includes(q.toLowerCase()) || (m.name||'').toLowerCase().includes(q.toLowerCase());
     }).slice(0, 8);
     res.innerHTML = filtered.map(function(m) {
-      return '<div class="ch-item" onclick="openDm(\'' + m.id + '\',\'' + escJs(m.display_name) + '\')">' +
+      return '<div class="ch-item" data-act="openDm" data-a1="' + m.id + '" data-a2="' + escJs(m.display_name) + '">' +
         (m.avatar ? '<img alt="" src="' + m.avatar + '"   style="width: 20px; height: 20px;">' : '<i class="fas fa-user ch-icon"></i>') +
         '<span class="ch-name">' + escHtml(m.display_name) + '</span></div>';
     }).join('');
@@ -1207,6 +1541,10 @@ async function openDmFromInput() {
 }
 
 async function openDm(userId, userName) {
+  userId = String(userId == null ? '' : userId);
+  userName = String(userName == null ? '' : userName);
+  if (!userId) return;
+  if (typeof window.__chatCloseDrawers === 'function') window.__chatCloseDrawers();
   _dmMode = true; _dmUserId = userId; _channelId = null; _lastMsgId = null; _fetchSeq++;
   _seenIds = {}; _unreadNew = 0; _lastDmData = null; _lastMsgData = null;
   clearChatSearchSilently();
@@ -1217,11 +1555,13 @@ async function openDm(userId, userName) {
   if (!existing) {
     var div = document.createElement('div');
     div.className = 'ch-item active'; div.id = 'dm-' + userId;
-    div.onclick = function(){ openDm(userId, userName); };
+    div.setAttribute('data-act', 'openDm');
+    div.setAttribute('data-a1', userId);
+    div.setAttribute('data-a2', userName);
     div.innerHTML = '<i class="fas fa-user ch-icon"></i><span class="ch-name">' + escHtml(userName) + '</span>';
     document.getElementById('dm-list').appendChild(div);
   } else { existing.classList.add('active'); }
-  var mem = _allMembers.find(function(x){ return x.id === userId; });
+  var mem = _allMembers.find(function(x){ return String(x.id) === userId; });
   var icon = mem && mem.avatar
     ? '<img src="' + mem.avatar + '" alt="" style="width:22px;height:22px;border-radius:50%">'
     : '<i class="fas fa-user"></i>';
@@ -1283,13 +1623,13 @@ function renderDmIntoDom(data) {
     if (isBot) {
       av = '<div class="msg-avatar-placeholder"><i class="fas fa-robot"></i></div>';
     } else if (avUrl) {
-      av = '<img alt="" class="msg-avatar" src="' + avUrl + '" onerror="this.outerHTML=\'<div class=msg-avatar-placeholder><i class=\\\"fas fa-user\\\"></i></div>\'">';
+      av = '<img alt="" class="msg-avatar" src="' + avUrl + '" onerror="this.outerHTML=\'<div class=msg-avatar-placeholder><i class=&quot;fas fa-user&quot;></i></div>\'">';
     } else {
       av = '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>';
     }
     var urlMatch = content.match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
     var inlineMedia = urlMatch ? '<div class="msg-attachments"><div   style="position: relative;">' +
-      '<img alt="Вложение сообщения" class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
+      '<img alt="Вложение сообщения" class="msg-img" src="' + urlMatch[0] + '" loading="lazy" data-act="openLightbox" data-a1="' + urlMatch[0] + '">' +
       (/\.gif(\?|$)/i.test(urlMatch[0]) ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>' : '';
     rows.push('<div class="msg-group">' + av + '<div class="msg-body">' +
       '<div class="msg-meta"><span class="msg-author' + (isBot?' is-bot':'') + '">' + escHtml(m.author) + (isBot?'<span class="bot-badge">BOT</span>':'') + '</span>' +
@@ -1364,7 +1704,7 @@ function renderMentionPopup() {
     var nm = String(m.name || '');
     var nameHtml = q ? nm.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : nm;
     var av = m.avatar
-      ? '<div class="mention-av-wrap"><img alt="" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=mention-av-fb><i class=\"fas fa-user\"></i></div>\'"><span class="status-dot ' + st + '"></span></div>'
+      ? '<div class="mention-av-wrap"><img alt="" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=mention-av-fb><i class=&quot;fas fa-user&quot;></i></div>\'"><span class="status-dot ' + st + '"></span></div>'
       : '<div class="mention-av-wrap"><div class="mention-av-fb">' + (m.bot ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>') + '</div><span class="status-dot ' + st + '"></span></div>';
     return '<div class="mention-item' + (i===_mentionIdx?' selected':'') + '" data-idx="' + i + '" role="option" aria-selected="' + (i===_mentionIdx?'true':'false') + '">' +
       av +
@@ -1445,10 +1785,10 @@ function renderMemberList(members) {
 }
 
 function renderMemberItem(m) {
-  var av = m.avatar ? '<img alt="" class="member-av" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=member-av-placeholder><i class=\"fas fa-user\"></i></div>\'">': '<div class="member-av-placeholder">' + (m.bot ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>') + '</div>';
+  var av = m.avatar ? '<img alt="" class="member-av" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=member-av-placeholder><i class=&quot;fas fa-user&quot;></i></div>\'">': '<div class="member-av-placeholder">' + (m.bot ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>') + '</div>';
   var st = m.status === 'online' ? 'online' : m.status === 'idle' ? 'idle' : m.status === 'dnd' ? 'dnd' : 'offline';
   var dn = m.nick || m.display_name || m.name;
-  return '<div class="member-item" id="mi-' + m.id + '" onclick="openprofile(event,\'' + m.id + '\')">' +
+  return '<div class="member-item" id="mi-' + m.id + '" data-act="openprofile" data-evt data-a1="' + m.id + '">' +
     '<div class="member-avatar-wrap">' + av + '<span class="status-dot ' + st + '"></span></div>' +
     '<span class="member-name' + (m.bot ? ' is-bot' : '') + '">' + dn + '</span></div>';
 }

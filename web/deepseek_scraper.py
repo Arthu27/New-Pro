@@ -51,7 +51,7 @@ async def _ensure_login ():
         )
         _page =await context .new_page ()
 
-        # Вход sayfasыna git
+        # Открываем страницу входа
         await _page .goto ('https://chat.deepseek.com/',timeout =30000 )
         await _page .wait_for_timeout (2000 )
 
@@ -71,11 +71,11 @@ async def _ensure_login ():
         pass_input =_page .locator ('input[type="password"]').first 
         await pass_input .fill (DEEPSEEK_PASSWORD ,timeout =5000 )
 
-        # Вход yap butonu
+        # Кнопка входа
         submit =_page .locator ('button[type="submit"]').first 
         await submit .click (timeout =5000 )
 
-        # Вход заверш kadar badd
+        # Ждём завершения входа
         await _page .wait_for_url ('**/chat**',timeout =20000 )
         await _page .wait_for_timeout (2000 )
 
@@ -118,7 +118,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
         # Отправить (Enter или кнопка)
         await textarea .press ('Enter')
 
-        # Cevabыn gelmesini badd — "dюшюnюyor" animasyonu bitene kadar
+        # Ждём ответа — пока не закончится анимация «думает»
         await _page .wait_for_timeout (2000 )
 
         # Ждём появления элемента ответа
@@ -129,7 +129,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
         while (datetime.now(timezone.utc).replace(tzinfo=None)-start ).seconds <timeout :
             await _page .wait_for_timeout (1000 )
 
-            # В конец message bloгunu получить
+            # Берём конец блока сообщения
             msgs =await _page .locator ('.message-content, .ds-markdown, [class*="message"], [class*="response"]').all ()
             if msgs :
                 current_text =await msgs [-1 ].inner_text ()
@@ -145,7 +145,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
 
     except Exception as e :
         print (f'[DeepSeek] Soru Ошибки: {e}')
-        _logged_in =False # Новыйden login denensin
+        _logged_in =False  # нужно повторить вход
         return ''
 
 
@@ -163,7 +163,7 @@ def ask_deepseek (prompt :str ,timeout :int =60 )->str :
         try :
             loop =asyncio .get_event_loop ()
             if loop .is_running ():
-            # Discord bot loop'u в, thread'de работатьtыr
+            # Работает в отдельном потоке, вне asyncio-лупа бота
                 import concurrent .futures 
                 with concurrent .futures .ThreadPoolExecutor ()as pool :
                     future =pool .submit (asyncio .run ,_ask_deepseek_async (prompt ,timeout ))

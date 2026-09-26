@@ -424,7 +424,7 @@ class TimeEstimator:
         }
     
     def get_average_by_category(self) -> Dict[str, float]:
-        """Kategoriye по ortalama длительность"""
+        """Среднее время по категории."""
         # Простая реализация — в будущем будет объединена с категориями тикетов
         category_times = {}
         
@@ -432,7 +432,7 @@ class TimeEstimator:
             if not entry.end_time:
                 continue
             
-            # Placeholder - gerчek kategorхорошо al
+            # Реальные категории тикетов пока не связаны — берём общую
             category = 'general'
             
             if category not in category_times:
@@ -462,7 +462,7 @@ class TimeReport:
         total_hours = sum(e.get_duration_hours() for e in entries if e.end_time)
         billable_hours = sum(e.get_duration_hours() for e in entries if e.end_time and e.billable)
         
-        # Деньlere по grupla
+        # Группируем по дням
         by_day = {}
         for entry in entries:
             if not entry.end_time:
@@ -515,7 +515,7 @@ class TimeReport:
         
         total_hours = sum(e.get_duration_hours() for e in all_entries if e.end_time)
         
-        # Пользовательlara по grupla
+        # Группируем по пользователям
         by_user = {}
         for entry in all_entries:
             if not entry.end_time:

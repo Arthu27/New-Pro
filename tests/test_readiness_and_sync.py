@@ -96,7 +96,11 @@ g_full = Guild(roles=[Role(10, 'Хелпер'), Role(20, 'Модератор')],
 check(staff_apply_missing(g_full) == [], 'всё настроено — замечаний нет')
 
 src_cog = open(os.path.join(ROOT, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
-check('readiness_block' in src_cog, '/staff-panel подключён к проверке готовности')
+# Меню набора публикуется само (без /staff-panel); readiness — общий хелпер.
+check('readiness_block' in open(os.path.join(ROOT, 'services', 'system_readiness.py'),
+                                encoding='utf-8').read()
+      or 'readiness_block' in src_cog,
+      'readiness_block доступен (меню набора / system_readiness)')
 
 # ═══ 2. Выключенные команды исчезают из Discord ═══════════════════════════
 print('== выключенные команды не попадают в Discord ==')
@@ -117,11 +121,24 @@ class Tree:
     sync() записывает пейлоад: [(имя, тип)]."""
 
     def __init__(self):
-        self.glob = [Cmd('ban'), Cmd('warn'), Cmd('staff-panel'),
+        # Боевые команды (белый список, публикуются в Discord):
+        #   глобальные keep_global — апелляция/update; гильдовые — modpanel, afk, report.
+        # Небоевые (ban, warn, staff-panel) и контекстные меню (Войс-мут,
+        # Варн за сообщение) в боевом составе НЕ публикуются вовсе.
+        # Контекстные меню (ПКМ user/message) в боевом составе НЕ
+        # существуют ни в одном коге — в мок-дереве их тоже нет. Проверяем
+        # именно chat-команды: боевые публикуются, небоевые — снимаются.
+        self.glob = [Cmd('modpanel'), Cmd('afk'), Cmd('report'),
+                     Cmd('ban'), Cmd('warn'), Cmd('staff-panel'),
                      Cmd('апелляция', extras={'keep_global': True}),
-                     Cmd('Войс-мут', 'user'), Cmd('Варн за сообщение', 'message')]
+                     Cmd('update', extras={'keep_global': True})]
         self.guilds = {}
         self.synced = []
+        # «Состояние Discord» (отдельно от локального дерева): его видит
+        # fetch_commands и переписывает sync(). Изначально на чужом сервере
+        # 999 висит старая копия команд (полигон вечных дублей), а цели
+        # синка пусты — как на холодном старте.
+        self.remote = {'global': [], 777: [], 999: [Cmd('ban'), Cmd('апелляция')]}
 
     @staticmethod
     def _want(t):
@@ -130,6 +147,9 @@ class Tree:
 
     def get_commands(self, guild=None, type=None):
         box = self.glob if guild is None else self.guilds.get(guild.id, [])
+        if type is None:
+            # как настоящий discord.py: без type= отдаём ВСЕ типы
+            return list(box)
         want = self._want(type)
         return [c for c in box if c.ctype == want]
 
@@ -153,10 +173,19 @@ class Tree:
             if not any(x.name == c.name and x.ctype == c.ctype for x in box):
                 box.append(c)
 
+    async def fetch_commands(self, guild=None):
+        # как в discord.py: читаем РЕАЛЬНО зарегистрированное в Discord
+        # (self.remote), а не локальное дерево.
+        key = 'global' if guild is None else guild.id
+        return list(self.remote.get(key, []))
+
     async def sync(self, guild=None):
         if getattr(self, 'slow', False):      # симуляция сети — для теста гонки
             await asyncio.sleep(0.05)
         box = self.glob if guild is None else self.guilds.get(guild.id, [])
+        key = 'global' if guild is None else guild.id
+        # sync() публикует локальное дерево в Discord (перезапись remote)
+        self.remote[key] = list(box)
         self.synced.append(('global' if guild is None else guild.id,
                             [(c.name, c.ctype) for c in box]))
         return box
@@ -178,24 +207,31 @@ class Bot:
         return GObj(777) if i == 777 else None
 
 
-CSW.set_disabled('warn', True)
+CSW.set_disabled('report', True)
 b = Bot()
 asyncio.new_event_loop().run_until_complete(SF.full_sync(b))
 synced = dict(b.tree.synced)
 glob_names = {n for n, _ in synced.get('global', [])}
-check(glob_names == {'апелляция'},
-      f'глобально остаётся только keep_global /апелляция — дублей нет (glob={sorted(glob_names)})')
+# 2026-09-08: /апелляция удалена (владелец: «она у нас в кнопке»),
+# глобально живёт только /update — и только из белого списка.
+check(glob_names == {'update'},
+      f'глобально остаются только keep_global из белого списка (glob={sorted(glob_names)})')
 check(not any(t != 'chat' for _, t in synced.get('global', [])),
       'контекстные меню НЕ остаются глобальными (иначе были бы дубли)')
 g777 = synced.get(777, [])
 g777_names = {n for n, _ in g777}
-check('warn' not in g777_names and 'ban' in g777_names,
-      'на сервер синка без выключенной warn, но с ban')
-check('staff-panel' in g777_names, 'остальные команды на месте')
-check(('Войс-мут', 'user') in g777 and ('Варн за сообщение', 'message') in g777,
-      'контекстные меню доехали до сервера (и только туда)')
-check('апелляция' not in g777_names,
-      'keep_global НЕ копируется в гильдию — иначе «апелляция» видна дважды')
+# report выключена тумблером — её нет; modpanel/afk — боевые, на месте.
+check('report' not in g777_names and 'modpanel' in g777_names and 'afk' in g777_names,
+      'на сервер синка без выключенной report, но с modpanel и afk')
+# небоевые (служебные/настроечные) команды не публикуются (белый список)
+for _h in ('ban', 'warn', 'staff-panel'):
+    check(_h not in g777_names and _h not in glob_names,
+          f'«{_h}» не публикуется в Discord (не в белом списке боевых команд)')
+# контекстных меню в боевом составе нет вообще — в пейлоаде только chat-тип
+check(all(t == 'chat' for _, t in g777),
+      'контекстные меню не публикуются на сервере (их нет в боевых когах)')
+check('апелляция' not in g777_names and 'update' not in g777_names,
+      'keep_global НЕ копируется в гильдию — иначе команда видна дважды')
 
 # старая гильдовая копия keep_global (залитая кодом прошлых версий) лежит
 # прямо в локальном дереве — sync обязан её снять и не вернуть в Discord
@@ -217,8 +253,10 @@ with open(os.path.join(os.getcwd(), 'data', 'sync_last.json'), encoding='utf-8')
 check(_ls.get('mode') == 'guilds' and _ls.get('targets') == [777]
       and _ls.get('stray_cleaned') == [999],
       f'метка последнего синка записана (mode/targets/stray) — {_ls}')
-check(any(c.name == 'warn' for c in b.tree.get_commands(guild=GObj(777))),
-      'warn вернулась в локальное дерево — панель видит и может включить')
+check(any(c.name == 'report' for c in b.tree.get_commands(guild=GObj(777))),
+      'report вернулась в локальное дерево — панель видит и может включить')
+check(any(c.name == 'report' for c in b.tree.get_commands(guild=GObj(777))),
+      'report вернулась в локальное дерево — панель видит и может включить')
 
 # повторный прогон (как рестарт / кнопка «Синхронизировать команды»):
 synced_len1 = len(b.tree.synced)
@@ -227,13 +265,15 @@ synced_again = dict(b.tree.synced)
 check(dict(b.tree.synced).get('global') == synced.get('global')
       and dict(b.tree.synced).get(777) == g777,
       'повторный синк идемпотентен — пейлоады не растут и не меняются')
+check(len(b.tree.synced) == synced_len1,
+      'повторный синк не шлёт PUT, если Discord уже keep_global (GET до парковки)')
 
-CSW.set_disabled('warn', False)        # включили обратно
+CSW.set_disabled('report', False)        # включили обратно
 b2 = Bot()
 asyncio.new_event_loop().run_until_complete(SF.full_sync(b2))
 synced2 = dict(b2.tree.synced)
-check('warn' in {n for n, _ in synced2.get(777, [])},
-      'включили warn — снова в Discord')
+check('report' in {n for n, _ in synced2.get(777, [])},
+      'включили report — снова в Discord')
 
 # антигонка: параллельный full_sync не должен стартовать вторым
 async def _race():
@@ -265,7 +305,7 @@ check('commands-audit' in src_app and 'fetch_commands' in src_app,
 import re as _re
 check(not _re.search(r'\btree \.sync \(\)', blog),
       'в обработчике кнопки нет сырого глобального tree.sync() (источник дублей)')
-CSW.set_disabled('warn', False)
+CSW.set_disabled('report', False)
 
 # ═══ 2б. full_sync: защита от дублей и пустого меню ═══════════════════════
 print('== full_sync: откаты при провалах ==')
@@ -287,9 +327,9 @@ gl3 = [x for x in b3.tree.synced if x[0] == 'global']
 check(r3 == [], 'провал всех guild-синков: ничего не «выдано» в гильдии')
 check(len(gl3) == 2, 'глобальный sync вызван дважды: очистка + перепубликация keep_global')
 # 2026-08-29: откат больше НЕ публикует «припаркованные» команды глобально —
-# именно так каждая команда становилась по две (глобальная копия поверх
-# гильдовой). Правильный откат повторяет payload шага 1: только keep_global.
-check(gl3[1][1] and ('warn', 'chat') not in gl3[1][1],
+# гильдовой). Правильный откат повторяет payload шага 1: только keep_global
+# (апелляция/update) — никаких гильдовых боевых команд глобально.
+check(gl3[1][1] and set(gl3[1][1]) <= {('апелляция', 'chat'), ('update', 'chat')},
       'откат опубликовал только keep_global — дублей физически не будет')
 check(not any(x[0] == 777 for x in b3.tree.synced),
       'при провале guild-sync в Discord ничего не ушло (меню без дублей)')
@@ -315,7 +355,7 @@ r4 = asyncio.new_event_loop().run_until_complete(SF.full_sync(b4))
 check(r4 != [], 'разовый сбой глобальной очистки: РЕТРАЙ довёл синк до серверов')
 check(any(x[0] == 777 for x in b4.tree.synced),
       'меню сервера обновлено (иначе стале-состояние живёт вечно)')
-check(any(c.name == 'warn' for c in b4.tree.get_commands(guild=None)),
+check(any(c.name == 'modpanel' for c in b4.tree.get_commands(guild=None)),
       'локальное дерево цело')
 
 
@@ -334,8 +374,49 @@ r5 = asyncio.new_event_loop().run_until_complete(SF.full_sync(b5))
 check(r5 == [], 'упорный провал очистки (3 попытки): bail-out, пустой результат')
 check(not any(x[0] == 777 for x in b5.tree.synced),
       'guild-синк не тронут — старое глобальное меню осталось, дублей нет')
-check(any(c.name == 'warn' for c in b5.tree.get_commands(guild=None)),
+check(any(c.name == 'modpanel' for c in b5.tree.get_commands(guild=None)),
       'локальное дерево собрано обратно после bail-out')
+
+# Инцидент 2026-09-05 23:50: парковка /modpanel ДО GET+PUT на 25с давала
+# CommandNotFound. copy_global_to первым + парковка только на PUT.
+print('== /modpanel жива во время глобальной очистки ==')
+
+
+class TreeParkProbe(Tree):
+    """Во время глобального PUT /modpanel уже должна быть на сервере."""
+
+    def __init__(self):
+        super().__init__()
+        self.modpanel_during_global_put = False
+        self.modpanel_parked_global = False
+
+    async def sync(self, guild=None):
+        if guild is None:
+            g777 = self.guilds.get(777, [])
+            self.modpanel_during_global_put = any(
+                c.name == 'modpanel' for c in g777)
+            self.modpanel_parked_global = not any(
+                c.name == 'modpanel' for c in self.glob)
+        return await super().sync(guild)
+
+
+b6 = Bot()
+b6.tree = TreeParkProbe()
+asyncio.new_event_loop().run_until_complete(SF.full_sync(b6))
+check(b6.tree.modpanel_during_global_put,
+      'во время глобального PUT /modpanel уже скопирована на сервер')
+check(b6.tree.modpanel_parked_global,
+      'во время PUT /modpanel снята глобально (не keep_global)')
+check(any(c.name == 'modpanel' for c in b6.tree.get_commands(guild=None)),
+      'после синка /modpanel снова в глобальном дереве (dispatch)')
+check('_copy_globals_to_targets' in src_sf and '_put_global_keep_only' in src_sf,
+      'copy_global_to раньше PUT, парковка только вокруг PUT')
+check(src_sf.index('_copy_globals_to_targets(tree, targets, kept)')
+      < src_sf.index('await _put_global_keep_only'),
+      'в _full_sync_inner копии на серверы идут до глобального PUT')
+check('CommandNotFound' in open(os.path.join(ROOT, 'error_handler.py'),
+                                encoding='utf-8').read(),
+      'error_handler отвечает на CommandNotFound, не critical traceback')
 
 # ═══ 3. Демки: имя вместо ID ══════════════════════════════════════════════
 print('== /proofs: загрузка без ID участника ==')

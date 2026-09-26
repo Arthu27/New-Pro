@@ -348,7 +348,7 @@ class ChangelogGenerator:
         """HTML создать"""
         markdown = self.generate_markdown(version)
         
-        # Basit markdown -> HTML dёnюшюmю
+        # Простое преобразование Markdown → HTML
         html = markdown.replace('# ', '<h1>').replace('\n\n', '</h1>\n')
         html = html.replace('## ', '<h2>').replace('\n\n', '</h2>\n')
         html = html.replace('### ', '<h3>').replace('\n\n', '</h3>\n')

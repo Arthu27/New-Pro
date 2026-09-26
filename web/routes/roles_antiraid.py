@@ -2,14 +2,14 @@
 """Цветные роли, антирейд, rejoin, бейджи (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _notify_discord_sender, _fire_panel_notification,
+    _process_action, _log, _live_publish,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -36,7 +36,7 @@ def register(ctx):
         import web .app as _appm
         if _appm .ROLES .get (session .get ('role'),-1 )<_appm .ROLES .get ('admin',2 ):
             return jsonify ({'error':'Нет доступа'}),403 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         colors =data .get ('colors')if isinstance (data .get ('colors'),list )else []
         clean =[]
         for c in colors :
@@ -58,7 +58,7 @@ def register(ctx):
     def api_publish_color_roles (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         ch_id =str (data .get ('channel_id')or '').strip ()
         colors =data .get ('colors')if isinstance (data .get ('colors'),list )else []
         import re as _re 
@@ -74,6 +74,11 @@ def register(ctx):
             return jsonify ({'error':'Выберите канал панели'}),400 
         if not clean :
             return jsonify ({'error':'Сначала добавьте хотя бы один цвет'}),400 
+        if not ch_id .isdigit ():
+            # int(ch_id) внутри корутины давал «invalid literal for int()»
+            return jsonify ({'error':'Неверный ID канала'}),400 
+        if not str (guild_id ).isdigit ():
+            return jsonify ({'error':'Неверный ID сервера'}),400 
         f =f'data/color_roles_{guild_id}.json'
         os .makedirs ('data',exist_ok =True )
         with open (f ,'w',encoding ='utf-8')as fp :json .dump (clean ,fp ,indent =2 ,ensure_ascii =False )
@@ -81,7 +86,9 @@ def register(ctx):
             if _app ._demo_mode ():
                 _fire_panel_notification ('color_roles',f"Цветные роли опубликованы: {len (clean )} цветов",f"Канал {ch_id } · демо-режим")
                 return jsonify ({'success':True ,'demo':True ,'message':f"Демо-режим: {len (clean )} цветов готовы — при живом боте роли создадутся в Discord"})
-            return jsonify ({'error':'Бот офлайн — публикация недоступна'})
+            return jsonify ({'error':'Бот офлайн — публикация недоступна'}),503 
+
+        failed =[]
 
         async def send ():
             guild =bot .get_guild (int (guild_id ))
@@ -100,7 +107,10 @@ def register(ctx):
                     try :
                         await guild .create_role (name =f"Цвет · {c['name']}",color =discord .Color (int (color_hex ,16 )))
                     except Exception as _ex :
+                        # раньше проглатывали молча и всё равно рапортовали
+                        # «Опубликовано цветов: N», хотя роли не создались
                         _log.debug("send(): роль %s: %s", c['name'], _ex )
+                        failed .append (c ['name'])
             desc ='\n'.join ([f"{c.get('emoji')or '🎨'} **{c['name']}** — `{c['hex']}`"for c in clean ])
             embed =discord .Embed (title ="Цветные роли",description =desc +"\n\nЧтобы получить нужный цвет, используйте команду `/color`!",color =0xdc143c )
             await ch .send (embed =embed )
@@ -113,6 +123,11 @@ def register(ctx):
                 msg ='Discord запретил отправку: у бота нет прав на этот канал'
             return jsonify ({'error':f"Не удалось опубликовать: {msg }"[:200 ]}),502 
         _fire_panel_notification ('color_roles',f"Цветные роли опубликованы: {len (clean )} цветов",f"Канал {ch_id }")
+        _live_publish (guild_id ,'roles')
+        if failed :
+            return jsonify ({'success':True ,'partial':True ,'message':
+                f"Панель отправлена, но не удалось создать роли: {', '.join (failed )}. "
+                'Проверьте право «Управлять ролями» и место моей роли в иерархии'})
         return jsonify ({'success':True ,'message':f"Опубликовано цветов: {len (clean )}"})
 
 
@@ -124,7 +139,7 @@ def register(ctx):
         if request .method =='GET':
             if not os .path .exists (f ):return jsonify ({'whitelist':[],'recent_events':[]})
             with open (f )as fp :return jsonify (json .load (fp ))
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         existing ={}
         if os .path .exists (f ):
             with open (f )as fp :existing =json .load (fp )
@@ -147,9 +162,13 @@ def register(ctx):
                 wl_clean .append (x )
                 # Maks 500 user limit
         data ['whitelist']=wl_clean [:500 ]
-        # raid_action her zaman 'alert' — diгer deгerleri отклонить
+        # raid_action всегда 'alert' — остальные значения отклоняем
         data ['raid_action']='alert'
-        # Numeric alanlarыn tipini koru
+        # Канал тревоги настраивается в «Каналах и маршрутах» (тот же файл,
+        # ключ alert_channel_id): здесь его не принимаем, чтобы пустой POST
+        # со страницы анти-рейда не затёр выбранный канал.
+        data ['alert_channel_id']=existing .get ('alert_channel_id')
+        # Сохраняем типы числовых полей
         try :
             data ['join_threshold']=max (2 ,min (50 ,int (data .get ('join_threshold',5 ))))
             data ['join_window']=max (5 ,min (120 ,int (data .get ('join_window',10 ))))
@@ -163,6 +182,10 @@ def register(ctx):
         'delete_protection','age_filter'):
             data [bkey ]=bool (data .get (bkey ,False ))
         with open (f ,'w')as fp :json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
+        # Живой пуш: ког antiraid в боте слушает шину и перечитает конфиг сразу,
+        # без ожидания 20-секундного watcher-тика.
+        _live_publish (guild_id ,'guardian')
+        _live_publish (guild_id ,'security')
         return jsonify ({'success':True })
 
 
@@ -186,7 +209,7 @@ def register(ctx):
             d .setdefault ('leave_log',[])
             return jsonify (d )
 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         enabled =bool (data .get ('enabled',False ))
         # tracked_role_ids: принимать только числовые строки, макс 50
         raw_ids =data .get ('tracked_role_ids',[])
@@ -201,7 +224,7 @@ def register(ctx):
                 clean_ids .append (s )
             if len (clean_ids )>=50 :
                 break 
-                # Кросс-проверка со списком ролей бота — отсутствующие роли могли быть удалены на сервереr
+                # Кросс-проверка со списком ролей бота — часть ролей могла быть удалена на сервере
         import web .app as _app 
         bot =_app .bot_instance 
         guild =None 
@@ -216,10 +239,10 @@ def register(ctx):
         if guild is not None :
             valid_ids =[rid for rid in clean_ids if guild .get_role (int (rid ))is not None ]
         else :
-        # Bot offline veya guild bulunamadы — tюm ID'leri принять et
+        # Бот офлайн или гильдия не найдена — принимаем все ID
             valid_ids =clean_ids 
 
-            # leave_log korunuyor (cog tarafыndan yazыlыr)
+            # leave_log сохраняется (его пишет ког)
         existing ={}
         if os .path .exists (f ):
             try :
@@ -230,7 +253,7 @@ def register(ctx):
         leave_log =data .get ('leave_log')
         if not isinstance (leave_log ,list ):
             leave_log =existing .get ('leave_log',[])
-            # leave_log'u 200 ile sыnыrla
+            # Ограничиваем leave_log 200 записями
         leave_log =leave_log [-200 :]
         result ={
         'enabled':enabled ,

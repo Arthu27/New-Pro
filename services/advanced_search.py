@@ -99,7 +99,7 @@ class SearchEngine:
         query_lower = query.lower()
         results = []
         
-        # Arama yapыlacak типler
+        # Типы объектов для поиска
         types_to_search = [item_type] if item_type else ['tickets', 'articles', 'users']
         
         for search_type in types_to_search:
@@ -121,7 +121,7 @@ class SearchEngine:
                         'score': score
                     })
         
-        # Score'a по очередьla
+        # Сортируем по score
         results.sort(key=lambda x: x['score'], reverse=True)
         
         return results[:limit]
@@ -144,18 +144,18 @@ class SearchEngine:
         """Skor hesapla"""
         score = 0.0
         
-        # Все text alanlarыnы проверить et
+        # Проверяем все текстовые поля
         for field, value in item_data.items():
             if isinstance(value, str):
                 value_lower = value.lower()
                 
-                # Tam eшleшme
+                # Полное совпадение
                 if query == value_lower:
                     score += 10.0
-                # Ичeriyor
+                # Вхождение подстроки
                 elif query in value_lower:
                     score += 5.0
-                # Kelime слово eшleшme
+                # Совпадение по отдельным словам
                 else:
                     query_words = query.split()
                     for word in query_words:
@@ -176,7 +176,7 @@ class SearchEngine:
         suggestions = set()
         query_lower = query.lower()
         
-        # Все text alanlarыndan предложениеler topla
+        # Собираем предложения из всех текстовых полей
         for search_type in ['tickets', 'articles', 'users']:
             items = self.index.get(search_type, {})
             
@@ -185,7 +185,7 @@ class SearchEngine:
                     if isinstance(value, str):
                         value_lower = value.lower()
                         
-                        # Query ile начатьyan словоleri найти
+                        # Ищем слова, начинающиеся с запроса
                         words = value_lower.split()
                         for word in words:
                             if word.startswith(query_lower) and len(word) > len(query):
@@ -231,7 +231,7 @@ class FuzzySearch:
     def search(self, query: str, threshold: float = 0.6,
                limit: int = 50) -> List[Dict[str, Any]]:
         """Fuzzy ara"""
-        # Basit fuzzy implementasyonu
+        # Простая нечёткая проверка
         results = []
         
         for search_type in ['tickets', 'articles', 'users']:
@@ -268,7 +268,7 @@ class FuzzySearch:
         if s1_lower in s2_lower or s2_lower in s1_lower:
             return 0.8
         
-        # Basit benzerlik
+        # Простая похожесть
         words1 = set(s1_lower.split())
         words2 = set(s2_lower.split())
         
@@ -371,7 +371,7 @@ class SearchAnalytics:
         """Сохранить аналитику"""
         os.makedirs('data', exist_ok=True)
         
-        # defaultdict'larы normal dict'lere чevir
+        # Преобразуем defaultdict в обычные dict
         analytics_dict = {
             'queries': dict(self.analytics['queries']),
             'no_results': dict(self.analytics['no_results']),

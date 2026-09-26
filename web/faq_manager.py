@@ -77,7 +77,7 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
     'question':question ,
     'guild_id':guild_id ,
     'channel_id':channel_id ,
-    'history_snapshot':history [-6 :],# В конец 6 message baгlam для
+    'history_snapshot':history [-6 :],  # последние 6 сообщений как контекст
     'count':1 ,
     'created_at':datetime.now(timezone.utc).isoformat (),
     'last_seen':datetime.now(timezone.utc).isoformat (),
@@ -104,7 +104,7 @@ def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str
             item ['updated_at']=datetime.now(timezone.utc).isoformat ()
             item ['updated_by']=staff_name 
             _save (FAQ_FILE ,faq )
-            # unknown_questions'da iшaretle
+            # помечаем в unknown_questions
             _mark_unknown_learned (question )
             print (f"[FAQ] Обновлено: {question[:60]}")
             return item ['id']
@@ -139,7 +139,7 @@ def _mark_unknown_learned (question :str ):
         _save (UNKNOWN_FILE ,items )
 
 
-        # ─── Benzer FAQ Bul (AI сканироватьfыndan чaгrыlыr) ─────────────────────────────────
+        # ─── Похожие FAQ (вызывается из AI-сканера) ─────────────────────────────────
 
 def find_relevant_faqs (question :str ,guild_id :int =None ,top_k :int =3 ,threshold :float =0.25 )->list :
     """
@@ -163,7 +163,7 @@ def find_relevant_faqs (question :str ,guild_id :int =None ,top_k :int =3 ,thres
 
     results .sort (key =lambda x :x ['score'],reverse =True )
 
-    # Использование число artыr
+    # Увеличиваем счётчик использований
     if results :
         faq_map ={item ['id']:item for item in faq }
         for r in results [:top_k ]:

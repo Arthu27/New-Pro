@@ -1,163 +1,108 @@
 {% extends "base.html" %}
-{% block title %}Настройки темы - Hakumo{% endblock %}
+{% block title %}Настройки темы — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-palette"></i> Настройки темы{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Тема панели</div>
-    <h1>Настройки темы</h1>
-    <p class="lead">Настройка внешнего вида панели управления.</p>
+    <div class="eyebrow">Настройки</div>
+    <h1>Тема панели</h1>
+    <p class="lead">Панель Hakumo всегда в тёмном Nova Glass. Можно выбрать акцент и размер шрифта — светлая/фиолетовая тема отключены.</p>
   </div>
 </div>
 
-
-<div class="section">
-  <div class="bs-title"><i class="fas fa-adjust"></i> Режим темы</div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
-    <div class="theme-card" onclick="setTheme('light')" style="cursor: pointer;">
-      <div style="background: #f5f1e8; border: 2px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 20px; text-align: center;">
-        <div style="font-size: 42px; margin-bottom: 12px; color: var(--ac);"><i class="fas fa-sun"></i></div>
-        <div style="font-weight: 600; margin-bottom: 8px;">Светлая тема</div>
-        <div style="font-size: 13px; color: var(--text-muted);">Яркий и чистый интерфейс</div>
-      </div>
-    </div>
-
-    <div class="theme-card" onclick="setTheme('dark')" style="cursor: pointer;">
-      <div style="background: #1a1a1a; border: 2px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 20px; text-align: center;">
-        <div style="font-size: 42px; margin-bottom: 12px; color: var(--ac-2);"><i class="fas fa-moon"></i></div>
-        <div style="font-weight: 600; margin-bottom: 8px;">Тёмная тема</div>
-        <div style="font-size: 13px; color: var(--text-muted);">Тёмный и комфортный для глаз</div>
-      </div>
-    </div>
-
-    <div class="theme-card" onclick="setTheme('auto')" style="cursor: pointer;">
-      <div style="background: linear-gradient(135deg, #ffffff 50%, #1a1a1a 50%); border: 2px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 20px; text-align: center;">
-        <div style="font-size: 42px; margin-bottom: 12px; color: var(--text-2);"><i class="fas fa-gear"></i></div>
-        <div style="font-weight: 600; margin-bottom: 8px;">Автоматически</div>
-        <div style="font-size: 13px; color: var(--text-muted);">Следовать системным настройкам</div>
-      </div>
+<div class="card section">
+  <div class="bs-title"><i class="fas fa-moon"></i> Режим</div>
+  <div class="nv-theme-grid">
+    <div class="nv-theme-card on" onclick="setTheme('dark')" role="button" tabindex="0">
+      <div class="ico"><i class="fas fa-moon"></i></div>
+      <div class="ttl">Тёмная Nova</div>
+      <div class="sub">Единственный режим панели — чёрный void + ice</div>
     </div>
   </div>
 </div>
 
-<div class="section">
-  <div class="bs-title"><i class="fas fa-palette"></i> Акцентный цвет</div>
-  <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-    <div class="color-option" data-color="#4f46e5" onclick="setAccentColor('#4f46e5')" style="width: 50px; height: 50px; border-radius: 8px; background: var(--ac); cursor: pointer; border: 2px solid transparent;"></div>
-    <div class="color-option" data-color="#9b59b6" onclick="setAccentColor('#9b59b6')" style="width: 50px; height: 50px; border-radius: 8px; background: #9b59b6; cursor: pointer; border: 2px solid transparent;"></div>
-    <div class="color-option" data-color="#dc2626" onclick="setAccentColor('#dc2626')" style="width: 50px; height: 50px; border-radius: 8px; background: var(--err); cursor: pointer; border: 2px solid transparent;"></div>
-    <div class="color-option" data-color="#f39c12" onclick="setAccentColor('#f39c12')" style="width: 50px; height: 50px; border-radius: 8px; background: #f39c12; cursor: pointer; border: 2px solid transparent;"></div>
-    <div class="color-option" data-color="#16a34a" onclick="setAccentColor('#16a34a')" style="width: 50px; height: 50px; border-radius: 8px; background: var(--ok); cursor: pointer; border: 2px solid transparent;"></div>
-    <div class="color-option" data-color="#1abc9c" onclick="setAccentColor('#1abc9c')" style="width: 50px; height: 50px; border-radius: 8px; background: #1abc9c; cursor: pointer; border: 2px solid transparent;"></div>
-    <div class="color-option" data-color="#3498db" onclick="setAccentColor('#3498db')" style="width: 50px; height: 50px; border-radius: 8px; background: #3498db; cursor: pointer; border: 2px solid transparent;"></div>
-    <div class="color-option" data-color="#e91e63" onclick="setAccentColor('#e91e63')" style="width: 50px; height: 50px; border-radius: 8px; background: #e91e63; cursor: pointer; border: 2px solid transparent;"></div>
+<div class="card section">
+  <div class="bs-title"><i class="fas fa-palette"></i> Акцент</div>
+  <div class="nv-swatch-row" id="accentRow">
+    <div class="nv-swatch" data-color="#5ec8ff" style="background:#5ec8ff" onclick="setAccentColor('#5ec8ff')" title="Ice"></div>
+    <div class="nv-swatch" data-color="#9ae0ff" style="background:#9ae0ff" onclick="setAccentColor('#9ae0ff')" title="Ice light"></div>
+    <div class="nv-swatch" data-color="#f0d09a" style="background:#f0d09a" onclick="setAccentColor('#f0d09a')" title="Champagne"></div>
+    <div class="nv-swatch" data-color="#3ee0a0" style="background:#3ee0a0" onclick="setAccentColor('#3ee0a0')" title="Ok"></div>
+    <div class="nv-swatch" data-color="#ff6b7a" style="background:#ff6b7a" onclick="setAccentColor('#ff6b7a')" title="Alert"></div>
+    <div class="nv-swatch" data-color="#1a8fd6" style="background:#1a8fd6" onclick="setAccentColor('#1a8fd6')" title="Deep ice"></div>
   </div>
-  <div style="margin-top: 16px;">
-    <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Пользовательский цвет</label>
-    <input type="color" id="customColor" value="#4f46e5" style="width: 100px; height: 40px; border: none; cursor: pointer;" aria-label="Свой цвет">
-    <button type="button" class="control-btn primary" onclick="setAccentColor(document.getElementById('customColor').value)" style="margin-left: 12px;">
-      Применить
-    </button>
+  <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+    <label class="muted" for="customColor">Свой цвет</label>
+    <input type="color" id="customColor" value="#5ec8ff" aria-label="Свой цвет">
+    <button type="button" class="btn btn-primary" onclick="setAccentColor(document.getElementById('customColor').value)">Применить</button>
   </div>
 </div>
 
-<div class="section">
+<div class="card section">
   <div class="bs-title"><i class="fas fa-text-height"></i> Размер шрифта</div>
-  <div style="display: flex; gap: 12px; align-items: center;">
-    <input type="range" id="fontSize" min="12" max="20" value="14" style="flex: 1;" aria-label="Размер шрифта">
-    <span id="fontSizeValue" style="font-weight: 600; min-width: 50px;">14px</span>
-  </div>
-  <div style="margin-top: 12px;">
-    <button type="button" class="control-btn primary" onclick="setFontSize()">Применить</button>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <input type="range" id="fontSize" min="12" max="20" value="14" style="flex:1;min-width:160px" aria-label="Размер шрифта">
+    <span id="fontSizeValue" style="font-weight:700;min-width:48px">14px</span>
+    <button type="button" class="btn btn-primary" onclick="setFontSize()">Применить</button>
   </div>
 </div>
 
-<div class="section">
-  <div class="bs-title"><i class="fas fa-save"></i> Сохранить настройки</div>
-  <button type="button" class="control-btn primary" onclick="saveThemeSettings()" style="width: 100%; padding: 12px;">
-    <i class="fas fa-save"></i> Сохранить все настройки
+<div class="card section">
+  <button type="button" class="btn btn-primary" style="width:100%" onclick="saveThemeSettings()">
+    <i class="fas fa-save"></i> Сохранить
   </button>
+  <div id="themeSaveMsg" style="margin-top:10px"></div>
 </div>
 
-<style>
-.theme-card:hover {transition: transform 0.2s}
-
-.color-option:hover {transition: transform 0.2s}
-
-.color-option.selected {
-  border-color: var(--accent-color) !important;
-  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.3);
-}
-</style>
-
-<script>
+<script nonce="{{ csp_nonce }}">
 var currentTheme = 'dark';
-var currentAccentColor = '#4f46e5';
+var currentAccentColor = '#5ec8ff';
 var currentFontSize = 14;
 
-function resolveTheme(t){
-  if(t === 'auto') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  return t === 'light' ? 'light' : 'dark';
-}
-function setTheme(theme) {
-  currentTheme = theme;
-  var resolved = resolveTheme(theme);
-  document.documentElement.setAttribute('data-theme', resolved);
-  try { localStorage.setItem('hakumo_theme', resolved); } catch(e){}
+function setTheme() {
+  currentTheme = 'dark';
+  document.documentElement.setAttribute('data-theme', 'dark');
+  try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {}
 }
 function setAccentColor(color) {
   currentAccentColor = color;
   if (window.applyAccent) window.applyAccent(color);
-  try { localStorage.setItem('hakumo_accent', color); } catch(e){}
-  document.querySelectorAll('.color-option').forEach(function(el){
-    el.classList.toggle('selected', (el.getAttribute('data-color')||'').toLowerCase() === String(color).toLowerCase());
+  try { localStorage.setItem('hakumo_accent', color); } catch (e) {}
+  document.querySelectorAll('.nv-swatch').forEach(function (el) {
+    el.classList.toggle('selected',
+      (el.getAttribute('data-color') || '').toLowerCase() === String(color).toLowerCase());
   });
+  var c = document.getElementById('customColor');
+  if (c) c.value = color;
 }
 function setFontSize() {
-  currentFontSize = parseInt(document.getElementById('fontSize').value);
+  currentFontSize = parseInt(document.getElementById('fontSize').value, 10) || 14;
+  document.getElementById('fontSizeValue').textContent = currentFontSize + 'px';
   document.documentElement.style.setProperty('--base-font-size', currentFontSize + 'px');
   document.documentElement.style.fontSize = currentFontSize + 'px';
+  try { localStorage.setItem('hakumo_font', String(currentFontSize)); } catch (e) {}
 }
-function applyTheme() {
-  setTheme(currentTheme);
-  setAccentColor(currentAccentColor);
-  document.getElementById('fontSize').value = currentFontSize;
-  document.getElementById('fontSizeValue').textContent = currentFontSize + 'px';
+function saveThemeSettings() {
+  setTheme();
+  setFontSize();
+  var el = document.getElementById('themeSaveMsg');
+  if (el) el.innerHTML = '<span class="badge ok">Сохранено локально</span>';
 }
-async function loadThemeSettings() {
+(function boot() {
   try {
-    var r = await fetch('/api/theme/settings');
-    var data = await r.json();
-    if (data.success && data.settings) {
-      var s = data.settings;
-      currentTheme = s.theme || 'dark';
-      currentAccentColor = s.accent_color || '#4f46e5';
-      currentFontSize = s.font_size || 14;
-      document.getElementById('fontSize').value = currentFontSize;
-      document.getElementById('fontSizeValue').textContent = currentFontSize + 'px';
-      document.getElementById('customColor').value = currentAccentColor;
-      applyTheme();
-    } else {
-      applyTheme();
+    var a = localStorage.getItem('hakumo_accent');
+    if (a) setAccentColor(a);
+    var f = parseInt(localStorage.getItem('hakumo_font') || '14', 10);
+    if (f) {
+      document.getElementById('fontSize').value = f;
+      document.getElementById('fontSizeValue').textContent = f + 'px';
+      currentFontSize = f;
     }
-  } catch(e){ applyTheme(); }
-}
-async function saveThemeSettings() {
-  setTheme(currentTheme); setAccentColor(currentAccentColor);
-  try {
-    var r = await fetch('/api/theme/settings', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({theme: currentTheme, accent_color: currentAccentColor, font_size: currentFontSize})
-    });
-    var d = await r.json();
-    if (d.success) showToast('Настройки темы сохранены!', true);
-    else showToast('Ошибка: ' + (d.error || 'Ошибка'), false);
-  } catch(e){ showToast('Ошибка соединения', false); }
-}
-document.getElementById('fontSize').addEventListener('input', function(){
-  document.getElementById('fontSizeValue').textContent = this.value + 'px';
-});
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadThemeSettings);
-else loadThemeSettings();
+  } catch (e) {}
+  setTheme();
+  document.getElementById('fontSize').addEventListener('input', function () {
+    document.getElementById('fontSizeValue').textContent = this.value + 'px';
+  });
+})();
 </script>
 {% endblock %}

@@ -84,7 +84,180 @@ def normalize_appearance(raw):
     }
 
 
-def render_appeal_card(*, appeal_id, user_name, text, link=None,
+# ── Своя картинка по URL: скачивание и «медиа-план» карточки ────────────────
+# Владелец (2026-09-05): «своя url не работает и не показывает картинку» +
+# «отправлять туда фото, чтобы качество не портилось». Discord-эмбед по
+# внешней ссылке пережимает картинку и молча пустеет, если хост отдаёт
+# ошибку/банит хотлинк (imgur). Поэтому бот СКАЧИВАЕТ оригинал и
+# прикрепляет ФАЙЛОМ (attachment://) — байты едут как есть, без пережатия.
+MAX_REMOTE_IMAGE_BYTES = 8 * 1024 * 1024   # лимит вложения Discord — 8 МиБ
+_IMAGE_EXTS = {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+               '.gif': 'image/gif', '.webp': 'image/webp'}
+
+
+def validate_image_url(url):
+    """Проверка ссылки на картинку. Возвращает (ok, причина).
+
+    Только https, публичный хост (без localhost/приватных адресов),
+    путь с картинным расширением ИЛИ без расширения (хост может отдать
+    image/* контентом — решит загрузка).
+    """
+    from urllib.parse import urlparse
+    u = str(url or '').strip()
+    low = u.lower()
+    if not u:
+        return False, 'пустая ссылка'
+    if not low.startswith('https://'):
+        return False, 'только https://'
+    if any(bad in low for bad in ('localhost', '127.0.0.1', '0.0.0.0',
+                                  '[::1]', '10.', '192.168.', '169.254.')):
+        return False, 'адрес должен быть публичным'
+    try:
+        p = urlparse(u)
+    except ValueError:
+        return False, 'не похоже на ссылку'
+    if not p.netloc:
+        return False, 'в ссылке нет хоста'
+    ext = os.path.splitext(p.path or '')[1].lower()
+    if ext and ext not in _IMAGE_EXTS:
+        # Страницы-пины (pin.it/7jxEf3HAx, pinterest.com/pin/123/) —
+        # валидны: fetch_remote_image вытащит og:image со страницы
+        # (владелец 2026-09-05: «вот вам например pin.it/…»).
+        low_host = (p.netloc or '').lower()
+        low_path = (p.path or '').lower()
+        if not ('pin.it' in low_host or 'pinterest.' in low_host
+                and '/pin/' in low_path):
+            return False, f'«{ext}» — не картинка (нужны png/jpg/gif/webp ' \
+                          'или ссылка на пин Pinterest)'
+    return True, ''
+
+
+def _host_check(url):
+    """Анти-SSRF: (публичный_ли_хост, причина_отказа).
+
+    Домен не резолвится и адреса приватные — разные причины, чтобы
+    владелец понимал, что именно не так со ссылкой.
+    """
+    from urllib.parse import urlparse
+    import ipaddress as _ipa
+    import socket as _sock
+    try:
+        host = (urlparse(str(url)).hostname or '').strip()
+    except ValueError:
+        return False, 'в ссылке нет адреса'
+    if not host:
+        return False, 'в ссылке нет адреса'
+    try:
+        infos = _sock.getaddrinfo(host, 443, proto=_sock.IPPROTO_TCP)
+    except OSError:
+        return False, 'домен не найден — проверь ссылку'
+    for info in infos or ():
+        addr = info[4][0]
+        try:
+            ip = _ipa.ip_address(addr)
+        except ValueError:
+            return False, 'домен отдал странный адрес'
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            return False, 'адрес ведёт в приватную сеть'
+    return True, '' 
+
+
+def _og_image_of(html, base=''):
+    """Достать og:image / twitter:image из HTML страницы (или None)."""
+    import re as _re
+    html = str(html or '')
+    m = _re.search(
+        r'<meta[^>]+(?:property|name)=["\']'
+        r'(?:og:image(?::secure_url)?|twitter:image(?:src)?)["\']'
+        r'[^>]+content=["\']([^"\']+)["\']', html, _re.I)
+    if not m:
+        m = _re.search(
+            r'content=["\']([^"\']+\.(?:jpg|jpeg|png|webp)[^"\']*)["\']'
+            r'[^>]*(?:property|name)=["\']'
+            r'(?:og:image|twitter:image)["\']', html, _re.I)
+    if not m:
+        return None
+    cand = m.group(1).replace('&amp;', '&').strip()
+    if not cand:
+        return None
+    if base:
+        from urllib.parse import urljoin
+        return urljoin(str(base), cand)
+    return cand
+
+
+def _sniff_image_ext(head):
+    """Расширение по магическим байтам (контент решает, не URL)."""
+    png = bytes([0x89]) + b"PNG" + bytes([0x0D, 0x0A, 0x1A, 0x0A])
+    if head[:8] == png:
+        return ".png"
+    if head[:3] == bytes([0xFF, 0xD8, 0xFF]):
+        return ".jpg"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return ".webp"
+    if head[:6] in (b"GIF87a", b"GIF89a"):
+        return ".gif"
+    return None
+
+
+async def fetch_remote_image(url, timeout=12):
+    """Скачать картинку по URL. Возвращает (bytes, filename) или (None, причина).
+
+    Никогда не бросает наружу. Проверяем размер и content-type: в файл
+    уходит только настоящая картинка в пределах лимита вложения.
+    """
+    ok, why = validate_image_url(url)
+    if not ok:
+        return None, why
+    import asyncio as _aio
+    try:
+        public, why = await _aio.to_thread(_host_check, str(url).strip())
+    except Exception:                     # noqa: BLE001
+        public, why = False, 'адрес недоступен'
+    if not public:
+        return None, why
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as ses:
+            async with ses.get(str(url).strip(), timeout=None) as resp:
+                if resp.status != 200:
+                    return None, f'хост ответил {resp.status}'
+                ctype = (resp.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+                if ctype and not ctype.startswith('image/'):
+                    # Страница (pin.it, соцсети, сайты)? Пробуем вытащить
+                    # og:image / twitter:image — люди копируют ссылки-СТРАНИЦЫ
+                    # (владелец 2026-09-05: «вот вам например pin.it/…»).
+                    page = await resp.text(errors='ignore')
+                    cand = _og_image_of(page, str(resp.url))
+                    if not cand:
+                        return None, 'по ссылке страница, а не картинка'
+                    async with ses.get(cand, timeout=None) as r2:
+                        if r2.status != 200:
+                            return None, f'картинка на странице недоступна ({r2.status})'
+                        ctype = (r2.headers.get('Content-Type') or '') \
+                            .split(';')[0].strip().lower()
+                        if ctype and not ctype.startswith('image/'):
+                            return None, 'на странице не нашлось картинки'
+                        data = await r2.read()
+                        url = str(r2.url)
+                else:
+                    data = await resp.read()
+                if len(data) > MAX_REMOTE_IMAGE_BYTES:
+                    return None, (f'файл больше {MAX_REMOTE_IMAGE_BYTES // (1024 * 1024)} МиБ — '
+                                  'Discord вложение такого размера не примет')
+                if not data:
+                    return None, 'пустой ответ'
+                ext = _sniff_image_ext(data[:32]) or \
+                    os.path.splitext(str(url).split('?')[0])[1].lower()
+                if ext not in _IMAGE_EXTS:
+                    ext = '.png'
+                return data, 'appeal_image' + ext
+    except Exception as _ex:                      # noqa: BLE001
+        return None, str(_ex)[:160] or 'сеть недоступна'
+
+
+def render_appeal_card(*, appeal_id, user_name, text,
                        theme=DEFAULT_APPEAL_THEME, brand='Hakumo'):
     """Карточка поданной апелляции → PNG bytes. Никогда не бросает наружу."""
     try:
@@ -162,7 +335,7 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
         # шрифт уменьшаем, пока блок не влезет целиком (иначе — многоточие)
         text_w = int((W * SS - 2 * pad) * 0.60)
         zone_top = S(214)
-        zone_bottom = (H * SS - S(100)) if link else (H * SS - S(84))
+        zone_bottom = H * SS - S(84)
         f_text, lines = None, None
         for size in range(28 * SS, 18 * SS - 1, -2 * SS):
             f_try = _font(False, size)
@@ -186,14 +359,6 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
             bb = d.textbbox((0, 0), ln or 'Ag', font=f_text)
             yy += (bb[3] - bb[1]) + S(12)
 
-        # ссылка-доказательство — на собственной строке над футером,
-        # футер — на дне; текстовый блок ограничен зоной выше них
-        if link:
-            f_link = _font(False, 18 * SS)
-            hosted = str(link)[:64]
-            d.text((pad, H * SS - S(92)), f'доказательство: {hosted}',
-                   font=f_link, fill=acc + (220,))
-
         # футер
         f_foot = _font(True, 20 * SS)
         d.text((pad, H * SS - S(56)), f'Апелляция #{int(appeal_id)}  ·  {brand}',
@@ -201,7 +366,39 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
 
         out = canvas.resize((W, H), Image.Resampling.LANCZOS).convert('RGB')
         buf = io.BytesIO()
-        out.save(buf, format='PNG', optimize=True)
+        out.save(buf, format='PNG')
+        return buf.getvalue()
+    except Exception:
+        return None
+
+
+URL_PHOTO_MAX_H = 560   # высота фото-зоны в композите (фото выше — центр-кроп)
+
+
+def render_url_card(photo_bytes, *, appeal_id, user_name, text,
+                    theme=DEFAULT_APPEAL_THEME):
+    """Своя картинка по URL → композит: фото СВЕРХУ, тексты апелляции ПОД ним.
+
+    Владелец (2026-09-05): «сообщения были внутри фото… надписи ниже фото,
+    а не сверху». Эмбед Discord рисует текст НАД картинкой — поэтому клеим
+    одно изображение: фото сверху, ниже — фирменная карточка с текстами
+    (та же render_appeal_card). В Discord уходит ОДИН файл, без пережатия.
+    """
+    try:
+        photo = Image.open(io.BytesIO(photo_bytes)).convert('RGB')
+        scale = W / photo.width
+        ph = photo.resize((W, max(1, int(photo.height * scale))), Image.LANCZOS)
+        if ph.height > URL_PHOTO_MAX_H:
+            top = max(0, (ph.height - URL_PHOTO_MAX_H) // 2)
+            ph = ph.crop((0, top, W, top + URL_PHOTO_MAX_H))
+        card = Image.open(io.BytesIO(render_appeal_card(
+            appeal_id=appeal_id, user_name=user_name, text=text,
+            theme=theme) or b'')).convert('RGB')
+        out = Image.new('RGB', (W, ph.height + card.height))
+        out.paste(ph, (0, 0))
+        out.paste(card, (0, ph.height))
+        buf = io.BytesIO()
+        out.save(buf, format='PNG')
         return buf.getvalue()
     except Exception:
         return None
@@ -213,4 +410,4 @@ def appeal_card_filename(appeal_id):
 
 __all__ = ('APPEAL_THEMES', 'APPEAL_THEME_ORDER', 'DEFAULT_APPEAL_THEME',
            'APPEAL_MODES', 'APPEAL_MODE_LABELS', 'normalize_appearance',
-           'render_appeal_card', 'appeal_card_filename')
+           'render_appeal_card', 'render_url_card', 'appeal_card_filename')

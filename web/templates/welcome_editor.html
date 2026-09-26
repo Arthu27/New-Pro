@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Приветствие Редактор - Hakumo{% endblock %}
+{% block title %}Приветствие Редактор — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-handshake" ></i> Приветствие / Прощание{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Приветствие</div>
+    <div class="eyebrow"> Настройки </div>
     <h1>Приветствие / Прощание</h1>
     <p class="lead">Настройка приветственных сообщений для новых участников.</p>
   </div>
@@ -124,7 +124,7 @@
   {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var selectedGuild = '{{ main_guild_id }}';
 
 async function loadSettings() {
@@ -145,9 +145,9 @@ async function loadSettings() {
     // Проверяем формат данных, пришедших от API
     var channels = [];
     if (Array.isArray(chData)) {
-      channels = chData.filter(function(c) { return c.type === 'text'; });
+      channels = chData.filter(function(c) { return c.type === 'text' && !c.hidden; });
     } else if (chData.channels && Array.isArray(chData.channels)) {
-      channels = chData.channels.filter(function(c) { return c.type === 'text'; });
+      channels = chData.channels.filter(function(c) { return c.type === 'text' && !c.hidden; });
     } else if (chData.error) {
       console.error('Channels API returned error:', chData.error);
       alert('Не удалось получить список каналов: ' + chData.error);
@@ -190,7 +190,7 @@ async function loadSettings() {
     }
   } catch(e) {
     console.error('loadSettings ошибки:', e);
-    alert('Настройки загруз ошибка произошла: ' + e.message);
+    alert('Ошибка загрузки настроек: ' + e.message);
   }
   updatePreviews();
 }

@@ -10,9 +10,11 @@ A. Демки:
 
 B. Роли наказаний — «для каждого наказания»:
 4. settings_view: kinds+levels как раньше + punish_info (каждое наказание
-   видно карточкой, таймаут/кик/разбан объяснены) + warn_steps.
-5. warn-step API: add → ступень сохранена в общий warn_config (cogs читают
-   ключ 'steps'), dedup по count, DELETE убирает, помойка → 400.
+   видно карточкой, таймаут/кик/разбан объяснены). Ступеней действий здесь
+   НЕТ — они на /ladder (единое место, без дублей).
+5. ladder API: add → ступень сохранена в общий warn_config (cogs читают
+   ключ 'steps'), dedup по count, remove убирает, помойка → 400; vmute —
+   отдельное действие (войс-мут ≠ чат-мут).
 """
 import io
 import os
@@ -81,7 +83,9 @@ r = client.get('/api/guild/777/role-settings')
 d = r.get_json() or {}
 keys_info = [x['key'] for x in d.get('punish_info', [])]
 check(set(keys_info) == {'timeout', 'kick', 'unban'}, f'punish_info покрывает все наказания ({keys_info})')
-r = client.post('/api/guild/777/role-settings/warn-step',
+check('warn_steps' not in d, 'на /role-settings ступеней действий больше нет (единое место — /ladder)')
+# Ступени действий — ТОЛЬКО через лестницу (/api/.../ladder/*)
+r = client.post('/api/guild/777/ladder/add',
                 json={'count': 3, 'action': 'mute', 'duration': 30, 'unit': 'minute'})
 d = r.get_json() or {}
 check(r.status_code == 200 and d.get('success'), f'ступень add ({r.status_code})')
@@ -90,17 +94,28 @@ cfg = load_warn_config('777')
 steps = cfg.get('steps') or []
 check(any(int(s.get('count', 0)) == 3 and s.get('action') == 'mute' for s in steps),
       f'ступень лежит в общем warn_config, которое читает ког ({steps})')
-r2 = client.post('/api/guild/777/role-settings/warn-step',
+# войс-мут — отдельное действие
+rv = client.post('/api/guild/777/ladder/add',
+                 json={'count': 2, 'action': 'vmute', 'duration': 15, 'unit': 'minute'})
+rvj = rv.get_json() or {}
+check(rv.status_code == 200 and rvj.get('success'), f'войс-мут как ступень принят ({rv.status_code})')
+r2 = client.post('/api/guild/777/ladder/add',
                  json={'count': 3, 'action': 'kick'})
-check(r2.status_code == 200 and len(r2.get_json().get('warn_steps', [])) == 1,
+steps2 = r2.get_json().get('steps', [])
+check(r2.status_code == 200 and len([s for s in steps2 if int(s.get('count', 0)) == 3]) == 1,
       'степень с тем же count — заменяется, не дублируется')
-r3 = client.get('/api/guild/777/role-settings')
-check(len((r3.get_json() or {}).get('warn_steps', [])) == 1,
-      'view возвращает warn_steps')
-r4 = client.delete('/api/guild/777/role-settings/warn-step/3')
-check(r4.status_code == 200 and r4.get_json().get('success'), 'DELETE убирает ступень')
-r5 = client.post('/api/guild/777/role-settings/warn-step', json={'count': 'x', 'action': 'bogus'})
+r3 = client.get('/api/guild/777/ladder/view')
+vsteps = (r3.get_json() or {}).get('steps', [])
+check(any(s.get('action') == 'vmute' for s in vsteps)
+      and any(s.get('action') == 'kick' and int(s.get('count', 0)) == 3 for s in vsteps),
+      'ladder/view отдаёт и войс-мут, и заменённый кик')
+r4 = client.post('/api/guild/777/ladder/remove', json={'count': 3})
+check(r4.status_code == 200 and r4.get_json().get('success'), 'remove убирает ступень')
+r5 = client.post('/api/guild/777/ladder/add', json={'count': 'x', 'action': 'bogus'})
 check(r5.status_code == 400 and not r5.get_json().get('success'), 'мусор в add → 400')
+# старый role-settings warn-step маршрут удалён
+r6 = client.post('/api/guild/777/role-settings/warn-step', json={'count': 1, 'action': 'mute'})
+check(r6.status_code == 404, 'дублирующий warn-step на /role-settings больше не существует')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

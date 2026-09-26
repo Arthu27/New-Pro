@@ -36,11 +36,11 @@ KIND_LABELS = {
 }
 
 DURATIONS = [
-    ('10 минут', 10 / 60),
+    ('30 минут', 0.5),
     ('1 час', 1.0),
+    ('2 часа', 2.0),
     ('1 день', 24.0),
     ('1 неделя', 24 * 7),
-    ('Постоянно', 0),
 ]
 
 
@@ -155,6 +155,25 @@ def ticket_list(guild_id, limit: int = 200) -> list:
     return out
 
 
+def has_recent_open_report(guild_id, reporter_id, accused_id,
+                            window_sec=86400) -> bool:
+    """КД на репорт: этот reporter уже подавал ОТКРЫТУЮ жалобу на того же
+    accused за последние window_sec сек (по умолчанию 1 день). Повторную
+    жалобу на того же участника не плодим (заказ владельца: «чтобы команду
+    не использовали, когда уже 1 раз подали на одного и того же»)."""
+    edge = _now() - max(0, int(window_sec))
+    with db() as c:
+        row = c.execute(
+            """SELECT 1 FROM tickets
+               WHERE guild=? AND reporter_id=? AND accused_id=?
+                 AND created >= ?
+                 AND (closed IS NULL OR closed=0)
+               LIMIT 1""",
+            (str(guild_id), str(reporter_id), str(accused_id), edge)
+        ).fetchone()
+    return row is not None
+
+
 def ticket_stats(guild_id) -> dict:
     """Сводка очереди: открыто / закрыто за 7 дней / всего."""
     now = _now()
@@ -176,6 +195,19 @@ def ticket_set(thread_id, **kv) -> None:
     with db() as c:
         c.execute(f'UPDATE tickets SET {cols} WHERE thread_id=?',
                   (*kv.values(), str(thread_id)))
+
+
+def ticket_rekey(old_key, new_key) -> None:
+    """Переозначить тикет (карточка вызова → её ветка разбора).
+
+    Панель внутри ветки ищет тикет по ID канала-ветки, а карточка хранит
+    его по ID сообщения — нужен именно перенос ключа, а не второй столбец.
+    """
+    if str(old_key) == str(new_key):
+        return
+    with db() as c:
+        c.execute('UPDATE tickets SET thread_id=? WHERE thread_id=?',
+                  (str(new_key), str(old_key)))
 
 
 def add_witness(thread_id, user_id) -> None:

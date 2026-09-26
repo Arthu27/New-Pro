@@ -2,14 +2,14 @@
 """Таск-трекер сервера + правила (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -34,7 +34,7 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def api_create_task ():
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         title =(data .get ('title')or '').strip ()
         if not title :return jsonify ({'error':'Укажите название задачи'}),400 
         f ='data/tasks.json'
@@ -58,7 +58,7 @@ def register(ctx):
         if not os .path .exists (f ):return jsonify ({'error':'Не найдено'})
         with open (f )as fp :tasks =json .load (fp )
         if task_id in tasks :
-            tasks [task_id ].update (request .get_json (silent =True )or {})
+            tasks [task_id ].update (_safe_json_obj())
             with open (f ,'w')as fp :json .dump (tasks ,fp ,indent =2 )
         return jsonify ({'success':True })
 
@@ -195,7 +195,7 @@ def register(ctx):
         meta =_load_rules_meta (guild_id )
         if request .method =='GET':
             return jsonify ({'success':True ,'meta':meta })
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         if 'title'in data :
             meta ['title']=str (data ['title']or '').strip ()[:200 ]or 'Правила сервера'
         if 'intro'in data :
@@ -248,7 +248,7 @@ def register(ctx):
     def api_publish_rules (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         ch_id =str (data .get ('channel_id')or '').strip ()
         raw =data .get ('rules')
         if raw is None :

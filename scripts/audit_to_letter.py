@@ -17,7 +17,13 @@ bad_count = 0
 
 # Семантические классы-хуки: используются как JS-селекторы, внешний вид задают
 # родительские классы (form-input/details/empty) или inline-стили.
-_SEMANTIC_HOOKS = {'pulse-empty', 'sa-open', 'sh-member', 'sh-time', 'shift-manage'}
+# Семантические классы-хуки: используются как JS-селекторы, внешний вид задают
+# родительские классы (form-input/details/empty) или inline-стили.
+# page-head-side/chs-optional — структурные обёртки: их рисует родитель
+# (.page-head — flex, .chs-guide-steps — список), своего стиля не требуют.
+_SEMANTIC_HOOKS = {'pulse-empty', 'sa-open', 'sh-member', 'sh-time', 'shift-manage',
+                   'page-head-side', 'chs-optional',
+                   'vf-card', 'vf-flow', 'vf-switch'}  # vf-* несут inline-стили
 def chk(ok, msg):
     global ok_count, bad_count
     if ok: ok_count += 1
@@ -85,12 +91,18 @@ chk(not unknown, f'иконки, которых нет в FA-вендоре: {un
 print(f'[2] FA-иконки: использовано {len(used)}, неизвестных {len(unknown)}')
 
 # 3. Сиротские классы: class="..." в шаблонах vs style.css + inline <style>
-css_all = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
-css_known = set(re.findall(r'\.([a-zA-Z][a-zA-Z0-9_-]*)', css_all))
+# Все CSS панели, а не только style.css: часть классов (карточка участника)
+# живёт в отдельных файлах — иначе аудит зовёт их сиротами напрасно.
+css_known = set()
+for css_file in glob.glob(os.path.join(ROOT, 'web', 'static', '**', '*.css'), recursive=True):
+    css_known |= set(re.findall(r'\.([a-zA-Z][a-zA-Z0-9_-]*)',
+                                open(css_file, encoding='utf-8', errors='replace').read()))
+tpl_scripts = []
 for f in TPL:
     text = open(f, encoding='utf-8').read()
     for inline in re.findall(r'<style[^>]*>(.*?)</style>', text, re.S):
         css_known |= set(re.findall(r'\.([a-zA-Z][a-zA-Z0-9_-]*)', inline))
+    tpl_scripts += re.findall(r'<script[^>]*>(.*?)</script>', text, re.S)
 used_classes = set()
 for f in TPL:
     text = open(f, encoding='utf-8').read()
@@ -106,8 +118,12 @@ for f in TPL:
                 continue  # хуки-селекторы: стиль у родителя/inline, у класса лишь роль метки
             used_classes.add(c)
 js_known = set()
-for js in glob.glob(os.path.join(ROOT, 'web', 'static', '*.js')):
+for js in glob.glob(os.path.join(ROOT, 'web', 'static', '**', '*.js'), recursive=True):
     js_known |= set(re.findall(r'\.([a-zA-Z][a-zA-Z0-9_-]*)', open(js, encoding='utf-8', errors='replace').read()))
+# Класс, к которому шаблон сам обращается как к селектору (.apTpl в closest()), —
+# это хук разметки, а не сирота: стиль ему и не положен.
+for chunk in tpl_scripts:
+    js_known |= set(re.findall(r'\.([a-zA-Z][a-zA-Z0-9_-]*)', chunk))
 known = css_known | js_known | {'fas', 'far', 'fab', 'fa-solid', 'fa-regular', 'fa-brands'}
 orphans = sorted(c for c in used_classes if c not in known)
 chk(not orphans, f'классы без определения: {orphans[:15]} (всего {len(orphans)})')
@@ -152,11 +168,24 @@ TYPOS = [('пожалуста', 'пожалуйста'), ('вообщем', 'в 
          ('одеть роль', 'выдать роль'), ('экспортнуть', 'экспортировать'),
          ('залогиниться', 'войти'), ('сохронить', 'сохранить'), ('отправлё', 'отправлено'),
          ('обновления данных', 'обновление данных')]
+def _typo_rx(bad):
+    """Опечатка как целое слово: «ложить» ловим, а «приложить»/«положить» — нет.
+
+    Приставочные глаголы с «-ложить» правильные, поэтому слева требуем границу
+    слова; справа не ограничиваем — часть опечаток задана основой («отправлё»).
+    Фразы из двух слов ищем простым вхождением.
+    """
+    if ' ' in bad:
+        return re.compile(re.escape(bad))
+    return re.compile(r'(?<![а-яёa-z-])' + re.escape(bad))
+
+
+_TYPO_RX = [(bad, good, _typo_rx(bad)) for bad, good in TYPOS]
 typo_found = []
 for f in TPL + glob.glob(os.path.join(ROOT, 'web', 'routes', '*.py')) + glob.glob(os.path.join(ROOT, 'web', 'routes', 'api', '*.py')):
-    text = open(f, encoding='utf-8').read()
-    for bad, good in TYPOS:
-        if bad in text.lower():
+    text = open(f, encoding='utf-8').read().lower()
+    for bad, good, rx in _TYPO_RX:
+        if rx.search(text):
             typo_found.append(f'{os.path.relpath(f, ROOT)}: «{bad}» → «{good}»')
 chk(not typo_found, f'опечатки: {typo_found[:8]}')
 print(f'[5] Опечатки: найдено {len(typo_found)}')

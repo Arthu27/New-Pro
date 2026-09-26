@@ -109,7 +109,7 @@ class PluginManager:
             self.plugins[plugin_name] = plugin
             self.save_config()
             
-            # Plugin setup чaгыr
+            # Вызываем setup плагина
             if hasattr(module, 'setup'):
                 module.setup()
             
@@ -127,7 +127,7 @@ class PluginManager:
         
         plugin = self.plugins[plugin_name]
         
-        # Plugin teardown чaгыr
+        # Вызываем teardown плагина
         if plugin.module and hasattr(plugin.module, 'teardown'):
             plugin.module.teardown()
         
@@ -182,14 +182,14 @@ class PluginManager:
         return plugins
     
     def install_plugin(self, plugin_url: str) -> bool:
-        """Plugin kur (placeholder)"""
-        # Gerчek uygulamada git clone или download yapыlacak
-        print(f"⏰ Plugin kurulumu: {plugin_url}")
+        """Установить плагин."""
+        # В полноценном развертывании: git clone или скачивание архива
+        print(f"📦 Установка плагина: {plugin_url}")
         return True
     
     def update_plugin(self, plugin_name: str) -> bool:
-        """Plugin обновить (placeholder)"""
-        # Gerчek uygulamada git pull yapыlacak
+        """Обновить плагин."""
+        # В полноценном развертывании: git pull
         print(f"⏰ Обновление плагина: {plugin_name}")
         return True
     

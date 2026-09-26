@@ -2,14 +2,14 @@
 """Коги, события, вебхуки, права тикетов (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -32,7 +32,7 @@ def register(ctx):
         # Скрыть служебные файлы, чтобы не путать пользователя:
         #  - имена с '_' / __init__ — вспомогательные (не cog'и)
         #  - NON_COG — модули-помощники на диске, загружаемые через import, а не как cog
-        NON_COG ={'embed_utils','leveling_engagement'}
+        NON_COG ={'embed_utils','_card_style','icons'}
         all_cogs =[]
         _cogs_dir =os .path .join (_REPO_ROOT ,'cogs')
         for f in os .listdir (_cogs_dir ):
@@ -130,7 +130,7 @@ def register(ctx):
         })
 
 
-        # ── ETKИNLИKLER API ──────────────────────────────────────────────────────
+        # ── АКТИВНОСТИ API ──────────────────────────────────────────────────────
 
     @app .route ('/api/guild/<guild_id>/events')
     @login_required 
@@ -143,6 +143,127 @@ def register(ctx):
         events =list (data .values ())
         events .sort (key =lambda x :x .get ('time',''))
         return jsonify (events )
+
+
+    @app.route('/api/guild/<guild_id>/event-panel')
+    @login_required
+    @role_required('mod')
+    def api_guild_event_panel(guild_id):
+        """Статус Discord-панели /event-panel (data/event_panel_<gid>.json)."""
+        try:
+            from cogs.event_panel import (
+                EVENT_ADMIN_ROLE_ID, EVENT_MOD_ROLE_ID,
+                configured_panel_channel_id, event_voice_channel_id,
+                load_panel_cfg, normalize_phase, target_channel_id)
+            cfg = load_panel_cfg(int(guild_id))
+        except Exception as ex:
+            return jsonify({'ok': False, 'error': str(ex)}), 500
+        signups = list(cfg.get('signups') or [])
+        try:
+            cfg_ch = int(configured_panel_channel_id() or 0)
+        except Exception:
+            cfg_ch = 0
+        try:
+            tgt = int(target_channel_id(cfg) or 0)
+        except Exception:
+            tgt = 0
+        try:
+            voice_id = int(event_voice_channel_id() or 0)
+        except Exception:
+            voice_id = 0
+        phase = normalize_phase(cfg)
+        return jsonify({
+            'ok': True,
+            'guild_id': str(guild_id),
+            'title': cfg.get('title') or 'События сервера',
+            'description': cfg.get('description') or '',
+            'phase': phase,
+            'registration_open': bool(cfg.get('registration_open', True)),
+            'signup_count': len(signups),
+            'signups': [str(u) for u in signups],
+            'channel_id': str(cfg['channel_id']) if cfg.get('channel_id') else '',
+            'message_id': str(cfg['message_id']) if cfg.get('message_id') else '',
+            'target_channel_id': str(tgt) if tgt else '',
+            'voice_channel_id': str(voice_id) if voice_id else '',
+            'posted_by': str(cfg.get('posted_by') or ''),
+            'posted_at': cfg.get('posted_at') or '',
+            'started_at': cfg.get('started_at') or '',
+            'ended_at': cfg.get('ended_at') or '',
+            'last_announce_by': str(cfg.get('last_announce_by') or ''),
+            'last_announce_at': cfg.get('last_announce_at') or '',
+            'event_admin_role_id': str(EVENT_ADMIN_ROLE_ID),
+            'event_mod_role_id': str(EVENT_MOD_ROLE_ID),
+            'configured_channel_id': cfg_ch,
+        })
+
+    @app.route('/api/guild/<guild_id>/event-panel', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_guild_event_panel_save(guild_id):
+        """Сохранить канал назначения панели событий."""
+        body = _safe_json_obj() or {}
+        raw = body.get('target_channel_id', body.get('channel_id', 0))
+        try:
+            cid = int(raw or 0)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'Некорректный channel id'}), 400
+        try:
+            from cogs.event_panel import set_target_channel_id, target_channel_id
+            cfg = set_target_channel_id(int(guild_id), cid)
+            return jsonify({
+                'ok': True,
+                'target_channel_id': str(target_channel_id(cfg) or '') or '',
+            })
+        except Exception as ex:
+            return jsonify({'ok': False, 'error': str(ex)}), 500
+
+    @app.route('/api/guild/<guild_id>/event-panel/publish', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_guild_event_panel_publish(guild_id):
+        """Опубликовать / обновить панель в Discord через бота."""
+        import web.app as _app
+        bot = getattr(_app, 'bot_instance', None)
+        if not bot or not getattr(bot, 'loop', None):
+            return jsonify({
+                'ok': False,
+                'error': 'Бот офлайн — опубликуй командой /event-panel в Discord '
+                         'или дождись запуска бота.',
+            }), 503
+        try:
+            from cogs.event_panel import publish_event_panel, set_target_channel_id
+            body = _safe_json_obj() or {}
+            if body.get('target_channel_id') not in (None, ''):
+                try:
+                    set_target_channel_id(int(guild_id), int(body['target_channel_id']))
+                except (TypeError, ValueError) as _ex:
+                    _log.debug('guild_extra: target_channel_id: %s', _ex)
+
+            async def _post():
+                guild = bot.get_guild(int(guild_id))
+                if guild is None:
+                    guild = await bot.fetch_guild(int(guild_id))
+                if guild is None:
+                    raise ValueError('Сервер не найден')
+                # кэш каналов после fetch_guild часто пуст
+                try:
+                    if not guild.channels:
+                        await guild.fetch_channels()
+                except Exception as _ex:
+                    _log.debug('guild_extra: fetch_channels: %s', _ex)
+                uid = session.get('user_id') or session.get('discord_id') or 'panel'
+                msg, cfg = await publish_event_panel(guild, posted_by=uid)
+                return msg, cfg
+
+            import asyncio as _aio
+            msg, cfg = _aio.run_coroutine_threadsafe(_post(), bot.loop).result(timeout=20)
+            return jsonify({
+                'ok': True,
+                'message_id': str(msg.id),
+                'channel_id': str(cfg.get('channel_id') or ''),
+            })
+        except Exception as ex:
+            return jsonify({'ok': False, 'error': f'Не удалось опубликовать: {ex}'}), 500
 
 
     @app .route ('/api/guild/<guild_id>/events/<event_id>/delete',methods =['POST'])
@@ -187,7 +308,7 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord as _discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         wh_id =data .get ('webhook_id')
         message =data .get ('message','')
         username =data .get ('username','Hakumo')
@@ -224,51 +345,3 @@ def register(ctx):
             return jsonify ({'error':str (e )})
 
 
-            # ── TICKET PERMISSIONS API ─────────────────────────────────────────────────
-    @app .route ('/api/guild/<int:guild_id>/ticket-permissions')
-    @login_required 
-    def api_ticket_permissions_get (guild_id ):
-        """Получить настройки разрешений тикетов"""
-        cfg_path =f'data/ticket_permissions_{guild_id}.json'
-        default ={
-        'systems':{
-        'ai_enabled':True ,
-        'rate_limiter':True ,
-        'auto_close':True ,
-        'feedback':True ,
-        'progress_indicator':True ,
-        'complaint_system':True ,
-        },
-        'roles':{
-        'mod_roles':[],
-        'owner_roles':[],
-        }
-        }
-        try :
-            if os .path .exists (cfg_path ):
-                with open (cfg_path ,'r',encoding ='utf-8')as f :
-                    data =json .load (f )
-                return jsonify ({'success':True ,'config':data })
-            return jsonify ({'success':True ,'config':default })
-        except Exception as e :
-            return jsonify ({'success':False ,'error':str (e )}),500 
-
-
-    @app .route ('/api/guild/<int:guild_id>/ticket-permissions',methods =['POST'])
-    @login_required 
-    def api_ticket_permissions_set (guild_id ):
-        """Сохранить настройки разрешений тикетов"""
-        data =request .get_json ()
-        if not data :
-            return jsonify ({'success':False ,'error':'Нет данных'}),400 
-
-        cfg_path =f'data/ticket_permissions_{guild_id}.json'
-        try :
-            os .makedirs ('data',exist_ok =True )
-            tmp =cfg_path +'.tmp'
-            with open (tmp ,'w',encoding ='utf-8')as f :
-                json .dump (data ,f ,ensure_ascii =False ,indent =2 )
-            os .replace (tmp ,cfg_path )
-            return jsonify ({'success':True })
-        except Exception as e :
-            return jsonify ({'success':False ,'error':str (e )}),500 

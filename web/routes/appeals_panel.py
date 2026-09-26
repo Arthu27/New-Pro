@@ -24,8 +24,10 @@ fmt_card_text (строчка карточки в очереди — как в /
 проверка «Управление сервером» — админский уровень).
 """
 from datetime import datetime, timezone
+import os
 
 from web.routes._common import (
+    _safe_json_obj,
     _log, _run_async,
     render_template, session, request, jsonify, Response,
     discord,
@@ -122,7 +124,8 @@ def pending_view(state, gid=None):
         if gid is not None:
             try:
                 from services.appeal_context import build_context
-                context = build_context(state, gid, item.get('user_id'))['line']
+                _ctx = build_context(state, gid, item.get('user_id'))
+                context = _ctx.get('rich') or _ctx.get('line') or '—'
             except Exception as _ex:
                 _log.debug('appeals: контекст очереди: %s', _ex)
         claim = item.get('claimed_by') or None
@@ -132,7 +135,6 @@ def pending_view(state, gid=None):
             'user_name': str(item.get('user_name') or ''),
             'text': str(item.get('text') or ''),
             'created_at': str(item.get('created_at') or '')[:16].replace('T', ' '),
-            'link': str(item.get('link') or ''),
             'context': context,
             'card_text': AP.fmt_card_text(item),
             'claimed_by': (str(claim.get('name') or '') if claim else ''),
@@ -222,8 +224,89 @@ def _notify_user(bot, gid, item, accept, unbanned, member_present=False):
         return False
 
 
-def apply_side_effects(bot, gid, item, accept):
-    """Разбан/снятие изоляции (при принятии) + ЛС — как в AppealView._resolve."""
+def _post_room_note(bot, gid, text):
+    """Сообщение в комнату апелляции — объявление о ведущем и т.п."""
+    if not bot:
+        return False
+    try:
+        cog = bot.get_cog('Appeals')
+        guild = bot.get_guild(int(gid))
+        if cog is None or guild is None:
+            return False
+
+        async def _do():
+            ch = await cog._appeal_channel(guild)
+            if ch is None:
+                return False
+            await ch.send(text)
+            return True
+
+        return bool(_run_async(_do(), timeout=10))
+    except Exception as _ex:
+        _log.debug('appeals: сообщение в комнату: %s', _ex)
+        return False
+
+
+def _open_channel_for_claim(bot, gid, item, reviewer=''):
+    """«Взять в работу» из панели — открыть канал апелляции забаненному.
+
+    Тот же маршрут, что у кнопки под карточкой в Discord (AppealView
+    ._claim): комнату апелляции делаем видимой участнику — модератор взял
+    дело, человек сразу может диалог (владелец 2026-09-06). Плюс объявление
+    в комнату «вас будет обслуживать …» (владелец 2026-09-08)."""
+    if not bot:
+        return False
+    try:
+        cog = bot.get_cog('Appeals')
+    except Exception as _ex:
+        _log.debug('appeals: get_cog на claim: %s', _ex)
+        cog = None
+    guild = None
+    try:
+        guild = bot.get_guild(int(gid))
+    except Exception as _ex:
+        _log.debug('appeals: guild на claim: %s', _ex)
+    if cog is None or guild is None:
+        return False
+
+    async def _do():
+        try:
+            user = await bot.fetch_user(int(item['user_id']))
+        except Exception as _ex:
+            _log.debug('appeals: fetch_user на claim: %s', _ex)
+            return False
+        # 'opened' — доступ уже виден; 'deferred' — overwrite стоит, канал
+        # откроется участнику сразу после разбана (жёсткий бан)
+        opened, _ch = await cog._open_appeal_channel(guild, user)
+        ok = opened in ('opened', 'deferred')
+        # Объявление, кто ведёт дело: человек сразу понимает, к кому
+        # обращаться (владелец 2026-09-08: «вас будет обслуживать
+        # вот этот человек»). При deferred сообщение ляжет в комнату
+        # и дождётся возвращения после разбана.
+        if ok and _ch is not None and reviewer:
+            try:
+                await _ch.send(
+                    f"🤝 **Вас будет обслуживать:** {reviewer} — "
+                    f"ваша апелляция у него в работе. Общайтесь здесь.")
+            except Exception as _ann_ex:
+                _log.debug('appeals: объявление в комнату (панель): %s',
+                           _ann_ex)
+        return ok
+
+    try:
+        return bool(_run_async(_do(), timeout=15))
+    except Exception as _ex:
+        _log.debug('appeals: канал по claim из панели: %s', _ex)
+        return False
+
+
+def apply_side_effects(bot, gid, item, accept, state=None, reviewer=None,
+                       reviewer_id=None):
+    """Разбан/снятие изоляции (при принятии) + ЛС — как в AppealView._resolve.
+
+    Плюс то, что раньше панель пропускала: дело «unban» и карточку
+    «Блокировка снята» с автором решения при принятии, и удаление
+    карточки апелляции при любом решении (владелец 2026-09-06)."""
     if not bot:
         return {'offline': True, 'unbanned': None, 'dm_attempted': False}
     unbanned = None
@@ -255,20 +338,63 @@ def apply_side_effects(bot, gid, item, accept):
                     mod = bot.get_cog('Moderation')
                     if mod is not None:
                         await mod._unisolate_member(guild, member)
-                        try:
-                            await member.timeout(None)
-                        except (discord.Forbidden, discord.HTTPException) as _e:
-                            _log.debug('appeals: таймаут при возврате: %s', _e)
+                    # муты снимаем тем же вызовом, что и кнопка кога в
+                    # AppealView._resolve: роль чат-мута, роль войс-мута,
+                    # server-mute и нативный таймаут — разом. Раньше панель
+                    # снимала только нативный таймаут, и мут-роли оставались
+                    # (расхождение путей, обход 2026-09-05).
+                    from services import mute_state
+                    await mute_state.clear_all_mutes(guild, member)
                 try:
                     _run_async(_soft_return(), timeout=15)
                 except Exception as _ex:
                     _log.debug('appeals: снятие изоляции из панели: %s', _ex)
             unbanned = _unban(guild, item['user_id'], item['id'])
+    # карточка «Блокировка снята» с автором решения — тот же маршрут, что
+    # кнопка «Принять» под карточкой в Discord
+    if accept:
+        try:
+            cog = bot.get_cog('Appeals')
+        except Exception as _ex:
+            _log.debug('appeals: get_cog: %s', _ex)
+            cog = None
+        if cog is not None and guild is not None:
+            try:
+                _run_async(cog._log_unban_decision(
+                    guild, item, reviewer_id or 0,
+                    reviewer or 'панель'), timeout=10)
+            except Exception as _ex:
+                _log.debug('appeals: карточка разбана из панели: %s', _ex)
     dm = _notify_user(bot, gid, item, accept, bool(unbanned), member_present)
-    return {'offline': False, 'unbanned': unbanned, 'dm_attempted': dm}
+    # решение вынесено — карточку обновляем (кто принял / исход), не удаляем
+    card_updated = False
+    try:
+        cog = bot.get_cog('Appeals')
+    except Exception as _ex:
+        _log.debug('appeals: get_cog: %s', _ex)
+        cog = None
+    if cog is not None:
+        _g = None
+        try:
+            _g = bot.get_guild(int(gid))
+        except Exception as _ex:
+            _log.debug('appeals: guild на обновлении карточки: %s', _ex)
+        try:
+            card_updated = bool(_run_async(
+                cog._finalize_appeal_card(
+                    _g, state, item,
+                    accept=bool(accept),
+                    unbanned=bool(unbanned),
+                    reviewer=reviewer,
+                ), timeout=10))
+        except Exception as _ex:
+            _log.debug('appeals: обновление карточки из панели: %s', _ex)
+    return {'offline': False, 'unbanned': unbanned, 'dm_attempted': dm,
+            'card_deleted': False, 'card_updated': card_updated}
 
 
-def resolve_panel(bot, gid, appeal_id, accept, reviewer, reply=None, now=None):
+def resolve_panel(bot, gid, appeal_id, accept, reviewer, reply=None, now=None,
+                  reviewer_id=None):
     """Решение по апелляции. (ok, err, http_code, payload)."""
     state = _state(gid)
     item, err = AP.resolve_appeal(state, int(appeal_id), bool(accept), reviewer,
@@ -276,7 +402,8 @@ def resolve_panel(bot, gid, appeal_id, accept, reviewer, reply=None, now=None):
     if err:
         return False, err, (404 if 'не найдена' in err else 409), None
     _save(gid, state)
-    effects = apply_side_effects(bot, gid, item, bool(accept))
+    effects = apply_side_effects(bot, gid, item, bool(accept), state=state,
+                                 reviewer=reviewer, reviewer_id=reviewer_id)
     status_text = ('принята (разбанен)' if (accept and effects.get('unbanned'))
                    else ('принята' if accept else 'отклонена'))
     return True, '', 200, {'item': item, 'effects': effects,
@@ -306,7 +433,6 @@ def history_view(state, status=None, query=None, limit=HISTORY_LIMIT):
             'user_id': str(item.get('user_id') or ''),
             'user_name': str(item.get('user_name') or ''),
             'text': str(item.get('text') or ''),
-            'link': str(item.get('link') or ''),
             'status': item.get('status'),
             'status_label': STATUS_LABELS.get(item.get('status'), '?'),
             'created_at': str(item.get('created_at') or '')[:16].replace('T', ' '),
@@ -360,6 +486,11 @@ def _csv_cell(text):
     return str(text).replace(';', ',').replace('\r', ' ').replace('\n', ' ')
 
 
+# Демо-текст карточки в предпросмотре (общий для авто-картинки и композита).
+DEMO_TEXT = ('Бан за ссылки — это был не спам, а ссылка на общий документ '
+             'с гайдом по ивенту. Могу пояснить, что произошло.')
+
+
 def register(ctx):
     app = ctx.app
     login_required = ctx.login_required
@@ -409,7 +540,7 @@ def register(ctx):
     def api_appeals_appearance(gid):
         """Оформление карточки апелляции: авто-картинка (тема), свой URL или off."""
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         ap = ABC.normalize_appearance(data)
         url = ap['url']
         if ap['mode'] == 'url' and url:
@@ -437,7 +568,7 @@ def register(ctx):
         """«Правила подачи»: кулдаун после отказа, порог напоминаний о висящих,
         обязательный комментарий при отказе, шаблоны причин отказа."""
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
 
         def _clamp_hours(value, lo, hi, fallback):
             try:
@@ -501,16 +632,61 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_appeals_card_preview(gid):
-        """Живой предпросмотр авто-карточки апелляции в выбранной теме."""
+        """Живой предпросмотр карточки апелляции.
+
+        Два режима:
+        • auto — рисуем демо-карточку в выбранной теме;
+        • url  — СЕРВЕР скачивает картинку по ссылке и отдаёт байты.
+          Прямая ссылка в <img> не работала (хотлинк-защита хостов и
+          смешанный контент) — владелец видел пустое место вместо
+          картинки (2026-09-05). Превью через тот же загрузчик, что и
+          отправка ботом: что видишь тут — то и уедет в Discord файлом.
+        """
+        mode = (request.args.get('mode') or 'auto').strip()
+        if mode == 'url':
+            url = (request.args.get('url') or '').strip()
+            from services.appeal_card import fetch_remote_image as _fri
+
+            def _fetch_sync(u):
+                # превью работает и без бота — свой короткий цикл
+                import asyncio as _aio
+                loop = _aio.new_event_loop()
+                try:
+                    return loop.run_until_complete(_fri(u))
+                finally:
+                    loop.close()
+
+            data, info = _fetch_sync(url)
+            if not data:
+                return jsonify({'success': False,
+                                'error': 'Картинку по ссылке скачать не вышло: ' + (info or 'неизвестно')}), 502
+            # Владелец (2026-09-05): тексты апелляции — внутри картинки,
+            # фото сверху, надписи ниже. Превью собирает ТОТ ЖЕ композит,
+            # что уедет в Discord: фото + карточка с демо-текстами.
+            png = None
+            try:
+                from services.appeal_card import render_url_card
+                png = render_url_card(
+                    data, appeal_id=7, user_name='Кипарис',
+                    text=(request.args.get('text') or DEMO_TEXT)[:400],
+                    theme=request.args.get('theme') or ABC.DEFAULT_APPEAL_THEME)
+            except Exception as _ex:
+                _log.debug('card-preview: композит не собрался: %s', _ex)
+            if png:
+                resp = Response(png, mimetype='image/png')
+                resp.headers['Cache-Control'] = 'no-store'
+                return resp
+            from services.appeal_card import _IMAGE_EXTS
+            ext = os.path.splitext(info or '')[1].lower()
+            mime = _IMAGE_EXTS.get(ext, 'image/png')
+            resp = Response(data, mimetype=mime)
+            resp.headers['Cache-Control'] = 'no-store'
+            return resp
         theme = request.args.get('theme')
-        text = (request.args.get('text') or
-                'Бан за ссылки — это был не спам, а ссылка на общий документ '
-                'с гайдом по ивенту. Прикладываю скрин переписки с согласованием.'
-                )[:400]
-        link = request.args.get('link') or 'https://i.imgur.com/demo-appeal-proof.png'
+        text = (request.args.get('text') or DEMO_TEXT)[:400]
         png = ABC.render_appeal_card(
             appeal_id=7, user_name='Кипарис', text=text,
-            link=link, theme=theme or ABC.DEFAULT_APPEAL_THEME)
+            theme=theme or ABC.DEFAULT_APPEAL_THEME)
         if not png:
             return jsonify({'success': False, 'error': 'Не удалось отрисовать пример'}), 500
         resp = Response(png, mimetype='image/png')
@@ -549,11 +725,15 @@ def register(ctx):
 
     @app.route('/api/guild/<gid>/appeals/resolve', methods=['POST'])
     @login_required
-    @role_required('admin')
+    @role_required('mod')
     def api_appeals_resolve(gid):
+        # Гейт «mod», а не «admin»: решение апелляции регулирует ACL «Бан»
+        # (панель → Доступ → Права команд), ровно как кнопки под карточкой
+        # в Discord. Раньше панель была строже кнопок: модератор, которому
+        # владелец явно выдал «Бан», в панели получал 403 (обход 2026-09-05).
         import web.app as appmod
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         raw_id = str(data.get('appeal_id') or '').strip()
         if not raw_id.isdigit():
             return jsonify({'success': False,
@@ -579,11 +759,22 @@ def register(ctx):
                 return jsonify({'success': False,
                                 'error': 'Нет права: «Бан» не разрешено вашей '
                                          'роли (настройка — «Права команд»)'}), 403
+            # Лимиты стаффа: принятие апелляции = расходка «unban»
+            from web.routes._common import _panel_limit_deny
+            _lim_denied = _panel_limit_deny(appmod.bot_instance, gid,
+                                            _member, 'unban')
+            if _lim_denied:
+                return jsonify({'success': False,
+                                'error': _lim_denied}), 429
         ok, err, code, payload = resolve_panel(
             appmod.bot_instance, gid, int(raw_id), accept,
-            session.get('username', '?'), reply=reply)
+            session.get('username', '?'), reply=reply,
+            reviewer_id=session.get('discord_id') or 0)
         if not ok:
             return jsonify({'success': False, 'error': err}), code
+        if accept:  # успешное принятие — расходка «unban» в счётчик
+            from web.routes._common import _panel_limit_record
+            _panel_limit_record(gid, _member, 'unban', 1)
         payload['success'] = True
         _notify(f'Апелляция #{raw_id}: {payload["status_text"]}')
         return jsonify(payload)
@@ -594,7 +785,7 @@ def register(ctx):
     def api_appeals_claim(gid):
         """Взять апелляцию в работу из панели / снять с себя (повтор)."""
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         raw_id = str(data.get('appeal_id') or '').strip()
         if not raw_id.isdigit():
             return jsonify({'success': False,
@@ -610,18 +801,30 @@ def register(ctx):
         if claim and str(claim.get('id')) != uid:
             return jsonify({'success': False,
                             'error': f'Уже в работе у {claim.get("name")}'}), 409
+        import web.app as appmod
         if claim:
             item['claimed_by'] = None
             claimed_by = ''
+            # снятие с работы — честно сказать в комнате, что ведущий ушёл
+            _post_room_note(
+                appmod.bot_instance, gid,
+                f'🌀 {uname} больше не ведёт вашу апелляцию — она снова '
+                f'в общей очереди модерации.')
         else:
             item['claimed_by'] = {'id': uid, 'name': uname,
                                   'at': datetime.now(UTC).isoformat()}
             claimed_by = uname
         _save(gid, state)
+        # взяли в работу → канал апелляции открывается забаненному (тот же
+        # маршрут, что кнопка в Discord; владелец 2026-09-06) + объявление
+        # «вас будет обслуживать …» (владелец 2026-09-08)
+        chan_opened = bool(claimed_by) and _open_channel_for_claim(
+            appmod.bot_instance, gid, item, reviewer=uname)
         _notify(f'Апелляция #{raw_id}: ' +
                 ('в работе у ' + uname if claimed_by else 'снята с работы'))
         return jsonify({'success': True, 'claimed': bool(claimed_by),
-                        'claimed_by': claimed_by})
+                        'claimed_by': claimed_by,
+                        'channel_opened': chan_opened})
 
     @app.route('/api/guild/<gid>/appeals/channel', methods=['POST'])
     @login_required
@@ -629,7 +832,7 @@ def register(ctx):
     def api_appeals_channel(gid):
         import web.app as appmod
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         state = _state(gid)
         ok, err, cid = set_log_channel(state, data.get('channel_id'))
         if not ok:

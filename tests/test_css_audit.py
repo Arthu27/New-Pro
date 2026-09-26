@@ -75,6 +75,11 @@ check(not _missing, f'все {len(_used)} использованных пере�
 
 print('== 4. Переменные шаблонов: определены или из JS ==')
 _css_vars = set(re.findall(r'--([a-z0-9-]+)\s*:', CSS))
+# auth-страницы (login/register) грузят auth.css — его переменные тоже живые
+_auth_css_path = os.path.join(ROOT, 'web', 'static', 'auth.css')
+if os.path.exists(_auth_css_path):
+    _css_vars |= set(re.findall(r'--([a-z0-9-]+)\s*:',
+                                open(_auth_css_path, encoding='utf-8').read()))
 _bad = []
 for f, src in TPL.items():
     own = set(re.findall(r'--([a-z0-9-]+)\s*:', src))

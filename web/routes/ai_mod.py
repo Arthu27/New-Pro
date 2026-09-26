@@ -2,14 +2,14 @@
 """AI-модерация API (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _notify_discord_sender, _fire_panel_notification,
+    _process_action, _log, _live_publish,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def _demo_cog():
     """В демо-режиме детекция и конфиг работают без бота (AIModeration(None))."""
@@ -41,13 +41,14 @@ def register(ctx):
             guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
             if request .method =='POST':
                 cfg =demo_cog .load_config (guild_id )
-                patch =request .get_json (silent =True )or {}
+                patch =_safe_json_obj()
                 for k ,v in patch .items ():
                     if isinstance (v ,dict )and k in cfg :
                         cfg [k ].update (v )
                     else :
                         cfg [k ]=v 
                 demo_cog .save_config (guild_id ,cfg )
+                _live_publish (guild_id ,'security')
                 return jsonify ({'ok':True })
             return jsonify (demo_cog .load_config (guild_id ))
         from cogs .ai_moderation import AIModeration 
@@ -59,13 +60,14 @@ def register(ctx):
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         if request .method =='POST':
             cfg =cog .load_config (guild_id )
-            patch =request .get_json (silent =True )or {}
+            patch =_safe_json_obj()
             for k ,v in patch .items ():
                 if isinstance (v ,dict )and k in cfg :
                     cfg [k ].update (v )
                 else :
                     cfg [k ]=v 
             cog .save_config (guild_id ,cfg )
+            _live_publish (guild_id ,'security')
             return jsonify ({'ok':True })
         return jsonify (cog .load_config (guild_id ))
 
@@ -115,8 +117,8 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         demo_cog =_demo_cog ()
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
-        d =request .get_json (silent =True )or {}
-        text =d .get ('text','')
+        d =_safe_json_obj()
+        text =str (d .get ('text')or '')
         if demo_cog is not None :
             cfg =demo_cog .load_config (guild_id )
             matches =demo_cog .detect_toxic (text ,cfg .get ('languages',['ru','tr','en']),cfg .get ('sensitivity',0.7 ))

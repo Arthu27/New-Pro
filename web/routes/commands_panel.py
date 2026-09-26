@@ -9,6 +9,7 @@
 /api/execute-command (admin+) на собственной странице формы.
 """
 from web.routes._common import (
+    _safe_json_obj,
     _log, request, jsonify,
 )
 
@@ -67,7 +68,7 @@ def register(ctx):
         """Вкл/выкл сразу список команд (кнопки «Вкл показанные / Выкл показанные»
         и «включить категорию целиком» — вместо кликов по одному)."""
         from services import command_switches as CSW
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         names = [str(n).strip() for n in (data.get('names') or [])
                  if str(n).strip()][:500]
         off = bool(data.get('disabled'))
@@ -117,7 +118,7 @@ def register(ctx):
         from services import menu_mode as MM
         if request.method == 'GET':
             return jsonify({'success': True, 'full': MM.is_full()})
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         if 'full' not in data:
             return jsonify({'success': False,
                             'error': 'Не указан режим (full)'}), 400
@@ -146,7 +147,7 @@ def register(ctx):
         """Вкл/выкл команду. Бот онлайн — команда мгновенно исчезает
         из slash-меню Discord (пересинк в фоне) и перестаёт отвечать."""
         from services import command_switches as CSW
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         name = str(data.get('name') or '').strip()
         off = bool(data.get('disabled'))
         if not name:

@@ -36,9 +36,6 @@ DICT_KEYED = ('audit_log.json', 'audit_log_backup.json', 'join_log.json',
               'warnings.json', 'night_summary.json', 'channel_routes.json',
               'tag_jail.json')
 
-# вложенные журналы: {'case': {ID_сервера: [...]}}
-NESTED_KEYED = {'mod_data.json': 'case'}
-
 # справочники записей с полем сервера: {ключ: {'guild_id': ID, ...}}
 VALUE_FIELD_KEYED = {'staff_apps.json': 'guild_id'}
 
@@ -83,15 +80,21 @@ def plan(keep: str) -> list:
                     actions.append(('json_key', (path, gid),
                                     f'журнал {name}: сервер {gid} ({n} записей)'))
             continue
-        if name in NESTED_KEYED:
-            section = NESTED_KEYED[name]
+        # mod_data.json: журналы дел живут в ДВУХ ключах сразу ('cases' —
+        # актуальный, 'case' — легаси); прогон по обоим, иначе записи
+        # выселённого сервера остаются в другом ключе.
+        if name == 'mod_data.json':
             try:
                 with open(path, encoding='utf-8') as f:
                     data = json.load(f)
             except Exception:
                 continue
-            nested = data.get(section) if isinstance(data, dict) else None
-            if isinstance(nested, dict):
+            if not isinstance(data, dict):
+                continue
+            for section in ('cases', 'case'):
+                nested = data.get(section)
+                if not isinstance(nested, dict):
+                    continue
                 for gid in sorted(k for k in nested if str(k).isdigit() and str(k) != keep):
                     n = len(nested[gid]) if hasattr(nested[gid], '__len__') else 1
                     actions.append(('json_nested_key', (path, section, str(gid)),

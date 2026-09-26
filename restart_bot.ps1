@@ -1,4 +1,4 @@
-# Tюm Python process'lerini ёldюr
+# Остановить все процессы Python
 Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force
 
 # 2 секунд bekle
@@ -7,5 +7,5 @@ Start-Sleep -Seconds 2
 # Bot dizinine geç (verilerin doğru yerde tutulması için)
 Set-Location -Path $PSScriptRoot
 
-# Yeni botu baшlat
+# Запустить бота заново
 python main.py

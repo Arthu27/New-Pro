@@ -134,6 +134,11 @@ print('\n[4] Эндпоинт /security-center/protection-reset:')
 from web.app import app as flask_app
 flask_app.config['TESTING'] = True
 client = flask_app.test_client()
+# демо-автологина больше нет (2026-09-08): сброс защиты — действие владельца,
+# входим по паролю панели из env этого теста
+_r = client.post('/login', data={'username': os.environ.get('PANEL_USER', 'owner'),
+                                 'password': os.environ.get('PANEL_PASSWORD', '')})
+assert _r.status_code in (200, 302), f'вход для сброса не удался: {_r.status_code}'
 
 # Сбросим всё в True снова, теперь через стор центра
 _w(f'data/security_{GID}.json', {'ai_spam': True, 'fake_account': True, 'link_scanner': True})

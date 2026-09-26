@@ -164,30 +164,42 @@ def duration_to_minutes(duration, unit):
     return duration
 
 
-async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total ):
-    """Записать варн в Discord-канал логов (-модерация → mod-log → …).
+async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total ,punishment_result=None ):
+    """Записать варн в канал «Наказания» (⚖・наказания → -модерация → …).
 
-    Раньше варн уходил только пользователю в DM и в файл — в лог-канале
-    сервера его не было видно вообще («логи не работают»).
+    Заказ владельца: варны и наказания по варнам — отдельным каналом,
+    не вперемешку с остальной модерацией. Канал не выбран в панели —
+    система сама вернётся к поиску по имени/наследию.
     Fail-safe: любые ошибки глушим, варн уже сохранён.
     """
     try :
-        from cogs .logs import ensure_log_channel ,_safe_send
-        ch =await ensure_log_channel (guild ,'модерация')
-        if not ch :
-            return
-        e =discord .Embed (color =0xE74C3C ,timestamp =datetime .now (timezone .utc ))
-        e .description =(
-        "## Предупреждение\n"
-        f"**{user.display_name}** · `{user.id}`\n\n"
-        f"Варн: **#{warn_id}** · Всего: **{total}**\n"
-        f"Модератор: **{moderator.display_name}**\n"
-        f"Причина: {reason or 'Не указана'}"
-        )
-        e .set_footer (text =f"{guild.name}")
-        await _safe_send (ch ,embed =e )
+        from cogs.logs import send_action_log
+        extra = f'Варн #{warn_id} · всего {total}'
+        if punishment_result:
+            extra += f'\nАвто-наказание: {punishment_result}'
+        await send_action_log(
+            guild, 'warn', user, moderator,
+            reason=reason or 'Не указана', extra=extra)
     except Exception as _ex:
         _log.debug("_log_warn_to_channel(): подавлено: %s", _ex)
+
+
+async def _log_punish_to_channel (guild ,user ,punishment_result ,total ):
+    """Отдельная запись об авто-наказании по варнам (⚖・наказания).
+
+    Лестница сработала — персонал видит это в канале наказаний сразу,
+    даже если сам варн писался другим путём (панель/AI/реакция).
+    Fail-safe: ошибки глушим.
+    """
+    if not punishment_result :
+        return
+    try :
+        from cogs.logs import send_action_log
+        await send_action_log(
+            guild, 'warn', user, None,
+            extra=f'Авто-наказание: {punishment_result}\nВарнов всего: {total}')
+    except Exception as _ex:
+        _log.debug("_log_punish_to_channel(): подавлено: %s", _ex)
 
 
 class warnings(commands.Cog):
@@ -304,6 +316,13 @@ class warnings(commands.Cog):
             # таймаута/бана: владелец сам выбрал, какими роли наказывать.
             from services import punish_roles as PR
             if action in ('mute', 'timeout'):
+                # чат-мут/таймаут глушат чат (таймаут — ещё и голос): снимаем
+                # любой висящий отдельный войс-мут, чтобы не было двух ограничений
+                try:
+                    from services import mute_state
+                    await mute_state.clear_voice_mute(guild, member)
+                except Exception as _mse:
+                    log.debug('авто-мут: очистка войс-мута: %s', _mse)
                 rid = PR.role_for(guild.id, 'mute')
                 role = guild.get_role(rid) if rid else None
                 if role is not None:
@@ -315,6 +334,33 @@ class warnings(commands.Cog):
                 until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
                 await member.timeout(until, reason=f'Авто-наказание: {warn_count} предупреждений')
                 return f'Мут {minutes} мин'
+            elif action == 'vmute':
+                # Войс-мут — ОТДЕЛЬНО от чат-мута: глушим ТОЛЬКО микрофон.
+                # Чат-мут/таймаут не трогаем (и не снимаем — это другое ограничение).
+                vrid = PR.role_for(guild.id, 'vmute')
+                vrole = guild.get_role(vrid) if vrid else None
+                if vrole is not None:
+                    import time as _time
+                    await member.add_roles(vrole, reason=f'Авто: {warn_count} предупреждений (войс-мут)')
+                    PR.add_temp(guild.id, member.id, vrole.id,
+                                _time.time() + max(60, minutes * 60))
+                    # роль войс-мута сама глушит микрофон в голосовом канале
+                    try:
+                        voice = getattr(member, 'voice', None)
+                        if voice is not None and getattr(voice, 'channel', None) is not None \
+                                and not getattr(voice, 'mute', False):
+                            await member.edit(mute=True, reason=f'Авто войс-мут: {warn_count} предупреждений')
+                    except Exception as _ve:
+                        log.debug('авто войс-мут: server-mute: %s', _ve)
+                    return f'Войс-мут: роль «{vrole.name}» {minutes} мин'
+                # роли нет — нативный server-mute (работает, только если участник в голосе)
+                voice = getattr(member, 'voice', None)
+                if voice is not None and getattr(voice, 'channel', None) is not None:
+                    await member.edit(mute=True, reason=f'Авто войс-мут: {warn_count} предупреждений')
+                    return f'Войс-мут {minutes} мин'
+                # вне голоса нативный server-mute поставить нельзя — мягкий фоллбэк:
+                # ставим роль войс-мута не выйдет (её нет), сообщаем модерации
+                return 'Войс-мут: участник не в голосовом канале и роль войс-мута не назначена'
             elif action == 'kick':
                 await member.kick(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Кик'
@@ -350,6 +396,19 @@ class warnings(commands.Cog):
         Возвращает: (warn_id, total, punishment_result)
         """
         guild = interaction.guild
+
+        # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05): не варним персонал своего
+        # уровня и выше — модеры не варят модеров/кураторов/админов.
+        try:
+            from services.staff_hierarchy import check as _hchk
+            _hok, _hdeny, _a, _t = _hchk(guild, interaction.user, user, 'warn')
+            if not _hok:
+                from cogs.embed_utils import error_embed as _err
+                await interaction.followup.send(embed=_err(_hdeny),
+                                                ephemeral=True)
+                return (0, len(self._get_warns(guild.id, user.id)), None)
+        except Exception as _hex:
+            log.debug(f"[WARNS] warn hierarchy: {_hex}")
 
         # Лимиты стаффа (владельца не трогаем): пер-рольные лимиты на варны
         try:
@@ -395,6 +454,13 @@ class warnings(commands.Cog):
         guild = interaction.guild
         await self._sync_warn_level_roles(guild, user, total)
 
+        # Варн → сброс прогрессии мута (снова с 1 часа)
+        try:
+            from services.mute_progression import reset_on_warn
+            reset_on_warn(guild.id, user.id)
+        except Exception as _ex:
+            _log.debug("add_warn() mute_progression: %s", _ex)
+
         # Лимиты: фиксируем успешный варн в дневном счётчике
         try:
             from services.staff_limits import record_hit as _sl_rec
@@ -404,7 +470,7 @@ class warnings(commands.Cog):
 
         # Уведомление панели о варне (веб/Discord/email — в фоне)
         try:
-            from cogs.ticket import _notify_panel_ticket_event as _np
+            from services.panel_notify import notify_panel_event as _np
             _np(interaction, 'warn',
                 f"Предупреждение: {user.display_name}",
                 f"Модератор: {interaction.user.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}")
@@ -415,13 +481,11 @@ class warnings(commands.Cog):
         await _log_warn_to_channel (guild ,user ,interaction .user ,reason ,warn_id ,total )
 
         # DM пользователю
-        import json, os
+        # чтение кастомного текста DM — в рабочем потоке (файл не блокирует loop)
+        from services.async_io import load_json_async
         dm_file = f'data/warn_dm_{guild.id}.json'
-        custom_dm = None
-        if os.path.exists(dm_file):
-            with open(dm_file, 'r', encoding='utf-8') as df:
-                dm_cfg = json.load(df)
-            custom_dm = dm_cfg.get('message')
+        dm_cfg = await load_json_async(dm_file, {}, log=_log) or {}
+        custom_dm = dm_cfg.get('message')
 
         if custom_dm:
             msg = custom_dm.replace('{user}', user.display_name).replace('{reason}', reason or 'Не указана').replace('{mod}', interaction.user.display_name).replace('{сервер}', guild.name)
@@ -447,6 +511,8 @@ class warnings(commands.Cog):
         except Exception as _pun_e:
             log.warning(f"[WARN] Авто-наказание не применено: {_pun_e}")
             punishment_result = None
+        if punishment_result:
+            await _log_punish_to_channel(guild, user, punishment_result, total)
         return warn_id, total, punishment_result
 
     # ── /warnings ────────────────────────────────────────────────────────
@@ -481,9 +547,39 @@ class warnings(commands.Cog):
 
     # ── /unwarn ─────────────────────────────────────────────────────────
     @app_commands.command(name="unwarn", description="Снять последнее предупреждение у пользователя")
-    @app_commands.checks.has_permissions(moderate_members=True)
     async def unwarn(self, interaction, user: discord.Member):
         """Снять последнее предупреждение у пользователя"""
+        # Права решает владелец через панель (ACL «Снять варн»), а не Discord.
+        try:
+            from services.permission_acl import check_action as _acl, \
+                allowed_roles_for_action as _allowed
+            if not _acl(interaction.guild_id, interaction.user, 'unwarn'):
+                # ACL на «unwarn» ещё никто не настраивал и другие варн-права
+                # тоже пусты → не превращаем снятие в кнопку ни для кого:
+                # дублируем старое поведение (Discord-модерация).
+                _legacy = (not _allowed(interaction.guild_id, 'unwarn')
+                           and not _allowed(interaction.guild_id, 'warn'))
+                _ok = _legacy and getattr(
+                    getattr(interaction.user, 'guild_permissions', None),
+                    'moderate_members', False)
+                if not _ok:
+                    await interaction.response.send_message(
+                        '🚫 Снятие варнов тебе не выдано (панель → Доступ → '
+                        'Права команд → Классические разрешения → «Снять варн»).',
+                        ephemeral=True)
+                    return
+        except Exception as _acl_e:
+            log.debug(f"[WARNS] unwarn acl: {_acl_e}")
+        # ИЕРАРХИЯ: персонал не снимает варны персоналу своего уровня и выше
+        try:
+            from services.staff_hierarchy import check as _hchk
+            _hok, _hdeny, _a, _t = _hchk(interaction.guild,
+                                         interaction.user, user, 'unwarn')
+            if not _hok:
+                await interaction.response.send_message(_hdeny, ephemeral=True)
+                return
+        except Exception as _hex:
+            log.debug(f"[WARNS] unwarn hierarchy: {_hex}")
         warns = self._get_warns(interaction.guild.id, user.id)
         if not warns:
             e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
@@ -504,6 +600,16 @@ class warnings(commands.Cog):
         # сняли варн — уровень упал: пересчитать роль уровня (снять/выдать)
         await self._sync_warn_level_roles(interaction.guild, user, total)
 
+        # Канал «Наказания»: снятие варна тоже туда (полная картина по варнам)
+        try:
+            from cogs.logs import send_action_log
+            await send_action_log(
+                interaction.guild, 'unwarn', user, interaction.user,
+                reason=removed.get('reason', 'Не указана'),
+                extra=f"Снято #{removed.get('id')} · осталось {total}")
+        except Exception as _ulog_e:
+            log.debug(f"[WARNS] лог снятия: {_ulog_e}")
+
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         e.description = (
             "## Снятие предупреждения\n"
@@ -517,7 +623,28 @@ class warnings(commands.Cog):
         e.set_footer(text=f"{interaction.guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    # ── add_warning (для AI-modератора, без interaction) ─────────────────
+    async def remove_last_warning(self, user, moderator):
+        """Снять ПОСЛЕДНИЙ варн (панель/бот): роль уровня пересчитывается,
+        дело пишется в лог. Возвращает (removed, total) или (None, total)."""
+        guild = user.guild
+        warns = self._get_warns(guild.id, user.id)
+        if not warns:
+            return None, 0
+        removed = warns.pop()
+        self._save_warns(guild.id, user.id, warns)
+        total = len(warns)
+        await self._sync_warn_level_roles(guild, user, total)
+        try:
+            from cogs.logs import send_action_log
+            await send_action_log(
+                guild, 'unwarn', user, moderator,
+                reason=removed.get('reason', 'Не указана'),
+                extra=f"Снято #{removed.get('id')} · осталось {total}")
+        except Exception as _ulog_e:
+            log.debug(f"[WARNS] лог снятия (общий): {_ulog_e}")
+        return removed, total
+
+    # ── add_warning (для AI-модератора, без interaction) ─────────────────
     async def add_warning(self, user: discord.Member, moderator: discord.Member, reason: str = None):
         """Добавить предупреждение без interaction"""
         guild = user.guild
@@ -545,6 +672,13 @@ class warnings(commands.Cog):
 
         # Роли уровня варна (путь панели/AI-модератора — тот же переезд)
         await self._sync_warn_level_roles(user.guild, user, total)
+
+        # Варн → сброс прогрессии мута (снова с 1 часа)
+        try:
+            from services.mute_progression import reset_on_warn
+            reset_on_warn(guild.id, user.id)
+        except Exception as _ex:
+            _log.debug("add_warning() mute_progression: %s", _ex)
 
         # Лимиты: фиксируем успешный варн в дневном счётчике
         try:
@@ -584,7 +718,9 @@ class warnings(commands.Cog):
             _log.debug("add_warning(): подавлено: %s", _ex)
 
         try:
-            await self.apply_warn_punishment(guild, user, total)
+            _pun_res = await self.apply_warn_punishment(guild, user, total)
+            if _pun_res:
+                await _log_punish_to_channel(guild, user, _pun_res, total)
         except Exception as _pun_e:
             log.warning(f"[WARN] Авто-наказание не применено: {_pun_e}")
         return warn_id, total

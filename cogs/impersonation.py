@@ -178,7 +178,21 @@ class AntiFake(commands.Cog):
     # Детекция
     # ────────────────────────────────────────────────────────────
     def _protected_members(self, guild: discord.Guild):
-        """Администрация сервера: владелец + админы/модераторы."""
+        """Администрация сервера: владелец + админы/модераторы.
+
+        Кэш 30с на гильдию — иначе on_member_update/on_message
+        сканируют ВСЕХ участников на каждый ник/сообщение и
+        блокируют event loop.
+        """
+        gid = getattr(guild, 'id', 0) or 0
+        now = time.monotonic()
+        cache = getattr(self, '_prot_cache', None)
+        if cache is None:
+            self._prot_cache = {}
+            cache = self._prot_cache
+        hit = cache.get(gid)
+        if hit and (now - hit[0]) < 30.0:
+            return hit[1]
         out = []
         for m in guild.members:
             if m.bot:
@@ -186,6 +200,7 @@ class AntiFake(commands.Cog):
             if m == guild.owner or m.guild_permissions.administrator \
                     or m.guild_permissions.manage_guild or m.guild_permissions.moderate_members:
                 out.append(m)
+        cache[gid] = (now, out)
         return out
 
     def protected_names(self, guild: discord.Guild):
@@ -440,6 +455,11 @@ class AntiFake(commands.Cog):
         punished = ""
         if cfg.get('strike_timeout') and total >= STRIKE_LIMIT:
             try:
+                try:
+                    from services import mute_state
+                    await mute_state.clear_voice_mute(message.guild, member)
+                except Exception as _mse:
+                    _log.debug('antifake timeout: очистка войс-мута: %s', _mse)
                 await member.timeout(datetime.now(timezone.utc) + timedelta(minutes=60),
                                      reason="[AntiFake] замаскированная реклама (3 страйка)")
                 punished = " · получен таймаут 60 мин"

@@ -40,7 +40,11 @@ class FakeChannel:
         self.mention = f'<#{cid}>'; self.topic = None; self.category = None
         self.members = []; self.sent = []
     async def send(self, content=None, embed=None, **kw):
-        self.sent.append(embed or content); return object()
+        f = kw.get('file')
+        e = embed
+        if e is None and f is not None:
+            e = getattr(getattr(f, 'fp', None), '_log_embed', None)
+        self.sent.append(e or content); return object()
 class FakeRole:
     def __init__(self, rid, name, perms=None, color=0x9B59B6):
         self.id = rid; self.name = name; self.mention = f'<@&{rid}>'
@@ -134,15 +138,15 @@ def last_embed(chname):
     return ch.sent[-1] if ch and ch.sent else None
 
 def desc_of(e):
-    """Текст лог-эмбеда для проверок.
-
-    В канале Discord логи уходят как "только картинка" (_safe_send очищает
-    description), но исходный текст сохраняется в e._hakumo_log_desc.
-    Если карточка не отрендерилась (fallback) — возвращаем description как есть.
-    """
+    """Текст лог-эмбеда: title + description + поля (нативный Discord layout)."""
     if not e:
         return ''
-    return getattr(e, '_hakumo_log_desc', None) or e.description or ''
+    parts = [getattr(e, '_hakumo_log_desc', None) or '',
+             e.title or '', e.description or '']
+    for f in getattr(e, 'fields', None) or []:
+        parts.append(getattr(f, 'name', '') or '')
+        parts.append(getattr(f, 'value', '') or '')
+    return ' '.join(parts)
 
 print('== бан / кик / разбан с модератором и причиной ==')
 mod = FakeUser(50, 'TestMod')
@@ -153,9 +157,13 @@ e = last_embed('-модерация')
 check(e and 'Пользователь заблокирован' in desc_of(e) and 'TestMod' in desc_of(e)
       and 'Флуд и реклама' in desc_of(e) and 'Причина' in desc_of(e),
       f'бан: модератор + причина в эмбеде')
-check('Hakumo Log' in getattr(e, '_hakumo_log_footer', ''), 'футер «Hakumo Log · …» сохранён (в канале — только картинка)')
-check(e.description is None and e.image and e.image.url == 'attachment://hakumo_log_card.jpg',
-      'в канал уходит ТОЛЬКО карточка-картинка (description очищен)')
+_ft = (e.footer.text if e.footer else '') or getattr(e, '_hakumo_log_footer', '')
+check('Hakumo Log' in _ft, 'футер «Hakumo Log · …» на эмбеде')
+check(e.title and 'Пользователь заблокирован' in e.title,
+      'заголовок — нативный title Discord, не картинка')
+check(e.thumbnail and e.thumbnail.url, 'профиль участника — аватар справа')
+check(not e.image or 'hakumo_log_card' not in str(getattr(e.image, 'url', '') or ''),
+      'сгенерированная карточка не прикладывается')
 
 guild.audit_entries = [FakeAuditEntry(77, mod, None)]
 run(cog.on_member_unban(guild, victim))
@@ -178,9 +186,13 @@ msg.attachments = [object(), object()]
 run(cog.on_message_delete(msg))
 e = last_embed('-сообщения')
 check(e and 'Сообщение удалено' in desc_of(e) and 'удалённый текст' in desc_of(e)
-      and 'Вложений удалено' in desc_of(e) and 'Отправлено' in desc_of(e),
+      and 'Вложений' in desc_of(e) and 'Когда' in desc_of(e),
       'удаление: текст + вложения + дата')
 check(e.thumbnail and e.thumbnail.url, 'удаление: аватарка автора')
+_ids = [getattr(f, 'value', '') or '' for f in (e.fields or [])]
+check(any('<#' in v for v in _ids) and not any(
+    __import__('re').search(r'`\d{15,25}`', v) for v in _ids),
+      'удаление: канал кликабельный, без сырого ID')
 
 before = FakeMessage(1002, 'было это', author, guild.channels[108], guild)
 after = FakeMessage(1002, 'стало другое', author, guild.channels[108], guild)
@@ -196,7 +208,8 @@ m_after.timed_out_until = NOW + datetime.timedelta(minutes=30)
 guild.audit_entries = [FakeAuditEntry(91, mod, 'оскорбления')]
 run(cog.on_member_update(m_before, m_after))
 e = last_embed('-модерация')
-check(e and 'замьючен' in desc_of(e) and 'Действует до' in desc_of(e) and 'оскорбления' in desc_of(e),
+check(e and 'выдали мут' in desc_of(e) and 'Срок' in desc_of(e) and 'оскорбления' in desc_of(e)
+      and 'TestMod' in desc_of(e),
       'таймаут: эмбед с модератором, причиной и сроком')
 
 print('== каналы / роли / инвайты / сервер ==')
@@ -305,6 +318,51 @@ tasks_before = len(asyncio.all_tasks(loop)) if hasattr(asyncio, 'all_tasks') els
 run(once_cog.on_ready())
 tasks_after = len(asyncio.all_tasks(loop)) if hasattr(asyncio, 'all_tasks') else 0
 check(tasks_after <= tasks_before + 1, 'второй on_ready НЕ плодит дубли цикла')
+
+# ═══ Свой фон-фото карточек логов (владелец 2026-09-05: «данные в фото
+# внутри, а сама фото — как задний фон») ═══
+print('== фон-фото карточек логов ==')
+from services.log_card import (get_log_cards_cfg, save_log_cards_cfg,  # noqa: E402
+                               render_log_card, fetch_bg_direct,
+                               get_bg_bytes_sync, compact_log_photo)
+_saved = save_log_cards_cfg(777, {'theme': 'hakumo',
+                                  'bg_url': 'https://pin.it/7jxEf3HAx'})
+check(_saved.get('bg_url') == 'https://pin.it/7jxEf3HAx',
+      'bg_url сохраняется в оформлении логов')
+check(get_log_cards_cfg(777).get('bg_url') == 'https://pin.it/7jxEf3HAx',
+      'bg_url читается обратно')
+check(save_log_cards_cfg(778, {'bg_url': 'http://127.0.0.1/x.png'}).get('bg_url') == '',
+      'локальные адреса в bg_url отбрасываются')
+check(get_log_cards_cfg(779).get('bg_url') == '',
+      'по умолчанию фона-фото нет — звёздный фон')
+
+import io as _bio
+from PIL import Image as _PILImage
+_bbuf = _bio.BytesIO()
+_PILImage.new('RGB', (900, 600), (18, 26, 52)).save(_bbuf, format='PNG')
+_ph_bytes = _bbuf.getvalue()
+_jpg = render_log_card('mod', 'Выдан мут (чат + войс)',
+                       [('Пользователь', 'GhostBlade'),
+                        ('Модератор', 'Sonya'), ('Срок', '30 минут')],
+                       cat_name='модерация', time_str='20:41 UTC',
+                       bg_bytes=_ph_bytes)
+check(bool(_jpg) and _jpg[:2] == b'\xff\xd8' and len(_jpg) > 20000,
+      'карточка лога с фото-фоном рисуется (JPEG)')
+_ban = compact_log_photo(_ph_bytes)
+check(bool(_ban) and _ban[:2] == b'\xff\xd8', 'компактное фото лога — JPEG без стекла')
+_im = _PILImage.open(_bio.BytesIO(_ban))
+check(_im.size[0] <= 1200 and _im.size[1] <= 400 and _im.size[0] / _im.size[1] >= 2.5,
+      f'фото — компактная полоса {_im.size}, не полное')
+check(render_log_card('mod', 'Т', [('A', 'b')], cat_name='модерация',
+                       bg_bytes=b'garbage') is not None,
+      'битый фон-фото не роняет карточку — звёздный фон')
+
+try:
+    check(fetch_bg_direct('') is None and fetch_bg_direct('ftp://x') is None,
+          'пустой/не-http фон не качается')
+    check(get_bg_bytes_sync('') is None, 'пустой bg_url — без загрузки, кэш молчит')
+except ModuleNotFoundError:
+    check(True, 'fetch_bg_direct: нет requests — проверка сети пропущена')
 
 loop.close()
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')

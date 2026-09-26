@@ -66,6 +66,7 @@ def clean_demo_data():
             f'data/rules_{gid}.json', f'data/xp_{gid}.json',
             f'data/leveling_{gid}.json', f'data/antiraid_{gid}.json',
             f'data/security_{gid}.json', f'data/guardian_{gid}.json',
+            f'data/bot_roles_{gid}.json',   # снимки ролей моста (services/bot_bridge)
         ]
     gid_files += ['data/demo_channels.json', 'data/demo_cog_states.json']
     for path in gid_files:
@@ -342,15 +343,24 @@ audit = {
 }
 
 # ── 3. История решений (mod_data) ───────────────────────────────────────
+# Дела несут срок (duration_minutes, минуты) и «до какого времени» (until):
+# страница «История решений» показывает это колонкой «Длительность».
+# Варнов тут НЕТ: как и в бою, варны живут только в warnings.json (их пишет
+# warnings-модуль), mod_data — дела наказаний из /modpanel.
 mod_data = {'case': {GID: [
-    {'user_id': '823456789012345680', 'mod_id': 'lina.mod', 'action': 'mute',
-     'reason': 'Обход мьюта вторым аккаунтом', 'duration_minutes': 720, 'timestamp': iso(1, 22, 45)},
-    {'user_id': '523456789012345678', 'mod_id': 'sonya.staff', 'action': 'warn',
-     'reason': 'Разжигание конфликта после предупреждения', 'timestamp': iso(2, 21, 15)},
-    {'user_id': '723456789012345679', 'mod_id': 'artem.mods', 'action': 'mute',
-     'reason': 'Спам ссылками на сторонний сервер', 'duration_minutes': 120, 'timestamp': iso(5, 15, 5)},
-    {'user_id': '823456789012345680', 'mod_id': 'artem.mods', 'action': 'warn',
-     'reason': 'Оскорбления в адрес модерации', 'timestamp': iso(8, 19, 50)},
+    {'user_id': '923456789012345681', 'mod_id': 'lina.mod', 'mod_name': 'Lina',
+     'action': 'timeout', 'reason': 'Флуд стикерами после предупреждения',
+     'duration_minutes': 120, 'until': (NOW + timedelta(minutes=74)).isoformat(),
+     'timestamp': iso_recent(46)},
+    {'user_id': '823456789012345680', 'mod_id': 'lina.mod', 'mod_name': 'Lina',
+     'action': 'mute', 'reason': 'Обход мьюта вторым аккаунтом',
+     'duration_minutes': 720, 'timestamp': iso(1, 22, 45)},
+    {'user_id': '723456789012345679', 'mod_id': 'artem.mods', 'mod_name': 'Artem',
+     'action': 'mute', 'reason': 'Спам ссылками на сторонний сервер',
+     'duration_minutes': 120, 'timestamp': iso(5, 15, 5)},
+    {'user_id': '723456789012345679', 'mod_id': 'sonya.staff', 'mod_name': 'Sonya',
+     'action': 'ban', 'reason': 'Реклама сторонних серверов повторно',
+     'timestamp': iso(9, 12, 30)},
 ]}}
 
 # ── 3b. Исторические события за 90 дней (для календаря активности) ───────
@@ -695,11 +705,12 @@ staff_apps = {
 }
 
 # Роли наказаний: уровни варнов НЕ фиксированные — владелец добавляет сам.
-# Для демо-витрины кладём три «своих» уровня (ролей в демо нет — селекты
-# пустые, это и показывает свободу настройки).
+# Для демо-витрины кладём три «своих» уровня. Роль БАНА выбрана (9021):
+# бан из панели работает через роль (владелец 2026-09-08) — в демо сразу
+# видно действие, без предупреждения «не выбрана роль бана».
 punish_roles = {
     GID: {
-        'roles': {},
+        'roles': {'ban': 9021},
         'warn_levels': [2, 5, 8],
         'temps': {},
     },
@@ -981,32 +992,6 @@ try:
 except Exception as _ex:
     print('маппинг ролей не засеян:', _ex)
 
-# ── Демо-тикеты для Про-аналитики (файл, который читает /api/analytics/advanced) ──
-try:
-    _cats = ['Модерация', 'Техподдержка', 'Жалобы', 'Другое']
-    _mods = ['sonya.staff', 'artem.mods', 'lina.mod', None]
-    _users = ['toxicguy', 'spammer_228', 'caps_forever', 'night_flooder', 'emoji_spam']
-    _tk = {}
-    for i in range(26):
-        days_ago = (i * 5) % 30
-        opened = NOW - timedelta(days=days_ago, hours=i % 9)
-        closed = opened + timedelta(hours=1 + (i % 30))
-        status = 'closed' if i % 4 else 'open'
-        _tk['tk-demo-%02d' % i] = {
-            'created_at': opened.isoformat(),
-            'closed_at': closed.isoformat() if status == 'closed' else None,
-            'status': status,
-            'category': _cats[i % len(_cats)],
-            'closed_by': _mods[i % len(_mods)] if status == 'closed' else None,
-            'user_name': _users[i % len(_users)],
-            'description': 'Демо-обращение №%d для Про-аналитики' % (i + 1),
-        }
-    with open('data/ai_tickets_demo.json', 'w', encoding='utf-8') as _f:
-        json.dump(_tk, _f, ensure_ascii=False, indent=2)
-    print('записано: демо-тикеты для Про-аналитики (%d шт)' % len(_tk))
-except Exception as _ex:
-    print('демо-тикеты не засеяны:', _ex)
-
 # ── Антифейк: конфиг + страйки рекламы (файлы кога) ──
 try:
     _af_cfg = {
@@ -1069,10 +1054,10 @@ try:
 
     _ap = _AP.empty_state()
 
-    def _mk(days_ago, hour, uid, name, text, link=None):
+    def _mk(days_ago, hour, uid, name, text):
         _dt = (NOW - timedelta(days=days_ago)).replace(hour=hour, minute=0,
                                                       second=0, microsecond=0)
-        _item, _err = _AP.create_appeal(_ap, uid, name, text, _dt, link=link)
+        _item, _err = _AP.create_appeal(_ap, uid, name, text, _dt)
         return _item
 
     def _res(days_ago, hour, uid, name, text, accept, who, reply):
@@ -1081,7 +1066,7 @@ try:
                                                       second=0, microsecond=0)
         _AP.resolve_appeal(_ap, _it['id'], accept, who, _rv, reply=reply)
 
-    # очередь: три свежих, одна с ссылкой-доказательством
+    # очередь: три свежих
     _mk(0, 11, '523456789012345678', 'NightHawk_77',
         'Меня замутили на сутки за «флуд», но я просто отвечал троим подряд '
         'в приветственном канале — в логах видно, что сообщения были по делу. '
@@ -1089,8 +1074,7 @@ try:
     _mk(1, 19, '723456789012345679', 'Кипарис',
         'Бан за ссылки — это был не спам, а ссылка на наш общий документ '
         'с гайдом по ивенту, модератор мог принять за рекламу. '
-        'Прикладываю скрин переписки с согласованием.',
-        link='https://i.imgur.com/demo-appeal-proof.png')
+        'Могу пояснить, что именно за документ.')
     _mk(2, 14, '823456789012345670', 'turbo.fox',
         'Сняли роль ивентёра без объяснений, хотя нарушений я не допускал. '
         'Если решение не изменится — прошу хотя бы комментарий, за что именно.')

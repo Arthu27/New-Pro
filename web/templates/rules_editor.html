@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Правила</div>
+    <div class="eyebrow"> Настройки </div>
     <h1>Правила сервера</h1>
     <p class="lead">Текст, до двух ссылок на правило, картинка и миниатюра. Публикация эмбедами или одним V2-сообщением от вебхука «Правила сервера».</p>
   </div>
@@ -301,7 +301,7 @@
 .pv-tab i { font-size: 11.5px; }
 
 /* ── V2-превью (как в Discord) ── */
-.v2p { border: 1px solid var(--line); border-left: 4px solid var(--v2c, #4f46e5); border-radius: 12px; padding: 14px 16px; background: color-mix(in srgb, var(--text) 3%, transparent); display: flex; flex-direction: column; gap: 9px; }
+.v2p { border: 1px solid var(--line); border-left: 4px solid var(--v2c, #4d9fff); border-radius: 12px; padding: 14px 16px; background: color-mix(in srgb, var(--text) 3%, transparent); display: flex; flex-direction: column; gap: 9px; }
 .v2p-head { font-size: 15px; font-weight: 800; color: var(--text); }
 .v2p-intro { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
 .v2p-sep { height: 1px; background: color-mix(in srgb, var(--text) 8%, transparent); }
@@ -326,7 +326,7 @@
 .pub-opt-sub { font-size: 11.5px; color: var(--text-3); line-height: 1.5; flex: 1; }
 .pub-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: inherit; }
 .pub-btn:hover { border-color: var(--ac); filter: brightness(1.12); }
-.pub-btn.accent { background: linear-gradient(135deg, var(--ac), color-mix(in srgb, var(--ac) 70%, #818cf8)); color: #fff; border: none; }
+.pub-btn.accent { background: linear-gradient(135deg, var(--ac), color-mix(in srgb, var(--ac) 70%, #4d9fff)); color: #fff; border: none; }
 .pub-btn.accent:hover { filter: brightness(1.1); box-shadow: 0 6px 18px color-mix(in srgb, var(--ac) 35%, transparent); }
 @media (prefers-reduced-motion: reduce) {
   .btn-add, .rule-input, .rule-field, .rule-row, .rule-del, .rule-move button, .pv-link { transition: none; }
@@ -364,7 +364,7 @@
         <div class="preview-card-bar" id="previewColorBar"></div>
         <div class="preview-card-body">
           <div class="pv-msg">
-            <span class="pv-ava"><span class="ph">A</span><img alt="" src="/static/brand/emblem-dragon.png" onerror="this.remove()"></span>
+            <span class="pv-ava"><span class="ph">A</span><img alt="" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" onerror="this.remove()"></span>
             <div style="flex:1;min-width:0">
               <div class="pv-bot-line"><span class="pv-bot-name">Hakumo</span><span class="pv-bot-badge"><i class="fas fa-robot"></i> BOT</span></div>
               <div class="pv-embed" id="pv-embed">
@@ -385,7 +385,7 @@
           <div class="preview-card-bar" id="pv2ColorBar"></div>
           <div class="preview-card-body">
             <div class="pv-msg">
-              <span class="pv-ava"><span class="ph">П</span><img alt="" src="/static/brand/emblem-dragon.png" onerror="this.remove()"></span>
+              <span class="pv-ava"><span class="ph">П</span><img alt="" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" onerror="this.remove()"></span>
               <div style="flex:1;min-width:0">
                 <div class="pv-bot-line"><span class="pv-bot-name" id="pv2HookName">Правила сервера</span><span class="pv-bot-badge"><i class="fas fa-paper-plane"></i> Вебхук</span></div>
                 <div class="v2p" id="pv2"></div>
@@ -401,7 +401,7 @@
       <div class="rules-pub-fields">
         <div class="rule-line"><i class="fas fa-heading"></i><input class="rule-field" id="rules-title" placeholder="Заголовок эмбеда: Правила сервера" aria-label="Заголовок эмбеда" data-meta="title"></div>
         <div class="rule-line"><i class="fas fa-align-left"></i><input class="rule-field" id="rules-intro" placeholder="Вступление: Нарушение правил ведёт к наказанию" aria-label="Вступление эмбеда" data-meta="intro"></div>
-        <div class="rule-line"><i class="fas fa-palette"></i><input class="rule-field" id="rules-color" type="color" value="#4f46e5" aria-label="Цвет эмбеда" data-meta="color" style="max-width:70px;padding:4px 6px"></div>
+        <div class="rule-line"><i class="fas fa-palette"></i><input class="rule-field" id="rules-color" type="color" value="#4d9fff" aria-label="Цвет эмбеда" data-meta="color" style="max-width:70px;padding:4px 6px"></div>
         <div class="rule-line"><i class="fas fa-wand-magic-sparkles"></i><select class="rule-field" id="rules-img-theme" aria-label="Тема авто-картинок" data-meta="img_theme" style="flex:1">
           <option value="violet">Авто-картинки: тёмный фиолет</option>
           <option value="night">Авто-картинки: ночная</option>
@@ -441,7 +441,7 @@
     </div>
   </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
   'use strict';
   var rules = [];
@@ -466,7 +466,7 @@
     var cEl = document.getElementById('rules-color');
     var title = tEl ? tEl.value.trim() : 'Правила сервера';
     var intro = iEl ? iEl.value.trim() : '';
-    var color = cEl ? cEl.value : '#4f46e5';
+    var color = cEl ? cEl.value : '#4d9fff';
     var pt = document.getElementById('preview-title');
     var pi = document.getElementById('preview-intro');
     var pb = document.getElementById('previewColorBar');
@@ -546,7 +546,7 @@
   }
   function curColor() {
     var c = document.getElementById('rules-color');
-    return c ? String(c.value || '#4f46e5').replace('#', '') : '4f46e5';
+    return c ? String(c.value || '#4d9fff').replace('#', '') : '4d9fff';
   }
   function curTitle() {
     var t = document.getElementById('rules-title');
@@ -575,9 +575,24 @@
     }, delay || 350);
   }
 
+  /* Каналы для селекта «Публикация в Discord» тянем ОДНОВРЕМЕННО со списком
+     серверов: раньше запрос уходил только после /api/guilds и ещё двух
+     запросов loadRules — селект доезжал последним. */
+  var _chansPrefetch = null;
+  function channelsFor(gid) {
+    if (!gid) return Promise.resolve([]);
+    if (_chansPrefetch && _chansPrefetch.gid === String(gid)) return _chansPrefetch.p;
+    var p = fetch('/api/guild/' + gid + '/channels')
+      .then(function (r) { return r.json(); })
+      .catch(function () { return []; });
+    _chansPrefetch = { gid: String(gid), p: p };
+    return p;
+  }
+
   /* ── Серверы ── */
   async function loadGuilds() {
     var sel = document.getElementById('guild-select');
+    channelsFor(selectedGuild);
     try {
       var r = await fetch('/api/guilds');
       var guilds = await r.json();
@@ -598,6 +613,9 @@
   /* ── Загрузка правил, меты и каналов ── */
   async function loadRules() {
     if (!selectedGuild) return;
+    /* Каналы тянем СРАЗУ, параллельно с правилами и метой: раньше запрос
+       шёл третьим по очереди, и селект канала доезжал на ~800 мс позже. */
+    var chansP = channelsFor(selectedGuild);
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/rules');
       var d = await r.json();
@@ -621,19 +639,20 @@
       syncPreviewMeta();
     } catch (e) { /* мета не критична */ }
     try {
-      var cr = await fetch('/api/guild/' + selectedGuild + '/channels');
-      var chD = await cr.json();
+      var chD = await chansP;
       var chans = Array.isArray(chD) ? chD : (chD.channels || []);
       var chSel = document.getElementById('rules-channel');
       var prev = chSel.value;
-      chSel.innerHTML = '<option value="">Выберите канал…</option>';
+      /* строку собираем целиком: += по одному option перечитывал весь список */
+      var optHtml = ['<option value="">Выберите канал…</option>'];
       chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
         .sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
         .forEach(function (c) {
           var chosen = prev || lastChannel;
           var s = String(c.id) === chosen ? ' selected' : '';
-          chSel.innerHTML += '<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>';
+          optHtml.push('<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>');
         });
+      chSel.innerHTML = optHtml.join('');
       if (!chSel.value && lastChannel) chSel.value = lastChannel;
       /* ничего не сохранено — берём первый текстовый канал:
          кнопка «Опубликовать» сразу рабочая, без тупика «выберите канал» */
@@ -702,7 +721,7 @@
     if (!box) return;
     var title = (document.getElementById('rules-title').value || '').trim() || 'Правила сервера';
     var intro = (document.getElementById('rules-intro').value || '').trim();
-    var color = (document.getElementById('rules-color').value || '#4f46e5').replace('#', '');
+    var color = (document.getElementById('rules-color').value || '#4d9fff').replace('#', '');
     var html = '<div class="v2p" style="--v2c:#' + esc(color) + '">';
     html += '<div class="v2p-head">' + esc(title) + '</div>';
     if (intro) html += '<div class="v2p-intro">' + esc(intro) + '</div>';

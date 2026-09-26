@@ -334,7 +334,8 @@ import re as _re
 import subprocess as _sp
 page_src = open(os.path.join(ROOT, 'web', 'templates', 'pagerduty.html'),
                 encoding='utf-8').read()
-_scripts = _re.findall(r'<script>(.*?)</script>', page_src, _re.S)
+# 2026-09-08: инлайн-скрипты несут nonce — тег с атрибутами
+_scripts = _re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', page_src, _re.S)
 check(len(_scripts) >= 1, 'inline-скрипт страницы извлечён')
 page_js = _scripts[-1].replace('{{ (guild_id|string)|tojson }}', '777')
 

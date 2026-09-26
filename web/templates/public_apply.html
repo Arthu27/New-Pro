@@ -2,7 +2,7 @@
 <html lang="ru" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Заявка в администрацию — Hakumo</title>
 <link rel="icon" href="/static/favicon.ico">
     <style>
@@ -11,23 +11,32 @@
       html { background: #0f1013; color-scheme: dark; }
       body { background: transparent; margin: 0; }
     </style>
-<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+<!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
+         только разобрав fonts.css и all.subset.css, и они встают в конец
+         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
+         820 мс до последнего шрифта). crossorigin обязателен даже для своего
+         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
+<link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
 <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
 <style>
   :root {
-    --bg: #05060a;
+    --bg:#0a0c12;
     --surface: #0d1019;
     --surface2: #121624;
     --line: #1d2333;
     --line2: #2a3247;
     --text: #e8ecf6;
     --text2: #9aa3ba;
-    --text3: #5f6880;
-    --ac: #4f46e5;
-    --ac2: #7c3aed;
+    --text3: #767f99;
+    --ac: #5e5ce6;
+    --ac2: #0a84ff;
     --ac3: #22d3ee;
-    --ac-grad: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #22d3ee);
+    --ac-grad: linear-gradient(135deg, #6cb8ff, #0a84ff 55%, #5e5ce6);
     --ac-soft: rgba(79, 70, 229, 0.12);
     --ac-line: rgba(79, 70, 229, 0.35);
     --ok: #4ade80;
@@ -110,7 +119,7 @@
     font-family: 'Unbounded', sans-serif;
     font-size: 26px; font-weight: 700; letter-spacing: .02em;
     margin: 16px 0 6px;
-    background: linear-gradient(90deg, #818cf8, #a78bfa 30%, #22d3ee 50%, #a78bfa 70%, #818cf8);
+    background: linear-gradient(90deg, #6cb8ff, #0a84ff 30%, #e8b64c 50%, #0a84ff 70%, #6cb8ff);
     background-size: 220% 100%;
     -webkit-background-clip: text; background-clip: text; color: transparent;
     animation: gradFlow 7s linear infinite;
@@ -362,10 +371,10 @@
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
-<div class="container">
+<main class="container">
   <!-- Header -->
   <div class="header">
-    <img class="logo" id="bot-logo" src="/static/brand/emblem-dragon.png" alt="Hakumo">
+    <img class="logo" id="bot-logo" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo">
     <h1>Hakumo</h1>
     <p>Система заявок администратора</p>
     <div class="divider"></div>
@@ -409,16 +418,28 @@
 
       <div class="section-title"><i class="fas fa-user-gear"></i> Желаемая должность</div>
       <div class="role-pick" id="role-pick">
-        <label class="role-card" data-role="Хелпер">
-          <input type="radio" name="apply-role" value="Хелпер" aria-label="Хелпер">
-          <span class="rc-ico" style="background:linear-gradient(135deg,#0891b2,#22d3ee)"><i class="fas fa-hands-helping"></i></span>
-          <span class="rc-copy"><b>Хелпер</b><small>Помощь новичкам, ответы на вопросы</small></span>
+        <label class="role-card" data-role="Moderator">
+          <input type="radio" name="apply-role" value="Moderator" checked aria-label="Moderator">
+          <span class="rc-ico" style="background:var(--ac-grad)"><i class="fas fa-shield-halved"></i></span>
+          <span class="rc-copy"><b>Moderator</b></span>
           <span class="rc-check"><i class="fas fa-check"></i></span>
         </label>
-        <label class="role-card" data-role="Модератор">
-          <input type="radio" name="apply-role" value="Модератор" checked aria-label="Модератор">
-          <span class="rc-ico" style="background:var(--ac-grad)"><i class="fas fa-shield-halved"></i></span>
-          <span class="rc-copy"><b>Модератор</b><small>Контроль чатов, варны и порядок</small></span>
+        <label class="role-card" data-role="Helper">
+          <input type="radio" name="apply-role" value="Helper" aria-label="Helper">
+          <span class="rc-ico" style="background:var(--ac-grad)"><i class="fas fa-hands-helping"></i></span>
+          <span class="rc-copy"><b>Helper</b></span>
+          <span class="rc-check"><i class="fas fa-check"></i></span>
+        </label>
+        <label class="role-card" data-role="Eventsmod">
+          <input type="radio" name="apply-role" value="Eventsmod" aria-label="Eventsmod">
+          <span class="rc-ico" style="background:var(--ac-grad)"><i class="fas fa-calendar-star"></i></span>
+          <span class="rc-copy"><b>Eventsmod</b></span>
+          <span class="rc-check"><i class="fas fa-check"></i></span>
+        </label>
+        <label class="role-card" data-role="Broadcaster">
+          <input type="radio" name="apply-role" value="Broadcaster" aria-label="Broadcaster">
+          <span class="rc-ico" style="background:var(--ac-grad)"><i class="fas fa-tower-broadcast"></i></span>
+          <span class="rc-copy"><b>Broadcaster</b></span>
           <span class="rc-check"><i class="fas fa-check"></i></span>
         </label>
       </div>
@@ -434,7 +455,7 @@
           <label>Discord ID</label>
           <div style="position: relative;">
             <input type="text" id="discord_id" placeholder="например: 123456789012345678"
-              oninput="onIdInput()" aria-label="например: 123456789012345678">
+              aria-label="например: 123456789012345678">
             <span id="id-status" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%);"></span>
           </div>
           <span class="hint">Включите режим разработчика → правый клик → скопировать ID</span>
@@ -481,7 +502,7 @@
         </div>
       </div>
 
-      <button type="button" class="submit-btn" id="submit-btn" onclick="submitForm()">
+      <button type="button" class="submit-btn" id="submit-btn">
         <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ЗАЯВКУ
       </button>
     </div>
@@ -495,12 +516,30 @@
     <div class="app-id-box" id="app-id-display"></div>
     <p style="margin-top: 18px;">Эту страницу можно закрыть.</p>
   </div>
-</div>
+</main>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var selectedGuild = '{{ main_guild_id }}';
 var memberVerified = false;
 var idCheckTimer = null;
+
+/* Trusted Types (2026-09-08): innerHTML на этой странице больше не
+   пишется нигде — только createElement + textContent. */
+function el(tag, cls, text) {
+  var n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+/* Иконка статуса ID (иконка + цвет) без записи разметки строкой. */
+function statusIco(cls, colorVar) {
+  var s = document.getElementById('id-status');
+  s.textContent = '';
+  var i = el('i', cls);
+  i.style.color = colorVar;
+  s.appendChild(i);
+  return s;
+}
 
 // Проверка участника при вводе ID
 function onIdInput() {
@@ -512,16 +551,17 @@ function onIdInput() {
   document.getElementById('discord_name').value = '';
 
   if (!/^\d{17,19}$/.test(id)) {
-    status.innerHTML = id.length > 0 ? '<i class="fas fa-circle-xmark" style="color:var(--err)"></i>' : '';
+    status.textContent = '';
+    if (id.length > 0) statusIco('fas fa-circle-xmark', 'var(--err)');
     return;
   }
   if (!selectedGuild) {
-    status.innerHTML = '<i class="fas fa-triangle-exclamation" style="color:var(--warn)"></i>';
+    statusIco('fas fa-triangle-exclamation', 'var(--warn)');
     showAlert('error', 'Сначала выберите сервер!');
     return;
   }
 
-  status.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="color:var(--warn)"></i>';
+  statusIco('fas fa-circle-notch fa-spin', 'var(--warn)');
   clearTimeout(idCheckTimer);
   idCheckTimer = setTimeout(async function() {
     try {
@@ -532,7 +572,7 @@ function onIdInput() {
       });
       var res = await r.json();
       if (res.found) {
-        status.innerHTML = '<i class="fas fa-circle-check" style="color:var(--ok)"></i>';
+        statusIco('fas fa-circle-check', 'var(--ok)');
         document.getElementById('discord_name').value = res.name;
         document.getElementById('member-avatar').src = res.avatar;
         document.getElementById('member-name').textContent = res.display_name + ' (' + res.name + ')';
@@ -540,13 +580,13 @@ function onIdInput() {
         memberVerified = true;
         hideAlert();
       } else {
-        status.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--err)"></i>';
+        statusIco('fas fa-circle-xmark', 'var(--err)');
         card.style.display = 'none';
         memberVerified = false;
         showAlert('error', '' + (res.error || 'На этом сервере участник не найден.'));
       }
     } catch(e) {
-      status.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--err)"></i>';
+      statusIco('fas fa-circle-xmark', 'var(--err)');
     }
   }, 600);
 }
@@ -558,18 +598,36 @@ async function loadServers() {
     var guilds = await r.json();
     var grid = document.getElementById('server-grid');
     if (!guilds.length) {
-      grid.innerHTML = '<div class="server-loading">Сервер не найден.</div>';
+      grid.textContent = '';
+      grid.appendChild(el('div', 'server-loading', 'Сервер не найден.'));
       return;
     }
-    grid.innerHTML = guilds.map(function(g) {
+    grid.textContent = '';
+    guilds.forEach(function(g) {
       var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
-      return '<div class="server-card" onclick="selectGuild(\''+g.id+'\',\''+g.name.replace(/'/g,"\\'")+'\')" id="sc-'+g.id+'" role="button" tabindex="0">' +
-        '<img alt="" src="'+icon+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-        '<div><div class="sname">'+g.name+'</div><div class="smembers">'+g.members+' участников</div></div>' +
-        '</div>';
-    }).join('');
+      /* Клик и фолбэк-аватар — через data-атрибуты и делегирование:
+         строгий CSP публичной страницы не исполняет инлайн-обработчики. */
+      var card = el('div', 'server-card');
+      card.setAttribute('data-gid', g.id);
+      card.setAttribute('data-gname', g.name);
+      card.id = 'sc-' + g.id;
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
+      var img = el('img');
+      img.alt = '';
+      img.src = icon;
+      img.setAttribute('data-fallback', 'https://cdn.discordapp.com/embed/avatars/0.png');
+      card.appendChild(img);
+      var txt = el('div');
+      txt.appendChild(el('div', 'sname', g.name));
+      txt.appendChild(el('div', 'smembers', g.members + ' участников'));
+      card.appendChild(txt);
+      grid.appendChild(card);
+    });
   } catch(e) {
-    document.getElementById('server-grid').innerHTML = '<div class="server-loading">Загрузка серверов.</div>';
+    var g = document.getElementById('server-grid');
+    g.textContent = '';
+    g.appendChild(el('div', 'server-loading', 'Загрузка серверов.'));
   }
 }
 
@@ -583,7 +641,7 @@ function selectGuild(id, name) {
     document.getElementById('step1').style.display = 'none';
     document.getElementById('step2').style.display = 'block';
     document.getElementById('step1-ind').className = 'step done';
-    document.getElementById('step1-ind').querySelector('.step-num').innerHTML = '<i class="fas fa-check"></i>';
+    document.getElementById('step1-ind').querySelector('.step-num').appendChild(el('i', 'fas fa-check'));
     document.getElementById('step2-ind').className = 'step active';
     window.scrollTo({top:0,behavior:'smooth'});
   }, 300);
@@ -611,7 +669,9 @@ async function submitForm() {
   }
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ОТПРАВКА...';
+  btn.textContent = '';
+  btn.appendChild(el('i', 'fas fa-spinner fa-spin'));
+  btn.appendChild(document.createTextNode(' ОТПРАВКА...'));
 
   try {
     var r = await fetch('/api/public/apply', {
@@ -621,7 +681,7 @@ async function submitForm() {
         discord_id, discord_name,
         guild_id: selectedGuild.id,
         guild_name: selectedGuild.name,
-        role: (document.querySelector('input[name="apply-role"]:checked') || {}).value || 'Модератор',
+        role: (document.querySelector('input[name="apply-role"]:checked') || {}).value || 'Moderator',
         yas, activity, tecrube, why, ekstra
       })
     });
@@ -630,20 +690,24 @@ async function submitForm() {
       document.getElementById('step2').style.display = 'none';
       document.getElementById('success-screen').style.display = 'block';
       document.getElementById('step2-ind').className = 'step done';
-      document.getElementById('step2-ind').querySelector('.step-num').innerHTML = '<i class="fas fa-check"></i>';
+      document.getElementById('step2-ind').querySelector('.step-num').appendChild(el('i', 'fas fa-check'));
       document.getElementById('step3-ind').className = 'step done';
-      document.getElementById('step3-ind').querySelector('.step-num').innerHTML = '<i class="fas fa-check"></i>';
+      document.getElementById('step3-ind').querySelector('.step-num').appendChild(el('i', 'fas fa-check'));
       document.getElementById('app-id-display').textContent = 'Заявка ID: ' + res.app_id;
       window.scrollTo({top:0,behavior:'smooth'});
     } else {
       showAlert('error', '' + (res.error || 'Произошла ошибка.'));
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ЗАЯВКУ';
+      btn.textContent = '';
+      btn.appendChild(el('i', 'fas fa-paper-plane'));
+      btn.appendChild(document.createTextNode(' ОТПРАВИТЬ ЗАЯВКУ'));
     }
   } catch(e) {
     showAlert('error', 'Ошибка соединения: ' + e.message);
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ЗАЯВКУ';
+    btn.textContent = '';
+    btn.appendChild(el('i', 'fas fa-paper-plane'));
+    btn.appendChild(document.createTextNode(' ОТПРАВИТЬ ЗАЯВКУ'));
   }
 }
 
@@ -651,7 +715,7 @@ function showAlert(type, msg) {
   var a = document.getElementById('alert-box');
   a.className = 'alert ' + type;
   a.style.display = 'block';
-  a.innerHTML = msg;
+  a.textContent = msg;
   a.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
@@ -661,6 +725,31 @@ function hideAlert() {
 }
 
 loadServers();
+
+/* ── Слушатели вместо инлайн-обработчиков (строгий CSP) ────────────── */
+(function () {
+  var idInput = document.getElementById('discord_id');
+  if (idInput) idInput.addEventListener('input', onIdInput);
+  var submitBtn = document.getElementById('submit-btn');
+  if (submitBtn) submitBtn.addEventListener('click', submitForm);
+  /* выбор сервера: один слушатель на сетку — работает и для карточек,
+     вставленных позже через innerHTML */
+  var grid = document.getElementById('server-grid');
+  if (grid) {
+    grid.addEventListener('click', function (e) {
+      var card = e.target.closest && e.target.closest('.server-card');
+      if (card) selectGuild(card.getAttribute('data-gid'), card.getAttribute('data-gname') || '');
+    });
+  }
+  /* битая иконка сервера → дефолтная аватарка (без инлайн-onerror) */
+  document.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t.tagName === 'IMG' && t.getAttribute('data-fallback')
+        && t.src !== t.getAttribute('data-fallback')) {
+      t.src = t.getAttribute('data-fallback');
+    }
+  }, true);
+})();
 </script>
 </body>
 </html>

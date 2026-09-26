@@ -13,15 +13,13 @@
 4. Общие файлы-мосты между панелью и ботом:
    data/channel_routes.json (каналы), data/command_switches.json (команды),
    data/bot_config.json (present-статус).
-5. Зависимости музыки (связка с /play): ffmpeg в PATH, yt-dlp установлен.
-6. Маршруты каналов из панели (channel_routes) — ключи и номера каналов.
+5. Маршруты каналов из панели (channel_routes) — ключи и номера каналов.
 
 Скрипт НЕ запускает бота и ничего не меняет — только читает и проверяет.
 """
 import json
 import os
 import socket
-import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -154,16 +152,8 @@ def main():
               'панель → «Каналы и маршруты»: выбери каналы '
               '(апелляция/доказательства/приветствия и т.д.)')
 
-    print('\n== 6. Музыка (/play) ==')
-    check(shutil.which('ffmpeg') is not None,
-          'ffmpeg найден в PATH (без него музыка не играет)',
-          'установи ffmpeg или укажи FFMPEG_BINARY в .env')
-    try:
-        import yt_dlp  # noqa: F401
-        check(True, 'yt-dlp установлен (ссылки/названия для /play)')
-    except ImportError:
-        check(False, 'yt-dlp не установлен',
-              'выполни: .venv/bin/pip install -r requirements.txt && перезапусти бота')
+    # Музыка (/play) удалена из проекта (2026-09-01) — проверки ffmpeg и
+    # yt-dlp больше не нужны.
 
     print('\n' + '=' * 62)
     print(f'  ИТОГ: ОК — {OK} · ПРОБЛЕМ — {FAIL}')

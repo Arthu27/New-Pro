@@ -2,20 +2,19 @@
 """AI-чат панели (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
-# Модель панельного AI — заказ владельца: в панели заведомо СЛАБАЯ (дешёвая)
-# модель; боевой сильный ответчик живёт в Discord-чате (cogs/ai_chat).
-# Переопределяется через AI_PANEL_MODEL в .env.
-_AI_PANEL_MODEL = (os.getenv('AI_PANEL_MODEL', 'mistral-small-latest')
-                   or 'mistral-small-latest')
+# Модель панельного AI — сильная по умолчанию (заказ: не тупить в простых
+# ответах). Переопределяется через AI_PANEL_MODEL в .env.
+_AI_PANEL_MODEL = (os.getenv('AI_PANEL_MODEL', 'mistral-large-latest')
+                   or 'mistral-large-latest')
 
 def register(ctx):
     app = ctx.app
@@ -49,7 +48,7 @@ def register(ctx):
         from web .ai_helper import _call 
         import web .app as _app ;bot =_app .bot_instance 
         import datetime as _dt ,asyncio as _asyncio ,discord as _discord 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         question =d .get ('message','').strip ()
         if not question :
             return jsonify ({'error':'Сообщение пусто'}),400 
@@ -59,7 +58,7 @@ def register(ctx):
         user_role =session .get ('role','uye')
         now =_dt .datetime .now ()
 
-        # ── СЕРВЕР VERИSИ собрать ──────────────────────────────────────────────
+        # ── СОБИРАЕМ ДАННЫЕ СЕРВЕРА ──────────────────────────────────────────────
         guild_data =[]
         if bot :
             for g in bot .guilds :
@@ -133,7 +132,7 @@ def register(ctx):
                 +('\n'.join (f'  {c}'for c in server_configs ))
                 )
 
-                # ── ПОЛЬЗОВАТЕЛЬ ID TESPИT ET VE ИНФОРМАЦИЯ ТЯНУТЬ ─────────────────────────────
+                # ── ОПРЕДЕЛЯЕМ ID ПОЛЬЗОВАТЕЛЯ И ТЯНЕМ ДАННЫЕ ─────────────────────────────
         import re as _re2 
         user_info_block =''
         id_matches =_re2 .findall (r'\b(\d{17,20})\b',question )
@@ -177,7 +176,7 @@ def register(ctx):
                         try :
                             with open (mod_file ,'r',encoding ='utf-8')as fp :
                                 md =json .load (fp )
-                            case =md .get ('case',{}).get (str (g .id ),[])
+                            case =(md .get ('cases')or md .get ('case')or {}).get (str (g .id ),[])
                             for c in case :
                                 if str (c .get ('user_id',''))==uid_str :
                                     mod_history .append (
@@ -358,7 +357,7 @@ def register(ctx):
         f"Вчера ({yesterday}) действия:\n{fmt_actions(yesterday_actions)}"
         )
 
-        # состояние skoru — все guild'lerin health dosyalarыndan тянуть
+        # скор состояния — тянем из health-файлов всех гильдий
         health_info =''
         health_lines =[]
         if bot :
@@ -376,7 +375,7 @@ def register(ctx):
         if health_lines :
             health_info ='Оценки состояния сервера:\n'+'\n'.join (f'  {l}'for l in health_lines )
         else :
-        # Fallback: API'den hesapla
+        # Fallback: считаем сами
             try :
                 # Порт панели берём из того же источника, что и сам сервер
                 # (PANEL_PORT -> PORT из config.py), а не «магическую»
@@ -472,6 +471,9 @@ def register(ctx):
         f"{channel_messages_block}\n"
         f"{eylem_prompt}\n"
         "Говори ТОЛЬКО на русском языке. Никакого турецкого, никакого английского. "
+        "Ты сильный и точный ассистент: на простые вопросы отвечай сразу одним-двумя "
+        "чёткими предложениями, без воды и без «хороший вопрос». Не тупи и не "
+        "ошибайся в очевидных фактах из контекста выше. "
         "Используй ТОЛЬКО реальные данные из контекста выше, никогда не выдумывай. "
         "Если в списке нет нужного имени или действия, скажи 'Такого пользователя/действия в записях нет'. "
         "При выполнении действия используй ID участника, а не имя — в списке участников у каждого есть ID.\n"
@@ -483,7 +485,9 @@ def register(ctx):
         messages .append ({'role':'user','content':question })
 
         try :
-            answer ,model_name ,_ =_call (messages ,max_tokens =1024 ,model =_AI_PANEL_MODEL )
+            answer ,model_name ,_ =_call (
+            messages ,max_tokens =1600 ,temperature =0.18 ,model =_AI_PANEL_MODEL )
+
         except Exception as e :
         # Fallback: локальный ответ
             print (f"[AI-CHAT] _call exception: {e}")
@@ -500,7 +504,7 @@ def register(ctx):
             except Exception :
                 return jsonify ({'error':'AI вернул пустой ответ.'}),502 
 
-                # ── FUNC ИШLE (function calling) — выполнение [FUNC:...] от AI ──────────
+                # ── ВЫПОЛНЕНИЕ FUNC (function calling) — обработка [FUNC:...] от AI ──────────
         import re as _re 
         func_calls_in_answer =_re .findall (r'\[FUNC:[^\]]+\]',answer )
         func_results_text =''
@@ -741,7 +745,8 @@ def register(ctx):
                 'content':"Сформулируй финальный ответ на основе данных выше."
                 })
                 try :
-                    final_answer ,model_name2 ,_ =_call (messages ,max_tokens =1024 ,model =_AI_PANEL_MODEL )
+                    final_answer ,model_name2 ,_ =_call (
+                    messages ,max_tokens =1600 ,temperature =0.18 ,model =_AI_PANEL_MODEL )
                     if final_answer :
                         answer =final_answer 
                 except Exception as _fe2 :
@@ -750,7 +755,7 @@ def register(ctx):
                     # На всякий случай вырежем оставшиеся маркеры
             answer =_re .sub (r'\[FUNC:[^\]]+\]','',answer ).strip ()
 
-            # ── EYLEM ИШLE (только owner) ─────────────────────────────────────────
+            # ── ВЫПОЛНЕНИЕ ДЕЙСТВИЯ (только owner) ─────────────────────────────────────────
         action_result =None 
         action_match =_re .search (r'\[EYLEM:([^\]]+)\]',answer )
         if action_match and bot and user_role =='owner':
@@ -785,13 +790,13 @@ def register(ctx):
                         if val .isdigit ():
                             return guild .get_member (int (val ))
                         val_lower =val .lower ()
-                        # До tam eшleшme
+                        # Сначала точное совпадение
                         exact =discord .utils .find (
                         lambda m :m .display_name .lower ()==val_lower or m .name .lower ()==val_lower ,
                         guild .members 
                         )
                         if exact :return exact 
-                        # В конецra kыsmi eшleшme
+                        # Затем частичное совпадение
                         return discord .utils .find (
                         lambda m :val_lower in m .display_name .lower ()or val_lower in m .name .lower (),
                         guild .members 
@@ -873,7 +878,7 @@ def register(ctx):
                             return f'✅ {m.display_name} → перемещён в {ch.name}'
                         return '❌ Участник или канал не найден'
                     elif tip =='UST_SESE'and len (parts )>1 :
-                    # Юst ses в канал move
+                    # Перемещаем участника в голосовой канал
                         m =resolve_member (parts [1 ])
                         steps =int (parts [2 ])if len (parts )>2 and parts [2 ].isdigit ()else 1 
                         move_back =parts [3 ].lower ()=='geri'if len (parts )>3 else False 
@@ -1032,10 +1037,30 @@ def register(ctx):
         {'role':'user','content':question [:500 ]},
         {'role':'assistant','content':answer [:500 ]}
         ]
-        # Son 12 сообщение (6 user+assistant чifti) — cookie 4KB sыnыrы iчin
+        # Последние 12 сообщений (6 пар user+assistant) — лимит cookie 4KB
         session [history_key ]=new_history [-12 :]
         session .modified =True 
         return jsonify ({'answer':answer ,'model':model_name })
+
+
+    @app .route ('/api/ai-chat/settings',methods =['GET','POST'])
+    @login_required 
+    @role_required ('admin')
+    def api_ai_chat_settings ():
+        """Каналы и сила Discord AI-чата (админ)."""
+        from services .ai_chat_settings import load_settings ,save_settings 
+        if request .method =='GET':
+            return jsonify (load_settings ())
+        body =_safe_json_obj ()or {}
+        cur =load_settings ()
+        for key in ('enabled','reply_to_bot','respond_all','require_mention',
+        'model','temperature','max_tokens','channels'):
+            if key in body :
+                cur [key ]=body [key ]
+        if not save_settings (cur ):
+            return jsonify ({'error':'Не удалось сохранить'}),500 
+        # Сброс in-memory dynamic set не нужен — _ai_allowed читает файл
+        return jsonify ({'ok':True ,'settings':load_settings ()})
 
 
     @app .route ('/api/ai-chat/clear',methods =['POST'])

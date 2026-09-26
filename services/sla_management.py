@@ -350,7 +350,7 @@ class SLACalculator:
         work_days = business_hours['days']
         
         while remaining_minutes > 0:
-            # Работа день mю?
+            # Сегодня рабочий день?
             if current.weekday() not in work_days:
                 current += timedelta(days=1)
                 current = current.replace(hour=start_hour, minute=0, second=0, microsecond=0)
@@ -364,7 +364,7 @@ class SLACalculator:
                 current = current.replace(hour=start_hour, minute=0, second=0, microsecond=0)
                 continue
             
-            # Buдень kalan работа dakikalarы
+            # Остаток рабочих минут на сегодня
             end_of_day = current.replace(hour=end_hour, minute=0, second=0, microsecond=0)
             available_minutes = int((end_of_day - current).total_seconds() / 60)
             
@@ -426,7 +426,7 @@ class SLABreachDetector:
         if not policy:
             return breaches
         
-        # Yanыt длительность проверка
+        # Проверка времени ответа
         first_response_at = ticket.get('first_response_at')
         if not first_response_at:
             response_deadline = self.sla_calculator.calculate_response_deadline(ticket, policy)
@@ -440,7 +440,7 @@ class SLABreachDetector:
                     'policy_id': policy.policy_id
                 })
         
-        # Чёzюm длительность проверка
+        # Проверка времени решения
         if ticket.get('status') != 'closed':
             resolution_deadline = self.sla_calculator.calculate_resolution_deadline(ticket, policy)
             
@@ -453,7 +453,7 @@ class SLABreachDetector:
                     'policy_id': policy.policy_id
                 })
         
-        # Иhlalleri сохранить
+        # Сохраняем нарушения
         if breaches:
             self.breaches[ticket_id] = breaches
             self._save_breaches()

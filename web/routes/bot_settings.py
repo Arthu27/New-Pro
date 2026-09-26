@@ -2,14 +2,14 @@
 """Настройки бота (presence, sync) (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -46,15 +46,56 @@ def register(ctx):
         bot = _app.bot_instance
         cfg = _bot_cfg_load()
         online = False
+        guilds_n = 0
+        # Имя бота (жалоба: «настройки бота — имя не видно»). Порядок:
+        # живой процесс → пульс data/bot_state.json (панель отдельным
+        # процессом) → демо-заглушка для превью.
+        ident = {}
         if bot is not None:
             try:
                 online = not bot.is_closed()
             except Exception:
                 online = False
+            guilds_n = len(getattr(bot, 'guilds', []) or [])
+            _bu = getattr(bot, 'user', None)
+            if _bu is not None:
+                try:
+                    ident = {
+                        'id': str(_bu.id),
+                        'name': str(getattr(_bu, 'name', '') or ''),
+                        'display_name': str(getattr(_bu, 'display_name', '')
+                                            or getattr(_bu, 'name', '') or ''),
+                        'avatar': str(getattr(getattr(_bu, 'display_avatar', None),
+                                              'url', '') or ''),
+                    }
+                except Exception:
+                    ident = {}
+        else:
+            # Панель отдельным процессом от бота — правда по пульсу
+            # (data/bot_state.json), иначе страница вечно показывает «офлайн».
+            try:
+                from services import bot_bridge as _bb
+                _st = _bb.read_state()
+                if _bb.state_status(_st) == 'online':
+                    online = True
+                    guilds_n = len(_bb.guild_ids(_st))
+                # имя — последнее известное, даже если бот сейчас офлайн
+                ident = _bb.state_identity(_st)
+            except Exception:
+                online = False
+        if not ident.get('name') and getattr(_app, '_demo_mode', lambda: False)():
+            ident = {'id': '987654321098765432', 'name': 'Hakumo',
+                     'display_name': 'Hakumo (демо)', 'avatar': ''}
+            online = True
+            guilds_n = guilds_n or 1
         return jsonify({'ok': True, 'bot_online': online,
-                        'guilds': len(getattr(bot, 'guilds', []) or []),
+                        'guilds': guilds_n,
                         'discord_version': _discord.__version__,
                         'prefix': Config.COMMAND_PREFIX,
+                        'bot_name': ident.get('display_name') or ident.get('name') or '',
+                        'bot_username': ident.get('name') or '',
+                        'bot_id': ident.get('id') or '',
+                        'bot_avatar': ident.get('avatar') or '',
                         'presence': {'status': cfg.get('status', 'online'),
                                      'activity_type': cfg.get('activity_type', 'watching'),
                                      'activity_text': cfg.get('activity_text', 'Hakumo') or 'Hakumo'}})
@@ -66,7 +107,7 @@ def register(ctx):
     def api_bot_settings_presence():
         import web.app as _app
         import discord as _discord
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         status = str(data.get('status', ''))
         activity_type = str(data.get('activity_type', ''))
         activity_text = ' '.join(str(data.get('activity_text', '') or '').split())[:80]
@@ -158,7 +199,7 @@ def register(ctx):
                 _log.debug('update-source GET: %s', _ex)
             return jsonify(payload)
 
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         repo = str(data.get('repo') or '').strip()
         branch = str(data.get('branch') or '').strip()
         ok, error, (new_repo, new_branch) = US.set_source(repo, branch)
@@ -168,3 +209,65 @@ def register(ctx):
                         'kind': US.source_kind(),
                         'hint': 'Источник сохранён — /update и автообновление '
                                 'качают уже оттуда. Перезапуск не нужен.'})
+
+
+    VOICE_STAY_PATH = os.path.join(_REPO_ROOT, 'config', 'voice_stay.json')
+
+    def _voice_stay_load():
+        try:
+            if os.path.isfile(VOICE_STAY_PATH):
+                with open(VOICE_STAY_PATH, encoding='utf-8') as f:
+                    d = json.load(f) or {}
+                return str(d.get('channel_id') or d.get('VOICE_CHANNEL_ID') or '').strip()
+        except Exception as _ex:
+            _log.debug('voice_stay load: %s', _ex)
+        return str(os.environ.get('VOICE_CHANNEL_ID') or '').strip()
+
+    def _voice_stay_save(channel_id: str):
+        os.makedirs(os.path.dirname(VOICE_STAY_PATH), exist_ok=True)
+        payload = {
+            'channel_id': str(channel_id or '').strip(),
+            'stay_enabled': True,
+            'note': 'Основной бот всегда сидит в этом войсе (24/7). Stay выключить нельзя.',
+        }
+        with open(VOICE_STAY_PATH, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        return payload
+
+    @app.route('/api/bot-settings/voice-stay', methods=['GET', 'POST'])
+    @login_required
+    @role_required('owner')
+    def api_bot_settings_voice_stay():
+        """Голосовой канал 24/7: сохранить ID и (опционально) подключиться сейчас."""
+        import web.app as _app
+        if request.method == 'GET':
+            cid = _voice_stay_load()
+            return jsonify({
+                'ok': True,
+                'channel_id': cid,
+                'bot_online': bool(_app.bot_instance),
+                'demo': bool(getattr(_app, '_demo_mode', lambda: False)()),
+            })
+
+        data = _safe_json_obj()
+        raw = str(data.get('channel_id') or '').strip()
+        if raw and (not raw.isdigit() or len(raw) < 5 or len(raw) > 22):
+            return jsonify({'ok': False, 'error': 'ID канала — только цифры Discord snowflake'}), 400
+        saved = _voice_stay_save(raw)
+        # Обновить in-process значение у main и сразу вернуть в войс
+        try:
+            import main as _main
+            _main.VOICE_CHANNEL_ID = int(raw) if raw else None
+            if raw and getattr(_main, 'bot', None) and not _main.bot.is_closed():
+                try:
+                    _main._schedule_main_voice_rejoin('panel-save')
+                except Exception as _ex2:
+                    _log.debug('voice_stay schedule rejoin: %s', _ex2)
+        except Exception as _ex:
+            _log.debug('voice_stay live update: %s', _ex)
+        return jsonify({
+            'ok': True,
+            'channel_id': saved.get('channel_id') or '',
+            'stay_enabled': True,
+            'hint': 'Сохранено. Stay всегда вкл — бот сразу вернётся в канал, если онлайн.',
+        })

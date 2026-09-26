@@ -4,9 +4,14 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Логи <span class="sep">·</span> Сообщения</div>
+    <div class="eyebrow"> Логи </div>
     <h1>Логи сообщений</h1>
     <p class="lead">Журнал удалённых и изменённых сообщений на сервере.</p>
+  </div>
+  <div class="page-head-actions">
+    <span class="fresh-stamp" id="ml-stamp"></span>
+    <button type="button" class="btn" id="ml-pause" title="Пауза live"></button>
+    <button type="button" class="btn" id="ml-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
   </div>
 </div>
 
@@ -30,7 +35,7 @@
 .log-row.log-edited{border-left:3px solid var(--warn)}
 .log-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
 .log-user-wrap{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
-.log-user{font-weight:700;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-user{font-weight:700;color:var(--text);font-size:14px;white-space: normal; overflow-wrap: anywhere; line-height: 1.3;}
 .log-channel{font-size:12px;color:var(--text-3);background:var(--ac-soft);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-family:'JetBrains Mono',monospace}
 .log-time{font-size:11.5px;color:var(--text-3);font-family:'JetBrains Mono',monospace;white-space:nowrap}
 .type-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
@@ -44,27 +49,22 @@
 </style>
 
 <!-- Статистика -->
-<div class="stat-row" data-reveal="up">
-  <div class="stat-box">
-    <div class="stat-icon gold"><i class="fas fa-comments"></i></div>
-    <div class="stat-body"><div class="stat-val" id="total-count" data-countup>-</div><div class="stat-lbl">Всего</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon red"><i class="fas fa-trash"></i></div>
-    <div class="stat-body"><div class="stat-val" id="deleted-count" data-countup>-</div><div class="stat-lbl">Удалённые</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon amber"><i class="fas fa-edit"></i></div>
-    <div class="stat-body"><div class="stat-val" id="edited-count" data-countup>-</div><div class="stat-lbl">Изменённые</div></div>
-  </div>
+<div class="kpi-row" data-reveal="up">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-comments"></i></div><div class="kpi-copy"><div class="kpi-value" id="total-count">—</div><div class="kpi-label">Всего</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-trash"></i></div><div class="kpi-copy"><div class="kpi-value" id="deleted-count">—</div><div class="kpi-label">Удалённые</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-edit"></i></div><div class="kpi-copy"><div class="kpi-value" id="edited-count">—</div><div class="kpi-label">Изменённые</div></div></div>
 </div>
 
 <!-- Оформление карточек логов (то, что бот шлёт в лог-каналы Discord) -->
 <div class="ml-filter-box" id="lcSetBox" {% if not can_edit %}hidden{% endif %} data-reveal="up">
-  <div class="box-title"><i class="fas fa-wand-magic-sparkles"></i> Карточки логов в Discord — оформление</div>
+  <div class="box-title"><i class="fas fa-wand-magic-sparkles"></i> Вид логов в Discord</div>
   <div class="filter-row" style="margin-bottom:10px">
-    <label class="field-input" style="display:flex;align-items:center;gap:9px;flex:0 0 auto;cursor:pointer">
-      <input type="checkbox" id="lcOn" checked aria-label="Показывать карточки-картинки в лог-каналах"> Карточки-картинки включены
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)">
+      Как слать
+      <select id="lcDelivery" class="field-input" aria-label="Вид логов в Discord">
+        <option value="embed">Эмбед Discord</option>
+        <option value="photo">Фото со стеклом</option>
+      </select>
     </label>
     <select id="lcTheme" class="field-input" aria-label="Тема оформления карточек"></select>
     <select id="lcCat" class="field-input" aria-label="Категория для предпросмотра">
@@ -86,25 +86,44 @@
     <span class="spacer"></span>
     <button type="button" class="btn btn-primary" id="lcSave"><i class="fas fa-save"></i> Сохранить</button>
   </div>
+  <div class="filter-row" style="margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap">
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)">
+      Форма сообщений
+      <select id="lcForm" class="field-input" aria-label="Форма плашек сообщений">
+        <option value="glass">Стекло</option>
+        <option value="rounded">Мягкая</option>
+        <option value="pill">Пилюля</option>
+        <option value="sharp">Прямая</option>
+      </select>
+    </label>
+  </div>
+  <div class="filter-row" style="margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap">
+    <input type="text" id="lcBgUrl" class="field-input" placeholder="Фон-фото карточек по URL (https://… — подойдёт и pin.it)" aria-label="Своя фоновая картинка карточек логов" style="flex:1;min-width:240px">
+    <button type="button" class="btn btn-sm" id="lcBgClear"><i class="fas fa-rotate-left"></i> Стандартный фон</button>
+  </div>
+  <div class="filter-row" id="lcByCatRow" style="margin-bottom:10px;display:none;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="font-size:12.5px;color:var(--text-2)">Образ по категориям:</span>
+    <span id="lcByCat" style="display:flex;gap:8px;flex-wrap:wrap"></span>
+  </div>
   <div class="hint" id="lcMsg" style="margin-bottom:10px"></div>
   <div style="border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg)">
     <img id="lcPreview" alt="Предпросмотр карточки лога" style="width:100%;height:auto" loading="lazy">
   </div>
-  <div class="hint" style="margin-top:8px">Так выглядит карточка, которую бот прикладывает к каждому событию в лог-каналах. Отключение оставляет обычный текстовый эмбед.</div>
+  <div class="hint" style="margin-top:8px">Эмбед — обычная карточка Discord: можно копировать текст и перейти в канал. Фото — стеклянные письма на вашем фоне. Ниже — как выглядит фото-режим.</div>
 </div>
 
 <!-- Фильтры -->
 <div class="ml-filter-box" data-reveal="up">
   <div class="filter-row">
-    <select id="guild-select" onchange="loadLogs()" class="field-input" aria-label="Сервер">
+    <select id="guild-select" class="field-input" aria-label="Сервер">
       <option value="{{ main_guild_id }}">Текущий сервер</option>
     </select>
-    <select id="log-type" onchange="loadLogs()" class="field-input" aria-label="Тип журнала">
+    <select id="log-type" class="field-input" aria-label="Тип журнала">
       <option value="all">Все</option>
       <option value="deleted">Удалённые</option>
       <option value="edited">Изменённые</option>
     </select>
-    <input type="text" id="user-filter" placeholder="Поиск пользователя..." class="field-input" style="min-width:160px" oninput="filterLogs()" aria-label="Поиск пользователя...">
+    <input type="search" id="user-filter" placeholder="Поиск: пользователь, канал, текст" class="field-input" style="min-width:160px" aria-label="Поиск: пользователь, канал, текст">
   </div>
 </div>
 
@@ -114,24 +133,49 @@
   <div id="log-list"><div class="log-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var allLogs = [];
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+var ML_PAGE = 80;
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;'); }
 
 function isDeleted(l){ return /удал|delet/i.test((l.action||'')+' '+(l.type||'')); }
 function isEdited(l){ return /измен|редакт|düzenl|dюzenl|edit/i.test((l.action||'')+' '+(l.type||'')); }
 
+function fmtTime(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  if (isNaN(d.getTime())) return String(ts);
+  return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+function hay(l) {
+  return ((l.user_name||'')+' '+(l.user_id||'')+' '+(l.content||'')+' '+(l.before||'')+' '+(l.after||'')+' '+(l.channel_name||'')+' '+(l.channel||'')+' '+(l.channel_id||'')+' '+(l.action||'')).toLowerCase();
+}
+function stampNow() {
+  var el = document.getElementById('ml-stamp');
+  if (!el) return;
+  var t = new Date();
+  el.innerHTML = '<i class="fas fa-circle"></i> ' + t.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+function currentFiltered() {
+  var q = (document.getElementById('user-filter').value || '').toLowerCase();
+  if (!q) return allLogs;
+  return allLogs.filter(function(l) { return hay(l).indexOf(q) !== -1; });
+}
+
 async function loadLogs() {
   var type = document.getElementById('log-type').value;
   var guildId = document.getElementById('guild-select').value;
-  if (!guildId) { renderLogs([]); return; }
+  if (!guildId) { allLogs = []; updateStats(); renderLogs([]); return; }
   try {
     var r = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/message-logs?type=' + encodeURIComponent(type));
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    allLogs = await r.json();
-    if (!Array.isArray(allLogs)) allLogs = [];
+    var raw = await r.json();
+    if (!Array.isArray(raw)) raw = [];
+    if (window.silentGuard && window.silentGuard('message-logs', JSON.stringify(raw))) return;
+    allLogs = raw;
     updateStats();
-    renderLogs(allLogs);
+    renderLogs(currentFiltered());
+    stampNow();
   } catch (e) {
     allLogs = [];
     updateStats();
@@ -146,16 +190,15 @@ function updateStats() {
 }
 
 function filterLogs() {
-  var q = document.getElementById('user-filter').value.toLowerCase();
-  renderLogs(allLogs.filter(function(l) {
-    return ((l.user_name||'')+' '+(l.user_id||'')).toLowerCase().includes(q);
-  }));
+  ML_PAGE = 80;
+  renderLogs(currentFiltered());
 }
 
 function renderLogs(logs) {
   var box = document.getElementById('log-list');
   if (!logs.length) { box.innerHTML = '<div class="log-empty"><i class="fas fa-inbox"></i>Логи не найдены</div>'; return; }
-  box.innerHTML = logs.slice(0, 150).map(function(l) {
+  var shown = Math.min(ML_PAGE, logs.length);
+  box.innerHTML = logs.slice(0, shown).map(function(l) {
     var del = isDeleted(l);
     var cls = del ? 'log-deleted' : 'log-edited';
     var badge = del
@@ -168,15 +211,49 @@ function renderLogs(logs) {
       '<div class="log-header">' +
         '<div class="log-user-wrap">' + badge +
           '<span class="log-user">' + esc(l.user_name || l.user_id || '?') + '</span>' +
-          '<span class="log-channel">#' + esc(l.channel_name || l.channel_id || '?') + '</span>' +
+          '<span class="log-channel">#' + esc(l.channel_name || l.channel || l.channel_id || '?') + '</span>' +
         '</div>' +
-        '<span class="log-time">' + esc(l.timestamp || '') + '</span>' +
+        '<span class="log-time">' + esc(fmtTime(l.timestamp)) + '</span>' +
       '</div>' + content +
     '</div>';
   }).join('');
+  if (logs.length > shown) {
+    box.innerHTML += '<button type="button" class="load-more-btn" id="mlMore"><i class="fas fa-chevron-down"></i> Показать ещё ' +
+      Math.min(80, logs.length - shown) + ' из ' + (logs.length - shown) + '</button>';
+  }
+}
+
+function exportCsv() {
+  var list = currentFiltered();
+  var rows = [['Тип', 'Пользователь', 'Канал', 'Текст / до', 'После', 'Время']];
+  list.forEach(function (l) {
+    rows.push([
+      isDeleted(l) ? 'удалено' : 'изменено',
+      l.user_name || l.user_id || '',
+      l.channel_name || l.channel || l.channel_id || '',
+      l.content || l.before || '',
+      l.after || '',
+      l.timestamp || ''
+    ]);
+  });
+  var ok = window.csvDownload ? window.csvDownload('message_logs.csv', rows) : false;
+  if (window.showToast) window.showToast(ok ? 'Выгружено строк: ' + list.length : 'Не удалось выгрузить', ok);
 }
 
 function start() {
+  document.getElementById('guild-select').addEventListener('change', function () { ML_PAGE = 80; loadLogs(); });
+  document.getElementById('log-type').addEventListener('change', function () { ML_PAGE = 80; loadLogs(); });
+  document.getElementById('user-filter').addEventListener('input', filterLogs);
+  var moreHost = document.getElementById('log-list');
+  moreHost.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('#mlMore')) {
+      ML_PAGE += 80;
+      renderLogs(currentFiltered());
+    }
+  });
+  var csvBtn = document.getElementById('ml-csv');
+  if (csvBtn) csvBtn.addEventListener('click', exportCsv);
+  if (window.livePauseButton) window.livePauseButton(document.getElementById('ml-pause'));
   loadLogs();
   if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 1500);
   else setInterval(loadLogs, 5000);
@@ -185,27 +262,48 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else start();
 </script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 /* ── Оформление карточек логов (admin/owner): тема, акцент, вкл/выкл ── */
 (function () {
   var box = document.getElementById('lcSetBox');
   if (!box) return;
   function lcGid() { return document.getElementById('guild-select').value; }
-  var on = document.getElementById('lcOn'),
+  var deliverySel = document.getElementById('lcDelivery'),
       themeSel = document.getElementById('lcTheme'),
       catSel = document.getElementById('lcCat'),
       accent = document.getElementById('lcAccent'),
+      formSel = document.getElementById('lcForm'),
+      bgUrl = document.getElementById('lcBgUrl'),
       msg = document.getElementById('lcMsg'),
-      img = document.getElementById('lcPreview');
+      img = document.getElementById('lcPreview'),
+      byCatBox = document.getElementById('lcByCat'),
+      byCatRow = document.getElementById('lcByCatRow');
+  var CAT_LABELS = { mod: 'Модерация', automod: 'Автомод', message: 'Сообщения',
+                     voice: 'Войсы', member: 'Зашёл-вышел', nick: 'Никнеймы',
+                     role: 'Роли', channel: 'Каналы', invite: 'Приглашения',
+                     guild: 'Сервер', ticket: 'Тикеты' };
+  function byCatValue(cat) {
+    var el = document.getElementById('lcT_' + cat);
+    return el ? el.value : '';
+  }
   var accentDirty = false; /* не трогаем цвет до первого касания владельца */
   accent.addEventListener('input', function () { accentDirty = true; schedulePreview(); });
+  bgUrl.addEventListener('input', schedulePreview);
+  document.getElementById('lcBgClear').addEventListener('click', function () {
+    bgUrl.value = ''; schedulePreview(); lcSave(true);
+  });
 
   var pvT = null;
   function lcPreviewUrl() {
     var q = new URLSearchParams();
-    q.set('theme', themeSel.value || 'hakumo');
+    var cat = catSel.value || 'mod';
+    /* реальный образ категории: её собственный, если задан, иначе общая тема */
+    q.set('theme', byCatValue(cat) || themeSel.value || 'hakumo');
     if (accentDirty) q.set('accent', accent.value.replace('#', ''));
-    q.set('cat', catSel.value || 'mod');
+    q.set('form', formSel.value || 'glass');
+    var bg = (bgUrl.value || '').trim();
+    if (bg) q.set('bg', bg);
+    q.set('cat', cat);
     return '/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/preview.png?' + q.toString() + '&_=' + Date.now();
   }
   function schedulePreview() {
@@ -213,6 +311,7 @@ else start();
     pvT = setTimeout(function () { img.src = lcPreviewUrl(); }, 160);
   }
   themeSel.addEventListener('change', schedulePreview);
+  formSel.addEventListener('change', schedulePreview);
   catSel.addEventListener('change', schedulePreview);
   document.getElementById('guild-select').addEventListener('change', loadLc);
   document.getElementById('lcAccentClear').addEventListener('click', function () {
@@ -228,17 +327,50 @@ else start();
             return '<option value="' + esc(t.id) + '">' + esc(t.label) + '</option>';
           }).join('');
         }
-        on.checked = !!d.cfg.enabled;
+        if (!byCatBox.options_ && d.cats && d.themes) {
+          var saved = d.cfg.theme_by_cat || {};
+          byCatBox.innerHTML = d.cats.filter(function (c) { return CAT_LABELS[c.id]; })
+            .map(function (c) {
+              var opts = ['<option value="">общая тема</option>'].concat((d.themes || []).map(function (t) {
+                return '<option value="' + esc(t.id) + '"' + (saved[c.id] === t.id ? ' selected' : '') + '>' + esc(t.label) + '</option>';
+              })).join('');
+              return '<label style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--text-2)">' + CAT_LABELS[c.id] +
+                '<select id="lcT_' + esc(c.id) + '" data-cat="' + esc(c.id) + '" style="padding:5px 8px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--text);font-size:12px;font-family:inherit;cursor:pointer">' + opts + '</select></label>';
+            }).join('');
+          byCatRow.style.display = 'flex';
+          byCatBox.addEventListener('change', function (ev) {
+            if (ev.target && ev.target.id && ev.target.id.indexOf('lcT_') === 0) schedulePreview();
+          });
+        }
+        if (byCatBox.children.length) {
+          Array.prototype.forEach.call(byCatBox.querySelectorAll('select'), function (sel) {
+            var v = (d.cfg.theme_by_cat || {})[sel.getAttribute('data-cat')] || '';
+            sel.value = v;
+          });
+        }
+        deliverySel.value = (d.cfg.delivery === 'photo') ? 'photo' : 'embed';
         themeSel.value = d.cfg.theme || 'hakumo';
+        formSel.value = d.cfg.form || 'glass';
         if (d.cfg.accent) { accent.value = '#' + d.cfg.accent; accentDirty = true; }
         else accentDirty = false;
+        bgUrl.value = d.cfg.bg_url || '';
         schedulePreview();
       }).catch(function () {});
   }
 
   function lcSave(silent) {
-    var body = { enabled: on.checked, theme: themeSel.value || 'hakumo',
-                 accent: accentDirty ? accent.value.replace('#', '') : '' };
+    var tbc = {};
+    Array.prototype.forEach.call(byCatBox.querySelectorAll('select'), function (sel) {
+      if (sel.value) tbc[sel.getAttribute('data-cat')] = sel.value;
+    });
+    var body = { enabled: true,
+                 delivery: deliverySel.value || 'embed',
+                 theme: themeSel.value || 'hakumo',
+                 accent: accentDirty ? accent.value.replace('#', '') : '',
+                 form: formSel.value || 'glass',
+                 form_color: '',
+                 bg_url: (bgUrl.value || '').trim(),
+                 theme_by_cat: tbc };
     fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     }).then(function (r) { return r.json(); }).then(function (d) {

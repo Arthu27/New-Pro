@@ -47,11 +47,11 @@ for marker, label in [
 ]:
     check(marker in source, f'реализовано: {label}')
 
-print('== 2. Одна категория за раз ==')
+print('== 2. Все категории открыты, сворачиваются сами ==')
 for marker, label in [
-    ("ch_active_cat_", 'активная категория запоминается для сервера'),
-    ("item === group", 'при открытии остальные категории сворачиваются'),
-    ("item.classList.toggle('collapsed', !active)", 'аккордеон оставляет один раздел'),
+    ("ch_collapsed_cats_", 'свёрнутые категории запоминаются для сервера'),
+    ("isOpen = !collapsedCats[key]", 'по умолчанию каждая категория ОТКРЫТА — каналы видны сразу'),
+    ("group.classList.toggle('collapsed')", 'категория сворачивается сама, остальные не трогаются'),
     ('aria-expanded=', 'состояние категории доступно screen reader'),
     ('function channelWord', 'корректные русские счётчики каналов'),
     ("name: 'Вне структуры'", 'потерянные категории не скрывают каналы'),
@@ -92,7 +92,10 @@ except Exception as exc:
     print('  JINJA:', exc)
 check(jinja_ok, 'channels.html проходит Jinja parse')
 
-scripts = re.findall(r'<script>(.*?)</script>', source, re.S)
+# 2026-09-08: инлайн-скрипты несут nonce — берём тег с атрибутами,
+# но только исполняемые (без src= и json-блоков данных)
+_all = re.findall(r'<script([^>]*)>(.*?)</script>', source, re.S)
+scripts = [b for a, b in _all if 'src=' not in a and 'application/json' not in a]
 js = scripts[-1] if scripts else ''
 js = re.sub(r'\{\{.*?\}\}', 'TEST_VALUE', js, flags=re.S)
 js_path = os.path.join(_TMP, 'channels-inline.js')

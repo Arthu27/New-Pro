@@ -35,16 +35,13 @@ from db import GuildData  # noqa: E402
 
 NOW = datetime(2026, 8, 13, 12, 0, 0, tzinfo=UTC)
 
-print('== 0. ссылка-доказательство ==')
+print('== 0. поля-доказательства больше нет ==')
 st0 = ap.empty_state()
-it0, err0 = ap.create_appeal(st0, 555, 'Zhulik', 'прошу разбанить, вот пруф', NOW,
-                             link='imgur.com/abc')
-check(it0 is not None and it0.get('link') == 'https://imgur.com/abc',
-      'ссылка без протокола -> https://')
-it0b, _ = ap.create_appeal(st0, 556, 'X', 'вторая ссылка с javascript', NOW,
-                           link='javascript:alert(1)')
-check(it0b.get('link') is None, 'опасная схема отбрасывается')
-check('Доказательство' in ap.fmt_card_text(it0), 'fmt_card_text включает ссылку')
+it0, err0 = ap.create_appeal(st0, 555, 'Zhulik', 'прошу разбанить, вот пруф', NOW)
+check(it0 is not None and 'link' not in it0,
+      'в новой апелляции поля link нет (владелец 2026-09-07)')
+check('Доказательство' not in ap.fmt_card_text(it0),
+      'fmt_card_text без строки доказательства')
 
 print('== 1. create_appeal: валидация и лимиты ==')
 st = ap.empty_state()
@@ -59,20 +56,21 @@ check(bad is None and 'подробнее' in err, 'слишком коротк�
 bad, err = ap.create_appeal(st, 555, 'Zhulik', 'у' * 600, NOW)
 check(bad is None and '500' in err, 'слишком длинный текст отклонён')
 
-# лимит открытых: создаём до потолка, дальше — отказ
-ap.create_appeal(st, 555, 'Zhulik', 'вторая попытка, подробно и честно', NOW)
-ap.create_appeal(st, 555, 'Zhulik', 'третья попытка, очень подробно', NOW)
-bad, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая попытка лимита', NOW)
-check(bad is None and 'дождитесь' in err, f'лимит {ap.MAX_PER_USER} открытых')
+# дубликаты: пока апелляция на рассмотрении, новую не принимаем —
+# одна заявка, одна карточка (владелец 2026-09-06)
+dup, err = ap.create_appeal(st, 555, 'Zhulik', 'вторая попытка, дубликат', NOW)
+check(dup is None and '#1' in err and 'рассмотрении' in err,
+      'дубль не проходит: одна заявка на рассмотрении')
+check(len(ap.user_pending(st, 555)) == 1, 'в очереди осталась одна заявка')
 # решённая освобождает место — но сразу после отказа работает кулдаун,
 # а по его истечении слот честно свободен
 ap.resolve_appeal(st, 1, False, 'Arthur', NOW, reply='нет')
-bad, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая после отказа', NOW)
+bad, err = ap.create_appeal(st, 555, 'Zhulik', 'вторая после отказа', NOW)
 check(bad is None and 'повторная подача' in err,
       'мгновенный репост после отказа удерживает кулдаун')
-freed, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая после кулдауна',
+freed, err = ap.create_appeal(st, 555, 'Zhulik', 'вторая после кулдауна',
                               NOW + timedelta(hours=ap.DEFAULT_COOLDOWN_HOURS + 1))
-check(freed is not None, 'после кулдауна решённая освобождает слот лимита')
+check(freed is not None, 'после кулдауна решённая освобождает слот')
 
 print('== 2. resolve_appeal ==')
 st2 = ap.empty_state()
@@ -92,7 +90,7 @@ check(item2['status'] == 'rejected' and item2['reply'].startswith('Доказа�
 
 print('== 3. списки и карточки ==')
 check([i['id'] for i in ap.pending_items(st2)] == [], 'после решений pending пуст')
-check(len(ap.user_pending(st, 555)) == 3, 'user_pending считает только открытые')
+check(len(ap.user_pending(st, 555)) == 1, 'user_pending считает только открытые')
 check(ap.get_appeal(st2, a1['id'])['user_name'] == 'Griever', 'get_appeal находит запись')
 card = ap.fmt_card_text(a1)
 check('#1' in card and 'Griever' in card and 'клянусь' in card, 'карточка читаемая')
@@ -101,12 +99,48 @@ print('== 4. view: уникальные custom_id ==')
 import discord  # noqa: E402
 v1 = ap.AppealView(object(), 4242, 7)
 v2 = ap.AppealView(object(), 4242, 8)
-ids1 = sorted(c.custom_id for c in v1.children)
-ids2 = sorted(c.custom_id for c in v2.children)
-check(ids1 == ['appeal:accept:7', 'appeal:claim:7', 'appeal:reject:7'],
+
+
+def _btn_ids(view):
+    ids = []
+    for child in view.children:
+        cid = getattr(child, 'custom_id', None)
+        if cid:
+            ids.append(cid)
+        for nested in list(getattr(child, 'children', None) or []):
+            nid = getattr(nested, 'custom_id', None)
+            if nid:
+                ids.append(nid)
+            for deep in list(getattr(nested, 'children', None) or []):
+                did = getattr(deep, 'custom_id', None)
+                if did:
+                    ids.append(did)
+    return sorted(ids)
+
+
+ids1 = _btn_ids(v1)
+ids2 = _btn_ids(v2)
+check(ids1 == ['appeal:menu:7'],
       f'custom_id несут id апелляции: {ids1}')
 check(not set(ids1) & set(ids2), 'custom_id не пересекаются между апелляциями')
 check(v1.timeout is None, 'persistent (timeout=None) — переживает рестарт')
+check(v1.has_components_v2(), 'карточка апелляции — Components V2 LayoutView')
+# select options: Принять / Отклонить / Взять в работу
+_opts = []
+for child in v1.children:
+    stack = [child]
+    while stack:
+        n = stack.pop()
+        for opt in getattr(n, 'options', None) or []:
+            _opts.append(getattr(opt, 'label', ''))
+        stack.extend(list(getattr(n, 'children', None) or []))
+check(set(_opts) >= {'Принять', 'Отклонить', 'Взять в работу'},
+      f'select с действиями апелляции: {_opts}')
+v1.apply_resolved(title='Апелляция #7 — принята',
+                   body='текст\n\n**Решение**\n✅ Принята',
+                   footer='решение вынесено · принята', accent=0x57F287)
+check(v1._resolved and _btn_ids(v1) == [],
+      'после решения кнопок нет')
 
 print('== 5. хранилище ==')
 db = GuildData('appeals')
@@ -134,11 +168,23 @@ check(sdef['invite_on_unban'] is False and sdef['invite_channel_id'] == 0,
 sinv = ap.settings_of({'settings': {'invite_on_unban': True, 'invite_channel_id': 555}})
 check(sinv['invite_on_unban'] is True and sinv['invite_channel_id'] == 555,
       'ссылка-возврат подхватывается из state')
-check(sdef['ping_role_id'] == 0 and sdef['block_after_rejects'] == 0,
-      'пинг роли и авто-блок по умолчанию выключены')
+# Заказ владельца 2026-09-08: «807030012301541377 это роль куратора…
+# он будет тегать эту роль» — тег при новой апелляции ВСЕГДА, дефолт =
+# роль куратора. Прежний дефолт 0 никто не выбирал руками — мигрирует.
+check(ap.CURATOR_PING_ROLE_ID == 807030012301541377,
+      'роль куратора зафиксирована константой')
+check(sdef['ping_role_id'] == ap.CURATOR_PING_ROLE_ID
+      and sdef['block_after_rejects'] == 0,
+      'тег при новой апелляции — куратор по умолчанию; авто-блок выкл')
+s_leg = ap.settings_of({'settings': {'ping_role_id': 0}})
+check(s_leg['ping_role_id'] == ap.CURATOR_PING_ROLE_ID,
+      'старый сохранённый 0 (ничей выбор) мигрирует на куратора')
+s_str = ap.settings_of({'settings': {'ping_role_id': '0'}})
+check(s_str['ping_role_id'] == ap.CURATOR_PING_ROLE_ID,
+      "строка '0' тоже мигрирует (truthy — простой or None её пропускал)")
 spb = ap.settings_of({'settings': {'ping_role_id': 555, 'block_after_rejects': 3}})
 check(spb['ping_role_id'] == 555 and spb['block_after_rejects'] == 3,
-      'пинг роли и авто-блок подхватываются из state')
+      'своя роль из настроек и авто-блок подхватываются из state')
 
 print('== 5.2 кулдаун после отказа ==')
 stc = ap.empty_state()
@@ -157,9 +203,15 @@ check(ap.cooldown_block(stc, 777, NOW + timedelta(hours=ap.DEFAULT_COOLDOWN_HOUR
 print('== 5.3 автозакрытие при ручном разбане ==')
 sta = ap.empty_state()
 pa1, _ = ap.create_appeal(sta, 900, 'Mira', 'прошу разбанить первый раз честно', NOW)
-pa2, _ = ap.create_appeal(sta, 900, 'Mira', 'вторая апелляция от того же человека', NOW)
+# вторая открытая той же Mira — легаси-дубль из старой базы: новые дубли
+# create_appeal не пропускает, автозакрытие должно чистить и такие
+pa2 = dict(pa1)
+pa2['id'] = sta['next_id']
+pa2['text'] = 'вторая апелляция от того же человека'
+sta['next_id'] += 1
+sta['items'].append(pa2)
 pb, _ = ap.create_appeal(sta, 901, 'Chuk', 'а я просто мимо проходил тут', NOW)
-rj, _ = ap.create_appeal(sta, 900, 'Mira', 'третья старая уже решённая', NOW)
+rj, _ = ap.create_appeal(sta, 902, 'Rita', 'третья старая уже решённая', NOW)
 ap.resolve_appeal(sta, rj['id'], False, 'Arthur', NOW, reply='нет')
 closed = ap.auto_close_unbanned(sta, 900, NOW + timedelta(hours=2))
 check(len(closed) == 2 and {c['id'] for c in closed} == {pa1['id'], pa2['id']},
@@ -200,10 +252,43 @@ check(ok0 is not None, '0 в настройке — авто-блок не ме�
 
 print('== 5.6 rate-view оценки рассмотрения ==')
 rv = ap.AppealRateView(object(), 42, 7)
-rids = sorted(c.custom_id for c in rv.children)
-check(rids == ['app_rate:down:42:7', 'app_rate:up:42:7'],
-      f'custom_id оценки несут gid и номер: {rids}')
+rids = [c.custom_id for c in rv.children]
+check(rids == ['app_rate:42:7'],
+      f'custom_id селекта оценки несёт gid и номер: {rids}')
 check(rv.timeout is None, 'rate-view persistent (переживает рестарт)')
+check(len(rv.children) == 1 and isinstance(rv.children[0], discord.ui.Select),
+      'оценка — одно меню-селект, не две голые кнопки')
+opts = {o.value: o.label for o in rv.children[0].options}
+check(opts == {'up': 'Помогли разобраться', 'down': 'Не помогли'},
+      f'пункты меню оценки: {opts}')
+pe = ap._rate_prompt_embed({'id': 7, 'status': 'accepted'}, 'Сервер')
+check(pe.title == 'Оценка рассмотрения' and pe.fields,
+      'ЛС оценки — карточка-таблица, не сырой текст')
+fnames = [f.name for f in pe.fields]
+check(fnames == ['Апелляция', 'Решение', 'Как оценить'],
+      f'столбцы меню оценки: {fnames}')
+check('> ' in pe.fields[0].value and '"' in pe.fields[0].value,
+      'ячейки меню — цитата с кавычками')
+le = ap._rate_log_embed(
+    type('G', (), {'id': 1, 'name': 'G', 'icon': None,
+                   'get_member': lambda self, x: None})(),
+    {'id': 7, 'status': 'accepted', 'reviewed_by': 'Мод',
+     'text': 'прошу снять бан, это был брат',
+     'reply': 'ок, снимаем',
+     'created_at': '2026-09-01T12:00:00+00:00',
+     'reviewed_at': '2026-09-01T13:00:00+00:00',
+     },
+    type('U', (), {'mention': '<@9>', 'display_name': 'Автор',
+                   'id': 9, 'display_avatar': type('A', (), {'url': ''})()})(),
+    'up', 'всё ясно')
+check(le.title and 'Оценка рассмотрения' in (le.title or ''),
+      'лог оценки — карточка, не сырая строка')
+ln = [f.name for f in le.fields]
+check('Апелляция' in ln and 'Оценка' in ln and 'Комментарий' in ln
+      and 'Решение' in ln and 'Рассмотрел' in ln
+      and 'Текст' in ln and 'Подана' in ln and 'Рассмотрена' in ln
+      and 'Ответ модерации' in ln,
+      f'таблица лога оценки: {ln}')
 
 print('== 5.7 эскалация, «в работе», комментарий к оценке ==')
 s_esc = ap.empty_state()
@@ -235,6 +320,11 @@ silent = [n.lineno for n in ast.walk(tree)
                          (ast.Pass, ast.Continue))]
 check('_dm_embed' in src and 'COLOR_CLOSED' in src,
       'ЛС апелляций — единые embed-карточки')
+check('class AppealRateSelect' in src and '_rate_prompt_embed' in src
+      and '_rate_log_embed' in src,
+      'оценка — селект + карточка в ЛС + таблица в канал')
+check("Как прошло рассмотрение? Одна оценка" not in src,
+      'сырой текст оценки в ЛС убран')
 check('ответят в треде' not in src,
       'старая неверная фраза «ответят в треде» убрана из ЛС пользователя')
 check(not silent, f'ни одного молчаливого except {silent or "ок"}')
