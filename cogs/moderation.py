@@ -422,7 +422,16 @@ class Moderation (commands .Cog ):
             schedule_ensure_menu_emojis(interaction.client)
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
-        view = ModPanelView(self, interaction.user, allowed, preselect=target)
+        try:
+            view = ModPanelView(self, interaction.user, allowed, preselect=target)
+        except Exception as _vex:
+            log.exception('modpanel view: %s', _vex)
+            await _respond(
+                interaction,
+                embed=error_embed(
+                    'Панель не собралась. Попробуй ещё раз через пару секунд.'),
+                ephemeral=True)
+            return
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
