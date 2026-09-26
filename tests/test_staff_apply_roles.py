@@ -489,6 +489,12 @@ rej_txt = layout_plain_text(rej_view) if rej_view else ''
 check(rej_view is not None and type(rej_view).__name__ == 'StaffAppDecidedView',
       'отклонение: карточка без select')
 check('ОТКЛОНЕНО' in rej_txt, 'отклонение: статус ОТКЛОНЕНО на карточке', rej_txt[:200])
+# статус внизу — после текста заявки
+_pos_body = rej_txt.find('Пользователь') if 'Пользователь' in rej_txt else rej_txt.find('ID')
+_pos_status = rej_txt.find('ОТКЛОНЕНО')
+check(_pos_status >= 0 and (_pos_body < 0 or _pos_status > _pos_body),
+      'отклонение: ОТКЛОНЕНО внизу карточки',
+      f'body@{_pos_body} status@{_pos_status}')
 # select отсутствует (нет ActionRow с Select)
 has_select = False
 try:
@@ -695,14 +701,17 @@ check(SR.curator_role_id(777) == 607,
 check(SR.curator_role_id(778, 999) == 999,
       'нет куратора нигде — берётся .env')
 
-# кнопки «Одобрить/Отклонить/Чёрный список» на карточке
+# кнопки legacy + select на новой карточке
 src_cog_full = open(os.path.join(repo, 'cogs', 'staff_apply.py'),
                     encoding='utf-8').read()
+check('StaffReviewSelect' in src_cog_full
+      and 'staff_review_select_v2' in src_cog_full
+      and 'Принять' in src_cog_full and 'Отклонить' in src_cog_full
+      and 'Чёрный список' in src_cog_full,
+      'решение по заявке — select Принять/Отклонить/Чёрный список')
 check('staff_card_approve_v3' in src_cog_full
-      and 'Одобрить' in src_cog_full and 'Отклонить' in src_cog_full
-      and 'Чёрный список' in src_cog_full
       and 'StaffCardBlacklistButton' in src_cog_full,
-      'решение по заявке — кнопки Одобрить/Отклонить/Чёрный список')
+      'legacy-кнопки v3 оставлены для старых карточек')
 check('staff_review_approve_v1' in src_cog_full
       and 'StaffReviewButtonsView' in src_cog_full,
       'старые заявки с кнопками остаются рабочими')

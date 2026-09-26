@@ -254,25 +254,36 @@ from cogs.staff_apply import (  # noqa: E402
     StaffReviewSelect, StaffCardApproveButton, StaffCardBlacklistButton)
 rev = StaffReviewSelect()
 check([o.value for o in rev.options] == ['approve', 'reject', 'blacklist'],
-      'legacy select: Принять/Отклонить/Чёрный список')
+      'select решения: Принять/Отклонить/Чёрный список')
 card = StaffAppCardView(title='Moderator', body='x')
-# Walk children for buttons (V2 ActionRow)
-_btn_labels = []
+# Walk children for Select (V2 ActionRow)
+_has_sel = False
+_sel_vals = []
 for item in card.children:
     walk = [item]
     while walk:
         cur = walk.pop()
-        kids = getattr(cur, 'children', None) or []
+        kids = list(getattr(cur, 'children', None) or [])
         walk.extend(kids)
-        lab = getattr(cur, 'label', None)
-        if lab:
-            _btn_labels.append(lab)
-check('Одобрить' in _btn_labels and 'Отклонить' in _btn_labels
-      and 'Чёрный список' in _btn_labels,
-      f'карточка: кнопки решения {_btn_labels}')
+        if type(cur).__name__ in ('Select', 'StaffReviewSelect') or hasattr(cur, 'options'):
+            opts = list(getattr(cur, 'options', None) or [])
+            if opts:
+                _has_sel = True
+                _sel_vals = [getattr(o, 'value', None) for o in opts]
+check(_has_sel and _sel_vals == ['approve', 'reject', 'blacklist'],
+      f'карточка: select решения {_sel_vals}')
 check(StaffCardApproveButton().custom_id.endswith('approve_v3')
       and StaffCardBlacklistButton().custom_id.endswith('blacklist_v3'),
-      'кнопки ЧС на карточке')
+      'legacy-кнопки v3 живы для старых карточек')
+# decided: ОТКЛОНЕНО внизу
+from cogs.staff_apply import StaffAppDecidedView  # noqa: E402
+from services.v2_layouts import layout_plain_text as _lpt  # noqa: E402
+dec = StaffAppDecidedView(title='Moderator', body='**Пользователь** · <@1>\n**ID** · `1`',
+                          status='ОТКЛОНЕНО', note='test · today')
+dec_txt = _lpt(dec) or ''
+_pb = dec_txt.find('Пользователь')
+_ps = dec_txt.find('ОТКЛОНЕНО')
+check(_ps > _pb >= 0, f'ОТКЛОНЕНО внизу (body@{_pb} status@{_ps})')
 for kind in SR.POSITIONS:
     tag = _curator_ping(
         types.SimpleNamespace(

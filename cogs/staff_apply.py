@@ -908,10 +908,12 @@ class RoleSelect(discord.ui.Select):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Рассмотрение заявки (persistent) — кнопки Одобрить / Отклонить / ЧС
+# Рассмотрение заявки (persistent) — select Принять / Отклонить / ЧС
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffCardApproveButton(discord.ui.Button):
+    """Legacy v3 — старые карточки с кнопками остаются живыми."""
+
     def __init__(self):
         super().__init__(
             label='Одобрить', style=discord.ButtonStyle.success,
@@ -922,6 +924,8 @@ class StaffCardApproveButton(discord.ui.Button):
 
 
 class StaffCardRejectButton(discord.ui.Button):
+    """Legacy v3 — старые карточки с кнопками остаются живыми."""
+
     def __init__(self):
         super().__init__(
             label='Отклонить', style=discord.ButtonStyle.danger,
@@ -932,6 +936,8 @@ class StaffCardRejectButton(discord.ui.Button):
 
 
 class StaffCardBlacklistButton(discord.ui.Button):
+    """Legacy v3 — старые карточки с кнопками остаются живыми."""
+
     def __init__(self):
         super().__init__(
             label='Чёрный список', style=discord.ButtonStyle.secondary,
@@ -942,13 +948,13 @@ class StaffCardBlacklistButton(discord.ui.Button):
 
 
 class StaffReviewSelect(discord.ui.Select):
-    """Legacy select — только для старых карточек до кнопок."""
+    """Select решения: Принять / Отклонить / ЧС — личные стикеры набора."""
 
     def __init__(self):
         from services.menu_banners import select_label
         from services.menu_emojis import emoji_for_review
         super().__init__(
-            placeholder="",
+            placeholder="Решение по заявке",
             options=[
                 discord.SelectOption(
                     label=select_label("Принять"), value="approve",
@@ -969,7 +975,7 @@ class StaffReviewSelect(discord.ui.Select):
 
 
 class StaffAppCardView(discord.ui.LayoutView):
-    """Карточка заявки куратору — V2: должность, ответы, кнопки решения."""
+    """Карточка заявки куратору — V2: должность, ответы, select решения."""
 
     def __init__(self, *, title: str, body: str, footer: str = ''):
         super().__init__(timeout=None)
@@ -985,13 +991,9 @@ class StaffAppCardView(discord.ui.LayoutView):
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
         foot = footer or (
-            'HAKUMO · решение — кнопки ниже · только куратор этой ветки'
+            'HAKUMO · select ниже · только «отвечаю за» этой ветки'
         )
-        btns = (
-            StaffCardApproveButton(),
-            StaffCardRejectButton(),
-            StaffCardBlacklistButton(),
-        )
+        sel = StaffReviewSelect()
         if V2_AVAILABLE:
             from discord import ui as dui
             children = [
@@ -1003,19 +1005,17 @@ class StaffAppCardView(discord.ui.LayoutView):
                 dui.TextDisplay(f'-# {foot}'[:400]),
             ]
             row = dui.ActionRow()
-            for b in btns:
-                row.add_item(b)
+            row.add_item(sel)
             children.append(row)
             self.add_item(black_container(*children))
             return
         row = discord.ui.ActionRow()
-        for b in btns:
-            row.add_item(b)
+        row.add_item(sel)
         self.add_item(row)
 
 
 class StaffAppDecidedView(discord.ui.LayoutView):
-    """После решения: та же таблица заявки, без select, статус сверху."""
+    """После решения: таблица заявки, статус ОТКЛОНЕНО/ПРИНЯТО внизу."""
 
     def __init__(self, *, title: str, body: str, status: str, note: str = '',
                  accent: int = 0xE74C3C):
@@ -1031,18 +1031,20 @@ class StaffAppDecidedView(discord.ui.LayoutView):
         except Exception:
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
-        status_line = f'## {status}'
+        # Статус ВНИЗУ — владелец: «чтобы красиво и внизу написало отклонено»
+        status_u = (status or '').strip().upper() or 'РЕШЕНО'
+        bottom = f'## {status_u}'
         if note:
-            status_line = f'{status_line}\n-# {note}'
+            bottom = f'{bottom}\n-# {note}'
         if V2_AVAILABLE:
             from discord import ui as dui
             children = [
                 dui.TextDisplay(head[:500]),
                 dui.TextDisplay('-# HAKUMO · заявка в команду'),
                 dui.Separator(spacing=SeparatorSpacing.large),
-                dui.TextDisplay(status_line[:500]),
-                dui.Separator(),
                 dui.TextDisplay(str(body)[:3500]),
+                dui.Separator(spacing=SeparatorSpacing.large),
+                dui.TextDisplay(bottom[:500]),
             ]
             self.add_item(black_container(*children, accent=accent))
             return
@@ -1631,7 +1633,14 @@ class StaffApply(commands.Cog):
         self.bot.add_view(StaffApplyView())
         self.bot.add_view(StaffReviewView())
         self.bot.add_view(StaffReviewButtonsView())
+        # Новые карточки — select v2 внутри LayoutView
         self.bot.add_view(StaffAppCardView(title='Заявка', body='…'))
+        # Legacy v3-кнопки на старых карточках
+        _legacy_btns = discord.ui.View(timeout=None)
+        _legacy_btns.add_item(StaffCardApproveButton())
+        _legacy_btns.add_item(StaffCardRejectButton())
+        _legacy_btns.add_item(StaffCardBlacklistButton())
+        self.bot.add_view(_legacy_btns)
         if not self._menu_task_started:
             self._menu_task_started = True
             try:
