@@ -184,23 +184,36 @@ class Config:
     LOG_CHANNEL_ID: int = _env_int('LOG_CHANNEL_ID', 1491145640900558979)
     COMPANION_USER_ID: int = _env_int('COMPANION_USER_ID', 1353157554967937153)
     REQUIRED_ROLE_ID: int = _env_int('REQUIRED_ROLE_ID', 1474866958758576309)
-    APPLY_CHANNEL_ID: int = _env_int('APPLY_CHANNEL_ID', 1484308081302306846)
+    # Канал, куда падают заявки в команду (карточки кураторам).
+    APPLY_CHANNEL_ID: int = _env_int('APPLY_CHANNEL_ID', 1312436222307860490)
+    # Канал меню набора (бот публикует сам при старте).
+    STAFF_MENU_CHANNEL_ID: int = _env_int('STAFF_MENU_CHANNEL_ID', 1312429743865335939)
     # Куда /event-panel публикует панель ивентов (0 = канал из опции команды
     # или канал, где вызвали /event-panel). Задать snowflake ID текстового канала.
     EVENT_PANEL_CHANNEL_ID: int = _env_int('EVENT_PANEL_CHANNEL_ID', 0)
-    # Роли, выдаваемые после одобрения заявки в команду (0 = искать по имени)
-    STAFF_HELPER_ROLE_ID: int = _env_int('STAFF_HELPER_ROLE_ID', 0)
-    STAFF_MODERATOR_ROLE_ID: int = _env_int('STAFF_MODERATOR_ROLE_ID', 0)
+    # Роли после одобрения (известные ID сервера Hakumo).
+    STAFF_HELPER_ROLE_ID: int = _env_int('STAFF_HELPER_ROLE_ID', 948969471916249119)
+    STAFF_MODERATOR_ROLE_ID: int = _env_int(
+        'STAFF_MODERATOR_ROLE_ID', 803553848396349510)
+    STAFF_EVENT_ROLE_ID: int = _env_int('STAFF_EVENT_ROLE_ID', 852634463535759461)
+    STAFF_BROADCASTER_ROLE_ID: int = _env_int(
+        'STAFF_BROADCASTER_ROLE_ID', 1551180629687664670)
     # Ветки заявок: куда отправлять «новую заявку» по должности
-    # (0 = общий канал APPLY_CHANNEL_ID)
+    # (0 = общий канал APPLY_CHANNEL_ID / комната заявок)
     STAFF_HELPER_CHANNEL_ID: int = _env_int('STAFF_HELPER_CHANNEL_ID', 0)
     STAFF_MODERATOR_CHANNEL_ID: int = _env_int('STAFF_MODERATOR_CHANNEL_ID', 0)
-    # Кураторы: кого пинговать в ветке (0 = не пинговать)
-    # Куратор заявок один на обе ветки; старые раздельные переменные
-    # работают как запасное значение (если новая не задана)
+    STAFF_EVENT_CHANNEL_ID: int = _env_int('STAFF_EVENT_CHANNEL_ID', 0)
+    STAFF_BROADCASTER_CHANNEL_ID: int = _env_int('STAFF_BROADCASTER_CHANNEL_ID', 0)
+    # Кураторы «× Отвечаю за …» — раздельные по веткам
     STAFF_CURATOR_ROLE_ID: int = _env_int('STAFF_CURATOR_ROLE_ID', 0)
-    STAFF_HELPER_CURATOR_ROLE_ID: int = _env_int('STAFF_HELPER_CURATOR_ROLE_ID', 0)
-    STAFF_MODERATOR_CURATOR_ROLE_ID: int = _env_int('STAFF_MODERATOR_CURATOR_ROLE_ID', 0)
+    STAFF_HELPER_CURATOR_ROLE_ID: int = _env_int(
+        'STAFF_HELPER_CURATOR_ROLE_ID', 1551525681207189504)
+    STAFF_MODERATOR_CURATOR_ROLE_ID: int = _env_int(
+        'STAFF_MODERATOR_CURATOR_ROLE_ID', 1551524708552278036)
+    STAFF_EVENT_CURATOR_ROLE_ID: int = _env_int(
+        'STAFF_EVENT_CURATOR_ROLE_ID', 1551527644326002748)
+    STAFF_BROADCASTER_CURATOR_ROLE_ID: int = _env_int(
+        'STAFF_BROADCASTER_CURATOR_ROLE_ID', 1552639452713848912)
 
     @classmethod
     def data_path(cls, *parts: str) -> str:

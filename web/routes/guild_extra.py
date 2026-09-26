@@ -152,8 +152,9 @@ def register(ctx):
         """Статус Discord-панели /event-panel (data/event_panel_<gid>.json)."""
         try:
             from cogs.event_panel import (
-                EVENT_MOD_ROLE_ID, configured_panel_channel_id,
-                load_panel_cfg, target_channel_id)
+                EVENT_ADMIN_ROLE_ID, EVENT_MOD_ROLE_ID,
+                configured_panel_channel_id, event_voice_channel_id,
+                load_panel_cfg, normalize_phase, target_channel_id)
             cfg = load_panel_cfg(int(guild_id))
         except Exception as ex:
             return jsonify({'ok': False, 'error': str(ex)}), 500
@@ -166,21 +167,31 @@ def register(ctx):
             tgt = int(target_channel_id(cfg) or 0)
         except Exception:
             tgt = 0
+        try:
+            voice_id = int(event_voice_channel_id() or 0)
+        except Exception:
+            voice_id = 0
+        phase = normalize_phase(cfg)
         return jsonify({
             'ok': True,
             'guild_id': str(guild_id),
             'title': cfg.get('title') or 'События сервера',
             'description': cfg.get('description') or '',
+            'phase': phase,
             'registration_open': bool(cfg.get('registration_open', True)),
             'signup_count': len(signups),
             'signups': [str(u) for u in signups],
             'channel_id': str(cfg['channel_id']) if cfg.get('channel_id') else '',
             'message_id': str(cfg['message_id']) if cfg.get('message_id') else '',
             'target_channel_id': str(tgt) if tgt else '',
+            'voice_channel_id': str(voice_id) if voice_id else '',
             'posted_by': str(cfg.get('posted_by') or ''),
             'posted_at': cfg.get('posted_at') or '',
+            'started_at': cfg.get('started_at') or '',
+            'ended_at': cfg.get('ended_at') or '',
             'last_announce_by': str(cfg.get('last_announce_by') or ''),
             'last_announce_at': cfg.get('last_announce_at') or '',
+            'event_admin_role_id': str(EVENT_ADMIN_ROLE_ID),
             'event_mod_role_id': str(EVENT_MOD_ROLE_ID),
             'configured_channel_id': cfg_ch,
         })
@@ -225,8 +236,8 @@ def register(ctx):
             if body.get('target_channel_id') not in (None, ''):
                 try:
                     set_target_channel_id(int(guild_id), int(body['target_channel_id']))
-                except (TypeError, ValueError):
-                    pass
+                except (TypeError, ValueError) as _ex:
+                    _log.debug('guild_extra: target_channel_id: %s', _ex)
 
             async def _post():
                 guild = bot.get_guild(int(guild_id))
@@ -238,8 +249,8 @@ def register(ctx):
                 try:
                     if not guild.channels:
                         await guild.fetch_channels()
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug('guild_extra: fetch_channels: %s', _ex)
                 uid = session.get('user_id') or session.get('discord_id') or 'panel'
                 msg, cfg = await publish_event_panel(guild, posted_by=uid)
                 return msg, cfg

@@ -225,10 +225,8 @@ async def main():
         return out
 
     ids = _ids(view) if view else []
-    check(any(str(i).startswith('appeal:accept:') for i in ids)
-          and any(str(i).startswith('appeal:reject:') for i in ids)
-          and any(str(i).startswith('appeal:claim:') for i in ids),
-          'на карточке есть Принять / Отклонить / Взять в работу', f'→ {ids}')
+    check(any(str(i).startswith('appeal:menu:') for i in ids),
+          'на карточке select Принять / Отклонить / Взять в работу', f'→ {ids}')
     check(item.get('message_id') and item.get('card_channel_id') == APPEAL_CH,
           'запись апелляции знает ID карточки и канал')
     check(len(appeal_ch.overwrites) == 1

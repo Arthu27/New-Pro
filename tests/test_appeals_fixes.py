@@ -195,10 +195,9 @@ cog._open_appeal_channel = _fake_open
 
 from services.permission_acl import set_action_rule, clear_action_rules  # noqa: E402
 
-ROLE_ID = 6201
-set_action_rule(GID, 'ban', [ROLE_ID])
+# ACL «Бан» больше не нужен: кто видит канал — может взять в работу.
 view = AppealView(cog, GID, other['id'])   # «other» ещё pending
-mod_user = _User(MOD, [_Role(ROLE_ID)])
+mod_user = _User(MOD, [])
 it = _Inter(mod_user)
 asyncio.new_event_loop().run_until_complete(view._claim(it))
 check(opened_calls == [(GID, 111222333444555666)],

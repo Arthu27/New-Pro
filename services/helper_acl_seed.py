@@ -152,8 +152,8 @@ def apply_helper_acl_seed(force=False, guild_id=None):
                         if tier in ('helper', 'mod', 'master', 'curator',
                                     'admin', 'owner'):
                             roles.append(str(rid))
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug('helper_acl_seed: except@155: %s', _ex)
                 seen, uniq = set(), []
                 for r in roles:
                     if r not in seen:

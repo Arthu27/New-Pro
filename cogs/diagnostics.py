@@ -58,8 +58,10 @@ DATA_DIR ="data"
 os .makedirs (DATA_DIR ,exist_ok =True )
 
 # Health thresholds
+# Бот Hakumo стабильно живёт ~450–550 МБ RSS (много когов + панель).
+# Старый warn=400 спамил Auto-Repair каждые 5 мин и писал в ЛС владельцу.
 THRESHOLDS ={
-"memory_mb":{"warn":400 ,"critical":700 },
+"memory_mb":{"warn":750 ,"critical":1100 },
 "cpu_percent":{"warn":60 ,"critical":85 },
 "latency_ms":{"warn":300 ,"critical":800 },
 "error_rate_per_min":{"warn":5 ,"critical":15 },
@@ -68,12 +70,28 @@ THRESHOLDS ={
 
 # Auto-repair actions
 REPAIR_ACTIONS ={
-"high_memory":"Garbage collect + reload heaviest cog",
+"high_memory":"Garbage collect",
 "high_latency":"Reset websocket connection",
 "high_error_rate":"Identify failing cog + auto-reload",
 "memory_leak":"Periodic full cog reload (hourly)",
 "stuck_cog":"Unload + reload stuck cog",
 }
+
+# Не дёргать одну и ту же починку слишком часто (сек). high_memory — реже:
+# GC не снижает RSS у долгоживущего Python-процесса заметно.
+REPAIR_COOLDOWN = {
+    'high_memory': 3600,   # 1 час
+    'high_latency': 300,
+    'high_error_rate': 300,
+}
+DEFAULT_REPAIR_COOLDOWN = 300
+
+# Discord-уведомления владельцу об Auto-Repair. По умолчанию ВЫКЛ —
+# иначе high_memory warn спамит ЛС/канал при нормальном RSS ~500 МБ.
+# Вкл: AUTO_REPAIR_DISCORD_NOTIFY=1
+def _discord_notify_enabled() -> bool:
+    raw = (os.getenv('AUTO_REPAIR_DISCORD_NOTIFY') or '0').strip().lower()
+    return raw in ('1', 'true', 'yes', 'on')
 
 
 class Diagnostics (commands .Cog ):
@@ -308,18 +326,22 @@ class Diagnostics (commands .Cog ):
             await self ._trigger_repair ("high_error_rate","critical")
 
     async def _trigger_repair (self ,repair_type ,severity ):
-        """Throttle: don't trigger same repair within 5 minutes"""
-        if time .time ()-self .last_repair [repair_type ]<300 :
+        """Throttle: не повторять одну починку слишком часто."""
+        cooldown = REPAIR_COOLDOWN.get(repair_type, DEFAULT_REPAIR_COOLDOWN)
+        if time .time ()-self .last_repair [repair_type ]< cooldown :
             return 
         self .last_repair [repair_type ]=time .time ()
         self .repair_count [repair_type ]+=1 
         action =REPAIR_ACTIONS .get (repair_type ,"Unknown")
-        # Log
+        # Log (всегда в файл/journal — Discord отдельно и по умолчанию выкл)
         log .info (f"[diagnostics] AUTO-REPAIR: {repair_type} ({severity}) — {action}")
         if repair_type =="high_memory":
             import gc 
             gc .collect ()
-            # Optional: reload heaviest cog
+            # warn: только GC + лог, без Discord (иначе спам при RSS ~500 МБ).
+            # critical: Discord только если AUTO_REPAIR_DISCORD_NOTIFY=1.
+            if severity != "critical":
+                return
         elif repair_type =="high_latency":
         # Can't really reset websocket from here, but log it
             pass 
@@ -337,11 +359,12 @@ class Diagnostics (commands .Cog ):
                         self .cog_perf [cog_name ]["errors"]=0 
                     except Exception as e :
                         log .info (f"[diagnostics] reload failed for {cog_name}: {e}")
-                        # Notify admin
         await self ._notify_admin (repair_type ,severity ,action )
 
     async def _notify_admin (self ,repair_type ,severity ,action ):
-        """DM owner about auto-repair action"""
+        """DM owner about auto-repair — только если AUTO_REPAIR_DISCORD_NOTIFY=1."""
+        if not _discord_notify_enabled():
+            return
         owner_id =os .getenv ("OWNER_ID")
         if not owner_id :
             return 
@@ -456,11 +479,13 @@ class Diagnostics (commands .Cog ):
         ctx =InterCtx (interaction )
         h =await self .get_health_snapshot_async ()
         embed =discord .Embed (title =" Bot Health",color =self ._health_color (h ))
-        # Status indicator
-        status_emoji ="🟢"if h ["latency_ms"]<300 and h ["memory_mb"]<700 else "🟡"if h ["latency_ms"]<800 and h ["memory_mb"]<1000 else ""
+        # Status indicator — пороги из THRESHOLDS (warn/critical памяти)
+        _mw = THRESHOLDS["memory_mb"]["warn"]
+        _mc = THRESHOLDS["memory_mb"]["critical"]
+        status_emoji ="🟢"if h ["latency_ms"]<300 and h ["memory_mb"]<_mw else "🟡"if h ["latency_ms"]<800 and h ["memory_mb"]<_mc else ""
         embed .description =f"{status_emoji} **Bot Online** · Uptime: {self._fmt_uptime(h['uptime_sec'])}"
         # Vitals
-        mem_status ="🟢"if h ["memory_mb"]<400 else "🟡"if h ["memory_mb"]<700 else ""
+        mem_status ="🟢"if h ["memory_mb"]<_mw else "🟡"if h ["memory_mb"]<_mc else ""
         cpu_status ="🟢"if h ["cpu_percent"]<60 else "🟡"if h ["cpu_percent"]<85 else ""
         lat_status ="🟢"if h ["latency_ms"]<300 else "🟡"if h ["latency_ms"]<800 else ""
         embed .add_field (name =" Память",value =f"{mem_status} {h['memory_mb']} MB",inline =True )
@@ -567,9 +592,11 @@ class Diagnostics (commands .Cog ):
         
         # HELPERS 
     def _health_color (self ,h ):
-        if h ["latency_ms"]<300 and h ["memory_mb"]<700 and h ["errors_last_min"]<5 :
+        _mw = THRESHOLDS["memory_mb"]["warn"]
+        _mc = THRESHOLDS["memory_mb"]["critical"]
+        if h ["latency_ms"]<300 and h ["memory_mb"]<_mw and h ["errors_last_min"]<5 :
             return 0x4ADE80 # green
-        if h ["latency_ms"]<800 and h ["memory_mb"]<1000 :
+        if h ["latency_ms"]<800 and h ["memory_mb"]<_mc :
             return 0xFBBF24 # yellow
         return 0xEF4444 # red
 

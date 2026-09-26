@@ -54,13 +54,13 @@ def _normalize(raw: dict | None) -> dict:
         if 'temperature' in raw:
             t = float(raw['temperature'])
             cfg['temperature'] = max(0.0, min(1.0, t))
-    except (TypeError, ValueError):
-        pass
+    except (TypeError, ValueError) as _ex:
+        _log.debug('ai_chat_settings: except@57: %s', _ex)
     try:
         if 'max_tokens' in raw:
             cfg['max_tokens'] = max(256, min(4096, int(raw['max_tokens'])))
-    except (TypeError, ValueError):
-        pass
+    except (TypeError, ValueError) as _ex:
+        _log.debug('ai_chat_settings: except@62: %s', _ex)
     chans = raw.get('channels')
     if isinstance(chans, list):
         out = []
@@ -69,7 +69,8 @@ def _normalize(raw: dict | None) -> dict:
                 cid = int(str(c).strip())
                 if cid > 0:
                     out.append(cid)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as _ex:
+                _log.debug('ai_chat_settings: except@72: %s', _ex)
                 continue
         # Не даём случайно стереть единственный боевой канал пустым списком
         # через битый JSON — пустой список = «все выкл», это явно ок.
@@ -109,6 +110,7 @@ def env_channel_ids() -> set[int]:
             continue
         try:
             out.add(int(part))
-        except ValueError:
+        except ValueError as _ex:
+            _log.debug('ai_chat_settings: except@112: %s', _ex)
             continue
     return out

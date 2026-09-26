@@ -6,7 +6,7 @@ _log = get_logger("moderation")
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
-from datetime import datetime ,timedelta ,timezone 
+from datetime import datetime, timedelta, timezone
 import json 
 import os 
 import time 
@@ -422,11 +422,24 @@ class Moderation (commands .Cog ):
             schedule_ensure_menu_emojis(interaction.client)
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
-        view = ModPanelView(self, interaction.user, allowed, preselect=target)
+        try:
+            view = ModPanelView(self, interaction.user, allowed, preselect=target)
+        except Exception as _vex:
+            log.exception('modpanel view: %s', _vex)
+            await _respond(
+                interaction,
+                embed=error_embed(
+                    'Панель не собралась. Попробуй ещё раз через пару секунд.'),
+                ephemeral=True)
+            return
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
-        banner = view._banner_file or view._make_banner_file()
+        banner = None
+        try:
+            banner = view._banner_file or view._make_banner_file()
+        except Exception as _bex:
+            log.warning('modpanel banner: %s — открываем без баннера', _bex)
         edit_kw = {
             'view': view,
             'content': None,
@@ -1186,8 +1199,23 @@ class Moderation (commands .Cog ):
                 count =max (1 ,min (int (amount )or 10 ,200 ))
             except Exception :
                 count =10
+            # Цель выбрана в панели → удаляем сообщения ЭТОГО участника
+            # (не просто последние N в канале). Без цели — как раньше: purge канала.
+            target_member =None
+            target_uid =None
+            if target :
+                target_member ,target_uid =self ._resolve_member (guild ,target )
+                if not target_uid :
+                    try :
+                        target_uid =int (str (target ).strip ())
+                    except (TypeError ,ValueError ):
+                        target_uid =None
             try :
-                deleted =await ch .purge (limit =count )
+                if target_uid :
+                    deleted =await self ._purge_user_messages (
+                        ch ,int (target_uid ),count )
+                else :
+                    deleted =await ch .purge (limit =count )
             except discord .Forbidden :
                 await _respond (interaction ,embed =error_embed (
                 'У бота нет права «Управление сообщениями» в этом канале. '
@@ -1205,10 +1233,17 @@ class Moderation (commands .Cog ):
             except Exception as _re :
                 log .debug (f'[STAFF_LIMIT] clear rec: {_re}')
             _where =getattr (ch ,'mention',None )or 'канале'
-            confirm =success_embed (
-            "Сообщения удалены",
-            f"Удалено **{len(deleted)}** сообщений в {_where}",
-            guild =guild )
+            if target_uid :
+                who =getattr (target_member ,'mention',None )or f'<@{target_uid}>'
+                confirm =success_embed (
+                "Сообщения удалены",
+                f"Удалено **{len(deleted)}** сообщ. от {who} в {_where}",
+                guild =guild )
+            else :
+                confirm =success_embed (
+                "Сообщения удалены",
+                f"Удалено **{len(deleted)}** сообщений в {_where}",
+                guild =guild )
             await _respond (interaction ,embed =confirm ,ephemeral =True )
 
     async def _ensure_action_acl(self, interaction, action):
@@ -1421,6 +1456,58 @@ class Moderation (commands .Cog ):
             await member .edit (mute =True ,reason ='активен войс-мут')
         except Exception as _ex :
             log .debug (f'[MODPANEL] on_voice_state_update: {_ex}')
+
+    async def _purge_user_messages(self, channel, user_id: int, count: int):
+        """Удалить до `count` последних сообщений участника в канале.
+
+        Discord purge(limit=N, check=…) смотрит только N сообщений канала —
+        чужие сообщения «съедают» лимит. Поэтому сначала собираем нужные
+        из истории (до 500), потом удаляем пачкой.
+        """
+        count = max(1, min(int(count or 10), 200))
+        uid = int(user_id)
+        found = []
+        try:
+            async for msg in channel.history(limit=500):
+                try:
+                    if int(getattr(getattr(msg, 'author', None), 'id', 0) or 0) == uid:
+                        found.append(msg)
+                except (TypeError, ValueError) as _ex:
+                    log.debug('moderation: except@1462: %s', _ex)
+                    continue
+                if len(found) >= count:
+                    break
+        except Exception as _hx:
+            log.warning('[MODPANEL] history for purge user: %s', _hx)
+            raise
+
+        if not found:
+            return []
+
+        # < 14 дней — bulk delete; старше — по одному
+        deleted = []
+        try:
+            if hasattr(channel, 'delete_messages') and len(found) > 1:
+                # discord.py сам режет bulk на окна 14 дней
+                await channel.delete_messages(found)
+                deleted = found
+            else:
+                for msg in found:
+                    try:
+                        await msg.delete()
+                        deleted.append(msg)
+                    except Exception as _dx:
+                        log.debug('[MODPANEL] msg.delete: %s', _dx)
+        except discord.HTTPException:
+            # fallback: по одному
+            deleted = []
+            for msg in found:
+                try:
+                    await msg.delete()
+                    deleted.append(msg)
+                except Exception as _dx:
+                    log.debug('[MODPANEL] msg.delete fallback: %s', _dx)
+        return deleted
 
     async def _clear_voice_mute (self ,guild ,user ):
         """Снять любое голосовое заглушение (роль войс-мута или нативный
@@ -2282,20 +2369,20 @@ def _cancel_panel_reset(panel):
         return
     try:
         panel._reset_gen = int(getattr(panel, '_reset_gen', 0) or 0) + 1
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('modpanel cancel reset_gen: %s', _ex)
     task = getattr(panel, '_reset_task', None)
     if task is None:
         return
     try:
         if not task.done():
             task.cancel()
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('modpanel cancel reset_task: %s', _ex)
     try:
         panel._reset_task = None
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('modpanel clear reset_task: %s', _ex)
 
 
 async def _push_panel_view(panel, interaction=None):
@@ -2316,8 +2403,8 @@ async def _push_panel_view(panel, interaction=None):
                         'modpanel push: ответили msg=%s, ждали %s — не переезжаем',
                         getattr(new_msg, 'id', None), want)
                     return True
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('moderation: except@2392: %s', _ex)
             panel._panel_message = new_msg
             try:
                 panel._panel_message_id = int(new_msg.id)
@@ -2392,8 +2479,8 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
         # rebuild уже мог сменить custom_id — обязаны запушить, иначе мёртвая панель
         try:
             await _push_panel_view(panel, interaction)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('moderation: except@2468: %s', _ex)
         raise
     except Exception as _e:
         log.warning('modpanel reset: %s', _e)
@@ -2547,8 +2634,8 @@ async def _offer_mod_form(interaction, cog, action, prefill, panel=None):
                     embed=error_embed(
                         'Не удалось открыть форму. Выберите действие ещё раз.'),
                     ephemeral=True)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('moderation: except@2623: %s', _ex)
         return False
     # Та же панель, свежие селекты — без второй эфемерки
     await _reset_after_step(interaction, panel, prefer_resend=False)
@@ -2706,12 +2793,12 @@ class ModActionSelect(discord.ui.Select):
         _cancel_panel_reset(view)
         _bind_live_panel(view, interaction)
         try:
-            lag = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+            lag = (datetime.now(timezone.utc) - interaction.created_at).total_seconds()
             if lag > 1.0:
                 log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят)',
                             lag)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('modpanel action lag: %s', _ex)
         action = self.values[0]
         prefill = ""
         if view is not None:
@@ -2742,8 +2829,8 @@ class ModActionSelect(discord.ui.Select):
             except Exception:
                 try:
                     await _ack(interaction, thinking=False)
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    log.debug('moderation: except@2818: %s', _ex)
             try:
                 _bind_live_panel(view, interaction)
                 await _silent_reset_panel(interaction, view)
@@ -2980,8 +3067,8 @@ class ModPanelView(discord.ui.LayoutView):
         # На refresh баннер НЕ перезаливаем — keep message.attachments.
         try:
             self._make_banner_file(force=False)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('moderation: except@3056: %s', _ex)
 
     def _action_label(self, action):
         for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):

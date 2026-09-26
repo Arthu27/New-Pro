@@ -179,8 +179,8 @@ def _embed_cookie_reason ():
         _xfh =(request .headers .get ('X-Forwarded-Host')or '').lower ()
         if _host .endswith ('.e2b.app')or _xfh .endswith ('.e2b.app'):
             return 'host'
-    except Exception :
-        pass
+    except Exception  as _ex:
+        _log.debug('app: except@182: %s', _ex)
     if _os .getenv ('PANEL_EMBED_COOKIE','0')=='1':
         return 'env'
     if _os .getenv ('E2B_SANDBOX','').strip ().lower ()in ('true','1'):
@@ -189,8 +189,8 @@ def _embed_cookie_reason ():
         _sfd =(request .headers .get ('Sec-Fetch-Dest')or '').strip ().lower ()
         if _sfd =='iframe':
             return 'sec-fetch'
-    except Exception :
-        pass
+    except Exception  as _ex:
+        _log.debug('app: except@192: %s', _ex)
     return None
 
 @app .before_request
@@ -223,8 +223,8 @@ def _embed_cookie_policy ():
                         request .headers .get ('Sec-Fetch-Dest')or '-',
                         request .remote_addr ,_samesite ,_secure ,_partitioned ,
                         (' (embed: '+_why +')')if _why else '')
-        except Exception :
-            pass
+        except Exception  as _ex:
+            _log.debug('app: except@226: %s', _ex)
 
 bot_instance =None
 
@@ -4019,6 +4019,25 @@ def api_review_staff_app (app_id ):
         return jsonify ({'error':'Заявка не найдена'}),404
     if not _record_on_main_guild (data [app_id ]):
         return jsonify ({'error':'Эта заявка с другого сервера — здесь её рассматривать нельзя.'}),404
+    # Изоляция веток: только куратор ЭТОЙ ветки или × Administrator.
+    # Панельный admin/mod/curator НЕ обходит — иначе Helper-куратор с
+    # Discord admin-битом (сессия admin) принимал все ветки.
+    # session owner — доверенный вход владельца панели.
+    _sess_role =session .get ('role')or ''
+    if _sess_role !='owner':
+        try :
+            from services .staff_roles import can_review_position 
+            from web .routes ._common import viewer_member 
+            _gid =int (data [app_id ].get ('guild_id')or MAIN_GUILD_ID or 0 )
+            _member =viewer_member (bot_instance ,_gid )if bot_instance else None 
+            if _member is None :
+                return jsonify ({'error':'Чужая ветка — принимать нельзя (нужна роль куратора ветки или × Administrator).'}),403 
+            _ok ,_deny =can_review_position (_member ,data [app_id ].get ('role')or '')
+            if not _ok :
+                return jsonify ({'error':(_deny or 'Чужая ветка — принимать нельзя.').replace ('**','')}),403 
+        except Exception as _acl_ex :
+            print (f'[staff-apps review ACL]: {_acl_ex}')
+            return jsonify ({'error':'Не удалось проверить доступ к ветке'}),403 
     req =_safe_json_obj()
     action =req .get ('action')# 'approve' or 'reject'
     note =req .get ('note','')
@@ -4399,13 +4418,34 @@ def api_public_apply ():
         with open (apps_file ,'r',encoding ='utf-8')as f :
             apps =json .load (f )
 
-            # Проверка ожидающей заявки
+            # Проверка: нельзя повторно на ту же ветку (pending / роль / ЧС).
+            # approved без роли — можно снова.
     uid =str (data ['discord_id'])
-    for app_data in apps .values ():
-        if app_data .get ('user_id')==uid and app_data .get ('status')=='pending':
-            return jsonify ({'error':'У вас уже есть заявка на рассмотрении!'}),400 
-
-    app_id =str (int (datetime.now(timezone.utc).timestamp ()))
+    from services .staff_roles import normalize_position ,position_label 
+    _kind =normalize_position (data .get ('role')) or 'moderator'
+    try :
+        from cogs .staff_apply import apply_blocked_reason ,app_storage_key 
+        _member =None 
+        try :
+            _gid =int (data .get ('guild_id')or MAIN_GUILD_ID or 0 )
+            if bot_instance and _gid :
+                _g =bot_instance .get_guild (_gid )
+                if _g is not None :
+                    _member =_g .get_member (int (uid ))
+        except Exception :
+            _member =None 
+        _deny =apply_blocked_reason (uid ,_kind ,member =_member )
+        if _deny :
+            return jsonify ({'error':_deny .replace ('**','').replace ('\n',' ')}),400 
+        app_id =app_storage_key (uid ,_kind )
+    except Exception :
+        # fallback: любая pending + ключ uid:kind
+        for app_data in apps .values ():
+            if app_data .get ('user_id')==uid and app_data .get ('status')=='pending':
+                _pk =normalize_position (app_data .get ('role')or app_data .get ('kind'))
+                if _pk ==_kind or not _pk :
+                    return jsonify ({'error':'У вас уже есть заявка на рассмотрении!'}),400 
+        app_id =f"{uid}:{_kind}"
     guild_id =str (data ['guild_id'])
 
     app_entry ={
@@ -4417,9 +4457,11 @@ def api_public_apply ():
     'guild_id':guild_id ,
     'guild_name':data .get ('guild_name',''),
     'timestamp':datetime.now(timezone.utc).isoformat (),
+    'submitted_at':datetime.now(timezone.utc).isoformat (),
     'status':'pending',
     'source':'web',
-    'role':data ['role'],
+    'role':position_label (_kind ),
+    'kind':_kind ,
     'answers':{
     'yas':data ['yas'],
     'tecrube':data ['tecrube'],
@@ -4445,37 +4487,32 @@ def api_public_apply ():
     if bot_instance :
         async def send_to_discord ():
             try :
-                from cogs .staff_apply import apply_target ,StaffReviewView 
+                from cogs .staff_apply import apply_target ,StaffAppCardView ,_send_staff_card 
+                from services .staff_roles import normalize_position ,position_label 
                 guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
                 if not guild :
                     return 
                 channel ,ping =apply_target (data .get ('role'),guild )
                 if not channel :
                     return 
-                # Карточка заявки с сайта — тот же вид, что из Discord:
-                # тег куратора В САМОЙ АНКЕТЕ (владелец 2026-09-06)
-                embed =discord .Embed (
-                title =f"Новая заявка — {data ['role']}",
-                color =0xC8922A ,
-                timestamp =datetime.now(timezone.utc)
-                )
-                embed .description =(
-                (f"{ping } — заявка ждёт вашего взгляда\n" if ping else "")
-                +f"Заявитель: `{data ['discord_name']}` · `{uid}` · подана с сайта"
-                )
-                embed .add_field (name ="Должность",value =data ['role'],inline =True )
-                embed .add_field (name ="Возраст",value =data ['yas'],inline =True )
-                embed .add_field (name ="Активность",value =data ['активен'],inline =True )
-                embed .add_field (name ="Опыт модерации",value =str (data ['tecrube'])[:1000] or "—",inline =False )
-                embed .add_field (name ="Почему выбирает нас",value =str (data ['почему'])[:1000] or "—",inline =False )
+                kind =normalize_position (data .get ('role')) or 'moderator'
+                role_label =position_label (kind )
+                from cogs .staff_apply import build_application_body 
+                class _U :
+                    mention =f"<@{uid}>"
+                member =guild .get_member (int (uid )) if hasattr (guild ,'get_member') else None 
+                body =build_application_body (
+                user =_U (),user_id =str (uid ),
+                age =data ['yas'],activity =data ['активен'],
+                experience =str (data ['tecrube']),reason =str (data ['почему']),
+                member =member ,kind =kind )
                 if data .get ('ekstra'):
-                    embed .add_field (name ="Дополнительно",value =str (data ['ekstra'])[:1000],inline =False )
-                embed .set_footer (text =f"Заявка ID: {app_id} • решение — меню под карточкой")
-                view =StaffReviewView ()
-                # content с тем же тегом — чтобы роль реально получила пинг
-                msg =await channel .send (content =ping or None ,embed =embed ,view =view ,
-                allowed_mentions =discord .AllowedMentions (roles =True ))
+                    body +=f"\n\n**Дополнительно**\n> {str (data ['ekstra'])[:800]}"
+                card =StaffAppCardView (title =role_label ,body =body )
+                # Без пинга роли/«Moderation — новая заявка …»
+                msg =await _send_staff_card (channel ,view =card )
                 apps [app_id ]['message_id']=str (msg .id )
+                apps [app_id ]['role']=role_label 
                 with open (apps_file ,'w',encoding ='utf-8')as f :
                     json .dump (apps ,f ,indent =2 ,ensure_ascii =False )
             except Exception as e :
@@ -5773,7 +5810,8 @@ def _human_fallback_title(method, path):
     _known = {
         'ban_appeal_channel': 'канал апелляции', 'proof_channel': 'канал доказательств',
         'appeals_channel': 'канал апелляций', 'welcome_channel': 'канал приветствий',
-        'staff_apply_channel': 'канал заявок', 'appeal_menu_channel': 'меню апелляций',
+        'staff_apply_channel': 'канал заявок', 'staff_menu_channel': 'меню набора',
+        'appeal_menu_channel': 'меню апелляций',
         'guardian_channel': 'тревоги щита', 'security_channel': 'лог авто-защиты',
         'antiraid_channel': 'алерты анти-рейда', 'anticrash_channel': 'сводки анти-краша',
         'pagerduty_channel': 'канал PagerDuty', 'log_settings': 'настройки логов',

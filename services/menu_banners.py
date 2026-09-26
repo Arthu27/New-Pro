@@ -22,6 +22,9 @@ from typing import Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
+from logger import get_logger
+log = get_logger('menu_banners')
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, 'assets')
 STICKERS = os.path.join(ASSETS, 'stickers')
@@ -57,7 +60,8 @@ PRESETS = {
         'pill': 'Стань частью команды',
         'accent': (245, 245, 248),
         'tint': (8, 8, 10),
-        'bgs': ('staff.jpg', 'help_bg.png', 'hakumo_log_bg.png'),
+        # не тянем staff.jpg как фон без blur — там AI-мусор снизу
+        'bgs': ('help_bg.png', 'hakumo_log_bg.png'),
     },
     'events': {
         'headline': 'ИВЕНТЫ',
@@ -68,14 +72,14 @@ PRESETS = {
     },
 }
 
-# Только *_custom* — ручная подмена без перерисовки кода
+# Только *_custom* — ручная подмена без перерисовки кода.
+# staff_hakumo_banner / staff.jpg НЕ здесь: там AI-мусор снизу слева.
 _CUSTOM_NAMES = {
     'modpanel': ('modpanel_banner_custom.png', 'modpanel_banner_custom.jpg',
                  'modpanel_custom.png', 'modpanel_custom.jpg'),
     'appeals': ('appeals_banner_custom.png', 'appeals_banner_custom.jpg',
                 'appeals_custom.png', 'appeals_custom.jpg'),
-    'staff': ('staff_banner_custom.png', 'staff_hakumo_banner.png',
-              'staff_banner_custom.jpg'),
+    'staff': ('staff_banner_custom.png', 'staff_banner_custom.jpg'),
     'events': ('events_banner_custom.png', 'events_banner_custom.jpg',
                'events_banner.png'),
 }
@@ -91,6 +95,12 @@ STICKER_SPECS = {
     'helper':     {'accent': (240, 240, 245), 'icon': 'helper'},
     'moderator':  {'accent': (230, 230, 240), 'icon': 'mod'},
     'heart':      {'accent': (245, 245, 250), 'icon': 'heart'},
+    # Events /event-panel
+    'signup':     {'accent': (80, 220, 160), 'icon': 'user'},
+    'announce':   {'accent': (94, 200, 255), 'icon': 'helper'},
+    'start':      {'accent': (240, 162, 2), 'icon': 'heart'},
+    'finish':     {'accent': (160, 170, 185), 'icon': 'appeal'},
+    'elist':      {'accent': (220, 225, 235), 'icon': 'mod'},
 }
 
 
@@ -106,7 +116,8 @@ def _font(bold=False, sz=20, *, display=False):
         try:
             if path and os.path.isfile(path):
                 return ImageFont.truetype(path, sz)
-        except Exception:
+        except Exception as _ex:
+            log.debug('menu_banners: except@119: %s', _ex)
             continue
     return ImageFont.load_default()
 
@@ -153,8 +164,8 @@ def _load_atmosphere(kind: str) -> Image.Image:
     if custom:
         try:
             return _cover(Image.open(custom).convert('RGBA'), W, H)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('menu_banners: except@166: %s', _ex)
 
     base = None
     for name in preset['bgs']:
@@ -163,7 +174,8 @@ def _load_atmosphere(kind: str) -> Image.Image:
             try:
                 base = _cover(Image.open(path).convert('RGBA'), W, H)
                 break
-            except Exception:
+            except Exception as _ex:
+                log.debug('menu_banners: except@176: %s', _ex)
                 continue
     if base is None:
         base = Image.new('RGBA', (W, H), (12, 10, 18, 255))
@@ -389,7 +401,8 @@ def _premium_bg(kind: str) -> Optional[Image.Image]:
                 sd.ellipse((x, y, x + s, y + s), fill=(255, 255, 255, a))
             covered = Image.alpha_composite(covered, spark)
             return covered  # chrome сам даунскейлит с ss
-        except Exception:
+        except Exception as _ex:
+            log.debug('menu_banners: except@402: %s', _ex)
             continue
     return None
 
@@ -402,8 +415,8 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
         try:
             # pad, не crop — иначе обрезается HAKUMO сверху/снизу
             return _fit_pad(Image.open(custom).convert('RGBA'), W, H)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('menu_banners: except@415: %s', _ex)
     return _render_banner_fresh(kind)
 
 
@@ -428,8 +441,8 @@ def warm_menu_banners(kinds=('modpanel',)) -> None:
     for kind in kinds:
         try:
             menu_banner_bytes(kind)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('menu_banners: except@441: %s', _ex)
 
 
 def menu_banner_file(kind: str = 'modpanel', filename: str = None):
@@ -440,7 +453,13 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    name = filename or f'hakumo_{kind}_banner_v15.png'
+    # staff custom — v16 (CDN cache-bust после смены баннера)
+    if filename:
+        name = filename
+    elif kind == 'staff':
+        name = 'hakumo_staff_banner_v16.png'
+    else:
+        name = f'hakumo_{kind}_banner_v15.png'
     return bio, name
 
 
@@ -549,6 +568,23 @@ def _icon_layer(size: int, accent, kind: str) -> Image.Image:
         body = [(64, 30), (94, 44), (94, 72), (64, 100), (34, 72), (34, 44)]
         P(body)
         E((56, 54, 72, 70), fill=(*accent, 255), outline=None, width=1)
+    elif kind == 'accept':
+        L([(38, 66), (56, 86)], 9)
+        L([(56, 86), (92, 42)], 9)
+    elif kind == 'decline':
+        L([(42, 42), (86, 86)], 9)
+        L([(86, 42), (42, 86)], 9)
+    elif kind == 'event':
+        R((36, 40, 92, 96), fill=None, outline=ink, width=6, radius=12)
+        L([(36, 56), (92, 56)], 5)
+        E((48, 34, 56, 46), fill=ink, outline=None, width=1)
+        E((72, 34, 80, 46), fill=ink, outline=None, width=1)
+        R((48, 68, 60, 80), fill=ink, outline=None, radius=4)
+        R((68, 68, 80, 80), fill=ink, outline=None, radius=4)
+    elif kind == 'broadcast':
+        E((56, 56, 72, 72), fill=ink, outline=None, width=1)
+        E((46, 46, 82, 82), fill=None, outline=ink, width=5)
+        E((36, 36, 92, 92), fill=None, outline=ink, width=4)
     elif kind == 'heart':
         pts = []
         for t in range(0, 360, 3):
@@ -722,13 +758,32 @@ def _render_banner_fresh(kind: str) -> Image.Image:
         staff_path = os.path.join(ASSETS, 'staff.jpg')
         if os.path.isfile(staff_path):
             try:
-                # staff.jpg — фото без нашего chrome; для меню нужна надпись
-                base = _cover(Image.open(staff_path).convert('RGBA'), ww, hh)
-                dark = Image.new('RGBA', (ww, hh), (0, 0, 0, 140))
+                # staff.jpg — только атмосфера. Низ с AI-мусором («STAFF HAKUMO»
+                # и кракозябры) обрезаем, остальное сильно блюрим.
+                raw = Image.open(staff_path).convert('RGBA')
+                rw, rh = raw.size
+                # отрезаем нижние 22% — там мусорные надписи
+                raw = raw.crop((0, 0, rw, int(rh * 0.78)))
+                base = _cover(raw, ww, hh)
+                base = base.filter(ImageFilter.GaussianBlur(max(36, ss * 14)))
+                base = ImageEnhance.Brightness(base).enhance(0.32)
+                base = ImageEnhance.Color(base).enhance(0.30)
+                dark = Image.new('RGBA', (ww, hh), (0, 0, 0, 195))
                 base = Image.alpha_composite(base, dark)
+                # лёгкие острые звёзды — без «странных надписей»
+                spark = Image.new('RGBA', (ww, hh), (0, 0, 0, 0))
+                sd = ImageDraw.Draw(spark)
+                rng = random.Random(0x5A17)
+                for _ in range(90):
+                    x = rng.randint(20, ww - 20)
+                    y = rng.randint(15, hh - 15)
+                    s = rng.choice((1, 1, 2, 2, 3))
+                    a = rng.randint(110, 220)
+                    sd.ellipse((x, y, x + s, y + s), fill=(255, 255, 255, a))
+                base = Image.alpha_composite(base, spark)
                 return _draw_banner_chrome(base, kind)
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('menu_banners: except@782: %s', _ex)
     img = _premium_bg(kind)
     if img is None:
         img = Image.new('RGBA', (ww, hh), (0, 0, 0, 255))
@@ -748,8 +803,8 @@ def _render_banner_fresh(kind: str) -> Image.Image:
             dark = Image.new('RGBA', (ww, hh), (0, 0, 0, 160))
             atm = Image.alpha_composite(atm, dark)
             img = Image.blend(img, atm, 0.26)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('menu_banners: except@803: %s', _ex)
     return _draw_banner_chrome(img, kind)
 
 

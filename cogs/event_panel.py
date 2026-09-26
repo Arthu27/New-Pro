@@ -78,8 +78,8 @@ async def resolve_panel_channel(
     if cfg and cfg.get('channel_id'):
         try:
             candidates.append(int(cfg['channel_id']))
-        except (TypeError, ValueError):
-            pass
+        except (TypeError, ValueError) as _ex:
+            log.debug('event_panel: except@81: %s', _ex)
     if interaction is not None and getattr(interaction, 'channel', None) is not None:
         cid = getattr(interaction.channel, 'id', None)
         if cid:
@@ -181,14 +181,14 @@ def is_event_mod(member: discord.Member) -> bool:
     try:
         if member.guild_permissions.manage_guild or member.guild_permissions.administrator:
             return True
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('event_panel: except@184: %s', _ex)
     try:
         from config import Config
         if int(member.id) in Config.all_owner_ids():
             return True
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('event_panel: except@190: %s', _ex)
     roles = getattr(member, 'roles', None) or []
     return any(int(getattr(r, 'id', 0) or 0) == EVENT_MOD_ROLE_ID for r in roles)
 
@@ -286,8 +286,8 @@ class EventAnnounceModal(discord.ui.Modal, title='Анонс события'):
             await channel.send(
                 f'<@&{EVENT_MOD_ROLE_ID}> новый анонс: **{cfg["title"]}**',
                 delete_after=30)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('event_panel: except@289: %s', _ex)
 
 
 class EventPanelView(discord.ui.View):

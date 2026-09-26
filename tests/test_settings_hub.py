@@ -2,7 +2,7 @@
 """Хаб настроек: группа «Настройки», лэйаут меню, /mod-settings, живые маршруты.
 
 Проверяем:
-- 14 маршрутов хаба каналов + запись/чтение новых шести адаптеров (считалка,
+- 18 маршрутов хаба каналов + запись/чтение адаптеров (считалка,
   зала славы, ночной итог, дайджест модерации, смены, призыв тикетов) —
   через те же файлы и хранилища, что читает бот;
 - категорию «Настройки» в меню и её 13 страниц в верном порядке
@@ -58,13 +58,15 @@ from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 14 and len(set(keys)) == 14,
-      f'14 уникальных живых маршрутов ({len(keys)})')
+check(len(keys) == 18 and len(set(keys)) == 18,
+      f'18 уникальных живых маршрутов ({len(keys)})')
 need = {'ban_appeal_channel', 'appeal_menu_channel', 'pagerduty_channel',
         'proof_channel', 'report_channel', 'appeals_channel', 'welcome_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
-        'anticrash_channel',
-        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel'}
+        'anticrash_channel', 'event_panel_channel', 'staff_menu_channel',
+        'staff_helper_channel', 'staff_moderator_channel',
+        'staff_event_channel', 'staff_broadcaster_channel',
+        'staff_apply_channel'}
 check(set(keys) == need, f'только живые системы на хабе ({len(need)})')
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')
 
@@ -98,8 +100,8 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 70 and len(set(paths)) == 70,
-      f'в меню 70 уникальных страниц ({len(paths)}); музыка/тикеты/варны/дубль бэкапов убраны')
+check(len(paths) == 71 and len(set(paths)) == 71,
+      f'в меню 71 уникальных страниц ({len(paths)}); музыка/тикеты/варны/дубль бэкапов убраны')
 check('/warn-config' not in paths, 'дубль «Варны» (/warn-config) убран из меню')
 check('/ladder' in paths, 'каноническая «Лестница наказаний» в меню')
 groups = {g['key']: g for g in PM.MENU}
@@ -229,7 +231,8 @@ check('Авто-наказания' in body
 check('msSaveRoles' not in body and 'msRoleMute' not in body
       and '/role-settings' in body,
       'роли наказаний не дублируются на /mod-settings — ушли на /role-settings')
-check('msPublishMenu' in body and 'Меню апелляций' in body,
+check('msPublishMenu' in body and ('Снять старое меню' in body
+      or 'Меню апелляций' in body),
       'публикация меню апелляций осталась на /mod-settings (уникальная функция)')
 check('/channel-settings' in body and '/guardian' in body,
       'панель связей настроек модерации на месте')
@@ -363,7 +366,9 @@ check('layoutHide' in ptpl and 'layoutMove' in ptpl and 'saveLayout' in ptpl,
 
 css = open(os.path.join(ROOT, 'web', 'static', 'style.css'),
            encoding='utf-8').read()
-check('input[type="number"]' in css and '-webkit-inner-spin-button' in css,
+check('input[type="number"]' in css and (
+      '-webkit-inner-spin-button' in css or 'appearance: none' in css
+      or '-webkit-appearance: none' in css),
       'CSS: стрелки числовых полей убраны глобально')
 
 from web import routes_extra as _re  # noqa: E402

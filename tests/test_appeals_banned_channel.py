@@ -113,7 +113,7 @@ def _cog(guild):
     cog._card_channel = _card_channel
     cog._load = lambda gid: A.empty_state()
     cog._save = lambda gid, st: None
-    cog._mod_context = lambda st, gid, uid: '—'
+    cog._mod_context = lambda st, gid, uid, **kw: '—'
 
     async def _paint(embed, item, appearance):
         return None
@@ -183,7 +183,7 @@ async def main():
     status3, ch3 = await cog3._open_appeal_channel(_Guild(), _DmUser())
     check(status3 == 'failed' and ch3 is None, 'честный failed')
 
-    print('== 4. полный поток: карточка с кнопками разбана в комнате ==')
+    print('== 4. полный поток: select-меню разбана в комнате ==')
     guild4 = _Guild(members={})
     cog4 = _cog(guild4)
     user4 = _DmUser(77)
@@ -193,8 +193,19 @@ async def main():
     check(len(guild4._room.sent) == 1, 'карточка отправлена в комнату')
     if guild4._room.sent:
         view = guild4._room.sent[0].get('view')
-        labels = [getattr(c, 'label', '') for c in
-                  getattr(view, 'children', [])]
+        labels = []
+        ids = []
+        stack = list(getattr(view, 'children', []) or [])
+        while stack:
+            n = stack.pop()
+            cid = getattr(n, 'custom_id', None)
+            if cid:
+                ids.append(str(cid))
+            for opt in getattr(n, 'options', None) or []:
+                labels.append(getattr(opt, 'label', ''))
+            stack.extend(list(getattr(n, 'children', None) or []))
+        check(any(i.startswith('appeal:menu:') for i in ids),
+              f'select appeal:menu на карточке: {ids}')
         check('Принять' in labels and 'Отклонить' in labels,
               f'меню разбана в карточке: {labels}')
     check(len(guild4._room.overwrites) == 1,

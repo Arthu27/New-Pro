@@ -465,7 +465,7 @@ check(gE.kicked == [7002], 'а вот ЗАШЕДШИЙ чужой бот — к�
 
 print('== хаб каналов: живые маршруты ==')
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 14, f'маршрутов в спецификации (только живые системы): {len(keys)}')
+check(len(keys) == 18, f'маршрутов в спецификации (только живые системы): {len(keys)}')
 check('guardian_channel' in keys and 'antiraid_channel' in keys
       and 'security_channel' in keys and 'anticrash_channel' in keys,
       f'все маршруты защиты на хабе ({keys})')
@@ -619,7 +619,7 @@ routes = r.get_json().get('routes', [])
 # 4 лог-алерт маршрута (guardian/security/antiraid/anticrash) скрыты с хаба —
 # они дублируют категории «Логи сервера»; бот их по-прежнему читает.
 hub_keys = [x['key'] for x in routes]
-check(len(routes) == 10, f'хаб Каналов отдаёт 10 видимых маршрутов ({len(routes)})')
+check(len(routes) == 14, f'хаб Каналов отдаёт 14 видимых маршрутов ({len(routes)})')
 check('guardian_channel' not in hub_keys and 'security_channel' not in hub_keys
       and 'antiraid_channel' not in hub_keys and 'anticrash_channel' not in hub_keys,
       'лог-алерты Щита/защиты/рейда/краша убраны с хаба (дублируют «Логи сервера»)')
@@ -643,7 +643,7 @@ check(paths.count('/guardian') == 1, 'Щит сервера — один пун�
 gd = [p for p in pages if p['path'] == '/guardian'][0]
 check(gd.get('section') == 'protection' and gd.get('min_role') == 'admin',
       'пункт в разделе «Защита» модерации, доступ Админ')
-check(len(paths) == 70, f'в меню 70 страниц ({len(paths)}); музыка и тикеты удалены, дубль бэкапов убран')
+check(len(paths) == 71, f'в меню 71 страниц ({len(paths)}); музыка и тикеты удалены, дубль бэкапов убран')
 
 from web import routes_extra as _re  # noqa: E402
 

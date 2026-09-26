@@ -144,8 +144,8 @@ def build_server_dossier(guild) -> dict[str, Any]:
     try:
         if guild.owner:
             dossier['guild_owner'] = guild.owner.display_name
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug('ai_server_snapshot: except@147: %s', _ex)
 
     # Каналы с категориями и id
     ch_lines = []
@@ -186,8 +186,8 @@ def build_server_dossier(guild) -> dict[str, Any]:
                 members = [m.display_name for m in role.members if not m.bot][:6]
                 if members:
                     staff.append({'name': role.name, 'members': members})
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug('ai_server_snapshot: except@189: %s', _ex)
     dossier['staff_roles'] = staff[:10]
 
     # Live status

@@ -204,7 +204,8 @@ async def panel_checks():
     g.members = [member]
     cog = M.Moderation.__new__(M.Moderation)
     cog.bot = PBot(g)
-    ok, text = await cog.apply_panel_action(g, member, "timeout", reason="x", amount="2ч", actor="Ivan")
+    # Первый мут — потолок 1ч (прогрессия). 2ч здесь упрётся в лимит.
+    ok, text = await cog.apply_panel_action(g, member, "timeout", reason="x", amount="1ч", actor="Ivan")
     check("A. timeout без роли → нативный member.timeout()",
           ok and member.timed_out_until is not None)
     check("A. timeout без роли НЕ вешает мут-роль (чат+войс одним состоянием)",
