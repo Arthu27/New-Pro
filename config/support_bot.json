@@ -1,0 +1,17 @@
+{
+  "guild_id": "793336829280780331",
+  "support_role_id": "1553138713532563516",
+  "support_lead_role_id": "1553139245735219390",
+  "male_role_id": "804361264641474602",
+  "female_role_id": "804361268017627156",
+  "unverify_role_id": "0",
+  "nedopusk_role_id": "0",
+  "reviews_channel_id": "0",
+  "appeals_channel_id": "0",
+  "staff_log_category_id": "1312411839182672015",
+  "create_missing": true,
+  "review_max_chars": 140,
+  "review_window_seconds": 300,
+  "daily_norma": 10,
+  "note": "Token only in .env as SUPPORT_BOT_TOKEN. Fill 0 IDs after first boot or set env."
+}
