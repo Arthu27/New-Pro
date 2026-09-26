@@ -476,29 +476,43 @@ def public_base_url() -> str:
 
 
 def ensure_public_banners(kinds=('modpanel', 'appeals', 'staff', 'events')) -> dict:
-    """Записать PNG в web/static/menu/ — Discord тянет по HTTPS, не отлетают."""
+    """Записать PNG в web/static/menu/ — Discord тянет по HTTPS, не отлетают.
+
+    Если файл уже на диске — НЕ гоняем PIL (иначе /modpanel «думает» ~2с).
+    """
     os.makedirs(PUBLIC_MENU_DIR, exist_ok=True)
     out = {}
     for kind in kinds:
         name = banner_filename(kind)
         path = os.path.join(PUBLIC_MENU_DIR, name)
         try:
+            if os.path.isfile(path) and os.path.getsize(path) > 1000:
+                out[kind] = path
+                continue
             raw = menu_banner_bytes(kind)
-            # не переписываем байт-в-байт тот же файл
-            if (not os.path.isfile(path)
-                    or os.path.getsize(path) != len(raw)):
-                with open(path, 'wb') as fh:
-                    fh.write(raw)
+            with open(path, 'wb') as fh:
+                fh.write(raw)
             out[kind] = path
         except Exception:
             continue
     return out
 
 
+_URL_CACHE: dict[str, str] = {}
+
+
 def public_banner_url(kind: str = 'modpanel') -> str:
-    """HTTPS URL баннера — всегда онлайн в MediaGallery (не attachment)."""
-    ensure_public_banners((kind,))
-    return f'{public_base_url()}/static/menu/{banner_filename(kind)}'
+    """HTTPS URL баннера — мгновенно, если PNG уже в static/menu/."""
+    cached = _URL_CACHE.get(kind)
+    if cached:
+        return cached
+    name = banner_filename(kind)
+    path = os.path.join(PUBLIC_MENU_DIR, name)
+    if not (os.path.isfile(path) and os.path.getsize(path) > 1000):
+        ensure_public_banners((kind,))
+    url = f'{public_base_url()}/static/menu/{name}'
+    _URL_CACHE[kind] = url
+    return url
 
 
 def select_label(text: str) -> str:

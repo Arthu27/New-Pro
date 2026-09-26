@@ -143,11 +143,16 @@ class Moderation (commands .Cog ):
             log .debug (f'punish_roles_loop старт: {_ex}')
 
     async def cog_load(self):
-        # Баннер ~0.9с на 3× PIL — греем в потоке, чтобы /modpanel не ждал.
+        # Баннер ~0.9с на 3× PIL — греем в потоке + кладём PNG в static/menu,
+        # чтобы /modpanel брал готовый HTTPS URL без ожидания.
         import asyncio
         try:
-            from services.menu_banners import warm_menu_banners
-            await asyncio.to_thread(warm_menu_banners, ('modpanel', 'appeals'))
+            from services.menu_banners import warm_menu_banners, ensure_public_banners
+
+            def _warm():
+                warm_menu_banners(('modpanel', 'appeals', 'staff', 'events'))
+                ensure_public_banners()
+            await asyncio.to_thread(_warm)
         except Exception as _ex:
             log.debug('modpanel banner warm: %s', _ex)
 
@@ -435,21 +440,7 @@ class Moderation (commands .Cog ):
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
-        # Баннер по HTTPS (hakumods.xyz/static/menu/…) — не attachment://,
-        # иначе MediaGallery → 400 и «думает» бесконечно.
-        try:
-            from services.menu_banners import public_banner_url, banner_filename
-            view._banner_url = public_banner_url('modpanel')
-            view._banner_name = banner_filename('modpanel')
-            view._rebuild(interaction.guild)
-        except Exception as _bu:
-            log.warning('modpanel public banner: %s — без баннера', _bu)
-            view._banner_url = None
-            view._banner_name = None
-            try:
-                view._rebuild(interaction.guild)
-            except Exception as _rx:
-                log.warning('modpanel rebuild без баннера: %s', _rx)
+        # URL баннера уже в ModPanelView.__init__ — без второго PIL/rebuild.
         # Только embeds=[] — нельзя одновременно embed= и embeds= (discord.py).
         edit_kw = {
             'view': view,
@@ -487,9 +478,10 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-form-v16 url=%s',
+        log.info('modpanel ready msg=%s build=multi-form-v16 url=%s open_ms=%.0f',
                  getattr(panel_msg, 'id', None),
-                 getattr(view, '_banner_url', None))
+                 getattr(view, '_banner_url', None),
+                 (datetime.now(timezone.utc) - _t_open).total_seconds() * 1000)
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
