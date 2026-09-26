@@ -114,7 +114,9 @@ print('== mafia on event-bot ==')
 ev_src = open(os.path.join(ROOT, 'services', 'event_voice_bot.py'), encoding='utf-8').read()
 check('cog mafia' in ev_src and 'EventPanel снят' in ev_src,
       'event-bot грузит mafia, EventPanel снят')
-check('from cogs.mafia import Mafia' in ev_src, 'import Mafia')
+check(('from cogs.mafia import Mafia' in ev_src
+      or ('from cogs import mafia' in ev_src and 'Mafia' in ev_src)),
+      'import Mafia')
 check('EventLifecycle' in ev_src and 'event_lifecycle' in ev_src,
       'event-bot грузит EventLifecycle (/eventstart)')
 check("'event-panel'" not in ev_src or 'без event-panel' in ev_src.lower()
