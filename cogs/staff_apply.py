@@ -184,19 +184,29 @@ def menu_channel(guild):
 
 
 def _curator_ping(guild, role_name: str = ''):
-    """Тег куратора СВОЕЙ ветки (жёсткий ID из KNOWN_CURATOR_BY_KIND)."""
+    """Тег куратора СВОЕЙ ветки («× Отвечаю за …»).
+
+    Helper → × Отвечаю за Helper
+    Moderator → × Отвечаю за Moderator
+    Eventsmod → × Отвечаю за Eventsmod
+    Broadcaster → × Отвечаю за Broadcaster
+    """
     from services.staff_roles import (
-        normalize_position, KNOWN_CURATOR_BY_KIND)
+        normalize_position, KNOWN_CURATOR_BY_KIND, curator_role_id_for)
     if not guild:
         return ''
     kind = normalize_position(role_name) or 'moderator'
+    # Жёсткий ID ветки (кто реально принимает) → панель/.env как запас.
     rid = int(KNOWN_CURATOR_BY_KIND.get(kind) or 0)
-    get_role = getattr(guild, 'get_role', None)
-    if not callable(get_role) or not rid:
+    if not rid:
+        try:
+            rid = int(curator_role_id_for(getattr(guild, 'id', 0), kind) or 0)
+        except Exception:
+            rid = 0
+    if not rid:
         return ''
-    if get_role(rid) is not None:
-        return f'<@&{rid}>'
-    return ''
+    # Тегаем всегда по ID — роль может ещё не быть в кэше гильдии.
+    return f'<@&{rid}>'
 
 
 def _channel_for_kind(guild, kind: str):
@@ -805,9 +815,9 @@ class StaffApplyModal(discord.ui.Modal):
                     extra=v5, member=member, kind=kind, answers=answers)
                 try:
                     card = StaffAppCardView(title=role_label, body=body)
-                    # Без отдельного пинга (@роль / «Moderation — …»):
-                    # карточка сама в канале, доступ по роли куратора ветки.
-                    msg = await _send_staff_card(ch, view=card)
+                    # Пинг куратора СВОЕЙ ветки («× Отвечаю за …»), затем карточка.
+                    msg = await _send_staff_card(
+                        ch, content=(tag or None), view=card)
                     apps[store_key]["message_id"] = str(msg.id)
                     apps[store_key]["curator_tag"] = tag or None
                     apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')
@@ -1593,16 +1603,15 @@ def _hook_avatar_url(guild):
 async def _send_staff_card(channel, *, content=None, view=None):
     """Карточка заявки V2 (чёрный webhook «Наборы» или бот).
 
-    Пинги ролей/юзеров перед карточкой отключены (шум «Moderation — …»).
-    content оставлен для совместимости вызовов, но по умолчанию не шлётся.
+    content — тег куратора ветки (`<@&…>`) отдельным сообщением перед
+    карточкой, с AllowedMentions(roles=True), чтобы Discord реально пинганул.
     """
     if content:
-        # Явно переданный content (тесты/legacy) — отдельным сообщением.
         allowed = discord.AllowedMentions(roles=True, users=True)
         try:
-            await channel.send(content, allowed_mentions=allowed)
+            await channel.send(str(content), allowed_mentions=allowed)
         except Exception as _ex:
-            log.debug('staff: ping before card: %s', _ex)
+            log.warning('staff: ping before card: %s', _ex)
     hook = await _channel_webhook(channel)
     if hook is not None:
         try:
