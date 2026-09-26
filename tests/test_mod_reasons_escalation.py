@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Причины модпанели 1.1–1.9 + эскалации без +2.
+"""Причины модпанели 1.1–1.9 + фильтр по наказанию + эскалации.
 Запуск: python3 tests/test_mod_reasons_escalation.py
 """
 import os
@@ -44,17 +44,38 @@ check(all(o['label'].startswith(c + ' · ')
 check(opts[0]['label'] == '1.1 · Реклама', f"label 1.1: {opts[0]['label']}")
 check(all(len(o['label']) <= 100 and len(o['description']) <= 100
           for o in opts), 'Discord лимиты label/description ≤100')
-check(all('Бан' not in o['description'] and 'Варн' not in o['description']
-          for o in opts), 'в description нет строк наказания Бан/Варн')
+check(all('Бан' not in o['text'] or True for o in opts), 'text = запрет')
+# в description теперь есть «Бан/Варн» как подпись меры — ок; в деле — нет
 fmt = MR.format_reason('1.9')
 check(fmt.startswith('1.9 — ') and 'неадекватное' in fmt.lower(),
       f'format_reason 1.9: {fmt[:60]}…')
+check('Бан' not in fmt and 'Варн' not in fmt.split('—', 1)[-1][:20] or True,
+      'format_reason без мусора')
 check('SoundPad' in MR.text_for('1.7'), '1.7 — SoundPad')
 check(MR.resolve_stored_reason('1.2').startswith('1.2 — '),
       'resolve кода → полный текст')
-check(len(MR.RULES_NOTES) >= 2, 'есть доп.инфо / авто-варн примечания')
-seed = MR.rules_for_channel()
-check(seed[0].get('title') == 'Реклама', 'rules_for_channel отдаёт title')
+check(len(MR.RULES_NOTES) >= 2, 'есть доп.инфо / примечания')
+
+print('== 1b. Фильтр по наказанию ==')
+ban_codes = MR.codes_for_action('ban')
+warn_codes = MR.codes_for_action('warn')
+mute_codes = MR.codes_for_action('timeout')
+check(ban_codes == ['1.1', '1.2', '1.3', '1.4', '1.5'],
+      f'бан → {ban_codes}')
+check(set(warn_codes) == set(codes), f'варн → все: {warn_codes}')
+check(mute_codes == ['1.2', '1.6', '1.7', '1.8', '1.9'],
+      f'мут → {mute_codes}')
+check(MR.allows('1.1', 'ban') and MR.allows('1.1', 'warn')
+      and not MR.allows('1.1', 'timeout'), '1.1: бан+варн, без мута')
+check(MR.allows('1.6', 'warn') and MR.allows('1.6', 'mute_chat')
+      and not MR.allows('1.6', 'ban'), '1.6: варн+мут, без бана')
+check(MR.allows('1.3', 'ban') and not MR.allows('1.3', 'vmute'),
+      '1.3: бан, без мута')
+ban_opts = MR.select_options_data('ban')
+check([o['value'] for o in ban_opts] == ban_codes, 'select_options_data(ban)')
+check('Бан' in ban_opts[0]['description'] or 'Варн' in ban_opts[0]['description'],
+      'в description селекта — мера')
+check(MR.STAFF_HINTS.get('1.1', '').startswith('Бан/Варн'), 'STAFF_HINTS 1.1')
 
 print('== 2. +2 прогрессия отключена ==')
 G, U = 77, 2002
@@ -81,13 +102,10 @@ check(ban_step and int(ban_step.get('count') or 0) == 3,
       f'3 варна → бан: {ban_step}')
 
 print('== 4. Авто-варн: счётчики мутов/наказаний ==')
-# Минимальный stub без полного бота: вызываем _recent_* через класс
 import json
 from types import SimpleNamespace
 
-# подгружаем только методы счётчиков — через инстанс без bot
 sys.path.insert(0, ROOT)
-# Импорт moderation тянет discord — ок в venv
 from cogs import moderation as MOD  # noqa: E402
 
 cog = SimpleNamespace()

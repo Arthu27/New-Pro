@@ -727,22 +727,45 @@
       }).catch(function () {});
   }
 
+  function pnReasonKey(action) {
+    if (action === 'warn') return 'warn';
+    if (action === 'ban') return 'ban';
+    if (action === 'timeout' || action === 'mute_chat' || action === 'vmute') return 'mute';
+    return '';
+  }
+
   function pnFillReasons() {
     var sel = $('pnReason');
     if (!sel) return;
     var keep = sel.value;
-    sel.innerHTML = '<option value="">Выберите правило (1.1 · Реклама …)</option>';
-    (pnReasons || []).forEach(function (r) {
+    var key = pnReasonKey(pnSel);
+    var list = (pnReasons || []).filter(function (r) {
+      if (!key) return true;
+      var acts = r.actions || [];
+      return acts.indexOf(key) >= 0;
+    });
+    var placeholders = {
+      warn: 'Правила для варна…',
+      ban: 'Правила для бана (1.1, 1.3 …)',
+      mute: 'Правила для мута…'
+    };
+    sel.innerHTML = '<option value="">' + (placeholders[key] || 'Выберите правило…') + '</option>';
+    list.forEach(function (r) {
       var o = document.createElement('option');
       o.value = r.code || r.label;
       var head = r.label || (r.code + (r.title ? (' · ' + r.title) : ''));
-      o.textContent = head + ' — ' + (r.text || '').slice(0, 72)
-        + ((r.text || '').length > 72 ? '…' : '');
-      o.title = (r.code || '') + (r.title ? (' · ' + r.title) : '')
-        + (r.text ? (' — ' + r.text) : '');
+      var meta = (r.punish || '') + (r.duration ? (' · ' + r.duration) : '');
+      o.textContent = head + (meta ? (' — ' + meta) : '');
+      o.title = head + (meta ? (' — ' + meta) : '')
+        + (r.text ? ('\n' + r.text) : '');
       sel.appendChild(o);
     });
-    if (keep) sel.value = keep;
+    if (keep && list.some(function (r) { return (r.code || r.label) === keep; })) {
+      sel.value = keep;
+    } else {
+      sel.value = '';
+      if ($('pnReasonHint')) $('pnReasonHint').hidden = true;
+    }
   }
 
   function pnRenderForm() {
@@ -829,6 +852,7 @@
       b.classList.toggle('sel', on);
       b.setAttribute('aria-checked', on ? 'true' : 'false');
     });
+    pnFillReasons();
     pnSyncUi();
   }
 
@@ -1263,7 +1287,9 @@
         if (row && row.text) {
           $('pnReasonHint').hidden = false;
           var head = row.label || (code + (row.title ? (' · ' + row.title) : ''));
-          $('pnReasonHintText').textContent = head + ' — ' + row.text;
+          var meta = (row.punish || '') + (row.duration ? (' · ' + row.duration) : '');
+          $('pnReasonHintText').textContent = head
+            + (meta ? (' — ' + meta) : '') + '. ' + row.text;
         } else {
           $('pnReasonHint').hidden = true;
         }

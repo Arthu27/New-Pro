@@ -149,13 +149,20 @@ def register(ctx):
                         code = (item .get ('code') or '').strip ()
                         title = (item .get ('title') or '').strip ()
                         text = (item .get ('t') or '').strip ()
+                        punish = (item .get ('punish') or '').strip ()
+                        duration = (item .get ('duration') or '').strip ()
                         if not text :
                             continue
-                        if code and title :
-                            seed .append (_norm_rule (
-                                f'{code}. {title}. {text}'))
-                        elif code :
-                            seed .append (_norm_rule (f'{code}. {text}'))
+                        if code :
+                            bits = [f'{code}.']
+                            if title :
+                                bits .append (title + '.')
+                            bits .append (text)
+                            if punish :
+                                bits .append (f'Наказание: {punish}.')
+                            if duration :
+                                bits .append (f'Длительность: {duration}.')
+                            seed .append (_norm_rule (' '.join (bits )))
                         else :
                             seed .append (_norm_rule (text ))
                     return jsonify (seed )

@@ -1731,11 +1731,11 @@ class _CtxMuteModal(discord.ui.Modal):
             discord.SelectOption(
                 label=o['label'], value=o['value'],
                 description=o['description'])
-            for o in _MR.select_options_data()
+            for o in _MR.select_options_data(action)
         ]
         self.reason_select = discord.ui.Select(
             required=True, options=opts, min_values=1, max_values=1,
-            placeholder='1.1 · Реклама · …')
+            placeholder='Правило под этот мут…')
         self.add_item(discord.ui.Label(
             text='Какое правило нарушено?', component=self.reason_select))
 
@@ -1769,6 +1769,12 @@ class _CtxMuteModal(discord.ui.Modal):
             log.debug(f'[ПКМ] duration cap: {_cx}')
         from services import mod_reasons as _MR
         _code = (self.reason_select.values or [''])[0]
+        if not _MR.allows(_code, self._action):
+            await _respond(
+                interaction,
+                content='Это правило нельзя выдать этим мутом.',
+                ephemeral=True)
+            return
         _reason = _MR.format_reason(_code)
         ok, text = await self._cog.apply_panel_action(
             interaction.guild, self._member, self._action,
@@ -2847,13 +2853,19 @@ class ModActionModal(discord.ui.Modal):
                 discord.SelectOption(
                     label=o['label'], value=o['value'],
                     description=o['description'])
-                for o in _MR.select_options_data()
+                for o in _MR.select_options_data(action)
             ]
-            _rule_lbl = ('Какое правило нарушено?'
-                         if action == 'warn' else 'Правило (причина)')
+            _ph = {
+                'warn': 'Правила для варна…',
+                'ban': 'Правила для бана…',
+                'timeout': 'Правила для мута…',
+                'mute_chat': 'Правила для мута…',
+                'vmute': 'Правила для мута…',
+            }.get(action, 'Выберите правило…')
+            _rule_lbl = 'Какое правило нарушено?'
             self.reason_select = discord.ui.Select(
                 required=True, options=opts, min_values=1, max_values=1,
-                placeholder='1.1 · Реклама · …')
+                placeholder=_ph)
             self.add_item(discord.ui.Label(
                 text=_rule_lbl, component=self.reason_select))
         else:
@@ -2904,6 +2916,12 @@ class ModActionModal(discord.ui.Modal):
         if self.reason_select is not None:
             from services import mod_reasons as _MR
             _code = (self.reason_select.values or [''])[0]
+            if not _MR.allows(_code, self.action):
+                await _respond(
+                    interaction,
+                    content='Это правило нельзя выдать выбранным наказанием.',
+                    ephemeral=True)
+                return
             _reason = _MR.format_reason(_code)
         else:
             _r = getattr(self, 'reason', None)

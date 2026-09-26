@@ -81,7 +81,7 @@ _REASON_RULE_ACTIONS = ('warn', 'ban', 'timeout', 'mute_chat', 'vmute')
 
 
 def _mod_reasons_payload():
-    """Правила 1.1–1.9 для формы панели: label=«1.1 · Реклама», text=запрет."""
+    """Правила 1.1–1.9: label + текст + actions (warn/mute/ban) для фильтра."""
     try:
         from services import mod_reasons as _MR
         return [
@@ -89,7 +89,10 @@ def _mod_reasons_payload():
                 'code': o['value'],
                 'label': o['label'],
                 'title': o.get('title') or '',
-                'text': o.get('text') or o.get('description') or '',
+                'text': o.get('text') or '',
+                'punish': o.get('punish') or '',
+                'duration': o.get('duration') or '',
+                'actions': list(o.get('actions') or []),
             }
             for o in _MR.select_options_data()
         ]
@@ -306,10 +309,20 @@ def register(ctx):
             return jsonify({'success': False, 'error': _h_deny}), 403
 
         reason = str(d.get('reason') or '').strip()[:500]
-        # Код правила 1.1–1.9 → полный текст запрета в деле
-        if action in _REASON_RULE_ACTIONS and reason:
+        # Код правила 1.1–1.9 → полный текст; только если правило подходит к действию
+        if action in _REASON_RULE_ACTIONS:
             try:
                 from services import mod_reasons as _MR
+                _code = reason.split('—', 1)[0].strip() if reason else ''
+                if not reason:
+                    return jsonify({'success': False,
+                                    'error': 'Выберите правило под это наказание'}), 400
+                if not _MR.allows(_code, action) and not _MR.allows(reason, action):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Это правило нельзя выдать выбранным наказанием '
+                                 '(смотрите «Наказание» у правила)',
+                    }), 400
                 reason = _MR.resolve_stored_reason(reason)[:500]
             except Exception as _rex:
                 _log.debug('punish reason resolve: %s', _rex)
