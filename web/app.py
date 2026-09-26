@@ -1232,6 +1232,45 @@ def favicon ():
     return send_from_directory (os .path .join (app .root_path ,'static'),
     'favicon.ico',mimetype ='image/vnd.microsoft.icon')
 
+# Публичная галерея шаблонов профилей (создатель сервера).
+# Файлы живут в data/profile_templates/ (вне git) — смена ветки их не сносит.
+# Первый старт копирует из web/static/profiles, дальше НЕ перезаписывает.
+@app .route ('/profiles')
+@app .route ('/profiles/')
+@app .route ('/static/profiles')
+@app .route ('/static/profiles/')
+def profiles_gallery ():
+    from services.profile_templates import profiles_dir
+    folder =str (profiles_dir ())
+    return send_from_directory (folder ,'index.html',mimetype ='text/html')
+
+@app .route ('/profiles/<path:filename>')
+def profiles_file (filename ):
+    """Короткие ссылки: /profiles/couple-card.png → тот же PNG."""
+    from services.profile_templates import profiles_dir
+    folder =str (profiles_dir ())
+    safe =os .path .normpath (filename ).lstrip ('/\')
+    if '..' in safe .split (os .sep )or safe .startswith (('/','\')):
+        return 'Not Found',404
+    full =os .path .join (folder ,safe )
+    if not os .path .isfile (full ):
+        return 'Not Found',404
+    return send_from_directory (folder ,safe )
+
+# Также /static/profiles/<file> — Flask static мог бы отдать пусто после
+# смены ветки; дублируем на persist.
+@app .route ('/static/profiles/<path:filename>')
+def profiles_static_file (filename ):
+    return profiles_file (filename )
+
+# Один раз при загрузке приложения: создать persist, не затирая то что уже есть.
+try :
+    from services.profile_templates import ensure_profile_templates as _ensure_profiles
+    _ensure_profiles (overwrite =False )
+except Exception as _prof_ex :
+    _log .debug ('profile_templates ensure: %s',_prof_ex )
+
+
 # security.txt (RFC 9116): internet.nl требует файл в /.well-known/security.txt
 # с полями Contact и Expires. Без него исследователю, нашедшему уязвимость,
 # некуда написать. Файл публичный — без @login_required.
