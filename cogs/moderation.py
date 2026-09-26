@@ -1734,9 +1734,10 @@ class _CtxMuteModal(discord.ui.Modal):
             for o in _MR.select_options_data()
         ]
         self.reason_select = discord.ui.Select(
-            required=True, options=opts, min_values=1, max_values=1)
+            required=True, options=opts, min_values=1, max_values=1,
+            placeholder='1.1 · Реклама · …')
         self.add_item(discord.ui.Label(
-            text='Правило (причина)', component=self.reason_select))
+            text='Какое правило нарушено?', component=self.reason_select))
 
     async def on_submit(self, interaction):
         await _ack(interaction, thinking=True)
@@ -2836,7 +2837,7 @@ class ModActionModal(discord.ui.Modal):
                     placeholder="30, 60, 2ч",
                 )
             self.add_item(self.amount)
-        # Наказания: причина = правило 1.1–1.9 (номер + текст запрета).
+        # Наказания: причина = правило 1.1–1.9 (ярлык + текст запрета).
         # Снятие/чистка — свободный текст как раньше.
         self.reason_select = None
         self.reason = None
@@ -2848,10 +2849,13 @@ class ModActionModal(discord.ui.Modal):
                     description=o['description'])
                 for o in _MR.select_options_data()
             ]
+            _rule_lbl = ('Какое правило нарушено?'
+                         if action == 'warn' else 'Правило (причина)')
             self.reason_select = discord.ui.Select(
-                required=True, options=opts, min_values=1, max_values=1)
+                required=True, options=opts, min_values=1, max_values=1,
+                placeholder='1.1 · Реклама · …')
             self.add_item(discord.ui.Label(
-                text='Правило (причина)', component=self.reason_select))
+                text=_rule_lbl, component=self.reason_select))
         else:
             self.reason = discord.ui.TextInput(
                 label="Причина", required=False,

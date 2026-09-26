@@ -81,12 +81,17 @@ _REASON_RULE_ACTIONS = ('warn', 'ban', 'timeout', 'mute_chat', 'vmute')
 
 
 def _mod_reasons_payload():
-    """Правила 1.1–1.9 для формы панели: label=номер, text=запрет."""
+    """Правила 1.1–1.9 для формы панели: label=«1.1 · Реклама», text=запрет."""
     try:
         from services import mod_reasons as _MR
         return [
-            {'code': c, 'label': c, 'text': t}
-            for c, t in _MR.MODPANEL_REASONS
+            {
+                'code': o['value'],
+                'label': o['label'],
+                'title': o.get('title') or '',
+                'text': o.get('text') or o.get('description') or '',
+            }
+            for o in _MR.select_options_data()
         ]
     except Exception:
         return []

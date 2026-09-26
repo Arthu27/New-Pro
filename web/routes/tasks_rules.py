@@ -147,11 +147,17 @@ def register(ctx):
                     seed =[]
                     for item in _MR .rules_for_channel ():
                         code = (item .get ('code') or '').strip ()
+                        title = (item .get ('title') or '').strip ()
                         text = (item .get ('t') or '').strip ()
                         if not text :
                             continue
-                        seed .append (_norm_rule (
-                            f'{code}. {text}' if code else text ))
+                        if code and title :
+                            seed .append (_norm_rule (
+                                f'{code}. {title}. {text}'))
+                        elif code :
+                            seed .append (_norm_rule (f'{code}. {text}'))
+                        else :
+                            seed .append (_norm_rule (text ))
                     return jsonify (seed )
                 except Exception as _sx :
                     _log .debug ('api_rules seed: %s',_sx )

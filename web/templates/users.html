@@ -731,13 +731,15 @@
     var sel = $('pnReason');
     if (!sel) return;
     var keep = sel.value;
-    sel.innerHTML = '<option value="">Выберите правило…</option>';
+    sel.innerHTML = '<option value="">Выберите правило (1.1 · Реклама …)</option>';
     (pnReasons || []).forEach(function (r) {
       var o = document.createElement('option');
       o.value = r.code || r.label;
-      o.textContent = (r.label || r.code) + ' — ' + (r.text || '').slice(0, 80)
-        + ((r.text || '').length > 80 ? '…' : '');
-      o.title = r.text || '';
+      var head = r.label || (r.code + (r.title ? (' · ' + r.title) : ''));
+      o.textContent = head + ' — ' + (r.text || '').slice(0, 72)
+        + ((r.text || '').length > 72 ? '…' : '');
+      o.title = (r.code || '') + (r.title ? (' · ' + r.title) : '')
+        + (r.text ? (' — ' + r.text) : '');
       sel.appendChild(o);
     });
     if (keep) sel.value = keep;
@@ -1260,7 +1262,8 @@
         });
         if (row && row.text) {
           $('pnReasonHint').hidden = false;
-          $('pnReasonHintText').textContent = code + ' — ' + row.text;
+          var head = row.label || (code + (row.title ? (' · ' + row.title) : ''));
+          $('pnReasonHintText').textContent = head + ' — ' + row.text;
         } else {
           $('pnReasonHint').hidden = true;
         }

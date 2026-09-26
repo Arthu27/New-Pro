@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 """Каталог причин наказаний для /modpanel и /report (правила 1.1–1.9).
 
-Код/ярлык селекта — только номер («1.9»).
-Описание/текст дела — текст запрета (не строка «Бан/Варн/…»).
+В селекте: короткий ярлык «1.1 · Реклама» + описание = текст запрета.
+В деле/логе: «1.9 — <полный текст запрета>» (не строка «Бан/Варн/…»).
 
 Доп.инфо для канала правил / доков — RULES_NOTES (не в селекте модпанели).
 """
 from __future__ import annotations
 
-# (код, текст запрета) — порядок = порядок в UI
-MODPANEL_REASONS: tuple[tuple[str, str], ...] = (
+# (код, короткий ярлык, текст запрета) — порядок = порядок в UI
+MODPANEL_REASONS: tuple[tuple[str, str, str], ...] = (
     (
         '1.1',
+        'Реклама',
         'Запрещена реклама любых сторонних серверов, продуктов, а также '
         'прямые запросы денег, товаров или услуг.',
     ),
     (
         '1.2',
+        '18+ / хейт / вред',
         'Запрещается публикация, распространение и трансляция шокирующих, '
         'порнографических и иных материалов сексуального характера, а также '
         'контента, разжигающего ненависть или содержащего пропаганду, призывы, '
@@ -27,18 +29,21 @@ MODPANEL_REASONS: tuple[tuple[str, str], ...] = (
     ),
     (
         '1.3',
+        'Обход / твинк',
         'Запрещено использование другой учетной записи для обхода наложенных '
         'на вас наказаний или с целью фарма серверной валюты. Варн/выдается '
         'на основной аккаунт, твинк получает блокировку.',
     ),
     (
         '1.4',
+        'Личка / докс',
         'Запрещено распространение любой личной информации или фото человека '
         'без его согласия, угрозы сватом/доксом и их совершение, а также '
         'демонстрация способов деанонимизации пользователей.',
     ),
     (
         '1.5',
+        'Аватар / баннер',
         'Запрещено использование изображений профиля (аватарка, баннер), '
         'содержащего оскорбительный, шокирующий, сексуальный, тошнотворный '
         'или изображающий кровопролитие контент. Также запрещены изображения '
@@ -47,6 +52,7 @@ MODPANEL_REASONS: tuple[tuple[str, str], ...] = (
     ),
     (
         '1.6',
+        'Помеха серверу',
         'Запрещены деструктивные действия по отношению к серверу, способные '
         'привести к помехам в процессе его развития, т.е. любое '
         'препятствование работе стаффа, неконструктивная критика в сторону '
@@ -55,17 +61,20 @@ MODPANEL_REASONS: tuple[tuple[str, str], ...] = (
     ),
     (
         '1.7',
+        'SoundPad / голос',
         'Запрещен SoundPad и его аналоги, громкие мешающие звуки, увеличение '
         'громкости микрофона, использование программ для изменения голоса.',
     ),
     (
         '1.8',
+        'Капс / спам / флуд',
         'Запрещен капс, спам, флуд в любых его проявлениях, беспричинное '
         'многократное упоминание участников и ролей, а также несоблюдение '
         'тематики чата.',
     ),
     (
         '1.9',
+        'Провокации / травля',
         'Запрещено неадекватное поведение в любых его проявлениях, '
         'грубые/косвенные/ завуалированные провокации, а так же травля в '
         'любой форме.',
@@ -85,11 +94,16 @@ STAFF_HINTS: dict[str, str] = {
     '1.1': 'Бан/Варн — на усмотрение',
 }
 
-_BY_CODE = {code: text for code, text in MODPANEL_REASONS}
+_BY_CODE = {code: text for code, _title, text in MODPANEL_REASONS}
+_TITLE_BY_CODE = {code: title for code, title, _text in MODPANEL_REASONS}
 
 
 def codes() -> list[str]:
-    return [c for c, _ in MODPANEL_REASONS]
+    return [c for c, _, _ in MODPANEL_REASONS]
+
+
+def title_for(code: str) -> str:
+    return _TITLE_BY_CODE.get(str(code or '').strip(), '')
 
 
 def text_for(code: str) -> str:
@@ -109,6 +123,16 @@ def format_reason(code: str) -> str:
     return f'{code} — {text}'
 
 
+def select_label(code: str, limit: int = 100) -> str:
+    """Ярлык селекта: «1.1 · Реклама» (Discord ≤100)."""
+    code = str(code or '').strip()
+    title = title_for(code)
+    label = f'{code} · {title}' if title else code
+    if len(label) <= limit:
+        return label
+    return label[: max(0, limit - 1)].rstrip() + '…'
+
+
 def select_description(code: str, limit: int = 100) -> str:
     """Укороченный текст для Discord SelectOption.description (≤100)."""
     text = text_for(code) or ''
@@ -119,18 +143,27 @@ def select_description(code: str, limit: int = 100) -> str:
 
 
 def select_options_data() -> list[dict]:
-    """Данные для SelectOption: label=номер, description=текст запрета."""
+    """Данные для SelectOption: label=номер+тема, description=текст запрета."""
     return [
-        {'value': code, 'label': code, 'description': select_description(code)}
-        for code, _ in MODPANEL_REASONS
+        {
+            'value': code,
+            'label': select_label(code),
+            'description': select_description(code),
+            'title': title,
+            'text': text,
+        }
+        for code, title, text in MODPANEL_REASONS
     ]
 
 
 def rules_for_channel() -> list[dict]:
     """Правила + примечания для публикации в канал правил (panel)."""
-    items = [{'code': c, 't': t} for c, t in MODPANEL_REASONS]
+    items = [
+        {'code': c, 'title': title, 't': text}
+        for c, title, text in MODPANEL_REASONS
+    ]
     for note in RULES_NOTES:
-        items.append({'code': '', 't': note})
+        items.append({'code': '', 'title': '', 't': note})
     return items
 
 

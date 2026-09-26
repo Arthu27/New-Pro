@@ -971,9 +971,10 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
                 discord.SelectOption(label='Голосовой канал', value='voice',
                                      emoji='🔊'),
             ])
-        # Причина = правило 1.1–1.9 (номер + текст запрета), как в /modpanel
+        # Причина = правило 1.1–1.9 (ярлык + текст запрета), как в /modpanel
         self.reason_select = discord.ui.Select(
             required=True,
+            placeholder='1.1 · Реклама · …',
             options=[
                 discord.SelectOption(
                     label=o['label'], value=o['value'],
@@ -986,7 +987,7 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
                                        component=self.against_select))
         self.add_item(discord.ui.Label(text='Где происходило нарушение?',
                                        component=self.location_select))
-        self.add_item(discord.ui.Label(text='Правило (причина)',
+        self.add_item(discord.ui.Label(text='Какое правило нарушено?',
                                        component=self.reason_select))
 
     async def on_submit(self, interaction: discord.Interaction):

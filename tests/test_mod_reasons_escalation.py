@@ -35,10 +35,15 @@ print('== 1. Каталог причин 1.1–1.9 ==')
 codes = MR.codes()
 check(codes == [f'1.{i}' for i in range(1, 10)], f'коды={codes}')
 check(all(MR.text_for(c) for c in codes), 'у каждого кода есть текст запрета')
-# ярлык селекта — только номер
+check(MR.title_for('1.1') == 'Реклама', '1.1 — ярлык Реклама')
+check(MR.title_for('1.8') == 'Капс / спам / флуд', '1.8 — ярлык спам')
 opts = MR.select_options_data()
-check(all(o['label'] == o['value'] == c
-          for o, c in zip(opts, codes)), 'label/value = номер')
+check(all(o['value'] == c for o, c in zip(opts, codes)), 'value = номер')
+check(all(o['label'].startswith(c + ' · ')
+          for o, c in zip(opts, codes)), 'label = «1.x · тема»')
+check(opts[0]['label'] == '1.1 · Реклама', f"label 1.1: {opts[0]['label']}")
+check(all(len(o['label']) <= 100 and len(o['description']) <= 100
+          for o in opts), 'Discord лимиты label/description ≤100')
 check(all('Бан' not in o['description'] and 'Варн' not in o['description']
           for o in opts), 'в description нет строк наказания Бан/Варн')
 fmt = MR.format_reason('1.9')
@@ -48,6 +53,8 @@ check('SoundPad' in MR.text_for('1.7'), '1.7 — SoundPad')
 check(MR.resolve_stored_reason('1.2').startswith('1.2 — '),
       'resolve кода → полный текст')
 check(len(MR.RULES_NOTES) >= 2, 'есть доп.инфо / авто-варн примечания')
+seed = MR.rules_for_channel()
+check(seed[0].get('title') == 'Реклама', 'rules_for_channel отдаёт title')
 
 print('== 2. +2 прогрессия отключена ==')
 G, U = 77, 2002
