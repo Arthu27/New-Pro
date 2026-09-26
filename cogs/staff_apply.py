@@ -1347,10 +1347,52 @@ class StaffApplyView(discord.ui.LayoutView):
 
 WEBHOOK_NAME = 'Наборы Hakumo'
 HOOK_USERNAME = 'Наборы'
+# Чёрный круг с белой «H» — аватар вебхука (без иконки гильдии).
+_HOOK_AVATAR_PNG = None
+
+
+def _black_hook_avatar_bytes() -> bytes:
+    """Маленький чёрный аватар для вебхука «Наборы»."""
+    global _HOOK_AVATAR_PNG
+    if _HOOK_AVATAR_PNG is not None:
+        return _HOOK_AVATAR_PNG
+    try:
+        size = 128
+        img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        d.ellipse((2, 2, size - 3, size - 3), fill=(8, 8, 10, 255),
+                  outline=(40, 40, 48, 255), width=3)
+        font = _f(True, 72)
+        text = 'H'
+        bbox = d.textbbox((0, 0), text, font=font)
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        d.text(((size - tw) / 2 - bbox[0], (size - th) / 2 - bbox[1] - 4),
+               text, fill=(235, 235, 240, 255), font=font)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG', optimize=True)
+        _HOOK_AVATAR_PNG = buf.getvalue()
+    except Exception as _ex:
+        log.debug('staff: black avatar: %s', _ex)
+        # 1×1 чёрный PNG
+        _HOOK_AVATAR_PNG = (
+            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+            b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00'
+            b'\x00\x0cIDATx\x9cc\x60\x60\x60\x00\x00\x00\x04\x00\x01'
+            b'\x27\x4c\xac\xa4\x00\x00\x00\x00IEND\xaeB`\x82')
+    return _HOOK_AVATAR_PNG
+
+
+def _hook_name_match(name: str) -> bool:
+    n = (name or '').strip().lower()
+    return n in (WEBHOOK_NAME.lower(), HOOK_USERNAME.lower(), 'наборы hakumo',
+                 'наборы')
 
 
 async def _channel_webhook(channel):
-    """Найти/создать вебхук бота для V2-публикации."""
+    """Найти/создать чёрный вебхук «Наборы» для V2-карточек.
+
+    Предпочитаем свой именной хук, чужие (апелляции и т.п.) не берём.
+    """
     fetch = getattr(channel, 'webhooks', None)
     if fetch is None:
         return None
@@ -1364,31 +1406,45 @@ async def _channel_webhook(channel):
         me_id = channel.guild.me.id
     except Exception as _ex:
         log.debug('staff: guild.me: %s', _ex)
+    mine = []
+    named = None
     for h in hooks or ():
         try:
-            if me_id is None or h.user is None or h.user.id == me_id:
-                return h
+            owner_ok = (me_id is None or h.user is None or h.user.id == me_id)
+            if not owner_ok:
+                continue
+            mine.append(h)
+            if _hook_name_match(getattr(h, 'name', '') or ''):
+                named = h
+                break
         except Exception as _ex:
             log.debug('staff: skip webhook: %s', _ex)
+    if named is not None:
+        return named
     create = getattr(channel, 'create_webhook', None)
     if create is None:
-        return None
+        return mine[0] if mine else None
     try:
-        return await create(name=WEBHOOK_NAME)
+        return await create(name=WEBHOOK_NAME, avatar=_black_hook_avatar_bytes())
+    except TypeError:
+        try:
+            return await create(name=WEBHOOK_NAME)
+        except Exception as _ex:
+            log.debug('staff: create_webhook: %s', _ex)
+            return mine[0] if mine else None
     except Exception as _ex:
         log.debug('staff: create_webhook: %s', _ex)
-        return None
+        return mine[0] if mine else None
 
 
-def _hook_avatar(guild):
-    try:
-        return guild.icon.url if guild.icon else None
-    except Exception:
-        return None
+def _hook_avatar_url(guild):
+    """URL аватара для send: не используем — чёрный аватар задан на вебхуке.
+    Оставляем None, чтобы Discord брал аватар самого хука."""
+    return None
 
 
 async def _send_staff_card(channel, *, content=None, view=None):
-    """Карточка заявки V2 (webhook или бот).
+    """Карточка заявки V2 (чёрный webhook «Наборы» или бот).
 
     Пинги ролей/юзеров перед карточкой отключены (шум «Moderation — …»).
     content оставлен для совместимости вызовов, но по умолчанию не шлётся.
@@ -1406,14 +1462,14 @@ async def _send_staff_card(channel, *, content=None, view=None):
             return await hook.send(
                 view=view, wait=True,
                 username=HOOK_USERNAME,
-                avatar_url=_hook_avatar(getattr(channel, 'guild', None)))
+                avatar_url=_hook_avatar_url(getattr(channel, 'guild', None)))
         except Exception as _ex:
             log.debug('staff: card webhook failed: %s', _ex)
     return await channel.send(view=view)
 
 
 async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
-    """Опубликовать меню набора через webhook V2 (баннер + select)."""
+    """Опубликовать меню набора через чёрный webhook V2 (баннер + кнопки)."""
     if channel is None:
         return False, 'Канал не найден'
     fname = banner_name or 'hakumo_staff_banner_v16.png'
@@ -1425,7 +1481,7 @@ async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
         except Exception as _ex:
             log.debug('staff_apply: banner seek: %s', _ex)
         file = discord.File(banner_bio, filename=fname)
-    avatar = _hook_avatar(getattr(channel, 'guild', None))
+    avatar = _hook_avatar_url(getattr(channel, 'guild', None))
     hook = await _channel_webhook(channel)
     msg = None
     used_hook = None
