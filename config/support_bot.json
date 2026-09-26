@@ -11,5 +11,7 @@
   "staff_log_category_id": "1312411839182672015",
   "create_missing": true,
   "review_max_chars": 140,
+  "review_window_seconds": 300,
+  "daily_norma": 10,
   "note": "Token only in .env as SUPPORT_BOT_TOKEN. Fill 0 IDs after first boot or set env."
 }

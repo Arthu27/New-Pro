@@ -27,6 +27,8 @@ _DEFAULT = {
     'staff_log_category_id': '1312411839182672015',
     'create_missing': True,
     'review_max_chars': 140,
+    'review_window_seconds': 300,  # 5 минут на отзыв в ЛС
+    'daily_norma': 10,
 }
 
 _ENV_MAP = {
@@ -72,12 +74,23 @@ def load_config() -> dict[str, Any]:
         cfg['review_max_chars'] = max(20, min(500, int(cfg.get('review_max_chars', 140))))
     except (TypeError, ValueError):
         cfg['review_max_chars'] = 140
+    try:
+        cfg['review_window_seconds'] = max(60, min(3600, int(cfg.get('review_window_seconds', 300))))
+    except (TypeError, ValueError):
+        cfg['review_window_seconds'] = 300
+    try:
+        cfg['daily_norma'] = max(1, min(100, int(cfg.get('daily_norma', 10))))
+    except (TypeError, ValueError):
+        cfg['daily_norma'] = 10
     return cfg
 
 
 def save_config(cfg: dict) -> None:
     CFG_PATH.parent.mkdir(parents=True, exist_ok=True)
     out = {k: cfg.get(k, _DEFAULT.get(k)) for k in _DEFAULT}
+    # keep note if present
+    if 'note' in cfg:
+        out['note'] = cfg.get('note')
     tmp = CFG_PATH.with_suffix('.tmp')
     tmp.write_text(json.dumps(out, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     tmp.replace(CFG_PATH)

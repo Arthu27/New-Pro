@@ -50,6 +50,7 @@ async def amain():
     intents.members = (os.environ.get('SUPPORT_MEMBERS_INTENT') or '0').strip() in (
         '1', 'true', 'yes', 'on')
     intents.message_content = False
+    intents.voice_states = True  # /top online
 
     bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
     boot = {'done': False}

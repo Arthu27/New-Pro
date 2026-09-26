@@ -3,6 +3,7 @@
 import os
 import sys
 import tempfile
+from pathlib import Path
 
 _TMP = tempfile.mkdtemp(prefix='hakumo_support_')
 os.chdir(_TMP)
@@ -49,6 +50,7 @@ print('== emojis / stickers ==')
 for key in ('s_verify', 's_deny', 's_male', 's_female', 's_gender'):
     check(EMO.sticker_path(key) is not None, f'sticker file {key}')
 check(isinstance(EMO.emoji_for('s_verify'), str), 'unicode fallback')
+check(Path(os.path.join(ROOT,'assets/stickers/verify_banner.png')).is_file(), 'verify banner')
 
 print('== resolve helpers ==')
 class R:
@@ -76,6 +78,23 @@ cog = open(os.path.join(ROOT, 'cogs/support_verify.py'), encoding='utf-8').read(
 check('query_members' in cog, 'nick resolve via query_members without Members Intent')
 svc = open(os.path.join(ROOT, 'deploy/hakumo-support.service'), encoding='utf-8').read()
 check('run_support_bot.py' in svc, 'systemd unit')
+
+
+print('== v2 ui labels / commands ==')
+cog = open(os.path.join(ROOT, 'cogs/support_verify.py'), encoding='utf-8').read()
+check('Мальчик' in cog and 'Девочка' in cog, 'gender labels Мальчик/Девочка')
+check("name='norma'" in cog, '/norma command')
+check("name='online'" in cog and "name='support'" in cog, '/top online + /top support')
+check('VerifyPanelView' in cog and 'ConfirmPanelView' in cog, 'V2 panels')
+check('AppealApproveButton' not in cog and 'class ActionSelect' in cog,
+      'main verify flow uses selects (no action Buttons class)')
+check('ReviewSelect' in cog and 'AppealSelect' in cog, 'DM uses selects not buttons')
+STORE.bump_verify(1, 9)
+STORE.bump_verify(1, 9)
+check(STORE.daily_verifies(1, 9) >= 2, 'daily verifies tracked')
+STORE.add_voice_seconds(1, 9, 125)
+rows=STORE.top_online(1)
+check(rows and rows[0]['user_id']==9, 'top online')
 
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
