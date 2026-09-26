@@ -117,12 +117,27 @@ class _Followup:
         s._resp.msg = str(content or '')
 
 
+class _Perms:
+    def __init__(s, view=True):
+        s.view_channel = view
+
+
+class _Channel:
+    def __init__(s, view=True):
+        s.id = 9001
+        s._view = view
+
+    def permissions_for(s, user):
+        return _Perms(s._view)
+
+
 class _Inter:
-    def __init__(s, user):
+    def __init__(s, user, *, can_view=True):
         s.user = user
         s.response = _Resp()
         s.message = _Msg()
         s.followup = _Followup(s.response)
+        s.channel = _Channel(can_view)
 
 
 class _Guild:
@@ -166,7 +181,7 @@ def _cog_with(state):
     return cog, guild
 
 
-print('== 1. Кнопка «Принять»: лимит «unban» действует ДО решения ==')
+print('== 1. Доступ к каналу + лимит «unban» ДО решения ==')
 state = {'items': [], 'next_id': 1, 'settings': {}}
 item, err = AP.create_appeal(state, UID, 'Нарушитель',
                              'Прошу снять бан, это была ошибка',
@@ -179,11 +194,12 @@ set_action_rule(GID, 'ban', [ROLE_ID])
 mod_ok = _User(UID, [_Role(ROLE_ID)])
 mod_no = _User(999000000000000999, [])
 
-# ACL: без роли — отказ ещё до лимитов
-in0 = _Inter(mod_no)
+# Кто не видит канал апелляций — отказ (ACL «Бан» больше не режет)
+in0 = _Inter(mod_no, can_view=False)
 asyncio.new_event_loop().run_until_complete(view._resolve(in0, True))
-check('не дал владелец' in in0.response.msg, 'без права «Бан» — отказ ACL',
-      in0.response.msg[:80])
+check('Нет доступа' in (in0.response.msg or ''),
+      'без доступа к каналу — отказ',
+      (in0.response.msg or '')[:80])
 check(item['status'] == 'pending', 'апелляция не решена')
 
 # лимит unban исчерпан → принятие запрещено, апелляция ждёт

@@ -430,8 +430,8 @@ class AppealView(discord.ui.LayoutView):
         try:
             from services.menu_emojis import schedule_ensure_menu_emojis
             schedule_ensure_menu_emojis(getattr(self.cog, 'bot', None))
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('appeals: schedule menu emojis: %s', _ex)
         claim_label = 'Взять в работу'
         claim_desc = 'Открыть комнату и вести дело'
         try:
@@ -442,8 +442,8 @@ class AppealView(discord.ui.LayoutView):
                 who = str(claim.get('name') or 'модератор')[:32]
                 claim_label = f'Снять с работы ({who})'
                 claim_desc = 'Вернуть апелляцию в общую очередь'
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('appeals: claim label from state: %s', _ex)
         opts = [
             discord.SelectOption(
                 label='Принять', value='accept',
@@ -543,8 +543,8 @@ class AppealView(discord.ui.LayoutView):
             try:
                 await interaction.response.send_message(
                     'Нет доступа к каналу апелляций.', ephemeral=True)
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('appeals: claim deny reply: %s', _ex)
             return
         gid = self.guild_id
         state = self.cog._load(gid)
@@ -683,8 +683,8 @@ class AppealView(discord.ui.LayoutView):
             try:
                 await interaction.response.send_message(
                     'Нет доступа к каналу апелляций.', ephemeral=True)
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('appeals: resolve deny reply: %s', _ex)
             return
         if accept:
             # Лимиты стаффа: принятие апелляции = разбан, расходка «unban»
@@ -1669,8 +1669,8 @@ class Appeals(commands.Cog):
                 if ch_appeal is not None and int(ch_appeal.id) not in seen:
                     channels.append(ch_appeal)
                     seen.add(int(ch_appeal.id))
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('appeals: purge appeal channel: %s', _ex)
             try:
                 from services.channel_routes import get_route
                 for key in ('appeal_menu_channel', 'ban_appeal_channel'):
@@ -1691,10 +1691,10 @@ class Appeals(commands.Cog):
                         try:
                             await msg.delete()
                             deleted += 1
-                        except discord.NotFound:
-                            pass
-                    except discord.NotFound:
-                        pass
+                        except discord.NotFound as _nf:
+                            log.debug('appeals: purge menu gone: %s', _nf)
+                    except discord.NotFound as _nf:
+                        log.debug('appeals: purge menu msg gone: %s', _nf)
                     except Exception as _ex:
                         log.debug('appeals: purge menu msg: %s', _ex)
 
@@ -1728,8 +1728,8 @@ class Appeals(commands.Cog):
                 if ('Несогласны с наказанием' in desc
                         and 'Подать апелляцию' in desc):
                     return True
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('appeals: menu embed probe: %s', _ex)
         try:
             for row in (getattr(msg, 'components', None) or ()):
                 children = getattr(row, 'children', None)
@@ -1743,8 +1743,8 @@ class Appeals(commands.Cog):
                         ncid = str(getattr(nested, 'custom_id', '') or '')
                         if ncid == MENU_CUSTOM_ID or ncid.startswith('appeal:menu:'):
                             return True
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('appeals: menu components probe: %s', _ex)
         return False
 
     async def _safe_delete_menu_msg(self, msg) -> bool:
@@ -1820,8 +1820,8 @@ class Appeals(commands.Cog):
                     try:
                         if getattr(_ex, 'status', None) == 429:
                             wait = float(getattr(_ex, 'retry_after', None) or wait)
-                    except Exception:
-                        pass
+                    except Exception as _rx:
+                        log.debug('appeals: retry_after parse: %s', _rx)
                     log.debug('appeals: repair fetch #%s try=%s: %s (sleep %.1fs)',
                               aid, attempt + 1, _ex, wait)
                     await asyncio.sleep(wait)

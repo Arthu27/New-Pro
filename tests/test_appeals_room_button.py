@@ -192,9 +192,8 @@ def _ids(v):
 
 
 ids = _ids(view) if view else []
-check(any(i.startswith('appeal:accept:') for i in ids)
-      and any(i.startswith('appeal:claim:') for i in ids),
-      'на карточке кнопки Принять / Взять в работу', f'→ {ids}')
+check(any(i.startswith('appeal:menu:') for i in ids),
+      'на карточке select Принять / Взять в работу', f'→ {ids}')
 check(item.get('card_channel_id') == ROOM and item.get('message_id'),
       'канал и сообщение карточки запомнены')
 # пинг роли при новой апелляции — тоже в комнату
