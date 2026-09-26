@@ -1014,11 +1014,38 @@ class StaffAppCardView(discord.ui.LayoutView):
         self.add_item(row)
 
 
+class StaffReconsiderSelect(discord.ui.Select):
+    """После отказа: select «Принять решение» — можно потом принять / ЧС."""
+
+    def __init__(self):
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_review
+        super().__init__(
+            placeholder="Принять решение",
+            options=[
+                discord.SelectOption(
+                    label=select_label("Принять"), value="approve",
+                    emoji=emoji_for_review('approve')),
+                discord.SelectOption(
+                    label=select_label("Отклонить"), value="reject",
+                    emoji=emoji_for_review('reject')),
+                discord.SelectOption(
+                    label=select_label("Чёрный список"), value="blacklist",
+                    emoji=emoji_for_review('blacklist')),
+            ],
+            custom_id="staff_reconsider_select_v1",
+            min_values=1, max_values=1,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await StaffReviewView()._review(interaction, self.values[0])
+
+
 class StaffAppDecidedView(discord.ui.LayoutView):
-    """После решения: select снят, внизу панели статус ОТКАЗАНО/ПРИНЯТО."""
+    """После решения: статус в панели; при отказе — select «Принять решение»."""
 
     def __init__(self, *, title: str, body: str, status: str, note: str = '',
-                 accent: int = 0xE74C3C):
+                 accent: int = 0xE74C3C, allow_reconsider: bool = None):
         super().__init__(timeout=None)
         from services.v2_layouts import V2_AVAILABLE, black_container
         from discord import SeparatorSpacing
@@ -1031,21 +1058,29 @@ class StaffAppDecidedView(discord.ui.LayoutView):
         except Exception:
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
-        # Статус ВНИЗУ панели — без select. Владелец: «закрой select и напиши отказано».
         status_u = (status or '').strip().upper() or 'РЕШЕНО'
-        # Красный блок для отказа / зелёный для принятия
         if 'ОТКАЗ' in status_u or 'ОТКЛОН' in status_u:
             mark = '✕'
+            is_denied = True
         elif 'ПРИНЯТ' in status_u or 'ОДОБР' in status_u:
             mark = '✓'
+            is_denied = False
         elif 'ЧЁРН' in status_u or 'ЧЕРН' in status_u:
             mark = '■'
+            is_denied = True
         else:
             mark = '●'
+            is_denied = False
         bottom = f'## {mark}  {status_u}'
         if note:
             bottom = f'{bottom}\n-# {note}'
-        foot = 'HAKUMO · решение зафиксировано · select закрыт'
+        # После отказа/ЧС оставляем select — можно потом принять.
+        if allow_reconsider is None:
+            allow_reconsider = is_denied
+        if allow_reconsider:
+            foot = 'HAKUMO · можно изменить: select «Принять решение»'
+        else:
+            foot = 'HAKUMO · решение зафиксировано'
         if V2_AVAILABLE:
             from discord import ui as dui
             children = [
@@ -1058,9 +1093,12 @@ class StaffAppDecidedView(discord.ui.LayoutView):
                 dui.Separator(),
                 dui.TextDisplay(f'-# {foot}'[:400]),
             ]
+            if allow_reconsider:
+                row = dui.ActionRow()
+                row.add_item(StaffReconsiderSelect())
+                children.append(row)
             self.add_item(black_container(*children, accent=accent))
             return
-        # без V2 — пустой view (select уже снят через edit view=None)
 
 
 class StaffReviewView(discord.ui.View):
@@ -1082,7 +1120,7 @@ class StaffReviewView(discord.ui.View):
 
     async def _review(self, interaction: discord.Interaction, action: str):
         from services.v2_layouts import (
-            reply_text_v2, respond_v2, send_dm_v2, V2_AVAILABLE)
+            reply_text_v2, send_dm_v2, V2_AVAILABLE)
         from services.staff_roles import can_review_position, position_label
 
         key, app, apps = self._find_app_by_message(interaction.message.id)
@@ -1116,20 +1154,6 @@ class StaffReviewView(discord.ui.View):
                 interaction, deny or "Чужая ветка.",
                 kind='err', title='Нет доступа')
 
-        if app.get("status") != "pending":
-            label = {
-                "approved": "одобрена",
-                "rejected": "отклонена",
-                "blacklisted": "в чёрном списке",
-            }.get(app.get("status"), app.get("status", "?"))
-            # Застрявший select после отказа — закрыть и дописать статус в панели.
-            try:
-                await self._refresh_decided_card(interaction, app)
-            except Exception as _rx:
-                log.warning('staff: refresh decided card: %s', _rx)
-            return await reply_text_v2(
-                interaction, f"Уже **{label}**.", kind='warn')
-
         status_map = {
             "approve": "approved",
             "reject": "rejected",
@@ -1139,15 +1163,42 @@ class StaffReviewView(discord.ui.View):
             return await reply_text_v2(
                 interaction, "Неизвестное действие.", kind='err')
 
+        cur = app.get("status") or "pending"
+        new_st = status_map[action]
+        if cur != "pending":
+            # После отказа/ЧС можно сменить вердикт (напр. потом Принять).
+            can_reconsider = (
+                cur in ("rejected", "blacklisted") and new_st != cur
+            )
+            if not can_reconsider:
+                try:
+                    await self._refresh_decided_card(interaction, app)
+                except Exception as _rx:
+                    log.warning('staff: refresh decided card: %s', _rx)
+                if not interaction.response.is_done():
+                    try:
+                        await interaction.response.defer(ephemeral=True)
+                        await interaction.delete_original_response()
+                    except Exception:
+                        try:
+                            await interaction.response.send_message(
+                                "\u200b", ephemeral=True, delete_after=1)
+                        except Exception as _sx:
+                            log.debug('staff already-decided ack: %s', _sx)
+                return
+
         # Approve: роль может занять >3с → defer, правку карточки через webhook.
         # Reject/ЧС: сначала response.edit_message (select закрывается сразу).
+        deferred_ephemeral = False
+        response_edited = False
         if action == "approve" and not interaction.response.is_done():
             try:
                 await interaction.response.defer(ephemeral=True)
+                deferred_ephemeral = True
             except Exception as _dx:
                 log.debug('staff approve defer: %s', _dx)
 
-        app["status"] = status_map[action]
+        app["status"] = new_st
         app["reviewed_by"] = str(interaction.user)
         if not app.get("timestamp"):
             app["timestamp"] = app.get("submitted_at")
@@ -1216,6 +1267,7 @@ class StaffReviewView(discord.ui.View):
                 note += f" · {granted}"
             body = self._decided_body(app, interaction)
             edited = False
+            response_edited = False
             if V2_AVAILABLE:
                 done = StaffAppDecidedView(
                     title=pos, body=body, status=status_label,
@@ -1226,6 +1278,7 @@ class StaffReviewView(discord.ui.View):
                         await interaction.response.edit_message(
                             view=done, embed=None)
                         edited = True
+                        response_edited = True
                     except Exception as _ie:
                         log.warning('staff: response.edit_message: %s', _ie)
                 # 2) webhook.edit_message / message.edit
@@ -1261,10 +1314,11 @@ class StaffReviewView(discord.ui.View):
         if not interaction.response.is_done():
             try:
                 await interaction.response.defer(ephemeral=True)
+                deferred_ephemeral = True
             except Exception as _dx:
                 log.debug('staff defer after edit: %s', _dx)
 
-        dm_ok = False
+        # DM заявителю (панель уже обновлена — ephemeral куратору не шлём).
         try:
             user = await interaction.client.fetch_user(int(app["user_id"]))
             if action == "approve":
@@ -1292,34 +1346,20 @@ class StaffReviewView(discord.ui.View):
             emb.set_footer(text="/my-application")
             emb.timestamp = datetime.now(timezone.utc)
             await send_dm_v2(user, emb)
-            dm_ok = True
         except Exception as e:
             log.info(f"[STAFF] DM заявителю не доставлен: {e}")
 
-        verdict = {
-            "approve": "одобрена",
-            "reject": "отклонена",
-            "blacklist": "в чёрном списке",
-        }[action]
-        role_line = ""
-        if action == "approve":
-            role_line = (f" Роль: **{granted}**."
-                         if granted else f" Роль не выдана: {grant_note}.")
-        elif action == "blacklist":
-            role_line = f" Только ветка **{pos}**. Остальные открыты."
-        kind = {
-            "approve": "ok",
-            "reject": "warn",
-            "blacklist": "err",
-        }[action]
-        await respond_v2(
-            interaction, kind=kind,
-            title=verdict.capitalize(),
-            body=(
-                f"**{pos}** — **{verdict}**.{role_line}\n"
-                f"ЛС: {'отправлено' if dm_ok else 'не доставлено'}"
-            ),
-            ephemeral=True)
+        # Без ephemeral «Отклонена / ЛС отправлено» — статус в панели.
+        # Если был ephemeral-defer (approve) — убрать «думает…».
+        if deferred_ephemeral and not response_edited:
+            try:
+                await interaction.delete_original_response()
+            except Exception:
+                try:
+                    await interaction.followup.send(
+                        "\u200b", ephemeral=True, delete_after=1)
+                except Exception as _fu:
+                    log.debug('staff silent followup: %s', _fu)
 
     @staticmethod
     def _decided_body(app, interaction):
@@ -1762,6 +1802,10 @@ class StaffApply(commands.Cog):
         self.bot.add_view(StaffReviewButtonsView())
         # Новые карточки — select v2 внутри LayoutView
         self.bot.add_view(StaffAppCardView(title='Заявка', body='…'))
+        # После отказа: статус + select «Принять решение»
+        self.bot.add_view(StaffAppDecidedView(
+            title='Заявка', body='…', status='ОТКАЗАНО',
+            allow_reconsider=True))
         # Legacy v3-кнопки на старых карточках
         _legacy_btns = discord.ui.View(timeout=None)
         _legacy_btns.add_item(StaffCardApproveButton())
