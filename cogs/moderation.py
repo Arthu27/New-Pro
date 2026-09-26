@@ -410,6 +410,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
+        _t_open = datetime.now(timezone.utc)
         log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v16',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None),
