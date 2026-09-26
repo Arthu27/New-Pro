@@ -140,7 +140,35 @@ def register(ctx):
         f =f'data/rules_{guild_id}.json'
         os .makedirs ('data',exist_ok =True )
         if request .method =='GET':
-            if not os .path .exists (f ):return jsonify ([])
+            if not os .path .exists (f ):
+                # Нет файла — отдаём каталог 1.1–1.9 (+ примечания) как черновик
+                try :
+                    from services import mod_reasons as _MR
+                    seed =[]
+                    for item in _MR .rules_for_channel ():
+                        code = (item .get ('code') or '').strip ()
+                        title = (item .get ('title') or '').strip ()
+                        text = (item .get ('t') or '').strip ()
+                        punish = (item .get ('punish') or '').strip ()
+                        duration = (item .get ('duration') or '').strip ()
+                        if not text :
+                            continue
+                        if code :
+                            bits = [f'{code}.']
+                            if title :
+                                bits .append (title + '.')
+                            bits .append (text)
+                            if punish :
+                                bits .append (f'Наказание: {punish}.')
+                            if duration :
+                                bits .append (f'Длительность: {duration}.')
+                            seed .append (_norm_rule (' '.join (bits )))
+                        else :
+                            seed .append (_norm_rule (text ))
+                    return jsonify (seed )
+                except Exception as _sx :
+                    _log .debug ('api_rules seed: %s',_sx )
+                    return jsonify ([])
             try :
                 with open (f ,encoding ='utf-8')as fp :raw =json .load (fp )
             except Exception :

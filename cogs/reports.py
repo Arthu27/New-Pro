@@ -946,12 +946,13 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
     UserSelect/Select/TextInput внутри модалки, discord.py 2.6+).
 
     Порядок полей = порядок общения с модератором: кого выбрали,
-    на кого жалоба (пользователь/стафф), где случилось, почему.
+    на кого жалоба (пользователь/стафф), где случилось, какое правило.
     """
 
     def __init__(self):
         super().__init__()
         from services.menu_emojis import emoji_for_report
+        from services import mod_reasons as _MR
         self.target_select = discord.ui.UserSelect(required=True)
         self.against_select = discord.ui.Select(
             required=True,
@@ -970,17 +971,24 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
                 discord.SelectOption(label='Голосовой канал', value='voice',
                                      emoji='🔊'),
             ])
-        self.reason_input = discord.ui.TextInput(
-            style=discord.TextStyle.paragraph, required=True,
-            max_length=1000, placeholder='Опишите причину жалобы...')
+        # Причина = правило 1.1–1.9 (ярлык + текст запрета), как в /modpanel
+        self.reason_select = discord.ui.Select(
+            required=True,
+            placeholder='1.1 · Реклама · …',
+            options=[
+                discord.SelectOption(
+                    label=o['label'], value=o['value'],
+                    description=o['description'])
+                for o in _MR.select_options_data()
+            ])
         self.add_item(discord.ui.Label(text='Выберите нарушителя',
                                        component=self.target_select))
         self.add_item(discord.ui.Label(text='На кого жалоба?',
                                        component=self.against_select))
         self.add_item(discord.ui.Label(text='Где происходило нарушение?',
                                        component=self.location_select))
-        self.add_item(discord.ui.Label(text='Причина жалобы',
-                                       component=self.reason_input))
+        self.add_item(discord.ui.Label(text='Какое правило нарушено?',
+                                       component=self.reason_select))
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -994,7 +1002,9 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
                 'На себя и ботов вызывать модератора нельзя.', ephemeral=True)
         against = (self.against_select.values or ['user'])[0]
         location = (self.location_select.values or ['chat'])[0]
-        reason = (self.reason_input.value or '').strip() or 'Не указана'
+        from services import mod_reasons as _MR
+        _code = (self.reason_select.values or [''])[0]
+        reason = _MR.format_reason(_code) if _code else 'Не указана'
         await _deliver_report(interaction, target, reason, against, location)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):

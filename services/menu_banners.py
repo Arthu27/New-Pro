@@ -432,6 +432,15 @@ def warm_menu_banners(kinds=('modpanel',)) -> None:
             pass
 
 
+# Версия в имени файла — сброс кэша Discord CDN / браузера
+BANNER_FILE_VER = 'v16'
+PUBLIC_MENU_DIR = os.path.join(ROOT, 'web', 'static', 'menu')
+
+
+def banner_filename(kind: str = 'modpanel') -> str:
+    return f'hakumo_{kind}_banner_{BANNER_FILE_VER}.png'
+
+
 def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     """(BytesIO, filename) для discord.File.
 
@@ -440,8 +449,43 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    name = filename or f'hakumo_{kind}_banner_v15.png'
+    name = filename or banner_filename(kind)
     return bio, name
+
+
+def public_base_url() -> str:
+    """База панели для постоянных URL баннеров (без attachment://)."""
+    for key in ('PANEL_PUBLIC_URL', 'PUBLIC_BASE_URL', 'PANEL_URL'):
+        raw = (os.environ.get(key) or '').strip().rstrip('/')
+        if raw.startswith('http'):
+            return raw
+    return 'https://hakumods.xyz'
+
+
+def ensure_public_banners(kinds=('modpanel', 'appeals', 'staff', 'events')) -> dict:
+    """Записать PNG в web/static/menu/ — Discord тянет по HTTPS, не отлетают."""
+    os.makedirs(PUBLIC_MENU_DIR, exist_ok=True)
+    out = {}
+    for kind in kinds:
+        name = banner_filename(kind)
+        path = os.path.join(PUBLIC_MENU_DIR, name)
+        try:
+            raw = menu_banner_bytes(kind)
+            # не переписываем байт-в-байт тот же файл
+            if (not os.path.isfile(path)
+                    or os.path.getsize(path) != len(raw)):
+                with open(path, 'wb') as fh:
+                    fh.write(raw)
+            out[kind] = path
+        except Exception:
+            continue
+    return out
+
+
+def public_banner_url(kind: str = 'modpanel') -> str:
+    """HTTPS URL баннера — всегда онлайн в MediaGallery (не attachment)."""
+    ensure_public_banners((kind,))
+    return f'{public_base_url()}/static/menu/{banner_filename(kind)}'
 
 
 def select_label(text: str) -> str:

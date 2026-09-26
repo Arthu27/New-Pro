@@ -271,8 +271,11 @@
     <div class="pn-presets" id="pnPresets" aria-label="Быстрый выбор срока"></div>
     <input id="pnDur" placeholder="или своё: 45м, 2ч, 1д…" maxlength="40" aria-label="Срок наказания">
     </div>
-    <div class="pn-lbl"><span>Причина</span><span class="pn-cnt" id="pnReasonCnt">0/500</span></div>
-    <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500" aria-label="Причина наказания">
+    <div class="pn-lbl"><span>Правило (причина)</span><span class="pn-cnt" id="pnReasonCnt">1.1–1.9</span></div>
+    <select id="pnReason" aria-label="Правило (причина наказания)">
+      <option value="">Выберите правило…</option>
+    </select>
+    <div class="pn-hint" id="pnReasonHint" style="margin-top:6px" hidden><span id="pnReasonHintText"></span></div>
     <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:10px" disabled><i class="fas fa-bolt"></i> Применить</button>
     <div class="pn-hint" id="pnHint" hidden><i class="fas fa-circle-info"></i><span id="pnHintText"></span></div>
     <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
@@ -639,6 +642,7 @@
      pnLimitExempt (true — владелец/доверенный вход, лимитов нет). */
   var pnLimits = {};
   var pnLimitExempt = true;
+  var pnReasons = [];
 
   var PN_META = {
     warn:      { icon: 'fa-triangle-exclamation', kind: 'neg',    sub: 'предупреждение' },
@@ -651,7 +655,7 @@
     untimeout: { icon: 'fa-clock-rotate-left',    kind: 'pos',    sub: 'снять мут' },
     vunmute:   { icon: 'fa-microphone',           kind: 'pos',    sub: 'вернуть микрофон' }
   };
-  var PN_PRESETS = ['10м', '30м', '1ч', '3ч', '12ч', '1д', '3д', '7д'];
+  var PN_PRESETS = ['30м', '1ч', '2ч'];
 
   function pnActionMeta(v) {
     return PN_META[v] || { icon: 'fa-bolt', kind: 'neg', sub: '' };
@@ -661,7 +665,7 @@
     pnSel = '';
     pnArm = 0;
     if ($('pnReason')) $('pnReason').value = '';
-    if ($('pnReasonCnt')) $('pnReasonCnt').textContent = '0/500';
+    if ($('pnReasonHint')) $('pnReasonHint').hidden = true;
     if ($('pnDur')) $('pnDur').value = '';
     if ($('pnMsg')) { $('pnMsg').textContent = ''; $('pnMsg').style.color = ''; }
   }
@@ -717,8 +721,51 @@
         pnActions = pnOpts ? (pnOpts.actions || []) : [];
         pnLimits = (pnOpts && pnOpts.limits) || {};
         pnLimitExempt = !!(pnOpts && pnOpts.limit_exempt);
+        pnReasons = (pnOpts && pnOpts.reasons) || [];
+        pnFillReasons();
         pnRenderForm();
       }).catch(function () {});
+  }
+
+  function pnReasonKey(action) {
+    if (action === 'warn') return 'warn';
+    if (action === 'ban') return 'ban';
+    if (action === 'timeout' || action === 'mute_chat' || action === 'vmute') return 'mute';
+    return '';
+  }
+
+  function pnFillReasons() {
+    var sel = $('pnReason');
+    if (!sel) return;
+    var keep = sel.value;
+    var key = pnReasonKey(pnSel);
+    var list = (pnReasons || []).filter(function (r) {
+      if (!key) return true;
+      var acts = r.actions || [];
+      return acts.indexOf(key) >= 0;
+    });
+    var placeholders = {
+      warn: 'Правила для варна…',
+      ban: 'Правила для бана (1.1, 1.3 …)',
+      mute: 'Правила для мута…'
+    };
+    sel.innerHTML = '<option value="">' + (placeholders[key] || 'Выберите правило…') + '</option>';
+    list.forEach(function (r) {
+      var o = document.createElement('option');
+      o.value = r.code || r.label;
+      var head = r.label || (r.code + (r.title ? (' · ' + r.title) : ''));
+      var meta = (r.punish || '') + (r.duration ? (' · ' + r.duration) : '');
+      o.textContent = head + (meta ? (' — ' + meta) : '');
+      o.title = head + (meta ? (' — ' + meta) : '')
+        + (r.text ? ('\n' + r.text) : '');
+      sel.appendChild(o);
+    });
+    if (keep && list.some(function (r) { return (r.code || r.label) === keep; })) {
+      sel.value = keep;
+    } else {
+      sel.value = '';
+      if ($('pnReasonHint')) $('pnReasonHint').hidden = true;
+    }
   }
 
   function pnRenderForm() {
@@ -805,6 +852,7 @@
       b.classList.toggle('sel', on);
       b.setAttribute('aria-checked', on ? 'true' : 'false');
     });
+    pnFillReasons();
     pnSyncUi();
   }
 
@@ -813,6 +861,13 @@
     var gid = $('guild-select').value;
     var btn = $('pnGo');
     if (btn.disabled) return;
+    var needRule = ['warn', 'ban', 'timeout', 'mute_chat', 'vmute'].indexOf(pnSel) >= 0;
+    var reasonCode = $('pnReason').value.trim();
+    if (needRule && !reasonCode) {
+      $('pnMsg').textContent = 'Выберите правило 1.1–1.9';
+      $('pnMsg').style.color = 'var(--warn)';
+      return;
+    }
     /* бан — с подтверждением: первый клик «взводит», второй (5 сек) применяет */
     if (pnSel === 'ban' && Date.now() > pnArm) {
       pnArm = Date.now() + 5000;
@@ -833,7 +888,7 @@
         user_id: pnUid,
         action: pnSel,
         duration: $('pnDurBlock').hidden ? '' : $('pnDur').value.trim(),
-        reason: $('pnReason').value.trim()
+        reason: reasonCode
       })
     }).then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false;
@@ -1224,8 +1279,20 @@
           x.classList.toggle('sel', x.getAttribute('data-dur') === v);
         });
       });
-      $('pnReason').addEventListener('input', function () {
-        $('pnReasonCnt').textContent = $('pnReason').value.length + '/500';
+      $('pnReason').addEventListener('change', function () {
+        var code = $('pnReason').value;
+        var row = (pnReasons || []).find(function (r) {
+          return (r.code || r.label) === code;
+        });
+        if (row && row.text) {
+          $('pnReasonHint').hidden = false;
+          var head = row.label || (code + (row.title ? (' · ' + row.title) : ''));
+          var meta = (row.punish || '') + (row.duration ? (' · ' + row.duration) : '');
+          $('pnReasonHintText').textContent = head
+            + (meta ? (' — ' + meta) : '') + '. ' + row.text;
+        } else {
+          $('pnReasonHint').hidden = true;
+        }
       });
       $('pnGo').addEventListener('click', pnApply);
     }

@@ -170,14 +170,14 @@ TIER_DEFAULT_LIMITS = {
     'owner':   {},   # владелец не ограничен ни в чём
 }
 
-# Потолок ДЛИТЕЛЬНОСТИ мута по тиру (секунды) — запасной, если прогрессия
-# недоступна. Боевой потолок: mute_progression (1ч → +2ч до варна).
+# Потолок ДЛИТЕЛЬНОСТИ мута по тиру (секунды). Прогрессия «+2» отменена
+# (2026-09-25): у всех тиров один фиксированный потолок 2 ч (UI).
 TIER_DEFAULT_DURATIONS = {
-    'helper':  3600,
-    'mod':     3600,          # 1 час (первый шаг)
-    'master':  3600,
-    'curator': 3600,
-    'admin':   3600,
+    'helper':  2 * 3600,
+    'mod':     2 * 3600,      # 2 часа — без авто-эскалации
+    'master':  2 * 3600,
+    'curator': 2 * 3600,
+    'admin':   2 * 3600,
     'owner':   0,             # без ограничения
 }
 
@@ -536,12 +536,11 @@ def role_scoped_actions(guild_id, role_ids=()):
     return scoped
 
 
-# Срок одного мута ПО УМОЛЧАНИЮ: минимум 30 мин.
-# Максимум — прогрессия по участнику (mute_progression):
-# первый мут 1 ч, каждый следующий +2 ч, до варна — сброс на 1 ч
-# (заказ владельца 2026-09-24). Тировые 2 ч больше не дефолт потолка.
+# Срок одного мута ПО УМОЛЧАНИЮ: минимум 30 мин, потолок 2 ч.
+# Прогрессия «+2» отменена (заказ владельца 2026-09-25): срок выбирает
+# персонал в UI, без авто-эскалации по участнику.
 DEFAULT_MUTE_DURATION_MIN = 30 * 60
-DEFAULT_MUTE_DURATION_CAP = 3600   # первый шаг прогрессии (1 ч)
+DEFAULT_MUTE_DURATION_CAP = 2 * 3600   # фиксированный потолок 2 ч
 
 
 def mute_duration_error(seconds, cap_sec=None, min_sec=None):
@@ -569,14 +568,15 @@ def mute_duration_error(seconds, cap_sec=None, min_sec=None):
                    else f'{req_m} мин')
         return (f'Мут дольше разрешённого: потолок — {cap_txt}, '
                 f'а запрошено {req_txt}. '
-                'Первый мут — до 1 ч, дальше +2 ч, после варна снова с 1 ч.')
+                'Срок выбирает персонал (мин. 30 мин, макс. по потолку).')
     return None
 
 
 def resolve_mute_cap(guild_id, target_id=None, role_ids=(), *, unlimited=False):
-    """Потолок мута (сек) с прогрессией по цели. 0 = без ограничения.
+    """Потолок мута (сек). 0 = без ограничения.
 
-    У всех (кроме владельца): 1ч + step×2ч по участнику.
+    Без прогрессии «+2»: фиксированный потолок (2 ч) или тировый/
+    override из панели. target_id сохранён в сигнатуре для совместимости.
     """
     if unlimited:
         return 0
@@ -585,11 +585,18 @@ def resolve_mute_cap(guild_id, target_id=None, role_ids=(), *, unlimited=False):
             return 0
     except Exception:
         pass
+    # Явный потолок роли / гильдии важнее дефолта
+    try:
+        capped = effective_max_duration(guild_id, 'mute', role_ids)
+        if capped:
+            return int(capped)
+    except Exception as ex:
+        _log.debug('resolve_mute_cap effective: %s', ex)
     try:
         from services import mute_progression as _MP
-        if target_id is not None:
-            return int(_MP.cap_seconds(guild_id, target_id))
-        return int(_MP.FIRST_CAP_SEC)
+        return int(getattr(_MP, 'FIXED_CAP_SEC', None)
+                   or getattr(_MP, 'FIRST_CAP_SEC', None)
+                   or DEFAULT_MUTE_DURATION_CAP)
     except Exception as ex:
         _log.debug('resolve_mute_cap: %s', ex)
         return int(DEFAULT_MUTE_DURATION_CAP)

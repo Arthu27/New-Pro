@@ -77,6 +77,27 @@ _PANEL_LIMIT_KEY = {
 
 # Действия с длительностью — им проверяем ещё и «потолок мута» (Щит → Лимиты).
 _DURATION_ACTIONS = ('timeout', 'mute_chat', 'vmute')
+_REASON_RULE_ACTIONS = ('warn', 'ban', 'timeout', 'mute_chat', 'vmute')
+
+
+def _mod_reasons_payload():
+    """Правила 1.1–1.9: label + текст + actions (warn/mute/ban) для фильтра."""
+    try:
+        from services import mod_reasons as _MR
+        return [
+            {
+                'code': o['value'],
+                'label': o['label'],
+                'title': o.get('title') or '',
+                'text': o.get('text') or '',
+                'punish': o.get('punish') or '',
+                'duration': o.get('duration') or '',
+                'actions': list(o.get('actions') or []),
+            }
+            for o in _MR.select_options_data()
+        ]
+    except Exception:
+        return []
 
 
 def _member_role_ids(member):
@@ -230,6 +251,8 @@ def register(ctx):
                 {'value': v, 'label': lbl, 'duration': dur, 'proof': prf}
                 for v, lbl, dur, prf in actions
             ],
+            # Правила 1.1–1.9: label = номер, text = запрет (не Бан/Варн)
+            'reasons': _mod_reasons_payload(),
         })
 
     @app.route('/api/guild/<gid>/punish', methods=['POST'])
@@ -286,6 +309,23 @@ def register(ctx):
             return jsonify({'success': False, 'error': _h_deny}), 403
 
         reason = str(d.get('reason') or '').strip()[:500]
+        # Код правила 1.1–1.9 → полный текст; только если правило подходит к действию
+        if action in _REASON_RULE_ACTIONS:
+            try:
+                from services import mod_reasons as _MR
+                _code = reason.split('—', 1)[0].strip() if reason else ''
+                if not reason:
+                    return jsonify({'success': False,
+                                    'error': 'Выберите правило под это наказание'}), 400
+                if not _MR.allows(_code, action) and not _MR.allows(reason, action):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Это правило нельзя выдать выбранным наказанием '
+                                 '(смотрите «Наказание» у правила)',
+                    }), 400
+                reason = _MR.resolve_stored_reason(reason)[:500]
+            except Exception as _rex:
+                _log.debug('punish reason resolve: %s', _rex)
         duration = str(d.get('duration') or '').strip()[:40] or None
         proof = str(d.get('proof') or '').strip()[:500] or None
         actor = str(session.get('username') or 'Панель')
@@ -311,7 +351,7 @@ def register(ctx):
                 if not _okl:
                     return jsonify({'success': False,
                                     'error': _deny or 'Лимит исчерпан'}), 429
-                # потолок длительности мута (прогрессия по цели)
+                # потолок длительности мута (фиксированный, без +2)
                 if action in _DURATION_ACTIONS:
                     _cap = _SL.resolve_mute_cap(
                         guild.id, getattr(target, 'id', target), role_ids)

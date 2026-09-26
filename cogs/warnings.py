@@ -147,13 +147,32 @@ def _score_text(score):
 
 
 def load_warn_config(guild_id):
-    """Загрузить конфигурацию наказаний (пока JSON, потом DB)"""
+    """Загрузить конфигурацию наказаний (пока JSON, потом DB).
+
+    Без файла / без ступеней — дефолт: 3 варна → Бан (заказ 2026-09-25).
+    """
     import json, os
     f = f'data/warn_config_{guild_id}.json'
+    default = {
+        'steps': [
+            {'count': 3, 'action': 'ban', 'duration': 0, 'unit': 'minute'},
+        ]
+    }
     if os.path.exists(f):
-        with open(f, 'r', encoding='utf-8') as fp:
-            return json.load(fp)
-    return {'steps': []}
+        try:
+            with open(f, 'r', encoding='utf-8') as fp:
+                cfg = json.load(fp)
+            if isinstance(cfg, dict):
+                steps = cfg.get('steps') or cfg.get('thresholds') or []
+                if steps:
+                    return cfg
+                # пустой список ступеней — подставляем дефолт 3→бан
+                cfg = dict(cfg)
+                cfg['steps'] = list(default['steps'])
+                return cfg
+        except Exception:
+            pass
+    return dict(default)
 
 
 def duration_to_minutes(duration, unit):

@@ -113,10 +113,19 @@ def emojis_ready() -> bool:
 
 
 async def ensure_menu_emojis(bot) -> Dict[str, Any]:
-    """Залить белые стикеры как application emoji, заполнить кэш."""
+    """Залить белые стикеры как application emoji, заполнить кэш.
+
+    Перед заливкой гарантируем PNG на диске (ensure_sticker_pack) —
+    иначе после деплоя/wipe файлы пропадают и картинки «отлетают».
+    """
     global _synced
     if emojis_ready():
         return dict(_cache)
+    try:
+        from services.menu_banners import ensure_sticker_pack
+        ensure_sticker_pack()
+    except Exception as ex:
+        _log.warning('menu_emojis: ensure_sticker_pack: %s', ex)
     try:
         existing = {e.name: e for e in await bot.fetch_application_emojis()}
     except Exception as ex:
