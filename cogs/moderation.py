@@ -435,21 +435,28 @@ class Moderation (commands .Cog ):
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
-        banner = None
+        # Баннер по HTTPS (hakumods.xyz/static/menu/…) — не attachment://,
+        # иначе MediaGallery → 400 и «думает» бесконечно.
         try:
-            banner = view._banner_file or view._make_banner_file()
-        except Exception as _bex:
-            log.warning('modpanel banner: %s — открываем без баннера', _bex)
+            from services.menu_banners import public_banner_url, banner_filename
+            view._banner_url = public_banner_url('modpanel')
+            view._banner_name = banner_filename('modpanel')
+            view._rebuild(interaction.guild)
+        except Exception as _bu:
+            log.warning('modpanel public banner: %s — без баннера', _bu)
+            view._banner_url = None
+            view._banner_name = None
+            try:
+                view._rebuild(interaction.guild)
+            except Exception as _rx:
+                log.warning('modpanel rebuild без баннера: %s', _rx)
+        # Только embeds=[] — нельзя одновременно embed= и embeds= (discord.py).
         edit_kw = {
             'view': view,
             'content': None,
-            'embed': None,
             'embeds': [],
+            'attachments': [],  # картинка из URL, файл не нужен
         }
-        if banner is not None:
-            edit_kw['attachments'] = [banner]
-        else:
-            edit_kw['attachments'] = []
         panel_msg = None
         try:
             # Панель = original response (тот же токен, что и сброс селектов)
@@ -458,11 +465,15 @@ class Moderation (commands .Cog ):
             log.warning('modpanel edit_original: %s — followup fallback', ex)
             try:
                 fu_kw = {'view': view, 'ephemeral': True, 'wait': True}
-                if banner is not None:
-                    fu_kw['file'] = banner
                 panel_msg = await interaction.followup.send(**fu_kw)
             except Exception as ex2:
                 log.warning('modpanel followup: %s', ex2)
+                try:
+                    await interaction.edit_original_response(
+                        content='⚠️ Панель не открылась. Нажми /modpanel ещё раз.',
+                        embeds=[], view=None, attachments=[])
+                except Exception:
+                    pass
                 return
         view._panel_message = panel_msg
         view._panel_message_id = getattr(panel_msg, 'id', None)
@@ -476,8 +487,9 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v16',
-                 getattr(panel_msg, 'id', None))
+        log.info('modpanel ready msg=%s build=multi-form-v16 url=%s',
+                 getattr(panel_msg, 'id', None),
+                 getattr(view, '_banner_url', None))
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -3192,13 +3204,20 @@ class ModPanelView(discord.ui.LayoutView):
         self._kind_kinds = None
         self._kind_title = ''
         self._guild = getattr(member, 'guild', None)
-        self._banner_name = 'hakumo_modpanel_banner_v15.png'
+        self._banner_name = None
+        self._banner_url = None
         self._banner_file = None
         self._banner_bytes = None
         self._use_v2 = True
         self._actor_label = ''
         self._mute_kinds_cache = None
         self._unmute_kinds_cache = None
+        try:
+            from services.menu_banners import public_banner_url, banner_filename
+            self._banner_url = public_banner_url('modpanel')
+            self._banner_name = banner_filename('modpanel')
+        except Exception:
+            self._banner_name = 'hakumo_modpanel_banner_v16.png'
         try:
             from services.staff_hierarchy import actor_panel_role, LABELS
             guild = getattr(member, 'guild', None)
@@ -3219,12 +3238,6 @@ class ModPanelView(discord.ui.LayoutView):
         except Exception as _kx:
             log.debug('modpanel kinds cache: %s', _kx)
         self._rebuild(None)
-        # File для первого ответа /modpanel (process-cache байтов).
-        # На refresh баннер НЕ перезаливаем — keep message.attachments.
-        try:
-            self._make_banner_file(force=False)
-        except Exception as _ex:
-            log.debug('moderation: except@3056: %s', _ex)
 
     def _action_label(self, action):
         for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):
@@ -3332,16 +3345,27 @@ class ModPanelView(discord.ui.LayoutView):
         self.action_buttons = []
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
-        # Имя баннера для MediaGallery — без нового File (upload только при
-        # первом /modpanel; на refresh оставляем старый attachment).
         from services.v2_layouts import SHOW_MENU_BANNER
-        if SHOW_MENU_BANNER and not self._banner_name:
-            self._banner_name = 'hakumo_modpanel_banner_v15.png'
-        if not SHOW_MENU_BANNER:
+        if SHOW_MENU_BANNER:
+            if not getattr(self, '_banner_url', None):
+                try:
+                    from services.menu_banners import public_banner_url
+                    self._banner_url = public_banner_url('modpanel')
+                except Exception:
+                    self._banner_url = None
+            if not self._banner_name:
+                try:
+                    from services.menu_banners import banner_filename
+                    self._banner_name = banner_filename('modpanel')
+                except Exception:
+                    self._banner_name = 'hakumo_modpanel_banner_v16.png'
+        else:
             self._banner_name = None
+            self._banner_url = None
         if V2_AVAILABLE and self._use_v2:
             items = build_modpanel_items(
                 banner_filename=self._banner_name,
+                banner_url=getattr(self, '_banner_url', None),
                 status=self._status_text(),
                 footer=self._footer_text(guild),
                 target_select=self.target_select,
