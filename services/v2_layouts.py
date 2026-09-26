@@ -188,19 +188,42 @@ def black_container(*children, accent: int = None):
     return _ui.Container(*children, accent_colour=colour)
 
 
-def _gallery(banner_filename: str):
+def _gallery(media: str):
+    """MediaGallery: HTTPS URL (всегда онлайн) или attachment://имя."""
     from discord.components import MediaGalleryItem
-    return _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}'))
+    src = (media or '').strip()
+    if not src:
+        return None
+    if src.startswith('http://') or src.startswith('https://'):
+        return _ui.MediaGallery(MediaGalleryItem(src))
+    if src.startswith('attachment://'):
+        return _ui.MediaGallery(MediaGalleryItem(src))
+    return _ui.MediaGallery(MediaGalleryItem(f'attachment://{src}'))
+
+
+def _resolve_banner_media(*, banner_url: str = None, banner_filename: str = None,
+                          kind: str = 'modpanel') -> str:
+    """Предпочитаем постоянный HTTPS; иначе attachment:// (как раньше)."""
+    url = (banner_url or '').strip()
+    if url.startswith('http'):
+        return url
+    try:
+        from services.menu_banners import public_banner_url
+        return public_banner_url(kind)
+    except Exception as _ex:
+        _log.debug('banner public url: %s', _ex)
+    name = (banner_filename or '').strip()
+    return name
 
 
 # Баннер в шапке вместе с заголовком (как в референсе V2).
 SHOW_MENU_BANNER = True
 
 
-def build_modpanel_items(*, banner_filename: str, status: str,
+def build_modpanel_items(*, banner_filename: str = None, status: str,
                          footer: str = '',
                          target_select=None, action_select=None,
-                         show_banner: bool = None):
+                         show_banner: bool = None, banner_url: str = None):
     """Финальный /modpanel: шапка + баннер + два чёрных блока с селектами."""
     if not V2_AVAILABLE:
         return None
@@ -212,8 +235,13 @@ def build_modpanel_items(*, banner_filename: str, status: str,
         _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if show_banner and banner_filename:
-        head.append(_gallery(banner_filename))
+    if show_banner:
+        media = _resolve_banner_media(
+            banner_url=banner_url, banner_filename=banner_filename,
+            kind='modpanel')
+        gal = _gallery(media) if media else None
+        if gal is not None:
+            head.append(gal)
     if status:
         head.append(_ui.TextDisplay(status))
     items.append(black_container(*head))
@@ -236,10 +264,10 @@ def build_modpanel_items(*, banner_filename: str, status: str,
     return items
 
 
-def build_modpanel_container(*, banner_filename: str, status: str,
+def build_modpanel_container(*, banner_filename: str = None, status: str,
                              footer: str = '',
                              target_select=None, action_select=None,
-                             show_banner: bool = None):
+                             show_banner: bool = None, banner_url: str = None):
     """Один общий Container (фолбек) — без футера."""
     if not V2_AVAILABLE:
         return None
@@ -249,8 +277,13 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if show_banner and banner_filename:
-        children.append(_gallery(banner_filename))
+    if show_banner:
+        media = _resolve_banner_media(
+            banner_url=banner_url, banner_filename=banner_filename,
+            kind='modpanel')
+        gal = _gallery(media) if media else None
+        if gal is not None:
+            children.append(gal)
     if status:
         children.append(_ui.TextDisplay(status))
     if target_select is not None:
@@ -264,9 +297,9 @@ def build_modpanel_container(*, banner_filename: str, status: str,
     return black_container(*children)
 
 
-def build_appeals_menu_items(*, banner_filename: str, body: str,
+def build_appeals_menu_items(*, banner_filename: str = None, body: str,
                              footer: str, menu_select=None,
-                             show_banner: bool = None):
+                             show_banner: bool = None, banner_url: str = None):
     """Баннер в шапке + select апелляций — как у модерации."""
     if not V2_AVAILABLE:
         return None
@@ -277,8 +310,13 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
         _ui.TextDisplay('# Апелляции\n-# HAKUMO'),
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if show_banner and banner_filename:
-        head.append(_gallery(banner_filename))
+    if show_banner:
+        media = _resolve_banner_media(
+            banner_url=banner_url, banner_filename=banner_filename,
+            kind='appeals')
+        gal = _gallery(media) if media else None
+        if gal is not None:
+            head.append(gal)
     if body:
         head.append(_ui.TextDisplay(body))
     items.append(black_container(*head))
@@ -294,8 +332,9 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
     return items
 
 
-def build_staff_menu_items(*, banner_filename: str, body: str = None,
-                           role_select=None, show_banner: bool = None):
+def build_staff_menu_items(*, banner_filename: str = None, body: str = None,
+                           role_select=None, show_banner: bool = None,
+                           banner_url: str = None):
     """Наборы: шапка с баннером + select роли."""
     if not V2_AVAILABLE:
         return None
@@ -306,8 +345,13 @@ def build_staff_menu_items(*, banner_filename: str, body: str = None,
         _ui.TextDisplay('# Наборы\n-# HAKUMO'),
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if show_banner and banner_filename:
-        head.append(_gallery(banner_filename))
+    if show_banner:
+        media = _resolve_banner_media(
+            banner_url=banner_url, banner_filename=banner_filename,
+            kind='staff')
+        gal = _gallery(media) if media else None
+        if gal is not None:
+            head.append(gal)
     if body:
         head.append(_ui.TextDisplay(body))
     items.append(black_container(*head))
@@ -321,8 +365,9 @@ def build_staff_menu_items(*, banner_filename: str, body: str = None,
     return items
 
 
-def build_events_menu_items(*, banner_filename: str, status: str,
-                            action_row=None, show_banner: bool = None):
+def build_events_menu_items(*, banner_filename: str = None, status: str,
+                            action_row=None, show_banner: bool = None,
+                            banner_url: str = None):
     """Ивенты: шапка с баннером + действия."""
     if not V2_AVAILABLE:
         return None
@@ -333,8 +378,13 @@ def build_events_menu_items(*, banner_filename: str, status: str,
         _ui.TextDisplay('# Ивенты\n-# HAKUMO'),
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if show_banner and banner_filename:
-        head.append(_gallery(banner_filename))
+    if show_banner:
+        media = _resolve_banner_media(
+            banner_url=banner_url, banner_filename=banner_filename,
+            kind='events')
+        gal = _gallery(media) if media else None
+        if gal is not None:
+            head.append(gal)
     if status:
         head.append(_ui.TextDisplay(status))
     items.append(black_container(*head))

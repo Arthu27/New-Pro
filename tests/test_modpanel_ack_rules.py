@@ -44,13 +44,13 @@ check("name='⚠️ Варн'" in src or 'name="⚠️ Варн"' in src, 'conte
 check('rebuild_selects=False' in src, 'member select не убивает ActionSelect')
 check('refresh_target=True' in src, 'UserSelect обновляется отдельно')
 check('def _relayout' in src, '_relayout есть')
-check("'embed': None" not in src.split('edit_kw')[1][:200]
-      if 'edit_kw' in src else True, 'нет mix embed+embeds')
-# более надёжная проверка
-check("edit_kw = {\n            'view': view,\n            'content': None,\n"
-      "            'embeds': [],\n        }" in src
-      or ("'embeds': []" in src and "Cannot mix embed" in src),
-      'modpanel open: только embeds=[]')
+# open: embeds=[] без отдельного embed= (discord.py Cannot mix)
+idx = src.find('edit_kw = {')
+chunk = src[idx:idx + 220] if idx >= 0 else ''
+check("'embeds': []" in chunk and "'embed': None" not in chunk,
+      'modpanel open: только embeds=[] (без mix embed)')
+check("'attachments': []" in chunk or 'public_banner_url' in src,
+      'баннер по HTTPS / без обязательного attachment')
 
 print('== 3. Relayout сохраняет action_select ==')
 # Лёгкий stub без discord gateway

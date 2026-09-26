@@ -146,8 +146,13 @@ class Moderation (commands .Cog ):
         # Баннер ~0.9с на 3× PIL — греем в потоке, чтобы /modpanel не ждал.
         import asyncio
         try:
-            from services.menu_banners import warm_menu_banners
-            await asyncio.to_thread(warm_menu_banners, ('modpanel', 'appeals'))
+            from services.menu_banners import (
+                warm_menu_banners, ensure_public_banners, ensure_sticker_pack)
+            def _warm():
+                ensure_sticker_pack()
+                warm_menu_banners(('modpanel', 'appeals', 'staff', 'events'))
+                ensure_public_banners()
+            await asyncio.to_thread(_warm)
         except Exception as _ex:
             log.debug('modpanel banner warm: %s', _ex)
 
@@ -446,17 +451,23 @@ class Moderation (commands .Cog ):
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
-        banner = view._banner_file or view._make_banner_file()
+        # Баннер по HTTPS (hakumods.xyz/static/menu/…) — не attachment,
+        # иначе при refresh MediaGallery «отлетает».
+        try:
+            from services.menu_banners import public_banner_url, banner_filename
+            view._banner_url = public_banner_url('modpanel')
+            view._banner_name = banner_filename('modpanel')
+            view._rebuild(interaction.guild)
+        except Exception as _bu:
+            log.debug('modpanel public banner: %s', _bu)
+            view._make_banner_file(force=False)
         # Только embeds=[] — нельзя одновременно embed= и embeds= (discord.py).
         edit_kw = {
             'view': view,
             'content': None,
             'embeds': [],
+            'attachments': [],  # картинка из URL, файл не нужен
         }
-        if banner is not None:
-            edit_kw['attachments'] = [banner]
-        else:
-            edit_kw['attachments'] = []
         panel_msg = None
         try:
             # Панель = original response (тот же токен, что и сброс селектов)
@@ -465,8 +476,6 @@ class Moderation (commands .Cog ):
             log.warning('modpanel edit_original: %s — followup fallback', ex)
             try:
                 fu_kw = {'view': view, 'ephemeral': True, 'wait': True}
-                if banner is not None:
-                    fu_kw['file'] = banner
                 panel_msg = await interaction.followup.send(**fu_kw)
             except Exception as ex2:
                 log.warning('modpanel followup: %s', ex2)
@@ -3129,13 +3138,20 @@ class ModPanelView(discord.ui.LayoutView):
         self._kind_kinds = None
         self._kind_title = ''
         self._guild = getattr(member, 'guild', None)
-        self._banner_name = 'hakumo_modpanel_banner_v15.png'
+        self._banner_name = None
+        self._banner_url = None
         self._banner_file = None
         self._banner_bytes = None
         self._use_v2 = True
         self._actor_label = ''
         self._mute_kinds_cache = None
         self._unmute_kinds_cache = None
+        try:
+            from services.menu_banners import public_banner_url, banner_filename
+            self._banner_url = public_banner_url('modpanel')
+            self._banner_name = banner_filename('modpanel')
+        except Exception:
+            self._banner_name = 'hakumo_modpanel_banner_v16.png'
         try:
             from services.staff_hierarchy import actor_panel_role, LABELS
             guild = getattr(member, 'guild', None)
@@ -3156,12 +3172,6 @@ class ModPanelView(discord.ui.LayoutView):
         except Exception as _kx:
             log.debug('modpanel kinds cache: %s', _kx)
         self._rebuild(None)
-        # File для первого ответа /modpanel (process-cache байтов).
-        # На refresh баннер НЕ перезаливаем — keep message.attachments.
-        try:
-            self._make_banner_file(force=False)
-        except Exception:
-            pass
 
     def _action_label(self, action):
         for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):
@@ -3253,13 +3263,26 @@ class ModPanelView(discord.ui.LayoutView):
         """Сложить контейнеры вокруг уже созданных селектов."""
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
         from services.v2_layouts import SHOW_MENU_BANNER
-        if SHOW_MENU_BANNER and not self._banner_name:
-            self._banner_name = 'hakumo_modpanel_banner_v15.png'
-        if not SHOW_MENU_BANNER:
+        if SHOW_MENU_BANNER:
+            if not self._banner_url:
+                try:
+                    from services.menu_banners import public_banner_url
+                    self._banner_url = public_banner_url('modpanel')
+                except Exception:
+                    pass
+            if not self._banner_name:
+                try:
+                    from services.menu_banners import banner_filename
+                    self._banner_name = banner_filename('modpanel')
+                except Exception:
+                    self._banner_name = 'hakumo_modpanel_banner_v16.png'
+        else:
             self._banner_name = None
+            self._banner_url = None
         if V2_AVAILABLE and self._use_v2:
             items = build_modpanel_items(
                 banner_filename=self._banner_name,
+                banner_url=self._banner_url,
                 status=self._status_text(),
                 footer=self._footer_text(guild),
                 target_select=self.target_select,
