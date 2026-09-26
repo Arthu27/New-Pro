@@ -678,8 +678,8 @@ def _load_menu_state():
             with open(MENU_STATE_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
             return data if isinstance(data, dict) else {}
-        except (OSError, ValueError):
-            pass
+        except (OSError, ValueError) as _ex:
+            log.debug('staff_apply: menu state read: %s', _ex)
     return {}
 
 
@@ -840,8 +840,8 @@ class StaffApplyModal(discord.ui.Modal):
                 _m = getattr(delivery_ch, 'mention', None)
                 if _m:
                     ch_ref = _m
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('staff_apply: confirm channel mention: %s', _ex)
             confirm = (
                 f"Заявка на **{role_label}** ушла в "
                 f"{ch_ref}.\n"
@@ -1396,8 +1396,8 @@ async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
     if banner_bio is not None:
         try:
             banner_bio.seek(0)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('staff_apply: banner seek: %s', _ex)
         file = discord.File(banner_bio, filename=fname)
     avatar = _hook_avatar(getattr(channel, 'guild', None))
     hook = await _channel_webhook(channel)
