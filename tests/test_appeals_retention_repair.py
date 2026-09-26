@@ -221,5 +221,5 @@ check('Garbage collect + reload heaviest cog' not in open(
 
 
 print()
-print(f'Result: {PASS} passed, {FAIL} failed')
+print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(0 if FAIL == 0 else 1)

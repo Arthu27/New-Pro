@@ -154,13 +154,14 @@ mod = M.Moderation.__new__(M.Moderation)
 mod.bot = _Bot(guild)
 
 ok, text = asyncio.run(mod.apply_panel_action(
-    guild, target, 'timeout', reason='спам', amount='2ч', actor='Ivan'))
-check(ok and '120 мин' in text, f'мут применён, длительность названа ({text[:70]})')
+    guild, target, 'timeout', reason='спам', amount='1ч', actor='Ivan'))
+check(ok and ('60 мин' in text or '1 ч' in text),
+      f'мут применён, длительность названа ({text[:70]})')
 check(target.timed_out_until is not None, 'timeout() реально вызван')
-_mins = (target.timed_out_until.timestamp() if hasattr(target.timed_out_until, 'timestamp') else 0)
 import datetime as _dt  # noqa: E402
+assert target.timed_out_until is not None
 _left = (target.timed_out_until.replace(tzinfo=None) - _dt.datetime.utcnow()).total_seconds() / 60
-check(115 <= _left <= 125, f'длительность «2ч» ≈ 120 мин ({_left:.0f})')
+check(55 <= _left <= 65, f'длительность «1ч» ≈ 60 мин ({_left:.0f})')
 
 print('== 2. «Бан» из панели: роль бана, каналы не трогаем ==')
 from services import channel_routes as CHR  # noqa: E402

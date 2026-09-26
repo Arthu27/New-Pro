@@ -48,6 +48,8 @@ class FaultyConn:
 
 
 def leak_probe(store, method, *args):
+    """Ошибка должна прокинуться. Conn не закрываем: db.py держит
+    персистентный shared-conn на поток (без reconnect на каждый get)."""
     fc = FaultyConn()
     store._conn = lambda: fc
     crashed = False
@@ -60,14 +62,14 @@ def leak_probe(store, method, *args):
 
 g = GuildData('leak_g')
 u = UserData('leak_u')
-cr, cl = leak_probe(g, 'get', 1, 'k');            check(cr and cl, 'GuildData.get: ошибка прокинута, conn закрыт')
-cr, cl = leak_probe(g, 'get_all', 1);             check(cr and cl, 'GuildData.get_all: conn закрыт при ошибке')
-cr, cl = leak_probe(g, 'get_all_keys', 1);        check(cr and cl, 'GuildData.get_all_keys: conn закрыт при ошибке')
-cr, cl = leak_probe(g, 'count', 1);               check(cr and cl, 'GuildData.count: conn закрыт при ошибке')
-cr, cl = leak_probe(u, 'get', 1);                 check(cr and cl, 'UserData.get: conn закрыт при ошибке')
-cr, cl = leak_probe(u, 'get_all');                check(cr and cl, 'UserData.get_all: conn закрыт при ошибке')
-cr, cl = leak_probe(GuildData('leak_g2'), '_ensure_table'); check(cr and cl, 'GuildData._ensure_table: conn закрыт при ошибке')
-cr, cl = leak_probe(UserData('leak_u2'), '_ensure_table');  check(cr and cl, 'UserData._ensure_table: conn закрыт при ошибке')
+cr, cl = leak_probe(g, 'get', 1, 'k');            check(cr, 'GuildData.get: ошибка прокинута')
+cr, cl = leak_probe(g, 'get_all', 1);             check(cr, 'GuildData.get_all: ошибка прокинута')
+cr, cl = leak_probe(g, 'get_all_keys', 1);        check(cr, 'GuildData.get_all_keys: ошибка прокинута')
+cr, cl = leak_probe(g, 'count', 1);               check(cr, 'GuildData.count: ошибка прокинута')
+cr, cl = leak_probe(u, 'get', 1);                 check(cr, 'UserData.get: ошибка прокинута')
+cr, cl = leak_probe(u, 'get_all');                check(cr, 'UserData.get_all: ошибка прокинута')
+cr, cl = leak_probe(GuildData('leak_g2'), '_ensure_table'); check(cr, 'GuildData._ensure_table: ошибка прокинута')
+cr, cl = leak_probe(UserData('leak_u2'), '_ensure_table');  check(cr, 'UserData._ensure_table: ошибка прокинута')
 
 # штатная работа после правок
 g2 = GuildData('ok_g')

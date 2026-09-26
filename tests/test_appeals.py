@@ -120,11 +120,22 @@ def _btn_ids(view):
 
 ids1 = _btn_ids(v1)
 ids2 = _btn_ids(v2)
-check(ids1 == ['appeal:accept:7', 'appeal:claim:7', 'appeal:reject:7'],
+check(ids1 == ['appeal:menu:7'],
       f'custom_id несут id апелляции: {ids1}')
 check(not set(ids1) & set(ids2), 'custom_id не пересекаются между апелляциями')
 check(v1.timeout is None, 'persistent (timeout=None) — переживает рестарт')
 check(v1.has_components_v2(), 'карточка апелляции — Components V2 LayoutView')
+# select options: Принять / Отклонить / Взять в работу
+_opts = []
+for child in v1.children:
+    stack = [child]
+    while stack:
+        n = stack.pop()
+        for opt in getattr(n, 'options', None) or []:
+            _opts.append(getattr(opt, 'label', ''))
+        stack.extend(list(getattr(n, 'children', None) or []))
+check(set(_opts) >= {'Принять', 'Отклонить', 'Взять в работу'},
+      f'select с действиями апелляции: {_opts}')
 v1.apply_resolved(title='Апелляция #7 — принята',
                    body='текст\n\n**Решение**\n✅ Принята',
                    footer='решение вынесено · принята', accent=0x57F287)

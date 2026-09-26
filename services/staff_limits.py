@@ -198,27 +198,27 @@ def _role_tier_map(guild_id=None):
         from services.staff_roles import KNOWN_CURATOR_ROLE_ID
         kid = str(int(KNOWN_CURATOR_ROLE_ID))
         out.setdefault(kid, 'curator')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug('staff_limits: except@201: %s', _ex)
     try:
         from services.staff_roles import KNOWN_HELPER_ROLE_ID
         hid = str(int(KNOWN_HELPER_ROLE_ID))
         out.setdefault(hid, 'helper')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug('staff_limits: except@207: %s', _ex)
     try:
         from services.staff_roles import KNOWN_MODERATOR_ROLE_ID
         mid = str(int(KNOWN_MODERATOR_ROLE_ID))
         out.setdefault(mid, 'mod')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug('staff_limits: except@213: %s', _ex)
     try:
         from services.staff_roles import KNOWN_MASTER_ROLE_ID
         xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
         if xid and xid != '0':
             out.setdefault(xid, 'master')
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug('staff_limits: except@220: %s', _ex)
     return out
 
 
@@ -577,22 +577,43 @@ def resolve_mute_cap(guild_id, target_id=None, role_ids=(), *, unlimited=False):
     """Потолок мута (сек) с прогрессией по цели. 0 = без ограничения.
 
     У всех (кроме владельца): 1ч + step×2ч по участнику.
+    Если в панели задан свой потолок роли/сервера (set_durations) —
+    берём минимум из прогрессии и этого потолка (жёстче побеждает).
     """
     if unlimited:
         return 0
     try:
         if tier_for_roles(role_ids) == 'owner':
             return 0
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug('staff_limits: except@586: %s', _ex)
     try:
         from services import mute_progression as _MP
         if target_id is not None:
-            return int(_MP.cap_seconds(guild_id, target_id))
-        return int(_MP.FIRST_CAP_SEC)
+            prog = int(_MP.cap_seconds(guild_id, target_id))
+        else:
+            prog = int(_MP.FIRST_CAP_SEC)
     except Exception as ex:
         _log.debug('resolve_mute_cap: %s', ex)
-        return int(DEFAULT_MUTE_DURATION_CAP)
+        prog = int(DEFAULT_MUTE_DURATION_CAP)
+    try:
+        # Свой потолок из панели (роль/сервер) — без тирового дефолта:
+        # effective_max_duration при пустых настройках возвращает
+        # DEFAULT_MUTE_DURATION_CAP (1ч), что ломало бы прогрессию 3ч+.
+        overrides = get_role_overrides(guild_id)
+        configured = 0
+        for rid_s in _role_ids_for_overrides(role_ids):
+            ov = overrides.get(rid_s) or {}
+            v = int((ov.get('durations') or {}).get('mute') or 0)
+            if v > configured:
+                configured = v
+        if not configured:
+            configured = int(get_durations(guild_id).get('mute') or 0)
+        if configured > 0:
+            return min(prog, configured) if prog > 0 else configured
+    except Exception as _cex:
+        _log.debug('resolve_mute_cap configured: %s', _cex)
+    return prog
 
 
 def effective_max_duration(guild_id, key, role_ids=()):

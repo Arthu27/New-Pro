@@ -6,7 +6,7 @@ _log = get_logger("moderation")
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
-from datetime import datetime ,timedelta ,timezone 
+from datetime import datetime, timedelta, timezone
 import json 
 import os 
 import time 
@@ -422,11 +422,24 @@ class Moderation (commands .Cog ):
             schedule_ensure_menu_emojis(interaction.client)
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
-        view = ModPanelView(self, interaction.user, allowed, preselect=target)
+        try:
+            view = ModPanelView(self, interaction.user, allowed, preselect=target)
+        except Exception as _vex:
+            log.exception('modpanel view: %s', _vex)
+            await _respond(
+                interaction,
+                embed=error_embed(
+                    'Панель не собралась. Попробуй ещё раз через пару секунд.'),
+                ephemeral=True)
+            return
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
-        banner = view._banner_file or view._make_banner_file()
+        banner = None
+        try:
+            banner = view._banner_file or view._make_banner_file()
+        except Exception as _bex:
+            log.warning('modpanel banner: %s — открываем без баннера', _bex)
         edit_kw = {
             'view': view,
             'content': None,
@@ -1459,7 +1472,8 @@ class Moderation (commands .Cog ):
                 try:
                     if int(getattr(getattr(msg, 'author', None), 'id', 0) or 0) == uid:
                         found.append(msg)
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as _ex:
+                    log.debug('moderation: except@1462: %s', _ex)
                     continue
                 if len(found) >= count:
                     break
@@ -2355,20 +2369,20 @@ def _cancel_panel_reset(panel):
         return
     try:
         panel._reset_gen = int(getattr(panel, '_reset_gen', 0) or 0) + 1
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('modpanel cancel reset_gen: %s', _ex)
     task = getattr(panel, '_reset_task', None)
     if task is None:
         return
     try:
         if not task.done():
             task.cancel()
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('modpanel cancel reset_task: %s', _ex)
     try:
         panel._reset_task = None
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('modpanel clear reset_task: %s', _ex)
 
 
 async def _push_panel_view(panel, interaction=None):
@@ -2389,8 +2403,8 @@ async def _push_panel_view(panel, interaction=None):
                         'modpanel push: ответили msg=%s, ждали %s — не переезжаем',
                         getattr(new_msg, 'id', None), want)
                     return True
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('moderation: except@2392: %s', _ex)
             panel._panel_message = new_msg
             try:
                 panel._panel_message_id = int(new_msg.id)
@@ -2465,8 +2479,8 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
         # rebuild уже мог сменить custom_id — обязаны запушить, иначе мёртвая панель
         try:
             await _push_panel_view(panel, interaction)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('moderation: except@2468: %s', _ex)
         raise
     except Exception as _e:
         log.warning('modpanel reset: %s', _e)
@@ -2620,8 +2634,8 @@ async def _offer_mod_form(interaction, cog, action, prefill, panel=None):
                     embed=error_embed(
                         'Не удалось открыть форму. Выберите действие ещё раз.'),
                     ephemeral=True)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('moderation: except@2623: %s', _ex)
         return False
     # Та же панель, свежие селекты — без второй эфемерки
     await _reset_after_step(interaction, panel, prefer_resend=False)
@@ -2779,12 +2793,12 @@ class ModActionSelect(discord.ui.Select):
         _cancel_panel_reset(view)
         _bind_live_panel(view, interaction)
         try:
-            lag = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+            lag = (datetime.now(timezone.utc) - interaction.created_at).total_seconds()
             if lag > 1.0:
                 log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят)',
                             lag)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('modpanel action lag: %s', _ex)
         action = self.values[0]
         prefill = ""
         if view is not None:
@@ -2815,8 +2829,8 @@ class ModActionSelect(discord.ui.Select):
             except Exception:
                 try:
                     await _ack(interaction, thinking=False)
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    log.debug('moderation: except@2818: %s', _ex)
             try:
                 _bind_live_panel(view, interaction)
                 await _silent_reset_panel(interaction, view)
@@ -3053,8 +3067,8 @@ class ModPanelView(discord.ui.LayoutView):
         # На refresh баннер НЕ перезаливаем — keep message.attachments.
         try:
             self._make_banner_file(force=False)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('moderation: except@3056: %s', _ex)
 
     def _action_label(self, action):
         for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):
