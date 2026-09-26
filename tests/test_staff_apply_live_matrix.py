@@ -250,10 +250,29 @@ sel = RoleSelect()
 check([o.value for o in sel.options] ==
       ['Moderator', 'Helper', 'Eventsmod', 'Broadcaster'], 'select EN')
 check(StaffAppCardView(title='Moderator', body='x').has_components_v2(), 'V2 card')
-from cogs.staff_apply import StaffReviewSelect  # noqa: E402
+from cogs.staff_apply import (  # noqa: E402
+    StaffReviewSelect, StaffCardApproveButton, StaffCardBlacklistButton)
 rev = StaffReviewSelect()
 check([o.value for o in rev.options] == ['approve', 'reject', 'blacklist'],
-      'review: Принять/Отклонить/Чёрный список')
+      'legacy select: Принять/Отклонить/Чёрный список')
+card = StaffAppCardView(title='Moderator', body='x')
+# Walk children for buttons (V2 ActionRow)
+_btn_labels = []
+for item in card.children:
+    walk = [item]
+    while walk:
+        cur = walk.pop()
+        kids = getattr(cur, 'children', None) or []
+        walk.extend(kids)
+        lab = getattr(cur, 'label', None)
+        if lab:
+            _btn_labels.append(lab)
+check('Одобрить' in _btn_labels and 'Отклонить' in _btn_labels
+      and 'Чёрный список' in _btn_labels,
+      f'карточка: кнопки решения {_btn_labels}')
+check(StaffCardApproveButton().custom_id.endswith('approve_v3')
+      and StaffCardBlacklistButton().custom_id.endswith('blacklist_v3'),
+      'кнопки ЧС на карточке')
 for kind in SR.POSITIONS:
     tag = _curator_ping(
         types.SimpleNamespace(

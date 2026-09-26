@@ -632,8 +632,8 @@ def layout_plain_text(view) -> str:
     try:
         for child in list(getattr(view, 'children', None) or []):
             _walk(child)
-    except Exception:
-        pass
+    except Exception as _ex:
+        _log.debug('v2_layouts: except@635: %s', _ex)
     return '\n'.join(parts)
 
 

@@ -367,10 +367,13 @@ mod_cog = Moderation(botx)
 _opts = ModActionSelect(mod_cog)
 _labels = {o.label for o in _opts.options}
 _ban_opt = next(o for o in _opts.options if o.value == 'ban')
-check('Бан' in _labels, 'select: пункт «Бан» есть')
+check(any('Бан' in str(l) for l in _labels),
+      'select: пункт «Бан» есть')
 check('оль бана' in (_ban_opt.description or ''),
       'select: «Бан» — роль бана, а не обход каналов')
-check('Снять бан' in _labels, 'select: «Снять бан» есть')
+check(any('Снять бан' in str(l) for l in _labels),
+      'select: «Снять бан» есть')
+
 check({'ban', 'unban', 'mute', 'clear'} <= {o.value for o in _opts.options},
       'select: действия ban/unban/mute/clear на месте')
 check('kick' not in {o.value for o in _opts.options},

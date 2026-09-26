@@ -872,8 +872,8 @@ def _resolve_voice_channel_id():
     if raw and raw not in ('0', 'none', 'None'):
         try:
             return int(raw) or None
-        except (TypeError, ValueError):
-            pass
+        except (TypeError, ValueError) as _ex:
+            _log.debug('VOICE_CHANNEL_ID parse: %s', _ex)
     cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config', 'voice_stay.json')
     try:
         if os.path.isfile(cfg_path):
@@ -915,8 +915,8 @@ async def _ensure_main_voice_joined(channel_id=None):
                 if (v.is_connected()
                         and getattr(getattr(v, 'channel', None), 'id', None) == cid):
                     return True, f'уже в <#{cid}>'
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug('main: except@918: %s', _ex)
         channel = bot.get_channel(cid)
         if channel is None:
             try:
@@ -929,8 +929,8 @@ async def _ensure_main_voice_joined(channel_id=None):
             try:
                 if not stale.is_connected():
                     await stale.disconnect(force=True)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug('main: except@932: %s', _ex)
         vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
         if vc and vc.is_connected():
             if getattr(vc.channel, 'id', None) == cid:
@@ -942,8 +942,8 @@ async def _ensure_main_voice_joined(channel_id=None):
             except Exception:
                 try:
                     await vc.disconnect(force=True)
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug('main: except@945: %s', _ex)
         try:
             # self_deaf стабильнее для «просто сидеть» 24/7
             await channel.connect(
@@ -983,7 +983,8 @@ def _schedule_main_voice_rejoin(reason=''):
             try:
                 if not bot.is_ready():
                     continue
-            except Exception:
+            except Exception as _ex:
+                _log.debug('main: except@986: %s', _ex)
                 continue
             cid = VOICE_CHANNEL_ID
             if not cid:
@@ -995,8 +996,8 @@ def _schedule_main_voice_rejoin(reason=''):
                         if attempt > 1:
                             _log.info('main voice rejoin skip — already in %s', cid)
                         return
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug('main: except@998: %s', _ex)
             ok, msg = await _ensure_main_voice_joined(cid)
             if ok:
                 _log.info('main voice rejoin (%s try=%s): %s',
@@ -1046,8 +1047,8 @@ async def _monitor_voice():
                     in_target = True
                     vc = v
                     break
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug('main: except@1049: %s', _ex)
         if not in_target:
             ok, msg = await _ensure_main_voice_joined(cid)
             if ok:
@@ -1130,14 +1131,14 @@ def _bind_voice_gw_listeners():
     async def _voice_on_disconnect():
         try:
             _schedule_main_voice_rejoin('gateway-disconnect')
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug('main: except@1133: %s', _ex)
 
     async def _voice_on_resumed():
         try:
             _schedule_main_voice_rejoin('resume')
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug('main: except@1139: %s', _ex)
 
     try:
         bot.add_listener(_voice_on_disconnect, 'on_disconnect')

@@ -22,6 +22,9 @@ from typing import Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
+from logger import get_logger
+log = get_logger('menu_banners')
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, 'assets')
 STICKERS = os.path.join(ASSETS, 'stickers')
@@ -113,7 +116,8 @@ def _font(bold=False, sz=20, *, display=False):
         try:
             if path and os.path.isfile(path):
                 return ImageFont.truetype(path, sz)
-        except Exception:
+        except Exception as _ex:
+            log.debug('menu_banners: except@119: %s', _ex)
             continue
     return ImageFont.load_default()
 
@@ -160,8 +164,8 @@ def _load_atmosphere(kind: str) -> Image.Image:
     if custom:
         try:
             return _cover(Image.open(custom).convert('RGBA'), W, H)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('menu_banners: except@166: %s', _ex)
 
     base = None
     for name in preset['bgs']:
@@ -170,7 +174,8 @@ def _load_atmosphere(kind: str) -> Image.Image:
             try:
                 base = _cover(Image.open(path).convert('RGBA'), W, H)
                 break
-            except Exception:
+            except Exception as _ex:
+                log.debug('menu_banners: except@176: %s', _ex)
                 continue
     if base is None:
         base = Image.new('RGBA', (W, H), (12, 10, 18, 255))
@@ -396,7 +401,8 @@ def _premium_bg(kind: str) -> Optional[Image.Image]:
                 sd.ellipse((x, y, x + s, y + s), fill=(255, 255, 255, a))
             covered = Image.alpha_composite(covered, spark)
             return covered  # chrome сам даунскейлит с ss
-        except Exception:
+        except Exception as _ex:
+            log.debug('menu_banners: except@402: %s', _ex)
             continue
     return None
 
@@ -409,8 +415,8 @@ def render_menu_banner(kind: str = 'modpanel') -> Image.Image:
         try:
             # pad, не crop — иначе обрезается HAKUMO сверху/снизу
             return _fit_pad(Image.open(custom).convert('RGBA'), W, H)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('menu_banners: except@415: %s', _ex)
     return _render_banner_fresh(kind)
 
 
@@ -435,8 +441,8 @@ def warm_menu_banners(kinds=('modpanel',)) -> None:
     for kind in kinds:
         try:
             menu_banner_bytes(kind)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('menu_banners: except@441: %s', _ex)
 
 
 def menu_banner_file(kind: str = 'modpanel', filename: str = None):
@@ -776,8 +782,8 @@ def _render_banner_fresh(kind: str) -> Image.Image:
                     sd.ellipse((x, y, x + s, y + s), fill=(255, 255, 255, a))
                 base = Image.alpha_composite(base, spark)
                 return _draw_banner_chrome(base, kind)
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('menu_banners: except@782: %s', _ex)
     img = _premium_bg(kind)
     if img is None:
         img = Image.new('RGBA', (ww, hh), (0, 0, 0, 255))
@@ -797,8 +803,8 @@ def _render_banner_fresh(kind: str) -> Image.Image:
             dark = Image.new('RGBA', (ww, hh), (0, 0, 0, 160))
             atm = Image.alpha_composite(atm, dark)
             img = Image.blend(img, atm, 0.26)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('menu_banners: except@803: %s', _ex)
     return _draw_banner_chrome(img, kind)
 
 

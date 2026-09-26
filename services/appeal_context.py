@@ -20,6 +20,9 @@ import os
 import time
 from datetime import datetime, timezone
 
+from logger import get_logger
+log = get_logger('appeal_context')
+
 CACHE_FILE = 'data/discord_audit_cache.json'
 MOD_DATA_FILE = 'data/mod_data.json'
 PUNISH_ROLES_FILE = 'data/punish_roles.json'
@@ -193,8 +196,8 @@ def active_from_temps(gid, user_id):
                 'when': '',
                 'source': 'temps',
             }
-    except (TypeError, ValueError):
-        pass
+    except (TypeError, ValueError) as _ex:
+        log.debug('appeal_context: except@199: %s', _ex)
     _ = ban_id  # бан смотрим по ролям/делам
     return None
 

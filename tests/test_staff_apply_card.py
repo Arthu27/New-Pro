@@ -123,7 +123,7 @@ g_room = _Guild(
     roles=(_Role(CURATOR), _Role(SR.KNOWN_CURATOR_BY_KIND['moderator']),
            _Role(SR.KNOWN_CURATOR_BY_KIND['helper'])))
 
-# own branch takes priority when set
+# own branch when apply channel not on this guild
 ch, tag = SA.apply_target('Moderator', g_room)
 check(ch is not None and ch.id == 502,
       'Moderator → own branch 502', getattr(ch, 'id', None))
@@ -157,10 +157,10 @@ try:
 finally:
     SA.APPLY_CHANNEL_ID = _saved_apply
 
-# apply channel missing on guild → legacy room
+# apply channel missing on guild → НЕ в апелляции
 ch, tag = SA.apply_target('Moderator', g_room)
-check(ch is not None and ch.id == ROOM,
-      'no apply channel on guild → shared room', getattr(ch, 'id', None))
+check(ch is None,
+      'нет канала анкет и ветки → не в апелляции', getattr(ch, 'id', None))
 check(tag == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
       'curator tag still computed for room', tag)
 
@@ -206,21 +206,30 @@ class _Inter:
             send=lambda *a, **k: asyncio.sleep(0))
 
 
-# restore own branches empty → room
+# канал анкет на сервере (не апелляции)
+apps_ch2 = _Chan(APPS_CH, 'apps')
+g_submit = _Guild(
+    channels=(room_ch, mod_ch, help_ch, apps_ch2),
+    roles=(_Role(CURATOR), _Role(SR.KNOWN_CURATOR_BY_KIND['moderator']),
+           _Role(SR.KNOWN_CURATOR_BY_KIND['helper'])))
+_saved_apply2 = SA.APPLY_CHANNEL_ID
+SA.APPLY_CHANNEL_ID = APPS_CH
 modal = SA.StaffApplyModal(role_name='Moderator')
 modal.age._value = '19'
 modal.activity._value = 'пк, 2 часа'
 modal.experience._value = 'zxc гуль'
 modal.reason._value = '10/10'
-inter = _Inter(g_room)
+inter = _Inter(g_submit)
 asyncio.get_event_loop().run_until_complete(modal.on_submit(inter))
+SA.APPLY_CHANNEL_ID = _saved_apply2
 
-check(len(room_ch.sent) >= 1, 'card sent to shared room')
+check(len(apps_ch2.sent) >= 1, 'card sent to apps channel')
+check(len(room_ch.sent) == 0, 'апелляции не трогаем')
 check(len(mod_ch.sent) == 0 and len(help_ch.sent) == 0, 'own branches unused')
 # Без пинга: только карточка (view), content-сообщений нет
-ping_msgs = [s for s in room_ch.sent if s.get('content')]
-card_msg = next((s for s in room_ch.sent if s.get('view') is not None), None)
-sent = card_msg or room_ch.sent[-1]
+ping_msgs = [s for s in apps_ch2.sent if s.get('content')]
+card_msg = next((s for s in apps_ch2.sent if s.get('view') is not None), None)
+sent = card_msg or apps_ch2.sent[-1]
 check(not ping_msgs, 'no separate ping before card', ping_msgs)
 view = sent.get('view')
 check(isinstance(view, SA.StaffAppCardView),

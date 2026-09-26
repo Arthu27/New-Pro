@@ -156,34 +156,6 @@ def generate_staff_panel_bytes() -> io.BytesIO:
     return buf
 
 
-def _apply_room(guild):
-    """Legacy-фолбек: комната апелляций, если канал заявок недоступен.
-
-    Заявки в команду идут в APPLY_CHANNEL_ID / staff_apply_channel.
-    Эта комната — только запасной путь.
-    """
-    try:
-        from services.channel_routes import (
-            get_route as _get_route, KNOWN_CHANNELS as _KNOWN,
-            channel_on_guild as _on_g)
-        cid = int(_get_route(guild.id, 'ban_appeal_channel') or 0)
-        if not cid:
-            cid = int(_KNOWN.get('ban_appeal_channel') or 0)
-    except Exception as _ex:
-        log.debug('staff_apply: маршрут комнаты заявок: %s', _ex)
-        cid = 0
-    if not cid:
-        return None
-    try:
-        ch = _on_g(guild, cid)
-        if ch is not None:
-            return ch
-    except Exception as _e:
-        log.debug('staff_apply: канал #%s: %s', cid, _e)
-    getter = getattr(guild, 'get_channel', None)
-    return getter(cid) if callable(getter) else None
-
-
 def menu_channel(guild):
     """Куда публиковать меню набора: панель → KNOWN → Config → None."""
     if not guild:
@@ -254,53 +226,71 @@ def _bot_can_send(channel) -> bool:
         me = getattr(guild, 'me', None) if guild is not None else None
         if me is None:
             return True  # нет me — пусть попробует отправить
-        perms = channel.permissions_for(me)
+        perms_fn = getattr(channel, 'permissions_for', None)
+        if not callable(perms_fn):
+            return True
+        perms = perms_fn(me)
         return bool(getattr(perms, 'view_channel', False)
                     and getattr(perms, 'send_messages', False))
     except Exception:
         return False
 
 
+def _resolve_channel(guild, cid):
+    """Канал по ID: кэш гильдии → channel_on_guild."""
+    if not guild or not cid:
+        return None
+    try:
+        cid = int(cid)
+    except (TypeError, ValueError):
+        return None
+    getter = getattr(guild, 'get_channel', None)
+    ch = getter(cid) if callable(getter) else None
+    if ch is not None:
+        return ch
+    try:
+        from services.channel_routes import channel_on_guild
+        return channel_on_guild(guild, cid)
+    except Exception as _ex:
+        log.debug('staff_apply: resolve channel #%s: %s', cid, _ex)
+        return None
+
+
 def apply_target(role_name: str, guild):
     """Куда отправить новую заявку + тег куратора СВОЕЙ ветки.
 
-    Порядок канала:
-      1) своя ветка должности (helper/moderator/event/broadcaster)
-      2) общий apply_channel / APPLY_CHANNEL_ID / staff_apply_channel (анкеты)
-      3) комната апелляций (legacy-фолбек)
-    Канал без права send у бота пропускаем — иначе «сохранено, персонал
-    не уведомлён» при живом #・анкеты.
+    Порядок канала (апелляции НЕ трогаем — только набор):
+      1) staff_apply_channel / APPLY_CHANNEL_ID
+         (по умолчанию 1312436222307860490)
+      2) своя ветка должности (helper/moderator/event/broadcaster)
+    Канал без права send у бота пропускаем.
     """
     from services.staff_roles import normalize_position, setting
     if not guild:
         return None, ''
     kind = normalize_position(role_name) or 'moderator'
-    tag = _curator_ping(guild, role_name)
+    tag = _curator_ping(guild, kind)
     candidates = []
-    # 1) своя ветка
+    # 1) общий канал анкет — главный (владелец: 1312436222307860490)
+    common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
+    try:
+        from services.channel_routes import (
+            get_route, KNOWN_CHANNELS, STAFF_APPLY_CHANNEL_ID)
+        common = (common
+                  or get_route(guild.id, 'staff_apply_channel')
+                  or KNOWN_CHANNELS.get('staff_apply_channel')
+                  or STAFF_APPLY_CHANNEL_ID
+                  or APPLY_CHANNEL_ID)
+    except Exception:
+        common = common or APPLY_CHANNEL_ID
+    if common:
+        ch = _resolve_channel(guild, common)
+        if ch is not None:
+            candidates.append(ch)
+    # 2) своя ветка (если задана отдельно и отличается)
     ch = _channel_for_kind(guild, kind)
     if ch is not None:
         candidates.append(ch)
-    # 2) общий канал заявок (анкеты)
-    common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
-    if not common:
-        try:
-            from services.channel_routes import (
-                get_route, KNOWN_CHANNELS, STAFF_APPLY_CHANNEL_ID)
-            common = (get_route(guild.id, 'staff_apply_channel')
-                      or KNOWN_CHANNELS.get('staff_apply_channel')
-                      or STAFF_APPLY_CHANNEL_ID)
-        except Exception:
-            common = APPLY_CHANNEL_ID
-    if common:
-        getter = getattr(guild, 'get_channel', None)
-        ch = getter(int(common)) if callable(getter) else None
-        if ch is not None:
-            candidates.append(ch)
-    # 3) legacy: комната апелляций
-    room = _apply_room(guild)
-    if room is not None:
-        candidates.append(room)
     seen = set()
     for ch in candidates:
         cid = getattr(ch, 'id', None)
@@ -918,11 +908,41 @@ class RoleSelect(discord.ui.Select):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Рассмотрение заявки (persistent) — Select «Принять / Отклонить»
+# Рассмотрение заявки (persistent) — кнопки Одобрить / Отклонить / ЧС
 # ═══════════════════════════════════════════════════════════════════
 
+class StaffCardApproveButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(
+            label='Одобрить', style=discord.ButtonStyle.success,
+            custom_id='staff_card_approve_v3')
+
+    async def callback(self, interaction: discord.Interaction):
+        await StaffReviewView()._review(interaction, 'approve')
+
+
+class StaffCardRejectButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(
+            label='Отклонить', style=discord.ButtonStyle.danger,
+            custom_id='staff_card_reject_v3')
+
+    async def callback(self, interaction: discord.Interaction):
+        await StaffReviewView()._review(interaction, 'reject')
+
+
+class StaffCardBlacklistButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(
+            label='Чёрный список', style=discord.ButtonStyle.secondary,
+            custom_id='staff_card_blacklist_v3')
+
+    async def callback(self, interaction: discord.Interaction):
+        await StaffReviewView()._review(interaction, 'blacklist')
+
+
 class StaffReviewSelect(discord.ui.Select):
-    """Select решения — внутри V2-карточки заявки, со стикерами."""
+    """Legacy select — только для старых карточек до кнопок."""
 
     def __init__(self):
         from services.menu_banners import select_label
@@ -949,7 +969,7 @@ class StaffReviewSelect(discord.ui.Select):
 
 
 class StaffAppCardView(discord.ui.LayoutView):
-    """Карточка заявки куратору — V2 webhook: должность, тег, ответы, select."""
+    """Карточка заявки куратору — V2: должность, ответы, кнопки решения."""
 
     def __init__(self, *, title: str, body: str, footer: str = ''):
         super().__init__(timeout=None)
@@ -957,7 +977,6 @@ class StaffAppCardView(discord.ui.LayoutView):
         from discord import SeparatorSpacing
         from services.menu_emojis import emoji_for_role
         from services.staff_roles import normalize_position
-        sel = StaffReviewSelect()
         kind = normalize_position(title) or 'moderator'
         try:
             em = emoji_for_role(kind)
@@ -966,7 +985,12 @@ class StaffAppCardView(discord.ui.LayoutView):
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
         foot = footer or (
-            'HAKUMO · решение — меню ниже · только куратор этой ветки'
+            'HAKUMO · решение — кнопки ниже · только куратор этой ветки'
+        )
+        btns = (
+            StaffCardApproveButton(),
+            StaffCardRejectButton(),
+            StaffCardBlacklistButton(),
         )
         if V2_AVAILABLE:
             from discord import ui as dui
@@ -979,12 +1003,14 @@ class StaffAppCardView(discord.ui.LayoutView):
                 dui.TextDisplay(f'-# {foot}'[:400]),
             ]
             row = dui.ActionRow()
-            row.add_item(sel)
+            for b in btns:
+                row.add_item(b)
             children.append(row)
             self.add_item(black_container(*children))
             return
         row = discord.ui.ActionRow()
-        row.add_item(sel)
+        for b in btns:
+            row.add_item(b)
         self.add_item(row)
 
 
@@ -1273,7 +1299,7 @@ class StaffReviewView(discord.ui.View):
 
 
 class StaffReviewButtonsView(discord.ui.View):
-    """Старые кнопки — живут на заявках до перехода на select."""
+    """Кнопки решения: Одобрить / Отклонить / Чёрный список."""
 
     def __init__(self):
         super().__init__(timeout=None)

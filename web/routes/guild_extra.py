@@ -236,8 +236,8 @@ def register(ctx):
             if body.get('target_channel_id') not in (None, ''):
                 try:
                     set_target_channel_id(int(guild_id), int(body['target_channel_id']))
-                except (TypeError, ValueError):
-                    pass
+                except (TypeError, ValueError) as _ex:
+                    _log.debug('guild_extra: target_channel_id: %s', _ex)
 
             async def _post():
                 guild = bot.get_guild(int(guild_id))
@@ -249,8 +249,8 @@ def register(ctx):
                 try:
                     if not guild.channels:
                         await guild.fetch_channels()
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug('guild_extra: fetch_channels: %s', _ex)
                 uid = session.get('user_id') or session.get('discord_id') or 'panel'
                 msg, cfg = await publish_event_panel(guild, posted_by=uid)
                 return msg, cfg

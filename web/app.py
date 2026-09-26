@@ -179,8 +179,8 @@ def _embed_cookie_reason ():
         _xfh =(request .headers .get ('X-Forwarded-Host')or '').lower ()
         if _host .endswith ('.e2b.app')or _xfh .endswith ('.e2b.app'):
             return 'host'
-    except Exception :
-        pass
+    except Exception  as _ex:
+        _log.debug('app: except@182: %s', _ex)
     if _os .getenv ('PANEL_EMBED_COOKIE','0')=='1':
         return 'env'
     if _os .getenv ('E2B_SANDBOX','').strip ().lower ()in ('true','1'):
@@ -189,8 +189,8 @@ def _embed_cookie_reason ():
         _sfd =(request .headers .get ('Sec-Fetch-Dest')or '').strip ().lower ()
         if _sfd =='iframe':
             return 'sec-fetch'
-    except Exception :
-        pass
+    except Exception  as _ex:
+        _log.debug('app: except@192: %s', _ex)
     return None
 
 @app .before_request
@@ -223,8 +223,8 @@ def _embed_cookie_policy ():
                         request .headers .get ('Sec-Fetch-Dest')or '-',
                         request .remote_addr ,_samesite ,_secure ,_partitioned ,
                         (' (embed: '+_why +')')if _why else '')
-        except Exception :
-            pass
+        except Exception  as _ex:
+            _log.debug('app: except@226: %s', _ex)
 
 bot_instance =None
 

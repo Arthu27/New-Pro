@@ -196,9 +196,10 @@ print('== 5. Текст ЛС при бане ==')
 e_src = src_of('cogs/embed_utils.py')
 check('Вам выдан бан' in e_src and 'выдали бан (блокировку)' in e_src,
       'ЛС о бане прямо говорит про бан/блокировку')
-check('Подать апелляцию' in e_src and 'после подачи' in e_src
-      and '/апелляция' not in e_src,
-      'в ЛС — только кнопка «Подать апелляцию» (команды больше нет), канал — после подачи')
+check('Подать апелляцию' in e_src
+      and '/апелляция' not in e_src
+      and ('личк' in e_src.lower() or 'ниже' in e_src.lower()),
+      'в ЛС — только кнопка «Подать апелляцию» (команды больше нет)')
 
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

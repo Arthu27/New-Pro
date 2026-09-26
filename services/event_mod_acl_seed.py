@@ -82,8 +82,8 @@ def apply_event_mod_acl_seed(force=False, guild_id=None):
                     for rid, tier in rm.items():
                         if tier in ('mod', 'curator', 'admin', 'owner'):
                             roles.append(str(rid))
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug('event_mod_acl_seed: except@85: %s', _ex)
                 seen, uniq = set(), []
                 for r in roles:
                     if r not in seen:

@@ -59,6 +59,7 @@ KNOWN_CURATOR_BY_KIND = {
 # Роли, выдаваемые после одобрения (владелец 2026-09-24)
 KNOWN_HELPER_ROLE_ID = 948969471916249119
 KNOWN_MODERATOR_ROLE_ID = 803553848396349510
+KNOWN_MASTER_ROLE_ID = 1552637932907667466  # × Master (тир между mod и curator)
 KNOWN_ADMIN_ROLE_ID = 1189999426631122964  # × Administrator
 KNOWN_GRANT_BY_KIND = {
     "helper": KNOWN_HELPER_ROLE_ID,
@@ -243,8 +244,8 @@ def can_review_position(member, position) -> tuple:
         for r in list(getattr(member, "roles", None) or []):
             try:
                 role_ids.add(int(getattr(r, "id", 0) or 0))
-            except (TypeError, ValueError):
-                pass
+            except (TypeError, ValueError) as _ex:
+                log.debug('staff_roles: except@246: %s', _ex)
     except Exception:
         role_ids = set()
 
@@ -257,8 +258,8 @@ def can_review_position(member, position) -> tuple:
         from config import Config
         if mid and mid in Config.all_owner_ids():
             return True, ""
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('staff_roles: except@260: %s', _ex)
 
     kind = normalize_position(position)
     if not kind or kind not in KNOWN_CURATOR_BY_KIND:
@@ -473,8 +474,8 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
                for r in (getattr(member, "roles", None) or [])):
             return {"kind": kind, "role_name": role.name, "reason": None,
                     "searched": searched, "already": True}
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug('staff_roles: except@476: %s', _ex)
 
     try:
         await member.add_roles(role, reason="Заявка в команду одобрена (Hakumo)")

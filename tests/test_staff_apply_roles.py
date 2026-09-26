@@ -695,16 +695,19 @@ check(SR.curator_role_id(777) == 607,
 check(SR.curator_role_id(778, 999) == 999,
       'нет куратора нигде — берётся .env')
 
-# select «Принять/Отклонить» вместо кнопок
+# кнопки «Одобрить/Отклонить/Чёрный список» на карточке
 src_cog_full = open(os.path.join(repo, 'cogs', 'staff_apply.py'),
                     encoding='utf-8').read()
-check('staff_review_select_v1' in src_cog_full
-      and 'Принять' in src_cog_full and 'Отклонить' in src_cog_full
-      and 'Чёрный список' in src_cog_full,
-      'решение по заявке — select Принять/Отклонить/Чёрный список')
+check('staff_card_approve_v3' in src_cog_full
+      and 'Одобрить' in src_cog_full and 'Отклонить' in src_cog_full
+      and 'Чёрный список' in src_cog_full
+      and 'StaffCardBlacklistButton' in src_cog_full,
+      'решение по заявке — кнопки Одобрить/Отклонить/Чёрный список')
 check('staff_review_approve_v1' in src_cog_full
       and 'StaffReviewButtonsView' in src_cog_full,
       'старые заявки с кнопками остаются рабочими')
+check('staff_review_select_v1' in src_cog_full or 'staff_review_select_v2' in src_cog_full,
+      'legacy select оставлен для старых карточек')
 check('1312436222307860490' in open(os.path.join(repo, 'config.py'),
                                     encoding='utf-8').read()
       and '1312429743865335939' in open(os.path.join(repo, 'config.py'),
@@ -723,14 +726,13 @@ class _GCh:
     def get_channel(self, cid):
         if not cid:
             return None
-        # комнаты заявок на этом сервере нет — проверяем запасной путь
-        from services.channel_routes import KNOWN_CHANNELS
+        # только ветка helper 501 — общий apps-канал «не на этом сервере»
         try:
-            if int(cid) == int(KNOWN_CHANNELS.get('ban_appeal_channel') or 0):
-                return None
+            if int(cid) == 501:
+                return FakeRole(cid, 'helper-ch')
         except (TypeError, ValueError):
             pass
-        return FakeRole(cid, f'ch{cid}')
+        return None
 
     def get_role(self, rid):
         # пинг — только жёсткий ID куратора Helper

@@ -84,7 +84,8 @@ def _guild_ids(namespace: str) -> list[int]:
         for r in rows:
             try:
                 out.append(int(r['guild_id'] if hasattr(r, 'keys') else r[0]))
-            except (TypeError, ValueError, KeyError):
+            except (TypeError, ValueError, KeyError) as _ex:
+                _log.debug('data_retention: except@87: %s', _ex)
                 continue
         return out
     except Exception as _ex:

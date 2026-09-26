@@ -224,12 +224,12 @@ class VoiceTracker(commands.Cog):
     def cog_unload(self):
         try:
             self._flush_voice_stats.cancel()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('voice_tracker: except@227: %s', _ex)
         try:
             self._flush_sync()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('voice_tracker: except@231: %s', _ex)
 
     # ── Запись статистики ────────────────────────────────────────────────
 
@@ -257,8 +257,8 @@ class VoiceTracker(commands.Cog):
         data['name'] = member.display_name
         try:
             data['avatar'] = str(member.display_avatar.url)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug('voice_tracker: except@260: %s', _ex)
         today = str(date.today())
         daily = data.get('daily') or {}
         daily[today] = int(daily.get(today, 0) or 0) + elapsed
