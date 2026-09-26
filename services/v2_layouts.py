@@ -187,9 +187,15 @@ def black_container(*children, accent: int = None):
     return _ui.Container(*children, accent_colour=colour)
 
 
-def _gallery(banner_filename: str):
+def _gallery(banner_filename: str = None, banner_url: str = None):
+    """MediaGallery: HTTPS URL предпочтительнее attachment:// (не отлетает)."""
     from discord.components import MediaGalleryItem
-    return _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}'))
+    src = (banner_url or '').strip()
+    if not src and banner_filename:
+        src = f'attachment://{banner_filename}'
+    if not src:
+        return None
+    return _ui.MediaGallery(MediaGalleryItem(src))
 
 
 # Баннер в шапке вместе с заголовком (как в референсе V2).
@@ -203,7 +209,7 @@ def build_modpanel_items(*, banner_filename: str, status: str,
                          banner_url: str = None):
     """Финальный /modpanel: шапка + баннер + два чёрных блока с селектами.
 
-    banner_url — опционально (старые вызовы); MediaGallery берёт filename.
+    banner_url — HTTPS (hakumods.xyz/static/menu/…); если есть, attachment не нужен.
     """
     if not V2_AVAILABLE:
         return None
@@ -215,8 +221,10 @@ def build_modpanel_items(*, banner_filename: str, status: str,
         _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if show_banner and banner_filename:
-        head.append(_gallery(banner_filename))
+    if show_banner and (banner_url or banner_filename):
+        gal = _gallery(banner_filename, banner_url=banner_url)
+        if gal is not None:
+            head.append(gal)
     if status:
         head.append(_ui.TextDisplay(status))
     items.append(black_container(*head))
