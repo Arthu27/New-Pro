@@ -74,6 +74,94 @@ def _main_guild_id(override=None):
     return None
 
 
+# Канон: роль варна с 1-го предупреждения (владелец 2026-09-26).
+KNOWN_WARN_ROLE_ID = 1545468739221327942
+
+
+def ensure_warn_1_role(report=None):
+    """Гарантировать warn_1 на боевом сервере.
+
+    Раньше роль могла сидеть как warn_3 — тогда 1–2 варна роль не давали.
+    Переносим KNOWN_WARN_ROLE_ID на warn_1; чужие уровни не трогаем.
+    """
+    report = report if isinstance(report, dict) else {}
+    gid = _main_guild_id()
+    if not gid:
+        return report
+    try:
+        from services.punish_roles import valid_kind  # noqa: F401
+    except Exception:
+        pass
+    punish = _read_json(PUNISH_PATH, {})
+    if not isinstance(punish, dict):
+        return report
+    row = punish.get(str(gid))
+    if not isinstance(row, dict):
+        row = {}
+    roles = row.get('roles')
+    if not isinstance(roles, dict):
+        roles = {}
+    changed = False
+    warn_id = int(KNOWN_WARN_ROLE_ID)
+    cur_1 = int(roles.get('warn_1') or 0)
+    if cur_1 != warn_id:
+        roles['warn_1'] = warn_id
+        changed = True
+    # Если та же роль висела на warn_N (N>1) — убрать дубль, чтобы
+    # level_transition не ждал N варнов.
+    for k in list(roles.keys()):
+        if k == 'warn_1' or not str(k).startswith('warn_'):
+            continue
+        try:
+            if int(roles.get(k) or 0) == warn_id:
+                roles.pop(k, None)
+                changed = True
+        except (TypeError, ValueError):
+            continue
+    levels = [int(x) for x in (row.get('warn_levels') or [])
+              if str(x).isdigit() or isinstance(x, int)]
+    if 1 not in levels:
+        levels.append(1)
+        changed = True
+    # уровни без роли (кроме 1) — оставить; убрать пустые warn_N уровни
+    # где роль сняли
+    levels = sorted({int(x) for x in levels if int(x) == 1 or
+                     int(roles.get(f'warn_{int(x)}') or 0)})
+    if changed:
+        row['roles'] = roles
+        row['warn_levels'] = levels
+        punish[str(gid)] = row
+        _write_json(PUNISH_PATH, punish)
+        report.setdefault('punish_added', []).append('warn_1')
+        _log.info('punish_roles: warn_1=%s (ensure) gid=%s', warn_id, gid)
+    return report
+
+
+def ensure_known_helper_tier(report=None):
+    """Известный Helper в role_map: если ещё «mod» — перевести в helper.
+
+    Идемпотентно, без маркера версии: чинит старые установки, где роль
+    9489… осталась на тире mod до v6. Можно звать на каждом on_ready.
+    """
+    if report is None:
+        report = {'role_map_added': []}
+    try:
+        from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        hid = str(int(KNOWN_HELPER_ROLE_ID))
+    except Exception as ex:
+        _log.debug('ensure_known_helper_tier id: %s', ex)
+        return report
+    role_map = _read_json(ROLE_MAP_PATH, {})
+    if not isinstance(role_map, dict):
+        role_map = {}
+    if role_map.get(hid) == 'mod':
+        role_map[hid] = 'helper'
+        _write_json(ROLE_MAP_PATH, role_map)
+        report.setdefault('role_map_added', []).append(f'{hid}=helper(upgrade)')
+        _log.info('role_map: %s mod→helper (ensure)', hid)
+    return report
+
+
 def apply_role_seed(force=False, guild_id=None):
     """Применить сид. Возвращает короткий отчёт-словарь (для логов/тестов).
 
@@ -102,6 +190,10 @@ def apply_role_seed(force=False, guild_id=None):
             version = 1
         marker = MARKER_FMT.format(version=version)
         if not force and os.path.exists(marker):
+            # Маркер есть — полный сид не трогаем, но тир хелпера и warn_1
+            # чиним (старые VPS: warn сидел на warn_3 → роль с 3-го варна).
+            ensure_known_helper_tier(report)
+            ensure_warn_1_role(report)
             report['reason'] = f'already applied (v{version})'
             return report
 
@@ -110,31 +202,35 @@ def apply_role_seed(force=False, guild_id=None):
         role_map = _read_json(ROLE_MAP_PATH, {})
         if not isinstance(role_map, dict):
             role_map = {}
+        _VALID_TIERS = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
         for rid, tier in seed_map.items():
             rid = str(rid).strip()
             tier = str(tier).strip()
-            if rid and tier in ('mod', 'curator', 'admin', 'owner') \
-                    and rid not in role_map:
+            if rid and tier in _VALID_TIERS and rid not in role_map:
                 role_map[rid] = tier
                 report['role_map_added'].append(f'{rid}={tier}')
         if report['role_map_added']:
             _write_json(ROLE_MAP_PATH, role_map)
 
+        # v6+: известный Helper, если в карте ещё как «mod» — перевести в helper
+        ensure_known_helper_tier(report)
+
         # 2) action ACL: дефолтные разрешения действий для ролей персонала.
-        # Строгая модель permission_acl — default-deny: на чистом сервере без
-        # правил варн/мут/бан заблокированы («варны не работают»). Засеиваем
-        # все действия ролям указанных тиров (mod/curator/admin). Только
-        # ДОПИСЫВАЕМ роли к уже существующим спискам: ручные запреты владельца
-        # в панели не трогаем, пустые правила (явный запрет) не перетираем.
+        # Хелпер (тир helper / KNOWN_HELPER) ИСКЛЮЧЁН — ветка чата через helper_acl_seed.
         action_tiers = [str(t).strip() for t in
                         ((seed.get('action_default') or {}).get('tiers') or [])]
-        action_tiers = [t for t in action_tiers if t in ('mod', 'curator', 'admin', 'owner')]
+        action_tiers = [t for t in action_tiers if t in _VALID_TIERS and t != 'helper']
         if action_tiers:
             try:
                 from services.permission_acl import ACTIONS, load_action_acl, save_action_acl
-                # Роли сидовых тиров (из итоговой role_map — её уже дополнили выше).
+                try:
+                    from services.staff_roles import KNOWN_HELPER_ROLE_ID
+                    _exclude = {str(int(KNOWN_HELPER_ROLE_ID))}
+                except Exception:
+                    _exclude = {'948969471916249119'}
                 seed_role_ids = [rid for rid, tier in role_map.items()
-                                 if tier in action_tiers]
+                                 if tier in action_tiers and rid not in _exclude
+                                 and tier != 'helper']
                 gid = _main_guild_id(guild_id)
                 if seed_role_ids and gid:
                     acl = load_action_acl(gid)
@@ -161,12 +257,13 @@ def apply_role_seed(force=False, guild_id=None):
             except Exception as _ex:
                 _log.warning('role_seed action ACL: %s', _ex)
 
-        # 3) punish_roles: роли наказаний (ban/mute/vmute) для главного
+        # 3) punish_roles: роли наказаний (ban/mute/vmute/warn_N) для главного
         # сервера. Каждую роль ставим ТОЛЬКО если она ещё не задана — ручной
         # выбор владельца в панели («Роли за наказания») неприкосновенен.
         punish_seed = seed.get('punish_roles') or {}
         gid = _main_guild_id(guild_id)
         if punish_seed and gid:
+            from services.punish_roles import valid_kind
             punish = _read_json(PUNISH_PATH, {})
             if not isinstance(punish, dict):
                 punish = {}
@@ -177,21 +274,42 @@ def apply_role_seed(force=False, guild_id=None):
             if not isinstance(roles, dict):
                 roles = {}
             added = []
-            for kind in ('ban', 'mute', 'vmute'):
-                rid = int(punish_seed.get(kind) or 0)
+            levels = list(row.get('warn_levels') or [])
+            for kind, raw in punish_seed.items():
+                if str(kind).startswith('_'):
+                    continue
+                if not valid_kind(kind):
+                    continue
+                try:
+                    rid = int(raw or 0)
+                except (TypeError, ValueError):
+                    continue
                 if rid and not int(roles.get(kind) or 0):
                     roles[kind] = rid
                     added.append(kind)
+                    # warn_N → уровень N в списке карточек панели
+                    if str(kind).startswith('warn_'):
+                        try:
+                            lvl = int(str(kind).split('_', 1)[1])
+                            if lvl not in levels:
+                                levels.append(lvl)
+                        except (TypeError, ValueError):
+                            pass
             if added:
                 row['roles'] = roles
-                # сохраняем сопутствующую структуру (warn_levels/temps), если была
+                if levels:
+                    row['warn_levels'] = sorted(int(x) for x in levels)
                 punish[str(gid)] = row
                 _write_json(PUNISH_PATH, punish)
                 report['punish_added'] = added
                 if 'ban' in added:
                     report['ban_role'] = True
+            # Канон warn_1 — даже если в сиде уже был warn_N с тем же id
+            ensure_warn_1_role(report)
         elif punish_seed and not gid:
             _log.debug('punish-роли пропущены: боевой MAIN_GUILD_ID не задан')
+        else:
+            ensure_warn_1_role(report)
 
         # маркер версии — прогон сделан
         try:
