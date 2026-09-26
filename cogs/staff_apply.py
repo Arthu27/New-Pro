@@ -996,17 +996,19 @@ class StaffAppCardView(discord.ui.LayoutView):
         sel = StaffReviewSelect()
         if V2_AVAILABLE:
             from discord import ui as dui
+            row = dui.ActionRow()
+            row.add_item(sel)
+            # Селект сразу под заголовком — список открывается вниз
             children = [
                 dui.TextDisplay(head[:500]),
                 dui.TextDisplay('-# HAKUMO · заявка в команду'),
                 dui.Separator(spacing=SeparatorSpacing.large),
+                row,
+                dui.Separator(),
                 dui.TextDisplay(str(body)[:3500]),
                 dui.Separator(),
                 dui.TextDisplay(f'-# {foot}'[:400]),
             ]
-            row = dui.ActionRow()
-            row.add_item(sel)
-            children.append(row)
             self.add_item(black_container(*children))
             return
         row = discord.ui.ActionRow()
@@ -1087,16 +1089,20 @@ class StaffAppDecidedView(discord.ui.LayoutView):
                 dui.TextDisplay(head[:500]),
                 dui.TextDisplay('-# HAKUMO · заявка в команду'),
                 dui.Separator(spacing=SeparatorSpacing.large),
+            ]
+            # Селект сразу под заголовком — список открывается вниз
+            if allow_reconsider:
+                row = dui.ActionRow()
+                row.add_item(StaffReconsiderSelect())
+                children.append(row)
+                children.append(dui.Separator())
+            children.extend([
                 dui.TextDisplay(str(body)[:3500]),
                 dui.Separator(spacing=SeparatorSpacing.large),
                 dui.TextDisplay(bottom[:500]),
                 dui.Separator(),
                 dui.TextDisplay(f'-# {foot}'[:400]),
-            ]
-            if allow_reconsider:
-                row = dui.ActionRow()
-                row.add_item(StaffReconsiderSelect())
-                children.append(row)
+            ])
             self.add_item(black_container(*children, accent=accent))
             return
 

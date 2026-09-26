@@ -1774,28 +1774,43 @@ PANEL_ACTIONS = ('warn', 'unwarn', 'timeout', 'mute_chat', 'vmute', 'ban',
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  ПКМ-МЕНЮ: правый клик по участнику → Приложения → мут/войс-мут/снять
+#  ПКМ-МЕНЮ: правый клик по участнику → Приложения → мут/войс-мут/варн/снять
 #  (владелец 2026-09-05: «чтобы через ПКМ»). Те же ACL, лимиты и дела,
 #  что у /modpanel и панели — единый путь apply_panel_action.
 # ═══════════════════════════════════════════════════════════════════════════
-class _CtxMuteModal(discord.ui.Modal):
-    """Окно мута из ПКМ: срок + причина."""
+def _rule_select_options(action: str):
+    """SelectOption[] для правила под действие (warn/ban/mute)."""
+    from services import mod_reasons as _MR
+    return [
+        discord.SelectOption(
+            label=o['label'], value=o['value'],
+            description=o['description'])
+        for o in _MR.select_options_data(action)
+    ]
 
-    duration = discord.ui.TextInput(
-        label='Срок (30 мин … потолок по участнику)', placeholder='30, 60, 2ч',
-        required=True, max_length=16)
-    reason = discord.ui.TextInput(
-        label='Причина', style=discord.TextStyle.paragraph,
-        max_length=300, required=False)
+
+class _CtxMuteModal(discord.ui.Modal):
+    """Окно мута из ПКМ: правило сверху (селект открывается вниз), затем срок."""
 
     def __init__(self, cog, member, action, acl_key, limit_key, label):
-        super().__init__(timeout=180)
+        super().__init__(title=str(label or 'Мут')[:45], timeout=180)
         self._cog = cog
         self._member = member
         self._action = action
         self._acl_key = acl_key
         self._limit_key = limit_key
         self._label = label
+        # Select ПЕРВЫМ: Discord открывает список вниз, если снизу есть место.
+        opts = _rule_select_options(action)
+        self.reason_select = discord.ui.Select(
+            required=True, options=opts, min_values=1, max_values=1,
+            placeholder='Правило под этот мут…')
+        self.add_item(discord.ui.Label(
+            text='Какое правило нарушено?', component=self.reason_select))
+        self.duration = discord.ui.TextInput(
+            label='Срок (30 мин … 2 ч)', placeholder='30, 60, 2ч',
+            required=True, max_length=16)
+        self.add_item(self.duration)
 
     async def on_submit(self, interaction):
         await _ack(interaction, thinking=True)
@@ -1825,10 +1840,18 @@ class _CtxMuteModal(discord.ui.Modal):
                              getattr(self._member, 'id', None), _roles)
         except Exception as _cx:
             log.debug(f'[ПКМ] duration cap: {_cx}')
+        from services import mod_reasons as _MR
+        _code = (self.reason_select.values or [''])[0]
+        if not _MR.allows(_code, self._action):
+            await _respond(
+                interaction,
+                content='Это правило нельзя выдать этим мутом.',
+                ephemeral=True)
+            return
+        _reason = _MR.format_reason(_code)
         ok, text = await self._cog.apply_panel_action(
             interaction.guild, self._member, self._action,
-            reason=(str(self.reason.value or '').strip()
-                    or 'Причина не указана'),
+            reason=_reason,
             amount=str(self.duration.value or '').strip(),
             actor=getattr(interaction.user, 'display_name', None)
             or str(interaction.user),
@@ -1852,6 +1875,63 @@ def _mod_cog_of(interaction):
         return interaction.client.get_cog('Moderation')
     except Exception:
         return None
+
+
+class _CtxWarnModal(discord.ui.Modal):
+    """Варн из ПКМ: только правила, за которые можно варн."""
+
+    def __init__(self, cog, member):
+        super().__init__(title='Варн', timeout=180)
+        self._cog = cog
+        self._member = member
+        opts = _rule_select_options('warn')
+        self.reason_select = discord.ui.Select(
+            required=True, options=opts, min_values=1, max_values=1,
+            placeholder='Правила для варна…')
+        self.add_item(discord.ui.Label(
+            text='Какое правило нарушено?', component=self.reason_select))
+
+    async def on_submit(self, interaction):
+        await _ack(interaction, thinking=True)
+        from services.permission_acl import check_action as _acl
+        if not _acl(interaction.guild_id, interaction.user, 'warn'):
+            await _respond(interaction, content=
+                '🚫 Варн тебе не выдан (панель → Доступ → Права команд).',
+                ephemeral=True)
+            return
+        try:
+            from services.staff_limits import check_action as _slc
+            _ok, _deny = _slc(interaction.guild, interaction.user, 'warn')
+            if not _ok:
+                await _respond(interaction, content=_deny or 'Лимит исчерпан',
+                               ephemeral=True)
+                return
+        except Exception as _sx:
+            log.debug(f'[ПКМ] warn staff_limits: {_sx}')
+        from services import mod_reasons as _MR
+        _code = (self.reason_select.values or [''])[0]
+        if not _MR.allows(_code, 'warn'):
+            await _respond(interaction,
+                           content='Это правило нельзя выдать варном.',
+                           ephemeral=True)
+            return
+        _reason = _MR.format_reason(_code)
+        ok, text = await self._cog.apply_panel_action(
+            interaction.guild, self._member, 'warn',
+            reason=_reason, amount='',
+            actor=getattr(interaction.user, 'display_name', None)
+            or str(interaction.user))
+        if ok:
+            try:
+                from services.staff_limits import record_hit as _rec
+                _rec(interaction.guild_id, interaction.user.id, 'warn', 1)
+            except Exception as _rx:
+                log.debug(f'[ПКМ] warn record: {_rx}')
+        await _respond(
+            interaction,
+            content=('✅ ' if ok else '⚠️ ') + str(
+                text or ('Готово' if ok else 'Не получилось')),
+            ephemeral=True)
 
 
 @app_commands.context_menu(name='🔇 Мут (чат + войс)')
@@ -1882,6 +1962,19 @@ async def ctx_voice_mute(interaction, member: discord.Member):
         mod, member, 'vmute', 'vmute', 'mute', 'Войс-мут'))
 
 
+@app_commands.context_menu(name='⚠️ Варн')
+async def ctx_warn(interaction, member: discord.Member):
+    """Варн через ПКМ: селект правил 1.1–1.9 (только warn-допустимые)."""
+    if member.bot or member.id == interaction.user.id:
+        return await interaction.response.send_message(
+            'Себе и ботам варн не выдать.', ephemeral=True)
+    mod = _mod_cog_of(interaction)
+    if mod is None:
+        return await interaction.response.send_message(
+            'Модуль модерации не загружен.', ephemeral=True)
+    await interaction.response.send_modal(_CtxWarnModal(mod, member))
+
+
 @app_commands.context_menu(name='🔊 Снять муты')
 async def ctx_unmute(interaction, member: discord.Member):
     """Снять мут через ПКМ: сначала выбор чат / войс."""
@@ -1909,7 +2002,7 @@ async def ctx_unmute(interaction, member: discord.Member):
             embed=embed, view=view, ephemeral=True)
 
 
-_CTX_COMMANDS = (ctx_full_mute, ctx_voice_mute, ctx_unmute)
+_CTX_COMMANDS = (ctx_full_mute, ctx_voice_mute, ctx_warn, ctx_unmute)
 
 
 async def _ctx_setup(bot):
@@ -2229,9 +2322,10 @@ class MuteKindView(discord.ui.LayoutView):
             from discord import ui as _ui
             row = _ui.ActionRow()
             row.add_item(sel)
-            # Как в главной панели: заголовок «Действие», селект без «Куда мут?»
+            # Селект первым — Discord открывает список вниз
             self.add_item(black_container(
-                _ui.TextDisplay(f'{text}\n**Действие**'), row))
+                _ui.TextDisplay('**Действие**'), row,
+                _ui.TextDisplay(f'-# {text}')))
         else:
             row = discord.ui.ActionRow()
             row.add_item(sel)
@@ -2297,9 +2391,10 @@ class UnmuteKindView(discord.ui.LayoutView):
             from discord import ui as _ui
             row = _ui.ActionRow()
             row.add_item(sel)
-            # Как в главной панели: «Действие», без «Куда снять?»
+            # Селект первым — Discord открывает список вниз
             self.add_item(black_container(
-                _ui.TextDisplay(f'{text}\n**Действие**'), row))
+                _ui.TextDisplay('**Действие**'), row,
+                _ui.TextDisplay(f'-# {text}')))
         else:
             row = discord.ui.ActionRow()
             row.add_item(sel)
@@ -2843,14 +2938,17 @@ class ModActionSelect(discord.ui.Select):
 
 
 _PUNISH_MODPANEL = ("ban", "timeout", "mute_chat", "vmute")
+_REASON_RULE_ACTIONS = ("warn", "ban", "timeout", "mute_chat", "vmute")
 
 
 class ModActionModal(discord.ui.Modal):
     """Модальное окно ввода — поля строго под выбранное действие.
 
     «Очистка» спрашивает только количество и причину (никакой демки),
-    разбан/размут — цель и причину, наказания — демку, НО только если
-    требование включено в панели.
+    разбан/размут — цель и причину, наказания — правило 1.1–1.9 и демку,
+    НО только если требование демки включено в панели.
+
+    Порядок: селект правила СВЕРХУ — Discord тогда открывает список вниз.
     """
 
     def __init__(self, cog, action, guild=None, prefill_target="", user=None):
@@ -2874,6 +2972,34 @@ class ModActionModal(discord.ui.Modal):
         # «выбрал участника — просит ник ещё раз, убери»). Поле остаётся
         # только для ручного пути (ник/ID вписываются руками).
         self.fixed_target_id = str(prefill_target or "").strip() or None
+
+        # 1) Правило СВЕРХУ — селект открывается вниз.
+        self.reason_select = None
+        self.reason = None
+        if action in _REASON_RULE_ACTIONS:
+            opts = _rule_select_options(action)
+            if not opts:
+                self.reason = discord.ui.TextInput(
+                    label="Причина (правило не загрузилось)",
+                    required=True, placeholder="1.1 — …",
+                    style=discord.TextStyle.short)
+                self.add_item(self.reason)
+            else:
+                _ph = {
+                    'warn': 'Правила для варна…',
+                    'ban': 'Правила для бана…',
+                    'timeout': 'Правила для мута…',
+                    'mute_chat': 'Правила для мута…',
+                    'vmute': 'Правила для мута…',
+                }.get(action, 'Выберите правило…')
+                self.reason_select = discord.ui.Select(
+                    required=True, options=opts, min_values=1, max_values=1,
+                    placeholder=_ph)
+                self.add_item(discord.ui.Label(
+                    text='Какое правило нарушено?',
+                    component=self.reason_select))
+
+        # 2) Цель / срок / кол-во — ниже селекта.
         if action != "clear" and not self.fixed_target_id:
             self.target = discord.ui.TextInput(
                 label="Цель (@ник, точное имя или ID)", required=True,
@@ -2892,11 +3018,16 @@ class ModActionModal(discord.ui.Modal):
                     placeholder="30, 60, 2ч",
                 )
             self.add_item(self.amount)
-        self.reason = discord.ui.TextInput(
-            label="Причина", required=False, placeholder="За что? (необязательно)",
-            style=discord.TextStyle.short,
-        )
-        self.add_item(self.reason)
+
+        # Снятие/чистка — свободный текст причины (после цели/кол-ва).
+        if action not in _REASON_RULE_ACTIONS:
+            self.reason = discord.ui.TextInput(
+                label="Причина", required=False,
+                placeholder="За что? (необязательно)",
+                style=discord.TextStyle.short,
+            )
+            self.add_item(self.reason)
+
         _need_proof = False
         if action in _PUNISH_MODPANEL:
             try:
@@ -2935,7 +3066,32 @@ class ModActionModal(discord.ui.Modal):
         _t = getattr(self, 'target', None)
         _a = getattr(self, 'amount', None)
         _p = getattr(self, 'proof', None)
-        _reason = (self.reason.value or "").strip() or "Не указана"
+        if self.reason_select is not None:
+            from services import mod_reasons as _MR
+            _code = (self.reason_select.values or [''])[0]
+            if not _MR.allows(_code, self.action):
+                await _respond(
+                    interaction,
+                    content='Это правило нельзя выдать выбранным наказанием.',
+                    ephemeral=True)
+                return
+            _reason = _MR.format_reason(_code)
+        else:
+            from services import mod_reasons as _MR
+            _r = getattr(self, 'reason', None)
+            _raw = ((_r.value if _r else '') or "").strip()
+            if self.action in _REASON_RULE_ACTIONS and _raw:
+                _code = _raw.split('—', 1)[0].strip()
+                if _MR.allows(_code, self.action) or _MR.allows(_raw, self.action):
+                    _reason = _MR.resolve_stored_reason(_raw)
+                else:
+                    await _respond(
+                        interaction,
+                        content='Укажите правило из списка для этого наказания.',
+                        ephemeral=True)
+                    return
+            else:
+                _reason = _raw or "Не указана"
         _target_value = self.fixed_target_id or ((_t.value or "").strip() if _t else "")
         await self.cog._execute_mod_action(
             interaction,
