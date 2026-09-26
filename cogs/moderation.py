@@ -447,10 +447,10 @@ class Moderation (commands .Cog ):
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
         banner = view._banner_file or view._make_banner_file()
+        # Только embeds=[] — нельзя одновременно embed= и embeds= (discord.py).
         edit_kw = {
             'view': view,
             'content': None,
-            'embed': None,
             'embeds': [],
         }
         if banner is not None:
@@ -1711,6 +1711,17 @@ PANEL_ACTIONS = ('warn', 'unwarn', 'timeout', 'mute_chat', 'vmute', 'ban',
 #  (владелец 2026-09-05: «чтобы через ПКМ»). Те же ACL, лимиты и дела,
 #  что у /modpanel и панели — единый путь apply_panel_action.
 # ═══════════════════════════════════════════════════════════════════════════
+def _rule_select_options(action: str):
+    """SelectOption[] для правила под действие (warn/ban/mute)."""
+    from services import mod_reasons as _MR
+    return [
+        discord.SelectOption(
+            label=o['label'], value=o['value'],
+            description=o['description'])
+        for o in _MR.select_options_data(action)
+    ]
+
+
 class _CtxMuteModal(discord.ui.Modal):
     """Окно мута из ПКМ: срок + правило 1.1–1.9."""
 
@@ -1726,13 +1737,7 @@ class _CtxMuteModal(discord.ui.Modal):
         self._acl_key = acl_key
         self._limit_key = limit_key
         self._label = label
-        from services import mod_reasons as _MR
-        opts = [
-            discord.SelectOption(
-                label=o['label'], value=o['value'],
-                description=o['description'])
-            for o in _MR.select_options_data(action)
-        ]
+        opts = _rule_select_options(action)
         self.reason_select = discord.ui.Select(
             required=True, options=opts, min_values=1, max_values=1,
             placeholder='Правило под этот мут…')
@@ -1804,6 +1809,63 @@ def _mod_cog_of(interaction):
         return None
 
 
+class _CtxWarnModal(discord.ui.Modal):
+    """Варн из ПКМ: только правила, за которые можно варн."""
+
+    def __init__(self, cog, member):
+        super().__init__(title='Варн', timeout=180)
+        self._cog = cog
+        self._member = member
+        opts = _rule_select_options('warn')
+        self.reason_select = discord.ui.Select(
+            required=True, options=opts, min_values=1, max_values=1,
+            placeholder='Правила для варна…')
+        self.add_item(discord.ui.Label(
+            text='Какое правило нарушено?', component=self.reason_select))
+
+    async def on_submit(self, interaction):
+        await _ack(interaction, thinking=True)
+        from services.permission_acl import check_action as _acl
+        if not _acl(interaction.guild_id, interaction.user, 'warn'):
+            await _respond(interaction, content=
+                '🚫 Варн тебе не выдан (панель → Доступ → Права команд).',
+                ephemeral=True)
+            return
+        try:
+            from services.staff_limits import check_action as _slc
+            _ok, _deny = _slc(interaction.guild, interaction.user, 'warn')
+            if not _ok:
+                await _respond(interaction, content=_deny or 'Лимит исчерпан',
+                               ephemeral=True)
+                return
+        except Exception as _sx:
+            log.debug(f'[ПКМ] warn staff_limits: {_sx}')
+        from services import mod_reasons as _MR
+        _code = (self.reason_select.values or [''])[0]
+        if not _MR.allows(_code, 'warn'):
+            await _respond(interaction,
+                           content='Это правило нельзя выдать варном.',
+                           ephemeral=True)
+            return
+        _reason = _MR.format_reason(_code)
+        ok, text = await self._cog.apply_panel_action(
+            interaction.guild, self._member, 'warn',
+            reason=_reason, amount='',
+            actor=getattr(interaction.user, 'display_name', None)
+            or str(interaction.user))
+        if ok:
+            try:
+                from services.staff_limits import record_hit as _rec
+                _rec(interaction.guild_id, interaction.user.id, 'warn', 1)
+            except Exception as _rx:
+                log.debug(f'[ПКМ] warn record: {_rx}')
+        await _respond(
+            interaction,
+            content=('✅ ' if ok else '⚠️ ') + str(
+                text or ('Готово' if ok else 'Не получилось')),
+            ephemeral=True)
+
+
 @app_commands.context_menu(name='🔇 Мут (чат + войс)')
 async def ctx_full_mute(interaction, member: discord.Member):
     """Мут через ПКМ: обе роли сразу (чат + микрофон)."""
@@ -1830,6 +1892,19 @@ async def ctx_voice_mute(interaction, member: discord.Member):
             'Модуль модерации не загружен.', ephemeral=True)
     await interaction.response.send_modal(_CtxMuteModal(
         mod, member, 'vmute', 'vmute', 'mute', 'Войс-мут'))
+
+
+@app_commands.context_menu(name='⚠️ Варн')
+async def ctx_warn(interaction, member: discord.Member):
+    """Варн через ПКМ: селект правил 1.1–1.9 (только warn-допустимые)."""
+    if member.bot or member.id == interaction.user.id:
+        return await interaction.response.send_message(
+            'Себе и ботам варн не выдать.', ephemeral=True)
+    mod = _mod_cog_of(interaction)
+    if mod is None:
+        return await interaction.response.send_message(
+            'Модуль модерации не загружен.', ephemeral=True)
+    await interaction.response.send_modal(_CtxWarnModal(mod, member))
 
 
 @app_commands.context_menu(name='🔊 Снять муты')
@@ -1859,7 +1934,7 @@ async def ctx_unmute(interaction, member: discord.Member):
             embed=embed, view=view, ephemeral=True)
 
 
-_CTX_COMMANDS = (ctx_full_mute, ctx_voice_mute, ctx_unmute)
+_CTX_COMMANDS = (ctx_full_mute, ctx_voice_mute, ctx_warn, ctx_unmute)
 
 
 async def _ctx_setup(bot):
@@ -2393,11 +2468,14 @@ async def _push_panel_view(panel, interaction=None):
     return False
 
 
-async def _silent_reset_panel(interaction, panel, *, gen=None):
-    """Сбросить селекты edit'ом ТОГО ЖЕ сообщения. Новое окно не создаём.
+async def _silent_reset_panel(interaction, panel, *, gen=None,
+                              rebuild_selects=True, refresh_target=False):
+    """Сбросить / обновить панель edit'ом ТОГО ЖЕ сообщения.
 
-    После rebuild ОБЯЗАН быть успешный push — иначе custom_id рассинхрон
-    и нельзя выбрать участника/действие повторно.
+    rebuild_selects=True — новые custom_id у обоих селектов (после действия).
+    rebuild_selects=False — только статус; ActionSelect НЕ трогаем (иначе
+    первый клик по наказанию после выбора участника → «приложение не отвечает»).
+    refresh_target=True — пересоздать только UserSelect (снять sticky).
     """
     import asyncio as _aio
     try:
@@ -2409,7 +2487,12 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
         guild = getattr(interaction, 'guild', None) or getattr(panel, '_guild', None)
         kept_uid = getattr(panel, 'selected_uid', None)
         kept_pending = getattr(panel, 'pending_action', None)
-        panel._rebuild(guild)
+        if rebuild_selects:
+            panel._rebuild(guild)
+        elif hasattr(panel, '_relayout'):
+            panel._relayout(guild, refresh_target=refresh_target)
+        else:
+            panel._rebuild(guild)
         if kept_uid:
             panel.selected_uid = kept_uid
         panel.pending_action = kept_pending
@@ -2423,8 +2506,9 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
                     interaction, panel,
                     clear_pending=(kept_pending is None), delay=0.4)
         else:
-            log.info('modpanel reset ok uid=%s msg=%s',
-                     kept_uid, getattr(panel._panel_message, 'id', None))
+            log.info('modpanel reset ok uid=%s msg=%s rebuild=%s',
+                     kept_uid, getattr(panel._panel_message, 'id', None),
+                     rebuild_selects)
     except _aio.CancelledError:
         # rebuild уже мог сменить custom_id — обязаны запушить, иначе мёртвая панель
         try:
@@ -2563,18 +2647,16 @@ async def _enter_kind_mode(interaction, panel, *, kinds, target_id, title,
 async def _offer_mod_form(interaction, cog, action, prefill, panel=None):
     """Сразу send_modal (без кнопки). После открытия — сброс панели.
 
-    Кнопку «открыть форму» убрали: меню/модалка появляется сразу.
-    Сброс селектов сразу после ACK, чтобы можно было жать следующее
-    действие, не дожидаясь закрытия модалки.
+    Модалку собираем ДО любого await, ACK = send_modal первой строкой
+    с сетью — иначе Discord «приложение не отвечает».
     """
-    modal = ModActionModal(
-        cog, action, guild=getattr(interaction, 'guild', None),
-        prefill_target=prefill, user=getattr(interaction, 'user', None))
     try:
         if interaction.response.is_done():
-            # Уже ACK (не должно быть на селекте) — модалку не открыть
             log.warning('modpanel offer: response already done, modal skipped')
             return False
+        modal = ModActionModal(
+            cog, action, guild=getattr(interaction, 'guild', None),
+            prefill_target=prefill, user=getattr(interaction, 'user', None))
         await interaction.response.send_modal(modal)
     except Exception as ex:
         log.warning('modpanel send_modal: %s', ex)
@@ -2587,8 +2669,10 @@ async def _offer_mod_form(interaction, cog, action, prefill, panel=None):
         except Exception:
             pass
         return False
-    # Та же панель, свежие селекты — без второй эфемерки
-    await _reset_after_step(interaction, panel, prefer_resend=False)
+    # Сброс селектов в фоне — не блокируем ответ клиенту
+    if panel is not None:
+        _schedule_panel_reset(
+            interaction, panel, clear_pending=True, delay=0.15)
     return True
 
 
@@ -2738,8 +2822,9 @@ class ModActionSelect(discord.ui.Select):
         self.target_select = target_select
 
     async def callback(self, interaction: discord.Interaction):
-        """ACK = send_modal сразу (без кнопки). Сброс панели после модалки."""
+        """ACK = send_modal сразу. Никакого rebuild до send_modal."""
         view = getattr(self, 'panel', None) or self.view
+        # Отменить фоновый rebuild — он убивает custom_id этого селекта
         _cancel_panel_reset(view)
         _bind_live_panel(view, interaction)
         try:
@@ -2781,9 +2866,11 @@ class ModActionSelect(discord.ui.Select):
                     await _ack(interaction, thinking=False)
                 except Exception:
                     pass
+            # Статус обновить, ActionSelect НЕ пересоздавать
             try:
                 _bind_live_panel(view, interaction)
-                await _silent_reset_panel(interaction, view)
+                await _silent_reset_panel(
+                    interaction, view, rebuild_selects=False)
             except Exception:
                 _schedule_panel_reset(
                     interaction, view, clear_pending=False, delay=0.2)
@@ -2848,26 +2935,28 @@ class ModActionModal(discord.ui.Modal):
         self.reason_select = None
         self.reason = None
         if action in _REASON_RULE_ACTIONS:
-            from services import mod_reasons as _MR
-            opts = [
-                discord.SelectOption(
-                    label=o['label'], value=o['value'],
-                    description=o['description'])
-                for o in _MR.select_options_data(action)
-            ]
-            _ph = {
-                'warn': 'Правила для варна…',
-                'ban': 'Правила для бана…',
-                'timeout': 'Правила для мута…',
-                'mute_chat': 'Правила для мута…',
-                'vmute': 'Правила для мута…',
-            }.get(action, 'Выберите правило…')
-            _rule_lbl = 'Какое правило нарушено?'
-            self.reason_select = discord.ui.Select(
-                required=True, options=opts, min_values=1, max_values=1,
-                placeholder=_ph)
-            self.add_item(discord.ui.Label(
-                text=_rule_lbl, component=self.reason_select))
+            opts = _rule_select_options(action)
+            if not opts:
+                # Не должно случаться — иначе модалка без причины
+                self.reason = discord.ui.TextInput(
+                    label="Причина (правило не загрузилось)",
+                    required=True, placeholder="1.1 — …",
+                    style=discord.TextStyle.short)
+                self.add_item(self.reason)
+            else:
+                _ph = {
+                    'warn': 'Правила для варна…',
+                    'ban': 'Правила для бана…',
+                    'timeout': 'Правила для мута…',
+                    'mute_chat': 'Правила для мута…',
+                    'vmute': 'Правила для мута…',
+                }.get(action, 'Выберите правило…')
+                self.reason_select = discord.ui.Select(
+                    required=True, options=opts, min_values=1, max_values=1,
+                    placeholder=_ph)
+                self.add_item(discord.ui.Label(
+                    text='Какое правило нарушено?',
+                    component=self.reason_select))
         else:
             self.reason = discord.ui.TextInput(
                 label="Причина", required=False,
@@ -2924,8 +3013,21 @@ class ModActionModal(discord.ui.Modal):
                 return
             _reason = _MR.format_reason(_code)
         else:
+            from services import mod_reasons as _MR
             _r = getattr(self, 'reason', None)
-            _reason = ((_r.value if _r else '') or "").strip() or "Не указана"
+            _raw = ((_r.value if _r else '') or "").strip()
+            if self.action in _REASON_RULE_ACTIONS and _raw:
+                _code = _raw.split('—', 1)[0].strip()
+                if _MR.allows(_code, self.action) or _MR.allows(_raw, self.action):
+                    _reason = _MR.resolve_stored_reason(_raw)
+                else:
+                    await _respond(
+                        interaction,
+                        content='Укажите правило из списка для этого наказания.',
+                        ephemeral=True)
+                    return
+            else:
+                _reason = _raw or "Не указана"
         _target_value = self.fixed_target_id or ((_t.value or "").strip() if _t else "")
         await self.cog._execute_mod_action(
             interaction,
@@ -2950,11 +3052,10 @@ class ModTargetSelect(discord.ui.UserSelect):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        """Выбор участника: ACK → статус на панели + свежий UserSelect.
+        """Выбор участника: ACK → статус. ActionSelect НЕ пересоздаём.
 
-        Сразу (не через delay): иначе статус «участник @…» не меняется,
-        а sticky UserSelect не даёт выбрать другого. Delayed schedule
-        раньше гонялся с «Действие» — его здесь нет.
+        Раньше полный rebuild менял custom_id «Действие» → первый клик
+        по наказанию давал «приложение не отвечает», второй работал.
         """
         view = getattr(self, 'panel', None) or self.view
         _cancel_panel_reset(view)
@@ -2971,7 +3072,7 @@ class ModTargetSelect(discord.ui.UserSelect):
             # Действие уже ждали — модалка / вид мута сразу.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
-        # ACK <3с, потом view-only edit (статус + сброс sticky)
+        # ACK <3с, потом статус + новый UserSelect; ActionSelect тот же
         try:
             if not interaction.response.is_done():
                 try:
@@ -2992,7 +3093,9 @@ class ModTargetSelect(discord.ui.UserSelect):
         if view is None:
             return
         try:
-            await _silent_reset_panel(interaction, view)
+            await _silent_reset_panel(
+                interaction, view,
+                rebuild_selects=False, refresh_target=True)
         except Exception as _re:
             log.warning('ModTargetSelect status refresh: %s', _re)
 
@@ -3146,28 +3249,9 @@ class ModPanelView(discord.ui.LayoutView):
         self._banner_file = discord.File(out, filename=name)
         return self._banner_file
 
-    def _rebuild(self, guild):
-        self.clear_items()
-        # default_values ставим ТОЛЬКО на самый первый rebuild — когда
-        # /modpanel открыт сразу с участником (target=). На дальнейших
-        # rebuild'ах НЕ передаём (sticky select не даёт выбрать другого).
-        _preselect = self._preselect_member
-        self._preselect_member = None
-        self.target_select = ModTargetSelect(
-            self.cog, default_values=[_preselect] if _preselect else None)
-        self.target_select.panel = self
-        # Главная панель ВСЕГДА с полным списком действий.
-        # Виды мута/размута — отдельная эфемерка (MuteKindView), иначе
-        # после «Мут» пункт «Снять мут» пропадает / панель зависает.
-        self.action_select = ModActionSelect(
-            self.cog, None, self.allowed,
-            target_select=self.target_select)
-        self.action_select.panel = self
-        self.action_buttons = []
-
+    def _attach_layout(self, guild):
+        """Сложить контейнеры вокруг уже созданных селектов."""
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
-        # Имя баннера для MediaGallery — без нового File (upload только при
-        # первом /modpanel; на refresh оставляем старый attachment).
         from services.v2_layouts import SHOW_MENU_BANNER
         if SHOW_MENU_BANNER and not self._banner_name:
             self._banner_name = 'hakumo_modpanel_banner_v15.png'
@@ -3191,6 +3275,49 @@ class ModPanelView(discord.ui.LayoutView):
         row2.add_item(self.action_select)
         self.add_item(row1)
         self.add_item(row2)
+
+    def _relayout(self, guild, *, refresh_target=False):
+        """Обновить статус/раскладку, сохранив ActionSelect (тот же custom_id).
+
+        refresh_target=True — новый UserSelect (снять sticky после выбора).
+        """
+        self.clear_items()
+        if refresh_target or getattr(self, 'target_select', None) is None:
+            self.target_select = ModTargetSelect(self.cog)
+            self.target_select.panel = self
+        if getattr(self, 'action_select', None) is None:
+            self.action_select = ModActionSelect(
+                self.cog, None, self.allowed,
+                target_select=self.target_select)
+            self.action_select.panel = self
+        else:
+            # держим ссылку target_select актуальной для prefill
+            try:
+                self.action_select.target_select = self.target_select
+            except Exception:
+                pass
+        self.action_buttons = []
+        self._attach_layout(guild)
+
+    def _rebuild(self, guild):
+        self.clear_items()
+        # default_values ставим ТОЛЬКО на самый первый rebuild — когда
+        # /modpanel открыт сразу с участником (target=). На дальнейших
+        # rebuild'ах НЕ передаём (sticky select не даёт выбрать другого).
+        _preselect = self._preselect_member
+        self._preselect_member = None
+        self.target_select = ModTargetSelect(
+            self.cog, default_values=[_preselect] if _preselect else None)
+        self.target_select.panel = self
+        # Главная панель ВСЕГДА с полным списком действий.
+        # Виды мута/размута — отдельная эфемерка (MuteKindView), иначе
+        # после «Мут» пункт «Снять мут» пропадает / панель зависает.
+        self.action_select = ModActionSelect(
+            self.cog, None, self.allowed,
+            target_select=self.target_select)
+        self.action_select.panel = self
+        self.action_buttons = []
+        self._attach_layout(guild)
 
     def panel_edit_kwargs(self, *, message=None, reattach_banner=False):
         """kwargs для edit панели.
