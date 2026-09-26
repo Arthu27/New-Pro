@@ -124,7 +124,8 @@ def pending_view(state, gid=None):
         if gid is not None:
             try:
                 from services.appeal_context import build_context
-                context = build_context(state, gid, item.get('user_id'))['line']
+                _ctx = build_context(state, gid, item.get('user_id'))
+                context = _ctx.get('rich') or _ctx.get('line') or '—'
             except Exception as _ex:
                 _log.debug('appeals: контекст очереди: %s', _ex)
         claim = item.get('claimed_by') or None

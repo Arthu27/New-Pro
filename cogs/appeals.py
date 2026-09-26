@@ -422,37 +422,44 @@ class AppealView(discord.ui.LayoutView):
         self._rebuild_card()
 
     def _make_select(self):
-        """Select «Принять / Отклонить / Взять в работу» со стикерами."""
+        """Select «Принять / Отклонить / Взять в работу» со стикерами.
+
+        Один клик = одно действие. Подписи короткие и однозначные —
+        без «жёлтого» меню и без трёх кнопок в ряд (владелец 2026-09-24/26).
+        """
         try:
             from services.menu_emojis import schedule_ensure_menu_emojis
             schedule_ensure_menu_emojis(getattr(self.cog, 'bot', None))
         except Exception:
             pass
         claim_label = 'Взять в работу'
+        claim_desc = 'Открыть комнату и вести дело'
         try:
             state = self.cog._load(self.guild_id)
             item = get_appeal(state, self.appeal_id) if state else None
             claim = (item or {}).get('claimed_by') or None
             if claim:
-                claim_label = f'В работе: {str(claim.get("name") or "")[:40]}'
+                who = str(claim.get('name') or 'модератор')[:32]
+                claim_label = f'Снять с работы ({who})'
+                claim_desc = 'Вернуть апелляцию в общую очередь'
         except Exception:
             pass
         opts = [
             discord.SelectOption(
                 label='Принять', value='accept',
-                description='Разбанить и закрыть апелляцию',
+                description='Снять бан и закрыть апелляцию',
                 emoji=_appeal_select_emoji('accept')),
             discord.SelectOption(
                 label='Отклонить', value='reject',
-                description='Отказать в апелляции',
+                description='Оставить наказание · отказ в ЛС',
                 emoji=_appeal_select_emoji('reject')),
             discord.SelectOption(
                 label=claim_label[:100], value='claim',
-                description='Взять в работу / снять с себя',
+                description=claim_desc[:100],
                 emoji=_appeal_select_emoji('claim')),
         ]
         sel = discord.ui.Select(
-            placeholder='Действие с апелляцией',
+            placeholder='Выберите действие по апелляции…',
             options=opts,
             custom_id=f'appeal:menu:{self.appeal_id}',
             min_values=1, max_values=1)
@@ -1387,14 +1394,34 @@ class Appeals(commands.Cog):
     def _save(self, guild_id, state):
         self.db.set(guild_id, 'state', state)
 
-    def _mod_context(self, state, guild_id, user_id):
-        """Строка «Контекст модератора» для карточки: наказания и апелляции юзера."""
+    def _mod_context(self, state, guild_id, user_id, *, role_ids=None):
+        """Текст «Контекст модератора»: сейчас / кто выдал + счётчики.
+
+        rich — многострочный блок для карточки; если rich нет — line.
+        role_ids — роли участника на сервере (бан/мут видны сразу).
+        """
         try:
             from services.appeal_context import build_context
-            return build_context(state, guild_id, user_id)['line']
+            ctx = build_context(state, guild_id, user_id, role_ids=role_ids)
+            return ctx.get('rich') or ctx.get('line') or '—'
         except Exception as _ex:
             log.debug('appeals: контекст %s: %s', user_id, _ex)
             return 'история наказаний недоступна'
+
+    def _member_role_ids(self, guild, user_id):
+        """Id ролей участника (если он на сервере) — для текущего наказания."""
+        try:
+            mid = int(user_id or 0)
+            if not guild or not mid:
+                return None
+            mem = guild.get_member(mid)
+            if mem is None:
+                return None
+            return [int(getattr(r, 'id', 0) or 0)
+                    for r in (getattr(mem, 'roles', None) or [])]
+        except Exception as _ex:
+            log.debug('appeals: role_ids %s: %s', user_id, _ex)
+            return None
 
     async def _fire_panel_event(self, item):
         """Событие «новая апелляция» в колокольчик панели (веб).
@@ -2526,7 +2553,9 @@ class Appeals(commands.Cog):
         embed.add_field(name='Участник',
                         value=f'{user.mention} · `{user.id}`', inline=False)
         embed.add_field(name='Контекст модератора',
-                        value=self._mod_context(state, guild.id, user.id),
+                        value=self._mod_context(
+                            state, guild.id, user.id,
+                            role_ids=self._member_role_ids(guild, user.id)),
                         inline=False)
         embed.set_footer(text=f'appeal #{item["id"]} · решение — меню под карточкой')
         card_file = None
@@ -2619,7 +2648,9 @@ class Appeals(commands.Cog):
         embed.add_field(name='Участник',
                         value=f'{user.mention} · `{user.id}`', inline=False)
         embed.add_field(name='Контекст модератора',
-                        value=self._mod_context(state, guild.id, user.id),
+                        value=self._mod_context(
+                            state, guild.id, user.id,
+                            role_ids=self._member_role_ids(guild, user.id)),
                         inline=False)
         embed.set_footer(text=f'user_id: {item["user_id"]} · appeal #{item["id"]} · меню под карточкой')
         # «всё сюда, кроме логов»: карточка живёт в комнате апелляции;
