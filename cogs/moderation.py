@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 import json 
 import os 
 import time 
-from cogs .embed_utils import gif ,now_ts ,mod_dm_embed ,mod_log_embed ,success_embed ,error_embed 
+from cogs .embed_utils import gif ,now_ts ,mod_dm_embed ,mod_log_embed ,success_embed ,error_embed ,mod_result_embed 
 
 from logger import get_logger 
 log =get_logger ("moderation")
@@ -869,10 +869,7 @@ class Moderation (commands .Cog ):
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
                     except Exception as _re :
                         log .debug (f'[STAFF_LIMIT] ban rec: {_re}')
-                    msg =(f"роль бана «{_brole .name }» выдана — доступ закрыт "
-                          "самой ролью, каналы бот не трогает. Апелляция — "
-                          "кнопкой в ЛС бота; комната апелляции откроется "
-                          "после подачи заявки")
+                    msg = "Доступ закрыт · апелляция в ЛС"
                 elif action =="kick":
                     # Система kick полностью отключена решением владельца (2026-08):
                     # опция убрана из меню, ручные вызовы — вежливый отказ.
@@ -920,11 +917,7 @@ class Moderation (commands .Cog ):
                         await user.timeout(until, reason=reason or 'мут')
                     except (discord.Forbidden, discord.HTTPException, AttributeError) as _te:
                         log.debug(f'[MODPANEL] нативный таймаут пропущен: {_te}')
-                    msg = (f"🔇 мут на {human_duration(minutes)} "
-                           f"(~{minutes} мин) — обе роли выданы: чат закрыт, "
-                           "микрофон заглушён")
-                    if _extra_roles:
-                        msg += " · роли: " + ", ".join(f"«{n}»" for n in _extra_roles)
+                    msg = f"Чат и войс · {human_duration(minutes)}"
                     await self._maybe_watchlist_after_mute(interaction, user, reason)
                 elif action == "mute_chat":
                     # «Мут (только чат)» — закрываем ТОЛЬКО текст через мут-роль.
@@ -949,8 +942,7 @@ class Moderation (commands .Cog ):
                         log.debug(f'[MODPANEL] mute_chat clear all: {_mse}')
                     await user.add_roles(_mrole, reason=reason or 'мут чата')
                     self._remember_temp(guild, user, _mrole, minutes * 60)
-                    msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
-                           f"(роль «{_mrole.name}»); голос не тронут")
+                    msg = f"Чат закрыт · {human_duration(minutes)}"
                     await self._maybe_watchlist_after_mute(interaction, user, reason)
                 elif action =="vmute":
                     # Войс-мут — ТОЛЬКО микрофон, чат не трогаем. Снимаем
@@ -976,7 +968,7 @@ class Moderation (commands .Cog ):
                         # если роль случайно запрещает вход в голосовые — чиним:
                         # войс-мут глушит МИКРОФОН, а не выгоняет из каналов
                         await self ._fix_vmute_role_connect (guild ,_vrole )
-                        msg =f"🎙️ войс-мут «{_vrole .name }» на {minutes } мин — микрофон заглушён, зайти в голосовой можно"
+                        msg = f"Микрофон · {human_duration(minutes)}"
                     else :
                         if not user .voice or not user .voice .channel :
                             await _respond (interaction ,
@@ -992,7 +984,7 @@ class Moderation (commands .Cog ):
                             embed =error_embed (f"Не удалось заглушить микрофон: {_ve }"),
                             ephemeral =True )
                             return
-                        msg ="🎙️ микрофон заглушён (войс-мут)"
+                        msg = "Микрофон заглушён"
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
                     if _vrole is not None :
@@ -1004,21 +996,21 @@ class Moderation (commands .Cog ):
                             await user .edit (mute =False ,reason ='войс-мут снят')
                     except Exception as _ve :
                         log .debug (f'[MODPANEL] vunmute edit: {_ve}')
-                    msg ="🎙️ войс-мут снят — микрофон открыт"
+                    msg = "Войс-мут снят"
                 elif action =="unmute_chat":
                     try :
                         from services import mute_state
                         await mute_state .clear_chat_mute (guild ,user )
                     except Exception as _mse :
                         log .debug (f'[MODPANEL] unmute_chat: {_mse}')
-                    msg ="чат-мут снят, голос не тронут"
+                    msg = "Мут чата снят"
                 else :  # untimeout — снимаем ЛЮБОЙ мут (чат+войс) разом
                     try :
                         from services import mute_state
                         await mute_state .clear_all_mutes (guild ,user )
                     except Exception as _mse :
                         log .debug (f'[MODPANEL] untimeout clear all: {_mse}')
-                    msg ="мут снят (чат и голос)"
+                    msg = "Мут снят"
 
                 # Вспомогательные шаги: дело, DM, лог, уведомление панели.
                 # Каждый — в своём try: сбой побочного шага НЕ должен превращать
@@ -1053,12 +1045,23 @@ class Moderation (commands .Cog ):
                     case_id =0
                     aux_errors .append ("дело не записано")
                     log .warning (f'[MODPANEL] save_case: {_case_e}')
-                confirm =success_embed (
-                "Действие выполнено",
-                f"**{user.display_name}** · `{user.id}`\n{msg}\n**Причина:** {reason}\n**Дело:** #{case_id}",
-                guild =guild )
-                if aux_errors :
-                    confirm .description +=f"\n\n⚠️ {' · '.join (aux_errors )}"
+                _titles = {
+                    'timeout': 'Мут',
+                    'mute_chat': 'Мут чата',
+                    'vmute': 'Войс-мут',
+                    'untimeout': 'Размут',
+                    'vunmute': 'Войс-размут',
+                    'unmute_chat': 'Размут чата',
+                    'ban': 'Бан',
+                    'kick': 'Кик',
+                }
+                confirm = mod_result_embed(
+                    title=_titles.get(action, 'Готово'),
+                    user=user, body=msg, reason=reason, case_id=case_id)
+                if aux_errors:
+                    confirm.description = (
+                        (confirm.description or '')
+                        + "\n⚠️ " + " · ".join(aux_errors))
                 # Сначала ответ модератору — логи/ЛС/демка могут идти секундами.
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
                 try :

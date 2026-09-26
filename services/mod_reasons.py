@@ -188,6 +188,24 @@ def format_reason(code: str) -> str:
     return f'{code} — {text}'
 
 
+def display_reason(raw: str) -> str:
+    """Короткая подпись для ответа модератору: «1.8 · Капс / спам / флуд».
+
+    Полный текст запрета остаётся в деле/логе через format_reason.
+    """
+    raw = (raw or '').strip()
+    if not raw:
+        return ''
+    for sep in ('—', '·', '-'):
+        head = raw.split(sep, 1)[0].strip()
+        if is_known(head):
+            return select_label(head)
+    if is_known(raw):
+        return select_label(raw)
+    # свободный текст — без простыни
+    return _clip(raw, 80)
+
+
 def select_label(code: str, limit: int = 100) -> str:
     code = str(code or '').strip()
     title = title_for(code)

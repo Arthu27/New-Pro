@@ -174,26 +174,53 @@ def mod_log_embed(action, title, color, user, moderator, guild, reason=None, cas
 # ── Общие Embed'ы ──────────────────────────────────────────────────────────
 
 def success_embed(title, description, guild=None, gif_key=None, fields=None):
-    """Успешное действие"""
-    e = discord.Embed(color=0x2ECC71, timestamp=datetime.now(timezone.utc))
-    desc = f"## ✅ {title}\n{description}"
+    """Успешное действие — коротко, без декоративных разделителей."""
+    e = discord.Embed(
+        title=f"✅ {title}",
+        description=str(description or '').strip(),
+        color=0x2ECC71,
+        timestamp=datetime.now(timezone.utc),
+    )
     if fields:
-        desc += "\n"
         for name, value, inline in fields:
-            desc += f"\n**{name}**: {value}"
-    desc += f"\n\n{DIVIDER}"
-    e.description = desc
+            e.add_field(name=str(name)[:256], value=str(value)[:1024],
+                        inline=bool(inline))
     if gif_key:
         e.set_image(url=gif(gif_key))
-    if guild:
-        e.set_footer(text=str(getattr(guild, "name", None) or "сервер"))  # гильдия без .name не роняет embed
+    e.set_footer(text="HAKUMO")
+    return e
+
+
+def mod_result_embed(*, title: str, user, body: str, reason: str = None,
+                     case_id=None, color: int = 0x2ECC71):
+    """Ответ модератору после наказания: имя, результат, правило, дело."""
+    uid = getattr(user, 'id', None) or user
+    name = getattr(user, 'display_name', None) or str(uid)
+    lines = [f"**{name}** · `{uid}`", str(body or '').strip()]
+    try:
+        from services import mod_reasons as _MR
+        short = _MR.display_reason(reason) if reason else ''
+    except Exception:
+        short = (str(reason or '').strip()[:80]) if reason else ''
+    if short:
+        lines.append(f"**Правило** · {short}")
+    if case_id not in (None, '', 0, '0'):
+        lines.append(f"**Дело** · #{case_id}")
+    e = discord.Embed(
+        title=f"✅ {title}",
+        description="\n".join(lines),
+        color=color,
+        timestamp=datetime.now(timezone.utc),
+    )
+    e.set_footer(text="HAKUMO")
     return e
 
 
 def error_embed(description, title="Ошибка"):
     """Ошибка"""
     e = discord.Embed(color=0xE74C3C, timestamp=datetime.now(timezone.utc))
-    e.description = f"## ❌ {title}\n{description}"
+    e.title = f"❌ {title}"
+    e.description = str(description or '').strip()
     return e
 
 
