@@ -314,6 +314,29 @@ body_br = SA.build_application_body(
 check('часовой пояс' in body_br.lower() and 'веб камера' in body_br.lower(),
       'Broadcaster body uses broadcaster questions')
 
+print('== 3c. Decided view closes select + ОТКАЗАНО ==')
+done = SA.StaffAppDecidedView(
+    title='Helper', body='body text', status='ОТКАЗАНО',
+    note='Curator · 26.09.2026', accent=0xE74C3C)
+_types = set()
+_texts = []
+
+def _walk(item):
+    _types.add(type(item).__name__)
+    c = getattr(item, 'content', None)
+    if isinstance(c, str):
+        _texts.append(c)
+    for ch in getattr(item, 'children', None) or []:
+        _walk(ch)
+
+for it in done.children:
+    _walk(it)
+blob = '\n'.join(_texts)
+check('Select' not in _types and 'StaffReviewSelect' not in _types,
+      'decided has no select')
+check('ОТКАЗАНО' in blob, 'status ОТКАЗАНО in panel', blob[:200])
+check('select ниже' not in blob.lower(), 'no select footer hint')
+
 print('== 4. Web send_to_discord uses V2 ==')
 web_src = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
 check('StaffAppCardView' in web_src and '_send_staff_card' in web_src,
