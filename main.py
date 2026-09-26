@@ -648,64 +648,17 @@ signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_on_exit)
 
 async def send_panel_link(url):
-    import json as _json
-    panel_url = url
+    """Раньше создавал #hakumo-panel и кидал туда ссылку при старте.
 
-    for guild in bot.guilds:
-        try:
-            panel_ch = discord.utils.get(guild.text_channels, name="hakumo-panel")
-            if not panel_ch:
-                for old_name in ["panel-link", "hakumo-panel", "Hakumo-panel"]:
-                    panel_ch = discord.utils.get(guild.text_channels, name=old_name)
-                    if panel_ch:
-                        await panel_ch.edit(name="hakumo-panel")
-                        break
-                if not panel_ch:
-                    overwrites = {
-                        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                        guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-                    }
-                    role = guild.get_role(ALERT_ROLE_ID) if ALERT_ROLE_ID else None
-                    if role:
-                        overwrites[role] = discord.PermissionOverwrite(read_messages=True)
-                    panel_ch = await guild.create_text_channel("hakumo-panel", overwrites=overwrites)
-                    print(f"[ИНФО] Канал hakumo-panel создан: {guild.name}")
-            async for msg in panel_ch.history(limit=10):
-                if msg.author == bot.user:
-                    await msg.delete()
-            embed = discord.Embed(
-                color=0xc8922a,
-                timestamp=discord.utils.utcnow()
-            )
-            embed.set_author(
-                name="Hakumo — Управление панелью",
-                icon_url=guild.icon.url if guild.icon else None
-            )
-            embed.description = f"[**› Войти в панель**]({panel_url})"
-            embed.set_image(url="https://static.klipy.com/ii/71b2873e478b9d8d0482ea3ec777ba7f/15/36/51ALUZhO.gif")
-            embed.add_field(
-                name="🖥 Сервер",
-                value=f"```{guild.name}```",
-                inline=True
-            )
-            embed.add_field(
-                name="👥 Участники",
-                value=f"```{guild.member_count}```",
-                inline=True
-            )
-            embed.add_field(
-                name="🔓 Доступ",
-                value="```Автоматически по роли Discord```",
-                inline=False
-            )
-            embed.set_footer(
-                text="Hakumo Panel • Обновляется при каждом запуске",
-                icon_url=guild.icon.url if guild.icon else None
-            )
-            await panel_ch.send(embed=embed)
-            print(f"[ОК] Ссылка на панель отправлена: {guild.name}")
-        except Exception as e:
-            print(f"[ОШИБКА] Не удалось отправить ссылку на панель ({guild.name}): {e}")
+    Больше не нужно: ссылку владелец кидает сам. Канал не создаём,
+    сообщения не шлём. Вызов оставлен, чтобы старт/туннель не ломались.
+    """
+    _log.info(
+        'send_panel_link: авто-канал hakumo-panel отключён '
+        '(ссылку кидает владелец) url=%s',
+        (url or '')[:80],
+    )
+    return
 
 def _is_tunnel_alive(url):
     try:

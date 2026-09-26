@@ -57,14 +57,19 @@ log =get_logger ("diagnostics")
 DATA_DIR ="data"
 os .makedirs (DATA_DIR ,exist_ok =True )
 
-# Health thresholds
+# Health thresholds.
+# Память: основной бот + веб-панель спокойно держит 450–600 MB —
+# порог warn=400 сыпал Auto-Repair в ЛС владельцу каждую минуту после рестарта.
 THRESHOLDS ={
-"memory_mb":{"warn":400 ,"critical":700 },
+"memory_mb":{"warn":900 ,"critical":1400 },
 "cpu_percent":{"warn":60 ,"critical":85 },
 "latency_ms":{"warn":300 ,"critical":800 },
 "error_rate_per_min":{"warn":5 ,"critical":15 },
 "cache_size_mb":{"warn":100 ,"critical":250 },
 }
+
+# В ЛС владельцу — только critical. Warn пишем в лог (без спама в Discord).
+NOTIFY_DM_SEVERITIES = frozenset({"critical"})
 
 # Auto-repair actions
 REPAIR_ACTIONS ={
@@ -341,7 +346,9 @@ class Diagnostics (commands .Cog ):
         await self ._notify_admin (repair_type ,severity ,action )
 
     async def _notify_admin (self ,repair_type ,severity ,action ):
-        """DM owner about auto-repair action"""
+        """ЛС владельцу только при critical. Warn — только лог (без спама)."""
+        if severity not in NOTIFY_DM_SEVERITIES :
+            return
         owner_id =os .getenv ("OWNER_ID")
         if not owner_id :
             return 
@@ -351,9 +358,9 @@ class Diagnostics (commands .Cog ):
             owner =await self .bot .fetch_user (int (owner_id ))
             if owner :
                 embed =discord .Embed (
-                title =f" Auto-Repair: {repair_type}",
+                title =f"Auto-Repair: {repair_type}",
                 description =f"**Severity:** {severity}\n**Action:** {action}",
-                color =0xFBBF24 if severity =="warn"else 0xEF4444 
+                color =0xEF4444 
                 )
                 embed .timestamp =datetime.now(timezone.utc)
                 await owner .send (embed =embed )
@@ -457,12 +464,17 @@ class Diagnostics (commands .Cog ):
         h =await self .get_health_snapshot_async ()
         embed =discord .Embed (title =" Bot Health",color =self ._health_color (h ))
         # Status indicator
-        status_emoji ="🟢"if h ["latency_ms"]<300 and h ["memory_mb"]<700 else "🟡"if h ["latency_ms"]<800 and h ["memory_mb"]<1000 else ""
+        _mw =THRESHOLDS ["memory_mb"]["warn"]
+        _mc =THRESHOLDS ["memory_mb"]["critical"]
+        status_emoji =("🟢"if h ["latency_ms"]<300 and h ["memory_mb"]<_mw
+                       else "🟡"if h ["latency_ms"]<800 and h ["memory_mb"]<_mc
+                       else "🔴")
         embed .description =f"{status_emoji} **Bot Online** · Uptime: {self._fmt_uptime(h['uptime_sec'])}"
         # Vitals
-        mem_status ="🟢"if h ["memory_mb"]<400 else "🟡"if h ["memory_mb"]<700 else ""
-        cpu_status ="🟢"if h ["cpu_percent"]<60 else "🟡"if h ["cpu_percent"]<85 else ""
-        lat_status ="🟢"if h ["latency_ms"]<300 else "🟡"if h ["latency_ms"]<800 else ""
+        mem_status =("🟢"if h ["memory_mb"]<_mw
+                     else "🟡"if h ["memory_mb"]<_mc else "🔴")
+        cpu_status ="🟢"if h ["cpu_percent"]<60 else "🟡"if h ["cpu_percent"]<85 else "🔴"
+        lat_status ="🟢"if h ["latency_ms"]<300 else "🟡"if h ["latency_ms"]<800 else "🔴"
         embed .add_field (name =" Память",value =f"{mem_status} {h['memory_mb']} MB",inline =True )
         embed .add_field (name =" CPU",value =f"{cpu_status} {h['cpu_percent']}%",inline =True )
         embed .add_field (name =" Latency",value =f"{lat_status} {h['latency_ms']}ms",inline =True )
