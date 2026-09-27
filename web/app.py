@@ -892,24 +892,70 @@ def _appeals_list(gid):
 
 
 def _reasons_bundle(gid):
+    """Правила/причины: каталог mod_reasons (1.1–1.9) + опциональные JSON."""
     reasons, rules = [], []
-    # json files first
+
+    # 1) каноничный каталог бота — то, что в /modpanel
+    try:
+        from services.mod_reasons import select_options_data, rules_for_channel
+        catalog = select_options_data()
+        for row in catalog:
+            reasons.append({
+                'code': row.get('value') or '',
+                'title': row.get('title') or row.get('label') or '',
+                'text': row.get('text') or '',
+                'punish': row.get('punish') or '',
+                'duration': row.get('duration') or '',
+                'actions': row.get('actions') or [],
+                'name': row.get('label') or '',
+            })
+        for row in rules_for_channel():
+            code = row.get('code') or ''
+            title = row.get('title') or ''
+            text = row.get('t') or ''
+            if not code and not title and text:
+                rules.append({
+                    'code': '',
+                    'title': 'Примечание',
+                    'text': text,
+                    'punish': '',
+                    'duration': '',
+                    'note': True,
+                })
+            else:
+                rules.append({
+                    'code': code,
+                    'title': title or code,
+                    'text': text,
+                    'punish': row.get('punish') or '',
+                    'duration': row.get('duration') or '',
+                    'actions': row.get('actions') or [],
+                    'note': False,
+                })
+    except Exception:
+        pass
+
+    # 2) json overrides / дополнения
     for p in DATA.glob(f'mod_reasons_{gid}.json') if gid else []:
         try:
             raw = json.loads(p.read_text(encoding='utf-8'))
-            if isinstance(raw, list):
+            if isinstance(raw, list) and raw:
                 reasons = raw
             elif isinstance(raw, dict):
-                reasons = raw.get('reasons') or raw.get('items') or []
+                extra = raw.get('reasons') or raw.get('items') or []
+                if extra:
+                    reasons = extra
         except Exception:
             pass
     for p in DATA.glob(f'rules_{gid}.json') if gid else []:
         try:
             raw = json.loads(p.read_text(encoding='utf-8'))
-            if isinstance(raw, list):
+            if isinstance(raw, list) and raw:
                 rules = raw
             elif isinstance(raw, dict):
-                rules = raw.get('rules') or raw.get('items') or []
+                extra = raw.get('rules') or raw.get('items') or []
+                if extra:
+                    rules = extra
         except Exception:
             pass
     try:
@@ -923,7 +969,7 @@ def _reasons_bundle(gid):
                 rules = ru if isinstance(ru, list) else rules
     except Exception:
         pass
-    # fallback: any mod_reasons_*.json
+
     if not reasons:
         for p in sorted(DATA.glob('mod_reasons_*.json')):
             try:
@@ -950,6 +996,21 @@ def _reasons_bundle(gid):
                         break
             except Exception:
                 continue
+
+    # если rules пусты — покажем тот же каталог как правила
+    if not rules and reasons:
+        rules = [
+            {
+                'code': (r.get('code') if isinstance(r, dict) else ''),
+                'title': (r.get('title') or r.get('name') if isinstance(r, dict) else str(r)),
+                'text': (r.get('text') if isinstance(r, dict) else ''),
+                'punish': (r.get('punish') if isinstance(r, dict) else ''),
+                'duration': (r.get('duration') if isinstance(r, dict) else ''),
+                'actions': (r.get('actions') if isinstance(r, dict) else []),
+                'note': False,
+            }
+            for r in reasons
+        ]
     return reasons or [], rules or []
 
 
@@ -2131,13 +2192,45 @@ def reasons():
     reasons_list, rules = _reasons_bundle(gid)
     role = session.get('role') or 'helper'
     show_reasons = LEVEL.get(role, 0) >= LEVEL['mod']
+    allowed = set(_viewer_punish_actions(role))
+    annotated = []
+    for r in rules:
+        if not isinstance(r, dict):
+            annotated.append({'title': str(r), 'text': '', 'code': '', 'locked': False, 'note': False})
+            continue
+        row = dict(r)
+        acts = set(row.get('actions') or [])
+        row['locked'] = bool(acts) and not (acts & allowed) and not row.get('note')
+        annotated.append(row)
     return render_template(
         'reasons.html',
         reasons=reasons_list if show_reasons else [],
-        rules=rules,
+        rules=annotated,
         show_reasons=show_reasons,
         limits=_viewer_limits_card(),
     )
+
+
+@app.get('/api/rules')
+@login_required
+@role_required('helper')
+def api_rules():
+    """Правила для селекта наказания, фильтр по action=warn|mute|ban|kick."""
+    action = (request.args.get('action') or '').strip().lower()
+    allowed = _viewer_punish_actions()
+    if action and action not in allowed:
+        return jsonify({'ok': False, 'error': 'недоступно', 'items': []}), 403
+    try:
+        from services.mod_reasons import select_options_data
+        key = 'timeout' if action == 'mute' else action
+        items = select_options_data(key if action else None)
+        # хелперу — только правила, где есть warn/mute
+        if session.get('role') == 'helper':
+            items = [it for it in items if set(it.get('actions') or []) & {'warn', 'mute'}]
+        return jsonify({'ok': True, 'items': items})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)[:160], 'items': []}), 500
+
 
 
 # ── routes: owner-only bot pages ───────────────────────────────────────

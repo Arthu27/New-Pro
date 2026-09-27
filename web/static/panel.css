@@ -670,3 +670,16 @@ button.on {
 }
 .mp-mini-kpis .is-locked { opacity: .45; }
 .mp-mini-kpis .is-locked b { color: var(--muted); }
+
+.rule-card.is-note { border-style: dashed; opacity: .9; }
+.rule-card.is-locked { opacity: .55; }
+.rule-card.is-locked .rule-num { color: var(--muted); border-color: #2a3140; }
+.rule-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rule-dur {
+  font-size: .72rem; font-weight: 800; padding: 4px 8px; border-radius: 6px;
+  background: #1a2440; color: #9db4ff;
+}
+.rule-lock {
+  font-size: .72rem; font-weight: 800; padding: 4px 8px; border-radius: 6px;
+  background: #2a1818; color: #ff8a7a;
+}
