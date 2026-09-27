@@ -300,3 +300,18 @@ html, body.gate-body {
     animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important;
   }
 }
+
+.suggest-dark {
+  position: relative; left: 0; right: 0; top: 0; margin: -6px 0 8px;
+  background: #10131b; border: 1px solid var(--line, #222836);
+  border-radius: 10px; max-height: 220px; overflow: auto;
+}
+.suggest-dark .suggest-item {
+  width: 100%; display: flex; gap: 10px; align-items: center;
+  padding: 10px 12px; border: 0; background: transparent; color: inherit;
+  cursor: pointer; text-align: left; font: inherit;
+}
+.suggest-dark .suggest-item:hover { background: #1a2030; }
+.suggest-dark img { border-radius: 50%; }
+.suggest-dark span { display: flex; flex-direction: column; gap: 1px; }
+.suggest-dark small { opacity: .7; font-size: .78rem; }

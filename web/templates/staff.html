@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Staff{% endblock %}
+{% block heading %}Staff{% endblock %}
+{% block body %}
+<p class="lead">Отдельное место для команды: кто staff и что они делали.</p>
+
+<section class="panel rise">
+  <h2>Команда на сервере</h2>
+  {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+  {% if not people %}<div class="empty">Staff не загрузился</div>
+  {% else %}
+  <div class="people-board">
+    {% for p in people %}
+    <a class="p-card" href="{{ url_for('member', q=p.id) }}">
+      <img src="{{ p.avatar }}" alt="" width="42" height="42">
+      <div>
+        <strong>{{ p.name }}</strong>
+        <div class="dim">@{{ p.handle }}</div>
+      </div>
+      <span class="tag tag-{{ p.role }}">{{ p.role_label }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel rise" style="margin-top:16px">
+  <h2>Лента staff</h2>
+  {% if not feed %}<div class="empty">Пока пусто</div>
+  {% else %}
+  <div class="feed">
+    {% for f in feed %}
+    <div class="feed-row">
+      <div class="feed-act">{{ f.action }}</div>
+      <div class="feed-body">
+        <strong>{{ f.who }}</strong>
+        <span class="dim">→ {{ f.target }}</span>
+        {% if f.detail %}<div class="dim">{{ f.detail }}</div>{% endif %}
+      </div>
+      <div class="feed-when">{{ f.when }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

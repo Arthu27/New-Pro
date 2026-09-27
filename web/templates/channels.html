@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Каналы{% endblock %}
+{% block heading %}Каналы · способности{% endblock %}
+{% block body %}
+<p class="lead">Таблица способностей каналов для @everyone. Только просмотр — без опасных правок.</p>
+
+<section class="panel rise">
+  <h2>Матрица</h2>
+  {% if not rows %}<div class="empty">Каналы недоступны (бот офлайн?)</div>
+  {% else %}
+  <div class="table-scroll">
+  <table class="cap-table">
+    <thead>
+      <tr>
+        <th>Канал</th>
+        <th>Тип</th>
+        <th>Смотреть</th>
+        <th>Писать</th>
+        <th>Голос</th>
+        <th>Зайти</th>
+        <th>Стрим</th>
+        <th>Управлять</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><b>#{{ r.name }}</b></td>
+        <td class="dim">{{ r.kind }}</td>
+        <td>{% if r.view %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
+        <td>{% if r.send %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
+        <td>{% if r.speak %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
+        <td>{% if r.connect %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
+        <td>{% if r.stream %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
+        <td>{% if r.manage %}<span class="dot warn"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,16 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Пользователи{% endblock %}
-{% block heading %}Пользователи{% endblock %}
+{% block title %}Участники{% endblock %}
+{% block heading %}Участники{% endblock %}
 {% block body %}
-<p class="lead">Участники и их меры. Поиск по нику или ID.</p>
-<form method="get" class="form form-row" style="margin-bottom:16px;grid-template-columns:1fr auto;max-width:560px">
-  <label>Поиск<input class="input" name="q" value="{{ q }}" placeholder="ник или discord id"></label>
-  <button type="submit">Найти</button>
-</form>
-<div class="panel">
+<p class="lead">Живой поиск по нику. Можно выдать меру прямо отсюда.</p>
+
+<div class="search-live panel rise">
+  <label class="sr-only" for="uq">Поиск</label>
+  <input id="uq" class="input input-lg" type="search" value="{{ q }}" placeholder="Начни печатать ник…" autocomplete="off" autofocus>
+  <div id="usuggest" class="suggest" hidden></div>
+</div>
+
+<div class="panel rise" style="margin-top:14px">
   <h2>Список{% if q %} · «{{ q }}»{% endif %}</h2>
   {% if not rows %}
-  <div class="empty">Никого не нашли — карта имён появится после активности на сервере</div>
+  <div class="empty">Никого — введи ник выше или дождись активности</div>
   {% else %}
   <table>
     <thead>
@@ -22,7 +25,6 @@
         <th>Мут</th>
         <th>Кик</th>
         <th>Бан</th>
-        <th>Последнее</th>
         <th></th>
       </tr>
     </thead>
@@ -36,12 +38,114 @@
         <td>{{ r.mutes }}</td>
         <td>{{ r.kicks }}</td>
         <td>{{ r.bans }}</td>
-        <td class="dim">{{ r.last }}</td>
-        <td><a href="{{ url_for('member', q=r.user_id) }}">история</a></td>
+        <td class="row-actions">
+          <a href="{{ url_for('member', q=r.user_id) }}">история</a>
+          {% if user_role in ['mod','curator','admin','owner'] %}
+          <button type="button" class="ghost punish-btn" data-uid="{{ r.user_id }}" data-name="{{ r.name }}">наказать</button>
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
   {% endif %}
 </div>
+
+<dialog id="punishDlg" class="dlg">
+  <form method="dialog" id="punishForm" class="dlg-card">
+    <h3>Наказать <span id="punishName"></span></h3>
+    <input type="hidden" id="punishUid">
+    <label>Мера
+      <select id="punishAction">
+        <option value="warn">Варн</option>
+        <option value="mute">Мут</option>
+        <option value="kick">Кик</option>
+        <option value="ban">Бан</option>
+      </select>
+    </label>
+    <label>Минуты (для мута)
+      <input id="punishMin" type="number" min="1" max="40320" value="10">
+    </label>
+    <label>Причина
+      <input id="punishReason" required placeholder="причина">
+    </label>
+    <div class="dlg-actions">
+      <button value="cancel" class="ghost">Отмена</button>
+      <button id="punishGo" value="default" class="primary-btn">Выдать</button>
+    </div>
+    <p id="punishMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  const input = document.getElementById('uq');
+  const box = document.getElementById('usuggest');
+  let t = null;
+  function render(items) {
+    if (!items.length) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = items.map(it =>
+      `<button type="button" class="suggest-item" data-id="${it.id}" data-name="${it.name}">
+        <img src="${it.avatar || ''}" alt="" width="28" height="28">
+        <span><b>${it.name}</b><small>@${it.handle || ''}</small></span>
+      </button>`
+    ).join('');
+  }
+  input.addEventListener('input', () => {
+    clearTimeout(t);
+    const q = input.value.trim();
+    t = setTimeout(async () => {
+      if (q.length < 1) { render([]); return; }
+      const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
+      const j = await r.json();
+      render(j.items || []);
+    }, 120);
+  });
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('.suggest-item');
+    if (!b) return;
+    location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      location.href = '/users?q=' + encodeURIComponent(input.value.trim());
+    }
+  });
+
+  const dlg = document.getElementById('punishDlg');
+  document.querySelectorAll('.punish-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('punishUid').value = btn.dataset.uid;
+      document.getElementById('punishName').textContent = btn.dataset.name;
+      document.getElementById('punishMsg').textContent = '';
+      dlg.showModal();
+    });
+  });
+  document.getElementById('punishGo').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('punishMsg');
+    msg.textContent = 'Отправляю…';
+    const body = {
+      user_id: document.getElementById('punishUid').value,
+      action: document.getElementById('punishAction').value,
+      minutes: document.getElementById('punishMin').value,
+      reason: document.getElementById('punishReason').value,
+    };
+    const r = await fetch('/api/punish', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (j.ok) {
+      msg.textContent = 'Готово: ' + j.action;
+      setTimeout(() => location.reload(), 700);
+    } else {
+      msg.textContent = j.error || 'Ошибка';
+    }
+  });
+})();
+</script>
 {% endblock %}

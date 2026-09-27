@@ -102,18 +102,47 @@
           {% endif %}
 
         {% elif mode == 'password' %}
-          <form class="login-form" method="post" autocomplete="on">
+          <form class="login-form" method="post" autocomplete="on" id="passForm">
             <input type="hidden" name="mode" value="password">
             <input type="hidden" name="next" value="{{ next }}">
             {% if hint %}<div class="login-flash" role="alert">{{ hint }}</div>{% endif %}
             <label>Логин
-              <input name="username" autocomplete="username" required autofocus placeholder="owner">
+              <input id="passUser" name="username" autocomplete="username" required autofocus placeholder="начни печатать…">
             </label>
+            <div id="accSuggest" class="suggest suggest-dark" hidden></div>
             <label>Пароль
               <input type="password" name="password" autocomplete="current-password" required>
             </label>
             <button class="login-submit" type="submit">Войти</button>
           </form>
+          <script>
+          (function(){
+            const inp=document.getElementById('passUser');
+            const box=document.getElementById('accSuggest');
+            let t=null;
+            inp.addEventListener('input',()=>{
+              clearTimeout(t);
+              const q=inp.value.trim();
+              t=setTimeout(async()=>{
+                if(q.length<1){box.hidden=true;box.innerHTML='';return;}
+                const r=await fetch('/api/login/accounts?q='+encodeURIComponent(q));
+                const j=await r.json();
+                const items=j.items||[];
+                if(!items.length){box.hidden=true;return;}
+                box.hidden=false;
+                box.innerHTML=items.map(it=>`<button type="button" class="suggest-item" data-u="${it.username}">
+                  ${it.avatar?`<img src="${it.avatar}" width="28" height="28" alt="">`:''}
+                  <span><b>${it.label||it.username}</b><small>${it.hint||''}</small></span>
+                </button>`).join('');
+              },100);
+            });
+            box.addEventListener('click',e=>{
+              const b=e.target.closest('.suggest-item'); if(!b) return;
+              inp.value=b.dataset.u; box.hidden=true;
+              document.querySelector('#passForm input[name=password]')?.focus();
+            });
+          })();
+          </script>
 
         {% elif mode == 'register' %}
           <form class="login-form" method="post" autocomplete="off">

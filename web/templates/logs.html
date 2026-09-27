@@ -2,8 +2,64 @@
 {% block title %}Журнал{% endblock %}
 {% block heading %}Журнал{% endblock %}
 {% block body %}
-<div class="panel">
-  <h2>Наказания</h2>
+<p class="lead">Чёткие логи: наказания, входы/выходы и staff-действия отдельно.</p>
+
+<section class="split-3">
+  <article class="stat-card">
+    <div class="stat-k">Наказания</div>
+    <div class="stat-v">{{ rows|length }}</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-k">Staff лента</div>
+    <div class="stat-v">{{ feed|length }}</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-k">Входы / выходы</div>
+    <div class="stat-v">{{ joins|length }}</div>
+  </article>
+</section>
+
+<section class="panel rise" style="margin-top:16px">
+  <h2>Staff · действия</h2>
+  {% if not feed %}<div class="empty">Пока тихо</div>
+  {% else %}
+  <div class="feed">
+    {% for f in feed %}
+    <div class="feed-row feed-{{ f.kind }}">
+      <div class="feed-act">{{ f.action }}</div>
+      <div class="feed-body">
+        <strong>{{ f.who }}</strong>
+        <span class="dim">→ {{ f.target }}</span>
+        {% if f.detail %}<div class="dim">{{ f.detail }}</div>{% endif %}
+      </div>
+      <div class="feed-when">{{ f.when }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel rise" style="margin-top:16px">
+  <h2>Входы / выходы</h2>
+  {% if not joins %}<div class="empty">Нет свежих join/leave</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Событие</th><th>Кто</th><th>Время</th></tr></thead>
+    <tbody>
+    {% for e in joins %}
+      <tr>
+        <td>{{ e.action }}</td>
+        <td>{{ e.user_name or e.user_id }}</td>
+        <td class="dim">{{ e.when }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+
+<section class="panel rise" style="margin-top:16px">
+  <h2>Все наказания</h2>
   {% if not rows %}<div class="empty">Пока пусто</div>
   {% else %}
   <table>
@@ -11,7 +67,7 @@
     <tbody>
     {% for r in rows %}
       <tr>
-        <td>{{ r.action }}</td>
+        <td><span class="pill pill-{{ r.kind }}">{{ r.action }}</span></td>
         <td>{{ r.user_name }} <span class="dim">{{ r.user_id }}</span></td>
         <td>{{ r.mod_name }}</td>
         <td class="dim">{{ r.reason }}{% if r.duration %} · {{ r.duration }} мин{% endif %}</td>
@@ -21,5 +77,5 @@
     </tbody>
   </table>
   {% endif %}
-</div>
+</section>
 {% endblock %}

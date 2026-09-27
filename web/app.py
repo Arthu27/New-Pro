@@ -47,8 +47,10 @@ ROLE_LABELS = {
 PAGES_ALL = [
     ('today', '/', 'Сегодня', 'fa-sun'),
     ('logs', '/logs', 'Журнал', 'fa-book-open'),
-    ('users', '/users', 'Пользователи', 'fa-users'),
+    ('staff', '/staff', 'Staff', 'fa-user-shield'),
+    ('users', '/users', 'Участники', 'fa-users'),
     ('member', '/member', 'Участник', 'fa-user'),
+    ('channels', '/channels', 'Каналы', 'fa-table'),
     ('warns', '/warns', 'Варны', 'fa-triangle-exclamation'),
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
@@ -60,18 +62,26 @@ PAGES_ALL = [
     ('access', '/access', 'Доступ', 'fa-key'),
 ]
 PAGES_MOD = [p for p in PAGES_ALL if p[0] in {
-    'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons'}]
+    'today', 'logs', 'staff', 'users', 'member', 'channels',
+    'warns', 'appeals', 'proofs', 'reasons'}]
 PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
     'bot', 'modules', 'commands', 'anticrash', 'access'}]
 
 # Какие ключи страниц видит роль (накопительно по уровню)
+# Admin НЕ видит бот/модули/команды — только owner.
 ROLE_PAGE_KEYS = {
-    'helper': {'today', 'logs', 'users', 'member', 'warns'},
-    'mod': {'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons'},
-    'curator': {'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons'},
+    'helper': {'today', 'logs', 'staff', 'users', 'member', 'warns'},
+    'mod': {
+        'today', 'logs', 'staff', 'users', 'member', 'channels',
+        'warns', 'appeals', 'proofs', 'reasons',
+    },
+    'curator': {
+        'today', 'logs', 'staff', 'users', 'member', 'channels',
+        'warns', 'appeals', 'proofs', 'reasons',
+    },
     'admin': {
-        'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons',
-        'bot', 'modules', 'commands', 'anticrash',
+        'today', 'logs', 'staff', 'users', 'member', 'channels',
+        'warns', 'appeals', 'proofs', 'reasons', 'anticrash',
     },
     'owner': {p[0] for p in PAGES_ALL},
 }
@@ -82,14 +92,14 @@ ROLE_CARDS = [
         'title': 'Helper',
         'tag': '@Helper',
         'blurb': 'Смотрит смены и варны. Без апелляций и настроек сервера.',
-        'pages': ['Сегодня', 'Журнал', 'Пользователи', 'Участник', 'Варны'],
+        'pages': ['Сегодня', 'Журнал', 'Staff', 'Участники', 'Варны'],
     },
     {
         'key': 'mod',
         'title': 'Moderator',
         'tag': '@Moderator',
-        'blurb': 'Полная мод-панель: апелляции, демки, причины.',
-        'pages': ['Всё у Helper', '+ Апелляции', 'Демки', 'Причины'],
+        'blurb': 'Полная мод-панель: апелляции, демки, каналы, причины.',
+        'pages': ['Всё у Helper', '+ Каналы', 'Апелляции', 'Демки', 'Причины'],
     },
     {
         'key': 'curator',
@@ -102,15 +112,15 @@ ROLE_CARDS = [
         'key': 'admin',
         'title': 'Admin',
         'tag': '@Admin',
-        'blurb': 'Мод-панель + бот, модули, команды и антикраш.',
-        'pages': ['Мод-панель', 'Бот', 'Модули', 'Команды', 'Антикраш'],
+        'blurb': 'Мод-панель + антикраш. Без бота/модулей/команд.',
+        'pages': ['Мод-панель', 'Антикраш'],
     },
     {
         'key': 'owner',
         'title': 'Owner',
         'tag': '@Owner',
-        'blurb': 'Полный доступ, включая страницу Доступ.',
-        'pages': ['Всё', '+ Доступ'],
+        'blurb': 'Полный доступ, включая бота и Доступ.',
+        'pages': ['Всё', '+ Бот', 'Модули', 'Команды', 'Доступ'],
     },
 ]
 
@@ -569,7 +579,8 @@ def inject_nav():
         'is_owner': role == 'owner',
         'auth_via': session.get('auth_via') or '',
         'mod_nav_keys': {
-            'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons'},
+            'today', 'logs', 'staff', 'users', 'member', 'channels',
+            'warns', 'appeals', 'proofs', 'reasons'},
         'owner_nav_keys': {'bot', 'modules', 'commands', 'anticrash', 'access'},
     }
 
@@ -1224,6 +1235,119 @@ def logout():
     return redirect(url_for('welcome'))
 
 
+
+
+def _run_on_bot(coro, timeout=25):
+    bot = bot_instance
+    if not bot or not getattr(bot, 'loop', None):
+        raise RuntimeError('Бот офлайн')
+    return asyncio.run_coroutine_threadsafe(coro, bot.loop).result(timeout=timeout)
+
+
+def _audit_events(gid: str, limit=300):
+    raw = _read_json(DATA / 'audit_log.json', {})
+    items = []
+    if isinstance(raw, dict):
+        items = list(raw.get(str(gid)) or [])
+    elif isinstance(raw, list):
+        items = raw
+    return list(reversed(items[-limit:]))
+
+
+def _staff_feed(gid: str, limit=80):
+    """Лента staff: наказания + входы/выходы + mute/mod из audit."""
+    feed = []
+    for r in _collect_cases(gid)[:120]:
+        feed.append({
+            'kind': 'punish',
+            'action': r.get('action') or r.get('kind'),
+            'who': r.get('mod_name') or r.get('mod_id') or '—',
+            'target': r.get('user_name') or r.get('user_id') or '—',
+            'detail': r.get('reason') or '',
+            'when': _fmt(r.get('timestamp')),
+            'ts': r.get('timestamp') or '',
+        })
+    for ev in _audit_events(gid, 400):
+        act = str(ev.get('action') or '')
+        cat = str(ev.get('category') or '')
+        interesting = (
+            cat in ('member', 'mod', 'mute')
+            or act in ('Участник вошёл', 'Участник вышел')
+            or 'бан' in act.lower() or 'кик' in act.lower()
+            or 'мут' in act.lower() or 'варн' in act.lower()
+            or bool(ev.get('mod_name') or ev.get('mod_id'))
+        )
+        if not interesting:
+            continue
+        feed.append({
+            'kind': 'audit',
+            'action': act,
+            'who': ev.get('mod_name') or ev.get('user_name') or '—',
+            'target': ev.get('target_name') or ev.get('user_name') or ev.get('user_id') or '—',
+            'detail': ev.get('reason') or ev.get('channel_name') or '',
+            'when': _fmt(ev.get('timestamp')),
+            'ts': ev.get('timestamp') or '',
+        })
+    feed.sort(key=lambda x: str(x.get('ts') or ''), reverse=True)
+    return feed[:limit]
+
+
+def _fuzzy_match(q: str, *parts) -> bool:
+    ql = (q or '').strip().lower()
+    if not ql:
+        return True
+    blob = ' '.join(str(p or '') for p in parts).lower()
+    if ql in blob:
+        return True
+    tokens = [t for t in ql.split() if t]
+    if tokens and all(t in blob for t in tokens):
+        return True
+    # prefix / similar: каждое слово начинается так же
+    words = blob.replace('@', ' ').split()
+    for tok in tokens or [ql]:
+        if not any(w.startswith(tok) or tok in w for w in words):
+            return False
+    return True
+
+
+def _search_accounts(q: str, limit=12):
+    """Аккаунты для логина по паролю: access users + staff."""
+    out = []
+    ql = (q or '').strip()
+    for u in _load_access()['users']:
+        name = str(u.get('username') or '')
+        note = str(u.get('note') or '')
+        if not _fuzzy_match(ql, name, note):
+            continue
+        out.append({
+            'username': name,
+            'label': name,
+            'hint': note or (u.get('role') or 'mod'),
+            'kind': 'account',
+        })
+    people, _ = _list_login_people(ql)
+    for p in people:
+        out.append({
+            'username': p.get('handle') or p.get('name'),
+            'label': p.get('name'),
+            'hint': f"@{p.get('handle') or ''} · {p.get('role_label')}",
+            'kind': 'staff',
+            'avatar': p.get('avatar'),
+        })
+    # unique by username
+    seen = set()
+    uniq = []
+    for row in out:
+        key = str(row.get('username') or '').lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        uniq.append(row)
+        if len(uniq) >= limit:
+            break
+    return uniq
+
+
 # ── routes: mod pages ──────────────────────────────────────────────────
 
 @app.route('/')
@@ -1254,7 +1378,159 @@ def logs():
     rows = _collect_cases(gid)[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
-    return render_template('logs.html', rows=rows)
+    feed = _staff_feed(gid, 60)
+    joins = [e for e in _audit_events(gid, 200)
+             if e.get('action') in ('Участник вошёл', 'Участник вышел')][:40]
+    for e in joins:
+        e['when'] = _fmt(e.get('timestamp'))
+    return render_template('logs.html', rows=rows, feed=feed, joins=joins)
+
+
+@app.route('/staff')
+@login_required
+@role_required('helper')
+def staff_page():
+    gid = _main_guild()
+    feed = _staff_feed(gid, 100)
+    people, err = _list_login_people()
+    return render_template('staff.html', feed=feed, people=people, error=err)
+
+
+@app.route('/channels')
+@login_required
+@role_required('mod')
+def channels_page():
+    """Таблица способностей каналов (чтение)."""
+    gid = _main_guild()
+    rows = []
+    bot = bot_instance
+    try:
+        guild = bot.get_guild(int(gid)) if bot and gid else None
+    except Exception:
+        guild = None
+    if guild is not None:
+        everyone = guild.default_role
+        for ch in sorted(guild.channels, key=lambda c: (getattr(c, 'position', 0), str(c.name))):
+            kind = type(ch).__name__.replace('Channel', '').replace('Category', 'Cat')
+            perms = None
+            try:
+                perms = ch.permissions_for(everyone) if everyone else None
+            except Exception:
+                perms = None
+            def flag(name):
+                return bool(getattr(perms, name, False)) if perms else False
+            rows.append({
+                'id': str(ch.id),
+                'name': getattr(ch, 'name', '?'),
+                'kind': kind,
+                'view': flag('view_channel'),
+                'send': flag('send_messages'),
+                'speak': flag('speak'),
+                'connect': flag('connect'),
+                'manage': flag('manage_channels'),
+                'stream': flag('stream'),
+            })
+    return render_template('channels.html', rows=rows)
+
+
+@app.get('/api/login/accounts')
+def api_login_accounts():
+    q = (request.args.get('q') or '').strip()
+    return jsonify({'ok': True, 'items': _search_accounts(q, 14)})
+
+
+@app.get('/api/users/search')
+@login_required
+@role_required('helper')
+def api_users_search():
+    q = (request.args.get('q') or '').strip()
+    people = []
+    bot = bot_instance
+    gid = _main_guild()
+    try:
+        guild = bot.get_guild(int(gid)) if bot and gid else None
+    except Exception:
+        guild = None
+    if guild is not None:
+        for m in list(guild.members)[:2000]:
+            if getattr(m, 'bot', False):
+                continue
+            name = getattr(m, 'display_name', None) or getattr(m, 'name', '') or str(m.id)
+            handle = getattr(m, 'name', '') or ''
+            if not _fuzzy_match(q, name, handle, m.id):
+                continue
+            people.append({
+                'id': str(m.id),
+                'name': name,
+                'handle': handle,
+                'avatar': _member_avatar_url(m),
+            })
+            if len(people) >= 20:
+                break
+    return jsonify({'ok': True, 'items': people})
+
+
+@app.post('/api/punish')
+@login_required
+@role_required('mod')
+def api_punish():
+    """Выдать меру из панели (через бота)."""
+    data = request.get_json(silent=True) or request.form
+    action = str(data.get('action') or '').strip().lower()
+    uid = str(data.get('user_id') or '').strip()
+    reason = str(data.get('reason') or 'Панель').strip()[:400]
+    try:
+        minutes = int(data.get('minutes') or 10)
+    except Exception:
+        minutes = 10
+    if action not in ('warn', 'mute', 'kick', 'ban'):
+        return jsonify({'ok': False, 'error': 'action: warn|mute|kick|ban'}), 400
+    if not uid.isdigit():
+        return jsonify({'ok': False, 'error': 'user_id'}), 400
+    bot = bot_instance
+    gid = _main_guild()
+    if not bot or not gid:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _do():
+        guild = bot.get_guild(int(gid))
+        if guild is None:
+            raise RuntimeError('guild not found')
+        member = guild.get_member(int(uid))
+        if member is None:
+            member = await guild.fetch_member(int(uid))
+        mod_name = session.get('discord_display') or session.get('username') or 'panel'
+        mod_id = session.get('discord_id') or '0'
+        cog = bot.get_cog('moderation') or bot.get_cog('Moderation')
+        if action == 'warn':
+            warns = bot.get_cog('warnings')
+            if warns is None:
+                raise RuntimeError('warnings cog offline')
+            await warns.add_warning(member, guild.me, reason)
+            act = 'warn'
+        elif action == 'mute':
+            from datetime import timedelta
+            until = datetime.now(timezone.utc) + timedelta(minutes=max(1, minutes))
+            await member.timeout(until, reason=reason)
+            act = 'timeout'
+        elif action == 'kick':
+            await member.kick(reason=reason)
+            act = 'kick'
+        elif action == 'ban':
+            await member.ban(reason=reason, delete_message_days=0)
+            act = 'ban'
+        else:
+            act = action
+        if cog and hasattr(cog, 'save_case'):
+            cog.save_case(guild.id, act, member.id, mod_id, reason, mod_name=mod_name,
+                          duration=minutes if action == 'mute' else None)
+        return {'action': act, 'user': str(member), 'id': str(member.id)}
+
+    try:
+        result = _run_on_bot(_do())
+        return jsonify({'ok': True, **result})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)[:200]}), 500
 
 
 @app.route('/users')
@@ -1464,7 +1740,7 @@ def reasons():
 
 @app.route('/bot')
 @login_required
-@role_required('admin')
+@role_required('owner')
 def bot_page():
     info = {
         'online': False,
@@ -1501,7 +1777,7 @@ def bot_page():
 
 @app.route('/modules')
 @login_required
-@role_required('admin')
+@role_required('owner')
 def modules():
     rows = []
     bot = bot_instance
@@ -1523,7 +1799,7 @@ def modules():
 
 @app.route('/commands')
 @login_required
-@role_required('admin')
+@role_required('owner')
 def commands_page():
     rows = []
     bot = bot_instance

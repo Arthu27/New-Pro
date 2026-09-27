@@ -30,6 +30,8 @@
 | Журнал | `/logs` | helper |
 | **Пользователи** | `/users` | helper |
 | Участник | `/member` | helper |
+| Staff | `/staff` | helper |
+| Каналы | `/channels` | mod |
 | Варны | `/warns` | helper |
 | Апелляции | `/appeals` | mod |
 | Демки | `/proofs` | mod |
@@ -39,9 +41,9 @@
 
 | Страница | URL | Мин. роль |
 | --- | --- | --- |
-| Бот | `/bot` | admin |
-| Модули | `/modules` | admin |
-| Команды | `/commands` | admin |
+| Бот | `/bot` | owner |
+| Модули | `/modules` | owner |
+| Команды | `/commands` | owner |
 | **Антикраш сервера** | `/anticrash` | admin |
 | Доступ | `/access` | owner |
 
