@@ -2,49 +2,52 @@
 {% block title %}Доступ{% endblock %}
 {% block heading %}Доступ{% endblock %}
 {% block body %}
-<p class="lead">Кто входит в панель и что видит. Модераторы не получают страницы бота.</p>
+<p class="lead">Discord-вход подтягивает роль с сервера. Пароль — запасной путь для owner и выданных логинов.</p>
 {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
 
-<section class="split">
-  <article class="card-hero owner-card">
-    <div class="card-kicker">Владелец</div>
-    <h2 class="card-title">{{ owner_user }}</h2>
-    <p class="dim">Из `.env` · роль <span class="tag owner">owner</span></p>
-    <ul class="chip-list">
-      {% for name in owner_only %}
-      <li>{{ name }}</li>
-      {% endfor %}
-    </ul>
-    <p class="hint">Эти страницы видишь только ты.</p>
-  </article>
+<section class="panel" style="margin-bottom:16px">
+  <h2>Discord auto-login</h2>
+  <p class="dim" style="margin:0 0 10px">
+    {% if discord_ready %}
+    Настроен · staff заходит кнопкой «Войти через Discord», роль = Helper / Mod / Curator / Admin / Owner.
+    {% else %}
+    Не настроен — добавь <code>DISCORD_CLIENT_ID</code> и <code>DISCORD_CLIENT_SECRET</code> в .env
+    (те же, что у приложения бота в Developer Portal → OAuth2). Redirect:
+    <code>/auth/discord/callback</code>
+    {% endif %}
+  </p>
+</section>
 
-  <article class="card-hero">
-    <div class="card-kicker">Модераторы видят</div>
-    <h2 class="card-title">7 страниц мер</h2>
+<section class="split">
+  {% for card in role_cards %}
+  <article class="card-hero {% if card.key == 'owner' %}owner-card{% endif %}">
+    <div class="card-kicker">{{ card.tag }}</div>
+    <h2 class="card-title">{{ card.title }}</h2>
+    <p class="dim">{{ card.blurb }}</p>
     <ul class="chip-list">
-      {% for name in mod_pages %}
+      {% for name in card.pages %}
       <li>{{ name }}</li>
       {% endfor %}
     </ul>
-    <p class="hint">Без Бота, Модулей, Команд, Антикраша и Доступа.</p>
   </article>
+  {% endfor %}
 </section>
 
 <section class="panel" style="margin-top:18px">
-  <h2>Выдать вход модератору</h2>
+  <h2>Выдать запасной вход (пароль)</h2>
   <form method="post" class="form form-row" style="padding:16px">
     <input type="hidden" name="action" value="add">
     <label>Логин<input class="input" name="username" required autocomplete="off"></label>
     <label>Пароль<input class="input" type="password" name="password" required autocomplete="new-password"></label>
-    <label>Заметка<input class="input" name="note" placeholder="ник в Discord"></label>
+    <label>Заметка<input class="input" name="note" placeholder="@ник в Discord"></label>
     <button type="submit">Выдать · mod</button>
   </form>
 </section>
 
 <section class="panel" style="margin-top:16px">
-  <h2>Кто уже имеет вход</h2>
+  <h2>Парольные аккаунты</h2>
   {% if not users %}
-  <div class="empty">Пока никого — только ты через .env</div>
+  <div class="empty">Пока никого — staff входит через Discord, owner через .env</div>
   {% else %}
   <table>
     <thead><tr><th>Логин</th><th>Роль</th><th>Заметка</th><th></th></tr></thead>
@@ -52,7 +55,7 @@
     {% for u in users %}
       <tr>
         <td>{{ u.username }}</td>
-        <td><span class="tag">mod</span></td>
+        <td><span class="tag">{{ u.role or 'mod' }}</span></td>
         <td class="dim">{{ u.note or '—' }}</td>
         <td>
           <form method="post" style="display:inline">

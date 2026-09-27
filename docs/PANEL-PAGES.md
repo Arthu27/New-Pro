@@ -2,28 +2,48 @@
 
 Дизайн и код — **новые**, не похожи на старую панель.
 
-## Модераторам (mod)
+## Вход
 
-| Страница | URL |
-| --- | --- |
-| Сегодня | `/` |
-| Журнал | `/logs` |
-| **Пользователи** | `/users` |
-| Участник | `/member` |
-| Варны | `/warns` |
-| Апелляции | `/appeals` |
-| Демки | `/proofs` |
-| Причины | `/reasons` |
+1. **Discord (основной)** — `/login` → «Войти через Discord»
+   - Роль берётся с `MAIN_GUILD_ID` по staff-ролям сервера
+   - В шапке: аватар + `@username` + роль
+2. **Пароль** — owner из `.env` или выданный на `/access`
 
-## Только владелец (owner)
+Нужны в `.env`: `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, redirect `/auth/discord/callback`
+(или `ACTIVITY_CLIENT_ID` / `ACTIVITY_CLIENT_SECRET`). `TOKEN` + `MAIN_GUILD_ID` — чтобы считать роли.
 
-| Страница | URL |
-| --- | --- |
-| Бот | `/bot` |
-| Модули | `/modules` |
-| Команды | `/commands` |
-| **Антикраш сервера** | `/anticrash` |
-| Доступ | `/access` |
+## Роли (Discord → панель)
+
+| Роль | Уровень | Страницы |
+| --- | --- | --- |
+| Helper | 1 | Сегодня, Журнал, Пользователи, Участник, Варны |
+| Moderator | 2 | + Апелляции, Демки, Причины |
+| Curator | 3 | как Moderator |
+| Admin | 4 | + Бот, Модули, Команды, Антикраш |
+| Owner | 9 | + Доступ |
+
+## Helper / Mod
+
+| Страница | URL | Мин. роль |
+| --- | --- | --- |
+| Сегодня | `/` | helper |
+| Журнал | `/logs` | helper |
+| **Пользователи** | `/users` | helper |
+| Участник | `/member` | helper |
+| Варны | `/warns` | helper |
+| Апелляции | `/appeals` | mod |
+| Демки | `/proofs` | mod |
+| Причины | `/reasons` | mod |
+
+## Admin / Owner
+
+| Страница | URL | Мин. роль |
+| --- | --- | --- |
+| Бот | `/bot` | admin |
+| Модули | `/modules` | admin |
+| Команды | `/commands` | admin |
+| **Антикраш сервера** | `/anticrash` | admin |
+| Доступ | `/access` | owner |
 
 ### Антикраш сервера (сильный, opt-in)
 
@@ -39,13 +59,14 @@
 
 - Меры (бан/мут) — Discord `/modpanel`  
 - В панели — смотреть и включать защиту  
-- Моды не видят owner-страницы (403)
+- Ниже уровнем не видит страницы выше (403)
 
-## Публичные экраны (новые)
+## Публичные экраны
 
 | Страница | URL |
 | --- | --- |
 | Welcome | `/welcome` |
 | Вход | `/login` |
+| Discord OAuth | `/auth/discord` → `/auth/discord/callback` |
 
 Не залогинен на защищённой странице → `/login`. Выход → `/welcome`.

@@ -202,6 +202,36 @@ button.on {
   background: #e7eee8; color: var(--ink);
 }
 .tag.owner { background: #f8e4d8; color: var(--accent-2); }
+.tag-helper { background: #e7f6ee; color: #1b7f4a; }
+.tag-mod { background: #e7eefc; color: #2f5bd8; }
+.tag-curator { background: #f3e9fc; color: #7a3db8; }
+.tag-admin { background: #fde8e4; color: #b42318; }
+.tag-owner { background: #f8e4d8; color: var(--accent-2); }
+
+.user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.user-pill__ava {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+.user-pill__who {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.15;
+  gap: 1px;
+}
+.user-pill__who strong { font-size: .92rem; }
+.user-pill__at {
+  font-size: .75rem;
+  color: var(--muted);
+  font-weight: 600;
+}
 .tag.off { background: #eceff1; color: var(--muted); }
 .tag.on { background: #dff3e8; color: var(--ok); }
 

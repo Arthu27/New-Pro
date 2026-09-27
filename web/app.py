@@ -2,13 +2,17 @@
 """Минимальная панель модерации (v2). Без старого web/-меню и демо-данных.
 
 Страницы: docs/PANEL-PAGES.md
-Роли: owner > mod. Страницы бота — только owner.
+Роли: owner > admin > curator > mod > helper.
+Вход: Discord OAuth (роли с сервера) или пароль (.env / Доступ).
 """
 from __future__ import annotations
 
 import json
 import os
 import secrets
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -22,9 +26,24 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / 'data'
 ACCESS_FILE = DATA / 'panel_access.json'
 SECRET_FILE = DATA / 'panel_secret.txt'
+DISCORD_API = 'https://discord.com/api/v10'
 
-LEVEL = {'mod': 1, 'owner': 9}
-PAGES_MOD = [
+# helper < mod < curator < admin < owner
+LEVEL = {
+    'helper': 1,
+    'mod': 2,
+    'curator': 3,
+    'admin': 4,
+    'owner': 9,
+}
+ROLE_LABELS = {
+    'helper': 'Helper',
+    'mod': 'Moderator',
+    'curator': 'Curator',
+    'admin': 'Admin',
+    'owner': 'Owner',
+}
+PAGES_ALL = [
     ('today', '/', 'Сегодня', 'fa-sun'),
     ('logs', '/logs', 'Журнал', 'fa-book-open'),
     ('users', '/users', 'Пользователи', 'fa-users'),
@@ -33,13 +52,65 @@ PAGES_MOD = [
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
     ('reasons', '/reasons', 'Причины', 'fa-list-check'),
-]
-PAGES_OWNER = [
     ('bot', '/bot', 'Бот', 'fa-robot'),
     ('modules', '/modules', 'Модули', 'fa-puzzle-piece'),
     ('commands', '/commands', 'Команды', 'fa-terminal'),
     ('anticrash', '/anticrash', 'Антикраш', 'fa-shield-heart'),
     ('access', '/access', 'Доступ', 'fa-key'),
+]
+PAGES_MOD = [p for p in PAGES_ALL if p[0] in {
+    'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons'}]
+PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
+    'bot', 'modules', 'commands', 'anticrash', 'access'}]
+
+# Какие ключи страниц видит роль (накопительно по уровню)
+ROLE_PAGE_KEYS = {
+    'helper': {'today', 'logs', 'users', 'member', 'warns'},
+    'mod': {'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons'},
+    'curator': {'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons'},
+    'admin': {
+        'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons',
+        'bot', 'modules', 'commands', 'anticrash',
+    },
+    'owner': {p[0] for p in PAGES_ALL},
+}
+
+ROLE_CARDS = [
+    {
+        'key': 'helper',
+        'title': 'Helper',
+        'tag': '@Helper',
+        'blurb': 'Смотрит смены и варны. Без апелляций и настроек сервера.',
+        'pages': ['Сегодня', 'Журнал', 'Пользователи', 'Участник', 'Варны'],
+    },
+    {
+        'key': 'mod',
+        'title': 'Moderator',
+        'tag': '@Moderator',
+        'blurb': 'Полная мод-панель: апелляции, демки, причины.',
+        'pages': ['Всё у Helper', '+ Апелляции', 'Демки', 'Причины'],
+    },
+    {
+        'key': 'curator',
+        'title': 'Curator',
+        'tag': '@Curator',
+        'blurb': 'Куратор ветки — та же мод-панель, роль с Discord.',
+        'pages': ['Как Moderator'],
+    },
+    {
+        'key': 'admin',
+        'title': 'Admin',
+        'tag': '@Admin',
+        'blurb': 'Мод-панель + бот, модули, команды и антикраш.',
+        'pages': ['Мод-панель', 'Бот', 'Модули', 'Команды', 'Антикраш'],
+    },
+    {
+        'key': 'owner',
+        'title': 'Owner',
+        'tag': '@Owner',
+        'blurb': 'Полный доступ, включая страницу Доступ.',
+        'pages': ['Всё', '+ Доступ'],
+    },
 ]
 
 bot_instance = None
@@ -117,13 +188,228 @@ def _auth_user(username, password):
         if str(u.get('password', '')) != password:
             return None
         role = str(u.get('role') or 'mod').strip().lower()
-        if role not in LEVEL:
-            role = 'mod'
-        # доп. аккаунты не могут быть owner через файл — только через .env
-        if role == 'owner':
+        if role not in LEVEL or role == 'owner':
             role = 'mod'
         return username, role
     return None
+
+
+def _pages_for_role(role: str):
+    keys = ROLE_PAGE_KEYS.get(role) or ROLE_PAGE_KEYS['helper']
+    return [p for p in PAGES_ALL if p[0] in keys]
+
+
+# ── Discord OAuth ──────────────────────────────────────────────────────
+
+def _http_json(method, url, *, headers=None, form=None, timeout=12):
+    data = None
+    hdrs = dict(headers or {})
+    if form is not None:
+        data = urllib.parse.urlencode(form).encode('utf-8')
+        hdrs.setdefault('Content-Type', 'application/x-www-form-urlencoded')
+    req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode('utf-8')
+            return resp.status, json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read().decode('utf-8')
+            payload = json.loads(body) if body else {}
+        except Exception:
+            payload = {}
+        return e.code, payload
+    except Exception as e:
+        return 0, {'error': str(e)}
+
+
+def _discord_client_creds():
+    cid = (
+        (os.environ.get('DISCORD_CLIENT_ID') or '').strip()
+        or (os.environ.get('ACTIVITY_CLIENT_ID') or '').strip()
+    )
+    secret = (
+        (os.environ.get('DISCORD_CLIENT_SECRET') or '').strip()
+        or (os.environ.get('ACTIVITY_CLIENT_SECRET') or '').strip()
+    )
+    if not cid:
+        token = (os.environ.get('TOKEN') or '').strip()
+        if token:
+            st, data = _http_json(
+                'GET', f'{DISCORD_API}/oauth2/applications/@me',
+                headers={'Authorization': f'Bot {token}'},
+            )
+            if st == 200 and data.get('id'):
+                cid = str(data['id'])
+    return cid, secret
+
+
+def _discord_oauth_ready():
+    cid, secret = _discord_client_creds()
+    return bool(cid and secret)
+
+
+def _panel_public_base():
+    base = (os.environ.get('PANEL_URL') or '').strip().rstrip('/')
+    if base:
+        return base
+    return (request.url_root or '').rstrip('/')
+
+
+def _discord_redirect_uri():
+    custom = (os.environ.get('DISCORD_REDIRECT_URI') or '').strip()
+    if custom:
+        return custom
+    return f'{_panel_public_base()}/auth/discord/callback'
+
+
+def _discord_avatar_url(user: dict) -> str:
+    uid = str(user.get('id') or '')
+    avatar = user.get('avatar')
+    if uid and avatar:
+        ext = 'gif' if str(avatar).startswith('a_') else 'png'
+        return f'https://cdn.discordapp.com/avatars/{uid}/{avatar}.{ext}?size=128'
+    try:
+        idx = (int(uid) >> 22) % 6 if uid else 0
+    except Exception:
+        idx = 0
+    return f'https://cdn.discordapp.com/embed/avatars/{idx}.png'
+
+
+def _discord_handle(user: dict) -> str:
+    uname = (user.get('username') or 'user').strip()
+    disc = user.get('discriminator')
+    if disc and str(disc) not in ('0', '0000'):
+        return f'{uname}#{disc}'
+    return uname
+
+
+def _discord_display(user: dict) -> str:
+    return (user.get('global_name') or user.get('username') or 'Discord').strip()
+
+
+def _staff_role_id_set() -> dict:
+    """Наборы Discord role id → уровень панели."""
+    try:
+        from services.staff_roles import (
+            KNOWN_ADMIN_ROLE_ID, KNOWN_CURATOR_BY_KIND, KNOWN_CURATOR_ROLE_ID,
+            KNOWN_HELPER_ROLE_ID, KNOWN_MASTER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID,
+            KNOWN_GRANT_BY_KIND,
+        )
+    except Exception:
+        KNOWN_ADMIN_ROLE_ID = 1189999426631122964
+        KNOWN_CURATOR_BY_KIND = {}
+        KNOWN_CURATOR_ROLE_ID = 807030012301541377
+        KNOWN_HELPER_ROLE_ID = 948969471916249119
+        KNOWN_MASTER_ROLE_ID = 1552637932907667466
+        KNOWN_MODERATOR_ROLE_ID = 803553848396349510
+        KNOWN_GRANT_BY_KIND = {}
+
+    def _env_rid(*names):
+        out = set()
+        for n in names:
+            try:
+                from config import Config
+                v = int(getattr(Config, n, 0) or 0)
+            except Exception:
+                v = int(os.environ.get(n) or 0)
+            if v:
+                out.add(v)
+        return out
+
+    admin = {int(KNOWN_ADMIN_ROLE_ID)} | _env_rid()
+    curator = {int(KNOWN_CURATOR_ROLE_ID)} | {
+        int(v) for v in (KNOWN_CURATOR_BY_KIND or {}).values() if v
+    } | _env_rid(
+        'STAFF_CURATOR_ROLE_ID', 'STAFF_HELPER_CURATOR_ROLE_ID',
+        'STAFF_MODERATOR_CURATOR_ROLE_ID', 'STAFF_EVENT_CURATOR_ROLE_ID',
+        'STAFF_BROADCASTER_CURATOR_ROLE_ID',
+    )
+    mod = {int(KNOWN_MODERATOR_ROLE_ID), int(KNOWN_MASTER_ROLE_ID)} | _env_rid(
+        'STAFF_MODERATOR_ROLE_ID',
+    )
+    # event/broadcaster → как mod для панели
+    for k, rid in (KNOWN_GRANT_BY_KIND or {}).items():
+        if k in ('event', 'broadcaster', 'moderator') and rid:
+            mod.add(int(rid))
+    helper = {int(KNOWN_HELPER_ROLE_ID)} | _env_rid('STAFF_HELPER_ROLE_ID')
+    for k, rid in (KNOWN_GRANT_BY_KIND or {}).items():
+        if k == 'helper' and rid:
+            helper.add(int(rid))
+    return {'admin': admin, 'curator': curator, 'mod': mod, 'helper': helper}
+
+
+def resolve_discord_panel_role(discord_user_id, role_ids) -> str | None:
+    """Высшая роль панели по Discord user id + role ids участника. None = нет доступа."""
+    try:
+        uid = int(discord_user_id)
+    except Exception:
+        return None
+    try:
+        from config import Config
+        if uid in Config.all_owner_ids():
+            return 'owner'
+    except Exception:
+        pass
+    try:
+        ids = {int(r) for r in (role_ids or []) if r is not None}
+    except Exception:
+        ids = set()
+    bags = _staff_role_id_set()
+    if ids & bags['admin']:
+        return 'admin'
+    if ids & bags['curator']:
+        return 'curator'
+    if ids & bags['mod']:
+        return 'mod'
+    if ids & bags['helper']:
+        return 'helper'
+    return None
+
+
+def _fetch_guild_member_roles(discord_user_id: str):
+    """Роли участника MAIN_GUILD через Bot token. (roles, error_text)."""
+    token = (os.environ.get('TOKEN') or '').strip()
+    if not token:
+        return None, 'Нет TOKEN бота в .env'
+    try:
+        from config import Config
+        gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+    except Exception:
+        gid = int(os.environ.get('MAIN_GUILD_ID') or 0)
+    if not gid:
+        return None, 'Задайте MAIN_GUILD_ID в .env'
+    st, data = _http_json(
+        'GET',
+        f'{DISCORD_API}/guilds/{gid}/members/{discord_user_id}',
+        headers={'Authorization': f'Bot {token}'},
+    )
+    if st == 404:
+        return None, 'Тебя нет на основном сервере бота'
+    if st != 200:
+        return None, f'Discord member API: {st}'
+    roles = data.get('roles') or []
+    return [str(r) for r in roles], ''
+
+
+def _start_session(*, username, role, discord_user=None):
+    session.clear()
+    session['logged_in'] = True
+    session['username'] = username
+    session['role'] = role
+    session['role_label'] = ROLE_LABELS.get(role, role)
+    if discord_user:
+        session['discord_id'] = str(discord_user.get('id') or '')
+        session['discord_handle'] = _discord_handle(discord_user)
+        session['discord_display'] = _discord_display(discord_user)
+        session['discord_avatar'] = _discord_avatar_url(discord_user)
+        session['auth_via'] = 'discord'
+    else:
+        session['discord_id'] = ''
+        session['discord_handle'] = ''
+        session['discord_display'] = username
+        session['discord_avatar'] = ''
+        session['auth_via'] = 'password'
 
 
 # ── auth helpers ───────────────────────────────────────────────────────
@@ -145,7 +431,7 @@ def role_required(min_role):
         def wrapped(*a, **kw):
             if not session.get('logged_in'):
                 return redirect(url_for('login', next=request.path))
-            have = LEVEL.get(session.get('role') or 'mod', 0)
+            have = LEVEL.get(session.get('role') or 'helper', 0)
             if have < need:
                 abort(403)
             return f(*a, **kw)
@@ -156,14 +442,20 @@ def role_required(min_role):
 @app.context_processor
 def inject_nav():
     role = session.get('role') or ''
-    pages = list(PAGES_MOD)
-    if role == 'owner':
-        pages = pages + list(PAGES_OWNER)
+    pages = _pages_for_role(role) if role else []
+    handle = session.get('discord_handle') or ''
     return {
         'nav_pages': pages,
-        'user_name': session.get('username') or '',
+        'user_name': session.get('discord_display') or session.get('username') or '',
+        'user_handle': f'@{handle}' if handle else '',
+        'user_avatar': session.get('discord_avatar') or '',
         'user_role': role,
+        'user_role_label': session.get('role_label') or ROLE_LABELS.get(role, role),
         'is_owner': role == 'owner',
+        'auth_via': session.get('auth_via') or '',
+        'mod_nav_keys': {
+            'today', 'logs', 'users', 'member', 'warns', 'appeals', 'proofs', 'reasons'},
+        'owner_nav_keys': {'bot', 'modules', 'commands', 'anticrash', 'access'},
     }
 
 
@@ -415,28 +707,115 @@ def welcome():
     return render_template('welcome.html')
 
 
+def _safe_next(raw: str | None) -> str:
+    nxt = raw or url_for('today')
+    if not isinstance(nxt, str) or not nxt.startswith('/'):
+        return url_for('today')
+    return nxt
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    err = ''
+    err = (request.args.get('error') or '').strip()
     if request.method == 'POST':
         username = request.form.get('username', '')
         password = request.form.get('password', '')
         got = _auth_user(username, password)
         if got:
-            session.clear()
-            session['logged_in'] = True
-            session['username'] = got[0]
-            session['role'] = got[1]
-            nxt = request.args.get('next') or url_for('today')
-            if not nxt.startswith('/'):
-                nxt = url_for('today')
-            return redirect(nxt)
+            _start_session(username=got[0], role=got[1])
+            return redirect(_safe_next(request.args.get('next') or request.form.get('next')))
         err = 'Неверный логин или пароль'
     _, env_pw = _env_owner_creds()
     hint = '' if env_pw else 'Задайте PANEL_PASSWORD в .env'
-    return render_template('login.html', error=err, hint=hint)
+    discord_ready = _discord_oauth_ready()
+    return render_template(
+        'login.html',
+        error=err,
+        hint=hint,
+        discord_ready=discord_ready,
+        role_cards=ROLE_CARDS,
+        next=_safe_next(request.args.get('next')),
+    )
+
+
+@app.route('/auth/discord')
+def auth_discord():
+    """Быстрый вход через Discord → роль с сервера (Helper/Mod/Curator/Admin/Owner)."""
+    if session.get('logged_in'):
+        return redirect(url_for('today'))
+    cid, secret = _discord_client_creds()
+    if not cid or not secret:
+        return redirect(url_for(
+            'login',
+            error='Discord-вход не настроен: задай DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET в .env',
+        ))
+    state = secrets.token_urlsafe(24)
+    session['oauth_state'] = state
+    session['oauth_next'] = _safe_next(request.args.get('next'))
+    params = {
+        'client_id': cid,
+        'response_type': 'code',
+        'scope': 'identify',
+        'redirect_uri': _discord_redirect_uri(),
+        'state': state,
+    }
+    url = 'https://discord.com/api/oauth2/authorize?' + urllib.parse.urlencode(params)
+    return redirect(url)
+
+
+@app.route('/auth/discord/callback')
+def auth_discord_callback():
+    err = (request.args.get('error_description') or request.args.get('error') or '').strip()
+    if err:
+        return redirect(url_for('login', error=f'Discord: {err}'))
+    state = request.args.get('state') or ''
+    if not state or state != session.get('oauth_state'):
+        return redirect(url_for('login', error='Сессия входа устарела — попробуй ещё раз'))
+    code = request.args.get('code') or ''
+    if not code:
+        return redirect(url_for('login', error='Discord не вернул код'))
+    cid, secret = _discord_client_creds()
+    st, token_data = _http_json(
+        'POST',
+        'https://discord.com/api/oauth2/token',
+        form={
+            'client_id': cid,
+            'client_secret': secret,
+            'grant_type': 'authorization_code',
+            'code': code,
+            'redirect_uri': _discord_redirect_uri(),
+        },
+    )
+    if st != 200 or not token_data.get('access_token'):
+        msg = token_data.get('error_description') or token_data.get('error') or f'HTTP {st}'
+        return redirect(url_for('login', error=f'Токен Discord: {msg}'))
+    st, user = _http_json(
+        'GET',
+        f'{DISCORD_API}/users/@me',
+        headers={'Authorization': f"Bearer {token_data['access_token']}"},
+    )
+    if st != 200 or not user.get('id'):
+        return redirect(url_for('login', error='Не удалось получить профиль Discord'))
+    roles, role_err = _fetch_guild_member_roles(str(user['id']))
+    if role_err:
+        return redirect(url_for('login', error=role_err))
+    panel_role = resolve_discord_panel_role(user['id'], roles)
+    if not panel_role:
+        handle = _discord_handle(user)
+        return redirect(url_for(
+            'login',
+            error=f'@{handle}: нет staff-роли на сервере (Helper / Mod / Curator / Admin)',
+        ))
+    nxt = session.pop('oauth_next', None) or url_for('today')
+    session.pop('oauth_state', None)
+    _start_session(
+        username=_discord_display(user),
+        role=panel_role,
+        discord_user=user,
+    )
+    return redirect(_safe_next(nxt))
 
 
 @app.route('/logout')
@@ -449,7 +828,7 @@ def logout():
 
 @app.route('/')
 @login_required
-@role_required('mod')
+@role_required('helper')
 def today():
     gid = _main_guild()
     rows = _collect_cases(gid)
@@ -469,7 +848,7 @@ def today():
 
 @app.route('/logs')
 @login_required
-@role_required('mod')
+@role_required('helper')
 def logs():
     gid = _main_guild()
     rows = _collect_cases(gid)[:200]
@@ -480,7 +859,7 @@ def logs():
 
 @app.route('/users')
 @login_required
-@role_required('mod')
+@role_required('helper')
 def users_page():
     """Участники сервера + счётчики мер."""
     gid = _main_guild()
@@ -542,7 +921,7 @@ def users_page():
 
 @app.route('/member')
 @login_required
-@role_required('mod')
+@role_required('helper')
 def member():
     q = (request.args.get('q') or '').strip()
     rows = []
@@ -563,7 +942,7 @@ def member():
 
 @app.route('/warns')
 @login_required
-@role_required('mod')
+@role_required('helper')
 def warns():
     gid = _main_guild()
     rows = [r for r in _collect_cases(gid) if r['kind'] == 'warn'][:200]
@@ -612,7 +991,7 @@ def reasons():
 
 @app.route('/bot')
 @login_required
-@role_required('owner')
+@role_required('admin')
 def bot_page():
     info = {
         'online': False,
@@ -649,7 +1028,7 @@ def bot_page():
 
 @app.route('/modules')
 @login_required
-@role_required('owner')
+@role_required('admin')
 def modules():
     rows = []
     bot = bot_instance
@@ -671,7 +1050,7 @@ def modules():
 
 @app.route('/commands')
 @login_required
-@role_required('owner')
+@role_required('admin')
 def commands_page():
     rows = []
     bot = bot_instance
@@ -696,7 +1075,7 @@ def _anticrash_handler():
 
 @app.route('/anticrash', methods=['GET', 'POST'])
 @login_required
-@role_required('owner')
+@role_required('admin')
 def anticrash_page():
     """Антикраш сервера: щит, антирейд, security, watchdog. Всё opt-in."""
     from web import protection as P
@@ -844,22 +1223,22 @@ def access_page():
             flash('Доступ снят', 'ok')
             return redirect(url_for('access_page'))
     env_u, _ = _env_owner_creds()
-    mod_pages = [p[2] for p in PAGES_MOD]
-    owner_only = [p[2] for p in PAGES_OWNER]
     return render_template(
         'access.html',
         users=data['users'],
         owner_user=env_u,
         error=err,
-        mod_pages=mod_pages,
-        owner_only=owner_only,
+        role_cards=ROLE_CARDS,
+        discord_ready=_discord_oauth_ready(),
     )
 
 
 @app.errorhandler(403)
 def forbidden(_e):
-    return render_template('error.html', code=403,
-                           text='Недостаточно прав. Страницы бота — только владельцу.'), 403
+    return render_template(
+        'error.html', code=403,
+        text='Недостаточно прав для этой страницы.',
+    ), 403
 
 
 @app.get('/health')

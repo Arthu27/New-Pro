@@ -17,14 +17,18 @@
     <nav class="nav">
       <div class="group">Модерация</div>
       {% for key, href, label, icon in nav_pages %}
-        {% if key in ['today','logs','users','member','warns','appeals','proofs','reasons'] %}
+        {% if key in mod_nav_keys %}
         <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>
         {% endif %}
       {% endfor %}
-      {% if is_owner %}
-      <div class="group">Сервер · только ты</div>
+      {% set ns = namespace(server=false) %}
       {% for key, href, label, icon in nav_pages %}
-        {% if key in ['bot','modules','commands','anticrash','access'] %}
+        {% if key in owner_nav_keys %}{% set ns.server = true %}{% endif %}
+      {% endfor %}
+      {% if ns.server %}
+      <div class="group">Сервер</div>
+      {% for key, href, label, icon in nav_pages %}
+        {% if key in owner_nav_keys %}
         <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>
         {% endif %}
       {% endfor %}
@@ -34,8 +38,17 @@
   <main class="main">
     <div class="top">
       <h1>{% block heading %}{% endblock %}</h1>
-      <div class="meta">{{ user_name }} · <span class="tag {% if is_owner %}owner{% endif %}">{{ user_role }}</span>
-        · <a href="{{ url_for('logout') }}">выйти</a></div>
+      <div class="meta user-pill">
+        {% if user_avatar %}
+        <img class="user-pill__ava" src="{{ user_avatar }}" alt="" width="28" height="28">
+        {% endif %}
+        <span class="user-pill__who">
+          <strong>{{ user_name }}</strong>
+          {% if user_handle %}<span class="user-pill__at">{{ user_handle }}</span>{% endif %}
+        </span>
+        <span class="tag tag-{{ user_role }} {% if is_owner %}owner{% endif %}">{{ user_role_label or user_role }}</span>
+        <a href="{{ url_for('logout') }}">выйти</a>
+      </div>
     </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}
