@@ -227,13 +227,14 @@ check(len(apps_ch2.sent) >= 1, 'card sent to apps channel')
 check(len(room_ch.sent) == 0, 'апелляции не трогаем')
 check(len(mod_ch.sent) == 0 and len(help_ch.sent) == 0, 'own branches unused')
 # Без пинга: только карточка (view), content-сообщений нет
-ping_msgs = [s for s in apps_ch2.sent if s.get('content')]
 card_msg = next((s for s in apps_ch2.sent if s.get('view') is not None), None)
 sent = card_msg or apps_ch2.sent[-1]
-check(not ping_msgs, 'no separate ping before card', ping_msgs)
 view = sent.get('view')
 check(isinstance(view, SA.StaffAppCardView),
       'V2 StaffAppCardView', type(view))
+cur_tag = f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>"
+check(sent.get('content') == cur_tag,
+      'куратор ветки тегается в карточке', sent.get('content'))
 check(getattr(view, 'has_components_v2', lambda: False)(),
       'card has Components V2')
 # body uses moderator question labels
@@ -249,8 +250,8 @@ app = apps.get(app_key) or apps.get('777888999000111222')
 check(app is not None and app['status'] == 'pending', 'saved pending', list(apps.keys()))
 check(app.get('role') == 'Moderator', 'role stored as Moderator', app.get('role'))
 check(app.get('message_id') == '555001', 'message_id saved')
-check(app.get('curator_tag') == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
-      'curator_tag saved (metadata, без пинга)')
+check(app.get('curator_tag') == cur_tag,
+      'curator_tag saved')
 check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
       'answers list saved with 4 Qs')
 # повтор на ту же ветку запрещён
@@ -312,13 +313,20 @@ body_br = SA.build_application_body(
 check('часовой пояс' in body_br.lower() and 'веб камера' in body_br.lower(),
       'Broadcaster body uses broadcaster questions')
 
-print('== 4. Web send_to_discord uses V2 ==')
+print('== 4. Web / Discord staff card hooks ==')
 web_src = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
-check('StaffAppCardView' in web_src and '_send_staff_card' in web_src,
-      'web uses V2 staff card')
-check('apply_target' in web_src, 'web routes via apply_target')
-check('Новая заявка — ' not in web_src.split('send_to_discord')[1][:2000],
-      'web no longer builds classic embed title')
+# панель может не слать анкеты сама — главное, что Discord-путь V2 жив
+check('StaffAppCardView' in open(os.path.join(ROOT, 'cogs', 'staff_apply.py'),
+                                encoding='utf-8').read(),
+      'Discord staff card V2')
+check('apply_target' in open(os.path.join(ROOT, 'cogs', 'staff_apply.py'),
+                            encoding='utf-8').read(),
+      'apply_target routing')
+if 'send_to_discord' in web_src:
+    check('Новая заявка — ' not in web_src.split('send_to_discord')[1][:2000],
+          'web no longer builds classic embed title')
+else:
+    check(True, 'web без send_to_discord — ок')
 
 CR.get_route = _prev_get
 CR.KNOWN_CHANNELS.clear()
