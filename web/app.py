@@ -183,6 +183,10 @@ def _auth_static_headers(resp):
         return resp
     if path.startswith('/static/auth-new.css') or path in ('/login', '/welcome'):
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    # Ошибку не запоминать: иначе чужой браузер и Discord часами показывают старый 404.
+    if resp.status_code >= 400:
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        resp.headers['CDN-Cache-Control'] = 'no-store'
     return resp
 
 
@@ -207,13 +211,23 @@ def _profiles_folder() -> str:
         return str(folder)
 
 
+def _public_file(folder: str, name: str, *, mimetype: str | None = None):
+    """Картинка для чужого браузера и Discord: не скачивание и не закрытый ресурс."""
+    kwargs = {'mimetype': mimetype} if mimetype else {}
+    resp = send_from_directory(folder, name, **kwargs)
+    resp.headers.pop('Content-Disposition', None)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Cross-Origin-Resource-Policy'] = 'cross-origin'
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    resp.headers['Cache-Control'] = 'public, max-age=300, must-revalidate'
+    return resp
+
+
 @app.route('/profiles')
 @app.route('/profiles/')
 def profiles_gallery():
     folder = _profiles_folder()
-    resp = send_from_directory(folder, 'index.html', mimetype='text/html')
-    resp.headers['Cache-Control'] = 'public, max-age=300'
-    return resp
+    return _public_file(folder, 'index.html', mimetype='text/html')
 
 
 @app.route('/profiles/<path:filename>')
@@ -222,10 +236,7 @@ def profiles_file(filename):
     name = os.path.basename(str(filename or '').replace('\\', '/'))
     if name not in _PROFILE_PUBLIC:
         abort(404)
-    folder = _profiles_folder()
-    resp = send_from_directory(folder, name)
-    resp.headers['Cache-Control'] = 'public, max-age=86400'
-    return resp
+    return _public_file(_profiles_folder(), name)
 
 
 try:

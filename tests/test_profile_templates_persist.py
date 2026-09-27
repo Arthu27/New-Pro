@@ -90,6 +90,8 @@ for name in ('profile-card.png', 'most-active.png', 'couple-card.png'):
     check(resp.status_code == 200, f'GET /profiles/{name}', str(resp.status_code))
     check(resp.mimetype == 'image/png', f'{name} is png', resp.mimetype)
     check('login' not in (resp.headers.get('Location') or ''), f'{name} not redirected')
+    check('Content-Disposition' not in resp.headers, f'{name} is not a download')
+    check(resp.headers.get('Access-Control-Allow-Origin') == '*', f'{name} is embeddable')
 gallery = client.get('/profiles/')
 check(gallery.status_code == 200, 'gallery 200', str(gallery.status_code))
 body = gallery.get_data(as_text=True)
