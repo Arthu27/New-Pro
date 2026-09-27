@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=6">
   <style>
     html, body { margin:0; background:#05060a; color:#f4f6fb; }
   </style>
@@ -197,25 +197,41 @@
             const box=document.getElementById('regSuggest');
             if(!inp) return;
             let t=null;
+            const nextVal={{ next|tojson }};
             function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+            function pickUrl(id){
+              const u=new URL('/login', window.location.origin);
+              u.searchParams.set('mode','register');
+              if(nextVal) u.searchParams.set('next', nextVal);
+              u.searchParams.set('reg_id', String(id));
+              return u.pathname + u.search;
+            }
             inp.addEventListener('input',()=>{
               clearTimeout(t);
               const q=inp.value.trim();
               t=setTimeout(async()=>{
                 if(q.length<1){box.hidden=true;box.innerHTML='';return;}
-                const r=await fetch('/api/login/members?q='+encodeURIComponent(q));
-                const j=await r.json();
-                const items=j.items||[];
-                if(!items.length){
-                  box.hidden=false;
-                  box.innerHTML='<div class="suggest-empty">Никого не найдено</div>';
-                  return;
-                }
                 box.hidden=false;
-                box.innerHTML=items.map(it=>`<a class="suggest-item" href="{{ url_for('login', mode='register', next=next) }}&reg_id=${encodeURIComponent(it.id)}">
-                  <img src="${esc(it.avatar)}" width="28" height="28" alt="">
-                  <span><b>${esc(it.name)}</b><small>@${esc(it.handle||'')}</small></span>
-                </a>`).join('');
+                box.innerHTML='<div class="suggest-empty">Ищем…</div>';
+                try{
+                  const r=await fetch('/api/login/members?q='+encodeURIComponent(q), {headers:{'Accept':'application/json'}});
+                  const j=await r.json();
+                  if(j.error && !(j.items||[]).length){
+                    box.innerHTML='<div class="suggest-empty">'+esc(j.error)+'</div>';
+                    return;
+                  }
+                  const items=j.items||[];
+                  if(!items.length){
+                    box.innerHTML='<div class="suggest-empty">Никого не найдено — попробуй другой ник</div>';
+                    return;
+                  }
+                  box.innerHTML=items.map(it=>`<a class="suggest-item" href="${pickUrl(it.id)}">
+                    <img src="${esc(it.avatar)}" width="28" height="28" alt="">
+                    <span><b>${esc(it.name)}</b><small>@${esc(it.handle||'')}</small></span>
+                  </a>`).join('');
+                }catch(err){
+                  box.innerHTML='<div class="suggest-empty">Сеть сбойнула — обнови страницу</div>';
+                }
               },120);
             });
           })();

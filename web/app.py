@@ -14,6 +14,7 @@ import secrets
 import urllib.error
 import urllib.parse
 import urllib.request
+import asyncio
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -365,13 +366,22 @@ def _auth_pin(username, pin):
 
 def _invite_ok(code: str) -> bool:
     want = (os.environ.get('PANEL_INVITE_CODE') or '').strip()
-    return bool(want) and secrets.compare_digest(want, (code or '').strip())
+    got = (code or '').strip()
+    if not want or not got:
+        return False
+    a, b = want.casefold(), got.casefold()
+    if len(a) != len(b):
+        return False
+    return secrets.compare_digest(a, b)
 
 
 def _recovery_ok(code: str) -> bool:
     want = (os.environ.get('PANEL_RECOVERY_CODE') or '').strip()
-    if want and secrets.compare_digest(want, (code or '').strip()):
-        return True
+    got = (code or '').strip()
+    if want and got:
+        a, b = want.casefold(), got.casefold()
+        if len(a) == len(b) and secrets.compare_digest(a, b):
+            return True
     # запас: пароль owner из .env
     _, env_pw = _env_owner_creds()
     return bool(env_pw) and secrets.compare_digest(env_pw, (code or '').strip())
@@ -1284,6 +1294,93 @@ def _guild_member_snapshot(m, *, role=None):
     }
 
 
+def _avatar_url_from_user_payload(user: dict) -> str:
+    uid = str((user or {}).get('id') or '0')
+    av = (user or {}).get('avatar')
+    if av:
+        return f'https://cdn.discordapp.com/avatars/{uid}/{av}.png?size=1024'
+    try:
+        idx = (int(uid) >> 22) % 6
+    except Exception:
+        idx = 0
+    return f'https://cdn.discordapp.com/embed/avatars/{idx}.png'
+
+
+def _snapshot_from_api_member(row: dict, *, role=None) -> dict:
+    user = row.get('user') or {}
+    uid = str(user.get('id') or '')
+    handle = str(user.get('username') or '')
+    display = (
+        row.get('nick')
+        or user.get('global_name')
+        or handle
+        or uid
+    )
+    return {
+        'id': uid,
+        'name': str(display),
+        'handle': handle,
+        'role': role or '',
+        'role_label': ROLE_LABELS.get(role, role or ''),
+        'avatar': _avatar_url_from_user_payload(user),
+        'joined': row.get('joined_at'),
+        'created': None,
+    }
+
+
+def _match_rank(q: str, *, name: str, handle: str, uid: str, nick: str = '') -> int:
+    """Меньше = лучше. Точный ник выше случайных вхождений."""
+    ql = (q or '').strip().lower()
+    if not ql:
+        return 50
+    name_l = str(name or '').lower()
+    handle_l = str(handle or '').lower()
+    nick_l = str(nick or '').lower()
+    uid_s = str(uid or '')
+    if ql == uid_s or ql in (name_l, handle_l, nick_l):
+        return 0
+    if any(p.startswith(ql) for p in (name_l, handle_l, nick_l) if p):
+        return 1
+    if any(ql in p for p in (name_l, handle_l, nick_l) if p):
+        return 2
+    tokens = [t for t in ql.split() if t]
+    if tokens and all(
+            any(t in p for p in (name_l, handle_l, nick_l) if p) for t in tokens):
+        return 3
+    return 9
+
+
+def _discord_rest_member_search(gid: str, q: str, *, limit: int = 25):
+    """Живой поиск участников через Discord API (не только кэш бота)."""
+    token = (os.environ.get('TOKEN') or '').strip()
+    query = (q or '').strip()
+    if not token or not gid or not query:
+        return [], ''
+    url = (
+        f'{DISCORD_API}/guilds/{gid}/members/search?'
+        + urllib.parse.urlencode({
+            'query': query,
+            'limit': max(1, min(int(limit), 100)),
+        })
+    )
+    st, data = _http_json(
+        'GET', url,
+        headers={
+            'Authorization': f'Bot {token}',
+            'User-Agent': 'HakumoPanel (https://hakumods.xyz, 1.0)',
+        },
+        timeout=10,
+    )
+    if st != 200:
+        err = ''
+        if isinstance(data, dict):
+            err = str(data.get('message') or data.get('error') or '')[:160]
+        return [], err or f'Discord search HTTP {st}'
+    if not isinstance(data, list):
+        return [], 'Discord search: неожиданный ответ'
+    return data, ''
+
+
 def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
     """Поиск участников гильдии по имени/нику/ID. (items, error)."""
     people = []
@@ -1305,6 +1402,53 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
     except Exception:
         owner_ids = set()
 
+    by_id: dict[str, dict] = {}
+
+    def _accept(snap: dict, *, nick: str = '') -> None:
+        if not snap.get('id'):
+            return
+        role = snap.get('role') or ''
+        if staff_only and not role:
+            return
+        snap = dict(snap)
+        if ql:
+            rank = _match_rank(
+                ql,
+                name=snap.get('name') or '',
+                handle=snap.get('handle') or '',
+                uid=snap.get('id') or '',
+                nick=nick,
+            )
+            if rank >= 9:
+                return
+            snap['_rank'] = rank
+        else:
+            snap['_rank'] = 50
+        prev = by_id.get(snap['id'])
+        if prev is None or int(snap.get('_rank', 99)) < int(prev.get('_rank', 99)):
+            by_id[snap['id']] = snap
+
+    api_err = ''
+    if ql:
+        rows, api_err = _discord_rest_member_search(
+            str(gid), q, limit=max(int(limit), 40))
+        for row in rows:
+            try:
+                user = row.get('user') or {}
+                if user.get('bot'):
+                    continue
+                uid = int(user.get('id') or 0)
+                role_ids = [
+                    int(x) for x in (row.get('roles') or []) if str(x).isdigit()
+                ]
+                role = resolve_discord_panel_role(uid, role_ids)
+                if not role and uid in owner_ids:
+                    role = 'owner'
+                snap = _snapshot_from_api_member(row, role=role)
+                _accept(snap, nick=str(row.get('nick') or ''))
+            except Exception:
+                continue
+
     for m in list(getattr(guild, 'members', []) or []):
         try:
             if getattr(m, 'bot', False):
@@ -1315,27 +1459,39 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
                 role = 'owner'
             if staff_only and not role:
                 continue
-            display = (
-                getattr(m, 'display_name', None)
-                or getattr(m, 'global_name', None)
-                or getattr(m, 'name', None)
-                or str(m.id)
-            )
-            handle = getattr(m, 'name', '') or ''
-            if ql and not _fuzzy_match(ql, display, handle, m.id, getattr(m, 'nick', None) or ''):
+            if ql and not _fuzzy_match(
+                    ql,
+                    getattr(m, 'display_name', None),
+                    getattr(m, 'name', None),
+                    m.id,
+                    getattr(m, 'nick', None) or '',
+                    getattr(m, 'global_name', None) or ''):
                 continue
-            people.append(_guild_member_snapshot(m, role=role))
-            if len(people) >= limit:
-                break
+            snap = _guild_member_snapshot(m, role=role)
+            _accept(snap, nick=str(getattr(m, 'nick', None) or ''))
         except Exception:
             continue
 
+    people = list(by_id.values())
     if staff_only:
         order = {'owner': 0, 'admin': 1, 'curator': 2, 'mod': 3, 'helper': 4}
-        people.sort(key=lambda p: (order.get(p['role'], 9), str(p['name']).lower()))
+        people.sort(key=lambda p: (
+            int(p.get('_rank', 50)),
+            order.get(p.get('role'), 9),
+            str(p.get('name') or '').lower(),
+        ))
     else:
-        people.sort(key=lambda p: str(p['name']).lower())
-    return people, ''
+        people.sort(key=lambda p: (
+            int(p.get('_rank', 50)),
+            str(p.get('name') or '').lower(),
+        ))
+    out = []
+    for p in people[: max(1, int(limit))]:
+        p.pop('_rank', None)
+        out.append(p)
+    if ql and not out and api_err:
+        return out, api_err
+    return out, ''
 
 
 def _list_login_people(q: str = ''):
@@ -1351,13 +1507,68 @@ def _find_guild_member(uid: str):
     try:
         guild = bot.get_guild(int(gid))
     except Exception:
-        return None
+        guild = None
     if guild is None:
         return None
     try:
-        return guild.get_member(int(uid))
+        member = guild.get_member(int(uid))
+    except Exception:
+        member = None
+    if member is not None:
+        return member
+    try:
+        return _run_on_bot(guild.fetch_member(int(uid)), timeout=12)
     except Exception:
         return None
+
+
+def _rest_guild_member(uid: str):
+    """Участник через REST, если кэш/fetch не сработали."""
+    gid = _main_guild()
+    token = (os.environ.get('TOKEN') or '').strip()
+    if not gid or not token or not str(uid).isdigit():
+        return None
+    url = f'{DISCORD_API}/guilds/{gid}/members/{uid}'
+    st, data = _http_json(
+        'GET', url,
+        headers={
+            'Authorization': f'Bot {token}',
+            'User-Agent': 'HakumoPanel (https://hakumods.xyz, 1.0)',
+        },
+        timeout=10,
+    )
+    if st != 200 or not isinstance(data, dict) or not data.get('user'):
+        return None
+    return data
+
+
+class _RestMember:
+    """Минимальный объект участника из REST для регистрации."""
+
+    def __init__(self, row: dict):
+        user = row.get('user') or {}
+        self.id = int(user.get('id') or 0)
+        self.name = str(user.get('username') or '')
+        self.global_name = user.get('global_name')
+        self.nick = row.get('nick')
+        self.display_name = (
+            row.get('nick')
+            or user.get('global_name')
+            or user.get('username')
+            or str(self.id)
+        )
+        self.bot = bool(user.get('bot'))
+        self._avatar = _avatar_url_from_user_payload(user)
+        self.roles = []
+        for rid in row.get('roles') or []:
+            try:
+                self.roles.append(type('R', (), {'id': int(rid)})())
+            except Exception:
+                continue
+
+    @property
+    def display_avatar(self):
+        return type('A', (), {'url': self._avatar})()
 
 
 def _issue_pin_to_dm(discord_id: str):
@@ -1510,6 +1721,10 @@ def login():
             username = (request.form.get('username') or '').strip()
             env_u, _ = _env_owner_creds()
             member = _find_guild_member(reg_id) if reg_id else None
+            if member is None and reg_id:
+                row = _rest_guild_member(reg_id)
+                if row is not None:
+                    member = _RestMember(row)
             if not _invite_ok(invite):
                 err = 'Неверный код приглашения'
             elif not member:
@@ -1590,6 +1805,23 @@ def login():
         m = _find_guild_member(reg_id)
         if m is not None:
             reg_person = _guild_member_snapshot(m)
+        else:
+            row = _rest_guild_member(reg_id)
+            if row is not None:
+                try:
+                    from config import Config
+                    owner_ids = {int(x) for x in Config.all_owner_ids()}
+                except Exception:
+                    owner_ids = set()
+                user = row.get('user') or {}
+                uid = int(user.get('id') or 0)
+                role_ids = [
+                    int(x) for x in (row.get('roles') or []) if str(x).isdigit()
+                ]
+                role = resolve_discord_panel_role(uid, role_ids)
+                if not role and uid in owner_ids:
+                    role = 'owner'
+                reg_person = _snapshot_from_api_member(row, role=role)
 
     pin_person = None
     if mode == 'pin' and selected_id:
