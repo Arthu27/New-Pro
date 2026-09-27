@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Доступ{% endblock %}
+{% block heading %}Доступ{% endblock %}
+{% block body %}
+<p class="dim" style="margin-top:-8px">Только владелец выдаёт вход. Модерам — роль <b>mod</b>, без страниц бота.</p>
+{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+
+<div class="panel" style="margin-bottom:16px">
+  <h2>Владелец (.env)</h2>
+  <table>
+    <tbody>
+      <tr><td>{{ owner_user }}</td><td><span class="tag owner">owner</span></td><td class="dim">PANEL_USER / PANEL_PASSWORD</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="panel" style="margin-bottom:16px">
+  <h2>Выдать доступ модератору</h2>
+  <form method="post" class="form" style="padding:14px">
+    <input type="hidden" name="action" value="add">
+    <label>Логин<input class="input" name="username" required></label>
+    <label>Пароль<input class="input" type="password" name="password" required></label>
+    <input type="hidden" name="role" value="mod">
+    <button type="submit">Добавить (mod)</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Кто имеет вход</h2>
+  {% if not users %}<div class="empty">Пока никого — только ты через .env</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Логин</th><th>Роль</th><th></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{ u.username }}</td>
+        <td><span class="tag">{{ u.role }}</span></td>
+        <td>
+          <form method="post" style="display:inline">
+            <input type="hidden" name="action" value="del">
+            <input type="hidden" name="username" value="{{ u.username }}">
+            <button type="submit" class="ghost">Снять</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

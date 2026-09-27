@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Варны{% endblock %}
+{% block heading %}Варны{% endblock %}
+{% block body %}
+<div class="panel">
+  <h2>Предупреждения</h2>
+  {% if not rows %}<div class="empty">Варнов нет</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Кому</th><th>Кто</th><th>Причина</th><th>Время</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.user_name }} <span class="dim">{{ r.user_id }}</span></td>
+        <td>{{ r.mod_name }}</td>
+        <td class="dim">{{ r.reason }}</td>
+        <td>{{ r.when }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

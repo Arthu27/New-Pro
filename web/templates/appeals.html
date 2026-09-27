@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Апелляции{% endblock %}
+{% block heading %}Апелляции{% endblock %}
+{% block body %}
+<div class="panel">
+  <h2>Очередь</h2>
+  {% if not rows %}<div class="empty">Апелляций нет</div>
+  {% else %}
+  <table>
+    <thead><tr><th>ID</th><th>Кто</th><th>Статус</th><th>Текст</th><th>Мод</th><th>Время</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.user }}</td>
+        <td>{{ r.status }}</td>
+        <td class="dim">{{ r.reason }}</td>
+        <td>{{ r.mod }}</td>
+        <td>{{ r.when }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

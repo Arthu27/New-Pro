@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Панель{% endblock %} · Hakumo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+{% if hide_shell %}
+  {% block bare %}{% endblock %}
+{% else %}
+<div class="shell">
+  <aside class="side">
+    <div class="brand">Hakumo <span>мод-ядро</span></div>
+    <nav class="nav">
+      <div class="group">Модерация</div>
+      {% for key, href, label, icon in nav_pages %}
+        {% if key in ['today','logs','member','warns','appeals','proofs','reasons'] %}
+        <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if is_owner %}
+      <div class="group">Бот · только ты</div>
+      {% for key, href, label, icon in nav_pages %}
+        {% if key in ['bot','modules','commands','access'] %}
+        <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>
+        {% endif %}
+      {% endfor %}
+      {% endif %}
+    </nav>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <h1>{% block heading %}{% endblock %}</h1>
+      <div class="meta">{{ user_name }} · <span class="tag {% if is_owner %}owner{% endif %}">{{ user_role }}</span>
+        · <a href="{{ url_for('logout') }}">выйти</a></div>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {% if cat == 'err' %}err{% endif %}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+  </main>
+</div>
+{% endif %}
+</body>
+</html>

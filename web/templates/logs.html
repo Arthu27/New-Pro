@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Журнал{% endblock %}
+{% block heading %}Журнал{% endblock %}
+{% block body %}
+<div class="panel">
+  <h2>Наказания</h2>
+  {% if not rows %}<div class="empty">Пока пусто</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.action }}</td>
+        <td>{{ r.user_name }} <span class="dim">{{ r.user_id }}</span></td>
+        <td>{{ r.mod_name }}</td>
+        <td class="dim">{{ r.reason }}{% if r.duration %} · {{ r.duration }} мин{% endif %}</td>
+        <td>{{ r.when }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

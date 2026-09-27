@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Сегодня{% endblock %}
+{% block heading %}Сегодня{% endblock %}
+{% block body %}
+<p class="dim" style="margin-top:-8px">Только наказания · новые сверху</p>
+<div class="kpis">
+  <div class="kpi"><b>{{ kpi.actions }}</b><span>Мер</span></div>
+  <div class="kpi"><b>{{ kpi.warns }}</b><span>Варнов</span></div>
+  <div class="kpi"><b>{{ kpi.bans }}</b><span>Банов</span></div>
+  <div class="kpi"><b>{{ kpi.kicks }}</b><span>Киков</span></div>
+  <div class="kpi"><b>{{ kpi.mutes }}</b><span>Мутов</span></div>
+</div>
+<div class="panel">
+  <h2>Последние за сегодня</h2>
+  {% if not rows %}
+  <div class="empty">Сегодня наказаний ещё нет</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.action }}</td>
+        <td>{{ r.user_name }}</td>
+        <td>{{ r.mod_name }}</td>
+        <td class="dim">{{ r.reason }}</td>
+        <td>{{ r.when }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

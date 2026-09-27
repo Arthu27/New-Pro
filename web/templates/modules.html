@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Модули{% endblock %}
+{% block heading %}Модули{% endblock %}
+{% block body %}
+<p class="dim" style="margin-top:-8px">Видно только владельцу</p>
+<div class="panel">
+  <h2>Коги</h2>
+  {% if not rows %}<div class="empty">Список пуст</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Имя</th><th>Класс</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td>{{ r.name }}</td><td class="dim">{{ r.cls }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% set hide_shell = true %}
+{% block title %}Вход{% endblock %}
+{% block bare %}
+<div class="login-wrap">
+  <form class="login-box form" method="post">
+    <h1>Вход</h1>
+    <p class="dim">Панель модерации · без старых аккаунтов</p>
+    {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+    {% if hint %}<div class="flash err">{{ hint }}</div>{% endif %}
+    <label>Логин<input class="input" name="username" autocomplete="username" required></label>
+    <label>Пароль<input class="input" type="password" name="password" autocomplete="current-password" required></label>
+    <button type="submit">Войти</button>
+  </form>
+</div>
+{% endblock %}

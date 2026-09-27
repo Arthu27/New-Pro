@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Бот{% endblock %}
+{% block heading %}Бот{% endblock %}
+{% block body %}
+<p class="dim" style="margin-top:-8px">Видно только владельцу</p>
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+  <div class="kpi"><b>{% if info.online %}online{% else %}offline{% endif %}</b><span>Статус</span></div>
+  <div class="kpi"><b>{{ info.latency }}</b><span>Пинг</span></div>
+  <div class="kpi"><b>{{ info.name }}</b><span>Имя · {{ info.id }}</span></div>
+</div>
+<div class="panel">
+  <h2>Гильдии</h2>
+  {% if not info.guilds %}<div class="empty">Нет данных — бот не подключён к панели</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Сервер</th><th>ID</th><th>Участники</th></tr></thead>
+    <tbody>
+    {% for g in info.guilds %}
+      <tr><td>{{ g.name }}</td><td class="dim">{{ g.id }}</td><td>{{ g.members }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}
