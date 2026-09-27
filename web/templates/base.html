@@ -24,7 +24,7 @@
       {% if is_owner %}
       <div class="group">Бот · только ты</div>
       {% for key, href, label, icon in nav_pages %}
-        {% if key in ['bot','modules','commands','access'] %}
+        {% if key in ['bot','modules','commands','anticrash','access'] %}
         <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>
         {% endif %}
       {% endfor %}

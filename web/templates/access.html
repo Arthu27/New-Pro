@@ -2,40 +2,58 @@
 {% block title %}Доступ{% endblock %}
 {% block heading %}Доступ{% endblock %}
 {% block body %}
-<p class="dim" style="margin-top:-8px">Только владелец выдаёт вход. Модерам — роль <b>mod</b>, без страниц бота.</p>
+<p class="lead">Кто входит в панель и что видит. Модераторы не получают страницы бота.</p>
 {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
 
-<div class="panel" style="margin-bottom:16px">
-  <h2>Владелец (.env)</h2>
-  <table>
-    <tbody>
-      <tr><td>{{ owner_user }}</td><td><span class="tag owner">owner</span></td><td class="dim">PANEL_USER / PANEL_PASSWORD</td></tr>
-    </tbody>
-  </table>
-</div>
+<section class="split">
+  <article class="card-hero owner-card">
+    <div class="card-kicker">Владелец</div>
+    <h2 class="card-title">{{ owner_user }}</h2>
+    <p class="dim">Из `.env` · роль <span class="tag owner">owner</span></p>
+    <ul class="chip-list">
+      {% for name in owner_only %}
+      <li>{{ name }}</li>
+      {% endfor %}
+    </ul>
+    <p class="hint">Эти страницы видишь только ты.</p>
+  </article>
 
-<div class="panel" style="margin-bottom:16px">
-  <h2>Выдать доступ модератору</h2>
-  <form method="post" class="form" style="padding:14px">
+  <article class="card-hero">
+    <div class="card-kicker">Модераторы видят</div>
+    <h2 class="card-title">7 страниц мер</h2>
+    <ul class="chip-list">
+      {% for name in mod_pages %}
+      <li>{{ name }}</li>
+      {% endfor %}
+    </ul>
+    <p class="hint">Без Бота, Модулей, Команд, Антикраша и Доступа.</p>
+  </article>
+</section>
+
+<section class="panel" style="margin-top:18px">
+  <h2>Выдать вход модератору</h2>
+  <form method="post" class="form form-row" style="padding:16px">
     <input type="hidden" name="action" value="add">
-    <label>Логин<input class="input" name="username" required></label>
-    <label>Пароль<input class="input" type="password" name="password" required></label>
-    <input type="hidden" name="role" value="mod">
-    <button type="submit">Добавить (mod)</button>
+    <label>Логин<input class="input" name="username" required autocomplete="off"></label>
+    <label>Пароль<input class="input" type="password" name="password" required autocomplete="new-password"></label>
+    <label>Заметка<input class="input" name="note" placeholder="ник в Discord"></label>
+    <button type="submit">Выдать · mod</button>
   </form>
-</div>
+</section>
 
-<div class="panel">
-  <h2>Кто имеет вход</h2>
-  {% if not users %}<div class="empty">Пока никого — только ты через .env</div>
+<section class="panel" style="margin-top:16px">
+  <h2>Кто уже имеет вход</h2>
+  {% if not users %}
+  <div class="empty">Пока никого — только ты через .env</div>
   {% else %}
   <table>
-    <thead><tr><th>Логин</th><th>Роль</th><th></th></tr></thead>
+    <thead><tr><th>Логин</th><th>Роль</th><th>Заметка</th><th></th></tr></thead>
     <tbody>
     {% for u in users %}
       <tr>
         <td>{{ u.username }}</td>
-        <td><span class="tag">{{ u.role }}</span></td>
+        <td><span class="tag">mod</span></td>
+        <td class="dim">{{ u.note or '—' }}</td>
         <td>
           <form method="post" style="display:inline">
             <input type="hidden" name="action" value="del">
@@ -48,5 +66,5 @@
     </tbody>
   </table>
   {% endif %}
-</div>
+</section>
 {% endblock %}

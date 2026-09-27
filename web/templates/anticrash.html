@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Антикраш{% endblock %}
+{% block heading %}Антикраш{% endblock %}
+{% block body %}
+<p class="lead">Watchdog, алерты и circuit breaker. Только владелец.</p>
+{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+
+{% set on = overview.master_enabled if overview.ok is defined else overview.get('master_enabled') %}
+{% set alive = overview.get('ok') %}
+
+<section class="ac-hero {% if not alive %}dead{% elif on %}on{% else %}off{% endif %}">
+  <div class="ac-shield"><i class="fas fa-shield-heart"></i></div>
+  <div>
+    <div class="ac-title">
+      {% if not alive %}Обработчик офлайн
+      {% elif on %}Защита активна
+      {% else %}Защита выключена{% endif %}
+    </div>
+    <div class="dim">
+      {% if alive %}Аптайм {{ overview.uptime_human or '—' }} · пинг {{ overview.latency_ms or 0 }} ms · гильдий {{ overview.guilds or 0 }}
+      {% else %}Запусти бота — появится живая статистика{% endif %}
+    </div>
+  </div>
+  {% if alive %}
+  <form method="post" class="ac-master">
+    <input type="hidden" name="key" value="master_enabled">
+    <input type="hidden" name="value" value="{{ '0' if on else '1' }}">
+    <button type="submit" class="{% if on %}ghost{% endif %}">
+      {% if on %}Выключить{% else %}Включить{% endif %}
+    </button>
+  </form>
+  {% endif %}
+</section>
+
+{% if alive %}
+<div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-top:16px">
+  <div class="kpi"><b>{{ overview.total_errors or 0 }}</b><span>Ошибок всего</span></div>
+  <div class="kpi"><b>{{ overview.errors_last_hour or 0 }}</b><span>За час</span></div>
+  <div class="kpi"><b>{{ overview.critical or 0 }}</b><span>Критических</span></div>
+  <div class="kpi"><b>{{ overview.loop_lag_recent or 0 }}s</b><span>Лаг цикла</span></div>
+</div>
+
+<section class="split" style="margin-top:16px">
+  <article class="panel">
+    <h2>Топ типов</h2>
+    {% if not overview.top_types %}<div class="empty">Пока тихо</div>
+    {% else %}
+    <table>
+      <tbody>
+      {% for t in overview.top_types %}
+        <tr><td>{{ t.name }}</td><td class="dim">{{ t.count }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </article>
+  <article class="panel">
+    <h2>Топ когов</h2>
+    {% if not overview.top_cogs %}<div class="empty">Пока тихо</div>
+    {% else %}
+    <table>
+      <tbody>
+      {% for t in overview.top_cogs %}
+        <tr><td>{{ t.name }}</td><td class="dim">{{ t.count }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </article>
+</section>
+
+<section class="panel" style="margin-top:16px">
+  <h2>Последние ошибки</h2>
+  {% if not overview.last_errors %}<div class="empty">Нет записей</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Модуль</th><th>Текст</th><th>×</th></tr></thead>
+    <tbody>
+    {% for e in overview.last_errors[:12] %}
+      <tr>
+        <td>{{ e.module or '—' }}</td>
+        <td class="dim">{{ (e.text or e.message or e.error or '')[:140] }}</td>
+        <td>{{ e.count or 1 }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="panel" style="margin-top:16px">
+  <h2>Переключатели</h2>
+  <div class="toggle-grid">
+  {% for key in toggles %}
+    {% set label = (meta.get(key) or (key, '', 'bool'))[0] %}
+    {% set help = (meta.get(key) or ('', '', ''))[1] %}
+    {% set val = config.get(key) %}
+    <form method="post" class="toggle-row">
+      <div>
+        <b>{{ label }}</b>
+        <div class="dim">{{ help }}</div>
+      </div>
+      <input type="hidden" name="key" value="{{ key }}">
+      <input type="hidden" name="value" value="{{ '0' if val else '1' }}">
+      <button type="submit" class="ghost {% if val %}on{% endif %}">
+        {% if val %}вкл{% else %}выкл{% endif %}
+      </button>
+    </form>
+  {% endfor %}
+  </div>
+</section>
+
+<section class="panel" style="margin-top:16px">
+  <h2>Канал алертов</h2>
+  <form method="post" class="form form-row" style="padding:16px">
+    <input type="hidden" name="key" value="log_channel_id">
+    <label>ID канала<input class="input" name="value" value="{{ config.get('log_channel_id') or 0 }}"></label>
+    <button type="submit">Сохранить</button>
+  </form>
+</section>
+{% endblock %}

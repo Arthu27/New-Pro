@@ -57,8 +57,48 @@ tr:last-child td { border-bottom: 0; }
 .login-box h1 { margin: 0 0 6px; }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .72rem; background: #243044; color: #c7d2fe; }
 .tag.owner { background: #3b1d1d; color: #fecaca; }
+.lead { color: var(--muted); margin: -6px 0 18px; max-width: 52ch; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.card-hero {
+  background: linear-gradient(165deg, #1a2230, var(--bg2));
+  border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 14px;
+}
+.card-hero.owner-card { border-color: #5a2a2a; background: linear-gradient(165deg, #2a1818, var(--bg2)); }
+.card-kicker { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.card-title { margin: 0 0 8px; font-size: 1.2rem; }
+.chip-list { list-style: none; padding: 0; margin: 12px 0 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-list li {
+  padding: 4px 10px; border-radius: 999px; font-size: .78rem;
+  background: #243044; color: #c7d2fe; border: 1px solid #334155;
+}
+.hint { color: var(--muted); font-size: .8rem; margin: 0; }
+.form-row { grid-template-columns: 1fr 1fr 1fr auto; max-width: none; align-items: end; }
+.ac-hero {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 18px 20px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--bg2);
+}
+.ac-hero.on { border-color: #166534; background: linear-gradient(160deg, #102418, var(--bg2)); }
+.ac-hero.off { border-color: #7f1d1d; background: linear-gradient(160deg, #2a1212, var(--bg2)); }
+.ac-hero.dead { opacity: .85; }
+.ac-shield {
+  width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center;
+  font-size: 1.25rem; background: #1e293b; color: #93c5fd;
+}
+.ac-hero.on .ac-shield { background: #14532d; color: #86efac; }
+.ac-hero.off .ac-shield { background: #7f1d1d; color: #fecaca; }
+.ac-title { font-weight: 700; font-size: 1.15rem; }
+.ac-master { margin-left: auto; }
+.toggle-grid { display: grid; gap: 0; }
+.toggle-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--line);
+}
+.toggle-row:last-child { border-bottom: 0; }
+.toggle-row button.on { border-color: #166534; color: #86efac; }
 @media (max-width: 900px) {
   .shell { grid-template-columns: 1fr; }
   .side { border-right: 0; border-bottom: 1px solid var(--line); }
   .kpis { grid-template-columns: repeat(2, 1fr); }
+  .split, .form-row { grid-template-columns: 1fr; }
 }

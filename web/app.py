@@ -37,6 +37,7 @@ PAGES_OWNER = [
     ('bot', '/bot', 'Бот', 'fa-robot'),
     ('modules', '/modules', 'Модули', 'fa-puzzle-piece'),
     ('commands', '/commands', 'Команды', 'fa-terminal'),
+    ('anticrash', '/anticrash', 'Антикраш', 'fa-shield-heart'),
     ('access', '/access', 'Доступ', 'fa-key'),
 ]
 
@@ -615,10 +616,84 @@ def commands_page():
     return render_template('commands.html', rows=rows)
 
 
+def _anticrash_handler():
+    bot = bot_instance
+    if not bot:
+        return None
+    return getattr(bot, 'error_handler', None)
+
+
+@app.route('/anticrash', methods=['GET', 'POST'])
+@login_required
+@role_required('owner')
+def anticrash_page():
+    """Антикраш — только owner. UI с нуля, данные из error_handler."""
+    eh = _anticrash_handler()
+    err = ''
+    if request.method == 'POST':
+        if not eh:
+            err = 'Бот офлайн — конфиг не сохранить'
+        else:
+            try:
+                from error_handler import DEFAULT_CONFIG
+                key = (request.form.get('key') or '').strip()
+                if key not in DEFAULT_CONFIG:
+                    err = 'Неизвестный ключ'
+                else:
+                    raw = request.form.get('value')
+                    if isinstance(DEFAULT_CONFIG[key], bool):
+                        raw = request.form.get('value') == '1'
+                    eh.update_config(key, raw)
+                    flash('Сохранено', 'ok')
+                    return redirect(url_for('anticrash_page'))
+            except Exception as ex:
+                err = str(ex)
+    overview = {}
+    config = {}
+    meta = {}
+    if eh:
+        try:
+            overview = eh.get_overview() or {}
+        except Exception:
+            overview = {'ok': False}
+        try:
+            from error_handler import CONFIG_META, DEFAULT_CONFIG
+            config = dict(getattr(eh, 'config', None) or DEFAULT_CONFIG)
+            meta = CONFIG_META
+        except Exception:
+            pass
+    else:
+        overview = {'ok': False, 'error': 'Обработчик офлайн'}
+        try:
+            from error_handler import CONFIG_META, DEFAULT_CONFIG
+            config = dict(DEFAULT_CONFIG)
+            # файл на диске, если бот ещё не поднялся
+            disk = _read_json(DATA / 'anticrash_config.json', {})
+            if isinstance(disk, dict):
+                config.update(disk)
+            meta = CONFIG_META
+        except Exception:
+            pass
+    # ключевые тумблеры для красивого UI (остальное — расширенный блок)
+    toggles = [
+        'master_enabled', 'alerts_enabled', 'loop_watchdog', 'cog_breaker',
+        'filter_enabled', 'connection_watch', 'warning_monitor', 'webhook_enabled',
+    ]
+    return render_template(
+        'anticrash.html',
+        overview=overview,
+        config=config,
+        meta=meta,
+        toggles=toggles,
+        error=err,
+    )
+
+
 @app.route('/access', methods=['GET', 'POST'])
 @login_required
 @role_required('owner')
 def access_page():
+    """Категория «Доступ» с нуля: кто входит и что видит."""
     data = _load_access()
     err = ''
     if request.method == 'POST':
@@ -626,9 +701,7 @@ def access_page():
         if action == 'add':
             username = (request.form.get('username') or '').strip()
             password = request.form.get('password') or ''
-            role = (request.form.get('role') or 'mod').strip().lower()
-            if role != 'mod':
-                role = 'mod'  # только mod через UI; owner — из .env
+            note = (request.form.get('note') or '').strip()[:80]
             if not username or not password:
                 err = 'Нужны логин и пароль'
             elif username == _env_owner_creds()[0]:
@@ -639,10 +712,11 @@ def access_page():
                 data['users'].append({
                     'username': username,
                     'password': password,
-                    'role': role,
+                    'role': 'mod',
+                    'note': note,
                 })
                 _save_access(data)
-                flash('Доступ выдан', 'ok')
+                flash('Модератору выдан вход', 'ok')
                 return redirect(url_for('access_page'))
         elif action == 'del':
             username = (request.form.get('username') or '').strip()
@@ -651,8 +725,16 @@ def access_page():
             flash('Доступ снят', 'ok')
             return redirect(url_for('access_page'))
     env_u, _ = _env_owner_creds()
-    return render_template('access.html', users=data['users'],
-                           owner_user=env_u, error=err)
+    mod_pages = [p[2] for p in PAGES_MOD]
+    owner_only = [p[2] for p in PAGES_OWNER]
+    return render_template(
+        'access.html',
+        users=data['users'],
+        owner_user=env_u,
+        error=err,
+        mod_pages=mod_pages,
+        owner_only=owner_only,
+    )
 
 
 @app.errorhandler(403)
