@@ -5,7 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hakumo</title>
   <meta name="description" content="Hakumo — панель модерации Discord.">
-  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}">
+  <meta name="theme-color" content="#05060a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=4">
+  <style>html,body{margin:0;background:#05060a;color:#f4f6fb}</style>
 </head>
 <body class="gate-body">
   <div class="gate-plane" aria-hidden="true">
@@ -22,7 +27,7 @@
 
     <main class="welcome-stage">
       <h1 class="welcome-name">Haku<span>mo</span></h1>
-      <p class="welcome-lead">Чёрная панель модерации. Вошёл — и сразу в свой уровень доступа. Без лишнего шума.</p>
+      <p class="welcome-lead">Чёрная панель. Выбери себя — PIN в личку. Роль сама.</p>
       <div class="welcome-actions">
         <a class="welcome-cta" href="{{ url_for('login') }}">
           Войти
@@ -30,8 +35,7 @@
             <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </a>
-        <a class="welcome-sub" href="{{ url_for('login', mode='people') }}">Выбрать себя · PIN в ЛС</a>
-        <a class="welcome-sub" href="{{ url_for('login', mode='password') }}">Пароль</a>
+        <a class="welcome-sub" href="{{ url_for('login', mode='people') }}">Люди · PIN в ЛС</a>
       </div>
     </main>
   </div>

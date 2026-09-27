@@ -141,6 +141,17 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 
+@app.after_request
+def _auth_static_headers(resp):
+    try:
+        path = request.path or ''
+    except Exception:
+        return resp
+    if path.startswith('/static/auth-new.css') or path in ('/login', '/welcome'):
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    return resp
+
+
 # ── access store (fresh file, no migration from old panel) ─────────────
 
 def _load_access():

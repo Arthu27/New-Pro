@@ -5,7 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Вход — Hakumo</title>
   <meta name="description" content="Вход в панель Hakumo — выбери себя, PIN придёт в ЛС.">
-  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}">
+  <meta name="theme-color" content="#05060a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=4">
+  <style>
+    /* критический тёмный кадр — даже до CSS */
+    html, body { margin:0; background:#05060a; color:#f4f6fb; }
+  </style>
 </head>
 <body class="gate-body">
   <div class="gate-plane" aria-hidden="true">
@@ -26,9 +34,8 @@
       <p class="login-kicker">Вход</p>
       <h1 class="login-mark">Haku<em>mo</em></h1>
       <p class="login-hint">
-        {% if mode == 'people' %}Выбери себя в списке — PIN уйдёт в Discord ЛС. Роль подтянется сама.
-        {% elif mode == 'pin' %}Введи постоянный PIN (если задан).
-        {% elif mode == 'register' %}Создай логин и пароль (нужен код приглашения).
+        {% if mode == 'people' %}Выбери себя — PIN придёт в Discord ЛС. Роль подтянется сама.
+        {% elif mode == 'register' %}Создай логин и пароль (код приглашения).
         {% elif mode == 'forgot' %}Сброс пароля по коду восстановления.
         {% else %}Вход по паролю.
         {% endif %}
@@ -43,7 +50,8 @@
 
       <div class="login-card">
         {% if ok %}<div class="login-flash ok" role="status">{{ ok }}</div>{% endif %}
-        {% if error %}<div class="login-flash" role="alert">{{ error }}</div>{% endif %}
+        {% if error and mode != 'people' %}<div class="login-flash" role="alert">{{ error }}</div>{% endif %}
+        {% if error and mode == 'people' and 'DISCORD_CLIENT' not in error %}<div class="login-flash" role="alert">{{ error }}</div>{% endif %}
 
         {% if mode == 'people' %}
           <form class="people-search" method="get" action="{{ url_for('login') }}">
@@ -54,18 +62,18 @@
           </form>
 
           {% if not people %}
-          <div class="people-empty">Staff пока не загрузились. Обнови страницу через пару секунд после старта бота.</div>
+          <div class="people-empty">{{ error or 'Staff загружается… обнови через пару секунд.' }}</div>
           {% else %}
           <div class="people-grid" role="list">
             {% for p in people %}
-            <form method="post" class="person-card {% if selected_id == p.id %}is-on{% endif %}" role="listitem">
+            <form method="post" class="person-card {% if selected_id == p.id %}is-on{% endif %}" role="listitem" style="--i: {{ loop.index0 if loop.index0 < 24 else 24 }}">
               <input type="hidden" name="mode" value="people">
               <input type="hidden" name="action" value="send">
               <input type="hidden" name="uid" value="{{ p.id }}">
               <input type="hidden" name="next" value="{{ next }}">
               <input type="hidden" name="pq" value="{{ people_q }}">
               <button type="submit" class="person-hit">
-                <img class="person-ava" src="{{ p.avatar }}" alt="" width="44" height="44">
+                <img class="person-ava" src="{{ p.avatar }}" alt="" width="48" height="48" loading="lazy">
                 <span class="person-meta">
                   <strong>{{ p.name }}</strong>
                   <span class="person-at">@{{ p.handle or p.name }}</span>
@@ -90,18 +98,10 @@
             <button class="login-submit" type="submit">Войти</button>
           </form>
           {% else %}
-          <p class="login-note">Кликни по себе — бот пришлёт PIN в личку.</p>
+          <p class="login-note">Кликни по себе — PIN уйдёт в личку Discord</p>
           {% endif %}
 
         {% elif mode == 'password' %}
-          {% if discord_ready %}
-          <a class="discord-btn" href="{{ url_for('auth_discord', next=next) }}">
-            <span class="discord-btn__text">
-              <strong>Войти через Discord OAuth</strong>
-              <small>если настроен client secret</small>
-            </span>
-          </a>
-          {% endif %}
           <form class="login-form" method="post" autocomplete="on">
             <input type="hidden" name="mode" value="password">
             <input type="hidden" name="next" value="{{ next }}">
@@ -120,7 +120,7 @@
             <input type="hidden" name="mode" value="register">
             <input type="hidden" name="next" value="{{ next }}">
             <label>Код приглашения
-              <input name="invite" required placeholder="PANEL_INVITE_CODE">
+              <input name="invite" required>
             </label>
             <label>Логин
               <input name="username" required minlength="3">
@@ -139,7 +139,7 @@
               <input name="username" required autofocus>
             </label>
             <label>Код восстановления
-              <input name="recovery" required placeholder="PANEL_RECOVERY_CODE">
+              <input name="recovery" required>
             </label>
             <label>Новый пароль
               <input type="password" name="password" required minlength="6" autocomplete="new-password">
