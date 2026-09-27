@@ -1408,13 +1408,14 @@ async def on_ready():
     except Exception as _ex:
         _log.debug("on_ready(): event_mod_acl_seed: %s", _ex)
 
-    # Веб-панель снята (docs/PANEL-REMOVED.md) — мост set_bot_instance больше не нужен.
-    _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
-    if os.path.exists(_tunnel_path):
-        try:
-            os.remove(_tunnel_path)
-        except Exception as _e:
-            _log.debug('on_ready drop tunnel_url: %s', _e)
+    # Мод-панель v2: отдаём бота в web.app
+    try:
+        from web.app import set_bot_instance
+        set_bot_instance(bot)
+        print("[ВЕБ] Панель подключена к боту")
+    except Exception as _ex:
+        print(f"[ВЕБ] ⚠ Панель не получила бота: {_ex}")
+        _log.error("on_ready(): set_bot_instance: %s", _ex)
 
 async def load_cogs():
     # Какие модули грузить — решает cogs_policy (MOD_ONLY / DISABLED_COGS /
@@ -1701,19 +1702,18 @@ async def main():
     except Exception as _ex:
         log.debug('preflight: %s', _ex)
 
-    # Веб-панель удалена (см. docs/PANEL-REMOVED.md). Пульс bot_state
-    # оставляем — пригодится диагностике; Flask/WS/туннель не поднимаем.
+    # Мод-панель v2 (docs/PANEL-PAGES.md) + пульс bot_state
+    try:
+        from web.app import app as _web_app, set_bot_instance
+        set_bot_instance(bot)
+        _start_web_server(_web_app)
+    except Exception as _ex:
+        print(f"[ВЕБ] Не удалось запустить панель: {_ex}")
+        log.error("main(): web panel: %s", _ex)
     try:
         asyncio.create_task(_bridge_loop(bot))
     except Exception as _ex:
         log.debug('main(): bridge loop: %s', _ex)
-    print("[ВЕБ] Веб-панель снята — бот работает без браузерного UI")
-    try:
-        from services import named_tunnel as _nt
-        _root = os.path.dirname(os.path.abspath(__file__))
-        _nt.drop_stale_url(_root)
-    except Exception as _ex:
-        log.debug('drop tunnel url: %s', _ex)
 
     print("[БОТ] Запускается... (загрузка когов -> вход в Discord)")
     async with bot:

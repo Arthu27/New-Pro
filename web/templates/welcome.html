@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hakumo</title>
+  <meta name="description" content="Hakumo — панель модерации Discord.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}">
+</head>
+<body class="gate-body">
+  <div class="gate-plane" aria-hidden="true">
+    <div class="gate-plane__mesh"></div>
+    <div class="gate-plane__slash"></div>
+    <div class="gate-plane__grain"></div>
+  </div>
+
+  <div class="welcome">
+    <header class="welcome-top">
+      <a class="welcome-brand-link" href="{{ url_for('welcome') }}">Hakumo</a>
+      <a class="welcome-enter" href="{{ url_for('login') }}">Войти</a>
+    </header>
+
+    <main class="welcome-stage">
+      <h1 class="welcome-name">Haku<span>mo</span></h1>
+      <p class="welcome-lead">Панель модерации без лишнего. Быстрый вход через Discord — роль как на сервере.</p>
+      <div class="welcome-actions">
+        <a class="welcome-cta" href="{{ url_for('login') }}">
+          Войти в панель
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <a class="welcome-sub" href="{{ url_for('auth_discord') }}">Discord · авто @ник</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

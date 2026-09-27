@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Демки{% endblock %}
+{% block heading %}Демки{% endblock %}
+{% block body %}
+<div class="panel">
+  <h2>Доказательства</h2>
+  {% if not rows %}<div class="empty">Пока пусто — демки обычно идут в Discord-канал</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Что</th><th>Детали</th><th>Время</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.title }}</td>
+        <td class="dim">{{ r.detail }}</td>
+        <td>{{ r.when or '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Команды{% endblock %}
+{% block heading %}Команды{% endblock %}
+{% block body %}
+<p class="dim" style="margin-top:-8px">Видно только владельцу · обзор slash</p>
+<div class="panel">
+  <h2>Слеш-меню</h2>
+  {% if not rows %}<div class="empty">Бот не подключён — список недоступен</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Команда</th><th>Описание</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td>{{ r.name }}</td><td class="dim">{{ r.desc }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

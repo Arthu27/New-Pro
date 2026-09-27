@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Антикраш{% endblock %}
+{% block heading %}Антикраш сервера{% endblock %}
+{% block body %}
+<p class="lead">Сильный щит гильдии. Все системы по умолчанию выключены — включаешь только то, что нужно. Сервер: <b>{{ gid }}</b></p>
+{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+
+{% set f = snap.flags %}
+<section class="ac-hero {% if f.any %}on{% else %}off{% endif %}">
+  <div class="ac-shield"><i class="fas fa-shield-heart"></i></div>
+  <div>
+    <div class="ac-title">{% if f.any %}Защита частично активна{% else %}Все защиты выключены{% endif %}</div>
+    <div class="dim">Щит · Антирейд · Security · Watchdog бота — opt-in</div>
+  </div>
+  <div class="ac-master">
+    <form method="post">
+      <input type="hidden" name="action" value="kill_all">
+      <button type="submit" class="ghost">Выключить всё</button>
+    </form>
+  </div>
+</section>
+
+<div class="sys-grid">
+  <article class="sys-card">
+    <header>
+      <h3>Щит</h3>
+      <span class="tag {% if f.guardian %}on{% else %}off{% endif %}">{% if f.guardian %}вкл{% else %}выкл{% endif %}</span>
+    </header>
+    <p class="dim">Ньюк: каналы, роли, баны, вебхуки, чужие боты.</p>
+  </article>
+  <article class="sys-card">
+    <header>
+      <h3>Антирейд</h3>
+      <span class="tag {% if f.antiraid %}on{% else %}off{% endif %}">{% if f.antiraid %}вкл{% else %}выкл{% endif %}</span>
+    </header>
+    <p class="dim">Пачка входов, возраст аккаунта, вебхуки, боты.</p>
+  </article>
+  <article class="sys-card">
+    <header>
+      <h3>Security</h3>
+      <span class="tag {% if f.security %}on{% else %}off{% endif %}">{% if f.security %}вкл{% else %}выкл{% endif %}</span>
+    </header>
+    <p class="dim">Спам, фейки, опасные ссылки.</p>
+  </article>
+  <article class="sys-card">
+    <header>
+      <h3>Watchdog</h3>
+      <span class="tag {% if f.bot %}on{% else %}off{% endif %}">{% if f.bot %}вкл{% else %}выкл{% endif %}</span>
+    </header>
+    <p class="dim">Лаг цикла, breaker когов, алерты бота.</p>
+  </article>
+</div>
+
+{# ── Щит / Guardian ── #}
+<section class="panel" style="margin-top:8px">
+  <h2>Щит сервера · Guardian</h2>
+  <div class="toggle-row">
+    <div>
+      <b>Мастер щита</b>
+      <div class="dim">Без этого события щита молчат</div>
+    </div>
+    <form method="post">
+      <input type="hidden" name="system" value="guardian">
+      <input type="hidden" name="key" value="enabled">
+      <input type="hidden" name="value" value="{{ '0' if snap.guardian.enabled else '1' }}">
+      <button class="ghost {% if snap.guardian.enabled %}on{% endif %}" type="submit">
+        {% if snap.guardian.enabled %}вкл{% else %}выкл{% endif %}
+      </button>
+    </form>
+  </div>
+  <div class="toggle-row">
+    <div>
+      <b>Кик чужих ботов</b>
+      <div class="dim">Неавторизованный бот выкидывается</div>
+    </div>
+    <form method="post">
+      <input type="hidden" name="system" value="guardian">
+      <input type="hidden" name="key" value="kick_unauthorized_bots">
+      <input type="hidden" name="value" value="{{ '0' if snap.guardian.kick_unauthorized_bots else '1' }}">
+      <button class="ghost {% if snap.guardian.kick_unauthorized_bots %}on{% endif %}" type="submit">
+        {% if snap.guardian.kick_unauthorized_bots %}вкл{% else %}выкл{% endif %}
+      </button>
+    </form>
+  </div>
+  {% for spec in snap.guardian_specs %}
+  {% set ev = (snap.guardian.events or {}).get(spec.key) or {} %}
+  <div class="toggle-row">
+    <div>
+      <b><i class="fas {{ spec.icon }}"></i> {{ spec.label }}</b>
+      <div class="dim">{{ spec.desc }} · порог {{ ev.threshold or spec.def[0] }} / {{ ev.window or spec.def[1] }}с</div>
+    </div>
+    <form method="post">
+      <input type="hidden" name="system" value="guardian">
+      <input type="hidden" name="key" value="event:{{ spec.key }}">
+      <input type="hidden" name="value" value="{{ '0' if ev.enabled else '1' }}">
+      <button class="ghost {% if ev.enabled %}on{% endif %}" type="submit">
+        {% if ev.enabled %}вкл{% else %}выкл{% endif %}
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</section>
+
+{# ── Антирейд ── #}
+<section class="panel" style="margin-top:16px">
+  <h2>Антирейд</h2>
+  {% for key, title, help in ar_flags %}
+  <div class="toggle-row">
+    <div>
+      <b>{{ title }}</b>
+      <div class="dim">{{ help }}</div>
+    </div>
+    <form method="post">
+      <input type="hidden" name="system" value="antiraid">
+      <input type="hidden" name="key" value="{{ key }}">
+      <input type="hidden" name="value" value="{{ '0' if snap.antiraid.get(key) else '1' }}">
+      <button class="ghost {% if snap.antiraid.get(key) %}on{% endif %}" type="submit">
+        {% if snap.antiraid.get(key) %}вкл{% else %}выкл{% endif %}
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+  <form method="post" class="form form-row" style="padding:16px;grid-template-columns:1fr 1fr 1fr auto">
+    <input type="hidden" name="system" value="antiraid">
+    <input type="hidden" name="key" value="join_threshold">
+    <label>Порог входов<input class="input" name="value" value="{{ snap.antiraid.get('join_threshold') or 5 }}"></label>
+    <label class="dim" style="align-self:end">за окно {{ snap.antiraid.get('join_window') or 10 }}с</label>
+    <span></span>
+    <button type="submit">Сохранить порог</button>
+  </form>
+</section>
+
+{# ── Security ── #}
+<section class="panel" style="margin-top:16px">
+  <h2>Security</h2>
+  {% for key, title, help in sec_flags %}
+  <div class="toggle-row">
+    <div>
+      <b>{{ title }}</b>
+      <div class="dim">{{ help }}</div>
+    </div>
+    <form method="post">
+      <input type="hidden" name="system" value="security">
+      <input type="hidden" name="key" value="{{ key }}">
+      <input type="hidden" name="value" value="{{ '0' if snap.security.get(key) else '1' }}">
+      <button class="ghost {% if snap.security.get(key) %}on{% endif %}" type="submit">
+        {% if snap.security.get(key) %}вкл{% else %}выкл{% endif %}
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</section>
+
+{# ── Bot watchdog ── #}
+<section class="panel" style="margin-top:16px">
+  <h2>Watchdog бота</h2>
+  {% set ov = snap.bot_overview %}
+  {% if ov.get('ok') %}
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin:12px 16px">
+    <div class="kpi"><b>{{ ov.total_errors or 0 }}</b><span>Ошибок</span></div>
+    <div class="kpi"><b>{{ ov.errors_last_hour or 0 }}</b><span>За час</span></div>
+    <div class="kpi"><b>{{ ov.critical or 0 }}</b><span>Критических</span></div>
+    <div class="kpi"><b>{{ ov.loop_lag_recent or 0 }}s</b><span>Лаг цикла</span></div>
+  </div>
+  {% else %}
+  <div class="empty">Бот офлайн — тумблеры пишутся в файл и подхватятся при старте</div>
+  {% endif %}
+  {% for key in bot_toggles %}
+  {% set label = (snap.bot_meta.get(key) or (key, '', ''))[0] %}
+  {% set help = (snap.bot_meta.get(key) or ('', '', ''))[1] %}
+  {% set val = snap.bot_config.get(key) %}
+  <div class="toggle-row">
+    <div>
+      <b>{{ label }}</b>
+      <div class="dim">{{ help }}</div>
+    </div>
+    <form method="post">
+      <input type="hidden" name="system" value="bot">
+      <input type="hidden" name="key" value="{{ key }}">
+      <input type="hidden" name="value" value="{{ '0' if val else '1' }}">
+      <button class="ghost {% if val %}on{% endif %}" type="submit">
+        {% if val %}вкл{% else %}выкл{% endif %}
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}
