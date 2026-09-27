@@ -1669,7 +1669,7 @@ def login():
     nxt = _safe_next(request.args.get('next') or request.form.get('next'))
     selected_id = (request.values.get('uid') or '').strip()
     people_q = (request.values.get('pq') or '').strip()
-    reg_id = (request.values.get('reg_id') or '').strip()
+    reg_id = (request.values.get('member_id') or request.values.get('reg_id') or '').strip()
 
     if request.method == 'POST':
         mode = (request.form.get('mode') or mode).strip().lower()
@@ -1717,7 +1717,7 @@ def login():
         elif mode == 'register':
             invite = request.form.get('invite', '')
             password = request.form.get('password') or ''
-            reg_id = (request.form.get('reg_id') or '').strip()
+            reg_id = (request.form.get('member_id') or request.form.get('reg_id') or '').strip()
             username = (request.form.get('username') or '').strip()
             env_u, _ = _env_owner_creds()
             member = _find_guild_member(reg_id) if reg_id else None

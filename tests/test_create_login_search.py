@@ -76,5 +76,13 @@ check(rm.display_name == 'Дотер', 'rest display')
 check(len(rm.roles) == 2, 'rest roles')
 check(bool(rm.display_avatar.url), 'rest avatar')
 
+print('== reg_id html entity trap ==')
+# «&reg_id=» в HTML превращается в «®_id=» — параметр member_id безопасен
+src = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
+check("searchParams.set('member_id'" in src, 'JS ставит member_id')
+check("createElement('a')" in src, 'ссылки через DOM, не innerHTML href')
+check("request.values.get('member_id')" in open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read(),
+      'бэкенд читает member_id')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 raise SystemExit(1 if FAIL else 0)

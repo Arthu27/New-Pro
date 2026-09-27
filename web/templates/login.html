@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=6">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=7">
   <style>
     html, body { margin:0; background:#05060a; color:#f4f6fb; }
   </style>
@@ -198,13 +198,39 @@
             if(!inp) return;
             let t=null;
             const nextVal={{ next|tojson }};
-            function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
             function pickUrl(id){
               const u=new URL('/login', window.location.origin);
               u.searchParams.set('mode','register');
               if(nextVal) u.searchParams.set('next', nextVal);
-              u.searchParams.set('reg_id', String(id));
+              // member_id — не reg_id: в HTML «&reg» становится знаком ® и ломает ссылку
+              u.searchParams.set('member_id', String(id));
               return u.pathname + u.search;
+            }
+            function renderItems(items){
+              box.innerHTML='';
+              items.forEach(it=>{
+                const a=document.createElement('a');
+                a.className='suggest-item';
+                a.href=pickUrl(it.id);
+                const img=document.createElement('img');
+                img.src=it.avatar||'';
+                img.width=28; img.height=28; img.alt='';
+                const span=document.createElement('span');
+                const b=document.createElement('b');
+                b.textContent=it.name||'';
+                const small=document.createElement('small');
+                small.textContent='@'+(it.handle||'');
+                span.appendChild(b); span.appendChild(small);
+                a.appendChild(img); a.appendChild(span);
+                box.appendChild(a);
+              });
+            }
+            function renderEmpty(text){
+              box.innerHTML='';
+              const d=document.createElement('div');
+              d.className='suggest-empty';
+              d.textContent=text;
+              box.appendChild(d);
             }
             inp.addEventListener('input',()=>{
               clearTimeout(t);
@@ -212,25 +238,22 @@
               t=setTimeout(async()=>{
                 if(q.length<1){box.hidden=true;box.innerHTML='';return;}
                 box.hidden=false;
-                box.innerHTML='<div class="suggest-empty">Ищем…</div>';
+                renderEmpty('Ищем…');
                 try{
                   const r=await fetch('/api/login/members?q='+encodeURIComponent(q), {headers:{'Accept':'application/json'}});
                   const j=await r.json();
                   if(j.error && !(j.items||[]).length){
-                    box.innerHTML='<div class="suggest-empty">'+esc(j.error)+'</div>';
+                    renderEmpty(String(j.error));
                     return;
                   }
                   const items=j.items||[];
                   if(!items.length){
-                    box.innerHTML='<div class="suggest-empty">Никого не найдено — попробуй другой ник</div>';
+                    renderEmpty('Никого не найдено — попробуй другой ник');
                     return;
                   }
-                  box.innerHTML=items.map(it=>`<a class="suggest-item" href="${pickUrl(it.id)}">
-                    <img src="${esc(it.avatar)}" width="28" height="28" alt="">
-                    <span><b>${esc(it.name)}</b><small>@${esc(it.handle||'')}</small></span>
-                  </a>`).join('');
+                  renderItems(items);
                 }catch(err){
-                  box.innerHTML='<div class="suggest-empty">Сеть сбойнула — обнови страницу</div>';
+                  renderEmpty('Сеть сбойнула — обнови страницу');
                 }
               },120);
             });
