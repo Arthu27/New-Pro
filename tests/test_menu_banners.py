@@ -241,5 +241,21 @@ except Exception as ex:
     print(f'  FAIL: preview banners {ex}')
     FAIL += 1
 
+print('== staff menu banner ==')
+from services.v2_layouts import build_staff_menu_items, STAFF_MENU_BODY  # noqa: E402
+import json as _json
+staff_url = 'https://hakumods.xyz/static/menu/hakumo_staff_banner_v17.png'
+staff_items = build_staff_menu_items(banner_url=staff_url, role_select=None)
+parts = []
+for it in staff_items or []:
+    if hasattr(it, 'to_components'):
+        parts.extend(it.to_components())
+blob = _json.dumps(parts, ensure_ascii=False)
+check('Набор в команду сервера' in blob, 'текст набора на месте')
+check('только одну должность' in blob, 'одна должность')
+check(staff_url in blob, 'баннер по HTTPS')
+check('attachment://' not in blob, 'без attachment://')
+check(STAFF_MENU_BODY.split('\n', 1)[0] in blob, 'шапка правила')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 raise SystemExit(1 if FAIL else 0)

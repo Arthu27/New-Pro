@@ -453,14 +453,47 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    # staff custom — v16 (CDN cache-bust после смены баннера)
     if filename:
         name = filename
     elif kind == 'staff':
-        name = 'hakumo_staff_banner_v16.png'
+        name = STAFF_BANNER_NAME
     else:
         name = f'hakumo_{kind}_banner_v15.png'
     return bio, name
+
+
+# Баннер набора лежит на сайте: MediaGallery с attachment:// теряет файл,
+# и в Discord остаётся битая картинка. Новое имя — чтобы не взять старый кэш.
+STAFF_BANNER_NAME = 'hakumo_staff_banner_v17.png'
+PUBLIC_MENU_DIR = os.path.join(ROOT, 'web', 'static', 'menu')
+
+
+def public_base_url() -> str:
+    """База панели. Баннер набора Discord открывает по этому HTTPS."""
+    for key in ('PANEL_PUBLIC_URL', 'PUBLIC_BASE_URL', 'PANEL_URL'):
+        raw = (os.environ.get(key) or '').strip().rstrip('/')
+        if raw.startswith('http'):
+            return raw
+    return 'https://hakumods.xyz'
+
+
+def ensure_staff_public_banner() -> str:
+    """Положить PNG набора в web/static/menu/. Уже лежащий файл не переписываем."""
+    os.makedirs(PUBLIC_MENU_DIR, exist_ok=True)
+    path = os.path.join(PUBLIC_MENU_DIR, STAFF_BANNER_NAME)
+    if not os.path.isfile(path) or os.path.getsize(path) < 1000:
+        raw = menu_banner_bytes('staff')
+        tmp = path + '.tmp'
+        with open(tmp, 'wb') as fh:
+            fh.write(raw)
+        os.replace(tmp, path)
+    return path
+
+
+def public_staff_banner_url() -> str:
+    """Постоянный HTTPS баннера набора — не attachment://."""
+    ensure_staff_public_banner()
+    return f'{public_base_url()}/static/menu/{STAFF_BANNER_NAME}'
 
 
 def select_label(text: str) -> str:

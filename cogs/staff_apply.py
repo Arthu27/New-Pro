@@ -659,7 +659,7 @@ def remove_from_blacklist(user_id, position=None) -> bool:
 MENU_STATE_FILE = "data/staff_menu_state.json"
 # bump → при следующем on_ready меню перепубликуется в канал наборов
 # v3: 4 ветки (Helper/Mod/Event/Broadcaster) + V2 баннер НАБОРЫ (не Gojo STAFF)
-MENU_POST_VERSION = 5  # v5: Mod→Helper; строгая изоляция веток
+MENU_POST_VERSION = 8  # v8: баннер по HTTPS, текст набора на месте
 
 
 def _load_menu_state():
@@ -1321,17 +1321,19 @@ class StaffReviewButtonsView(discord.ui.View):
 
 
 class StaffApplyView(discord.ui.LayoutView):
-    """Меню набора — баннер + select (без дубля заголовка)."""
+    """Меню набора — текст, баннер по ссылке и выбор должности."""
 
-    def __init__(self, *, banner_filename: str = 'hakumo_staff_banner_v16.png'):
+    def __init__(self, *, banner_filename: str = 'hakumo_staff_banner_v17.png',
+                 banner_url: str = None):
         super().__init__(timeout=None)
         from services.v2_layouts import (
             V2_AVAILABLE, build_staff_menu_items, SHOW_MENU_BANNER)
         sel = RoleSelect()
-        show = bool(SHOW_MENU_BANNER and banner_filename)
+        show = bool(SHOW_MENU_BANNER and (banner_url or banner_filename))
         if V2_AVAILABLE:
             items = build_staff_menu_items(
                 banner_filename=banner_filename or '',
+                banner_url=banner_url,
                 body=None,
                 role_select=sel,
                 show_banner=show,
@@ -1412,14 +1414,57 @@ async def _send_staff_card(channel, *, content=None, view=None):
     return await channel.send(view=view)
 
 
-async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
-    """Опубликовать меню набора через webhook V2 (баннер + select)."""
+def _component_has_custom_id(components, custom_id: str) -> bool:
+    for comp in components or []:
+        if str(getattr(comp, 'custom_id', '') or '') == custom_id:
+            return True
+        nested = getattr(comp, 'children', None)
+        if nested is None:
+            nested = getattr(comp, 'components', None)
+        if _component_has_custom_id(nested, custom_id):
+            return True
+    return False
+
+
+async def _drop_old_staff_menus(channel, keep_id):
+    """Убрать прежнее меню набора, у которого картинка уже отвалилась."""
+    try:
+        history = channel.history(limit=40)
+    except Exception as _ex:
+        log.warning('STAFF: не прочитал канал меню: %s', _ex)
+        return
+    async for msg in history:
+        if keep_id and int(getattr(msg, 'id', 0) or 0) == int(keep_id):
+            continue
+        if not _component_has_custom_id(
+                getattr(msg, 'components', None), 'staff_role_select_v2'):
+            continue
+        try:
+            await msg.delete()
+            log.info('STAFF: убрал старое меню %s', msg.id)
+        except Exception as _ex:
+            log.warning('STAFF: не удалил старое меню %s: %s',
+                        getattr(msg, 'id', '?'), _ex)
+
+
+async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None,
+                             banner_url=None):
+    """Опубликовать меню набора: текст + баннер по HTTPS + выбор должности."""
     if channel is None:
-        return False, 'Канал не найден'
-    fname = banner_name or 'hakumo_staff_banner_v16.png'
-    view = StaffApplyView(banner_filename=fname)
+        return False, 'Канал не найден', None
+    url = (banner_url or '').strip()
+    if not url.startswith('http'):
+        try:
+            from services.menu_banners import public_staff_banner_url
+            url = public_staff_banner_url()
+        except Exception as _ex:
+            log.warning('STAFF: баннер https: %s', _ex)
+            url = ''
+    fname = banner_name or 'hakumo_staff_banner_v17.png'
+    view = StaffApplyView(banner_filename=fname, banner_url=url or None)
     file = None
-    if banner_bio is not None:
+    # Файл нужен только если ссылки нет: attachment:// в этом меню уже отваливался.
+    if not url and banner_bio is not None:
         try:
             banner_bio.seek(0)
         except Exception as _ex:
@@ -1442,7 +1487,7 @@ async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
             log.debug('staff: menu webhook failed: %s', _ex)
             msg = None
             used_hook = None
-            if banner_bio is not None:
+            if file is not None and banner_bio is not None:
                 try:
                     banner_bio.seek(0)
                     file = discord.File(banner_bio, filename=fname)
@@ -1455,9 +1500,10 @@ async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None):
             else:
                 msg = await channel.send(view=view)
         except (discord.Forbidden, discord.HTTPException) as _ex:
-            return False, f'Не могу писать в канал: {_ex}'
+            return False, f'Не могу писать в канал: {_ex}', None
     how = 'вебхуком' if used_hook is not None else 'от бота'
-    return True, f'Опубликовано в {channel.mention} ({how})'
+    mid = getattr(msg, 'id', None)
+    return True, f'Опубликовано в {channel.mention} ({how})', mid
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1535,7 +1581,13 @@ class StaffApply(commands.Cog):
             await ensure_menu_emojis(self.bot)
         except Exception as _ex:
             log.debug('staff ensure emojis: %s', _ex)
-        from services.menu_banners import menu_banner_file
+        from services.menu_banners import public_staff_banner_url
+        try:
+            banner_url = await self.bot.loop.run_in_executor(
+                None, public_staff_banner_url)
+        except Exception as _ex:
+            log.warning('STAFF: не собрал баннер: %s', _ex)
+            banner_url = ''
         state = _load_menu_state()
         for guild in list(self.bot.guilds):
             ch = menu_channel(guild)
@@ -1547,19 +1599,21 @@ class StaffApply(commands.Cog):
             if int(prev.get('version') or 0) >= MENU_POST_VERSION:
                 continue
             try:
-                bio, fname = await self.bot.loop.run_in_executor(
-                    None, lambda: menu_banner_file('staff'))
-                ok, detail = await publish_staff_menu(
-                    ch, banner_bio=bio, banner_name=fname)
+                ok, detail, mid = await publish_staff_menu(
+                    ch, banner_url=banner_url)
                 if ok:
+                    await _drop_old_staff_menus(ch, mid)
                     state[key] = {
                         'channel_id': ch.id,
                         'guild_id': guild.id,
                         'version': MENU_POST_VERSION,
+                        'message_id': mid,
+                        'banner_url': banner_url,
                         'at': datetime.now(timezone.utc).isoformat(),
                     }
                     _save_menu_state(state)
-                    log.info('STAFF: меню набора → #%s (%s)', ch.id, detail)
+                    log.info('STAFF: меню набора → #%s (%s) %s',
+                             ch.id, detail, banner_url)
                 else:
                     log.warning('STAFF: меню не ушло в #%s: %s', ch.id, detail)
             except Exception as _ex:
@@ -1572,7 +1626,12 @@ class StaffApply(commands.Cog):
             schedule_ensure_menu_emojis(self.bot)
         except Exception as _ex:
             log.debug('staff emojis: %s', _ex)
-        self.bot.add_view(StaffApplyView())
+        try:
+            from services.menu_banners import STAFF_BANNER_NAME, public_base_url
+            menu_url = f'{public_base_url()}/static/menu/{STAFF_BANNER_NAME}'
+        except Exception:
+            menu_url = None
+        self.bot.add_view(StaffApplyView(banner_url=menu_url))
         self.bot.add_view(StaffReviewView())
         self.bot.add_view(StaffReviewButtonsView())
         self.bot.add_view(StaffAppCardView(title='Заявка', body='…'))
