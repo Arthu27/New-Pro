@@ -1,0 +1,50 @@
+<section class="panel rise" style="margin-top:12px">
+  <h2>
+    Активность модераторов
+    <span class="dim act-window">{% if span == 'month' %}30 дней{% else %}7 дней{% endif %}</span>
+    <span class="seg">
+      <a href="{{ url_for(request.endpoint, span='week') }}" class="{% if span != 'month' %}on{% endif %}" {% if span != 'month' %}aria-current="true"{% endif %}>Неделя</a>
+      <a href="{{ url_for(request.endpoint, span='month') }}" class="{% if span == 'month' %}on{% endif %}" {% if span == 'month' %}aria-current="true"{% endif %}>Месяц</a>
+    </span>
+  </h2>
+  {% if not activity %}
+  <div class="empty">За этот срок мер нет</div>
+  {% else %}
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Модератор</th>
+        <th>Всего</th>
+        <th>Варн</th>
+        <th>Мут</th>
+        {% if 'kick' not in (hidden_kinds or []) %}<th>Кик</th>{% endif %}
+        {% if 'ban' not in (hidden_kinds or []) %}<th>Бан</th>{% endif %}
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for a in activity %}
+      <tr {% if a.id %}class="click-row" data-href="{{ url_for('member', q=a.id) }}"{% endif %}>
+        <td>
+          {% if a.id %}
+          <a class="log-who" href="{{ url_for('member', q=a.id) }}">{{ a.name }}</a>
+          {% else %}
+          <b>{{ a.name }}</b>
+          {% endif %}
+        </td>
+        <td class="num">{{ a.total }}</td>
+        <td class="num dim">{{ a.warns }}</td>
+        <td class="num dim">{{ a.mutes }}</td>
+        {% if 'kick' not in (hidden_kinds or []) %}<td class="num dim">{{ a.kicks }}</td>{% endif %}
+        {% if 'ban' not in (hidden_kinds or []) %}<td class="num dim">{{ a.bans }}</td>{% endif %}
+        <td class="row-actions">
+          {% if a.id %}<a href="{{ url_for('member', q=a.id) }}">профиль</a>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>

@@ -24,6 +24,8 @@
   {% endif %}
 </section>
 
+{% include '_activity.html' %}
+
 <section class="panel rise" style="margin-top:12px">
   <h2>Лента staff <span class="count">{{ feed|length }}</span></h2>
   {% if not feed %}<div class="empty">Пока пусто</div>
@@ -33,7 +35,9 @@
     <div class="feed-row">
       <div class="feed-act">{{ f.action }}</div>
       <div class="feed-body">
-        <strong>{{ f.who }}</strong> <span class="dim">→ {{ f.target }}</span>
+        {% if f.who_id %}<a href="{{ url_for('member', q=f.who_id) }}"><strong>{{ f.who }}</strong></a>{% else %}<strong>{{ f.who }}</strong>{% endif %}
+        <span class="dim">→</span>
+        {% if f.target_id %}<a href="{{ url_for('member', q=f.target_id) }}">{{ f.target }}</a>{% else %}{{ f.target }}{% endif %}
         {% if f.detail %}<div class="dim">{{ f.detail }}</div>{% endif %}
       </div>
       <div class="feed-when">{{ f.when }}</div>

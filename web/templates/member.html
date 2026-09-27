@@ -14,13 +14,19 @@
 </form>
 
 {% if profile %}
+<nav class="crumb rise">
+  <a href="{{ url_for('users_page') }}">Участники</a>
+  <span aria-hidden="true">›</span>
+  <b>{{ profile.name }}</b>
+  <a class="crumb-jump" href="#history">история</a>
+</nav>
 <div class="mp-grid rise">
   <div class="mp-card">
     <div class="mp-head">
       <img class="mp-av" src="{{ profile.avatar }}" alt="">
       <div>
         <div class="mp-name">{{ profile.name }}</div>
-        <div class="mp-sub">@{{ profile.handle or profile.id }}{% if not profile.on_server %} · не на сервере{% endif %}</div>
+        <div class="mp-sub">{% if profile.handle %}@{{ profile.handle }}{% endif %}{% if not profile.on_server %}{% if profile.handle %} · {% endif %}не на сервере{% endif %}</div>
       </div>
     </div>
     <div class="mp-row"><span class="mp-key">ID</span><span class="mp-val mono">{{ profile.id }}</span></div>
@@ -56,7 +62,7 @@
   </div>
 </div>
 
-<section class="panel rise" style="margin-top:12px">
+<section class="panel rise" id="history" style="margin-top:12px">
   <h2>История нарушений <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}
   <div class="empty">История чиста{% if hidden_kinds %} (бан/кик скрыты ролью){% endif %}</div>
@@ -68,7 +74,9 @@
       <div>
         <div class="log-top">
           <span class="pill pill-{{ r.kind }}">{{ r.action }}</span>
-          <span class="log-who">{{ r.mod_name }}</span>
+          {% if r.mod_id and (r.mod_id|string)|length >= 15 %}
+          <a class="log-who" href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod_name }}</a>
+          {% else %}<span class="log-who">{{ r.mod_name }}</span>{% endif %}
           <span class="log-when">{{ r.when }}</span>
         </div>
         {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}

@@ -13,15 +13,15 @@
     <thead><tr><th>#</th><th>Кто</th><th>Статус</th><th>Текст</th><th>Мод</th><th>Время</th></tr></thead>
     <tbody>
     {% for r in rows %}
-      <tr>
+      <tr class="{% if r.user_id %}click-row{% endif %}" {% if r.user_id %}data-href="{{ url_for('member', q=r.user_id) }}"{% endif %}>
         <td class="mono dim">{{ r.id }}</td>
-        <td><b>{{ r.user }}</b></td>
+        <td>{% if r.user_id %}<a href="{{ url_for('member', q=r.user_id) }}"><b>{{ r.user }}</b></a>{% else %}<b>{{ r.user }}</b>{% endif %}</td>
         <td>
           {% set st = (r.status|string)|lower %}
           <span class="pill {% if 'accept' in st or 'принят' in st or 'approved' in st %}pill-ok{% elif 'reject' in st or 'отклон' in st %}pill-ban{% else %}pill-warn{% endif %}">{{ r.status }}</span>
         </td>
         <td class="dim">{{ r.reason }}</td>
-        <td>{{ r.mod }}</td>
+        <td>{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod }}</a>{% else %}{{ r.mod }}{% endif %}</td>
         <td class="dim">{{ r.when }}</td>
       </tr>
     {% endfor %}

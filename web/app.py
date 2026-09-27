@@ -874,7 +874,102 @@ def _collect_cases(gid_filter=''):
                     })
     out.sort(key=lambda e: _parse_ts(e.get('timestamp'))
              or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    book = _namebook(gid_filter)
+    for row in out:
+        row['user_name'] = _best_name(row.get('user_name'), row.get('user_id'), book)
+        row['mod_name'] = _best_name(row.get('mod_name'), row.get('mod_id'), book)
     return out
+
+
+def _namebook(gid=''):
+    """id → отображаемое имя: живой кэш Discord и сохранённые ники."""
+    book = {}
+    gid = str(gid or _main_guild() or '')
+    try:
+        bot = bot_instance
+        if bot and gid:
+            guild = bot.get_guild(int(gid))
+            if guild is not None:
+                for m in list(getattr(guild, 'members', []) or []):
+                    name = (
+                        getattr(m, 'display_name', None)
+                        or getattr(m, 'global_name', None)
+                        or getattr(m, 'name', None)
+                        or str(m.id)
+                    )
+                    book[str(m.id)] = str(name)
+    except Exception:
+        pass
+    paths = []
+    prefer = DATA / f'member_names_{gid}.json' if gid else None
+    if prefer and prefer.exists():
+        paths.append(prefer)
+    for p in sorted(DATA.glob('member_names_*.json')):
+        if p not in paths:
+            paths.append(p)
+    for p in paths:
+        raw = _read_json(p, {})
+        if not isinstance(raw, dict):
+            continue
+        for uid, name in raw.items():
+            uid = str(uid)
+            if uid.endswith('::__q'):
+                continue
+            label = str(name or '').strip()
+            if label and not label.isdigit():
+                book.setdefault(uid, label)
+    return book
+
+
+def _is_id(value) -> bool:
+    """Discord snowflake, не короткий числовой ник."""
+    s = str(value or '').strip()
+    return s.isdigit() and len(s) >= 15
+
+
+def _best_name(primary, secondary, book, fallback='—'):
+    """Имя вместо голого Discord ID. Уже готовое имя не затираем."""
+    p = str(primary or '').strip()
+    s = str(secondary or '').strip()
+    if p and not _is_id(p) and p.lower() not in ('none', 'null', '—'):
+        return p
+    for raw in (p, s):
+        if _is_id(raw) and raw in book and not _is_id(book[raw]):
+            return str(book[raw])
+    if s and not _is_id(s) and s.lower() not in ('none', 'null', '—'):
+        return s
+    return fallback
+
+
+def _mod_activity(gid, days):
+    """Сколько мер каждый модератор выдал за N дней."""
+    from datetime import timedelta
+    edge = datetime.now(timezone.utc) - timedelta(days=max(1, int(days)))
+    hidden = _viewer_hidden_kinds()
+    stats = {}
+    for r in _collect_cases(gid):
+        if r.get('kind') in hidden:
+            continue
+        ts = _parse_ts(r.get('timestamp'))
+        if ts is None or ts < edge:
+            continue
+        key = str(r.get('mod_id') or r.get('mod_name') or '—')
+        st = stats.setdefault(key, {
+            'id': str(r.get('mod_id') or '') if str(r.get('mod_id') or '').isdigit() else '',
+            'name': r.get('mod_name') or '—',
+            'warns': 0, 'mutes': 0, 'kicks': 0, 'bans': 0, 'total': 0,
+        })
+        st['total'] += 1
+        k = r.get('kind')
+        if k == 'warn':
+            st['warns'] += 1
+        elif k in ('mute', 'timeout'):
+            st['mutes'] += 1
+        elif k == 'kick':
+            st['kicks'] += 1
+        elif k == 'ban':
+            st['bans'] += 1
+    return sorted(stats.values(), key=lambda x: (-x['total'], str(x['name']).lower()))
 
 
 def _is_today(ts):
@@ -1051,6 +1146,7 @@ def _proofs_list(gid):
                 'title': f"{ev['action']} · {ev['user_name']}",
                 'detail': r[:200],
                 'when': _fmt(ev.get('timestamp')),
+                'user_id': str(ev.get('user_id') or '') if _is_id(ev.get('user_id')) else '',
             })
     return items[:50]
 
@@ -1569,13 +1665,16 @@ def _audit_events(gid: str, limit=300):
 
 def _staff_feed(gid: str, limit=80):
     """Лента staff: наказания + входы/выходы + mute/mod из audit."""
+    book = _namebook(gid)
     feed = []
     for r in _collect_cases(gid)[:120]:
         feed.append({
             'kind': 'punish',
             'action': r.get('action') or r.get('kind'),
-            'who': r.get('mod_name') or r.get('mod_id') or '—',
-            'target': r.get('user_name') or r.get('user_id') or '—',
+            'who': r.get('mod_name') or '—',
+            'who_id': str(r.get('mod_id') or '') if str(r.get('mod_id') or '').isdigit() else '',
+            'target': r.get('user_name') or '—',
+            'target_id': str(r.get('user_id') or '') if str(r.get('user_id') or '').isdigit() else '',
             'detail': r.get('reason') or '',
             'when': _fmt(r.get('timestamp')),
             'ts': r.get('timestamp') or '',
@@ -1592,11 +1691,19 @@ def _staff_feed(gid: str, limit=80):
         )
         if not interesting:
             continue
+        who_id = str(ev.get('mod_id') or ev.get('user_id') or '')
+        target_id = str(ev.get('target_id') or ev.get('user_id') or '')
         feed.append({
             'kind': 'audit',
             'action': act,
-            'who': ev.get('mod_name') or ev.get('user_name') or '—',
-            'target': ev.get('target_name') or ev.get('user_name') or ev.get('user_id') or '—',
+            'who': _best_name(ev.get('mod_name') or ev.get('user_name'), who_id, book),
+            'who_id': who_id if who_id.isdigit() else '',
+            'target': _best_name(
+                ev.get('target_name') or ev.get('user_name'),
+                ev.get('target_id') or ev.get('user_id'),
+                book,
+            ),
+            'target_id': target_id if target_id.isdigit() else '',
             'detail': ev.get('reason') or ev.get('channel_name') or '',
             'when': _fmt(ev.get('timestamp')),
             'ts': ev.get('timestamp') or '',
@@ -1691,11 +1798,12 @@ def today():
 @role_required('helper')
 def logs():
     gid = _main_guild()
+    span = 'month' if request.args.get('span') == 'month' else 'week'
+    days = 30 if span == 'month' else 7
     rows = _filter_cases_for_viewer(_collect_cases(gid))[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
     feed = _staff_feed(gid, 60)
-    # хелперу не светим ban/kick в staff-ленте
     hidden = _viewer_hidden_kinds()
     if hidden:
         feed = [
@@ -1703,14 +1811,19 @@ def logs():
             if not any(h in str(f.get('action') or '').lower()
                        for h in ('бан', 'ban', 'кик', 'kick'))
         ]
+    book = _namebook(gid)
     joins = [e for e in _audit_events(gid, 200)
              if e.get('action') in ('Участник вошёл', 'Участник вышел')][:40]
     for e in joins:
         e['when'] = _fmt(e.get('timestamp'))
+        e['user_name'] = _best_name(e.get('user_name'), e.get('user_id'), book)
+        e['user_id'] = str(e.get('user_id') or '')
     return render_template(
         'logs.html', rows=rows, feed=feed, joins=joins,
         limits=_viewer_limits_card(),
-        hidden_kinds=sorted(_viewer_hidden_kinds()),
+        hidden_kinds=sorted(hidden),
+        activity=_mod_activity(gid, days),
+        span=span,
     )
 
 
@@ -1719,9 +1832,15 @@ def logs():
 @role_required('helper')
 def staff_page():
     gid = _main_guild()
+    span = 'month' if request.args.get('span') == 'month' else 'week'
+    days = 30 if span == 'month' else 7
     feed = _staff_feed(gid, 100)
     people, err = _list_login_people()
-    return render_template('staff.html', feed=feed, people=people, error=err)
+    return render_template(
+        'staff.html', feed=feed, people=people, error=err,
+        activity=_mod_activity(gid, days), span=span,
+        hidden_kinds=sorted(_viewer_hidden_kinds()),
+    )
 
 
 @app.route('/channels')
@@ -2060,9 +2179,12 @@ def users_page():
         st = stats.get(uid) or {
             'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0, 'total': 0, 'last': '',
         }
-        display = names.get(uid) or st.get('name') or uid
-        if str(display).isdigit() and st.get('name') and not str(st.get('name')).isdigit():
-            display = st['name']
+        display = names.get(uid) or st.get('name') or ''
+        if _is_id(display):
+            alt = st.get('name') or ''
+            display = alt if alt and not _is_id(alt) else ''
+        if not display or _is_id(display):
+            display = '—'
         blob = names.get(uid + '::__q') or f"{display} {uid}".lower()
         if ql:
             tokens = [t for t in ql.split() if t]
@@ -2192,7 +2314,11 @@ def member():
             kicks = sum(1 for r in rows if r.get('kind') == 'kick')
             profile = {
                 'id': uid,
-                'name': (snap or {}).get('name') or (rows[0].get('user_name') if rows else uid),
+                'name': _best_name(
+                    (snap or {}).get('name') or (rows[0].get('user_name') if rows else ''),
+                    uid,
+                    _namebook(gid),
+                ),
                 'handle': (snap or {}).get('handle') or '',
                 'avatar': (snap or {}).get('avatar') or f'https://cdn.discordapp.com/embed/avatars/{(int(uid) >> 22) % 6 if uid.isdigit() else 0}.png',
                 'roles': roles,
@@ -2239,15 +2365,20 @@ def warns():
 def appeals():
     gid = _main_guild()
     items = _appeals_list(gid)
+    book = _namebook(gid)
     view = []
     for it in items:
+        uid = str(it.get('user_id') or it.get('author_id') or '')
+        mid = str(it.get('mod_id') or it.get('reviewer_id') or '')
         view.append({
             'id': it.get('id') or it.get('case_id') or '—',
-            'user': it.get('user_name') or it.get('user_id') or '—',
+            'user_id': uid if _is_id(uid) else '',
+            'user': _best_name(it.get('user_name') or it.get('username'), uid, book),
             'status': it.get('status') or '—',
             'reason': (it.get('reason') or it.get('text') or '')[:160],
             'when': _fmt(it.get('created_at') or it.get('timestamp')),
-            'mod': it.get('reviewed_by') or '—',
+            'mod_id': mid if _is_id(mid) else '',
+            'mod': _best_name(it.get('reviewed_by') or it.get('mod_name'), mid, book),
         })
     return render_template('appeals.html', rows=view)
 

@@ -21,7 +21,7 @@
 </div>
 
 <section class="panel rise" style="margin-top:12px">
-  <h2>Профили{% if q %} · «{{ q }}»{% endif %} <span class="count">{{ rows|length }}</span></h2>
+  <h2>Профили{% if q %} · «{{ q }}»{% endif %} <span class="count" data-base="{{ rows|length }}">{{ rows|length }}</span></h2>
   {% if not rows %}
   <div class="empty">Никого — введи ник выше</div>
   {% else %}
@@ -41,13 +41,13 @@
     </thead>
     <tbody>
     {% for r in rows %}
-      <tr>
+      <tr class="click-row" data-href="{{ url_for('member', q=r.user_id) }}" data-find="{{ r.name }} {{ r.handle }} {{ r.user_id }}">
         <td>
           <a class="profile-cell" href="{{ url_for('member', q=r.user_id) }}">
             <img class="profile-ava" src="{{ r.avatar }}" alt="" width="42" height="42" loading="lazy">
             <span class="profile-meta">
               <strong>{{ r.name }}</strong>
-              <span class="dim">@{{ r.handle or r.user_id }}</span>
+              {% if r.handle %}<span class="dim">@{{ r.handle }}</span>{% endif %}
             </span>
           </a>
         </td>
@@ -84,8 +84,21 @@
   const box = document.getElementById('usuggest');
   let t = null;
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  const countEl = document.querySelector('.profiles-table')?.closest('.panel')?.querySelector('.count');
+  function filterTable() {
+    const q = input.value.trim().toLowerCase();
+    let n = 0;
+    document.querySelectorAll('.profiles-table tbody tr').forEach(tr => {
+      const blob = (tr.dataset.find || '').toLowerCase();
+      const on = !q || blob.includes(q);
+      tr.hidden = !on;
+      if (on) n += 1;
+    });
+    if (countEl) countEl.textContent = q ? String(n) : (countEl.dataset.base || String(n));
+  }
   input.addEventListener('input', () => {
     clearTimeout(t);
+    filterTable();
     const q = input.value.trim();
     t = setTimeout(async () => {
       if (!q) { box.hidden = true; box.innerHTML = ''; return; }

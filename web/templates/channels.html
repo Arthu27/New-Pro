@@ -2,7 +2,7 @@
 {% block title %}Каналы{% endblock %}
 {% block heading %}Каналы{% endblock %}
 {% block body %}
-<p class="lead">Права @everyone по каждому каналу. Зелёная плашка — можно, пустая — закрыто. Только просмотр.</p>
+<p class="lead">Права @everyone. Белая плашка — можно, пустая — закрыто. Нажми карточку: откроется полный список прав.</p>
 
 <div class="kpis rise">
   <div class="kpi"><b>{{ kpi.total }}</b><span>каналов</span></div>
@@ -32,26 +32,39 @@
   <h2>{{ g.name }} <span class="count ch-count">{{ g['items']|length }}</span></h2>
   <div class="ch-grid">
     {% for r in g['items'] %}
-    <article class="ch-card" data-group="{{ r.group }}" data-closed="{{ 0 if r.view else 1 }}" data-name="{{ r.name|lower }}">
-      <div class="ch-card__top">
-        <span class="ch-ico {% if not r.view %}is-lock{% endif %}"><i class="fas {{ r.icon }}"></i></span>
-        <div class="ch-card__name">
-          <strong>{% if r.group != 'voice' %}#{% endif %}{{ r.name }}</strong>
-          <span class="dim">{{ r.kind }}{% if not r.view %} · скрыт{% endif %}</span>
+    <details class="ch-card" data-group="{{ r.group }}" data-closed="{{ 0 if r.view else 1 }}" data-name="{{ (r.name ~ ' ' ~ r.cat)|lower }}">
+      <summary>
+        <div class="ch-card__top">
+          <span class="ch-ico {% if not r.view %}is-lock{% endif %}"><i class="fas {{ r.icon }}"></i></span>
+          <div class="ch-card__name">
+            <strong>{% if r.group != 'voice' %}#{% endif %}{{ r.name }}</strong>
+            <span class="dim">{{ r.kind }}{% if not r.view %} · скрыт{% endif %} · открой</span>
+          </div>
+          <i class="fas fa-chevron-down ch-chev" aria-hidden="true"></i>
         </div>
+        <div class="ch-caps">
+          <span class="ch-cap {% if r.view %}on{% endif %}">смотреть</span>
+          {% if r.group == 'voice' %}
+          <span class="ch-cap {% if r.connect %}on{% endif %}">зайти</span>
+          <span class="ch-cap {% if r.speak %}on{% endif %}">говорить</span>
+          <span class="ch-cap {% if r.stream %}on{% endif %}">стрим</span>
+          {% else %}
+          <span class="ch-cap {% if r.send %}on{% endif %}">писать</span>
+          {% endif %}
+          <span class="ch-cap {% if r.manage %}on warn{% endif %}">управлять</span>
+        </div>
+      </summary>
+      <div class="ch-more">
+        <div class="mp-row"><span class="mp-key">Категория</span><span class="mp-val">{{ r.cat }}</span></div>
+        <div class="mp-row"><span class="mp-key">Тип</span><span class="mp-val">{{ r.kind }}</span></div>
+        <div class="mp-row"><span class="mp-key">Смотреть</span><span class="mp-val {% if r.view %}ok{% endif %}">{% if r.view %}да{% else %}нет{% endif %}</span></div>
+        <div class="mp-row"><span class="mp-key">Писать</span><span class="mp-val {% if r.send %}ok{% endif %}">{% if r.send %}да{% else %}нет{% endif %}</span></div>
+        <div class="mp-row"><span class="mp-key">Зайти</span><span class="mp-val {% if r.connect %}ok{% endif %}">{% if r.connect %}да{% else %}нет{% endif %}</span></div>
+        <div class="mp-row"><span class="mp-key">Говорить</span><span class="mp-val {% if r.speak %}ok{% endif %}">{% if r.speak %}да{% else %}нет{% endif %}</span></div>
+        <div class="mp-row"><span class="mp-key">Стрим</span><span class="mp-val {% if r.stream %}ok{% endif %}">{% if r.stream %}да{% else %}нет{% endif %}</span></div>
+        <div class="mp-row"><span class="mp-key">Управлять</span><span class="mp-val {% if r.manage %}ok{% endif %}">{% if r.manage %}да{% else %}нет{% endif %}</span></div>
       </div>
-      <div class="ch-caps">
-        <span class="ch-cap {% if r.view %}on{% endif %}">смотреть</span>
-        {% if r.group == 'voice' %}
-        <span class="ch-cap {% if r.connect %}on{% endif %}">зайти</span>
-        <span class="ch-cap {% if r.speak %}on{% endif %}">говорить</span>
-        <span class="ch-cap {% if r.stream %}on{% endif %}">стрим</span>
-        {% else %}
-        <span class="ch-cap {% if r.send %}on{% endif %}">писать</span>
-        {% endif %}
-        <span class="ch-cap {% if r.manage %}on warn{% endif %}">управлять</span>
-      </div>
-    </article>
+    </details>
     {% endfor %}
   </div>
 </section>

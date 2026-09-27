@@ -2,7 +2,7 @@
 {% block title %}Журнал{% endblock %}
 {% block heading %}Журнал{% endblock %}
 {% block body %}
-<p class="lead">Лента наказаний, staff-события и входы/выходы.{% if hidden_kinds %} Для твоей роли скрыто: <b>{{ hidden_kinds|join(', ') }}</b>.{% endif %}</p>
+<p class="lead">Имена, не номера. Клик по человеку открывает профиль и историю.{% if hidden_kinds %} Скрыто: <b>{{ hidden_kinds|join(', ') }}</b>.{% endif %}</p>
 
 {% include '_limits.html' %}
 
@@ -12,13 +12,15 @@
   <article class="stat-card"><div class="stat-k">Входы / выходы</div><div class="stat-v">{{ joins|length }}</div></article>
 </section>
 
+{% include '_activity.html' %}
+
 <section class="panel rise">
   <h2>Наказания <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}<div class="empty">Пока пусто</div>
   {% else %}
   <div class="log-timeline">
     {% for r in rows %}
-    <article class="log-item log-{{ r.kind }}">
+    <article class="log-item log-{{ r.kind }} click-row" {% if r.user_id %}data-href="{{ url_for('member', q=r.user_id) }}"{% endif %}>
       <div class="log-rail" aria-hidden="true"></div>
       <div>
         <div class="log-top">
@@ -27,7 +29,11 @@
           <span class="log-when">{{ r.when }}</span>
         </div>
         <div class="log-meta">
-          <span>мод · <b>{{ r.mod_name }}</b></span>
+          <span>мод ·
+            {% if r.mod_id and (r.mod_id|string)|length >= 15 %}
+            <a href="{{ url_for('member', q=r.mod_id) }}"><b>{{ r.mod_name }}</b></a>
+            {% else %}<b>{{ r.mod_name }}</b>{% endif %}
+          </span>
           {% if r.duration %}<span>{{ r.duration }} мин</span>{% endif %}
         </div>
         {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
@@ -47,7 +53,9 @@
     <div class="feed-row">
       <div class="feed-act">{{ f.action }}</div>
       <div class="feed-body">
-        <strong>{{ f.who }}</strong> <span class="dim">→ {{ f.target }}</span>
+        {% if f.who_id %}<a href="{{ url_for('member', q=f.who_id) }}"><strong>{{ f.who }}</strong></a>{% else %}<strong>{{ f.who }}</strong>{% endif %}
+        <span class="dim">→</span>
+        {% if f.target_id %}<a href="{{ url_for('member', q=f.target_id) }}">{{ f.target }}</a>{% else %}{{ f.target }}{% endif %}
         {% if f.detail %}<div class="dim">{{ f.detail }}</div>{% endif %}
       </div>
       <div class="feed-when">{{ f.when }}</div>
@@ -63,13 +71,14 @@
   {% else %}
   <div class="join-list">
     {% for e in joins %}
-    <div class="join-row">
+    <div class="join-row click-row" {% if e.user_id %}data-href="{{ url_for('member', q=e.user_id) }}"{% endif %}>
       <span class="pill {% if 'вошёл' in e.action %}pill-ok{% else %}pill-leave{% endif %}">{{ e.action }}</span>
-      <span><b>{{ e.user_name or e.user_id }}</b></span>
+      <span>{% if e.user_id %}<a href="{{ url_for('member', q=e.user_id) }}"><b>{{ e.user_name }}</b></a>{% else %}<b>{{ e.user_name }}</b>{% endif %}</span>
       <span class="dim">{{ e.when }}</span>
     </div>
     {% endfor %}
   </div>
   {% endif %}
 </section>
+
 {% endblock %}

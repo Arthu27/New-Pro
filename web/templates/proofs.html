@@ -12,7 +12,7 @@
     {% for r in rows %}
     <div class="history-item">
       <div class="history-body">
-        <strong>{{ r.title }}</strong>
+        {% if r.user_id %}<a href="{{ url_for('member', q=r.user_id) }}"><strong>{{ r.title }}</strong></a>{% else %}<strong>{{ r.title }}</strong>{% endif %}
         <span class="dim">{{ r.detail }}</span>
       </div>
       <span class="history-when">{{ r.when or '—' }}</span>

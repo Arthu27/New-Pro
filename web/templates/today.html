@@ -21,7 +21,7 @@
   {% else %}
   <div class="log-timeline">
     {% for r in rows %}
-    <article class="log-item log-{{ r.kind }}">
+    <article class="log-item log-{{ r.kind }} click-row" {% if r.user_id %}data-href="{{ url_for('member', q=r.user_id) }}"{% endif %}>
       <div class="log-rail" aria-hidden="true"></div>
       <div>
         <div class="log-top">
@@ -29,7 +29,11 @@
           <a class="log-who" href="{{ url_for('member', q=r.user_id) }}">{{ r.user_name }}</a>
           <span class="log-when">{{ r.when }}</span>
         </div>
-        <div class="log-meta"><span>мод · <b>{{ r.mod_name }}</b></span></div>
+        <div class="log-meta"><span>мод ·
+          {% if r.mod_id and (r.mod_id|string)|length >= 15 %}
+          <a href="{{ url_for('member', q=r.mod_id) }}"><b>{{ r.mod_name }}</b></a>
+          {% else %}<b>{{ r.mod_name }}</b>{% endif %}
+        </span></div>
         {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
       </div>
     </article>

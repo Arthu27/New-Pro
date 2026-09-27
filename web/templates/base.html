@@ -6,7 +6,7 @@
   <title>{% block title %}Панель{% endblock %} · Hakumo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=11">
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=14">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <meta name="theme-color" content="#07080a">
   <style>html,body{background:#07080a;color:#f2f4f8}</style>
@@ -117,6 +117,11 @@
     location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
   });
   document.addEventListener('click', e => { if (!e.target.closest('.gsearch')) box.hidden = true; });
+  document.addEventListener('click', e => {
+    if (e.target.closest('a, button, input, select, summary, label')) return;
+    const row = e.target.closest('.click-row[data-href]');
+    if (row) location.href = row.dataset.href;
+  });
 })();
 </script>
 {% endif %}
