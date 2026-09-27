@@ -20,7 +20,7 @@ from pathlib import Path
 
 from flask import (
     Flask, abort, flash, g, jsonify, redirect, render_template,
-    request, session, url_for,
+    request, send_from_directory, session, url_for,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -183,7 +183,68 @@ def _auth_static_headers(resp):
         return resp
     if path.startswith('/static/auth-new.css') or path in ('/login', '/welcome'):
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    # Ошибку не запоминать: иначе чужой браузер и Discord часами показывают старый 404.
+    if resp.status_code >= 400:
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        resp.headers['CDN-Cache-Control'] = 'no-store'
     return resp
+
+
+# Публичные шаблоны профилей. Без логина и без флага «выключить»:
+# profile-card / most-active / couple-card всегда отдаются.
+# Файлы лежат вне git (data/ + /var/lib/hakumo/profiles), деплой их не сносит.
+_PROFILE_PUBLIC = frozenset({
+    'index.html',
+    'profile-card.png',
+    'most-active.png',
+    'couple-card.png',
+})
+
+
+def _profiles_folder() -> str:
+    try:
+        from services.profile_templates import profiles_dir
+        return str(profiles_dir())
+    except Exception:
+        folder = DATA / 'profile_templates'
+        folder.mkdir(parents=True, exist_ok=True)
+        return str(folder)
+
+
+def _public_file(folder: str, name: str, *, mimetype: str | None = None):
+    """Картинка для чужого браузера и Discord: не скачивание и не закрытый ресурс."""
+    kwargs = {'mimetype': mimetype} if mimetype else {}
+    resp = send_from_directory(folder, name, **kwargs)
+    resp.headers.pop('Content-Disposition', None)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Cross-Origin-Resource-Policy'] = 'cross-origin'
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    resp.headers['Cache-Control'] = 'public, max-age=300, must-revalidate'
+    return resp
+
+
+@app.route('/profiles')
+@app.route('/profiles/')
+def profiles_gallery():
+    folder = _profiles_folder()
+    return _public_file(folder, 'index.html', mimetype='text/html')
+
+
+@app.route('/profiles/<path:filename>')
+def profiles_file(filename):
+    """Короткие ссылки: /profiles/couple-card.png и соседние карточки."""
+    name = os.path.basename(str(filename or '').replace('\\', '/'))
+    if name not in _PROFILE_PUBLIC:
+        abort(404)
+    return _public_file(_profiles_folder(), name)
+
+
+try:
+    from services.profile_templates import ensure_profile_templates as _ensure_profiles
+    _ensure_profiles(overwrite=False)
+except Exception as _prof_ex:
+    import logging
+    logging.getLogger('profile_templates').debug('ensure: %s', _prof_ex)
 
 
 # ── access store (fresh file, no migration from old panel) ─────────────
