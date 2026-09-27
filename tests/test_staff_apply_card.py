@@ -248,6 +248,8 @@ check('С чего вы сидите' in card_text and 'знания прави�
       'moderator question labels on card', card_text[:200])
 check('куратор этой ветки' in card_text.lower(),
       'footer names branch curator', card_text[-160:])
+check('select ниже' in card_text.lower(),
+      'footer says select, not buttons', card_text[-160:])
 apps = SA.load_apps()
 app_key = '777888999000111222:moderator'
 app = apps.get(app_key) or apps.get('777888999000111222')

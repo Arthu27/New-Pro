@@ -909,10 +909,12 @@ class RoleSelect(discord.ui.Select):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Рассмотрение заявки (persistent) — кнопки Одобрить / Отклонить / ЧС
+# Рассмотрение заявки (persistent) — select Принять / Отклонить / ЧС
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffCardApproveButton(discord.ui.Button):
+    """Legacy: старые карточки с кнопками до перехода на select."""
+
     def __init__(self):
         super().__init__(
             label='Одобрить', style=discord.ButtonStyle.success,
@@ -923,6 +925,8 @@ class StaffCardApproveButton(discord.ui.Button):
 
 
 class StaffCardRejectButton(discord.ui.Button):
+    """Legacy: старые карточки с кнопками."""
+
     def __init__(self):
         super().__init__(
             label='Отклонить', style=discord.ButtonStyle.danger,
@@ -933,6 +937,8 @@ class StaffCardRejectButton(discord.ui.Button):
 
 
 class StaffCardBlacklistButton(discord.ui.Button):
+    """Legacy: старые карточки с кнопками."""
+
     def __init__(self):
         super().__init__(
             label='Чёрный список', style=discord.ButtonStyle.secondary,
@@ -943,13 +949,13 @@ class StaffCardBlacklistButton(discord.ui.Button):
 
 
 class StaffReviewSelect(discord.ui.Select):
-    """Legacy select — только для старых карточек до кнопок."""
+    """Select решения на карточке заявки."""
 
     def __init__(self):
         from services.menu_banners import select_label
         from services.menu_emojis import emoji_for_review
         super().__init__(
-            placeholder="",
+            placeholder="Выберите решение",
             options=[
                 discord.SelectOption(
                     label=select_label("Принять"), value="approve",
@@ -969,8 +975,18 @@ class StaffReviewSelect(discord.ui.Select):
         await StaffReviewView()._review(interaction, self.values[0])
 
 
+class StaffAppCardButtonsLegacyView(discord.ui.View):
+    """Старые карточки с тремя кнопками — только persistent custom_id."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(StaffCardApproveButton())
+        self.add_item(StaffCardRejectButton())
+        self.add_item(StaffCardBlacklistButton())
+
+
 class StaffAppCardView(discord.ui.LayoutView):
-    """Карточка заявки куратору — V2: должность, ответы, кнопки решения."""
+    """Карточка заявки куратору — V2: должность, ответы, select решения."""
 
     def __init__(self, *, title: str, body: str, footer: str = ''):
         super().__init__(timeout=None)
@@ -986,13 +1002,9 @@ class StaffAppCardView(discord.ui.LayoutView):
             em_s = ''
         head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
         foot = footer or (
-            'HAKUMO · решение — кнопки ниже · только куратор этой ветки'
+            'HAKUMO · решение — select ниже · только куратор этой ветки'
         )
-        btns = (
-            StaffCardApproveButton(),
-            StaffCardRejectButton(),
-            StaffCardBlacklistButton(),
-        )
+        sel = StaffReviewSelect()
         if V2_AVAILABLE:
             from discord import ui as dui
             children = [
@@ -1004,14 +1016,12 @@ class StaffAppCardView(discord.ui.LayoutView):
                 dui.TextDisplay(f'-# {foot}'[:400]),
             ]
             row = dui.ActionRow()
-            for b in btns:
-                row.add_item(b)
+            row.add_item(sel)
             children.append(row)
             self.add_item(black_container(*children))
             return
         row = discord.ui.ActionRow()
-        for b in btns:
-            row.add_item(b)
+        row.add_item(sel)
         self.add_item(row)
 
 
@@ -1749,6 +1759,7 @@ class StaffApply(commands.Cog):
         self.bot.add_view(StaffApplyView(banner_url=menu_url))
         self.bot.add_view(StaffReviewView())
         self.bot.add_view(StaffReviewButtonsView())
+        self.bot.add_view(StaffAppCardButtonsLegacyView())
         self.bot.add_view(StaffAppCardView(title='Заявка', body='…'))
         if not self._menu_task_started:
             self._menu_task_started = True

@@ -274,28 +274,41 @@ check([o.value for o in sel.options] ==
       ['Moderator', 'Helper', 'Eventsmod', 'Broadcaster'], 'select EN')
 check(StaffAppCardView(title='Moderator', body='x').has_components_v2(), 'V2 card')
 from cogs.staff_apply import (  # noqa: E402
-    StaffReviewSelect, StaffCardApproveButton, StaffCardBlacklistButton)
+    StaffReviewSelect, StaffCardApproveButton, StaffCardBlacklistButton,
+    StaffAppCardButtonsLegacyView)
 rev = StaffReviewSelect()
 check([o.value for o in rev.options] == ['approve', 'reject', 'blacklist'],
-      'legacy select: Принять/Отклонить/Чёрный список')
+      'select: Принять/Отклонить/Чёрный список')
+check(rev.custom_id == 'staff_review_select_v2'
+      and rev.placeholder == 'Выберите решение',
+      'select placeholder + custom_id')
 card = StaffAppCardView(title='Moderator', body='x')
-# Walk children for buttons (V2 ActionRow)
-_btn_labels = []
+# Walk children for select (V2 ActionRow)
+_sel_ids = []
+_sel_vals = []
 for item in card.children:
     walk = [item]
     while walk:
         cur = walk.pop()
         kids = getattr(cur, 'children', None) or []
         walk.extend(kids)
-        lab = getattr(cur, 'label', None)
-        if lab:
-            _btn_labels.append(lab)
-check('Одобрить' in _btn_labels and 'Отклонить' in _btn_labels
-      and 'Чёрный список' in _btn_labels,
-      f'карточка: кнопки решения {_btn_labels}')
+        cid = getattr(cur, 'custom_id', None)
+        opts = getattr(cur, 'options', None)
+        if cid and opts is not None:
+            _sel_ids.append(cid)
+            _sel_vals.extend([o.value for o in opts])
+check('staff_review_select_v2' in _sel_ids
+      and _sel_vals == ['approve', 'reject', 'blacklist'],
+      f'карточка: select решения {_sel_ids} {_sel_vals}')
+from services.v2_layouts import layout_plain_text as _lpt  # noqa: E402
+_card_txt = _lpt(card)
+check('select ниже' in _card_txt.lower(),
+      'footer говорит про select', _card_txt[-200:])
 check(StaffCardApproveButton().custom_id.endswith('approve_v3')
       and StaffCardBlacklistButton().custom_id.endswith('blacklist_v3'),
-      'кнопки ЧС на карточке')
+      'legacy кнопки v3 живы для старых сообщений')
+leg = StaffAppCardButtonsLegacyView()
+check(len(leg.children) == 3, 'legacy view держит 3 кнопки')
 for kind in SR.POSITIONS:
     tag = _curator_ping(
         types.SimpleNamespace(
