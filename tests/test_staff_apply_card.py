@@ -233,8 +233,12 @@ view = sent.get('view')
 check(isinstance(view, SA.StaffAppCardView),
       'V2 StaffAppCardView', type(view))
 cur_tag = f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>"
-check(sent.get('content') == cur_tag,
-      'куратор ветки тегается в карточке', sent.get('content'))
+# V2 нельзя с content — тег куратора отдельным сообщением
+ping_msgs = [s for s in apps_ch2.sent if s.get('content') == cur_tag]
+check(bool(ping_msgs), 'куратор ветки тегается отдельным сообщением',
+      [s.get('content') for s in apps_ch2.sent])
+check(not sent.get('content'),
+      'V2-карточка без content (иначе Discord 50035)', sent.get('content'))
 check(getattr(view, 'has_components_v2', lambda: False)(),
       'card has Components V2')
 # body uses moderator question labels

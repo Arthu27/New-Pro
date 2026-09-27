@@ -1141,9 +1141,7 @@ class StaffReviewView(discord.ui.View):
                 done = StaffAppDecidedView(
                     title=pos_label, body=body, status=status_label,
                     note=note, accent=accent)
-                how = await _publish_decision(
-                    interaction, view=done,
-                    content=getattr(interaction.message, 'content', None) or None)
+                how = await _publish_decision(interaction, view=done)
             else:
                 how = await _publish_decision(interaction, view=None)
                 src = interaction.message
@@ -1418,40 +1416,40 @@ def _hook_avatar(guild):
 async def _send_staff_card(channel, *, content=None, view=None):
     """Карточка заявки V2 (webhook или бот).
 
-    content — тег куратора ветки (`<@&…>`), уходит в том же сообщении.
+    Discord запрещает `content` вместе с IS_COMPONENTS_V2.
+    Тег куратора — отдельным сообщением, карточка без content.
     """
     allowed = discord.AllowedMentions(roles=True, users=True)
+    if content:
+        try:
+            await channel.send(str(content), allowed_mentions=allowed)
+        except Exception as _ex:
+            log.warning('STAFF: ping before card: %s', _ex)
     hook = await _channel_webhook(channel)
     if hook is not None:
         try:
-            kwargs = dict(
+            return await hook.send(
                 view=view, wait=True,
                 username=HOOK_USERNAME,
                 avatar_url=_hook_avatar(getattr(channel, 'guild', None)),
                 allowed_mentions=allowed)
-            if content:
-                kwargs['content'] = content
-            return await hook.send(**kwargs)
         except Exception as _ex:
             log.debug('staff: card webhook failed: %s', _ex)
-    return await channel.send(
-        content=content, view=view, allowed_mentions=allowed)
+    return await channel.send(view=view, allowed_mentions=allowed)
 
 
-async def _publish_decision(interaction, *, view, content=None) -> str:
+async def _publish_decision(interaction, *, view) -> str:
     """Закрыть анкету сразу: убрать кнопки, показать кто решил.
 
     Карточки шлёт вебхук — обычный message.edit часто молча не проходит.
     Правильный путь: response.edit_message / followup.edit_message.
+    content сюда не кладём — V2 его запрещает.
     """
     kwargs = {'view': view}
-    # V2-карточка без эмбеда; content оставляем (тег куратора), если был
     try:
         kwargs['embed'] = None
     except Exception:
         pass
-    if content is not None:
-        kwargs['content'] = content
     # 1) первый ответ interaction = правка самой анкеты
     if not interaction.response.is_done():
         try:
