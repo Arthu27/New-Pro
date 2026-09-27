@@ -1,0 +1,146 @@
+{# Диалог наказания: мера → правило (1.1–1.9) → длительность → комментарий #}
+{% if punish_actions %}
+<dialog id="punishDlg" class="dlg">
+  <form method="dialog" class="dlg-card" id="punishForm">
+    <div class="dlg-head">
+      <div>
+        <h3>Наказать <span id="punishName"></span></h3>
+        <div class="dim" id="punishSub">выбери меру и правило</div>
+      </div>
+      <button type="button" class="dlg-x" id="punishClose" aria-label="Закрыть">×</button>
+    </div>
+    <input type="hidden" id="punishUid">
+
+    <label>Мера
+      <div class="seg" id="punishSeg">
+        {% for a in punish_actions %}
+        <button type="button" data-act="{{ a }}" class="{% if a == 'ban' %}danger-seg{% endif %}">{{ punish_labels.get(a, a) }}</button>
+        {% endfor %}
+      </div>
+    </label>
+
+    <label>Правило
+      <div class="rule-picker" id="rulePicker"><div class="empty dim">Загружаю правила…</div></div>
+    </label>
+    <input type="hidden" id="punishRule">
+
+    {% if 'mute' in punish_actions %}
+    <label id="punishMinWrap">Длительность мута
+      <select id="punishMin">
+        <option value="5">5 минут</option>
+        <option value="10" selected>10 минут</option>
+        <option value="30">30 минут</option>
+        <option value="60">1 час</option>
+        {% if user_role != 'helper' %}
+        <option value="180">3 часа</option>
+        <option value="720">12 часов</option>
+        <option value="1440">1 день</option>
+        {% endif %}
+      </select>
+    </label>
+    {% endif %}
+
+    <label>Комментарий <span class="dim" style="text-transform:none;letter-spacing:0">(необязательно)</span>
+      <input id="punishNote" placeholder="уточнение, ссылка на скрин…" maxlength="200">
+    </label>
+
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="punishCancel">Отмена</button>
+      <button type="button" id="punishGo" class="primary-btn">Выдать</button>
+    </div>
+    <p id="punishMsg" class="dim" style="margin:0;min-height:1.2em"></p>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  const dlg = document.getElementById('punishDlg');
+  if (!dlg) return;
+  const $ = id => document.getElementById(id);
+  const seg = $('punishSeg'), picker = $('rulePicker'), msg = $('punishMsg');
+  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  let action = seg.querySelector('button').dataset.act;
+  const rulesCache = {};
+
+  async function loadRules() {
+    picker.innerHTML = '<div class="empty dim">Загружаю правила…</div>';
+    $('punishRule').value = '';
+    let items = rulesCache[action];
+    if (!items) {
+      try {
+        const r = await fetch('/api/rules?action=' + encodeURIComponent(action));
+        const j = await r.json();
+        items = j.items || [];
+      } catch (e) { items = []; }
+      rulesCache[action] = items;
+    }
+    if (!items.length) {
+      picker.innerHTML = '<div class="empty dim">Нет правил для этой меры</div>';
+      return;
+    }
+    picker.innerHTML = items.map(it => `<button type="button" class="rule-opt" data-code="${esc(it.value)}">
+      <span class="rule-opt__code">${esc(it.value)}</span>
+      <span class="rule-opt__body"><strong>${esc(it.title)}</strong><small>${esc(it.punish)} · ${esc(it.duration)}</small></span>
+    </button>`).join('');
+  }
+  function setAction(a) {
+    action = a;
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.act === a));
+    const mw = $('punishMinWrap');
+    if (mw) mw.style.display = a === 'mute' ? '' : 'none';
+    loadRules();
+  }
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    setAction(b.dataset.act);
+  });
+  picker.addEventListener('click', e => {
+    const b = e.target.closest('.rule-opt'); if (!b) return;
+    picker.querySelectorAll('.rule-opt').forEach(x => x.classList.toggle('on', x === b));
+    $('punishRule').value = b.dataset.code;
+    msg.textContent = '';
+  });
+
+  window.openPunish = function (uid, name, act) {
+    $('punishUid').value = uid;
+    $('punishName').textContent = name;
+    $('punishNote').value = '';
+    msg.textContent = '';
+    setAction(act && seg.querySelector(`button[data-act="${act}"]`) ? act : seg.querySelector('button').dataset.act);
+    dlg.showModal();
+  };
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.punish-btn'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    window.openPunish(b.dataset.uid, b.dataset.name, b.dataset.act);
+  });
+  $('punishClose').addEventListener('click', () => dlg.close());
+  $('punishCancel').addEventListener('click', () => dlg.close());
+
+  $('punishGo').addEventListener('click', async () => {
+    const rule = $('punishRule').value;
+    if (!rule) { msg.textContent = 'Выбери правило'; return; }
+    msg.textContent = 'Отправляю…';
+    const body = {
+      user_id: $('punishUid').value,
+      action: action,
+      rule: rule,
+      note: $('punishNote').value,
+      minutes: ($('punishMin') || {}).value || 10,
+    };
+    try {
+      const r = await fetch('/api/punish', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        msg.textContent = 'Готово · ' + (j.reason || j.action);
+        setTimeout(() => location.reload(), 700);
+      } else {
+        msg.textContent = j.error || 'Ошибка';
+      }
+    } catch (e) { msg.textContent = 'Сеть: ' + e.message; }
+  });
+})();
+</script>
+{% endif %}

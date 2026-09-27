@@ -2,21 +2,20 @@
 {% block title %}Правила{% endblock %}
 {% block heading %}Правила{% endblock %}
 {% block body %}
-<p class="lead">Правила 1.1–1.9 — те же, что в /modpanel. {% if not show_reasons %}Хелпер читает все; бан/кик недоступны.{% endif %}</p>
+<p class="lead">Правила 1.1–1.9 — те же, что в /modpanel. При наказании выбирается правило, не текст.{% if not show_reasons %} Бан и кик твоей роли недоступны.{% endif %}</p>
 
 {% include '_limits.html' %}
 
-<section class="panel rise rules-panel">
-  <h2>Правила сервера · {{ rules|length }}</h2>
-  {% if not rules %}
-  <div class="empty">Каталог правил не загрузился</div>
+<section class="panel rise">
+  <h2>Правила сервера <span class="count">{{ rules|length }}</span></h2>
+  {% if not rules %}<div class="empty">Каталог правил не загрузился</div>
   {% else %}
   <div class="rules-list">
     {% for r in rules %}
     <article class="rule-card {% if r.note %}is-note{% endif %} {% if r.locked %}is-locked{% endif %}" style="--i: {{ loop.index0 if loop.index0 < 20 else 20 }}">
       <div class="rule-num">{{ r.code or '·' }}</div>
       <div class="rule-body">
-        <h3>{% if r.code and r.title %}{{ r.code }} · {{ r.title }}{% else %}{{ r.title or 'Правило' }}{% endif %}</h3>
+        <h3>{% if r.code and r.title %}{{ r.title }}{% else %}{{ r.title or 'Правило' }}{% endif %}</h3>
         {% if r.text %}<p>{{ r.text }}</p>{% endif %}
         <div class="rule-meta">
           {% if r.punish %}<span class="rule-punish">{{ r.punish }}</span>{% endif %}
@@ -31,12 +30,10 @@
 </section>
 
 {% if show_reasons and reasons %}
-<section class="panel rise" style="margin-top:16px">
-  <h2>Для селекта наказаний</h2>
+<section class="panel rise" style="margin-top:12px">
+  <h2>Коды для селекта</h2>
   <div class="reason-chips">
-    {% for r in reasons %}
-    <span class="reason-chip">{{ r.code or '' }}{% if r.title %} · {{ r.title }}{% endif %}</span>
-    {% endfor %}
+    {% for r in reasons %}<span class="reason-chip">{{ r.code }}{% if r.title %} · {{ r.title }}{% endif %}</span>{% endfor %}
   </div>
 </section>
 {% endif %}

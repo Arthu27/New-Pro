@@ -474,6 +474,8 @@ def _viewer_limits_card():
         'actions': allowed,
         'slots': items,
         'can_punish': bool(allowed),
+        # owner/без лимитов — карточку не показываем
+        'show': any(it.get('locked') or (it.get('limit') or 0) > 0 for it in items),
     }
 
 
@@ -723,7 +725,19 @@ def inject_nav():
     pages = _pages_for_role(role) if role else []
     handle = session.get('discord_handle') or ''
     limits = _viewer_limits_card() if session.get('logged_in') else None
+    badges = {}
+    if session.get('logged_in') and LEVEL.get(role, 0) >= LEVEL['mod']:
+        try:
+            pend = sum(
+                1 for it in _appeals_list(_main_guild())
+                if str(it.get('status') or '').lower() in ('pending', 'open', 'new', 'ожидает', '')
+            )
+            if pend:
+                badges['appeals'] = pend
+        except Exception:
+            pass
     return {
+        'nav_badges': badges,
         'nav_pages': pages,
         'user_name': session.get('discord_display') or session.get('username') or '',
         'user_handle': f'@{handle}' if handle else '',
@@ -1724,19 +1738,39 @@ def channels_page():
         guild = None
     if guild is not None:
         everyone = guild.default_role
-        for ch in sorted(guild.channels, key=lambda c: (getattr(c, 'position', 0), str(c.name))):
-            kind = type(ch).__name__.replace('Channel', '').replace('Category', 'Cat')
+
+        def _order(c):
+            cat = getattr(c, 'category', None)
+            cp = getattr(cat, 'position', -1) if cat is not None else -1
+            return (cp, getattr(c, 'position', 0), str(getattr(c, 'name', '')).lower())
+
+        for ch in sorted(guild.channels, key=_order):
+            cls = type(ch).__name__
+            if 'Category' in cls:
+                group, kind, icon = 'category', 'категория', 'fa-folder'
+            elif 'Voice' in cls or 'Stage' in cls:
+                group, kind, icon = 'voice', 'голос', 'fa-volume-high'
+            elif 'Forum' in cls:
+                group, kind, icon = 'forum', 'форум', 'fa-comments'
+            else:
+                group, kind, icon = 'text', 'текст', 'fa-hashtag'
+            cat = getattr(getattr(ch, 'category', None), 'name', None) or 'Без категории'
             perms = None
             try:
                 perms = ch.permissions_for(everyone) if everyone else None
             except Exception:
                 perms = None
-            def flag(name):
-                return bool(getattr(perms, name, False)) if perms else False
+
+            def flag(name, _p=perms):
+                return bool(getattr(_p, name, False)) if _p else False
+
             rows.append({
                 'id': str(ch.id),
                 'name': getattr(ch, 'name', '?'),
                 'kind': kind,
+                'group': group,
+                'icon': icon,
+                'cat': cat,
                 'view': flag('view_channel'),
                 'send': flag('send_messages'),
                 'speak': flag('speak'),
@@ -1744,7 +1778,21 @@ def channels_page():
                 'manage': flag('manage_channels'),
                 'stream': flag('stream'),
             })
-    return render_template('channels.html', rows=rows)
+    shown = [r for r in rows if r.get('group') != 'category']
+    groups, seen = [], {}
+    for r in shown:
+        key = r['cat']
+        if key not in seen:
+            seen[key] = {'name': key, 'items': []}
+            groups.append(seen[key])
+        seen[key]['items'].append(r)
+    kpi = {
+        'total': len(shown),
+        'text': sum(1 for r in shown if r['group'] == 'text'),
+        'voice': sum(1 for r in shown if r['group'] == 'voice'),
+        'closed': sum(1 for r in shown if not r['view']),
+    }
+    return render_template('channels.html', rows=shown, groups=groups, kpi=kpi)
 
 
 @app.get('/api/login/accounts')
@@ -1794,7 +1842,9 @@ def api_punish():
     data = request.get_json(silent=True) or request.form
     action = str(data.get('action') or '').strip().lower()
     uid = str(data.get('user_id') or '').strip()
-    reason = str(data.get('reason') or 'Панель').strip()[:400]
+    rule = str(data.get('rule') or '').strip()
+    note = str(data.get('note') or '').strip()[:200]
+    legacy_reason = str(data.get('reason') or '').strip()[:400]
     try:
         minutes = int(data.get('minutes') or 10)
     except Exception:
@@ -1809,6 +1859,33 @@ def api_punish():
         }), 403
     if not uid.isdigit():
         return jsonify({'ok': False, 'error': 'user_id'}), 400
+    # хелперу мут — максимум час
+    if action == 'mute' and (session.get('role') or 'helper') == 'helper':
+        minutes = min(max(1, minutes), 60)
+
+    # причина = правило из каталога (+ комментарий)
+    reason = ''
+    try:
+        from services.mod_reasons import is_known, allows, format_reason
+        if rule:
+            if not is_known(rule):
+                return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
+            act_key = 'timeout' if action == 'mute' else action
+            if action != 'kick' and not allows(rule, act_key):
+                return jsonify({
+                    'ok': False,
+                    'error': f'Правило {rule} не предусматривает: {PUNISH_LABELS.get(action, action)}',
+                }), 400
+            reason = format_reason(rule)
+        elif not legacy_reason:
+            return jsonify({'ok': False, 'error': 'Выбери правило'}), 400
+    except ImportError:
+        pass
+    if not reason:
+        reason = legacy_reason or 'Панель'
+    if note:
+        reason = f'{reason} · {note}'
+    reason = reason[:400]
     # лимиты staff_limits
     try:
         from services.staff_limits import check_limit, limit_deny_text, human_window, get_windows
@@ -1863,7 +1940,8 @@ def api_punish():
         if cog and hasattr(cog, 'save_case'):
             cog.save_case(guild.id, act, member.id, mod_id, reason, mod_name=mod_name,
                           duration=minutes if action == 'mute' else None)
-        return {'action': act, 'user': str(member), 'id': str(member.id)}
+        return {'action': act, 'user': str(member), 'id': str(member.id),
+                'reason': (rule or reason)[:80]}
 
     try:
         result = _run_on_bot(_do())
@@ -2484,6 +2562,26 @@ def forbidden(_e):
         'error.html', code=403,
         text='Недостаточно прав для этой страницы.',
     ), 403
+
+
+@app.errorhandler(404)
+def not_found(_e):
+    if request.path.startswith('/api/'):
+        return jsonify({'ok': False, 'error': 'not found'}), 404
+    return render_template(
+        'error.html', code=404,
+        text='Такой страницы нет — либо ссылка устарела.',
+    ), 404
+
+
+@app.errorhandler(500)
+def server_error(_e):
+    if request.path.startswith('/api/'):
+        return jsonify({'ok': False, 'error': 'server error'}), 500
+    return render_template(
+        'error.html', code=500,
+        text='Что-то сломалось. Попробуй обновить страницу.',
+    ), 500
 
 
 @app.get('/health')

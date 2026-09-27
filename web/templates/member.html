@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Профиль участника{% endblock %}
+{% block title %}Профиль{% endblock %}
 {% block heading %}Профиль участника{% endblock %}
 {% block body %}
-<p class="lead">Роли и история. {% if hidden_kinds %}Скрыто: {{ hidden_kinds|join(', ') }}.{% endif %}</p>
+<p class="lead">Роли, активность и история нарушений.{% if hidden_kinds %} Скрыто для твоей роли: <b>{{ hidden_kinds|join(', ') }}</b>.{% endif %}</p>
 
 {% include '_limits.html' %}
 
 <form method="get" class="mp-searchbar rise" action="{{ url_for('member') }}">
   <label class="sr-only" for="mq">Поиск</label>
-  <input id="mq" class="input input-lg" type="search" name="q" value="{{ q }}" placeholder="Имя участника или ID…" autocomplete="off" autofocus>
+  <input id="mq" class="input input-lg" type="search" name="q" value="{{ q }}" placeholder="Имя участника или ID…" autocomplete="off" {% if not profile %}autofocus{% endif %}>
   <div id="msuggest" class="suggest" hidden></div>
   <button type="submit" class="primary-btn">Загрузить</button>
 </form>
@@ -17,13 +17,13 @@
 <div class="mp-grid rise">
   <div class="mp-card">
     <div class="mp-head">
-      <img class="mp-av" src="{{ profile.avatar }}" alt="" width="64" height="64">
-      <div class="mp-info">
+      <img class="mp-av" src="{{ profile.avatar }}" alt="">
+      <div>
         <div class="mp-name">{{ profile.name }}</div>
         <div class="mp-sub">@{{ profile.handle or profile.id }}{% if not profile.on_server %} · не на сервере{% endif %}</div>
       </div>
     </div>
-    <div class="mp-row"><span class="mp-key">ID</span><span class="mp-val">{{ profile.id }}</span></div>
+    <div class="mp-row"><span class="mp-key">ID</span><span class="mp-val mono">{{ profile.id }}</span></div>
     <div class="mp-row"><span class="mp-key">Аккаунт создан</span><span class="mp-val">{{ profile.created }}</span></div>
     <div class="mp-row"><span class="mp-key">На сервере с</span><span class="mp-val">{{ profile.joined }}</span></div>
     <div class="mp-row"><span class="mp-key">Предупреждений</span><span class="mp-val accent">{{ profile.warns }}</span></div>
@@ -32,9 +32,7 @@
     <div class="mp-actions">
       {% for a in punish_actions %}
       <button type="button" class="ghost punish-btn {% if a == 'ban' %}danger{% endif %}"
-              data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="{{ a }}">
-        {{ punish_labels.get(a, a) }}
-      </button>
+              data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="{{ a }}">{{ punish_labels.get(a, a) }}</button>
       {% endfor %}
     </div>
     {% endif %}
@@ -43,152 +41,76 @@
   <div class="mp-card">
     <div class="mp-section">Роли участника</div>
     <div class="mp-roles">
-      {% if profile.roles %}
-        {% for role in profile.roles %}<span class="mp-role">{{ role }}</span>{% endfor %}
-      {% else %}
-        <p class="dim">Нет ролей</p>
-      {% endif %}
+      {% if profile.roles %}{% for role in profile.roles %}<span class="mp-role">{{ role }}</span>{% endfor %}
+      {% else %}<p class="dim" style="margin:0">Нет ролей</p>{% endif %}
     </div>
-    <div class="mp-section" style="margin-top:16px">Сводка мер</div>
+    <div class="mp-section" style="margin-top:18px">Сводка мер</div>
     <div class="mp-mini-kpis">
       <div><b>{{ profile.warns }}</b><span>варн</span></div>
       <div><b>{{ profile.mutes }}</b><span>мут</span></div>
-      {% if profile.kicks is not none %}
-      <div><b>{{ profile.kicks }}</b><span>кик</span></div>
-      {% else %}
-      <div class="is-locked"><b>—</b><span>кик</span></div>
-      {% endif %}
-      {% if profile.bans is not none %}
-      <div><b>{{ profile.bans }}</b><span>бан</span></div>
-      {% else %}
-      <div class="is-locked"><b>—</b><span>бан</span></div>
-      {% endif %}
+      {% if profile.kicks is not none %}<div><b>{{ profile.kicks }}</b><span>кик</span></div>
+      {% else %}<div class="is-locked"><b>—</b><span>кик</span></div>{% endif %}
+      {% if profile.bans is not none %}<div><b>{{ profile.bans }}</b><span>бан</span></div>
+      {% else %}<div class="is-locked"><b>—</b><span>бан</span></div>{% endif %}
     </div>
   </div>
 </div>
 
-<div class="panel rise" style="margin-top:14px">
-  <h2>История нарушений</h2>
+<section class="panel rise" style="margin-top:12px">
+  <h2>История нарушений <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}
-  <div class="empty">История чиста{% if hidden_kinds %} (или скрыта лимитами роли){% endif %}</div>
+  <div class="empty">История чиста{% if hidden_kinds %} (бан/кик скрыты ролью){% endif %}</div>
   {% else %}
-  <div class="history-list">
+  <div class="log-timeline">
     {% for r in rows %}
-    <div class="history-item">
-      <span class="pill pill-{{ r.kind }}">{{ r.action }}</span>
-      <div class="history-body">
-        <strong>{{ r.mod_name }}</strong>
-        <span class="dim">{{ r.reason }}</span>
+    <article class="log-item log-{{ r.kind }}">
+      <div class="log-rail" aria-hidden="true"></div>
+      <div>
+        <div class="log-top">
+          <span class="pill pill-{{ r.kind }}">{{ r.action }}</span>
+          <span class="log-who">{{ r.mod_name }}</span>
+          <span class="log-when">{{ r.when }}</span>
+        </div>
+        {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
       </div>
-      <span class="history-when">{{ r.when }}</span>
-    </div>
+    </article>
     {% endfor %}
   </div>
   {% endif %}
-</div>
+</section>
 
 {% elif q %}
-<div class="empty panel rise">Ничего не найдено по «{{ q }}»</div>
+<div class="panel rise"><div class="empty">Ничего не найдено по «{{ q }}»</div></div>
 {% else %}
-<div class="empty panel rise">Введите имя или ID участника и нажмите «Загрузить»</div>
+<div class="panel rise"><div class="empty">Введи имя или ID участника</div></div>
 {% endif %}
 
-{% if punish_actions %}
-<dialog id="punishDlg" class="dlg">
-  <form method="dialog" class="dlg-card">
-    <h3>Наказать <span id="punishName"></span></h3>
-    <input type="hidden" id="punishUid">
-    <label>Мера
-      <select id="punishAction">
-        {% for a in punish_actions %}
-        <option value="{{ a }}">{{ punish_labels.get(a, a) }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    {% if 'mute' in punish_actions %}
-    <label>Минуты (для мута)
-      <input id="punishMin" type="number" min="1" max="60" value="10">
-    </label>
-    {% endif %}
-    <label>Причина
-      <input id="punishReason" required placeholder="причина">
-    </label>
-    <div class="dlg-actions">
-      <button value="cancel" class="ghost">Отмена</button>
-      <button id="punishGo" value="default" class="primary-btn">Выдать</button>
-    </div>
-    <p id="punishMsg" class="dim"></p>
-  </form>
-</dialog>
-{% endif %}
+{% include '_punish.html' %}
 
 <script>
 (function () {
   const input = document.getElementById('mq');
   const box = document.getElementById('msuggest');
+  if (!input) return;
   let t = null;
-  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-  function render(items) {
-    if (!items.length) { box.hidden = true; box.innerHTML = ''; return; }
-    box.hidden = false;
-    box.innerHTML = items.map(it =>
-      `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
-        <img src="${esc(it.avatar || '')}" alt="" width="28" height="28">
-        <span><b>${esc(it.name)}</b><small>@${esc(it.handle || '')}</small></span>
-      </button>`
-    ).join('');
-  }
-  if (input) {
-    input.addEventListener('input', () => {
-      clearTimeout(t);
-      const q = input.value.trim();
-      t = setTimeout(async () => {
-        if (q.length < 1) { render([]); return; }
-        const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
-        const j = await r.json();
-        render(j.items || []);
-      }, 120);
-    });
-    box.addEventListener('click', (e) => {
-      const b = e.target.closest('.suggest-item');
-      if (!b) return;
-      location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
-    });
-  }
-
-  const dlg = document.getElementById('punishDlg');
-  if (!dlg) return;
-  document.querySelectorAll('.punish-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.getElementById('punishUid').value = btn.dataset.uid;
-      document.getElementById('punishName').textContent = btn.dataset.name;
-      if (btn.dataset.act) document.getElementById('punishAction').value = btn.dataset.act;
-      document.getElementById('punishMsg').textContent = '';
-      dlg.showModal();
-    });
+  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  input.addEventListener('input', () => {
+    clearTimeout(t);
+    const q = input.value.trim();
+    t = setTimeout(async () => {
+      if (!q) { box.hidden = true; box.innerHTML = ''; return; }
+      const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
+      const j = await r.json();
+      const items = j.items || [];
+      if (!items.length) { box.hidden = true; return; }
+      box.hidden = false;
+      box.innerHTML = items.map(it => `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
+        <img src="${esc(it.avatar)}" alt=""><span><b>${esc(it.name)}</b><small>@${esc(it.handle)}</small></span></button>`).join('');
+    }, 120);
   });
-  document.getElementById('punishGo').addEventListener('click', async (e) => {
-    e.preventDefault();
-    const msg = document.getElementById('punishMsg');
-    msg.textContent = 'Отправляю…';
-    const body = {
-      user_id: document.getElementById('punishUid').value,
-      action: document.getElementById('punishAction').value,
-      minutes: (document.getElementById('punishMin') || {}).value || 10,
-      reason: document.getElementById('punishReason').value,
-    };
-    const r = await fetch('/api/punish', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body),
-    });
-    const j = await r.json();
-    if (j.ok) {
-      msg.textContent = 'Готово: ' + j.action;
-      setTimeout(() => location.reload(), 700);
-    } else {
-      msg.textContent = j.error || 'Ошибка';
-    }
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.suggest-item'); if (!b) return;
+    location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
   });
 })();
 </script>

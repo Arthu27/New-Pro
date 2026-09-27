@@ -2,24 +2,20 @@
 {% block title %}Сегодня{% endblock %}
 {% block heading %}Сегодня{% endblock %}
 {% block body %}
-<p class="lead">Наказания за сегодня · с учётом твоих лимитов и доступа.</p>
+<p class="lead">Наказания за сегодня — новые сверху. Учитывает твою роль и лимиты.</p>
 
 {% include '_limits.html' %}
 
 <div class="kpis rise">
-  <div class="kpi"><b>{{ kpi.actions }}</b><span>Мер</span></div>
-  <div class="kpi"><b>{{ kpi.warns }}</b><span>Варнов</span></div>
-  {% if 'ban' not in (hidden_kinds or []) %}
-  <div class="kpi"><b>{{ kpi.bans }}</b><span>Банов</span></div>
-  {% endif %}
-  {% if 'kick' not in (hidden_kinds or []) %}
-  <div class="kpi"><b>{{ kpi.kicks }}</b><span>Киков</span></div>
-  {% endif %}
-  <div class="kpi"><b>{{ kpi.mutes }}</b><span>Мутов</span></div>
+  <div class="kpi"><b>{{ kpi.actions }}</b><span>мер</span></div>
+  <div class="kpi"><b>{{ kpi.warns }}</b><span>варнов</span></div>
+  <div class="kpi"><b>{{ kpi.mutes }}</b><span>мутов</span></div>
+  {% if 'kick' not in (hidden_kinds or []) %}<div class="kpi"><b>{{ kpi.kicks }}</b><span>киков</span></div>{% endif %}
+  {% if 'ban' not in (hidden_kinds or []) %}<div class="kpi"><b>{{ kpi.bans }}</b><span>банов</span></div>{% endif %}
 </div>
 
-<div class="panel rise">
-  <h2>Последние за сегодня</h2>
+<section class="panel rise">
+  <h2>Последние за сегодня <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}
   <div class="empty">Сегодня наказаний ещё нет</div>
   {% else %}
@@ -27,20 +23,18 @@
     {% for r in rows %}
     <article class="log-item log-{{ r.kind }}">
       <div class="log-rail" aria-hidden="true"></div>
-      <div class="log-main">
+      <div>
         <div class="log-top">
           <span class="pill pill-{{ r.kind }}">{{ r.action }}</span>
           <a class="log-who" href="{{ url_for('member', q=r.user_id) }}">{{ r.user_name }}</a>
           <span class="log-when">{{ r.when }}</span>
         </div>
-        <div class="log-meta">
-          <span>мод · <b>{{ r.mod_name }}</b></span>
-        </div>
+        <div class="log-meta"><span>мод · <b>{{ r.mod_name }}</b></span></div>
         {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
       </div>
     </article>
     {% endfor %}
   </div>
   {% endif %}
-</div>
+</section>
 {% endblock %}

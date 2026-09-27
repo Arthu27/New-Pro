@@ -1,6 +1,24 @@
-{% extends "base.html" %}
-{% block title %}Ошибка{% endblock %}
-{% block heading %}{{ code }}{% endblock %}
-{% block body %}
-<div class="panel"><div class="empty">{{ text }}</div></div>
-{% endblock %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ code }} · Hakumo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=11">
+  <meta name="theme-color" content="#07080a">
+  <style>html,body{background:#07080a;color:#f2f4f8}</style>
+</head>
+<body>
+<main class="err-page">
+  <div class="err-eclipse" aria-hidden="true"></div>
+  <div class="err-mist" aria-hidden="true"></div>
+  <div class="err-brand">haku<span style="color:#ff4d3d">mo</span></div>
+  <div class="err-card">
+    <h1 class="err-code">{{ code }}</h1>
+    <span class="err-sub">{% if code == 404 %}page not found{% elif code == 403 %}access denied{% else %}error{% endif %}</span>
+    <p class="err-text">{{ text }}</p>
+    <a class="err-home" href="{{ url_for('today') }}">← На главную</a>
+  </div>
+</main>
+</body>
+</html>

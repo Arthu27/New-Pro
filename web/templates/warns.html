@@ -2,23 +2,28 @@
 {% block title %}Варны{% endblock %}
 {% block heading %}Варны{% endblock %}
 {% block body %}
-<div class="panel">
-  <h2>Предупреждения</h2>
+<p class="lead">Все предупреждения — новые сверху.</p>
+
+<section class="panel rise">
+  <h2>Предупреждения <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}<div class="empty">Варнов нет</div>
   {% else %}
-  <table>
-    <thead><tr><th>Кому</th><th>Кто</th><th>Причина</th><th>Время</th></tr></thead>
-    <tbody>
+  <div class="log-timeline">
     {% for r in rows %}
-      <tr>
-        <td>{{ r.user_name }} <span class="dim">{{ r.user_id }}</span></td>
-        <td>{{ r.mod_name }}</td>
-        <td class="dim">{{ r.reason }}</td>
-        <td>{{ r.when }}</td>
-      </tr>
+    <article class="log-item log-warn">
+      <div class="log-rail" aria-hidden="true"></div>
+      <div>
+        <div class="log-top">
+          <span class="pill pill-warn">Варн</span>
+          <a class="log-who" href="{{ url_for('member', q=r.user_id) }}">{{ r.user_name }}</a>
+          <span class="log-when">{{ r.when }}</span>
+        </div>
+        <div class="log-meta"><span>мод · <b>{{ r.mod_name }}</b></span><span class="mono">{{ r.user_id }}</span></div>
+        {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
+      </div>
+    </article>
     {% endfor %}
-    </tbody>
-  </table>
+  </div>
   {% endif %}
-</div>
+</section>
 {% endblock %}

@@ -4,10 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Панель{% endblock %} · Hakumo</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=11">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-  <meta name="theme-color" content="#0b0d14">
-  <style>html,body{background:#0b0d14;color:#e8ecf4}</style>
+  <meta name="theme-color" content="#07080a">
+  <style>html,body{background:#07080a;color:#f2f4f8}</style>
 </head>
 <body>
 {% if hide_shell %}
@@ -15,41 +17,68 @@
 {% else %}
 <div class="shell">
   <aside class="side">
-    <div class="brand">Hakumo <span>mod core · new</span></div>
+    <div class="side-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="brand">haku<em>mo</em><span>mod core</span></div>
+    <div class="side-rule"></div>
+
     <nav class="nav">
-      <div class="group">Модерация</div>
+      <div class="group">Меню</div>
       {% for key, href, label, icon in nav_pages %}
         {% if key in mod_nav_keys %}
-        <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>
+        <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}">
+          <i class="fas {{ icon }}"></i><span>{{ label }}</span>
+          {% if nav_badges and nav_badges.get(key) %}<span class="badge-dot" title="{{ nav_badges.get(key) }}"></span>{% endif %}
+        </a>
         {% endif %}
       {% endfor %}
+
       {% set ns = namespace(server=false) %}
       {% for key, href, label, icon in nav_pages %}
         {% if key in owner_nav_keys %}{% set ns.server = true %}{% endif %}
       {% endfor %}
       {% if ns.server %}
+      <div class="side-rule" style="margin:12px 4px"></div>
       <div class="group">Сервер</div>
       {% for key, href, label, icon in nav_pages %}
         {% if key in owner_nav_keys %}
-        <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>
+        <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}">
+          <i class="fas {{ icon }}"></i><span>{{ label }}</span>
+        </a>
         {% endif %}
       {% endfor %}
       {% endif %}
     </nav>
+
+    <div class="side-foot">
+      <a class="account" href="{% if session.get('discord_id') %}{{ url_for('member', q=session.get('discord_id')) }}{% else %}{{ url_for('today') }}{% endif %}">
+        {% if user_avatar %}
+        <img class="account__ava" src="{{ user_avatar }}" alt="">
+        {% else %}
+        <span class="account__ava account__ava--fallback">{{ (user_name or 'H')[:1]|upper }}</span>
+        {% endif %}
+        <span class="account__who">
+          <strong>{{ user_name }}</strong>
+          <span>{{ user_role_label or user_role }}{% if user_handle %} · {{ user_handle }}{% endif %}</span>
+        </span>
+        <span class="account__chev">›</span>
+      </a>
+      <a class="side-logout" href="{{ url_for('logout') }}"><i class="fas fa-arrow-right-from-bracket"></i> Выйти</a>
+    </div>
   </aside>
+
   <main class="main">
     <div class="top">
       <h1>{% block heading %}{% endblock %}</h1>
-      <div class="meta user-pill">
-        {% if user_avatar %}
-        <img class="user-pill__ava" src="{{ user_avatar }}" alt="" width="28" height="28">
-        {% endif %}
-        <span class="user-pill__who">
-          <strong>{{ user_name }}</strong>
-          {% if user_handle %}<span class="user-pill__at">{{ user_handle }}</span>{% endif %}
+      <div class="top-tools">
+        <form class="gsearch" action="{{ url_for('users_page') }}" method="get" autocomplete="off">
+          <span class="gsearch__ico"><i class="fas fa-magnifying-glass"></i></span>
+          <input id="gq" name="q" placeholder="Найти участника…">
+          <div id="gsuggest" class="suggest" hidden></div>
+        </form>
+        <span class="chip-btn">
+          {% if user_avatar %}<img src="{{ user_avatar }}" alt="">{% else %}<span class="ava-fb"><i class="fas fa-user"></i></span>{% endif %}
+          <span class="role-pill">{{ user_role_label or user_role }}</span>
         </span>
-        <span class="tag tag-{{ user_role }} {% if is_owner %}owner{% endif %}">{{ user_role_label or user_role }}</span>
-        <a href="{{ url_for('logout') }}">выйти</a>
       </div>
     </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -60,6 +89,36 @@
     {% block body %}{% endblock %}
   </main>
 </div>
+<script>
+(function () {
+  const inp = document.getElementById('gq');
+  const box = document.getElementById('gsuggest');
+  if (!inp || !box) return;
+  let t = null;
+  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  inp.addEventListener('input', () => {
+    clearTimeout(t);
+    const q = inp.value.trim();
+    t = setTimeout(async () => {
+      if (!q) { box.hidden = true; box.innerHTML = ''; return; }
+      try {
+        const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
+        const j = await r.json();
+        const items = j.items || [];
+        if (!items.length) { box.hidden = true; return; }
+        box.hidden = false;
+        box.innerHTML = items.slice(0, 8).map(it => `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
+          <img src="${esc(it.avatar)}" alt=""><span><b>${esc(it.name)}</b><small>@${esc(it.handle)}</small></span></button>`).join('');
+      } catch (e) { box.hidden = true; }
+    }, 120);
+  });
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.suggest-item'); if (!b) return;
+    location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.gsearch')) box.hidden = true; });
+})();
+</script>
 {% endif %}
 </body>
 </html>

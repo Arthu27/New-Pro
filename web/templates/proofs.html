@@ -2,22 +2,23 @@
 {% block title %}Демки{% endblock %}
 {% block heading %}Демки{% endblock %}
 {% block body %}
-<div class="panel">
-  <h2>Доказательства</h2>
+<p class="lead">Доказательства из дел — ссылки на скрины и видео.</p>
+
+<section class="panel rise">
+  <h2>Доказательства <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}<div class="empty">Пока пусто — демки обычно идут в Discord-канал</div>
   {% else %}
-  <table>
-    <thead><tr><th>Что</th><th>Детали</th><th>Время</th></tr></thead>
-    <tbody>
+  <div class="history-list">
     {% for r in rows %}
-      <tr>
-        <td>{{ r.title }}</td>
-        <td class="dim">{{ r.detail }}</td>
-        <td>{{ r.when or '—' }}</td>
-      </tr>
+    <div class="history-item">
+      <div class="history-body">
+        <strong>{{ r.title }}</strong>
+        <span class="dim">{{ r.detail }}</span>
+      </div>
+      <span class="history-when">{{ r.when or '—' }}</span>
+    </div>
     {% endfor %}
-    </tbody>
-  </table>
+  </div>
   {% endif %}
-</div>
+</section>
 {% endblock %}

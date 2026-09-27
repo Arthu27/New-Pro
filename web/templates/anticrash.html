@@ -2,11 +2,11 @@
 {% block title %}Антикраш{% endblock %}
 {% block heading %}Антикраш сервера{% endblock %}
 {% block body %}
-<p class="lead">Сильный щит гильдии. Все системы по умолчанию выключены — включаешь только то, что нужно. Сервер: <b>{{ gid }}</b></p>
+<p class="lead">Щит гильдии. Всё выключено по умолчанию — включаешь только нужное. Сервер <b class="mono">{{ gid }}</b></p>
 {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
 
 {% set f = snap.flags %}
-<section class="ac-hero {% if f.any %}on{% else %}off{% endif %}">
+<section class="ac-hero rise {% if f.any %}on{% else %}off{% endif %}">
   <div class="ac-shield"><i class="fas fa-shield-heart"></i></div>
   <div>
     <div class="ac-title">{% if f.any %}Защита частично активна{% else %}Все защиты выключены{% endif %}</div>
@@ -20,7 +20,7 @@
   </div>
 </section>
 
-<div class="sys-grid">
+<div class="sys-grid rise">
   <article class="sys-card">
     <header>
       <h3>Щит</h3>
@@ -52,7 +52,7 @@
 </div>
 
 {# ── Щит / Guardian ── #}
-<section class="panel" style="margin-top:8px">
+<section class="panel rise">
   <h2>Щит сервера · Guardian</h2>
   <div class="toggle-row">
     <div>
@@ -102,7 +102,7 @@
 </section>
 
 {# ── Антирейд ── #}
-<section class="panel" style="margin-top:16px">
+<section class="panel rise" style="margin-top:12px">
   <h2>Антирейд</h2>
   {% for key, title, help in ar_flags %}
   <div class="toggle-row">
@@ -131,7 +131,7 @@
 </section>
 
 {# ── Security ── #}
-<section class="panel" style="margin-top:16px">
+<section class="panel rise" style="margin-top:12px">
   <h2>Security</h2>
   {% for key, title, help in sec_flags %}
   <div class="toggle-row">
@@ -152,7 +152,7 @@
 </section>
 
 {# ── Bot watchdog ── #}
-<section class="panel" style="margin-top:16px">
+<section class="panel rise" style="margin-top:12px">
   <h2>Watchdog бота</h2>
   {% set ov = snap.bot_overview %}
   {% if ov.get('ok') %}

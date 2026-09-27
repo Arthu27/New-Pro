@@ -2,24 +2,24 @@
 {% block title %}Бот{% endblock %}
 {% block heading %}Бот{% endblock %}
 {% block body %}
-<p class="dim" style="margin-top:-8px">Видно только владельцу</p>
-<div class="kpis" style="grid-template-columns:repeat(3,1fr)">
-  <div class="kpi"><b>{% if info.online %}online{% else %}offline{% endif %}</b><span>Статус</span></div>
-  <div class="kpi"><b>{{ info.latency }}</b><span>Пинг</span></div>
-  <div class="kpi"><b>{{ info.name }}</b><span>Имя · {{ info.id }}</span></div>
+<p class="lead">Состояние процесса. Видно только владельцу.</p>
+<div class="kpis rise">
+  <div class="kpi"><b style="color:{% if info.online %}var(--ok){% else %}var(--danger){% endif %}">{% if info.online %}online{% else %}offline{% endif %}</b><span>статус</span></div>
+  <div class="kpi"><b>{{ info.latency }}</b><span>пинг</span></div>
+  <div class="kpi"><b style="font-size:1.2rem">{{ info.name }}</b><span>имя · <span class="mono">{{ info.id }}</span></span></div>
 </div>
-<div class="panel">
-  <h2>Гильдии</h2>
+<section class="panel rise">
+  <h2>Гильдии <span class="count">{{ info.guilds|length }}</span></h2>
   {% if not info.guilds %}<div class="empty">Нет данных — бот не подключён к панели</div>
   {% else %}
   <table>
     <thead><tr><th>Сервер</th><th>ID</th><th>Участники</th></tr></thead>
     <tbody>
     {% for g in info.guilds %}
-      <tr><td>{{ g.name }}</td><td class="dim">{{ g.id }}</td><td>{{ g.members }}</td></tr>
+      <tr><td><b>{{ g.name }}</b></td><td class="dim mono">{{ g.id }}</td><td class="num">{{ g.members }}</td></tr>
     {% endfor %}
     </tbody>
   </table>
   {% endif %}
-</div>
+</section>
 {% endblock %}

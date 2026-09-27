@@ -2,25 +2,32 @@
 {% block title %}Апелляции{% endblock %}
 {% block heading %}Апелляции{% endblock %}
 {% block body %}
-<div class="panel">
-  <h2>Очередь</h2>
+<p class="lead">Очередь апелляций. Решения — в Discord.</p>
+
+<section class="panel rise">
+  <h2>Очередь <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}<div class="empty">Апелляций нет</div>
   {% else %}
+  <div class="table-scroll">
   <table>
-    <thead><tr><th>ID</th><th>Кто</th><th>Статус</th><th>Текст</th><th>Мод</th><th>Время</th></tr></thead>
+    <thead><tr><th>#</th><th>Кто</th><th>Статус</th><th>Текст</th><th>Мод</th><th>Время</th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr>
-        <td>{{ r.id }}</td>
-        <td>{{ r.user }}</td>
-        <td>{{ r.status }}</td>
+        <td class="mono dim">{{ r.id }}</td>
+        <td><b>{{ r.user }}</b></td>
+        <td>
+          {% set st = (r.status|string)|lower %}
+          <span class="pill {% if 'accept' in st or 'принят' in st or 'approved' in st %}pill-ok{% elif 'reject' in st or 'отклон' in st %}pill-ban{% else %}pill-warn{% endif %}">{{ r.status }}</span>
+        </td>
         <td class="dim">{{ r.reason }}</td>
         <td>{{ r.mod }}</td>
-        <td>{{ r.when }}</td>
+        <td class="dim">{{ r.when }}</td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
+  </div>
   {% endif %}
-</div>
+</section>
 {% endblock %}

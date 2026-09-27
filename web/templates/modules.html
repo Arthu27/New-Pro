@@ -2,19 +2,19 @@
 {% block title %}Модули{% endblock %}
 {% block heading %}Модули{% endblock %}
 {% block body %}
-<p class="dim" style="margin-top:-8px">Видно только владельцу</p>
-<div class="panel">
-  <h2>Коги</h2>
+<p class="lead">Загруженные коги. Видно только владельцу.</p>
+<section class="panel rise">
+  <h2>Коги <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}<div class="empty">Список пуст</div>
   {% else %}
   <table>
     <thead><tr><th>Имя</th><th>Класс</th></tr></thead>
     <tbody>
     {% for r in rows %}
-      <tr><td>{{ r.name }}</td><td class="dim">{{ r.cls }}</td></tr>
+      <tr><td><b>{{ r.name }}</b></td><td class="dim mono">{{ r.cls }}</td></tr>
     {% endfor %}
     </tbody>
   </table>
   {% endif %}
-</div>
+</section>
 {% endblock %}

@@ -1,43 +1,98 @@
 {% extends "base.html" %}
 {% block title %}Каналы{% endblock %}
-{% block heading %}Каналы · способности{% endblock %}
+{% block heading %}Каналы{% endblock %}
 {% block body %}
-<p class="lead">Таблица способностей каналов для @everyone. Только просмотр — без опасных правок.</p>
+<p class="lead">Права @everyone по каждому каналу. Зелёная плашка — можно, пустая — закрыто. Только просмотр.</p>
 
-<section class="panel rise">
-  <h2>Матрица</h2>
-  {% if not rows %}<div class="empty">Каналы недоступны (бот офлайн?)</div>
-  {% else %}
-  <div class="table-scroll">
-  <table class="cap-table">
-    <thead>
-      <tr>
-        <th>Канал</th>
-        <th>Тип</th>
-        <th>Смотреть</th>
-        <th>Писать</th>
-        <th>Голос</th>
-        <th>Зайти</th>
-        <th>Стрим</th>
-        <th>Управлять</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for r in rows %}
-      <tr>
-        <td><b>#{{ r.name }}</b></td>
-        <td class="dim">{{ r.kind }}</td>
-        <td>{% if r.view %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
-        <td>{% if r.send %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
-        <td>{% if r.speak %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
-        <td>{% if r.connect %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
-        <td>{% if r.stream %}<span class="dot ok"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
-        <td>{% if r.manage %}<span class="dot warn"></span>{% else %}<span class="dot no"></span>{% endif %}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+<div class="kpis rise">
+  <div class="kpi"><b>{{ kpi.total }}</b><span>каналов</span></div>
+  <div class="kpi"><b>{{ kpi.text }}</b><span>текст</span></div>
+  <div class="kpi"><b>{{ kpi.voice }}</b><span>голос</span></div>
+  <div class="kpi"><b>{{ kpi.closed }}</b><span>скрыты</span></div>
+</div>
+
+<div class="ch-bar rise">
+  <div class="seg" id="chFilter" role="tablist">
+    <button type="button" class="on" data-f="all">Все</button>
+    <button type="button" data-f="text">Текст</button>
+    <button type="button" data-f="voice">Голос</button>
+    <button type="button" data-f="closed">Скрытые</button>
   </div>
-  {% endif %}
+  <label class="ch-find">
+    <i class="fas fa-magnifying-glass"></i>
+    <input id="chq" type="search" placeholder="Найти канал…" autocomplete="off">
+  </label>
+</div>
+
+{% if not groups %}
+<section class="panel rise"><div class="empty">Каналы недоступны — бот ещё не в сети</div></section>
+{% else %}
+{% for g in groups %}
+<section class="panel rise ch-group" data-cat="{{ g.name|lower }}">
+  <h2>{{ g.name }} <span class="count ch-count">{{ g['items']|length }}</span></h2>
+  <div class="ch-grid">
+    {% for r in g['items'] %}
+    <article class="ch-card" data-group="{{ r.group }}" data-closed="{{ 0 if r.view else 1 }}" data-name="{{ r.name|lower }}">
+      <div class="ch-card__top">
+        <span class="ch-ico {% if not r.view %}is-lock{% endif %}"><i class="fas {{ r.icon }}"></i></span>
+        <div class="ch-card__name">
+          <strong>{% if r.group != 'voice' %}#{% endif %}{{ r.name }}</strong>
+          <span class="dim">{{ r.kind }}{% if not r.view %} · скрыт{% endif %}</span>
+        </div>
+      </div>
+      <div class="ch-caps">
+        <span class="ch-cap {% if r.view %}on{% endif %}">смотреть</span>
+        {% if r.group == 'voice' %}
+        <span class="ch-cap {% if r.connect %}on{% endif %}">зайти</span>
+        <span class="ch-cap {% if r.speak %}on{% endif %}">говорить</span>
+        <span class="ch-cap {% if r.stream %}on{% endif %}">стрим</span>
+        {% else %}
+        <span class="ch-cap {% if r.send %}on{% endif %}">писать</span>
+        {% endif %}
+        <span class="ch-cap {% if r.manage %}on warn{% endif %}">управлять</span>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
 </section>
+{% endfor %}
+<p class="ch-none dim" id="chNone" hidden>Ничего не подошло под фильтр</p>
+{% endif %}
+
+<script>
+(function () {
+  const filter = document.getElementById('chFilter');
+  const q = document.getElementById('chq');
+  if (!filter) return;
+  let mode = 'all';
+  function apply() {
+    const needle = (q.value || '').trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll('.ch-card').forEach(card => {
+      const okMode = mode === 'all'
+        || (mode === 'closed' ? card.dataset.closed === '1' : card.dataset.group === mode);
+      const okQ = !needle || (card.dataset.name || '').includes(needle);
+      const on = okMode && okQ;
+      card.hidden = !on;
+      if (on) shown += 1;
+    });
+    document.querySelectorAll('.ch-group').forEach(g => {
+      const n = g.querySelectorAll('.ch-card:not([hidden])').length;
+      g.hidden = n === 0;
+      const c = g.querySelector('.ch-count');
+      if (c) c.textContent = n;
+    });
+    const none = document.getElementById('chNone');
+    if (none) none.hidden = shown !== 0;
+  }
+  filter.addEventListener('click', e => {
+    const b = e.target.closest('button[data-f]');
+    if (!b) return;
+    mode = b.dataset.f;
+    filter.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    apply();
+  });
+  q.addEventListener('input', apply);
+})();
+</script>
 {% endblock %}
