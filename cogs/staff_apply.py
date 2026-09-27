@@ -12,6 +12,7 @@ from config import Config
 import json
 import os
 import io
+import types
 from datetime import datetime, timezone
 
 import aiohttp
@@ -805,9 +806,9 @@ class StaffApplyModal(discord.ui.Modal):
                     extra=v5, member=member, kind=kind, answers=answers)
                 try:
                     card = StaffAppCardView(title=role_label, body=body)
-                    # Без отдельного пинга (@роль / «Moderation — …»):
-                    # карточка сама в канале, доступ по роли куратора ветки.
-                    msg = await _send_staff_card(ch, view=card)
+                    # Тег куратора ветки в том же сообщении — видят, кому решать
+                    msg = await _send_staff_card(
+                        ch, content=tag or None, view=card)
                     apps[store_key]["message_id"] = str(msg.id)
                     apps[store_key]["curator_tag"] = tag or None
                     apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')
@@ -1101,10 +1102,82 @@ class StaffReviewView(discord.ui.View):
             return await reply_text_v2(
                 interaction, deny or "Чужая ветка.",
                 kind='err', title='Нет доступа')
-        if not interaction.response.is_done():
-            await interaction.response.defer(ephemeral=True)
+
+        def _rebuild_body():
+            try:
+                class _U:
+                    mention = f"<@{app.get('user_id')}>"
+                member = None
+                if interaction.guild:
+                    try:
+                        member = interaction.guild.get_member(
+                            int(app.get('user_id') or 0))
+                    except (TypeError, ValueError):
+                        member = None
+                return build_application_body(
+                    user=_U(),
+                    user_id=str(app.get('user_id') or ''),
+                    age=str(app.get('age') or ''),
+                    activity=str(app.get('activity') or ''),
+                    experience=str(app.get('experience') or ''),
+                    reason=str(app.get('reason') or ''),
+                    extra=str(app.get('extra') or ''),
+                    member=member,
+                    kind=app.get('kind') or app.get('role'),
+                    answers=app.get('answers'),
+                )
+            except Exception as _bx:
+                log.debug('staff decided body: %s', _bx)
+                return f"<@{app.get('user_id')}>"
+
+        async def _close_card(*, action_key: str, granted_name: str = None,
+                              reviewer_obj=None):
+            pos_label = position_label(app.get('role'))
+            status_label, note, accent = _decision_note(
+                action_key, reviewer_obj or reviewer, granted=granted_name)
+            body = _rebuild_body()
+            how = ''
+            if V2_AVAILABLE:
+                done = StaffAppDecidedView(
+                    title=pos_label, body=body, status=status_label,
+                    note=note, accent=accent)
+                how = await _publish_decision(
+                    interaction, view=done,
+                    content=getattr(interaction.message, 'content', None) or None)
+            else:
+                how = await _publish_decision(interaction, view=None)
+                src = interaction.message
+                if src and getattr(src, 'embeds', None):
+                    try:
+                        e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
+                        e0.color = accent
+                        e0.set_footer(text=note)
+                        await src.edit(embed=e0, view=None)
+                        how = how or 'message'
+                    except Exception as _ee:
+                        log.warning('STAFF: legacy embed close: %s', _ee)
+            if not how:
+                log.warning(
+                    'STAFF: карточка #%s не закрылась после %s',
+                    getattr(interaction.message, 'id', '?'), action_key)
+            return status_label, note, how
 
         if app.get("status") != "pending":
+            # Уже решена, а кнопки ещё висят — закрыть и показать кто решил
+            past = {
+                "approved": "approve",
+                "rejected": "reject",
+                "blacklisted": "blacklist",
+            }.get(app.get("status"), "reject")
+            who_past = app.get("reviewed_by") or "—"
+            fake = types.SimpleNamespace(display_name=str(who_past))
+            try:
+                await _close_card(
+                    action_key=past,
+                    granted_name=app.get("granted_role"),
+                    reviewer_obj=fake)
+            except Exception as _sx:
+                log.warning('STAFF: self-heal close: %s', _sx)
             label = {
                 "approved": "одобрена",
                 "rejected": "отклонена",
@@ -1123,7 +1196,12 @@ class StaffReviewView(discord.ui.View):
                 interaction, "Неизвестное действие.", kind='err')
 
         app["status"] = status_map[action]
-        app["reviewed_by"] = str(interaction.user)
+        app["reviewed_by"] = str(
+            getattr(reviewer, 'display_name', None)
+            or getattr(reviewer, 'name', None)
+            or interaction.user
+        )
+        app["reviewed_at"] = datetime.now(timezone.utc).isoformat()
         if not app.get("timestamp"):
             app["timestamp"] = app.get("submitted_at")
 
@@ -1169,6 +1247,12 @@ class StaffReviewView(discord.ui.View):
             app["blacklisted"] = True
         save_apps(apps)
 
+        # Сразу закрыть анкету (кнопки долой + кто/когда) — до ЛС
+        try:
+            await _close_card(action_key=action, granted_name=granted)
+        except Exception as _ex:
+            log.warning("STAFF: не закрыл карточку: %s", _ex)
+
         pos = position_label(app.get("role"))
         dm_ok = False
         try:
@@ -1201,64 +1285,6 @@ class StaffReviewView(discord.ui.View):
             dm_ok = True
         except Exception as e:
             log.info(f"[STAFF] DM заявителю не доставлен: {e}")
-
-        try:
-            src = interaction.message
-            status_label = {
-                "approve": "ПРИНЯТО",
-                "reject": "ОТКЛОНЕНО",
-                "blacklist": "ЧЁРНЫЙ СПИСОК",
-            }[action]
-            accent = {
-                "approve": 0x2ECC71,
-                "reject": 0xE74C3C,
-                "blacklist": 0x2C2F33,
-            }[action]
-            who = interaction.user.display_name
-            when = datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')
-            note = f"{who} · {when}"
-            if granted:
-                note += f" · {granted}"
-            # сохранить таблицу ответов, убрать select
-            body = ''
-            try:
-                class _U:
-                    mention = f"<@{app.get('user_id')}>"
-                member = None
-                if interaction.guild:
-                    try:
-                        member = interaction.guild.get_member(int(app.get('user_id') or 0))
-                    except (TypeError, ValueError):
-                        member = None
-                body = build_application_body(
-                    user=_U(),
-                    user_id=str(app.get('user_id') or ''),
-                    age=str(app.get('age') or ''),
-                    activity=str(app.get('activity') or ''),
-                    experience=str(app.get('experience') or ''),
-                    reason=str(app.get('reason') or ''),
-                    extra=str(app.get('extra') or ''),
-                    member=member,
-                    kind=app.get('kind') or app.get('role'),
-                    answers=app.get('answers'),
-                )
-            except Exception as _bx:
-                log.debug('staff decided body: %s', _bx)
-                body = f"<@{app.get('user_id')}>"
-            if V2_AVAILABLE:
-                done = StaffAppDecidedView(
-                    title=pos, body=body, status=status_label,
-                    note=note, accent=accent)
-                await src.edit(view=done, embed=None, content=src.content or None)
-            elif src and src.embeds:
-                e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
-                e0.color = accent
-                e0.add_field(name=status_label, value=note, inline=False)
-                await src.edit(embed=e0, view=None)
-            else:
-                await src.edit(view=None)
-        except Exception as _ex:
-            log.debug("_review(): подавлено: %s", _ex)
 
         verdict = {
             "approve": "одобрена",
@@ -1392,26 +1418,117 @@ def _hook_avatar(guild):
 async def _send_staff_card(channel, *, content=None, view=None):
     """Карточка заявки V2 (webhook или бот).
 
-    Пинги ролей/юзеров перед карточкой отключены (шум «Moderation — …»).
-    content оставлен для совместимости вызовов, но по умолчанию не шлётся.
+    content — тег куратора ветки (`<@&…>`), уходит в том же сообщении.
     """
-    if content:
-        # Явно переданный content (тесты/legacy) — отдельным сообщением.
-        allowed = discord.AllowedMentions(roles=True, users=True)
-        try:
-            await channel.send(content, allowed_mentions=allowed)
-        except Exception as _ex:
-            log.debug('staff: ping before card: %s', _ex)
+    allowed = discord.AllowedMentions(roles=True, users=True)
     hook = await _channel_webhook(channel)
     if hook is not None:
         try:
-            return await hook.send(
+            kwargs = dict(
                 view=view, wait=True,
                 username=HOOK_USERNAME,
-                avatar_url=_hook_avatar(getattr(channel, 'guild', None)))
+                avatar_url=_hook_avatar(getattr(channel, 'guild', None)),
+                allowed_mentions=allowed)
+            if content:
+                kwargs['content'] = content
+            return await hook.send(**kwargs)
         except Exception as _ex:
             log.debug('staff: card webhook failed: %s', _ex)
-    return await channel.send(view=view)
+    return await channel.send(
+        content=content, view=view, allowed_mentions=allowed)
+
+
+async def _publish_decision(interaction, *, view, content=None) -> str:
+    """Закрыть анкету сразу: убрать кнопки, показать кто решил.
+
+    Карточки шлёт вебхук — обычный message.edit часто молча не проходит.
+    Правильный путь: response.edit_message / followup.edit_message.
+    """
+    kwargs = {'view': view}
+    # V2-карточка без эмбеда; content оставляем (тег куратора), если был
+    try:
+        kwargs['embed'] = None
+    except Exception:
+        pass
+    if content is not None:
+        kwargs['content'] = content
+    # 1) первый ответ interaction = правка самой анкеты
+    if not interaction.response.is_done():
+        try:
+            await interaction.response.edit_message(**kwargs)
+            return 'response'
+        except TypeError:
+            kwargs.pop('embed', None)
+            try:
+                await interaction.response.edit_message(**kwargs)
+                return 'response'
+            except Exception as _ex:
+                log.warning('STAFF: response.edit_message: %s', _ex)
+        except Exception as _ex:
+            log.warning('STAFF: response.edit_message: %s', _ex)
+    # 2) после defer — правка через interaction token
+    mid = getattr(getattr(interaction, 'message', None), 'id', None)
+    follow = getattr(interaction, 'followup', None)
+    if mid and follow is not None and hasattr(follow, 'edit_message'):
+        try:
+            await follow.edit_message(mid, **kwargs)
+            return 'followup'
+        except TypeError:
+            kwargs.pop('embed', None)
+            try:
+                await follow.edit_message(mid, **kwargs)
+                return 'followup'
+            except Exception as _ex:
+                log.warning('STAFF: followup.edit_message: %s', _ex)
+        except Exception as _ex:
+            log.warning('STAFF: followup.edit_message: %s', _ex)
+    # 3) запас: bot token (нужны права / своё сообщение)
+    src = getattr(interaction, 'message', None)
+    if src is not None and hasattr(src, 'edit'):
+        try:
+            await src.edit(**kwargs)
+            return 'message'
+        except TypeError:
+            kwargs.pop('embed', None)
+            try:
+                await src.edit(**kwargs)
+                return 'message'
+            except Exception as _ex:
+                log.warning('STAFF: message.edit: %s', _ex)
+        except Exception as _ex:
+            log.warning('STAFF: message.edit: %s', _ex)
+    return ''
+
+
+def _decision_note(action: str, reviewer, *, granted: str = None) -> tuple:
+    """(status_label, note, accent) — как в старом боте: кто и когда."""
+    when = datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')
+    who = (
+        getattr(reviewer, 'display_name', None)
+        or getattr(reviewer, 'global_name', None)
+        or getattr(reviewer, 'name', None)
+        or str(reviewer)
+    )
+    verb = {
+        'approve': 'Принял',
+        'reject': 'Отклонил',
+        'blacklist': 'В ЧС отправил',
+    }.get(action, 'Решил')
+    status = {
+        'approve': 'ПРИНЯТО',
+        'reject': 'ОТКЛОНЕНО',
+        'blacklist': 'ЧЁРНЫЙ СПИСОК',
+    }.get(action, 'РЕШЕНО')
+    accent = {
+        'approve': 0x2ECC71,
+        'reject': 0xE74C3C,
+        'blacklist': 0x2C2F33,
+    }.get(action, 0xE74C3C)
+    note = f'{verb}: {who} · {when}'
+    if granted:
+        note += f' · {granted}'
+    return status, note, accent
+
 
 
 def _component_has_custom_id(components, custom_id: str) -> bool:

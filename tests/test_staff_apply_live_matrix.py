@@ -174,16 +174,18 @@ json.dump(apps, open('data/staff_apps.json', 'w'))
 class FakeMsg:
     id = 999
     embeds = []
-    content = None
+    content = '<@&1551527644326002748>'
+    edits = []
 
     async def edit(self, **kw):
-        pass
+        self.edits.append(kw)
 
 
 class FakeResp:
     def __init__(self):
         self._done = False
         self.kw = {}
+        self.edits = []
 
     def is_done(self):
         return self._done
@@ -195,13 +197,21 @@ class FakeResp:
         self._done = True
         self.kw = k
 
+    async def edit_message(self, **kw):
+        self._done = True
+        self.edits.append(kw)
+
 
 class FakeFollow:
     def __init__(self):
         self.msgs = []
+        self.edits = []
 
     async def send(self, *a, **k):
         self.msgs.append(k or a)
+
+    async def edit_message(self, mid, **kw):
+        self.edits.append((mid, kw))
 
 
 class FakeClient:
@@ -244,6 +254,19 @@ data = json.load(open('data/staff_apps.json'))
 check(data['u1']['status'] == 'approved', 'своя ветка: approved')
 check(EXPECT_GRANT['event'] in m42.added, 'своя ветка: Eventsmod выдана')
 check(data['u1'].get('granted_role') == '× Eventsmod', 'granted_role в базе')
+check(bool(inter2.response.edits) or bool(inter2.followup.edits)
+      or bool(inter2.message.edits),
+      'анкета закрыта после принятия (edit view)')
+if inter2.response.edits:
+    closed = inter2.response.edits[-1].get('view')
+    from cogs.staff_apply import StaffAppDecidedView
+    check(isinstance(closed, StaffAppDecidedView),
+          'после принятия — StaffAppDecidedView', type(closed))
+    from services.v2_layouts import layout_plain_text
+    txt = layout_plain_text(closed)
+    check('ПРИНЯТО' in txt and 'Принял:' in txt,
+          'видно кто принял', txt[:300])
+
 
 print('== 6. UI + curator pings ==')
 sel = RoleSelect()
@@ -337,9 +360,10 @@ class FakeMsg2:
     id = 888
     embeds = []
     content = None
+    edits = []
 
     async def edit(self, **kw):
-        pass
+        self.edits.append(kw)
 
 
 helper_cur2 = CurMember(SR.KNOWN_CURATOR_BY_KIND['helper'])
@@ -350,6 +374,10 @@ inter3 = types.SimpleNamespace(
 loop.run_until_complete(StaffReviewView()._review(inter3, 'blacklist'))
 data = json.load(open('data/staff_apps.json'))
 check(data['u2']['status'] == 'blacklisted', 'blacklist: status')
+check(bool(inter3.response.edits) or bool(inter3.followup.edits)
+      or bool(inter3.message.edits),
+      'blacklist: карточка закрыта')
+
 check(SA.is_blacklisted(77, 'Helper'), 'blacklist: Helper ветка')
 check(not SA.is_blacklisted(77, 'Moderator'), 'blacklist: Moderator свободна')
 check(not SA.is_blacklisted(999, 'Helper'), 'blacklist: other free')
