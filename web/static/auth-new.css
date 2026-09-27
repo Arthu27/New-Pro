@@ -119,16 +119,19 @@
   color: var(--gate-ink);
 }
 
-.welcome-enter {
+.gate-body a.welcome-enter {
   font-weight: 600;
   font-size: .92rem;
-  color: var(--gate-ink);
-  border-bottom: 1.5px solid transparent;
-  transition: border-color .2s, color .2s;
+  color: #f7f8fa;
+  padding: 8px 14px;
+  border-radius: 4px;
+  background: rgba(14, 20, 27, .42);
+  backdrop-filter: blur(8px);
+  transition: background .2s, color .2s;
 }
-.welcome-enter:hover {
-  border-bottom-color: var(--gate-accent);
-  color: var(--gate-accent);
+.gate-body a.welcome-enter:hover {
+  background: var(--gate-accent);
+  color: #fff;
 }
 
 .welcome-stage {
