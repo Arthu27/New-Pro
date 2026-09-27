@@ -407,6 +407,14 @@ def _proofs_list(gid):
 
 # ── routes: auth ───────────────────────────────────────────────────────
 
+@app.route('/welcome')
+def welcome():
+    """Публичная витрина — новый дизайн, не старая тёмная welcome."""
+    if session.get('logged_in'):
+        return redirect(url_for('today'))
+    return render_template('welcome.html')
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if session.get('logged_in'):
@@ -434,7 +442,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('login'))
+    return redirect(url_for('welcome'))
 
 
 # ── routes: mod pages ──────────────────────────────────────────────────

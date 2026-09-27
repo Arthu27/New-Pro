@@ -1,16 +1,39 @@
-{% extends "base.html" %}
-{% set hide_shell = true %}
-{% block title %}Вход{% endblock %}
-{% block bare %}
-<div class="login-wrap">
-  <form class="login-box form" method="post">
-    <h1>Вход</h1>
-    <p class="dim">Новая панель модерации · чистый лист</p>
-    {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
-    {% if hint %}<div class="flash err">{{ hint }}</div>{% endif %}
-    <label>Логин<input class="input" name="username" autocomplete="username" required></label>
-    <label>Пароль<input class="input" type="password" name="password" autocomplete="current-password" required></label>
-    <button type="submit">Войти</button>
-  </form>
-</div>
-{% endblock %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход — Hakumo</title>
+  <meta name="description" content="Вход в панель модерации Hakumo.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}">
+</head>
+<body>
+  <div class="login-scene">
+    <aside class="login-visual">
+      <a class="mark" href="{{ url_for('welcome') }}">Hakumo</a>
+      <div>
+        <h2>Вход только для тех, кого пустили</h2>
+        <p>Модераторам — журнал и люди. Владельцу — антикраш и доступ.</p>
+      </div>
+      <div style="color:#9fd9c4;font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:.75rem">mod core · new</div>
+    </aside>
+    <section class="login-panel">
+      <form class="login-card form" method="post" autocomplete="on">
+        <h1>Вход</h1>
+        <p class="sub">Логин из `.env` или выданный на странице Доступ</p>
+        {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+        {% if hint %}<div class="flash err">{{ hint }}</div>{% endif %}
+        <label>Логин
+          <input class="input" name="username" autocomplete="username" required autofocus>
+        </label>
+        <label>Пароль
+          <input class="input" type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Войти</button>
+        <p class="login-foot"><a href="{{ url_for('welcome') }}">На главную</a></p>
+      </form>
+    </section>
+  </div>
+</body>
+</html>
