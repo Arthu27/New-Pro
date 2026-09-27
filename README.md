@@ -1,36 +1,10 @@
 # Hakumo (MOEBIUS) — Discord Bot
 
-Русский Discord-бот с AI-функциями, модерацией и веб-панелью управления.
+Русский Discord-бот с AI-функциями и модерацией.
 
-## Быстрый запуск веб-панели
-
-Два режима:
-
-- **Боевой (по умолчанию):** `start_panel.bat` / `bash start_panel.sh` — панель читает `.env`
-  (токен, `MAIN_GUILD_ID` твоего сервера, логин/пароль) и показывает только реальные данные.
-  Нет `.env` — скрипт подскажет, что скопировать из `.env.example`.
-- **Демо-превью (без токена, выдуманные данные):** `start_panel.bat demo` / `bash start_panel.sh --demo`.
-  Браузер сам откроет http://localhost:5001 — логин `owner`, пароль `preview123`.
-
-Скрипт сам создаст виртуальное окружение, поставит только нужные панели зависимости
-(`requirements-panel.txt`, без тяжёлых библиотек бота) и поднимет сервер. Демо-режим никогда не
-перекрывает боевой: если заполнены `TOKEN` или `MAIN_GUILD_ID` настоящего сервера, выдуманные
-данные не появятся даже при случайно включённом `DEMO_MODE=1`.
-
-> Если скачивал проект ZIP-архивом с GitHub — бери архив актуальной ветки
-> (`Code → Download ZIP`), а не только `main`: свежие правки могут быть ещё не влиты.
-
-Ручной вариант демо-превью:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements-panel.txt   # Windows: .venv\Scripts\pip
-DEMO_MODE=1 .venv/bin/python scripts/seed_demo_panel.py
-DOTENV_PATH=config/panel_preview.env .venv/bin/python -m flask --app web.wsgi run --port 5001
-```
-
-Если демо-данные уже попали в `data/` — их можно убрать, не трогая реальные:
-`python scripts/seed_demo_panel.py --clean`.
+> **Веб-панель снята (2026-09-27).** Архив «что было и для чего» —
+> [`docs/PANEL-REMOVED.md`](docs/PANEL-REMOVED.md). Управление — через Discord
+> (`/modpanel` и остальные команды). Браузерный UI (`web/`, порт 5001) удалён.
 
 ## Возможности
 

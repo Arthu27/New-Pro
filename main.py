@@ -1408,28 +1408,13 @@ async def on_ready():
     except Exception as _ex:
         _log.debug("on_ready(): event_mod_acl_seed: %s", _ex)
 
-    # Связь с веб-панелью — САМОЕ ВАЖНОЕ в хвосте on_ready: без неё панель
-    # показывает «бот выключен», хотя он в сети. Держим отдельно и защищённо.
-    try:
-        from web.app import set_bot_instance
-        set_bot_instance(bot)
-        print("[ВЕБ] Панель подключена к боту")
-    except Exception as _ex:
-        print(f"[ВЕБ] ⚠ Панель не получила бота: {_ex}")
-        _log.error("on_ready(): set_bot_instance: %s", _ex)
-
+    # Веб-панель снята (docs/PANEL-REMOVED.md) — мост set_bot_instance больше не нужен.
     _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
-    if not getattr(bot, '_panel_link_sent', False) and os.path.exists(_tunnel_path):
+    if os.path.exists(_tunnel_path):
         try:
-            # чтение файла со ссылкой — в рабочем потоке (event loop не встаёт)
-            import asyncio as _aio_t
-            _url = (await _aio_t.to_thread(
-                lambda: open(_tunnel_path, "r", encoding="utf-8").read())).strip()
-            if _url:
-                await send_panel_link(_url)
-                bot._panel_link_sent = True
+            os.remove(_tunnel_path)
         except Exception as _e:
-            print(f"[ОШИБКА] Отправка ссылки панели: {_e}")
+            _log.debug('on_ready drop tunnel_url: %s', _e)
 
 async def load_cogs():
     # Какие модули грузить — решает cogs_policy (MOD_ONLY / DISABLED_COGS /
@@ -1716,46 +1701,19 @@ async def main():
     except Exception as _ex:
         log.debug('preflight: %s', _ex)
 
-    from web.app import app, set_bot_instance
-    set_bot_instance(bot)
-    # Пульс состояния бота → data/bot_state.json + снимки ролей: чтобы
-    # панель, запущенная отдельным процессом (start_panel, gunicorn, VDS),
-    # видела «бот онлайн» и живые роли, а не вечное «Бот офлайн».
+    # Веб-панель удалена (см. docs/PANEL-REMOVED.md). Пульс bot_state
+    # оставляем — пригодится диагностике; Flask/WS/туннель не поднимаем.
     try:
         asyncio.create_task(_bridge_loop(bot))
     except Exception as _ex:
         log.debug('main(): bridge loop: %s', _ex)
-    _start_web_server(app)
-    print("[ВЕБ] Веб панель: http://localhost:5001")
-    _start_tunnel_sidecar()
-
+    print("[ВЕБ] Веб-панель снята — бот работает без браузерного UI")
     try:
-        from web.websocket_server import start_websocket_thread
-        _ws_host = (os.environ.get('WS_HOST', '') or '').strip() or '0.0.0.0'
-        _ws_port = int(os.environ.get('WS_PORT', '') or 0) or 8765
-        start_websocket_thread(host=_ws_host, port=_ws_port)
-        log.info("WebSocket сервер запущен на %s:%s", _ws_host, _ws_port)
-    except Exception as e:
-        log.warning(f"WebSocket сервер не запущен: {e}")
-
-    # Старый «случайный» quick-туннель (trycloudflare-адрес менялся каждый
-    # запуск) теперь ВЫКЛЮЧЕН: у панели постоянный домен, его поднимает
-    # _start_tunnel_sidecar выше (или служба Windows). Вернуть старое
-    # поведение можно через QUICK_TUNNEL=1 в .env.
-    _quick_raw = (os.environ.get('QUICK_TUNNEL', '') or '').strip().lower()
-    if _quick_raw in ('1', 'true', 'yes', 'on'):
-        def delayed_tunnel():
-            import time
-            time.sleep(3)
-            start_tunnel()
-        threading.Thread(target=delayed_tunnel, daemon=True).start()
-    else:
-        # Постоянного домена пока нет и quick-туннель выключен — убираем
-        # старую случайную ссылку, чтобы бот не постил её в канал панели.
         from services import named_tunnel as _nt
         _root = os.path.dirname(os.path.abspath(__file__))
-        if not _nt.find_config(_root):
-            _nt.drop_stale_url(_root)
+        _nt.drop_stale_url(_root)
+    except Exception as _ex:
+        log.debug('drop tunnel url: %s', _ex)
 
     print("[БОТ] Запускается... (загрузка когов -> вход в Discord)")
     async with bot:

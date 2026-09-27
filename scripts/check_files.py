@@ -40,6 +40,11 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 
+# Веб-панель снята — проверки портов/маршрутов панели больше не применимы.
+if not os.path.isdir(os.path.join(ROOT, 'web')):
+    print('check_files: веб-панель удалена (docs/PANEL-REMOVED.md) — пропуск.')
+    sys.exit(0)
+
 OK = 0
 FAIL = 0
 SKIP = 0
