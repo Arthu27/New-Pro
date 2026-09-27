@@ -188,8 +188,28 @@ def black_container(*children, accent: int = None):
 
 
 def _gallery(banner_filename: str):
+    """Картинка меню: HTTPS (не пропадает) или attachment://имя."""
     from discord.components import MediaGalleryItem
-    return _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}'))
+    src = (banner_filename or '').strip()
+    if not src:
+        return None
+    if src.startswith(('http://', 'https://', 'attachment://')):
+        url = src
+    else:
+        url = f'attachment://{src}'
+    return _ui.MediaGallery(MediaGalleryItem(url))
+
+
+# Текст меню набора. Картинка идёт сразу под ним.
+STAFF_MENU_BODY = (
+    '**Можно выбрать только одну должность.**\n'
+    '-# Нельзя подавать сразу на несколько — одна заявка.\n\n'
+    '# Набор в команду сервера\n'
+    '> Мы ищем людей, **готовых внести свой вклад** и **помочь** нам '
+    '**сделать наше сообщество лучше.** Независимо от **вашего опыта,** '
+    '**у нас найдется место** для вас. **Отправляйте заявку,** чтобы '
+    '**стать частью** нашей **дружной команды и весело провести время вместе!**'
+)
 
 
 # Баннер в шапке вместе с заголовком (как в референсе V2).
@@ -293,19 +313,32 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
     return items
 
 
-def build_staff_menu_items(*, banner_filename: str, body: str = None,
-                           role_select=None, show_banner: bool = None):
-    """Наборы V2: баннер (уже с НАБОРЫ) + select — без дубля заголовка."""
+def build_staff_menu_items(*, banner_filename: str = None, body: str = None,
+                           role_select=None, show_banner: bool = None,
+                           banner_url: str = None):
+    """Наборы: текст + баннер по HTTPS + выбор должности."""
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
     head = []
-    if show_banner and banner_filename:
-        head.append(_gallery(banner_filename))
-    if body:
-        head.append(_ui.TextDisplay(body))
+    notice = STAFF_MENU_BODY if body is None else str(body)
+    notice = notice.strip()
+    if notice:
+        head.append(_ui.TextDisplay(notice))
+    media = (banner_url or '').strip()
+    if show_banner and not media.startswith('http'):
+        try:
+            from services.menu_banners import public_staff_banner_url
+            media = public_staff_banner_url()
+        except Exception as _ex:
+            _log.debug('staff banner url: %s', _ex)
+            media = (banner_filename or '').strip()
+    if show_banner and media:
+        gal = _gallery(media)
+        if gal is not None:
+            head.append(gal)
     if head:
         items.append(black_container(*head))
     if role_select is not None:
