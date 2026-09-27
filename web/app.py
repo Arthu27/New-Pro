@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import secrets
@@ -173,6 +174,32 @@ def _env_owner_creds():
     return user, pw
 
 
+def _hash_secret(raw: str) -> str:
+    raw = str(raw or '')
+    return hashlib.sha256(('hakumo|' + raw).encode('utf-8')).hexdigest()
+
+
+def _secret_matches(stored, raw) -> bool:
+    if stored is None or raw is None:
+        return False
+    stored = str(stored)
+    raw = str(raw)
+    if not stored or not raw:
+        return False
+    # поддержка старых plaintext + новых hash
+    if stored == raw:
+        return True
+    return stored == _hash_secret(raw)
+
+
+def _find_access_user(username: str):
+    username = (username or '').strip()
+    for u in _load_access()['users']:
+        if str(u.get('username', '')).strip() == username:
+            return u
+    return None
+
+
 def _auth_user(username, password):
     """Вернуть (username, role) или None."""
     username = (username or '').strip()
@@ -182,16 +209,93 @@ def _auth_user(username, password):
     env_u, env_pw = _env_owner_creds()
     if env_pw and username == env_u and password == env_pw:
         return env_u, 'owner'
-    for u in _load_access()['users']:
-        if str(u.get('username', '')).strip() != username:
-            continue
-        if str(u.get('password', '')) != password:
-            return None
-        role = str(u.get('role') or 'mod').strip().lower()
+    u = _find_access_user(username)
+    if not u:
+        return None
+    if not _secret_matches(u.get('password'), password):
+        return None
+    role = str(u.get('role') or 'mod').strip().lower()
+    if role not in LEVEL or role == 'owner':
+        role = 'mod'
+    return username, role
+
+
+def _auth_pin(username, pin):
+    """Вернуть (username, role) или None. username может быть пустым."""
+    pin = (pin or '').strip()
+    if not pin or not pin.isdigit() or not (4 <= len(pin) <= 8):
+        return None
+    env_u, _ = _env_owner_creds()
+    owner_pin = (os.environ.get('PANEL_PIN') or '').strip()
+    users = list(_load_access()['users'])
+    username = (username or '').strip()
+
+    def _role_of(u):
+        role = str((u or {}).get('role') or 'mod').strip().lower()
         if role not in LEVEL or role == 'owner':
             role = 'mod'
-        return username, role
+        return role
+
+    if username:
+        if owner_pin and username == env_u and pin == owner_pin:
+            return env_u, 'owner'
+        u = _find_access_user(username)
+        if u and _secret_matches(u.get('pin'), pin):
+            return username, _role_of(u)
+        return None
+
+    # PIN без логина — только если ровно один матч
+    hits = []
+    if owner_pin and pin == owner_pin:
+        hits.append((env_u, 'owner'))
+    for u in users:
+        if _secret_matches(u.get('pin'), pin):
+            hits.append((str(u.get('username') or '').strip(), _role_of(u)))
+    hits = [h for h in hits if h[0]]
+    if len(hits) == 1:
+        return hits[0]
     return None
+
+
+def _invite_ok(code: str) -> bool:
+    want = (os.environ.get('PANEL_INVITE_CODE') or '').strip()
+    return bool(want) and secrets.compare_digest(want, (code or '').strip())
+
+
+def _recovery_ok(code: str) -> bool:
+    want = (os.environ.get('PANEL_RECOVERY_CODE') or '').strip()
+    if want and secrets.compare_digest(want, (code or '').strip()):
+        return True
+    # запас: пароль owner из .env
+    _, env_pw = _env_owner_creds()
+    return bool(env_pw) and secrets.compare_digest(env_pw, (code or '').strip())
+
+
+def _upsert_access_user(*, username, password=None, pin=None, role='mod', note=''):
+    data = _load_access()
+    username = (username or '').strip()
+    found = None
+    for u in data['users']:
+        if str(u.get('username', '')).strip() == username:
+            found = u
+            break
+    if found is None:
+        found = {'username': username, 'role': role or 'mod', 'note': note or ''}
+        data['users'].append(found)
+    if password is not None:
+        found['password'] = _hash_secret(password)
+    if pin is not None:
+        pin = (pin or '').strip()
+        if pin:
+            found['pin'] = _hash_secret(pin)
+        else:
+            found.pop('pin', None)
+    if role and role in LEVEL and role != 'owner':
+        found['role'] = role
+    if note is not None:
+        found['note'] = note
+    _save_access(data)
+    return found
 
 
 def _pages_for_role(role: str):
@@ -718,25 +822,80 @@ def _safe_next(raw: str | None) -> str:
 def login():
     if session.get('logged_in'):
         return redirect(url_for('today'))
+    mode = (request.values.get('mode') or 'password').strip().lower()
+    if mode not in ('password', 'pin', 'register', 'forgot'):
+        mode = 'password'
     err = (request.args.get('error') or '').strip()
+    ok = ''
+    nxt = _safe_next(request.args.get('next') or request.form.get('next'))
+
     if request.method == 'POST':
-        username = request.form.get('username', '')
-        password = request.form.get('password', '')
-        got = _auth_user(username, password)
-        if got:
-            _start_session(username=got[0], role=got[1])
-            return redirect(_safe_next(request.args.get('next') or request.form.get('next')))
-        err = 'Неверный логин или пароль'
+        mode = (request.form.get('mode') or mode).strip().lower()
+        if mode == 'password':
+            got = _auth_user(request.form.get('username', ''), request.form.get('password', ''))
+            if got:
+                _start_session(username=got[0], role=got[1])
+                return redirect(nxt)
+            err = 'Неверный логин или пароль'
+        elif mode == 'pin':
+            got = _auth_pin(request.form.get('username', ''), request.form.get('pin', ''))
+            if got:
+                _start_session(username=got[0], role=got[1])
+                return redirect(nxt)
+            err = 'Неверный PIN (или укажи логин, если PIN не уникален)'
+        elif mode == 'register':
+            invite = request.form.get('invite', '')
+            username = (request.form.get('username') or '').strip()
+            password = request.form.get('password') or ''
+            pin = (request.form.get('pin') or '').strip()
+            env_u, _ = _env_owner_creds()
+            if not _invite_ok(invite):
+                err = 'Неверный код приглашения (PANEL_INVITE_CODE)'
+            elif len(username) < 3:
+                err = 'Логин слишком короткий'
+            elif len(password) < 6:
+                err = 'Пароль минимум 6 символов'
+            elif username == env_u:
+                err = 'Этот логин занят владельцем'
+            elif _find_access_user(username):
+                err = 'Такой логин уже есть'
+            elif pin and (not pin.isdigit() or not (4 <= len(pin) <= 8)):
+                err = 'PIN — 4–8 цифр'
+            else:
+                _upsert_access_user(username=username, password=password, pin=pin or None, role='mod')
+                _start_session(username=username, role='mod')
+                return redirect(nxt)
+        elif mode == 'forgot':
+            username = (request.form.get('username') or '').strip()
+            recovery = request.form.get('recovery', '')
+            password = request.form.get('password') or ''
+            pin = (request.form.get('pin') or '').strip()
+            env_u, _ = _env_owner_creds()
+            if not _recovery_ok(recovery):
+                err = 'Неверный код восстановления'
+            elif len(password) < 6:
+                err = 'Новый пароль минимум 6 символов'
+            elif pin and (not pin.isdigit() or not (4 <= len(pin) <= 8)):
+                err = 'PIN — 4–8 цифр'
+            elif username == env_u:
+                err = 'Пароль owner меняй в .env (PANEL_PASSWORD)'
+            elif not _find_access_user(username):
+                err = 'Такого логина нет'
+            else:
+                _upsert_access_user(username=username, password=password, pin=pin if pin else None)
+                ok = 'Пароль обновлён — теперь войди'
+                mode = 'password'
+
     _, env_pw = _env_owner_creds()
     hint = '' if env_pw else 'Задайте PANEL_PASSWORD в .env'
-    discord_ready = _discord_oauth_ready()
     return render_template(
         'login.html',
         error=err,
+        ok=ok,
         hint=hint,
-        discord_ready=discord_ready,
-        role_cards=ROLE_CARDS,
-        next=_safe_next(request.args.get('next')),
+        discord_ready=_discord_oauth_ready(),
+        mode=mode,
+        next=nxt,
     )
 
 
@@ -861,10 +1020,39 @@ def logs():
 @login_required
 @role_required('helper')
 def users_page():
-    """Участники сервера + счётчики мер."""
+    """Участники сервера + счётчики мер. Поиск по нику/нику Discord/ID."""
     gid = _main_guild()
-    q = (request.args.get('q') or '').strip().lower()
+    q = (request.args.get('q') or '').strip()
+    ql = q.lower()
     names = {}
+
+    # 1) живой кэш с Discord (бот в том же процессе)
+    try:
+        bot = bot_instance
+        if bot and gid:
+            guild = bot.get_guild(int(gid))
+            if guild is not None:
+                for m in guild.members:
+                    label = (
+                        getattr(m, 'display_name', None)
+                        or getattr(m, 'global_name', None)
+                        or getattr(getattr(m, 'name', None), '__str__', lambda: None)()
+                        or str(m)
+                    )
+                    # discord.py Member: display_name, name, global_name, nick
+                    parts = [
+                        getattr(m, 'display_name', '') or '',
+                        getattr(m, 'name', '') or '',
+                        getattr(m, 'global_name', None) or '',
+                        getattr(m, 'nick', None) or '',
+                        str(m.id),
+                    ]
+                    names[str(m.id)] = parts[0] or parts[1] or str(m.id)
+                    # stash searchable blob
+                    names[str(m.id) + '::__q'] = ' '.join(p for p in parts if p).lower()
+    except Exception:
+        pass
+
     prefer = DATA / f'member_names_{gid}.json' if gid else None
     paths = [prefer] if prefer and prefer.exists() else []
     paths += [p for p in sorted(DATA.glob('member_names_*.json')) if p not in paths]
@@ -872,9 +1060,14 @@ def users_page():
         raw = _read_json(p, {})
         if isinstance(raw, dict):
             for uid, name in raw.items():
-                names[str(uid)] = str(name)
-        if names and gid and prefer and p == prefer:
+                uid = str(uid)
+                if uid.endswith('::__q'):
+                    continue
+                names.setdefault(uid, str(name))
+                names.setdefault(uid + '::__q', f"{name} {uid}".lower())
+        if any(not k.endswith('::__q') for k in names) and gid and prefer and p == prefer:
             break
+
     stats = {}
     for ev in _collect_cases(gid):
         uid = str(ev.get('user_id') or '')
@@ -897,14 +1090,33 @@ def users_page():
         if ev.get('user_name') and not str(ev.get('user_name')).isdigit():
             st['name'] = ev['user_name']
         names.setdefault(uid, st['name'])
+        blob = names.get(uid + '::__q', '')
+        names[uid + '::__q'] = (blob + ' ' + str(st['name']) + ' ' + uid).lower()
+
+    # также подтянуть имена из варнов/мер если файл имён пуст
+    uids = [k for k in names if not k.endswith('::__q')]
+    for uid in list(stats.keys()):
+        if uid not in names:
+            names[uid] = stats[uid].get('name') or uid
+            names[uid + '::__q'] = f"{names[uid]} {uid}".lower()
+            uids.append(uid)
+
     rows = []
-    for uid, name in names.items():
+    for uid in uids:
         st = stats.get(uid) or {
             'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0, 'total': 0, 'last': '',
         }
-        display = name if not str(name).isdigit() else (st.get('name') or uid)
-        if q and q not in str(display).lower() and q not in uid:
-            continue
+        display = names.get(uid) or st.get('name') or uid
+        if str(display).isdigit() and st.get('name') and not str(st.get('name')).isdigit():
+            display = st['name']
+        blob = names.get(uid + '::__q') or f"{display} {uid}".lower()
+        if ql:
+            # частичный поиск: каждое слово q должно встретиться
+            tokens = [t for t in ql.split() if t]
+            if tokens and not all(tok in blob for tok in tokens):
+                # также простая подстрока целиком
+                if ql not in blob and ql not in uid:
+                    continue
         rows.append({
             'user_id': uid,
             'name': display,
@@ -916,7 +1128,7 @@ def users_page():
             'last': _fmt(st.get('last')),
         })
     rows.sort(key=lambda r: (-r['total'], str(r['name']).lower()))
-    return render_template('users.html', rows=rows[:200], q=q)
+    return render_template('users.html', rows=rows[:300], q=q)
 
 
 @app.route('/member')
@@ -929,9 +1141,29 @@ def member():
         gid = _main_guild()
         all_rows = _collect_cases(gid)
         ql = q.lower()
+        # если ввели ник — резолвим в id через гильдию
+        extra_ids = set()
+        try:
+            bot = bot_instance
+            if bot and gid and not q.isdigit():
+                guild = bot.get_guild(int(gid))
+                if guild is not None:
+                    for m in guild.members:
+                        blob = ' '.join([
+                            getattr(m, 'display_name', '') or '',
+                            getattr(m, 'name', '') or '',
+                            getattr(m, 'global_name', None) or '',
+                            getattr(m, 'nick', None) or '',
+                        ]).lower()
+                        if ql in blob or all(t in blob for t in ql.split() if t):
+                            extra_ids.add(str(m.id))
+        except Exception:
+            pass
         for r in all_rows:
-            if (ql in str(r.get('user_id', '')).lower()
-                    or ql in str(r.get('user_name', '')).lower()):
+            uid = str(r.get('user_id', ''))
+            uname = str(r.get('user_name', '')).lower()
+            if (ql in uid or ql in uname or uid in extra_ids
+                    or all(t in uname for t in ql.split() if t)):
                 r = dict(r)
                 r['when'] = _fmt(r.get('timestamp'))
                 rows.append(r)
@@ -1199,6 +1431,7 @@ def access_page():
         if action == 'add':
             username = (request.form.get('username') or '').strip()
             password = request.form.get('password') or ''
+            pin = (request.form.get('pin') or '').strip()
             note = (request.form.get('note') or '').strip()[:80]
             if not username or not password:
                 err = 'Нужны логин и пароль'
@@ -1206,14 +1439,12 @@ def access_page():
                 err = 'Этот логин занят владельцем (.env)'
             elif any(u.get('username') == username for u in data['users']):
                 err = 'Такой логин уже есть'
+            elif pin and (not pin.isdigit() or not (4 <= len(pin) <= 8)):
+                err = 'PIN — 4–8 цифр'
             else:
-                data['users'].append({
-                    'username': username,
-                    'password': password,
-                    'role': 'mod',
-                    'note': note,
-                })
-                _save_access(data)
+                _upsert_access_user(
+                    username=username, password=password,
+                    pin=pin or None, role='mod', note=note)
                 flash('Модератору выдан вход', 'ok')
                 return redirect(url_for('access_page'))
         elif action == 'del':

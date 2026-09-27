@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Вход — Hakumo</title>
-  <meta name="description" content="Быстрый вход в панель Hakumo через Discord.">
+  <meta name="description" content="Вход в панель Hakumo.">
   <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}">
 </head>
 <body class="gate-body">
@@ -14,8 +14,8 @@
     <div class="gate-plane__grain"></div>
   </div>
 
-  <main class="login login--wide">
-    <div class="login-shell login-shell--wide">
+  <main class="login">
+    <div class="login-shell">
       <a class="login-back" href="{{ url_for('welcome') }}">
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -23,14 +23,28 @@
         На главную
       </a>
 
-      <div class="login-grid">
-        <section class="login-primary">
-          <p class="login-kicker">Быстрый вход</p>
-          <h1 class="login-mark">Haku<em>mo</em></h1>
-          <p class="login-hint">Войди Discord-аккаунтом — роль подтянется с сервера, как @Helper / @Moderator.</p>
+      <p class="login-kicker">Вход</p>
+      <h1 class="login-mark">Haku<em>mo</em></h1>
+      <p class="login-hint">
+        {% if mode == 'pin' %}Быстрый вход по PIN — роль подтянется сама.
+        {% elif mode == 'register' %}Создай логин и пароль (нужен код приглашения).
+        {% elif mode == 'forgot' %}Сброс пароля по коду восстановления.
+        {% else %}Пароль, PIN или Discord. Панель сама определит высшую роль.
+        {% endif %}
+      </p>
 
-          {% if error %}<div class="login-flash" role="alert">{{ error }}</div>{% endif %}
+      <nav class="login-tabs" aria-label="Способ входа">
+        <a href="{{ url_for('login', mode='password', next=next) }}" class="{% if mode == 'password' %}on{% endif %}">Пароль</a>
+        <a href="{{ url_for('login', mode='pin', next=next) }}" class="{% if mode == 'pin' %}on{% endif %}">PIN</a>
+        <a href="{{ url_for('login', mode='register', next=next) }}" class="{% if mode == 'register' %}on{% endif %}">Создать</a>
+        <a href="{{ url_for('login', mode='forgot', next=next) }}" class="{% if mode == 'forgot' %}on{% endif %}">Забыл</a>
+      </nav>
 
+      <div class="login-card">
+        {% if ok %}<div class="login-flash ok" role="status">{{ ok }}</div>{% endif %}
+        {% if error %}<div class="login-flash" role="alert">{{ error }}</div>{% endif %}
+
+        {% if mode == 'password' %}
           {% if discord_ready %}
           <a class="discord-btn" href="{{ url_for('auth_discord', next=next) }}">
             <svg class="discord-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -38,52 +52,77 @@
             </svg>
             <span class="discord-btn__text">
               <strong>Войти через Discord</strong>
-              <small>авто @ник · роль с сервера</small>
+              <small>авто @ник · высшая роль сама</small>
             </span>
           </a>
-          {% else %}
-          <div class="discord-btn discord-btn--off" aria-disabled="true">
-            <span class="discord-btn__text">
-              <strong>Discord-вход не настроен</strong>
-              <small>DISCORD_CLIENT_ID + DISCORD_CLIENT_SECRET в .env</small>
-            </span>
-          </div>
           {% endif %}
 
-          <details class="login-pass">
-            <summary>Вход по паролю (owner / выданный доступ)</summary>
-            <form class="login-form" method="post" autocomplete="on">
-              <input type="hidden" name="next" value="{{ next }}">
-              {% if hint %}<div class="login-flash" role="alert">{{ hint }}</div>{% endif %}
-              <label>Логин
-                <input name="username" autocomplete="username" required>
-              </label>
-              <label>Пароль
-                <input type="password" name="password" autocomplete="current-password" required>
-              </label>
-              <button class="login-submit" type="submit">Войти</button>
-            </form>
-          </details>
-        </section>
+          <form class="login-form" method="post" autocomplete="on">
+            <input type="hidden" name="mode" value="password">
+            <input type="hidden" name="next" value="{{ next }}">
+            {% if hint %}<div class="login-flash" role="alert">{{ hint }}</div>{% endif %}
+            <label>Логин
+              <input name="username" autocomplete="username" required autofocus placeholder="owner">
+            </label>
+            <label>Пароль
+              <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+            <button class="login-submit" type="submit">Войти</button>
+          </form>
+          <p class="login-note"><a href="{{ url_for('login', mode='forgot') }}">Забыл пароль</a> · <a href="{{ url_for('login', mode='pin') }}">Войти по PIN</a></p>
 
-        <aside class="login-roles" aria-label="Роли и панели">
-          <h2 class="login-roles__title">Кто что видит</h2>
-          <p class="login-roles__lead">Роль берётся с Discord сервера при входе.</p>
-          <ul class="role-rail">
-            {% for card in role_cards %}
-            <li class="role-chip role-chip--{{ card.key }}">
-              <div class="role-chip__head">
-                <span class="role-chip__tag">{{ card.tag }}</span>
-                <strong>{{ card.title }}</strong>
-              </div>
-              <p>{{ card.blurb }}</p>
-              <div class="role-chip__pages">
-                {% for p in card.pages %}<span>{{ p }}</span>{% endfor %}
-              </div>
-            </li>
-            {% endfor %}
-          </ul>
-        </aside>
+        {% elif mode == 'pin' %}
+          <form class="login-form" method="post" autocomplete="off">
+            <input type="hidden" name="mode" value="pin">
+            <input type="hidden" name="next" value="{{ next }}">
+            <label>Логин <span style="font-weight:500;text-transform:none;letter-spacing:0">(необязательно, если PIN уникален)</span>
+              <input name="username" autocomplete="username" placeholder="ник">
+            </label>
+            <label>PIN
+              <input name="pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" required autofocus placeholder="••••">
+            </label>
+            <button class="login-submit" type="submit">Войти по PIN</button>
+          </form>
+
+        {% elif mode == 'register' %}
+          <form class="login-form" method="post" autocomplete="off">
+            <input type="hidden" name="mode" value="register">
+            <input type="hidden" name="next" value="{{ next }}">
+            <label>Код приглашения
+              <input name="invite" required placeholder="из .env PANEL_INVITE_CODE">
+            </label>
+            <label>Логин
+              <input name="username" required autocomplete="off" minlength="3">
+            </label>
+            <label>Пароль
+              <input type="password" name="password" required autocomplete="new-password" minlength="6">
+            </label>
+            <label>PIN (4–8 цифр, необязательно)
+              <input name="pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" placeholder="например 4821">
+            </label>
+            <button class="login-submit" type="submit">Создать и войти</button>
+          </form>
+          <p class="login-note">Роль по умолчанию — mod. Owner выдаёт invite в `.env`.</p>
+
+        {% else %}
+          <form class="login-form" method="post" autocomplete="off">
+            <input type="hidden" name="mode" value="forgot">
+            <input type="hidden" name="next" value="{{ next }}">
+            <label>Логин
+              <input name="username" required autofocus>
+            </label>
+            <label>Код восстановления
+              <input name="recovery" required placeholder="PANEL_RECOVERY_CODE">
+            </label>
+            <label>Новый пароль
+              <input type="password" name="password" required autocomplete="new-password" minlength="6">
+            </label>
+            <label>Новый PIN (необязательно)
+              <input name="pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8">
+            </label>
+            <button class="login-submit" type="submit">Сбросить пароль</button>
+          </form>
+        {% endif %}
       </div>
     </div>
   </main>

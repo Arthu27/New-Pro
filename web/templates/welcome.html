@@ -22,15 +22,16 @@
 
     <main class="welcome-stage">
       <h1 class="welcome-name">Haku<span>mo</span></h1>
-      <p class="welcome-lead">Панель модерации без лишнего. Быстрый вход через Discord — роль как на сервере.</p>
+      <p class="welcome-lead">Чёрная панель модерации. Вошёл — и сразу в свой уровень доступа. Без лишнего шума.</p>
       <div class="welcome-actions">
         <a class="welcome-cta" href="{{ url_for('login') }}">
-          Войти в панель
+          Войти
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </a>
-        <a class="welcome-sub" href="{{ url_for('auth_discord') }}">Discord · авто @ник</a>
+        <a class="welcome-sub" href="{{ url_for('login', mode='pin') }}">PIN</a>
+        <a class="welcome-sub" href="{{ url_for('login', mode='register') }}">Создать пароль</a>
       </div>
     </main>
   </div>
