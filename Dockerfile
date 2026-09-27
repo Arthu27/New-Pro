@@ -29,12 +29,11 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV DISABLE_TUNNEL=1
 
-# Порт веб-панели
-EXPOSE 5001
+# Веб-панель снята — порт 5001 не слушаем (docs/PANEL-REMOVED.md)
 
-# Healthcheck
+# Healthcheck: PID 1 (процесс бота) жив
 HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5001/health', timeout=5)" || exit 1
+    CMD python -c "import os; os.kill(1, 0)" || exit 1
 
 # Запуск
 CMD ["python", "main.py"]

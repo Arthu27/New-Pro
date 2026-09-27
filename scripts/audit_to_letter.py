@@ -10,6 +10,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TPL = sorted(glob.glob(os.path.join(ROOT, 'web', 'templates', '*.html')))
 sys.path.insert(0, ROOT)
 
+if not os.path.isdir(os.path.join(ROOT, 'web')):
+    print('audit_to_letter: веб-панель удалена (docs/PANEL-REMOVED.md) — пропуск.')
+    sys.exit(0)
+
 from web.app import app as _flask_app  # noqa: E402  (url_map для проверки ссылок)
 
 ok_count = 0

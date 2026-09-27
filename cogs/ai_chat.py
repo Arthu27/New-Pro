@@ -434,8 +434,13 @@ async def _get_channel_context (channel ,limit :int =16 )->list :
 
 def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =None ,channel_context :list =None )->str :
     try :
-        from web .ai_helper import ai_assistant 
-        # Свежие знания/инструкции с диска — панель могла обновить без рестарта
+        # AI-слой жил в веб-панели (web.ai_helper) — панель снята.
+        try :
+            from web .ai_helper import ai_assistant 
+        except ImportError :
+            return ('AI-помощник панели снят вместе с веб-панелью. '
+                    'См. docs/PANEL-REMOVED.md.')
+        # Свежие знания/инструкции с диска
         global _knowledge_base ,_instructions ,_histories 
         try :
             _knowledge_base =_load_knowledge_base ()

@@ -42,6 +42,11 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
 
+# Веб-панель снята — аудит шаблонов/роутов панели больше не применим.
+if not os.path.isdir(os.path.join(ROOT, 'web')):
+    print('check_health: веб-панель удалена (docs/PANEL-REMOVED.md) — пропуск.')
+    sys.exit(0)
+
 OK = 0
 FAIL = 0
 SKIP = 0
