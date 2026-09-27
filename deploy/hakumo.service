@@ -8,6 +8,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/hakumo
+# Карточки профилей всегда на месте до старта. «-» — сбой pin не гасит бота.
+ExecStartPre=-/opt/hakumo/.venv/bin/python /opt/hakumo/scripts/ensure_profile_templates.py
 ExecStart=/opt/hakumo/.venv/bin/python main.py
 Restart=always
 RestartSec=5
