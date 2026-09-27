@@ -801,6 +801,191 @@ def _proofs_list(gid):
     return items[:50]
 
 
+PENDING_PINS_FILE = DATA / 'panel_pending_pins.json'
+PIN_TTL_SEC = 10 * 60
+
+
+def _load_pending_pins():
+    raw = _read_json(PENDING_PINS_FILE, {})
+    return raw if isinstance(raw, dict) else {}
+
+
+def _save_pending_pins(data: dict):
+    DATA.mkdir(parents=True, exist_ok=True)
+    PENDING_PINS_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    try:
+        os.chmod(PENDING_PINS_FILE, 0o600)
+    except OSError:
+        pass
+
+
+def _purge_pending_pins(data: dict | None = None) -> dict:
+    data = dict(data if data is not None else _load_pending_pins())
+    now = datetime.now(timezone.utc).timestamp()
+    changed = False
+    for uid in list(data.keys()):
+        row = data.get(uid) or {}
+        try:
+            exp = float(row.get('exp') or 0)
+        except Exception:
+            exp = 0
+        if exp and exp < now:
+            data.pop(uid, None)
+            changed = True
+    if changed:
+        _save_pending_pins(data)
+    return data
+
+
+def _member_avatar_url(member) -> str:
+    try:
+        av = getattr(member, 'display_avatar', None)
+        if av is not None:
+            return str(av.url)
+    except Exception:
+        pass
+    try:
+        uid = int(getattr(member, 'id', 0) or 0)
+        idx = (uid >> 22) % 6 if uid else 0
+    except Exception:
+        idx = 0
+    return f'https://cdn.discordapp.com/embed/avatars/{idx}.png'
+
+
+def _list_login_people(q: str = ''):
+    """Staff с сервера для выбора на логине."""
+    people = []
+    bot = bot_instance
+    gid = _main_guild()
+    if not bot or not gid:
+        return people, 'Бот ещё не подключён — подожди пару секунд'
+    try:
+        guild = bot.get_guild(int(gid))
+    except Exception:
+        guild = None
+    if guild is None:
+        return people, 'Сервер не найден (MAIN_GUILD_ID)'
+
+    ql = (q or '').strip().lower()
+    seen = set()
+
+    # owners always
+    try:
+        from config import Config
+        owner_ids = {int(x) for x in Config.all_owner_ids()}
+    except Exception:
+        owner_ids = set()
+
+    for m in list(getattr(guild, 'members', []) or []):
+        try:
+            role_ids = [r.id for r in getattr(m, 'roles', []) or []]
+            role = resolve_discord_panel_role(m.id, role_ids)
+            if not role and int(m.id) in owner_ids:
+                role = 'owner'
+            if not role:
+                continue
+            if getattr(m, 'bot', False):
+                continue
+            uid = str(m.id)
+            if uid in seen:
+                continue
+            seen.add(uid)
+            display = (
+                getattr(m, 'display_name', None)
+                or getattr(m, 'global_name', None)
+                or getattr(m, 'name', None)
+                or uid
+            )
+            handle = getattr(m, 'name', '') or ''
+            blob = f'{display} {handle} {uid}'.lower()
+            if ql and ql not in blob and not all(t in blob for t in ql.split() if t):
+                continue
+            people.append({
+                'id': uid,
+                'name': display,
+                'handle': handle,
+                'role': role,
+                'role_label': ROLE_LABELS.get(role, role),
+                'avatar': _member_avatar_url(m),
+            })
+        except Exception:
+            continue
+
+    order = {'owner': 0, 'admin': 1, 'curator': 2, 'mod': 3, 'helper': 4}
+    people.sort(key=lambda p: (order.get(p['role'], 9), str(p['name']).lower()))
+    return people, ''
+
+
+def _issue_pin_to_dm(discord_id: str):
+    """Сгенерировать PIN, сохранить pending, отправить в ЛС. (ok_msg, err)."""
+    bot = bot_instance
+    if not bot or not getattr(bot, 'loop', None):
+        return '', 'Бот не готов отправлять ЛС'
+    people, _ = _list_login_people()
+    person = next((p for p in people if p['id'] == str(discord_id)), None)
+    if not person:
+        return '', 'Этот человек не в staff-списке'
+    pin = f'{secrets.randbelow(10**6):06d}'
+    data = _purge_pending_pins()
+    data[str(discord_id)] = {
+        'pin': _hash_secret(pin),
+        'role': person['role'],
+        'name': person['name'],
+        'handle': person.get('handle') or '',
+        'avatar': person.get('avatar') or '',
+        'exp': datetime.now(timezone.utc).timestamp() + PIN_TTL_SEC,
+    }
+    _save_pending_pins(data)
+
+    async def _send():
+        user = bot.get_user(int(discord_id))
+        if user is None:
+            user = await bot.fetch_user(int(discord_id))
+        text = (
+            f"**Hakumo** — код входа в панель\n"
+            f"PIN: `{pin}`\n"
+            f"Действует {PIN_TTL_SEC // 60} мин. Никому не пересылай."
+        )
+        await user.send(text)
+
+    import asyncio
+    try:
+        fut = asyncio.run_coroutine_threadsafe(_send(), bot.loop)
+        fut.result(timeout=20)
+    except Exception as e:
+        msg = str(e)
+        if 'Cannot send messages to this user' in msg or '50007' in msg:
+            return '', 'Не смог написать в ЛС — открой личку с ботом (Allow DMs)'
+        return '', f'ЛС не отправилось: {msg[:160]}'
+    return f'PIN отправлен в Discord ЛС → @{person.get("handle") or person["name"]}', ''
+
+
+def _auth_pending_pin(discord_id: str, pin: str):
+    pin = (pin or '').strip()
+    if not pin.isdigit() or not (4 <= len(pin) <= 8):
+        return None
+    data = _purge_pending_pins()
+    row = data.get(str(discord_id))
+    if not row:
+        return None
+    if not _secret_matches(row.get('pin'), pin):
+        return None
+    data.pop(str(discord_id), None)
+    _save_pending_pins(data)
+    role = str(row.get('role') or 'mod')
+    if role not in LEVEL:
+        role = 'mod'
+    name = row.get('name') or row.get('handle') or str(discord_id)
+    return {
+        'username': name,
+        'role': role,
+        'discord_id': str(discord_id),
+        'handle': row.get('handle') or '',
+        'avatar': row.get('avatar') or '',
+    }
+
+
 # ── routes: auth ───────────────────────────────────────────────────────
 
 @app.route('/welcome')
@@ -822,27 +1007,66 @@ def _safe_next(raw: str | None) -> str:
 def login():
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    mode = (request.values.get('mode') or 'password').strip().lower()
-    if mode not in ('password', 'pin', 'register', 'forgot'):
-        mode = 'password'
+    mode = (request.values.get('mode') or 'people').strip().lower()
+    if mode not in ('people', 'password', 'pin', 'register', 'forgot'):
+        mode = 'people'
     err = (request.args.get('error') or '').strip()
-    ok = ''
+    ok = (request.args.get('ok') or '').strip()
     nxt = _safe_next(request.args.get('next') or request.form.get('next'))
+    selected_id = (request.values.get('uid') or '').strip()
+    people_q = (request.values.get('pq') or '').strip()
 
     if request.method == 'POST':
         mode = (request.form.get('mode') or mode).strip().lower()
-        if mode == 'password':
+        if mode == 'people':
+            action = (request.form.get('action') or 'verify').strip()
+            selected_id = (request.form.get('uid') or '').strip()
+            people_q = (request.form.get('pq') or '').strip()
+            if action == 'send':
+                if not selected_id:
+                    err = 'Выбери человека'
+                else:
+                    msg, e2 = _issue_pin_to_dm(selected_id)
+                    if e2:
+                        err = e2
+                    else:
+                        ok = msg
+            else:
+                got = _auth_pending_pin(selected_id, request.form.get('pin', ''))
+                if got:
+                    _start_session(username=got['username'], role=got['role'])
+                    session['discord_id'] = got['discord_id']
+                    session['discord_handle'] = got.get('handle') or ''
+                    session['discord_display'] = got['username']
+                    session['discord_avatar'] = got.get('avatar') or ''
+                    session['auth_via'] = 'pin-dm'
+                    session['role_label'] = ROLE_LABELS.get(got['role'], got['role'])
+                    return redirect(nxt)
+                err = 'Неверный или просроченный PIN'
+        elif mode == 'password':
             got = _auth_user(request.form.get('username', ''), request.form.get('password', ''))
             if got:
                 _start_session(username=got[0], role=got[1])
                 return redirect(nxt)
             err = 'Неверный логин или пароль'
         elif mode == 'pin':
+            # legacy static PIN + optional people uid pending
+            uid = (request.form.get('uid') or '').strip()
+            if uid:
+                gotp = _auth_pending_pin(uid, request.form.get('pin', ''))
+                if gotp:
+                    _start_session(username=gotp['username'], role=gotp['role'])
+                    session['discord_id'] = gotp['discord_id']
+                    session['discord_handle'] = gotp.get('handle') or ''
+                    session['discord_display'] = gotp['username']
+                    session['discord_avatar'] = gotp.get('avatar') or ''
+                    session['auth_via'] = 'pin-dm'
+                    return redirect(nxt)
             got = _auth_pin(request.form.get('username', ''), request.form.get('pin', ''))
             if got:
                 _start_session(username=got[0], role=got[1])
                 return redirect(nxt)
-            err = 'Неверный PIN (или укажи логин, если PIN не уникален)'
+            err = 'Неверный PIN'
         elif mode == 'register':
             invite = request.form.get('invite', '')
             username = (request.form.get('username') or '').strip()
@@ -886,6 +1110,9 @@ def login():
                 ok = 'Пароль обновлён — теперь войди'
                 mode = 'password'
 
+    people, people_err = _list_login_people(people_q) if mode == 'people' else ([], '')
+    if mode == 'people' and people_err and not err:
+        err = people_err
     _, env_pw = _env_owner_creds()
     hint = '' if env_pw else 'Задайте PANEL_PASSWORD в .env'
     return render_template(
@@ -896,6 +1123,9 @@ def login():
         discord_ready=_discord_oauth_ready(),
         mode=mode,
         next=nxt,
+        people=people,
+        people_q=people_q,
+        selected_id=selected_id,
     )
 
 

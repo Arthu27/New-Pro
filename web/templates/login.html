@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Вход — Hakumo</title>
-  <meta name="description" content="Вход в панель Hakumo.">
+  <meta name="description" content="Вход в панель Hakumo — выбери себя, PIN придёт в ЛС.">
   <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}">
 </head>
 <body class="gate-body">
@@ -15,7 +15,7 @@
   </div>
 
   <main class="login">
-    <div class="login-shell">
+    <div class="login-shell {% if mode == 'people' %}login-shell--people{% endif %}">
       <a class="login-back" href="{{ url_for('welcome') }}">
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -26,16 +26,17 @@
       <p class="login-kicker">Вход</p>
       <h1 class="login-mark">Haku<em>mo</em></h1>
       <p class="login-hint">
-        {% if mode == 'pin' %}Быстрый вход по PIN — роль подтянется сама.
+        {% if mode == 'people' %}Выбери себя в списке — PIN уйдёт в Discord ЛС. Роль подтянется сама.
+        {% elif mode == 'pin' %}Введи постоянный PIN (если задан).
         {% elif mode == 'register' %}Создай логин и пароль (нужен код приглашения).
         {% elif mode == 'forgot' %}Сброс пароля по коду восстановления.
-        {% else %}Пароль, PIN или Discord. Панель сама определит высшую роль.
+        {% else %}Вход по паролю.
         {% endif %}
       </p>
 
       <nav class="login-tabs" aria-label="Способ входа">
+        <a href="{{ url_for('login', mode='people', next=next) }}" class="{% if mode == 'people' %}on{% endif %}">Люди</a>
         <a href="{{ url_for('login', mode='password', next=next) }}" class="{% if mode == 'password' %}on{% endif %}">Пароль</a>
-        <a href="{{ url_for('login', mode='pin', next=next) }}" class="{% if mode == 'pin' %}on{% endif %}">PIN</a>
         <a href="{{ url_for('login', mode='register', next=next) }}" class="{% if mode == 'register' %}on{% endif %}">Создать</a>
         <a href="{{ url_for('login', mode='forgot', next=next) }}" class="{% if mode == 'forgot' %}on{% endif %}">Забыл</a>
       </nav>
@@ -44,19 +45,63 @@
         {% if ok %}<div class="login-flash ok" role="status">{{ ok }}</div>{% endif %}
         {% if error %}<div class="login-flash" role="alert">{{ error }}</div>{% endif %}
 
-        {% if mode == 'password' %}
+        {% if mode == 'people' %}
+          <form class="people-search" method="get" action="{{ url_for('login') }}">
+            <input type="hidden" name="mode" value="people">
+            <input type="hidden" name="next" value="{{ next }}">
+            <input name="pq" value="{{ people_q }}" placeholder="Поиск по нику…" autocomplete="off">
+            <button type="submit">Найти</button>
+          </form>
+
+          {% if not people %}
+          <div class="people-empty">Staff пока не загрузились. Обнови страницу через пару секунд после старта бота.</div>
+          {% else %}
+          <div class="people-grid" role="list">
+            {% for p in people %}
+            <form method="post" class="person-card {% if selected_id == p.id %}is-on{% endif %}" role="listitem">
+              <input type="hidden" name="mode" value="people">
+              <input type="hidden" name="action" value="send">
+              <input type="hidden" name="uid" value="{{ p.id }}">
+              <input type="hidden" name="next" value="{{ next }}">
+              <input type="hidden" name="pq" value="{{ people_q }}">
+              <button type="submit" class="person-hit">
+                <img class="person-ava" src="{{ p.avatar }}" alt="" width="44" height="44">
+                <span class="person-meta">
+                  <strong>{{ p.name }}</strong>
+                  <span class="person-at">@{{ p.handle or p.name }}</span>
+                </span>
+                <span class="person-role role-{{ p.role }}">{{ p.role_label }}</span>
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if selected_id %}
+          <form class="login-form pin-enter" method="post" autocomplete="off">
+            <input type="hidden" name="mode" value="people">
+            <input type="hidden" name="action" value="verify">
+            <input type="hidden" name="uid" value="{{ selected_id }}">
+            <input type="hidden" name="next" value="{{ next }}">
+            <input type="hidden" name="pq" value="{{ people_q }}">
+            <label>PIN из Discord ЛС
+              <input name="pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" required autofocus placeholder="6 цифр">
+            </label>
+            <button class="login-submit" type="submit">Войти</button>
+          </form>
+          {% else %}
+          <p class="login-note">Кликни по себе — бот пришлёт PIN в личку.</p>
+          {% endif %}
+
+        {% elif mode == 'password' %}
           {% if discord_ready %}
           <a class="discord-btn" href="{{ url_for('auth_discord', next=next) }}">
-            <svg class="discord-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M20.317 4.37a19.8 19.8 0 0 0-4.885-1.515.07.07 0 0 0-.079.04c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.07.07 0 0 0-.079-.04A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.08.07 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.08.08 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.07.07 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.07.07 0 0 1-.007-.117c.126-.094.252-.192.372-.292a.07.07 0 0 1 .074-.01c3.928 1.793 8.18 1.793 12.062 0a.07.07 0 0 1 .075.009c.12.1.246.198.373.293a.07.07 0 0 1-.006.117 12.3 12.3 0 0 1-1.873.891.07.07 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.08.08 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.08.08 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.06.06 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-            </svg>
             <span class="discord-btn__text">
-              <strong>Войти через Discord</strong>
-              <small>авто @ник · высшая роль сама</small>
+              <strong>Войти через Discord OAuth</strong>
+              <small>если настроен client secret</small>
             </span>
           </a>
           {% endif %}
-
           <form class="login-form" method="post" autocomplete="on">
             <input type="hidden" name="mode" value="password">
             <input type="hidden" name="next" value="{{ next }}">
@@ -69,40 +114,22 @@
             </label>
             <button class="login-submit" type="submit">Войти</button>
           </form>
-          <p class="login-note"><a href="{{ url_for('login', mode='forgot') }}">Забыл пароль</a> · <a href="{{ url_for('login', mode='pin') }}">Войти по PIN</a></p>
-
-        {% elif mode == 'pin' %}
-          <form class="login-form" method="post" autocomplete="off">
-            <input type="hidden" name="mode" value="pin">
-            <input type="hidden" name="next" value="{{ next }}">
-            <label>Логин <span style="font-weight:500;text-transform:none;letter-spacing:0">(необязательно, если PIN уникален)</span>
-              <input name="username" autocomplete="username" placeholder="ник">
-            </label>
-            <label>PIN
-              <input name="pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" required autofocus placeholder="••••">
-            </label>
-            <button class="login-submit" type="submit">Войти по PIN</button>
-          </form>
 
         {% elif mode == 'register' %}
           <form class="login-form" method="post" autocomplete="off">
             <input type="hidden" name="mode" value="register">
             <input type="hidden" name="next" value="{{ next }}">
             <label>Код приглашения
-              <input name="invite" required placeholder="из .env PANEL_INVITE_CODE">
+              <input name="invite" required placeholder="PANEL_INVITE_CODE">
             </label>
             <label>Логин
-              <input name="username" required autocomplete="off" minlength="3">
+              <input name="username" required minlength="3">
             </label>
             <label>Пароль
-              <input type="password" name="password" required autocomplete="new-password" minlength="6">
-            </label>
-            <label>PIN (4–8 цифр, необязательно)
-              <input name="pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" placeholder="например 4821">
+              <input type="password" name="password" required minlength="6" autocomplete="new-password">
             </label>
             <button class="login-submit" type="submit">Создать и войти</button>
           </form>
-          <p class="login-note">Роль по умолчанию — mod. Owner выдаёт invite в `.env`.</p>
 
         {% else %}
           <form class="login-form" method="post" autocomplete="off">
@@ -115,10 +142,7 @@
               <input name="recovery" required placeholder="PANEL_RECOVERY_CODE">
             </label>
             <label>Новый пароль
-              <input type="password" name="password" required autocomplete="new-password" minlength="6">
-            </label>
-            <label>Новый PIN (необязательно)
-              <input name="pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8">
+              <input type="password" name="password" required minlength="6" autocomplete="new-password">
             </label>
             <button class="login-submit" type="submit">Сбросить пароль</button>
           </form>
