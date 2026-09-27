@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block heading %}Пользователи{% endblock %}
+{% block body %}
+<p class="lead">Участники и их меры. Поиск по нику или ID.</p>
+<form method="get" class="form form-row" style="margin-bottom:16px;grid-template-columns:1fr auto;max-width:560px">
+  <label>Поиск<input class="input" name="q" value="{{ q }}" placeholder="ник или discord id"></label>
+  <button type="submit">Найти</button>
+</form>
+<div class="panel">
+  <h2>Список{% if q %} · «{{ q }}»{% endif %}</h2>
+  {% if not rows %}
+  <div class="empty">Никого не нашли — карта имён появится после активности на сервере</div>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Участник</th>
+        <th>ID</th>
+        <th>Мер</th>
+        <th>Варн</th>
+        <th>Мут</th>
+        <th>Кик</th>
+        <th>Бан</th>
+        <th>Последнее</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><b>{{ r.name }}</b></td>
+        <td class="dim">{{ r.user_id }}</td>
+        <td>{{ r.total }}</td>
+        <td>{{ r.warns }}</td>
+        <td>{{ r.mutes }}</td>
+        <td>{{ r.kicks }}</td>
+        <td>{{ r.bans }}</td>
+        <td class="dim">{{ r.last }}</td>
+        <td><a href="{{ url_for('member', q=r.user_id) }}">история</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

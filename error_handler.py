@@ -306,13 +306,13 @@ DETAILS_MAX_BYTES = 5 * 1024 * 1024
 
 DEFAULT_CONFIG = {
     # ── ядро ──
-    "master_enabled": True,       # главный выключатель мониторинга
+    "master_enabled": False,       # opt-in: включают с панели Антикраш
     "log_channel_id": 0,          # ID канала критических сводок (0 = выкл)
-    "alerts_enabled": True,       # слать сводки в канал
+    "alerts_enabled": False,      # opt-in
     "max_alerts_per_hour": 6,     # лимит сводок в час
     "alert_flush_sec": 60,        # период отправки сводки
     # ── watchdog event-loop ──
-    "loop_watchdog": True,
+    "loop_watchdog": False,             # opt-in
     "loop_lag_threshold": 5.0,
     "loop_check_interval": 2.0,
     # ── здоровье/статистика ──
@@ -321,15 +321,15 @@ DEFAULT_CONFIG = {
     "stats_persist": True,
     "stats_save_sec": 300,
     # ── circuit breaker ──
-    "cog_breaker": True,
+    "cog_breaker": False,               # opt-in
     "cog_error_threshold": 20,
     "cog_window_sec": 600,
     "cog_auto_reload": False,
     # ── warning-монитор (библиотеки) ──
-    "warning_monitor": True,      # ловить warnings (Deprecation и др.)
+    "warning_monitor": False,     # opt-in
     "warning_dedup_sec": 600,     # одинаковый warning — раз в период
     # ── фильтр шумных/повторных ошибок ──
-    "filter_enabled": True,
+    "filter_enabled": False,            # opt-in
     "filter_substrings": [
         "Unknown Message",                 # сообщение уже удалено
         "Unknown interaction",             # истёк interaction
@@ -345,9 +345,9 @@ DEFAULT_CONFIG = {
     "webhook_dedup_sec": 300,             # тот же тип ошибки — раз в период
     "webhook_max_per_hour": 20,
     # ── детальный файл ошибок ──
-    "details_log_enabled": True,          # data/anticrash_errors.jsonl
+    "details_log_enabled": False,         # opt-in
     # ── монитор соединения (shards/websocket) ──
-    "connection_watch": True,
+    "connection_watch": False,          # opt-in
     "disconnect_alert_threshold": 5,      # обрывов в окне → алерт
     "disconnect_window_sec": 600,
 }
@@ -893,7 +893,7 @@ class ErrorHandler:
                 'traceback': tb[-1500:],
             })
 
-        if critical and self.config.get('master_enabled', True):
+        if critical and self.config.get('master_enabled', False):
             self.queue_alert(
                 "Критическая ошибка",
                 f"`{err_type}` — {where or 'система'} · `{loc}`\n{raw[:180]}",
@@ -1033,7 +1033,7 @@ class ErrorHandler:
     # Сводки алертов в Discord-канал (очередь + лимит)
     # ────────────────────────────────────────────────────────────
     def queue_alert(self, title: str, desc: str):
-        if not self.config.get('master_enabled', True):
+        if not self.config.get('master_enabled', False):
             return
         if len(self._alerts) < 50:
             self._alerts.append({'title': title, 'desc': desc, 'ts': time.time()})
@@ -1336,7 +1336,7 @@ class ErrorHandler:
         await self.bot.wait_until_ready()
         while not self.bot.is_closed():
             await asyncio.sleep(max(60, int(self.config.get('health_log_interval', 600))))
-            if not self.config.get('master_enabled', True):
+            if not self.config.get('master_enabled', False):
                 continue
             ov = self.get_overview()
             log.info(
@@ -1396,7 +1396,7 @@ class ErrorHandler:
             daily7.append({'day': dkey, 'count': int(daily_src.get(dkey, 0))})
         return {
             'ok': True,
-            'master_enabled': self.config.get('master_enabled', True),
+            'master_enabled': self.config.get('master_enabled', False),
             'uptime_sec': int(uptime),
             'uptime_human': f"{h}ч {m}м {s_}с",
             'total_errors': self.stats['total_errors'],

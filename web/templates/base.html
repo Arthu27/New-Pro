@@ -13,16 +13,16 @@
 {% else %}
 <div class="shell">
   <aside class="side">
-    <div class="brand">Hakumo <span>мод-ядро</span></div>
+    <div class="brand">Hakumo <span>mod core · new</span></div>
     <nav class="nav">
       <div class="group">Модерация</div>
       {% for key, href, label, icon in nav_pages %}
-        {% if key in ['today','logs','member','warns','appeals','proofs','reasons'] %}
+        {% if key in ['today','logs','users','member','warns','appeals','proofs','reasons'] %}
         <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>
         {% endif %}
       {% endfor %}
       {% if is_owner %}
-      <div class="group">Бот · только ты</div>
+      <div class="group">Сервер · только ты</div>
       {% for key, href, label, icon in nav_pages %}
         {% if key in ['bot','modules','commands','anticrash','access'] %}
         <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}"><i class="fas {{ icon }}"></i>{{ label }}</a>

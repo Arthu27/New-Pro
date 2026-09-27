@@ -25,13 +25,14 @@ SECRET_FILE = DATA / 'panel_secret.txt'
 
 LEVEL = {'mod': 1, 'owner': 9}
 PAGES_MOD = [
-    ('today', '/', 'Сегодня', 'fa-gauge-high'),
-    ('logs', '/logs', 'Журнал', 'fa-scroll'),
+    ('today', '/', 'Сегодня', 'fa-sun'),
+    ('logs', '/logs', 'Журнал', 'fa-book-open'),
+    ('users', '/users', 'Пользователи', 'fa-users'),
     ('member', '/member', 'Участник', 'fa-user'),
     ('warns', '/warns', 'Варны', 'fa-triangle-exclamation'),
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
-    ('reasons', '/reasons', 'Причины', 'fa-list'),
+    ('reasons', '/reasons', 'Причины', 'fa-list-check'),
 ]
 PAGES_OWNER = [
     ('bot', '/bot', 'Бот', 'fa-robot'),
@@ -469,6 +470,68 @@ def logs():
     return render_template('logs.html', rows=rows)
 
 
+@app.route('/users')
+@login_required
+@role_required('mod')
+def users_page():
+    """Участники сервера + счётчики мер."""
+    gid = _main_guild()
+    q = (request.args.get('q') or '').strip().lower()
+    names = {}
+    prefer = DATA / f'member_names_{gid}.json' if gid else None
+    paths = [prefer] if prefer and prefer.exists() else []
+    paths += [p for p in sorted(DATA.glob('member_names_*.json')) if p not in paths]
+    for p in paths:
+        raw = _read_json(p, {})
+        if isinstance(raw, dict):
+            for uid, name in raw.items():
+                names[str(uid)] = str(name)
+        if names and gid and prefer and p == prefer:
+            break
+    stats = {}
+    for ev in _collect_cases(gid):
+        uid = str(ev.get('user_id') or '')
+        if not uid:
+            continue
+        st = stats.setdefault(uid, {
+            'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0, 'total': 0,
+            'name': ev.get('user_name') or uid, 'last': ev.get('timestamp'),
+        })
+        st['total'] += 1
+        k = ev.get('kind')
+        if k == 'warn':
+            st['warns'] += 1
+        elif k in ('mute', 'timeout'):
+            st['mutes'] += 1
+        elif k == 'ban':
+            st['bans'] += 1
+        elif k == 'kick':
+            st['kicks'] += 1
+        if ev.get('user_name') and not str(ev.get('user_name')).isdigit():
+            st['name'] = ev['user_name']
+        names.setdefault(uid, st['name'])
+    rows = []
+    for uid, name in names.items():
+        st = stats.get(uid) or {
+            'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0, 'total': 0, 'last': '',
+        }
+        display = name if not str(name).isdigit() else (st.get('name') or uid)
+        if q and q not in str(display).lower() and q not in uid:
+            continue
+        rows.append({
+            'user_id': uid,
+            'name': display,
+            'warns': st.get('warns', 0),
+            'mutes': st.get('mutes', 0),
+            'bans': st.get('bans', 0),
+            'kicks': st.get('kicks', 0),
+            'total': st.get('total', 0),
+            'last': _fmt(st.get('last')),
+        })
+    rows.sort(key=lambda r: (-r['total'], str(r['name']).lower()))
+    return render_template('users.html', rows=rows[:200], q=q)
+
+
 @app.route('/member')
 @login_required
 @role_required('mod')
@@ -627,65 +690,113 @@ def _anticrash_handler():
 @login_required
 @role_required('owner')
 def anticrash_page():
-    """Антикраш — только owner. UI с нуля, данные из error_handler."""
-    eh = _anticrash_handler()
+    """Антикраш сервера: щит, антирейд, security, watchdog. Всё opt-in."""
+    from web import protection as P
+    gid = P.gid_int(_main_guild())
     err = ''
     if request.method == 'POST':
-        if not eh:
-            err = 'Бот офлайн — конфиг не сохранить'
-        else:
-            try:
+        action = (request.form.get('action') or '').strip()
+        try:
+            if action == 'kill_all':
+                P.kill_all_protections(gid, bot_instance)
+                flash('Все защиты выключены', 'ok')
+                return redirect(url_for('anticrash_page'))
+
+            system = (request.form.get('system') or '').strip()
+            key = (request.form.get('key') or '').strip()
+            raw = request.form.get('value')
+
+            if system == 'guardian':
+                gu = P.load_guardian(gid)
+                if key == 'enabled':
+                    gu['enabled'] = raw == '1'
+                elif key == 'kick_unauthorized_bots':
+                    gu['kick_unauthorized_bots'] = raw == '1'
+                elif key == 'punishment':
+                    gu['punishment'] = str(raw or 'strip')
+                elif key.startswith('event:'):
+                    ek = key.split(':', 1)[1]
+                    ev = (gu.get('events') or {}).setdefault(ek, {'enabled': False})
+                    ev['enabled'] = raw == '1'
+                if gid:
+                    P.save_guardian(gid, gu)
+                flash('Щит сервера обновлён', 'ok')
+                return redirect(url_for('anticrash_page'))
+
+            if system == 'antiraid':
+                ar = P.load_antiraid(gid)
+                if key in ('min_age', 'join_threshold', 'join_window', 'alert_channel_id'):
+                    try:
+                        ar[key] = int(raw or 0)
+                    except Exception:
+                        ar[key] = 0
+                elif key == 'raid_action':
+                    ar[key] = str(raw or 'alert')
+                else:
+                    ar[key] = raw == '1'
+                if gid:
+                    P.save_antiraid(gid, ar)
+                flash('Антирейд обновлён', 'ok')
+                return redirect(url_for('anticrash_page'))
+
+            if system == 'security':
+                sec = P.load_security(gid)
+                if key in ('ai_spam', 'fake_account', 'link_scanner'):
+                    sec[key] = raw == '1'
+                elif key == 'new_account_days':
+                    sec[key] = max(0, int(raw or 0))
+                elif key == 'new_account_action':
+                    sec[key] = str(raw or 'warn')
+                if gid:
+                    P.save_security(gid, sec)
+                flash('Security обновлён', 'ok')
+                return redirect(url_for('anticrash_page'))
+
+            if system == 'bot':
                 from error_handler import DEFAULT_CONFIG
-                key = (request.form.get('key') or '').strip()
+                eh = _anticrash_handler()
                 if key not in DEFAULT_CONFIG:
                     err = 'Неизвестный ключ'
-                else:
-                    raw = request.form.get('value')
-                    if isinstance(DEFAULT_CONFIG[key], bool):
-                        raw = request.form.get('value') == '1'
-                    eh.update_config(key, raw)
-                    flash('Сохранено', 'ok')
+                elif eh:
+                    val = (raw == '1') if isinstance(DEFAULT_CONFIG[key], bool) else raw
+                    eh.update_config(key, val)
+                    flash('Watchdog бота обновлён', 'ok')
                     return redirect(url_for('anticrash_page'))
-            except Exception as ex:
-                err = str(ex)
-    overview = {}
-    config = {}
-    meta = {}
-    if eh:
-        try:
-            overview = eh.get_overview() or {}
-        except Exception:
-            overview = {'ok': False}
-        try:
-            from error_handler import CONFIG_META, DEFAULT_CONFIG
-            config = dict(getattr(eh, 'config', None) or DEFAULT_CONFIG)
-            meta = CONFIG_META
-        except Exception:
-            pass
-    else:
-        overview = {'ok': False, 'error': 'Обработчик офлайн'}
-        try:
-            from error_handler import CONFIG_META, DEFAULT_CONFIG
-            config = dict(DEFAULT_CONFIG)
-            # файл на диске, если бот ещё не поднялся
-            disk = _read_json(DATA / 'anticrash_config.json', {})
-            if isinstance(disk, dict):
-                config.update(disk)
-            meta = CONFIG_META
-        except Exception:
-            pass
-    # ключевые тумблеры для красивого UI (остальное — расширенный блок)
-    toggles = [
-        'master_enabled', 'alerts_enabled', 'loop_watchdog', 'cog_breaker',
-        'filter_enabled', 'connection_watch', 'warning_monitor', 'webhook_enabled',
-    ]
+                else:
+                    cfg = P.read_json(DATA / 'anticrash_config.json', {})
+                    if not isinstance(cfg, dict):
+                        cfg = {}
+                    cfg[key] = (raw == '1') if isinstance(DEFAULT_CONFIG[key], bool) else raw
+                    DATA.mkdir(parents=True, exist_ok=True)
+                    (DATA / 'anticrash_config.json').write_text(
+                        json.dumps(cfg, ensure_ascii=False, indent=2), encoding='utf-8')
+                    flash('Записано на диск (бот офлайн)', 'ok')
+                    return redirect(url_for('anticrash_page'))
+        except Exception as ex:
+            err = str(ex)
+
+    snap = P.snapshot(gid, bot_instance)
     return render_template(
         'anticrash.html',
-        overview=overview,
-        config=config,
-        meta=meta,
-        toggles=toggles,
+        gid=gid or '—',
+        snap=snap,
         error=err,
+        bot_toggles=[
+            'master_enabled', 'alerts_enabled', 'loop_watchdog', 'cog_breaker',
+            'filter_enabled', 'connection_watch', 'warning_monitor', 'webhook_enabled',
+        ],
+        ar_flags=[
+            ('join_raid', 'Анти-рейд входов', 'Пачка входов за окно → тревога/мера'),
+            ('bot_protection', 'Защита от ботов', 'Чужие боты без разрешения'),
+            ('webhook_protection', 'Защита вебхуков', 'Массовое создание вебхуков'),
+            ('delete_protection', 'Массовое удаление', 'Снос сообщений/каналов пачкой'),
+            ('age_filter', 'Возраст аккаунта', 'Слишком новые аккаунты'),
+        ],
+        sec_flags=[
+            ('ai_spam', 'AI-спам', 'Подозрительный спам-текст'),
+            ('fake_account', 'Фейк-аккаунты', 'Подозрительные ники/клоны'),
+            ('link_scanner', 'Сканер ссылок', 'Опасные / фишинговые ссылки'),
+        ],
     )
 
 
