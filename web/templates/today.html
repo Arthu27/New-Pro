@@ -2,33 +2,45 @@
 {% block title %}Сегодня{% endblock %}
 {% block heading %}Сегодня{% endblock %}
 {% block body %}
-<p class="dim" style="margin-top:-8px">Только наказания · новые сверху</p>
-<div class="kpis">
+<p class="lead">Наказания за сегодня · с учётом твоих лимитов и доступа.</p>
+
+{% include '_limits.html' %}
+
+<div class="kpis rise">
   <div class="kpi"><b>{{ kpi.actions }}</b><span>Мер</span></div>
   <div class="kpi"><b>{{ kpi.warns }}</b><span>Варнов</span></div>
+  {% if 'ban' not in (hidden_kinds or []) %}
   <div class="kpi"><b>{{ kpi.bans }}</b><span>Банов</span></div>
+  {% endif %}
+  {% if 'kick' not in (hidden_kinds or []) %}
   <div class="kpi"><b>{{ kpi.kicks }}</b><span>Киков</span></div>
+  {% endif %}
   <div class="kpi"><b>{{ kpi.mutes }}</b><span>Мутов</span></div>
 </div>
-<div class="panel">
+
+<div class="panel rise">
   <h2>Последние за сегодня</h2>
   {% if not rows %}
   <div class="empty">Сегодня наказаний ещё нет</div>
   {% else %}
-  <table>
-    <thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
-    <tbody>
+  <div class="log-timeline">
     {% for r in rows %}
-      <tr>
-        <td>{{ r.action }}</td>
-        <td>{{ r.user_name }}</td>
-        <td>{{ r.mod_name }}</td>
-        <td class="dim">{{ r.reason }}</td>
-        <td>{{ r.when }}</td>
-      </tr>
+    <article class="log-item log-{{ r.kind }}">
+      <div class="log-rail" aria-hidden="true"></div>
+      <div class="log-main">
+        <div class="log-top">
+          <span class="pill pill-{{ r.kind }}">{{ r.action }}</span>
+          <a class="log-who" href="{{ url_for('member', q=r.user_id) }}">{{ r.user_name }}</a>
+          <span class="log-when">{{ r.when }}</span>
+        </div>
+        <div class="log-meta">
+          <span>мод · <b>{{ r.mod_name }}</b></span>
+        </div>
+        {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
+      </div>
+    </article>
     {% endfor %}
-    </tbody>
-  </table>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

@@ -2,14 +2,20 @@
 {% block title %}Участники{% endblock %}
 {% block heading %}Участники{% endblock %}
 {% block body %}
-<p class="lead">Профили сервера: имя, роли, меры. Клик — полная история.</p>
+<p class="lead">Профили: имя, роли, меры. Клик — история. {% if hidden_kinds %}Скрыто для тебя: {{ hidden_kinds|join(', ') }}.{% endif %}</p>
+
+{% include '_limits.html' %}
 
 <div class="kpis rise">
   <div class="kpi"><b>{{ kpi.total }}</b><span>в списке</span></div>
   <div class="kpi"><b>{{ kpi.warns }}</b><span>варны</span></div>
   <div class="kpi"><b>{{ kpi.mutes }}</b><span>муты</span></div>
+  {% if 'kick' not in (hidden_kinds or []) %}
   <div class="kpi"><b>{{ kpi.kicks }}</b><span>кики</span></div>
+  {% endif %}
+  {% if 'ban' not in (hidden_kinds or []) %}
   <div class="kpi"><b>{{ kpi.bans }}</b><span>баны</span></div>
+  {% endif %}
 </div>
 
 <div class="search-live panel rise">
@@ -21,7 +27,7 @@
 <div class="panel rise profiles-panel" style="margin-top:14px">
   <h2>Профили{% if q %} · «{{ q }}»{% endif %}</h2>
   {% if not rows %}
-  <div class="empty">Никого — введи ник выше или дождись синхронизации участников</div>
+  <div class="empty">Никого — введи ник выше</div>
   {% else %}
   <div class="table-scroll">
   <table class="profiles-table">
@@ -32,14 +38,14 @@
         <th>Мер</th>
         <th>Варн</th>
         <th>Мут</th>
-        <th>Кик</th>
-        <th>Бан</th>
+        {% if 'kick' not in (hidden_kinds or []) %}<th>Кик</th>{% endif %}
+        {% if 'ban' not in (hidden_kinds or []) %}<th>Бан</th>{% endif %}
         <th></th>
       </tr>
     </thead>
     <tbody>
     {% for r in rows %}
-      <tr class="profile-row" data-href="{{ url_for('member', q=r.user_id) }}">
+      <tr class="profile-row">
         <td>
           <a class="profile-cell" href="{{ url_for('member', q=r.user_id) }}">
             <img class="profile-ava" src="{{ r.avatar }}" alt="" width="40" height="40" loading="lazy">
@@ -60,11 +66,11 @@
         <td><b>{{ r.total }}</b></td>
         <td>{{ r.warns }}</td>
         <td>{{ r.mutes }}</td>
-        <td>{{ r.kicks }}</td>
-        <td>{{ r.bans }}</td>
+        {% if 'kick' not in (hidden_kinds or []) %}<td>{{ r.kicks }}</td>{% endif %}
+        {% if 'ban' not in (hidden_kinds or []) %}<td>{{ r.bans }}</td>{% endif %}
         <td class="row-actions">
           <a href="{{ url_for('member', q=r.user_id) }}">история</a>
-          {% if user_role in ['mod','curator','admin','owner'] %}
+          {% if punish_actions %}
           <button type="button" class="ghost punish-btn" data-uid="{{ r.user_id }}" data-name="{{ r.name }}">наказать</button>
           {% endif %}
         </td>
@@ -76,21 +82,23 @@
   {% endif %}
 </div>
 
+{% if punish_actions %}
 <dialog id="punishDlg" class="dlg">
   <form method="dialog" id="punishForm" class="dlg-card">
     <h3>Наказать <span id="punishName"></span></h3>
     <input type="hidden" id="punishUid">
     <label>Мера
       <select id="punishAction">
-        <option value="warn">Варн</option>
-        <option value="mute">Мут</option>
-        <option value="kick">Кик</option>
-        <option value="ban">Бан</option>
+        {% for a in punish_actions %}
+        <option value="{{ a }}">{{ punish_labels.get(a, a) }}</option>
+        {% endfor %}
       </select>
     </label>
+    {% if 'mute' in punish_actions %}
     <label>Минуты (для мута)
-      <input id="punishMin" type="number" min="1" max="40320" value="10">
+      <input id="punishMin" type="number" min="1" max="60" value="10">
     </label>
+    {% endif %}
     <label>Причина
       <input id="punishReason" required placeholder="причина">
     </label>
@@ -101,6 +109,7 @@
     <p id="punishMsg" class="dim"></p>
   </form>
 </dialog>
+{% endif %}
 
 <script>
 (function () {
@@ -112,7 +121,7 @@
     if (!items.length) { box.hidden = true; box.innerHTML = ''; return; }
     box.hidden = false;
     box.innerHTML = items.map(it =>
-      `<button type="button" class="suggest-item" data-id="${esc(it.id)}" data-name="${esc(it.name)}">
+      `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
         <img src="${esc(it.avatar || '')}" alt="" width="28" height="28">
         <span><b>${esc(it.name)}</b><small>@${esc(it.handle || '')}</small></span>
       </button>`
@@ -141,6 +150,7 @@
   });
 
   const dlg = document.getElementById('punishDlg');
+  if (!dlg) return;
   document.querySelectorAll('.punish-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -157,7 +167,7 @@
     const body = {
       user_id: document.getElementById('punishUid').value,
       action: document.getElementById('punishAction').value,
-      minutes: document.getElementById('punishMin').value,
+      minutes: (document.getElementById('punishMin') || {}).value || 10,
       reason: document.getElementById('punishReason').value,
     };
     const r = await fetch('/api/punish', {

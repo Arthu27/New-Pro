@@ -1,39 +1,54 @@
 {% extends "base.html" %}
-{% block title %}Причины{% endblock %}
-{% block heading %}Причины{% endblock %}
+{% block title %}Правила{% endblock %}
+{% block heading %}Правила{% endblock %}
 {% block body %}
-<div class="panel" style="margin-bottom:16px">
-  <h2>Причины наказаний</h2>
-  {% if not reasons %}<div class="empty">Список пуст (data/mod_reasons_*.json)</div>
+<p class="lead">Правила сервера — читай перед наказанием. {% if show_reasons %}Ниже — причины для select.{% endif %}</p>
+
+{% include '_limits.html' %}
+
+<section class="panel rise rules-panel">
+  <h2>Правила сервера</h2>
+  {% if not rules %}
+  <div class="empty">Правила ещё не загружены (data/rules_*.json)</div>
   {% else %}
-  <table>
-    <thead><tr><th>#</th><th>Причина</th></tr></thead>
-    <tbody>
-    {% for r in reasons %}
-      <tr>
-        <td class="dim">{{ loop.index }}</td>
-        <td>{% if r is mapping %}{{ r.get('title') or r.get('name') or r.get('text') or r }}{% else %}{{ r }}{% endif %}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-</div>
-<div class="panel">
-  <h2>Правила</h2>
-  {% if not rules %}<div class="empty">Список пуст (data/rules_*.json)</div>
-  {% else %}
-  <table>
-    <thead><tr><th>#</th><th>Правило</th></tr></thead>
-    <tbody>
+  <div class="rules-list">
     {% for r in rules %}
-      <tr>
-        <td class="dim">{{ loop.index }}</td>
-        <td>{% if r is mapping %}{{ r.get('title') or r.get('code') or r.get('text') or r }}{% else %}{{ r }}{% endif %}</td>
-      </tr>
+    <article class="rule-card" style="--i: {{ loop.index0 if loop.index0 < 20 else 20 }}">
+      <div class="rule-num">{{ loop.index }}</div>
+      <div class="rule-body">
+        {% if r is mapping %}
+          <h3>{{ r.get('title') or r.get('code') or r.get('name') or ('Правило ' ~ loop.index) }}</h3>
+          {% if r.get('text') or r.get('description') or r.get('body') %}
+          <p>{{ r.get('text') or r.get('description') or r.get('body') }}</p>
+          {% endif %}
+          {% if r.get('punish') or r.get('penalty') %}
+          <span class="rule-punish">мера: {{ r.get('punish') or r.get('penalty') }}</span>
+          {% endif %}
+        {% else %}
+          <h3>Правило {{ loop.index }}</h3>
+          <p>{{ r }}</p>
+        {% endif %}
+      </div>
+    </article>
     {% endfor %}
-    </tbody>
-  </table>
+  </div>
   {% endif %}
-</div>
+</section>
+
+{% if show_reasons %}
+<section class="panel rise" style="margin-top:16px">
+  <h2>Причины для наказаний</h2>
+  {% if not reasons %}
+  <div class="empty">Список пуст (data/mod_reasons_*.json)</div>
+  {% else %}
+  <div class="reason-chips">
+    {% for r in reasons %}
+    <span class="reason-chip">
+      {% if r is mapping %}{{ r.get('title') or r.get('name') or r.get('text') or r }}{% else %}{{ r }}{% endif %}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
 {% endblock %}

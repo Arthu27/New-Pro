@@ -2,7 +2,9 @@
 {% block title %}Профиль участника{% endblock %}
 {% block heading %}Профиль участника{% endblock %}
 {% block body %}
-<p class="lead">Роли, активность и история нарушений — как раньше в панели.</p>
+<p class="lead">Роли и история. {% if hidden_kinds %}Скрыто: {{ hidden_kinds|join(', ') }}.{% endif %}</p>
+
+{% include '_limits.html' %}
 
 <form method="get" class="mp-searchbar rise" action="{{ url_for('member') }}">
   <label class="sr-only" for="mq">Поиск</label>
@@ -26,12 +28,14 @@
     <div class="mp-row"><span class="mp-key">На сервере с</span><span class="mp-val">{{ profile.joined }}</span></div>
     <div class="mp-row"><span class="mp-key">Предупреждений</span><span class="mp-val accent">{{ profile.warns }}</span></div>
     <div class="mp-row"><span class="mp-key">Всего мер</span><span class="mp-val">{{ profile.total }}</span></div>
-    {% if user_role in ['mod','curator','admin','owner'] %}
+    {% if punish_actions %}
     <div class="mp-actions">
-      <button type="button" class="ghost punish-btn" data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="warn">Варн</button>
-      <button type="button" class="ghost punish-btn" data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="mute">Мут</button>
-      <button type="button" class="ghost punish-btn" data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="kick">Кик</button>
-      <button type="button" class="ghost punish-btn danger" data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="ban">Бан</button>
+      {% for a in punish_actions %}
+      <button type="button" class="ghost punish-btn {% if a == 'ban' %}danger{% endif %}"
+              data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="{{ a }}">
+        {{ punish_labels.get(a, a) }}
+      </button>
+      {% endfor %}
     </div>
     {% endif %}
   </div>
@@ -49,8 +53,16 @@
     <div class="mp-mini-kpis">
       <div><b>{{ profile.warns }}</b><span>варн</span></div>
       <div><b>{{ profile.mutes }}</b><span>мут</span></div>
+      {% if profile.kicks is not none %}
       <div><b>{{ profile.kicks }}</b><span>кик</span></div>
+      {% else %}
+      <div class="is-locked"><b>—</b><span>кик</span></div>
+      {% endif %}
+      {% if profile.bans is not none %}
       <div><b>{{ profile.bans }}</b><span>бан</span></div>
+      {% else %}
+      <div class="is-locked"><b>—</b><span>бан</span></div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -58,7 +70,7 @@
 <div class="panel rise" style="margin-top:14px">
   <h2>История нарушений</h2>
   {% if not rows %}
-  <div class="empty">История чиста</div>
+  <div class="empty">История чиста{% if hidden_kinds %} (или скрыта лимитами роли){% endif %}</div>
   {% else %}
   <div class="history-list">
     {% for r in rows %}
@@ -81,21 +93,23 @@
 <div class="empty panel rise">Введите имя или ID участника и нажмите «Загрузить»</div>
 {% endif %}
 
+{% if punish_actions %}
 <dialog id="punishDlg" class="dlg">
   <form method="dialog" class="dlg-card">
     <h3>Наказать <span id="punishName"></span></h3>
     <input type="hidden" id="punishUid">
     <label>Мера
       <select id="punishAction">
-        <option value="warn">Варн</option>
-        <option value="mute">Мут</option>
-        <option value="kick">Кик</option>
-        <option value="ban">Бан</option>
+        {% for a in punish_actions %}
+        <option value="{{ a }}">{{ punish_labels.get(a, a) }}</option>
+        {% endfor %}
       </select>
     </label>
+    {% if 'mute' in punish_actions %}
     <label>Минуты (для мута)
-      <input id="punishMin" type="number" min="1" max="40320" value="10">
+      <input id="punishMin" type="number" min="1" max="60" value="10">
     </label>
+    {% endif %}
     <label>Причина
       <input id="punishReason" required placeholder="причина">
     </label>
@@ -106,6 +120,7 @@
     <p id="punishMsg" class="dim"></p>
   </form>
 </dialog>
+{% endif %}
 
 <script>
 (function () {
@@ -142,6 +157,7 @@
   }
 
   const dlg = document.getElementById('punishDlg');
+  if (!dlg) return;
   document.querySelectorAll('.punish-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.getElementById('punishUid').value = btn.dataset.uid;
@@ -151,15 +167,14 @@
       dlg.showModal();
     });
   });
-  const go = document.getElementById('punishGo');
-  if (go) go.addEventListener('click', async (e) => {
+  document.getElementById('punishGo').addEventListener('click', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('punishMsg');
     msg.textContent = 'Отправляю…';
     const body = {
       user_id: document.getElementById('punishUid').value,
       action: document.getElementById('punishAction').value,
-      minutes: document.getElementById('punishMin').value,
+      minutes: (document.getElementById('punishMin') || {}).value || 10,
       reason: document.getElementById('punishReason').value,
     };
     const r = await fetch('/api/punish', {

@@ -2,9 +2,11 @@
 {% block title %}Журнал{% endblock %}
 {% block heading %}Журнал{% endblock %}
 {% block body %}
-<p class="lead">Чёткие логи: наказания, входы/выходы и staff-действия отдельно.</p>
+<p class="lead">Лента наказаний и staff-событий. {% if hidden_kinds %}Для твоей роли скрыты: {{ hidden_kinds|join(', ') }}.{% endif %}</p>
 
-<section class="split-3">
+{% include '_limits.html' %}
+
+<section class="split-3 rise">
   <article class="stat-card">
     <div class="stat-k">Наказания</div>
     <div class="stat-v">{{ rows|length }}</div>
@@ -17,6 +19,32 @@
     <div class="stat-k">Входы / выходы</div>
     <div class="stat-v">{{ joins|length }}</div>
   </article>
+</section>
+
+<section class="panel rise" style="margin-top:16px">
+  <h2>Наказания</h2>
+  {% if not rows %}<div class="empty">Пока пусто</div>
+  {% else %}
+  <div class="log-timeline">
+    {% for r in rows %}
+    <article class="log-item log-{{ r.kind }}">
+      <div class="log-rail" aria-hidden="true"></div>
+      <div class="log-main">
+        <div class="log-top">
+          <span class="pill pill-{{ r.kind }}">{{ r.action }}</span>
+          <a class="log-who" href="{{ url_for('member', q=r.user_id) }}">{{ r.user_name }}</a>
+          <span class="log-when">{{ r.when }}</span>
+        </div>
+        <div class="log-meta">
+          <span>мод · <b>{{ r.mod_name }}</b></span>
+          {% if r.duration %}<span>{{ r.duration }} мин</span>{% endif %}
+        </div>
+        {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
 </section>
 
 <section class="panel rise" style="margin-top:16px">
@@ -43,39 +71,15 @@
   <h2>Входы / выходы</h2>
   {% if not joins %}<div class="empty">Нет свежих join/leave</div>
   {% else %}
-  <table>
-    <thead><tr><th>Событие</th><th>Кто</th><th>Время</th></tr></thead>
-    <tbody>
+  <div class="join-list">
     {% for e in joins %}
-      <tr>
-        <td>{{ e.action }}</td>
-        <td>{{ e.user_name or e.user_id }}</td>
-        <td class="dim">{{ e.when }}</td>
-      </tr>
+    <div class="join-row">
+      <span class="pill {% if 'вошёл' in e.action %}pill-ok{% else %}pill-leave{% endif %}">{{ e.action }}</span>
+      <span>{{ e.user_name or e.user_id }}</span>
+      <span class="dim">{{ e.when }}</span>
+    </div>
     {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-</section>
-
-<section class="panel rise" style="margin-top:16px">
-  <h2>Все наказания</h2>
-  {% if not rows %}<div class="empty">Пока пусто</div>
-  {% else %}
-  <table>
-    <thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
-    <tbody>
-    {% for r in rows %}
-      <tr>
-        <td><span class="pill pill-{{ r.kind }}">{{ r.action }}</span></td>
-        <td>{{ r.user_name }} <span class="dim">{{ r.user_id }}</span></td>
-        <td>{{ r.mod_name }}</td>
-        <td class="dim">{{ r.reason }}{% if r.duration %} · {{ r.duration }} мин{% endif %}</td>
-        <td>{{ r.when }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  </div>
   {% endif %}
 </section>
 {% endblock %}

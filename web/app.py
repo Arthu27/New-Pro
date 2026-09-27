@@ -54,7 +54,7 @@ PAGES_ALL = [
     ('warns', '/warns', 'Варны', 'fa-triangle-exclamation'),
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
-    ('reasons', '/reasons', 'Причины', 'fa-list-check'),
+    ('reasons', '/reasons', 'Правила', 'fa-scroll'),
     ('bot', '/bot', 'Бот', 'fa-robot'),
     ('modules', '/modules', 'Модули', 'fa-puzzle-piece'),
     ('commands', '/commands', 'Команды', 'fa-terminal'),
@@ -69,8 +69,9 @@ PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
 
 # Какие ключи страниц видит роль (накопительно по уровню)
 # Admin НЕ видит бот/модули/команды — только owner.
+# Helper видит Правила (не причины наказаний как отдельный список).
 ROLE_PAGE_KEYS = {
-    'helper': {'today', 'logs', 'staff', 'users', 'member', 'warns'},
+    'helper': {'today', 'logs', 'staff', 'users', 'member', 'warns', 'reasons'},
     'mod': {
         'today', 'logs', 'staff', 'users', 'member', 'channels',
         'warns', 'appeals', 'proofs', 'reasons',
@@ -86,20 +87,43 @@ ROLE_PAGE_KEYS = {
     'owner': {p[0] for p in PAGES_ALL},
 }
 
+# Меры, которые роль может ВЫДАТЬ из панели
+ROLE_PUNISH_ACTIONS = {
+    'helper': ('warn', 'mute'),
+    'mod': ('warn', 'mute', 'kick', 'ban'),
+    'curator': ('warn', 'mute', 'kick', 'ban'),
+    'admin': ('warn', 'mute', 'kick', 'ban'),
+    'owner': ('warn', 'mute', 'kick', 'ban'),
+}
+# Виды в журнале/истории, которые роль НЕ видит
+ROLE_HIDDEN_KINDS = {
+    'helper': frozenset({'ban', 'kick'}),
+    'mod': frozenset(),
+    'curator': frozenset(),
+    'admin': frozenset(),
+    'owner': frozenset(),
+}
+PUNISH_LABELS = {
+    'warn': 'Варн',
+    'mute': 'Мут',
+    'kick': 'Кик',
+    'ban': 'Бан',
+}
+
 ROLE_CARDS = [
     {
         'key': 'helper',
         'title': 'Helper',
         'tag': '@Helper',
-        'blurb': 'Смотрит смены и варны. Без апелляций и настроек сервера.',
-        'pages': ['Сегодня', 'Журнал', 'Staff', 'Участники', 'Варны'],
+        'blurb': 'Варн/мут с лимитами. Бан и кик скрыты. Правила — можно.',
+        'pages': ['Сегодня', 'Журнал', 'Staff', 'Участники', 'Варны', 'Правила'],
     },
     {
         'key': 'mod',
         'title': 'Moderator',
         'tag': '@Moderator',
-        'blurb': 'Полная мод-панель: апелляции, демки, каналы, причины.',
-        'pages': ['Всё у Helper', '+ Каналы', 'Апелляции', 'Демки', 'Причины'],
+        'blurb': 'Полная мод-панель: апелляции, демки, каналы, правила.',
+        'pages': ['Всё у Helper', '+ Каналы', 'Апелляции', 'Демки', 'Правила'],
     },
     {
         'key': 'curator',
@@ -334,6 +358,123 @@ def _upsert_access_user(*, username, password=None, pin=None, role='mod', note='
 def _pages_for_role(role: str):
     keys = ROLE_PAGE_KEYS.get(role) or ROLE_PAGE_KEYS['helper']
     return [p for p in PAGES_ALL if p[0] in keys]
+
+
+def _session_discord_role_ids():
+    """Роли Discord текущего пользователя панели (для staff_limits)."""
+    uid = str(session.get('discord_id') or '').strip()
+    if not uid.isdigit():
+        return []
+    m = _find_guild_member(uid)
+    if m is None:
+        return []
+    try:
+        return [int(r.id) for r in (getattr(m, 'roles', None) or []) if getattr(r, 'id', None)]
+    except Exception:
+        return []
+
+
+def _viewer_punish_actions(role: str | None = None):
+    role = role or session.get('role') or 'helper'
+    return list(ROLE_PUNISH_ACTIONS.get(role) or ROLE_PUNISH_ACTIONS['helper'])
+
+
+def _viewer_hidden_kinds(role: str | None = None):
+    role = role or session.get('role') or 'helper'
+    return ROLE_HIDDEN_KINDS.get(role) or frozenset()
+
+
+def _filter_cases_for_viewer(rows):
+    """Скрыть наказания, которые роль не должна видеть."""
+    hidden = _viewer_hidden_kinds()
+    if not hidden:
+        return list(rows or [])
+    out = []
+    for r in rows or []:
+        kind = str((r or {}).get('kind') or '').lower()
+        if kind in hidden:
+            continue
+        out.append(r)
+    return out
+
+
+def _viewer_limits_card():
+    """Карточка лимитов для шапки/страниц — чётко: что можно и сколько осталось."""
+    role = session.get('role') or 'helper'
+    gid = _main_guild()
+    uid = str(session.get('discord_id') or '').strip() or '0'
+    allowed = _viewer_punish_actions(role)
+    hidden = _viewer_hidden_kinds(role)
+    items = []
+    lim_map, win_map = {}, {}
+    try:
+        from services.staff_limits import (
+            check_limit, effective_limits, human_window, ACTION_TITLES,
+        )
+        role_ids = _session_discord_role_ids()
+        if gid:
+            lim_map, win_map = effective_limits(gid, role_ids)
+        for key in ('warn', 'mute', 'kick', 'ban'):
+            title = PUNISH_LABELS.get(key) or ACTION_TITLES.get(key, key)
+            if key in hidden or key not in allowed:
+                items.append({
+                    'key': key,
+                    'title': title,
+                    'locked': True,
+                    'used': 0,
+                    'limit': 0,
+                    'left': 0,
+                    'window': '',
+                    'hint': 'недоступно твоей роли',
+                })
+                continue
+            limit = int(lim_map.get(key) or 0)
+            if limit <= 0:
+                items.append({
+                    'key': key,
+                    'title': title,
+                    'locked': False,
+                    'used': 0,
+                    'limit': 0,
+                    'left': None,
+                    'window': '',
+                    'hint': 'без лимита',
+                })
+                continue
+            _ok, used, lim = check_limit(gid, uid, key, 1, role_ids)
+            used = int(used or 0)
+            lim = int(lim or limit)
+            items.append({
+                'key': key,
+                'title': title,
+                'locked': False,
+                'used': used,
+                'limit': lim,
+                'left': max(0, lim - used),
+                'window': human_window(win_map.get(key) or 86400),
+                'hint': f'{used}/{lim} за {human_window(win_map.get(key) or 86400)}',
+            })
+    except Exception:
+        for key in ('warn', 'mute', 'kick', 'ban'):
+            title = PUNISH_LABELS.get(key, key)
+            locked = key in hidden or key not in allowed
+            items.append({
+                'key': key,
+                'title': title,
+                'locked': locked,
+                'used': 0,
+                'limit': 0,
+                'left': 0 if locked else None,
+                'window': '',
+                'hint': 'недоступно' if locked else '—',
+            })
+    return {
+        'role': role,
+        'role_label': ROLE_LABELS.get(role, role),
+        'actions': allowed,
+        'slots': items,
+        'can_punish': bool(allowed),
+    }
 
 
 # ── Discord OAuth ──────────────────────────────────────────────────────
@@ -581,6 +722,7 @@ def inject_nav():
     role = session.get('role') or ''
     pages = _pages_for_role(role) if role else []
     handle = session.get('discord_handle') or ''
+    limits = _viewer_limits_card() if session.get('logged_in') else None
     return {
         'nav_pages': pages,
         'user_name': session.get('discord_display') or session.get('username') or '',
@@ -594,6 +736,9 @@ def inject_nav():
             'today', 'logs', 'staff', 'users', 'member', 'channels',
             'warns', 'appeals', 'proofs', 'reasons'},
         'owner_nav_keys': {'bot', 'modules', 'commands', 'anticrash', 'access'},
+        'viewer_limits': limits,
+        'punish_actions': _viewer_punish_actions(role) if role else [],
+        'punish_labels': PUNISH_LABELS,
     }
 
 
@@ -1448,7 +1593,7 @@ def _search_accounts(q: str, limit=12):
 @role_required('helper')
 def today():
     gid = _main_guild()
-    rows = _collect_cases(gid)
+    rows = _filter_cases_for_viewer(_collect_cases(gid))
     today_rows = [r for r in rows if _is_today(r.get('timestamp'))]
     kpi = {
         'actions': len(today_rows),
@@ -1459,8 +1604,11 @@ def today():
     }
     for r in today_rows:
         r['when'] = _fmt(r.get('timestamp'))
-    return render_template('today.html', kpi=kpi, rows=today_rows[:30],
-                           fmt=_fmt)
+    return render_template(
+        'today.html', kpi=kpi, rows=today_rows[:30], fmt=_fmt,
+        limits=_viewer_limits_card(),
+        hidden_kinds=sorted(_viewer_hidden_kinds()),
+    )
 
 
 @app.route('/logs')
@@ -1468,15 +1616,27 @@ def today():
 @role_required('helper')
 def logs():
     gid = _main_guild()
-    rows = _collect_cases(gid)[:200]
+    rows = _filter_cases_for_viewer(_collect_cases(gid))[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
     feed = _staff_feed(gid, 60)
+    # хелперу не светим ban/kick в staff-ленте
+    hidden = _viewer_hidden_kinds()
+    if hidden:
+        feed = [
+            f for f in feed
+            if not any(h in str(f.get('action') or '').lower()
+                       for h in ('бан', 'ban', 'кик', 'kick'))
+        ]
     joins = [e for e in _audit_events(gid, 200)
              if e.get('action') in ('Участник вошёл', 'Участник вышел')][:40]
     for e in joins:
         e['when'] = _fmt(e.get('timestamp'))
-    return render_template('logs.html', rows=rows, feed=feed, joins=joins)
+    return render_template(
+        'logs.html', rows=rows, feed=feed, joins=joins,
+        limits=_viewer_limits_card(),
+        hidden_kinds=sorted(_viewer_hidden_kinds()),
+    )
 
 
 @app.route('/staff')
@@ -1567,9 +1727,9 @@ def api_users_search():
 
 @app.post('/api/punish')
 @login_required
-@role_required('mod')
+@role_required('helper')
 def api_punish():
-    """Выдать меру из панели (через бота)."""
+    """Выдать меру из панели (через бота). Учитывает роль и staff_limits."""
     data = request.get_json(silent=True) or request.form
     action = str(data.get('action') or '').strip().lower()
     uid = str(data.get('user_id') or '').strip()
@@ -1580,8 +1740,31 @@ def api_punish():
         minutes = 10
     if action not in ('warn', 'mute', 'kick', 'ban'):
         return jsonify({'ok': False, 'error': 'action: warn|mute|kick|ban'}), 400
+    allowed = _viewer_punish_actions()
+    if action not in allowed:
+        return jsonify({
+            'ok': False,
+            'error': f'Твоя роль не может выдавать: {PUNISH_LABELS.get(action, action)}',
+        }), 403
     if not uid.isdigit():
         return jsonify({'ok': False, 'error': 'user_id'}), 400
+    # лимиты staff_limits
+    try:
+        from services.staff_limits import check_limit, limit_deny_text, human_window, get_windows
+        gid0 = _main_guild()
+        actor = str(session.get('discord_id') or '').strip()
+        if gid0 and actor.isdigit():
+            sl_key = 'mute' if action == 'mute' else action
+            role_ids = _session_discord_role_ids()
+            ok_l, used, lim = check_limit(gid0, actor, sl_key, 1, role_ids)
+            if not ok_l and lim > 0:
+                win = (get_windows(gid0) or {}).get(sl_key)
+                return jsonify({
+                    'ok': False,
+                    'error': limit_deny_text(sl_key, used, lim, 1, window=win),
+                }), 429
+    except Exception:
+        pass
     bot = bot_instance
     gid = _main_guild()
     if not bot or not gid:
@@ -1623,6 +1806,14 @@ def api_punish():
 
     try:
         result = _run_on_bot(_do())
+        try:
+            from services.staff_limits import record_hit
+            actor = str(session.get('discord_id') or '').strip()
+            if gid and actor.isdigit():
+                sl_key = 'mute' if action == 'mute' else action
+                record_hit(gid, actor, sl_key, 1)
+        except Exception:
+            pass
         return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)[:200]}), 500
@@ -1760,7 +1951,11 @@ def users_page():
         'bans': sum(r['bans'] for r in rows),
         'kicks': sum(r['kicks'] for r in rows),
     }
-    return render_template('users.html', rows=rows[:300], q=q, kpi=kpi)
+    return render_template(
+        'users.html', rows=rows[:300], q=q, kpi=kpi,
+        limits=_viewer_limits_card(),
+        hidden_kinds=sorted(_viewer_hidden_kinds()),
+    )
 
 
 @app.route('/member')
@@ -1871,7 +2066,21 @@ def member():
                 'total': len(rows),
                 'on_server': member_obj is not None,
             }
-    return render_template('member.html', q=q, rows=rows, profile=profile)
+    rows = _filter_cases_for_viewer(rows)
+    if profile:
+        hidden = _viewer_hidden_kinds()
+        if 'ban' in hidden:
+            profile['bans'] = None
+        if 'kick' in hidden:
+            profile['kicks'] = None
+        profile['total'] = len(rows)
+        profile['warns'] = sum(1 for r in rows if r.get('kind') == 'warn')
+        profile['mutes'] = sum(1 for r in rows if r.get('kind') in ('mute', 'timeout'))
+    return render_template(
+        'member.html', q=q, rows=rows, profile=profile,
+        limits=_viewer_limits_card(),
+        hidden_kinds=sorted(_viewer_hidden_kinds()),
+    )
 
 
 @app.route('/warns')
@@ -1913,12 +2122,22 @@ def proofs():
 
 
 @app.route('/reasons')
+@app.route('/rules')
 @login_required
-@role_required('mod')
+@role_required('helper')
 def reasons():
+    """Правила сервера (+ причины наказаний для mod+)."""
     gid = _main_guild()
-    reasons, rules = _reasons_bundle(gid)
-    return render_template('reasons.html', reasons=reasons, rules=rules)
+    reasons_list, rules = _reasons_bundle(gid)
+    role = session.get('role') or 'helper'
+    show_reasons = LEVEL.get(role, 0) >= LEVEL['mod']
+    return render_template(
+        'reasons.html',
+        reasons=reasons_list if show_reasons else [],
+        rules=rules,
+        show_reasons=show_reasons,
+        limits=_viewer_limits_card(),
+    )
 
 
 # ── routes: owner-only bot pages ───────────────────────────────────────
