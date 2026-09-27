@@ -171,7 +171,7 @@
   animation: gate-rise .85s .24s ease both;
 }
 
-.welcome-cta {
+.gate-body a.welcome-cta {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -183,18 +183,19 @@
   letter-spacing: -.01em;
   border: 0;
   border-radius: 4px;
-  transition: transform .2s, background .2s;
+  transition: transform .2s, background .2s, color .2s;
 }
-.welcome-cta:hover {
+.gate-body a.welcome-cta:hover {
   background: var(--gate-accent);
+  color: #fff;
   transform: translateY(-2px);
 }
-.welcome-cta svg {
+.gate-body a.welcome-cta svg {
   width: 16px;
   height: 16px;
   transition: transform .25s;
 }
-.welcome-cta:hover svg { transform: translateX(3px); }
+.gate-body a.welcome-cta:hover svg { transform: translateX(3px); }
 
 .welcome-sub {
   font-weight: 600;
