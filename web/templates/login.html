@@ -9,9 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=5">
   <style>
-    /* критический тёмный кадр — даже до CSS */
     html, body { margin:0; background:#05060a; color:#f4f6fb; }
   </style>
 </head>
@@ -23,7 +22,7 @@
   </div>
 
   <main class="login">
-    <div class="login-shell {% if mode == 'people' %}login-shell--people{% endif %}">
+    <div class="login-shell {% if mode in ('people', 'register') %}login-shell--people{% endif %}">
       <a class="login-back" href="{{ url_for('welcome') }}">
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -34,18 +33,18 @@
       <p class="login-kicker">Вход</p>
       <h1 class="login-mark">Haku<em>mo</em></h1>
       <p class="login-hint">
-        {% if mode == 'people' %}Выбери себя — PIN придёт в Discord ЛС. Роль подтянется сама.
-        {% elif mode == 'register' %}Создай логин и пароль (код приглашения).
+        {% if mode == 'people' %}Выбери себя — PIN уйдёт в Discord ЛС.
+        {% elif mode == 'pin' %}Введи PIN из лички Discord.
+        {% elif mode == 'register' %}Найди себя по имени, введи код приглашения и пароль.
         {% elif mode == 'forgot' %}Сброс пароля по коду восстановления.
         {% else %}Вход по паролю.
         {% endif %}
       </p>
 
-      <nav class="login-tabs" aria-label="Способ входа">
+      <nav class="login-tabs login-tabs--3" aria-label="Способ входа">
         <a href="{{ url_for('login', mode='people', next=next) }}" class="{% if mode == 'people' %}on{% endif %}">Люди</a>
         <a href="{{ url_for('login', mode='password', next=next) }}" class="{% if mode == 'password' %}on{% endif %}">Пароль</a>
         <a href="{{ url_for('login', mode='register', next=next) }}" class="{% if mode == 'register' %}on{% endif %}">Создать</a>
-        <a href="{{ url_for('login', mode='forgot', next=next) }}" class="{% if mode == 'forgot' %}on{% endif %}">Забыл</a>
       </nav>
 
       <div class="login-card">
@@ -57,7 +56,7 @@
           <form class="people-search" method="get" action="{{ url_for('login') }}">
             <input type="hidden" name="mode" value="people">
             <input type="hidden" name="next" value="{{ next }}">
-            <input name="pq" value="{{ people_q }}" placeholder="Поиск по нику…" autocomplete="off">
+            <input name="pq" value="{{ people_q }}" placeholder="Поиск по нику…" autocomplete="off" autofocus>
             <button type="submit">Найти</button>
           </form>
 
@@ -66,7 +65,7 @@
           {% else %}
           <div class="people-grid" role="list">
             {% for p in people %}
-            <form method="post" class="person-card {% if selected_id == p.id %}is-on{% endif %}" role="listitem" style="--i: {{ loop.index0 if loop.index0 < 24 else 24 }}">
+            <form method="post" class="person-card" role="listitem" style="--i: {{ loop.index0 if loop.index0 < 24 else 24 }}">
               <input type="hidden" name="mode" value="people">
               <input type="hidden" name="action" value="send">
               <input type="hidden" name="uid" value="{{ p.id }}">
@@ -84,22 +83,33 @@
             {% endfor %}
           </div>
           {% endif %}
+          <p class="login-note">Кликни по себе — PIN уйдёт в личку, ввод на отдельном экране</p>
 
-          {% if selected_id %}
-          <form class="login-form pin-enter" method="post" autocomplete="off">
-            <input type="hidden" name="mode" value="people">
-            <input type="hidden" name="action" value="verify">
+        {% elif mode == 'pin' %}
+          {% if pin_person %}
+          <div class="pin-who">
+            <img src="{{ pin_person.avatar }}" alt="" width="44" height="44">
+            <div>
+              <strong>{{ pin_person.name }}</strong>
+              <span>@{{ pin_person.handle or pin_person.name }}</span>
+            </div>
+          </div>
+          {% endif %}
+          <form class="login-form" method="post" autocomplete="off">
+            <input type="hidden" name="mode" value="pin">
             <input type="hidden" name="uid" value="{{ selected_id }}">
             <input type="hidden" name="next" value="{{ next }}">
-            <input type="hidden" name="pq" value="{{ people_q }}">
+            {% if not selected_id %}
+            <label>Логин
+              <input name="username" autocomplete="username" placeholder="если статический PIN">
+            </label>
+            {% endif %}
             <label>PIN из Discord ЛС
               <input name="pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" required autofocus placeholder="6 цифр">
             </label>
             <button class="login-submit" type="submit">Войти</button>
           </form>
-          {% else %}
-          <p class="login-note">Кликни по себе — PIN уйдёт в личку Discord</p>
-          {% endif %}
+          <p class="login-note"><a href="{{ url_for('login', mode='people', next=next) }}">← выбрать другого</a></p>
 
         {% elif mode == 'password' %}
           <form class="login-form" method="post" autocomplete="on" id="passForm">
@@ -145,20 +155,72 @@
           </script>
 
         {% elif mode == 'register' %}
+          {% if not invite_set %}
+          <div class="people-empty">Код приглашения ещё не задан в .env (PANEL_INVITE_CODE). Попроси owner.</div>
+          {% else %}
+          <div class="reg-search-wrap">
+            <label class="reg-label">Найди себя по имени
+              <input id="regQ" type="search" placeholder="ник Discord…" autocomplete="off" autofocus value="">
+            </label>
+            <div id="regSuggest" class="suggest suggest-dark" hidden></div>
+          </div>
+
+          {% if reg_person %}
+          <div class="pin-who reg-picked">
+            <img src="{{ reg_person.avatar }}" alt="" width="44" height="44">
+            <div>
+              <strong>{{ reg_person.name }}</strong>
+              <span>@{{ reg_person.handle or reg_person.name }}</span>
+            </div>
+            <a class="reg-clear" href="{{ url_for('login', mode='register', next=next) }}">сменить</a>
+          </div>
           <form class="login-form" method="post" autocomplete="off">
             <input type="hidden" name="mode" value="register">
             <input type="hidden" name="next" value="{{ next }}">
+            <input type="hidden" name="reg_id" value="{{ reg_person.id }}">
+            <input type="hidden" name="username" value="{{ reg_person.handle or reg_person.name }}">
             <label>Код приглашения
-              <input name="invite" required>
-            </label>
-            <label>Логин
-              <input name="username" required minlength="3">
+              <input name="invite" required autocomplete="off">
             </label>
             <label>Пароль
               <input type="password" name="password" required minlength="6" autocomplete="new-password">
             </label>
             <button class="login-submit" type="submit">Создать и войти</button>
           </form>
+          {% else %}
+          <p class="login-note">Начни печатать имя — выбери себя из списка</p>
+          {% endif %}
+
+          <script>
+          (function(){
+            const inp=document.getElementById('regQ');
+            const box=document.getElementById('regSuggest');
+            if(!inp) return;
+            let t=null;
+            function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+            inp.addEventListener('input',()=>{
+              clearTimeout(t);
+              const q=inp.value.trim();
+              t=setTimeout(async()=>{
+                if(q.length<1){box.hidden=true;box.innerHTML='';return;}
+                const r=await fetch('/api/login/members?q='+encodeURIComponent(q));
+                const j=await r.json();
+                const items=j.items||[];
+                if(!items.length){
+                  box.hidden=false;
+                  box.innerHTML='<div class="suggest-empty">Никого не найдено</div>';
+                  return;
+                }
+                box.hidden=false;
+                box.innerHTML=items.map(it=>`<a class="suggest-item" href="{{ url_for('login', mode='register', next=next) }}&reg_id=${encodeURIComponent(it.id)}">
+                  <img src="${esc(it.avatar)}" width="28" height="28" alt="">
+                  <span><b>${esc(it.name)}</b><small>@${esc(it.handle||'')}</small></span>
+                </a>`).join('');
+              },120);
+            });
+          })();
+          </script>
+          {% endif %}
 
         {% else %}
           <form class="login-form" method="post" autocomplete="off">
@@ -175,6 +237,18 @@
             </label>
             <button class="login-submit" type="submit">Сбросить пароль</button>
           </form>
+        {% endif %}
+      </div>
+
+      <div class="login-foot">
+        {% if mode != 'forgot' %}
+        <a href="{{ url_for('login', mode='forgot', next=next) }}">Забыл пароль</a>
+        {% endif %}
+        {% if mode != 'pin' %}
+        <a href="{{ url_for('login', mode='pin', next=next) }}">Ввести PIN</a>
+        {% endif %}
+        {% if mode == 'pin' or mode == 'forgot' %}
+        <a href="{{ url_for('login', mode='people', next=next) }}">К людям</a>
         {% endif %}
       </div>
     </div>

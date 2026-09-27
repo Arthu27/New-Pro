@@ -292,7 +292,8 @@ def _recovery_ok(code: str) -> bool:
     return bool(env_pw) and secrets.compare_digest(env_pw, (code or '').strip())
 
 
-def _upsert_access_user(*, username, password=None, pin=None, role='mod', note=''):
+def _upsert_access_user(*, username, password=None, pin=None, role='mod', note='',
+                        discord_id=None, display_name=None, avatar=None):
     data = _load_access()
     username = (username or '').strip()
     found = None
@@ -300,9 +301,14 @@ def _upsert_access_user(*, username, password=None, pin=None, role='mod', note='
         if str(u.get('username', '')).strip() == username:
             found = u
             break
+        if discord_id and str(u.get('discord_id') or '') == str(discord_id):
+            found = u
+            break
     if found is None:
         found = {'username': username, 'role': role or 'mod', 'note': note or ''}
         data['users'].append(found)
+    if username:
+        found['username'] = username
     if password is not None:
         found['password'] = _hash_secret(password)
     if pin is not None:
@@ -315,6 +321,12 @@ def _upsert_access_user(*, username, password=None, pin=None, role='mod', note='
         found['role'] = role
     if note is not None:
         found['note'] = note
+    if discord_id:
+        found['discord_id'] = str(discord_id)
+    if display_name:
+        found['display_name'] = str(display_name)
+    if avatar:
+        found['avatar'] = str(avatar)
     _save_access(data)
     return found
 
@@ -875,8 +887,28 @@ def _member_avatar_url(member) -> str:
     return f'https://cdn.discordapp.com/embed/avatars/{idx}.png'
 
 
-def _list_login_people(q: str = ''):
-    """Staff с сервера для выбора на логине."""
+def _guild_member_snapshot(m, *, role=None):
+    display = (
+        getattr(m, 'display_name', None)
+        or getattr(m, 'global_name', None)
+        or getattr(m, 'name', None)
+        or str(m.id)
+    )
+    handle = getattr(m, 'name', '') or ''
+    return {
+        'id': str(m.id),
+        'name': display,
+        'handle': handle,
+        'role': role or '',
+        'role_label': ROLE_LABELS.get(role, role or ''),
+        'avatar': _member_avatar_url(m),
+        'joined': getattr(m, 'joined_at', None),
+        'created': getattr(getattr(m, 'created_at', None), 'isoformat', lambda: None)(),
+    }
+
+
+def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
+    """Поиск участников гильдии по имени/нику/ID. (items, error)."""
     people = []
     bot = bot_instance
     gid = _main_guild()
@@ -890,9 +922,6 @@ def _list_login_people(q: str = ''):
         return people, 'Сервер не найден (MAIN_GUILD_ID)'
 
     ql = (q or '').strip().lower()
-    seen = set()
-
-    # owners always
     try:
         from config import Config
         owner_ids = {int(x) for x in Config.all_owner_ids()}
@@ -901,42 +930,57 @@ def _list_login_people(q: str = ''):
 
     for m in list(getattr(guild, 'members', []) or []):
         try:
+            if getattr(m, 'bot', False):
+                continue
             role_ids = [r.id for r in getattr(m, 'roles', []) or []]
             role = resolve_discord_panel_role(m.id, role_ids)
             if not role and int(m.id) in owner_ids:
                 role = 'owner'
-            if not role:
+            if staff_only and not role:
                 continue
-            if getattr(m, 'bot', False):
-                continue
-            uid = str(m.id)
-            if uid in seen:
-                continue
-            seen.add(uid)
             display = (
                 getattr(m, 'display_name', None)
                 or getattr(m, 'global_name', None)
                 or getattr(m, 'name', None)
-                or uid
+                or str(m.id)
             )
             handle = getattr(m, 'name', '') or ''
-            blob = f'{display} {handle} {uid}'.lower()
-            if ql and ql not in blob and not all(t in blob for t in ql.split() if t):
+            if ql and not _fuzzy_match(ql, display, handle, m.id, getattr(m, 'nick', None) or ''):
                 continue
-            people.append({
-                'id': uid,
-                'name': display,
-                'handle': handle,
-                'role': role,
-                'role_label': ROLE_LABELS.get(role, role),
-                'avatar': _member_avatar_url(m),
-            })
+            people.append(_guild_member_snapshot(m, role=role))
+            if len(people) >= limit:
+                break
         except Exception:
             continue
 
-    order = {'owner': 0, 'admin': 1, 'curator': 2, 'mod': 3, 'helper': 4}
-    people.sort(key=lambda p: (order.get(p['role'], 9), str(p['name']).lower()))
+    if staff_only:
+        order = {'owner': 0, 'admin': 1, 'curator': 2, 'mod': 3, 'helper': 4}
+        people.sort(key=lambda p: (order.get(p['role'], 9), str(p['name']).lower()))
+    else:
+        people.sort(key=lambda p: str(p['name']).lower())
     return people, ''
+
+
+def _list_login_people(q: str = ''):
+    """Staff с сервера для выбора на логине."""
+    return _search_guild_members(q, staff_only=True, limit=80)
+
+
+def _find_guild_member(uid: str):
+    bot = bot_instance
+    gid = _main_guild()
+    if not bot or not gid or not str(uid).isdigit():
+        return None
+    try:
+        guild = bot.get_guild(int(gid))
+    except Exception:
+        return None
+    if guild is None:
+        return None
+    try:
+        return guild.get_member(int(uid))
+    except Exception:
+        return None
 
 
 def _issue_pin_to_dm(discord_id: str):
@@ -1037,34 +1081,26 @@ def login():
     nxt = _safe_next(request.args.get('next') or request.form.get('next'))
     selected_id = (request.values.get('uid') or '').strip()
     people_q = (request.values.get('pq') or '').strip()
+    reg_id = (request.values.get('reg_id') or '').strip()
 
     if request.method == 'POST':
         mode = (request.form.get('mode') or mode).strip().lower()
         if mode == 'people':
-            action = (request.form.get('action') or 'verify').strip()
+            action = (request.form.get('action') or 'send').strip()
             selected_id = (request.form.get('uid') or '').strip()
             people_q = (request.form.get('pq') or '').strip()
-            if action == 'send':
-                if not selected_id:
-                    err = 'Выбери человека'
-                else:
-                    msg, e2 = _issue_pin_to_dm(selected_id)
-                    if e2:
-                        err = e2
-                    else:
-                        ok = msg
+            if not selected_id:
+                err = 'Выбери человека'
             else:
-                got = _auth_pending_pin(selected_id, request.form.get('pin', ''))
-                if got:
-                    _start_session(username=got['username'], role=got['role'])
-                    session['discord_id'] = got['discord_id']
-                    session['discord_handle'] = got.get('handle') or ''
-                    session['discord_display'] = got['username']
-                    session['discord_avatar'] = got.get('avatar') or ''
-                    session['auth_via'] = 'pin-dm'
-                    session['role_label'] = ROLE_LABELS.get(got['role'], got['role'])
-                    return redirect(nxt)
-                err = 'Неверный или просроченный PIN'
+                msg, e2 = _issue_pin_to_dm(selected_id)
+                if e2:
+                    err = e2
+                else:
+                    # PIN вводится на отдельной странице
+                    return redirect(url_for(
+                        'login', mode='pin', uid=selected_id,
+                        next=nxt, ok=msg,
+                    ))
         elif mode == 'password':
             got = _auth_user(request.form.get('username', ''), request.form.get('password', ''))
             if got:
@@ -1072,8 +1108,8 @@ def login():
                 return redirect(nxt)
             err = 'Неверный логин или пароль'
         elif mode == 'pin':
-            # legacy static PIN + optional people uid pending
             uid = (request.form.get('uid') or '').strip()
+            selected_id = uid
             if uid:
                 gotp = _auth_pending_pin(uid, request.form.get('pin', ''))
                 if gotp:
@@ -1083,34 +1119,70 @@ def login():
                     session['discord_display'] = gotp['username']
                     session['discord_avatar'] = gotp.get('avatar') or ''
                     session['auth_via'] = 'pin-dm'
+                    session['role_label'] = ROLE_LABELS.get(gotp['role'], gotp['role'])
                     return redirect(nxt)
             got = _auth_pin(request.form.get('username', ''), request.form.get('pin', ''))
             if got:
                 _start_session(username=got[0], role=got[1])
                 return redirect(nxt)
-            err = 'Неверный PIN'
+            err = 'Неверный или просроченный PIN'
         elif mode == 'register':
             invite = request.form.get('invite', '')
-            username = (request.form.get('username') or '').strip()
             password = request.form.get('password') or ''
-            pin = (request.form.get('pin') or '').strip()
+            reg_id = (request.form.get('reg_id') or '').strip()
+            username = (request.form.get('username') or '').strip()
             env_u, _ = _env_owner_creds()
+            member = _find_guild_member(reg_id) if reg_id else None
             if not _invite_ok(invite):
-                err = 'Неверный код приглашения (PANEL_INVITE_CODE)'
-            elif len(username) < 3:
-                err = 'Логин слишком короткий'
+                err = 'Неверный код приглашения'
+            elif not member:
+                err = 'Найди себя по имени Discord и выбери из списка'
             elif len(password) < 6:
                 err = 'Пароль минимум 6 символов'
-            elif username == env_u:
-                err = 'Этот логин занят владельцем'
-            elif _find_access_user(username):
-                err = 'Такой логин уже есть'
-            elif pin and (not pin.isdigit() or not (4 <= len(pin) <= 8)):
-                err = 'PIN — 4–8 цифр'
             else:
-                _upsert_access_user(username=username, password=password, pin=pin or None, role='mod')
-                _start_session(username=username, role='mod')
-                return redirect(nxt)
+                handle = getattr(member, 'name', '') or ''
+                display = (
+                    getattr(member, 'display_name', None)
+                    or getattr(member, 'global_name', None)
+                    or handle
+                    or str(member.id)
+                )
+                username = (username or handle or display).strip()
+                if len(username) < 3:
+                    err = 'Логин слишком короткий'
+                elif username == env_u:
+                    err = 'Этот логин занят владельцем'
+                else:
+                    existing = _find_access_user(username)
+                    if existing and str(existing.get('discord_id') or '') not in ('', str(member.id)):
+                        err = 'Такой логин уже есть'
+                    else:
+                        try:
+                            role_ids = [r.id for r in getattr(member, 'roles', []) or []]
+                            role = resolve_discord_panel_role(member.id, role_ids) or 'mod'
+                        except Exception:
+                            role = 'mod'
+                        if role == 'owner':
+                            role = 'admin'
+                        if role not in LEVEL:
+                            role = 'mod'
+                        _upsert_access_user(
+                            username=username,
+                            password=password,
+                            role=role,
+                            note=f'@{handle}' if handle else '',
+                            discord_id=str(member.id),
+                            display_name=display,
+                            avatar=_member_avatar_url(member),
+                        )
+                        _start_session(username=username, role=role)
+                        session['discord_id'] = str(member.id)
+                        session['discord_handle'] = handle
+                        session['discord_display'] = display
+                        session['discord_avatar'] = _member_avatar_url(member)
+                        session['auth_via'] = 'register'
+                        session['role_label'] = ROLE_LABELS.get(role, role)
+                        return redirect(nxt)
         elif mode == 'forgot':
             username = (request.form.get('username') or '').strip()
             recovery = request.form.get('recovery', '')
@@ -1135,8 +1207,25 @@ def login():
     people, people_err = _list_login_people(people_q) if mode == 'people' else ([], '')
     if mode == 'people' and people_err and not err:
         err = people_err
+
+    reg_person = None
+    if mode == 'register' and reg_id:
+        m = _find_guild_member(reg_id)
+        if m is not None:
+            reg_person = _guild_member_snapshot(m)
+
+    pin_person = None
+    if mode == 'pin' and selected_id:
+        m = _find_guild_member(selected_id)
+        if m is not None:
+            pin_person = _guild_member_snapshot(m)
+        else:
+            people_all, _ = _list_login_people()
+            pin_person = next((p for p in people_all if p['id'] == selected_id), None)
+
     _, env_pw = _env_owner_creds()
     hint = '' if env_pw else 'Задайте PANEL_PASSWORD в .env'
+    invite_set = bool((os.environ.get('PANEL_INVITE_CODE') or '').strip())
     return render_template(
         'login.html',
         error=err,
@@ -1148,6 +1237,10 @@ def login():
         people=people,
         people_q=people_q,
         selected_id=selected_id,
+        reg_id=reg_id,
+        reg_person=reg_person,
+        pin_person=pin_person,
+        invite_set=invite_set,
     )
 
 
@@ -1439,35 +1532,37 @@ def api_login_accounts():
     return jsonify({'ok': True, 'items': _search_accounts(q, 14)})
 
 
+@app.get('/api/login/members')
+def api_login_members():
+    """Публичный поиск участников по имени — для вкладки Создать."""
+    q = (request.args.get('q') or '').strip()
+    if len(q) < 1:
+        return jsonify({'ok': True, 'items': []})
+    people, err = _search_guild_members(q, staff_only=False, limit=20)
+    items = [{
+        'id': p['id'],
+        'name': p['name'],
+        'handle': p.get('handle') or '',
+        'avatar': p.get('avatar') or '',
+        'role': p.get('role') or '',
+        'role_label': p.get('role_label') or '',
+    } for p in people]
+    return jsonify({'ok': True, 'items': items, 'error': err or ''})
+
+
 @app.get('/api/users/search')
 @login_required
 @role_required('helper')
 def api_users_search():
     q = (request.args.get('q') or '').strip()
-    people = []
-    bot = bot_instance
-    gid = _main_guild()
-    try:
-        guild = bot.get_guild(int(gid)) if bot and gid else None
-    except Exception:
-        guild = None
-    if guild is not None:
-        for m in list(guild.members)[:2000]:
-            if getattr(m, 'bot', False):
-                continue
-            name = getattr(m, 'display_name', None) or getattr(m, 'name', '') or str(m.id)
-            handle = getattr(m, 'name', '') or ''
-            if not _fuzzy_match(q, name, handle, m.id):
-                continue
-            people.append({
-                'id': str(m.id),
-                'name': name,
-                'handle': handle,
-                'avatar': _member_avatar_url(m),
-            })
-            if len(people) >= 20:
-                break
-    return jsonify({'ok': True, 'items': people})
+    people, _ = _search_guild_members(q, staff_only=False, limit=20)
+    items = [{
+        'id': p['id'],
+        'name': p['name'],
+        'handle': p.get('handle') or '',
+        'avatar': p.get('avatar') or '',
+    } for p in people]
+    return jsonify({'ok': True, 'items': items})
 
 
 @app.post('/api/punish')
@@ -1537,36 +1632,49 @@ def api_punish():
 @login_required
 @role_required('helper')
 def users_page():
-    """Участники сервера + счётчики мер. Поиск по нику/нику Discord/ID."""
+    """Участники сервера — профили таблицей + счётчики мер."""
     gid = _main_guild()
     q = (request.args.get('q') or '').strip()
     ql = q.lower()
     names = {}
+    avatars = {}
+    handles = {}
+    role_names = {}
 
-    # 1) живой кэш с Discord (бот в том же процессе)
     try:
         bot = bot_instance
         if bot and gid:
             guild = bot.get_guild(int(gid))
             if guild is not None:
                 for m in guild.members:
-                    label = (
+                    if getattr(m, 'bot', False):
+                        continue
+                    uid = str(m.id)
+                    display = (
                         getattr(m, 'display_name', None)
                         or getattr(m, 'global_name', None)
-                        or getattr(getattr(m, 'name', None), '__str__', lambda: None)()
-                        or str(m)
+                        or getattr(m, 'name', None)
+                        or uid
                     )
-                    # discord.py Member: display_name, name, global_name, nick
+                    handle = getattr(m, 'name', '') or ''
                     parts = [
-                        getattr(m, 'display_name', '') or '',
-                        getattr(m, 'name', '') or '',
+                        display, handle,
                         getattr(m, 'global_name', None) or '',
                         getattr(m, 'nick', None) or '',
-                        str(m.id),
+                        uid,
                     ]
-                    names[str(m.id)] = parts[0] or parts[1] or str(m.id)
-                    # stash searchable blob
-                    names[str(m.id) + '::__q'] = ' '.join(p for p in parts if p).lower()
+                    names[uid] = display
+                    handles[uid] = handle
+                    avatars[uid] = _member_avatar_url(m)
+                    names[uid + '::__q'] = ' '.join(p for p in parts if p).lower()
+                    try:
+                        roles = [
+                            r.name for r in getattr(m, 'roles', []) or []
+                            if getattr(r, 'name', None) and r.name != '@everyone'
+                        ]
+                        role_names[uid] = roles[:8]
+                    except Exception:
+                        role_names[uid] = []
     except Exception:
         pass
 
@@ -1610,7 +1718,6 @@ def users_page():
         blob = names.get(uid + '::__q', '')
         names[uid + '::__q'] = (blob + ' ' + str(st['name']) + ' ' + uid).lower()
 
-    # также подтянуть имена из варнов/мер если файл имён пуст
     uids = [k for k in names if not k.endswith('::__q')]
     for uid in list(stats.keys()):
         if uid not in names:
@@ -1628,15 +1735,16 @@ def users_page():
             display = st['name']
         blob = names.get(uid + '::__q') or f"{display} {uid}".lower()
         if ql:
-            # частичный поиск: каждое слово q должно встретиться
             tokens = [t for t in ql.split() if t]
             if tokens and not all(tok in blob for tok in tokens):
-                # также простая подстрока целиком
                 if ql not in blob and ql not in uid:
                     continue
         rows.append({
             'user_id': uid,
             'name': display,
+            'handle': handles.get(uid) or '',
+            'avatar': avatars.get(uid) or f'https://cdn.discordapp.com/embed/avatars/{(int(uid) >> 22) % 6 if uid.isdigit() else 0}.png',
+            'roles': role_names.get(uid) or [],
             'warns': st.get('warns', 0),
             'mutes': st.get('mutes', 0),
             'bans': st.get('bans', 0),
@@ -1645,7 +1753,14 @@ def users_page():
             'last': _fmt(st.get('last')),
         })
     rows.sort(key=lambda r: (-r['total'], str(r['name']).lower()))
-    return render_template('users.html', rows=rows[:300], q=q)
+    kpi = {
+        'total': len(rows),
+        'warns': sum(r['warns'] for r in rows),
+        'mutes': sum(r['mutes'] for r in rows),
+        'bans': sum(r['bans'] for r in rows),
+        'kicks': sum(r['kicks'] for r in rows),
+    }
+    return render_template('users.html', rows=rows[:300], q=q, kpi=kpi)
 
 
 @app.route('/member')
@@ -1654,39 +1769,109 @@ def users_page():
 def member():
     q = (request.args.get('q') or '').strip()
     rows = []
+    profile = None
     if q:
         gid = _main_guild()
         all_rows = _collect_cases(gid)
         ql = q.lower()
-        # если ввели ник — резолвим в id через гильдию
         extra_ids = set()
+        member_obj = None
         try:
             bot = bot_instance
-            if bot and gid and not q.isdigit():
+            if bot and gid:
                 guild = bot.get_guild(int(gid))
                 if guild is not None:
-                    for m in guild.members:
-                        blob = ' '.join([
-                            getattr(m, 'display_name', '') or '',
-                            getattr(m, 'name', '') or '',
-                            getattr(m, 'global_name', None) or '',
-                            getattr(m, 'nick', None) or '',
-                        ]).lower()
-                        if ql in blob or all(t in blob for t in ql.split() if t):
-                            extra_ids.add(str(m.id))
+                    if q.isdigit():
+                        member_obj = guild.get_member(int(q))
+                    else:
+                        for m in guild.members:
+                            blob = ' '.join([
+                                getattr(m, 'display_name', '') or '',
+                                getattr(m, 'name', '') or '',
+                                getattr(m, 'global_name', None) or '',
+                                getattr(m, 'nick', None) or '',
+                            ]).lower()
+                            if ql in blob or all(t in blob for t in ql.split() if t):
+                                extra_ids.add(str(m.id))
+                                if member_obj is None:
+                                    member_obj = m
         except Exception:
             pass
+
+        target_ids = set()
+        if q.isdigit():
+            target_ids.add(q)
+        target_ids |= extra_ids
+
         for r in all_rows:
             uid = str(r.get('user_id', ''))
             uname = str(r.get('user_name', '')).lower()
-            if (ql in uid or ql in uname or uid in extra_ids
+            if (uid in target_ids or ql in uid or ql in uname
                     or all(t in uname for t in ql.split() if t)):
                 r = dict(r)
                 r['when'] = _fmt(r.get('timestamp'))
                 rows.append(r)
                 if len(rows) >= 100:
                     break
-    return render_template('member.html', q=q, rows=rows)
+                if uid:
+                    target_ids.add(uid)
+
+        # профиль
+        uid = None
+        if member_obj is not None:
+            uid = str(member_obj.id)
+        elif target_ids:
+            uid = next(iter(sorted(target_ids)))
+        elif q.isdigit():
+            uid = q
+
+        if uid:
+            snap = None
+            if member_obj is not None:
+                snap = _guild_member_snapshot(member_obj)
+            roles = []
+            joined = '—'
+            created = '—'
+            if member_obj is not None:
+                try:
+                    roles = [
+                        r.name for r in getattr(member_obj, 'roles', []) or []
+                        if getattr(r, 'name', None) and r.name != '@everyone'
+                    ]
+                except Exception:
+                    roles = []
+                try:
+                    ja = getattr(member_obj, 'joined_at', None)
+                    if ja:
+                        joined = ja.astimezone().strftime('%d.%m.%Y')
+                except Exception:
+                    pass
+                try:
+                    ca = getattr(member_obj, 'created_at', None)
+                    if ca:
+                        created = ca.strftime('%d.%m.%Y')
+                except Exception:
+                    pass
+            warns = sum(1 for r in rows if r.get('kind') == 'warn')
+            mutes = sum(1 for r in rows if r.get('kind') in ('mute', 'timeout'))
+            bans = sum(1 for r in rows if r.get('kind') == 'ban')
+            kicks = sum(1 for r in rows if r.get('kind') == 'kick')
+            profile = {
+                'id': uid,
+                'name': (snap or {}).get('name') or (rows[0].get('user_name') if rows else uid),
+                'handle': (snap or {}).get('handle') or '',
+                'avatar': (snap or {}).get('avatar') or f'https://cdn.discordapp.com/embed/avatars/{(int(uid) >> 22) % 6 if uid.isdigit() else 0}.png',
+                'roles': roles,
+                'joined': joined,
+                'created': created,
+                'warns': warns,
+                'mutes': mutes,
+                'bans': bans,
+                'kicks': kicks,
+                'total': len(rows),
+                'on_server': member_obj is not None,
+            }
+    return render_template('member.html', q=q, rows=rows, profile=profile)
 
 
 @app.route('/warns')

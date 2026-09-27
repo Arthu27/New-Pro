@@ -1,29 +1,180 @@
 {% extends "base.html" %}
-{% block title %}Участник{% endblock %}
-{% block heading %}Участник{% endblock %}
+{% block title %}Профиль участника{% endblock %}
+{% block heading %}Профиль участника{% endblock %}
 {% block body %}
-<form method="get" class="form" style="margin-bottom:16px;grid-template-columns:1fr auto;max-width:560px;align-items:end">
-  <label>ID или ник<input class="input" name="q" value="{{ q }}" placeholder="123… или nick"></label>
-  <button type="submit">Найти</button>
+<p class="lead">Роли, активность и история нарушений — как раньше в панели.</p>
+
+<form method="get" class="mp-searchbar rise" action="{{ url_for('member') }}">
+  <label class="sr-only" for="mq">Поиск</label>
+  <input id="mq" class="input input-lg" type="search" name="q" value="{{ q }}" placeholder="Имя участника или ID…" autocomplete="off" autofocus>
+  <div id="msuggest" class="suggest" hidden></div>
+  <button type="submit" class="primary-btn">Загрузить</button>
 </form>
-<div class="panel">
-  <h2>История мер{% if q %} · {{ q }}{% endif %}</h2>
-  {% if not q %}<div class="empty">Введите ID или ник</div>
-  {% elif not rows %}<div class="empty">Ничего не найдено</div>
+
+{% if profile %}
+<div class="mp-grid rise">
+  <div class="mp-card">
+    <div class="mp-head">
+      <img class="mp-av" src="{{ profile.avatar }}" alt="" width="64" height="64">
+      <div class="mp-info">
+        <div class="mp-name">{{ profile.name }}</div>
+        <div class="mp-sub">@{{ profile.handle or profile.id }}{% if not profile.on_server %} · не на сервере{% endif %}</div>
+      </div>
+    </div>
+    <div class="mp-row"><span class="mp-key">ID</span><span class="mp-val">{{ profile.id }}</span></div>
+    <div class="mp-row"><span class="mp-key">Аккаунт создан</span><span class="mp-val">{{ profile.created }}</span></div>
+    <div class="mp-row"><span class="mp-key">На сервере с</span><span class="mp-val">{{ profile.joined }}</span></div>
+    <div class="mp-row"><span class="mp-key">Предупреждений</span><span class="mp-val accent">{{ profile.warns }}</span></div>
+    <div class="mp-row"><span class="mp-key">Всего мер</span><span class="mp-val">{{ profile.total }}</span></div>
+    {% if user_role in ['mod','curator','admin','owner'] %}
+    <div class="mp-actions">
+      <button type="button" class="ghost punish-btn" data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="warn">Варн</button>
+      <button type="button" class="ghost punish-btn" data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="mute">Мут</button>
+      <button type="button" class="ghost punish-btn" data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="kick">Кик</button>
+      <button type="button" class="ghost punish-btn danger" data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="ban">Бан</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="mp-card">
+    <div class="mp-section">Роли участника</div>
+    <div class="mp-roles">
+      {% if profile.roles %}
+        {% for role in profile.roles %}<span class="mp-role">{{ role }}</span>{% endfor %}
+      {% else %}
+        <p class="dim">Нет ролей</p>
+      {% endif %}
+    </div>
+    <div class="mp-section" style="margin-top:16px">Сводка мер</div>
+    <div class="mp-mini-kpis">
+      <div><b>{{ profile.warns }}</b><span>варн</span></div>
+      <div><b>{{ profile.mutes }}</b><span>мут</span></div>
+      <div><b>{{ profile.kicks }}</b><span>кик</span></div>
+      <div><b>{{ profile.bans }}</b><span>бан</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel rise" style="margin-top:14px">
+  <h2>История нарушений</h2>
+  {% if not rows %}
+  <div class="empty">История чиста</div>
   {% else %}
-  <table>
-    <thead><tr><th>Действие</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
-    <tbody>
+  <div class="history-list">
     {% for r in rows %}
-      <tr>
-        <td>{{ r.action }}</td>
-        <td>{{ r.mod_name }}</td>
-        <td class="dim">{{ r.reason }}</td>
-        <td>{{ r.when }}</td>
-      </tr>
+    <div class="history-item">
+      <span class="pill pill-{{ r.kind }}">{{ r.action }}</span>
+      <div class="history-body">
+        <strong>{{ r.mod_name }}</strong>
+        <span class="dim">{{ r.reason }}</span>
+      </div>
+      <span class="history-when">{{ r.when }}</span>
+    </div>
     {% endfor %}
-    </tbody>
-  </table>
+  </div>
   {% endif %}
 </div>
+
+{% elif q %}
+<div class="empty panel rise">Ничего не найдено по «{{ q }}»</div>
+{% else %}
+<div class="empty panel rise">Введите имя или ID участника и нажмите «Загрузить»</div>
+{% endif %}
+
+<dialog id="punishDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <h3>Наказать <span id="punishName"></span></h3>
+    <input type="hidden" id="punishUid">
+    <label>Мера
+      <select id="punishAction">
+        <option value="warn">Варн</option>
+        <option value="mute">Мут</option>
+        <option value="kick">Кик</option>
+        <option value="ban">Бан</option>
+      </select>
+    </label>
+    <label>Минуты (для мута)
+      <input id="punishMin" type="number" min="1" max="40320" value="10">
+    </label>
+    <label>Причина
+      <input id="punishReason" required placeholder="причина">
+    </label>
+    <div class="dlg-actions">
+      <button value="cancel" class="ghost">Отмена</button>
+      <button id="punishGo" value="default" class="primary-btn">Выдать</button>
+    </div>
+    <p id="punishMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  const input = document.getElementById('mq');
+  const box = document.getElementById('msuggest');
+  let t = null;
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  function render(items) {
+    if (!items.length) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = items.map(it =>
+      `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
+        <img src="${esc(it.avatar || '')}" alt="" width="28" height="28">
+        <span><b>${esc(it.name)}</b><small>@${esc(it.handle || '')}</small></span>
+      </button>`
+    ).join('');
+  }
+  if (input) {
+    input.addEventListener('input', () => {
+      clearTimeout(t);
+      const q = input.value.trim();
+      t = setTimeout(async () => {
+        if (q.length < 1) { render([]); return; }
+        const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
+        const j = await r.json();
+        render(j.items || []);
+      }, 120);
+    });
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('.suggest-item');
+      if (!b) return;
+      location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
+    });
+  }
+
+  const dlg = document.getElementById('punishDlg');
+  document.querySelectorAll('.punish-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('punishUid').value = btn.dataset.uid;
+      document.getElementById('punishName').textContent = btn.dataset.name;
+      if (btn.dataset.act) document.getElementById('punishAction').value = btn.dataset.act;
+      document.getElementById('punishMsg').textContent = '';
+      dlg.showModal();
+    });
+  });
+  const go = document.getElementById('punishGo');
+  if (go) go.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('punishMsg');
+    msg.textContent = 'Отправляю…';
+    const body = {
+      user_id: document.getElementById('punishUid').value,
+      action: document.getElementById('punishAction').value,
+      minutes: document.getElementById('punishMin').value,
+      reason: document.getElementById('punishReason').value,
+    };
+    const r = await fetch('/api/punish', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (j.ok) {
+      msg.textContent = 'Готово: ' + j.action;
+      setTimeout(() => location.reload(), 700);
+    } else {
+      msg.textContent = j.error || 'Ошибка';
+    }
+  });
+})();
+</script>
 {% endblock %}

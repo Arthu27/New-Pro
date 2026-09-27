@@ -2,24 +2,33 @@
 {% block title %}Участники{% endblock %}
 {% block heading %}Участники{% endblock %}
 {% block body %}
-<p class="lead">Живой поиск по нику. Можно выдать меру прямо отсюда.</p>
+<p class="lead">Профили сервера: имя, роли, меры. Клик — полная история.</p>
+
+<div class="kpis rise">
+  <div class="kpi"><b>{{ kpi.total }}</b><span>в списке</span></div>
+  <div class="kpi"><b>{{ kpi.warns }}</b><span>варны</span></div>
+  <div class="kpi"><b>{{ kpi.mutes }}</b><span>муты</span></div>
+  <div class="kpi"><b>{{ kpi.kicks }}</b><span>кики</span></div>
+  <div class="kpi"><b>{{ kpi.bans }}</b><span>баны</span></div>
+</div>
 
 <div class="search-live panel rise">
   <label class="sr-only" for="uq">Поиск</label>
-  <input id="uq" class="input input-lg" type="search" value="{{ q }}" placeholder="Начни печатать ник…" autocomplete="off" autofocus>
+  <input id="uq" class="input input-lg" type="search" value="{{ q }}" placeholder="Имя, ник или ID…" autocomplete="off" autofocus>
   <div id="usuggest" class="suggest" hidden></div>
 </div>
 
-<div class="panel rise" style="margin-top:14px">
-  <h2>Список{% if q %} · «{{ q }}»{% endif %}</h2>
+<div class="panel rise profiles-panel" style="margin-top:14px">
+  <h2>Профили{% if q %} · «{{ q }}»{% endif %}</h2>
   {% if not rows %}
-  <div class="empty">Никого — введи ник выше или дождись активности</div>
+  <div class="empty">Никого — введи ник выше или дождись синхронизации участников</div>
   {% else %}
-  <table>
+  <div class="table-scroll">
+  <table class="profiles-table">
     <thead>
       <tr>
-        <th>Участник</th>
-        <th>ID</th>
+        <th>Профиль</th>
+        <th>Роли</th>
         <th>Мер</th>
         <th>Варн</th>
         <th>Мут</th>
@@ -30,10 +39,25 @@
     </thead>
     <tbody>
     {% for r in rows %}
-      <tr>
-        <td><b>{{ r.name }}</b></td>
-        <td class="dim">{{ r.user_id }}</td>
-        <td>{{ r.total }}</td>
+      <tr class="profile-row" data-href="{{ url_for('member', q=r.user_id) }}">
+        <td>
+          <a class="profile-cell" href="{{ url_for('member', q=r.user_id) }}">
+            <img class="profile-ava" src="{{ r.avatar }}" alt="" width="40" height="40" loading="lazy">
+            <span class="profile-meta">
+              <strong>{{ r.name }}</strong>
+              <span class="dim">@{{ r.handle or r.user_id }}</span>
+            </span>
+          </a>
+        </td>
+        <td class="roles-cell">
+          {% if r.roles %}
+            {% for role in r.roles[:4] %}<span class="mp-role">{{ role }}</span>{% endfor %}
+            {% if r.roles|length > 4 %}<span class="dim">+{{ r.roles|length - 4 }}</span>{% endif %}
+          {% else %}
+            <span class="dim">—</span>
+          {% endif %}
+        </td>
+        <td><b>{{ r.total }}</b></td>
         <td>{{ r.warns }}</td>
         <td>{{ r.mutes }}</td>
         <td>{{ r.kicks }}</td>
@@ -48,6 +72,7 @@
     {% endfor %}
     </tbody>
   </table>
+  </div>
   {% endif %}
 </div>
 
@@ -82,13 +107,14 @@
   const input = document.getElementById('uq');
   const box = document.getElementById('usuggest');
   let t = null;
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
   function render(items) {
     if (!items.length) { box.hidden = true; box.innerHTML = ''; return; }
     box.hidden = false;
     box.innerHTML = items.map(it =>
-      `<button type="button" class="suggest-item" data-id="${it.id}" data-name="${it.name}">
-        <img src="${it.avatar || ''}" alt="" width="28" height="28">
-        <span><b>${it.name}</b><small>@${it.handle || ''}</small></span>
+      `<button type="button" class="suggest-item" data-id="${esc(it.id)}" data-name="${esc(it.name)}">
+        <img src="${esc(it.avatar || '')}" alt="" width="28" height="28">
+        <span><b>${esc(it.name)}</b><small>@${esc(it.handle || '')}</small></span>
       </button>`
     ).join('');
   }
@@ -116,7 +142,8 @@
 
   const dlg = document.getElementById('punishDlg');
   document.querySelectorAll('.punish-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       document.getElementById('punishUid').value = btn.dataset.uid;
       document.getElementById('punishName').textContent = btn.dataset.name;
       document.getElementById('punishMsg').textContent = '';
