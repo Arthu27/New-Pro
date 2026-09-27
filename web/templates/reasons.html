@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Причины{% endblock %}
+{% block heading %}Причины{% endblock %}
+{% block body %}
+<div class="panel" style="margin-bottom:16px">
+  <h2>Причины наказаний</h2>
+  {% if not reasons %}<div class="empty">Список пуст (data/mod_reasons_*.json)</div>
+  {% else %}
+  <table>
+    <thead><tr><th>#</th><th>Причина</th></tr></thead>
+    <tbody>
+    {% for r in reasons %}
+      <tr>
+        <td class="dim">{{ loop.index }}</td>
+        <td>{% if r is mapping %}{{ r.get('title') or r.get('name') or r.get('text') or r }}{% else %}{{ r }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+<div class="panel">
+  <h2>Правила</h2>
+  {% if not rules %}<div class="empty">Список пуст (data/rules_*.json)</div>
+  {% else %}
+  <table>
+    <thead><tr><th>#</th><th>Правило</th></tr></thead>
+    <tbody>
+    {% for r in rules %}
+      <tr>
+        <td class="dim">{{ loop.index }}</td>
+        <td>{% if r is mapping %}{{ r.get('title') or r.get('code') or r.get('text') or r }}{% else %}{{ r }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

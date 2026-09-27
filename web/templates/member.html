@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Участник{% endblock %}
+{% block heading %}Участник{% endblock %}
+{% block body %}
+<form method="get" class="form" style="margin-bottom:16px;grid-template-columns:1fr auto;max-width:560px;align-items:end">
+  <label>ID или ник<input class="input" name="q" value="{{ q }}" placeholder="123… или nick"></label>
+  <button type="submit">Найти</button>
+</form>
+<div class="panel">
+  <h2>История мер{% if q %} · {{ q }}{% endif %}</h2>
+  {% if not q %}<div class="empty">Введите ID или ник</div>
+  {% elif not rows %}<div class="empty">Ничего не найдено</div>
+  {% else %}
+  <table>
+    <thead><tr><th>Действие</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ r.action }}</td>
+        <td>{{ r.mod_name }}</td>
+        <td class="dim">{{ r.reason }}</td>
+        <td>{{ r.when }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

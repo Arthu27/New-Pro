@@ -400,18 +400,7 @@ def _have_gunicorn():
 
 
 def _start_web_server(app):
-    """Запуск веб-панели.
-
-    ПО УМОЛЧАНИЮ — В ТОМ ЖЕ ПРОЦЕССЕ, ЧТО БОТ (Werkzeug, threaded).
-    Только так панель видит бота: web/app.py хранит bot_instance в памяти
-    процесса, и при отдельном процессе (gunicorn) он всегда None → панель
-    отвечает «Бот офлайн», изменения из панели не применяются к боту
-    (каналы, коги, синк команд, наказания...). Вот это и был разрыв
-    «я меняю тут — а там не работает».
-
-    Вернуть старые «внешний процесс без моста» (осознанно): PANEL_PROCESS=gunicorn
-    на своём риске — панель НЕ будет видеть бота.
-    """
+    """Запуск компактной мод-панели (web/ v2) в том же процессе, что бот."""
     global _web_server_proc
     _port = int(os.environ.get('PANEL_PORT', '') or 0)
     if not _port:
@@ -422,26 +411,6 @@ def _start_web_server(app):
             _port = 0
     _port = _port or 5001
 
-    _mode = (os.environ.get('PANEL_PROCESS', '') or '').strip().lower()
-    if _mode == 'gunicorn' and _have_gunicorn():
-        try:
-            cmd = [
-                sys.executable, '-m', 'gunicorn',
-                '--config', 'web/gunicorn_conf.py',
-                'web.wsgi:application',
-            ]
-            _web_server_proc = subprocess.Popen(
-                cmd,
-                stdout=sys.stdout, stderr=subprocess.STDOUT,
-                preexec_fn=os.setsid if hasattr(os, 'setsid') else None,
-            )
-            print(f"[ВЕБ] Gunicorn запущен (pid={_web_server_proc.pid}) — "
-                  f"панель в ОТДЕЛЬНОМ процессе: бота она НЕ видит "
-                  f"(настройки из панели не применятся!)")
-            return
-        except Exception as e:
-            print(f"[ВЕБ] Не удалось запустить Gunicorn, fallback на Werkzeug: {e}")
-
     import logging
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     threading.Thread(
@@ -449,8 +418,8 @@ def _start_web_server(app):
                                use_reloader=False, threaded=True),
         daemon=True
     ).start()
-    print(f"[ВЕБ] Панель запущена ВМЕСТЕ С БОТОМ (единый процесс): "
-          f"http://localhost:{_port} — изменения из панели применяются сразу")
+    print(f"[ВЕБ] Мод-панель v2: http://localhost:{_port}  "
+          f"(страницы: docs/PANEL-PAGES.md)")
 
 
 def _stop_web_server():
@@ -1408,13 +1377,14 @@ async def on_ready():
     except Exception as _ex:
         _log.debug("on_ready(): event_mod_acl_seed: %s", _ex)
 
-    # Веб-панель снята (docs/PANEL-REMOVED.md) — мост set_bot_instance больше не нужен.
-    _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
-    if os.path.exists(_tunnel_path):
-        try:
-            os.remove(_tunnel_path)
-        except Exception as _e:
-            _log.debug('on_ready drop tunnel_url: %s', _e)
+    # Мод-панель v2: отдаём бота в web.app (страницы бота /bot /modules …)
+    try:
+        from web.app import set_bot_instance
+        set_bot_instance(bot)
+        print("[ВЕБ] Панель подключена к боту")
+    except Exception as _ex:
+        print(f"[ВЕБ] ⚠ Панель не получила бота: {_ex}")
+        _log.error("on_ready(): set_bot_instance: %s", _ex)
 
 async def load_cogs():
     # Какие модули грузить — решает cogs_policy (MOD_ONLY / DISABLED_COGS /
@@ -1701,19 +1671,18 @@ async def main():
     except Exception as _ex:
         log.debug('preflight: %s', _ex)
 
-    # Веб-панель удалена (см. docs/PANEL-REMOVED.md). Пульс bot_state
-    # оставляем — пригодится диагностике; Flask/WS/туннель не поднимаем.
+    # Мод-панель v2 (docs/PANEL-PAGES.md) + пульс bot_state
+    try:
+        from web.app import app as _web_app, set_bot_instance
+        set_bot_instance(bot)
+        _start_web_server(_web_app)
+    except Exception as _ex:
+        print(f"[ВЕБ] Не удалось запустить панель: {_ex}")
+        log.error("main(): web panel: %s", _ex)
     try:
         asyncio.create_task(_bridge_loop(bot))
     except Exception as _ex:
         log.debug('main(): bridge loop: %s', _ex)
-    print("[ВЕБ] Веб-панель снята — бот работает без браузерного UI")
-    try:
-        from services import named_tunnel as _nt
-        _root = os.path.dirname(os.path.abspath(__file__))
-        _nt.drop_stale_url(_root)
-    except Exception as _ex:
-        log.debug('drop tunnel url: %s', _ex)
 
     print("[БОТ] Запускается... (загрузка когов -> вход в Discord)")
     async with bot:
