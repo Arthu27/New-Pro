@@ -409,7 +409,7 @@ def _proofs_list(gid):
 
 @app.route('/welcome')
 def welcome():
-    """Публичная витрина — новый дизайн, не старая тёмная welcome."""
+    """Публичная витрина — отдельный gate-дизайн (auth-new.css)."""
     if session.get('logged_in'):
         return redirect(url_for('today'))
     return render_template('welcome.html')
