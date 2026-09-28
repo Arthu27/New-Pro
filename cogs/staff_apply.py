@@ -1,6 +1,6 @@
 """
 Staff Apply — recruitment menu (Helper / Moderator / Eventsmod / Broadcaster).
-Components V2 LayoutView + webhook publish. English position labels.
+Components V2 LayoutView — меню и заявки от бота модерации. English position labels.
 """
 
 MENU_GIF = "https://media.tenor.com/x8v1oNUOmg4AAAAC/rain-dark.gif"
@@ -660,7 +660,7 @@ def remove_from_blacklist(user_id, position=None) -> bool:
 MENU_STATE_FILE = "data/staff_menu_state.json"
 # bump → при следующем on_ready меню перепубликуется в канал наборов
 # v3: 4 ветки (Helper/Mod/Event/Broadcaster) + V2 баннер НАБОРЫ (не Gojo STAFF)
-MENU_POST_VERSION = 8  # v8: баннер по HTTPS, текст набора на месте
+MENU_POST_VERSION = 9  # v9: без «только одну должность»; заявки от бота модерации
 
 
 def _load_menu_state():
@@ -1424,7 +1424,7 @@ def _hook_avatar(guild):
 
 
 async def _send_staff_card(channel, *, content=None, view=None):
-    """Карточка заявки V2 (webhook или бот).
+    """Карточка заявки V2 — только от бота модерации (не webhook «Наборы»).
 
     Discord запрещает `content` вместе с IS_COMPONENTS_V2.
     Тег куратора — отдельным сообщением, карточка без content.
@@ -1435,23 +1435,13 @@ async def _send_staff_card(channel, *, content=None, view=None):
             await channel.send(str(content), allowed_mentions=allowed)
         except Exception as _ex:
             log.warning('STAFF: ping before card: %s', _ex)
-    hook = await _channel_webhook(channel)
-    if hook is not None:
-        try:
-            return await hook.send(
-                view=view, wait=True,
-                username=HOOK_USERNAME,
-                avatar_url=_hook_avatar(getattr(channel, 'guild', None)),
-                allowed_mentions=allowed)
-        except Exception as _ex:
-            log.debug('staff: card webhook failed: %s', _ex)
     return await channel.send(view=view, allowed_mentions=allowed)
 
 
 async def _publish_decision(interaction, *, view) -> str:
-    """Закрыть анкету сразу: убрать кнопки, показать кто решил.
+    """Закрыть анкету сразу: убрать select, показать кто решил.
 
-    Карточки шлёт вебхук — обычный message.edit часто молча не проходит.
+    Новые карточки шлёт бот модерации; старые могли быть от вебхука.
     Правильный путь: response.edit_message / followup.edit_message.
     content сюда не кладём — V2 его запрещает.
     """
@@ -1595,40 +1585,16 @@ async def publish_staff_menu(channel, *, banner_bio=None, banner_name=None,
         except Exception as _ex:
             log.debug('staff_apply: banner seek: %s', _ex)
         file = discord.File(banner_bio, filename=fname)
-    avatar = _hook_avatar(getattr(channel, 'guild', None))
-    hook = await _channel_webhook(channel)
-    msg = None
-    used_hook = None
-    if hook is not None:
-        used_hook = hook
-        try:
-            kwargs = dict(
-                view=view, wait=True,
-                username=HOOK_USERNAME, avatar_url=avatar)
-            if file is not None:
-                kwargs['file'] = file
-            msg = await hook.send(**kwargs)
-        except Exception as _ex:
-            log.debug('staff: menu webhook failed: %s', _ex)
-            msg = None
-            used_hook = None
-            if file is not None and banner_bio is not None:
-                try:
-                    banner_bio.seek(0)
-                    file = discord.File(banner_bio, filename=fname)
-                except Exception:
-                    file = None
-    if msg is None:
-        try:
-            if file is not None:
-                msg = await channel.send(file=file, view=view)
-            else:
-                msg = await channel.send(view=view)
-        except (discord.Forbidden, discord.HTTPException) as _ex:
-            return False, f'Не могу писать в канал: {_ex}', None
-    how = 'вебхуком' if used_hook is not None else 'от бота'
+    # Меню и заявки — от бота модерации (видно имя/аватар бота, не webhook).
+    try:
+        if file is not None:
+            msg = await channel.send(file=file, view=view)
+        else:
+            msg = await channel.send(view=view)
+    except (discord.Forbidden, discord.HTTPException) as _ex:
+        return False, f'Не могу писать в канал: {_ex}', None
     mid = getattr(msg, 'id', None)
-    return True, f'Опубликовано в {channel.mention} ({how})', mid
+    return True, f'Опубликовано в {channel.mention} (от бота)', mid
 
 
 # ═══════════════════════════════════════════════════════════════════
