@@ -652,7 +652,6 @@ class AppealView(discord.ui.LayoutView):
         banned_uid = int(item.get('user_id') or self._banned_user_id or 0)
         edit_kw = {
             'view': self,
-            'embed': None,
             'embeds': [],
         }
         # V2: без content
@@ -2219,7 +2218,7 @@ class Appeals(commands.Cog):
             getattr(message, 'flags', None)
             and getattr(message.flags, 'is_components_v2', False))
         if not is_v2:
-            edit_kw.update({'content': None, 'embed': None, 'embeds': []})
+            edit_kw.update({'content': None, 'embeds': []})
         # 1) сообщение из интеракции
         edited = False
         if message is not None:

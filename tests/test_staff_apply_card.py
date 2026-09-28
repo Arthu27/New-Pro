@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Staff apply card: V2 LayoutView without role ping (owner 2026-09-24).
+"""Staff apply card: V2 LayoutView + curator role ping.
 
-  1) curator role: panel → .env → known server role;
-  2) V2 card with Accept/Decline; NO separate curator ping message;
+  1) curator role: KNOWN «× Отвечаю за …» по ветке;
+  2) V2 card with Accept/Decline + separate curator ping message;
   3) web path uses same StaffAppCardView.
 
 Run: python3 tests/test_staff_apply_card.py
@@ -226,11 +226,16 @@ SA.APPLY_CHANNEL_ID = _saved_apply2
 check(len(apps_ch2.sent) >= 1, 'card sent to apps channel')
 check(len(room_ch.sent) == 0, 'апелляции не трогаем')
 check(len(mod_ch.sent) == 0 and len(help_ch.sent) == 0, 'own branches unused')
-# Без пинга: только карточка (view), content-сообщений нет
+# Пинг куратора ветки отдельным сообщением, затем карточка
 ping_msgs = [s for s in apps_ch2.sent if s.get('content')]
 card_msg = next((s for s in apps_ch2.sent if s.get('view') is not None), None)
 sent = card_msg or apps_ch2.sent[-1]
-check(not ping_msgs, 'no separate ping before card', ping_msgs)
+want_ping = f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>"
+check(any(s.get('content') == want_ping for s in ping_msgs),
+      'ping × Отвечаю за Moderator before card', ping_msgs)
+check(any(s.get('allowed_mentions') for s in ping_msgs)
+      or any('allowed_mentions' in s for s in ping_msgs),
+      'ping with AllowedMentions(roles)')
 view = sent.get('view')
 check(isinstance(view, SA.StaffAppCardView),
       'V2 StaffAppCardView', type(view))
@@ -251,8 +256,8 @@ app = apps.get(app_key) or apps.get('777888999000111222')
 check(app is not None and app['status'] == 'pending', 'saved pending', list(apps.keys()))
 check(app.get('role') == 'Moderator', 'role stored as Moderator', app.get('role'))
 check(app.get('message_id') == '555001', 'message_id saved')
-check(app.get('curator_tag') == f"<@&{SR.KNOWN_CURATOR_BY_KIND['moderator']}>",
-      'curator_tag saved (metadata, без пинга)')
+check(app.get('curator_tag') == want_ping,
+      'curator_tag saved + pinged')
 check(isinstance(app.get('answers'), list) and len(app['answers']) == 4,
       'answers list saved with 4 Qs')
 # повтор на ту же ветку запрещён
@@ -313,6 +318,42 @@ body_br = SA.build_application_body(
     experience='да', reason='Да', extra='Да', kind='broadcaster')
 check('часовой пояс' in body_br.lower() and 'веб камера' in body_br.lower(),
       'Broadcaster body uses broadcaster questions')
+
+print('== 3c. Decided view: ОТКАЗАНО + Принять решение ==')
+done = SA.StaffAppDecidedView(
+    title='Helper', body='body text', status='ОТКАЗАНО',
+    note='Curator · 26.09.2026', accent=0xE74C3C)
+_types = set()
+_texts = []
+
+def _walk(item):
+    _types.add(type(item).__name__)
+    c = getattr(item, 'content', None)
+    if isinstance(c, str):
+        _texts.append(c)
+    for ch in getattr(item, 'children', None) or []:
+        _walk(ch)
+
+for it in done.children:
+    _walk(it)
+blob = '\n'.join(_texts)
+check('ОТКАЗАНО' in blob, 'status ОТКАЗАНО in panel', blob[:200])
+check('StaffReconsiderSelect' in _types,
+      'reconsider select after reject', sorted(_types))
+check('принять решение' in blob.lower(),
+      'footer mentions Принять решение', blob[-200:])
+
+done_ok = SA.StaffAppDecidedView(
+    title='Helper', body='body', status='ПРИНЯТО', accent=0x2ECC71)
+_types2 = set()
+def _walk2(item):
+    _types2.add(type(item).__name__)
+    for ch in getattr(item, 'children', None) or []:
+        _walk2(ch)
+for it in done_ok.children:
+    _walk2(it)
+check('StaffReconsiderSelect' not in _types2 and 'Select' not in _types2,
+      'approved card has no select')
 
 print('== 4. Web send_to_discord uses V2 ==')
 web_src = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()

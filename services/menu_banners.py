@@ -445,6 +445,15 @@ def warm_menu_banners(kinds=('modpanel',)) -> None:
             log.debug('menu_banners: except@441: %s', _ex)
 
 
+# Версия файла в URL/CDN — bump при смене картинки (иначе Discord кеширует).
+BANNER_FILE_VER = 'v16'
+PUBLIC_MENU_DIR = os.path.join(ROOT, 'web', 'static', 'menu')
+
+
+def banner_filename(kind: str = 'modpanel') -> str:
+    return f'hakumo_{kind}_banner_{BANNER_FILE_VER}.png'
+
+
 def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     """(BytesIO, filename) для discord.File.
 
@@ -453,14 +462,57 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     raw = menu_banner_bytes(kind)
     bio = io.BytesIO(raw)
     bio.seek(0)
-    # staff custom — v16 (CDN cache-bust после смены баннера)
-    if filename:
-        name = filename
-    elif kind == 'staff':
-        name = 'hakumo_staff_banner_v16.png'
-    else:
-        name = f'hakumo_{kind}_banner_v15.png'
+    name = filename or banner_filename(kind)
     return bio, name
+
+
+def public_base_url() -> str:
+    """База панели для постоянных URL баннеров (без attachment://)."""
+    for key in ('PANEL_PUBLIC_URL', 'PUBLIC_BASE_URL', 'PANEL_URL'):
+        raw = (os.environ.get(key) or '').strip().rstrip('/')
+        if raw.startswith('http'):
+            return raw
+    return 'https://hakumods.xyz'
+
+
+def ensure_public_banners(kinds=('modpanel', 'appeals', 'staff', 'events')) -> dict:
+    """Записать PNG в web/static/menu/ — Discord тянет по HTTPS, не отлетают.
+
+    Если файл уже на диске — НЕ гоняем PIL (иначе /modpanel «думает» ~2с).
+    """
+    os.makedirs(PUBLIC_MENU_DIR, exist_ok=True)
+    out = {}
+    for kind in kinds:
+        name = banner_filename(kind)
+        path = os.path.join(PUBLIC_MENU_DIR, name)
+        try:
+            if os.path.isfile(path) and os.path.getsize(path) > 1000:
+                out[kind] = path
+                continue
+            raw = menu_banner_bytes(kind)
+            with open(path, 'wb') as fh:
+                fh.write(raw)
+            out[kind] = path
+        except Exception:
+            continue
+    return out
+
+
+_URL_CACHE: dict[str, str] = {}
+
+
+def public_banner_url(kind: str = 'modpanel') -> str:
+    """HTTPS URL баннера — мгновенно, если PNG уже в static/menu/."""
+    cached = _URL_CACHE.get(kind)
+    if cached:
+        return cached
+    name = banner_filename(kind)
+    path = os.path.join(PUBLIC_MENU_DIR, name)
+    if not (os.path.isfile(path) and os.path.getsize(path) > 1000):
+        ensure_public_banners((kind,))
+    url = f'{public_base_url()}/static/menu/{name}'
+    _URL_CACHE[kind] = url
+    return url
 
 
 def select_label(text: str) -> str:

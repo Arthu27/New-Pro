@@ -71,6 +71,8 @@ MODERATION_COGS = frozenset({
     # анти-рейд / безопасность / верификация
     'antiraid.py', 'guardian.py', 'security.py', 'age_verification.py',
     'impersonation.py',
+    # автобан по запрещённым никам (АртемаВавилова / EN)
+    'name_autoban.py',
     # анти-альт — защита
     'anti_alt.py',
     # репорты от пользователей
@@ -132,6 +134,8 @@ MOD_LEAN_COGS = frozenset({
     # Их слушатели защищают с завода, а меню не пухнет: slash-лимит жёстко
     # режет slash_budget до 14, префикс-хелп статический.
     'security.py', 'anti_alt.py', 'impersonation.py', 'ai_moderation.py',
+    # автобан по запрещённым никам (АртемаВавилова / ArtemaVavilova)
+    'name_autoban.py',
     # tag_jail.py оставлен спящим (18 лишних команд). Вернуть: EXTRA_COGS=tag_jail
 })
 

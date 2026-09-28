@@ -187,9 +187,15 @@ def black_container(*children, accent: int = None):
     return _ui.Container(*children, accent_colour=colour)
 
 
-def _gallery(banner_filename: str):
+def _gallery(banner_filename: str = None, banner_url: str = None):
+    """MediaGallery: HTTPS URL предпочтительнее attachment:// (не отлетает)."""
     from discord.components import MediaGalleryItem
-    return _ui.MediaGallery(MediaGalleryItem(f'attachment://{banner_filename}'))
+    src = (banner_url or '').strip()
+    if not src and banner_filename:
+        src = f'attachment://{banner_filename}'
+    if not src:
+        return None
+    return _ui.MediaGallery(MediaGalleryItem(src))
 
 
 # Баннер в шапке вместе с заголовком (как в референсе V2).
@@ -199,22 +205,26 @@ SHOW_MENU_BANNER = True
 def build_modpanel_items(*, banner_filename: str, status: str,
                          footer: str = '',
                          target_select=None, action_select=None,
-                         show_banner: bool = None):
-    """Финальный /modpanel: шапка + баннер + два чёрных блока с селектами."""
+                         show_banner: bool = None,
+                         banner_url: str = None):
+    """Финальный /modpanel: шапка + баннер + два чёрных блока с селектами.
+
+    banner_url — HTTPS (hakumods.xyz/static/menu/…); если есть, attachment не нужен.
+    """
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    # 1) шапка
+    # 1) шапка (без статуса — селекты выше → dropdown открывается вниз)
     head = [
         _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if show_banner and banner_filename:
-        head.append(_gallery(banner_filename))
-    if status:
-        head.append(_ui.TextDisplay(status))
+    if show_banner and (banner_url or banner_filename):
+        gal = _gallery(banner_filename, banner_url=banner_url)
+        if gal is not None:
+            head.append(gal)
     items.append(black_container(*head))
     # 2) участник — заголовок + селект (placeholder отдельный, без дубля)
     if target_select is not None:
@@ -224,14 +234,19 @@ def build_modpanel_items(*, banner_filename: str, status: str,
             _ui.TextDisplay('**Участник**'),
             row,
         ))
-    # 3) действие
+    # 3) действие (+ статус под селектом, без 4-й карточки)
     if action_select is not None:
         row = _ui.ActionRow()
         row.add_item(action_select)
-        items.append(black_container(
+        bits = [
             _ui.TextDisplay('**Действие**'),
             row,
-        ))
+        ]
+        if status:
+            bits.append(_ui.TextDisplay(f'-# {status}'))
+        items.append(black_container(*bits))
+    elif status:
+        items.append(black_container(_ui.TextDisplay(f'-# {status}')))
     return items
 
 
@@ -250,8 +265,6 @@ def build_modpanel_container(*, banner_filename: str, status: str,
     ]
     if show_banner and banner_filename:
         children.append(_gallery(banner_filename))
-    if status:
-        children.append(_ui.TextDisplay(status))
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
@@ -260,6 +273,8 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         row = _ui.ActionRow()
         row.add_item(action_select)
         children.append(row)
+    if status:
+        children.append(_ui.TextDisplay(f'-# {status}'))
     return black_container(*children)
 
 
@@ -278,9 +293,8 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
     ]
     if show_banner and banner_filename:
         head.append(_gallery(banner_filename))
-    if body:
-        head.append(_ui.TextDisplay(body))
     items.append(black_container(*head))
+    # Селект сразу под баннером — список открывается вниз
     if menu_select is not None:
         row = _ui.ActionRow()
         row.add_item(menu_select)
@@ -288,6 +302,8 @@ def build_appeals_menu_items(*, banner_filename: str, body: str,
             _ui.TextDisplay('**Обращение**\n-# подать или проверить'),
             row,
         ))
+    if body:
+        items.append(black_container(_ui.TextDisplay(body)))
     if footer:
         items.append(black_container(_ui.TextDisplay(f'-# {footer}')))
     return items
@@ -304,14 +320,15 @@ def build_staff_menu_items(*, banner_filename: str, body: str = None,
     head = []
     if show_banner and banner_filename:
         head.append(_gallery(banner_filename))
-    if body:
-        head.append(_ui.TextDisplay(body))
     if head:
         items.append(black_container(*head))
+    # Селект сразу под баннером — dropdown вниз, не вверх в шапку
     if role_select is not None:
         row = _ui.ActionRow()
         row.add_item(role_select)
         items.append(black_container(row))
+    if body:
+        items.append(black_container(_ui.TextDisplay(body)))
     return items
 
 
@@ -329,14 +346,14 @@ def build_events_menu_items(*, banner_filename: str, status: str,
     ]
     if show_banner and banner_filename:
         head.append(_gallery(banner_filename))
-    if status:
-        head.append(_ui.TextDisplay(status))
     items.append(black_container(*head))
     if action_row is not None:
         items.append(black_container(
             _ui.TextDisplay('**Действия**'),
             action_row,
         ))
+    if status:
+        items.append(black_container(_ui.TextDisplay(f'-# {status}')))
     return items
 
 
@@ -463,13 +480,8 @@ def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
         return None
     children = []
     head = f'# {title}' if title else '# Апелляция'
-    if body:
-        head = f'{head}\n{body}'
-    children.append(_ui.TextDisplay(head[:4000]))
-    if image_filename:
-        children.append(_full_bleed_gallery(image_filename))
-    if footer:
-        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    children.append(_ui.TextDisplay(head[:500]))
+    # Селект сразу под заголовком — dropdown открывается вниз
     if select is not None:
         row = _ui.ActionRow()
         row.add_item(select)
@@ -479,6 +491,12 @@ def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
         for btn in buttons:
             row.add_item(btn)
         children.append(row)
+    if body:
+        children.append(_ui.TextDisplay(str(body)[:3500]))
+    if image_filename:
+        children.append(_full_bleed_gallery(image_filename))
+    if footer:
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
     return [black_container(*children, accent=accent if accent is not None else _BLACK)]
 
 

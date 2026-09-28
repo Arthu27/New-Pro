@@ -124,22 +124,25 @@ view._rebuild(None)
 st_joined = _collect_texts(view)
 check('<@424242424242424242>' in st_joined and 'Участник:' not in st_joined,
       f'после выбора краткий статус: {st_joined!r}')
-check('v15' in (view._banner_name or ''),
-      f'banner filename v15: {view._banner_name!r}')
+check('v16' in (view._banner_name or ''),
+      f'banner filename v16: {view._banner_name!r}')
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == '',
       f"footer выключен: {view._footer_text(g)!r}")
 g2 = type('G', (), {'name': 'My Server'})()
 check(view._footer_text(g2) == '',
       f"footer other выключен: {view._footer_text(g2)!r}")
-check(view._banner_file is not None, 'banner file attached')
+# Баннер по HTTPS URL — файл не прикладываем (attachment:// ломал /modpanel)
+check(bool(getattr(view, '_banner_url', None))
+      and str(view._banner_url).startswith('http'),
+      f'banner HTTPS url: {getattr(view, "_banner_url", None)!r}')
 
 print('== select refresh: ACK first, no banner re-upload ==')
 import asyncio as _aio
 
 
 class _Att:
-    filename = 'hakumo_modpanel_banner_v15.png'
+    filename = 'hakumo_modpanel_banner_v16.png'
 
 
 class _RMsg:
