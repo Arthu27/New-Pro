@@ -100,7 +100,10 @@ main_src = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('ThreadPoolExecutor' in main_src and 'set_default_executor' in main_src,
       'main: общий ThreadPoolExecutor(32)')
 check('VOICE_SILENCE_PING' in main_src,
-      'voice: silence-ping выключен по умолчанию (VOICE_SILENCE_PING)')
+      'voice: silence keepalive управляется VOICE_SILENCE_PING')
+check('silence keepalive' in main_src.lower() or "or '1')" in main_src
+      or 'soft-reconnect' in main_src,
+      'voice: silence keepalive / soft-reconnect против 24ч zombie')
 check('to_thread(vc.play' in main_src.replace(' ', ''),
       'voice: если play — только to_thread')
 check('_loop_lag_watchdog' in main_src or 'EVENT-LOOP lag' in main_src,

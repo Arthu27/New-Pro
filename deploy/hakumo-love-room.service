@@ -1,0 +1,28 @@
+# Hakumo Love Room bot: temp 2-person VCs + V2 panel (отдельный процесс).
+# Установка:
+#   sudo cp deploy/hakumo-love-room.service /etc/systemd/system/
+#   # в /opt/hakumo/.env: LOVE_ROOM_BOT_TOKEN=... и LOVE_ROOM_STANDALONE=1
+#   # category/panel IDs могут быть 0 — сервис стартует и ждёт конфиг
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hakumo-love-room
+#
+# Логи: journalctl -u hakumo-love-room -f
+# НЕ логирует полный токен (только ••••last4).
+[Unit]
+Description=Hakumo Love Room bot (pair voice rooms)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hakumo
+Environment=LOVE_ROOM_STANDALONE=1
+EnvironmentFile=-/opt/hakumo/.env
+ExecStart=/opt/hakumo/.venv/bin/python scripts/run_love_room.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

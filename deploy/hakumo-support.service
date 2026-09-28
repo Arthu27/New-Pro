@@ -1,0 +1,18 @@
+# Hakumo Support bot (/verify) — отдельный процесс.
+[Unit]
+Description=Hakumo Support Discord bot (/verify)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hakumo
+ExecStart=/opt/hakumo/.venv/bin/python scripts/run_support_bot.py
+Restart=always
+RestartSec=5
+EnvironmentFile=-/opt/hakumo/.env
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
