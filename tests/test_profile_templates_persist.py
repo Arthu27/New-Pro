@@ -27,20 +27,25 @@ print('== persist seed / no overwrite ==')
 td = Path(tempfile.mkdtemp(prefix='hakumo_prof_'))
 seed = td / 'seed'
 persist = td / 'persist'
+pin = td / 'pin'
 seed.mkdir()
 for name in ('index.html', 'profile-card.png', 'most-active.png', 'couple-card.png'):
     (seed / name).write_bytes(b'SEED-' + name.encode())
 
 os.environ['PROFILES_DIR'] = str(persist)
+os.environ['PROFILES_PIN_DIR'] = str(pin)
 import services.profile_templates as PT
 PT.static_seed_dir = lambda: seed  # type: ignore
 PT.persist_dir = lambda: persist  # type: ignore
+PT.pin_dir = lambda: pin  # type: ignore
 
 d1 = PT.ensure_profile_templates(overwrite=False)
 check(d1 == persist, 'returns persist dir')
 check((persist / 'couple-card.png').read_bytes().startswith(b'SEED-'), 'seeded couple')
 check((persist / 'profile-card.png').is_file(), 'seeded profile-card')
 check((persist / 'most-active.png').is_file(), 'seeded most-active')
+check((pin / 'couple-card.png').is_file(), 'mirrored to pin')
+check((pin / 'profile-card.png').is_file(), 'pin has profile-card')
 
 (seed / 'couple-card.png').write_bytes(b'NEW-VERSION')
 PT.ensure_profile_templates(overwrite=False)
@@ -49,10 +54,19 @@ check((persist / 'couple-card.png').read_bytes().startswith(b'SEED-'),
 
 (persist / 'most-active.png').unlink()
 (seed / 'most-active.png').write_bytes(b'SEED-most-active.png')
+# pin still has old most-active — refill from pin first (не из seed)
 PT.ensure_profile_templates(overwrite=False)
 check((persist / 'most-active.png').is_file(), 'refilled missing only')
+check((persist / 'most-active.png').read_bytes().startswith(b'SEED-'),
+      'refilled from pin (original seed)')
 check((persist / 'couple-card.png').read_bytes().startswith(b'SEED-'),
       'existing still intact after refill')
+
+# Если и persist, и seed пусты — восстанавливаем только из pin
+(persist / 'profile-card.png').unlink()
+(seed / 'profile-card.png').unlink()
+PT.ensure_profile_templates(overwrite=False)
+check((persist / 'profile-card.png').is_file(), 'restored from pin when seed gone')
 
 print('== routes in app.py ==')
 app_src = (ROOT / 'web' / 'app.py').read_text(encoding='utf-8')
