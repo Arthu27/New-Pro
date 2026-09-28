@@ -314,6 +314,42 @@ body_br = SA.build_application_body(
 check('часовой пояс' in body_br.lower() and 'веб камера' in body_br.lower(),
       'Broadcaster body uses broadcaster questions')
 
+print('== 3c. Decided view: ОТКАЗАНО + Принять решение ==')
+done = SA.StaffAppDecidedView(
+    title='Helper', body='body text', status='ОТКАЗАНО',
+    note='Curator · 26.09.2026', accent=0xE74C3C)
+_types = set()
+_texts = []
+
+def _walk(item):
+    _types.add(type(item).__name__)
+    c = getattr(item, 'content', None)
+    if isinstance(c, str):
+        _texts.append(c)
+    for ch in getattr(item, 'children', None) or []:
+        _walk(ch)
+
+for it in done.children:
+    _walk(it)
+blob = '\n'.join(_texts)
+check('ОТКАЗАНО' in blob, 'status ОТКАЗАНО in panel', blob[:200])
+check('StaffReconsiderSelect' in _types,
+      'reconsider select after reject', sorted(_types))
+check('принять решение' in blob.lower(),
+      'footer mentions Принять решение', blob[-200:])
+
+done_ok = SA.StaffAppDecidedView(
+    title='Helper', body='body', status='ПРИНЯТО', accent=0x2ECC71)
+_types2 = set()
+def _walk2(item):
+    _types2.add(type(item).__name__)
+    for ch in getattr(item, 'children', None) or []:
+        _walk2(ch)
+for it in done_ok.children:
+    _walk2(it)
+check('StaffReconsiderSelect' not in _types2 and 'Select' not in _types2,
+      'approved card has no select')
+
 print('== 4. Web send_to_discord uses V2 ==')
 web_src = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
 check('StaffAppCardView' in web_src and '_send_staff_card' in web_src,
