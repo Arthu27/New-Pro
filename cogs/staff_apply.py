@@ -1381,48 +1381,6 @@ class StaffApplyView(discord.ui.LayoutView):
         self.add_item(row)
 
 
-WEBHOOK_NAME = 'Наборы Hakumo'
-HOOK_USERNAME = 'Наборы'
-
-
-async def _channel_webhook(channel):
-    """Найти/создать вебхук бота для V2-публикации."""
-    fetch = getattr(channel, 'webhooks', None)
-    if fetch is None:
-        return None
-    try:
-        hooks = await fetch()
-    except Exception as _ex:
-        log.debug('staff: webhooks(%s): %s', channel, _ex)
-        return None
-    me_id = None
-    try:
-        me_id = channel.guild.me.id
-    except Exception as _ex:
-        log.debug('staff: guild.me: %s', _ex)
-    for h in hooks or ():
-        try:
-            if me_id is None or h.user is None or h.user.id == me_id:
-                return h
-        except Exception as _ex:
-            log.debug('staff: skip webhook: %s', _ex)
-    create = getattr(channel, 'create_webhook', None)
-    if create is None:
-        return None
-    try:
-        return await create(name=WEBHOOK_NAME)
-    except Exception as _ex:
-        log.debug('staff: create_webhook: %s', _ex)
-        return None
-
-
-def _hook_avatar(guild):
-    try:
-        return guild.icon.url if guild.icon else None
-    except Exception:
-        return None
-
-
 async def _send_staff_card(channel, *, content=None, view=None):
     """Карточка заявки V2 — только от бота модерации (не webhook «Наборы»).
 
