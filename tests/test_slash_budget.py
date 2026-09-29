@@ -233,17 +233,19 @@ def _fake_context_menus(tree, guild=None):
 
 slash_budget._context_menus = _fake_context_menus
 
-# LEAN: 6 ПКМ-меню глобально + кураторские слэш-команды
+# LEAN: лишние ПКМ режем, KEEP_CTX (мут/войс-мут/варн/снять) оставляем
 os.environ.pop('BOT_FULL', None)
 _t = _CtxTree2()
 for _n in slash_budget.KEEP_SLASH:
     _t.add_chat(_n, None)
 for _m in ('Предупредить', 'Изолировать', 'Варн за сообщение',
-           'Войс-мут', 'Войс-размут', 'Кик из войса'):
+           'Войс-мут', 'Войс-размут', 'Кик из войса',
+           '🔇 Мут (чат + войс)', '🎙️ Войс-мут', '⚠️ Варн', '🔊 Снять муты'):
     _t.add_ctx(_m, None)
 slash_budget.apply_slash_budget(_t, guilds=[])
-check(not _t.ctx.get(None),
-      f'LEAN: все ПКМ-меню вырезаны из глобального дерева (осталось {len(_t.ctx.get(None, ()))})')
+_kept_ctx = set(_t.ctx.get(None, ()))
+check(_kept_ctx == set(slash_budget.KEEP_CTX),
+      f'LEAN: KEEP_CTX на месте, лишние ПКМ вырезаны (осталось {_kept_ctx})')
 check(len(_t.chat.get(None, ())) == len(slash_budget.KEEP_SLASH),
       f'LEAN: кураторские слэш-команды на месте ({len(_t.chat.get(None, ()))})')
 
