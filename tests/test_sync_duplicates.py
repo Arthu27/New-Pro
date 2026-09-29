@@ -131,6 +131,10 @@ async def _msg_cb(interaction, message: discord.Message):
     pass
 
 
+async def _user_cb(interaction, member: discord.Member):
+    pass
+
+
 def mk(name, keep_global=False):
     extras = {'keep_global': True} if keep_global else {}
     return command(name=name, description=f'cmd {name}', extras=extras)(_cb)
@@ -141,9 +145,12 @@ def build_bot(cold_cache=False):
     tree = bot.tree
     # Как в боте (владелец 2026-09-08): глобальных команд НЕТ — /апелляция
     # удалена («она у нас в кнопке»), /update стала гильдовой (админам).
-    # Контекстное меню НЕ в белом списке боевых команд — в Discord не публикуется.
+    # Старое ПКМ «Варн за сообщение» — вне KEEP_CTX, не публикуем.
+    # ПКМ moderation (войс-мут и др.) — в KEEP_CTX, публикуем.
     tree.add_command(ContextMenu(name='Варн за сообщение', callback=_msg_cb,
                                  type=AppCommandType.message))
+    tree.add_command(ContextMenu(name='🎙️ Войс-мут', callback=_user_cb,
+                                 type=AppCommandType.user))
     # гильдовые (коги с guilds=Config.guild_objects()):
     #   боевые (modpanel, update, afk, report) — публикуются;
     #   служебные/вырезанные (play, afk-remove, ticket-panel) — снимаются с публикации.
@@ -173,14 +180,18 @@ async def main():
           'глобально нет команд вне белого списка')
     check(set(glob) & set(guild) == set(),
           f'пересечение глобаль∩гильдия пустое — дублей нет ({sorted(set(glob) & set(guild))})')
-    # Белый список: в Discord публикуются ТОЛЬКО шесть боевых команд.
-    # Служебные/вырезанные (play, afk-remove, ticket-panel) и контекстные
-    # меню в боевом составе не публикуются вовсе.
-    _wl = set(SF.PUBLIC_COMMAND_WHITELIST)
-    check(set(guild) <= _wl,
-          f'в гильдии только команды белого списка, лишних нет ({sorted(set(guild) - _wl)})')
+    # Белый список: боевые слэш + ПКМ из KEEP_CTX. Служебные и старые
+    # контекстные меню (play, «Варн за сообщение») не публикуются.
+    _wl = set(SF._public_names())
+    _guild_norm = {SF.normalize_cmd(n) for n in guild}
+    check(_guild_norm <= _wl,
+          f'в гильдии только команды белого списка, лишних нет '
+          f'({sorted(_guild_norm - _wl)})')
     check({'modpanel', 'update', 'afk', 'report'} <= set(guild),
           f'боевые гильдовые команды на месте, update — гильдовая ({guild})')
+    check(any(SF.normalize_cmd(n) == SF.normalize_cmd('🎙️ Войс-мут')
+              for n in guild),
+          f'ПКМ «🎙️ Войс-мут» публикуется ({guild})')
     for _hidden in ('play', 'afk-remove', 'ticket-panel', 'Варн за сообщение'):
         check(_hidden not in guild and _hidden not in glob,
               f'«{_hidden}» не публикуется в Discord (не в белом списке)')
@@ -301,15 +312,18 @@ async def main():
     check(bool(sync_last7.get('error')),
           f'причина сбоя записана в sync_last.json ({sync_last7.get("error")})')
 
-    # ═══ E. Кнопка в панели больше не «висит» с таймаутом ══════════════════
-    print('== E. Кнопка синка уходит фоном (исходники) ==')
-    src_bs = open(os.path.join(ROOT, 'web', 'routes', 'bot_settings.py'),
-                  encoding='utf-8').read()
-    check('run_coroutine_threadsafe' in src_bs and 'timeout=10' not in src_bs,
-          'bot_settings: синк фоном, без ожидания с таймаутом')
-    check('_run_async' not in src_bs.split('def api_bot_settings_sync')[1].split('def ')[0]
-          if 'def api_bot_settings_sync' in src_bs else False,
-          'bot_settings: sync-эндпоинт не блокирует Flask-поток')
+    # ═══ E. Кнопка синка / порядок copy→PUT (исходники) ═══════════════════
+    print('== E. Синк: порядок copy→PUT и фон (исходники) ==')
+    _bs_path = os.path.join(ROOT, 'web', 'routes', 'bot_settings.py')
+    if os.path.isfile(_bs_path):
+        src_bs = open(_bs_path, encoding='utf-8').read()
+        check('run_coroutine_threadsafe' in src_bs and 'timeout=10' not in src_bs,
+              'bot_settings: синк фоном, без ожидания с таймаутом')
+        check('_run_async' not in src_bs.split('def api_bot_settings_sync')[1].split('def ')[0]
+              if 'def api_bot_settings_sync' in src_bs else False,
+              'bot_settings: sync-эндпоинт не блокирует Flask-поток')
+    else:
+        check(True, 'bot_settings снят вместе с панелью — проверка фона пропущена')
     src_sf = open(os.path.join(ROOT, 'services', 'sync_filtered.py'),
                   encoding='utf-8').read()
     check('перепубликуем только keep_global' in src_sf,

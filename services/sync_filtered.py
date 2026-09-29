@@ -69,13 +69,24 @@ PUBLIC_COMMAND_WHITELIST = frozenset({
 })
 
 
+def _public_names():
+    """Имена, которые можно публиковать в Discord: слэш + ПКМ из KEEP_CTX."""
+    names = set(PUBLIC_COMMAND_WHITELIST)
+    try:
+        from slash_budget import KEEP_CTX
+        names |= set(KEEP_CTX)
+    except Exception as e:
+        _log.debug('KEEP_CTX: %s', e)
+    return {normalize_cmd(x) for x in names}
+
+
 def _is_public(c):
-    """Публиковать ли команду в Discord (и имя, и контекстные меню)."""
+    """Публиковать ли команду в Discord (слэш и ПКМ из KEEP_CTX)."""
     try:
         name = getattr(c, 'name', '') or ''
     except Exception:
         name = ''
-    return normalize_cmd(name) in {normalize_cmd(x) for x in PUBLIC_COMMAND_WHITELIST}
+    return normalize_cmd(name) in _public_names()
 
 
 def normalize_cmd(name):
