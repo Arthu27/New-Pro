@@ -961,7 +961,8 @@ class Moderation (commands .Cog ):
                            f"(роль «{_mrole.name}»); голос не тронут")
                     await self._maybe_watchlist_after_mute(interaction, user, reason)
                 elif action =="vmute":
-                    # Войс-мут = роль войс-мута + выкид из войса. Больше ничего.
+                    # Войс-мут = только роль. Из войса не выкидываем.
+                    # Срок в temps → punish_roles_loop снимет роль сам.
                     _vrole =self ._punish_role (guild ,'vmute')
                     minutes =parse_duration_minutes (amount ,30 )
                     minutes =max (1 ,min (minutes ,40320 ))
@@ -980,15 +981,8 @@ class Moderation (commands .Cog ):
                     user =await self ._give_punish_role (
                         guild ,user ,_vrole ,reason or 'войс-мут')
                     self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
-                    _kicked =False
-                    try :
-                        if getattr (getattr (user ,'voice',None ),'channel',None ):
-                            await user .move_to (None ,reason =reason or 'войс-мут')
-                            _kicked =True
-                    except Exception as _vd :
-                        log .warning (f'[MODPANEL] vmute voice kick: {_vd}')
-                    msg =(f"войс-мут «{_vrole .name }» на {minutes } мин — роль выдана"
-                          +(" · выкинут из войса" if _kicked else ""))
+                    msg =(f"войс-мут «{_vrole .name }» на {minutes } мин — "
+                          f"роль выдана, снимется по сроку")
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
                     if _vrole is not None :
@@ -1941,9 +1935,9 @@ async def ctx_full_mute(interaction, member: discord.Member):
         mod, member, 'timeout', 'timeout', 'mute', 'Мут (чат + войс)'))
 
 
-@app_commands.context_menu(name='🎙️ Войс-мут (микрофон)')
+@app_commands.context_menu(name='🎙️ Войс-мут')
 async def ctx_voice_mute(interaction, member: discord.Member):
-    """Войс-мут через ПКМ: роль + микрофон + выкид из войса."""
+    """Войс-мут через ПКМ: роль на срок, потом снимается сама."""
     if member.bot or member.id == interaction.user.id:
         return await interaction.response.send_message(
             'Себе и ботам мут не выдать.', ephemeral=True)

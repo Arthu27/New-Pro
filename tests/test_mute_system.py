@@ -5,7 +5,7 @@
    мут (чат+войс) = роль мута + роль войс-мута + сервер-мут микрофона;
    нативный таймаут НЕ обязателен — без права «Модерация участников»
    действие ВСЁ РАВНО выполняется.
-2) Войс-мут = выдать роль войс-мута + выкинуть из войса.
+2) Войс-мут = выдать роль войс-мута на срок (без выкида из войса).
 3) Снятие войс-мута возвращает микрофон (роль И сервер-мут).
 4) «Снять варн» в панели (/modpanel + веб) и в боте (/unwarn без
    Discord-права — права выдаёт владелец через ACL).
@@ -305,7 +305,7 @@ async def main():
     check(ok_pre2 is None, 'мут чата — то же (нужно только «Управление ролями»)',
           f'→ {ok_pre2}')
 
-    print('== 2. Войс-мут: роль + выкид из войса ==')
+    print('== 2. Войс-мут: только роль на срок ==')
     tgt2 = _Member(3010000000000000301, 'Войс-нарушитель', guild=guild)
     guild.members.append(tgt2)
     ok, text = await cog.apply_panel_action(
@@ -322,9 +322,15 @@ async def main():
         guild, tgt3, 'vmute', reason='1.9', amount='30м', actor='Панель')
     check(ok, 'войс-мут с участником в войсе', f'→ {text3}')
     check(any(rid == 5002 for rid, _ in tgt3.added), 'роль выдана третьему')
-    check(tgt3.moved_to is None, 'выкинут из войса', f'→ {tgt3.moved_to}')
+    check(tgt3.moved_to == 'unset', 'из войса НЕ выкидываем', f'→ {tgt3.moved_to}')
     check(not any(e.get('mute') is True for e in tgt3.edits),
-          'сервер-мут НЕ трогаем — только роль + выкид', f'→ {tgt3.edits}')
+          'сервер-мут НЕ трогаем', f'→ {tgt3.edits}')
+    # срок в temps — loop снимет роль сам
+    due_now = PR.due(0)
+    check(any(int(gid) == GID and int(rid) == 5002 for gid, uid, rid in due_now)
+          or any(int(uid) in (tgt2.id, tgt3.id)
+                 for gid, uid, rid in PR.due(__import__('time').time() + 3600)),
+          'срок войс-мута записан в temps')
 
     print('== 3. Снятие войс-мута снимает роль ==')
     ok, text = await cog.apply_panel_action(
@@ -336,7 +342,7 @@ async def main():
     print('== 5. ПКМ-меню зарегистрировано ==')
     check(hasattr(M, '_CtxMuteModal'), 'модалка ПКМ-мута существует')
     names = [getattr(c, 'name', '') for c in getattr(M, '_CTX_COMMANDS', ())]
-    check('🔇 Мут (чат + войс)' in names and '🎙️ Войс-мут (микрофон)' in names
+    check('🔇 Мут (чат + войс)' in names and '🎙️ Войс-мут' in names
           and '⚠️ Варн' in names and '🔊 Снять муты' in names,
           'ПКМ: мут / войс-мут / варн / снять', f'→ {names}')
     check('_ctx_setup' in open(os.path.join(ROOT, 'cogs/moderation.py'),
