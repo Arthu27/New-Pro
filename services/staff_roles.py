@@ -81,6 +81,8 @@ KNOWN_HELPER_ROLE_ID = 948969471916249119
 KNOWN_MODERATOR_ROLE_ID = 803553848396349510
 KNOWN_MASTER_ROLE_ID = 1552637932907667466  # × Master (тир между mod и curator)
 KNOWN_ADMIN_ROLE_ID = 1189999426631122964  # × Administrator
+# Общая роль на ВСЕ ветки (Helper/Mod/Creative/…) — если нет, выдаём при accept
+KNOWN_COMMON_STAFF_ROLE_ID = 1553105240398631062
 KNOWN_GRANT_BY_KIND = {
     "helper": KNOWN_HELPER_ROLE_ID,
     "moderator": KNOWN_MODERATOR_ROLE_ID,
@@ -523,8 +525,54 @@ def resolve_staff_role(guild, kind: str):
     return None, variants
 
 
+def _member_has_role(member, role_id: int) -> bool:
+    try:
+        rid = int(role_id)
+    except (TypeError, ValueError):
+        return False
+    for r in (getattr(member, "roles", None) or []):
+        try:
+            if int(getattr(r, "id", 0) or 0) == rid:
+                return True
+        except (TypeError, ValueError):
+            continue
+    # тестовые фейки
+    added = list(getattr(member, "added", None) or [])
+    if rid in {int(x) for x in added if str(x).isdigit()}:
+        return True
+    return False
+
+
+async def ensure_common_staff_role(guild, member) -> dict:
+    """Общая роль на все ветки — выдать, если ещё нет."""
+    out = {"role_id": KNOWN_COMMON_STAFF_ROLE_ID, "granted": False,
+           "already": False, "reason": None, "role_name": None}
+    if guild is None or member is None:
+        out["reason"] = "no_member"
+        return out
+    role = guild.get_role(int(KNOWN_COMMON_STAFF_ROLE_ID))
+    if role is None:
+        out["reason"] = "not_found"
+        return out
+    out["role_name"] = getattr(role, "name", None) or str(role.id)
+    if _member_has_role(member, KNOWN_COMMON_STAFF_ROLE_ID):
+        out["already"] = True
+        return out
+    try:
+        await member.add_roles(
+            role, reason="Общая staff-роль (все ветки набора, Hakumo)")
+        out["granted"] = True
+        log.info("[staff_roles] общая роль «%s» → %s",
+                 out["role_name"], getattr(member, "id", "?"))
+    except Exception as e:
+        out["reason"] = "forbidden"
+        out["error"] = str(e)
+        log.warning("[staff_roles] common role %s: %s", role.id, e)
+    return out
+
+
 async def grant_staff_role(guild, user_id, position, *, client=None):
-    """Выдать участнику роль по должности заявки.
+    """Выдать участнику роль по должности заявки + общую staff-роль.
 
     После add_roles проверяем, что роль реально на участнике
     (иначе в базе «выдано», а в Discord пусто).
@@ -555,17 +603,19 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
         return {"kind": None, "role_name": None, "reason": "no_position",
                 "searched": []}
 
+    # общая роль — всегда при accept любой ветки (если нет)
+    common = await ensure_common_staff_role(guild, member)
+
     role, searched = resolve_staff_role(guild, kind)
     if role is None:
         return {"kind": kind, "role_name": None, "reason": "not_found",
-                "searched": searched}
+                "searched": searched, "common": common}
 
-    # уже есть — считаем успехом
+    # уже есть — считаем успехом (общую всё равно уже попробовали)
     try:
-        if any(int(getattr(r, "id", 0) or 0) == int(role.id)
-               for r in (getattr(member, "roles", None) or [])):
+        if _member_has_role(member, role.id):
             return {"kind": kind, "role_name": role.name, "reason": None,
-                    "searched": searched, "already": True}
+                    "searched": searched, "already": True, "common": common}
     except Exception as _ex:
         log.debug('staff_roles: except@476: %s', _ex)
 
@@ -574,7 +624,7 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
     except Exception as e:
         log.warning(f"[staff_roles] add_roles({role.name}): {e}")
         return {"kind": kind, "role_name": None, "reason": "forbidden",
-                "searched": searched, "error": str(e)}
+                "searched": searched, "error": str(e), "common": common}
 
     # проверка: роль реально повисла (только если fetch_member доступен)
     has = False
@@ -588,9 +638,7 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
             except Exception:
                 fresh = None
         check_m = fresh or member
-        has = any(int(getattr(r, "id", 0) or 0) == int(role.id)
-                  for r in (getattr(check_m, "roles", None) or []))
-        # тестовые фейки пишут в .added, не обновляя .roles
+        has = _member_has_role(check_m, role.id)
         if not has:
             added = list(getattr(check_m, "added", None)
                          or getattr(member, "added", None)
@@ -606,11 +654,11 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
             "[staff_roles] add_roles(%s) ок, но роли нет у %s — иерархия/права?",
             role.name, uid)
         return {"kind": kind, "role_name": None, "reason": "not_applied",
-                "searched": searched}
+                "searched": searched, "common": common}
 
     log.info("[staff_roles] выдана «%s» → %s (kind=%s)", role.name, uid, kind)
     return {"kind": kind, "role_name": role.name, "reason": None,
-            "searched": searched}
+            "searched": searched, "common": common}
 
 
 def role_hint(result: dict) -> str:

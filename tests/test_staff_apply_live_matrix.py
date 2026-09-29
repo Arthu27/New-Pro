@@ -85,6 +85,7 @@ live_roles = [
     R(803553848396349510, '× Moderator'),
     R(852634463535759461, '× Eventsmod'),
     R(1551180629687664670, '× Broadcaster'),
+    R(1553105240398631062, '× Staff common'),
     R(1551525681207189504, '× Отвечаю за Helper'),
     R(1551524708552278036, '× Отвечаю за Moderator'),
     R(1551527644326002748, '× Отвечаю за Eventsmod'),
@@ -110,6 +111,8 @@ for kind, rid in EXPECT_GRANT.items():
     check(role is not None and role.id == rid, f'resolve {kind}')
 
 print('== 2. Auto-grant all 4 ==')
+check(SR.KNOWN_COMMON_STAFF_ROLE_ID == 1553105240398631062,
+      'общая staff-роль на все ветки')
 for kind, rid in EXPECT_GRANT.items():
     m = Mem(1000 + list(EXPECT_GRANT).index(kind))
     g._m[m.id] = m
@@ -117,6 +120,18 @@ for kind, rid in EXPECT_GRANT.items():
         SR.grant_staff_role(g, m.id, SR.position_label(kind)))
     check(res.get('role_name') and rid in m.added,
           f'grant {SR.position_label(kind)}', res)
+    check(SR.KNOWN_COMMON_STAFF_ROLE_ID in m.added,
+          f'common staff role + {kind}')
+# повторный accept — общую не дублируем, ветка already
+m2 = Mem(2001)
+m2.roles = [R(SR.KNOWN_COMMON_STAFF_ROLE_ID, '× Staff common')]
+g._m[m2.id] = m2
+res2 = loop.run_until_complete(
+    SR.grant_staff_role(g, m2.id, 'Helper'))
+check(res2.get('common', {}).get('already') is True,
+      'common already — не выдаём повторно')
+check(m2.added.count(SR.KNOWN_COMMON_STAFF_ROLE_ID) == 0,
+      'common не добавили второй раз')
 
 print('== 3. Isolation matrix 4×4 ==')
 
