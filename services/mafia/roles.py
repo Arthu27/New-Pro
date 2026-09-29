@@ -52,7 +52,10 @@ ROLES: Dict[str, Role] = {
 
 
 def preset_for_count(n: int) -> Dict[str, int]:
-    """Состав ролей по числу игроков (ТЗ)."""
+    """Состав ролей по числу игроков.
+
+    Путана только с **13** игроков (заказ владельца).
+    """
     if n < 6:
         raise ValueError('Нужно минимум 6 игроков в голосе (без ведущего)')
     if n == 6:
@@ -60,11 +63,17 @@ def preset_for_count(n: int) -> Dict[str, int]:
     if n == 7:
         return {'mafia': 1, 'sheriff': 1, 'doctor': 1, 'citizen': 4}
     if n in (8, 9):
-        return {'mafia': 2, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': n - 5}
+        # мафия×2 + шериф + доктор — без путаны
+        return {'mafia': 2, 'sheriff': 1, 'doctor': 1, 'citizen': n - 4}
     if n in (10, 11):
-        return {'mafia': 3, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': n - 6}
-    # 12+
-    return {'mafia': 3, 'don': 1, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': n - 7}
+        return {'mafia': 3, 'sheriff': 1, 'doctor': 1, 'citizen': n - 5}
+    if n == 12:
+        return {'mafia': 3, 'don': 1, 'sheriff': 1, 'doctor': 1, 'citizen': 6}
+    # 13+: появляется путана
+    return {
+        'mafia': 3, 'don': 1, 'sheriff': 1, 'doctor': 1,
+        'courtesan': 1, 'citizen': n - 7,
+    }
 
 
 def expand_roles(counts: Dict[str, int]) -> List[str]:
