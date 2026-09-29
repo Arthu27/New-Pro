@@ -96,6 +96,8 @@ class Game:
     last_vote_report: str = ''
     # публичные msg id для очистки в конце
     public_message_ids: List[int] = field(default_factory=list)
+    # доктор: самохил — не чаще 1 раза за 2 ночи (day_number последней)
+    doctor_last_self_heal_day: int = 0
 
     # ── helpers ──────────────────────────────────────────────
     def alive_players(self) -> List[Player]:
@@ -210,6 +212,7 @@ class Game:
         self.vote_index = 0
         self.last_night_report = ''
         self.last_vote_report = ''
+        self.doctor_last_self_heal_day = 0
         self.add_event(f'Роли разданы (токен `{self.deal_token[:6]}`)')
         return counts
 
@@ -534,6 +537,10 @@ class Game:
                 raise RuntimeError('Цель недоступна')
             if tid == actor.user_id and kind == 'kill':
                 raise RuntimeError('Нельзя выбрать себя')
+            if kind == 'heal' and tid == actor.user_id:
+                if not self.can_doctor_self_heal():
+                    raise RuntimeError(
+                        'Себя можно лечить **1 раз за 2 ночи** · сейчас кулдаун')
 
         prev = dict(self.night_actions.get(int(actor_id)) or {})
 
@@ -581,33 +588,47 @@ class Game:
                 'skip': 'пас',
             }.get(kind, kind)
             self.add_event(f'🌙 {actor.display_name} · {label}')
+        # самохил доктора — кулдаун 2 ночи
+        if kind == 'heal' and tid == actor.user_id:
+            self.doctor_last_self_heal_day = int(self.day_number)
+            rec['self_heal'] = True
         return rec
 
+    def can_doctor_self_heal(self) -> bool:
+        """Себя — 1 раз за 2 ночи (между самохилами ≥ 1 ночь паузы)."""
+        last = int(self.doctor_last_self_heal_day or 0)
+        if last <= 0:
+            return True
+        return (int(self.day_number) - last) >= 2
+
+    def mafia_team(self) -> List[Player]:
+        return [p for p in self.players.values()
+                if p.role and is_mafia_team(p.role)]
+
+    def alive_mafia_team(self) -> List[Player]:
+        return [p for p in self.mafia_team() if p.alive]
+
     def resolve_night(self) -> dict:
-        """Итог ночи: убийство/лечение/блок. Возвращает отчёт."""
+        """Итог ночи: убийство/лечение/блок. Классический отчёт."""
         if self.phase != PHASE_PLAYING or self.cycle != CYCLE_NIGHT:
             raise RuntimeError('Сейчас не ночь')
 
         actions = list(self.night_actions.values())
-        # блок путаны
         blocked = {
             int(a['target_id'])
             for a in actions
             if a.get('kind') == 'block' and a.get('target_id')
         }
-        # лечение
         healed = {
             int(a['target_id'])
             for a in actions
             if a.get('kind') == 'heal' and a.get('target_id')
             and int(a.get('target_id') or 0) not in blocked
-            # если доктора заблокировали — heal не срабатывает
         }
         doctor_ids = {p.user_id for p in self.alive_players() if p.role == 'doctor'}
         if doctor_ids & blocked:
             healed = set()
 
-        # голоса мафии на kill (дон + мафия), игнор если актёр заблокирован
         kill_votes: List[int] = []
         for actor_id, a in self.night_actions.items():
             if a.get('kind') != 'kill' or not a.get('target_id'):
@@ -618,7 +639,6 @@ class Game:
 
         victim_id = None
         if kill_votes:
-            # большинство; при ничьей — выбор дона, иначе первый
             counts = Counter(kill_votes)
             top = counts.most_common()
             best_n = top[0][1]
@@ -643,15 +663,10 @@ class Game:
             else:
                 killed = self.kill(victim_id, by='мафия')
 
-        if killed is None and not saved:
-            report = '🌙 Ночь тихая — никто не погиб.'
-        elif saved:
-            report = '💉 Ночью был выстрел, но жертву спасли.'
-        else:
-            report = f'💀 Этой ночью погиб {_name(killed)}.'
-
+        report = self._classic_night_report(
+            victim_id=victim_id, killed=killed, saved=saved)
         self.last_night_report = report
-        self.add_event(report)
+        self.add_event(report.split('\n')[0][:200] if report else 'ночь')
         return {
             'report': report,
             'killed_id': killed.user_id if killed else None,
@@ -659,6 +674,23 @@ class Game:
             'victim_id': victim_id,
             'winner': self.winner,
         }
+
+    def _classic_night_report(self, *, victim_id, killed, saved) -> str:
+        """Публичный итог как в классике: кого хотели убить / спас ли доктор."""
+        lines = [f'**Утро · после ночи {self.day_number}**', '']
+        if victim_id is None:
+            lines.append('Город проснулся. **Ночь была тихой** — в двери никто не стучал.')
+        elif saved:
+            name = self.players[int(victim_id)].display_name
+            lines.append(f'Ночью мафия **целилась** в **{name}**.')
+            lines.append(f'💉 **Доктор спас** — **{name}** остался(ась) жив(а).')
+        else:
+            lines.append(f'💀 Этой ночью **убит(а)** {_name(killed)}.')
+            lines.append('Утром тело нашли на площади. Город в трауре.')
+        alive = len(self.alive_players())
+        lines.append('')
+        lines.append(f'-# В живых: **{alive}**')
+        return '\n'.join(lines)
 
     def submit_vote(self, voter_id: int, target_id: int) -> None:
         if self.phase != PHASE_PLAYING or self.cycle != CYCLE_VOTE:
@@ -831,6 +863,7 @@ class Game:
             'last_night_report': self.last_night_report,
             'last_vote_report': self.last_vote_report,
             'public_message_ids': [int(x) for x in (self.public_message_ids or [])],
+            'doctor_last_self_heal_day': int(self.doctor_last_self_heal_day or 0),
         }
 
     @classmethod
@@ -873,6 +906,7 @@ class Game:
             last_night_report=str(d.get('last_night_report') or ''),
             last_vote_report=str(d.get('last_vote_report') or ''),
             public_message_ids=[int(x) for x in (d.get('public_message_ids') or [])],
+            doctor_last_self_heal_day=int(d.get('doctor_last_self_heal_day') or 0),
         )
 
 

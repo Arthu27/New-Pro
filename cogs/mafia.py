@@ -26,6 +26,7 @@ from services.mafia import (
     Game,
     preset_summary,
 )
+from services.mafia.roles import is_mafia_team
 
 log = get_logger('mafia')
 
@@ -154,13 +155,25 @@ def role_dm_embed(game: Game, player) -> discord.Embed:
         mark = role_mark(player.role)
     except Exception:
         mark = role.emoji
+    body = (
+        f'{mark} **{role.name}**\n\n'
+        f'{role.description}\n'
+    )
+    # мафия знает семью сразу
+    if is_mafia_team(player.role):
+        team = game.mafia_team()
+        lines = []
+        for t in team:
+            tr = ROLES.get(t.role)
+            you = ' · **вы**' if t.user_id == player.user_id else ''
+            lines.append(
+                f'🤍 {_mention(t.user_id)} — {tr.name if tr else "?"}{you}')
+        body += '\n**Ваша семья**\n' + '\n'.join(lines) + '\n'
+        body += '\n-# Ночью семья говорит в войсе; днём — молчите о ролях.\n'
+    body += f'\n-# #{game.game_id} · ведущий {_mention(game.host_id)}'
     e = discord.Embed(
-        title=role.name,
-        description=(
-            f'{mark} **{role.name}**\n\n'
-            f'{role.description}\n\n'
-            f'-# #{game.game_id} · ведущий {_mention(game.host_id)}'
-        ),
+        title=f'🤍 {role.name}',
+        description=body[:4000],
         color=RED if role.team == 'mafia' else BLUE,
     )
     e.set_footer(text='Секретно · подтвердите · ночью ход придёт сюда же')
@@ -658,7 +671,8 @@ class HostPanelView(discord.ui.View):
             f'Удалено сообщений партии: **{n}**.', ephemeral=True)
 
 
-def _alive_options(game: Game, *, exclude_id: int = 0) -> list:
+def _alive_options(game: Game, *, exclude_id: int = 0,
+                   include_self_id: int = 0, self_label: str = None) -> list:
     opts = []
     for p in game.alive_players()[:24]:
         if exclude_id and int(p.user_id) == int(exclude_id):
@@ -668,11 +682,49 @@ def _alive_options(game: Game, *, exclude_id: int = 0) -> list:
             value=str(p.user_id),
             emoji='🤍',
         ))
+    if include_self_id:
+        me = game.players.get(int(include_self_id))
+        if me and me.alive:
+            # не дублировать если уже в списке
+            if not any(o.value == str(include_self_id) for o in opts):
+                opts.insert(0, discord.SelectOption(
+                    label=(self_label or f'Себя · {me.display_name}')[:100],
+                    value=str(include_self_id),
+                    emoji='🤍',
+                    description='Самохил',
+                ))
     return opts
 
 
+class MafiaChatModal(discord.ui.Modal, title='Сообщение семье'):
+    text = discord.ui.TextInput(
+        label='Текст семье',
+        style=discord.TextStyle.paragraph,
+        max_length=400, required=True,
+        placeholder='Только живая мафия увидит это в ЛС…')
+
+    def __init__(self, guild_id: int):
+        super().__init__(timeout=180)
+        self.guild_id = int(guild_id)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        game = STORE.get(self.guild_id)
+        if not game or game.phase != PHASE_PLAYING:
+            return await interaction.response.send_message(
+                'Игра не идёт.', ephemeral=True)
+        me = game.players.get(int(interaction.user.id))
+        if not me or not me.alive or not me.role or not is_mafia_team(me.role):
+            return await interaction.response.send_message(
+                'Только живая мафия.', ephemeral=True)
+        cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
+        n = await cog.relay_mafia_chat(
+            game, author=me, text=str(self.text.value or ''))
+        await interaction.response.send_message(
+            f'Отправлено семье · **{n}**', ephemeral=True)
+
+
 class NightActionView(discord.ui.View):
-    """Ночной ход роли в ЛС — select, без кнопок ведущего."""
+    """Ночной ход роли в ЛС — select; у мафии ещё чат семьи."""
 
     def __init__(self, guild_id: int, actor_id: int, kind: str):
         super().__init__(timeout=600)
@@ -680,23 +732,47 @@ class NightActionView(discord.ui.View):
         self.actor_id = int(actor_id)
         self.kind = kind  # kill|heal|block|sheriff|don
         game = STORE.get(self.guild_id)
-        options = _alive_options(game, exclude_id=actor_id) if game else []
+        options = []
+        if game and kind == 'heal':
+            others = _alive_options(game, exclude_id=actor_id)
+            if game.can_doctor_self_heal():
+                me = game.players.get(int(actor_id))
+                options.append(discord.SelectOption(
+                    label='💉 Себя (1× / 2 ночи)'[:100],
+                    value=str(actor_id), emoji='🤍',
+                    description='Самохил доступен'))
+            options.extend(others)
+            ph = ('Кого лечим? · себя можно' if game.can_doctor_self_heal()
+                  else 'Кого лечим? · себя пока нельзя')
+        else:
+            options = _alive_options(game, exclude_id=actor_id) if game else []
+            ph = {
+                'kill': 'Кого убиваем?',
+                'block': 'Кого блокируем?',
+                'sheriff': 'Кого проверить?',
+                'don': 'Кого проверить (шериф?)',
+            }.get(kind, 'Выберите…')
         options.append(discord.SelectOption(
             label='› Пас', value='0', emoji='🤍',
             description='Пропустить ход'))
-        ph = {
-            'kill': 'Кого убиваем?',
-            'heal': 'Кого лечим?',
-            'block': 'Кого блокируем?',
-            'sheriff': 'Кого проверить?',
-            'don': 'Кого проверить (шериф?)',
-        }.get(kind, 'Выберите…')
         sel = discord.ui.Select(
-            placeholder=ph, min_values=1, max_values=1,
+            placeholder=ph[:150], min_values=1, max_values=1,
             options=options[:25],
         )
         sel.callback = self._on_pick  # type: ignore
         self.add_item(sel)
+        if kind == 'kill':
+            btn = discord.ui.Button(
+                label='Написать семье', style=discord.ButtonStyle.secondary,
+                emoji='🤍')
+            btn.callback = self._mafia_chat  # type: ignore
+            self.add_item(btn)
+
+    async def _mafia_chat(self, interaction: discord.Interaction):
+        if int(interaction.user.id) != self.actor_id:
+            return await interaction.response.send_message(
+                'Это не ваш ход.', ephemeral=True)
+        await interaction.response.send_modal(MafiaChatModal(self.guild_id))
 
     async def _on_pick(self, interaction: discord.Interaction):
         if int(interaction.user.id) != self.actor_id:
@@ -996,6 +1072,11 @@ class Mafia(commands.Cog, name='mafia'):
             except Exception:
                 game.mark_dm_failed(p.user_id)
                 failed += 1
+        # мафии — отдельная карточка семьи
+        try:
+            await self.send_mafia_briefing(game)
+        except Exception as ex:
+            log.debug('mafia briefing: %s', ex)
         STORE.persist(game)
         host = interaction.user
         if interaction.guild:
@@ -1107,7 +1188,7 @@ class Mafia(commands.Cog, name='mafia'):
             log.debug('mafia announce: %s', ex)
 
     async def set_voice_night_mute(self, game: Game, *, night: bool) -> int:
-        """Ночь: сервер-мут всем живым в войсе. День: снять с живых, мёртвые — мут."""
+        """Ночь: город на муте, живая мафия говорит. День: живые говорят, мёртвые — мут."""
         guild = self.bot.get_guild(int(game.guild_id))
         if guild is None:
             return 0
@@ -1120,18 +1201,83 @@ class Mafia(commands.Cog, name='mafia'):
             vs = getattr(member, 'voice', None)
             if vs is None or vs.channel is None or int(vs.channel.id) != voice_id:
                 continue
-            want_mute = bool(night) or (not p.alive)
+            if not p.alive:
+                want_mute = True
+            elif night:
+                # семья мафии общается ночью в войсе
+                want_mute = not (p.role and is_mafia_team(p.role))
+            else:
+                want_mute = False
             try:
                 if bool(getattr(vs, 'mute', False)) == want_mute:
                     continue
                 await member.edit(
                     mute=want_mute,
-                    reason=('мафия: ночь — город спит' if night
+                    reason=('мафия: ночь — город спит, семья говорит' if night
                             else 'мафия: день'),
                 )
                 n += 1
             except Exception as ex:
                 log.debug('mafia mute %s: %s', p.user_id, ex)
+        return n
+
+    async def send_mafia_briefing(self, game: Game) -> int:
+        """После раздачи — семья знает друг друга (карта + список)."""
+        team = game.mafia_team()
+        if not team:
+            return 0
+        lines = []
+        for t in team:
+            tr = ROLES.get(t.role)
+            lines.append(
+                f'🤍 {_mention(t.user_id)} — **{tr.name if tr else "?"}**')
+        roster = '\n'.join(lines)
+        sent = 0
+        for p in team:
+            try:
+                user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
+                e = discord.Embed(
+                    title='🤍 Семья мафии',
+                    description=(
+                        f'Вы в одной семье · партия **#{game.game_id}**\n\n'
+                        f'{roster}\n\n'
+                        '**Ночью:** говорите в войсе (город на муте) и '
+                        'пишите кнопкой «Написать семье».\n'
+                        '**Днём:** молчите о ролях.\n'
+                        '-# Это видит только мафия'
+                    ),
+                    color=RED,
+                )
+                await user.send(embed=e)
+                sent += 1
+            except Exception as ex:
+                game.mark_dm_failed(p.user_id)
+                log.debug('mafia briefing %s: %s', p.user_id, ex)
+        return sent
+
+    async def relay_mafia_chat(self, game: Game, *, author, text: str) -> int:
+        """Переслать сообщение всем живым мафиям в ЛС."""
+        body = (text or '').strip()[:400]
+        if not body:
+            return 0
+        n = 0
+        e = discord.Embed(
+            title='🤍 Семья · сообщение',
+            description=(
+                f'**{author.display_name}**: {body}\n'
+                f'-# #{game.game_id} · ночь {game.day_number}'
+            ),
+            color=RED,
+        )
+        for p in game.alive_mafia_team():
+            try:
+                user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
+                await user.send(embed=e)
+                n += 1
+            except Exception as ex:
+                log.debug('mafia chat %s: %s', p.user_id, ex)
+        game.add_event(f'🔴 Семья переписывалась ({author.display_name})')
+        STORE.persist(game)
         return n
 
     async def clear_voice_mutes(self, game: Game) -> int:
@@ -1318,20 +1464,59 @@ class Mafia(commands.Cog, name='mafia'):
             game,
             f'## 🌙 Ночь {game.day_number}\n'
             '**Город засыпает.**\n'
-            'В войсе — мут.\n'
+            'Мирные — мут в войсе. **Мафия может говорить.**\n'
             f'Ходы **по очереди**: сейчас **{first}**.',
             accent=0x2C3E6B,
         )
         await self.send_night_step_dms(game)
+        await self.send_mafia_night_chat(game)
         await self.refresh_host_summary(game)
         await self.refresh_public(game)
 
+    async def send_mafia_night_chat(self, game: Game) -> int:
+        """Ночью семье — панель «Написать семье» (общение в ЛС)."""
+        sent = 0
+        team = game.alive_mafia_team()
+        if len(team) < 1:
+            return 0
+        for p in team:
+            try:
+                user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
+                e = discord.Embed(
+                    title='🤍 Связь семьи',
+                    description=(
+                        f'Ночь **{game.day_number}** · город спит.\n'
+                        'В войсе вы **можете говорить**.\n'
+                        'Или напишите семье кнопкой ниже — уйдёт всем в ЛС.'
+                    ),
+                    color=RED,
+                )
+                view = discord.ui.View(timeout=900)
+                btn = discord.ui.Button(
+                    label='Написать семье',
+                    style=discord.ButtonStyle.secondary, emoji='🤍')
+
+                async def _cb(interaction: discord.Interaction, uid=p.user_id):
+                    if int(interaction.user.id) != int(uid):
+                        return await interaction.response.send_message(
+                            'Не ваша панель.', ephemeral=True)
+                    await interaction.response.send_modal(
+                        MafiaChatModal(game.guild_id))
+
+                btn.callback = _cb  # type: ignore
+                view.add_item(btn)
+                await user.send(embed=e, view=view)
+                sent += 1
+            except Exception as ex:
+                log.debug('mafia night chat %s: %s', p.user_id, ex)
+        return sent
+
     async def on_day_started(self, game: Game, night_report: str = ''):
         await self.set_voice_night_mute(game, night=False)
-        body = f'## ☀️ День {game.day_number}\n**Город просыпается.**\n'
+        body = f'## ☀️ День {game.day_number}\n**Город просыпается.**\n\n'
         if night_report:
-            body += f'\n{night_report}\n'
-        body += '\nОбсуждайте в войсе.\n-# **Дальше** → голосование по очереди'
+            body += f'{night_report}\n\n'
+        body += 'Обсуждайте в войсе.\n-# **Дальше** → голосование по очереди'
         await self.announce(game, body, accent=0xC4A35A)
         await self.refresh_host_summary(game)
         await self.refresh_public(game)

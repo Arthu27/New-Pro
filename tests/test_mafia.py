@@ -361,6 +361,9 @@ g7.advance_night_step()
 check(g7.night_ready(), 'очередь ночи закрыта')
 rep = g7.resolve_night()
 check(rep['saved'] is True and rep['killed_id'] is None, f'спасён: {rep}')
+check('целилась' in rep['report'] and 'Доктор спас' in rep['report'],
+      f'классический отчёт спасения: {rep["report"][:120]}')
+check(victim.display_name in rep['report'], 'в отчёте имя жертвы')
 g7.begin_day()
 check(g7.cycle == CYCLE_DAY, 'день')
 g7.begin_vote()
@@ -395,6 +398,57 @@ check('cleanup_game_messages' in src_m and 'Очистить сообщения'
       'очистка сообщений в конце')
 check('send_night_step_dms' in src_m and 'send_current_vote_dm' in src_m,
       'ночь и голос по очереди в cog')
+check('relay_mafia_chat' in src_m and 'send_mafia_briefing' in src_m
+      and 'Написать семье' in src_m,
+      'мафия знает семью + чат')
+check('can_doctor_self_heal' in open(
+    os.path.join(_REPO, 'services/mafia/game.py'), encoding='utf-8').read(),
+      'самохил доктора в game')
+
+
+print('\n== 14. Семья мафии + самохил доктора ==')
+g8 = Game.create(49, 1, 9, 8, [(800 + i, f'B{i}') for i in range(8)])
+roles8b = ['mafia', 'mafia', 'sheriff', 'doctor', 'courtesan',
+           'citizen', 'citizen', 'citizen']
+g8.deal_token = 'fam'
+for p, r in zip(g8.players.values(), roles8b):
+    p.role = r
+    p.confirmed = True
+g8.phase = PHASE_READY
+team = g8.mafia_team()
+check(len(team) == 2, f'семья из 2: {len(team)}')
+from cogs.mafia import role_dm_embed  # noqa: E402
+emb = role_dm_embed(g8, team[0])
+check('Ваша семья' in (emb.description or ''), 'в DM роли — список семьи')
+check(all(str(t.user_id) in (emb.description or '') for t in team),
+      'оба мафии в списке семьи')
+# самохил
+g8.start()
+doc = next(p for p in g8.players.values() if p.role == 'doctor')
+check(g8.can_doctor_self_heal() is True, 'самохил доступен в ночь 1')
+# пройти очередь до heal
+while g8.current_night_step() and g8.current_night_step()['step'] != 'heal':
+    step = g8.current_night_step()
+    for uid in step['actors']:
+        g8.submit_night_action(uid, 'skip')
+    g8.advance_night_step()
+check(g8.current_night_step()['step'] == 'heal', 'шаг доктора')
+g8.submit_night_action(doc.user_id, 'heal', doc.user_id)
+check(g8.doctor_last_self_heal_day == 1, 'записан самохил ночи 1')
+# добить ночь и начать ночь 2
+g8.night_step = len(g8.night_queue)
+g8.resolve_night()
+g8.begin_day()
+g8.begin_night()
+check(g8.day_number == 2, f'ночь 2 (day={g8.day_number})')
+check(g8.can_doctor_self_heal() is False, 'ночь 2 — самохил на кулдауне')
+# ночь 3 — снова можно
+g8.night_step = len(g8.night_queue)
+g8.resolve_night()
+g8.begin_day()
+g8.begin_night()
+check(g8.day_number == 3 and g8.can_doctor_self_heal() is True,
+      'ночь 3 — самохил снова можно')
 
 
 print(f'\nИтого: {PASS} PASS / {FAIL} FAIL')
