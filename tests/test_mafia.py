@@ -49,13 +49,17 @@ print('\n== 1. Пресеты по ТЗ ==')
 expected = {
     6: {'mafia': 1, 'sheriff': 1, 'citizen': 4},
     7: {'mafia': 1, 'sheriff': 1, 'doctor': 1, 'citizen': 4},
-    8: {'mafia': 2, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': 3},
-    9: {'mafia': 2, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': 4},
-    10: {'mafia': 3, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': 4},
-    11: {'mafia': 3, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': 5},
-    12: {'mafia': 3, 'don': 1, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': 5},
+    8: {'mafia': 2, 'sheriff': 1, 'doctor': 1, 'citizen': 4},
+    9: {'mafia': 2, 'sheriff': 1, 'doctor': 1, 'citizen': 5},
+    10: {'mafia': 3, 'sheriff': 1, 'doctor': 1, 'citizen': 5},
+    11: {'mafia': 3, 'sheriff': 1, 'doctor': 1, 'citizen': 6},
+    12: {'mafia': 3, 'don': 1, 'sheriff': 1, 'doctor': 1, 'citizen': 6},
+    13: {'mafia': 3, 'don': 1, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': 6},
     14: {'mafia': 3, 'don': 1, 'sheriff': 1, 'doctor': 1, 'courtesan': 1, 'citizen': 7},
 }
+# путана только с 13
+check('courtesan' not in preset_for_count(12), 'на 12 нет путаны')
+check(preset_for_count(13).get('courtesan') == 1, 'на 13 есть путана')
 for n, want in expected.items():
     got = preset_for_count(n)
     check(got == want, f'пресет {n}: {got}')
