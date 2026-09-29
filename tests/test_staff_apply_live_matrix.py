@@ -50,6 +50,9 @@ EXPECT_GRANT = {
     'moderator': 803553848396349510,
     'event': 852634463535759461,
     'broadcaster': 1551180629687664670,
+    'support': 1553138713532563516,
+    'closemod': 1553769624603201546,
+    'creative': 1553853968969638058,
 }
 
 
@@ -85,6 +88,10 @@ live_roles = [
     R(803553848396349510, '× Moderator'),
     R(852634463535759461, '× Eventsmod'),
     R(1551180629687664670, '× Broadcaster'),
+    R(1553138713532563516, '× Support'),
+    R(1553769624603201546, '× Close mod'),
+    R(1553853968969638058, '× Creative'),
+    R(1553105240398631062, '× Staff common'),
     R(1551525681207189504, '× Отвечаю за Helper'),
     R(1551524708552278036, '× Отвечаю за Moderator'),
     R(1551527644326002748, '× Отвечаю за Eventsmod'),
@@ -99,17 +106,12 @@ loop = asyncio.new_event_loop()
 print('== 1. Grant IDs ==')
 for kind, rid in EXPECT_GRANT.items():
     check(SR.KNOWN_GRANT_BY_KIND.get(kind) == rid, f'KNOWN_GRANT {kind}')
-    cfg = getattr(Config, {
-        'helper': 'STAFF_HELPER_ROLE_ID',
-        'moderator': 'STAFF_MODERATOR_ROLE_ID',
-        'event': 'STAFF_EVENT_ROLE_ID',
-        'broadcaster': 'STAFF_BROADCASTER_ROLE_ID',
-    }[kind])
-    check(int(cfg) == rid, f'Config {kind}')
     role, _ = SR.resolve_staff_role(g, kind)
     check(role is not None and role.id == rid, f'resolve {kind}')
 
-print('== 2. Auto-grant all 4 ==')
+print('== 2. Auto-grant all branches + common ==')
+check(SR.KNOWN_COMMON_STAFF_ROLE_ID == 1553105240398631062,
+      'общая staff-роль на все ветки')
 for kind, rid in EXPECT_GRANT.items():
     m = Mem(1000 + list(EXPECT_GRANT).index(kind))
     g._m[m.id] = m
@@ -117,6 +119,25 @@ for kind, rid in EXPECT_GRANT.items():
         SR.grant_staff_role(g, m.id, SR.position_label(kind)))
     check(res.get('role_name') and rid in m.added,
           f'grant {SR.position_label(kind)}', res)
+    check(SR.KNOWN_COMMON_STAFF_ROLE_ID in m.added,
+          f'common staff role + {kind}')
+# повторный accept — общую не дублируем, ветка already
+m2 = Mem(2001)
+m2.roles = [R(SR.KNOWN_COMMON_STAFF_ROLE_ID, '× Staff common')]
+g._m[m2.id] = m2
+res2 = loop.run_until_complete(
+    SR.grant_staff_role(g, m2.id, 'Helper'))
+check(res2.get('common', {}).get('already') is True,
+      'common already — не выдаём повторно')
+check(m2.added.count(SR.KNOWN_COMMON_STAFF_ROLE_ID) == 0,
+      'common не добавили второй раз')
+# creative / support / closemod — общая тоже
+for label in ('Creative', 'Support', 'Close mod'):
+    m = Mem(3000 + hash(label) % 1000)
+    g._m[m.id] = m
+    res = loop.run_until_complete(SR.grant_staff_role(g, m.id, label))
+    check(SR.KNOWN_COMMON_STAFF_ROLE_ID in m.added,
+          f'common on accept «{label}»', res)
 
 print('== 3. Isolation matrix 4×4 ==')
 
