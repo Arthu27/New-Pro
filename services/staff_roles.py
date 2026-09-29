@@ -86,7 +86,9 @@ KNOWN_GRANT_BY_KIND = {
     "moderator": KNOWN_MODERATOR_ROLE_ID,
     "event": 852634463535759461,          # × Eventsmod
     "broadcaster": 1551180629687664670,   # × Broadcaster
-    # support / closemod / creative — по имени роли на сервере (ID не задан)
+    "support": 1553138713532563516,       # × Support
+    "closemod": 1553769624603201546,      # × Close mod
+    "creative": 1553853968969638058,      # × Creative
 }
 
 ROLE_SPECS = [

@@ -767,7 +767,7 @@ class ProofFileModal(discord.ui.Modal, title='Доказательство'):
                 from discord import ui as dui, SeparatorSpacing
                 done = dui.LayoutView(timeout=1)
                 done.add_item(black_container(
-                    dui.TextDisplay(f'# Демка #{entry["id"]}'),
+                    dui.TextDisplay(f'# 🤍 Демка #{entry["id"]}'),
                     dui.Separator(spacing=SeparatorSpacing.small),
                     dui.TextDisplay('В канале доказательств · на проверке'),
                 ))
@@ -781,12 +781,11 @@ class ProofFileModal(discord.ui.Modal, title='Доказательство'):
 
 
 class ProofOfferSelect(discord.ui.Select):
-    """Select после наказания: файл / пропустить — стикеры набора."""
+    """Select после наказания: файл / пропустить — 🤍."""
 
     def __init__(self, *, guild_id: int, user_id: int, mod_id: int,
                  action: str, reason: str, case_id=None, warn_id=None):
         from services.menu_banners import select_label
-        from services.menu_emojis import emoji_for_appeal
         self.guild_id = int(guild_id or 0)
         self.user_id = int(user_id or 0)
         self.mod_id = int(mod_id or 0)
@@ -800,12 +799,10 @@ class ProofOfferSelect(discord.ui.Select):
             options=[
                 discord.SelectOption(
                     label=select_label('Прикрепить файл'),
-                    value='upload',
-                    emoji=emoji_for_appeal('claim')),
+                    value='upload', emoji='🤍'),
                 discord.SelectOption(
                     label=select_label('Пропустить'),
-                    value='skip',
-                    emoji=emoji_for_appeal('reject')),
+                    value='skip', emoji='🤍'),
             ],
         )
 
@@ -827,7 +824,7 @@ class ProofOfferSelect(discord.ui.Select):
                 from discord import ui as dui, SeparatorSpacing
                 done = dui.LayoutView(timeout=1)
                 done.add_item(black_container(
-                    dui.TextDisplay('# Доказательство'),
+                    dui.TextDisplay('# 🤍 Доказательство'),
                     dui.Separator(spacing=SeparatorSpacing.small),
                     dui.TextDisplay('Пропущено · наказание уже выдано'),
                 ))
@@ -854,7 +851,7 @@ def build_proof_offer_view(*, guild_id: int, user_id: int, mod_id: int,
         row = dui.ActionRow()
         row.add_item(sel)
         view.add_item(black_container(
-            dui.TextDisplay('# Доказательство'),
+            dui.TextDisplay('# 🤍 Доказательство'),
             dui.TextDisplay('-# HAKUMO · демка к наказанию'),
             dui.Separator(spacing=SeparatorSpacing.large),
             dui.TextDisplay(
@@ -889,11 +886,10 @@ class ProofRejectReasonModal(discord.ui.Modal, title='Отклонить дем�
 
 
 class ProofReviewSelect(discord.ui.Select):
-    """Select на карточке демки: Принять / Отклонить — стикеры набора."""
+    """Select на карточке демки: Принять / Отклонить — 🤍."""
 
     def __init__(self, entry_id: int = 0, guild_id: int = 0):
         from services.menu_banners import select_label
-        from services.menu_emojis import emoji_for_review
         self.entry_id = int(entry_id or 0)
         self.guild_id = int(guild_id or 0)
         super().__init__(
@@ -903,12 +899,10 @@ class ProofReviewSelect(discord.ui.Select):
             options=[
                 discord.SelectOption(
                     label=select_label('Принять'),
-                    value='accept',
-                    emoji=emoji_for_review('approve')),
+                    value='accept', emoji='🤍'),
                 discord.SelectOption(
                     label=select_label('Отклонить'),
-                    value='reject',
-                    emoji=emoji_for_review('reject')),
+                    value='reject', emoji='🤍'),
             ],
         )
 
@@ -1048,13 +1042,13 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
     if entry.get('review_status') in ('accepted', 'rejected'):
         return False, f'Уже решено: {entry.get("review_status")}.'
     status = 'accepted' if accept else 'rejected'
-    note = ''
+    undo = ''
     if accept:
         proof_update(guild_id, entry_id,
                      review_status=status,
                      reviewed_by=str(getattr(reviewer, 'id', '')),
                      review_reason='')
-        note = 'Демка принята — наказание остаётся.'
+        reply = 'Демка принята — наказание остаётся.'
     else:
         undo = await _undo_punishment(
             bot, guild, entry, reviewer, reason or 'демка отклонена')
@@ -1063,50 +1057,127 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
                      reviewed_by=str(getattr(reviewer, 'id', '')),
                      review_reason=(reason or '')[:400],
                      undo_note=undo)
-        note = f'Демка отклонена. {undo}'
-    # обновить сообщение
+        reply = f'Демка отклонена. {undo}'
+
+    # Закрыть карточку как анкету: статус сверху + тело + медиа, без select
     try:
         mid = int(entry.get('msg_id') or 0)
         cid = int(entry.get('channel_id') or 0)
         ch = guild.get_channel(cid) if cid else None
         if ch and mid:
             msg = await ch.fetch_message(mid)
+            media_urls = []
+            for a in (getattr(msg, 'attachments', None) or []):
+                u = getattr(a, 'url', None)
+                if u:
+                    media_urls.append(u)
+            if not media_urls and entry.get('url'):
+                media_urls.append(str(entry['url']))
+            body = _proof_card_body(entry)
+            status_label, note, accent = _proof_decision_note(
+                'accept' if accept else 'reject', reviewer,
+                extra=undo, reject_reason=reason or '')
             view = ProofReviewDoneView(
-                status=status, reviewer=reviewer, reason=reason or '')
+                entry_id=entry_id,
+                action=entry.get('action') or '',
+                body=body,
+                status=status_label,
+                note=note,
+                media_urls=media_urls,
+                accent=accent,
+            )
             try:
+                await msg.edit(view=view, attachments=[])
+            except TypeError:
                 await msg.edit(view=view)
-            except Exception:
-                await msg.edit(view=None)
+            except Exception as ex1:
+                log.warning('[PROOF] edit decided: %s', ex1)
+                try:
+                    await msg.edit(view=view)
+                except Exception as ex2:
+                    log.warning('[PROOF] edit decided retry: %s', ex2)
     except Exception as ex:
-        log.debug('[PROOF] edit after review: %s', ex)
-    return True, note
+        log.warning('[PROOF] close card: %s', ex)
+    return True, reply
+
+
+def _proof_card_body(entry: dict) -> str:
+    """Текст карточки демки (как до решения)."""
+    uid = entry.get('user_id')
+    mention = f'<@{uid}>' if uid else '—'
+    mod = entry.get('mod_name') or entry.get('mod_id') or '—'
+    action = entry.get('action') or '—'
+    reason = entry.get('reason') or '—'
+    pid = entry.get('id') or '?'
+    lines = [
+        f'**Нарушитель** · {mention} (`{uid}`)',
+        f'**Модератор** · `{mod}`',
+        f'**Наказание** · {action}',
+        f'**Причина** · {reason}',
+        f'**Дело** · #{pid}',
+    ]
+    if entry.get('case_id'):
+        lines[-1] += f' · case `{entry["case_id"]}`'
+    return '\n'.join(lines)
+
+
+def _proof_decision_note(action: str, reviewer, *, extra: str = '',
+                         reject_reason: str = '') -> tuple:
+    """(status_label, note, accent) — как у закрытых анкет."""
+    from datetime import datetime, timezone
+    when = datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')
+    who = (
+        getattr(reviewer, 'display_name', None)
+        or getattr(reviewer, 'global_name', None)
+        or getattr(reviewer, 'name', None)
+        or str(reviewer)
+    )
+    ok = action == 'accept'
+    status = 'ПРИНЯТО' if ok else 'ОТКЛОНЕНО'
+    verb = 'Принял' if ok else 'Отклонил'
+    accent = 0x2ECC71 if ok else 0xE74C3C
+    note = f'{verb}: {who} · {when}'
+    if reject_reason and not ok:
+        note += f'\nПричина: {reject_reason[:200]}'
+    if extra and not ok:
+        note += f'\n{extra[:200]}'
+    return status, note, accent
 
 
 class ProofReviewDoneView(discord.ui.LayoutView):
-    def __init__(self, *, status: str, reviewer, reason: str = ''):
+    """После решения: как закрытая анкета — статус + тело + медиа, без select."""
+
+    def __init__(self, *, entry_id, action: str, body: str, status: str,
+                 note: str = '', media_urls=None, accent: int = 0xE74C3C):
         super().__init__(timeout=None)
         from services.v2_layouts import V2_AVAILABLE, black_container
-        from services.menu_emojis import emoji_for_review
-        who = getattr(reviewer, 'mention', None) or str(reviewer)
-        ok = status == 'accepted'
-        try:
-            em = emoji_for_review('approve' if ok else 'reject')
-            em_s = str(em) if em else ''
-        except Exception:
-            em_s = ''
-        title = 'Демка принята' if ok else 'Демка отклонена'
-        head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
-        body = f'**Решил** · {who}'
-        if reason and not ok:
-            body += f'\n**Причина** · {reason[:400]}'
+        from discord import SeparatorSpacing
+        from discord.components import MediaGalleryItem
+        head = f'# 🤍 Демка #{entry_id}'
+        if action:
+            head = f'{head} · {action}'
+        status_line = f'## {status}'
+        if note:
+            status_line = f'{status_line}\n-# {note}'
         if V2_AVAILABLE:
-            from discord import ui as dui, SeparatorSpacing
-            self.add_item(black_container(
+            from discord import ui as dui
+            children = [
                 dui.TextDisplay(head[:500]),
                 dui.TextDisplay('-# HAKUMO · доказательство'),
-                dui.Separator(spacing=SeparatorSpacing.small),
-                dui.TextDisplay(body[:1500]),
-            ))
+                dui.Separator(spacing=SeparatorSpacing.large),
+                dui.TextDisplay(status_line[:800]),
+                dui.Separator(),
+                dui.TextDisplay(str(body)[:3500]),
+            ]
+            urls = [u for u in (media_urls or []) if u][:10]
+            if urls:
+                try:
+                    children.append(dui.Separator())
+                    children.append(dui.MediaGallery(
+                        *[MediaGalleryItem(u) for u in urls]))
+                except Exception:
+                    pass
+            self.add_item(black_container(*children, accent=accent))
 
 
 async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
@@ -1186,20 +1257,7 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
     try:
         if V2_AVAILABLE:
             from discord import ui as dui, SeparatorSpacing
-            from services.menu_emojis import emoji_for_action
-            try:
-                em = emoji_for_action(action_key if action_key in (
-                    'warn', 'mute', 'vmute', 'ban', 'kick') else 'mute')
-                # mute_chat / timeout → mute sticker
-                if action_key in ('timeout', 'mute_chat'):
-                    em = emoji_for_action('mute')
-                elif action_key == 'vmute':
-                    em = emoji_for_action('vmute')
-                em_s = str(em) if em else ''
-            except Exception:
-                em_s = ''
-            head = (f'# {em_s} Демка #{entry["id"]}'.strip()
-                    if em_s else f'# Демка #{entry["id"]}')
+            head = f'# 🤍 Демка #{entry["id"]} · {action_ru}'
             children = [
                 dui.TextDisplay(head[:500]),
                 dui.TextDisplay('-# HAKUMO · доказательство'),

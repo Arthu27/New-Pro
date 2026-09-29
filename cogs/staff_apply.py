@@ -908,14 +908,13 @@ class RoleSelect(discord.ui.Select):
     def __init__(self):
         from services.menu_banners import select_label
         from services.staff_roles import POSITIONS, position_select_value
-        from services.menu_emojis import emoji_for_role
         options = []
         for kind in POSITIONS:
             label = position_select_value(kind)
             options.append(discord.SelectOption(
                 label=select_label(label),
                 value=label,
-                emoji=emoji_for_role(kind),
+                emoji='🤍',
             ))
         super().__init__(
             placeholder="Выберите должность",
@@ -987,19 +986,18 @@ class StaffReviewSelect(discord.ui.Select):
 
     def __init__(self):
         from services.menu_banners import select_label
-        from services.menu_emojis import emoji_for_review
         super().__init__(
             placeholder="Выберите решение",
             options=[
                 discord.SelectOption(
                     label=select_label("Принять"), value="approve",
-                    emoji=emoji_for_review('approve')),
+                    emoji='🤍'),
                 discord.SelectOption(
                     label=select_label("Отклонить"), value="reject",
-                    emoji=emoji_for_review('reject')),
+                    emoji='🤍'),
                 discord.SelectOption(
                     label=select_label("Чёрный список"), value="blacklist",
-                    emoji=emoji_for_review('blacklist')),
+                    emoji='🤍'),
             ],
             custom_id="staff_review_select_v2",
             min_values=1, max_values=1,
@@ -1026,15 +1024,7 @@ class StaffAppCardView(discord.ui.LayoutView):
         super().__init__(timeout=None)
         from services.v2_layouts import V2_AVAILABLE, black_container
         from discord import SeparatorSpacing
-        from services.menu_emojis import emoji_for_role
-        from services.staff_roles import normalize_position
-        kind = normalize_position(title) or 'moderator'
-        try:
-            em = emoji_for_role(kind)
-            em_s = str(em) if em else ''
-        except Exception:
-            em_s = ''
-        head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
+        head = f'# 🤍 {title}'.strip()
         foot = footer or (
             'HAKUMO · решение — select ниже · только куратор этой ветки'
         )
@@ -1067,15 +1057,7 @@ class StaffAppDecidedView(discord.ui.LayoutView):
         super().__init__(timeout=None)
         from services.v2_layouts import V2_AVAILABLE, black_container
         from discord import SeparatorSpacing
-        from services.menu_emojis import emoji_for_role
-        from services.staff_roles import normalize_position
-        kind = normalize_position(title) or 'moderator'
-        try:
-            em = emoji_for_role(kind)
-            em_s = str(em) if em else ''
-        except Exception:
-            em_s = ''
-        head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
+        head = f'# 🤍 {title}'.strip()
         status_line = f'## {status}'
         if note:
             status_line = f'{status_line}\n-# {note}'
