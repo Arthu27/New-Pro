@@ -17,6 +17,10 @@ from services.mafia import (
     PHASE_LOBBY,
     PHASE_PLAYING,
     PHASE_READY,
+    CYCLE_DAY,
+    CYCLE_NIGHT,
+    CYCLE_NONE,
+    CYCLE_VOTE,
     ROLES,
     STORE,
     Game,
@@ -89,12 +93,28 @@ def host_summary_embed(game: Game) -> discord.Embed:
         color = RED
     if game.phase == PHASE_ENDED:
         color = GREEN if game.winner == 'town' else RED
-    e = discord.Embed(
-        title=f'Сводка · #{game.game_id}',
-        description=(
+    if game.phase == PHASE_PLAYING and game.cycle:
+        desc = f'**{game.cycle_label()}** · авто-цикл'
+        if game.cycle == CYCLE_NIGHT:
+            left = len(game.night_pending())
+            desc += f'\nНочные ходы: **{len(game.night_actions)}/{len(game.night_actors_needed())}**'
+            if left:
+                desc += f' · ждут {left}'
+        elif game.cycle == CYCLE_VOTE:
+            desc += (
+                f'\nГолоса: **{len(game.votes)}/{len(game.alive_players())}**'
+                ' · без детализации «кто за кого»'
+            )
+        elif game.cycle == CYCLE_DAY:
+            desc += '\nОбсуждение · дальше — голосование'
+    else:
+        desc = (
             f'**{_phase_label(game.phase)}** · '
             f'{conf}/{total} подтвердили'
-        ),
+        )
+    e = discord.Embed(
+        title=f'🤍 Сводка · #{game.game_id}',
+        description=desc,
         color=color,
     )
     lines = []
@@ -109,15 +129,19 @@ def host_summary_embed(game: Game) -> discord.Embed:
             role = ROLES.get(p.role).label if p.role and p.role in ROLES else '—'
         mark = '✓' if p.confirmed else '…'
         alive = '' if p.alive else ' · out'
-        dm = '' if p.dm_ok else ' · DM'
+        dm = '' if p.dm_ok else ' · DM∅'
         lines.append(f'{mark} {_mention(p.user_id)} — {role}{alive}{dm}')
     e.add_field(name='Стол', value='\n'.join(lines)[:1020] or '—', inline=False)
+    if game.last_night_report:
+        e.add_field(name='Прошлая ночь', value=game.last_night_report[:500], inline=False)
+    if game.last_vote_report:
+        e.add_field(name='Прошлое голосование', value=game.last_vote_report[:500], inline=False)
     if game.winner:
         label = 'Город победил' if game.winner == 'town' else 'Мафия победила'
         e.add_field(name='Финал', value=label, inline=False)
     if game.log:
-        e.add_field(name='Лог', value='\n'.join(game.log[-6:])[:1020], inline=False)
-    e.set_footer(text='Только ведущему')
+        e.add_field(name='Лог', value='\n'.join(game.log[-5:])[:1020], inline=False)
+    e.set_footer(text='Ведущему · роли ходят сами в ЛС')
     return e
 
 
@@ -137,7 +161,7 @@ def role_dm_embed(game: Game, player) -> discord.Embed:
         ),
         color=RED if role.team == 'mafia' else BLUE,
     )
-    e.set_footer(text='Секретно · подтвердите ниже')
+    e.set_footer(text='Секретно · подтвердите · ночью ход придёт сюда же')
     return e
 
 
@@ -157,11 +181,25 @@ def public_status_embed(game: Game) -> discord.Embed:
         alive = len(game.alive_players())
         dead = [p for p in game.players.values() if not p.alive]
         dead_txt = ', '.join(_mention(p.user_id) for p in dead) if dead else '—'
+        cycle = game.cycle_label() or 'игра'
+        if game.cycle == CYCLE_NIGHT:
+            tip = 'Город спит · в войсе мут · роли ходят в ЛС'
+        elif game.cycle == CYCLE_DAY:
+            tip = 'Обсуждение в войсе'
+        elif game.cycle == CYCLE_VOTE:
+            tip = 'Голосование в ЛС у живых'
+        else:
+            tip = 'Авто-цикл'
         e.description = (
-            f'Игра идёт · в живых: **{alive}**\n'
+            f'**{cycle}** · в живых: **{alive}**\n'
+            f'{tip}\n'
             f'Выбыли: {dead_txt}'
         )
         e.color = RED
+        if game.last_night_report and game.cycle in (CYCLE_DAY, CYCLE_VOTE):
+            e.add_field(name='Ночь', value=game.last_night_report[:500], inline=False)
+        if game.last_vote_report and game.cycle == CYCLE_NIGHT and game.day_number > 1:
+            e.add_field(name='Голосование', value=game.last_vote_report[:500], inline=False)
     elif game.phase == PHASE_ENDED:
         if game.winner == 'town':
             e.description = '🏁 **Выиграл мирный город**'
@@ -472,31 +510,27 @@ LobbyView = PublicLobbyView
 
 
 class HostPanelView(discord.ui.View):
-    """Панель ведущего. Persistent + стикеры Hakumo."""
+    """Панель ведущего v2: мало кнопок, цикл авто.
+
+    До старта: Напомнить · Перераздать · Начать · Отменить
+    В игре: Дальше (фаза) · Отменить
+    Убийство/шериф/дон/голос — у ролей в ЛС, не у ведущего.
+    """
 
     def __init__(self):
         super().__init__(timeout=None)
-        try:
-            from services.mafia.ui_v2 import sticker
-            mapping = {
-                'pending': 'pending', 'remind': 'remind', 'redeal': 'deal',
-                'start': 'play', 'kill': 'kill', 'vote': 'vote',
-                'sheriff': 'sheriff', 'don': 'don', 'exclude': 'exclude',
-                'cancel_game': 'cancel',
-            }
-            for attr, kind in mapping.items():
-                btn = getattr(self, attr, None)
-                if btn is not None:
-                    btn.emoji = sticker(kind)
-        except Exception:
-            pass
+        for btn in self.children:
+            if getattr(btn, 'emoji', None) is None and hasattr(btn, 'emoji'):
+                try:
+                    btn.emoji = '🤍'
+                except Exception:
+                    pass
 
     async def _host(self, interaction: discord.Interaction) -> Game | None:
         game = None
         if interaction.guild_id:
             game = STORE.get(interaction.guild_id)
         if game is None:
-            # сводка в ЛС — guild_id нет, ищем по ведущему
             for g in STORE._by_guild.values():
                 if g.host_id == interaction.user.id and g.phase != PHASE_ENDED:
                     game = g
@@ -511,42 +545,27 @@ class HostPanelView(discord.ui.View):
             return None
         return game
 
-    async def _need_playing(self, interaction: discord.Interaction) -> Game | None:
-        game = await self._host(interaction)
-        if not game:
-            return None
-        if game.phase != PHASE_PLAYING:
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    'Доступно только во время игры.', ephemeral=True)
-            return None
-        return game
-
-    @discord.ui.button(label='Кто не подтвердил', style=discord.ButtonStyle.secondary, emoji='⏳',
-                       custom_id='mafia:host:pending', row=0)
-    async def pending(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._host(interaction)
-        if not game:
-            return
-        pending = game.unconfirmed()
-        if not pending:
-            txt = 'Все подтвердили ✅'
-        else:
-            txt = '\n'.join(f'⏳ {_mention(p.user_id)}' for p in pending)
-        await interaction.response.send_message(txt, ephemeral=True)
-
-    @discord.ui.button(label='Напомнить', style=discord.ButtonStyle.secondary, emoji='🔔',
+    @discord.ui.button(label='Напомнить', style=discord.ButtonStyle.secondary, emoji='🤍',
                        custom_id='mafia:host:remind', row=0)
     async def remind(self, interaction: discord.Interaction, button: discord.ui.Button):
         game = await self._host(interaction)
         if not game:
             return
+        if game.phase == PHASE_PLAYING:
+            await interaction.response.send_message(
+                'Игра уже идёт — роли ходят сами в ЛС.', ephemeral=True)
+            return
         cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
         await interaction.response.defer(ephemeral=True)
         n = await cog.remind_unconfirmed(game)
-        await interaction.followup.send(f'Напомнил {n} игрокам.', ephemeral=True)
+        pending = game.unconfirmed()
+        extra = ''
+        if pending:
+            extra = '\nЖдут: ' + ', '.join(_mention(p.user_id) for p in pending[:12])
+        await interaction.followup.send(
+            f'Напомнил {n}.{extra}', ephemeral=True)
 
-    @discord.ui.button(label='Перераздать', style=discord.ButtonStyle.primary, emoji='🎭',
+    @discord.ui.button(label='Перераздать', style=discord.ButtonStyle.secondary, emoji='🤍',
                        custom_id='mafia:host:redeal', row=0)
     async def redeal(self, interaction: discord.Interaction, button: discord.ui.Button):
         game = await self._host(interaction)
@@ -554,114 +573,190 @@ class HostPanelView(discord.ui.View):
             return
         if game.phase == PHASE_PLAYING:
             await interaction.response.send_message(
-                'Во время игры нельзя. Сначала завершите.', ephemeral=True)
+                'Во время игры нельзя.', ephemeral=True)
             return
         cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
         await interaction.response.defer(ephemeral=True)
         try:
             await cog.deal_roles(interaction, game)
             await interaction.followup.send(
-                'Роли переразданы. Старая раздача недействительна.', ephemeral=True)
+                'Роли переразданы.', ephemeral=True)
         except Exception as e:
             await interaction.followup.send(f'Ошибка: {e}', ephemeral=True)
 
-    @discord.ui.button(label='Начать игру', style=discord.ButtonStyle.success, emoji='▶️',
-                       custom_id='mafia:host:start', row=1)
-    async def start(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label='Начать / Дальше', style=discord.ButtonStyle.primary, emoji='🤍',
+                       custom_id='mafia:host:advance', row=1)
+    async def advance(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """До игры — старт (ночь 1). В игре — следующая фаза."""
         game = await self._host(interaction)
         if not game:
-            return
-        try:
-            game.start()
-            STORE.persist(game)
-        except Exception as e:
-            await interaction.response.send_message(str(e), ephemeral=True)
             return
         cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
-        await cog.refresh_host_summary(game)
-        await cog.refresh_public(game)
-        await interaction.response.send_message(
-            'Игра началась. Состав зафиксирован.', ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
+        try:
+            if game.phase != PHASE_PLAYING:
+                game.start()
+                STORE.persist(game)
+                await cog.on_night_started(game)
+                await interaction.followup.send(
+                    f'Игра началась · **Ночь {game.day_number}** · город спит, войс на муте.',
+                    ephemeral=True)
+                return
+            msg = await cog.advance_cycle(game, force=True)
+            await interaction.followup.send(msg or 'Фаза сдвинута.', ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(str(e), ephemeral=True)
 
-    @discord.ui.button(label='Убийство мафии', style=discord.ButtonStyle.danger, emoji='🔫',
-                       custom_id='mafia:host:kill', row=1)
-    async def kill(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._need_playing(interaction)
-        if not game:
-            return
-        await interaction.response.send_message(
-            'Кого убила мафия?',
-            view=PlayerSelectView(game.guild_id, mode='kill'),
-            ephemeral=True,
-        )
-
-    @discord.ui.button(label='Изгнать голосом', style=discord.ButtonStyle.danger, emoji='🗳️',
-                       custom_id='mafia:host:vote', row=1)
-    async def vote(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._need_playing(interaction)
-        if not game:
-            return
-        await interaction.response.send_message(
-            'Кого изгнали голосованием?',
-            view=PlayerSelectView(game.guild_id, mode='vote'),
-            ephemeral=True,
-        )
-
-    @discord.ui.button(label='Проверка шерифа', style=discord.ButtonStyle.primary, emoji='🕵️',
-                       custom_id='mafia:host:sheriff', row=2)
-    async def sheriff(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._need_playing(interaction)
-        if not game:
-            return
-        await interaction.response.send_message(
-            'Кого проверил шериф?',
-            view=PlayerSelectView(game.guild_id, mode='sheriff'),
-            ephemeral=True,
-        )
-
-    @discord.ui.button(label='Проверка дона', style=discord.ButtonStyle.primary, emoji='👑',
-                       custom_id='mafia:host:don', row=2)
-    async def don(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._need_playing(interaction)
-        if not game:
-            return
-        await interaction.response.send_message(
-            'Кого проверил дон?',
-            view=PlayerSelectView(game.guild_id, mode='don'),
-            ephemeral=True,
-        )
-
-    @discord.ui.button(label='Исключить из состава', style=discord.ButtonStyle.secondary, emoji='🚫',
-                       custom_id='mafia:host:exclude', row=2)
-    async def exclude(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._host(interaction)
-        if not game:
-            return
-        if game.phase == PHASE_PLAYING:
-            await interaction.response.send_message(
-                'Во время игры используйте «Изгнать голосом» / «Убийство».', ephemeral=True)
-            return
-        await interaction.response.send_message(
-            'Кого исключить из состава?',
-            view=PlayerSelectView(game.guild_id, mode='exclude', alive_only=False),
-            ephemeral=True,
-        )
-
-    @discord.ui.button(label='Отменить игру', style=discord.ButtonStyle.danger, emoji='🗑️',
-                       custom_id='mafia:host:cancel', row=3)
+    @discord.ui.button(label='Отменить игру', style=discord.ButtonStyle.danger, emoji='🤍',
+                       custom_id='mafia:host:cancel', row=1)
     async def cancel_game(self, interaction: discord.Interaction, button: discord.ui.Button):
         game = await self._host(interaction)
         if not game:
             return
         gid = game.guild_id
+        cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
+        await interaction.response.defer(ephemeral=True)
+        try:
+            await cog.clear_voice_mutes(game)
+        except Exception:
+            pass
         game.cancel()
         STORE.clear(gid, archive=True)
+        try:
+            await cog.refresh_public(game)
+            await cog.refresh_lobby_message(game, closed=True)
+        except Exception:
+            pass
+        await interaction.followup.send(f'Игра #{game.game_id} отменена · муты сняты.', ephemeral=True)
+
+
+def _alive_options(game: Game, *, exclude_id: int = 0) -> list:
+    opts = []
+    for p in game.alive_players()[:24]:
+        if exclude_id and int(p.user_id) == int(exclude_id):
+            continue
+        opts.append(discord.SelectOption(
+            label=p.display_name[:100],
+            value=str(p.user_id),
+            emoji='🤍',
+        ))
+    return opts
+
+
+class NightActionView(discord.ui.View):
+    """Ночной ход роли в ЛС — select, без кнопок ведущего."""
+
+    def __init__(self, guild_id: int, actor_id: int, kind: str):
+        super().__init__(timeout=600)
+        self.guild_id = int(guild_id)
+        self.actor_id = int(actor_id)
+        self.kind = kind  # kill|heal|block|sheriff|don
+        game = STORE.get(self.guild_id)
+        options = _alive_options(game, exclude_id=actor_id) if game else []
+        options.append(discord.SelectOption(
+            label='› Пас', value='0', emoji='🤍',
+            description='Пропустить ход'))
+        ph = {
+            'kill': 'Кого убиваем?',
+            'heal': 'Кого лечим?',
+            'block': 'Кого блокируем?',
+            'sheriff': 'Кого проверить?',
+            'don': 'Кого проверить (шериф?)',
+        }.get(kind, 'Выберите…')
+        sel = discord.ui.Select(
+            placeholder=ph, min_values=1, max_values=1,
+            options=options[:25],
+        )
+        sel.callback = self._on_pick  # type: ignore
+        self.add_item(sel)
+
+    async def _on_pick(self, interaction: discord.Interaction):
+        if int(interaction.user.id) != self.actor_id:
+            await interaction.response.send_message('Это не ваш ход.', ephemeral=True)
+            return
+        game = STORE.get(self.guild_id)
+        if not game or game.cycle != CYCLE_NIGHT:
+            await interaction.response.send_message('Ночь уже закончилась.', ephemeral=True)
+            return
+        raw = (self.children[0].values or ['0'])[0]  # type: ignore
+        tid = int(raw)
         cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
-        await cog.refresh_public(game)
-        await interaction.response.send_message(f'Игра #{game.game_id} отменена.', ephemeral=True)
+        try:
+            # пас на проверке дона ≠ пас на убийстве
+            if tid == 0 and self.kind == 'don':
+                kind, tid = 'don', 0
+            elif tid == 0:
+                kind = 'skip'
+            else:
+                kind = self.kind
+            rec = game.submit_night_action(
+                self.actor_id, kind, None if tid == 0 else tid)
+            STORE.persist(game)
+            msg = 'Ход принят.'
+            if rec.get('result'):
+                r = rec['result']
+                msg = f'Результат: **{r.get("result")}**\n{r.get("detail", "")}'
+            elif kind == 'skip':
+                msg = 'Пас · ждёте итог ночи.'
+            await interaction.response.edit_message(content=msg, view=None, embed=None)
+            await cog.refresh_host_summary(game)
+            if game.night_ready():
+                await cog.advance_cycle(game, force=False)
+        except Exception as e:
+            if interaction.response.is_done():
+                await interaction.followup.send(str(e), ephemeral=True)
+            else:
+                await interaction.response.send_message(str(e), ephemeral=True)
 
 
+class VoteSelectView(discord.ui.View):
+    """Дневное голосование в ЛС — без показа «кто за кого» ведущему."""
+
+    def __init__(self, guild_id: int, voter_id: int):
+        super().__init__(timeout=600)
+        self.guild_id = int(guild_id)
+        self.voter_id = int(voter_id)
+        game = STORE.get(self.guild_id)
+        options = _alive_options(game, exclude_id=voter_id) if game else []
+        options.append(discord.SelectOption(
+            label='› Воздержаться', value='0', emoji='🤍'))
+        sel = discord.ui.Select(
+            placeholder='Кого изгоняем?',
+            min_values=1, max_values=1, options=options[:25],
+        )
+        sel.callback = self._on_pick  # type: ignore
+        self.add_item(sel)
+
+    async def _on_pick(self, interaction: discord.Interaction):
+        if int(interaction.user.id) != self.voter_id:
+            await interaction.response.send_message('Чужой голос.', ephemeral=True)
+            return
+        game = STORE.get(self.guild_id)
+        if not game or game.cycle != CYCLE_VOTE:
+            await interaction.response.send_message('Голосование закрыто.', ephemeral=True)
+            return
+        raw = (self.children[0].values or ['0'])[0]  # type: ignore
+        cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
+        try:
+            game.submit_vote(self.voter_id, int(raw))
+            STORE.persist(game)
+            await interaction.response.edit_message(
+                content='Голос принят · итог без раскрытия «кто за кого».',
+                view=None, embed=None)
+            await cog.refresh_host_summary(game)
+            if game.vote_ready():
+                await cog.advance_cycle(game, force=False)
+        except Exception as e:
+            if interaction.response.is_done():
+                await interaction.followup.send(str(e), ephemeral=True)
+            else:
+                await interaction.response.send_message(str(e), ephemeral=True)
+
+
+# совместимость со старыми вызовами
 class PlayerSelectView(discord.ui.View):
+    """Устарело: ручные ходы ведущего убраны. Оставлен exclude до старта."""
+
     def __init__(self, guild_id: int, mode: str, alive_only: bool = True):
         super().__init__(timeout=120)
         self.guild_id = guild_id
@@ -671,65 +766,34 @@ class PlayerSelectView(discord.ui.View):
         if game:
             pool = game.alive_players() if alive_only else list(game.players.values())
             for p in pool[:25]:
-                role = ROLES.get(p.role).name if p.role and p.role in ROLES else '?'
                 options.append(discord.SelectOption(
-                    label=p.display_name[:100],
-                    value=str(p.user_id),
-                    description=f'роль: {role}'[:100],
-                ))
-        select = discord.ui.Select(
-            placeholder='Выберите игрока…',
-            options=options or [discord.SelectOption(label='Нет игроков', value='0')],
-            min_values=1,
-            max_values=1,
-        )
-        select.callback = self._on_select  # type: ignore
-        self.add_item(select)
+                    label=p.display_name[:100], value=str(p.user_id), emoji='🤍'))
+        sel = discord.ui.Select(
+            placeholder='Выберите…',
+            options=options or [discord.SelectOption(label='Нет', value='0')],
+            min_values=1, max_values=1)
+        sel.callback = self._on_select  # type: ignore
+        self.add_item(sel)
 
     async def _on_select(self, interaction: discord.Interaction):
         game = STORE.get(self.guild_id)
         if not game or interaction.user.id != game.host_id:
             await interaction.response.send_message('Нет доступа.', ephemeral=True)
             return
-        raw = interaction.data.get('values', ['0'])[0]  # type: ignore
-        uid = int(raw)
-        if uid == 0:
-            await interaction.response.send_message('Нет игроков.', ephemeral=True)
+        uid = int((self.children[0].values or ['0'])[0])  # type: ignore
+        if self.mode != 'exclude' or uid == 0:
+            await interaction.response.send_message(
+                'Ручные ходы убраны — роли ходят в ЛС.', ephemeral=True)
             return
-        cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
         try:
-            if self.mode == 'kill':
-                p = game.kill(uid)
-                msg = f'💀 Убит: **{p.display_name}**'
-            elif self.mode == 'vote':
-                p = game.vote_out(uid)
-                msg = f'🗳️ Изгнан: **{p.display_name}**'
-            elif self.mode == 'sheriff':
-                rec = game.sheriff_check(uid)
-                msg = f'🕵️ {rec["target_name"]}: **{rec["result"]}**\n{rec["detail"]}'
-            elif self.mode == 'don':
-                rec = game.don_check(uid)
-                msg = f'👑 {rec["target_name"]}: **{rec["result"]}**\n{rec["detail"]}'
-            elif self.mode == 'exclude':
-                p = game.exclude_player(uid)
-                msg = f'Исключён: **{p.display_name}**. Нужна новая раздача.'
-            else:
-                msg = 'Неизвестное действие'
-            if game.winner == 'town':
-                msg += '\n\n🏁 **Выиграл мирный город**'
-            elif game.winner == 'mafia':
-                msg += '\n\n🏁 **Выиграла мафия**'
+            p = game.exclude_player(uid)
             STORE.persist(game)
+            cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
             await cog.refresh_host_summary(game)
-            await cog.refresh_public(game)
-            if game.phase == PHASE_ENDED:
-                STORE.clear(game.guild_id, archive=True)
-            await interaction.response.edit_message(content=msg, view=None)
+            await interaction.response.edit_message(
+                content=f'Исключён: **{p.display_name}**', view=None)
         except Exception as e:
-            if interaction.response.is_done():
-                await interaction.followup.send(str(e), ephemeral=True)
-            else:
-                await interaction.response.send_message(str(e), ephemeral=True)
+            await interaction.response.send_message(str(e), ephemeral=True)
 
 
 # ── Cog ──────────────────────────────────────────────────────
@@ -979,6 +1043,247 @@ class Mafia(commands.Cog, name='mafia'):
             await msg.edit(embed=public_status_embed(game), view=None)
         except Exception as e:
             log.debug('refresh_public: %s', e)
+
+    async def announce(self, game: Game, text: str):
+        """Публичная фаза в канал лобби — V2 если можно, иначе embed."""
+        try:
+            ch = self.bot.get_channel(int(game.text_channel_id))
+            if ch is None:
+                ch = await self.bot.fetch_channel(int(game.text_channel_id))
+            from services.v2_layouts import V2_AVAILABLE, black_container
+            if V2_AVAILABLE:
+                from discord import ui as dui, SeparatorSpacing
+                view = dui.LayoutView(timeout=1)
+                view.add_item(black_container(
+                    dui.TextDisplay('# 🤍 Мафия'),
+                    dui.TextDisplay(f'-# HAKUMO · {game.cycle_label() or "партия"}'),
+                    dui.Separator(spacing=SeparatorSpacing.large),
+                    dui.TextDisplay(str(text)[:3500]),
+                    accent=0x000000,
+                ))
+                await ch.send(view=view)
+                return
+            e = discord.Embed(
+                title=f'🤍 Мафия · {game.cycle_label() or game.game_id}',
+                description=str(text)[:4000], color=BLACK)
+            await ch.send(embed=e)
+        except Exception as ex:
+            log.debug('mafia announce: %s', ex)
+
+    async def set_voice_night_mute(self, game: Game, *, night: bool) -> int:
+        """Ночь: сервер-мут всем живым в войсе. День: снять с живых, мёртвые — мут."""
+        guild = self.bot.get_guild(int(game.guild_id))
+        if guild is None:
+            return 0
+        n = 0
+        voice_id = int(game.voice_channel_id)
+        for p in game.players.values():
+            member = guild.get_member(int(p.user_id))
+            if member is None:
+                continue
+            vs = getattr(member, 'voice', None)
+            if vs is None or vs.channel is None or int(vs.channel.id) != voice_id:
+                continue
+            want_mute = bool(night) or (not p.alive)
+            try:
+                if bool(getattr(vs, 'mute', False)) == want_mute:
+                    continue
+                await member.edit(
+                    mute=want_mute,
+                    reason=('мафия: ночь — город спит' if night
+                            else 'мафия: день'),
+                )
+                n += 1
+            except Exception as ex:
+                log.debug('mafia mute %s: %s', p.user_id, ex)
+        return n
+
+    async def clear_voice_mutes(self, game: Game) -> int:
+        """Снять сервер-мут со всех игроков партии (отмена/конец)."""
+        guild = self.bot.get_guild(int(game.guild_id))
+        if guild is None:
+            return 0
+        n = 0
+        for p in game.players.values():
+            member = guild.get_member(int(p.user_id))
+            if member is None:
+                continue
+            vs = getattr(member, 'voice', None)
+            if vs is None or not getattr(vs, 'mute', False):
+                continue
+            try:
+                await member.edit(mute=False, reason='мафия: муты сняты')
+                n += 1
+            except Exception as ex:
+                log.debug('mafia unmute %s: %s', p.user_id, ex)
+        return n
+
+    async def send_night_action_dms(self, game: Game) -> int:
+        """Разослать ночные select ролям."""
+        sent = 0
+        for p in game.night_actors_needed():
+            kind = {
+                'mafia': 'kill',
+                'don': 'kill',
+                'sheriff': 'sheriff',
+                'doctor': 'heal',
+                'courtesan': 'block',
+            }.get(p.role or '')
+            if not kind:
+                continue
+            try:
+                user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
+                role = ROLES.get(p.role)
+                title = role.name if role else 'Ход'
+                desc = {
+                    'kill': 'Ночь · выберите жертву (или пас).',
+                    'sheriff': 'Ночь · кого проверить: мафия или мирный?',
+                    'heal': 'Ночь · кого лечить?',
+                    'block': 'Ночь · чьё действие блокируем?',
+                }.get(kind, 'Ночной ход')
+                e = discord.Embed(
+                    title=f'🤍 {title}',
+                    description=f'{desc}\n-# #{game.game_id} · ночь {game.day_number}',
+                    color=RED if role and role.team == 'mafia' else BLUE,
+                )
+                view = NightActionView(game.guild_id, p.user_id, kind)
+                await user.send(embed=e, view=view)
+                # дон: доп. проверка шерифа
+                if p.role == 'don':
+                    e2 = discord.Embed(
+                        title='🤍 Дон · проверка',
+                        description=(
+                            'По желанию проверьте игрока: шериф это или нет.\n'
+                            '-# Можно пас'
+                        ),
+                        color=RED,
+                    )
+                    await user.send(
+                        embed=e2,
+                        view=NightActionView(game.guild_id, p.user_id, 'don'),
+                    )
+                sent += 1
+            except Exception as ex:
+                game.mark_dm_failed(p.user_id)
+                log.debug('night dm %s: %s', p.user_id, ex)
+        STORE.persist(game)
+        return sent
+
+    async def send_vote_dms(self, game: Game) -> int:
+        sent = 0
+        for p in game.alive_players():
+            try:
+                user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
+                e = discord.Embed(
+                    title='🤍 Голосование',
+                    description=(
+                        f'День {game.day_number} · кого изгоняем?\n'
+                        '-# Голос тайный · ведущий не видит «кто за кого»'
+                    ),
+                    color=GOLD,
+                )
+                await user.send(
+                    embed=e, view=VoteSelectView(game.guild_id, p.user_id))
+                sent += 1
+            except Exception as ex:
+                game.mark_dm_failed(p.user_id)
+                log.debug('vote dm %s: %s', p.user_id, ex)
+        STORE.persist(game)
+        return sent
+
+    async def on_night_started(self, game: Game):
+        """После begin_night: мут + анонс + ЛС ролям."""
+        await self.set_voice_night_mute(game, night=True)
+        await self.announce(
+            game,
+            f'## 🌙 Ночь {game.day_number}\n'
+            '**Город засыпает.**\n'
+            'В войсе — мут. Мафия и спецроли ходят в личке с ботом.',
+        )
+        await self.send_night_action_dms(game)
+        await self.refresh_host_summary(game)
+        await self.refresh_public(game)
+
+    async def on_day_started(self, game: Game, night_report: str = ''):
+        await self.set_voice_night_mute(game, night=False)
+        body = f'## ☀️ День {game.day_number}\n**Город просыпается.**\n'
+        if night_report:
+            body += f'\n{night_report}\n'
+        body += '\nОбсуждайте в войсе. Ведущий жмёт **Начать / Дальше** → голосование.'
+        await self.announce(game, body)
+        await self.refresh_host_summary(game)
+        await self.refresh_public(game)
+
+    async def on_vote_started(self, game: Game):
+        n = await self.send_vote_dms(game)
+        await self.announce(
+            game,
+            f'## 🗳️ Голосование · день {game.day_number}\n'
+            f'Живые получили select в ЛС (**{n}**).\n'
+            '-# Итог без «кто за кого»',
+        )
+        await self.refresh_host_summary(game)
+        await self.refresh_public(game)
+
+    async def advance_cycle(self, game: Game, *, force: bool = False) -> str:
+        """Сдвинуть фазу: ночь→день→голос→ночь. force — даже если не все сходили."""
+        if game.phase != PHASE_PLAYING:
+            raise RuntimeError('Игра не идёт')
+        if game.cycle == CYCLE_NIGHT:
+            if not force and not game.night_ready():
+                left = len(game.night_pending())
+                return f'Ночь ещё идёт · ждут ход: {left}'
+            # дон мог прислать только check — для resolve это ок; kill optional
+            report = game.resolve_night()
+            STORE.persist(game)
+            await self.refresh_host_summary(game)
+            if game.phase == PHASE_ENDED:
+                await self.clear_voice_mutes(game)
+                await self.announce(
+                    game,
+                    f'## 🏁 Финал\n{report["report"]}\n'
+                    + ('Победа **города**.' if game.winner == 'town'
+                       else 'Победа **мафии**.'),
+                )
+                await self.refresh_public(game)
+                STORE.clear(game.guild_id, archive=True)
+                return 'Игра окончена.'
+            game.begin_day()
+            STORE.persist(game)
+            await self.on_day_started(game, night_report=report['report'])
+            return f'День {game.day_number} · {report["report"]}'
+
+        if game.cycle == CYCLE_DAY:
+            game.begin_vote()
+            STORE.persist(game)
+            await self.on_vote_started(game)
+            return f'Голосование · день {game.day_number}'
+
+        if game.cycle == CYCLE_VOTE:
+            if not force and not game.vote_ready():
+                left = len(game.vote_pending())
+                return f'Голосование · ждут: {left}'
+            report = game.resolve_vote()
+            STORE.persist(game)
+            await self.announce(game, f'## Итог голосования\n{report["report"]}')
+            await self.refresh_host_summary(game)
+            if game.phase == PHASE_ENDED:
+                await self.clear_voice_mutes(game)
+                await self.announce(
+                    game,
+                    '## 🏁 Финал\n'
+                    + ('Победа **города**.' if game.winner == 'town'
+                       else 'Победа **мафии**.'),
+                )
+                await self.refresh_public(game)
+                STORE.clear(game.guild_id, archive=True)
+                return 'Игра окончена.'
+            game.begin_night()
+            STORE.persist(game)
+            await self.on_night_started(game)
+            return f'Ночь {game.day_number} · город снова спит'
+
+        raise RuntimeError('Неизвестная фаза цикла')
 
     async def remind_unconfirmed(self, game: Game) -> int:
         n = 0

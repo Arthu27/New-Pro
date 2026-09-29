@@ -24,6 +24,9 @@ from services.mafia.game import (  # noqa: E402
     PHASE_LOBBY,
     PHASE_PLAYING,
     PHASE_READY,
+    CYCLE_DAY,
+    CYCLE_NIGHT,
+    CYCLE_VOTE,
     Game,
 )
 from services.mafia.store import GameStore  # noqa: E402
@@ -109,6 +112,8 @@ check(g.phase == PHASE_READY, 'все подтвердили → ready')
 check(g.all_confirmed(), 'all_confirmed')
 g.start()
 check(g.phase == PHASE_PLAYING, 'start → playing')
+check(g.cycle == CYCLE_NIGHT and g.day_number == 1,
+      f'start → ночь 1 (cycle={g.cycle}, day={g.day_number})')
 
 
 print('\n== 5. Перераздача инвалидирует старый токен ==')
@@ -251,12 +256,20 @@ check(all(getattr(o, 'emoji', None) is not None for o in sel.options),
       'у каждого пункта есть emoji')
 
 # публичное лобби — только Участвовать/Выйти
-from cogs.mafia import PublicLobbyView, HostToolsView  # noqa: E402
+from cogs.mafia import PublicLobbyView, HostToolsView, HostPanelView  # noqa: E402
 pub_labels = {i.label for i in PublicLobbyView(1).children if hasattr(i, 'label')}
 check(pub_labels == {'Участвовать', 'Выйти'}, f'публичные кнопки: {pub_labels}')
 check('Анонс' not in pub_labels and 'Старт' not in pub_labels, 'нет анонс/старт у участников')
 host_labels = {i.label for i in HostToolsView(1).children if hasattr(i, 'label')}
 check('Раздать роли' in host_labels, f'хост-панель: {host_labels}')
+# сводка ведущего — мало кнопок, без убийства/шерифа/дона
+panel_labels = {i.label for i in HostPanelView().children if hasattr(i, 'label')}
+check('Убийство мафии' not in panel_labels, f'нет ручного убийства: {panel_labels}')
+check('Проверка шерифа' not in panel_labels and 'Проверка дона' not in panel_labels,
+      f'нет ручных проверок: {panel_labels}')
+check('Начать / Дальше' in panel_labels and 'Отменить игру' in panel_labels,
+      f'есть Дальше+Отмена: {panel_labels}')
+check(len(panel_labels) <= 4, f'мало кнопок ({len(panel_labels)}): {panel_labels}')
 
 # стикеры + V2 как демка
 from services.mafia.ui_v2 import (  # noqa: E402
@@ -309,6 +322,53 @@ check('cogs import mafia' in _ev or 'from cogs.mafia' in _ev
       'event-bot импортирует cogs.mafia')
 check(os.path.isfile(os.path.join(_REPO, 'cogs/mafia.py')),
       'cogs/mafia.py на месте')
+
+
+print('\n== 13. Авто-цикл ночь → день → голос ==')
+g7 = Game.create(48, 1, 9, 8, [(700 + i, f'A{i}') for i in range(6)])
+roles6 = ['mafia', 'sheriff', 'doctor', 'citizen', 'citizen', 'citizen']
+g7.deal_token = 'auto'
+for p, r in zip(g7.players.values(), roles6):
+    p.role = r
+    p.confirmed = True
+g7.phase = PHASE_READY
+g7.start()
+check(g7.cycle == CYCLE_NIGHT, 'старт → ночь')
+mafia_p = next(p for p in g7.players.values() if p.role == 'mafia')
+sher_p = next(p for p in g7.players.values() if p.role == 'sheriff')
+doc_p = next(p for p in g7.players.values() if p.role == 'doctor')
+citizens = [p for p in g7.players.values() if p.role == 'citizen']
+victim = citizens[0]
+# мафия стреляет в citizen0, доктор его лечит
+g7.submit_night_action(mafia_p.user_id, 'kill', victim.user_id)
+g7.submit_night_action(sher_p.user_id, 'sheriff', mafia_p.user_id)
+g7.submit_night_action(doc_p.user_id, 'heal', victim.user_id)
+check(g7.night_ready(), 'все спецроли сходили')
+rep = g7.resolve_night()
+check(rep['saved'] is True and rep['killed_id'] is None, f'спасён: {rep}')
+g7.begin_day()
+check(g7.cycle == CYCLE_DAY, 'день')
+g7.begin_vote()
+check(g7.cycle == CYCLE_VOTE, 'голос')
+# все голосуют за мафию
+for p in g7.alive_players():
+    if p.user_id == mafia_p.user_id:
+        g7.submit_vote(p.user_id, 0)  # мафия воздержалась
+    else:
+        g7.submit_vote(p.user_id, mafia_p.user_id)
+check(g7.vote_ready(), 'все проголосовали')
+vrep = g7.resolve_vote()
+check(vrep['eliminated_id'] == mafia_p.user_id, f'изгнали мафию: {vrep}')
+check(g7.winner == 'town', f'победа города после голоса: {g7.winner}')
+# ведущему не светятся «кто за кого» в last_vote_report детально по именам голосующих
+check('голосованием' in (g7.log[-1] if g7.log else '') or 'изгнал' in vrep['report'].lower()
+      or 'Изгнал' in vrep['report'] or 'изгнал' in vrep['report'],
+      f'отчёт голоса: {vrep["report"]}')
+src_m = open(os.path.join(_REPO, 'cogs/mafia.py'), encoding='utf-8').read()
+check('set_voice_night_mute' in src_m and 'on_night_started' in src_m,
+      'войс-мут + авто-ночь в cog')
+check('NightActionView' in src_m and 'VoteSelectView' in src_m,
+      'ЛС-ходы ролей и голосование')
 
 
 print(f'\nИтого: {PASS} PASS / {FAIL} FAIL')
