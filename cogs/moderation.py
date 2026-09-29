@@ -729,15 +729,9 @@ class Moderation (commands .Cog ):
         except Exception as _le :
             log .debug (f'[STAFF_LIMIT] {_le}')
 
-        # Наказания — только с доказательством (ссылкой на скрин/видео):
-        # модальные окна Discord не принимают вложения, поэтому через панель
-        # доказательство передаётся ссылкой.
-        _punish_actions =("ban","timeout","mute_chat","vmute")
-        if action in _punish_actions :
-            from cogs .proof_cog import require_proof
-            _action_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
-            if not await require_proof (interaction ,action_ru =_action_ru ,link =proof_link ):
-                return
+        # Демка НЕ блокирует наказание: после выдачи — меню «прикрепить файл»
+        # (фото/видео без ссылки). Ссылка в модалке больше не нужна.
+        _punish_actions =("ban","timeout","mute_chat","vmute","warn")
 
         # Причина для наказаний/варна — только правило 1.1–1.9 (не «токс»).
         if action in ('warn', 'ban', 'timeout', 'mute_chat', 'vmute'):
@@ -776,6 +770,13 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,embed =success_embed (
                 'Варн выдан',f'**{who }** · `{uid }`\n{text }',guild =guild ),
                 ephemeral =True )
+                try :
+                    from cogs .proof_cog import offer_proof_after_punish
+                    await offer_proof_after_punish (
+                        interaction ,user =user or uid ,action ='warn',
+                        reason =reason )
+                except Exception as _pe :
+                    log .debug (f'[MODPANEL] offer proof warn: {_pe}')
             else :
                 await _respond (interaction ,embed =error_embed (text ),ephemeral =True )
             return
@@ -1107,10 +1108,15 @@ class Moderation (commands .Cog ):
                     _log.debug("_execute_mod_action(): подавлено: %s", _ex)
 
                 try :
-                    if action in _punish_actions and (proof_link or '').strip ():
-                        from cogs .proof_cog import try_deliver_proof
-                        _p_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
-                        await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
+                    if action in _punish_actions :
+                        from cogs .proof_cog import offer_proof_after_punish
+                        await offer_proof_after_punish (
+                            interaction ,user =user ,action =action ,
+                            reason =reason ,case_id =case_id )
+                        if (proof_link or '').strip ():
+                            from cogs .proof_cog import try_deliver_proof
+                            _p_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
+                            await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
                 except Exception as _pe :
                     log .warning (f'[MODPANEL] демка: {_pe}')
             except discord .Forbidden :
@@ -1885,6 +1891,14 @@ class _CtxMuteModal(discord.ui.Modal):
             interaction,
             content=('✅ ' if ok else '⚠️ ') + str(text or ('Готово' if ok else 'Не получилось')),
             ephemeral=True)
+        if ok:
+            try:
+                from cogs.proof_cog import offer_proof_after_punish
+                await offer_proof_after_punish(
+                    interaction, user=self._member, action=self._action,
+                    reason=_reason)
+            except Exception as _pe:
+                log.debug(f'[ПКМ] offer proof: {_pe}')
 
 
 def _mod_cog_of(interaction):
@@ -1949,6 +1963,14 @@ class _CtxWarnModal(discord.ui.Modal):
             content=('✅ ' if ok else '⚠️ ') + str(
                 text or ('Готово' if ok else 'Не получилось')),
             ephemeral=True)
+        if ok:
+            try:
+                from cogs.proof_cog import offer_proof_after_punish
+                await offer_proof_after_punish(
+                    interaction, user=self._member, action='warn',
+                    reason=_reason)
+            except Exception as _pe:
+                log.debug(f'[ПКМ] offer proof warn: {_pe}')
 
 
 @app_commands.context_menu(name='🔇 Мут (чат + войс)')
@@ -3034,31 +3056,8 @@ class ModActionModal(discord.ui.Modal):
             )
             self.add_item(self.reason)
 
-        _need_proof = False
-        if action in _PUNISH_MODPANEL:
-            try:
-                from cogs.proof_cog import proof_is_required
-                _need_proof = proof_is_required(getattr(guild, 'id', 0) or 0)
-            except Exception:
-                _need_proof = True
-            if _need_proof and user is not None:
-                try:
-                    from cogs.proof_cog import proof_is_whitelisted
-                    _need_proof = not proof_is_whitelisted(
-                        getattr(guild, 'id', 0) or 0,
-                        user_id=getattr(user, 'id', 0),
-                        role_ids=[getattr(r, 'id', 0)
-                                  for r in getattr(user, 'roles', []) or []])
-                except Exception as _wlx:
-                    log.debug(f'_need_proof whitelist: {_wlx}')
-                    _need_proof = True
-        if _need_proof:
-            self.proof = discord.ui.TextInput(
-                label="Доказательство (ссылка на скрин/видео)", required=True,
-                placeholder="https://… — без этого наказание не выдаётся",
-                max_length=500,
-            )
-            self.add_item(self.proof)
+        # Ссылку на демку в модалке больше не просим: после наказания
+        # выходит меню «прикрепить файл» (необязательно, без линка).
 
     async def on_submit(self, interaction: discord.Interaction):
         await _ack(interaction, thinking=True)
@@ -3066,7 +3065,6 @@ class ModActionModal(discord.ui.Modal):
             return
         _t = getattr(self, 'target', None)
         _a = getattr(self, 'amount', None)
-        _p = getattr(self, 'proof', None)
         if self.reason_select is not None:
             from services import mod_reasons as _MR
             _code = (self.reason_select.values or [''])[0]
@@ -3106,7 +3104,7 @@ class ModActionModal(discord.ui.Modal):
             _target_value,
             _reason,
             (_a.value or "").strip() if _a else "5",
-            proof_link=(_p.value or "").strip() if _p else "",
+            proof_link="",
         )
 
 

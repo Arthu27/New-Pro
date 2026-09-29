@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Роли по должности заявки: Хелпер / Модератор / Event / Broadcaster.
+"""Роли по должности заявки — ветки набора.
 
-Заявку одобряют в Discord (select на карточке) и в панели.
-Принимают ТОЛЬКО роли «× Отвечаю за …» своей ветки (жёсткие ID):
-
-  Moderator   1551524708552278036
-  Helper      1551525681207189504
-  Eventsmod   1551527644326002748
-  Broadcaster 1552639452713848912
+Заявку одобряют в Discord (select на карточке).
+Принимают ТОЛЬКО роли «× Отвечаю за …» своей ветки (жёсткие ID).
 
 Чужая ветка / × Administrator / общий × Curator — отказ.
 """
@@ -22,22 +17,34 @@ log = get_logger("staff_roles")
 STAFF_ROLES_FILE = "data/staff_roles.json"
 STAFF_SETTINGS_FILE = "data/staff_apply_settings.json"
 
-# Должности набора (порядок в select меню: Mod → Helper → Event → Broadcaster)
-POSITIONS = ("moderator", "helper", "event", "broadcaster")
+# Должности набора (порядок в select меню)
+POSITIONS = (
+    "moderator", "helper", "event", "support",
+    "closemod", "creative", "broadcaster",
+)
 
 STAFF_SETTING_KEYS = (
     "apply_channel",
     "helper_channel",
     "moderator_channel",
     "event_channel",
+    "support_channel",
+    "closemod_channel",
+    "creative_channel",
     "broadcaster_channel",
     "helper_role",
     "moderator_role",
     "event_role",
+    "support_role",
+    "closemod_role",
+    "creative_role",
     "broadcaster_role",
     "helper_curator_role",
     "moderator_curator_role",
     "event_curator_role",
+    "support_curator_role",
+    "closemod_curator_role",
+    "creative_curator_role",
     "broadcaster_curator_role",
     "curator_role",  # legacy: один на всех (фолбек)
 )
@@ -48,12 +55,25 @@ LEGACY_CURATOR_KEYS = ("helper_curator_role", "moderator_curator_role")
 KNOWN_CURATOR_ROLE_ID = 807030012301541377
 
 # «× Отвечаю за …» — ЕДИНСТВЕННЫЕ роли, кто принимает заявки своей ветки.
-# Владелец 2026-09-24: только эти ID, без × Administrator и без панели.
 KNOWN_CURATOR_BY_KIND = {
-    "moderator": 1551524708552278036,    # × Отвечаю за Moderator
+    "moderator": 1551524708552278036,    # × Отвечаю за Moderator (silent ping)
     "helper": 1551525681207189504,       # × Отвечаю за Helper
     "event": 1551527644326002748,        # × Отвечаю за Eventsmod
     "broadcaster": 1552639452713848912,  # × Отвечаю за Broadcaster
+    "support": 1553139245735219390,      # × Отвечаю за Support
+    "closemod": 1553770122966073384,     # × Отвечаю за Close mod
+    "creative": 1553854011449544825,     # × Отвечаю за Creative
+}
+
+# Каналы заявок по веткам (владелец 2026-09-29 — раздельные ветки)
+KNOWN_CHANNEL_BY_KIND = {
+    "moderator": 1554520410777976842,
+    "helper": 1554520289046569120,
+    "event": 1554520677615407115,
+    "support": 1554520537609408563,
+    "closemod": 1554520475483250831,
+    "creative": 1554520793285787708,
+    "broadcaster": 1554519758957846619,
 }
 
 # Роли, выдаваемые после одобрения (владелец 2026-09-24)
@@ -66,6 +86,7 @@ KNOWN_GRANT_BY_KIND = {
     "moderator": KNOWN_MODERATOR_ROLE_ID,
     "event": 852634463535759461,          # × Eventsmod
     "broadcaster": 1551180629687664670,   # × Broadcaster
+    # support / closemod / creative — по имени роли на сервере (ID не задан)
 }
 
 ROLE_SPECS = [
@@ -98,6 +119,27 @@ ROLE_SPECS = [
         "empty": "По умолчанию: известная роль Broadcaster.",
     },
     {
+        "key": "support_role",
+        "label": "Support",
+        "icon": "fa-headset",
+        "what": "Выдаётся после одобрения заявки Support.",
+        "empty": "Не задана — ищем роль Support по имени.",
+    },
+    {
+        "key": "closemod_role",
+        "label": "Close mod",
+        "icon": "fa-door-closed",
+        "what": "Выдаётся после одобрения заявки Close mod.",
+        "empty": "Не задана — ищем роль Close mod по имени.",
+    },
+    {
+        "key": "creative_role",
+        "label": "Creative",
+        "icon": "fa-palette",
+        "what": "Выдаётся после одобрения заявки Creative.",
+        "empty": "Не задана — ищем роль Creative по имени.",
+    },
+    {
         "key": "helper_curator_role",
         "label": "Куратор Helper",
         "icon": "fa-user-check",
@@ -108,7 +150,7 @@ ROLE_SPECS = [
         "key": "moderator_curator_role",
         "label": "Куратор Moderator",
         "icon": "fa-user-shield",
-        "what": "«× Отвечаю за Moderator» — только эта роль принимает заявки Moderator.",
+        "what": "«× Отвечаю за Moderator» — silent ping; только эта роль принимает Moderator.",
         "empty": "По умолчанию: 1551524708552278036.",
     },
     {
@@ -124,6 +166,27 @@ ROLE_SPECS = [
         "icon": "fa-podcast",
         "what": "«× Отвечаю за Broadcaster» — только эта роль принимает заявки Broadcaster.",
         "empty": "По умолчанию: 1552639452713848912.",
+    },
+    {
+        "key": "support_curator_role",
+        "label": "Куратор Support",
+        "icon": "fa-user-nurse",
+        "what": "«× Отвечаю за Support» — только эта роль принимает заявки Support.",
+        "empty": "По умолчанию: 1553139245735219390.",
+    },
+    {
+        "key": "closemod_curator_role",
+        "label": "Куратор Close mod",
+        "icon": "fa-user-lock",
+        "what": "«× Отвечаю за Close mod» — только эта роль принимает заявки Close mod.",
+        "empty": "По умолчанию: 1553770122966073384.",
+    },
+    {
+        "key": "creative_curator_role",
+        "label": "Куратор Creative",
+        "icon": "fa-user-pen",
+        "what": "«× Отвечаю за Creative» — только эта роль принимает заявки Creative.",
+        "empty": "По умолчанию: 1553854011449544825.",
     },
 ]
 
@@ -207,6 +270,9 @@ def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
             "moderator": getattr(Config, "STAFF_MODERATOR_CURATOR_ROLE_ID", 0),
             "event": getattr(Config, "STAFF_EVENT_CURATOR_ROLE_ID", 0),
             "broadcaster": getattr(Config, "STAFF_BROADCASTER_CURATOR_ROLE_ID", 0),
+            "support": getattr(Config, "STAFF_SUPPORT_CURATOR_ROLE_ID", 0),
+            "closemod": getattr(Config, "STAFF_CLOSEMOD_CURATOR_ROLE_ID", 0),
+            "creative": getattr(Config, "STAFF_CREATIVE_CURATOR_ROLE_ID", 0),
         }
         env_fallback = int(env_map.get(kind) or env_value or 0)
     except Exception:
@@ -227,12 +293,7 @@ def curator_role_id_for(guild_id, kind: str, env_value=0) -> int:
 def can_review_position(member, position) -> tuple:
     """Может ли участник принять/отклонить заявку этой должности.
 
-    Да ТОЛЬКО при роли из KNOWN_CURATOR_BY_KIND для этой ветки:
-      moderator  → 1551524708552278036
-      helper     → 1551525681207189504
-      event      → 1551527644326002748
-      broadcaster→ 1552639452713848912
-
+    Да ТОЛЬКО при роли из KNOWN_CURATOR_BY_KIND для этой ветки.
     Плюс владелец сервера/бота. Панель/.env/× Administrator/чужой
     куратор — нет. Проверка по жёстким ID, без подмены из настроек.
     """
@@ -282,6 +343,10 @@ NAME_VARIANTS = {
               "event mod", "eventmod", "event-mod"],
     "broadcaster": ["broadcaster", "broadcast", "бродкастер", "бродкаст",
                     "стример", "streamer"],
+    "support": ["support", "саппорт", "поддержка", "supporter"],
+    "closemod": ["closemod", "close mod", "close-mod", "клоузмод",
+                 "клоуз мод", "close"],
+    "creative": ["creative", "креатив", "креативщик"],
 }
 
 POSITION_ALIASES = {
@@ -307,11 +372,21 @@ POSITION_ALIASES = {
     "broadcast": "broadcaster",
     "бродкастер": "broadcaster",
     "бродкаст": "broadcaster",
+    "support": "support",
+    "саппорт": "support",
+    "поддержка": "support",
+    "closemod": "closemod",
+    "close mod": "closemod",
+    "close-mod": "closemod",
+    "клоузмод": "closemod",
+    "клоуз мод": "closemod",
+    "creative": "creative",
+    "креатив": "creative",
 }
 
 
 def normalize_position(value):
-    """Заявочная должность → helper|moderator|event|broadcaster|None."""
+    """Заявочная должность → ключ ветки или None."""
     if not value:
         return None
     key = " ".join(str(value).lower().replace("—", "-").split())
@@ -319,6 +394,12 @@ def normalize_position(value):
         return POSITION_ALIASES[key]
     if "бродк" in key or "broadcast" in key or "stream" in key:
         return "broadcaster"
+    if "support" in key or "саппорт" in key or "поддерж" in key:
+        return "support"
+    if "close" in key or "клоуз" in key:
+        return "closemod"
+    if "creat" in key or "креатив" in key:
+        return "creative"
     if "ивент" in key or "event" in key:
         return "event"
     if "хелп" in key or key == "help" or key.startswith("help"):
@@ -336,6 +417,9 @@ def position_label(kind: str) -> str:
         "moderator": "Moderator",
         "event": "Eventsmod",
         "broadcaster": "Broadcaster",
+        "support": "Support",
+        "closemod": "Close mod",
+        "creative": "Creative",
     }.get(kind, kind or "—")
 
 
@@ -345,6 +429,9 @@ def position_select_value(kind: str) -> str:
         "moderator": "Moderator",
         "event": "Eventsmod",
         "broadcaster": "Broadcaster",
+        "support": "Support",
+        "closemod": "Close mod",
+        "creative": "Creative",
     }.get(kind, kind or "Moderator")
 
 
@@ -385,6 +472,9 @@ def _env_role_id(kind: str) -> int:
             "moderator": getattr(Config, "STAFF_MODERATOR_ROLE_ID", 0),
             "event": getattr(Config, "STAFF_EVENT_ROLE_ID", 0),
             "broadcaster": getattr(Config, "STAFF_BROADCASTER_ROLE_ID", 0),
+            "support": getattr(Config, "STAFF_SUPPORT_ROLE_ID", 0),
+            "closemod": getattr(Config, "STAFF_CLOSEMOD_ROLE_ID", 0),
+            "creative": getattr(Config, "STAFF_CREATIVE_ROLE_ID", 0),
         }.get(kind) or 0)
     except Exception:
         return 0
@@ -546,6 +636,9 @@ def role_hint(result: dict) -> str:
             "moderator": "STAFF_MODERATOR_ROLE_ID",
             "event": "STAFF_EVENT_ROLE_ID",
             "broadcaster": "STAFF_BROADCASTER_ROLE_ID",
+            "support": "STAFF_SUPPORT_ROLE_ID",
+            "closemod": "STAFF_CLOSEMOD_ROLE_ID",
+            "creative": "STAFF_CREATIVE_ROLE_ID",
         }.get(kind, "STAFF_MODERATOR_ROLE_ID")
         return (f"роль {searched or f'«{label}»'} не найдена — задайте {env}")
     return reason or "неизвестно"

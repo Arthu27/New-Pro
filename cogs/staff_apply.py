@@ -201,21 +201,28 @@ def _curator_ping(guild, role_name: str = ''):
 
 
 def _channel_for_kind(guild, kind: str):
-    """Канал ветки по должности (панель/.env)."""
-    from services.staff_roles import setting
+    """Канал ветки по должности: панель → .env → KNOWN_CHANNEL_BY_KIND."""
+    from services.staff_roles import setting, KNOWN_CHANNEL_BY_KIND, normalize_position
+    kind = normalize_position(kind) or kind or 'moderator'
     key_env = {
         'helper': ('helper_channel', Config.STAFF_HELPER_CHANNEL_ID),
         'moderator': ('moderator_channel', Config.STAFF_MODERATOR_CHANNEL_ID),
         'event': ('event_channel', getattr(Config, 'STAFF_EVENT_CHANNEL_ID', 0)),
+        'support': ('support_channel',
+                    getattr(Config, 'STAFF_SUPPORT_CHANNEL_ID', 0)),
+        'closemod': ('closemod_channel',
+                     getattr(Config, 'STAFF_CLOSEMOD_CHANNEL_ID', 0)),
+        'creative': ('creative_channel',
+                     getattr(Config, 'STAFF_CREATIVE_CHANNEL_ID', 0)),
         'broadcaster': ('broadcaster_channel',
                         getattr(Config, 'STAFF_BROADCASTER_CHANNEL_ID', 0)),
-    }.get(kind or 'moderator', ('moderator_channel', 0))
+    }.get(kind, ('moderator_channel', 0))
     key, env_cid = key_env
-    cid = setting(guild.id, key, env_cid)
+    known = int(KNOWN_CHANNEL_BY_KIND.get(kind) or 0)
+    cid = setting(guild.id, key, env_cid) or known
     if not cid:
         return None
-    getter = getattr(guild, 'get_channel', None)
-    return getter(int(cid)) if callable(getter) else None
+    return _resolve_channel(guild, int(cid))
 
 
 def _bot_can_send(channel) -> bool:
@@ -260,10 +267,9 @@ def _resolve_channel(guild, cid):
 def apply_target(role_name: str, guild):
     """Куда отправить новую заявку + тег куратора СВОЕЙ ветки.
 
-    Порядок канала (апелляции НЕ трогаем — только набор):
-      1) staff_apply_channel / APPLY_CHANNEL_ID
-         (по умолчанию 1312436222307860490)
-      2) своя ветка должности (helper/moderator/event/broadcaster)
+    Порядок (владелец 2026-09-29 — ветки разделены):
+      1) своя ветка должности (moderator/helper/event/…)
+      2) общий staff_apply_channel — только запасной
     Канал без права send у бота пропускаем.
     """
     from services.staff_roles import normalize_position, setting
@@ -272,7 +278,11 @@ def apply_target(role_name: str, guild):
     kind = normalize_position(role_name) or 'moderator'
     tag = _curator_ping(guild, kind)
     candidates = []
-    # 1) общий канал анкет — главный (владелец: 1312436222307860490)
+    # 1) своя ветка — главная
+    ch = _channel_for_kind(guild, kind)
+    if ch is not None:
+        candidates.append(ch)
+    # 2) общий канал — запасной
     common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
     try:
         from services.channel_routes import (
@@ -288,10 +298,6 @@ def apply_target(role_name: str, guild):
         ch = _resolve_channel(guild, common)
         if ch is not None:
             candidates.append(ch)
-    # 2) своя ветка (если задана отдельно и отличается)
-    ch = _channel_for_kind(guild, kind)
-    if ch is not None:
-        candidates.append(ch)
     seen = set()
     for ch in candidates:
         cid = getattr(ch, 'id', None)
@@ -357,6 +363,31 @@ POSITION_QUESTIONS = {
          'ph': 'да, на сервере … / нет', 'style': 'paragraph', 'max': 500},
         {'label': 'Есть ли у Вас ПК и микрофон?', 'ph': 'Да / нет', 'style': 'short', 'max': 100},
         {'label': 'Есть ли у вас веб камера?', 'ph': 'Да / нет', 'style': 'short', 'max': 100},
+    ],
+    'support': [
+        {'label': 'Ваше имя и возраст', 'ph': 'например: Аня 20', 'style': 'short', 'max': 80},
+        {'label': 'Пик активности в сутках', 'ph': 'например: 16–23 МСК', 'style': 'short', 'max': 200},
+        {'label': 'Опыт в поддержке / на стаффе',
+         'ph': 'да, где / нет', 'style': 'paragraph', 'max': 500},
+        {'label': 'Почему хотите в Support?',
+         'ph': 'кратко о мотивации', 'style': 'paragraph', 'max': 500},
+    ],
+    'closemod': [
+        {'label': 'Ваше имя и возраст', 'ph': 'например: 19', 'style': 'short', 'max': 80},
+        {'label': 'Пик активности в сутках', 'ph': 'например: вечер', 'style': 'short', 'max': 200},
+        {'label': 'Опыт модерации закрытых комнат',
+         'ph': 'да / нет, кратко', 'style': 'paragraph', 'max': 500},
+        {'label': 'Почему Close mod?',
+         'ph': 'кратко о мотивации', 'style': 'paragraph', 'max': 500},
+    ],
+    'creative': [
+        {'label': 'Ваше имя и возраст', 'ph': 'например: 21', 'style': 'short', 'max': 80},
+        {'label': 'Чем занимаетесь в креативе?',
+         'ph': 'дизайн / видео / другое', 'style': 'short', 'max': 200},
+        {'label': 'Портфолио или примеры работ',
+         'ph': 'ссылка или кратко', 'style': 'paragraph', 'max': 500},
+        {'label': 'Почему Creative на этом сервере?',
+         'ph': 'кратко о мотивации', 'style': 'paragraph', 'max': 500},
     ],
 }
 
@@ -562,7 +593,9 @@ def load_blacklist():
         kinds = {}
         legacy_role = entry.get('role') if 'by' in entry or 'at' in entry else None
         if legacy_role is not None and not any(
-                k in entry for k in ('helper', 'moderator', 'event', 'broadcaster')):
+                k in entry for k in (
+                    'helper', 'moderator', 'event', 'broadcaster',
+                    'support', 'closemod', 'creative')):
             kind = normalize_position(legacy_role) or 'moderator'
             kinds[kind] = {
                 'by': str(entry.get('by') or ''),
@@ -660,7 +693,7 @@ def remove_from_blacklist(user_id, position=None) -> bool:
 MENU_STATE_FILE = "data/staff_menu_state.json"
 # bump → при следующем on_ready меню перепубликуется в канал наборов
 # v3: 4 ветки (Helper/Mod/Event/Broadcaster) + V2 баннер НАБОРЫ (не Gojo STAFF)
-MENU_POST_VERSION = 9  # v9: без «только одну должность»; заявки от бота модерации
+MENU_POST_VERSION = 10  # v10: 7 веток + раздельные каналы заявок
 
 
 def _load_menu_state():
@@ -806,9 +839,10 @@ class StaffApplyModal(discord.ui.Modal):
                     extra=v5, member=member, kind=kind, answers=answers)
                 try:
                     card = StaffAppCardView(title=role_label, body=body)
-                    # Тег куратора ветки в том же сообщении — видят, кому решать
+                    # Moderator — silent ping (без звука); остальные — обычный тег
                     msg = await _send_staff_card(
-                        ch, content=tag or None, view=card)
+                        ch, content=tag or None, view=card,
+                        silent_ping=(kind == 'moderator'))
                     apps[store_key]["message_id"] = str(msg.id)
                     apps[store_key]["curator_tag"] = tag or None
                     apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')
@@ -1381,16 +1415,28 @@ class StaffApplyView(discord.ui.LayoutView):
         self.add_item(row)
 
 
-async def _send_staff_card(channel, *, content=None, view=None):
+async def _send_staff_card(channel, *, content=None, view=None, silent_ping=False):
     """Карточка заявки V2 — только от бота модерации (не webhook «Наборы»).
 
     Discord запрещает `content` вместе с IS_COMPONENTS_V2.
     Тег куратора — отдельным сообщением, карточка без content.
+    silent_ping=True — тег без звука (suppress_notifications), для
+    «× Отвечаю за Moderator».
     """
     allowed = discord.AllowedMentions(roles=True, users=True)
     if content:
         try:
-            await channel.send(str(content), allowed_mentions=allowed)
+            kwargs = {
+                'content': str(content),
+                'allowed_mentions': allowed,
+            }
+            if silent_ping:
+                try:
+                    kwargs['flags'] = discord.MessageFlags(
+                        suppress_notifications=True)
+                except Exception:
+                    pass
+            await channel.send(**kwargs)
         except Exception as _ex:
             log.warning('STAFF: ping before card: %s', _ex)
     return await channel.send(view=view, allowed_mentions=allowed)

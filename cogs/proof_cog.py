@@ -381,16 +381,21 @@ class ProofCog(commands.Cog):
         self.bot = bot
 
     async def _proof_channel(self, guild):
-        """Канал доказательств: явный выбор в панели («Каналы и маршруты»),
-        иначе автосоздание через систему логов."""
+        """Канал доказательств: панель → KNOWN (1552088029047423027) → авто."""
         try:
-            from services.channel_routes import get_route
-            cid = get_route(guild.id, 'proof_channel')
+            from services.channel_routes import (
+                get_route, KNOWN_CHANNELS, channel_on_guild)
+            cid = (get_route(guild.id, 'proof_channel')
+                   or KNOWN_CHANNELS.get('proof_channel')
+                   or 1552088029047423027)
             if cid:
-                ch = guild.get_channel(cid)
+                ch = channel_on_guild(guild, int(cid))
+                if ch is None:
+                    getter = getattr(guild, 'get_channel', None)
+                    ch = getter(int(cid)) if callable(getter) else None
                 if ch is not None:
                     return ch
-                log.warning('[PROOF] маршрут proof_channel=%s не найден — фолбэк', cid)
+                log.warning('[PROOF] канал #%s не найден — фолбэк', cid)
         except Exception as _ex:
             _log.debug("_proof_channel(): маршруты: %s", _ex)
         try:
@@ -684,6 +689,512 @@ async def deliver_prefix_proof(bot, ctx, member, action_ru, reason):
         return None
 
 
+# ═══════════ после наказания: файл → канал → принять/отклонить ═══════════
+
+# «× Отвечаю за Moderator» — silent ping на карточке демки
+PROOF_REVIEW_ROLE_ID = 1551524708552278036
+
+
+def _action_key_ru(action: str) -> str:
+    a = (action or '').strip().lower()
+    return {
+        'warn': 'варн', 'варн': 'варн',
+        'timeout': 'мут', 'mute': 'мут', 'mute_chat': 'мут чата',
+        'vmute': 'войс-мут', 'войс-мут': 'войс-мут',
+        'ban': 'бан', 'апелляция': 'бан', 'кик': 'кик', 'kick': 'кик',
+    }.get(a, a or 'наказание')
+
+
+class ProofFileModal(discord.ui.Modal, title='Доказательство'):
+    """Модалка: файл (фото/видео), без ссылок — скорость."""
+
+    def __init__(self, *, guild_id: int, user_id: int, mod_id: int,
+                 action: str, reason: str, case_id=None, warn_id=None):
+        super().__init__(timeout=180)
+        self.guild_id = int(guild_id or 0)
+        self.user_id = int(user_id or 0)
+        self.mod_id = int(mod_id or 0)
+        self.action = action
+        self.reason = reason or ''
+        self.case_id = case_id
+        self.warn_id = warn_id
+        self.upload = discord.ui.FileUpload(
+            required=True, min_values=1, max_values=4)
+        self.add_item(discord.ui.Label(
+            text='Фото или видео',
+            description='Без ссылок — приложи файл сразу',
+            component=self.upload,
+        ))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        atts = list(self.upload.values or [])
+        media = [a for a in atts if is_media_attachment(a)]
+        if not media:
+            return await interaction.response.send_message(
+                'Нужен файл: фото или видео (не ссылка).', ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
+        bot = interaction.client
+        guild = interaction.guild or bot.get_guild(self.guild_id)
+        if guild is None:
+            return await interaction.followup.send(
+                'Сервер не найден — демку некуда отправить.', ephemeral=True)
+        mod = interaction.user
+        user = guild.get_member(self.user_id)
+        if user is None:
+            try:
+                user = await bot.fetch_user(self.user_id)
+            except Exception:
+                user = None
+        if user is None:
+            return await interaction.followup.send(
+                'Участник не найден.', ephemeral=True)
+        try:
+            ok, entry = await post_proof_review_card(
+                bot, guild, mod, user,
+                action=self.action, reason=self.reason,
+                attachments=media,
+                case_id=self.case_id, warn_id=self.warn_id)
+        except Exception as ex:
+            log.warning('[PROOF] post review card: %s', ex)
+            return await interaction.followup.send(
+                f'Не удалось отправить демку: {ex}', ephemeral=True)
+        if not ok:
+            return await interaction.followup.send(
+                'Канал доказательств недоступен (права бота?).', ephemeral=True)
+        await interaction.followup.send(
+            f'Демка #{entry["id"]} в канале доказательств — на проверке.',
+            ephemeral=True)
+
+
+class ProofOfferView(discord.ui.View):
+    """Эфемерное меню после наказания: прикрепить файл (необязательно)."""
+
+    def __init__(self, *, guild_id: int, user_id: int, mod_id: int,
+                 action: str, reason: str, case_id=None, warn_id=None):
+        super().__init__(timeout=300)
+        self.guild_id = int(guild_id or 0)
+        self.user_id = int(user_id or 0)
+        self.mod_id = int(mod_id or 0)
+        self.action = action
+        self.reason = reason or ''
+        self.case_id = case_id
+        self.warn_id = warn_id
+
+    @discord.ui.button(
+        label='Прикрепить файл', style=discord.ButtonStyle.primary,
+        custom_id='proof_offer_upload_v1')
+    async def upload_btn(self, interaction: discord.Interaction, button):
+        if int(getattr(interaction.user, 'id', 0) or 0) != self.mod_id:
+            return await interaction.response.send_message(
+                'Это меню только для модератора, кто выдал наказание.',
+                ephemeral=True)
+        await interaction.response.send_modal(ProofFileModal(
+            guild_id=self.guild_id, user_id=self.user_id, mod_id=self.mod_id,
+            action=self.action, reason=self.reason,
+            case_id=self.case_id, warn_id=self.warn_id))
+
+    @discord.ui.button(
+        label='Пропустить', style=discord.ButtonStyle.secondary,
+        custom_id='proof_offer_skip_v1')
+    async def skip_btn(self, interaction: discord.Interaction, button):
+        if int(getattr(interaction.user, 'id', 0) or 0) != self.mod_id:
+            return await interaction.response.send_message(
+                'Это меню только для модератора, кто выдал наказание.',
+                ephemeral=True)
+        for item in self.children:
+            item.disabled = True
+        try:
+            await interaction.response.edit_message(
+                content='Демку можно прикрепить позже — наказание уже выдано.',
+                view=self)
+        except Exception:
+            await interaction.response.send_message(
+                'Ок, без демки.', ephemeral=True)
+
+
+class ProofRejectReasonModal(discord.ui.Modal, title='Отклонить демку'):
+    reason = discord.ui.TextInput(
+        label='Причина отклонения',
+        placeholder='Почему демка не подходит / наказание снимаем',
+        style=discord.TextStyle.paragraph, max_length=400, required=True)
+
+    def __init__(self, entry_id: int, guild_id: int):
+        super().__init__(timeout=180)
+        self.entry_id = int(entry_id)
+        self.guild_id = int(guild_id)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        ok, msg = await _review_proof(
+            interaction, self.guild_id, self.entry_id,
+            accept=False, reason=str(self.reason.value or ''))
+        await interaction.followup.send(msg, ephemeral=True)
+
+
+class ProofReviewView(discord.ui.View):
+    """Кнопки принять / отклонить на карточке в канале доказательств."""
+
+    def __init__(self, entry_id: int = 0, guild_id: int = 0):
+        super().__init__(timeout=None)
+        self.entry_id = int(entry_id or 0)
+        self.guild_id = int(guild_id or 0)
+
+    @discord.ui.button(
+        label='Принять', style=discord.ButtonStyle.success,
+        custom_id='proof_review_accept_v1')
+    async def accept_btn(self, interaction: discord.Interaction, button):
+        gid = self.guild_id or int(getattr(interaction.guild, 'id', 0) or 0)
+        eid = self.entry_id or _entry_id_from_message(interaction)
+        if not eid:
+            return await interaction.response.send_message(
+                'Запись демки не найдена.', ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
+        ok, msg = await _review_proof(
+            interaction, gid, eid, accept=True, reason='')
+        await interaction.followup.send(msg, ephemeral=True)
+
+    @discord.ui.button(
+        label='Отклонить', style=discord.ButtonStyle.danger,
+        custom_id='proof_review_reject_v1')
+    async def reject_btn(self, interaction: discord.Interaction, button):
+        gid = self.guild_id or int(getattr(interaction.guild, 'id', 0) or 0)
+        eid = self.entry_id or _entry_id_from_message(interaction)
+        if not eid:
+            return await interaction.response.send_message(
+                'Запись демки не найдена.', ephemeral=True)
+        await interaction.response.send_modal(
+            ProofRejectReasonModal(eid, gid))
+
+
+def _entry_id_from_message(interaction) -> int:
+    try:
+        mid = int(getattr(interaction.message, 'id', 0) or 0)
+        gid = int(getattr(interaction.guild, 'id', 0) or 0)
+        for en in proof_list(gid, limit=200):
+            if int(en.get('msg_id') or 0) == mid:
+                return int(en.get('id') or 0)
+    except Exception:
+        pass
+    return 0
+
+
+def _can_review_proof(member) -> bool:
+    if member is None:
+        return False
+    try:
+        from config import Config
+        mid = int(getattr(member, 'id', 0) or 0)
+        if mid and mid in Config.all_owner_ids():
+            return True
+        guild = getattr(member, 'guild', None)
+        if guild and mid and int(getattr(guild, 'owner_id', 0) or 0) == mid:
+            return True
+    except Exception:
+        pass
+    try:
+        ids = {int(getattr(r, 'id', 0) or 0)
+               for r in (getattr(member, 'roles', None) or [])}
+        return PROOF_REVIEW_ROLE_ID in ids
+    except Exception:
+        return False
+
+
+async def _undo_punishment(bot, guild, entry, reviewer, reason: str) -> str:
+    """Снять мут / не считать варн при отклонении демки."""
+    uid = int(entry.get('user_id') or 0)
+    action = _action_key_ru(entry.get('action') or '')
+    member = guild.get_member(uid)
+    if member is None:
+        try:
+            member = await guild.fetch_member(uid)
+        except Exception:
+            member = None
+    notes = []
+    # варн — снять последний, если совпал
+    if action == 'варн' or entry.get('warn_id'):
+        try:
+            wc = bot.get_cog('warnings')
+            if wc is not None and member is not None:
+                removed, total = await wc.remove_last_warning(member, reviewer)
+                if removed:
+                    notes.append(f'варн #{removed.get("id")} снят · осталось {total}')
+                else:
+                    notes.append('варнов не было')
+        except Exception as ex:
+            notes.append(f'варн: {ex}')
+    # муты
+    if action in ('мут', 'мут чата', 'войс-мут') or entry.get('action_key') in (
+            'timeout', 'mute_chat', 'vmute'):
+        try:
+            from services import mute_state
+            if member is not None:
+                key = entry.get('action_key') or ''
+                if key == 'vmute' or action == 'войс-мут':
+                    await mute_state.clear_voice_mute(guild, member)
+                    notes.append('войс-мут снят')
+                else:
+                    await mute_state.clear_all_mutes(guild, member)
+                    notes.append('мут снят')
+        except Exception as ex:
+            notes.append(f'мут: {ex}')
+    # бан-роль
+    if action == 'бан' or entry.get('action_key') == 'ban':
+        try:
+            from services import punish_roles as PR
+            rid = int(PR.role_for(guild.id, 'ban') or 0)
+            role = guild.get_role(rid) if rid else None
+            if role and member is not None and role in member.roles:
+                await member.remove_roles(role, reason=f'демка отклонена: {reason}'[:200])
+                notes.append('роль бана снята')
+        except Exception as ex:
+            notes.append(f'бан: {ex}')
+    return ' · '.join(notes) if notes else 'наказание не трогали'
+
+
+async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
+                        reason: str) -> tuple:
+    bot = interaction.client
+    guild = interaction.guild or bot.get_guild(int(guild_id or 0))
+    if guild is None:
+        return False, 'Сервер не найден.'
+    reviewer = interaction.user
+    try:
+        mem = guild.get_member(int(getattr(reviewer, 'id', 0) or 0))
+        if mem is not None:
+            reviewer = mem
+    except Exception:
+        pass
+    if not _can_review_proof(reviewer):
+        return False, f'Только <@&{PROOF_REVIEW_ROLE_ID}> принимает/отклоняет демки.'
+    entry = None
+    for en in proof_list(guild_id, limit=500):
+        if int(en.get('id') or 0) == int(entry_id):
+            entry = en
+            break
+    if not entry:
+        return False, f'Демка #{entry_id} не найдена.'
+    if entry.get('review_status') in ('accepted', 'rejected'):
+        return False, f'Уже решено: {entry.get("review_status")}.'
+    status = 'accepted' if accept else 'rejected'
+    note = ''
+    if accept:
+        proof_update(guild_id, entry_id,
+                     review_status=status,
+                     reviewed_by=str(getattr(reviewer, 'id', '')),
+                     review_reason='')
+        note = 'Демка принята — наказание остаётся.'
+    else:
+        undo = await _undo_punishment(
+            bot, guild, entry, reviewer, reason or 'демка отклонена')
+        proof_update(guild_id, entry_id,
+                     review_status=status,
+                     reviewed_by=str(getattr(reviewer, 'id', '')),
+                     review_reason=(reason or '')[:400],
+                     undo_note=undo)
+        note = f'Демка отклонена. {undo}'
+    # обновить сообщение
+    try:
+        mid = int(entry.get('msg_id') or 0)
+        cid = int(entry.get('channel_id') or 0)
+        ch = guild.get_channel(cid) if cid else None
+        if ch and mid:
+            msg = await ch.fetch_message(mid)
+            view = ProofReviewDoneView(
+                status=status, reviewer=reviewer, reason=reason or '')
+            try:
+                await msg.edit(view=view)
+            except Exception:
+                await msg.edit(view=None)
+    except Exception as ex:
+        log.debug('[PROOF] edit after review: %s', ex)
+    return True, note
+
+
+class ProofReviewDoneView(discord.ui.LayoutView):
+    def __init__(self, *, status: str, reviewer, reason: str = ''):
+        super().__init__(timeout=None)
+        from services.v2_layouts import V2_AVAILABLE, black_container
+        who = getattr(reviewer, 'mention', None) or str(reviewer)
+        ok = status == 'accepted'
+        head = '# ✅ Демка принята' if ok else '# ❌ Демка отклонена'
+        body = f'**Решил** · {who}'
+        if reason and not ok:
+            body += f'\n**Причина** · {reason[:400]}'
+        accent = 0x2ECC71 if ok else 0xE74C3C
+        if V2_AVAILABLE:
+            from discord import ui as dui, SeparatorSpacing
+            self.add_item(black_container(
+                dui.TextDisplay(head),
+                dui.Separator(spacing=SeparatorSpacing.small),
+                dui.TextDisplay(body[:1500]),
+                accent=accent,
+            ))
+
+
+async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
+                                 attachments, case_id=None, warn_id=None):
+    """Карточка в канал доказательств: медиа + принять/отклонить."""
+    from services.v2_layouts import V2_AVAILABLE, black_container
+    from discord.components import MediaGalleryItem
+
+    action_ru = _action_key_ru(action)
+    action_key = {
+        'варн': 'warn', 'мут': 'timeout', 'мут чата': 'mute_chat',
+        'войс-мут': 'vmute', 'бан': 'ban', 'кик': 'kick',
+    }.get(action_ru, str(action or ''))
+
+    cog = bot.get_cog('ProofCog') if bot else None
+    if cog is None:
+        return False, None
+
+    files = []
+    gallery_names = []
+    for i, att in enumerate(attachments or []):
+        try:
+            raw = await att.read()
+        except Exception:
+            continue
+        if not raw:
+            continue
+        name = getattr(att, 'filename', None) or f'proof_{i}.bin'
+        # уникальные имена — иначе Discord схлопнет attachment://
+        safe = f'{i}_{name}'
+        files.append(discord.File(io.BytesIO(raw), filename=safe))
+        gallery_names.append(safe)
+
+    entry = proof_add(
+        guild.id, user.id, str(user),
+        moderator.id, str(moderator), action_ru, reason, link=None)
+    proof_update(
+        guild.id, entry['id'],
+        review_status='pending',
+        action_key=action_key,
+        case_id=case_id,
+        warn_id=warn_id,
+    )
+    entry.update({
+        'review_status': 'pending',
+        'action_key': action_key,
+        'case_id': case_id,
+        'warn_id': warn_id,
+    })
+
+    ch = await cog._proof_channel(guild)
+    if ch is None:
+        return False, entry
+
+    mention = getattr(user, 'mention', None) or f'<@{user.id}>'
+    mod_m = getattr(moderator, 'mention', None) or str(moderator)
+    body = (
+        f'**Нарушитель** · {mention} (`{user.id}`)\n'
+        f'**Модератор** · {mod_m}\n'
+        f'**Наказание** · {action_ru}\n'
+        f'**Причина** · {(reason or "—")[:500]}\n'
+        f'**Дело** · #{entry["id"]}'
+        + (f' · case `{case_id}`' if case_id else '')
+    )
+
+    # silent ping «отвечаю за мод»
+    try:
+        await ch.send(
+            f'<@&{PROOF_REVIEW_ROLE_ID}>',
+            allowed_mentions=discord.AllowedMentions(roles=True),
+            flags=discord.MessageFlags(suppress_notifications=True),
+        )
+    except Exception as ex:
+        log.debug('[PROOF] silent ping: %s', ex)
+
+    rev = ProofReviewView(entry['id'], guild.id)
+    try:
+        if V2_AVAILABLE and gallery_names:
+            from discord import ui as dui, SeparatorSpacing
+            items = [MediaGalleryItem(f'attachment://{n}')
+                     for n in gallery_names[:10]]
+            row = dui.ActionRow()
+            # кнопки из persistent view — клонируем через новый View
+            for child in ProofReviewView(entry['id'], guild.id).children:
+                row.add_item(child)
+            lv = dui.LayoutView(timeout=None)
+            lv.add_item(black_container(
+                dui.TextDisplay(f'# 📎 Демка #{entry["id"]}'),
+                dui.TextDisplay('-# HAKUMO · доказательство'),
+                dui.Separator(spacing=SeparatorSpacing.large),
+                dui.TextDisplay(body[:3500]),
+                dui.Separator(),
+                dui.MediaGallery(*items),
+                dui.Separator(),
+                dui.TextDisplay(
+                    '-# Принять — оставить · Отклонить — снять мут / не считать варн'),
+                row,
+                accent=0xD4AF37,
+            ))
+            msg = await ch.send(view=lv, files=files)
+        else:
+            e = discord.Embed(
+                title=f'📎 Демка #{entry["id"]} · {action_ru}',
+                description=body, color=GOLD, timestamp=_now())
+            e.set_footer(text='Принять — оставить · Отклонить — снять наказание')
+            if gallery_names and _is_image_name(gallery_names[0]):
+                e.set_image(url=f'attachment://{gallery_names[0]}')
+            msg = await ch.send(embed=e, files=files or None, view=rev)
+    except Exception as ex:
+        log.warning('[PROOF] send review card: %s', ex)
+        # фолбэк без V2
+        try:
+            e = discord.Embed(
+                title=f'📎 Демка #{entry["id"]} · {action_ru}',
+                description=body, color=GOLD)
+            msg = await ch.send(embed=e, files=files or None, view=rev)
+        except Exception as ex2:
+            log.warning('[PROOF] fallback send: %s', ex2)
+            return False, entry
+
+    url = None
+    atts = getattr(msg, 'attachments', None) or []
+    if atts:
+        url = getattr(atts[0], 'url', None)
+    proof_update_delivery(guild.id, entry['id'], getattr(msg, 'id', None),
+                          getattr(ch, 'id', None), url=url)
+    entry['msg_id'] = getattr(msg, 'id', None)
+    entry['channel_id'] = getattr(ch, 'id', None)
+    if url:
+        entry['url'] = url
+    return True, entry
+
+
+async def offer_proof_after_punish(interaction, *, user, action, reason,
+                                   case_id=None, warn_id=None):
+    """После наказания — эфемерное меню «прикрепить файл» (необязательно)."""
+    try:
+        if interaction is None or user is None:
+            return
+        guild = interaction.guild
+        if guild is None:
+            return
+        action_ru = _action_key_ru(action)
+        view = ProofOfferView(
+            guild_id=guild.id,
+            user_id=int(getattr(user, 'id', 0) or 0),
+            mod_id=int(getattr(interaction.user, 'id', 0) or 0),
+            action=action, reason=reason or '',
+            case_id=case_id, warn_id=warn_id,
+        )
+        text = (
+            f'## 📎 Доказательство\n'
+            f'Наказание **{action_ru}** уже выдано.\n'
+            'Прикрепи **фото/видео файлом** (не ссылкой) — необязательно.'
+        )
+        send = getattr(interaction, 'followup', None)
+        if send is not None:
+            await send.send(content=text, view=view, ephemeral=True)
+    except Exception as ex:
+        log.debug('[PROOF] offer after punish: %s', ex)
+
+
 async def setup(bot):
     await bot.add_cog(ProofCog(bot))
+    try:
+        bot.add_view(ProofReviewView())
+    except Exception as ex:
+        log.debug('[PROOF] add_view review: %s', ex)
     log.info('[PROOF] Ког загружен (демки к наказаниям)')

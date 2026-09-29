@@ -89,6 +89,9 @@ live_roles = [
     R(1551524708552278036, '× Отвечаю за Moderator'),
     R(1551527644326002748, '× Отвечаю за Eventsmod'),
     R(1552639452713848912, '× Отвечаю за Broadcaster'),
+    R(1553139245735219390, '× Отвечаю за Support'),
+    R(1553770122966073384, '× Отвечаю за Close mod'),
+    R(1553854011449544825, '× Отвечаю за Creative'),
 ]
 g = G(live_roles)
 loop = asyncio.new_event_loop()
@@ -271,7 +274,8 @@ if inter2.response.edits:
 print('== 6. UI + curator pings ==')
 sel = RoleSelect()
 check([o.value for o in sel.options] ==
-      ['Moderator', 'Helper', 'Eventsmod', 'Broadcaster'], 'select EN')
+      ['Moderator', 'Helper', 'Eventsmod', 'Support',
+       'Close mod', 'Creative', 'Broadcaster'], 'select EN')
 check(StaffAppCardView(title='Moderator', body='x').has_components_v2(), 'V2 card')
 from cogs.staff_apply import (  # noqa: E402
     StaffReviewSelect, StaffCardApproveButton, StaffCardBlacklistButton,

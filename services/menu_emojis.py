@@ -62,6 +62,9 @@ ROLE_STICKER = {
     'moderator': 'moderator',
     'event': 'eventsmod',
     'broadcaster': 'broadcaster',
+    'support': 's_support',
+    'closemod': 'moderator',
+    'creative': 'announce',
 }
 
 # решение по заявке
@@ -93,6 +96,9 @@ _ROLE_UNICODE = {
     'moderator': '🛡️',
     'event': '📅',
     'broadcaster': '📡',
+    'support': '🎧',
+    'closemod': '🔒',
+    'creative': '🎨',
 }
 
 _REVIEW_UNICODE = {

@@ -27,6 +27,8 @@ BAN_APPEAL_ROOM_ID = 1544483947705008188
 # Набор в команду (владелец 2026-09-24): меню и канал заявок — раздельно.
 STAFF_MENU_CHANNEL_ID = 1312429743865335939
 STAFF_APPLY_CHANNEL_ID = 1312436222307860490
+# Доказательства к наказаниям (владелец 2026-09-29)
+PROOF_CHANNEL_ID = 1552088029047423027
 # Оценка рассмотрения апелляции (владелец 2026-09-06). Не выдуман.
 APPEAL_RATING_CHANNEL_ID = 1518751543329951904
 KNOWN_CHANNELS = {
@@ -35,6 +37,14 @@ KNOWN_CHANNELS = {
     'ban_appeal_channel': BAN_APPEAL_ROOM_ID,
     'staff_menu_channel': STAFF_MENU_CHANNEL_ID,
     'staff_apply_channel': STAFF_APPLY_CHANNEL_ID,
+    'proof_channel': PROOF_CHANNEL_ID,
+    'staff_helper_channel': 1554520289046569120,
+    'staff_moderator_channel': 1554520410777976842,
+    'staff_event_channel': 1554520677615407115,
+    'staff_support_channel': 1554520537609408563,
+    'staff_closemod_channel': 1554520475483250831,
+    'staff_creative_channel': 1554520793285787708,
+    'staff_broadcaster_channel': 1554519758957846619,
 }
 
 # Имя-подсказка для комнаты апелляций в стиле сервера («эмодзи・слово»).
