@@ -122,14 +122,90 @@ def guardian_default():
     return {
         'enabled': False,
         'punishment': 'strip',
-        'bot_action': 'strip',
+        'bot_action': 'ban',
         'kick_unauthorized_bots': False,
+        'restore_channels': True,
+        'reverse_bans': True,
         'events': _default_events(),
         'whitelist_users': [],
         'whitelist_roles': [],
         'bot_whitelist_users': [],
         'bot_whitelist_roles': [],
         'incidents': [],
+    }
+
+
+# Жёсткие пороги PRO — быстрее реакция, меньше шансов «проскочить»
+_PRO_EVENT_TUNING = {
+    'channel_delete': {'threshold': 2, 'window': 8, 'action': 'strip'},
+    'channel_create': {'threshold': 4, 'window': 8, 'action': 'strip'},
+    'role_delete': {'threshold': 1, 'window': 8, 'action': 'strip'},
+    'role_create': {'threshold': 3, 'window': 8, 'action': 'strip'},
+    'dangerous_perms': {'threshold': 1, 'window': 5, 'action': 'strip'},
+    'member_ban': {'threshold': 2, 'window': 8, 'action': 'strip'},
+    'member_kick': {'threshold': 2, 'window': 8, 'action': 'strip'},
+    'webhook_create': {'threshold': 1, 'window': 15, 'action': 'strip'},
+    'bot_add': {'threshold': 1, 'window': 5, 'action': 'ban'},
+    'emoji_delete': {'threshold': 4, 'window': 20, 'action': 'strip'},
+    'guild_update': {'threshold': 1, 'window': 5, 'action': 'alert'},
+}
+
+
+def guardian_arm_pro(cfg=None, *, owner_id: int = 0) -> dict:
+    """Включить максимум Щита: все события, кик чужих ботов, restore.
+
+    Владелец сервера автоматически в белом списке. Остальных trusted
+    добавляй вручную — белый список ролей с Admin = дыра в защите.
+    """
+    base = guardian_normalize(cfg or {})
+    base['enabled'] = True
+    base['punishment'] = 'strip'
+    base['bot_action'] = 'ban'
+    base['kick_unauthorized_bots'] = True
+    base['restore_channels'] = True
+    base['reverse_bans'] = True
+    for key, ev in (base.get('events') or {}).items():
+        tune = _PRO_EVENT_TUNING.get(key) or {}
+        ev['enabled'] = True
+        if 'threshold' in tune:
+            ev['threshold'] = tune['threshold']
+        if 'window' in tune:
+            ev['window'] = tune['window']
+        if tune.get('action') in PUNISH_LABELS:
+            ev['action'] = tune['action']
+    wl = list(base.get('whitelist_users') or [])
+    if owner_id:
+        oid = str(int(owner_id))
+        if oid not in wl:
+            wl.insert(0, oid)
+    base['whitelist_users'] = _clean_ids(wl)
+    return guardian_normalize(base)
+
+
+def bot_role_health(guild) -> dict:
+    """Проверка: роль бота выше всех чужих Admin — иначе щит обходят."""
+    me = getattr(guild, 'me', None)
+    if me is None:
+        return {'ok': False, 'reason': 'бот не на сервере', 'blockers': []}
+    top = getattr(me, 'top_role', None)
+    blockers = []
+    for r in getattr(guild, 'roles', []) or []:
+        if r == top or getattr(r, 'is_default', lambda: False)():
+            continue
+        try:
+            if r > top and getattr(r.permissions, 'administrator', False):
+                blockers.append({'id': str(r.id), 'name': r.name,
+                                 'position': int(r.position)})
+        except Exception:
+            continue
+    return {
+        'ok': not blockers,
+        'bot_role': getattr(top, 'name', None),
+        'bot_position': int(getattr(top, 'position', 0) or 0),
+        'blockers': blockers[:10],
+        'reason': ('' if not blockers else
+                   'Роли с Administrator выше бота — подними роль бота '
+                   'на самый верх (под владельцем).'),
     }
 
 
@@ -168,6 +244,10 @@ def guardian_normalize(raw):
     base['bot_action'] = bact if bact in PUNISH_LABELS else 'strip'
     base['kick_unauthorized_bots'] = bool(raw.get(
         'kick_unauthorized_bots', base['kick_unauthorized_bots']))
+    base['restore_channels'] = bool(raw.get(
+        'restore_channels', base.get('restore_channels', True)))
+    base['reverse_bans'] = bool(raw.get(
+        'reverse_bans', base.get('reverse_bans', True)))
     base['whitelist_users'] = _clean_ids(raw.get('whitelist_users'))
     base['whitelist_roles'] = _clean_ids(raw.get('whitelist_roles'))
     base['bot_whitelist_users'] = _clean_ids(raw.get('bot_whitelist_users'))
@@ -296,6 +376,10 @@ class Guardian(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._counter = WindowCounter()
+        # guild_id → channel_id → snapshot dict (для restore после ньюка)
+        self._channel_snap: dict = {}
+        # guild_id → list[(ts, actor_id, victim_id)] недавние баны
+        self._recent_bans: dict = {}
 
     # — утилиты доступа/белого списка —
     def _member_role_ids(self, guild, user_id):
@@ -309,10 +393,124 @@ class Guardian(commands.Cog):
             return f'<@{actor_id}> (`{actor_name}`)'
         return f'`{actor_name}`'
 
+    def _snap_channel(self, channel):
+        """Снимок канала для восстановления после сноса."""
+        try:
+            guild = getattr(channel, 'guild', None)
+            if guild is None or getattr(channel, 'id', None) is None:
+                return
+            overs = []
+            for target, ow in (getattr(channel, 'overwrites', None) or {}).items():
+                try:
+                    allow, deny = ow.pair()
+                    overs.append({
+                        'id': int(target.id),
+                        'type': 'role' if isinstance(target, discord.Role) else 'member',
+                        'allow': int(allow.value),
+                        'deny': int(deny.value),
+                    })
+                except Exception:
+                    continue
+            snap = {
+                'id': int(channel.id),
+                'name': str(getattr(channel, 'name', 'restored') or 'restored')[:100],
+                'type': int(getattr(channel, 'type', discord.ChannelType.text).value
+                            if hasattr(getattr(channel, 'type', None), 'value')
+                            else 0),
+                'position': int(getattr(channel, 'position', 0) or 0),
+                'category_id': int(getattr(getattr(channel, 'category', None), 'id', 0)
+                                   or 0) or None,
+                'topic': (getattr(channel, 'topic', None) or None),
+                'nsfw': bool(getattr(channel, 'nsfw', False)),
+                'slowmode_delay': int(getattr(channel, 'slowmode_delay', 0) or 0),
+                'bitrate': int(getattr(channel, 'bitrate', 0) or 0) or None,
+                'user_limit': int(getattr(channel, 'user_limit', 0) or 0) or None,
+                'overwrites': overs,
+            }
+            self._channel_snap.setdefault(int(guild.id), {})[int(channel.id)] = snap
+        except Exception as _ex:
+            _log.debug('guardian snap: %s', _ex)
+
+    async def _restore_channel(self, guild, channel_id: int) -> str:
+        """Восстановить только что снесённый канал из снимка."""
+        snap = (self._channel_snap.get(int(guild.id)) or {}).get(int(channel_id))
+        if not snap:
+            return 'нет снимка канала'
+        try:
+            overwrites = {}
+            for row in snap.get('overwrites') or []:
+                tid = int(row.get('id') or 0)
+                if not tid:
+                    continue
+                target = (guild.get_role(tid) if row.get('type') == 'role'
+                          else guild.get_member(tid))
+                if target is None:
+                    continue
+                overwrites[target] = discord.PermissionOverwrite.from_pair(
+                    discord.Permissions(int(row.get('allow') or 0)),
+                    discord.Permissions(int(row.get('deny') or 0)),
+                )
+            ctype = int(snap.get('type') or 0)
+            kwargs = {
+                'name': snap.get('name') or 'restored',
+                'overwrites': overwrites,
+                'reason': 'Hakumo Щит PRO: восстановление после ньюка',
+            }
+            cat_id = snap.get('category_id')
+            if cat_id:
+                cat = guild.get_channel(int(cat_id))
+                if cat is not None:
+                    kwargs['category'] = cat
+            if ctype == int(discord.ChannelType.voice.value):
+                if snap.get('bitrate'):
+                    kwargs['bitrate'] = int(snap['bitrate'])
+                if snap.get('user_limit') is not None:
+                    kwargs['user_limit'] = int(snap.get('user_limit') or 0)
+                ch = await guild.create_voice_channel(**kwargs)
+            elif ctype == int(discord.ChannelType.stage_voice.value):
+                ch = await guild.create_stage_channel(**{
+                    k: v for k, v in kwargs.items()
+                    if k in ('name', 'overwrites', 'category', 'reason')
+                })
+            else:
+                if snap.get('topic'):
+                    kwargs['topic'] = str(snap['topic'])[:1024]
+                kwargs['nsfw'] = bool(snap.get('nsfw'))
+                kwargs['slowmode_delay'] = int(snap.get('slowmode_delay') or 0)
+                ch = await guild.create_text_channel(**kwargs)
+            try:
+                await ch.edit(position=int(snap.get('position') or 0),
+                              reason='Hakumo Щит PRO: позиция')
+            except Exception:
+                pass
+            self._snap_channel(ch)
+            return f'восстановлен «{ch.name}»'
+        except Exception as _ex:
+            _log.warning('guardian restore channel: %s', _ex)
+            return f'restore fail: {_ex}'
+
+    async def _reverse_bans(self, guild, actor_id: int, window: int = 30) -> str:
+        """Снять недавние баны этого актёра (откат массового бана)."""
+        now = time.time()
+        rows = self._recent_bans.get(int(guild.id)) or []
+        victims = [vid for ts, aid, vid in rows
+                   if now - ts <= window and int(aid) == int(actor_id or 0)]
+        if not victims:
+            return 'жертв бана нет'
+        ok = 0
+        for vid in victims[:25]:
+            try:
+                await guild.unban(discord.Object(id=int(vid)),
+                                  reason='Hakumo Щит PRO: откат массового бана')
+                ok += 1
+            except Exception:
+                continue
+        return f'разбанено: {ok}/{len(victims[:25])}'
+
     async def _actor(self, guild, action, target_id=None, max_age=15):
         """Кто это сделал — по журналу аудита Discord. (user_id, имя)."""
         try:
-            async for entry in guild.audit_logs(limit=6, action=action):
+            async for entry in guild.audit_logs(limit=8, action=action):
                 if target_id is not None and getattr(entry.target, 'id', None) != target_id:
                     continue
                 try:
@@ -329,7 +527,7 @@ class Guardian(commands.Cog):
 
     # — главный цикл реакции —
     async def _touch(self, guild, event_key, actor_id=0, actor_name='—',
-                     detail='', times=1):
+                     detail='', times=1, *, restore_channel_id=0):
         """Засчитать действие; при превышении порога — наказать и взвить тревогу."""
         cfg = load_cfg(guild.id)
         if not cfg.get('enabled'):
@@ -346,7 +544,8 @@ class Guardian(commands.Cog):
                 return
             if is_whitelisted(cfg, actor_id, self._member_role_ids(guild, actor_id)):
                 return
-        key = (guild.id, event_key, actor_id)
+        # actor_id=0 (аудит не успел) — считаем отдельно, чтобы волна не прошла тихо
+        key = (guild.id, event_key, int(actor_id or 0))
         count = self._counter.hit(key, time.time(),
                                   ev.get('window', 10), times=times)
         threshold = ev.get('threshold', 3)
@@ -356,16 +555,27 @@ class Guardian(commands.Cog):
             return
         self._counter.reset(key)
         action = ev.get('action') or cfg.get('punishment', 'strip')
-        # Если нарушитель — БОТ, применяем отдельную меру для ботов:
-        # у бота «вечная жизнь» не нужна — его можно и удалить сразу.
         try:
             _actor_member = guild.get_member(int(actor_id)) if actor_id else None
         except Exception as _ex:
             _log.debug('guardian: актёр не резолвится: %s', _ex)
             _actor_member = None
         if _actor_member is not None and getattr(_actor_member, 'bot', False):
-            action = cfg.get('bot_action', 'strip')
-        applied = await self._punish(guild, actor_id, action, spec)
+            action = cfg.get('bot_action', 'ban')
+        if not actor_id:
+            action = 'alert'
+            applied = 'актор неизвестен (аудит) — только тревога'
+        else:
+            applied = await self._punish(guild, actor_id, action, spec)
+        extras = []
+        if (event_key == 'channel_delete' and cfg.get('restore_channels')
+                and restore_channel_id):
+            extras.append(await self._restore_channel(guild, restore_channel_id))
+        if event_key == 'member_ban' and cfg.get('reverse_bans') and actor_id:
+            extras.append(await self._reverse_bans(
+                guild, actor_id, window=int(ev.get('window') or 10) + 20))
+        if extras:
+            applied = f'{applied}; ' + '; '.join(extras)
         await self._alert(guild, spec, actor_id, actor_name, action, applied,
                           detail, count)
         try:
@@ -448,14 +658,33 @@ class Guardian(commands.Cog):
 
     # ─── слушатели событий ───────────────────────────────────────────────
     @commands.Cog.listener()
+    async def on_ready(self):
+        for g in list(getattr(self.bot, 'guilds', None) or []):
+            try:
+                for ch in list(getattr(g, 'channels', None) or []):
+                    self._snap_channel(ch)
+            except Exception as _ex:
+                _log.debug('guardian ready snap %s: %s', getattr(g, 'id', '?'), _ex)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_update(self, before, after):
+        self._snap_channel(after)
+
+    @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
+        # снимок уже мог быть — не затираем
+        if int(getattr(channel, 'id', 0) or 0) not in (
+                self._channel_snap.get(int(channel.guild.id), {}) or {}):
+            self._snap_channel(channel)
         actor = await self._actor(channel.guild, discord.AuditLogAction.channel_delete,
                                   target_id=channel.id)
         await self._touch(channel.guild, 'channel_delete', actor[0], actor[1],
-                          detail=f'канал «{getattr(channel, "name", "?")}»')
+                          detail=f'канал «{getattr(channel, "name", "?")}»',
+                          restore_channel_id=int(getattr(channel, 'id', 0) or 0))
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
+        self._snap_channel(channel)
         actor = await self._actor(channel.guild, discord.AuditLogAction.channel_create,
                                   target_id=channel.id)
         await self._touch(channel.guild, 'channel_create', actor[0], actor[1],
@@ -491,6 +720,14 @@ class Guardian(commands.Cog):
     async def on_member_ban(self, guild, user):
         actor = await self._actor(guild, discord.AuditLogAction.ban,
                                   target_id=getattr(user, 'id', None))
+        try:
+            vid = int(getattr(user, 'id', 0) or 0)
+            if vid:
+                buf = self._recent_bans.setdefault(int(guild.id), [])
+                buf.append((time.time(), int(actor[0] or 0), vid))
+                del buf[:-80]
+        except Exception:
+            pass
         await self._touch(guild, 'member_ban', actor[0], actor[1],
                           detail=f'жертва: `{getattr(user, "name", user)}`')
 

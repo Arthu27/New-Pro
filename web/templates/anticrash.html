@@ -12,13 +12,31 @@
     <div class="ac-title">{% if f.any %}Защита частично активна{% else %}Все защиты выключены{% endif %}</div>
     <div class="dim">Щит · Антирейд · Security · Watchdog бота — opt-in</div>
   </div>
-  <div class="ac-master">
+  <div class="ac-master" style="display:flex;gap:8px;flex-wrap:wrap">
+    <form method="post">
+      <input type="hidden" name="action" value="arm_max">
+      <button type="submit" class="ghost on">Включить максимум PRO</button>
+    </form>
     <form method="post">
       <input type="hidden" name="action" value="kill_all">
       <button type="submit" class="ghost">Выключить всё</button>
     </form>
   </div>
 </section>
+
+{% set rh = snap.role_health or {} %}
+{% if not rh.get('ok', True) %}
+<section class="panel rise" style="border-color:#c0392b">
+  <h2>Критично: роль бота ниже Admin</h2>
+  <p class="dim">{{ rh.get('reason') }} Иначе щит <b>обходят</b> — бот не снимет роли выше себя.</p>
+  <ul>
+  {% for b in rh.get('blockers') or [] %}
+    <li><b>{{ b.name }}</b> (pos {{ b.position }}) — выше бота</li>
+  {% endfor %}
+  </ul>
+  <p>Подними роль бота <b>{{ rh.get('bot_role') }}</b> на самый верх в настройках Discord → Роли.</p>
+</section>
+{% endif %}
 
 <div class="sys-grid rise">
   <article class="sys-card">

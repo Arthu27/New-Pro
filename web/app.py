@@ -2837,6 +2837,11 @@ def anticrash_page():
                 flash('Все защиты выключены', 'ok')
                 return redirect(url_for('anticrash_page'))
 
+            if action == 'arm_max':
+                P.arm_all_protections(gid, bot_instance)
+                flash('Антикраш PRO включён на максимум', 'ok')
+                return redirect(url_for('anticrash_page'))
+
             system = (request.form.get('system') or '').strip()
             key = (request.form.get('key') or '').strip()
             raw = request.form.get('value')

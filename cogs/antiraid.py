@@ -41,7 +41,8 @@ class GuildAntiraidConfig:
         "min_age": 5,
         "join_threshold": 5,
         "join_window": 10,
-        "raid_action": "alert",
+        # alert | kick | ban — при join_raid / age_filter
+        "raid_action": "kick",
         "alert_channel_id": None,
         "whitelist": [],
         "recent_events": [],
@@ -199,13 +200,31 @@ class AntiRaid(commands.Cog):
 
         embed = discord.Embed(title=title, description=description, color=color,
                               timestamp=datetime.now(timezone.utc))
-        embed.set_footer(text="Hakumo AntiRaid — Режим наблюдения (без авто-действий)")
+        embed.set_footer(text="Hakumo AntiRaid PRO")
         for name, value in (fields or []):
             embed.add_field(name=name, value=value, inline=False)
         try:
             await target.send(embed=embed)
         except Exception as e:
             log.warning("antiraid alert send failed: %s", e)
+
+    async def _apply_raid_action(self, member: discord.Member, cfg, reason: str) -> str:
+        """Реальная мера: alert / kick / ban (по raid_action)."""
+        action = str(cfg.data.get('raid_action') or 'kick').lower()
+        if action not in ('alert', 'kick', 'ban'):
+            action = 'kick'
+        if action == 'alert':
+            return 'только тревога'
+        try:
+            if action == 'kick':
+                await member.kick(reason=f'Hakumo AntiRaid: {reason}')
+                return 'кикнут'
+            await member.ban(reason=f'Hakumo AntiRaid: {reason}',
+                             delete_message_seconds=0)
+            return 'забанен'
+        except Exception as e:
+            log.warning('antiraid action %s failed: %s', action, e)
+            return f'не удалось ({action})'
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
@@ -231,14 +250,17 @@ class AntiRaid(commands.Cog):
         account_age_days = (datetime.now(timezone.utc) - member.created_at).days
         min_age = int(cfg.data.get("min_age", 5) or 0)
         if cfg.data.get("age_filter") and min_age > 0 and account_age_days < min_age:
+            applied = await self._apply_raid_action(
+                member, cfg, f'аккаунт {account_age_days}д < {min_age}д')
             await self._send_alert(
                 member.guild, cfg,
-                title="👶 Новый аккаунт присоединился (алерт)",
-                description=f"{member.mention} присоединился, но аккаунт слишком новый.",
+                title="Новый аккаунт — AntiRaid",
+                description=f"{member.mention}: аккаунт слишком новый. Мера: **{applied}**.",
                 fields=[
                     ("Пользователь", f"{member} (`{member.id}`)"),
                     ("Возраст аккаунта", f"{account_age_days} дней (мин: {min_age})"),
                     ("Создан", member.created_at.strftime("%Y-%m-%d %H:%M UTC")),
+                    ("Мера", applied),
                 ],
                 color=discord.Color.yellow(),
             )
@@ -247,23 +269,28 @@ class AntiRaid(commands.Cog):
                 "user_id": str(member.id),
                 "user_tag": str(member),
                 "account_age_days": account_age_days,
+                "applied": applied,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             })
+            if applied in ('кикнут', 'забанен'):
+                return
 
         if cfg.data.get("join_raid"):
             count = len(self.join_tracker[guild_id])
             if count >= threshold:
+                applied = await self._apply_raid_action(
+                    member, cfg, f'reid {count}/{threshold} за {window}с')
                 await self._send_alert(
                     member.guild, cfg,
-                    title="🚨 Волна присоединений похожая на рейд (алерт)",
+                    title="Волна входов — AntiRaid",
                     description=(
-                        f"За последние {window} секунд присоединилось **{count}** человек "
-                        f"(порог: {threshold}). **Авто-действия отключены** — "
-                        "вы можете вмешаться через страницу `/antiraid` в панели."
+                        f"За {window}с зашло **{count}** (порог {threshold}). "
+                        f"Мера к последнему: **{applied}**."
                     ),
                     fields=[
                         ("Порог", f"{count}/{threshold} чел / {window}с"),
                         ("Последний", f"{member} (`{member.id}`)"),
+                        ("Мера", applied),
                     ],
                     color=discord.Color.dark_red(),
                 )
@@ -273,6 +300,7 @@ class AntiRaid(commands.Cog):
                     "window": window,
                     "threshold": threshold,
                     "last_user": str(member),
+                    "applied": applied,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
 
@@ -287,13 +315,19 @@ class AntiRaid(commands.Cog):
             return
         if cfg.is_whitelisted(after.id):
             return
+        applied = 'только тревога'
+        try:
+            await after.kick(reason='Hakumo AntiRaid: чужой бот')
+            applied = 'кикнут'
+        except Exception as e:
+            applied = f'кик не удался: {e}'
         await self._send_alert(
             after.guild, cfg,
-            title="🤖 На сервер добавлен бот (алерт)",
-            description=f"{after.mention} присоединился к серверу. **Авто-кик отключен** — проверьте в панели.",
+            title="Чужой бот — AntiRaid",
+            description=f"{after.mention} на сервере. Мера: **{applied}**.",
             fields=[
                 ("Бот", f"{after} (`{after.id}`)"),
-                ("Владелец", "Неизвестно"),
+                ("Мера", applied),
             ],
             color=discord.Color.purple(),
         )
@@ -301,6 +335,7 @@ class AntiRaid(commands.Cog):
             "type": "bot_join",
             "user_id": str(after.id),
             "user_tag": str(after),
+            "applied": applied,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 

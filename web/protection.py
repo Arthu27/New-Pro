@@ -70,6 +70,78 @@ def save_guardian(gid: int, data: dict) -> dict:
     return clean
 
 
+def arm_all_protections(gid: int, bot_instance=None, *, owner_id: int = 0) -> dict:
+    """Включить максимум антикраша: Щит PRO + антирейд + security + watchdog."""
+    from cogs import guardian as G
+    gu = load_guardian(gid)
+    if not owner_id and bot_instance is not None:
+        try:
+            g = bot_instance.get_guild(int(gid)) if gid else None
+            owner_id = int(getattr(g, 'owner_id', 0) or 0) if g else 0
+        except Exception:
+            owner_id = 0
+    gu = G.guardian_arm_pro(gu, owner_id=owner_id)
+    if gid:
+        save_guardian(gid, gu)
+
+    ar = load_antiraid(gid)
+    ar['join_raid'] = True
+    ar['bot_protection'] = True
+    ar['webhook_protection'] = True
+    ar['delete_protection'] = True
+    ar['age_filter'] = True
+    ar['min_age'] = max(int(ar.get('min_age') or 0), 3)
+    ar['join_threshold'] = min(int(ar.get('join_threshold') or 5), 5)
+    ar['join_window'] = min(int(ar.get('join_window') or 10), 10)
+    ar['raid_action'] = 'kick'
+    if gid:
+        save_antiraid(gid, ar)
+
+    sec = load_security(gid)
+    sec['ai_spam'] = True
+    sec['fake_account'] = True
+    sec['link_scanner'] = True
+    sec['new_account_days'] = max(int(sec.get('new_account_days') or 0), 3)
+    sec['new_account_action'] = 'kick'
+    if gid:
+        save_security(gid, sec)
+
+    eh = getattr(bot_instance, 'error_handler', None) if bot_instance else None
+    if eh:
+        eh.update_config('master_enabled', True)
+        eh.update_config('alerts_enabled', True)
+        eh.update_config('loop_watchdog', True)
+        eh.update_config('cog_breaker', True)
+        eh.update_config('connection_watch', True)
+    else:
+        cfg = read_json(DATA / 'anticrash_config.json', {})
+        if not isinstance(cfg, dict):
+            cfg = {}
+        cfg.update({
+            'master_enabled': True,
+            'alerts_enabled': True,
+            'loop_watchdog': True,
+            'cog_breaker': True,
+            'connection_watch': True,
+        })
+        DATA.mkdir(parents=True, exist_ok=True)
+        (DATA / 'anticrash_config.json').write_text(
+            json.dumps(cfg, ensure_ascii=False, indent=2), encoding='utf-8')
+    snap = snapshot(gid, bot_instance)
+    # если gid=0 — disk-save не было; вернём только что собранный PRO-конфиг
+    snap['guardian'] = gu
+    snap['antiraid'] = ar
+    snap['security'] = sec
+    snap['flags'] = {
+        'antiraid': True,
+        'security': True,
+        'guardian': True,
+        'bot': True,
+        'any': True,
+    }
+    return snap
+
+
 def kill_all_protections(gid: int, bot_instance=None) -> None:
     """Выключить ВСЕ защиты сервера и watchdog бота."""
     gu = load_guardian(gid)
@@ -145,6 +217,15 @@ def snapshot(gid: int, bot_instance=None) -> dict:
     gu_on = bool(gu.get('enabled'))
     bot_on = bool(bot_cfg.get('master_enabled'))
 
+    role_health = {'ok': True, 'blockers': [], 'reason': ''}
+    if bot_instance is not None and gid:
+        try:
+            g = bot_instance.get_guild(int(gid))
+            if g is not None:
+                role_health = G.bot_role_health(g)
+        except Exception:
+            pass
+
     return {
         'antiraid': ar,
         'security': sec,
@@ -153,6 +234,7 @@ def snapshot(gid: int, bot_instance=None) -> dict:
         'bot_overview': bot_ov,
         'bot_config': bot_cfg,
         'bot_meta': bot_meta,
+        'role_health': role_health,
         'flags': {
             'antiraid': ar_on,
             'security': sec_on,
