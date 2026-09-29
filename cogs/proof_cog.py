@@ -691,8 +691,16 @@ async def deliver_prefix_proof(bot, ctx, member, action_ru, reason):
 
 # ═══════════ после наказания: файл → канал → принять/отклонить ═══════════
 
-# «× Отвечаю за Moderator» — silent ping на карточке демки
+# «× Отвечаю за Moderator» — silent ping / приём демок
 PROOF_REVIEW_ROLE_ID = 1551524708552278036
+# «× Отвечаю за Helper» — тоже смотрит видео и принимает/отклоняет
+# (заказ: демки мута чата и остальные — не только кураторы модов)
+PROOF_REVIEW_HELPER_ROLE_ID = 1551525681207189504
+
+PROOF_REVIEW_ROLE_IDS = (
+    PROOF_REVIEW_ROLE_ID,
+    PROOF_REVIEW_HELPER_ROLE_ID,
+)
 
 
 def _action_key_ru(action: str) -> str:
@@ -960,6 +968,7 @@ def _entry_id_from_message(interaction) -> int:
 
 
 def _can_review_proof(member) -> bool:
+    """Owner / «Отвечаю за Moderator» / «Отвечаю за Helper»."""
     if member is None:
         return False
     try:
@@ -975,9 +984,14 @@ def _can_review_proof(member) -> bool:
     try:
         ids = {int(getattr(r, 'id', 0) or 0)
                for r in (getattr(member, 'roles', None) or [])}
-        return PROOF_REVIEW_ROLE_ID in ids
+        return any(rid in ids for rid in PROOF_REVIEW_ROLE_IDS)
     except Exception:
         return False
+
+
+def _proof_reviewer_ping_roles() -> list:
+    """Тихий пинг: «Отвечаю за Moderator» + «Отвечаю за Helper»."""
+    return [PROOF_REVIEW_ROLE_ID, PROOF_REVIEW_HELPER_ROLE_ID]
 
 
 async def _undo_punishment(bot, guild, entry, reviewer, reason: str) -> str:
@@ -1110,7 +1124,10 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
     except Exception:
         pass
     if not _can_review_proof(reviewer):
-        return False, f'Только <@&{PROOF_REVIEW_ROLE_ID}> принимает/отклоняет демки.'
+        return False, (
+            f'Только <@&{PROOF_REVIEW_ROLE_ID}> или '
+            f'<@&{PROOF_REVIEW_HELPER_ROLE_ID}> принимают/отклоняют демки.'
+        )
     entry = None
     for en in proof_list(guild_id, limit=500):
         if int(en.get('id') or 0) == int(entry_id):
@@ -1373,10 +1390,11 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
         + (f' · case `{case_id}`' if case_id else '')
     )
 
-    # silent ping «отвечаю за мод»
+    # silent ping: «отвечаю за мод» + «отвечаю за хелперов»
     try:
+        pings = ' '.join(f'<@&{rid}>' for rid in _proof_reviewer_ping_roles())
         await ch.send(
-            f'<@&{PROOF_REVIEW_ROLE_ID}>',
+            pings,
             allowed_mentions=discord.AllowedMentions(roles=True),
             flags=discord.MessageFlags(suppress_notifications=True),
         )

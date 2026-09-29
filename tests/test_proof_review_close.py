@@ -123,5 +123,26 @@ check('proof_delete_media' in src and '_close_proof_card' in src,
 check('_publish_proof_decision' in src, '_publish_proof_decision')
 check('attachments=[]' not in src, 'нет attachments=[] на закрытии')
 
+print('== отвечающие за хелперов тоже ревьюят ==')
+from cogs.proof_cog import (  # noqa: E402
+    PROOF_REVIEW_HELPER_ROLE_ID, _proof_reviewer_ping_roles,
+)
+check(PROOF_REVIEW_HELPER_ROLE_ID == 1551525681207189504,
+      'role × Отвечаю за Helper')
+pings = _proof_reviewer_ping_roles()
+check(PROOF_REVIEW_ROLE_ID in pings and PROOF_REVIEW_HELPER_ROLE_ID in pings,
+      f'пинг обеих ролей: {pings}')
+mod_role = types.SimpleNamespace(id=PROOF_REVIEW_ROLE_ID)
+help_role = types.SimpleNamespace(id=PROOF_REVIEW_HELPER_ROLE_ID)
+other = types.SimpleNamespace(id=1)
+mem_mod = types.SimpleNamespace(id=10, roles=[mod_role], guild=None)
+mem_help = types.SimpleNamespace(id=11, roles=[help_role], guild=None)
+mem_no = types.SimpleNamespace(id=12, roles=[other], guild=None)
+check(_can_review_proof(mem_mod) is True, 'мод-куратор может ревью')
+check(_can_review_proof(mem_help) is True, 'хелпер-куратор может ревью')
+check(_can_review_proof(mem_no) is False, 'чужой роль не ревьюит')
+check('PROOF_REVIEW_HELPER_ROLE_ID' in src and 'Отвечаю за Helper' in src,
+      'хелпер-куратор в исходниках')
+
 print(f'\nИтого: {PASS} PASS / {FAIL} FAIL')
 sys.exit(1 if FAIL else 0)
