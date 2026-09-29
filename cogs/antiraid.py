@@ -315,6 +315,12 @@ class AntiRaid(commands.Cog):
             return
         if cfg.is_whitelisted(after.id):
             return
+        try:
+            from services.own_bots import is_own_bot
+            if is_own_bot(after.id, self.bot):
+                return
+        except Exception:
+            pass
         applied = 'только тревога'
         try:
             await after.kick(reason='Hakumo AntiRaid: чужой бот')

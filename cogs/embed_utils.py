@@ -190,6 +190,31 @@ def success_embed(title, description, guild=None, gif_key=None, fields=None):
     return e
 
 
+def mod_result_embed(*, title: str, user, body: str, reason: str = None,
+                     case_id=None, color: int = 0x2ECC71):
+    """Короткий ответ модератору: имя, результат, правило, дело."""
+    uid = getattr(user, 'id', None) or user
+    name = getattr(user, 'display_name', None) or str(uid)
+    lines = [f"**{name}** · `{uid}`", str(body or '').strip()]
+    try:
+        from services import mod_reasons as _MR
+        short = _MR.display_reason(reason) if reason else ''
+    except Exception:
+        short = (str(reason or '').strip()[:80]) if reason else ''
+    if short:
+        lines.append(f"**Правило** · {short}")
+    if case_id not in (None, '', 0, '0'):
+        lines.append(f"**Дело** · #{case_id}")
+    e = discord.Embed(
+        title=f"✅ {title}",
+        description="\n".join(lines),
+        color=color,
+        timestamp=datetime.now(timezone.utc),
+    )
+    e.set_footer(text="HAKUMO")
+    return e
+
+
 def error_embed(description, title="Ошибка"):
     """Ошибка"""
     e = discord.Embed(color=0xE74C3C, timestamp=datetime.now(timezone.utc))

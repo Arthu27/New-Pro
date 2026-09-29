@@ -267,3 +267,20 @@ def resolve_stored_reason(raw: str) -> str:
     if is_known(raw):
         return format_reason(raw)
     return raw
+
+
+def display_reason(raw: str) -> str:
+    """Короткая подпись для ответа модератору: «1.8 · Капс / спам / флуд».
+
+    Полный текст запрета остаётся в деле/логе через format_reason.
+    """
+    raw = (raw or '').strip()
+    if not raw:
+        return ''
+    for sep in ('—', '·', '-'):
+        head = raw.split(sep, 1)[0].strip()
+        if is_known(head):
+            return select_label(head)
+    if is_known(raw):
+        return select_label(raw)
+    return _clip(raw, 80)

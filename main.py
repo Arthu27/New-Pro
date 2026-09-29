@@ -1098,8 +1098,8 @@ def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
 async def _monitor_voice():
     """Держим войс 24/7 по Discord-truth + soft reconnect + silence keepalive.
 
-    Каждые 2с: me.voice и latency. Zombie → force rejoin. Раз в ~45 мин
-    soft reconnect. Silence ping по умолчанию ВКЛ (лёгкий UDP keepalive).
+    Каждые 2с: me.voice и latency. Zombie → force rejoin. Soft reconnect
+    ~раз в 20ч. Silence ping по умолчанию ВКЛ (лёгкий UDP keepalive).
     """
     global _voice_last_silence_ts, _voice_last_join_ts
     from services.voice_stay_health import (

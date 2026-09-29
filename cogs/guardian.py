@@ -771,6 +771,13 @@ class Guardian(commands.Cog):
             _log.info('guardian: бот %s добавлен разрешённым %s — ок',
                       member.id, actor[0])
             return
+        try:
+            from services.own_bots import is_own_bot
+            if is_own_bot(member.id, self.bot):
+                _log.info('guardian: свой бот %s — не кикаем', member.id)
+                return
+        except Exception as _ob:
+            _log.debug('guardian own_bots: %s', _ob)
         kicked = False
         if cfg.get('kick_unauthorized_bots'):
             try:

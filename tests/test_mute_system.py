@@ -5,9 +5,8 @@
    мут (чат+войс) = роль мута + роль войс-мута + сервер-мут микрофона;
    нативный таймаут НЕ обязателен — без права «Модерация участников»
    действие ВСЁ РАВНО выполняется.
-2) Войс-мут = микрофон закрыт, НО зайти в голосовой можно:
-   сервер-мут сразу, при входе в войс — авто-мут; если роль запрещает
-   «Подключаться» в голосовых каналах — запрет снимается.
+2) Войс-мут = роль + speak deny + сервер-мут + выкид из войса;
+   при возврате в войс — авто-сервер-мут.
 3) Снятие войс-мута возвращает микрофон (роль И сервер-мут).
 4) «Снять варн» в панели (/modpanel + веб) и в боте (/unwarn без
    Discord-права — права выдаёт владелец через ACL).
@@ -59,9 +58,9 @@ def perms(**kw):
 class _Overwrite:
     def __init__(self):
         self.deny = 0
-
-    def __getattr__(self, name):
-        return 0
+        self.speak = None
+        self.connect = None
+        self.view_channel = None
 
 
 class _Channel:
@@ -76,6 +75,10 @@ class _Channel:
 
     async def set_permissions(self, target, **kw):
         self.calls.append(kw)
+        ow = self.overwrites.setdefault(id(target), _Overwrite())
+        for k, v in kw.items():
+            if k != 'reason':
+                setattr(ow, k, v)
 
 
 class _Role:
@@ -84,10 +87,18 @@ class _Role:
         self.name = name
         self.mention = f'<@&{rid}>'
         self.managed = False
-        self.permissions = perms()
+        self.permissions = types.SimpleNamespace(
+            value=0, speak=True, connect=False)
+        self.edits = []
 
     def is_default(self):
         return False
+
+    async def edit(self, **kw):
+        self.edits.append(kw)
+        perms = kw.get('permissions')
+        if perms is not None:
+            self.permissions = perms
 
 
 class _Voice:
@@ -112,6 +123,7 @@ class _Member:
         self.added = []
         self.removed = []
         self.dms = []
+        self.moved_to = 'unset'
         self.display_avatar = types.SimpleNamespace(url='http://a/1')
 
     async def add_roles(self, role, reason=None):
@@ -121,6 +133,10 @@ class _Member:
 
     async def remove_roles(self, role, reason=None):
         self.removed.append((role.id, reason))
+
+    async def move_to(self, channel, reason=None):
+        self.moved_to = channel
+        self.voice.channel = channel
 
     async def edit(self, **kw):
         self.edits.append(kw)
@@ -149,6 +165,7 @@ class _Guild:
         self.owner_id = 0
         self.roles = roles
         self.voice_channels = list(channels)
+        self.stage_channels = []
         self.members = []
         self.system_channel = None
 
@@ -256,7 +273,7 @@ async def main():
         pass
     tgt = target
     ok, text = await cog.apply_panel_action(
-        guild, tgt, 'timeout', reason='тест', amount='60м', actor='Панель')
+        guild, tgt, 'timeout', reason='1.9', amount='60м', actor='Панель')
     check(ok, 'мут выполнен без нативного таймаута', f'→ {text}')
     got_mute = any(rid == 5001 for rid, _ in tgt.added)
     got_vmute = any(rid == 5002 for rid, _ in tgt.added)
@@ -289,27 +306,30 @@ async def main():
     check(ok_pre2 is None, 'мут чата — то же (нужно только «Управление ролями»)',
           f'→ {ok_pre2}')
 
-    print('== 2. Войс-мут: микрофон закрыт, вход в войс разрешён ==')
+    print('== 2. Войс-мут: роль + speak deny + выкид из войса ==')
     tgt2 = _Member(3010000000000000301, 'Войс-нарушитель', guild=guild)
     guild.members.append(tgt2)
     ok, text = await cog.apply_panel_action(
-        guild, tgt2, 'vmute', reason='тест', amount='30м', actor='Панель')
-    check(ok, 'войс-мут применён')
+        guild, tgt2, 'vmute', reason='1.9', amount='30м', actor='Панель')
+    check(ok, 'войс-мут применён', f'→ {text}')
     check(any(rid == 5002 for rid, _ in tgt2.added), 'роль войс-мута выдана')
     vch = _Channel(8001)
     guild.voice_channels.append(vch)
-    # роль запрещает connect в голосовом → хелпер должен снять запрет
-    ow = _Overwrite()
-    ow.deny = (1 << 20)  # connect
-    vch.overwrites[id(r_vmute)] = ow
     tgt3 = _Member(3020000000000000302, 'Третий', guild=guild)
+    # уже в войсе — должны выкинуть
+    tgt3.voice = _Voice()
+    tgt3.voice.channel = vch
     guild.members.append(tgt3)
-    ok, _ = await cog.apply_panel_action(
-        guild, tgt3, 'vmute', reason='тест', amount='30м', actor='Панель')
-    check(ok and len(vch.calls) == 1
-          and vch.calls[0].get('connect', 'keep') in (None, True),
-          'запрет «Подключаться» у роли войс-мута снят в голосовом канале',
-          f'→ {vch.calls}')
+    ok, text3 = await cog.apply_panel_action(
+        guild, tgt3, 'vmute', reason='1.9', amount='30м', actor='Панель')
+    check(ok, 'войс-мут с участником в войсе', f'→ {text3}')
+    check(any(rid == 5002 for rid, _ in tgt3.added), 'роль выдана третьему')
+    check(any(e.get('mute') is True for e in tgt3.edits),
+          'сервер-мут перед выкидом', f'→ {tgt3.edits}')
+    check(tgt3.moved_to is None, 'выкинут из войса', f'→ {tgt3.moved_to}')
+    check(any(c.get('speak') is False and c.get('connect') is True
+              for c in vch.calls),
+          'в канале speak=False connect=True', f'→ {vch.calls}')
 
     print('== 3. Вход в войс с войс-мутом → микрофон глушится сам ==')
     tgt3.voice = _Voice()
@@ -327,7 +347,7 @@ async def main():
     print('== 4. Снятие войс-мута возвращает микрофон ==')
     tgt2.voice = _Voice(mute=True)
     ok, text = await cog.apply_panel_action(
-        guild, tgt2, 'vunmute', reason='тест', actor='Панель')
+        guild, tgt2, 'vunmute', reason='1.9', actor='Панель')
     check(ok, 'vunmute выполнен')
     check(any(e.get('mute') is False for e in tgt2.edits),
           'сервер-мут микрофона снят вместе с ролью')
@@ -336,8 +356,8 @@ async def main():
     check(hasattr(M, '_CtxMuteModal'), 'модалка ПКМ-мута существует')
     names = [getattr(c, 'name', '') for c in getattr(M, '_CTX_COMMANDS', ())]
     check('🔇 Мут (чат + войс)' in names and '🎙️ Войс-мут (микрофон)' in names
-          and '🔊 Снять муты' in names,
-          'три ПКМ-команды: мут чат+войс / войс-мут / снять муты', f'→ {names}')
+          and '⚠️ Варн' in names and '🔊 Снять муты' in names,
+          'ПКМ: мут / войс-мут / варн / снять', f'→ {names}')
     check('_ctx_setup' in open(os.path.join(ROOT, 'cogs/moderation.py'),
                                encoding='utf-8').read(),
           'ПКМ-команды регистрируются вместе с модерацией')
@@ -366,12 +386,12 @@ async def main():
     import cogs.logs as _logs_mod
     _logs_mod.ensure_log_channel = _fake_ensure
     ok, text = await cog.apply_panel_action(
-        guild, target, 'unwarn', reason='тест', actor='Панель')
+        guild, target, 'unwarn', reason='1.9', actor='Панель')
     check(ok and 'Снято' in text, 'панель сняла последний варн', f'→ {text}')
     clean = _Member(9990000000000000999, 'Чистый', guild=guild)
     guild.members.append(clean)
     ok, text = await cog.apply_panel_action(
-        guild, clean, 'unwarn', reason='тест', actor='Панель')
+        guild, clean, 'unwarn', reason='1.9', actor='Панель')
     check(not ok and 'нет предупреждений' in text,
           'без варнов — честный отказ', f'→ {text}')
 
