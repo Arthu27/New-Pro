@@ -5,8 +5,7 @@
    мут (чат+войс) = роль мута + роль войс-мута + сервер-мут микрофона;
    нативный таймаут НЕ обязателен — без права «Модерация участников»
    действие ВСЁ РАВНО выполняется.
-2) Войс-мут = роль + speak deny + сервер-мут + выкид из войса;
-   при возврате в войс — авто-сервер-мут.
+2) Войс-мут = выдать роль войс-мута + выкинуть из войса.
 3) Снятие войс-мута возвращает микрофон (роль И сервер-мут).
 4) «Снять варн» в панели (/modpanel + веб) и в боте (/unwarn без
    Discord-права — права выдаёт владелец через ACL).
@@ -306,7 +305,7 @@ async def main():
     check(ok_pre2 is None, 'мут чата — то же (нужно только «Управление ролями»)',
           f'→ {ok_pre2}')
 
-    print('== 2. Войс-мут: роль + speak deny + выкид из войса ==')
+    print('== 2. Войс-мут: роль + выкид из войса ==')
     tgt2 = _Member(3010000000000000301, 'Войс-нарушитель', guild=guild)
     guild.members.append(tgt2)
     ok, text = await cog.apply_panel_action(
@@ -316,7 +315,6 @@ async def main():
     vch = _Channel(8001)
     guild.voice_channels.append(vch)
     tgt3 = _Member(3020000000000000302, 'Третий', guild=guild)
-    # уже в войсе — должны выкинуть
     tgt3.voice = _Voice()
     tgt3.voice.channel = vch
     guild.members.append(tgt3)
@@ -324,33 +322,16 @@ async def main():
         guild, tgt3, 'vmute', reason='1.9', amount='30м', actor='Панель')
     check(ok, 'войс-мут с участником в войсе', f'→ {text3}')
     check(any(rid == 5002 for rid, _ in tgt3.added), 'роль выдана третьему')
-    check(any(e.get('mute') is True for e in tgt3.edits),
-          'сервер-мут перед выкидом', f'→ {tgt3.edits}')
     check(tgt3.moved_to is None, 'выкинут из войса', f'→ {tgt3.moved_to}')
-    check(any(c.get('speak') is False and c.get('connect') is True
-              for c in vch.calls),
-          'в канале speak=False connect=True', f'→ {vch.calls}')
+    check(not any(e.get('mute') is True for e in tgt3.edits),
+          'сервер-мут НЕ трогаем — только роль + выкид', f'→ {tgt3.edits}')
 
-    print('== 3. Вход в войс с войс-мутом → микрофон глушится сам ==')
-    tgt3.voice = _Voice()
-    await cog.on_voice_state_update(tgt3, types.SimpleNamespace(channel=None),
-                                    types.SimpleNamespace(channel=vch))
-    check(any(e.get('mute') is True for e in tgt3.edits),
-          'авто-сервер-мут при входе в голосовой с ролью')
-    # без роли — не глушим
-    tgt_clean = _Member(3030000000000000303, 'Чистый', guild=guild)
-    await cog.on_voice_state_update(tgt_clean, types.SimpleNamespace(channel=None),
-                                    types.SimpleNamespace(channel=vch))
-    check(not any(e.get('mute') is True for e in tgt_clean.edits),
-          'без роли войс-мута микрофон НЕ трогается')
-
-    print('== 4. Снятие войс-мута возвращает микрофон ==')
-    tgt2.voice = _Voice(mute=True)
+    print('== 3. Снятие войс-мута снимает роль ==')
     ok, text = await cog.apply_panel_action(
         guild, tgt2, 'vunmute', reason='1.9', actor='Панель')
     check(ok, 'vunmute выполнен')
-    check(any(e.get('mute') is False for e in tgt2.edits),
-          'сервер-мут микрофона снят вместе с ролью')
+    check(any(rid == 5002 for rid, _ in tgt2.removed),
+          'роль войс-мута снята', f'→ {tgt2.removed}')
 
     print('== 5. ПКМ-меню зарегистрировано ==')
     check(hasattr(M, '_CtxMuteModal'), 'модалка ПКМ-мута существует')

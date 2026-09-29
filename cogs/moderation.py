@@ -961,38 +961,25 @@ class Moderation (commands .Cog ):
                            f"(роль «{_mrole.name}»); голос не тронут")
                     await self._maybe_watchlist_after_mute(interaction, user, reason)
                 elif action =="vmute":
-                    # Войс-мут: роль + speak deny + сервер-мут + выкид из войса.
-                    # Чат не трогаем. Снимаем чат-мут/таймаут, чтобы не было
-                    # «двойного мута».
+                    # Войс-мут = роль войс-мута + выкид из войса. Больше ничего.
                     _vrole =self ._punish_role (guild ,'vmute')
                     minutes =parse_duration_minutes (amount ,30 )
                     minutes =max (1 ,min (minutes ,40320 ))
                     _case_minutes =minutes
+                    if _vrole is None :
+                        await _respond (interaction ,embed =error_embed (
+                        'Не выбрана роль войс-мута. '
+                        'Панель → «Роли наказаний» → войс-мут.'),
+                        ephemeral =True )
+                        return
                     if not hasattr (user ,'add_roles'):
                         await _respond (interaction ,embed =error_embed (
                         'Человек не на сервере — войс-мут выдать нельзя.'),
                         ephemeral =True )
                         return
-                    await self ._clear_chat_mute (guild ,user )
-                    if _vrole is not None :
-                        await self ._ensure_vmute_role_perms (guild ,_vrole )
-                        user =await self ._give_punish_role (
-                            guild ,user ,_vrole ,reason or 'войс-мут')
-                        self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
-                    elif not getattr (getattr (user ,'voice',None ),'channel',None ):
-                        await _respond (interaction ,
-                        embed =error_embed (
-                            "Нет роли войс-мута и участник не в голосовом. "
-                            "Панель → «Роли наказаний» → войс-мут."),
-                        ephemeral =True )
-                        return
-                    # сервер-мут микрофона (если ещё в войсе), затем выкид
-                    try :
-                        if getattr (getattr (user ,'voice',None ),'channel',None ):
-                            if not getattr (user .voice ,'mute',False ):
-                                await user .edit (mute =True ,reason =reason or 'войс-мут')
-                    except Exception as _ve :
-                        log .warning (f'[MODPANEL] vmute server-mute: {_ve}')
+                    user =await self ._give_punish_role (
+                        guild ,user ,_vrole ,reason or 'войс-мут')
+                    self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
                     _kicked =False
                     try :
                         if getattr (getattr (user ,'voice',None ),'channel',None ):
@@ -1000,25 +987,13 @@ class Moderation (commands .Cog ):
                             _kicked =True
                     except Exception as _vd :
                         log .warning (f'[MODPANEL] vmute voice kick: {_vd}')
-                    if _vrole is not None :
-                        msg =(f"войс-мут «{_vrole .name }» на {minutes } мин — "
-                              f"роль выдана, микрофон закрыт"
-                              +(" · выкинут из войса" if _kicked else ""))
-                    else :
-                        msg =("микрофон заглушён (войс-мут)"
-                              +(" · выкинут из войса" if _kicked else ""))
+                    msg =(f"войс-мут «{_vrole .name }» на {minutes } мин — роль выдана"
+                          +(" · выкинут из войса" if _kicked else ""))
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
                     if _vrole is not None :
                         await self ._drop_roles (guild ,user ,[_vrole ])
-                    # микрофон вернуть В ЛЮБОМ случае (раньше после снятия
-                    # роли микрофон оставался замьюченным)
-                    try :
-                        if getattr (getattr (user ,'voice',None ),'mute',False ) :
-                            await user .edit (mute =False ,reason ='войс-мут снят')
-                    except Exception as _ve :
-                        log .debug (f'[MODPANEL] vunmute edit: {_ve}')
-                    msg ="🎙️ войс-мут снят — микрофон открыт"
+                    msg ="войс-мут снят — роль убрана"
                 elif action =="unmute_chat":
                     try :
                         from services import mute_state
@@ -1427,39 +1402,6 @@ class Moderation (commands .Cog ):
         return ok ,text 
 
     # ── Роли наказаний (панель → «Настройки модерации») ─────────────────
-    async def _ensure_vmute_role_perms (self ,guild ,vrole ):
-        """Войс-мут: speak=False, connect=True во всех голосовых.
-
-        Раньше хелпер снимал speak/connect оверрайды — микрофон «не висел»,
-        а роль с connect=False не пускала обратно. Теперь явно: микрофон
-        закрыт, зайти можно (после выкида)."""
-        if vrole is None :
-            return
-        try :
-            perms =getattr (vrole ,'permissions',None )
-            if perms is not None and (perms .speak or not perms .connect ):
-                new =discord .Permissions (perms .value )
-                new .speak =False
-                new .connect =True
-                await vrole .edit (permissions =new ,
-                reason ='войс-мут: микрофон закрыт, вход разрешён')
-        except Exception as _ex :
-            log .debug (f'[MODPANEL] vmute role perms: {_ex}')
-        try :
-            for ch in list (getattr (guild ,'voice_channels',[])or []
-                            )+list (getattr (guild ,'stage_channels',[])or []):
-                try :
-                    ow =ch .overwrites_for (vrole )
-                    if ow .speak is False and ow .connect is True :
-                        continue
-                    await ch .set_permissions (
-                        vrole ,speak =False ,connect =True ,
-                        reason ='войс-мут: микрофон закрыт, вход можно')
-                except Exception as _ch :
-                    log .debug (f'[MODPANEL] vmute ch {getattr(ch,"id",0)}: {_ch}')
-        except Exception as _ex :
-            log .debug (f'[MODPANEL] ensure vmute perms: {_ex}')
-
     async def _give_punish_role (self ,guild ,user ,role ,reason ):
         """Выдать роль наказания и проверить, что она реально висит."""
         if role is None or user is None :
@@ -1469,7 +1411,6 @@ class Moderation (commands .Cog ):
         except Exception as _e :
             log .warning (f'[MODPANEL] add_roles {role.id}: {_e}')
             raise
-        # перечитываем участника — кэш иногда врёт
         member =guild .get_member (getattr (user ,'id',0 ))
         if member is None :
             try :
@@ -1511,27 +1452,6 @@ class Moderation (commands .Cog ):
             log .info (f'[MODPANEL] роли после возврата: {member } +{len (give )}')
         except Exception as _ex :
             log .debug (f'[MODPANEL] restore on join: {_ex}')
-
-    @commands .Cog .listener ()
-    async def on_voice_state_update (self ,member ,before ,after ):
-        """С ролью войс-мута в любом голосовом — сервер-мут микрофона.
-
-        Срабатывает и при входе, и при смене канала, и если кто-то снял
-        сервер-мут руками. Микрофон открывается только снятием роли."""
-        try :
-            if member is None or member .bot :
-                return
-            if after is None or after .channel is None :
-                return
-            _vrole =self ._punish_role (member .guild ,'vmute')
-            if _vrole is None or _vrole not in member .roles :
-                return
-            if getattr (after ,'mute',False )or getattr (
-                    getattr (member ,'voice',None ),'mute',False ):
-                return
-            await member .edit (mute =True ,reason ='активен войс-мут')
-        except Exception as _ex :
-            log .debug (f'[MODPANEL] on_voice_state_update: {_ex}')
 
     async def _purge_user_messages(self, channel, user_id: int, count: int):
         """Удалить до `count` последних сообщений участника в канале.
