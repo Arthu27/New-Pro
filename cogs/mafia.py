@@ -916,6 +916,7 @@ class Mafia(commands.Cog, name='mafia'):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self._family_guard_task = None
 
     async def cog_load(self):
         n = STORE.restore_all()
@@ -931,7 +932,36 @@ class Mafia(commands.Cog, name='mafia'):
             schedule_ensure_menu_emojis(self.bot)
         except Exception:
             pass
+        if self._family_guard_task is None or self._family_guard_task.done():
+            self._family_guard_task = self.bot.loop.create_task(
+                self._family_guard_loop(), name='mafia-family-guard')
         log.info('Mafia: восстановлено активных игр: %s', n)
+
+    async def cog_unload(self):
+        t = self._family_guard_task
+        if t is not None and not t.done():
+            t.cancel()
+
+    async def _family_guard_loop(self) -> None:
+        """Пока идёт партия — выгонять чужих с сервера семьи (без Members Intent)."""
+        await self.bot.wait_until_ready()
+        from services.mafia.family_guild import purge_strangers
+        while not self.bot.is_closed():
+            try:
+                active = any(
+                    getattr(g, 'mafia_family_ids', None)
+                    and g.phase in (PHASE_CONFIRM, PHASE_READY, PHASE_PLAYING)
+                    for g in list(STORE._by_guild.values())
+                )
+                if active:
+                    n = await purge_strangers(self.bot)
+                    if n:
+                        log.info('mafia family guard: выгнано чужих %s', n)
+            except Exception as ex:
+                log.debug('family guard: %s', ex)
+            await discord.utils.sleep_until(
+                discord.utils.utcnow() + __import__('datetime').timedelta(seconds=20)
+            )
 
     @commands.Cog.listener()
     async def on_voice_state_update(

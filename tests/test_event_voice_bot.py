@@ -97,8 +97,8 @@ check(hasattr(client, 'tree') and hasattr(client, 'add_cog'),
 ints = client.intents
 check(bool(ints.guilds) and bool(ints.voice_states),
       'intents: guilds + voice_states')
-check(bool(getattr(ints, 'members', False)),
-      'intents: members (сервер семьи / mute)')
+# Members Intent опционален (EVENT_BOT_MEMBERS_INTENT=1 + portal)
+check(hasattr(ints, 'members'), 'intents.members поле есть')
 check(not bool(getattr(ints, 'message_content', False)),
       'без message_content (лёгкий клиент)')
 check(EV._stay_on() is True, 'stay всегда on')

@@ -272,30 +272,80 @@ async def kick_if_not_mafia(bot, member: discord.Member) -> bool:
             return False
 
 
+async def _list_family_member_ids(bot, guild: discord.Guild) -> List[int]:
+    """Список uid на сервере семьи (HTTP — без Members Intent)."""
+    ids: List[int] = []
+    # кэш (если intent включён)
+    for m in list(getattr(guild, 'members', None) or []):
+        if m and not m.bot:
+            ids.append(int(m.id))
+    if ids:
+        return ids
+    # REST fallback
+    try:
+        after = 0
+        while True:
+            raw = await bot.http.get_members(guild.id, limit=100, after=after)
+            if not raw:
+                break
+            for row in raw:
+                try:
+                    uid = int(row['user']['id'])
+                    if not row['user'].get('bot'):
+                        ids.append(uid)
+                    after = max(after, uid)
+                except Exception:
+                    continue
+            if len(raw) < 100:
+                break
+            await asyncio.sleep(0.3)
+    except Exception as ex:
+        log.debug('family list members http: %s', ex)
+    return ids
+
+
 async def purge_strangers(bot) -> int:
     """Пройти сервер семьи и выгнать всех не из текущей семьи."""
     guild = bot.get_guild(family_guild_id())
     if guild is None:
+        try:
+            guild = await bot.fetch_guild(family_guild_id())
+        except Exception:
+            return 0
+    if guild is None:
         return 0
     allowed = allowed_mafia_ids(bot)
+    # если нет активной семьи — никого не трогаем (не банить весь сервер)
+    if not allowed:
+        return 0
     me_id = int(bot.user.id) if bot.user else 0
     n = 0
-    members = list(getattr(guild, 'members', None) or [])
-    if not members:
-        return 0
-    for m in members:
-        if m.bot or int(m.id) == me_id:
+    for uid in await _list_family_member_ids(bot, guild):
+        if uid == me_id or uid in allowed:
             continue
         try:
-            if m.guild_permissions.administrator:
+            member = guild.get_member(uid)
+            if member is None:
+                try:
+                    member = await guild.fetch_member(uid)
+                except Exception:
+                    member = None
+            if member is None:
+                try:
+                    await guild.ban(
+                        discord.Object(id=uid),
+                        reason='мафия: не из текущей семьи',
+                        delete_message_seconds=0,
+                    )
+                    n += 1
+                except Exception:
+                    pass
                 continue
-        except Exception:
-            pass
-        if int(m.id) in allowed:
-            continue
-        if await kick_if_not_mafia(bot, m):
-            n += 1
+            if await kick_if_not_mafia(bot, member):
+                n += 1
             await asyncio.sleep(0.4)
+        except Exception as ex:
+            log.debug('purge stranger %s: %s', uid, ex)
     return n
 
 
