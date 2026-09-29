@@ -1140,8 +1140,8 @@ async def _monitor_voice():
             _schedule_main_voice_rejoin('latency-heal', force=True)
             continue
         if needs_soft_reconnect(_voice_last_join_ts, now):
-            _log.info('main voice soft-reconnect after %.0f min',
-                      (now - _voice_last_join_ts) / 60.0)
+            _log.info('main voice soft-reconnect after %.1f h (редко, не каждые 45м)',
+                      (now - _voice_last_join_ts) / 3600.0)
             _schedule_main_voice_rejoin('soft-reconnect', force=True)
             continue
         if _silence and (now - _voice_last_silence_ts) > 60:

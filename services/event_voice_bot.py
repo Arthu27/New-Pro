@@ -604,8 +604,8 @@ async def _monitor_event_voice(client: discord.Client) -> None:
             _schedule_rejoin(client, 'latency-heal', force=True)
             continue
         if needs_soft_reconnect(_last_join_ts, now):
-            log.info('event-bot soft-reconnect after %.0f min',
-                     (now - _last_join_ts) / 60.0)
+            log.info('event-bot soft-reconnect after %.1f h (редко, не каждые 45м)',
+                     (now - _last_join_ts) / 3600.0)
             _schedule_rejoin(client, 'soft-reconnect', force=True)
             continue
         if _silence and (now - _last_silence_ts) > 60:

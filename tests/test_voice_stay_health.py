@@ -106,10 +106,14 @@ c3 = _Client(vc=None, me_ch=None)
 ok3, _, why3 = H.really_in_channel(c3, 99)
 check(not ok3 and why3 == 'out', f'both out ({why3})')
 
-# soft reconnect
+# soft reconnect — редкий (~20ч), не каждые 45 мин
+check(H.SOFT_RECONNECT_SEC >= 12 * 3600,
+      f'soft interval ≥12ч (сейчас {H.SOFT_RECONNECT_SEC}с)')
 check(H.needs_soft_reconnect(0, 1000) is False, 'no soft if never joined')
+check(H.needs_soft_reconnect(1, 1 + 45 * 60) is False,
+      '45 мин — ещё НЕ soft (иначе Events отлетает)')
 check(H.needs_soft_reconnect(1, 1 + H.SOFT_RECONNECT_SEC + 1),
-      'soft after interval')
+      'soft after long interval')
 
 print('== wiring in main + event ==')
 main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()

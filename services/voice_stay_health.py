@@ -20,8 +20,11 @@ from logger import get_logger
 
 log = get_logger('voice_stay_health')
 
-# Периодический force-reconnect, чтобы не копить zombie на 10+ часов
-SOFT_RECONNECT_SEC = 45 * 60  # 45 мин
+# Редкий force-reconnect: Discord иногда рвёт idle-сессию ~сутки.
+# Раньше было 45 мин — бот сам «отлетал» из войса каждые 45 минут
+# (владелец 2026-09-29: скрин Events). Silence keepalive держит UDP;
+# полный reconnect только если здоровы уже ~20ч, либо при zombie.
+SOFT_RECONNECT_SEC = 20 * 3600  # 20 часов
 
 
 def _member_voice_state(guild: discord.Guild, user_id: int):

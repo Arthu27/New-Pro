@@ -90,15 +90,9 @@ async def _run_once(stop: asyncio.Event) -> int:
 
         if st.get('online') and st.get('voice_connected'):
             miss = 0
-            # soft reconnect по таймеру
-            try:
-                from services.voice_stay_health import needs_soft_reconnect
-                if needs_soft_reconnect(
-                        getattr(EV, '_last_join_ts', 0) or 0, time.time()):
-                    print('heartbeat soft-reconnect', flush=True)
-                    EV._schedule_rejoin(c, 'soft-reconnect', force=True)
-            except Exception as ex:
-                print(f'heartbeat soft: {ex}', flush=True)
+            # Не дергаем soft-reconnect здесь: монитор сам решит
+            # (и только раз в ~20ч / при zombie). Иначе Events «отлетает»
+            # из войса на глазах каждые N минут.
             continue
 
         if st.get('online') and not st.get('voice_connected'):
