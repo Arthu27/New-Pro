@@ -693,7 +693,7 @@ def remove_from_blacklist(user_id, position=None) -> bool:
 MENU_STATE_FILE = "data/staff_menu_state.json"
 # bump → при следующем on_ready меню перепубликуется в канал наборов
 # v3: 4 ветки (Helper/Mod/Event/Broadcaster) + V2 баннер НАБОРЫ (не Gojo STAFF)
-MENU_POST_VERSION = 10  # v10: 7 веток + раздельные каналы заявок
+MENU_POST_VERSION = 11  # v11: 🤍 в селектах + роли support/closemod/creative
 
 
 def _load_menu_state():

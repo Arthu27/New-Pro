@@ -240,9 +240,15 @@ check(not is_group, '/mafia — одна команда с меню, не гру
 
 # меню содержит все действия ТЗ
 from cogs.mafia import MafiaActionSelect  # noqa: E402
-opts = {o.value for o in MafiaActionSelect().options}
+sel = MafiaActionSelect()
+opts = {o.value for o in sel.options}
 check(opts == {'start', 'deal', 'sync', 'status', 'panel', 'resend', 'add', 'cancel', 'presets'},
       f'меню действий: {sorted(opts)}')
+# 🤍 / › как у демок
+check(all(o.label.startswith('›') or '🤍' in o.label for o in sel.options),
+      f'лейблы › : {[o.label for o in sel.options][:3]}')
+check(all(getattr(o, 'emoji', None) is not None for o in sel.options),
+      'у каждого пункта есть emoji')
 
 # публичное лобби — только Участвовать/Выйти
 from cogs.mafia import PublicLobbyView, HostToolsView  # noqa: E402
@@ -252,10 +258,25 @@ check('Анонс' not in pub_labels and 'Старт' not in pub_labels, 'нет
 host_labels = {i.label for i in HostToolsView(1).children if hasattr(i, 'label')}
 check('Раздать роли' in host_labels, f'хост-панель: {host_labels}')
 
-# стикеры ролей включая путану
-from services.mafia.ui_v2 import sticker, role_sticker  # noqa: E402
+# стикеры + V2 как демка
+from services.mafia.ui_v2 import (  # noqa: E402
+    sticker, role_sticker, build_mafia_lobby_items, build_mafia_closed_items,
+    build_mafia_menu_items, V2_AVAILABLE as _MV2,
+)
 check(sticker('join') is not None and sticker('courtesan') is not None, 'стикеры join+путана')
 check(role_sticker('courtesan') is not None, 'role_sticker путана')
+if _MV2:
+    from discord import ui as _dui  # noqa: E402
+    _row = _dui.ActionRow()
+    lobby_items = build_mafia_lobby_items(body='**Ведущий** · <@1>', action_row=_row)
+    check(lobby_items and len(lobby_items) == 1, 'лобби — один чёрный контейнер')
+    closed_items = build_mafia_closed_items(body='x', note='закрыто')
+    check(closed_items and len(closed_items) == 1, 'закрытое лобби V2')
+    menu_items = build_mafia_menu_items(body='меню', select_row=_row)
+    check(menu_items and len(menu_items) == 1, 'меню ведущего — один контейнер')
+check('_lobby_closed_kwargs' in open(
+    os.path.join(_REPO, 'cogs/mafia.py'), encoding='utf-8').read(),
+    'закрытие лобби через V2-карточку')
 
 # старт только из войса ведущего — без Event-панели / signups
 src = open(os.path.join(_REPO, 'cogs/mafia.py'), encoding='utf-8').read()

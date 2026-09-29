@@ -872,17 +872,23 @@ class ProofRejectReasonModal(discord.ui.Modal, title='Отклонить дем�
         placeholder='Почему демка не подходит / наказание снимаем',
         style=discord.TextStyle.paragraph, max_length=400, required=True)
 
-    def __init__(self, entry_id: int, guild_id: int):
+    def __init__(self, entry_id: int, guild_id: int, message_id: int = 0):
         super().__init__(timeout=180)
         self.entry_id = int(entry_id)
         self.guild_id = int(guild_id)
+        self.message_id = int(message_id or 0)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Модалка — новый interaction без message; карточку правим по msg_id.
         await interaction.response.defer(ephemeral=True)
         ok, msg = await _review_proof(
             interaction, self.guild_id, self.entry_id,
-            accept=False, reason=str(self.reason.value or ''))
-        await interaction.followup.send(msg, ephemeral=True)
+            accept=False, reason=str(self.reason.value or ''),
+            message_id=self.message_id)
+        try:
+            await interaction.followup.send(msg, ephemeral=True)
+        except Exception:
+            pass
 
 
 class ProofReviewSelect(discord.ui.Select):
@@ -913,13 +919,22 @@ class ProofReviewSelect(discord.ui.Select):
             return await interaction.response.send_message(
                 'Запись демки не найдена.', ephemeral=True)
         choice = (self.values or [''])[0]
+        mid = int(getattr(getattr(interaction, 'message', None), 'id', 0) or 0)
         if choice == 'reject':
             return await interaction.response.send_modal(
-                ProofRejectReasonModal(eid, gid))
-        await interaction.response.defer(ephemeral=True)
+                ProofRejectReasonModal(eid, gid, message_id=mid))
+        # Принять: закрываем карточку ответом на interaction (select уходит),
+        # статус ПРИНЯТО пишется на самой демке — как у закрытых анкет.
         ok, msg = await _review_proof(
-            interaction, gid, eid, accept=True, reason='')
-        await interaction.followup.send(msg, ephemeral=True)
+            interaction, gid, eid, accept=True, reason='',
+            message_id=mid)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(msg, ephemeral=True)
+        else:
+            try:
+                await interaction.followup.send(msg, ephemeral=True)
+            except Exception:
+                pass
 
 
 class ProofReviewView(discord.ui.View):
@@ -1017,8 +1032,72 @@ async def _undo_punishment(bot, guild, entry, reviewer, reason: str) -> str:
     return ' · '.join(notes) if notes else 'наказание не трогали'
 
 
+async def _publish_proof_decision(interaction, *, view, message_id: int = 0,
+                                  guild=None, channel_id: int = 0) -> str:
+    """Убрать select и показать ПРИНЯТО/ОТКЛОНЕНО — как у закрытых анкет.
+
+    1) response.edit_message — пока interaction ещё не отвечен (accept)
+    2) followup.edit_message — после defer (модалка reject)
+    3) message.edit / fetch — запасной путь
+    Вложения НЕ трогаем: видео/фото остаются, MediaGallery берёт их CDN-URL.
+    """
+    kwargs = {'view': view}
+    # 1) первый ответ = правка самой демки
+    if not interaction.response.is_done():
+        try:
+            await interaction.response.edit_message(**kwargs)
+            return 'response'
+        except Exception as ex:
+            log.warning('[PROOF] response.edit_message: %s', ex)
+    # 2) после defer — token interaction
+    mid = (
+        int(message_id or 0)
+        or int(getattr(getattr(interaction, 'message', None), 'id', 0) or 0)
+    )
+    follow = getattr(interaction, 'followup', None)
+    if mid and follow is not None and hasattr(follow, 'edit_message'):
+        try:
+            await follow.edit_message(mid, **kwargs)
+            return 'followup'
+        except Exception as ex:
+            log.warning('[PROOF] followup.edit_message: %s', ex)
+    # 3) interaction.message
+    src = getattr(interaction, 'message', None)
+    if src is not None and hasattr(src, 'edit'):
+        try:
+            await src.edit(**kwargs)
+            return 'message'
+        except Exception as ex:
+            log.warning('[PROOF] message.edit: %s', ex)
+    # 4) fetch по записи
+    if guild is not None and mid and channel_id:
+        try:
+            ch = guild.get_channel(int(channel_id))
+            if ch is None and hasattr(guild, 'fetch_channel'):
+                ch = await guild.fetch_channel(int(channel_id))
+            if ch is not None:
+                msg = await ch.fetch_message(int(mid))
+                await msg.edit(**kwargs)
+                return 'fetch'
+        except Exception as ex:
+            log.warning('[PROOF] fetch.edit: %s', ex)
+    return ''
+
+
+def _media_urls_from_source(src, entry) -> list:
+    """CDN-ссылки вложений карточки — для MediaGallery после закрытия."""
+    urls = []
+    for a in (getattr(src, 'attachments', None) or []):
+        u = getattr(a, 'url', None)
+        if u:
+            urls.append(u)
+    if not urls and entry and entry.get('url'):
+        urls.append(str(entry['url']))
+    return urls[:10]
+
+
 async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
-                        reason: str) -> tuple:
+                        reason: str, message_id: int = 0) -> tuple:
     bot = interaction.client
     guild = interaction.guild or bot.get_guild(int(guild_id or 0))
     if guild is None:
@@ -1040,7 +1119,20 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
     if not entry:
         return False, f'Демка #{entry_id} не найдена.'
     if entry.get('review_status') in ('accepted', 'rejected'):
+        # Карточка могла остаться со select — закрыть повторно
+        try:
+            await _close_proof_card(
+                interaction, entry, entry_id,
+                accept=(entry.get('review_status') == 'accepted'),
+                reason=entry.get('review_reason') or '',
+                undo=entry.get('undo_note') or '',
+                reviewer=reviewer,
+                message_id=message_id or int(entry.get('msg_id') or 0),
+                guild=guild)
+        except Exception as ex:
+            log.debug('[PROOF] re-close: %s', ex)
         return False, f'Уже решено: {entry.get("review_status")}.'
+
     status = 'accepted' if accept else 'rejected'
     undo = ''
     if accept:
@@ -1059,46 +1151,69 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
                      undo_note=undo)
         reply = f'Демка отклонена. {undo}'
 
-    # Закрыть карточку как анкету: статус сверху + тело + медиа, без select
+    # Свежая запись после update
+    entry = proof_get(guild_id, entry_id) or entry
+
+    how = await _close_proof_card(
+        interaction, entry, entry_id,
+        accept=accept, reason=reason or '', undo=undo,
+        reviewer=reviewer,
+        message_id=message_id or int(entry.get('msg_id') or 0),
+        guild=guild)
+    if not how:
+        log.warning(
+            '[PROOF] карточка #%s не закрылась после %s',
+            entry_id, 'accept' if accept else 'reject')
+
+    # Локальный файл демки — удалить после решения (не хранить зря)
     try:
-        mid = int(entry.get('msg_id') or 0)
-        cid = int(entry.get('channel_id') or 0)
-        ch = guild.get_channel(cid) if cid else None
-        if ch and mid:
-            msg = await ch.fetch_message(mid)
-            media_urls = []
-            for a in (getattr(msg, 'attachments', None) or []):
-                u = getattr(a, 'url', None)
-                if u:
-                    media_urls.append(u)
-            if not media_urls and entry.get('url'):
-                media_urls.append(str(entry['url']))
-            body = _proof_card_body(entry)
-            status_label, note, accent = _proof_decision_note(
-                'accept' if accept else 'reject', reviewer,
-                extra=undo, reject_reason=reason or '')
-            view = ProofReviewDoneView(
-                entry_id=entry_id,
-                action=entry.get('action') or '',
-                body=body,
-                status=status_label,
-                note=note,
-                media_urls=media_urls,
-                accent=accent,
-            )
-            try:
-                await msg.edit(view=view, attachments=[])
-            except TypeError:
-                await msg.edit(view=view)
-            except Exception as ex1:
-                log.warning('[PROOF] edit decided: %s', ex1)
-                try:
-                    await msg.edit(view=view)
-                except Exception as ex2:
-                    log.warning('[PROOF] edit decided retry: %s', ex2)
+        if proof_delete_media(guild_id, entry):
+            proof_update(guild_id, entry_id, media=None)
+            log.info('[PROOF] #%s локальный файл удалён после решения', entry_id)
     except Exception as ex:
-        log.warning('[PROOF] close card: %s', ex)
+        log.warning('[PROOF] delete media #%s: %s', entry_id, ex)
+
     return True, reply
+
+
+async def _close_proof_card(interaction, entry, entry_id, *, accept: bool,
+                            reason: str, undo: str, reviewer,
+                            message_id: int = 0, guild=None) -> str:
+    """ПРИНЯТО/ОТКЛОНЕНО на карточке, select исчезает, медиа остаётся."""
+    body = _proof_card_body(entry)
+    status_label, note, accent = _proof_decision_note(
+        'accept' if accept else 'reject', reviewer,
+        extra=undo, reject_reason=reason or '')
+
+    media_urls = _media_urls_from_source(
+        getattr(interaction, 'message', None), entry)
+    mid = int(message_id or entry.get('msg_id') or 0)
+    cid = int(entry.get('channel_id') or 0)
+
+    # Если interaction без message (модалка) — подтянуть вложения fetch'ем
+    if not media_urls and guild is not None and mid and cid:
+        try:
+            ch = guild.get_channel(cid)
+            if ch is None and hasattr(guild, 'fetch_channel'):
+                ch = await guild.fetch_channel(cid)
+            if ch is not None:
+                msg = await ch.fetch_message(mid)
+                media_urls = _media_urls_from_source(msg, entry)
+        except Exception as ex:
+            log.debug('[PROOF] media fetch: %s', ex)
+
+    view = ProofReviewDoneView(
+        entry_id=entry_id,
+        action=entry.get('action') or '',
+        body=body,
+        status=status_label,
+        note=note,
+        media_urls=media_urls,
+        accent=accent,
+    )
+    return await _publish_proof_decision(
+        interaction, view=view, message_id=mid,
+        guild=guild, channel_id=cid)
 
 
 def _proof_card_body(entry: dict) -> str:
@@ -1156,6 +1271,7 @@ class ProofReviewDoneView(discord.ui.LayoutView):
         head = f'# 🤍 Демка #{entry_id}'
         if action:
             head = f'{head} · {action}'
+        # Крупный статус сразу под шапкой — видно без select
         status_line = f'## {status}'
         if note:
             status_line = f'{status_line}\n-# {note}'
@@ -1178,6 +1294,7 @@ class ProofReviewDoneView(discord.ui.LayoutView):
                 except Exception:
                     pass
             self.add_item(black_container(*children, accent=accent))
+        # без V2 LayoutView пустой — select снимет edit view=None снаружи
 
 
 async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
@@ -1198,6 +1315,7 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
 
     files = []
     gallery_names = []
+    raw_saved = []  # (filename, raw, content_type) — локальная копия до решения
     for i, att in enumerate(attachments or []):
         try:
             raw = await att.read()
@@ -1210,16 +1328,26 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
         safe = f'{i}_{name}'
         files.append(discord.File(io.BytesIO(raw), filename=safe))
         gallery_names.append(safe)
+        raw_saved.append((
+            name, raw, getattr(att, 'content_type', None)))
 
     entry = proof_add(
         guild.id, user.id, str(user),
         moderator.id, str(moderator), action_ru, reason, link=None)
+    # Локально храним до accept/reject — потом proof_delete_media
+    media_meta = None
+    for name, raw, ctype in raw_saved:
+        media_meta = proof_save_media(
+            guild.id, entry['id'], name, raw, ctype)
+        if media_meta:
+            break  # одна копия достаточно для панели / очистки
     proof_update(
         guild.id, entry['id'],
         review_status='pending',
         action_key=action_key,
         case_id=case_id,
         warn_id=warn_id,
+        **({'media': media_meta} if media_meta else {}),
     )
     entry.update({
         'review_status': 'pending',
@@ -1227,6 +1355,8 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
         'case_id': case_id,
         'warn_id': warn_id,
     })
+    if media_meta:
+        entry['media'] = media_meta
 
     ch = await cog._proof_channel(guild)
     if ch is None:

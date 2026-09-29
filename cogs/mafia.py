@@ -220,14 +220,10 @@ def make_confirm_view(game: Game, user_id: int) -> ConfirmView:
 
 class _JoinBtn(discord.ui.Button):
     def __init__(self):
-        try:
-            from services.mafia.ui_v2 import sticker
-            em = sticker('join')
-        except Exception:
-            em = '✋'
+        # 🤍 как у демок/анкет — чёрная карточка, без классических эмодзи
         super().__init__(
-            label='Участвовать', style=discord.ButtonStyle.success,
-            emoji=em, custom_id='mafia:public:join')
+            label='Участвовать', style=discord.ButtonStyle.secondary,
+            emoji='🤍', custom_id='mafia:public:join')
 
     async def callback(self, interaction: discord.Interaction):
         await _public_join(interaction)
@@ -235,14 +231,9 @@ class _JoinBtn(discord.ui.Button):
 
 class _LeaveBtn(discord.ui.Button):
     def __init__(self):
-        try:
-            from services.mafia.ui_v2 import sticker
-            em = sticker('leave')
-        except Exception:
-            em = '🚪'
         super().__init__(
             label='Выйти', style=discord.ButtonStyle.secondary,
-            emoji=em, custom_id='mafia:public:leave')
+            emoji='🤍', custom_id='mafia:public:leave')
 
     async def callback(self, interaction: discord.Interaction):
         await _public_leave(interaction)
@@ -812,19 +803,46 @@ class Mafia(commands.Cog, name='mafia'):
                 ch = await self.bot.fetch_channel(int(game.text_channel_id))
             msg = await ch.fetch_message(int(game.lobby_message_id))
             if closed:
-                await msg.edit(
-                    content=None,
-                    embed=discord.Embed(
-                        title='Мафия',
-                        description='Лобби закрыто.\n-# `/mafia` → Начать игру',
-                        color=DARK,
-                    ),
-                    view=None,
-                )
+                await msg.edit(**self._lobby_closed_kwargs(game))
             else:
                 await msg.edit(**await self.lobby_edit_kwargs(game))
         except Exception as e:
             log.debug('refresh_lobby_message: %s', e)
+
+    def _lobby_closed_kwargs(self, game: Game) -> dict:
+        """Закрытое лобби — как закрытая демка: ЗАКРЫТО, без кнопок/select."""
+        try:
+            from services.v2_layouts import V2_AVAILABLE
+            from services.mafia.ui_v2 import build_mafia_closed_items
+            if V2_AVAILABLE:
+                from datetime import datetime, timezone
+                when = datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')
+                body = (
+                    f'**Ведущий** · <@{game.host_id}>\n'
+                    f'**Войс** · <#{game.voice_channel_id}>\n'
+                    f'**Партия** · #{game.game_id}'
+                )
+                items = build_mafia_closed_items(
+                    body=body,
+                    note=f'Лобби закрыто · {when}\n`/mafia` → Начать игру',
+                    accent=0xE74C3C,
+                )
+                if items:
+                    view = discord.ui.LayoutView(timeout=None)
+                    for it in items:
+                        view.add_item(it)
+                    return {'view': view, 'embed': None, 'content': None}
+        except Exception as ex:
+            log.debug('lobby closed v2: %s', ex)
+        return {
+            'content': None,
+            'embed': discord.Embed(
+                title='🤍 Мафия · ЗАКРЫТО',
+                description='Лобби закрыто.\n-# `/mafia` → Начать игру',
+                color=DARK,
+            ),
+            'view': None,
+        }
 
     async def voice_members(self, guild: discord.Guild, voice_id: int, host_id: int):
         """Только живые люди сейчас в этом войсе (без ботов и ведущего)."""
@@ -1240,46 +1258,39 @@ class MafiaMenuView(discord.ui.View):
 
 class MafiaActionSelect(discord.ui.Select):
     def __init__(self):
+        from services.menu_banners import select_label
         try:
             from services.mafia.ui_v2 import sticker
-            e_start = sticker('play')
-            e_deal = sticker('deal')
-            e_sync = sticker('refresh')
-            e_status = sticker('elist')
-            e_panel = sticker('remind')
-            e_resend = sticker('deal')
-            e_add = sticker('signup')
-            e_cancel = sticker('cancel')
-            e_presets = sticker('courtesan')
+            heart = sticker('menu') or '🤍'
         except Exception:
-            e_start = e_deal = e_sync = e_status = e_panel = e_resend = e_add = e_cancel = e_presets = None
+            heart = '🤍'
         options = [
             discord.SelectOption(
-                label='Начать игру', value='start', emoji=e_start or '▶',
+                label=select_label('Начать игру'), value='start', emoji=heart,
                 description='Карточка набора в канал'),
             discord.SelectOption(
-                label='Раздать роли', value='deal', emoji=e_deal or '🎭',
+                label=select_label('Раздать роли'), value='deal', emoji=heart,
                 description='ЛС · минимум 6'),
             discord.SelectOption(
-                label='Синхр. из войса', value='sync', emoji=e_sync or '🔄',
+                label=select_label('Синхр. из войса'), value='sync', emoji=heart,
                 description='Состав = кто в войсе'),
             discord.SelectOption(
-                label='Статус', value='status', emoji=e_status or '📊',
+                label=select_label('Статус'), value='status', emoji=heart,
                 description='Фаза и состав'),
             discord.SelectOption(
-                label='Сводка ведущему', value='panel', emoji=e_panel or '📋',
+                label=select_label('Сводка ведущему'), value='panel', emoji=heart,
                 description='Панель ролей в ЛС'),
             discord.SelectOption(
-                label='Переслать роль', value='resend', emoji=e_resend or '📨',
+                label=select_label('Переслать роль'), value='resend', emoji=heart,
                 description='Повтор ЛС с ролью'),
             discord.SelectOption(
-                label='Добавить игрока', value='add', emoji=e_add or '➕',
+                label=select_label('Добавить игрока'), value='add', emoji=heart,
                 description='Вручную в состав'),
             discord.SelectOption(
-                label='Отменить игру', value='cancel', emoji=e_cancel or '🗑️',
+                label=select_label('Отменить игру'), value='cancel', emoji=heart,
                 description='Сбросить партию'),
             discord.SelectOption(
-                label='Пресеты ролей', value='presets', emoji=e_presets or '💋',
+                label=select_label('Пресеты ролей'), value='presets', emoji=heart,
                 description='Мафия · путана · …'),
         ]
         super().__init__(
