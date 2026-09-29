@@ -761,17 +761,32 @@ class ProofFileModal(discord.ui.Modal, title='Доказательство'):
         if not ok:
             return await interaction.followup.send(
                 'Канал доказательств недоступен (права бота?).', ephemeral=True)
-        await interaction.followup.send(
-            f'Демка #{entry["id"]} в канале доказательств — на проверке.',
-            ephemeral=True)
+        try:
+            from services.v2_layouts import V2_AVAILABLE, black_container
+            if V2_AVAILABLE:
+                from discord import ui as dui, SeparatorSpacing
+                done = dui.LayoutView(timeout=1)
+                done.add_item(black_container(
+                    dui.TextDisplay(f'# Демка #{entry["id"]}'),
+                    dui.Separator(spacing=SeparatorSpacing.small),
+                    dui.TextDisplay('В канале доказательств · на проверке'),
+                ))
+                await interaction.followup.send(view=done, ephemeral=True)
+            else:
+                await interaction.followup.send(
+                    f'Демка #{entry["id"]} — на проверке.', ephemeral=True)
+        except Exception:
+            await interaction.followup.send(
+                f'Демка #{entry["id"]} — на проверке.', ephemeral=True)
 
 
-class ProofOfferView(discord.ui.View):
-    """Эфемерное меню после наказания: прикрепить файл (необязательно)."""
+class ProofOfferSelect(discord.ui.Select):
+    """Select после наказания: файл / пропустить — стикеры набора."""
 
     def __init__(self, *, guild_id: int, user_id: int, mod_id: int,
                  action: str, reason: str, case_id=None, warn_id=None):
-        super().__init__(timeout=300)
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_appeal
         self.guild_id = int(guild_id or 0)
         self.user_id = int(user_id or 0)
         self.mod_id = int(mod_id or 0)
@@ -779,37 +794,79 @@ class ProofOfferView(discord.ui.View):
         self.reason = reason or ''
         self.case_id = case_id
         self.warn_id = warn_id
+        super().__init__(
+            placeholder='Выберите действие',
+            min_values=1, max_values=1,
+            options=[
+                discord.SelectOption(
+                    label=select_label('Прикрепить файл'),
+                    value='upload',
+                    emoji=emoji_for_appeal('claim')),
+                discord.SelectOption(
+                    label=select_label('Пропустить'),
+                    value='skip',
+                    emoji=emoji_for_appeal('reject')),
+            ],
+        )
 
-    @discord.ui.button(
-        label='Прикрепить файл', style=discord.ButtonStyle.primary,
-        custom_id='proof_offer_upload_v1')
-    async def upload_btn(self, interaction: discord.Interaction, button):
+    async def callback(self, interaction: discord.Interaction):
         if int(getattr(interaction.user, 'id', 0) or 0) != self.mod_id:
             return await interaction.response.send_message(
                 'Это меню только для модератора, кто выдал наказание.',
                 ephemeral=True)
-        await interaction.response.send_modal(ProofFileModal(
-            guild_id=self.guild_id, user_id=self.user_id, mod_id=self.mod_id,
-            action=self.action, reason=self.reason,
-            case_id=self.case_id, warn_id=self.warn_id))
-
-    @discord.ui.button(
-        label='Пропустить', style=discord.ButtonStyle.secondary,
-        custom_id='proof_offer_skip_v1')
-    async def skip_btn(self, interaction: discord.Interaction, button):
-        if int(getattr(interaction.user, 'id', 0) or 0) != self.mod_id:
-            return await interaction.response.send_message(
-                'Это меню только для модератора, кто выдал наказание.',
-                ephemeral=True)
-        for item in self.children:
-            item.disabled = True
+        choice = (self.values or [''])[0]
+        if choice == 'upload':
+            return await interaction.response.send_modal(ProofFileModal(
+                guild_id=self.guild_id, user_id=self.user_id,
+                mod_id=self.mod_id, action=self.action, reason=self.reason,
+                case_id=self.case_id, warn_id=self.warn_id))
+        # skip — закрыть меню
         try:
-            await interaction.response.edit_message(
-                content='Демку можно прикрепить позже — наказание уже выдано.',
-                view=self)
+            from services.v2_layouts import V2_AVAILABLE, black_container
+            if V2_AVAILABLE:
+                from discord import ui as dui, SeparatorSpacing
+                done = dui.LayoutView(timeout=1)
+                done.add_item(black_container(
+                    dui.TextDisplay('# Доказательство'),
+                    dui.Separator(spacing=SeparatorSpacing.small),
+                    dui.TextDisplay('Пропущено · наказание уже выдано'),
+                ))
+                await interaction.response.edit_message(view=done)
+                return
         except Exception:
-            await interaction.response.send_message(
-                'Ок, без демки.', ephemeral=True)
+            pass
+        await interaction.response.edit_message(
+            content='Пропущено · наказание уже выдано', view=None)
+
+
+def build_proof_offer_view(*, guild_id: int, user_id: int, mod_id: int,
+                           action: str, reason: str, case_id=None,
+                           warn_id=None):
+    """V2 чёрное меню + select со стикерами; фолбэк — View с select."""
+    from services.v2_layouts import V2_AVAILABLE, black_container
+    action_ru = _action_key_ru(action)
+    sel = ProofOfferSelect(
+        guild_id=guild_id, user_id=user_id, mod_id=mod_id,
+        action=action, reason=reason, case_id=case_id, warn_id=warn_id)
+    if V2_AVAILABLE:
+        from discord import ui as dui, SeparatorSpacing
+        view = dui.LayoutView(timeout=300)
+        row = dui.ActionRow()
+        row.add_item(sel)
+        view.add_item(black_container(
+            dui.TextDisplay('# Доказательство'),
+            dui.TextDisplay('-# HAKUMO · демка к наказанию'),
+            dui.Separator(spacing=SeparatorSpacing.large),
+            dui.TextDisplay(
+                f'Наказание **{action_ru}** уже выдано.\n'
+                'Прикрепи фото или видео **файлом** — необязательно.'),
+            dui.Separator(),
+            row,
+        ))
+        return view
+    view = discord.ui.View(timeout=300)
+    view.add_item(sel)
+    return view
 
 
 class ProofRejectReasonModal(discord.ui.Modal, title='Отклонить демку'):
@@ -831,39 +888,54 @@ class ProofRejectReasonModal(discord.ui.Modal, title='Отклонить дем�
         await interaction.followup.send(msg, ephemeral=True)
 
 
-class ProofReviewView(discord.ui.View):
-    """Кнопки принять / отклонить на карточке в канале доказательств."""
+class ProofReviewSelect(discord.ui.Select):
+    """Select на карточке демки: Принять / Отклонить — стикеры набора."""
 
     def __init__(self, entry_id: int = 0, guild_id: int = 0):
-        super().__init__(timeout=None)
+        from services.menu_banners import select_label
+        from services.menu_emojis import emoji_for_review
         self.entry_id = int(entry_id or 0)
         self.guild_id = int(guild_id or 0)
+        super().__init__(
+            placeholder='Выберите решение',
+            custom_id='proof_review_select_v1',
+            min_values=1, max_values=1,
+            options=[
+                discord.SelectOption(
+                    label=select_label('Принять'),
+                    value='accept',
+                    emoji=emoji_for_review('approve')),
+                discord.SelectOption(
+                    label=select_label('Отклонить'),
+                    value='reject',
+                    emoji=emoji_for_review('reject')),
+            ],
+        )
 
-    @discord.ui.button(
-        label='Принять', style=discord.ButtonStyle.success,
-        custom_id='proof_review_accept_v1')
-    async def accept_btn(self, interaction: discord.Interaction, button):
+    async def callback(self, interaction: discord.Interaction):
         gid = self.guild_id or int(getattr(interaction.guild, 'id', 0) or 0)
         eid = self.entry_id or _entry_id_from_message(interaction)
         if not eid:
             return await interaction.response.send_message(
                 'Запись демки не найдена.', ephemeral=True)
+        choice = (self.values or [''])[0]
+        if choice == 'reject':
+            return await interaction.response.send_modal(
+                ProofRejectReasonModal(eid, gid))
         await interaction.response.defer(ephemeral=True)
         ok, msg = await _review_proof(
             interaction, gid, eid, accept=True, reason='')
         await interaction.followup.send(msg, ephemeral=True)
 
-    @discord.ui.button(
-        label='Отклонить', style=discord.ButtonStyle.danger,
-        custom_id='proof_review_reject_v1')
-    async def reject_btn(self, interaction: discord.Interaction, button):
-        gid = self.guild_id or int(getattr(interaction.guild, 'id', 0) or 0)
-        eid = self.entry_id or _entry_id_from_message(interaction)
-        if not eid:
-            return await interaction.response.send_message(
-                'Запись демки не найдена.', ephemeral=True)
-        await interaction.response.send_modal(
-            ProofRejectReasonModal(eid, gid))
+
+class ProofReviewView(discord.ui.View):
+    """Persistent select на карточке доказательств (фолбэк без LayoutView)."""
+
+    def __init__(self, entry_id: int = 0, guild_id: int = 0):
+        super().__init__(timeout=None)
+        self.entry_id = int(entry_id or 0)
+        self.guild_id = int(guild_id or 0)
+        self.add_item(ProofReviewSelect(self.entry_id, self.guild_id))
 
 
 def _entry_id_from_message(interaction) -> int:
@@ -1014,20 +1086,26 @@ class ProofReviewDoneView(discord.ui.LayoutView):
     def __init__(self, *, status: str, reviewer, reason: str = ''):
         super().__init__(timeout=None)
         from services.v2_layouts import V2_AVAILABLE, black_container
+        from services.menu_emojis import emoji_for_review
         who = getattr(reviewer, 'mention', None) or str(reviewer)
         ok = status == 'accepted'
-        head = '# ✅ Демка принята' if ok else '# ❌ Демка отклонена'
+        try:
+            em = emoji_for_review('approve' if ok else 'reject')
+            em_s = str(em) if em else ''
+        except Exception:
+            em_s = ''
+        title = 'Демка принята' if ok else 'Демка отклонена'
+        head = f'# {em_s} {title}'.strip() if em_s else f'# {title}'
         body = f'**Решил** · {who}'
         if reason and not ok:
             body += f'\n**Причина** · {reason[:400]}'
-        accent = 0x2ECC71 if ok else 0xE74C3C
         if V2_AVAILABLE:
             from discord import ui as dui, SeparatorSpacing
             self.add_item(black_container(
-                dui.TextDisplay(head),
+                dui.TextDisplay(head[:500]),
+                dui.TextDisplay('-# HAKUMO · доказательство'),
                 dui.Separator(spacing=SeparatorSpacing.small),
                 dui.TextDisplay(body[:1500]),
-                accent=accent,
             ))
 
 
@@ -1106,44 +1184,55 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
 
     rev = ProofReviewView(entry['id'], guild.id)
     try:
-        if V2_AVAILABLE and gallery_names:
+        if V2_AVAILABLE:
             from discord import ui as dui, SeparatorSpacing
-            items = [MediaGalleryItem(f'attachment://{n}')
-                     for n in gallery_names[:10]]
-            row = dui.ActionRow()
-            # кнопки из persistent view — клонируем через новый View
-            for child in ProofReviewView(entry['id'], guild.id).children:
-                row.add_item(child)
-            lv = dui.LayoutView(timeout=None)
-            lv.add_item(black_container(
-                dui.TextDisplay(f'# 📎 Демка #{entry["id"]}'),
+            from services.menu_emojis import emoji_for_action
+            try:
+                em = emoji_for_action(action_key if action_key in (
+                    'warn', 'mute', 'vmute', 'ban', 'kick') else 'mute')
+                # mute_chat / timeout → mute sticker
+                if action_key in ('timeout', 'mute_chat'):
+                    em = emoji_for_action('mute')
+                elif action_key == 'vmute':
+                    em = emoji_for_action('vmute')
+                em_s = str(em) if em else ''
+            except Exception:
+                em_s = ''
+            head = (f'# {em_s} Демка #{entry["id"]}'.strip()
+                    if em_s else f'# Демка #{entry["id"]}')
+            children = [
+                dui.TextDisplay(head[:500]),
                 dui.TextDisplay('-# HAKUMO · доказательство'),
                 dui.Separator(spacing=SeparatorSpacing.large),
                 dui.TextDisplay(body[:3500]),
-                dui.Separator(),
-                dui.MediaGallery(*items),
-                dui.Separator(),
-                dui.TextDisplay(
-                    '-# Принять — оставить · Отклонить — снять мут / не считать варн'),
-                row,
-                accent=0xD4AF37,
-            ))
-            msg = await ch.send(view=lv, files=files)
+            ]
+            if gallery_names:
+                items = [MediaGalleryItem(f'attachment://{n}')
+                         for n in gallery_names[:10]]
+                children.append(dui.Separator())
+                children.append(dui.MediaGallery(*items))
+            children.append(dui.Separator())
+            row = dui.ActionRow()
+            row.add_item(ProofReviewSelect(entry['id'], guild.id))
+            children.append(row)
+            lv = dui.LayoutView(timeout=None)
+            lv.add_item(black_container(*children))
+            msg = await ch.send(view=lv, files=files or None)
         else:
             e = discord.Embed(
-                title=f'📎 Демка #{entry["id"]} · {action_ru}',
-                description=body, color=GOLD, timestamp=_now())
-            e.set_footer(text='Принять — оставить · Отклонить — снять наказание')
+                title=f'Демка #{entry["id"]} · {action_ru}',
+                description=body, color=0x000000, timestamp=_now())
+            e.set_footer(text='HAKUMO · доказательство')
             if gallery_names and _is_image_name(gallery_names[0]):
                 e.set_image(url=f'attachment://{gallery_names[0]}')
             msg = await ch.send(embed=e, files=files or None, view=rev)
     except Exception as ex:
         log.warning('[PROOF] send review card: %s', ex)
-        # фолбэк без V2
         try:
             e = discord.Embed(
-                title=f'📎 Демка #{entry["id"]} · {action_ru}',
-                description=body, color=GOLD)
+                title=f'Демка #{entry["id"]} · {action_ru}',
+                description=body, color=0x000000)
+            e.set_footer(text='HAKUMO · доказательство')
             msg = await ch.send(embed=e, files=files or None, view=rev)
         except Exception as ex2:
             log.warning('[PROOF] fallback send: %s', ex2)
@@ -1164,29 +1253,30 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
 
 async def offer_proof_after_punish(interaction, *, user, action, reason,
                                    case_id=None, warn_id=None):
-    """После наказания — эфемерное меню «прикрепить файл» (необязательно)."""
+    """После наказания — эфемерное V2-меню с select (необязательно)."""
     try:
         if interaction is None or user is None:
             return
         guild = interaction.guild
         if guild is None:
             return
-        action_ru = _action_key_ru(action)
-        view = ProofOfferView(
+        view = build_proof_offer_view(
             guild_id=guild.id,
             user_id=int(getattr(user, 'id', 0) or 0),
             mod_id=int(getattr(interaction.user, 'id', 0) or 0),
             action=action, reason=reason or '',
             case_id=case_id, warn_id=warn_id,
         )
-        text = (
-            f'## 📎 Доказательство\n'
-            f'Наказание **{action_ru}** уже выдано.\n'
-            'Прикрепи **фото/видео файлом** (не ссылкой) — необязательно.'
-        )
         send = getattr(interaction, 'followup', None)
         if send is not None:
-            await send.send(content=text, view=view, ephemeral=True)
+            # V2: без content (Discord 50035). Фолбэк View — короткий текст.
+            from services.v2_layouts import V2_AVAILABLE
+            kwargs = {'view': view, 'ephemeral': True}
+            if not V2_AVAILABLE:
+                kwargs['content'] = (
+                    f'Доказательство · наказание уже выдано.\n'
+                    f'Прикрепи файл или пропусти.')
+            await send.send(**kwargs)
     except Exception as ex:
         log.debug('[PROOF] offer after punish: %s', ex)
 
