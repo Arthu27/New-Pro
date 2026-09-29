@@ -148,7 +148,8 @@ def host_summary_embed(game: Game) -> discord.Embed:
     return e
 
 
-def role_dm_embed(game: Game, player) -> discord.Embed:
+def role_dm_embed(
+        game: Game, player, *, invite_url: str | None = None) -> discord.Embed:
     role = ROLES[player.role]
     try:
         from services.mafia.ui_v2 import role_mark
@@ -169,7 +170,14 @@ def role_dm_embed(game: Game, player) -> discord.Embed:
             lines.append(
                 f'🤍 {_mention(t.user_id)} — {tr.name if tr else "?"}{you}')
         body += '\n**Ваша семья**\n' + '\n'.join(lines) + '\n'
-        body += '\n-# Ночью — сервер семьи (инвайт в ЛС). Днём молчите о ролях.\n'
+        if invite_url:
+            body += (
+                f'\n**Сервер семьи** · ваш личный вход (1 раз):\n{invite_url}\n'
+                '-# После матча выгонят. Чужих на сервере быть не должно.\n'
+            )
+        else:
+            body += '\n-# Ночью — сервер семьи (инвайт вторым сообщением).\n'
+        body += '-# Днём молчите о ролях.\n'
     body += f'\n-# #{game.game_id} · ведущий {_mention(game.host_id)}'
     e = discord.Embed(
         title=f'🤍 {role.name}',
@@ -933,7 +941,7 @@ class Mafia(commands.Cog, name='mafia'):
             after: discord.VoiceState,
     ) -> None:
         """Ночью снова мутим, если кто-то зашёл в войс или снял мут."""
-        if member is None or member.bot:
+        if member is None or member.bot or member.guild is None:
             return
         game = STORE.get(member.guild.id)
         if game is None or game.phase != PHASE_PLAYING:
@@ -950,6 +958,16 @@ class Mafia(commands.Cog, name='mafia'):
             game, member, night=True,
             reason='мафия: ночь — войс на муте',
         )
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member) -> None:
+        """На сервер семьи — только текущая мафия; чужих выгоняем."""
+        if member is None or member.bot or member.guild is None:
+            return
+        from services.mafia.family_guild import family_guild_id, kick_if_not_mafia
+        if int(member.guild.id) != family_guild_id():
+            return
+        await kick_if_not_mafia(self.bot, member)
 
     def _make_lobby_view(self, game: Game):
         try:
@@ -1070,26 +1088,37 @@ class Mafia(commands.Cog, name='mafia'):
         # 1) кэш канала
         for m in list(ch.members):
             _add(m)
-        # 2) voice_states гильдии — надёжнее, если кэш members устарел
-        try:
-            for uid, vs in (guild.voice_states or {}).items():
-                if vs is None or vs.channel is None:
-                    continue
-                if int(vs.channel.id) != voice_id:
-                    continue
-                if int(uid) in seen or int(uid) == host_id:
-                    continue
-                member = guild.get_member(int(uid))
-                if member is None:
-                    continue
-                _add(member)
-        except Exception:
-            pass
+        # 2) voice_states гильдии (если атрибут есть — у fetch_guild его нет)
+        for uid, vs in self._iter_guild_voice_states(guild):
+            if vs is None or getattr(vs, 'channel', None) is None:
+                continue
+            if int(vs.channel.id) != voice_id:
+                continue
+            if uid in seen or uid == host_id:
+                continue
+            member = guild.get_member(uid)
+            if member is None:
+                continue
+            _add(member)
         return out
+
+    def _iter_guild_voice_states(self, guild: discord.Guild):
+        """Безопасно: у fetch_guild / части Guild нет .voice_states."""
+        states = getattr(guild, 'voice_states', None)
+        if states is None:
+            states = getattr(guild, '_voice_states', None)
+        if not states:
+            return
+        try:
+            items = states.items()
+        except Exception:
+            return
+        for uid, vs in items:
+            yield int(uid), vs
 
     async def _members_in_voice_channel(
             self, guild: discord.Guild, voice_id: int) -> list[discord.Member]:
-        """Кто сейчас в войсе (Event-бот без Members intent — fetch + voice_states)."""
+        """Кто в войсе: channel.members + voice_states (если есть) + fetch."""
         voice_id = int(voice_id)
         ch = guild.get_channel(voice_id)
         if ch is None:
@@ -1101,28 +1130,24 @@ class Mafia(commands.Cog, name='mafia'):
             return []
 
         out: dict[int, discord.Member] = {}
-        for m in list(ch.members):
+        for m in list(getattr(ch, 'members', None) or []):
             if m is not None and not m.bot:
                 out[int(m.id)] = m
-        try:
-            for uid, vs in (guild.voice_states or {}).items():
-                if vs is None or vs.channel is None:
+        for uid, vs in self._iter_guild_voice_states(guild):
+            if vs is None or getattr(vs, 'channel', None) is None:
+                continue
+            if int(vs.channel.id) != voice_id:
+                continue
+            if uid in out:
+                continue
+            member = guild.get_member(uid)
+            if member is None:
+                try:
+                    member = await guild.fetch_member(uid)
+                except Exception:
                     continue
-                if int(vs.channel.id) != voice_id:
-                    continue
-                uid = int(uid)
-                if uid in out:
-                    continue
-                member = guild.get_member(uid)
-                if member is None:
-                    try:
-                        member = await guild.fetch_member(uid)
-                    except Exception:
-                        continue
-                if member is not None and not member.bot:
-                    out[uid] = member
-        except Exception as ex:
-            log.debug('mafia voice members: %s', ex)
+            if member is not None and not member.bot:
+                out[uid] = member
         return list(out.values())
 
     def _voice_mute_wanted(
@@ -1149,9 +1174,12 @@ class Mafia(commands.Cog, name='mafia'):
             reason: str,
     ) -> bool:
         voice_id = int(game.voice_channel_id)
-        vs = (member.guild.voice_states or {}).get(member.id)
-        if vs is None:
-            vs = getattr(member, 'voice', None)
+        vs = getattr(member, 'voice', None)
+        if vs is None and member.guild is not None:
+            for uid, state in self._iter_guild_voice_states(member.guild):
+                if uid == int(member.id):
+                    vs = state
+                    break
         if vs is None or vs.channel is None or int(vs.channel.id) != voice_id:
             return False
         want = self._voice_mute_wanted(game, member.id, night=night)
@@ -1173,23 +1201,44 @@ class Mafia(commands.Cog, name='mafia'):
     async def deal_roles(self, interaction: discord.Interaction, game: Game):
         counts = game.deal()
         STORE.persist(game)
+        # сначала инвайты для ВСЕЙ семьи (с паузами/ретраями)
+        invites: dict = {}
+        try:
+            from services.mafia.family_guild import create_invites_for_team
+            invites = await create_invites_for_team(self.bot, game)
+            STORE.persist(game)
+        except Exception as ex:
+            log.warning('mafia create invites: %s', ex)
+
         sent = failed = 0
         for p in game.players.values():
             member = interaction.guild.get_member(p.user_id) if interaction.guild else None
             user = member or await self.bot.fetch_user(p.user_id)
             view = make_confirm_view(game, p.user_id)
             self.bot.add_view(view)
+            inv = invites.get(int(p.user_id))
             try:
-                await user.send(embed=role_dm_embed(game, p), view=view)
+                url = inv[0] if inv and is_mafia_team(p.role) else None
+                emb = role_dm_embed(game, p, invite_url=url)
+                if url:
+                    view.add_item(discord.ui.Button(
+                        label='Войти к семье',
+                        style=discord.ButtonStyle.link,
+                        url=url,
+                        emoji='🤍',
+                    ))
+                await user.send(embed=emb, view=view)
                 sent += 1
-            except Exception:
+            except Exception as ex:
                 game.mark_dm_failed(p.user_id)
                 failed += 1
-        # мафии — отдельная карточка семьи
+                log.warning('mafia role dm %s: %s', p.user_id, ex)
+        # дубль: отдельная карточка семьи с инвайтом (если роль-DM без кнопки)
         try:
-            await self.send_mafia_briefing(game)
+            inv_sent = await self.send_mafia_briefing(game, invites=invites)
         except Exception as ex:
-            log.debug('mafia briefing: %s', ex)
+            log.warning('mafia briefing: %s', ex)
+            inv_sent = 0
         STORE.persist(game)
         host = interaction.user
         if interaction.guild:
@@ -1201,13 +1250,14 @@ class Mafia(commands.Cog, name='mafia'):
         if game.lobby_message_id and interaction.channel:
             try:
                 msg = await interaction.channel.fetch_message(int(game.lobby_message_id))
-                # публично — только статус, без панели ведущего (роли секретны)
                 await msg.edit(embed=public_status_embed(game), view=None)
             except Exception:
                 pass
+        team_n = len(game.mafia_team())
         summary = (
-            f'Раздано по пресету: {preset_summary(len(game.players))}\n'
-            f'DM отправлены: **{sent}**, не дошли: **{failed}**.\n'
+            f'Раздано: {preset_summary(len(game.players))}\n'
+            f'DM: **{sent}**, не дошли: **{failed}**.\n'
+            f'Инвайты семьи: **{len(invites)}/{team_n}** · карточки: **{inv_sent}**.\n'
             'Сводка у вас в личке.'
         )
         if interaction.response.is_done():
@@ -1302,13 +1352,11 @@ class Mafia(commands.Cog, name='mafia'):
 
     async def set_voice_night_mute(self, game: Game, *, night: bool) -> int:
         """Ночь: все живые на муте в войсе (семья только в ЛС). День: живые говорят, мёртвые — мут."""
+        # только кэш get_guild — у fetch_guild нет voice_states / members
         guild = self.bot.get_guild(int(game.guild_id))
         if guild is None:
-            try:
-                guild = await self.bot.fetch_guild(int(game.guild_id))
-            except Exception as ex:
-                log.warning('mafia mute: guild %s: %s', game.guild_id, ex)
-                return 0
+            log.warning('mafia mute: guild %s не в кэше бота', game.guild_id)
+            return 0
         me = guild.me
         if me is not None and not me.guild_permissions.mute_members:
             log.warning(
@@ -1321,17 +1369,27 @@ class Mafia(commands.Cog, name='mafia'):
         n = 0
         members = await self._members_in_voice_channel(
             guild, int(game.voice_channel_id))
-        if not members:
-            # без Members intent кэш канала пуст — добрать состав по API
-            for p in game.players.values():
-                m = guild.get_member(int(p.user_id))
-                if m is None:
-                    try:
-                        m = await guild.fetch_member(int(p.user_id))
-                    except Exception:
-                        continue
-                if m is not None and not m.bot:
-                    members.append(m)
+        # добрать состав партии по fetch_member + member.voice
+        seen = {int(m.id) for m in members}
+        for p in game.players.values():
+            uid = int(p.user_id)
+            if uid in seen:
+                continue
+            m = guild.get_member(uid)
+            if m is None:
+                try:
+                    m = await guild.fetch_member(uid)
+                except Exception:
+                    continue
+            if m is None or m.bot:
+                continue
+            vs = getattr(m, 'voice', None)
+            if vs is None or vs.channel is None:
+                continue
+            if int(vs.channel.id) != int(game.voice_channel_id):
+                continue
+            members.append(m)
+            seen.add(uid)
         for member in members:
             if await self._apply_voice_mute_member(
                     game, member, night=night, reason=reason):
@@ -1348,14 +1406,17 @@ class Mafia(commands.Cog, name='mafia'):
             )
         return n
 
-    async def send_mafia_briefing(self, game: Game) -> int:
-        """После раздачи — семья + одноразовый инвайт на сервер общения."""
+    async def send_mafia_briefing(
+            self, game: Game, *, invites: dict | None = None) -> int:
+        """Каждому мафиози — карточка семьи + его личный одноразовый инвайт."""
         from services.mafia.family_guild import (
-            create_one_shot_invite, family_guild_id,
+            create_invites_for_team, family_guild_id,
         )
         team = game.mafia_team()
         if not team:
             return 0
+        if not invites:
+            invites = await create_invites_for_team(self.bot, game)
         lines = []
         for t in team:
             tr = ROLES.get(t.role)
@@ -1363,22 +1424,17 @@ class Mafia(commands.Cog, name='mafia'):
                 f'🤍 {_mention(t.user_id)} — **{tr.name if tr else "?"}**')
         roster = '\n'.join(lines)
         game.mafia_family_ids = [int(t.user_id) for t in team]
-        game.mafia_invite_codes = []
         sent = 0
         for p in team:
             try:
                 user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
-                url, code = await create_one_shot_invite(
-                    self.bot, p.user_id, game_id=game.game_id)
-                if code:
-                    game.mafia_invite_codes.append(code)
+                inv = (invites or {}).get(int(p.user_id))
+                url = inv[0] if inv else None
                 invite_block = (
-                    f'**Сервер семьи** · одноразовый вход\n'
-                    f'{url}\n'
-                    '-# Инвайт на **1 вход**. После матча вас выгонят.\n'
+                    f'**Ваш вход** (только для вас, 1 раз):\n{url}\n'
                     if url else
                     '⚠️ Инвайт не создался — напишите ведущему '
-                    f'(сервер `{family_guild_id()}`).\n'
+                    f'(`{family_guild_id()}`).\n'
                 )
                 e = discord.Embed(
                     title='🤍 Семья мафии',
@@ -1386,9 +1442,8 @@ class Mafia(commands.Cog, name='mafia'):
                         f'Партия **#{game.game_id}**\n\n'
                         f'{roster}\n\n'
                         f'{invite_block}\n'
-                        '**Ночью** — там. В общем войсе все на муте.\n'
-                        '**Днём** — молчите о ролях.\n'
-                        '-# Только для семьи'
+                        'Ночью общайтесь **там**. В общем войсе все на муте.\n'
+                        '-# Чужих на сервере выгоняют автоматически'
                     ),
                     color=RED,
                 )
@@ -1403,9 +1458,10 @@ class Mafia(commands.Cog, name='mafia'):
                     ))
                 await user.send(embed=e, view=view)
                 sent += 1
+                log.info('mafia briefing OK uid=%s has_invite=%s', p.user_id, bool(url))
             except Exception as ex:
                 game.mark_dm_failed(p.user_id)
-                log.debug('mafia briefing %s: %s', p.user_id, ex)
+                log.warning('mafia briefing %s: %s', p.user_id, ex)
         STORE.persist(game)
         return sent
 

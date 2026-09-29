@@ -452,7 +452,8 @@ def build_event_client():
     intents = discord.Intents.none()
     intents.guilds = True
     intents.voice_states = True
-    # members не privileged-обязателен для slash: роли приходят в interaction
+    # Members — кик чужих с сервера семьи мафии + надёжный mute по войсу
+    intents.members = True
     bot = commands.Bot(command_prefix=commands.when_mentioned,
                        intents=intents,
                        help_command=None)

@@ -485,6 +485,7 @@ async def _voice_mute_mock():
     guild = MagicMock()
     guild.voice_states = {901: vs}
     member.guild = guild
+    member.voice = vs
     member.edit = AsyncMock()
     ok = await cog._apply_voice_mute_member(
         g9, member, night=True, reason='test-night')
@@ -501,11 +502,20 @@ from services.mafia import family_guild as FG  # noqa: E402
 check(FG.DEFAULT_FAMILY_GUILD_ID == 1554581698946277538, 'guild id семьи')
 check(FG.family_guild_id() == 1554581698946277538, 'env/default family guild')
 src_m2 = open(os.path.join(_REPO, 'cogs/mafia.py'), encoding='utf-8').read()
-check('create_one_shot_invite' in src_m2 and 'evict_mafia_family' in src_m2,
-      'инвайт + выгон в cog')
+check('create_invites_for_team' in src_m2 and 'evict_mafia_family' in src_m2,
+      'инвайт всей семье + выгон в cog')
 check('Войти к семье' in src_m2, 'кнопка инвайта в ЛС')
+check('on_member_join' in src_m2 and 'kick_if_not_mafia' in src_m2,
+      'чужих с сервера семьи кикаем')
+check('_iter_guild_voice_states' in src_m2, 'безопасный voice_states')
 check('cleanup_game_messages' in src_m2 and 'purge' in src_m2,
       'purge сообщений бота в конце')
+fg_src = open(os.path.join(_REPO, 'services/mafia/family_guild.py'),
+              encoding='utf-8').read()
+check('create_invites_for_team' in fg_src and 'asyncio.sleep' in fg_src,
+      'инвайты с паузой от rate-limit')
+check('kick_if_not_mafia' in fg_src and 'allowed_mafia_ids' in fg_src,
+      'allowlist семьи на сервере')
 # сериализация полей семьи
 gfam = Game.create(50, 1, 9, 8, [(1, 'a'), (2, 'b'), (3, 'c'), (4, 'd'),
                                   (5, 'e'), (6, 'f')])
