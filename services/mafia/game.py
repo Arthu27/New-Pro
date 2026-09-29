@@ -98,6 +98,9 @@ class Game:
     public_message_ids: List[int] = field(default_factory=list)
     # доктор: самохил — не чаще 1 раза за 2 ночи (day_number последней)
     doctor_last_self_heal_day: int = 0
+    # сервер семьи: одноразовые инвайты на партию
+    mafia_family_ids: List[int] = field(default_factory=list)
+    mafia_invite_codes: List[str] = field(default_factory=list)
 
     # ── helpers ──────────────────────────────────────────────
     def alive_players(self) -> List[Player]:
@@ -864,6 +867,8 @@ class Game:
             'last_vote_report': self.last_vote_report,
             'public_message_ids': [int(x) for x in (self.public_message_ids or [])],
             'doctor_last_self_heal_day': int(self.doctor_last_self_heal_day or 0),
+            'mafia_family_ids': [int(x) for x in (self.mafia_family_ids or [])],
+            'mafia_invite_codes': [str(x) for x in (self.mafia_invite_codes or [])],
         }
 
     @classmethod
@@ -907,6 +912,8 @@ class Game:
             last_vote_report=str(d.get('last_vote_report') or ''),
             public_message_ids=[int(x) for x in (d.get('public_message_ids') or [])],
             doctor_last_self_heal_day=int(d.get('doctor_last_self_heal_day') or 0),
+            mafia_family_ids=[int(x) for x in (d.get('mafia_family_ids') or [])],
+            mafia_invite_codes=[str(x) for x in (d.get('mafia_invite_codes') or [])],
         )
 
 

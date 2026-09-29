@@ -496,5 +496,33 @@ async def _voice_mute_mock():
 asyncio.run(_voice_mute_mock())
 
 
+print('\n== 16. Сервер семьи мафии ==')
+from services.mafia import family_guild as FG  # noqa: E402
+check(FG.DEFAULT_FAMILY_GUILD_ID == 1554581698946277538, 'guild id семьи')
+check(FG.family_guild_id() == 1554581698946277538, 'env/default family guild')
+src_m2 = open(os.path.join(_REPO, 'cogs/mafia.py'), encoding='utf-8').read()
+check('create_one_shot_invite' in src_m2 and 'evict_mafia_family' in src_m2,
+      'инвайт + выгон в cog')
+check('Войти к семье' in src_m2, 'кнопка инвайта в ЛС')
+check('cleanup_game_messages' in src_m2 and 'purge' in src_m2,
+      'purge сообщений бота в конце')
+# сериализация полей семьи
+gfam = Game.create(50, 1, 9, 8, [(1, 'a'), (2, 'b'), (3, 'c'), (4, 'd'),
+                                  (5, 'e'), (6, 'f')])
+gfam.mafia_family_ids = [1, 2]
+gfam.mafia_invite_codes = ['abc', 'def']
+d = gfam.to_dict()
+gfam2 = Game.from_dict(d)
+check(gfam2.mafia_family_ids == [1, 2], 'persist family ids')
+check(gfam2.mafia_invite_codes == ['abc', 'def'], 'persist invite codes')
+_night_body = src_m2.split('async def on_night_started', 1)[1].split(
+    'async def ', 1)[0]
+check('send_mafia_night_chat' not in _night_body,
+      'ночь без повторной панели чата')
+_after_n = src_m2.split('async def after_night_action', 1)[1].split(
+    'async def ', 1)[0]
+check('announce(' not in _after_n, 'шаги ночи без публичного спама')
+
+
 print(f'\nИтого: {PASS} PASS / {FAIL} FAIL')
 sys.exit(1 if FAIL else 0)

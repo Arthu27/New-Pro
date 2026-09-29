@@ -169,7 +169,7 @@ def role_dm_embed(game: Game, player) -> discord.Embed:
             lines.append(
                 f'🤍 {_mention(t.user_id)} — {tr.name if tr else "?"}{you}')
         body += '\n**Ваша семья**\n' + '\n'.join(lines) + '\n'
-        body += '\n-# Ночью семья только в ЛС (кнопка «Написать семье»); днём — молчите о ролях.\n'
+        body += '\n-# Ночью — сервер семьи (инвайт в ЛС). Днём молчите о ролях.\n'
     body += f'\n-# #{game.game_id} · ведущий {_mention(game.host_id)}'
     e = discord.Embed(
         title=f'🤍 {role.name}',
@@ -198,7 +198,7 @@ def public_status_embed(game: Game) -> discord.Embed:
         dead_txt = ', '.join(_mention(p.user_id) for p in dead) if dead else '—'
         cycle = game.cycle_label() or 'игра'
         if game.cycle == CYCLE_NIGHT:
-            tip = 'Город спит · в войсе мут · роли ходят в ЛС'
+            tip = 'Город спит · войс на муте · ходы в ЛС'
         elif game.cycle == CYCLE_DAY:
             tip = 'Обсуждение в войсе'
         elif game.cycle == CYCLE_VOTE:
@@ -639,6 +639,10 @@ class HostPanelView(discord.ui.View):
             await cog.clear_voice_mutes(game)
         except Exception:
             pass
+        try:
+            await cog.evict_mafia_family(game)
+        except Exception:
+            pass
         if game.phase != PHASE_ENDED:
             game.cancel()
         n = 0
@@ -648,7 +652,7 @@ class HostPanelView(discord.ui.View):
             pass
         STORE.clear(gid, archive=True)
         await interaction.followup.send(
-            f'Игра #{game.game_id} закрыта · муты сняты · удалено сообщений: **{n}**.',
+            f'Игра #{game.game_id} закрыта · семья выгнана · удалено: **{n}**.',
             ephemeral=True)
 
     @discord.ui.button(label='Очистить сообщения', style=discord.ButtonStyle.secondary, emoji='🤍',
@@ -1345,7 +1349,10 @@ class Mafia(commands.Cog, name='mafia'):
         return n
 
     async def send_mafia_briefing(self, game: Game) -> int:
-        """После раздачи — семья знает друг друга (карта + список)."""
+        """После раздачи — семья + одноразовый инвайт на сервер общения."""
+        from services.mafia.family_guild import (
+            create_one_shot_invite, family_guild_id,
+        )
         team = game.mafia_team()
         if not team:
             return 0
@@ -1355,28 +1362,62 @@ class Mafia(commands.Cog, name='mafia'):
             lines.append(
                 f'🤍 {_mention(t.user_id)} — **{tr.name if tr else "?"}**')
         roster = '\n'.join(lines)
+        game.mafia_family_ids = [int(t.user_id) for t in team]
+        game.mafia_invite_codes = []
         sent = 0
         for p in team:
             try:
                 user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
+                url, code = await create_one_shot_invite(
+                    self.bot, p.user_id, game_id=game.game_id)
+                if code:
+                    game.mafia_invite_codes.append(code)
+                invite_block = (
+                    f'**Сервер семьи** · одноразовый вход\n'
+                    f'{url}\n'
+                    '-# Инвайт на **1 вход**. После матча вас выгонят.\n'
+                    if url else
+                    '⚠️ Инвайт не создался — напишите ведущему '
+                    f'(сервер `{family_guild_id()}`).\n'
+                )
                 e = discord.Embed(
                     title='🤍 Семья мафии',
                     description=(
-                        f'Вы в одной семье · партия **#{game.game_id}**\n\n'
+                        f'Партия **#{game.game_id}**\n\n'
                         f'{roster}\n\n'
-                        '**Ночью:** все на муте в войсе — '
-                        'пишите семье кнопкой «Написать семье» (ЛС).\n'
-                        '**Днём:** молчите о ролях.\n'
-                        '-# Это видит только мафия'
+                        f'{invite_block}\n'
+                        '**Ночью** — там. В общем войсе все на муте.\n'
+                        '**Днём** — молчите о ролях.\n'
+                        '-# Только для семьи'
                     ),
                     color=RED,
                 )
-                await user.send(embed=e)
+                view = None
+                if url:
+                    view = discord.ui.View(timeout=None)
+                    view.add_item(discord.ui.Button(
+                        label='Войти к семье',
+                        style=discord.ButtonStyle.link,
+                        url=url,
+                        emoji='🤍',
+                    ))
+                await user.send(embed=e, view=view)
                 sent += 1
             except Exception as ex:
                 game.mark_dm_failed(p.user_id)
                 log.debug('mafia briefing %s: %s', p.user_id, ex)
+        STORE.persist(game)
         return sent
+
+    async def evict_mafia_family(self, game: Game) -> int:
+        from services.mafia.family_guild import evict_family
+        try:
+            n = await evict_family(self.bot, game)
+            STORE.persist(game)
+            return n
+        except Exception as ex:
+            log.warning('mafia family evict: %s', ex)
+            return 0
 
     async def relay_mafia_chat(self, game: Game, *, author, text: str) -> int:
         """Переслать сообщение всем живым мафиям в ЛС."""
@@ -1514,19 +1555,10 @@ class Mafia(commands.Cog, name='mafia'):
         more = game.advance_night_step()
         STORE.persist(game)
         if more:
-            n = await self.send_night_step_dms(game)
-            step = game.current_night_step()
-            label = (step or {}).get('label', 'ход')
-            await self.announce(
-                game,
-                f'## Ночь {game.day_number}\n'
-                f'Очередь: **{label}**\n'
-                f'-# ЛС отправлено: {n}',
-                accent=0x2C3E6B,
-            )
+            await self.send_night_step_dms(game)
             await self.refresh_host_summary(game)
             return
-        # очередь кончилась
+        # очередь кончилась — сразу день
         await self.advance_cycle(game, force=False)
 
     async def after_vote_action(self, game: Game):
@@ -1538,7 +1570,7 @@ class Mafia(commands.Cog, name='mafia'):
         await self.send_current_vote_dm(game)
 
     async def cleanup_game_messages(self, game: Game) -> int:
-        """Удалить анонсы + лобби (+ сводку ведущего) — чистое окончание."""
+        """Удалить все сообщения бота по партии + сводку ведущего."""
         n = 0
         ch = None
         try:
@@ -1562,6 +1594,20 @@ class Mafia(commands.Cog, name='mafia'):
                 n += 1
             except Exception:
                 pass
+        # дочистить оставшиеся сообщения бота в канале партии
+        me = getattr(self.bot, 'user', None)
+        if ch is not None and me is not None:
+            try:
+                def _is_bot(m: discord.Message) -> bool:
+                    return (
+                        m.author is not None
+                        and int(m.author.id) == int(me.id)
+                        and int(m.id) not in seen
+                    )
+                deleted = await ch.purge(limit=80, check=_is_bot, bulk=True)
+                n += len(deleted or [])
+            except Exception as ex:
+                log.debug('mafia purge bot msgs: %s', ex)
         # сводка в ЛС ведущего
         try:
             if game.host_summary_channel_id and game.host_summary_message_id:
@@ -1585,22 +1631,17 @@ class Mafia(commands.Cog, name='mafia'):
         return n
 
     async def on_night_started(self, game: Game):
-        """После begin_night: мут + анонс + первый шаг очереди в ЛС."""
+        """После begin_night: мут + короткий анонс + ЛС ходов."""
         await self.set_voice_night_mute(game, night=True)
-        step = game.current_night_step()
-        first = (step or {}).get('label', '…')
         await self.announce(
             game,
             f'## 🌙 Ночь {game.day_number}\n'
-            '**Город засыпает.**\n'
-            '**Все на муте в войсе** — мафия общается только в ЛС у бота.\n'
-            f'Ходы **по очереди**: сейчас **{first}**.',
+            'Город спит · **войс на муте**.\n'
+            '-# Ходы — в ЛС',
             accent=0x2C3E6B,
         )
         await self.send_night_step_dms(game)
-        await self.send_mafia_night_chat(game)
         await self.refresh_host_summary(game)
-        await self.refresh_public(game)
 
     async def send_mafia_night_chat(self, game: Game) -> int:
         """Ночью семье — панель «Написать семье» (общение в ЛС)."""
@@ -1641,39 +1682,63 @@ class Mafia(commands.Cog, name='mafia'):
 
     async def on_day_started(self, game: Game, night_report: str = ''):
         await self.set_voice_night_mute(game, night=False)
-        body = f'## ☀️ День {game.day_number}\n**Город просыпается.**\n\n'
+        body = f'## ☀️ День {game.day_number}\n'
         if night_report:
-            body += f'{night_report}\n\n'
-        body += 'Обсуждайте в войсе.\n-# **Дальше** → голосование по очереди'
+            body += f'{night_report}\n'
+        body += '-# Обсуждение в войсе · **Дальше** → голос'
         await self.announce(game, body, accent=0xC4A35A)
         await self.refresh_host_summary(game)
-        await self.refresh_public(game)
 
     async def on_vote_started(self, game: Game):
         await self.send_current_vote_dm(game)
         await self.announce(
             game,
-            f'## 🗳️ Голосование · день {game.day_number}\n'
-            f'Голосуют **по очереди** · сейчас: **{game.vote_turn_label()}**\n'
-            '-# Без «кто за кого»',
+            f'## 🗳️ Голос · день {game.day_number}\n'
+            f'Очередь: **{game.vote_turn_label()}**',
             accent=0x8B3A3A,
         )
         await self.refresh_host_summary(game)
-        await self.refresh_public(game)
 
     async def _finish_game(self, game: Game, headline: str) -> str:
         await self.clear_voice_mutes(game)
-        await self.announce(
-            game,
-            f'## 🏁 Финал\n{headline}\n\n'
-            '-# Ведущий: **Очистить сообщения** — убрать анонсы из канала',
-            accent=0x2ECC71 if game.winner == 'town' else 0xE74C3C,
+        kicked = 0
+        try:
+            kicked = await self.evict_mafia_family(game)
+        except Exception:
+            pass
+        # сначала чистим всё от бота, потом одно сообщение «Финал»
+        n = await self.cleanup_game_messages(game)
+        try:
+            ch = self.bot.get_channel(int(game.text_channel_id))
+            if ch is None:
+                ch = await self.bot.fetch_channel(int(game.text_channel_id))
+            from services.v2_layouts import V2_AVAILABLE, black_container
+            color = 0x2ECC71 if game.winner == 'town' else 0xE74C3C
+            if V2_AVAILABLE:
+                from discord import ui as dui, SeparatorSpacing
+                view = dui.LayoutView(timeout=1)
+                view.add_item(black_container(
+                    dui.TextDisplay('# 🤍 Финал'),
+                    dui.TextDisplay(f'-# #{game.game_id}'),
+                    dui.Separator(spacing=SeparatorSpacing.large),
+                    dui.TextDisplay(str(headline)[:3500]),
+                    accent=color,
+                ))
+                await ch.send(view=view)
+            else:
+                e = discord.Embed(
+                    title='🤍 Финал',
+                    description=str(headline)[:4000],
+                    color=color,
+                )
+                await ch.send(embed=e)
+        except Exception as ex:
+            log.debug('mafia final announce: %s', ex)
+        STORE.clear(game.guild_id, archive=True)
+        return (
+            f'Финал · семья выгнана (**{kicked}**) · '
+            f'сообщений бота удалено: **{n}**'
         )
-        await self.refresh_public(game)
-        await self.refresh_host_summary(game)
-        # партию оставляем ENDED в store — чтобы нажать «Очистить»
-        STORE.persist(game)
-        return 'Игра окончена · нажми **Очистить сообщения**.'
 
     async def advance_cycle(self, game: Game, *, force: bool = False) -> str:
         """Сдвинуть фазу. force — пропуск текущего шага/очереди."""
