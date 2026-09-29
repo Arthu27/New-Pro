@@ -169,7 +169,7 @@ def role_dm_embed(game: Game, player) -> discord.Embed:
             lines.append(
                 f'🤍 {_mention(t.user_id)} — {tr.name if tr else "?"}{you}')
         body += '\n**Ваша семья**\n' + '\n'.join(lines) + '\n'
-        body += '\n-# Ночью семья говорит в войсе; днём — молчите о ролях.\n'
+        body += '\n-# Ночью семья только в ЛС (кнопка «Написать семье»); днём — молчите о ролях.\n'
     body += f'\n-# #{game.game_id} · ведущий {_mention(game.host_id)}'
     e = discord.Embed(
         title=f'🤍 {role.name}',
@@ -1188,7 +1188,7 @@ class Mafia(commands.Cog, name='mafia'):
             log.debug('mafia announce: %s', ex)
 
     async def set_voice_night_mute(self, game: Game, *, night: bool) -> int:
-        """Ночь: город на муте, живая мафия говорит. День: живые говорят, мёртвые — мут."""
+        """Ночь: все живые на муте в войсе (семья только в ЛС). День: живые говорят, мёртвые — мут."""
         guild = self.bot.get_guild(int(game.guild_id))
         if guild is None:
             return 0
@@ -1201,19 +1201,13 @@ class Mafia(commands.Cog, name='mafia'):
             vs = getattr(member, 'voice', None)
             if vs is None or vs.channel is None or int(vs.channel.id) != voice_id:
                 continue
-            if not p.alive:
-                want_mute = True
-            elif night:
-                # семья мафии общается ночью в войсе
-                want_mute = not (p.role and is_mafia_team(p.role))
-            else:
-                want_mute = False
+            want_mute = bool(night) or (not p.alive)
             try:
                 if bool(getattr(vs, 'mute', False)) == want_mute:
                     continue
                 await member.edit(
                     mute=want_mute,
-                    reason=('мафия: ночь — город спит, семья говорит' if night
+                    reason=('мафия: ночь — все на муте, семья в ЛС' if night
                             else 'мафия: день'),
                 )
                 n += 1
@@ -1241,8 +1235,8 @@ class Mafia(commands.Cog, name='mafia'):
                     description=(
                         f'Вы в одной семье · партия **#{game.game_id}**\n\n'
                         f'{roster}\n\n'
-                        '**Ночью:** говорите в войсе (город на муте) и '
-                        'пишите кнопкой «Написать семье».\n'
+                        '**Ночью:** все на муте в войсе — '
+                        'пишите семье кнопкой «Написать семье» (ЛС).\n'
                         '**Днём:** молчите о ролях.\n'
                         '-# Это видит только мафия'
                     ),
@@ -1464,7 +1458,7 @@ class Mafia(commands.Cog, name='mafia'):
             game,
             f'## 🌙 Ночь {game.day_number}\n'
             '**Город засыпает.**\n'
-            'Мирные — мут в войсе. **Мафия может говорить.**\n'
+            '**Все на муте в войсе** — мафия общается только в ЛС у бота.\n'
             f'Ходы **по очереди**: сейчас **{first}**.',
             accent=0x2C3E6B,
         )
@@ -1485,9 +1479,8 @@ class Mafia(commands.Cog, name='mafia'):
                 e = discord.Embed(
                     title='🤍 Связь семьи',
                     description=(
-                        f'Ночь **{game.day_number}** · город спит.\n'
-                        'В войсе вы **можете говорить**.\n'
-                        'Или напишите семье кнопкой ниже — уйдёт всем в ЛС.'
+                        f'Ночь **{game.day_number}** · город спит, войс на муте.\n'
+                        'Общайтесь с семьёй кнопкой ниже — сообщение уйдёт всем в ЛС.'
                     ),
                     color=RED,
                 )

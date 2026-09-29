@@ -401,6 +401,12 @@ check('send_night_step_dms' in src_m and 'send_current_vote_dm' in src_m,
 check('relay_mafia_chat' in src_m and 'send_mafia_briefing' in src_m
       and 'Написать семье' in src_m,
       'мафия знает семью + чат')
+# ночью мафию тоже мутим — иначе мирные видят, кто «семья» в войсе
+_mute_fn = src_m.split('async def set_voice_night_mute', 1)[1].split(
+    'async def ', 1)[0]
+check('is_mafia_team' not in _mute_fn, 'ночной мут без исключения для мафии')
+check('bool(night)' in _mute_fn and 'not p.alive' in _mute_fn,
+      'ночь = мут всех живых в войсе')
 check('can_doctor_self_heal' in open(
     os.path.join(_REPO, 'services/mafia/game.py'), encoding='utf-8').read(),
       'самохил доктора в game')
