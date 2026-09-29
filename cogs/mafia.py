@@ -96,17 +96,19 @@ def host_summary_embed(game: Game) -> discord.Embed:
     if game.phase == PHASE_PLAYING and game.cycle:
         desc = f'**{game.cycle_label()}** · авто-цикл'
         if game.cycle == CYCLE_NIGHT:
+            desc += f'\nОчередь: **{game.night_step_label()}**'
             left = len(game.night_pending())
-            desc += f'\nНочные ходы: **{len(game.night_actions)}/{len(game.night_actors_needed())}**'
             if left:
-                desc += f' · ждут {left}'
+                desc += f' · ждут ход: {left}'
         elif game.cycle == CYCLE_VOTE:
             desc += (
-                f'\nГолоса: **{len(game.votes)}/{len(game.alive_players())}**'
-                ' · без детализации «кто за кого»'
+                f'\nОчередь голоса: **{game.vote_turn_label()}**'
+                ' · без «кто за кого»'
             )
         elif game.cycle == CYCLE_DAY:
-            desc += '\nОбсуждение · дальше — голосование'
+            desc += '\nОбсуждение · Дальше → голосование по очереди'
+    elif game.phase == PHASE_ENDED:
+        desc = '**Финал** · можно очистить сообщения партии'
     else:
         desc = (
             f'**{_phase_label(game.phase)}** · '
@@ -526,15 +528,19 @@ class HostPanelView(discord.ui.View):
                 except Exception:
                     pass
 
-    async def _host(self, interaction: discord.Interaction) -> Game | None:
+    async def _host(self, interaction: discord.Interaction,
+                    *, allow_ended: bool = False) -> Game | None:
         game = None
         if interaction.guild_id:
             game = STORE.get(interaction.guild_id)
         if game is None:
             for g in STORE._by_guild.values():
-                if g.host_id == interaction.user.id and g.phase != PHASE_ENDED:
-                    game = g
-                    break
+                if g.host_id != interaction.user.id:
+                    continue
+                if g.phase == PHASE_ENDED and not allow_ended:
+                    continue
+                game = g
+                break
         if not game:
             if not interaction.response.is_done():
                 await interaction.response.send_message('Игры нет.', ephemeral=True)
@@ -610,7 +616,7 @@ class HostPanelView(discord.ui.View):
     @discord.ui.button(label='Отменить игру', style=discord.ButtonStyle.danger, emoji='🤍',
                        custom_id='mafia:host:cancel', row=1)
     async def cancel_game(self, interaction: discord.Interaction, button: discord.ui.Button):
-        game = await self._host(interaction)
+        game = await self._host(interaction, allow_ended=True)
         if not game:
             return
         gid = game.guild_id
@@ -620,14 +626,36 @@ class HostPanelView(discord.ui.View):
             await cog.clear_voice_mutes(game)
         except Exception:
             pass
-        game.cancel()
-        STORE.clear(gid, archive=True)
+        if game.phase != PHASE_ENDED:
+            game.cancel()
+        n = 0
         try:
-            await cog.refresh_public(game)
-            await cog.refresh_lobby_message(game, closed=True)
+            n = await cog.cleanup_game_messages(game)
         except Exception:
             pass
-        await interaction.followup.send(f'Игра #{game.game_id} отменена · муты сняты.', ephemeral=True)
+        STORE.clear(gid, archive=True)
+        await interaction.followup.send(
+            f'Игра #{game.game_id} закрыта · муты сняты · удалено сообщений: **{n}**.',
+            ephemeral=True)
+
+    @discord.ui.button(label='Очистить сообщения', style=discord.ButtonStyle.secondary, emoji='🤍',
+                       custom_id='mafia:host:cleanup', row=2)
+    async def cleanup_msgs(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """В конце катки — убрать анонсы/лобби из канала."""
+        game = await self._host(interaction, allow_ended=True)
+        if not game:
+            return
+        if game.phase not in (PHASE_ENDED, PHASE_PLAYING):
+            await interaction.response.send_message(
+                'Очистка после финала или отмены.', ephemeral=True)
+            return
+        cog: Mafia = interaction.client.get_cog('mafia')  # type: ignore
+        await interaction.response.defer(ephemeral=True)
+        n = await cog.cleanup_game_messages(game)
+        if game.phase == PHASE_ENDED:
+            STORE.clear(game.guild_id, archive=True)
+        await interaction.followup.send(
+            f'Удалено сообщений партии: **{n}**.', ephemeral=True)
 
 
 def _alive_options(game: Game, *, exclude_id: int = 0) -> list:
@@ -699,9 +727,7 @@ class NightActionView(discord.ui.View):
             elif kind == 'skip':
                 msg = 'Пас · ждёте итог ночи.'
             await interaction.response.edit_message(content=msg, view=None, embed=None)
-            await cog.refresh_host_summary(game)
-            if game.night_ready():
-                await cog.advance_cycle(game, force=False)
+            await cog.after_night_action(game)
         except Exception as e:
             if interaction.response.is_done():
                 await interaction.followup.send(str(e), ephemeral=True)
@@ -741,11 +767,9 @@ class VoteSelectView(discord.ui.View):
             game.submit_vote(self.voter_id, int(raw))
             STORE.persist(game)
             await interaction.response.edit_message(
-                content='Голос принят · итог без раскрытия «кто за кого».',
+                content='Голос принят · ждите остальных по очереди.',
                 view=None, embed=None)
-            await cog.refresh_host_summary(game)
-            if game.vote_ready():
-                await cog.advance_cycle(game, force=False)
+            await cog.after_vote_action(game)
         except Exception as e:
             if interaction.response.is_done():
                 await interaction.followup.send(str(e), ephemeral=True)
@@ -1044,29 +1068,41 @@ class Mafia(commands.Cog, name='mafia'):
         except Exception as e:
             log.debug('refresh_public: %s', e)
 
-    async def announce(self, game: Game, text: str):
-        """Публичная фаза в канал лобби — V2 если можно, иначе embed."""
+    async def announce(self, game: Game, text: str, *, accent: int = None):
+        """Публичная фаза в канал — V2, сообщение трекается для очистки."""
         try:
             ch = self.bot.get_channel(int(game.text_channel_id))
             if ch is None:
                 ch = await self.bot.fetch_channel(int(game.text_channel_id))
             from services.v2_layouts import V2_AVAILABLE, black_container
+            color = accent if accent is not None else (
+                0x2C3E6B if game.cycle == CYCLE_NIGHT else
+                0xC4A35A if game.cycle == CYCLE_DAY else
+                0x8B3A3A if game.cycle == CYCLE_VOTE else
+                0x000000
+            )
+            msg = None
             if V2_AVAILABLE:
                 from discord import ui as dui, SeparatorSpacing
                 view = dui.LayoutView(timeout=1)
                 view.add_item(black_container(
                     dui.TextDisplay('# 🤍 Мафия'),
-                    dui.TextDisplay(f'-# HAKUMO · {game.cycle_label() or "партия"}'),
+                    dui.TextDisplay(
+                        f'-# HAKUMO · {game.cycle_label() or "партия"} · #{game.game_id}'),
                     dui.Separator(spacing=SeparatorSpacing.large),
                     dui.TextDisplay(str(text)[:3500]),
-                    accent=0x000000,
+                    accent=color,
                 ))
-                await ch.send(view=view)
-                return
-            e = discord.Embed(
-                title=f'🤍 Мафия · {game.cycle_label() or game.game_id}',
-                description=str(text)[:4000], color=BLACK)
-            await ch.send(embed=e)
+                msg = await ch.send(view=view)
+            else:
+                e = discord.Embed(
+                    title=f'🤍 Мафия · {game.cycle_label() or game.game_id}',
+                    description=str(text)[:4000], color=color)
+                e.set_footer(text=f'#{game.game_id}')
+                msg = await ch.send(embed=e)
+            if msg is not None:
+                game.track_public_message(msg.id)
+                STORE.persist(game)
         except Exception as ex:
             log.debug('mafia announce: %s', ex)
 
@@ -1118,50 +1154,41 @@ class Mafia(commands.Cog, name='mafia'):
                 log.debug('mafia unmute %s: %s', p.user_id, ex)
         return n
 
-    async def send_night_action_dms(self, game: Game) -> int:
-        """Разослать ночные select ролям."""
+    async def send_night_step_dms(self, game: Game) -> int:
+        """Только текущий шаг очереди — шериф не раньше мафии/доктора."""
+        step = game.current_night_step()
+        if not step:
+            return 0
+        kind = step.get('kind') or 'kill'
         sent = 0
-        for p in game.night_actors_needed():
-            kind = {
-                'mafia': 'kill',
-                'don': 'kill',
-                'sheriff': 'sheriff',
-                'doctor': 'heal',
-                'courtesan': 'block',
-            }.get(p.role or '')
-            if not kind:
+        for uid in step.get('actors') or []:
+            p = game.players.get(int(uid))
+            if not p or not p.alive:
                 continue
             try:
                 user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
                 role = ROLES.get(p.role)
-                title = role.name if role else 'Ход'
+                title = step.get('label') or (role.name if role else 'Ход')
                 desc = {
-                    'kill': 'Ночь · выберите жертву (или пас).',
-                    'sheriff': 'Ночь · кого проверить: мафия или мирный?',
-                    'heal': 'Ночь · кого лечить?',
-                    'block': 'Ночь · чьё действие блокируем?',
-                }.get(kind, 'Ночной ход')
+                    'kill': 'Ваш ход · выберите жертву (или пас).',
+                    'sheriff': 'Ваш ход · кого проверить: мафия или мирный?',
+                    'heal': 'Ваш ход · кого лечить?',
+                    'block': 'Ваш ход · чьё действие блокируем?',
+                    'don': 'Ваш ход · проверка: это шериф? (можно пас)',
+                }.get(kind, 'Ваш ход')
                 e = discord.Embed(
                     title=f'🤍 {title}',
-                    description=f'{desc}\n-# #{game.game_id} · ночь {game.day_number}',
+                    description=(
+                        f'{desc}\n'
+                        f'-# #{game.game_id} · ночь {game.day_number} · '
+                        f'{game.night_step_label()}'
+                    ),
                     color=RED if role and role.team == 'mafia' else BLUE,
                 )
-                view = NightActionView(game.guild_id, p.user_id, kind)
-                await user.send(embed=e, view=view)
-                # дон: доп. проверка шерифа
-                if p.role == 'don':
-                    e2 = discord.Embed(
-                        title='🤍 Дон · проверка',
-                        description=(
-                            'По желанию проверьте игрока: шериф это или нет.\n'
-                            '-# Можно пас'
-                        ),
-                        color=RED,
-                    )
-                    await user.send(
-                        embed=e2,
-                        view=NightActionView(game.guild_id, p.user_id, 'don'),
-                    )
+                await user.send(
+                    embed=e,
+                    view=NightActionView(game.guild_id, p.user_id, kind),
+                )
                 sent += 1
             except Exception as ex:
                 game.mark_dm_failed(p.user_id)
@@ -1169,38 +1196,133 @@ class Mafia(commands.Cog, name='mafia'):
         STORE.persist(game)
         return sent
 
-    async def send_vote_dms(self, game: Game) -> int:
-        sent = 0
-        for p in game.alive_players():
-            try:
-                user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
-                e = discord.Embed(
-                    title='🤍 Голосование',
-                    description=(
-                        f'День {game.day_number} · кого изгоняем?\n'
-                        '-# Голос тайный · ведущий не видит «кто за кого»'
-                    ),
-                    color=GOLD,
-                )
-                await user.send(
-                    embed=e, view=VoteSelectView(game.guild_id, p.user_id))
-                sent += 1
-            except Exception as ex:
-                game.mark_dm_failed(p.user_id)
-                log.debug('vote dm %s: %s', p.user_id, ex)
+    async def send_current_vote_dm(self, game: Game) -> bool:
+        """Следующий голосующий по очереди — один DM."""
+        vid = game.current_voter_id()
+        if vid is None:
+            return False
+        p = game.players.get(int(vid))
+        if not p or not p.alive:
+            game.vote_index = int(game.vote_index or 0) + 1
+            STORE.persist(game)
+            return await self.send_current_vote_dm(game)
+        try:
+            user = self.bot.get_user(p.user_id) or await self.bot.fetch_user(p.user_id)
+            e = discord.Embed(
+                title='🤍 Голосование',
+                description=(
+                    f'День {game.day_number} · **ваша очередь** '
+                    f'({game.vote_turn_label()})\n'
+                    'Кого изгоняем?\n'
+                    '-# Голос тайный'
+                ),
+                color=GOLD,
+            )
+            await user.send(
+                embed=e, view=VoteSelectView(game.guild_id, p.user_id))
+            STORE.persist(game)
+            return True
+        except Exception as ex:
+            game.mark_dm_failed(p.user_id)
+            log.debug('vote dm %s: %s', p.user_id, ex)
+            game.vote_index = int(game.vote_index or 0) + 1
+            STORE.persist(game)
+            return await self.send_current_vote_dm(game)
+
+    async def after_night_action(self, game: Game):
+        """После хода: следующий шаг очереди или итог ночи."""
         STORE.persist(game)
-        return sent
+        await self.refresh_host_summary(game)
+        if not game.night_step_ready():
+            return
+        # шаг закрыт → следующий или resolve
+        more = game.advance_night_step()
+        STORE.persist(game)
+        if more:
+            n = await self.send_night_step_dms(game)
+            step = game.current_night_step()
+            label = (step or {}).get('label', 'ход')
+            await self.announce(
+                game,
+                f'## Ночь {game.day_number}\n'
+                f'Очередь: **{label}**\n'
+                f'-# ЛС отправлено: {n}',
+                accent=0x2C3E6B,
+            )
+            await self.refresh_host_summary(game)
+            return
+        # очередь кончилась
+        await self.advance_cycle(game, force=False)
+
+    async def after_vote_action(self, game: Game):
+        STORE.persist(game)
+        await self.refresh_host_summary(game)
+        if game.vote_ready():
+            await self.advance_cycle(game, force=False)
+            return
+        await self.send_current_vote_dm(game)
+
+    async def cleanup_game_messages(self, game: Game) -> int:
+        """Удалить анонсы + лобби (+ сводку ведущего) — чистое окончание."""
+        n = 0
+        ch = None
+        try:
+            ch = self.bot.get_channel(int(game.text_channel_id))
+            if ch is None:
+                ch = await self.bot.fetch_channel(int(game.text_channel_id))
+        except Exception:
+            ch = None
+        ids = list(game.public_message_ids or [])
+        if game.lobby_message_id:
+            ids.append(int(game.lobby_message_id))
+        seen = set()
+        for mid in ids:
+            mid = int(mid or 0)
+            if not mid or mid in seen or ch is None:
+                continue
+            seen.add(mid)
+            try:
+                msg = await ch.fetch_message(mid)
+                await msg.delete()
+                n += 1
+            except Exception:
+                pass
+        # сводка в ЛС ведущего
+        try:
+            if game.host_summary_channel_id and game.host_summary_message_id:
+                hch = self.bot.get_channel(int(game.host_summary_channel_id))
+                if hch is None:
+                    hch = await self.bot.fetch_channel(
+                        int(game.host_summary_channel_id))
+                hmsg = await hch.fetch_message(int(game.host_summary_message_id))
+                await hmsg.delete()
+                n += 1
+        except Exception:
+            pass
+        game.public_message_ids = []
+        game.lobby_message_id = None
+        game.host_summary_message_id = None
+        game.host_summary_channel_id = None
+        try:
+            STORE.persist(game)
+        except Exception:
+            pass
+        return n
 
     async def on_night_started(self, game: Game):
-        """После begin_night: мут + анонс + ЛС ролям."""
+        """После begin_night: мут + анонс + первый шаг очереди в ЛС."""
         await self.set_voice_night_mute(game, night=True)
+        step = game.current_night_step()
+        first = (step or {}).get('label', '…')
         await self.announce(
             game,
             f'## 🌙 Ночь {game.day_number}\n'
             '**Город засыпает.**\n'
-            'В войсе — мут. Мафия и спецроли ходят в личке с ботом.',
+            'В войсе — мут.\n'
+            f'Ходы **по очереди**: сейчас **{first}**.',
+            accent=0x2C3E6B,
         )
-        await self.send_night_action_dms(game)
+        await self.send_night_step_dms(game)
         await self.refresh_host_summary(game)
         await self.refresh_public(game)
 
@@ -1209,45 +1331,66 @@ class Mafia(commands.Cog, name='mafia'):
         body = f'## ☀️ День {game.day_number}\n**Город просыпается.**\n'
         if night_report:
             body += f'\n{night_report}\n'
-        body += '\nОбсуждайте в войсе. Ведущий жмёт **Начать / Дальше** → голосование.'
-        await self.announce(game, body)
+        body += '\nОбсуждайте в войсе.\n-# **Дальше** → голосование по очереди'
+        await self.announce(game, body, accent=0xC4A35A)
         await self.refresh_host_summary(game)
         await self.refresh_public(game)
 
     async def on_vote_started(self, game: Game):
-        n = await self.send_vote_dms(game)
+        await self.send_current_vote_dm(game)
         await self.announce(
             game,
             f'## 🗳️ Голосование · день {game.day_number}\n'
-            f'Живые получили select в ЛС (**{n}**).\n'
-            '-# Итог без «кто за кого»',
+            f'Голосуют **по очереди** · сейчас: **{game.vote_turn_label()}**\n'
+            '-# Без «кто за кого»',
+            accent=0x8B3A3A,
         )
         await self.refresh_host_summary(game)
         await self.refresh_public(game)
 
+    async def _finish_game(self, game: Game, headline: str) -> str:
+        await self.clear_voice_mutes(game)
+        await self.announce(
+            game,
+            f'## 🏁 Финал\n{headline}\n\n'
+            '-# Ведущий: **Очистить сообщения** — убрать анонсы из канала',
+            accent=0x2ECC71 if game.winner == 'town' else 0xE74C3C,
+        )
+        await self.refresh_public(game)
+        await self.refresh_host_summary(game)
+        # партию оставляем ENDED в store — чтобы нажать «Очистить»
+        STORE.persist(game)
+        return 'Игра окончена · нажми **Очистить сообщения**.'
+
     async def advance_cycle(self, game: Game, *, force: bool = False) -> str:
-        """Сдвинуть фазу: ночь→день→голос→ночь. force — даже если не все сходили."""
+        """Сдвинуть фазу. force — пропуск текущего шага/очереди."""
         if game.phase != PHASE_PLAYING:
             raise RuntimeError('Игра не идёт')
         if game.cycle == CYCLE_NIGHT:
             if not force and not game.night_ready():
-                left = len(game.night_pending())
-                return f'Ночь ещё идёт · ждут ход: {left}'
-            # дон мог прислать только check — для resolve это ок; kill optional
+                # force=False и шаг не готов — ждём
+                if not game.night_step_ready():
+                    left = len(game.night_pending())
+                    step = game.current_night_step()
+                    return (
+                        f'Ночь · ждут **{(step or {}).get("label", "?")}** '
+                        f'({left})'
+                    )
+                # шаг готов но очередь не кончилась — подвинуть
+                await self.after_night_action(game)
+                return f'Ночь · {game.night_step_label()}'
+            if force and not game.night_ready():
+                # добить очередь пустыми skip и resolve
+                game.night_step = len(game.night_queue or [])
             report = game.resolve_night()
             STORE.persist(game)
             await self.refresh_host_summary(game)
             if game.phase == PHASE_ENDED:
-                await self.clear_voice_mutes(game)
-                await self.announce(
+                return await self._finish_game(
                     game,
-                    f'## 🏁 Финал\n{report["report"]}\n'
+                    report['report'] + '\n'
                     + ('Победа **города**.' if game.winner == 'town'
-                       else 'Победа **мафии**.'),
-                )
-                await self.refresh_public(game)
-                STORE.clear(game.guild_id, archive=True)
-                return 'Игра окончена.'
+                       else 'Победа **мафии**.'))
             game.begin_day()
             STORE.persist(game)
             await self.on_day_started(game, night_report=report['report'])
@@ -1257,27 +1400,24 @@ class Mafia(commands.Cog, name='mafia'):
             game.begin_vote()
             STORE.persist(game)
             await self.on_vote_started(game)
-            return f'Голосование · день {game.day_number}'
+            return f'Голосование · {game.vote_turn_label()}'
 
         if game.cycle == CYCLE_VOTE:
             if not force and not game.vote_ready():
                 left = len(game.vote_pending())
-                return f'Голосование · ждут: {left}'
+                return f'Голосование · очередь: {game.vote_turn_label()} · ждут {left}'
+            if force and not game.vote_ready():
+                game.vote_index = len(game.vote_order or [])
             report = game.resolve_vote()
             STORE.persist(game)
-            await self.announce(game, f'## Итог голосования\n{report["report"]}')
+            await self.announce(
+                game, f'## Итог\n{report["report"]}', accent=0x8B3A3A)
             await self.refresh_host_summary(game)
             if game.phase == PHASE_ENDED:
-                await self.clear_voice_mutes(game)
-                await self.announce(
+                return await self._finish_game(
                     game,
-                    '## 🏁 Финал\n'
-                    + ('Победа **города**.' if game.winner == 'town'
-                       else 'Победа **мафии**.'),
-                )
-                await self.refresh_public(game)
-                STORE.clear(game.guild_id, archive=True)
-                return 'Игра окончена.'
+                    ('Победа **города**.' if game.winner == 'town'
+                     else 'Победа **мафии**.'))
             game.begin_night()
             STORE.persist(game)
             await self.on_night_started(game)

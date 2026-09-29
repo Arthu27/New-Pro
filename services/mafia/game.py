@@ -84,10 +84,18 @@ class Game:
     cycle: str = CYCLE_NONE
     # actor_id -> {'kind': kill|heal|block|sheriff|don|skip, 'target_id': int|None}
     night_actions: Dict[int, dict] = field(default_factory=dict)
+    # очередь ночи: [{step, actors:[uid], kind}] — шериф не раньше мафии/доктора
+    night_queue: List[dict] = field(default_factory=list)
+    night_step: int = 0
     # voter_id -> target_id (0 = воздержался)
     votes: Dict[int, int] = field(default_factory=dict)
+    # голосование по очереди
+    vote_order: List[int] = field(default_factory=list)
+    vote_index: int = 0
     last_night_report: str = ''
     last_vote_report: str = ''
+    # публичные msg id для очистки в конце
+    public_message_ids: List[int] = field(default_factory=list)
 
     # ── helpers ──────────────────────────────────────────────
     def alive_players(self) -> List[Player]:
@@ -195,7 +203,11 @@ class Game:
         self.day_number = 0
         self.cycle = CYCLE_NONE
         self.night_actions = {}
+        self.night_queue = []
+        self.night_step = 0
         self.votes = {}
+        self.vote_order = []
+        self.vote_index = 0
         self.last_night_report = ''
         self.last_vote_report = ''
         self.add_event(f'Роли разданы (токен `{self.deal_token[:6]}`)')
@@ -294,14 +306,18 @@ class Game:
         self.begin_night()
 
     def begin_night(self) -> None:
-        """Город засыпает · ночные действия ролей."""
+        """Город засыпает · ночные действия по очереди."""
         if self.phase != PHASE_PLAYING:
             raise RuntimeError('Игра не идёт')
         self.day_number = int(self.day_number or 0) + 1
         self.cycle = CYCLE_NIGHT
         self.night_actions = {}
         self.votes = {}
+        self.vote_order = []
+        self.vote_index = 0
         self.last_night_report = ''
+        self.night_queue = self._build_night_queue()
+        self.night_step = 0
         self.add_event(f'🌙 Ночь {self.day_number} · город засыпает')
 
     def begin_day(self) -> None:
@@ -309,6 +325,8 @@ class Game:
             raise RuntimeError('Игра не идёт')
         self.cycle = CYCLE_DAY
         self.votes = {}
+        self.vote_order = []
+        self.vote_index = 0
         self.add_event(f'☀️ День {self.day_number} · город просыпается')
 
     def begin_vote(self) -> None:
@@ -319,30 +337,156 @@ class Game:
         self.cycle = CYCLE_VOTE
         self.votes = {}
         self.last_vote_report = ''
-        self.add_event(f'🗳️ Голосование · день {self.day_number}')
+        # живые по порядку стола — голосуют по одному
+        self.vote_order = [p.user_id for p in self.alive_players()]
+        self.vote_index = 0
+        self.add_event(f'🗳️ Голосование · день {self.day_number} · по очереди')
+
+    def _build_night_queue(self) -> List[dict]:
+        """Очередь ночи: путана → мафия → доктор → шериф → дон-проверка.
+
+        Шериф не получает ход раньше мафии/доктора.
+        """
+        alive = {p.user_id: p for p in self.alive_players()}
+        q: List[dict] = []
+
+        def _uids(*roles: str) -> List[int]:
+            return [uid for uid, p in alive.items() if p.role in roles]
+
+        block = _uids('courtesan')
+        if block:
+            q.append({'step': 'block', 'kind': 'block', 'actors': block,
+                      'label': 'Путана'})
+        kill = _uids('mafia', 'don')
+        if kill:
+            q.append({'step': 'kill', 'kind': 'kill', 'actors': kill,
+                      'label': 'Мафия'})
+        heal = _uids('doctor')
+        if heal:
+            q.append({'step': 'heal', 'kind': 'heal', 'actors': heal,
+                      'label': 'Доктор'})
+        sher = _uids('sheriff')
+        if sher:
+            q.append({'step': 'sheriff', 'kind': 'sheriff', 'actors': sher,
+                      'label': 'Шериф'})
+        dons = _uids('don')
+        if dons:
+            q.append({'step': 'don_check', 'kind': 'don', 'actors': dons,
+                      'label': 'Дон · проверка', 'optional': True})
+        return q
+
+    def current_night_step(self) -> Optional[dict]:
+        if self.cycle != CYCLE_NIGHT or not self.night_queue:
+            return None
+        if self.night_step < 0 or self.night_step >= len(self.night_queue):
+            return None
+        return self.night_queue[self.night_step]
+
+    def night_step_label(self) -> str:
+        step = self.current_night_step()
+        if not step:
+            return 'ночь готова'
+        return f'{self.night_step + 1}/{len(self.night_queue)} · {step.get("label", "?")}'
 
     def night_actors_needed(self) -> List[Player]:
-        """Кто обязан/может ходить ночью (живые спецроли)."""
+        """Все, кто ходит ночью (для сводки)."""
         keys = {'mafia', 'don', 'sheriff', 'doctor', 'courtesan'}
         return [p for p in self.alive_players() if p.role in keys]
 
-    def _actor_night_done(self, p: Player) -> bool:
-        """Основной ночной ход сделан (проверка дона — опциональна)."""
+    def _actor_night_done(self, p: Player, *, for_kind: str = None) -> bool:
         a = self.night_actions.get(int(p.user_id))
         if not a:
             return False
-        if p.role == 'don':
-            # дону нужен kill или skip; don-check рядом не обязателен
+        if for_kind == 'don' or (for_kind is None and False):
+            return bool(a.get('don_check')) or a.get('kind') == 'don'
+        if for_kind == 'kill' and p.role == 'don':
+            return a.get('kind') in ('kill', 'skip') or bool(a.get('kill_done'))
+        if p.role == 'don' and for_kind is None:
             return a.get('kind') in ('kill', 'skip') or bool(a.get('kill_done'))
         return True
 
+    def step_actors_pending(self) -> List[Player]:
+        """Кто ещё не сходил на текущем шаге очереди."""
+        step = self.current_night_step()
+        if not step:
+            return []
+        kind = step.get('kind')
+        out = []
+        for uid in step.get('actors') or []:
+            p = self.players.get(int(uid))
+            if not p or not p.alive:
+                continue
+            a = self.night_actions.get(int(uid)) or {}
+            if kind == 'don':
+                if not a.get('don_check'):
+                    out.append(p)
+            elif kind == 'kill':
+                if not (a.get('kind') in ('kill', 'skip') or a.get('kill_done')):
+                    out.append(p)
+            else:
+                # heal / block / sheriff
+                if a.get('kind') not in (kind, 'skip'):
+                    out.append(p)
+        return out
+
     def night_pending(self) -> List[Player]:
-        return [p for p in self.night_actors_needed()
-                if not self._actor_night_done(p)]
+        return self.step_actors_pending()
+
+    def night_step_ready(self) -> bool:
+        step = self.current_night_step()
+        if step is None:
+            return True
+        return not self.step_actors_pending()
+
+    def advance_night_step(self) -> bool:
+        """Перейти к следующему шагу очереди. True если ночь ещё идёт."""
+        if not self.night_queue:
+            return False
+        self.night_step += 1
+        while self.night_step < len(self.night_queue):
+            step = self.night_queue[self.night_step]
+            # пропуск пустых (все мертвы)
+            actors = [uid for uid in (step.get('actors') or [])
+                      if (self.players.get(int(uid)) or Player(0, '')).alive]
+            if actors:
+                step['actors'] = actors
+                self.add_event(f'🌙 Ход: {step.get("label")}')
+                return True
+            self.night_step += 1
+        return False
 
     def night_ready(self) -> bool:
-        """Все живые спецроли сделали основной ход (или skip)."""
-        return not self.night_pending()
+        """Очередь ночи пройдена (все шаги)."""
+        if not self.night_queue:
+            return True
+        return self.night_step >= len(self.night_queue)
+
+    def track_public_message(self, message_id: int) -> None:
+        mid = int(message_id or 0)
+        if not mid:
+            return
+        ids = list(self.public_message_ids or [])
+        if mid not in ids:
+            ids.append(mid)
+        self.public_message_ids = ids[-80:]
+
+    def current_voter_id(self) -> Optional[int]:
+        if self.cycle != CYCLE_VOTE or not self.vote_order:
+            return None
+        if self.vote_index < 0 or self.vote_index >= len(self.vote_order):
+            return None
+        return int(self.vote_order[self.vote_index])
+
+    def vote_turn_label(self) -> str:
+        if not self.vote_order:
+            return ''
+        cur = self.vote_index + 1
+        total = len(self.vote_order)
+        vid = self.current_voter_id()
+        name = ''
+        if vid and vid in self.players:
+            name = f' · {self.players[vid].display_name}'
+        return f'{cur}/{total}{name}'
 
     def submit_night_action(self, actor_id: int, kind: str,
                             target_id: Optional[int] = None) -> dict:
@@ -351,8 +495,29 @@ class Game:
         actor = self.players.get(int(actor_id))
         if not actor or not actor.alive or not actor.role:
             raise RuntimeError('Вы вне игры')
+        # только текущий шаг очереди
+        step = self.current_night_step()
+        if step is None:
+            raise RuntimeError('Ночные ходы уже закончены')
+        if int(actor_id) not in [int(x) for x in (step.get('actors') or [])]:
+            raise RuntimeError(
+                f'Сейчас ход: **{step.get("label")}** · ваш ход позже')
+        want = step.get('kind')
         kind = (kind or '').strip().lower()
         role = actor.role
+        # на шаге kill дон/мафия шлют kill|skip; на don_check — don|skip
+        if want == 'don':
+            if kind == 'skip':
+                kind = 'don'
+                target_id = 0
+            elif kind != 'don':
+                raise RuntimeError('Сейчас проверка дона')
+        elif want == 'kill':
+            if kind not in ('kill', 'skip'):
+                raise RuntimeError('Сейчас ход мафии')
+        elif kind not in (want, 'skip'):
+            raise RuntimeError(f'Сейчас ход: {step.get("label")}')
+
         allowed = {
             'mafia': {'kill', 'skip'},
             'don': {'kill', 'don', 'skip'},
@@ -372,7 +537,6 @@ class Game:
 
         prev = dict(self.night_actions.get(int(actor_id)) or {})
 
-        # Дон: проверка не затирает kill
         if role == 'don' and kind == 'don':
             rec = prev or {'kind': 'kill', 'target_id': None, 'role': role}
             rec['role'] = role
@@ -383,20 +547,23 @@ class Game:
                 rec['result'] = result
             else:
                 rec['don_check'] = {'skipped': True}
-            # если kill ещё не было — не считаем основным ходом
             if rec.get('kind') not in ('kill', 'skip') and not rec.get('kill_done'):
                 rec['kind'] = prev.get('kind') or 'pending'
             self.night_actions[int(actor_id)] = rec
             return rec
 
         rec = {
-            'kind': kind,
+            'kind': kind if kind != 'skip' else (
+                'skip' if want != 'sheriff' else 'skip'),
             'target_id': tid,
             'role': role,
             'at': time.time(),
-            'kill_done': kind in ('kill', 'skip'),
+            'kill_done': kind in ('kill', 'skip') and want == 'kill',
         }
-        # сохранить прошлую проверку дона
+        if kind == 'skip' and want in ('heal', 'block', 'sheriff'):
+            rec['kind'] = 'skip'
+        elif kind != 'skip':
+            rec['kind'] = kind
         if prev.get('don_check'):
             rec['don_check'] = prev['don_check']
         if prev.get('result') and kind != 'sheriff':
@@ -499,6 +666,9 @@ class Game:
         voter = self.players.get(int(voter_id))
         if not voter or not voter.alive:
             raise RuntimeError('Вы вне игры')
+        cur = self.current_voter_id()
+        if cur is not None and int(voter_id) != int(cur):
+            raise RuntimeError('Сейчас голосует другой игрок · ждите очереди')
         tid = int(target_id or 0)
         if tid != 0:
             tgt = self.players.get(tid)
@@ -507,14 +677,20 @@ class Game:
             if tid == voter.user_id:
                 raise RuntimeError('Нельзя голосовать за себя')
         self.votes[int(voter_id)] = tid
-        # в лог ведущему — только факт голоса, без «за кого»
         self.add_event(f'🗳️ {voter.display_name} проголосовал')
+        # следующий в очереди
+        self.vote_index = int(self.vote_index or 0) + 1
 
     def vote_pending(self) -> List[Player]:
+        if self.vote_order:
+            return [self.players[uid] for uid in self.vote_order[self.vote_index:]
+                    if uid in self.players and self.players[uid].alive]
         return [p for p in self.alive_players()
                 if int(p.user_id) not in self.votes]
 
     def vote_ready(self) -> bool:
+        if self.vote_order:
+            return self.vote_index >= len(self.vote_order)
         return not self.vote_pending()
 
     def resolve_vote(self) -> dict:
@@ -647,9 +823,14 @@ class Game:
             'night_actions': {
                 str(k): dict(v) for k, v in (self.night_actions or {}).items()
             },
+            'night_queue': list(self.night_queue or []),
+            'night_step': int(self.night_step or 0),
             'votes': {str(k): int(v) for k, v in (self.votes or {}).items()},
+            'vote_order': [int(x) for x in (self.vote_order or [])],
+            'vote_index': int(self.vote_index or 0),
             'last_night_report': self.last_night_report,
             'last_vote_report': self.last_vote_report,
+            'public_message_ids': [int(x) for x in (self.public_message_ids or [])],
         }
 
     @classmethod
@@ -684,9 +865,14 @@ class Game:
             day_number=int(d.get('day_number') or 0),
             cycle=str(d.get('cycle') or CYCLE_NONE),
             night_actions=night_actions,
+            night_queue=list(d.get('night_queue') or []),
+            night_step=int(d.get('night_step') or 0),
             votes=votes,
+            vote_order=[int(x) for x in (d.get('vote_order') or [])],
+            vote_index=int(d.get('vote_index') or 0),
             last_night_report=str(d.get('last_night_report') or ''),
             last_vote_report=str(d.get('last_vote_report') or ''),
+            public_message_ids=[int(x) for x in (d.get('public_message_ids') or [])],
         )
 
 
