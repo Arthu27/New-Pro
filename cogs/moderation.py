@@ -961,8 +961,8 @@ class Moderation (commands .Cog ):
                            f"(роль «{_mrole.name}»); голос не тронут")
                     await self._maybe_watchlist_after_mute(interaction, user, reason)
                 elif action =="vmute":
-                    # Войс-мут = только роль. Из войса не выкидываем.
-                    # Срок в temps → punish_roles_loop снимет роль сам.
+                    # Войс-мут: роль + сервер-мут микрофона (если в войсе).
+                    # Из войса НЕ выкидываем. Срок → loop снимет роль и мут.
                     _vrole =self ._punish_role (guild ,'vmute')
                     minutes =parse_duration_minutes (amount ,30 )
                     minutes =max (1 ,min (minutes ,40320 ))
@@ -981,13 +981,26 @@ class Moderation (commands .Cog ):
                     user =await self ._give_punish_role (
                         guild ,user ,_vrole ,reason or 'войс-мут')
                     self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
-                    msg =(f"войс-мут «{_vrole .name }» на {minutes } мин — "
-                          f"роль выдана, снимется по сроку")
+                    _mic =False
+                    try :
+                        if getattr (getattr (user ,'voice',None ),'channel',None ):
+                            await user .edit (mute =True ,reason =reason or 'войс-мут')
+                            _mic =True
+                    except Exception as _ve :
+                        log .warning (f'[MODPANEL] vmute server-mute: {_ve}')
+                    msg =(f"войс-мут «{_vrole .name }» на {minutes } мин — роль выдана"
+                          +(" · микрофон закрыт" if _mic else "")
+                          +", снимется по сроку")
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
                     if _vrole is not None :
                         await self ._drop_roles (guild ,user ,[_vrole ])
-                    msg ="войс-мут снят — роль убрана"
+                    try :
+                        if getattr (getattr (user ,'voice',None ),'mute',False ):
+                            await user .edit (mute =False ,reason ='войс-мут снят')
+                    except Exception as _ve :
+                        log .debug (f'[MODPANEL] vunmute edit: {_ve}')
+                    msg ="войс-мут снят — роль и микрофон"
                 elif action =="unmute_chat":
                     try :
                         from services import mute_state
@@ -1422,6 +1435,23 @@ class Moderation (commands .Cog ):
             raise RuntimeError (
                 f'Роль «{role.name}» не выдалась (права/иерархия бота).')
         return member
+
+    @commands .Cog .listener ()
+    async def on_voice_state_update (self ,member ,before ,after ):
+        """С ролью войс-мута зашёл/перешёл в войс → сервер-мут микрофона."""
+        try :
+            if member is None or member .bot :
+                return
+            if after is None or after .channel is None :
+                return
+            _vrole =self ._punish_role (member .guild ,'vmute')
+            if _vrole is None or _vrole not in member .roles :
+                return
+            if getattr (after ,'mute',False ):
+                return
+            await member .edit (mute =True ,reason ='активен войс-мут')
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] on_voice_state_update: {_ex}')
 
     @commands .Cog .listener ()
     async def on_member_join (self ,member ):
@@ -1937,7 +1967,7 @@ async def ctx_full_mute(interaction, member: discord.Member):
 
 @app_commands.context_menu(name='🎙️ Войс-мут')
 async def ctx_voice_mute(interaction, member: discord.Member):
-    """Войс-мут через ПКМ: роль на срок, потом снимается сама."""
+    """ПКМ: роль войс-мута + микрофон в войсе на срок."""
     if member.bot or member.id == interaction.user.id:
         return await interaction.response.send_message(
             'Себе и ботам мут не выдать.', ephemeral=True)
