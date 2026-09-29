@@ -452,7 +452,10 @@ def build_event_client():
     intents = discord.Intents.none()
     intents.guilds = True
     intents.voice_states = True
-    # members не privileged-обязателен для slash: роли приходят в interaction
+    # Members — только если включён в Developer Portal (иначе бот не коннектится).
+    # Вкл: EVENT_BOT_MEMBERS_INTENT=1 + Privileged Intent «Server Members».
+    _mem = (os.environ.get('EVENT_BOT_MEMBERS_INTENT') or '').strip().lower()
+    intents.members = _mem in ('1', 'true', 'yes', 'on')
     bot = commands.Bot(command_prefix=commands.when_mentioned,
                        intents=intents,
                        help_command=None)

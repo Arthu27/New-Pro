@@ -97,6 +97,8 @@ check(hasattr(client, 'tree') and hasattr(client, 'add_cog'),
 ints = client.intents
 check(bool(ints.guilds) and bool(ints.voice_states),
       'intents: guilds + voice_states')
+# Members Intent опционален (EVENT_BOT_MEMBERS_INTENT=1 + portal)
+check(hasattr(ints, 'members'), 'intents.members поле есть')
 check(not bool(getattr(ints, 'message_content', False)),
       'без message_content (лёгкий клиент)')
 check(EV._stay_on() is True, 'stay всегда on')
@@ -114,7 +116,8 @@ print('== mafia on event-bot ==')
 ev_src = open(os.path.join(ROOT, 'services', 'event_voice_bot.py'), encoding='utf-8').read()
 check('cog mafia' in ev_src and 'EventPanel снят' in ev_src,
       'event-bot грузит mafia, EventPanel снят')
-check('from cogs.mafia import Mafia' in ev_src, 'import Mafia')
+check('mafia_mod.Mafia' in ev_src or 'from cogs.mafia import Mafia' in ev_src,
+      'import Mafia')
 check("'event-panel'" not in ev_src or 'без event-panel' in ev_src.lower()
       or 'Без event-panel' in ev_src,
       'докстринг без event-panel как основной фичи')
