@@ -921,6 +921,32 @@ class Mafia(commands.Cog, name='mafia'):
             pass
         log.info('Mafia: восстановлено активных игр: %s', n)
 
+    @commands.Cog.listener()
+    async def on_voice_state_update(
+            self,
+            member: discord.Member,
+            before: discord.VoiceState,
+            after: discord.VoiceState,
+    ) -> None:
+        """Ночью снова мутим, если кто-то зашёл в войс или снял мут."""
+        if member is None or member.bot:
+            return
+        game = STORE.get(member.guild.id)
+        if game is None or game.phase != PHASE_PLAYING:
+            return
+        voice_id = int(game.voice_channel_id)
+        if game.cycle != CYCLE_NIGHT:
+            return
+        in_game_voice = (
+            after.channel is not None and int(after.channel.id) == voice_id
+        )
+        if not in_game_voice:
+            return
+        await self._apply_voice_mute_member(
+            game, member, night=True,
+            reason='мафия: ночь — войс на муте',
+        )
+
     def _make_lobby_view(self, game: Game):
         try:
             from services.v2_layouts import V2_AVAILABLE
@@ -1057,6 +1083,89 @@ class Mafia(commands.Cog, name='mafia'):
             pass
         return out
 
+    async def _members_in_voice_channel(
+            self, guild: discord.Guild, voice_id: int) -> list[discord.Member]:
+        """Кто сейчас в войсе (Event-бот без Members intent — fetch + voice_states)."""
+        voice_id = int(voice_id)
+        ch = guild.get_channel(voice_id)
+        if ch is None:
+            try:
+                ch = await guild.fetch_channel(voice_id)
+            except Exception:
+                ch = None
+        if ch is None or not isinstance(ch, discord.VoiceChannel):
+            return []
+
+        out: dict[int, discord.Member] = {}
+        for m in list(ch.members):
+            if m is not None and not m.bot:
+                out[int(m.id)] = m
+        try:
+            for uid, vs in (guild.voice_states or {}).items():
+                if vs is None or vs.channel is None:
+                    continue
+                if int(vs.channel.id) != voice_id:
+                    continue
+                uid = int(uid)
+                if uid in out:
+                    continue
+                member = guild.get_member(uid)
+                if member is None:
+                    try:
+                        member = await guild.fetch_member(uid)
+                    except Exception:
+                        continue
+                if member is not None and not member.bot:
+                    out[uid] = member
+        except Exception as ex:
+            log.debug('mafia voice members: %s', ex)
+        return list(out.values())
+
+    def _voice_mute_wanted(
+            self, game: Game, user_id: int, *, night: bool) -> bool | None:
+        """None — не менять server-mute. True/False — целевое состояние."""
+        uid = int(user_id)
+        if uid == int(game.host_id):
+            return None
+        p = game.players.get(uid)
+        if p is not None:
+            if not p.alive:
+                return True
+            return bool(night)
+        if night:
+            return True
+        return None
+
+    async def _apply_voice_mute_member(
+            self,
+            game: Game,
+            member: discord.Member,
+            *,
+            night: bool,
+            reason: str,
+    ) -> bool:
+        voice_id = int(game.voice_channel_id)
+        vs = (member.guild.voice_states or {}).get(member.id)
+        if vs is None:
+            vs = getattr(member, 'voice', None)
+        if vs is None or vs.channel is None or int(vs.channel.id) != voice_id:
+            return False
+        want = self._voice_mute_wanted(game, member.id, night=night)
+        if want is None:
+            return False
+        if bool(getattr(vs, 'mute', False)) == want:
+            return False
+        try:
+            await member.edit(mute=want, reason=reason)
+            return True
+        except discord.Forbidden:
+            log.warning(
+                'mafia mute %s: нет Mute Members (бот %s)',
+                member.id, getattr(getattr(self.bot, 'user', None), 'id', '?'))
+        except Exception as ex:
+            log.warning('mafia mute %s: %s', member.id, ex)
+        return False
+
     async def deal_roles(self, interaction: discord.Interaction, game: Game):
         counts = game.deal()
         STORE.persist(game)
@@ -1191,28 +1300,48 @@ class Mafia(commands.Cog, name='mafia'):
         """Ночь: все живые на муте в войсе (семья только в ЛС). День: живые говорят, мёртвые — мут."""
         guild = self.bot.get_guild(int(game.guild_id))
         if guild is None:
-            return 0
-        n = 0
-        voice_id = int(game.voice_channel_id)
-        for p in game.players.values():
-            member = guild.get_member(int(p.user_id))
-            if member is None:
-                continue
-            vs = getattr(member, 'voice', None)
-            if vs is None or vs.channel is None or int(vs.channel.id) != voice_id:
-                continue
-            want_mute = bool(night) or (not p.alive)
             try:
-                if bool(getattr(vs, 'mute', False)) == want_mute:
-                    continue
-                await member.edit(
-                    mute=want_mute,
-                    reason=('мафия: ночь — все на муте, семья в ЛС' if night
-                            else 'мафия: день'),
-                )
-                n += 1
+                guild = await self.bot.fetch_guild(int(game.guild_id))
             except Exception as ex:
-                log.debug('mafia mute %s: %s', p.user_id, ex)
+                log.warning('mafia mute: guild %s: %s', game.guild_id, ex)
+                return 0
+        me = guild.me
+        if me is not None and not me.guild_permissions.mute_members:
+            log.warning(
+                'mafia mute: у бота нет права Mute Members на сервере %s',
+                game.guild_id,
+            )
+        reason = (
+            'мафия: ночь — все на муте, семья в ЛС' if night else 'мафия: день'
+        )
+        n = 0
+        members = await self._members_in_voice_channel(
+            guild, int(game.voice_channel_id))
+        if not members:
+            # без Members intent кэш канала пуст — добрать состав по API
+            for p in game.players.values():
+                m = guild.get_member(int(p.user_id))
+                if m is None:
+                    try:
+                        m = await guild.fetch_member(int(p.user_id))
+                    except Exception:
+                        continue
+                if m is not None and not m.bot:
+                    members.append(m)
+        for member in members:
+            if await self._apply_voice_mute_member(
+                    game, member, night=night, reason=reason):
+                n += 1
+        if night and n == 0 and members:
+            log.warning(
+                'mafia mute: ночь %s — в войсе %s чел., муты не применились',
+                game.day_number, len(members),
+            )
+        elif night:
+            log.info(
+                'mafia mute: ночь %s — замьючено %s (в войсе ~%s)',
+                game.day_number, n, len(members),
+            )
         return n
 
     async def send_mafia_briefing(self, game: Game) -> int:
@@ -1278,12 +1407,18 @@ class Mafia(commands.Cog, name='mafia'):
         """Снять сервер-мут со всех игроков партии (отмена/конец)."""
         guild = self.bot.get_guild(int(game.guild_id))
         if guild is None:
-            return 0
+            try:
+                guild = await self.bot.fetch_guild(int(game.guild_id))
+            except Exception:
+                return 0
         n = 0
         for p in game.players.values():
             member = guild.get_member(int(p.user_id))
             if member is None:
-                continue
+                try:
+                    member = await guild.fetch_member(int(p.user_id))
+                except Exception:
+                    continue
             vs = getattr(member, 'voice', None)
             if vs is None or not getattr(vs, 'mute', False):
                 continue

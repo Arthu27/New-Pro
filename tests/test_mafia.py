@@ -405,8 +405,11 @@ check('relay_mafia_chat' in src_m and 'send_mafia_briefing' in src_m
 _mute_fn = src_m.split('async def set_voice_night_mute', 1)[1].split(
     'async def ', 1)[0]
 check('is_mafia_team' not in _mute_fn, 'ночной мут без исключения для мафии')
-check('bool(night)' in _mute_fn and 'not p.alive' in _mute_fn,
-      'ночь = мут всех живых в войсе')
+check('_apply_voice_mute_member' in src_m and 'voice_states' in src_m,
+      'ночь = мут через voice_states + apply')
+check('_members_in_voice_channel' in src_m and 'fetch_member' in _mute_fn,
+      'мут не зависит от Members intent')
+check('on_voice_state_update' in src_m, 'домут при входе в войс ночью')
 check('can_doctor_self_heal' in open(
     os.path.join(_REPO, 'services/mafia/game.py'), encoding='utf-8').read(),
       'самохил доктора в game')
@@ -455,6 +458,42 @@ g8.begin_day()
 g8.begin_night()
 check(g8.day_number == 3 and g8.can_doctor_self_heal() is True,
       'ночь 3 — самохил снова можно')
+
+
+print('\n== 15. Мут войса (mock API) ==')
+from unittest.mock import AsyncMock, MagicMock  # noqa: E402
+from cogs.mafia import Mafia  # noqa: E402
+
+
+async def _voice_mute_mock():
+    bot = MagicMock()
+    cog = Mafia(bot)
+    g9 = Game.create(77, 900, 555, 88, [(901, 'P1'), (902, 'P2')])
+    g9.phase = PHASE_PLAYING
+    g9.cycle = CYCLE_NIGHT
+    check(cog._voice_mute_wanted(g9, 900, night=True) is None, 'ведущий без мута')
+    check(cog._voice_mute_wanted(g9, 901, night=True) is True, 'ночь — игрок мут')
+    check(cog._voice_mute_wanted(g9, 901, night=False) is False, 'день — игрок говорит')
+    member = MagicMock()
+    member.id = 901
+    member.bot = False
+    ch = MagicMock()
+    ch.id = 555
+    vs = MagicMock()
+    vs.channel = ch
+    vs.mute = False
+    guild = MagicMock()
+    guild.voice_states = {901: vs}
+    member.guild = guild
+    member.edit = AsyncMock()
+    ok = await cog._apply_voice_mute_member(
+        g9, member, night=True, reason='test-night')
+    check(ok, 'edit(mute=True) вызван')
+    member.edit.assert_called_once_with(mute=True, reason='test-night')
+    return True
+
+
+asyncio.run(_voice_mute_mock())
 
 
 print(f'\nИтого: {PASS} PASS / {FAIL} FAIL')
