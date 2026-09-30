@@ -1022,8 +1022,9 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
             return False, f'не удалось зайти: {ex or type(ex).__name__}'
     finally:
         _voice_joining = False
-        # 3с suppress — свой VOICE_STATE after=None после reconnect не штормит
-        _voice_suppress_rejoin_until = time.time() + 3.0
+        # 8с suppress — свой VOICE_STATE after=None после reconnect не штормит
+        # (3с мало: Discord иногда шлёт leave после settle → двойной rejoin)
+        _voice_suppress_rejoin_until = time.time() + 8.0
 
 
 def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
@@ -1099,7 +1100,7 @@ async def _monitor_voice():
     """Держим войс 24/7 по Discord-truth + soft reconnect + silence keepalive.
 
     Каждые 2с: me.voice и latency. Zombie → force rejoin. Soft reconnect
-    ~раз в 20ч. Silence ping по умолчанию ВКЛ (лёгкий UDP keepalive).
+    ~раз в 20ч. Silence ping по умолчанию ВЫКЛ (без libopus play ломает WS).
     """
     global _voice_last_silence_ts, _voice_last_join_ts
     from services.voice_stay_health import (
@@ -1107,11 +1108,19 @@ async def _monitor_voice():
 
     await bot.wait_until_ready()
     await asyncio.sleep(1)
-    # Silence по умолчанию ON; выключить: VOICE_SILENCE_PING=0
-    _silence_env = (os.environ.get('VOICE_SILENCE_PING') or '1').strip().lower()
-    _silence = _silence_env not in ('0', 'false', 'no', 'off')
+    # Silence keepalive только если явно включён И opus загружен.
+    # Без libopus play() ломает voice WS → leave/join каждые ~20с.
+    _silence_env = (os.environ.get('VOICE_SILENCE_PING') or '0').strip().lower()
+    _silence = _silence_env in ('1', 'true', 'yes', 'on')
+    if _silence and not discord.opus.is_loaded():
+        _log.warning(
+            '_monitor_voice: VOICE_SILENCE_PING=1, но libopus нет — '
+            'silence выключен (иначе войс флапает)')
+        _silence = False
     if _silence:
         _log.info('_monitor_voice: silence keepalive ON (VOICE_SILENCE_PING)')
+    else:
+        _log.info('_monitor_voice: silence keepalive OFF')
     while not bot.is_closed():
         await asyncio.sleep(2)
         if not VOICE_CHANNEL_ID:
@@ -1340,7 +1349,7 @@ async def on_ready():
         except Exception as _ex:
             _log.warning("on_ready(): GC-стабилизация не удалась: %s", _ex)
         # Voice stay всегда ВКЛ если задан канал (VOICE_STAY_ENABLED игнорируется).
-        # Silence keepalive по умолчанию ON; выключить: VOICE_SILENCE_PING=0.
+        # Silence keepalive только при VOICE_SILENCE_PING=1 и загруженном libopus.
         global _voice_monitor_task
         if VOICE_CHANNEL_ID:
             _bind_voice_gw_listeners()
