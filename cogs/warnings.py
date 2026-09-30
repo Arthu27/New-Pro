@@ -397,7 +397,7 @@ class warnings(commands.Cog):
         """
         guild = interaction.guild
 
-        # Куратор/ассистент/админ своей ветки; участникам — только бот
+        # Только «× Отвечаю за …» своей ветки; участникам — только бот
         try:
             from services.warn_acl import manual_warn_check
             _wok, _wdeny = manual_warn_check(

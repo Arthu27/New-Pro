@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Warn ACL: куратор/ассистент/админ своей ветки; warn в панели по цели.
+"""Warn ACL: только «× Отвечаю за …» своей ветки.
 
 Запуск: python3 tests/test_warn_acl.py
 """
@@ -48,6 +48,7 @@ ADMIN = 1189999426631122964
 CREATIVE = int(KNOWN_GRANT_BY_KIND['creative'])
 CREATIVE_CUR = int(KNOWN_CURATOR_BY_KIND['creative'])
 MOD_CUR = int(KNOWN_CURATOR_BY_KIND['moderator'])
+HELP_CUR = int(KNOWN_CURATOR_BY_KIND['helper'])
 
 
 class Role:
@@ -73,94 +74,93 @@ class Guild:
 
 g = Guild()
 
-print('== 1. ветки ==')
+print('== 1. ветки цели / issuer ==')
 check(WA.branches_of(Mem(1, [HELPER])) == frozenset({'helper'}), 'helper branch')
 check(WA.branches_of(Mem(2, [MOD])) == frozenset({'moderator'}), 'mod branch')
-check(WA.branches_of(Mem(3, [CUR, HELPER])) == frozenset({'helper'}),
-      'curator+helper → helper')
-check(WA.branches_of(Mem(4, [ADMIN, MOD])) == frozenset({'moderator'}),
-      'admin+mod → moderator')
-check(WA.branches_of(Mem(5, [CUR])) == frozenset(), 'curator alone → no branch')
+check(WA.issuer_branches_of(Mem(3, [HELP_CUR])) == frozenset({'helper'}),
+      'отвечаю за Helper → helper')
+check(WA.issuer_branches_of(Mem(4, [MOD_CUR])) == frozenset({'moderator'}),
+      'отвечаю за Moderator → moderator')
+check(WA.issuer_branches_of(Mem(5, [CUR, HELPER])) == frozenset(),
+      'общий куратор без «отвечаю» → нет issuer-ветки')
 check(WA.branches_of(Mem(6, [CREATIVE])) == frozenset({'creative'}),
-      'creative branch')
-check(WA.branches_of(Mem(7, [MOD_CUR])) == frozenset({'moderator'}),
-      '× Отвечаю за Moderator → moderator')
+      'creative staff branch')
 
-print('== 2. кто может выдавать ==')
+print('== 2. кто может выдавать (только отвечаю за) ==')
 check(WA.can_issue_manual_warn(Mem(1, [HELPER])) is False, 'helper NO')
 check(WA.can_issue_manual_warn(Mem(2, [MOD])) is False, 'mod NO')
-check(WA.can_issue_manual_warn(Mem(3, [MASTER, HELPER])) is True,
-      'master (ассистент)+helper YES')
-check(WA.can_issue_manual_warn(Mem(4, [CUR, HELPER])) is True, 'curator+helper YES')
-check(WA.can_issue_manual_warn(Mem(5, [ADMIN, MOD])) is True, 'admin+mod YES')
-check(WA.can_issue_manual_warn(Mem(6, [CREATIVE_CUR, CREATIVE])) is True,
+check(WA.can_issue_manual_warn(Mem(3, [MASTER, HELPER])) is False,
+      'master без отвечаю NO')
+check(WA.can_issue_manual_warn(Mem(4, [CUR, HELPER])) is False,
+      'общий curator без отвечаю NO')
+check(WA.can_issue_manual_warn(Mem(5, [ADMIN, MOD])) is False,
+      'admin без отвечаю NO')
+check(WA.can_issue_manual_warn(Mem(6, [HELP_CUR])) is True,
+      '× Отвечаю за Helper YES')
+check(WA.can_issue_manual_warn(Mem(7, [MOD_CUR])) is True,
+      '× Отвечаю за Moderator YES')
+check(WA.can_issue_manual_warn(Mem(8, [CREATIVE_CUR])) is True,
       '× Отвечаю за Creative YES')
 
-print('== 3. роль warn только curator/admin ==')
+print('== 3. роль warn только у отвечаю за ==')
 check(WA.warn_role_eligible(Mem(1, [HELPER])) is False, 'helper role NO')
-check(WA.warn_role_eligible(Mem(2, [MOD])) is False, 'mod role NO')
-check(WA.warn_role_eligible(Mem(3, [CUR])) is True, 'curator role YES')
-check(WA.warn_role_eligible(Mem(4, [ADMIN])) is True, 'admin role YES')
+check(WA.warn_role_eligible(Mem(2, [CUR])) is False, 'общий curator NO')
+check(WA.warn_role_eligible(Mem(3, [HELP_CUR])) is True, 'отвечаю YES')
 
-print('== 4. ручной варн: участник / ветки ==')
+print('== 4. ручной варн ==')
 uye = Mem(10, [])
 helper_staff = Mem(11, [HELPER])
 mod_staff = Mem(12, [MOD])
 creative_staff = Mem(13, [CREATIVE])
-cur_h = Mem(20, [CUR, HELPER])
-adm_m = Mem(21, [ADMIN, MOD])
-master_h = Mem(22, [MASTER, HELPER])
-cre_cur = Mem(23, [CREATIVE_CUR, CREATIVE])
+otv_h = Mem(20, [HELP_CUR])
+otv_m = Mem(21, [MOD_CUR])
+otv_c = Mem(22, [CREATIVE_CUR])
 bot = Mem(99, [], bot=True)
 
-ok, deny = WA.manual_warn_check(g, cur_h, uye)
+ok, deny = WA.manual_warn_check(g, otv_h, uye)
 check(ok is False and deny and 'бот' in deny.lower(),
-      f'куратор → участник DENY: {deny}')
+      f'отвечаю → участник DENY: {deny}')
 
 ok, deny = WA.manual_warn_check(g, bot, uye)
-check(ok is True, 'бот → участник OK (авто)')
+check(ok is True, 'бот → участник OK')
 
-ok, deny = WA.manual_warn_check(g, cur_h, helper_staff)
-check(ok is True, 'куратор хелперов → хелпер OK')
+ok, deny = WA.manual_warn_check(g, otv_h, helper_staff)
+check(ok is True, 'отвечаю Helper → хелпер OK')
 
-ok, deny = WA.manual_warn_check(g, cur_h, mod_staff)
-check(ok is False and deny and 'ветк' in deny.lower(),
-      f'куратор хелперов → модер DENY: {deny}')
-
-ok, deny = WA.manual_warn_check(g, adm_m, mod_staff)
-check(ok is True, 'админ модов → модер OK')
-
-ok, deny = WA.manual_warn_check(g, adm_m, helper_staff)
+ok, deny = WA.manual_warn_check(g, otv_h, mod_staff)
 check(ok is False and 'ветк' in (deny or '').lower(),
-      f'админ модов → хелпер DENY: {deny}')
+      f'отвечаю Helper → модер DENY: {deny}')
 
-ok, deny = WA.manual_warn_check(g, master_h, helper_staff)
-check(ok is True, 'ассистент (master) хелперов → хелпер OK')
+ok, deny = WA.manual_warn_check(g, otv_m, mod_staff)
+check(ok is True, 'отвечаю Mod → модер OK')
 
-ok, deny = WA.manual_warn_check(g, cre_cur, creative_staff)
-check(ok is True, 'куратор creative → creative OK')
+ok, deny = WA.manual_warn_check(g, otv_m, helper_staff)
+check(ok is False and 'ветк' in (deny or '').lower(),
+      f'отвечаю Mod → хелпер DENY: {deny}')
 
-ok, deny = WA.manual_warn_check(g, cre_cur, helper_staff)
+ok, deny = WA.manual_warn_check(g, Mem(30, [CUR, HELPER]), helper_staff)
+check(ok is False, 'общий куратор → DENY')
+
+ok, deny = WA.manual_warn_check(g, otv_c, creative_staff)
+check(ok is True, 'отвечаю Creative → creative OK')
+
+ok, deny = WA.manual_warn_check(g, otv_c, helper_staff)
 check(ok is False and 'ветк' in (deny or '').lower(),
       f'creative → helper DENY: {deny}')
 
-ok, deny = WA.manual_warn_check(g, Mem(30, [HELPER]), helper_staff)
-check(ok is False, 'хелпер → хелпер DENY (не issuer)')
-
-print('== 5. filter modpanel (warn только после выбора своего стаффа) ==')
+print('== 5. filter modpanel ==')
 acts = [('warn', 'Варн', '', 'warn'), ('mute', 'Мут', '', 'mute')]
-check(WA.filter_modpanel_actions(Mem(1, [HELPER]), acts) == [('mute', 'Мут', '', 'mute')],
-      'helper меню без warn')
-check(WA.filter_modpanel_actions(cur_h, acts) == [('mute', 'Мут', '', 'mute')],
-      'куратор без цели — warn скрыт')
-check(WA.filter_modpanel_actions(cur_h, acts, target=helper_staff, guild=g) == acts,
-      'куратор + свой хелпер — warn виден')
-check(WA.filter_modpanel_actions(cur_h, acts, target=mod_staff, guild=g)
+check(WA.filter_modpanel_actions(Mem(1, [CUR, HELPER]), acts)
       == [('mute', 'Мут', '', 'mute')],
-      'куратор + чужая ветка — warn скрыт')
-check(WA.filter_modpanel_actions(cur_h, acts, target=uye, guild=g)
+      'общий куратор — warn скрыт')
+check(WA.filter_modpanel_actions(otv_h, acts)
       == [('mute', 'Мут', '', 'mute')],
-      'куратор + участник — warn скрыт')
+      'отвечаю без цели — warn скрыт')
+check(WA.filter_modpanel_actions(otv_h, acts, target=helper_staff, guild=g) == acts,
+      'отвечаю + свой хелпер — warn виден')
+check(WA.filter_modpanel_actions(otv_h, acts, target=mod_staff, guild=g)
+      == [('mute', 'Мут', '', 'mute')],
+      'отвечаю + чужая ветка — warn скрыт')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

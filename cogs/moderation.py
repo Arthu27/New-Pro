@@ -1296,14 +1296,14 @@ class Moderation (commands .Cog ):
                         'Это действие тебе не выдано.'), ephemeral=True)
                     return False
                 return True
-            # Варн — только куратор/ассистент/админ ветки
+            # Варн — только «× Отвечаю за …» своей ветки
             if action == 'warn':
                 try:
                     from services.warn_acl import can_issue_manual_warn
                     if not can_issue_manual_warn(interaction.user):
                         await _respond(interaction, embed=error_embed(
-                            'Варн стаффу выдают только куратор, ассистент '
-                            'и админ своей ветки.'),
+                            'Варн стаффу выдают только роли '
+                            '«× Отвечаю за …» своей ветки.'),
                             ephemeral=True)
                         return False
                 except Exception as _wex:
@@ -1371,7 +1371,7 @@ class Moderation (commands .Cog ):
                         return False ,_derr
             except Exception as _pex :
                 _log .debug ('[MODPANEL] panel dur cap: %s',_pex )
-        # варн — куратор/ассистент/админ своей ветки; участникам только бот
+        # варн — только «× Отвечаю за …» своей ветки; участникам только бот
         if action =='warn':
             try :
                 from services .warn_acl import manual_warn_check
@@ -2284,7 +2284,7 @@ def actions_for_member(guild, member, target=None):
     не схлопывают /modpanel до хелперского меню.
 
     target — выбранный участник: пункт «Варн» появляется только если это
-    стафф своей ветки (куратор/ассистент/админ).
+    стафф своей ветки и у исполнителя есть «× Отвечаю за …».
     """
     _owner_all = False
     try:

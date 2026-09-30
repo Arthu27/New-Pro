@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Сид ACL «warn»: куратор / ассистент (master) / админ + «× Отвечаю за».
+"""Сид ACL «warn»: только роли «× Отвечаю за …».
 
-Хелпер/модер снимаются с действия warn. Маркер data/.warn_acl.v2.
+Хелпер/модер/мастер/общий куратор/админ снимаются с warn.
+Маркер data/.warn_acl.v3.
 """
 from __future__ import annotations
 
@@ -11,11 +12,12 @@ from logger import get_logger
 
 _log = get_logger('warn_acl_seed')
 
-SEED_VERSION = 2
+SEED_VERSION = 3
 MARKER = f'data/.warn_acl.v{SEED_VERSION}'
 _DEMO_GUILD = 987654321098765432
-WARN_TIERS = frozenset({'master', 'curator', 'admin', 'owner'})
-REVOKE_TIERS = frozenset({'helper', 'mod'})
+# В allow попадают только KNOWN_CURATOR_BY_KIND (ниже), не тиры role_map
+WARN_TIERS = frozenset()
+REVOKE_TIERS = frozenset({'helper', 'mod', 'master', 'curator', 'admin'})
 
 
 def _main_guild_id(override=None):
@@ -58,24 +60,23 @@ def apply_warn_acl_seed(force=False, guild_id=None) -> dict:
         tmap = _role_tier_map() or {}
         allow = [rid for rid, tier in tmap.items() if tier in WARN_TIERS]
         revoke = {rid for rid, tier in tmap.items() if tier in REVOKE_TIERS}
-        # known helper/mod — не выдают warn; master/кураторы веток — да
+        # Только «× Отвечаю за …»; остальные стафф-роли — revoke
         try:
             from services.staff_roles import (
                 KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID,
                 KNOWN_MASTER_ROLE_ID, KNOWN_CURATOR_BY_KIND,
                 KNOWN_ADMIN_ROLE_ID, KNOWN_CURATOR_ROLE_ID)
-            revoke.add(str(int(KNOWN_HELPER_ROLE_ID)))
-            revoke.add(str(int(KNOWN_MODERATOR_ROLE_ID)))
-            # master = ассистент — в allow, не в revoke
-            if KNOWN_MASTER_ROLE_ID:
-                allow.append(str(int(KNOWN_MASTER_ROLE_ID)))
-                revoke.discard(str(int(KNOWN_MASTER_ROLE_ID)))
-            if KNOWN_CURATOR_ROLE_ID:
-                allow.append(str(int(KNOWN_CURATOR_ROLE_ID)))
-            if KNOWN_ADMIN_ROLE_ID:
-                allow.append(str(int(KNOWN_ADMIN_ROLE_ID)))
+            for rid in (
+                    KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID,
+                    KNOWN_MASTER_ROLE_ID, KNOWN_ADMIN_ROLE_ID,
+                    KNOWN_CURATOR_ROLE_ID):
+                if rid:
+                    revoke.add(str(int(rid)))
+            allow = []
             for rid in (KNOWN_CURATOR_BY_KIND or {}).values():
-                allow.append(str(int(rid)))
+                s = str(int(rid))
+                allow.append(s)
+                revoke.discard(s)
         except Exception:
             pass
 

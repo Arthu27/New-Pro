@@ -145,11 +145,26 @@ check('clear' in acts, f'куратор+хелпер видит clear: {acts}')
 check(acts != ['mute', 'unmute', 'clear', 'warn']
       and set(acts) != {'mute', 'unmute', 'clear', 'warn'},
       f'это НЕ хелперское меню: {acts}')
-# warn появляется только после выбора своего стаффа
+# warn только у «× Отвечаю за …», не у общего куратора
 helper_target = _Member(99, [GID, HELPER], guild=guild)
 acts_with = [a[0] for a in actions_for_member(guild, cur_h, target=helper_target)]
-check('warn' in acts_with,
-      f'куратор + свой хелпер → warn виден: {acts_with}')
+check('warn' not in acts_with,
+      f'общий куратор без «отвечаю» — warn скрыт: {acts_with}')
+from services.staff_roles import KNOWN_CURATOR_BY_KIND as _KCBK
+_HELP_OTV = int(_KCBK['helper'])
+otv_h = _Member(100, [GID, _HELP_OTV], guild=guild)
+_acl = pacl.load_action_acl(GID) or {}
+_acl = {k: list(v) for k, v in _acl.items()}
+_acl['warn'] = list(dict.fromkeys(
+    [str(x) for x in (_acl.get('warn') or [])] + [str(_HELP_OTV)]))
+# чтобы меню не было пустым — mute тоже
+_acl['mute'] = list(dict.fromkeys(
+    [str(x) for x in (_acl.get('mute') or [])] + [str(_HELP_OTV)]))
+pacl.save_action_acl(GID, _acl)
+acts_otv = [a[0] for a in actions_for_member(
+    guild, otv_h, target=helper_target)]
+check('warn' in acts_otv,
+      f'× Отвечаю за Helper + хелпер → warn: {acts_otv}')
 
 h_acts = [a[0] for a in actions_for_member(guild, helper_only)]
 check('ban' not in h_acts, f'хелпер без ban: {h_acts}')
@@ -176,8 +191,8 @@ check('warn' not in acts2,
       f'без цели warn скрыт: {acts2}')
 mod_target = _Member(98, [GID, MOD], guild=guild)
 acts2t = [a[0] for a in actions_for_member(guild, cur_mod, target=mod_target)]
-check('warn' in acts2t,
-      f'куратор+mod + свой модер → warn: {acts2t}')
+check('warn' not in acts2t,
+      f'общий куратор+mod без «отвечаю» — warn скрыт: {acts2t}')
 check(SL.role_scoped_actions(GID, [CURATOR, MOD]) is None
       or 'ban' in (SL.role_scoped_actions(GID, [CURATOR, MOD]) or ()),
       'scoped не схлопнут в helper-only')
@@ -216,8 +231,8 @@ check('ban' in acts_ah,
       f'admin+helper видит полную панель: {acts_ah}')
 acts_ah_t = [a[0] for a in actions_for_member(
     guild, admin_h, target=helper_target)]
-check('warn' in acts_ah_t,
-      f'admin+helper + свой хелпер → warn: {acts_ah_t}')
+check('warn' not in acts_ah_t,
+      f'admin без «отвечаю» — warn скрыт: {acts_ah_t}')
 # Discord Administrator без admin в role_map + helper
 class _AdminPerms(_Perms):
     administrator = True
