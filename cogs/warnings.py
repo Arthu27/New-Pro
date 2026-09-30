@@ -397,18 +397,19 @@ class warnings(commands.Cog):
         """
         guild = interaction.guild
 
-        # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05): не варним персонал своего
-        # уровня и выше — модеры не варят модеров/кураторов/админов.
+        # Куратор/ассистент/админ своей ветки; участникам — только бот
         try:
-            from services.staff_hierarchy import check as _hchk
-            _hok, _hdeny, _a, _t = _hchk(guild, interaction.user, user, 'warn')
-            if not _hok:
+            from services.warn_acl import manual_warn_check
+            _wok, _wdeny = manual_warn_check(
+                guild, interaction.user, user)
+            if not _wok:
                 from cogs.embed_utils import error_embed as _err
-                await interaction.followup.send(embed=_err(_hdeny),
-                                                ephemeral=True)
+                await interaction.followup.send(
+                    embed=_err(_wdeny or 'Нет права на варн.'),
+                    ephemeral=True)
                 return (0, len(self._get_warns(guild.id, user.id)), None)
         except Exception as _hex:
-            log.debug(f"[WARNS] warn hierarchy: {_hex}")
+            log.debug(f"[WARNS] warn_acl: {_hex}")
 
         # Лимиты стаффа (владельца не трогаем): пер-рольные лимиты на варны
         try:

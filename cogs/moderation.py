@@ -762,9 +762,11 @@ class Moderation (commands .Cog ):
                 'Не нашёл участника по цели. Нужен @ник, ТОЧНОЕ имя или ID.'),
                 ephemeral =True )
                 return
+            # Реальный Member — иначе warn_acl видит PanelActor(is_panel)
+            # и пропускает проверку ветки как «owner».
             ok ,text =await self .apply_panel_action (
             guild ,(user if user is not None else uid ),'warn',
-            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            reason =reason ,actor =interaction .user )
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
@@ -1294,6 +1296,18 @@ class Moderation (commands .Cog ):
                         'Это действие тебе не выдано.'), ephemeral=True)
                     return False
                 return True
+            # Варн — только куратор/ассистент/админ ветки
+            if action == 'warn':
+                try:
+                    from services.warn_acl import can_issue_manual_warn
+                    if not can_issue_manual_warn(interaction.user):
+                        await _respond(interaction, embed=error_embed(
+                            'Варн стаффу выдают только куратор, ассистент '
+                            'и админ своей ветки.'),
+                            ephemeral=True)
+                        return False
+                except Exception as _wex:
+                    log.debug('[MODPANEL] warn issuer: %s', _wex)
             from services.permission_acl import check_action as _acl_check
             key = MODPANEL_ACL_KEYS.get(action)
             guild = getattr(interaction, 'guild', None)
@@ -1314,6 +1328,7 @@ class Moderation (commands .Cog ):
         """Наказание из веб-панели («Пользователи») — единый путь с /modpanel.
 
         target — discord.Member (на сервере) или строка-ID (ушёл с сервера).
+        actor — discord.Member из /modpanel или имя для веб-панели.
         Возвращает (ok, текст ответа для панели).
         """
         from cogs .embed_utils import error_embed as _err ,success_embed as _ok 
@@ -1321,7 +1336,11 @@ class Moderation (commands .Cog ):
             return False ,'Неизвестное действие'
         if guild is None :
             return False ,'Сервер не найден'
-        _actor =PanelActor (actor )
+        # Discord Member сохраняем как есть (нужен для warn_acl / иерархии).
+        if isinstance (actor ,discord .Member ):
+            _actor =actor 
+        else :
+            _actor =PanelActor (actor )
         target_str =str (getattr (target ,'id',target ))
         # ИЕРАРХИЯ ПЕРСОНАЛА (владелец 2026-09-05: «модер наказывает модера
         # и куратора — беспредел»): персонал не наказывает персонал своего
@@ -1352,8 +1371,17 @@ class Moderation (commands .Cog ):
                         return False ,_derr
             except Exception as _pex :
                 _log .debug ('[MODPANEL] panel dur cap: %s',_pex )
-        # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
+        # варн — куратор/ассистент/админ своей ветки; участникам только бот
         if action =='warn':
+            try :
+                from services .warn_acl import manual_warn_check
+                _tm =target if isinstance (target ,discord .Member ) \
+                else guild .get_member (int (target_str )or 0 )
+                _wok ,_wdeny =manual_warn_check (guild ,_actor ,_tm )
+                if not _wok :
+                    return False ,_wdeny or 'Нет права на варн'
+            except Exception as _wx :
+                _log .debug ('[MODPANEL] warn_acl: %s',_wx )
             try :
                 from services .staff_limits import check_action 
                 _okw ,_deny =check_action (guild ,_actor ,'warn')
@@ -2239,7 +2267,7 @@ def _action_acl_allows(guild_id, member, action_name):
         return False
 
 
-def actions_for_member(guild, member):
+def actions_for_member(guild, member, target=None):
     """Какие действия панели показывать модератору.
 
     СТРОГАЯ МОДЕЛЬ (своя система, Discord-права не учитываются):
@@ -2254,14 +2282,27 @@ def actions_for_member(guild, member):
 
     Куратор/админ+хелпер: смотрим ВЫСШИЙ тир — хелперские лимиты mute/clear
     не схлопывают /modpanel до хелперского меню.
+
+    target — выбранный участник: пункт «Варн» появляется только если это
+    стафф своей ветки (куратор/ассистент/админ).
     """
+    _owner_all = False
     try:
         uid = getattr(member, "id", 0)
         from config import Config as _Cfg
         if uid in _Cfg.all_owner_ids():
-            return list(MODPANEL_ACTIONS)
+            _owner_all = True
     except Exception:
         log.debug('actions_for_member: owner-проверка не удалась')
+    if _owner_all:
+        out = list(MODPANEL_ACTIONS)
+        try:
+            from services.warn_acl import filter_modpanel_actions
+            out = filter_modpanel_actions(
+                member, out, target=target, guild=guild)
+        except Exception as _wex:
+            log.debug('actions_for_member: owner warn filter: %s', _wex)
+        return out
     # Мастер без Helper/Moderator — пустое меню (Eventsmod/Broadcaster)
     try:
         from services.staff_limits import master_punish_allowed
@@ -2316,7 +2357,16 @@ def actions_for_member(guild, member):
         base = list(MODPANEL_ACTIONS)
     else:
         base = [a for a in MODPANEL_ACTIONS if a[3] in scoped]
-    return [a for a in base if _action_acl_allows(guild.id, member, a[0])]
+    out = [a for a in base if _action_acl_allows(guild.id, member, a[0])]
+    # Варн в меню — только куратор/ассистент/админ, и только когда выбран
+    # человек из своего стафа (target=…).
+    try:
+        from services.warn_acl import filter_modpanel_actions
+        out = filter_modpanel_actions(
+            member, out, target=target, guild=guild)
+    except Exception as _wex:
+        log.debug('actions_for_member: warn filter: %s', _wex)
+    return out
 
 
 class MuteKindSelect(discord.ui.Select):
@@ -3177,7 +3227,9 @@ class ModPanelView(discord.ui.LayoutView):
     def __init__(self, cog, member=None, allowed=None, preselect=None):
         super().__init__(timeout=300)  # 5 минут — любые действия без нового окна
         self.cog = cog
-        self.allowed = allowed
+        # base_allowed — без учёта выбранной цели; warn добавится в _rebuild
+        self.base_allowed = list(allowed or [])
+        self.allowed = list(allowed or [])
         self.member = member
         self.owner_id = getattr(member, 'id', None)
         # /modpanel target: сразу показать участника, без второго выбора.
@@ -3327,6 +3379,19 @@ class ModPanelView(discord.ui.LayoutView):
         self.target_select = ModTargetSelect(
             self.cog, default_values=[_preselect] if _preselect else None)
         self.target_select.panel = self
+        # Варн появляется только после выбора своего стаффа
+        g = guild or self._guild or getattr(self.member, 'guild', None)
+        target_m = None
+        if g is not None and self.selected_uid:
+            try:
+                target_m = g.get_member(int(self.selected_uid))
+            except (TypeError, ValueError):
+                target_m = None
+        try:
+            self.allowed = actions_for_member(g, self.member, target=target_m)
+        except Exception as _ax:
+            log.debug('modpanel rebuild actions: %s', _ax)
+            self.allowed = list(self.base_allowed or [])
         # Главная панель ВСЕГДА с полным списком действий.
         # Виды мута/размута — отдельная эфемерка (MuteKindView), иначе
         # после «Мут» пункт «Снять мут» пропадает / панель зависает.

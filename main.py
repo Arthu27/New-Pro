@@ -1475,6 +1475,16 @@ async def on_ready():
                 _log.debug('helper_acl_seed: %s', _href.get('reason'))
         except Exception as _hex:
             _log.debug('on_ready(): helper_acl_seed: %s', _hex)
+        try:
+            from services.warn_acl_seed import apply_warn_acl_seed
+            _wref = apply_warn_acl_seed(guild_id=_seed_gid or None)
+            if _wref.get('applied'):
+                print(f"[РОЛИ] Warn ACL v{_wref.get('reason', 'ok')}: "
+                      f"+{_wref.get('added')} -{_wref.get('removed')}")
+            else:
+                _log.debug('warn_acl_seed: %s', _wref.get('reason'))
+        except Exception as _wex:
+            _log.debug('on_ready(): warn_acl_seed: %s', _wex)
     except Exception as _ex:
         _log.debug("on_ready(): role_seed: %s", _ex)
 

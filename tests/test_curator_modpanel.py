@@ -133,22 +133,30 @@ check(pacl.check_action(GID, helper_only, 'ban') is False,
 check(pacl.check_action(GID, helper_only, 'mute') is True,
       'чистый хелпер mute может')
 check(pacl.check_action(GID, helper_only, 'warn') is True,
-      'чистый хелпер warn может')
+      'чистый хелпер ACL warn (пункт в меню всё равно скрыт)')
 
 print('== 4. actions_for_member: кураторская панель, не хелперская ==')
 acts = [a[0] for a in actions_for_member(guild, cur_h)]
 check('ban' in acts, f'куратор+хелпер видит ban: {acts}')
-check('warn' in acts, f'куратор+хелпер видит warn: {acts}')
+check('warn' not in acts,
+      f'куратор без цели — warn скрыт: {acts}')
 check('mute' in acts, f'куратор+хелпер видит mute: {acts}')
 check('clear' in acts, f'куратор+хелпер видит clear: {acts}')
 check(acts != ['mute', 'unmute', 'clear', 'warn']
       and set(acts) != {'mute', 'unmute', 'clear', 'warn'},
       f'это НЕ хелперское меню: {acts}')
+# warn появляется только после выбора своего стаффа
+helper_target = _Member(99, [GID, HELPER], guild=guild)
+acts_with = [a[0] for a in actions_for_member(guild, cur_h, target=helper_target)]
+check('warn' in acts_with,
+      f'куратор + свой хелпер → warn виден: {acts_with}')
 
 h_acts = [a[0] for a in actions_for_member(guild, helper_only)]
 check('ban' not in h_acts, f'хелпер без ban: {h_acts}')
-check('mute' in h_acts and 'clear' in h_acts and 'warn' in h_acts,
-      f'хелпер видит mute/clear/warn: {h_acts}')
+check('mute' in h_acts and 'clear' in h_acts,
+      f'хелпер видит mute/clear: {h_acts}')
+check('warn' not in h_acts,
+      f'хелпер без warn в меню: {h_acts}')
 
 print('== 5. Заголовок /modpanel · Куратор ==')
 view = ModPanelView(None, cur_h, actions_for_member(guild, cur_h))
@@ -162,8 +170,14 @@ print('== 6. Также с классическим mod-хелпером 803553 
 SL.set_role_limits(GID, MOD, who='test', mute=3, unmute=3, clear=10)
 cur_mod = _Member(44, [GID, CURATOR, MOD], guild=guild)
 acts2 = [a[0] for a in actions_for_member(guild, cur_mod)]
-check('ban' in acts2 and 'warn' in acts2,
+check('ban' in acts2,
       f'куратор+mod-роль: полная панель {acts2}')
+check('warn' not in acts2,
+      f'без цели warn скрыт: {acts2}')
+mod_target = _Member(98, [GID, MOD], guild=guild)
+acts2t = [a[0] for a in actions_for_member(guild, cur_mod, target=mod_target)]
+check('warn' in acts2t,
+      f'куратор+mod + свой модер → warn: {acts2t}')
 check(SL.role_scoped_actions(GID, [CURATOR, MOD]) is None
       or 'ban' in (SL.role_scoped_actions(GID, [CURATOR, MOD]) or ()),
       'scoped не схлопнут в helper-only')
@@ -174,7 +188,7 @@ print('== 7. Страховка: куратор+хелпер при ошибоч
 # хелперским: есть младшая роль → guard сбрасывает scoped.
 SL.set_role_limits(GID, CURATOR, who='test', mute=3, unmute=3, clear=10, warn=1)
 acts3 = [a[0] for a in actions_for_member(guild, cur_h)]
-check('ban' in acts3 and 'warn' in acts3,
+check('ban' in acts3,
       f'страховка: куратор+хелпер при curator-limits mute/clear → полная '
       f'панель {acts3}')
 # Чистый куратор без хелпера — свои mute/clear лимиты ОСТАЮТСЯ (не трогаем)
@@ -198,8 +212,12 @@ scoped_ah = SL.role_scoped_actions(GID, [ADMIN_ROLE, HELPER])
 check(scoped_ah is None,
       f'admin+helper → полное меню (None), got={scoped_ah}')
 acts_ah = [a[0] for a in actions_for_member(guild, admin_h)]
-check('ban' in acts_ah and 'warn' in acts_ah,
+check('ban' in acts_ah,
       f'admin+helper видит полную панель: {acts_ah}')
+acts_ah_t = [a[0] for a in actions_for_member(
+    guild, admin_h, target=helper_target)]
+check('warn' in acts_ah_t,
+      f'admin+helper + свой хелпер → warn: {acts_ah_t}')
 # Discord Administrator без admin в role_map + helper
 class _AdminPerms(_Perms):
     administrator = True
