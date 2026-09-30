@@ -1468,7 +1468,7 @@ async def on_ready():
             from services.helper_acl_seed import apply_helper_acl_seed
             _href = apply_helper_acl_seed(guild_id=_seed_gid or None)
             if _href.get('applied'):
-                print(f"[РОЛИ] Хелпер сид v4: mute/purge/warn "
+                print(f"[РОЛИ] Хелпер сид v5: mute/purge "
                       f"(+{_href.get('actions_added')} "
                       f"-{_href.get('actions_removed')})")
             else:
