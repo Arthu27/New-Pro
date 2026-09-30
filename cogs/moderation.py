@@ -1296,14 +1296,14 @@ class Moderation (commands .Cog ):
                         'Это действие тебе не выдано.'), ephemeral=True)
                     return False
                 return True
-            # Варн — только «× Отвечаю за …» своей ветки
+            # Варн: участникам — мод+; стаффу — только «× Отвечаю за …»
             if action == 'warn':
                 try:
                     from services.warn_acl import can_issue_manual_warn
                     if not can_issue_manual_warn(interaction.user):
                         await _respond(interaction, embed=error_embed(
-                            'Варн стаффу выдают только роли '
-                            '«× Отвечаю за …» своей ветки.'),
+                            'Нет права на варн. Участникам — модераторы; '
+                            'стаффу — только «× Отвечаю за …» своей ветки.'),
                             ephemeral=True)
                         return False
                 except Exception as _wex:

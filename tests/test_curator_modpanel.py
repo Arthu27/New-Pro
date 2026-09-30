@@ -117,7 +117,7 @@ pacl.save_action_acl(GID, {
     'mute': [str(HELPER), str(MOD), str(CURATOR)],
     'purge': [str(HELPER), str(MOD), str(CURATOR)],
     'ban': [str(MOD)],          # куратора нет — раньше бан пропадал из меню
-    'warn': [str(HELPER), str(MOD), str(CURATOR)],
+    'warn': [str(MOD), str(CURATOR)],  # хелпер без warn; мод+ — да
     'kick': [str(MOD), str(CURATOR)],
     'timeout': [str(MOD), str(CURATOR)],
     'unban': [str(MOD), str(CURATOR)],
@@ -132,8 +132,8 @@ check(pacl.check_action(GID, helper_only, 'ban') is False,
       'чистый хелпер бан НЕ может')
 check(pacl.check_action(GID, helper_only, 'mute') is True,
       'чистый хелпер mute может')
-check(pacl.check_action(GID, helper_only, 'warn') is True,
-      'чистый хелпер ACL warn (пункт в меню всё равно скрыт)')
+check(pacl.check_action(GID, helper_only, 'warn') is False,
+      'чистый хелпер без ACL warn')
 
 print('== 4. actions_for_member: кураторская панель, не хелперская ==')
 acts = [a[0] for a in actions_for_member(guild, cur_h)]
@@ -145,11 +145,17 @@ check('clear' in acts, f'куратор+хелпер видит clear: {acts}')
 check(acts != ['mute', 'unmute', 'clear', 'warn']
       and set(acts) != {'mute', 'unmute', 'clear', 'warn'},
       f'это НЕ хелперское меню: {acts}')
-# warn только у «× Отвечаю за …», не у общего куратора
+# стафф: warn только у «× Отвечаю за …»; участникам — мод/куратор
 helper_target = _Member(99, [GID, HELPER], guild=guild)
-acts_with = [a[0] for a in actions_for_member(guild, cur_h, target=helper_target)]
-check('warn' not in acts_with,
-      f'общий куратор без «отвечаю» — warn скрыт: {acts_with}')
+uye_target = _Member(97, [GID], guild=guild)
+acts_staff = [a[0] for a in actions_for_member(
+    guild, cur_h, target=helper_target)]
+check('warn' not in acts_staff,
+      f'общий куратор → стафф без «отвечаю» — warn скрыт: {acts_staff}')
+acts_uye = [a[0] for a in actions_for_member(
+    guild, cur_h, target=uye_target)]
+check('warn' in acts_uye,
+      f'куратор → участник — warn виден: {acts_uye}')
 from services.staff_roles import KNOWN_CURATOR_BY_KIND as _KCBK
 _HELP_OTV = int(_KCBK['helper'])
 otv_h = _Member(100, [GID, _HELP_OTV], guild=guild)
@@ -157,7 +163,6 @@ _acl = pacl.load_action_acl(GID) or {}
 _acl = {k: list(v) for k, v in _acl.items()}
 _acl['warn'] = list(dict.fromkeys(
     [str(x) for x in (_acl.get('warn') or [])] + [str(_HELP_OTV)]))
-# чтобы меню не было пустым — mute тоже
 _acl['mute'] = list(dict.fromkeys(
     [str(x) for x in (_acl.get('mute') or [])] + [str(_HELP_OTV)]))
 pacl.save_action_acl(GID, _acl)
@@ -192,7 +197,11 @@ check('warn' not in acts2,
 mod_target = _Member(98, [GID, MOD], guild=guild)
 acts2t = [a[0] for a in actions_for_member(guild, cur_mod, target=mod_target)]
 check('warn' not in acts2t,
-      f'общий куратор+mod без «отвечаю» — warn скрыт: {acts2t}')
+      f'общий куратор+mod → чужой стафф — warn скрыт: {acts2t}')
+acts2u = [a[0] for a in actions_for_member(
+    guild, cur_mod, target=uye_target)]
+check('warn' in acts2u,
+      f'куратор+mod → участник — warn: {acts2u}')
 check(SL.role_scoped_actions(GID, [CURATOR, MOD]) is None
       or 'ban' in (SL.role_scoped_actions(GID, [CURATOR, MOD]) or ()),
       'scoped не схлопнут в helper-only')
@@ -220,6 +229,12 @@ with open('data/role_map.json', 'w', encoding='utf-8') as fh:
         str(CURATOR): 'curator',
         str(ADMIN_ROLE): 'admin',
     }, fh)
+_acl8 = pacl.load_action_acl(GID) or {}
+_acl8 = {k: list(v) for k, v in _acl8.items()}
+for _k in ('warn', 'mute', 'ban', 'unban', 'timeout', 'vmute', 'purge'):
+    _acl8[_k] = list(dict.fromkeys(
+        [str(x) for x in (_acl8.get(_k) or [])] + [str(ADMIN_ROLE)]))
+pacl.save_action_acl(GID, _acl8)
 admin_h = _Member(46, [GID, ADMIN_ROLE, HELPER], guild=guild)
 check(SH.actor_panel_role(guild, admin_h) == 'admin',
       f'admin+helper actor → admin ({SH.actor_panel_role(guild, admin_h)})')
@@ -232,7 +247,11 @@ check('ban' in acts_ah,
 acts_ah_t = [a[0] for a in actions_for_member(
     guild, admin_h, target=helper_target)]
 check('warn' not in acts_ah_t,
-      f'admin без «отвечаю» — warn скрыт: {acts_ah_t}')
+      f'admin → стафф без «отвечаю» — warn скрыт: {acts_ah_t}')
+acts_ah_u = [a[0] for a in actions_for_member(
+    guild, admin_h, target=uye_target)]
+check('warn' in acts_ah_u,
+      f'admin → участник — warn: {acts_ah_u}')
 # Discord Administrator без admin в role_map + helper
 class _AdminPerms(_Perms):
     administrator = True

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Сид ACL «warn»: только роли «× Отвечаю за …».
+"""Сид ACL «warn»: моды+ для участников; «× Отвечаю за …» для стаффа.
 
-Хелпер/модер/мастер/общий куратор/админ снимаются с warn.
-Маркер data/.warn_acl.v3.
+Хелпер снимается с warn. Маркер data/.warn_acl.v4.
 """
 from __future__ import annotations
 
@@ -12,12 +11,11 @@ from logger import get_logger
 
 _log = get_logger('warn_acl_seed')
 
-SEED_VERSION = 3
+SEED_VERSION = 4
 MARKER = f'data/.warn_acl.v{SEED_VERSION}'
 _DEMO_GUILD = 987654321098765432
-# В allow попадают только KNOWN_CURATOR_BY_KIND (ниже), не тиры role_map
-WARN_TIERS = frozenset()
-REVOKE_TIERS = frozenset({'helper', 'mod', 'master', 'curator', 'admin'})
+WARN_TIERS = frozenset({'mod', 'master', 'curator', 'admin', 'owner'})
+REVOKE_TIERS = frozenset({'helper'})
 
 
 def _main_guild_id(override=None):
@@ -60,19 +58,18 @@ def apply_warn_acl_seed(force=False, guild_id=None) -> dict:
         tmap = _role_tier_map() or {}
         allow = [rid for rid, tier in tmap.items() if tier in WARN_TIERS]
         revoke = {rid for rid, tier in tmap.items() if tier in REVOKE_TIERS}
-        # Только «× Отвечаю за …»; остальные стафф-роли — revoke
         try:
             from services.staff_roles import (
                 KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID,
                 KNOWN_MASTER_ROLE_ID, KNOWN_CURATOR_BY_KIND,
                 KNOWN_ADMIN_ROLE_ID, KNOWN_CURATOR_ROLE_ID)
+            revoke.add(str(int(KNOWN_HELPER_ROLE_ID)))
             for rid in (
-                    KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID,
-                    KNOWN_MASTER_ROLE_ID, KNOWN_ADMIN_ROLE_ID,
-                    KNOWN_CURATOR_ROLE_ID):
+                    KNOWN_MODERATOR_ROLE_ID, KNOWN_MASTER_ROLE_ID,
+                    KNOWN_ADMIN_ROLE_ID, KNOWN_CURATOR_ROLE_ID):
                 if rid:
-                    revoke.add(str(int(rid)))
-            allow = []
+                    allow.append(str(int(rid)))
+                    revoke.discard(str(int(rid)))
             for rid in (KNOWN_CURATOR_BY_KIND or {}).values():
                 s = str(int(rid))
                 allow.append(s)
@@ -86,14 +83,12 @@ def apply_warn_acl_seed(force=False, guild_id=None) -> dict:
         cur = [str(r) for r in (acl.get('warn') or [])]
         new = []
         seen = set()
-        # оставить уже разрешённых curator/admin + добавить из карты
         for rid in list(cur) + list(allow):
             s = str(rid)
             if s in revoke:
                 if s in cur:
                     report['removed'].append(s)
                 continue
-            # если cur пуст — сеем allow; если cur был — чистим revoke, keep rest
             if not cur and s not in allow:
                 continue
             if s not in seen:
@@ -101,7 +96,6 @@ def apply_warn_acl_seed(force=False, guild_id=None) -> dict:
                 new.append(s)
                 if s not in cur:
                     report['added'].append(s)
-        # если после чистки пусто — поставить curator/admin
         if not new and allow:
             new = list(dict.fromkeys(allow))
             report['added'] = list(new)
