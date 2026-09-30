@@ -185,19 +185,25 @@ def menu_channel(guild):
 
 
 def _curator_ping(guild, role_name: str = ''):
-    """Тег куратора СВОЕЙ ветки (жёсткий ID из KNOWN_CURATOR_BY_KIND)."""
+    """Тег куратора СВОЕЙ ветки («× Отвечаю за …»).
+
+    Тегаем всегда по ID — роль может ещё не быть в кэше гильдии
+    (иначе заявки Moderator уходили без пинга).
+    """
     from services.staff_roles import (
-        normalize_position, KNOWN_CURATOR_BY_KIND)
+        normalize_position, KNOWN_CURATOR_BY_KIND, curator_role_id_for)
     if not guild:
         return ''
     kind = normalize_position(role_name) or 'moderator'
     rid = int(KNOWN_CURATOR_BY_KIND.get(kind) or 0)
-    get_role = getattr(guild, 'get_role', None)
-    if not callable(get_role) or not rid:
+    if not rid:
+        try:
+            rid = int(curator_role_id_for(getattr(guild, 'id', 0), kind) or 0)
+        except Exception:
+            rid = 0
+    if not rid:
         return ''
-    if get_role(rid) is not None:
-        return f'<@&{rid}>'
-    return ''
+    return f'<@&{rid}>'
 
 
 def _channel_for_kind(guild, kind: str):
@@ -839,10 +845,11 @@ class StaffApplyModal(discord.ui.Modal):
                     extra=v5, member=member, kind=kind, answers=answers)
                 try:
                     card = StaffAppCardView(title=role_label, body=body)
-                    # Moderator — silent ping (без звука); остальные — обычный тег
+                    # Пинг «× Отвечаю за …» со звуком — иначе кураторы
+                    # не замечают заявки (особенно Moderator).
                     msg = await _send_staff_card(
                         ch, content=tag or None, view=card,
-                        silent_ping=(kind == 'moderator'))
+                        silent_ping=False)
                     apps[store_key]["message_id"] = str(msg.id)
                     apps[store_key]["curator_tag"] = tag or None
                     apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')

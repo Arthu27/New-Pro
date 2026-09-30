@@ -8,11 +8,10 @@ AntiFake — защита от подделок (impersonation guard).
 
 Действия при обнаружении (настраивается): strip | jail | kick | alert.
 
-Дополнительно — детектор «замаскированной рекламы»: сообщение с
-конфузабельными (поддельными) буквами + ссылкой/инвайтом удаляется,
-автор получает страйк; 3 страйка за 7 дней — автоматический таймаут.
+Детектор «замаскированной рекламы» и страйки — ВЫКЛЮЧЕНЫ
+(заказ владельца 2026-09-30): on_message no-op, check_ads всегда False.
 
-Команды: /antifake ... (админ).
+Команды: /antifake ... (админ) — только impersonation имён/аватаров.
 """
 
 from logger import get_logger
@@ -49,12 +48,12 @@ DEFAULT_CFG = {
     "log_channel_id": 0,       # 0 = tagjail-лог → канал мод-логов
     "check_join": True,        # проверять при входе
     "check_update": True,      # проверять при смене ника/имени
-    "check_ads": True,         # ловить замаскированную рекламу в чате
+    "check_ads": False,        # ВЫКЛ: антиреклама/страйки — по приказу владельца
     "threshold": 0.85,         # порог похожести имён (0.6–1.0)
     "protected_names": [],     # дополнительные защищаемые строки (бренды, роли)
     "exempt_staff": True,      # не трогать админов/модераторов
     "dm_notify": True,         # DM нарушителю
-    "strike_timeout": True,    # 3 страйка рекламы за 7 дней → таймаут 60 мин
+    "strike_timeout": False,   # страйки рекламы выключены вместе с check_ads
 }
 
 ACTIONS_META = {
@@ -168,9 +167,16 @@ class AntiFake(commands.Cog):
     def cfg(self, guild_id: int) -> dict:
         c = dict(DEFAULT_CFG)
         c.update(self._configs.get(str(guild_id), {}))
+        # Жёстко: антиреклама/страйки выключены (владелец 2026-09-30).
+        # Даже если в data/antifake.json осталось check_ads=true.
+        c['check_ads'] = False
+        c['strike_timeout'] = False
         return c
 
     def set_cfg(self, guild_id: int, key: str, value):
+        # Не даём снова включить антирекламу через /antifake
+        if key in ('check_ads', 'strike_timeout'):
+            value = False
         self._configs.setdefault(str(guild_id), {})[key] = value
         _save_json(CFG_PATH, self._configs)
 
@@ -431,61 +437,8 @@ class AntiFake(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if not message.guild or message.author.bot:
-            return
-        member = message.author
-        if not isinstance(member, discord.Member):
-            return
-        cfg = self.cfg(message.guild.id)
-        if not cfg.get('check_ads') or self.is_exempt(member, cfg):
-            return
-        content = message.content or ''
-        if len(content) < 8 or not has_confusables(content):
-            return
-        norm = normalize(content)
-        if not any(t in norm or t in content.lower() for t in _AD_TRIGGERS):
-            return
-
-        try:
-            await message.delete()
-        except Exception:
-            return
-        total = self._add_strike(message.guild.id, member.id)
-
-        punished = ""
-        if cfg.get('strike_timeout') and total >= STRIKE_LIMIT:
-            try:
-                try:
-                    from services import mute_state
-                    await mute_state.clear_voice_mute(message.guild, member)
-                except Exception as _mse:
-                    _log.debug('antifake timeout: очистка войс-мута: %s', _mse)
-                await member.timeout(datetime.now(timezone.utc) + timedelta(minutes=60),
-                                     reason="[AntiFake] замаскированная реклама (3 страйка)")
-                punished = " · получен таймаут 60 мин"
-            except Exception:
-                punished = " · таймаут не удался (права)"
-
-        dm = discord.Embed(color=ORANGE, timestamp=datetime.now(timezone.utc))
-        dm.description = (
-            "## ⚠️ Реклама замаскированными буквами\n"
-            f"Сервер: **{message.guild.name}**\n"
-            f"Ваше сообщение удалено (страйк **{total}/{STRIKE_LIMIT}**){punished}.\n"
-            "Реклама без разрешения запрещена."
-        )
-        dm.set_footer(text=message.guild.name)
-        await self._dm(member, dm)
-
-        e = discord.Embed(color=ORANGE, timestamp=datetime.now(timezone.utc))
-        e.description = (
-            "## 🕵️ Замаскированная реклама\n"
-            f"**{member.display_name}** · `{member.id}`\n"
-            f"Канал: {message.channel.mention}\n\n"
-            f"> {(content[:300] or '[вложение]')}\n\n"
-            f"Страйк **{total}/{STRIKE_LIMIT}** за 7 дней{punished}\n{DIVIDER}"
-        )
-        e.set_footer(text=f"{message.guild.name} · anti-fake ads")
-        await self._log(message.guild, e)
+        # Антиреклама / страйки «замаскированными буквами» — полностью выключены.
+        return
 
     # ────────────────────────────────────────────────────────────
     # Slash: /antifake

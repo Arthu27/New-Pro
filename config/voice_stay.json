@@ -1,5 +1,5 @@
 {
   "channel_id": "1547390550108540948",
   "stay_enabled": true,
-  "note": "Основной бот всегда сидит в этом войсе (24/7). Silence keepalive + soft reconnect каждые 45 мин — чтобы не отваливался после суток. Stay выключить нельзя."
+  "note": "Основной бот всегда сидит в этом войсе (24/7). Нужен libopus на VPS. Soft reconnect ~20ч. Silence ping только с opus (VOICE_SILENCE_PING=1). Stay выключить нельзя."
 }
