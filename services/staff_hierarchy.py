@@ -30,9 +30,12 @@ from logger import get_logger
 
 _log = get_logger('staff_hierarchy')
 
-# Панельные роли по старшинству (тот же порядок, что web/app.ROLES)
-# master между mod и curator (заказ 2026-09-24).
-RANK = {'uye': 0, 'helper': 1, 'mod': 1, 'master': 2, 'curator': 3, 'admin': 4, 'owner': 5}
+# Панельные роли по старшинству (Discord pos: Master < Curator < Assistent).
+# helper/mod < master < curator < assistent < admin < owner (заказ 2026-10-01).
+RANK = {
+    'uye': 0, 'helper': 1, 'mod': 1, 'master': 2,
+    'curator': 3, 'assistent': 4, 'admin': 5, 'owner': 6,
+}
 
 LABELS = {
     'uye': 'участник',
@@ -40,6 +43,7 @@ LABELS = {
     'mod': 'модератор',
     'master': 'мастер',
     'curator': 'куратор',
+    'assistent': 'ассистент',
     'admin': 'администратор',
     'owner': 'владелец панели',
 }
@@ -85,17 +89,28 @@ def _role_map_tiers():
     except Exception as _ex:
         _log.debug('role_map_tiers moderator fallback: %s', _ex)
     try:
-        from services.staff_roles import (
-            KNOWN_MASTER_ROLE_ID, KNOWN_HELPER_MASTER_ROLE_IDS)
+        from services.staff_roles import KNOWN_MASTER_ROLE_ID
         xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
         if xid and xid != '0' and xid not in out:
             out[xid] = 'master'
-        for aid in KNOWN_HELPER_MASTER_ROLE_IDS:
-            aid_s = str(int(aid or 0))
-            if aid_s and aid_s != '0' and aid_s not in out:
-                out[aid_s] = 'master'
     except Exception as _ex:
         _log.debug('role_map_tiers master fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_CURATOR_BY_KIND
+        for _kind, cid in (KNOWN_CURATOR_BY_KIND or {}).items():
+            cid_s = str(int(cid or 0))
+            if cid_s and cid_s != '0' and cid_s not in out:
+                out[cid_s] = 'curator'
+    except Exception as _ex:
+        _log.debug('role_map_tiers branch-curator fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_ASSISTENT_ROLE_IDS
+        for aid in KNOWN_ASSISTENT_ROLE_IDS:
+            aid_s = str(int(aid or 0))
+            if aid_s and aid_s != '0' and aid_s not in out:
+                out[aid_s] = 'assistent'
+    except Exception as _ex:
+        _log.debug('role_map_tiers assistent fallback: %s', _ex)
     try:
         from services.staff_roles import KNOWN_ADMIN_ROLE_ID
         aid = str(int(KNOWN_ADMIN_ROLE_ID or 0))
@@ -221,7 +236,8 @@ def explain(actor_role, target_role, label=None):
     t = LABELS.get(target_role, target_role)
     what = f' ({label})' if label else ''
     return (f'Нельзя{what}: {t} — персонал твоего уровня или выше. '
-            f'Иерархия: модератор → мастер → куратор → администратор → владелец. '
+            f'Иерархия: модер/хелпер → мастер → куратор → ассистент → '
+            f'администратор → владелец. '
             f'Вопросы по правам — к владельцу панели.')
 
 

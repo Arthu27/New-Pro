@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Сид «× Assistent» / «× Staff Assistent» — мастер ветки Helper.
+"""Сид «× Assistent» / «× Staff Assistent» — выше куратора (обе ветки).
 
-Между хелпером и куратором (заказ владельца 2026-10-01):
-  • тир master в role_map;
-  • /modpanel: мут чата, размут, очистка (как хелпер — без ban/vmute/warn);
-  • лимиты mid: мут/размут 5, чистка 10 /день (хелпер 3 → ассистент 5 → куратор 7).
+Discord pos: Assistent (95) > Curator (94) > Master (93).
+Staff Assistent (100) — старший ассистент.
+
+  • тир assistent в role_map (между curator и admin);
+  • полный ACL наказаний (как куратор/мастер, не урезанный хелперский);
+  • лимиты выше куратора: мут/размут 9, бан 3; Staff Assistent — ещё выше.
 
 Идемпотентно: маркер data/.assistent_acl.v<N>.
 """
@@ -17,14 +19,17 @@ from logger import get_logger
 
 _log = get_logger('assistent_acl_seed')
 
-SEED_VERSION = 1
+SEED_VERSION = 2
 MARKER = f'data/.assistent_acl.v{SEED_VERSION}'
 _DEMO_GUILD = 987654321098765432
 
-# Как у хелпера — только чат. Бан / войс / таймаут / варн — нет.
-ASSISTENT_ACTIONS = ('mute', 'purge')
-# Среднее между helper (3) и curator (7).
-ASSISTENT_LIMITS = {'clear': 10, 'mute': 5, 'unmute': 5}
+# Полный набор действий стаффа (выше куратора — без урезания до mute/purge).
+ASSISTENT_LIMITS = {
+    'warn': 2, 'ban': 3, 'mute': 9, 'unmute': 9, 'clear': 10,
+}
+STAFF_ASSISTENT_LIMITS = {
+    'warn': 3, 'ban': 4, 'mute': 10, 'unmute': 10, 'clear': 12,
+}
 
 
 def _main_guild_id(override=None):
@@ -44,39 +49,17 @@ def _main_guild_id(override=None):
 
 
 def _assistent_ids():
-    from services.staff_roles import KNOWN_HELPER_MASTER_ROLE_IDS
-    return [str(int(r)) for r in KNOWN_HELPER_MASTER_ROLE_IDS if int(r or 0)]
-
-
-def _sync_assistent_action_acl(gid, report):
-    """Выдать mute/purge, снять тяжёлые. Пишет в report."""
-    from services.permission_acl import (
-        ACTIONS, load_action_acl, save_action_acl)
-    acl = load_action_acl(gid)
-    if not isinstance(acl, dict):
-        acl = {}
-    ids = _assistent_ids()
-    for rid in ids:
-        for action in ASSISTENT_ACTIONS:
-            cur = [str(r) for r in (acl.get(action) or [])]
-            if rid not in cur:
-                cur.append(rid)
-                acl[action] = cur
-                report['actions_added'].append(f'{action}:{rid}')
-        for action in ACTIONS:
-            if action in ASSISTENT_ACTIONS:
-                continue
-            cur = [str(r) for r in (acl.get(action) or [])]
-            if rid in cur:
-                acl[action] = [r for r in cur if r != rid]
-                report['actions_removed'].append(f'{action}:{rid}')
-    if report['actions_added'] or report['actions_removed']:
-        save_action_acl(gid, acl)
-    return acl
+    from services.staff_roles import (
+        KNOWN_ASSISTENT_ROLE_ID, KNOWN_STAFF_ASSISTENT_ROLE_ID)
+    out = []
+    for rid in (KNOWN_ASSISTENT_ROLE_ID, KNOWN_STAFF_ASSISTENT_ROLE_ID):
+        if int(rid or 0):
+            out.append(str(int(rid)))
+    return out
 
 
 def _ensure_role_map(report):
-    """Assistent / Staff Assistent → master."""
+    """Assistent / Staff Assistent → assistent; снять ошибочный master."""
     path = 'data/role_map.json'
     ids = _assistent_ids()
     try:
@@ -88,10 +71,10 @@ def _ensure_role_map(report):
             data = {}
         changed = False
         for rid in ids:
-            if data.get(rid) != 'master':
-                data[rid] = 'master'
+            if data.get(rid) != 'assistent':
+                data[rid] = 'assistent'
                 changed = True
-                report['role_map_added'].append(f'{rid}=master')
+                report['role_map_added'].append(f'{rid}=assistent')
         if changed:
             os.makedirs('data', exist_ok=True)
             with open(path, 'w', encoding='utf-8') as fh:
@@ -101,8 +84,28 @@ def _ensure_role_map(report):
         _log.warning('assistent role_map: %s', ex)
 
 
+def _sync_assistent_action_acl(gid, report):
+    """Полный ACL: добавить во все ACTIONS."""
+    from services.permission_acl import (
+        ACTIONS, load_action_acl, save_action_acl)
+    acl = load_action_acl(gid)
+    if not isinstance(acl, dict):
+        acl = {}
+    ids = _assistent_ids()
+    for rid in ids:
+        for action in ACTIONS:
+            cur = [str(r) for r in (acl.get(action) or [])]
+            if rid not in cur:
+                cur.append(rid)
+                acl[action] = cur
+                report['actions_added'].append(f'{action}:{rid}')
+    if report['actions_added']:
+        save_action_acl(gid, acl)
+    return acl
+
+
 def ensure_assistent_acl(guild_id=None):
-    """Подтянуть ACL ассистента без маркера (каждый on_ready)."""
+    """Подтянуть тир/ACL ассистента без маркера (каждый on_ready)."""
     report = {
         'applied': False, 'reason': '', 'guild_id': 0,
         'actions_added': [], 'actions_removed': [],
@@ -125,9 +128,8 @@ def ensure_assistent_acl(guild_id=None):
             report['applied'] = True
             report['reason'] = 'acl repaired'
             _log.info(
-                'assistent_acl ensure: guild=%s +%s -%s map=%s',
-                gid, report['actions_added'], report['actions_removed'],
-                report['role_map_added'])
+                'assistent_acl ensure: guild=%s +%s map=%s',
+                gid, report['actions_added'], report['role_map_added'])
         else:
             report['reason'] = 'acl ok'
     except Exception as ex:
@@ -137,7 +139,7 @@ def ensure_assistent_acl(guild_id=None):
 
 
 def apply_assistent_acl_seed(force=False, guild_id=None):
-    """Выдать ассистенту mid-права ветки хелперов. Возвращает отчёт."""
+    """Выдать ассистенту права выше куратора. Возвращает отчёт."""
     report = {
         'applied': False, 'reason': '', 'guild_id': 0,
         'actions_added': [], 'actions_removed': [],
@@ -149,8 +151,13 @@ def apply_assistent_acl_seed(force=False, guild_id=None):
                 '1', 'true', 'yes', 'on'):
             report['reason'] = 'demo mode'
             return report
-        if not force and os.path.exists(MARKER):
+        # v1 маркер (старый mid/master) — всегда пересидить на v2
+        old_marker = 'data/.assistent_acl.v1'
+        if (not force) and os.path.exists(MARKER):
             return ensure_assistent_acl(guild_id)
+        if (not force) and os.path.exists(old_marker) and not os.path.exists(
+                MARKER):
+            force = True  # апгрейд v1→v2
 
         gid = _main_guild_id(guild_id)
         if not gid:
@@ -185,10 +192,16 @@ def apply_assistent_acl_seed(force=False, guild_id=None):
 
         try:
             from services.staff_limits import set_role_limits
-            for rid in ids:
-                set_role_limits(
-                    gid, int(rid), who='assistent_acl_seed',
-                    role_name='× Assistent', **ASSISTENT_LIMITS)
+            from services.staff_roles import (
+                KNOWN_ASSISTENT_ROLE_ID, KNOWN_STAFF_ASSISTENT_ROLE_ID)
+            set_role_limits(
+                gid, int(KNOWN_ASSISTENT_ROLE_ID),
+                who='assistent_acl_seed', role_name='× Assistent',
+                **ASSISTENT_LIMITS)
+            set_role_limits(
+                gid, int(KNOWN_STAFF_ASSISTENT_ROLE_ID),
+                who='assistent_acl_seed', role_name='× Staff Assistent',
+                **STAFF_ASSISTENT_LIMITS)
             report['limits'] = True
         except Exception as ex:
             _log.warning('assistent limits: %s', ex)
@@ -197,15 +210,20 @@ def apply_assistent_acl_seed(force=False, guild_id=None):
             os.makedirs('data', exist_ok=True)
             with open(MARKER, 'w', encoding='utf-8') as fh:
                 fh.write('ok')
+            if os.path.exists(old_marker):
+                try:
+                    os.remove(old_marker)
+                except OSError:
+                    pass
         except OSError as ex:
             _log.debug('assistent marker: %s', ex)
 
         report['applied'] = True
         report['reason'] = 'ok'
         _log.info(
-            'assistent_acl_seed v%s: guild=%s +%s -%s limits=%s',
+            'assistent_acl_seed v%s: guild=%s +%s limits=%s/%s',
             SEED_VERSION, gid, report['actions_added'],
-            report['actions_removed'], ASSISTENT_LIMITS)
+            ASSISTENT_LIMITS, STAFF_ASSISTENT_LIMITS)
     except Exception as ex:
         report['reason'] = f'error: {ex}'
         _log.warning('apply_assistent_acl_seed: %s', ex)

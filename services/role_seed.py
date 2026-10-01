@@ -138,11 +138,20 @@ def apply_role_seed(force=False, guild_id=None):
         role_map = _read_json(ROLE_MAP_PATH, {})
         if not isinstance(role_map, dict):
             role_map = {}
-        _VALID_TIERS = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
+        _VALID_TIERS = (
+            'helper', 'mod', 'master', 'curator', 'assistent', 'admin', 'owner',
+        )
         for rid, tier in seed_map.items():
             rid = str(rid).strip()
             tier = str(tier).strip()
-            if rid and tier in _VALID_TIERS and rid not in role_map:
+            if not rid or tier not in _VALID_TIERS:
+                continue
+            # Апгрейд: Assistent раньше ошибочно был master → assistent
+            if (rid in role_map and role_map.get(rid) != tier
+                    and tier == 'assistent' and role_map.get(rid) == 'master'):
+                role_map[rid] = tier
+                report['role_map_added'].append(f'{rid}={tier}(upgrade)')
+            elif rid not in role_map:
                 role_map[rid] = tier
                 report['role_map_added'].append(f'{rid}={tier}')
         if report['role_map_added']:
@@ -160,18 +169,10 @@ def apply_role_seed(force=False, guild_id=None):
             try:
                 from services.permission_acl import ACTIONS, load_action_acl, save_action_acl
                 try:
-                    from services.staff_roles import (
-                        KNOWN_HELPER_ROLE_ID, KNOWN_HELPER_MASTER_ROLE_IDS)
+                    from services.staff_roles import KNOWN_HELPER_ROLE_ID
                     _exclude = {str(int(KNOWN_HELPER_ROLE_ID))}
-                    for _aid in KNOWN_HELPER_MASTER_ROLE_IDS:
-                        if int(_aid or 0):
-                            _exclude.add(str(int(_aid)))
                 except Exception:
-                    _exclude = {
-                        '948969471916249119',
-                        '1552815174115664013',
-                        '1554932049528225842',
-                    }
+                    _exclude = {'948969471916249119'}
                 seed_role_ids = [rid for rid, tier in role_map.items()
                                  if tier in action_tiers and rid not in _exclude
                                  and tier != 'helper']
