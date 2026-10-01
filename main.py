@@ -1510,6 +1510,18 @@ async def on_ready():
                 _log.debug('master_acl_seed: %s', _mref.get('reason'))
         except Exception as _mex:
             _log.debug('on_ready(): master_acl_seed: %s', _mex)
+        # Кураторы веток («× Отвечаю за …») — полный ACL
+        try:
+            from services.branch_curator_acl_seed import (
+                apply_branch_curator_acl_seed)
+            _cref = apply_branch_curator_acl_seed(guild_id=_seed_gid or None)
+            if _cref.get('applied'):
+                print(f"[РОЛИ] Branch curator сид "
+                      f"(+{_cref.get('actions_added')})")
+            else:
+                _log.debug('branch_curator_acl_seed: %s', _cref.get('reason'))
+        except Exception as _cex:
+            _log.debug('on_ready(): branch_curator_acl_seed: %s', _cex)
         # Assistent — ВЫШЕ куратора (обе ветки)
         try:
             from services.assistent_acl_seed import apply_assistent_acl_seed
