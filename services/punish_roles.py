@@ -242,29 +242,31 @@ def get(gid):
 def set_roles(gid, who=None, **kw):
     """Задать роли (set_roles(gid, mute=123, warn_1=456, vmute=0...));
     0 = снять выбор. Невалидные ключи/значения игнорируются."""
-    data = _load()
-    row = data.setdefault(str(gid), {})
-    cur = _clean_roles(row.get('roles'))
-    for k in kw:
-        if not valid_kind(k):
-            log.debug('set_roles: неизвестный вид %r — пропуск', k)
-            continue
-        try:
-            v = int(kw[k] or 0)
-        except (TypeError, ValueError) as _ex:
-            log.debug('set_roles: мусорное значение %s=%r: %s', k, kw[k], _ex)
-            continue
-        if v > 0:
-            cur[k] = v
+    with _lock:
+        _CACHE['mtime'] = None
+        data = _load()
+        row = data.setdefault(str(gid), {})
+        cur = _clean_roles(row.get('roles'))
+        for k in kw:
+            if not valid_kind(k):
+                log.debug('set_roles: неизвестный вид %r — пропуск', k)
+                continue
+            try:
+                v = int(kw[k] or 0)
+            except (TypeError, ValueError) as _ex:
+                log.debug('set_roles: мусорное значение %s=%r: %s', k, kw[k], _ex)
+                continue
+            if v > 0:
+                cur[k] = v
+            else:
+                cur.pop(k, None)
+        if cur:
+            row['roles'] = cur
         else:
-            cur.pop(k, None)
-    if cur:
-        row['roles'] = cur
-    else:
-        row.pop('roles', None)
-    if not row:
-        data.pop(str(gid), None)
-    _save(data)
+            row.pop('roles', None)
+        if not row:
+            data.pop(str(gid), None)
+        _save(data)
     log.info('punish_roles: %s → %s (кто: %s)', gid, cur, who or '?')
     return dict(cur)
 
@@ -279,12 +281,137 @@ def role_for(gid, kind):
 def add_temp(gid, uid, role_id, until_ts):
     """Запомнить, что роль выдана до момента until_ts."""
     with _lock:
+        # Всегда свежий диск: чужой writer (role_seed / set_roles) мог
+        # обновить файл, а кэш ещё держит старую копию без temps.
+        _CACHE['mtime'] = None
         data = _load()
         row = data.setdefault(str(gid), {})
         temps = row.setdefault('temps', {})
         user = temps.setdefault(str(uid), {})
         user[str(int(role_id))] = float(until_ts)
         _save(data)
+
+
+def _case_until_ts(case):
+    """timestamp + duration_minutes → unix until, или 0."""
+    try:
+        mins = int(case.get('duration_minutes') or 0)
+    except (TypeError, ValueError):
+        mins = 0
+    if mins <= 0:
+        return 0.0
+    raw = case.get('timestamp') or ''
+    try:
+        # ISO из save_case (UTC)
+        from datetime import datetime
+        ts = str(raw).replace('Z', '+00:00')
+        dt = datetime.fromisoformat(ts)
+        return float(dt.timestamp()) + mins * 60
+    except Exception:
+        try:
+            return float(raw) + mins * 60
+        except (TypeError, ValueError):
+            return 0.0
+
+
+def restore_temps_from_mod_data(gid, members_with_roles):
+    """Восстановить temps после рестарта по ролям Discord + делам.
+
+    members_with_roles: iterable (uid, role_id) — у кого сейчас висит
+    mute/vmute роль. Если в temps срока нет — берём последнее дело
+    mute_chat/timeout/vmute с duration_minutes.
+
+    Возвращает {'restored': N, 'expired': [(uid, role_id), ...],
+                'unknown': N}.
+    """
+    report = {'restored': 0, 'expired': [], 'unknown': 0}
+    try:
+        gid = str(int(gid))
+    except (TypeError, ValueError):
+        return report
+    now = time.time()
+    # дела гильдии
+    cases_by_user = {}
+    try:
+        with open('data/mod_data.json', 'r', encoding='utf-8') as fp:
+            md = json.load(fp) or {}
+        for c in (md.get('cases') or {}).get(gid) or []:
+            uid = str(c.get('user_id') or '')
+            if not uid:
+                continue
+            cases_by_user.setdefault(uid, []).append(c)
+    except (OSError, ValueError) as ex:
+        log.debug('restore_temps: mod_data: %s', ex)
+
+    mute_id = role_for(gid, 'mute')
+    vmute_id = role_for(gid, 'vmute')
+    kind_by_role = {}
+    if mute_id:
+        kind_by_role[int(mute_id)] = ('mute_chat', 'timeout')
+    if vmute_id:
+        kind_by_role[int(vmute_id)] = ('vmute', 'timeout')
+
+    with _lock:
+        _CACHE['mtime'] = None
+        data = _load()
+        row = data.setdefault(gid, {})
+        temps = row.setdefault('temps', {})
+        dirty = False
+        for uid, role_id in members_with_roles or ():
+            try:
+                uid_s = str(int(uid))
+                rid = int(role_id)
+            except (TypeError, ValueError):
+                continue
+            if rid not in kind_by_role:
+                continue
+            user = temps.setdefault(uid_s, {})
+            cur_until = 0.0
+            try:
+                cur_until = float(user.get(str(rid)) or 0)
+            except (TypeError, ValueError):
+                cur_until = 0.0
+            if cur_until > now:
+                continue  # срок уже есть и ещё действует
+            # ищем последнее подходящее дело
+            want = kind_by_role[rid]
+            until = 0.0
+            for c in reversed(cases_by_user.get(uid_s) or []):
+                act = str(c.get('action') or '')
+                if act not in want:
+                    continue
+                # снятие после этого дела?
+                lifts = {
+                    'mute_chat': ('unmute_chat', 'untimeout'),
+                    'timeout': ('untimeout', 'unmute_chat', 'vunmute'),
+                    'vmute': ('vunmute', 'untimeout'),
+                }.get(act, ())
+                idx = (cases_by_user.get(uid_s) or []).index(c)
+                later = (cases_by_user.get(uid_s) or [])[idx + 1:]
+                if any(str(x.get('action') or '') in lifts for x in later):
+                    continue
+                until = _case_until_ts(c)
+                if until > 0:
+                    break
+            if until <= 0:
+                report['unknown'] += 1
+                continue
+            if until <= now:
+                # срок уже вышел, пока бот лежал — снимем в loop
+                user[str(rid)] = now - 1
+                dirty = True
+                report['expired'].append((uid_s, rid))
+            else:
+                user[str(rid)] = float(until)
+                dirty = True
+                report['restored'] += 1
+        if dirty:
+            if temps:
+                row['temps'] = temps
+            _save(data)
+        elif not temps:
+            row.pop('temps', None)
+    return report
 
 
 def clear(gid, uid, role_id=None):

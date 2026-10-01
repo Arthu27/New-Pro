@@ -59,6 +59,8 @@ def main():
 
     from services.role_seed import apply_role_seed, ensure_known_helper_tier
     from services.helper_acl_seed import apply_helper_acl_seed, ensure_helper_acl
+    from services.assistent_acl_seed import (
+        apply_assistent_acl_seed, ensure_assistent_acl)
 
     print(f'guild={gid} force={args.force}')
     ensure_known_helper_tier()
@@ -66,9 +68,13 @@ def main():
     print('role_seed:', json.dumps(r1, ensure_ascii=False))
     r2 = apply_helper_acl_seed(force=args.force, guild_id=gid)
     print('helper_acl:', json.dumps(r2, ensure_ascii=False))
+    r2a = apply_assistent_acl_seed(force=args.force, guild_id=gid)
+    print('assistent_acl:', json.dumps(r2a, ensure_ascii=False))
     if not args.force:
         r3 = ensure_helper_acl(guild_id=gid)
         print('ensure_acl:', json.dumps(r3, ensure_ascii=False))
+        r3a = ensure_assistent_acl(guild_id=gid)
+        print('ensure_assistent:', json.dumps(r3a, ensure_ascii=False))
 
     rm = {}
     try:
@@ -90,6 +96,7 @@ def main():
     from services.staff_limits import effective_limits, tier_for_roles
     for label, rid in (('helper', int(hid)), ('mod', int(mid)),
                        ('master', 1552637932907667466),
+                       ('assistent', 1552815174115664013),
                        ('curator', 807030012301541377),
                        ('admin', 1189999426631122964)):
         lim = effective_limits(gid, [rid])[0]

@@ -1499,6 +1499,18 @@ async def on_ready():
                 _log.debug('helper_acl_seed: %s', _href.get('reason'))
         except Exception as _hex:
             _log.debug('on_ready(): helper_acl_seed: %s', _hex)
+        # Assistent — мастер ветки Helper (mid между хелпером и куратором)
+        try:
+            from services.assistent_acl_seed import apply_assistent_acl_seed
+            _aref = apply_assistent_acl_seed(guild_id=_seed_gid or None)
+            if _aref.get('applied'):
+                print(f"[РОЛИ] Assistent сид: master mid "
+                      f"(+{_aref.get('actions_added')} "
+                      f"-{_aref.get('actions_removed')})")
+            else:
+                _log.debug('assistent_acl_seed: %s', _aref.get('reason'))
+        except Exception as _aex:
+            _log.debug('on_ready(): assistent_acl_seed: %s', _aex)
         try:
             from services.warn_acl_seed import apply_warn_acl_seed
             _wref = apply_warn_acl_seed(guild_id=_seed_gid or None)

@@ -85,10 +85,15 @@ def _role_map_tiers():
     except Exception as _ex:
         _log.debug('role_map_tiers moderator fallback: %s', _ex)
     try:
-        from services.staff_roles import KNOWN_MASTER_ROLE_ID
+        from services.staff_roles import (
+            KNOWN_MASTER_ROLE_ID, KNOWN_HELPER_MASTER_ROLE_IDS)
         xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
         if xid and xid != '0' and xid not in out:
             out[xid] = 'master'
+        for aid in KNOWN_HELPER_MASTER_ROLE_IDS:
+            aid_s = str(int(aid or 0))
+            if aid_s and aid_s != '0' and aid_s not in out:
+                out[aid_s] = 'master'
     except Exception as _ex:
         _log.debug('role_map_tiers master fallback: %s', _ex)
     try:

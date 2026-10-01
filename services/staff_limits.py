@@ -213,10 +213,15 @@ def _role_tier_map(guild_id=None):
     except Exception as _ex:
         _log.debug('staff_limits: except@213: %s', _ex)
     try:
-        from services.staff_roles import KNOWN_MASTER_ROLE_ID
+        from services.staff_roles import (
+            KNOWN_MASTER_ROLE_ID, KNOWN_HELPER_MASTER_ROLE_IDS)
         xid = str(int(KNOWN_MASTER_ROLE_ID or 0))
         if xid and xid != '0':
             out.setdefault(xid, 'master')
+        for aid in KNOWN_HELPER_MASTER_ROLE_IDS:
+            aid_s = str(int(aid or 0))
+            if aid_s and aid_s != '0':
+                out.setdefault(aid_s, 'master')
     except Exception as _ex:
         _log.debug('staff_limits: except@220: %s', _ex)
     try:
@@ -237,22 +242,30 @@ def _role_tier_map(guild_id=None):
 
 
 def member_has_helper_or_moderator(member) -> bool:
-    """Есть ли у участника роль Helper или Moderator (ветки наказаний).
+    """Есть ли у участника роль Helper/Moderator/Assistent (ветки наказаний).
 
     Мастер без одной из этих ролей (только Eventsmod/Broadcaster/Master)
     применять наказания не может (заказ создателя 2026-09-24).
+    Assistent — мастер ветки Helper, сам по себе открывает наказания.
     """
     if member is None:
         return False
     try:
         from services.staff_roles import (
-            KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID)
+            KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID,
+            KNOWN_HELPER_MASTER_ROLE_IDS)
         need = {
             str(int(KNOWN_HELPER_ROLE_ID)),
             str(int(KNOWN_MODERATOR_ROLE_ID)),
         }
+        for aid in KNOWN_HELPER_MASTER_ROLE_IDS:
+            if int(aid or 0):
+                need.add(str(int(aid)))
     except Exception:
-        need = {'948969471916249119', '803553848396349510'}
+        need = {
+            '948969471916249119', '803553848396349510',
+            '1552815174115664013', '1554932049528225842',
+        }
     tmap = _role_tier_map()
     for role in (getattr(member, 'roles', None) or []):
         rid = str(getattr(role, 'id', '') or '')

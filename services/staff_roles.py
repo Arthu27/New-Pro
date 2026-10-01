@@ -80,11 +80,19 @@ KNOWN_CHANNEL_BY_KIND = {
 KNOWN_HELPER_ROLE_ID = 948969471916249119
 KNOWN_MODERATOR_ROLE_ID = 803553848396349510
 KNOWN_MASTER_ROLE_ID = 1552637932907667466  # × Master (тир между mod и curator)
+# × Assistent — мастер ветки Helper (среднее между хелпером и куратором)
+KNOWN_ASSISTENT_ROLE_ID = 1552815174115664013
+KNOWN_STAFF_ASSISTENT_ROLE_ID = 1554932049528225842  # × Staff Assistent
 KNOWN_ADMIN_ROLE_ID = 1189999426631122964  # × Administrator
 # × Staff Administrator — эскалация жалоб на админов; тир admin, лимиты +2
 KNOWN_STAFF_ADMIN_ROLE_ID = 1549118975110152263
 # Общая роль на ВСЕ ветки (Helper/Mod/Creative/…) — если нет, выдаём при accept
 KNOWN_COMMON_STAFF_ROLE_ID = 1553105240398631062
+# Мастера ветки Helper (тир master, ACL как у хелпера, лимиты mid)
+KNOWN_HELPER_MASTER_ROLE_IDS = (
+    KNOWN_ASSISTENT_ROLE_ID,
+    KNOWN_STAFF_ASSISTENT_ROLE_ID,
+)
 KNOWN_GRANT_BY_KIND = {
     "helper": KNOWN_HELPER_ROLE_ID,
     "moderator": KNOWN_MODERATOR_ROLE_ID,
