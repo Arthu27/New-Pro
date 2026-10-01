@@ -912,12 +912,19 @@ class Moderation (commands .Cog ):
                         'Бан из панели работает только с участниками сервера.'),
                         ephemeral =True )
                         return
-                    await user .add_roles (_brole ,reason =reason or 'бан')
+                    from services.discord_retry import call as _dcall
+                    await _dcall(
+                        lambda: user.add_roles(
+                            _brole, reason=reason or 'бан'),
+                        label='ban add_roles')
                     # Если человек в войсе — выкинуть сразу (роль бана
                     # каналы закрывает, но из голосового сам не выйдет).
                     try :
                         if getattr (getattr (user ,'voice',None ),'channel',None ):
-                            await user .move_to (None ,reason =reason or 'бан')
+                            await _dcall(
+                                lambda: user.move_to(
+                                    None, reason=reason or 'бан'),
+                                label='ban move_to')
                     except Exception as _vdisc :
                         log .debug (f'[MODPANEL] ban voice kick: {_vdisc}')
                     try :
@@ -953,12 +960,16 @@ class Moderation (commands .Cog ):
                         await mute_state.clear_all_mutes(guild, user)
                     except Exception as _mse:
                         log.debug(f'[MODPANEL] timeout clear all: {_mse}')
+                    from services.discord_retry import call as _dcall
                     _extra_roles = []
                     for _kind in ('mute', 'vmute'):
                         try:
                             _r = self._punish_role(guild, _kind)
                             if _r is not None and _r not in user.roles:
-                                await user.add_roles(_r, reason=reason or 'мут')
+                                await _dcall(
+                                    lambda r=_r: user.add_roles(
+                                        r, reason=reason or 'мут'),
+                                    label=f'timeout add_roles {_kind}')
                                 self._remember_temp(guild, user, _r, minutes * 60)
                                 _extra_roles.append(_r.name)
                         except Exception as _tre:
@@ -967,13 +978,19 @@ class Moderation (commands .Cog ):
                     try:
                         if getattr(getattr(user, 'voice', None), 'channel', None) \
                                 and not getattr(user.voice, 'mute', False):
-                            await user.edit(mute=True, reason=reason or 'мут')
+                            await _dcall(
+                                lambda: user.edit(
+                                    mute=True, reason=reason or 'мут'),
+                                label='timeout server-mute')
                     except Exception as _ve:
                         log.debug(f'[MODPANEL] timeout server-mute: {_ve}')
                     # нативный таймаут — ТОЛЬКО если право есть; сбой не ломает
                     try:
                         until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
-                        await user.timeout(until, reason=reason or 'мут')
+                        await _dcall(
+                            lambda: user.timeout(
+                                until, reason=reason or 'мут'),
+                            label='timeout native')
                     except (discord.Forbidden, discord.HTTPException, AttributeError) as _te:
                         log.debug(f'[MODPANEL] нативный таймаут пропущен: {_te}')
                     msg = (f"🔇 мут на {human_duration(minutes)} "

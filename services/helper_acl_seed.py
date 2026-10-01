@@ -24,7 +24,8 @@ HELPER_ROLE_ID = 948969471916249119
 # Только чат. Бан / войс / таймаут / варн — нет.
 HELPER_ACTIONS = ('mute', 'purge')
 HELPER_LIMITS = {'clear': 10, 'mute': 3, 'unmute': 3}
-SEED_VERSION = 5
+# v6: убрать устаревший warn=1 из overrides (варн только у «× Отвечаю»).
+SEED_VERSION = 6
 MARKER = f'data/.helper_acl.v{SEED_VERSION}'
 _DEMO_GUILD = 987654321098765432
 
@@ -166,10 +167,14 @@ def apply_helper_acl_seed(force=False, guild_id=None):
             _log.warning('helper cmd_acl: %s', ex)
 
         try:
-            from services.staff_limits import set_role_limits
+            from services.staff_limits import set_role_limits, unset_role_keys
             set_role_limits(
                 gid, HELPER_ROLE_ID, who='helper_acl_seed',
                 **HELPER_LIMITS)
+            # старый warn в overrides сужал scoped-меню — снимаем
+            unset_role_keys(
+                gid, HELPER_ROLE_ID, limit_keys=('warn', 'ban', 'kick'),
+                who='helper_acl_seed', role_name='Helper')
             report['limits'] = True
         except Exception as ex:
             _log.warning('helper limits: %s', ex)
