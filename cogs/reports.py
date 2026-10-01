@@ -5,9 +5,9 @@ Hakumo — Система репортов (ТЗ 2026-08-26)
 /report -> «Позвать модератора»: сигнал модерации уходит карточкой
 в канал модерации (тег роли), модераторы разбирают его прямо там
 (Принять / Отклонить / «Открыть разбор» — отдельная ветка с панелью:
-режим обсуждения, слова, вынесение решения). Доказательства НЕ собираем
-(решение владельца 2026-09-05: «/report — это позвать модератора»).
-Переписка при закрытии сжимается zlib и уходит в архив
+режим обсуждения, слова, вынесение решения). В модалке можно сразу
+приложить фото/видео — они уходят в канал доказательств вместе с
+вызовом. Переписка при закрытии сжимается zlib и уходит в архив
 (services/reports_core). /my_violations — мои нарушения (обжалование
 наказаний — кнопка апелляции: в ЛС боту и в «своих наказаниях»).
 
@@ -943,10 +943,12 @@ class _LegacyReportCardView(discord.ui.View):
 
 class ReportModal(discord.ui.Modal, title='Позвать модератора'):
     """Одна форма вместо трёх слеш-параметров — Components V2 (Label +
-    UserSelect/Select/TextInput внутри модалки, discord.py 2.6+).
+    UserSelect/Select/TextInput/FileUpload внутри модалки, discord.py 2.6+).
 
     Порядок полей = порядок общения с модератором: кого выбрали,
-    на кого жалоба (пользователь/стафф), где случилось, почему.
+    на кого жалоба (пользователь/стафф), где случилось, почему,
+    доказательства (фото/видео → канал доказательств).
+    Discord: максимум 5 Label в модалке — все заняты.
     """
 
     def __init__(self):
@@ -973,6 +975,9 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
         self.reason_input = discord.ui.TextInput(
             style=discord.TextStyle.paragraph, required=True,
             max_length=1000, placeholder='Опишите причину жалобы...')
+        # Доказательства сразу в форму — уйдут в канал доказательств.
+        self.proof_upload = discord.ui.FileUpload(
+            required=False, max_values=4)
         self.add_item(discord.ui.Label(text='Выберите нарушителя',
                                        component=self.target_select))
         self.add_item(discord.ui.Label(text='На кого жалоба?',
@@ -981,6 +986,10 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
                                        component=self.location_select))
         self.add_item(discord.ui.Label(text='Причина жалобы',
                                        component=self.reason_input))
+        self.add_item(discord.ui.Label(
+            text='Доказательства',
+            description='Фото или видео — сразу в канал доказательств',
+            component=self.proof_upload))
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -995,7 +1004,17 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
         against = (self.against_select.values or ['user'])[0]
         location = (self.location_select.values or ['chat'])[0]
         reason = (self.reason_input.value or '').strip() or 'Не указана'
-        await _deliver_report(interaction, target, reason, against, location)
+        proof_atts = []
+        try:
+            from cogs.proof_cog import is_media_attachment
+            for att in list(self.proof_upload.values or []):
+                if is_media_attachment(att):
+                    proof_atts.append(att)
+        except Exception as _px:
+            _log.debug('report proof collect: %s', _px)
+        await _deliver_report(
+            interaction, target, reason, against, location,
+            proof_attachments=proof_atts)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
         _log.warning('report modal on_submit: %s', error)
@@ -1013,14 +1032,16 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
 
 
 async def _deliver_report(interaction, target, reason: str, against: str,
-                          location: str):
+                          location: str, proof_attachments=None):
     """Собрать V2-карточку и отправить в канал модерации + тег роли.
 
     Вынесено из /report в отдельную функцию: модалка (ReportModal) и
     команда зовут один и тот же путь, без дублирования логики.
+    proof_attachments — фото/видео из модалки → канал доказательств.
     """
     guild = interaction.guild
     cfg = _cfg(guild.id)
+    proof_attachments = list(proof_attachments or [])
 
     # КД на повторный вызов ОДНОГО И ТОГО ЖЕ участника: если открытый
     # вызов от этого пользователя на эту же цель уже есть (окно из cfg,
@@ -1074,6 +1095,9 @@ async def _deliver_report(interaction, target, reason: str, against: str,
         reason=reason[:1500], days=days,
         violations_text=_violations_field(guild.id, target.id, cfg),
         target_tier=target_tier, escalation_label=escalation_label)
+    if proof_attachments:
+        body += (f'\n\n**Доказательства:** {len(proof_attachments)} влож. '
+                 '→ канал доказательств')
     accent = 0xF39C12 if against == 'staff' else 0xE74C3C
     card_view = ReportCardView(
         title='🛎️ Вызов модератора', body=body,
@@ -1110,8 +1134,26 @@ async def _deliver_report(interaction, target, reason: str, against: str,
                     f'**{interaction.user.display_name}** вызвал '
                     f'модератора из-за **{target.display_name}**: {reason[:120]}')
 
+    # Фото/видео из модалки → канал доказательств (сразу при отправке).
+    proof_ids = []
+    if proof_attachments:
+        try:
+            from cogs.proof_cog import deliver_report_proofs
+            proof_ids, _pnotes = await deliver_report_proofs(
+                interaction.client, guild, interaction.user, target,
+                reason, proof_attachments, report_msg_id=card.id)
+        except Exception as _pex:
+            _log.warning('report proof deliver: %s', _pex)
+
     note = (f'Модератор вызван: сигнал ушёл в {ch.mention} — модерация '
             'уже видит его и разберёт прямо там.')
+    if proof_ids:
+        note += (' Доказательства: '
+                 + ', '.join(f'#{i}' for i in proof_ids)
+                 + ' — в канале доказательств.')
+    elif proof_attachments:
+        note += (' Файлы приложены, но канал доказательств недоступен '
+                 '(права бота / маршрут в панели).')
     if vc is not None:
         note += f' Если ты в голосовом канале «{vc.name}» — к тебе зайдут.'
     if created:

@@ -5,16 +5,16 @@
   • /report больше не принимает параметров — сразу открывает модалку
     с полями: «Выберите нарушителя» (UserSelect), «На кого жалоба?»
     (Пользователь/Стафф), «Где происходило нарушение?» (Чат/Войс),
-    «Причина жалобы» (текст);
+    «Причина жалобы» (текст), «Доказательства» (FileUpload);
   • сигнал уходит V2-карточкой (Components V2, чёрный блок) в канал
     модерации, тег роли модераторов — отдельным сообщением (живой пуш);
+  • фото/видео из модалки уходят в канал доказательств (deliver_report_proofs);
   • карточка отвечает на вопросы: куда идти, кто вызвал, из-за кого, что
     случилось, категория (пользователь/стафф), место нарушения
     (+ голосовой канал вызывавшего, если он в войсе);
   • у модераторов на месте кнопки разбора (Принять/Отклонить/Открыть разбор);
   • вызывавшему сразу подтверждают: «Модератор вызван»;
-  • дубль-вызов на того же участника — отказ;
-  • конвейер демок (ProofCog) из /report больше не дёргается.
+  • дубль-вызов на того же участника — отказ.
 
 Запуск: python3 tests/test_report_call.py
 """
@@ -171,19 +171,22 @@ async def _submit(target, reason, against='user', location='chat'):
 
 
 # ── 1. Команда: без параметров, модалка вместо них ─────────────────────────
-print('== 1. /report — модалка, без proof и без параметров ==')
+print('== 1. /report — модалка + доказательства, без слеш-параметров ==')
 sig = inspect.signature(R.Reports.report_slash.callback)
 params = [p for p in sig.parameters if p not in ('self', 'interaction')]
 check(params == [], f'у /report нет параметров — форма модалкой', f'→ {params}')
 _src = open(os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))), 'cogs', 'reports.py'), encoding='utf-8').read()
-check('ProofCog' not in _src,
-      'конвейер демок (ProofCog) из /report удалён из кода')
+check('FileUpload' in _src and 'proof_upload' in _src,
+      'в модалке /report есть FileUpload для доказательств')
+check('deliver_report_proofs' in _src,
+      '/report отдаёт вложения в канал доказательств')
 check('discord.ui.Label' in _src and 'discord.ui.UserSelect' in _src,
       'модалка использует Components V2 (Label + UserSelect/Select)')
 check('Выберите нарушителя' in _src and 'На кого жалоба?' in _src
-      and 'Где происходило нарушение?' in _src and 'Причина жалобы' in _src,
-      'все 4 поля формы на месте')
+      and 'Где происходило нарушение?' in _src and 'Причина жалобы' in _src
+      and 'Доказательства' in _src,
+      'все 5 полей формы на месте (включая доказательства)')
 check('emoji_for_report' in _src,
       '«На кого жалоба?» — свои стикеры (Стафф/Участник), не родовые эмодзи')
 import os as _os
@@ -281,10 +284,10 @@ check(len(MOD_CH.sent) == before and inter_dup.followup.sent,
 check('жди' in (inter_dup.followup.sent[-1][0][0] if inter_dup.followup.sent else ''),
       'дубль объясняется отказом, а не тихим падением')
 
-# ── 6. ProofCog не дёргается, на себя/бота нельзя ───────────────────────────
-print('== 6. Валидация и отсутствие demo-конвейера ==')
+# ── 6. Без файлов ProofCog не зовём; на себя/бота нельзя ────────────────────
+print('== 6. Валидация (без вложений ProofCog не трогаем) ==')
 check('ProofCog' not in cog_names_asked,
-      'бот даже не спрашивают про ProofCog — демки из /report убраны',
+      'без FileUpload бот не зовёт ProofCog',
       f'→ {cog_names_asked}')
 
 before_self = len(MOD_CH.sent)

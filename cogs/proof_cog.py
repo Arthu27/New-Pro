@@ -508,9 +508,8 @@ class ProofCog(commands.Cog):
         return ok, entry, note
 
     # Команды /proof больше НЕТ (заказ владельца 2026-09-04: «/proof убери
-    # вообще»): демки грузятся через панель (из /report вложения убраны)
-    # («Доказательства»). Ядро _create_and_post выше осталось — им пользуются
-    # /warn, /moderate и прямая загрузка в панели.
+    # вообще»): демки — из /report (FileUpload), после наказания и в панели
+    # («Доказательства»). Ядро _create_and_post — общая точка постинга.
 
     # ── /proofs ───────────────────────────────────────────────────────────
     @app_commands.command(name='proofs', description='Все демки сервера (или конкретного юзера)')
@@ -600,6 +599,54 @@ async def try_deliver_proof(bot, guild, moderator, user, action, reason,
     except Exception as e:
         log.warning(f'[PROOF] интеграция с наказанием ({action}): {e}')
         return None
+
+
+async def deliver_report_proofs(bot, guild, reporter, accused, reason,
+                                attachments, *, report_msg_id=None):
+    """Файлы из /report → канал доказательств сразу при отправке жалобы.
+
+    Returns: (list[int] proof ids, list[str] notes). Не бросает — репорт
+    уже ушёл карточкой, демка не должна ронять вызов модератора.
+    """
+    ids = []
+    notes = []
+    media = [a for a in (attachments or []) if is_media_attachment(a)]
+    if not media:
+        return ids, notes
+    try:
+        cog = getattr(bot, 'get_cog', lambda name: None)('ProofCog') if bot else None
+    except Exception:
+        cog = None
+    if cog is None:
+        return ids, ['модуль доказательств не загружен']
+    proof_reason = (reason or 'Жалоба /report').strip()[:800]
+    if report_msg_id:
+        proof_reason = f'{proof_reason} · report:{report_msg_id}'
+    for att in media:
+        try:
+            ok, entry, note = await cog._create_and_post(
+                guild, reporter, accused, 'жалоба', proof_reason,
+                attachment=att)
+            if entry is not None:
+                pid = int(entry.get('id') or 0)
+                if pid:
+                    ids.append(pid)
+                if report_msg_id and pid:
+                    try:
+                        proof_update(
+                            guild.id, pid,
+                            case_id=f'report:{int(report_msg_id)}')
+                    except Exception as _ux:
+                        log.debug('[PROOF] report case_id: %s', _ux)
+                if not ok:
+                    notes.append(
+                        f'#{pid or "?"} записана, канал доказательств недоступен')
+            if note:
+                notes.append(str(note)[:200])
+        except Exception as ex:
+            log.warning('[PROOF] report deliver: %s', ex)
+            notes.append(str(ex)[:120])
+    return ids, notes
 
 
 VIDEO_EXTS = ('.mp4', '.mov', '.webm', '.mkv', '.avi', '.m4v')

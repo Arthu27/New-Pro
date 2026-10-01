@@ -119,11 +119,13 @@ check('add_view(ReportPanelView())' in src,
       'панель персистентная — переживает рестарт')
 check('create_thread' in src and 'private_thread' in src,
       'репорт открывает приватную ветку')
-# Доказательства из /report УБРАНЫ (решение владельца 2026-09-05:
-# «/report — это позвать модератора»): ни параметров proof_file/proof,
-# ни конвейера демок в коде быть не должно.
-check('proof_file' not in src and 'ProofCog' not in src,
-      'доказательства из /report убраны (файл, ссылка, конвейер демок)')
+# Доказательства снова в /report: FileUpload в модалке → канал доказательств.
+check('FileUpload' in src and 'proof_upload' in src,
+      '/report модалка принимает фото/видео (FileUpload)')
+check('deliver_report_proofs' in src,
+      '/report шлёт вложения в канал доказательств')
+check('proof_file' not in src,
+      'нет устаревшего параметра proof_file у слеш-команды')
 check('zlib' in open(os.path.join(ROOT, 'services', 'reports_core.py'),
                     encoding='utf-8').read(), 'ядро использует zlib')
 # Создание/закрытие канала репортов переехало из слеш-команды /report-setup
