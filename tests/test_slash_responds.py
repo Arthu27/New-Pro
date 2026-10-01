@@ -59,6 +59,11 @@ check('await _ack' in mp and mp.find('await _ack') < mp.find('actions_for_member
 check('edit_original_response(**edit_kw)' in mp.replace(' ', '')
       or 'edit_original_response(**edit_kw)' in mp,
       '/modpanel: панель через edit_original (не followup) — сброс правит то же сообщение')
+# Regression: embed= + embeds= → «Cannot mix…» → followup → мёртвый селект
+check("'embed': None" not in mp or "'embeds'" not in mp,
+      '/modpanel edit_kw: не смешивать embed и embeds')
+check("'embeds': []" not in mp and '"embeds": []' not in mp,
+      '/modpanel edit_kw: без embeds=[] рядом с LayoutView')
 check('await _respond(interaction, view=view' not in mp.replace(' ', '')
       and 'await _respond(interaction,view=view' not in mp.replace(' ', ''),
       '/modpanel: успех не через followup._respond(view=…) — иначе 2-й клик мёртв')

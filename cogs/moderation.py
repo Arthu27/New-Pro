@@ -440,16 +440,14 @@ class Moderation (commands .Cog ):
             banner = view._banner_file or view._make_banner_file()
         except Exception as _bex:
             log.warning('modpanel banner: %s — открываем без баннера', _bex)
+        # LayoutView / Components V2: только view (+ attachments).
+        # НЕ передавать embed= вместе с embeds= — discord.py падает
+        # «Cannot mix embed and embeds», панель уезжает в followup,
+        # селект «Участник» отвечает «Ошибка взаимодействия».
         edit_kw = {
             'view': view,
-            'content': None,
-            'embed': None,
-            'embeds': [],
+            'attachments': [banner] if banner is not None else [],
         }
-        if banner is not None:
-            edit_kw['attachments'] = [banner]
-        else:
-            edit_kw['attachments'] = []
         panel_msg = None
         try:
             # Панель = original response (тот же токен, что и сброс селектов)
@@ -3178,6 +3176,24 @@ class ModTargetSelect(discord.ui.UserSelect):
         раньше гонялся с «Действие» — его здесь нет.
         """
         view = getattr(self, 'panel', None) or self.view
+        # ACK первой строкой — при лаге цикла иначе «Ошибка взаимодействия».
+        pending_early = getattr(view, 'pending_action', None) if view else None
+        if not pending_early:
+            try:
+                if not interaction.response.is_done():
+                    try:
+                        await interaction.response.defer(thinking=False)
+                    except TypeError:
+                        await interaction.response.defer()
+            except Exception as _te:
+                log.warning('ModTargetSelect ACK: %s', _te)
+                try:
+                    if not interaction.response.is_done():
+                        await interaction.response.send_message(
+                            content='Участник выбран.', ephemeral=True)
+                except Exception as _te2:
+                    log.debug('ModTargetSelect fallback: %s', _te2)
+                return
         _cancel_panel_reset(view)
         _bind_live_panel(view, interaction)
         try:
@@ -3191,24 +3207,6 @@ class ModTargetSelect(discord.ui.UserSelect):
         if pending and prefill:
             # Действие уже ждали — модалка / вид мута сразу.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
-            return
-        # ACK <3с, потом view-only edit (статус + сброс sticky)
-        try:
-            if not interaction.response.is_done():
-                try:
-                    await interaction.response.defer(thinking=False)
-                except TypeError:
-                    await interaction.response.defer()
-        except Exception as _te:
-            log.warning('ModTargetSelect ACK: %s', _te)
-            try:
-                if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        content=(f'Участник <@{prefill}> выбран.'
-                                 if prefill else 'Участник выбран.'),
-                        ephemeral=True)
-            except Exception as _te2:
-                log.debug('ModTargetSelect fallback: %s', _te2)
             return
         if view is None:
             return
