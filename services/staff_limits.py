@@ -154,31 +154,35 @@ def _roles_path(gid):
 ROLE_MAP_PATH = 'data/role_map.json'
 
 # Порядок старшинства: больший индекс — больше прав (мягче лимиты).
-# helper < mod < master < curator (заказ 2026-09-24).
-TIER_ORDER = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
+# helper/mod < master < curator < assistent < admin (заказ 2026-10-01).
+TIER_ORDER = (
+    'helper', 'mod', 'master', 'curator', 'assistent', 'admin', 'owner',
+)
 
 # Тировые дефолты за окно (день).
-# Ветка хелперов: варн 1/1/2, бана нет. Ветка модеров: варн 3+, бан 1/1/2/5.
-# Мут/размут: хелпер/мод 3, мастер 5, куратор 7, админ 10.
+# Master — mid (обе ветки). Assistent — выше куратора.
+# Мут/размут: хелпер/мод 3 → мастер 5 → куратор 7 → ассистент 9 → админ 10.
 TIER_DEFAULT_LIMITS = {
     # тир владельца (owner) — ВСЁ без лимитов
-    'helper':  {'warn': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
-    'mod':     {'warn': 3, 'ban': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
-    'master':  {'warn': 1, 'ban': 1, 'unmute': 5, 'mute': 5, 'clear': 10},
-    'curator': {'warn': 2, 'ban': 2, 'unmute': 7, 'mute': 7, 'clear': 10},
-    'admin':   {'warn': 2, 'ban': 5, 'unmute': 10, 'mute': 10, 'clear': 10},
-    'owner':   {},   # владелец не ограничен ни в чём
+    'helper':     {'warn': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
+    'mod':        {'warn': 3, 'ban': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
+    'master':     {'warn': 1, 'ban': 1, 'unmute': 5, 'mute': 5, 'clear': 10},
+    'curator':    {'warn': 2, 'ban': 2, 'unmute': 7, 'mute': 7, 'clear': 10},
+    'assistent':  {'warn': 2, 'ban': 3, 'unmute': 9, 'mute': 9, 'clear': 10},
+    'admin':      {'warn': 2, 'ban': 5, 'unmute': 10, 'mute': 10, 'clear': 10},
+    'owner':      {},   # владелец не ограничен ни в чём
 }
 
 # Потолок ДЛИТЕЛЬНОСТИ мута по тиру (секунды) — запасной, если прогрессия
 # недоступна. Боевой потолок: mute_progression (1ч → +2ч до варна).
 TIER_DEFAULT_DURATIONS = {
-    'helper':  3600,
-    'mod':     3600,          # 1 час (первый шаг)
-    'master':  3600,
-    'curator': 3600,
-    'admin':   3600,
-    'owner':   0,             # без ограничения
+    'helper':     3600,
+    'mod':        3600,          # 1 час (первый шаг)
+    'master':     3600,
+    'curator':    3600,
+    'assistent':  3600,
+    'admin':      3600,
+    'owner':      0,             # без ограничения
 }
 
 
@@ -218,7 +222,23 @@ def _role_tier_map(guild_id=None):
         if xid and xid != '0':
             out.setdefault(xid, 'master')
     except Exception as _ex:
-        _log.debug('staff_limits: except@220: %s', _ex)
+        _log.debug('staff_limits: master fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_CURATOR_BY_KIND
+        for _kind, cid in (KNOWN_CURATOR_BY_KIND or {}).items():
+            cid_s = str(int(cid or 0))
+            if cid_s and cid_s != '0':
+                out.setdefault(cid_s, 'curator')
+    except Exception as _ex:
+        _log.debug('staff_limits: branch-curator fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_ASSISTENT_ROLE_IDS
+        for aid in KNOWN_ASSISTENT_ROLE_IDS:
+            aid_s = str(int(aid or 0))
+            if aid_s and aid_s != '0':
+                out.setdefault(aid_s, 'assistent')
+    except Exception as _ex:
+        _log.debug('staff_limits: assistent fallback: %s', _ex)
     try:
         from services.staff_roles import KNOWN_ADMIN_ROLE_ID
         aid = str(int(KNOWN_ADMIN_ROLE_ID or 0))
@@ -241,6 +261,7 @@ def member_has_helper_or_moderator(member) -> bool:
 
     Мастер без одной из этих ролей (только Eventsmod/Broadcaster/Master)
     применять наказания не может (заказ создателя 2026-09-24).
+    Assistent — отдельный тир выше куратора, гейт Master его не касается.
     """
     if member is None:
         return False

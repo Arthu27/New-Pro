@@ -59,6 +59,11 @@ def main():
 
     from services.role_seed import apply_role_seed, ensure_known_helper_tier
     from services.helper_acl_seed import apply_helper_acl_seed, ensure_helper_acl
+    from services.master_acl_seed import apply_master_acl_seed, ensure_master_acl
+    from services.branch_curator_acl_seed import (
+        apply_branch_curator_acl_seed, ensure_branch_curator_acl)
+    from services.assistent_acl_seed import (
+        apply_assistent_acl_seed, ensure_assistent_acl)
 
     print(f'guild={gid} force={args.force}')
     ensure_known_helper_tier()
@@ -66,9 +71,21 @@ def main():
     print('role_seed:', json.dumps(r1, ensure_ascii=False))
     r2 = apply_helper_acl_seed(force=args.force, guild_id=gid)
     print('helper_acl:', json.dumps(r2, ensure_ascii=False))
+    r2m = apply_master_acl_seed(force=args.force, guild_id=gid)
+    print('master_acl:', json.dumps(r2m, ensure_ascii=False))
+    r2c = apply_branch_curator_acl_seed(force=args.force, guild_id=gid)
+    print('branch_curator_acl:', json.dumps(r2c, ensure_ascii=False))
+    r2a = apply_assistent_acl_seed(force=args.force, guild_id=gid)
+    print('assistent_acl:', json.dumps(r2a, ensure_ascii=False))
     if not args.force:
         r3 = ensure_helper_acl(guild_id=gid)
         print('ensure_acl:', json.dumps(r3, ensure_ascii=False))
+        r3m = ensure_master_acl(guild_id=gid)
+        print('ensure_master:', json.dumps(r3m, ensure_ascii=False))
+        r3c = ensure_branch_curator_acl(guild_id=gid)
+        print('ensure_branch_curator:', json.dumps(r3c, ensure_ascii=False))
+        r3a = ensure_assistent_acl(guild_id=gid)
+        print('ensure_assistent:', json.dumps(r3a, ensure_ascii=False))
 
     rm = {}
     try:
@@ -88,10 +105,17 @@ def main():
               f'mod={"Y" if mid in roles else "n"}')
 
     from services.staff_limits import effective_limits, tier_for_roles
-    for label, rid in (('helper', int(hid)), ('mod', int(mid)),
-                       ('master', 1552637932907667466),
-                       ('curator', 807030012301541377),
-                       ('admin', 1189999426631122964)):
+    for label, rid in (
+            ('helper', int(hid)),
+            ('mod', int(mid)),
+            ('master', 1552637932907667466),
+            ('curator', 807030012301541377),
+            ('otv_helper', 1551525681207189504),
+            ('otv_mod', 1551524708552278036),
+            ('assistent', 1552815174115664013),
+            ('staff_assistent', 1554932049528225842),
+            ('admin', 1189999426631122964),
+            ('staff_admin', 1549118975110152263)):
         lim = effective_limits(gid, [rid])[0]
         print(f'  lim {label}/{tier_for_roles([rid])}: '
               f'warn={lim.get("warn")} mute={lim.get("mute")} '

@@ -1499,6 +1499,40 @@ async def on_ready():
                 _log.debug('helper_acl_seed: %s', _href.get('reason'))
         except Exception as _hex:
             _log.debug('on_ready(): helper_acl_seed: %s', _hex)
+        # Master — mid между Helper/Mod и Curator (обе ветки)
+        try:
+            from services.master_acl_seed import apply_master_acl_seed
+            _mref = apply_master_acl_seed(guild_id=_seed_gid or None)
+            if _mref.get('applied'):
+                print(f"[РОЛИ] Master сид: mid "
+                      f"(+{_mref.get('actions_added')})")
+            else:
+                _log.debug('master_acl_seed: %s', _mref.get('reason'))
+        except Exception as _mex:
+            _log.debug('on_ready(): master_acl_seed: %s', _mex)
+        # Кураторы веток («× Отвечаю за …») — полный ACL
+        try:
+            from services.branch_curator_acl_seed import (
+                apply_branch_curator_acl_seed)
+            _cref = apply_branch_curator_acl_seed(guild_id=_seed_gid or None)
+            if _cref.get('applied'):
+                print(f"[РОЛИ] Branch curator сид "
+                      f"(+{_cref.get('actions_added')})")
+            else:
+                _log.debug('branch_curator_acl_seed: %s', _cref.get('reason'))
+        except Exception as _cex:
+            _log.debug('on_ready(): branch_curator_acl_seed: %s', _cex)
+        # Assistent — ВЫШЕ куратора (обе ветки)
+        try:
+            from services.assistent_acl_seed import apply_assistent_acl_seed
+            _aref = apply_assistent_acl_seed(guild_id=_seed_gid or None)
+            if _aref.get('applied'):
+                print(f"[РОЛИ] Assistent сид: >curator "
+                      f"(+{_aref.get('actions_added')})")
+            else:
+                _log.debug('assistent_acl_seed: %s', _aref.get('reason'))
+        except Exception as _aex:
+            _log.debug('on_ready(): assistent_acl_seed: %s', _aex)
         try:
             from services.warn_acl_seed import apply_warn_acl_seed
             _wref = apply_warn_acl_seed(guild_id=_seed_gid or None)

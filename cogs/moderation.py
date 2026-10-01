@@ -159,6 +159,53 @@ class Moderation (commands .Cog ):
             schedule_ensure_menu_emojis(self.bot)
         except Exception as _ex:
             log.debug('menu emoji warm: %s', _ex)
+        # После обновления/рестарта восстановить сроки мутов из дел,
+        # иначе роль остаётся навечно (temps пустой → loop не снимает).
+        try:
+            import asyncio as _aio
+            _aio.create_task(self._sync_mute_temps_on_ready())
+        except Exception as _ex:
+            log.debug('mute temps sync schedule: %s', _ex)
+
+    async def _sync_mute_temps_on_ready(self):
+        """Скан mute/vmute ролей → восстановить temps / снять просроченное."""
+        import asyncio as _aio
+        await _aio.sleep(8)  # дать гильдиям и chunk членов подтянуться
+        try:
+            from services import punish_roles as PR
+        except Exception as _ex:
+            log.debug('sync mute temps import: %s', _ex)
+            return
+        total_restored = total_expired = total_unknown = 0
+        for guild in list(getattr(self.bot, 'guilds', None) or []):
+            try:
+                mute_id = PR.role_for(guild.id, 'mute')
+                vmute_id = PR.role_for(guild.id, 'vmute')
+                if not mute_id and not vmute_id:
+                    continue
+                pairs = []
+                for member in getattr(guild, 'members', None) or []:
+                    for role in getattr(member, 'roles', None) or []:
+                        rid = int(getattr(role, 'id', 0) or 0)
+                        if rid and rid in (mute_id, vmute_id):
+                            pairs.append((member.id, rid))
+                if not pairs:
+                    continue
+                rep = PR.restore_temps_from_mod_data(guild.id, pairs)
+                total_restored += int(rep.get('restored') or 0)
+                total_expired += len(rep.get('expired') or ())
+                total_unknown += int(rep.get('unknown') or 0)
+            except Exception as _ex:
+                log.debug(f'[MODPANEL] sync mute temps {guild.id}: {_ex}')
+        if total_restored or total_expired or total_unknown:
+            log.info(
+                '[MODPANEL] mute temps sync: restored=%s expired=%s unknown=%s',
+                total_restored, total_expired, total_unknown)
+        # сразу прогнать due — не ждать ещё минуту
+        try:
+            await self._expire_due_punish_roles()
+        except Exception as _ex:
+            log.debug(f'[MODPANEL] expire after sync: {_ex}')
 
     def _recent_mute_count(self, guild_id, user_id, hours: float = 48.0) -> int:
         """Сколько мутов (таймаут/чат/войс) получил пользователь за окно.
@@ -956,7 +1003,11 @@ class Moderation (commands .Cog ):
                         await mute_state.clear_all_mutes(guild, user)
                     except Exception as _mse:
                         log.debug(f'[MODPANEL] mute_chat clear all: {_mse}')
-                    await user.add_roles(_mrole, reason=reason or 'мут чата')
+                    from services.discord_retry import call as _dcall
+                    await _dcall(
+                        lambda: user.add_roles(
+                            _mrole, reason=reason or 'мут чата'),
+                        label='mute_chat add_roles')
                     self._remember_temp(guild, user, _mrole, minutes * 60)
                     msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
                            f"(роль «{_mrole.name}»); голос не тронут")
@@ -1125,7 +1176,12 @@ class Moderation (commands .Cog ):
             except Exception as ex :
                 import traceback as _tb
                 log .warning (f"[MODPANEL] Сбой действия: {_tb.format_exc()}")
-                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
+                try :
+                    from services .discord_retry import friendly_api_error
+                    _msg =friendly_api_error (ex )
+                except Exception :
+                    _msg =str (ex )
+                await _respond (interaction ,embed =error_embed (_msg ),ephemeral =True )
 
         elif action =="unban":
             uid =self ._parse_target_id (target )
@@ -1445,8 +1501,11 @@ class Moderation (commands .Cog ):
         """Выдать роль наказания и проверить, что она реально висит."""
         if role is None or user is None :
             return user
+        from services.discord_retry import call as _dcall
         try :
-            await user .add_roles (role ,reason =reason )
+            await _dcall(
+                lambda: user.add_roles(role, reason=reason),
+                label=f'add_roles {getattr(role, "id", "?")}')
         except Exception as _e :
             log .warning (f'[MODPANEL] add_roles {role.id}: {_e}')
             raise
@@ -1458,7 +1517,10 @@ class Moderation (commands .Cog ):
                 member =user
         if role not in (getattr (member ,'roles',None )or []):
             try :
-                await member .add_roles (role ,reason =reason or 'повтор войс-мут')
+                await _dcall(
+                    lambda: member.add_roles(
+                        role, reason=reason or 'повтор войс-мут'),
+                    label=f're-add role {getattr(role, "id", "?")}')
                 member =await guild .fetch_member (user .id )
             except Exception as _e2 :
                 log .warning (f'[MODPANEL] re-add role {role.id}: {_e2}')
@@ -1606,11 +1668,15 @@ class Moderation (commands .Cog ):
 
     async def _drop_roles (self ,guild ,user ,roles ):
         """Снять роли наказания и почистить журнал сроков."""
+        from services.discord_retry import call as _dcall
         for role in roles :
             if role is None :
                 continue 
             try :
-                await user .remove_roles (role ,reason ='снятие наказания')
+                await _dcall(
+                    lambda r=role: user.remove_roles(
+                        r, reason='снятие наказания'),
+                    label=f'remove_roles {getattr(role, "name", "?")}')
             except Exception as _ex :
                 log .debug (f'[MODPANEL] remove_roles {role .name }: {_ex}')
         try :
@@ -1709,67 +1775,71 @@ class Moderation (commands .Cog ):
                     except Exception as _ex2 :
                         log .debug (f'[MODPANEL] restore {getattr (r ,"name","?")}: {_ex2}')
 
-    @tasks .loop (seconds =60 )
-    async def punish_roles_loop (self ):
-        """Раз в минуту снимает просроченные роли наказаний."""
-        try :
-            import time as _time 
-            from services import punish_roles as PR 
-            due =PR .due (_time .time ())
-            for gid ,uid ,rid in due :
-                guild =self .bot .get_guild (int (gid ))
-                if guild is None :
-                    PR .clear (gid ,uid ,rid )
-                    continue 
-                member =guild .get_member (int (uid ))
-                role =guild .get_role (rid )
-                if member is not None and role is not None :
-                    try :
-                        await member .remove_roles (role ,reason ='срок наказания истёк')
-                    except Exception as _ex :
-                        log .debug (f'[MODPANEL] авто-снятие {role .name }: {_ex}')
-                # истёк ВОЙС-мут → вернуть микрофон; истёк чат-мут при нативном
-                # таймауте → его не трогаем (native снимется сам по сроку)
-                if member is not None :
-                    try :
-                        from services import punish_roles as _PR2
-                        if rid ==_PR2 .role_for (gid ,'vmute') :
-                            from services import mute_state as _ms
-                            await _ms .clear_voice_mute (guild ,member )
-                    except Exception as _ex :
-                        log .debug (f'[MODPANEL] авто-анмьют микрофона: {_ex}')
-                PR .clear (gid ,uid ,rid )
-                if member is not None :
-                    try :
-                        from services import punish_roles as _PRban
-                        if rid ==_PRban .role_for (gid ,'ban'):
-                            await self ._restore_roles_after_unban (guild ,member )
-                    except Exception as _rex :
-                        log .debug (f'[MODPANEL] авто-восстановление ролей: {_rex}')
-                if member is not None :
-                    try :
-                        from cogs .logs import send_action_log
-                        from services import punish_roles as _PR3
-                        if rid ==_PR3 .role_for (gid ,'ban'):
-                            _act ='unban'
-                        elif rid ==_PR3 .role_for (gid ,'mute'):
-                            _act ='unmute_chat'
-                        elif rid ==_PR3 .role_for (gid ,'vmute'):
-                            _act ='vunmute'
-                        else :
-                            _act ='untimeout'
-                        await send_action_log (
-                        guild ,_act ,member ,None ,
-                        reason ='срок наказания истёк')
-                    except Exception as _lex :
-                        log .debug (f'[MODPANEL] лог авто-снятия: {_lex}') 
-        except Exception as _ex :
-            log .debug (f'[MODPANEL] punish_roles_loop: {_ex}')
+    async def _expire_due_punish_roles (self ):
+        """Снять все просроченные роли наказаний (один проход)."""
+        import time as _time
+        from services import punish_roles as PR
+        due = PR.due(_time.time())
+        for gid, uid, rid in due:
+            guild = self.bot.get_guild(int(gid))
+            if guild is None:
+                PR.clear(gid, uid, rid)
+                continue
+            member = guild.get_member(int(uid))
+            role = guild.get_role(rid)
+            if member is not None and role is not None:
+                try:
+                    await member.remove_roles(role, reason='срок наказания истёк')
+                except Exception as _ex:
+                    log.debug(f'[MODPANEL] авто-снятие {role.name}: {_ex}')
+            # истёк ВОЙС-мут → вернуть микрофон; истёк чат-мут при нативном
+            # таймауте → его не трогаем (native снимется сам по сроку)
+            if member is not None:
+                try:
+                    from services import punish_roles as _PR2
+                    if rid == _PR2.role_for(gid, 'vmute'):
+                        from services import mute_state as _ms
+                        await _ms.clear_voice_mute(guild, member)
+                except Exception as _ex:
+                    log.debug(f'[MODPANEL] авто-анмьют микрофона: {_ex}')
+            PR.clear(gid, uid, rid)
+            if member is not None:
+                try:
+                    from services import punish_roles as _PRban
+                    if rid == _PRban.role_for(gid, 'ban'):
+                        await self._restore_roles_after_unban(guild, member)
+                except Exception as _rex:
+                    log.debug(f'[MODPANEL] авто-восстановление ролей: {_rex}')
+            if member is not None:
+                try:
+                    from cogs.logs import send_action_log
+                    from services import punish_roles as _PR3
+                    if rid == _PR3.role_for(gid, 'ban'):
+                        _act = 'unban'
+                    elif rid == _PR3.role_for(gid, 'mute'):
+                        _act = 'unmute_chat'
+                    elif rid == _PR3.role_for(gid, 'vmute'):
+                        _act = 'vunmute'
+                    else:
+                        _act = 'untimeout'
+                    await send_action_log(
+                        guild, _act, member, None,
+                        reason='срок наказания истёк')
+                except Exception as _lex:
+                    log.debug(f'[MODPANEL] лог авто-снятия: {_lex}')
 
-    @punish_roles_loop .before_loop 
-    async def _before_punish_loop (self ):
-        import asyncio as _aio 
-        await _aio .sleep (30 )      # дать боту подняться
+    @tasks.loop(seconds=60)
+    async def punish_roles_loop(self):
+        """Раз в минуту снимает просроченные роли наказаний."""
+        try:
+            await self._expire_due_punish_roles()
+        except Exception as _ex:
+            log.debug(f'[MODPANEL] punish_roles_loop: {_ex}')
+
+    @punish_roles_loop.before_loop
+    async def _before_punish_loop(self):
+        import asyncio as _aio
+        await _aio.sleep(5)  # быстрее подхватить просроченные после рестарта
 
     async def _maybe_watchlist_after_mute (self ,interaction ,user ,reason ):
         """Если пользователь получил 2+ мьюта — добавить в watchlist на 1 неделю.

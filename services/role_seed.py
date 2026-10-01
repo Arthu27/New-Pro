@@ -138,11 +138,20 @@ def apply_role_seed(force=False, guild_id=None):
         role_map = _read_json(ROLE_MAP_PATH, {})
         if not isinstance(role_map, dict):
             role_map = {}
-        _VALID_TIERS = ('helper', 'mod', 'master', 'curator', 'admin', 'owner')
+        _VALID_TIERS = (
+            'helper', 'mod', 'master', 'curator', 'assistent', 'admin', 'owner',
+        )
         for rid, tier in seed_map.items():
             rid = str(rid).strip()
             tier = str(tier).strip()
-            if rid and tier in _VALID_TIERS and rid not in role_map:
+            if not rid or tier not in _VALID_TIERS:
+                continue
+            # Апгрейд: Assistent раньше ошибочно был master → assistent
+            if (rid in role_map and role_map.get(rid) != tier
+                    and tier == 'assistent' and role_map.get(rid) == 'master'):
+                role_map[rid] = tier
+                report['role_map_added'].append(f'{rid}={tier}(upgrade)')
+            elif rid not in role_map:
                 role_map[rid] = tier
                 report['role_map_added'].append(f'{rid}={tier}')
         if report['role_map_added']:
@@ -199,29 +208,47 @@ def apply_role_seed(force=False, guild_id=None):
         punish_seed = seed.get('punish_roles') or {}
         gid = _main_guild_id(guild_id)
         if punish_seed and gid:
-            punish = _read_json(PUNISH_PATH, {})
-            if not isinstance(punish, dict):
-                punish = {}
-            row = punish.get(str(gid))
-            if not isinstance(row, dict):
-                row = {}
-            roles = row.get('roles')
-            if not isinstance(roles, dict):
-                roles = {}
-            added = []
-            for kind in ('ban', 'mute', 'vmute'):
-                rid = int(punish_seed.get(kind) or 0)
-                if rid and not int(roles.get(kind) or 0):
-                    roles[kind] = rid
-                    added.append(kind)
-            if added:
-                row['roles'] = roles
-                # сохраняем сопутствующую структуру (warn_levels/temps), если была
-                punish[str(gid)] = row
-                _write_json(PUNISH_PATH, punish)
-                report['punish_added'] = added
-                if 'ban' in added:
-                    report['ban_role'] = True
+            # Через API punish_roles — не затираем temps/held_roles
+            # сырым rewrite файла (после обновления бота сроки мутов жили).
+            try:
+                from services import punish_roles as PR
+                cur = PR.get(gid) or {}
+                to_set = {}
+                added = []
+                for kind in ('ban', 'mute', 'vmute'):
+                    rid = int(punish_seed.get(kind) or 0)
+                    if rid and not int(cur.get(kind) or 0):
+                        to_set[kind] = rid
+                        added.append(kind)
+                if to_set:
+                    PR.set_roles(gid, who='role_seed', **to_set)
+                    report['punish_added'] = added
+                    if 'ban' in added:
+                        report['ban_role'] = True
+            except Exception as _pex:
+                _log.warning('role_seed punish via API: %s', _pex)
+                punish = _read_json(PUNISH_PATH, {})
+                if not isinstance(punish, dict):
+                    punish = {}
+                row = punish.get(str(gid))
+                if not isinstance(row, dict):
+                    row = {}
+                roles = row.get('roles')
+                if not isinstance(roles, dict):
+                    roles = {}
+                added = []
+                for kind in ('ban', 'mute', 'vmute'):
+                    rid = int(punish_seed.get(kind) or 0)
+                    if rid and not int(roles.get(kind) or 0):
+                        roles[kind] = rid
+                        added.append(kind)
+                if added:
+                    row['roles'] = roles
+                    punish[str(gid)] = row
+                    _write_json(PUNISH_PATH, punish)
+                    report['punish_added'] = added
+                    if 'ban' in added:
+                        report['ban_role'] = True
         elif punish_seed and not gid:
             _log.debug('punish-роли пропущены: боевой MAIN_GUILD_ID не задан')
 

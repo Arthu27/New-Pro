@@ -1,12 +1,17 @@
 {
-  "version": 6,
-  "_comment": "v6: хелпер → тир helper (варн 1, без бана); модер → mod. Master/Curator warn 1/2. guild_id из MAIN_GUILD_ID.",
+  "version": 8,
+  "_comment": "v8: assistent > curator > master > helper/mod. Master mid для обеих веток. Assistent полный ACL.",
   "role_map": {
     "803553848396349510": "mod",
     "948969471916249119": "helper",
     "1552637932907667466": "master",
+    "1551524708552278036": "curator",
+    "1551525681207189504": "curator",
     "807030012301541377": "curator",
-    "1189999426631122964": "admin"
+    "1552815174115664013": "assistent",
+    "1554932049528225842": "assistent",
+    "1189999426631122964": "admin",
+    "1549118975110152263": "admin"
   },
   "punish_roles": {
     "ban": 1083106265422643251,
@@ -14,7 +19,7 @@
     "vmute": 943510458621632522
   },
   "action_default": {
-    "tiers": ["mod", "master", "curator", "admin"],
-    "_comment": "Полный ACL — Moderator/Master/Curator/Admin. Хелпер (тир helper) не здесь — mute+purge+warn через helper_acl_seed."
+    "tiers": ["mod", "master", "curator", "assistent", "admin"],
+    "_comment": "Полный ACL — Mod/Master/Curator/Assistent/Admin. Helper — только через helper_acl_seed (mute+purge)."
   }
 }

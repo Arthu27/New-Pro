@@ -79,12 +79,23 @@ KNOWN_CHANNEL_BY_KIND = {
 # Роли, выдаваемые после одобрения (владелец 2026-09-24)
 KNOWN_HELPER_ROLE_ID = 948969471916249119
 KNOWN_MODERATOR_ROLE_ID = 803553848396349510
-KNOWN_MASTER_ROLE_ID = 1552637932907667466  # × Master (тир между mod и curator)
+# × Master — mid между Helper/Moderator и Curator (обе ветки)
+KNOWN_MASTER_ROLE_ID = 1552637932907667466
+# × Assistent — ВЫШЕ куратора (обе ветки); × Staff Assistent — старший
+KNOWN_ASSISTENT_ROLE_ID = 1552815174115664013
+KNOWN_STAFF_ASSISTENT_ROLE_ID = 1554932049528225842
 KNOWN_ADMIN_ROLE_ID = 1189999426631122964  # × Administrator
 # × Staff Administrator — эскалация жалоб на админов; тир admin, лимиты +2
 KNOWN_STAFF_ADMIN_ROLE_ID = 1549118975110152263
 # Общая роль на ВСЕ ветки (Helper/Mod/Creative/…) — если нет, выдаём при accept
 KNOWN_COMMON_STAFF_ROLE_ID = 1553105240398631062
+# Ассистенты (тир assistent > curator)
+KNOWN_ASSISTENT_ROLE_IDS = (
+    KNOWN_ASSISTENT_ROLE_ID,
+    KNOWN_STAFF_ASSISTENT_ROLE_ID,
+)
+# backward-compat alias
+KNOWN_HELPER_MASTER_ROLE_IDS = KNOWN_ASSISTENT_ROLE_IDS
 KNOWN_GRANT_BY_KIND = {
     "helper": KNOWN_HELPER_ROLE_ID,
     "moderator": KNOWN_MODERATOR_ROLE_ID,

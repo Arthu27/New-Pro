@@ -30,9 +30,12 @@ from logger import get_logger
 
 _log = get_logger('staff_hierarchy')
 
-# Панельные роли по старшинству (тот же порядок, что web/app.ROLES)
-# master между mod и curator (заказ 2026-09-24).
-RANK = {'uye': 0, 'helper': 1, 'mod': 1, 'master': 2, 'curator': 3, 'admin': 4, 'owner': 5}
+# Панельные роли по старшинству (Discord pos: Master < Curator < Assistent).
+# helper/mod < master < curator < assistent < admin < owner (заказ 2026-10-01).
+RANK = {
+    'uye': 0, 'helper': 1, 'mod': 1, 'master': 2,
+    'curator': 3, 'assistent': 4, 'admin': 5, 'owner': 6,
+}
 
 LABELS = {
     'uye': 'участник',
@@ -40,6 +43,7 @@ LABELS = {
     'mod': 'модератор',
     'master': 'мастер',
     'curator': 'куратор',
+    'assistent': 'ассистент',
     'admin': 'администратор',
     'owner': 'владелец панели',
 }
@@ -91,6 +95,22 @@ def _role_map_tiers():
             out[xid] = 'master'
     except Exception as _ex:
         _log.debug('role_map_tiers master fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_CURATOR_BY_KIND
+        for _kind, cid in (KNOWN_CURATOR_BY_KIND or {}).items():
+            cid_s = str(int(cid or 0))
+            if cid_s and cid_s != '0' and cid_s not in out:
+                out[cid_s] = 'curator'
+    except Exception as _ex:
+        _log.debug('role_map_tiers branch-curator fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_ASSISTENT_ROLE_IDS
+        for aid in KNOWN_ASSISTENT_ROLE_IDS:
+            aid_s = str(int(aid or 0))
+            if aid_s and aid_s != '0' and aid_s not in out:
+                out[aid_s] = 'assistent'
+    except Exception as _ex:
+        _log.debug('role_map_tiers assistent fallback: %s', _ex)
     try:
         from services.staff_roles import KNOWN_ADMIN_ROLE_ID
         aid = str(int(KNOWN_ADMIN_ROLE_ID or 0))
@@ -210,13 +230,38 @@ def actor_panel_role(guild, actor, session_role=None):
     return target_panel_role(guild, actor)
 
 
+def staff_ladder_role(guild, member):
+    """Тир для ИЕРАРХИИ наказаний: role_map главнее Discord Administrator.
+
+    Иначе «× Отвечаю за Helper» + чужой Discord Admin на цели оба
+    становятся admin и куратор хелперов не может снять мут/наказать.
+    Меню /modpanel по-прежнему через actor_panel_role (Discord Admin
+    поднимает права хелпера до полного меню).
+    """
+    if member is None:
+        return 'uye'
+    try:
+        from config import Config
+        if int(getattr(member, 'id', 0) or 0) in Config.all_owner_ids():
+            return 'owner'
+    except Exception as _ex:
+        _log.debug('staff_ladder_role: bot-owner: %s', _ex)
+    if getattr(member, 'id', None) == getattr(guild, 'owner_id', None):
+        return 'owner'
+    mapped = best_mapped_tier(member)
+    if mapped:
+        return mapped
+    return target_panel_role(guild, member)
+
+
 def explain(actor_role, target_role, label=None):
     """Текст отказа — сразу готов для показа модератору/панели."""
     a = LABELS.get(actor_role, actor_role)
     t = LABELS.get(target_role, target_role)
     what = f' ({label})' if label else ''
     return (f'Нельзя{what}: {t} — персонал твоего уровня или выше. '
-            f'Иерархия: модератор → мастер → куратор → администратор → владелец. '
+            f'Иерархия: модер/хелпер → мастер → куратор → ассистент → '
+            f'администратор → владелец. '
             f'Вопросы по правам — к владельцу панели.')
 
 
@@ -230,8 +275,17 @@ def check(guild, actor, target, action='', *, actor_role=None,
     оффлайн-ID: тогда считаем участником, наказание оффлайн-цели не
     поднимает его статус).
     """
-    a_role = actor_role or actor_panel_role(guild, actor, session_role)
-    t_role = target_role or target_panel_role(guild, target)
+    # Иерархия — по role_map (staff_ladder), не по Discord Administrator.
+    if actor_role is None:
+        if session_role in RANK:
+            a_role = session_role
+        elif actor is None or getattr(actor, 'is_panel', False):
+            a_role = 'owner'
+        else:
+            a_role = staff_ladder_role(guild, actor)
+    else:
+        a_role = actor_role
+    t_role = target_role or staff_ladder_role(guild, target)
     try:
         # владелец бота и владелец сервера — вне юрисдикции всех, кроме owner
         if target is not None:
