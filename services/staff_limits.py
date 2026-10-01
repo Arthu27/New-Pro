@@ -219,6 +219,20 @@ def _role_tier_map(guild_id=None):
             out.setdefault(xid, 'master')
     except Exception as _ex:
         _log.debug('staff_limits: except@220: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_ADMIN_ROLE_ID
+        aid = str(int(KNOWN_ADMIN_ROLE_ID or 0))
+        if aid and aid != '0':
+            out.setdefault(aid, 'admin')
+    except Exception as _ex:
+        _log.debug('staff_limits: admin fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_STAFF_ADMIN_ROLE_ID
+        said = str(int(KNOWN_STAFF_ADMIN_ROLE_ID or 0))
+        if said and said != '0':
+            out.setdefault(said, 'admin')
+    except Exception as _ex:
+        _log.debug('staff_limits: staff-admin fallback: %s', _ex)
     return out
 
 

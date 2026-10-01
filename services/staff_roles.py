@@ -81,6 +81,8 @@ KNOWN_HELPER_ROLE_ID = 948969471916249119
 KNOWN_MODERATOR_ROLE_ID = 803553848396349510
 KNOWN_MASTER_ROLE_ID = 1552637932907667466  # × Master (тир между mod и curator)
 KNOWN_ADMIN_ROLE_ID = 1189999426631122964  # × Administrator
+# × Staff Administrator — эскалация жалоб на админов; тир admin, лимиты +2
+KNOWN_STAFF_ADMIN_ROLE_ID = 1549118975110152263
 # Общая роль на ВСЕ ветки (Helper/Mod/Creative/…) — если нет, выдаём при accept
 KNOWN_COMMON_STAFF_ROLE_ID = 1553105240398631062
 KNOWN_GRANT_BY_KIND = {

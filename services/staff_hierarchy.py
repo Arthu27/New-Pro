@@ -91,6 +91,20 @@ def _role_map_tiers():
             out[xid] = 'master'
     except Exception as _ex:
         _log.debug('role_map_tiers master fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_ADMIN_ROLE_ID
+        aid = str(int(KNOWN_ADMIN_ROLE_ID or 0))
+        if aid and aid != '0' and aid not in out:
+            out[aid] = 'admin'
+    except Exception as _ex:
+        _log.debug('role_map_tiers admin fallback: %s', _ex)
+    try:
+        from services.staff_roles import KNOWN_STAFF_ADMIN_ROLE_ID
+        said = str(int(KNOWN_STAFF_ADMIN_ROLE_ID or 0))
+        if said and said != '0' and said not in out:
+            out[said] = 'admin'
+    except Exception as _ex:
+        _log.debug('role_map_tiers staff-admin fallback: %s', _ex)
     return out
 
 

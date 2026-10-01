@@ -1509,6 +1509,16 @@ async def on_ready():
                 _log.debug('warn_acl_seed: %s', _wref.get('reason'))
         except Exception as _wex:
             _log.debug('on_ready(): warn_acl_seed: %s', _wex)
+        try:
+            from services.staff_admin_acl_seed import apply_staff_admin_acl_seed
+            _saref = apply_staff_admin_acl_seed(guild_id=_seed_gid or None)
+            if _saref.get('applied'):
+                print(f"[РОЛИ] Staff Admin сид: ACL "
+                      f"+{_saref.get('acl_added')} limits+2")
+            else:
+                _log.debug('staff_admin_acl_seed: %s', _saref.get('reason'))
+        except Exception as _saex:
+            _log.debug('on_ready(): staff_admin_acl_seed: %s', _saex)
     except Exception as _ex:
         _log.debug("on_ready(): role_seed: %s", _ex)
 
