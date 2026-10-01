@@ -1003,7 +1003,11 @@ class Moderation (commands .Cog ):
                         await mute_state.clear_all_mutes(guild, user)
                     except Exception as _mse:
                         log.debug(f'[MODPANEL] mute_chat clear all: {_mse}')
-                    await user.add_roles(_mrole, reason=reason or 'мут чата')
+                    from services.discord_retry import call as _dcall
+                    await _dcall(
+                        lambda: user.add_roles(
+                            _mrole, reason=reason or 'мут чата'),
+                        label='mute_chat add_roles')
                     self._remember_temp(guild, user, _mrole, minutes * 60)
                     msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
                            f"(роль «{_mrole.name}»); голос не тронут")
@@ -1172,7 +1176,12 @@ class Moderation (commands .Cog ):
             except Exception as ex :
                 import traceback as _tb
                 log .warning (f"[MODPANEL] Сбой действия: {_tb.format_exc()}")
-                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
+                try :
+                    from services .discord_retry import friendly_api_error
+                    _msg =friendly_api_error (ex )
+                except Exception :
+                    _msg =str (ex )
+                await _respond (interaction ,embed =error_embed (_msg ),ephemeral =True )
 
         elif action =="unban":
             uid =self ._parse_target_id (target )
@@ -1492,8 +1501,11 @@ class Moderation (commands .Cog ):
         """Выдать роль наказания и проверить, что она реально висит."""
         if role is None or user is None :
             return user
+        from services.discord_retry import call as _dcall
         try :
-            await user .add_roles (role ,reason =reason )
+            await _dcall(
+                lambda: user.add_roles(role, reason=reason),
+                label=f'add_roles {getattr(role, "id", "?")}')
         except Exception as _e :
             log .warning (f'[MODPANEL] add_roles {role.id}: {_e}')
             raise
@@ -1505,7 +1517,10 @@ class Moderation (commands .Cog ):
                 member =user
         if role not in (getattr (member ,'roles',None )or []):
             try :
-                await member .add_roles (role ,reason =reason or 'повтор войс-мут')
+                await _dcall(
+                    lambda: member.add_roles(
+                        role, reason=reason or 'повтор войс-мут'),
+                    label=f're-add role {getattr(role, "id", "?")}')
                 member =await guild .fetch_member (user .id )
             except Exception as _e2 :
                 log .warning (f'[MODPANEL] re-add role {role.id}: {_e2}')
@@ -1653,11 +1668,15 @@ class Moderation (commands .Cog ):
 
     async def _drop_roles (self ,guild ,user ,roles ):
         """Снять роли наказания и почистить журнал сроков."""
+        from services.discord_retry import call as _dcall
         for role in roles :
             if role is None :
                 continue 
             try :
-                await user .remove_roles (role ,reason ='снятие наказания')
+                await _dcall(
+                    lambda r=role: user.remove_roles(
+                        r, reason='снятие наказания'),
+                    label=f'remove_roles {getattr(role, "name", "?")}')
             except Exception as _ex :
                 log .debug (f'[MODPANEL] remove_roles {role .name }: {_ex}')
         try :

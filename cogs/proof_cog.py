@@ -432,10 +432,30 @@ class ProofCog(commands.Cog):
         if image_inline and file:
             e.set_image(url=f'attachment://{file.filename}')
         try:
+            from services.discord_retry import call as _dcall
             if file:
-                msg = await ch.send(embed=e, file=file)
+                # File нельзя переиспользовать после неудачи — клонируем bytes
+                raw = file.fp.read() if hasattr(file.fp, 'read') else None
+                if raw is not None:
+                    try:
+                        file.fp.seek(0)
+                    except Exception:
+                        pass
+
+                    async def _send_file():
+                        import io as _io
+                        f2 = discord.File(_io.BytesIO(raw),
+                                          filename=file.filename)
+                        return await ch.send(embed=e, file=f2)
+
+                    msg = await _dcall(_send_file, label='proof send file')
+                else:
+                    msg = await _dcall(
+                        lambda: ch.send(embed=e, file=file),
+                        label='proof send file')
             else:
-                msg = await ch.send(embed=e)
+                msg = await _dcall(
+                    lambda: ch.send(embed=e), label='proof send')
         except discord.Forbidden:
             log.warning(f'[PROOF] нет прав писать в #{ch.id}')
             return False
@@ -1431,7 +1451,17 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
         log.debug('[PROOF] silent ping: %s', ex)
 
     rev = ProofReviewView(entry['id'], guild.id)
-    try:
+    from services.discord_retry import call as _dcall
+
+    def _rebuild_files():
+        out = []
+        for i, (name, raw, _ct) in enumerate(raw_saved):
+            safe = f'{i}_{name}'
+            out.append(discord.File(io.BytesIO(raw), filename=safe))
+        return out
+
+    async def _send_review():
+        fl = _rebuild_files() if raw_saved else (files or None)
         if V2_AVAILABLE:
             from discord import ui as dui, SeparatorSpacing
             head = f'# 🤍 Демка #{entry["id"]} · {action_ru}'
@@ -1441,9 +1471,10 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
                 dui.Separator(spacing=SeparatorSpacing.large),
                 dui.TextDisplay(body[:3500]),
             ]
-            if gallery_names:
+            names = [f.filename for f in (fl or [])]
+            if names:
                 items = [MediaGalleryItem(f'attachment://{n}')
-                         for n in gallery_names[:10]]
+                         for n in names[:10]]
                 children.append(dui.Separator())
                 children.append(dui.MediaGallery(*items))
             children.append(dui.Separator())
@@ -1452,15 +1483,19 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
             children.append(row)
             lv = dui.LayoutView(timeout=None)
             lv.add_item(black_container(*children))
-            msg = await ch.send(view=lv, files=files or None)
-        else:
-            e = discord.Embed(
-                title=f'Демка #{entry["id"]} · {action_ru}',
-                description=body, color=0x000000, timestamp=_now())
-            e.set_footer(text='HAKUMO · доказательство')
-            if gallery_names and _is_image_name(gallery_names[0]):
-                e.set_image(url=f'attachment://{gallery_names[0]}')
-            msg = await ch.send(embed=e, files=files or None, view=rev)
+            return await ch.send(view=lv, files=fl or None)
+        e = discord.Embed(
+            title=f'Демка #{entry["id"]} · {action_ru}',
+            description=body, color=0x000000, timestamp=_now())
+        e.set_footer(text='HAKUMO · доказательство')
+        names = [f.filename for f in (fl or [])]
+        if names and _is_image_name(names[0]):
+            e.set_image(url=f'attachment://{names[0]}')
+        return await ch.send(embed=e, files=fl or None, view=rev)
+
+    try:
+        msg = await _dcall(_send_review, label='proof review card',
+                           attempts=3)
     except Exception as ex:
         log.warning('[PROOF] send review card: %s', ex)
         try:
@@ -1468,7 +1503,10 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
                 title=f'Демка #{entry["id"]} · {action_ru}',
                 description=body, color=0x000000)
             e.set_footer(text='HAKUMO · доказательство')
-            msg = await ch.send(embed=e, files=files or None, view=rev)
+            fl = _rebuild_files() if raw_saved else None
+            msg = await _dcall(
+                lambda: ch.send(embed=e, files=fl or None, view=rev),
+                label='proof fallback send')
         except Exception as ex2:
             log.warning('[PROOF] fallback send: %s', ex2)
             return False, entry

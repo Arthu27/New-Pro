@@ -230,6 +230,30 @@ def actor_panel_role(guild, actor, session_role=None):
     return target_panel_role(guild, actor)
 
 
+def staff_ladder_role(guild, member):
+    """Тир для ИЕРАРХИИ наказаний: role_map главнее Discord Administrator.
+
+    Иначе «× Отвечаю за Helper» + чужой Discord Admin на цели оба
+    становятся admin и куратор хелперов не может снять мут/наказать.
+    Меню /modpanel по-прежнему через actor_panel_role (Discord Admin
+    поднимает права хелпера до полного меню).
+    """
+    if member is None:
+        return 'uye'
+    try:
+        from config import Config
+        if int(getattr(member, 'id', 0) or 0) in Config.all_owner_ids():
+            return 'owner'
+    except Exception as _ex:
+        _log.debug('staff_ladder_role: bot-owner: %s', _ex)
+    if getattr(member, 'id', None) == getattr(guild, 'owner_id', None):
+        return 'owner'
+    mapped = best_mapped_tier(member)
+    if mapped:
+        return mapped
+    return target_panel_role(guild, member)
+
+
 def explain(actor_role, target_role, label=None):
     """Текст отказа — сразу готов для показа модератору/панели."""
     a = LABELS.get(actor_role, actor_role)
@@ -251,8 +275,17 @@ def check(guild, actor, target, action='', *, actor_role=None,
     оффлайн-ID: тогда считаем участником, наказание оффлайн-цели не
     поднимает его статус).
     """
-    a_role = actor_role or actor_panel_role(guild, actor, session_role)
-    t_role = target_role or target_panel_role(guild, target)
+    # Иерархия — по role_map (staff_ladder), не по Discord Administrator.
+    if actor_role is None:
+        if session_role in RANK:
+            a_role = session_role
+        elif actor is None or getattr(actor, 'is_panel', False):
+            a_role = 'owner'
+        else:
+            a_role = staff_ladder_role(guild, actor)
+    else:
+        a_role = actor_role
+    t_role = target_role or staff_ladder_role(guild, target)
     try:
         # владелец бота и владелец сервера — вне юрисдикции всех, кроме owner
         if target is not None:
