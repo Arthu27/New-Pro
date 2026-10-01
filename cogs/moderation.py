@@ -2770,6 +2770,19 @@ async def _reset_after_step(interaction, panel, *, prefer_resend=False):
     _schedule_panel_reset(interaction, panel, clear_pending=True, delay=0.45)
 
 
+def _bg_reset_after_step(interaction, panel, *, prefer_resend=False):
+    """Сброс панели в фоне — не держит колбэк селекта/модалки на event loop."""
+    if panel is None:
+        return
+    try:
+        import asyncio as _aio
+        _aio.get_running_loop().create_task(
+            _reset_after_step(interaction, panel, prefer_resend=prefer_resend),
+            name='modpanel-bg-reset')
+    except Exception:
+        _schedule_panel_reset(interaction, panel, clear_pending=True, delay=0.05)
+
+
 async def _enter_kind_mode(interaction, panel, *, kinds, target_id, title,
                            unmute=False):
     """Legacy: kind на той же панели. Сейчас мут идёт через _send_kind_menu.
@@ -2816,8 +2829,9 @@ async def _offer_mod_form(interaction, cog, action, prefill, panel=None):
         except Exception as _ex:
             log.debug('moderation: except@2623: %s', _ex)
         return False
-    # Та же панель, свежие селекты — без второй эфемерки
-    await _reset_after_step(interaction, panel, prefer_resend=False)
+    # Сброс панели в фоне: await rebuild после send_modal давил цикл
+    # и следующий клик ловил «Ошибка взаимодействия» при живом наказании.
+    _bg_reset_after_step(interaction, panel, prefer_resend=False)
     return True
 
 
@@ -2886,10 +2900,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             embed=None if V2_AVAILABLE else discord.Embed(
                 title='Мут', description=f'{who}', color=0x000000))
         if panel is not None:
-            try:
-                await _reset_after_step(interaction, panel, prefer_resend=False)
-            except Exception as ex:
-                log.debug('mute kind main reset: %s', ex)
+            _bg_reset_after_step(interaction, panel, prefer_resend=False)
         if not ok:
             await _respond(interaction, embed=error_embed(
                 'Не удалось открыть выбор вида мута. Попробуйте ещё раз.'),
@@ -2912,7 +2923,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             await cog._execute_mod_action(
                 interaction, kinds[0][0], prefill,
                 'Снято через панель', '', proof_link=None)
-            await _reset_after_step(interaction, panel, prefer_resend=False)
+            _bg_reset_after_step(interaction, panel, prefer_resend=False)
             return
         who = prefill
         try:
@@ -2930,10 +2941,7 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             embed=None if V2_AVAILABLE else discord.Embed(
                 title='Снять мут', description=f'{who}', color=0x000000))
         if panel is not None:
-            try:
-                await _reset_after_step(interaction, panel, prefer_resend=False)
-            except Exception as ex:
-                log.debug('unmute kind main reset: %s', ex)
+            _bg_reset_after_step(interaction, panel, prefer_resend=False)
         if not ok:
             await _respond(interaction, embed=error_embed(
                 'Не удалось открыть выбор снятия мута. Попробуйте ещё раз.'),
@@ -2969,8 +2977,8 @@ class ModActionSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         """ACK = send_modal сразу (без кнопки). Сброс панели после модалки."""
         view = getattr(self, 'panel', None) or self.view
+        # Минимум до send_modal — иначе lag цикла → «Ошибка взаимодействия».
         _cancel_panel_reset(view)
-        _bind_live_panel(view, interaction)
         try:
             lag = (datetime.now(timezone.utc) - interaction.created_at).total_seconds()
             if lag > 1.0:
@@ -2993,6 +3001,7 @@ class ModActionSelect(discord.ui.Select):
                         view.selected_uid = prefill
             except Exception as _pe:
                 log.debug("modpanel prefill цели: %s", _pe)
+        _bind_live_panel(view, interaction)
         # Без участника — запомнить действие, попросить выбрать участника
         if action != "clear" and not prefill and view is not None:
             view.pending_action = action
@@ -3210,8 +3219,12 @@ class ModTargetSelect(discord.ui.UserSelect):
             return
         if view is None:
             return
+        # Rebuild в фоне — await здесь конкурирует с следующим кликом «Действие»
         try:
-            await _silent_reset_panel(interaction, view)
+            import asyncio as _aio
+            _aio.get_running_loop().create_task(
+                _silent_reset_panel(interaction, view),
+                name='modpanel-target-status')
         except Exception as _re:
             log.warning('ModTargetSelect status refresh: %s', _re)
 

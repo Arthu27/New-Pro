@@ -113,8 +113,9 @@ _offer_end = (mod_src.index('async def _send_kind_menu')
               if 'async def _send_kind_menu' in mod_src
               else mod_src.index('async def _launch_action'))
 _offer_body = mod_src[mod_src.index('async def _offer_mod_form'):_offer_end]
-check('_reset_after_step' in _offer_body or '_silent_reset_panel' in _offer_body,
-      '_offer_mod_form: сброс панели сразу после модалки')
+check(('_bg_reset_after_step' in _offer_body or '_reset_after_step' in _offer_body
+       or '_silent_reset_panel' in _offer_body),
+      '_offer_mod_form: сброс панели после модалки (фон — не давит цикл)')
 check('_send_kind_menu' in mod_src and '_bind_live_panel' in mod_src
       and '_reset_after_step' in mod_src,
       'multi-use: kind-меню отдельно, основная панель сбрасывается')

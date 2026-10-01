@@ -30,6 +30,16 @@ PASS = FAIL = 0
 LOG = []
 
 
+async def _drain_bg(delay=0.08):
+    """Дождаться create_task(_silent_reset / _bg_reset_after_step)."""
+    await asyncio.sleep(delay)
+    pending = [t for t in asyncio.all_tasks()
+               if (not t.done()) and t is not asyncio.current_task()
+               and 'modpanel' in (t.get_name() or '')]
+    if pending:
+        await asyncio.wait(pending, timeout=1.0)
+
+
 def check(ok, msg, extra=''):
     global PASS, FAIL
     if ok:
@@ -179,6 +189,7 @@ async def _ban_twice():
     view.action_select._values = ['ban']
     sel_id_1 = id(view.action_select)
     await view.action_select.callback(inter1)
+    await _drain_bg()
     check(bool(inter1.response.modal), '1-й Бан → send_modal')
     check(len(inter1._fu_sent) == 0, '1-й Бан: followup панели НЕ слали')
     check(panel_msg.deleted is False, 'панель не удалена')
@@ -199,6 +210,7 @@ async def _ban_twice():
     view.action_select._values = ['ban']
     sel_id_2 = id(view.action_select)
     await view.action_select.callback(inter2)
+    await _drain_bg()
     check(bool(inter2.response.modal), '2-й Бан → снова send_modal')
     check(len(inter2._fu_sent) == 0, '2-й Бан: нового окна нет')
     check(panel_msg.deleted is False, 'панель всё ещё не удалена')
@@ -239,6 +251,7 @@ async def _mute_flow():
     inter = _Inter(opener, g, message=msg)
     view_m.action_select._values = ['mute']
     await view_m.action_select.callback(inter)
+    await _drain_bg()
     check(bool(inter.response.sent), 'мут → отдельное меню вида (send_message)')
     check(isinstance(view_m.action_select, M.ModActionSelect),
           'на основной панели снова ModActionSelect (не kind)')
@@ -251,6 +264,7 @@ async def _mute_flow():
     inter2 = _Inter(opener, g, message=msg)
     view_m.action_select._values = ['unmute']
     await view_m.action_select.callback(inter2)
+    await _drain_bg()
     check(bool(inter2.response.sent) or inter2.response.done,
           'после Мута сразу Снять мут отвечает')
 
@@ -314,12 +328,14 @@ async def _action_works():
     inter = _Inter(opener, g, message=msg)
     view_a.action_select._values = ['ban']
     await view_a.action_select.callback(inter)
+    await _drain_bg()
     check(bool(inter.response.modal), 'Бан с участником → send_modal')
     check(len(inter._fu_sent) == 0, 'без нового окна')
     # после сброса снова действие
     view_a.action_select._values = ['clear']
     inter2 = _Inter(opener, g, message=msg)
     await view_a.action_select.callback(inter2)
+    await _drain_bg()
     check(bool(inter2.response.modal) or inter2.response.done,
           'второе действие после сброса работает')
 
@@ -382,6 +398,7 @@ async def _member_status():
     sel_before = id(view_t.target_select)
     inter = _Inter(opener, g, message=msg)
     await view_t.target_select.callback(inter)
+    await _drain_bg()
     check(view_t.selected_uid == str(target.id), 'uid записан')
     check(inter.response.done, 'ACK defer после участника')
     check(f'участник <@{target.id}>' in view_t._status_text(),
@@ -424,6 +441,7 @@ async def _preselect_open():
     inter = _Inter(opener, g, message=msg)
     view_p.action_select._values = ['ban']
     await view_p.action_select.callback(inter)
+    await _drain_bg()
     check(bool(inter.response.modal),
           'preselect: действие срабатывает без ручного выбора участника')
 
@@ -446,9 +464,8 @@ check('_send_kind_menu' in src and 'MuteKindView' in src,
 bind = src[src.index('def _bind_live_panel'):src.index('async def _send_modal_fast')]
 check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'нет bot.wait_for на пути сброса')
-check("await _reset_after_step(interaction, panel, prefer_resend=False)" in src
-      or '_reset_after_step(interaction, panel' in src,
-      'после модалки — edit той же панели')
+check('_bg_reset_after_step' in src or '_reset_after_step' in src,
+      'после модалки — edit той же панели (фон/await)')
 check(int(M.ModPanelView(None, opener, allowed=allowed).timeout) == 300,
       'ModPanelView.timeout == 300')
 
@@ -471,6 +488,7 @@ async def _series():
         inter = _Inter(opener, g, message=msg)
         view_s.action_select._values = [act]
         await view_s.action_select.callback(inter)
+        await _drain_bg()
         check(bool(inter.response.modal) or inter.response.done,
               f'серия «{act}» — ACK/модалка')
         check(len(inter._fu_sent) == 0, f'серия «{act}» — без нового окна')

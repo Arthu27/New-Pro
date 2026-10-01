@@ -919,6 +919,7 @@ _voice_rejoin_task = None
 _voice_monitor_task = None
 _voice_last_join_ts = 0.0
 _voice_last_silence_ts = 0.0
+_voice_last_schedule_ts = 0.0
 
 
 async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
@@ -1028,17 +1029,27 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
 
 
 def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
-    """Бесконечный возврат в войс — без потолка попыток."""
-    global _voice_rejoin_task, _voice_suppress_rejoin_until
+    """Бесконечный возврат в войс — без потолка попыток.
+
+    resume/gateway-disconnect — мягко (сначала Discord-truth): иначе каждый
+    blip шлюза делает force-connect и рвёт event loop на 5–7с →
+    /modpanel «Ошибка взаимодействия», хотя наказание потом всё равно уходит.
+    """
+    global _voice_rejoin_task, _voice_suppress_rejoin_until, _voice_last_schedule_ts
     if not VOICE_CHANNEL_ID or bot.is_closed():
         return
-    # при kick/resume/zombie — не ждём suppress
+    now = time.time()
+    # debounce soft-rejoin: не ставить 10 задач на один blip
+    if (not force) and (now - _voice_last_schedule_ts) < 8.0:
+        return
+    # при kick/zombie — не ждём suppress; resume/GW — ждём settle
     if force:
         _voice_suppress_rejoin_until = 0.0
-    elif time.time() < _voice_suppress_rejoin_until:
+    elif now < _voice_suppress_rejoin_until:
         return
     if _voice_joining and not force:
         return
+    _voice_last_schedule_ts = now
 
     async def _go():
         from services.voice_stay_health import really_in_channel
@@ -1061,9 +1072,9 @@ def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
             cid = VOICE_CHANNEL_ID
             if not cid:
                 return
-            use_force = force or attempt > 1 or reason in (
-                'kicked-or-moved', 'resume', 'gateway-disconnect',
-                'soft-reconnect', 'zombie', 'daemon-heartbeat')
+            # resume/gateway — НЕ force с первой попытки (иначе шторм connect)
+            use_force = force or attempt > 2 or reason in (
+                'kicked-or-moved', 'soft-reconnect', 'zombie', 'daemon-heartbeat')
             if not use_force:
                 ok, _, why = really_in_channel(bot, cid)
                 if ok:
@@ -1080,8 +1091,10 @@ def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
             _log.warning('main voice rejoin fail (%s try=%s): %s',
                          reason or 'auto', attempt, msg)
 
-    # kick/force — отменить зависший rejoin и стартовать новый
-    if force and _voice_rejoin_task is not None and not _voice_rejoin_task.done():
+    # Только kick/zombie отменяют текущий rejoin; resume не рвёт connect
+    hard = force and reason in (
+        'kicked-or-moved', 'zombie', 'soft-reconnect', 'daemon-heartbeat')
+    if hard and _voice_rejoin_task is not None and not _voice_rejoin_task.done():
         try:
             _voice_rejoin_task.cancel()
         except Exception:
@@ -1227,13 +1240,15 @@ def _bind_voice_gw_listeners():
 
     async def _voice_on_disconnect():
         try:
-            _schedule_main_voice_rejoin('gateway-disconnect', force=True)
+            # Soft: краткий blip шлюза не должен force-reconnect'ить войс
+            _schedule_main_voice_rejoin('gateway-disconnect', force=False)
         except Exception as _ex:
             _log.debug('main: except voice disconnect: %s', _ex)
 
     async def _voice_on_resumed():
         try:
-            _schedule_main_voice_rejoin('resume', force=True)
+            # После resume Discord-voice часто жив — сначала проверка, не force
+            _schedule_main_voice_rejoin('resume', force=False)
         except Exception as _ex:
             _log.debug('main: except voice resume: %s', _ex)
 
