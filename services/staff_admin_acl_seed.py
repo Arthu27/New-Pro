@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Сид роли «× Staff Administrator» — полные admin-права + лимиты +2.
+"""Сид «× Administrator» + «× Staff Administrator».
 
-Роль 1549118975110152263 (эскалация жалоб на админов):
-  • тир admin в role_map;
-  • все классические ACL-действия как у × Administrator;
-  • лимиты на 2 выше дефолта admin (mute/unmute/ban/warn/clear).
+× Administrator (1189999426631122964):
+  • тир admin; полные ACL; лимиты admin (НЕ хелперские).
+
+× Staff Administrator (1549118975110152263):
+  • тир admin; те же ACL; лимиты admin + 2.
 
 Идемпотентно: маркер data/.staff_admin_acl.v<N>.
 """
@@ -17,9 +18,18 @@ from logger import get_logger
 
 _log = get_logger('staff_admin_acl_seed')
 
-SEED_VERSION = 1
+SEED_VERSION = 2
 MARKER = f'data/.staff_admin_acl.v{SEED_VERSION}'
 _DEMO_GUILD = 987654321098765432
+
+# Явные лимиты × Administrator (= TIER_DEFAULT_LIMITS['admin']).
+ADMIN_LIMITS = {
+    'warn': 2,
+    'ban': 5,
+    'mute': 10,
+    'unmute': 10,
+    'clear': 10,
+}
 
 # admin defaults + 2
 STAFF_ADMIN_LIMITS = {
@@ -52,10 +62,16 @@ def _staff_admin_id():
     return str(int(KNOWN_STAFF_ADMIN_ROLE_ID))
 
 
+def _admin_id():
+    from services.staff_roles import KNOWN_ADMIN_ROLE_ID
+    return str(int(KNOWN_ADMIN_ROLE_ID))
+
+
 def apply_staff_admin_acl_seed(force=False, guild_id=None) -> dict:
     report = {
         'applied': False, 'reason': '', 'guild_id': 0,
         'role_map': False, 'acl_added': [], 'limits': False,
+        'admin_limits': False,
     }
     try:
         if str(os.environ.get('DEMO_MODE', '')).strip().lower() in (
@@ -72,8 +88,9 @@ def apply_staff_admin_acl_seed(force=False, guild_id=None) -> dict:
             return report
 
         said = _staff_admin_id()
+        aid = _admin_id()
 
-        # 1) role_map → admin
+        # 1) role_map → admin (обе роли)
         path = 'data/role_map.json'
         try:
             data = {}
@@ -82,8 +99,12 @@ def apply_staff_admin_acl_seed(force=False, guild_id=None) -> dict:
                     data = json.load(f) or {}
             if not isinstance(data, dict):
                 data = {}
-            if data.get(said) != 'admin':
-                data[said] = 'admin'
+            changed_map = False
+            for rid in (said, aid):
+                if rid and rid != '0' and data.get(rid) != 'admin':
+                    data[rid] = 'admin'
+                    changed_map = True
+            if changed_map:
                 os.makedirs('data', exist_ok=True)
                 with open(path, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
@@ -92,24 +113,32 @@ def apply_staff_admin_acl_seed(force=False, guild_id=None) -> dict:
             report['reason'] = f'role_map: {ex}'
             return report
 
-        # 2) все ACL-действия
+        # 2) все ACL-действия для Staff Admin + Administrator
         from services.permission_acl import ACTIONS, load_action_acl, save_action_acl
         acl = load_action_acl(gid)
         if not isinstance(acl, dict):
             acl = {}
         changed = False
-        for action in ACTIONS:
-            cur = [str(r) for r in (acl.get(action) or [])]
-            if said not in cur:
-                cur.append(said)
-                acl[action] = cur
-                report['acl_added'].append(action)
-                changed = True
+        for rid in (said, aid):
+            if not rid or rid == '0':
+                continue
+            for action in ACTIONS:
+                cur = [str(r) for r in (acl.get(action) or [])]
+                if rid not in cur:
+                    cur.append(rid)
+                    acl[action] = cur
+                    report['acl_added'].append(f'{action}:{rid}')
+                    changed = True
         if changed:
             save_action_acl(gid, acl)
 
-        # 3) лимиты +2 к admin
+        # 3) лимиты: admin (явные) + Staff Admin (+2)
         from services import staff_limits as SL
+        if aid and aid != '0':
+            SL.set_role_limits(
+                gid, int(aid), who='staff_admin_acl_seed',
+                role_name='× Administrator', **ADMIN_LIMITS)
+            report['admin_limits'] = True
         SL.set_role_limits(
             gid, int(said), who='staff_admin_acl_seed',
             role_name='× Staff Administrator', **STAFF_ADMIN_LIMITS)
@@ -121,9 +150,9 @@ def apply_staff_admin_acl_seed(force=False, guild_id=None) -> dict:
         report['applied'] = True
         report['reason'] = 'ok'
         _log.info(
-            'staff_admin_acl v%s: role_map=%s acl+%s limits=%s',
-            SEED_VERSION, report['role_map'], report['acl_added'],
-            STAFF_ADMIN_LIMITS)
+            'staff_admin_acl v%s: role_map=%s acl+%s admin=%s staff=%s',
+            SEED_VERSION, report['role_map'], len(report['acl_added']),
+            ADMIN_LIMITS, STAFF_ADMIN_LIMITS)
     except Exception as ex:
         report['reason'] = f'error: {ex}'
         _log.warning('apply_staff_admin_acl_seed: %s', ex)
