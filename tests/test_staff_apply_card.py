@@ -272,6 +272,7 @@ for kind, needle in (
         ('Helper', 'предлагать идеи'),
         ('Eventsmod', 'ивентмоды'),
         ('Broadcaster', 'часовой пояс'),
+        ('Creative', 'главное направление'),
 ):
     m = SA.StaffApplyModal(role_name=kind)
     labels = [ti.label for ti in m._inputs]
@@ -279,6 +280,18 @@ for kind, needle in (
           f'{kind} has branch question «{needle}»', labels)
     check(all(len(lab) <= 45 for lab in labels),
           f'{kind} labels ≤45 chars')
+
+# Creative: 4 вопроса владельца (label ≤45)
+m_cr = SA.StaffApplyModal(role_name='Creative')
+cr_labels = [ti.label for ti in m_cr._inputs]
+check(len(cr_labels) == 4, f'Creative has 4 fields', cr_labels)
+check('направление' in cr_labels[0].lower(), 'Creative Q1 direction')
+check('стаффе' in cr_labels[1].lower() or 'сервер' in cr_labels[1].lower(),
+      'Creative Q2 staff exp')
+check('умеешь' in cr_labels[2].lower() or 'хвастайся' in cr_labels[2].lower(),
+      'Creative Q3 skills')
+check('войс' in cr_labels[3].lower(), 'Creative Q4 voice', cr_labels[3])
+check(all(len(lab) <= 45 for lab in cr_labels), 'Creative labels ≤45')
 
 # Events: 5 вопросов владельца
 m_ev = SA.StaffApplyModal(role_name='Eventsmod')
