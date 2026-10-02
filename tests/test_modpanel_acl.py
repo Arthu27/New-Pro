@@ -129,8 +129,10 @@ check([a[0] for a in actions_for_member(g_own, m_owner)] == [],
       'владелец СЕРВЕРА в Discord прав в боте не получает (своя система)')
 check([a[0] for a in actions_for_member(Guild(GID), m_admin)] == [],
       'Discord-админ прав в боте не получает (default-deny)')
-check([a[0] for a in actions_for_member(Guild(GID), m_bot_owner)] == BASE,
-      'владелец БОТА (OWNER_ID) видит все пункты')
+# warn без target скрыт filter_modpanel_actions — у владельца тоже
+_base_no_warn = [a for a in BASE if a != 'warn']
+check([a[0] for a in actions_for_member(Guild(GID), m_bot_owner)] == _base_no_warn,
+      'владелец БОТА (OWNER_ID) видит все пункты (warn — после выбора цели)')
 
 print('== 3. Дал «Бан» роли 601 — у неё появляется бан/разбан, у других нет ==')
 set_action_rule(GID, 'ban', ['601'])
@@ -145,7 +147,7 @@ check([a[0] for a in actions_for_member(g_own, m_owner)] == [],
       'владельца сервера правило бана не касается в обратную сторону — он всё равно без прав')
 check([a[0] for a in actions_for_member(Guild(GID), m_admin)] == [],
       'Discord-админ по-прежнему без бана')
-check([a[0] for a in actions_for_member(Guild(GID), m_bot_owner)] == BASE,
+check([a[0] for a in actions_for_member(Guild(GID), m_bot_owner)] == _base_no_warn,
       'владельца бота правило не ограничивает')
 set_action_rule(GID, 'ban', [])
 
@@ -168,8 +170,10 @@ set_action_rule(GID, 'timeout', ['602'])
 set_action_rule(GID, 'warn', ['602'])
 set_action_rule(GID, 'purge', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('mute' in got and 'unmute' in got and 'warn' in got and 'clear' in got,
-      f'с таймаутом/варном/очисткой они появляются: {got}')
+check('mute' in got and 'unmute' in got and 'clear' in got,
+      f'с таймаутом/очисткой они появляются: {got}')
+check('warn' not in got,
+      f'warn без выбранной цели скрыт: {got}')
 set_action_rule(GID, 'mute', [])
 set_action_rule(GID, 'vmute', [])
 set_action_rule(GID, 'timeout', [])
@@ -190,8 +194,9 @@ set_action_rule(GID, 'vmute', ['602'])
 set_action_rule(GID, 'timeout', ['602'])
 set_action_rule(GID, 'ban', ['602'])   # лимит мута бан НЕ пропустит
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check(set(got) == {'mute'},
-      f'лимит мута ∩ разрешения = только пункт «Мут» (бан срезан лимитом): {got}')
+# unmute парный к mute (меню / _SCOPED_PAIRS)
+check(set(got) == {'mute', 'unmute'},
+      f'лимит мута ∩ разрешения = мут+размут (бан срезан лимитом): {got}')
 set_action_rule(GID, 'ban', [])
 set_action_rule(GID, 'mute', [])
 set_action_rule(GID, 'vmute', [])

@@ -100,8 +100,8 @@ check(SH.target_panel_role(guild, cur_h) == 'curator',
 print('== 2. Хелперские лимиты НЕ сужают меню куратора ==')
 # как helper_acl_seed: mute/unmute/clear/warn на роли хелпера
 SL.set_role_limits(GID, HELPER, who='test', mute=3, unmute=3, clear=10, warn=1)
-check(SL.role_scoped_actions(GID, [HELPER]) == {'mute', 'unmute', 'clear', 'warn'},
-      'хелпер alone → узкое меню')
+check(SL.role_scoped_actions(GID, [HELPER]) == {'mute', 'unmute', 'clear', 'warn', 'unwarn'},
+      'хелпер alone → узкое меню (+unwarn pair)')
 scoped = SL.role_scoped_actions(GID, [CURATOR, HELPER])
 check(scoped is None,
       f'куратор+хелпер → полное меню (None), got={scoped}')

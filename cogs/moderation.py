@@ -2456,17 +2456,20 @@ def actions_for_member(guild, member, target=None):
     except Exception:
         scoped = None
     # Страховка: старший тир (куратор/админ) + хелпер — если scoped всё ещё
-    # «хелперский» (mute/unmute/clear/warn), сбрасываем. Чистые лимиты старшей
-    # роли без младшей не трогаем.
+    # «хелперский» (mute/unmute/clear/warn[/unwarn]), сбрасываем. Чистые
+    # лимиты старшей роли без младшей не трогаем.
+    # unwarn попадает в scoped через _SCOPED_PAIRS от warn — без него
+    # сравнение ломалось и куратор+хелпер оставался в хелперском меню.
     try:
         from services.staff_hierarchy import actor_panel_role, RANK
         from services.staff_limits import _role_tier_map
         from services.staff_roles import KNOWN_HELPER_ROLE_ID
+        _HELPER_LIKE = {'mute', 'unmute', 'clear', 'warn', 'unwarn'}
         _tier = actor_panel_role(guild, member)
         _rank = RANK.get(_tier, -1)
         if (_rank >= RANK.get('curator', 2)
                 and scoped is not None
-                and set(scoped) <= {'mute', 'unmute', 'clear', 'warn'}):
+                and set(scoped) <= _HELPER_LIKE):
             _tmap = _role_tier_map()
             _helper = str(int(KNOWN_HELPER_ROLE_ID))
             _has_junior = False

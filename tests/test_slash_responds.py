@@ -148,8 +148,8 @@ tgt_body = mod_src[mod_src.index('class ModTargetSelect'):
                    mod_src.index('class ModPanelView')]
 check('_schedule_panel_reset' not in tgt_body,
       'после участника НЕТ фонового delayed-reset')
-check('_silent_reset_panel' in tgt_body,
-      'после участника сразу статус/sticky через _silent_reset_panel')
+check(('_bg_reset_after_step' in tgt_body or '_silent_reset_panel' in tgt_body),
+      'после участника сразу статус/sticky через tracked reset')
 check('panel' in tgt_body or 'getattr(self, \'panel\'' in tgt_body
       or "getattr(self, 'panel'" in tgt_body,
       'ModTargetSelect берёт panel явно')
