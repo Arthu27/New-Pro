@@ -175,7 +175,7 @@ check(view.action_select is not None, 'есть action_select (не кнопки
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
 _ms = open(os.path.join(ROOT, 'cogs/moderation.py')).read()
-check('multi-fix-v16' in _ms or 'multi-fix-v13' in _ms,
+check('multi-fix-v17' in _ms or 'multi-fix-v16' in _ms or 'multi-fix-v13' in _ms,
       'build tag multi-fix-v16')
 
 
@@ -461,9 +461,12 @@ check('class ModActionSelect' in src and 'class ModActionButton' not in src,
       'действия — селект, не кнопки')
 check('_send_kind_menu' in src and 'MuteKindView' in src,
       'вид мута — отдельное меню, основная панель цела')
-bind = src[src.index('def _bind_live_panel'):src.index('async def _send_modal_fast')]
+bind = src[src.index('def _bind_live_panel'):src.index('async def _push_panel_view')]
 check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'нет bot.wait_for на пути сброса')
+check('bot.wait_for' not in src[src.index('async def _silent_reset_panel'):
+                              src.index('def _schedule_panel_reset')],
+      'silent reset без Collector wait_for')
 check('_bg_reset_after_step' in src or '_reset_after_step' in src,
       'после модалки — edit той же панели (фон/await)')
 check(int(M.ModPanelView(None, opener, allowed=allowed).timeout) == 300,

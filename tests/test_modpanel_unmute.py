@@ -511,12 +511,14 @@ asyncio.run(_msg_identity())
 
 print('== 10. Нет Collector / нового окна; kind на той же панели ==')
 src = open(M.__file__, encoding='utf-8').read()
-bind = src[src.index('def _bind_live_panel'):src.index('async def _send_modal_fast')]
+bind = src[src.index('def _bind_live_panel'):src.index('async def _push_panel_view')]
 check('.wait_for(' not in bind and 'bot.wait_for' not in bind,
       'reset-хелперы без bot.wait_for')
+check('bot.wait_for' not in src[src.index('async def _silent_reset_panel'):src.index('def _schedule_panel_reset')],
+      'silent reset без bot.wait_for')
 check('_send_kind_menu' in src and 'MuteKindView' in src,
       'вид мута — отдельное меню MuteKindView')
-check('multi-fix-v16' in src or 'multi-fix-v13' in src,
+check('multi-fix-v17' in src or 'multi-fix-v16' in src or 'multi-fix-v13' in src,
       'build=multi-use в логе открытия')
 check('resend disabled' in src or 'return False' in src[src.index('async def _resend_fresh_panel'):
                                                           src.index('def _cancel_panel_reset')],

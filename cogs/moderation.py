@@ -72,6 +72,48 @@ async def _ack(interaction, ephemeral=True, thinking=True):
         log.debug('[MODPANEL] defer: %s', _e)
 
 
+def _interaction_lag_sec(interaction) -> float:
+    """Сколько секунд interaction пролежал до колбэка (лаг event-loop)."""
+    try:
+        created = getattr(interaction, 'created_at', None)
+        if created is None:
+            return 0.0
+        return max(0.0, (datetime.now(timezone.utc) - created).total_seconds())
+    except Exception:
+        return 0.0
+
+
+async def _ack_or_busy(interaction, *, thinking=True, limit=2.2):
+    """ACK, либо «бот был занят» если Discord-окно уже почти сгорело.
+
+    Возвращает True если можно продолжать работу; False — уже ответили
+    «нажми ещё раз» / не смогли ACK.
+    """
+    lag = _interaction_lag_sec(interaction)
+    if lag > limit:
+        log.warning('modpanel: lag=%.2fs — окно сгорело, просим повтор', lag)
+        try:
+            resp = getattr(interaction, 'response', None)
+            if resp is not None and not resp.is_done():
+                await resp.send_message(
+                    content=('Бот был занят и не успел ответить Discord. '
+                             'Нажми действие ещё раз.'),
+                    ephemeral=True)
+                return False
+        except Exception as _ex:
+            log.debug('modpanel busy-nack: %s', _ex)
+        # уже ack'нуто кем-то — не продолжаем тяжёлую работу по протухшему
+        return False
+    await _ack(interaction, thinking=thinking)
+    try:
+        resp = getattr(interaction, 'response', None)
+        if resp is not None and not resp.is_done():
+            return False
+    except Exception:
+        pass
+    return True
+
+
 def _is_untouchable(guild, user):
     """Владелец бота, владелец сервера и боты — наказания не выдаём."""
     if user is None:
@@ -452,11 +494,16 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v16',
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v17',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None),
                  getattr(target, 'id', None))
-        allowed =actions_for_member (interaction .guild ,interaction .user )
+        try :
+            import asyncio as _aio
+            allowed =await _aio .to_thread (
+                actions_for_member ,interaction .guild ,interaction .user )
+        except Exception :
+            allowed =actions_for_member (interaction .guild ,interaction .user )
         if not allowed :
             await _respond (interaction ,
             embed =error_embed (
@@ -521,7 +568,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v16',
+        log.info('modpanel ready msg=%s build=multi-fix-v17',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -705,7 +752,8 @@ class Moderation (commands .Cog ):
         """Выполнить выбранное действие модерации."""
         # 3с-окно Discord закрываем ДО ролей/DM/логов: иначе наказание
         # уже выдано, а клиент рисует «приложение не ответило».
-        await _ack (interaction )
+        if not await _ack_or_busy (interaction ,thinking =True ):
+            return
         guild =interaction .guild
 
         # Лимиты стаффа — защита от «плохих» модераторов (владельца не трогаем).
@@ -2529,21 +2577,19 @@ class UnmuteKindSelect(discord.ui.Select):
         self.panel = panel
 
     async def callback(self, interaction: discord.Interaction):
-        # ACK сразу (<3с), ACL после — иначе SQLite съедает окно Discord.
+        # thinking=True: размут может ждать Discord API; без спиннера
+        # клиент рисует «приложение не ответило».
         action = self.values[0]
         panel = self.panel or getattr(self.view, 'panel', None)
-        await _ack(interaction, thinking=False)
+        if not await _ack_or_busy(interaction, thinking=True):
+            return
         if not await self.cog._ensure_action_acl(interaction, action):
             return
         await self.cog._execute_mod_action(
             interaction, action, self.target_id,
             'Снято через панель', '', proof_link=None)
-        # Основная панель уже сброшена при открытии kind-меню; ещё раз не вредно
         if panel is not None:
-            try:
-                await _silent_reset_panel(interaction, panel)
-            except Exception as ex:
-                log.debug('unmute kind restore: %s', ex)
+            _bg_reset_after_step(interaction, panel, prefer_resend=False)
 
 
 class UnmuteKindView(discord.ui.LayoutView):
@@ -2655,10 +2701,14 @@ async def _push_panel_view(panel, interaction=None):
     """Запушить view в ТО ЖЕ сообщение. Без нового окна.
 
     V2: только view= (без content/embed/attachments).
+    Каждый путь — с коротким timeout: зависший Discord edit не должен
+    держать event-loop и ронять следующий клик («не отвечает»).
     """
+    import asyncio as _aio
     msg = getattr(panel, '_panel_message', None)
     kw = {'view': panel}  # строго только view — иначе селекты мрут
     errors = []
+    _PUSH_TO = 2.0
 
     async def _ok(new_msg):
         if new_msg is not None and hasattr(new_msg, 'id'):
@@ -2678,33 +2728,35 @@ async def _push_panel_view(panel, interaction=None):
                 panel._panel_message_id = new_msg.id
         return True
 
-    if msg is not None and hasattr(msg, 'edit'):
+    async def _try(label, coro):
         try:
-            return await _ok(await msg.edit(**kw))
+            return await _ok(await _aio.wait_for(coro, timeout=_PUSH_TO))
+        except _aio.TimeoutError:
+            errors.append(f'{label}:timeout{_PUSH_TO}s')
+            return False
         except Exception as ex:
-            errors.append(f'msg.edit:{ex}')
+            errors.append(f'{label}:{ex}')
+            return False
+
+    if msg is not None and hasattr(msg, 'edit'):
+        if await _try('msg.edit', msg.edit(**kw)):
+            return True
     root = getattr(panel, '_root_edit', None)
     if root is not None:
-        try:
-            return await _ok(await root(**kw))
-        except Exception as ex:
-            errors.append(f'root:{ex}')
+        if await _try('root', root(**kw)):
+            return True
     fu = getattr(panel, '_mod_followup', None)
     if fu is None and interaction is not None:
         fu = getattr(interaction, 'followup', None)
     mid = getattr(msg, 'id', None) or getattr(panel, '_panel_message_id', None)
     if fu is not None and mid and hasattr(fu, 'edit_message'):
-        try:
-            return await _ok(await fu.edit_message(int(mid), **kw))
-        except Exception as ex:
-            errors.append(f'fu.edit:{ex}')
+        if await _try('fu.edit', fu.edit_message(int(mid), **kw)):
+            return True
     if interaction is not None:
-        try:
-            edit_orig = getattr(interaction, 'edit_original_response', None)
-            if callable(edit_orig):
-                return await _ok(await edit_orig(**kw))
-        except Exception as ex:
-            errors.append(f'orig:{ex}')
+        edit_orig = getattr(interaction, 'edit_original_response', None)
+        if callable(edit_orig):
+            if await _try('orig', edit_orig(**kw)):
+                return True
     log.warning('modpanel push FAILED: %s', '; '.join(errors) or 'no path')
     return False
 
@@ -2714,23 +2766,28 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
 
     После rebuild ОБЯЗАН быть успешный push — иначе custom_id рассинхрон
     и нельзя выбрать участника/действие повторно.
+    Возвращает True/False (успех push) или None (пропуск/отмена).
     """
     import asyncio as _aio
     try:
         if gen is not None and gen != getattr(panel, '_reset_gen', None):
-            return
+            return None
         _bind_live_panel(panel, interaction)
         if hasattr(panel, '_clear_kind_mode'):
             panel._clear_kind_mode()
         guild = getattr(interaction, 'guild', None) or getattr(panel, '_guild', None)
         kept_uid = getattr(panel, 'selected_uid', None)
         kept_pending = getattr(panel, 'pending_action', None)
+        # _rebuild трогает discord.ui — только в event-loop (не to_thread).
+        # Тяжёлый ACL режется кэшем _allowed_cache_key внутри _rebuild.
         panel._rebuild(guild)
         if kept_uid:
             panel.selected_uid = kept_uid
         panel.pending_action = kept_pending
         await _aio.sleep(0)
-        # Даже если поколение сменилось — всё равно пушим: иначе мёртвые селекты
+        # Устаревшее поколение — не пушим (иначе пачка кликов = шторм edit).
+        if gen is not None and gen != getattr(panel, '_reset_gen', None):
+            return None
         pushed = await _push_panel_view(panel, interaction)
         if not pushed:
             log.warning('modpanel reset FAILED push (селекты могут не отвечать)')
@@ -2741,6 +2798,7 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
         else:
             log.info('modpanel reset ok uid=%s msg=%s',
                      kept_uid, getattr(panel._panel_message, 'id', None))
+        return bool(pushed)
     except _aio.CancelledError:
         # rebuild уже мог сменить custom_id — обязаны запушить, иначе мёртвая панель
         try:
@@ -2750,6 +2808,7 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
         raise
     except Exception as _e:
         log.warning('modpanel reset: %s', _e)
+        return False
 
 
 def _schedule_panel_reset(interaction, panel, *, clear_pending=True, delay=0.35):
@@ -2837,35 +2896,67 @@ _MODAL_TITLES = {
 }
 
 
-async def _reset_after_step(interaction, panel, *, prefer_resend=False):
-    """После шага: сброс селектов на ТОЙ ЖЕ панели. Новое окно запрещено.
+async def _reset_after_step(interaction, panel, *, prefer_resend=False,
+                            gen=None):
+    """После шага: один сброс селектов на ТОЙ ЖЕ панели.
 
-    Сразу + запасной через 0.45с — если первый edit не дошёл до Discord,
-    второй клик по Действию всё равно оживёт.
+    Раньше: сразу + ещё через 0.45с → гонка edit'ов, лаг цикла, «не отвечает».
+    Теперь один push; при провале — один запасной через schedule.
+    gen — поколение: устаревший фоновый сброс выходит без edit.
     """
     if panel is None:
+        return
+    if gen is not None and gen != getattr(panel, '_reset_gen', None):
         return
     panel.pending_action = None
     if hasattr(panel, '_clear_kind_mode'):
         panel._clear_kind_mode()
     _bind_live_panel(panel, interaction)
     try:
-        await _silent_reset_panel(interaction, panel)
+        ok = await _silent_reset_panel(interaction, panel, gen=gen)
+        if ok is False and (gen is None
+                            or gen == getattr(panel, '_reset_gen', None)):
+            _schedule_panel_reset(
+                interaction, panel, clear_pending=True, delay=0.5)
     except Exception as ex:
         log.warning('modpanel reset after step: %s', ex)
-    # запасной push новых custom_id (не отменяется — новое поколение)
-    _schedule_panel_reset(interaction, panel, clear_pending=True, delay=0.45)
+        if gen is None or gen == getattr(panel, '_reset_gen', None):
+            _schedule_panel_reset(
+                interaction, panel, clear_pending=True, delay=0.5)
 
 
 def _bg_reset_after_step(interaction, panel, *, prefer_resend=False):
-    """Сброс панели в фоне — не держит колбэк селекта/модалки на event loop."""
+    """Сброс панели в фоне — один task, предыдущий отменяется."""
     if panel is None:
         return
     try:
         import asyncio as _aio
-        _aio.get_running_loop().create_task(
-            _reset_after_step(interaction, panel, prefer_resend=prefer_resend),
-            name='modpanel-bg-reset')
+        _cancel_panel_reset(panel)
+        try:
+            panel._reset_gen = int(getattr(panel, '_reset_gen', 0) or 0) + 1
+        except Exception:
+            panel._reset_gen = 1
+        my_gen = panel._reset_gen
+
+        async def _run():
+            try:
+                # короткая пауза: пачка кликов схлопывается в последний gen
+                await _aio.sleep(0.05)
+                if my_gen != getattr(panel, '_reset_gen', None):
+                    return
+                await _reset_after_step(
+                    interaction, panel, prefer_resend=prefer_resend,
+                    gen=my_gen)
+            except _aio.CancelledError:
+                raise
+            except Exception as _e:
+                log.debug('modpanel bg-reset: %s', _e)
+            finally:
+                if getattr(panel, '_reset_task', None) is _aio.current_task():
+                    panel._reset_task = None
+
+        panel._reset_task = _aio.get_running_loop().create_task(
+            _run(), name='modpanel-bg-reset')
     except Exception:
         _schedule_panel_reset(interaction, panel, clear_pending=True, delay=0.05)
 
@@ -3006,7 +3097,8 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
             return
         if len(kinds) == 1:
             if not interaction.response.is_done():
-                await _ack(interaction, thinking=True)
+                if not await _ack_or_busy(interaction, thinking=True):
+                    return
             await cog._execute_mod_action(
                 interaction, kinds[0][0], prefill,
                 'Снято через панель', '', proof_link=None)
@@ -3066,13 +3158,20 @@ class ModActionSelect(discord.ui.Select):
         view = getattr(self, 'panel', None) or self.view
         # Минимум до send_modal — иначе lag цикла → «Ошибка взаимодействия».
         _cancel_panel_reset(view)
-        try:
-            lag = (datetime.now(timezone.utc) - interaction.created_at).total_seconds()
-            if lag > 1.0:
-                log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят)',
-                            lag)
-        except Exception as _ex:
-            log.debug('modpanel action lag: %s', _ex)
+        lag = _interaction_lag_sec(interaction)
+        if lag > 1.0:
+            log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят)', lag)
+        if lag > 2.2:
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        content=('Бот был занят и не успел ответить Discord. '
+                                 'Выбери действие ещё раз.'),
+                        ephemeral=True)
+                return
+            except Exception as _ex:
+                log.debug('modpanel action busy-nack: %s', _ex)
+                return
         action = self.values[0]
         prefill = ""
         if view is not None:
@@ -3106,13 +3205,10 @@ class ModActionSelect(discord.ui.Select):
                     await _ack(interaction, thinking=False)
                 except Exception as _ex:
                     log.debug('moderation: except@2818: %s', _ex)
-            try:
-                _bind_live_panel(view, interaction)
-                await _silent_reset_panel(interaction, view)
-            except Exception:
-                _schedule_panel_reset(
-                    interaction, view, clear_pending=False, delay=0.2)
+            # pending НЕ сбрасываем — ждём выбор участника
             view.pending_action = action
+            _schedule_panel_reset(
+                interaction, view, clear_pending=False, delay=0.15)
             return
         await _launch_action(self.cog, interaction, action, prefill, panel=view)
 
@@ -3204,7 +3300,8 @@ class ModActionModal(discord.ui.Modal):
         # выходит меню «прикрепить файл» (необязательно, без линка).
 
     async def on_submit(self, interaction: discord.Interaction):
-        await _ack(interaction, thinking=True)
+        if not await _ack_or_busy(interaction, thinking=True):
+            return
         if not await self.cog._ensure_action_acl(interaction, self.action):
             return
         _t = getattr(self, 'target', None)
@@ -3302,6 +3399,17 @@ class ModTargetSelect(discord.ui.UserSelect):
         prefill = getattr(view, 'selected_uid', None) if view is not None else None
         if pending and prefill:
             # Действие уже ждали — модалка / вид мута сразу.
+            # Окно почти сгорело → не открываем форму (Discord откажет).
+            if _interaction_lag_sec(interaction) > 2.2:
+                try:
+                    if not interaction.response.is_done():
+                        await interaction.response.send_message(
+                            content=('Бот был занят и не успел ответить Discord. '
+                                     'Выбери действие ещё раз.'),
+                            ephemeral=True)
+                except Exception as _ex:
+                    log.debug('ModTargetSelect busy-nack: %s', _ex)
+                return
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
         if view is None:
@@ -3485,11 +3593,15 @@ class ModPanelView(discord.ui.LayoutView):
                 target_m = g.get_member(int(self.selected_uid))
             except (TypeError, ValueError):
                 target_m = None
-        try:
-            self.allowed = actions_for_member(g, self.member, target=target_m)
-        except Exception as _ax:
-            log.debug('modpanel rebuild actions: %s', _ax)
-            self.allowed = list(self.base_allowed or [])
+        # кэш: не дёргаем ACL на каждый сброс селектов (лаг цикла)
+        _ck = (str(self.selected_uid or ''), str(self.pending_action or ''))
+        if getattr(self, '_allowed_cache_key', None) != _ck or not self.allowed:
+            try:
+                self.allowed = actions_for_member(g, self.member, target=target_m)
+                self._allowed_cache_key = _ck
+            except Exception as _ax:
+                log.debug('modpanel rebuild actions: %s', _ax)
+                self.allowed = list(self.base_allowed or [])
         # Главная панель ВСЕГДА с полным списком действий.
         # Виды мута/размута — отдельная эфемерка (MuteKindView), иначе
         # после «Мут» пункт «Снять мут» пропадает / панель зависает.

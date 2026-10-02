@@ -119,7 +119,7 @@ check(('_bg_reset_after_step' in _offer_body or '_reset_after_step' in _offer_bo
 check('_send_kind_menu' in mod_src and '_bind_live_panel' in mod_src
       and '_reset_after_step' in mod_src,
       'multi-use: kind-меню отдельно, основная панель сбрасывается')
-check('multi-fix-v16' in mod_src or 'multi-fix-v13' in mod_src,
+check('multi-fix-v17' in mod_src or 'multi-fix-v16' in mod_src or 'multi-fix-v13' in mod_src,
       'build tag multi-fix для проверки деплоя')
 check('timeout=300' in mod_src,
       'панель живёт 5 минут')
@@ -157,7 +157,7 @@ check('_push_panel_view' in mod_src,
       'push панели после rebuild — без рассинхрона custom_id')
 check('_panel_message_id' in mod_src,
       'id основной панели зафиксирован — kind-меню его не ворует')
-check('multi-fix-v16' in mod_src or 'multi-fix-v13' in mod_src,
+check('multi-fix-v17' in mod_src or 'multi-fix-v16' in mod_src or 'multi-fix-v13' in mod_src,
       'build tag multi-fix для проверки деплоя')
 mks = mod_src[mod_src.index('class MuteKindSelect'):
               mod_src.index('class MuteKindView')]
