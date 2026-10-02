@@ -494,7 +494,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v17',
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v18',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None),
                  getattr(target, 'id', None))
@@ -568,7 +568,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v17',
+        log.info('modpanel ready msg=%s build=multi-fix-v18',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -2529,6 +2529,17 @@ class MuteKindSelect(discord.ui.Select):
         action = self.values[0]
         # MuteKindView.panel → основная ModPanelView (не сама kind-view)
         panel = self.panel or getattr(self.view, 'panel', None)
+        lag = _interaction_lag_sec(interaction)
+        if lag > 2.2:
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        content=('Бот был занят и не успел ответить Discord. '
+                                 'Выбери вид мута ещё раз.'),
+                        ephemeral=True)
+            except Exception as _ex:
+                log.debug('MuteKindSelect busy-nack: %s', _ex)
+            return
         await _offer_mod_form(
             interaction, self.cog, action, self.target_id, panel=panel)
 
@@ -2709,6 +2720,11 @@ async def _push_panel_view(panel, interaction=None):
     V2: только view= (без content/embed/attachments).
     Каждый путь — с коротким timeout: зависший Discord edit не должен
     держать event-loop и ронять следующий клик («не отвечает»).
+
+    Важно: edit_original / followup на «чужой» message (kind-меню,
+    slash-ACK) — это НЕ успех. Раньше _ok возвращал True при id≠want
+    → rebuild уже сменил custom_id, а Discord-панель осталась со старыми
+    → мёртвые селекты.
     """
     import asyncio as _aio
     msg = getattr(panel, '_panel_message', None)
@@ -2716,15 +2732,19 @@ async def _push_panel_view(panel, interaction=None):
     errors = []
     _PUSH_TO = 2.0
 
-    async def _ok(new_msg):
+    async def _ok(new_msg, *, known_target=False):
+        """known_target=True: edit уже ушёл в известное panel-сообщение."""
+        if known_target:
+            return True
         if new_msg is not None and hasattr(new_msg, 'id'):
             want = getattr(panel, '_panel_message_id', None)
             try:
                 if want is not None and int(new_msg.id) != int(want):
                     log.warning(
-                        'modpanel push: ответили msg=%s, ждали %s — не переезжаем',
+                        'modpanel push: ответили msg=%s, ждали %s — провал '
+                        '(не мигрируем, селекты иначе умрут)',
                         getattr(new_msg, 'id', None), want)
-                    return True
+                    return False
             except Exception as _ex:
                 log.debug('moderation: except@2392: %s', _ex)
             panel._panel_message = new_msg
@@ -2734,9 +2754,11 @@ async def _push_panel_view(panel, interaction=None):
                 panel._panel_message_id = new_msg.id
         return True
 
-    async def _try(label, coro):
+    async def _try(label, coro, *, known_target=False):
         try:
-            return await _ok(await _aio.wait_for(coro, timeout=_PUSH_TO))
+            return await _ok(
+                await _aio.wait_for(coro, timeout=_PUSH_TO),
+                known_target=known_target)
         except _aio.TimeoutError:
             errors.append(f'{label}:timeout{_PUSH_TO}s')
             return False
@@ -2744,12 +2766,14 @@ async def _push_panel_view(panel, interaction=None):
             errors.append(f'{label}:{ex}')
             return False
 
+    # msg.edit / _root_edit — цель уже привязана к панели; id ответа
+    # Discord может врать, но view уже на том же message.
     if msg is not None and hasattr(msg, 'edit'):
-        if await _try('msg.edit', msg.edit(**kw)):
+        if await _try('msg.edit', msg.edit(**kw), known_target=True):
             return True
     root = getattr(panel, '_root_edit', None)
     if root is not None:
-        if await _try('root', root(**kw)):
+        if await _try('root', root(**kw), known_target=True):
             return True
     fu = getattr(panel, '_mod_followup', None)
     if fu is None and interaction is not None:
@@ -2797,20 +2821,34 @@ async def _silent_reset_panel(interaction, panel, *, gen=None):
         pushed = await _push_panel_view(panel, interaction)
         if not pushed:
             log.warning('modpanel reset FAILED push (селекты могут не отвечать)')
+            # gen=None (untracked target-refresh и т.п.) — один запасной schedule.
+            # gen задан — caller (_schedule/_reset_after_step) сам ретраит;
+            # schedule изнутри tracked-task отменил бы сам себя через cancel.
             if gen is None:
                 _schedule_panel_reset(
                     interaction, panel,
                     clear_pending=(kept_pending is None), delay=0.4)
         else:
+            try:
+                panel._reset_push_retrying = False
+            except Exception:
+                pass
             log.info('modpanel reset ok uid=%s msg=%s',
                      kept_uid, getattr(panel._panel_message, 'id', None))
         return bool(pushed)
     except _aio.CancelledError:
-        # rebuild уже мог сменить custom_id — обязаны запушить, иначе мёртвая панель
+        # rebuild уже мог сменить custom_id. _cancel_panel_reset всегда
+        # бампит gen ДО cancel, поэтому проверка gen== бессмысленна.
+        # Пушим только если нет живого successor-task — иначе stale push
+        # перетирает свежий view. Нет successor (напр. lag-nack после
+        # cancel) — обязаны запушить, иначе custom_id рассинхрон.
         try:
-            await _push_panel_view(panel, interaction)
+            newer = getattr(panel, '_reset_task', None)
+            cur = _aio.current_task()
+            if newer is None or newer.done() or newer is cur:
+                await _push_panel_view(panel, interaction)
         except Exception as _ex:
-            log.debug('moderation: except@2468: %s', _ex)
+            log.debug('moderation: cancel-push: %s', _ex)
         raise
     except Exception as _e:
         log.warning('modpanel reset: %s', _e)
@@ -2846,9 +2884,26 @@ def _schedule_panel_reset(interaction, panel, *, clear_pending=True, delay=0.35)
                 panel, 'pending_action', None)
             panel.selected_uid = kept_uid
             panel.pending_action = kept_pending
-            await _silent_reset_panel(interaction, panel, gen=my_gen)
+            ok = await _silent_reset_panel(interaction, panel, gen=my_gen)
             if my_gen != getattr(panel, '_reset_gen', None):
                 return
+            # Push упал после rebuild — один in-task retry (без self-cancel).
+            if ok is False and not getattr(panel, '_reset_push_retrying', False):
+                try:
+                    panel._reset_push_retrying = True
+                except Exception:
+                    pass
+                await _aio.sleep(0.4)
+                if my_gen != getattr(panel, '_reset_gen', None):
+                    return
+                panel.selected_uid = kept_uid
+                panel.pending_action = kept_pending
+                ok = await _silent_reset_panel(interaction, panel, gen=my_gen)
+            if ok:
+                try:
+                    panel._reset_push_retrying = False
+                except Exception:
+                    pass
             panel.selected_uid = kept_uid
             panel.pending_action = kept_pending
         except _aio.CancelledError:
@@ -3420,12 +3475,10 @@ class ModTargetSelect(discord.ui.UserSelect):
             return
         if view is None:
             return
-        # Rebuild в фоне — await здесь конкурирует с следующим кликом «Действие»
+        # Tracked bg-reset: раньше create_task(_silent_reset) без _reset_task
+        # не отменялся кликом «Действие» → гонка rebuild/push, мёртвые селекты.
         try:
-            import asyncio as _aio
-            _aio.get_running_loop().create_task(
-                _silent_reset_panel(interaction, view),
-                name='modpanel-target-status')
+            _bg_reset_after_step(interaction, view, prefer_resend=False)
         except Exception as _re:
             log.warning('ModTargetSelect status refresh: %s', _re)
 

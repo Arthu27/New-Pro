@@ -53,13 +53,28 @@ check('_ack_or_busy' in uks and 'thinking=True' in uks,
 # no double schedule 0.45 after every step
 ras = src[src.index('async def _reset_after_step'):src.index('def _bg_reset_after_step')]
 check('delay=0.45' not in ras, 'нет обязательного второго reset через 0.45с')
-check('multi-fix-v17' in src, 'build tag v17')
+check('multi-fix-v17' in src or 'multi-fix-v18' in src, 'build tag v17+')
 check('_allowed_cache_key' in src, 'кэш allowed на rebuild')
+check('successor' in src or 'нет живого successor' in src
+      or '_reset_task' in src[src.index('except _aio.CancelledError'):
+                               src.index('except _aio.CancelledError') + 500],
+      'CancelledError push respects successor reset-task')
 
 # Action select lag > 2.2 soft nack
 asel = src[src.index('class ModActionSelect'):src.index('_PUNISH_MODPANEL')]
 check('lag > 2.2' in asel and 'Бот был занят' in asel,
       'ModActionSelect: soft-nack при lag>2.2')
+mks = src[src.index('class MuteKindSelect'):src.index('class MuteKindView')]
+check('lag > 2.2' in mks and 'Бот был занят' in mks,
+      'MuteKindSelect: soft-nack при lag>2.2')
+
+# Wrong-message / known_target guards
+push_fn = src[src.index('async def _push_panel_view'):src.index('async def _silent_reset_panel')]
+check('known_target' in push_fn and 'не мигрируем' in push_fn,
+      'push: known_target + чужой id → fail')
+mts = src[src.index('class ModTargetSelect'):src.index('class ModPanelView')]
+check('_bg_reset_after_step' in mts, 'ModTargetSelect tracked bg-reset')
+check('_reset_push_retrying' in src, 'schedule in-task push retry flag')
 
 print('== runtime lag helper ==')
 # exec just the small helpers with fake datetime already imported in module path

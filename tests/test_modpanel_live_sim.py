@@ -175,7 +175,7 @@ check(view.action_select is not None, 'есть action_select (не кнопки
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
 _ms = open(os.path.join(ROOT, 'cogs/moderation.py')).read()
-check('multi-fix-v17' in _ms or 'multi-fix-v16' in _ms or 'multi-fix-v13' in _ms,
+check('multi-fix-v18' in _ms or 'multi-fix-v17' in _ms or 'multi-fix-v16' in _ms or 'multi-fix-v13' in _ms,
       'build tag multi-fix-v16')
 
 
