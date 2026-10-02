@@ -549,6 +549,17 @@ def _role_ids_for_overrides(role_ids):
     return out
 
 
+# Пары «наказание → снятие» для меню /modpanel.
+# Лимит снятия часто 0 (= без квоты) и _clean_limits его не сохраняет —
+# тогда scoped по overrides содержит ban, но не unban, и пункт «Снять бан»
+# пропадает у куратора/админа (жалоба 2026-10-02).
+_SCOPED_PAIRS = (
+    ('ban', 'unban'),
+    ('mute', 'unmute'),
+    ('warn', 'unwarn'),
+)
+
+
 def role_scoped_actions(guild_id, role_ids=()):
     """Какие действия доступны модератору через /modpanel.
 
@@ -558,6 +569,8 @@ def role_scoped_actions(guild_id, role_ids=()):
 
     Старший тир (куратор > хелпер/mod) ГЛАВНЕЕ: override младших ролей
     не сужает меню куратору.
+
+    Если в scoped есть наказание — добавляем парное снятие (ban→unban…).
     """
     overrides = get_role_overrides(guild_id)
     scoped = None
@@ -568,6 +581,10 @@ def role_scoped_actions(guild_id, role_ids=()):
                 | set(ov.get('durations') or ()))
         if keys:
             scoped = (scoped or set()) | keys
+    if scoped:
+        for give, lift in _SCOPED_PAIRS:
+            if give in scoped:
+                scoped.add(lift)
     return scoped
 
 

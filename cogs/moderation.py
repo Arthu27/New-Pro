@@ -2489,6 +2489,12 @@ def actions_for_member(guild, member, target=None):
     if scoped is None:
         base = list(MODPANEL_ACTIONS)
     else:
+        # ban в лимитах → unban в меню (квота снятия часто 0 и не в overrides)
+        scoped = set(scoped)
+        if 'ban' in scoped:
+            scoped.add('unban')
+        if 'mute' in scoped:
+            scoped.add('unmute')
         base = [a for a in MODPANEL_ACTIONS if a[3] in scoped]
     out = [a for a in base if _action_acl_allows(guild.id, member, a[0])]
     # Варн в меню — только куратор/ассистент/админ, и только когда выбран
