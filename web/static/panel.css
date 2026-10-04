@@ -594,15 +594,18 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
   color: var(--muted); font-size: .78rem; font-weight: 700;
 }
 .sq-link:hover { color: var(--ink); background: rgba(255,255,255,.05); }
-.sq-btn, .sq-table button.sq-btn, button.sq-btn {
+.sq-btn, a.sq-btn, .sq-table button.sq-btn, button.sq-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   height: 28px; padding: 0 10px; border-radius: 3px !important;
   border: 1px solid var(--line-2); background: transparent; color: var(--ink-2);
   font-size: .75rem; font-weight: 700; transform: none !important;
+  text-decoration: none; box-sizing: border-box;
 }
-.sq-btn:hover, button.sq-btn:hover {
+.sq-btn:hover, a.sq-btn:hover, button.sq-btn:hover {
   border-color: var(--ink); color: var(--ink); background: rgba(255,255,255,.06);
   transform: none !important;
 }
+.proof-actions .sq-btn, .proof-actions a.sq-btn { height: 34px; padding: 0 12px; font-size: .8rem; }
 .empty-sm { padding: 28px 16px; }
 .empty-sm::before { width: 28px; height: 28px; border-radius: 4px; margin-bottom: 10px; }
 
