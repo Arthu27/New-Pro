@@ -53,10 +53,23 @@ check("for_action='timeout'" in to or 'for_action="timeout"' in to
       or "for_action='timeout'" in src,
       'timeout selective clear')
 
-# vmute: no _give_punish_role on hot path
+# vmute: no _give_punish_role on hot path; mic in aftermath
 vm = src[src.index('elif action =="vmute"'):src.index('elif action =="vunmute"')]
 check('_give_punish_role' not in vm, 'vmute skips heavy give_punish_role')
 check('add_roles' in vm and '_mute_aftermath' in vm, 'vmute fast add_roles + aftermath')
+check('do_server_mute=_in_voice' in vm, 'vmute mic deferred to aftermath')
+check("label='vmute server-mute'" not in vm, 'vmute no hot-path server-mute')
+
+# ban: respond before save_case / DM
+bn = src[src.index('if action =="ban"'):src.index('elif action =="kick"')]
+check('_ban_aftermath' in bn and 'await _respond' in bn, 'ban respond then aftermath')
+check('save_case' not in bn.split('await _respond')[0], 'ban: no save_case before respond')
+check("name='modpanel-ban-aftermath'" in src, 'ban aftermath task name')
+
+# open: skip second ACL when no target
+check("_allowed_cache_key = ('', '')" in src or '_allowed_cache_key = (\'\', \'\')' in src,
+      'open skips second ACL without target')
+check('if not _acked:' in src and '_ack_or_busy' in src, 'skip double ACK when modal done')
 
 # watchlist gated at 2+
 wl = src[src.index('async def _maybe_watchlist_after_mute'):src.index(

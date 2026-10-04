@@ -783,8 +783,15 @@ class Moderation (commands .Cog ):
         """Выполнить выбранное действие модерации."""
         # 3с-окно Discord закрываем ДО ролей/DM/логов: иначе наказание
         # уже выдано, а клиент рисует «приложение не ответило».
-        if not await _ack_or_busy (interaction ,thinking =True ):
-            return
+        # Модалка уже могла ACK — второй defer не нужен.
+        _acked = False
+        try:
+            _acked = bool(interaction.response.is_done())
+        except Exception:
+            _acked = False
+        if not _acked:
+            if not await _ack_or_busy(interaction, thinking=True):
+                return
         guild =interaction .guild
 
         # Лимиты стаффа — защита от «плохих» модераторов (владельца не трогаем).
@@ -997,6 +1004,7 @@ class Moderation (commands .Cog ):
                         ephemeral =True )
                         return
                     from services.discord_retry import call as _dcall
+                    import asyncio as _aio_ban
                     await _dcall(
                         lambda: user.add_roles(
                             _brole, reason=reason or 'бан'),
@@ -1011,15 +1019,22 @@ class Moderation (commands .Cog ):
                                 label='ban move_to')
                     except Exception as _vdisc :
                         log .debug (f'[MODPANEL] ban voice kick: {_vdisc}')
-                    try :
-                        from services .staff_limits import record_hit as _sl_rec
-                        _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
-                    except Exception as _re :
-                        log .debug (f'[STAFF_LIMIT] ban rec: {_re}')
                     msg =(f"роль бана «{_brole .name }» выдана — доступ закрыт "
                           "самой ролью, каналы бот не трогает. Апелляция — "
                           "кнопкой в ЛС бота; комната апелляции откроется "
                           "после подачи заявки")
+                    confirm = mod_result_embed(
+                        title='Бан', user=user,
+                        body=(msg + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        reason=reason, case_id=0)
+                    await _respond(interaction, embed=confirm, ephemeral=True)
+                    self._schedule_purge_after_punish(interaction, user)
+                    _aio_ban.create_task(self._ban_aftermath(
+                        interaction=interaction, guild=guild, user=user,
+                        reason=reason, proof_link=proof_link),
+                        name='modpanel-ban-aftermath')
+                    return
                 elif action =="kick":
                     # Система kick полностью отключена решением владельца (2026-08):
                     # опция убрана из меню, ручные вызовы — вежливый отказ.
@@ -1159,19 +1174,9 @@ class Moderation (commands .Cog ):
                     self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
                     _in_voice = bool(getattr(
                         getattr(user, 'voice', None), 'channel', None))
-                    # микрофон — на горячем пути только если уже в войсе (1 RTT)
-                    _mic = False
-                    if _in_voice:
-                        try:
-                            await _dcall(
-                                lambda: user.edit(
-                                    mute=True, reason=reason or 'войс-мут'),
-                                label='vmute server-mute')
-                            _mic = True
-                        except Exception as _ve:
-                            log.warning('[MODPANEL] vmute server-mute: %s', _ve)
+                    # Микрофон — в фоне (как timeout): ответ модеру без +1 RTT.
                     msg =(f"войс-мут «{_vrole .name }» на {minutes } мин — роль выдана"
-                          +(" · микрофон закрыт" if _mic else "")
+                          +(" · глушу микрофон…" if _in_voice else "")
                           +", снимется по сроку")
                     confirm = mod_result_embed(
                         title='Войс-мут', user=user,
@@ -1184,7 +1189,7 @@ class Moderation (commands .Cog ):
                         interaction=interaction, guild=guild, user=user,
                         action=action, reason=reason, amount=amount,
                         proof_link=proof_link, case_minutes=_case_minutes,
-                        do_server_mute=False),
+                        do_server_mute=_in_voice),
                         name='modpanel-mute-aftermath')
                     return
                 elif action =="vunmute":
@@ -2078,6 +2083,71 @@ class Moderation (commands .Cog ):
                 log.warning('[MODPANEL] mute демка: %s', _pe)
         except Exception as _ex:
             log.warning('[MODPANEL] mute aftermath: %s', _ex)
+
+    async def _ban_aftermath(
+            self, *, interaction, guild, user, reason, proof_link):
+        """Фон после быстрого бана: лимит, дело, ЛС+апелляция, лог, демка."""
+        import asyncio as _aio
+        case_id = 0
+        try:
+            try:
+                from services.staff_limits import record_hit as _sl_rec
+                _sl_rec(guild.id, interaction.user.id, 'ban', 1)
+            except Exception as _re:
+                log.debug('[STAFF_LIMIT] ban rec: %s', _re)
+            try:
+                _target_name = (
+                    getattr(user, 'display_name', None)
+                    or getattr(user, 'name', None)
+                    or str(getattr(user, 'id', '') or ''))
+                case_id = await _aio.to_thread(
+                    self.save_case, guild.id, 'ban', user.id,
+                    interaction.user.id, reason,
+                    getattr(interaction.user, 'display_name', None)
+                    or str(interaction.user),
+                    None, _target_name)
+            except Exception as _case_e:
+                log.warning('[MODPANEL] ban save_case: %s', _case_e)
+            try:
+                dm = mod_dm_embed('ban', guild, interaction.user, reason)
+                _dm_view = None
+                try:
+                    from cogs.appeals import AppealDMView
+                    _dm_view = AppealDMView()
+                except Exception as _imp_e:
+                    log.debug('[MODPANEL] ban dm view: %s', _imp_e)
+                await self.send_dm(user, dm, view=_dm_view)
+            except Exception as _dm_e:
+                log.info('[MODPANEL] ban DM: %s', _dm_e)
+            try:
+                from cogs.logs import send_action_log
+                await send_action_log(
+                    guild, 'ban', user, interaction.user,
+                    reason=reason, case_id=case_id, proof=proof_link)
+            except Exception as _log_e:
+                log.warning('[MODPANEL] ban send_log: %s', _log_e)
+            try:
+                from services.panel_notify import notify_panel_event as _np
+                _np(interaction, 'mod_action',
+                    f'Апелляция: {user.display_name}',
+                    f'Модератор: {interaction.user.display_name} · '
+                    f'Причина: {reason} · Дело #{case_id}')
+            except Exception as _ex:
+                log.debug('ban panel_notify: %s', _ex)
+            try:
+                from cogs.proof_cog import offer_proof_after_punish
+                await offer_proof_after_punish(
+                    interaction, user=user, action='ban',
+                    reason=reason, case_id=case_id)
+                if (proof_link or '').strip():
+                    from cogs.proof_cog import try_deliver_proof
+                    await try_deliver_proof(
+                        self.bot, guild, interaction.user, user,
+                        'апелляция', reason, link=proof_link)
+            except Exception as _pe:
+                log.warning('[MODPANEL] ban демка: %s', _pe)
+        except Exception as _ex:
+            log.warning('[MODPANEL] ban aftermath: %s', _ex)
 
     async def _drop_roles (self ,guild ,user ,roles ):
         """Снять роли наказания и почистить журнал сроков."""
@@ -3877,6 +3947,12 @@ class ModPanelView(discord.ui.LayoutView):
         # kinds считаются в to_thread на /modpanel open — не блокируем __init__.
         self._mute_kinds_cache = list(mute_kinds) if mute_kinds else None
         self._unmute_kinds_cache = list(unmute_kinds) if unmute_kinds else None
+        # Без target — не дёргаем actions_for_member второй раз в _rebuild.
+        # С target= — нужен ACL с целью (варн по своему стаффу).
+        if preselect is None and self.allowed:
+            self._allowed_cache_key = ('', '')
+        else:
+            self._allowed_cache_key = None
         try:
             from services.staff_hierarchy import actor_panel_role, LABELS
             guild = getattr(member, 'guild', None)
