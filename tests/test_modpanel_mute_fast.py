@@ -47,8 +47,11 @@ to = src[src.index('elif action == "timeout"'):src.index('elif action == "mute_c
 check('gather' in to and 'add_roles' in to, 'timeout parallel role adds')
 check('_mute_aftermath' in to and 'do_native_timeout=True' in to,
       'timeout native deferred to aftermath')
-check('await mute_state.clear_all_mutes' not in to,
+check('await mute_state.clear_all_mutes' not in to.split('_clear_mutes_if_needed')[0],
       'timeout uses _clear_mutes_if_needed not blind clear')
+check("for_action='timeout'" in to or 'for_action="timeout"' in to
+      or "for_action='timeout'" in src,
+      'timeout selective clear')
 
 # vmute: no _give_punish_role on hot path
 vm = src[src.index('elif action =="vmute"'):src.index('elif action =="vunmute"')]

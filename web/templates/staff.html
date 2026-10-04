@@ -2,9 +2,11 @@
 {% block title %}Staff{% endblock %}
 {% block heading %}Staff{% endblock %}
 {% block body %}
-<p class="lead">Команда сервера и что она делала. Клик по карточке — профиль. Staff Admin и Staff Assistent выше Admin.</p>
+<p class="lead">Активность команды: меры, чат, войс. Топы по ролям · неделя / месяц.</p>
 
-<section class="panel rise">
+{% include '_activity.html' %}
+
+<section class="panel rise" style="margin-top:12px">
   <h2>Команда на сервере <span class="count">{{ people|length }}</span></h2>
   {% if error %}<div class="flash err" style="margin:12px">{{ error }}</div>{% endif %}
   {% if not people %}<div class="empty">Staff не загрузился</div>
@@ -27,8 +29,6 @@
   </div>
   {% endif %}
 </section>
-
-{% include '_activity.html' %}
 
 <section class="panel rise" style="margin-top:12px">
   <h2>Лента staff <span class="count">{{ feed|length }}</span></h2>

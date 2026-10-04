@@ -1277,6 +1277,28 @@ def _mod_activity(gid, days):
     return sorted(stats.values(), key=lambda x: (-x['total'], str(x['name']).lower()))
 
 
+def _staff_board_for(gid, days, people):
+    """Красивая сводка: меры + чат + войс, топы по ролям."""
+    try:
+        from services.staff_board import build_staff_board
+        return build_staff_board(
+            guild_id=gid,
+            days=days,
+            people=people or [],
+            mod_rows=_mod_activity(gid, days),
+            hidden_kinds=_viewer_hidden_kinds(),
+        )
+    except Exception:
+        return {
+            'summary': {
+                'staff_active': 0, 'staff_total': len(people or []),
+                'actions': 0, 'messages': 0, 'voice_s': 0, 'voice': '0 мин',
+                'days': days,
+            },
+            'rows': [], 'podium': [], 'role_tops': [], 'by_role': {},
+        }
+
+
 def _is_today(ts):
     d = _parse_ts(ts)
     if not d:
@@ -2469,12 +2491,15 @@ def logs():
         e['when'] = _fmt(e.get('timestamp'))
         e['user_name'] = _best_name(e.get('user_name'), e.get('user_id'), book)
         e['user_id'] = str(e.get('user_id') or '')
+    people, _err = _list_login_people()
     return render_template(
         'logs.html', rows=rows, feed=feed, joins=joins,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(hidden),
         activity=_mod_activity(gid, days),
+        staff_board=_staff_board_for(gid, days, people),
         span=span,
+        role_filter=(request.args.get('role') or '').strip() or None,
     )
 
 
@@ -2487,9 +2512,13 @@ def staff_page():
     days = 30 if span == 'month' else 7
     feed = _staff_feed(gid, 100)
     people, err = _list_login_people()
+    role_filter = (request.args.get('role') or '').strip() or None
     return render_template(
         'staff.html', feed=feed, people=people, error=err,
-        activity=_mod_activity(gid, days), span=span,
+        activity=_mod_activity(gid, days),
+        staff_board=_staff_board_for(gid, days, people),
+        span=span,
+        role_filter=role_filter,
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
 

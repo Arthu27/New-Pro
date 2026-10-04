@@ -497,16 +497,30 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v18',
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v19',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None),
                  getattr(target, 'id', None))
-        try :
-            import asyncio as _aio
-            allowed =await _aio .to_thread (
-                actions_for_member ,interaction .guild ,interaction .user )
-        except Exception :
-            allowed =actions_for_member (interaction .guild ,interaction .user )
+        import asyncio as _aio
+
+        def _prep_open():
+            allowed_local = actions_for_member(
+                interaction.guild, interaction.user)
+            mute_k = unmute_k = None
+            if allowed_local:
+                vals = {a[0] for a in allowed_local}
+                gid = getattr(interaction.guild, 'id', None)
+                if gid and 'mute' in vals:
+                    mute_k = mute_kinds_for(gid, interaction.user)
+                if gid and 'unmute' in vals:
+                    unmute_k = unmute_kinds_for(gid, interaction.user)
+            return allowed_local, mute_k, unmute_k
+
+        try:
+            allowed, mute_k, unmute_k = await _aio.to_thread(_prep_open)
+        except Exception:
+            allowed = actions_for_member(interaction.guild, interaction.user)
+            mute_k = unmute_k = None
         if not allowed :
             await _respond (interaction ,
             embed =error_embed (
@@ -520,7 +534,9 @@ class Moderation (commands .Cog ):
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
         try:
-            view = ModPanelView(self, interaction.user, allowed, preselect=target)
+            view = ModPanelView(
+                self, interaction.user, allowed, preselect=target,
+                mute_kinds=mute_k, unmute_kinds=unmute_k)
         except Exception as _vex:
             log.exception('modpanel view: %s', _vex)
             await _respond(
@@ -534,9 +550,21 @@ class Moderation (commands .Cog ):
         view._mod_followup = interaction.followup
         banner = None
         try:
-            banner = view._banner_file or view._make_banner_file()
+            # Только из process-cache — без PIL на горячем пути открытия.
+            banner = view._banner_file or view._make_banner_file(cache_only=True)
         except Exception as _bex:
             log.warning('modpanel banner: %s — открываем без баннера', _bex)
+        # Если кэш пуст — греем в фоне, панель уже на экране.
+        if banner is None:
+            try:
+                from services.menu_banners import warm_menu_banners as _warm_b
+
+                async def _warm():
+                    await _aio.to_thread(_warm_b, ('modpanel',))
+
+                _aio.create_task(_warm(), name='modpanel-banner-warm')
+            except Exception as _bw:
+                log.debug('modpanel banner warm bg: %s', _bw)
         # LayoutView / Components V2: только view (+ attachments).
         # НЕ передавать embed= вместе с embeds= — discord.py падает
         # «Cannot mix embed and embeds», панель уезжает в followup,
@@ -571,7 +599,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v18',
+        log.info('modpanel ready msg=%s build=multi-fix-v19',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -1007,7 +1035,8 @@ class Moderation (commands .Cog ):
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))  # Discord — до 28 дней
                     _case_minutes = minutes
-                    await self._clear_mutes_if_needed(guild, user)
+                    await self._clear_mutes_if_needed(
+                        guild, user, for_action='timeout')
                     from services.discord_retry import call as _dcall
                     _extra_roles = []
                     _role_jobs = []
@@ -1077,7 +1106,8 @@ class Moderation (commands .Cog ):
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))
                     _case_minutes = minutes
-                    await self._clear_mutes_if_needed(guild, user)
+                    await self._clear_mutes_if_needed(
+                        guild, user, for_action='mute_chat')
                     from services.discord_retry import call as _dcall
                     if _mrole not in (getattr(user, 'roles', None) or []):
                         await _dcall(
@@ -1118,7 +1148,8 @@ class Moderation (commands .Cog ):
                         'Человек не на сервере — войс-мут выдать нельзя.'),
                         ephemeral =True )
                         return
-                    await self._clear_mutes_if_needed(guild, user)
+                    await self._clear_mutes_if_needed(
+                        guild, user, for_action='vmute')
                     from services.discord_retry import call as _dcall
                     if _vrole not in (getattr(user, 'roles', None) or []):
                         await _dcall(
@@ -1921,12 +1952,23 @@ class Moderation (commands .Cog ):
             pass
         return False
 
-    async def _clear_mutes_if_needed(self, guild, user):
-        """Снять старые муты только если они висят — 0 RTT на чистом участнике."""
+    async def _clear_mutes_if_needed(self, guild, user, *, for_action=None):
+        """Снять старые муты только если висят. Селективно под вид мута — меньше RTT."""
         if not self._member_has_any_mute(guild, user):
             return
         try:
             from services import mute_state
+            if for_action == 'mute_chat':
+                await mute_state.clear_voice_mute(guild, user)
+                try:
+                    if getattr(user, 'timed_out_until', None):
+                        await user.timeout(None, reason='снятие пересекающегося таймаута')
+                except Exception as _te:
+                    log.debug('[MODPANEL] clear timeout before chat mute: %s', _te)
+                return
+            if for_action == 'vmute':
+                await mute_state.clear_chat_mute(guild, user)
+                return
             await mute_state.clear_all_mutes(guild, user)
         except Exception as _mse:
             log.debug('[MODPANEL] clear_mutes_if_needed: %s', _mse)
@@ -3801,7 +3843,8 @@ class ModPanelView(discord.ui.LayoutView):
     Фолбек panel_embed/panel_payload — если V2 не приняли (старый клиент).
     """
 
-    def __init__(self, cog, member=None, allowed=None, preselect=None):
+    def __init__(self, cog, member=None, allowed=None, preselect=None,
+                 mute_kinds=None, unmute_kinds=None):
         super().__init__(timeout=300)  # 5 минут — любые действия без нового окна
         self.cog = cog
         # base_allowed — без учёта выбранной цели; warn добавится в _rebuild
@@ -3831,8 +3874,9 @@ class ModPanelView(discord.ui.LayoutView):
         self._banner_bytes = None
         self._use_v2 = True
         self._actor_label = ''
-        self._mute_kinds_cache = None
-        self._unmute_kinds_cache = None
+        # kinds считаются в to_thread на /modpanel open — не блокируем __init__.
+        self._mute_kinds_cache = list(mute_kinds) if mute_kinds else None
+        self._unmute_kinds_cache = list(unmute_kinds) if unmute_kinds else None
         try:
             from services.staff_hierarchy import actor_panel_role, LABELS
             guild = getattr(member, 'guild', None)
@@ -3840,25 +3884,12 @@ class ModPanelView(discord.ui.LayoutView):
             self._actor_label = LABELS.get(tier, '') or ''
         except Exception:
             self._actor_label = ''
-        # Виды мута/размута — один раз при открытии панели (не на каждый клик).
-        try:
-            guild = getattr(member, 'guild', None)
-            gid = getattr(guild, 'id', None)
-            vals = {a[0] for a in (allowed or [])}
-            if gid and member is not None:
-                if 'mute' in vals:
-                    self._mute_kinds_cache = mute_kinds_for(gid, member)
-                if 'unmute' in vals:
-                    self._unmute_kinds_cache = unmute_kinds_for(gid, member)
-        except Exception as _kx:
-            log.debug('modpanel kinds cache: %s', _kx)
         self._rebuild(None)
-        # File для первого ответа /modpanel (process-cache байтов).
-        # На refresh баннер НЕ перезаливаем — keep message.attachments.
+        # Баннер — только из process-cache (PIL уже прогрет в cog_load).
         try:
-            self._make_banner_file(force=False)
+            self._make_banner_file(force=False, cache_only=True)
         except Exception as _ex:
-            log.debug('moderation: except@3056: %s', _ex)
+            log.debug('moderation: banner cache: %s', _ex)
 
     def _action_label(self, action):
         for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):
@@ -3922,8 +3953,12 @@ class ModPanelView(discord.ui.LayoutView):
         embed.set_image(url=f'attachment://{name}')
         return embed, discord.File(bio, filename=name)
 
-    def _make_banner_file(self, *, force: bool = False):
-        """Баннер для вложений. PIL — только один раз, дальше кэш байтов."""
+    def _make_banner_file(self, *, force: bool = False, cache_only: bool = False):
+        """Баннер для вложений. PIL — только один раз, дальше кэш байтов.
+
+        cache_only=True — не генерировать PIL на горячем пути /modpanel;
+        если process-cache пуст, вернём None и откроем панель без баннера.
+        """
         from services.v2_layouts import SHOW_MENU_BANNER
         if not SHOW_MENU_BANNER:
             self._banner_name = None
@@ -3935,6 +3970,21 @@ class ModPanelView(discord.ui.LayoutView):
             bio = _io.BytesIO(self._banner_bytes)
             bio.seek(0)
             self._banner_file = discord.File(bio, filename=self._banner_name)
+            return self._banner_file
+        if cache_only and not force:
+            try:
+                from services.menu_banners import _BYTES_CACHE
+                raw = _BYTES_CACHE.get('modpanel')
+            except Exception:
+                raw = None
+            if not raw:
+                self._banner_file = None
+                return None
+            self._banner_bytes = raw
+            self._banner_name = self._banner_name or 'hakumo_modpanel_banner_v15.png'
+            out = _io.BytesIO(raw)
+            out.seek(0)
+            self._banner_file = discord.File(out, filename=self._banner_name)
             return self._banner_file
         from services.menu_banners import menu_banner_file
         bio, name = menu_banner_file('modpanel')
