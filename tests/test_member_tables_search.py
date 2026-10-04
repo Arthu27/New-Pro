@@ -38,8 +38,9 @@ check('/api/users/search?q=' in tpl and 'limit=24' in tpl, 'live Discord search'
 check('filterTables' in tpl, 'local table filter while typing')
 
 check('profiles-table' in partial and 'data-find=' in partial, 'partial has searchable rows')
-check('mp-role-panel' in css, 'panel role badge style')
-check('panel.css' in base and '?v=21' in base, 'CSS cache bump v=21')
+check('sq-table' in partial and 'sq-stat' in partial, 'square table markup')
+check('sq-wrap' in css and 'border-radius: 4px' in css, 'square table styles')
+check('panel.css' in base and '?v=22' in base, 'CSS cache bump v=22')
 
 print(f'\n{PASS} passed, {FAIL} failed')
 raise SystemExit(1 if FAIL else 0)

@@ -8,11 +8,10 @@
 
 <form method="get" class="mp-searchbar rise" action="{{ url_for('member') }}" id="mform" autocomplete="off">
   <label class="sr-only" for="mq">Поиск</label>
-  <input id="mq" class="input input-lg" type="search" name="q" value="{{ q }}" placeholder="Имя, ник или Discord ID…" autocomplete="off" {% if not profile %}autofocus{% endif %}>
+  <input id="mq" class="input input-lg" type="search" name="q" value="{{ q }}" placeholder="Поиск: имя, @ник или Discord ID" autocomplete="off" {% if not profile %}autofocus{% endif %}>
   <div id="msuggest" class="suggest" hidden></div>
-  <button type="submit" class="primary-btn" id="mload">Открыть</button>
+  <button type="submit" class="primary-btn" id="mload">Найти</button>
 </form>
-<p class="mp-search-hint dim" id="mhint">Начни печатать — подсказки и таблица результатов появятся сразу. Enter открывает выбранного.</p>
 
 {% if profile %}
 <nav class="crumb rise">
@@ -120,24 +119,24 @@
 </div>
 {% endif %}
 
-<section class="panel rise" id="mlive" hidden>
+<section class="panel rise people-block" id="mlive" hidden>
   <h2>Результаты поиска <span class="count" id="mlive-count">0</span></h2>
-  <div class="table-scroll">
-    <table class="profiles-table" id="mlive-table">
+  <div class="sq-wrap">
+    <table class="profiles-table sq-table" id="mlive-table">
       <thead>
         <tr>
-          <th>Профиль</th>
-          <th>Роль панели</th>
-          <th></th>
+          <th class="col-profile">Профиль</th>
+          <th>Роль</th>
+          <th class="col-act"></th>
         </tr>
       </thead>
       <tbody id="mlive-body"></tbody>
     </table>
   </div>
-  <div class="empty" id="mlive-empty" hidden>Никого не нашли — попробуй другой ник или ID</div>
+  <div class="empty empty-sm" id="mlive-empty" hidden>Никого не нашли — попробуй другой ник или ID</div>
 </section>
 
-<div class="kpis rise" id="mkpis">
+<div class="member-kpis rise" id="mkpis">
   <div class="kpi"><b>{{ people_kpi.total }}</b><span>в справочнике</span></div>
   <div class="kpi"><b>{{ staff_rows|length }}</b><span>staff</span></div>
   <div class="kpi"><b>{{ punished_rows|length }}</b><span>с мерами</span></div>
@@ -238,14 +237,13 @@
     if (liveTable) liveTable.hidden = false;
     if (liveCount) liveCount.textContent = String(items.length);
     if (liveBody) {
-      liveBody.innerHTML = items.map(it => `<tr class="click-row" data-href="/member?q=${esc(it.id)}">
-        <td><a class="profile-cell" href="/member?q=${esc(it.id)}">
-          <img class="profile-ava" src="${esc(it.avatar)}" alt="" width="42" height="42">
+      liveBody.innerHTML = items.map(it => `<tr class="click-row" data-href="/member?q=${esc(it.id)}" data-find="${esc(it.name)} ${esc(it.handle)} ${esc(it.id)} ${esc(it.role_label || '')}">
+        <td class="col-profile"><a class="profile-cell" href="/member?q=${esc(it.id)}">
+          <img class="profile-ava" src="${esc(it.avatar)}" alt="" width="36" height="36">
           <span class="profile-meta"><strong>${esc(it.name)}</strong>
-          ${it.handle ? `<span class="dim">@${esc(it.handle)}</span>` : ''}
-          <span class="dim mono">${esc(it.id)}</span></span></a></td>
-        <td>${it.role_label ? `<span class="mp-role mp-role-panel">${esc(it.role_label)}</span>` : '<span class="dim">—</span>'}</td>
-        <td class="row-actions"><a href="/member?q=${esc(it.id)}">открыть</a></td>
+          <span class="profile-sub">${it.handle ? `<span class="dim">@${esc(it.handle)}</span>` : ''}<span class="dim mono">${esc(it.id)}</span></span></span></a></td>
+        <td>${it.role_label ? `<span class="sq-badge${it.role ? ' tag-' + esc(it.role) : ''}">${esc(it.role_label)}</span>` : '<span class="dim">—</span>'}</td>
+        <td class="col-act"><div class="sq-actions"><a class="sq-link" href="/member?q=${esc(it.id)}">открыть</a></div></td>
       </tr>`).join('');
     }
   }
