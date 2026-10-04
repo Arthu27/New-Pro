@@ -62,6 +62,29 @@
   </div>
 </div>
 
+{% if proofs is defined and proofs %}
+<section class="panel rise" style="margin-top:12px">
+  <h2>Демки <span class="count">{{ proofs|length }}</span></h2>
+  <div class="proof-grid">
+    {% for r in proofs %}
+    <a class="proof-card" href="{{ url_for('proof_detail', pid=r.id) }}">
+      <div class="proof-card__head">
+        <span class="pill pill-{% if r.status == 'accepted' or r.status == 'approved' %}ok{% elif r.status == 'rejected' %}ban{% else %}warn{% endif %}">
+          {% if r.status == 'rejected' %}отклонена{% elif r.status in ('accepted','approved') %}принята{% else %}на проверке{% endif %}
+        </span>
+        <span class="dim">{{ r.when or '—' }}</span>
+      </div>
+      <div class="proof-card__title">{{ r.title }}</div>
+      {% if r.media_url and r.media_kind != 'video' %}
+      <img class="proof-card__media" src="{{ r.media_url }}" alt="" loading="lazy">
+      {% endif %}
+      <span class="proof-card__more">Открыть →</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <section class="panel rise" id="history" style="margin-top:12px">
   <h2>История нарушений <span class="count">{{ rows|length }}</span></h2>
   {% if not rows %}

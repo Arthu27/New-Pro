@@ -3034,6 +3034,7 @@ def member():
                 'on_server': member_obj is not None,
             }
     rows = _filter_cases_for_viewer(rows)
+    proofs = []
     if profile:
         hidden = _viewer_hidden_kinds()
         if 'ban' in hidden:
@@ -3043,8 +3044,18 @@ def member():
         profile['total'] = len(rows)
         profile['warns'] = sum(1 for r in rows if r.get('kind') == 'warn')
         profile['mutes'] = sum(1 for r in rows if r.get('kind') in ('mute', 'timeout'))
+        # демки этого человека — чтобы из профиля сразу смотреть доказательства
+        try:
+            uid = str(profile.get('id') or '')
+            for pr in _proofs_list(_main_guild()):
+                if str(pr.get('user_id') or '') == uid:
+                    proofs.append(pr)
+                if len(proofs) >= 20:
+                    break
+        except Exception:
+            proofs = []
     return render_template(
-        'member.html', q=q, rows=rows, profile=profile,
+        'member.html', q=q, rows=rows, profile=profile, proofs=proofs,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
