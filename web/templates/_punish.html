@@ -1,11 +1,11 @@
-{# Диалог наказания: мера → правило (1.1–1.9) → длительность → комментарий #}
+{# Диалог наказания / снятия: мера → правило (для выдачи) → длительность → комментарий #}
 {% if punish_actions %}
 <dialog id="punishDlg" class="dlg">
   <form method="dialog" class="dlg-card" id="punishForm">
     <div class="dlg-head">
       <div>
-        <h3>Наказать <span id="punishName"></span></h3>
-        <div class="dim" id="punishSub">выбери меру и правило</div>
+        <h3><span id="punishVerb">Наказать</span> <span id="punishName"></span></h3>
+        <div class="dim" id="punishSub">выбери меру</div>
       </div>
       <button type="button" class="dlg-x" id="punishClose" aria-label="Закрыть">×</button>
     </div>
@@ -14,15 +14,18 @@
     <label>Мера
       <div class="seg" id="punishSeg">
         {% for a in punish_actions %}
-        <button type="button" data-act="{{ a }}" class="{% if a == 'ban' %}danger-seg{% endif %}">{{ punish_labels.get(a, a) }}</button>
+        <button type="button" data-act="{{ a }}"
+          class="{% if a == 'ban' %}danger-seg{% elif a in ('unwarn','unmute','unban') %}lift-seg{% endif %}">{{ punish_labels.get(a, a) }}</button>
         {% endfor %}
       </div>
     </label>
 
-    <label>Правило
-      <div class="rule-picker" id="rulePicker"><div class="empty dim">Загружаю правила…</div></div>
-    </label>
-    <input type="hidden" id="punishRule">
+    <div id="punishRuleWrap">
+      <label>Правило
+        <div class="rule-picker" id="rulePicker"><div class="empty dim">Загружаю правила…</div></div>
+      </label>
+      <input type="hidden" id="punishRule">
+    </div>
 
     {% if 'mute' in punish_actions %}
     <label id="punishMinWrap">Длительность мута
@@ -58,21 +61,27 @@
   if (!dlg) return;
   const $ = id => document.getElementById(id);
   const seg = $('punishSeg'), picker = $('rulePicker'), msg = $('punishMsg');
+  const LIFT = { unwarn: 1, unmute: 1, unban: 1 };
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   let action = seg.querySelector('button').dataset.act;
   const rulesCache = {};
 
+  function isLift(a) { return !!LIFT[a]; }
+
   async function loadRules() {
+    if (!picker) return;
     picker.innerHTML = '<div class="empty dim">Загружаю правила…</div>';
     $('punishRule').value = '';
-    let items = rulesCache[action];
+    // для снятия правила не нужны — берём правила «парной» меры только если выдаём
+    const qAct = action === 'mute' ? 'mute' : action;
+    let items = rulesCache[qAct];
     if (!items) {
       try {
-        const r = await fetch('/api/rules?action=' + encodeURIComponent(action));
+        const r = await fetch('/api/rules?action=' + encodeURIComponent(qAct));
         const j = await r.json();
         items = j.items || [];
       } catch (e) { items = []; }
-      rulesCache[action] = items;
+      rulesCache[qAct] = items;
     }
     if (!items.length) {
       picker.innerHTML = '<div class="empty dim">Нет правил для этой меры</div>';
@@ -86,15 +95,32 @@
   function setAction(a) {
     action = a;
     seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.act === a));
+    const lift = isLift(a);
     const mw = $('punishMinWrap');
     if (mw) mw.style.display = a === 'mute' ? '' : 'none';
-    loadRules();
+    const rw = $('punishRuleWrap');
+    if (rw) rw.hidden = lift;
+    const verb = $('punishVerb');
+    if (verb) verb.textContent = lift ? 'Снять с' : 'Наказать';
+    const sub = $('punishSub');
+    if (sub) {
+      sub.textContent = lift
+        ? ({ unwarn: 'снять последний варн', unmute: 'снять мут (чат/войс/таймаут)', unban: 'снять бан / изоляцию' }[a] || 'снять меру')
+        : 'выбери меру и правило';
+    }
+    const go = $('punishGo');
+    if (go) {
+      go.textContent = lift ? 'Снять' : 'Выдать';
+      go.classList.toggle('danger', a === 'ban' || a === 'unban');
+    }
+    if (!lift) loadRules();
+    else { $('punishRule').value = ''; msg.textContent = ''; }
   }
   seg.addEventListener('click', e => {
     const b = e.target.closest('button[data-act]'); if (!b) return;
     setAction(b.dataset.act);
   });
-  picker.addEventListener('click', e => {
+  if (picker) picker.addEventListener('click', e => {
     const b = e.target.closest('.rule-opt'); if (!b) return;
     picker.querySelectorAll('.rule-opt').forEach(x => x.classList.toggle('on', x === b));
     $('punishRule').value = b.dataset.code;
@@ -118,9 +144,10 @@
   $('punishCancel').addEventListener('click', () => dlg.close());
 
   $('punishGo').addEventListener('click', async () => {
-    const rule = $('punishRule').value;
-    if (!rule) { msg.textContent = 'Выбери правило'; return; }
-    msg.textContent = 'Отправляю…';
+    const lift = isLift(action);
+    const rule = ($('punishRule') || {}).value || '';
+    if (!lift && !rule) { msg.textContent = 'Выбери правило'; return; }
+    msg.textContent = lift ? 'Снимаю…' : 'Отправляю…';
     const body = {
       user_id: $('punishUid').value,
       action: action,
@@ -134,7 +161,7 @@
       });
       const j = await r.json();
       if (j.ok) {
-        msg.textContent = 'Готово · ' + (j.reason || j.action);
+        msg.textContent = 'Готово · ' + (j.extra || j.reason || j.action);
         setTimeout(() => location.reload(), 700);
       } else {
         msg.textContent = j.error || 'Ошибка';

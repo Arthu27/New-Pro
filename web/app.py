@@ -107,10 +107,12 @@ ROLE_PAGE_KEYS = {
     'owner': {p[0] for p in PAGES_ALL},
 }
 
-# Меры, которые роль может ВЫДАТЬ из панели
-_MOD_PUNISH = ('warn', 'mute', 'kick', 'ban')
+# Меры, которые роль может ВЫДАТЬ / СНЯТЬ из панели
+# (как в /modpanel: warn↔unwarn, mute↔unmute, ban↔unban)
+_HELPER_PUNISH = ('warn', 'unwarn', 'mute', 'unmute')
+_MOD_PUNISH = ('warn', 'unwarn', 'mute', 'unmute', 'kick', 'ban', 'unban')
 ROLE_PUNISH_ACTIONS = {
-    'helper': ('warn', 'mute'),
+    'helper': _HELPER_PUNISH,
     'mod': _MOD_PUNISH,
     'creative': _MOD_PUNISH,
     'broadcaster': _MOD_PUNISH,
@@ -123,6 +125,7 @@ ROLE_PUNISH_ACTIONS = {
     'admin': _MOD_PUNISH,
     'owner': _MOD_PUNISH,
 }
+_LIFT_ACTIONS = frozenset({'unwarn', 'unmute', 'unban'})
 # Виды в журнале/истории, которые роль НЕ видит
 ROLE_HIDDEN_KINDS = {
     'helper': frozenset({'ban', 'kick'}),
@@ -140,9 +143,12 @@ ROLE_HIDDEN_KINDS = {
 }
 PUNISH_LABELS = {
     'warn': 'Варн',
+    'unwarn': 'Разварн',
     'mute': 'Мут',
+    'unmute': 'Размут',
     'kick': 'Кик',
     'ban': 'Бан',
+    'unban': 'Разбан',
 }
 
 ROLE_CARDS = [
@@ -2943,7 +2949,7 @@ def api_users_search():
 @login_required
 @role_required('helper')
 def api_punish():
-    """Выдать меру из панели (через бота). Учитывает роль и staff_limits."""
+    """Выдать / снять меру из панели (через бота). Учитывает роль и staff_limits."""
     data = request.get_json(silent=True) or request.form
     action = str(data.get('action') or '').strip().lower()
     uid = str(data.get('user_id') or '').strip()
@@ -2954,51 +2960,70 @@ def api_punish():
         minutes = int(data.get('minutes') or 10)
     except Exception:
         minutes = 10
-    if action not in ('warn', 'mute', 'kick', 'ban'):
-        return jsonify({'ok': False, 'error': 'action: warn|mute|kick|ban'}), 400
+    _issue = ('warn', 'mute', 'kick', 'ban')
+    _lift = ('unwarn', 'unmute', 'unban')
+    if action not in _issue + _lift:
+        return jsonify({
+            'ok': False,
+            'error': 'action: warn|unwarn|mute|unmute|kick|ban|unban',
+        }), 400
     allowed = _viewer_punish_actions()
     if action not in allowed:
         return jsonify({
             'ok': False,
-            'error': f'Твоя роль не может выдавать: {PUNISH_LABELS.get(action, action)}',
+            'error': f'Твоя роль не может: {PUNISH_LABELS.get(action, action)}',
         }), 403
     if not uid.isdigit():
         return jsonify({'ok': False, 'error': 'user_id'}), 400
+    is_lift = action in _LIFT_ACTIONS
     # хелперу мут — максимум час
     if action == 'mute' and (session.get('role') or 'helper') == 'helper':
         minutes = min(max(1, minutes), 60)
 
-    # причина = правило из каталога (+ комментарий)
+    # причина = правило из каталога (+ комментарий); снятие — без правила
     reason = ''
-    try:
-        from services.mod_reasons import is_known, allows, format_reason
-        if rule:
-            if not is_known(rule):
-                return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
-            act_key = 'timeout' if action == 'mute' else action
-            if action != 'kick' and not allows(rule, act_key):
-                return jsonify({
-                    'ok': False,
-                    'error': f'Правило {rule} не предусматривает: {PUNISH_LABELS.get(action, action)}',
-                }), 400
-            reason = format_reason(rule)
-        elif not legacy_reason:
-            return jsonify({'ok': False, 'error': 'Выбери правило'}), 400
-    except ImportError:
-        pass
+    if not is_lift:
+        try:
+            from services.mod_reasons import is_known, allows, format_reason
+            if rule:
+                if not is_known(rule):
+                    return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
+                act_key = 'timeout' if action == 'mute' else action
+                if action != 'kick' and not allows(rule, act_key):
+                    return jsonify({
+                        'ok': False,
+                        'error': f'Правило {rule} не предусматривает: {PUNISH_LABELS.get(action, action)}',
+                    }), 400
+                reason = format_reason(rule)
+            elif not legacy_reason:
+                return jsonify({'ok': False, 'error': 'Выбери правило'}), 400
+        except ImportError:
+            pass
     if not reason:
-        reason = legacy_reason or 'Панель'
+        if is_lift:
+            reason = {
+                'unwarn': 'Снятие варна',
+                'unmute': 'Снятие мута',
+                'unban': 'Разбан / снятие изоляции',
+            }.get(action, 'Снятие')
+        else:
+            reason = legacy_reason or 'Панель'
     if note:
         reason = f'{reason} · {note}'
     reason = reason[:400]
     # лимиты staff_limits (owner — без квот)
+    sl_key = {
+        'mute': 'mute', 'unmute': 'unmute',
+        'warn': 'warn', 'unwarn': 'unwarn',
+        'ban': 'ban', 'unban': 'unban',
+        'kick': 'kick',
+    }.get(action, action)
     if not _viewer_is_limit_exempt():
         try:
-            from services.staff_limits import check_limit, limit_deny_text, human_window, get_windows
+            from services.staff_limits import check_limit, limit_deny_text, get_windows
             gid0 = _main_guild()
             actor = str(session.get('discord_id') or '').strip()
             if gid0 and actor.isdigit():
-                sl_key = 'mute' if action == 'mute' else action
                 role_ids = _session_discord_role_ids()
                 ok_l, used, lim = check_limit(gid0, actor, sl_key, 1, role_ids)
                 if not ok_l and lim > 0:
@@ -3015,55 +3040,125 @@ def api_punish():
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
 
     async def _do():
+        import discord as _d
         guild = bot.get_guild(int(gid))
         if guild is None:
             raise RuntimeError('guild not found')
         member = guild.get_member(int(uid))
-        if member is None:
-            member = await guild.fetch_member(int(uid))
+        # разбан может быть для человека вне сервера
+        if member is None and action != 'unban':
+            try:
+                member = await guild.fetch_member(int(uid))
+            except Exception as ex:
+                raise RuntimeError(f'Участник не на сервере: {ex}') from ex
         mod_name = session.get('discord_display') or session.get('username') or 'panel'
         mod_id = session.get('discord_id') or '0'
         target_name = (
-            getattr(member, 'display_name', None)
-            or getattr(member, 'name', None)
-            or str(member.id)
+            (getattr(member, 'display_name', None)
+             or getattr(member, 'name', None)
+             or str(getattr(member, 'id', uid)))
+            if member is not None else uid
         )
-        # В audit Discord исполнителем будет бот — имя модератора в reason
         ban_reason = f'{reason} · панель: {mod_name}'[:512]
         cog = bot.get_cog('moderation') or bot.get_cog('Moderation')
+        act = action
+        extra = ''
+
         if action == 'warn':
-            warns = bot.get_cog('warnings')
+            warns = bot.get_cog('warnings') or bot.get_cog('Warnings')
             if warns is None:
                 raise RuntimeError('warnings cog offline')
             await warns.add_warning(member, guild.me, reason)
             act = 'warn'
+        elif action == 'unwarn':
+            warns = bot.get_cog('warnings') or bot.get_cog('Warnings')
+            if warns is None:
+                raise RuntimeError('warnings cog offline')
+            removed, total = await warns.remove_last_warning(member, guild.me)
+            if removed is None:
+                raise RuntimeError('У участника нет варнов')
+            act = 'unwarn'
+            extra = f"снято #{removed.get('id')} · осталось {total}"
         elif action == 'mute':
             from datetime import timedelta
             until = datetime.now(timezone.utc) + timedelta(minutes=max(1, minutes))
             await member.timeout(until, reason=ban_reason)
             act = 'timeout'
+        elif action == 'unmute':
+            # таймаут + роли чат/войс-мута — как кнопка размута в /modpanel
+            try:
+                await member.timeout(None, reason=ban_reason)
+            except Exception:
+                pass
+            try:
+                from services import mute_state
+                await mute_state.clear_all_mutes(guild, member)
+            except Exception as ex:
+                raise RuntimeError(f'Не удалось снять мут: {ex}') from ex
+            if cog and hasattr(cog, '_unisolate_member'):
+                try:
+                    await cog._unisolate_member(guild, member)
+                except Exception:
+                    pass
+            act = 'unmute'
         elif action == 'kick':
             await member.kick(reason=ban_reason)
             act = 'kick'
         elif action == 'ban':
             await member.ban(reason=ban_reason, delete_message_days=0)
             act = 'ban'
+        elif action == 'unban':
+            unban_done = False
+            if member is not None and cog is not None:
+                try:
+                    await cog._unisolate_member(guild, member)
+                except Exception:
+                    pass
+                try:
+                    await cog._unban_role(guild, member)
+                except Exception:
+                    pass
+                try:
+                    await cog._restore_roles_after_unban(guild, member)
+                except Exception:
+                    pass
+            try:
+                fetched = await bot.fetch_user(int(uid))
+                await guild.unban(fetched, reason=ban_reason)
+                unban_done = True
+                if member is None:
+                    target_name = getattr(fetched, 'name', None) or uid
+            except _d.NotFound:
+                unban_done = True  # уже не в бане
+            except Exception as ex:
+                if member is None:
+                    raise RuntimeError(f'Разбан не удался: {ex}') from ex
+            act = 'unban'
+            extra = 'разбанен' if unban_done else 'изоляция снята'
         else:
             act = action
+
+        case_uid = int(getattr(member, 'id', 0) or uid)
         if cog and hasattr(cog, 'save_case'):
             try:
                 cog.save_case(
-                    guild.id, act, member.id, mod_id, reason,
+                    guild.id, act, case_uid, mod_id, reason,
                     mod_name=mod_name,
                     duration=minutes if action == 'mute' else None,
                     user_name=target_name)
             except TypeError:
                 cog.save_case(
-                    guild.id, act, member.id, mod_id, reason,
+                    guild.id, act, case_uid, mod_id, reason,
                     mod_name=mod_name,
                     duration=minutes if action == 'mute' else None)
-        return {'action': act, 'user': str(member), 'id': str(member.id),
-                'mod': mod_name, 'reason': (rule or reason)[:80]}
+        return {
+            'action': act,
+            'user': target_name,
+            'id': str(case_uid),
+            'mod': mod_name,
+            'reason': (rule or reason)[:80],
+            'extra': extra,
+        }
 
     try:
         result = _run_on_bot(_do())
@@ -3072,7 +3167,6 @@ def api_punish():
                 from services.staff_limits import record_hit
                 actor = str(session.get('discord_id') or '').strip()
                 if gid and actor.isdigit():
-                    sl_key = 'mute' if action == 'mute' else action
                     record_hit(gid, actor, sl_key, 1)
             except Exception:
                 pass

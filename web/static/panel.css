@@ -1015,6 +1015,16 @@ h2 .seg { margin-left: auto; font-weight: 800; }
 .mp-val.ok { color: #e8fff1; }
 .seg button.on { background: var(--ink); color: #000; }
 .seg button.danger-seg.on { background: var(--accent); color: #fff; }
+.seg button.lift-seg.on {
+  background: rgba(79,209,139,.22); color: #9eebc0; border-color: rgba(79,209,139,.35);
+}
+.mp-actions .punish-btn.lift {
+  border-color: rgba(79,209,139,.4); color: #8ee6b6;
+}
+.mp-actions .punish-btn.lift:hover {
+  border-color: #8ee6b6; color: #b6f0d0; background: rgba(79,209,139,.12);
+}
+.primary-btn.danger { background: #c23b3b; color: #fff; }
 .rule-picker { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow: auto; padding-right: 2px; }
 .rule-opt {
   display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center;
