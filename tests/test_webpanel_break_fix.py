@@ -162,8 +162,20 @@ noisy_audit = [
      'mod_name': 'x', 'user_id': '1', 'timestamp': f'2026-10-0{i}T13:00:00+00:00'}
     for i in range(1, 10)
 ]
+# много свежих punish — старый reject всё равно должен остаться в ленте
+extra_cases = []
+for i in range(40):
+    extra_cases.append({
+        'guild_id': gid, 'action': 'Мут', 'kind': 'mute',
+        'user_id': str(1000 + i), 'user_name': f'u{i}',
+        'mod_id': '333', 'mod_name': 'Moddy',
+        'reason': 'x', 'duration': '',
+        'timestamp': f'2026-10-04T{i:02d}:00:00+00:00',
+        'source': 'case',
+    })
 with mock.patch.object(W, '_appeals_list', return_value=fake_appeals), \
-     mock.patch.object(W, '_audit_events', return_value=noisy_audit):
+     mock.patch.object(W, '_audit_events', return_value=noisy_audit), \
+     mock.patch.object(W, '_collect_cases', return_value=extra_cases):
     feed = W._staff_feed(gid, 20)
 check(any(f.get('kind') == 'appeal' and 'отклон' in str(f.get('action') or '').lower()
           for f in feed), 'staff_feed keeps appeal reject', feed)

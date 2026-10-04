@@ -2184,16 +2184,25 @@ def _staff_feed(gid: str, limit=80):
             'when': _fmt(ev.get('timestamp')),
             'ts': ev.get('timestamp') or '',
         })
-    # Наказания и апелляции не должны вытесняться audit-хвостом:
-    # сначала режем audit, потом мержим по времени.
-    core = [f for f in feed if f.get('kind') in ('punish', 'appeal')]
+    # Апелляции редкие и важные («кто откинул») — не даём им утонуть
+    # в свежих мутах/банах и audit-хвосте.
+    punish = [f for f in feed if f.get('kind') == 'punish']
+    appeals = [f for f in feed if f.get('kind') == 'appeal']
     audit = [f for f in feed if f.get('kind') == 'audit']
-    core.sort(key=lambda x: str(x.get('ts') or ''), reverse=True)
-    audit.sort(key=lambda x: str(x.get('ts') or ''), reverse=True)
-    room = max(0, int(limit) - len(core))
-    merged = core + audit[:room]
-    merged.sort(key=lambda x: str(x.get('ts') or ''), reverse=True)
-    return merged[:limit]
+    key = lambda x: str(x.get('ts') or '')
+    punish.sort(key=key, reverse=True)
+    appeals.sort(key=key, reverse=True)
+    audit.sort(key=key, reverse=True)
+    lim = max(1, int(limit))
+    # все решения по апелляциям (обычно единицы), остальное — наказания, потом audit
+    take_appeals = appeals[:lim]
+    room = max(0, lim - len(take_appeals))
+    take_punish = punish[:room]
+    room = max(0, lim - len(take_appeals) - len(take_punish))
+    take_audit = audit[:room]
+    merged = take_appeals + take_punish + take_audit
+    merged.sort(key=key, reverse=True)
+    return merged[:lim]
 
 
 def _fuzzy_match(q: str, *parts) -> bool:
