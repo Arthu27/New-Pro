@@ -75,6 +75,16 @@ class ActivityStats(commands.Cog):
                 getattr(message.channel, 'name', 'неизвестно'),
                 user_id=getattr(message.author, 'id', None),
             )
+            # Дневная сетка для staff-доски /staff-stats (лёгкий буфер).
+            try:
+                from services import mod_activity as ma
+                ma.record_message(
+                    message.guild.id,
+                    getattr(message.author, 'id', None),
+                    name=message.author.display_name or str(message.author),
+                )
+            except Exception as _ma:
+                _log.debug('activity_stats: mod_activity: %s', _ma)
         except Exception as _se:
             _log.debug('activity_stats: подавлено: %s', _se)  # статистика не ломает обработку
 

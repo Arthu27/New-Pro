@@ -326,14 +326,21 @@ def create_appeal(state, user_id, user_name, text, now):
     return item, None
 
 
-def resolve_appeal(state, appeal_id, accept, reviewer_name, now, reply=None):
+def resolve_appeal(state, appeal_id, accept, reviewer_name, now, reply=None,
+                   reviewer_id=None):
     """Решение модератора. (item | None, причина_если_None)."""
     for item in state['items']:
         if item['id'] == appeal_id:
             if item['status'] != 'pending':
                 return None, f'апелляция #{appeal_id} уже рассмотрена ({item["status"]})'
             item['status'] = 'accepted' if accept else 'rejected'
+            # display_name / mention-friendly — панель и ЛС показывают «кто»
             item['reviewed_by'] = str(reviewer_name)
+            try:
+                rid = int(reviewer_id) if reviewer_id is not None else 0
+            except (TypeError, ValueError):
+                rid = 0
+            item['reviewer_id'] = rid or None
             item['reviewed_at'] = now.isoformat()
             item['reply'] = (reply or '').strip()[:300] or None
             return item, None
@@ -702,8 +709,12 @@ class AppealView(discord.ui.LayoutView):
             except Exception as _ex:
                 log.debug('appeals: limit accept: %s', _ex)
         state = self.cog._load(gid)
-        item, err = resolve_appeal(state, self.appeal_id, accept,
-                                   str(interaction.user), datetime.now(UTC))
+        _who = (getattr(interaction.user, 'display_name', None)
+                or getattr(interaction.user, 'name', None)
+                or str(interaction.user))
+        item, err = resolve_appeal(
+            state, self.appeal_id, accept, _who, datetime.now(UTC),
+            reviewer_id=getattr(interaction.user, 'id', None))
         if err:
             await interaction.response.send_message(err, ephemeral=True)
             return
@@ -711,13 +722,18 @@ class AppealView(discord.ui.LayoutView):
         unbanned = False
         member_present = False
         guild = self.cog.bot.get_guild(gid)
-        if accept and guild is not None:
-            # Дело «unban» + карточка «Блокировка снята» с автором решения —
-            # ДО снятия роли: тогда слушатели логов видят свежее дело и не
-            # рисуют дубль карточки без автора (владелец 2026-09-06).
-            await self.cog._log_unban_decision(
-                guild, item, interaction.user.id,
-                interaction.user.display_name or str(interaction.user))
+        if guild is not None:
+            if accept:
+                # Дело «unban» + карточка «Блокировка снята» с автором решения —
+                # ДО снятия роли: тогда слушатели логов видят свежее дело и не
+                # рисуют дубль карточки без автора (владелец 2026-09-06).
+                await self.cog._log_unban_decision(
+                    guild, item, interaction.user.id, _who)
+            else:
+                # Отклонение тоже пишем в дела — иначе в журнале/панели
+                # не видно, кто «откинул» апелляцию.
+                await self.cog._log_reject_decision(
+                    guild, item, interaction.user.id, _who)
         if accept:
             if guild is not None:
                 member = guild.get_member(item['user_id'])
@@ -2071,6 +2087,33 @@ class Appeals(commands.Cog):
             return status, _iso
         return 'failed', None
 
+    async def _log_reject_decision(self, guild, item, mod_id, mod_name):
+        """Дело «appeal_reject» — кто отклонил апелляцию (след в журнале)."""
+        if guild is None:
+            return None
+        case_id = None
+        try:
+            mod_cog = self.bot.get_cog('Moderation')
+            save = getattr(mod_cog, 'save_case', None)
+            if callable(save):
+                import asyncio as _aio
+                _uname = str(item.get('user_name') or '')
+                try:
+                    case_id = await _aio.to_thread(
+                        save, guild.id, 'appeal_reject', int(item['user_id']),
+                        int(mod_id or 0),
+                        f'Апелляция #{item["id"]} отклонена',
+                        str(mod_name or 'модератор'), None, _uname)
+                except TypeError:
+                    case_id = await _aio.to_thread(
+                        save, guild.id, 'appeal_reject', int(item['user_id']),
+                        int(mod_id or 0),
+                        f'Апелляция #{item["id"]} отклонена',
+                        str(mod_name or 'модератор'))
+        except Exception as _ex:
+            log.debug('appeals: дело отклонения #%s: %s', item.get('id'), _ex)
+        return case_id
+
     async def _log_unban_decision(self, guild, item, mod_id, mod_name):
         """Дело «unban» + карточка «Блокировка снята» с автором решения.
 
@@ -2087,10 +2130,17 @@ class Appeals(commands.Cog):
             save = getattr(mod_cog, 'save_case', None)
             if callable(save):
                 import asyncio as _aio
-                case_id = await _aio.to_thread(
-                    save, guild.id, 'unban', int(item['user_id']),
-                    int(mod_id or 0), f'Апелляция #{item["id"]} принята',
-                    str(mod_name or 'модератор'))
+                _uname = str(item.get('user_name') or '')
+                try:
+                    case_id = await _aio.to_thread(
+                        save, guild.id, 'unban', int(item['user_id']),
+                        int(mod_id or 0), f'Апелляция #{item["id"]} принята',
+                        str(mod_name or 'модератор'), None, _uname)
+                except TypeError:
+                    case_id = await _aio.to_thread(
+                        save, guild.id, 'unban', int(item['user_id']),
+                        int(mod_id or 0), f'Апелляция #{item["id"]} принята',
+                        str(mod_name or 'модератор'))
         except Exception as _ex:
             log.debug('appeals: дело разбана #%s: %s', item.get('id'), _ex)
         try:
@@ -2138,7 +2188,10 @@ class Appeals(commands.Cog):
                        if accept else '❌ Отклонена')
             accent = COLOR_YES if accept else COLOR_NO
         snap = item.get('card_v2') or {}
-        base_body = str(snap.get('body') or item.get('text') or '').strip()
+        # исходный текст апелляции — без старых блоков «Решение» (иначе дубли)
+        base_body = str(item.get('text') or snap.get('body') or '').strip()
+        if '\n\n**Решение**' in base_body:
+            base_body = base_body.split('\n\n**Решение**', 1)[0].strip()
         who = None
         if reviewer is not None and not isinstance(reviewer, str):
             mention = getattr(reviewer, 'mention', None)

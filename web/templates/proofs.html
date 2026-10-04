@@ -2,21 +2,41 @@
 {% block title %}Демки{% endblock %}
 {% block heading %}Демки{% endblock %}
 {% block body %}
-<p class="lead">Доказательства из дел — ссылки на скрины и видео.</p>
+<p class="lead">Доказательства к наказаниям. Открой карточку — полный разбор{% if can_decide %}; owner / Staff Admin могут перерешить{% endif %}.</p>
 
 <section class="panel rise">
   <h2>Доказательства <span class="count">{{ rows|length }}</span></h2>
-  {% if not rows %}<div class="empty">Пока пусто — демки обычно идут в Discord-канал</div>
+  {% if not rows %}<div class="empty">Пока пусто — демки появятся после наказаний с вложением</div>
   {% else %}
-  <div class="history-list">
+  <div class="proof-grid">
     {% for r in rows %}
-    <div class="history-item">
-      <div class="history-body">
-        {% if r.user_id %}<a href="{{ url_for('member', q=r.user_id) }}"><strong>{{ r.title }}</strong></a>{% else %}<strong>{{ r.title }}</strong>{% endif %}
-        <span class="dim">{{ r.detail }}</span>
+    <a class="proof-card" href="{{ url_for('proof_detail', pid=r.id) }}">
+      <div class="proof-card__head">
+        <span class="pill pill-{% if r.status == 'approved' or r.status == 'accepted' %}ok{% elif r.status == 'rejected' %}ban{% else %}warn{% endif %}">
+          {% if r.status == 'rejected' %}отклонена{% elif r.status in ('approved','accepted') %}принята{% else %}на проверке{% endif %}
+        </span>
+        <span class="dim">{{ r.when or '—' }}</span>
       </div>
-      <span class="history-when">{{ r.when or '—' }}</span>
-    </div>
+      <div class="proof-card__title">{{ r.title }}</div>
+      <div class="proof-card__meta">
+        <div>кому · <b>{{ r.user_name }}</b></div>
+        <div>выдал · {{ r.mod_name }}</div>
+        {% if r.reviewer %}<div>решил · <b>{{ r.reviewer }}</b></div>{% endif %}
+      </div>
+      {% if r.reason %}<div class="proof-card__reason">{{ r.reason }}</div>{% endif %}
+      {% if r.media_url %}
+        {% if r.media_kind == 'video' %}
+        <video class="proof-card__media" muted preload="metadata" src="{{ r.media_url }}"></video>
+        {% else %}
+        <img class="proof-card__media" src="{{ r.media_url }}" alt="{{ r.media_name or 'демка' }}">
+        {% endif %}
+      {% elif r.link %}
+        <span class="btn btn-ghost proof-card__open"><i class="fas fa-arrow-up-right-from-square"></i> Discord</span>
+      {% else %}
+        <div class="dim">Файл не сохранён локально</div>
+      {% endif %}
+      <span class="proof-card__more">Подробнее{% if can_decide and r.status != 'pending' %} · перерешить{% endif %} →</span>
+    </a>
     {% endfor %}
   </div>
   {% endif %}

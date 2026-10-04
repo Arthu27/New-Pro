@@ -332,12 +332,14 @@ class Moderation (commands .Cog ):
             log.info(f'[MOD] auto-warn: {_aw_e}')
 
     def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ,mod_name=None ,
-    duration=None ):
+    duration=None ,user_name=None ):
         """Записать дело наказания в data/mod_data.json.
 
         duration — срок в МИНУТАХ (муты из /modpanel). Пишем отдельным ключом
         duration_minutes: его уже читают /api/mod-stats и посев демо-панели,
         а «История решений» показывает срок мута прямо в таблице.
+        user_name — ник цели в момент наказания (баненый потом пропадает
+        из кэша гильдии → журнал без имени).
         """
         os .makedirs ('data',exist_ok =True )
         filepath ='data/mod_data.json'
@@ -350,7 +352,7 @@ class Moderation (commands .Cog ):
                 # (например, {'case': ..., 'notes': ...}). Не теряем их записи,
                 # а лишь гарантируем ключ 'cases'.
                 if isinstance (loaded ,dict ):
-                    data =loaded
+                    data =loaded 
                 data .setdefault ('cases',{})
             gid =str (guild_id )
             if gid not in data ['cases']:
@@ -362,6 +364,7 @@ class Moderation (commands .Cog ):
             # Имя модератора в момент наказания: панель показывает его,
             # даже если имя так и не попало в карту имён сервера.
             'mod_name':str (mod_name or ''),
+            'user_name':str (user_name or ''),
             'reason':reason or 'Не указана',
             'timestamp':datetime .now (timezone .utc ).isoformat ()
             }
@@ -494,16 +497,30 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v18',
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v19',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None),
                  getattr(target, 'id', None))
-        try :
-            import asyncio as _aio
-            allowed =await _aio .to_thread (
-                actions_for_member ,interaction .guild ,interaction .user )
-        except Exception :
-            allowed =actions_for_member (interaction .guild ,interaction .user )
+        import asyncio as _aio
+
+        def _prep_open():
+            allowed_local = actions_for_member(
+                interaction.guild, interaction.user)
+            mute_k = unmute_k = None
+            if allowed_local:
+                vals = {a[0] for a in allowed_local}
+                gid = getattr(interaction.guild, 'id', None)
+                if gid and 'mute' in vals:
+                    mute_k = mute_kinds_for(gid, interaction.user)
+                if gid and 'unmute' in vals:
+                    unmute_k = unmute_kinds_for(gid, interaction.user)
+            return allowed_local, mute_k, unmute_k
+
+        try:
+            allowed, mute_k, unmute_k = await _aio.to_thread(_prep_open)
+        except Exception:
+            allowed = actions_for_member(interaction.guild, interaction.user)
+            mute_k = unmute_k = None
         if not allowed :
             await _respond (interaction ,
             embed =error_embed (
@@ -517,7 +534,9 @@ class Moderation (commands .Cog ):
         except Exception as _ee:
             log.debug('modpanel emoji sync: %s', _ee)
         try:
-            view = ModPanelView(self, interaction.user, allowed, preselect=target)
+            view = ModPanelView(
+                self, interaction.user, allowed, preselect=target,
+                mute_kinds=mute_k, unmute_kinds=unmute_k)
         except Exception as _vex:
             log.exception('modpanel view: %s', _vex)
             await _respond(
@@ -531,9 +550,21 @@ class Moderation (commands .Cog ):
         view._mod_followup = interaction.followup
         banner = None
         try:
-            banner = view._banner_file or view._make_banner_file()
+            # Только из process-cache — без PIL на горячем пути открытия.
+            banner = view._banner_file or view._make_banner_file(cache_only=True)
         except Exception as _bex:
             log.warning('modpanel banner: %s — открываем без баннера', _bex)
+        # Если кэш пуст — греем в фоне, панель уже на экране.
+        if banner is None:
+            try:
+                from services.menu_banners import warm_menu_banners as _warm_b
+
+                async def _warm():
+                    await _aio.to_thread(_warm_b, ('modpanel',))
+
+                _aio.create_task(_warm(), name='modpanel-banner-warm')
+            except Exception as _bw:
+                log.debug('modpanel banner warm bg: %s', _bw)
         # LayoutView / Components V2: только view (+ attachments).
         # НЕ передавать embed= вместе с embeds= — discord.py падает
         # «Cannot mix embed and embeds», панель уезжает в followup,
@@ -568,7 +599,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v18',
+        log.info('modpanel ready msg=%s build=multi-fix-v19',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -752,8 +783,15 @@ class Moderation (commands .Cog ):
         """Выполнить выбранное действие модерации."""
         # 3с-окно Discord закрываем ДО ролей/DM/логов: иначе наказание
         # уже выдано, а клиент рисует «приложение не ответило».
-        if not await _ack_or_busy (interaction ,thinking =True ):
-            return
+        # Модалка уже могла ACK — второй defer не нужен.
+        _acked = False
+        try:
+            _acked = bool(interaction.response.is_done())
+        except Exception:
+            _acked = False
+        if not _acked:
+            if not await _ack_or_busy(interaction, thinking=True):
+                return
         guild =interaction .guild
 
         # Лимиты стаффа — защита от «плохих» модераторов (владельца не трогаем).
@@ -863,8 +901,13 @@ class Moderation (commands .Cog ):
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
-                'Варн выдан',f'**{who }** · `{uid }`\n{text }',guild =guild ),
+                'Варн выдан',
+                f'**{who }** · `{uid }`\n{text }\n'
+                f'🧹 чищу его последние {self.PURGE_AFTER_PUNISH} сообщ…',
+                guild =guild ),
                 ephemeral =True )
+                # фон: последние сообщения ИМЕННО этого человека
+                self._schedule_purge_after_punish(interaction, user or uid)
                 try :
                     from cogs .proof_cog import offer_proof_after_punish
                     await offer_proof_after_punish (
@@ -961,6 +1004,7 @@ class Moderation (commands .Cog ):
                         ephemeral =True )
                         return
                     from services.discord_retry import call as _dcall
+                    import asyncio as _aio_ban
                     await _dcall(
                         lambda: user.add_roles(
                             _brole, reason=reason or 'бан'),
@@ -975,15 +1019,22 @@ class Moderation (commands .Cog ):
                                 label='ban move_to')
                     except Exception as _vdisc :
                         log .debug (f'[MODPANEL] ban voice kick: {_vdisc}')
-                    try :
-                        from services .staff_limits import record_hit as _sl_rec
-                        _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
-                    except Exception as _re :
-                        log .debug (f'[STAFF_LIMIT] ban rec: {_re}')
                     msg =(f"роль бана «{_brole .name }» выдана — доступ закрыт "
                           "самой ролью, каналы бот не трогает. Апелляция — "
                           "кнопкой в ЛС бота; комната апелляции откроется "
                           "после подачи заявки")
+                    confirm = mod_result_embed(
+                        title='Бан', user=user,
+                        body=(msg + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        reason=reason, case_id=0)
+                    await _respond(interaction, embed=confirm, ephemeral=True)
+                    self._schedule_purge_after_punish(interaction, user)
+                    _aio_ban.create_task(self._ban_aftermath(
+                        interaction=interaction, guild=guild, user=user,
+                        reason=reason, proof_link=proof_link),
+                        name='modpanel-ban-aftermath')
+                    return
                 elif action =="kick":
                     # Система kick полностью отключена решением владельца (2026-08):
                     # опция убрана из меню, ручные вызовы — вежливый отказ.
@@ -993,65 +1044,72 @@ class Moderation (commands .Cog ):
                         await interaction .response .send_message ("🛡 Кик отключён на этом сервере — используй мут или апелляцию.",ephemeral =True )
                     return 
                 elif action == "timeout":
-                    # «Мут (чат + войс)» — ГЛАВНОЕ: СРАЗУ ОБЕ РОЛИ (мут чата +
-                    # мут войса) + серверное заглушение микрофона. Нативный
-                    # таймаут Discord требует права «Модерация участников»,
-                    # которого у бота может не быть (владелец 2026-09-05:
-                    # «требует прав — а должен просто дать обе роли и всё»),
-                    # поэтому роли — основной механизм, нативный — бонус
-                    # поверх, если право вдруг есть (молча пропускаем сбой).
+                    # Быстрый путь: обе роли параллельно → ответ модеру ≤2с.
+                    # Нативный таймаут / server-mute / дело / демка — в фоне.
+                    import asyncio as _aio_mute
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))  # Discord — до 28 дней
                     _case_minutes = minutes
-                    try:
-                        from services import mute_state
-                        await mute_state.clear_all_mutes(guild, user)
-                    except Exception as _mse:
-                        log.debug(f'[MODPANEL] timeout clear all: {_mse}')
+                    await self._clear_mutes_if_needed(
+                        guild, user, for_action='timeout')
                     from services.discord_retry import call as _dcall
                     _extra_roles = []
+                    _role_jobs = []
                     for _kind in ('mute', 'vmute'):
-                        try:
-                            _r = self._punish_role(guild, _kind)
-                            if _r is not None and _r not in user.roles:
-                                await _dcall(
-                                    lambda r=_r: user.add_roles(
-                                        r, reason=reason or 'мут'),
-                                    label=f'timeout add_roles {_kind}')
-                                self._remember_temp(guild, user, _r, minutes * 60)
-                                _extra_roles.append(_r.name)
-                        except Exception as _tre:
-                            log.debug(f'[MODPANEL] timeout роль {_kind}: {_tre}')
-                    # микрофон: закрыть сразу, если человек в голосовом канале
-                    try:
-                        if getattr(getattr(user, 'voice', None), 'channel', None) \
-                                and not getattr(user.voice, 'mute', False):
+                        _r = self._punish_role(guild, _kind)
+                        if _r is None:
+                            continue
+                        if _r in (getattr(user, 'roles', None) or []):
+                            _extra_roles.append(_r.name)
+                            self._remember_temp(guild, user, _r, minutes * 60)
+                            continue
+
+                        async def _add(_role=_r, _k=_kind):
                             await _dcall(
-                                lambda: user.edit(
-                                    mute=True, reason=reason or 'мут'),
-                                label='timeout server-mute')
-                    except Exception as _ve:
-                        log.debug(f'[MODPANEL] timeout server-mute: {_ve}')
-                    # нативный таймаут — ТОЛЬКО если право есть; сбой не ломает
-                    try:
-                        until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
-                        await _dcall(
-                            lambda: user.timeout(
-                                until, reason=reason or 'мут'),
-                            label='timeout native')
-                    except (discord.Forbidden, discord.HTTPException, AttributeError) as _te:
-                        log.debug(f'[MODPANEL] нативный таймаут пропущен: {_te}')
+                                lambda r=_role: user.add_roles(
+                                    r, reason=reason or 'мут'),
+                                label=f'timeout add_roles {_k}')
+                            self._remember_temp(
+                                guild, user, _role, minutes * 60)
+                            return _role.name
+
+                        _role_jobs.append(_add())
+                    if _role_jobs:
+                        _got = await _aio_mute.gather(
+                            *_role_jobs, return_exceptions=True)
+                        for _name in _got:
+                            if isinstance(_name, str):
+                                _extra_roles.append(_name)
+                            elif isinstance(_name, Exception):
+                                log.debug(
+                                    '[MODPANEL] timeout роль: %s', _name)
+                    _in_voice = bool(getattr(
+                        getattr(user, 'voice', None), 'channel', None))
                     msg = (f"🔇 мут на {human_duration(minutes)} "
                            f"(~{minutes} мин) — обе роли выданы: чат закрыт, "
                            "микрофон заглушён")
                     if _extra_roles:
-                        msg += " · роли: " + ", ".join(f"«{n}»" for n in _extra_roles)
-                    await self._maybe_watchlist_after_mute(interaction, user, reason)
+                        msg += " · роли: " + ", ".join(
+                            f"«{n}»" for n in _extra_roles)
+                    # Сразу ответ модератору — фон добьёт timeout/лог/демку.
+                    confirm = mod_result_embed(
+                        title='Мут', user=user,
+                        body=(msg + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        reason=reason, case_id=0)
+                    await _respond(interaction, embed=confirm, ephemeral=True)
+                    self._schedule_purge_after_punish(interaction, user)
+                    _aio_mute.create_task(self._mute_aftermath(
+                        interaction=interaction, guild=guild, user=user,
+                        action=action, reason=reason, amount=amount,
+                        proof_link=proof_link, case_minutes=_case_minutes,
+                        do_native_timeout=True,
+                        do_server_mute=_in_voice),
+                        name='modpanel-mute-aftermath')
+                    return
                 elif action == "mute_chat":
-                    # «Мут (только чат)» — закрываем ТОЛЬКО текст через мут-роль.
-                    # Нативный таймаут тут не подходит: он заглушил бы и голос.
-                    # Поэтому чат-мут работает мут-ролью; без роли честно просим
-                    # её настроить (а не выдаём таймаут с подписью «только чат»).
+                    # «Мут (только чат)» — роль сразу, остальное в фоне.
+                    import asyncio as _aio_mute
                     _mrole = self._punish_role(guild, 'mute')
                     if _mrole is None:
                         await _respond(interaction, embed=error_embed(
@@ -1063,23 +1121,33 @@ class Moderation (commands .Cog ):
                     minutes = parse_duration_minutes(amount, 30)
                     minutes = max(1, min(minutes, 40320))
                     _case_minutes = minutes
-                    try:
-                        from services import mute_state
-                        await mute_state.clear_all_mutes(guild, user)
-                    except Exception as _mse:
-                        log.debug(f'[MODPANEL] mute_chat clear all: {_mse}')
+                    await self._clear_mutes_if_needed(
+                        guild, user, for_action='mute_chat')
                     from services.discord_retry import call as _dcall
-                    await _dcall(
-                        lambda: user.add_roles(
-                            _mrole, reason=reason or 'мут чата'),
-                        label='mute_chat add_roles')
+                    if _mrole not in (getattr(user, 'roles', None) or []):
+                        await _dcall(
+                            lambda: user.add_roles(
+                                _mrole, reason=reason or 'мут чата'),
+                            label='mute_chat add_roles')
                     self._remember_temp(guild, user, _mrole, minutes * 60)
                     msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
                            f"(роль «{_mrole.name}»); голос не тронут")
-                    await self._maybe_watchlist_after_mute(interaction, user, reason)
+                    confirm = mod_result_embed(
+                        title='Мут чата', user=user,
+                        body=(msg + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        reason=reason, case_id=0)
+                    await _respond(interaction, embed=confirm, ephemeral=True)
+                    self._schedule_purge_after_punish(interaction, user)
+                    _aio_mute.create_task(self._mute_aftermath(
+                        interaction=interaction, guild=guild, user=user,
+                        action=action, reason=reason, amount=amount,
+                        proof_link=proof_link, case_minutes=_case_minutes),
+                        name='modpanel-mute-aftermath')
+                    return
                 elif action =="vmute":
-                    # Войс-мут: роль + сервер-мут микрофона (если в войсе).
-                    # Из войса НЕ выкидываем. Срок → loop снимет роль и мут.
+                    # Войс-мут: одна add_roles, без fetch/re-add на горячем пути.
+                    import asyncio as _aio_mute
                     _vrole =self ._punish_role (guild ,'vmute')
                     minutes =parse_duration_minutes (amount ,30 )
                     minutes =max (1 ,min (minutes ,40320 ))
@@ -1095,19 +1163,35 @@ class Moderation (commands .Cog ):
                         'Человек не на сервере — войс-мут выдать нельзя.'),
                         ephemeral =True )
                         return
-                    user =await self ._give_punish_role (
-                        guild ,user ,_vrole ,reason or 'войс-мут')
+                    await self._clear_mutes_if_needed(
+                        guild, user, for_action='vmute')
+                    from services.discord_retry import call as _dcall
+                    if _vrole not in (getattr(user, 'roles', None) or []):
+                        await _dcall(
+                            lambda: user.add_roles(
+                                _vrole, reason=reason or 'войс-мут'),
+                            label='vmute add_roles')
                     self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
-                    _mic =False
-                    try :
-                        if getattr (getattr (user ,'voice',None ),'channel',None ):
-                            await user .edit (mute =True ,reason =reason or 'войс-мут')
-                            _mic =True
-                    except Exception as _ve :
-                        log .warning (f'[MODPANEL] vmute server-mute: {_ve}')
+                    _in_voice = bool(getattr(
+                        getattr(user, 'voice', None), 'channel', None))
+                    # Микрофон — в фоне (как timeout): ответ модеру без +1 RTT.
                     msg =(f"войс-мут «{_vrole .name }» на {minutes } мин — роль выдана"
-                          +(" · микрофон закрыт" if _mic else "")
+                          +(" · глушу микрофон…" if _in_voice else "")
                           +", снимется по сроку")
+                    confirm = mod_result_embed(
+                        title='Войс-мут', user=user,
+                        body=(msg + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        reason=reason, case_id=0)
+                    await _respond(interaction, embed=confirm, ephemeral=True)
+                    self._schedule_purge_after_punish(interaction, user)
+                    _aio_mute.create_task(self._mute_aftermath(
+                        interaction=interaction, guild=guild, user=user,
+                        action=action, reason=reason, amount=amount,
+                        proof_link=proof_link, case_minutes=_case_minutes,
+                        do_server_mute=_in_voice),
+                        name='modpanel-mute-aftermath')
+                    return
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
                     if _vrole is not None :
@@ -1158,10 +1242,14 @@ class Moderation (commands .Cog ):
                 try :
                     import asyncio as _aio_sc
                     # запись дела (файл) — в рабочем потоке, без блокировки loop
+                    _target_name =(
+                        getattr (user ,'display_name' ,None )
+                        or getattr (user ,'name' ,None )
+                        or str (getattr (user ,'id' ,'')or ''))
                     case_id =await _aio_sc .to_thread (
                         self .save_case ,guild .id ,action ,user .id ,interaction .user .id ,reason ,
                         getattr (interaction .user ,'display_name' ,None )or str (interaction .user ),
-                        _case_minutes )
+                        _case_minutes ,_target_name )
                 except Exception as _case_e :
                     case_id =0
                     aux_errors .append ("дело не записано")
@@ -1184,7 +1272,18 @@ class Moderation (commands .Cog ):
                         (confirm.description or '')
                         + "\n⚠️ " + " · ".join(aux_errors))
                 # Сначала ответ модератору — логи/ЛС/демка могут идти секундами.
+                if action == 'ban':
+                    try:
+                        confirm.description = (
+                            (confirm.description or '')
+                            + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…')
+                    except Exception:
+                        pass
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
+                # Бан → в фоне снести последние сообщения именно его
+                if action == 'ban':
+                    self._schedule_purge_after_punish(interaction, user)
                 try :
                     dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
                     # ЛС о бане — с кнопкой «Подать апелляцию» внизу:
@@ -1636,6 +1735,9 @@ class Moderation (commands .Cog ):
         except Exception as _ex :
             log .debug (f'[MODPANEL] restore on join: {_ex}')
 
+    # После варна/мута/бана — снести последние N сообщений ИМЕННО нарушителя
+    PURGE_AFTER_PUNISH = 30
+
     async def _purge_user_messages(self, channel, user_id: int, count: int):
         """Удалить до `count` последних сообщений участника в канале.
 
@@ -1688,6 +1790,104 @@ class Moderation (commands .Cog ):
                     log.debug('[MODPANEL] msg.delete fallback: %s', _dx)
         return deleted
 
+    async def _purge_user_recent(self, guild, prefer_channel, user_id: int,
+                                 count: int = None):
+        """До `count` последних сообщений ЭТОГО человека (чужие не трогаем).
+
+        1) канал, где выдали наказание;
+        2) если мало — другие текстовые каналы сервера (до 20).
+        """
+        need = int(count if count is not None else self.PURGE_AFTER_PUNISH)
+        need = max(1, min(need, 100))
+        uid = int(user_id)
+        deleted_all = []
+        seen_ids = set()
+
+        channels = []
+        if prefer_channel is not None and hasattr(prefer_channel, 'history'):
+            channels.append(prefer_channel)
+        if guild is not None:
+            try:
+                for ch in list(getattr(guild, 'text_channels', None) or []):
+                    if prefer_channel is not None and getattr(ch, 'id', None) == getattr(
+                            prefer_channel, 'id', None):
+                        continue
+                    if not hasattr(ch, 'history'):
+                        continue
+                    channels.append(ch)
+                    if len(channels) >= 21:  # prefer + 20
+                        break
+            except Exception as _ex:
+                log.debug('[MODPANEL] purge channel list: %s', _ex)
+
+        for ch in channels:
+            if len(deleted_all) >= need:
+                break
+            left = need - len(deleted_all)
+            try:
+                batch = await self._purge_user_messages(ch, uid, left)
+            except discord.Forbidden:
+                log.debug('[MODPANEL] purge: нет прав в #%s',
+                          getattr(ch, 'name', '?'))
+                continue
+            except Exception as _ex:
+                log.debug('[MODPANEL] purge in #%s: %s',
+                          getattr(ch, 'name', '?'), _ex)
+                continue
+            for msg in batch or []:
+                mid = getattr(msg, 'id', None)
+                if mid in seen_ids:
+                    continue
+                seen_ids.add(mid)
+                deleted_all.append(msg)
+        return deleted_all
+
+    def _schedule_purge_after_punish(self, interaction, user, *, count: int = None):
+        """Фон: после наказания удалить последние сообщения нарушителя."""
+        import asyncio as _aio
+        if user is None:
+            return
+        try:
+            uid = int(getattr(user, 'id', 0) or 0)
+        except Exception:
+            return
+        if not uid:
+            return
+        guild = getattr(interaction, 'guild', None)
+        channel = getattr(interaction, 'channel', None)
+        n = int(count if count is not None else self.PURGE_AFTER_PUNISH)
+
+        async def _run():
+            try:
+                deleted = await self._purge_user_recent(
+                    guild, channel, uid, n)
+                n_del = len(deleted or [])
+                if n_del <= 0:
+                    return
+                who = (getattr(user, 'mention', None)
+                       or getattr(user, 'display_name', None)
+                       or f'<@{uid}>')
+                text = (f'🧹 Удалено **{n_del}** сообщ. от {who} '
+                        f'— только его, чужие не трогали.')
+                try:
+                    await _respond(interaction, content=text, ephemeral=True)
+                except Exception:
+                    try:
+                        follow = getattr(interaction, 'followup', None)
+                        if follow is not None:
+                            await follow.send(text, ephemeral=True)
+                    except Exception as _fe:
+                        log.debug('[MODPANEL] purge followup: %s', _fe)
+                log.info('[MODPANEL] purge-after-punish uid=%s n=%s',
+                         uid, n_del)
+            except Exception as _ex:
+                log.warning('[MODPANEL] purge-after-punish: %s', _ex)
+
+        try:
+            _aio.create_task(_run(), name='modpanel-purge-after-punish')
+        except Exception as _ex:
+            log.debug('[MODPANEL] schedule purge: %s', _ex)
+
     async def _clear_voice_mute (self ,guild ,user ):
         """Снять любое голосовое заглушение (роль войс-мута или нативный
         server-mute), чтобы при чат-муте/таймауте не оставалось второго мута."""
@@ -1730,6 +1930,224 @@ class Moderation (commands .Cog ):
             PR .add_temp (guild .id ,user .id ,role .id ,until )
         except Exception as _ex :
             log .debug (f'[MODPANEL] remember_temp: {_ex}')
+
+    def _member_has_any_mute(self, guild, user) -> bool:
+        """Есть ли уже таймаут/мут-роль/войс-мут — иначе clear не нужен."""
+        if user is None:
+            return False
+        try:
+            if getattr(user, 'timed_out_until', None):
+                return True
+        except Exception:
+            pass
+        try:
+            from services import punish_roles as PR
+            mute_id = int(PR.role_for(guild.id, 'mute') or 0)
+            vmute_id = int(PR.role_for(guild.id, 'vmute') or 0)
+            ids = {int(getattr(r, 'id', 0) or 0)
+                   for r in (getattr(user, 'roles', None) or [])}
+            if (mute_id and mute_id in ids) or (vmute_id and vmute_id in ids):
+                return True
+        except Exception:
+            pass
+        try:
+            if getattr(getattr(user, 'voice', None), 'mute', False):
+                return True
+        except Exception:
+            pass
+        return False
+
+    async def _clear_mutes_if_needed(self, guild, user, *, for_action=None):
+        """Снять старые муты только если висят. Селективно под вид мута — меньше RTT."""
+        if not self._member_has_any_mute(guild, user):
+            return
+        try:
+            from services import mute_state
+            if for_action == 'mute_chat':
+                await mute_state.clear_voice_mute(guild, user)
+                try:
+                    if getattr(user, 'timed_out_until', None):
+                        await user.timeout(None, reason='снятие пересекающегося таймаута')
+                except Exception as _te:
+                    log.debug('[MODPANEL] clear timeout before chat mute: %s', _te)
+                return
+            if for_action == 'vmute':
+                await mute_state.clear_chat_mute(guild, user)
+                return
+            await mute_state.clear_all_mutes(guild, user)
+        except Exception as _mse:
+            log.debug('[MODPANEL] clear_mutes_if_needed: %s', _mse)
+
+    async def _mute_aftermath(
+            self, *, interaction, guild, user, action, reason, amount,
+            proof_link, case_minutes, do_native_timeout=False,
+            do_server_mute=False):
+        """Фон после быстрого мута: дело, лимиты, логи, демка, добить API."""
+        import asyncio as _aio
+        case_id = 0
+        try:
+            if do_server_mute:
+                try:
+                    from services.discord_retry import call as _dcall
+                    if (getattr(getattr(user, 'voice', None), 'channel', None)
+                            and not getattr(user.voice, 'mute', False)):
+                        await _dcall(
+                            lambda: user.edit(
+                                mute=True, reason=reason or 'мут'),
+                            label='mute aftermath server-mute')
+                except Exception as _ve:
+                    log.debug('[MODPANEL] aftermath server-mute: %s', _ve)
+            if do_native_timeout and case_minutes:
+                try:
+                    from services.discord_retry import call as _dcall
+                    until = (datetime.now(timezone.utc)
+                             + timedelta(minutes=int(case_minutes)))
+                    await _dcall(
+                        lambda: user.timeout(
+                            until, reason=reason or 'мут'),
+                        label='mute aftermath native timeout')
+                except Exception as _te:
+                    log.debug('[MODPANEL] aftermath native timeout: %s', _te)
+            try:
+                from services.staff_limits import record_hit as _sl_rec
+                _sl_rec(guild.id, interaction.user.id, 'mute', 1)
+            except Exception as _slr:
+                log.debug('[STAFF_LIMIT] mute rec: %s', _slr)
+            try:
+                from services.mute_progression import bump_after_mute
+                bump_after_mute(guild.id, user.id)
+            except Exception as _bex:
+                log.debug('[MUTE_PROG] bump: %s', _bex)
+            try:
+                _target_name = (
+                    getattr(user, 'display_name', None)
+                    or getattr(user, 'name', None)
+                    or str(getattr(user, 'id', '') or ''))
+                case_id = await _aio.to_thread(
+                    self.save_case, guild.id, action, user.id,
+                    interaction.user.id, reason,
+                    getattr(interaction.user, 'display_name', None)
+                    or str(interaction.user),
+                    case_minutes, _target_name)
+            except Exception as _case_e:
+                log.warning('[MODPANEL] mute save_case: %s', _case_e)
+            try:
+                await self._maybe_watchlist_after_mute(
+                    interaction, user, reason)
+            except Exception as _wl:
+                log.debug('[MODPANEL] watchlist: %s', _wl)
+            try:
+                dm = mod_dm_embed(action, guild, interaction.user, reason)
+                await self.send_dm(user, dm)
+            except Exception as _dm_e:
+                log.info('[MODPANEL] mute DM: %s', _dm_e)
+            try:
+                from cogs.logs import send_action_log
+                await send_action_log(
+                    guild, action, user, interaction.user,
+                    reason=reason, case_id=case_id,
+                    duration=amount, proof=proof_link)
+            except Exception as _log_e:
+                log.warning('[MODPANEL] mute send_log: %s', _log_e)
+            try:
+                await self._maybe_auto_warn(guild, user)
+            except Exception as _aw_e:
+                log.info('[MODPANEL] mute auto-warn: %s', _aw_e)
+            try:
+                from services.panel_notify import notify_panel_event as _np
+                _label = {
+                    'timeout': 'Таймаут', 'mute_chat': 'Мут чата',
+                    'vmute': 'Войс-мут',
+                }.get(action, action)
+                _np(interaction, 'mod_action',
+                    f'{_label}: {user.display_name}',
+                    f'Модератор: {interaction.user.display_name} · '
+                    f'Причина: {reason} · Дело #{case_id}')
+            except Exception as _ex:
+                log.debug('mute panel_notify: %s', _ex)
+            try:
+                from cogs.proof_cog import offer_proof_after_punish
+                await offer_proof_after_punish(
+                    interaction, user=user, action=action,
+                    reason=reason, case_id=case_id)
+                if (proof_link or '').strip():
+                    from cogs.proof_cog import try_deliver_proof
+                    _p_ru = {
+                        'timeout': 'мут', 'mute_chat': 'мут чата',
+                        'vmute': 'войс-мут',
+                    }.get(action, action)
+                    await try_deliver_proof(
+                        self.bot, guild, interaction.user, user,
+                        _p_ru, reason, link=proof_link)
+            except Exception as _pe:
+                log.warning('[MODPANEL] mute демка: %s', _pe)
+        except Exception as _ex:
+            log.warning('[MODPANEL] mute aftermath: %s', _ex)
+
+    async def _ban_aftermath(
+            self, *, interaction, guild, user, reason, proof_link):
+        """Фон после быстрого бана: лимит, дело, ЛС+апелляция, лог, демка."""
+        import asyncio as _aio
+        case_id = 0
+        try:
+            try:
+                from services.staff_limits import record_hit as _sl_rec
+                _sl_rec(guild.id, interaction.user.id, 'ban', 1)
+            except Exception as _re:
+                log.debug('[STAFF_LIMIT] ban rec: %s', _re)
+            try:
+                _target_name = (
+                    getattr(user, 'display_name', None)
+                    or getattr(user, 'name', None)
+                    or str(getattr(user, 'id', '') or ''))
+                case_id = await _aio.to_thread(
+                    self.save_case, guild.id, 'ban', user.id,
+                    interaction.user.id, reason,
+                    getattr(interaction.user, 'display_name', None)
+                    or str(interaction.user),
+                    None, _target_name)
+            except Exception as _case_e:
+                log.warning('[MODPANEL] ban save_case: %s', _case_e)
+            try:
+                dm = mod_dm_embed('ban', guild, interaction.user, reason)
+                _dm_view = None
+                try:
+                    from cogs.appeals import AppealDMView
+                    _dm_view = AppealDMView()
+                except Exception as _imp_e:
+                    log.debug('[MODPANEL] ban dm view: %s', _imp_e)
+                await self.send_dm(user, dm, view=_dm_view)
+            except Exception as _dm_e:
+                log.info('[MODPANEL] ban DM: %s', _dm_e)
+            try:
+                from cogs.logs import send_action_log
+                await send_action_log(
+                    guild, 'ban', user, interaction.user,
+                    reason=reason, case_id=case_id, proof=proof_link)
+            except Exception as _log_e:
+                log.warning('[MODPANEL] ban send_log: %s', _log_e)
+            try:
+                from services.panel_notify import notify_panel_event as _np
+                _np(interaction, 'mod_action',
+                    f'Апелляция: {user.display_name}',
+                    f'Модератор: {interaction.user.display_name} · '
+                    f'Причина: {reason} · Дело #{case_id}')
+            except Exception as _ex:
+                log.debug('ban panel_notify: %s', _ex)
+            try:
+                from cogs.proof_cog import offer_proof_after_punish
+                await offer_proof_after_punish(
+                    interaction, user=user, action='ban',
+                    reason=reason, case_id=case_id)
+                if (proof_link or '').strip():
+                    from cogs.proof_cog import try_deliver_proof
+                    await try_deliver_proof(
+                        self.bot, guild, interaction.user, user,
+                        'апелляция', reason, link=proof_link)
+            except Exception as _pe:
+                log.warning('[MODPANEL] ban демка: %s', _pe)
+        except Exception as _ex:
+            log.warning('[MODPANEL] ban aftermath: %s', _ex)
 
     async def _drop_roles (self ,guild ,user ,roles ):
         """Снять роли наказания и почистить журнал сроков."""
@@ -1923,6 +2341,9 @@ class Moderation (commands .Cog ):
             for c in cases :
                 if str (c .get ('user_id',''))==str (user .id )and c .get ('action')in ('timeout','mute_chat','vmute'):
                     mute_count +=1
+            # Только со 2-го мута (как в docstring) — иначе лишний JSON write
+            if mute_count < 2:
+                return
             # 2) Добавляем в watchlist (advanced_mod) на 1 неделю
             adv_file ='data/mod_advanced_data.json'
             adv =await load_json_async (adv_file ,{},log =log )or {}
@@ -3492,7 +3913,8 @@ class ModPanelView(discord.ui.LayoutView):
     Фолбек panel_embed/panel_payload — если V2 не приняли (старый клиент).
     """
 
-    def __init__(self, cog, member=None, allowed=None, preselect=None):
+    def __init__(self, cog, member=None, allowed=None, preselect=None,
+                 mute_kinds=None, unmute_kinds=None):
         super().__init__(timeout=300)  # 5 минут — любые действия без нового окна
         self.cog = cog
         # base_allowed — без учёта выбранной цели; warn добавится в _rebuild
@@ -3522,8 +3944,15 @@ class ModPanelView(discord.ui.LayoutView):
         self._banner_bytes = None
         self._use_v2 = True
         self._actor_label = ''
-        self._mute_kinds_cache = None
-        self._unmute_kinds_cache = None
+        # kinds считаются в to_thread на /modpanel open — не блокируем __init__.
+        self._mute_kinds_cache = list(mute_kinds) if mute_kinds else None
+        self._unmute_kinds_cache = list(unmute_kinds) if unmute_kinds else None
+        # Без target — не дёргаем actions_for_member второй раз в _rebuild.
+        # С target= — нужен ACL с целью (варн по своему стаффу).
+        if preselect is None and self.allowed:
+            self._allowed_cache_key = ('', '')
+        else:
+            self._allowed_cache_key = None
         try:
             from services.staff_hierarchy import actor_panel_role, LABELS
             guild = getattr(member, 'guild', None)
@@ -3531,25 +3960,12 @@ class ModPanelView(discord.ui.LayoutView):
             self._actor_label = LABELS.get(tier, '') or ''
         except Exception:
             self._actor_label = ''
-        # Виды мута/размута — один раз при открытии панели (не на каждый клик).
-        try:
-            guild = getattr(member, 'guild', None)
-            gid = getattr(guild, 'id', None)
-            vals = {a[0] for a in (allowed or [])}
-            if gid and member is not None:
-                if 'mute' in vals:
-                    self._mute_kinds_cache = mute_kinds_for(gid, member)
-                if 'unmute' in vals:
-                    self._unmute_kinds_cache = unmute_kinds_for(gid, member)
-        except Exception as _kx:
-            log.debug('modpanel kinds cache: %s', _kx)
         self._rebuild(None)
-        # File для первого ответа /modpanel (process-cache байтов).
-        # На refresh баннер НЕ перезаливаем — keep message.attachments.
+        # Баннер — только из process-cache (PIL уже прогрет в cog_load).
         try:
-            self._make_banner_file(force=False)
+            self._make_banner_file(force=False, cache_only=True)
         except Exception as _ex:
-            log.debug('moderation: except@3056: %s', _ex)
+            log.debug('moderation: banner cache: %s', _ex)
 
     def _action_label(self, action):
         for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):
@@ -3613,8 +4029,12 @@ class ModPanelView(discord.ui.LayoutView):
         embed.set_image(url=f'attachment://{name}')
         return embed, discord.File(bio, filename=name)
 
-    def _make_banner_file(self, *, force: bool = False):
-        """Баннер для вложений. PIL — только один раз, дальше кэш байтов."""
+    def _make_banner_file(self, *, force: bool = False, cache_only: bool = False):
+        """Баннер для вложений. PIL — только один раз, дальше кэш байтов.
+
+        cache_only=True — не генерировать PIL на горячем пути /modpanel;
+        если process-cache пуст, вернём None и откроем панель без баннера.
+        """
         from services.v2_layouts import SHOW_MENU_BANNER
         if not SHOW_MENU_BANNER:
             self._banner_name = None
@@ -3626,6 +4046,21 @@ class ModPanelView(discord.ui.LayoutView):
             bio = _io.BytesIO(self._banner_bytes)
             bio.seek(0)
             self._banner_file = discord.File(bio, filename=self._banner_name)
+            return self._banner_file
+        if cache_only and not force:
+            try:
+                from services.menu_banners import _BYTES_CACHE
+                raw = _BYTES_CACHE.get('modpanel')
+            except Exception:
+                raw = None
+            if not raw:
+                self._banner_file = None
+                return None
+            self._banner_bytes = raw
+            self._banner_name = self._banner_name or 'hakumo_modpanel_banner_v15.png'
+            out = _io.BytesIO(raw)
+            out.seek(0)
+            self._banner_file = discord.File(out, filename=self._banner_name)
             return self._banner_file
         from services.menu_banners import menu_banner_file
         bio, name = menu_banner_file('modpanel')
