@@ -326,14 +326,21 @@ def create_appeal(state, user_id, user_name, text, now):
     return item, None
 
 
-def resolve_appeal(state, appeal_id, accept, reviewer_name, now, reply=None):
+def resolve_appeal(state, appeal_id, accept, reviewer_name, now, reply=None,
+                   reviewer_id=None):
     """Решение модератора. (item | None, причина_если_None)."""
     for item in state['items']:
         if item['id'] == appeal_id:
             if item['status'] != 'pending':
                 return None, f'апелляция #{appeal_id} уже рассмотрена ({item["status"]})'
             item['status'] = 'accepted' if accept else 'rejected'
+            # display_name / mention-friendly — панель и ЛС показывают «кто»
             item['reviewed_by'] = str(reviewer_name)
+            try:
+                rid = int(reviewer_id) if reviewer_id is not None else 0
+            except (TypeError, ValueError):
+                rid = 0
+            item['reviewer_id'] = rid or None
             item['reviewed_at'] = now.isoformat()
             item['reply'] = (reply or '').strip()[:300] or None
             return item, None
@@ -702,8 +709,12 @@ class AppealView(discord.ui.LayoutView):
             except Exception as _ex:
                 log.debug('appeals: limit accept: %s', _ex)
         state = self.cog._load(gid)
-        item, err = resolve_appeal(state, self.appeal_id, accept,
-                                   str(interaction.user), datetime.now(UTC))
+        _who = (getattr(interaction.user, 'display_name', None)
+                or getattr(interaction.user, 'name', None)
+                or str(interaction.user))
+        item, err = resolve_appeal(
+            state, self.appeal_id, accept, _who, datetime.now(UTC),
+            reviewer_id=getattr(interaction.user, 'id', None))
         if err:
             await interaction.response.send_message(err, ephemeral=True)
             return
@@ -2138,7 +2149,10 @@ class Appeals(commands.Cog):
                        if accept else '❌ Отклонена')
             accent = COLOR_YES if accept else COLOR_NO
         snap = item.get('card_v2') or {}
-        base_body = str(snap.get('body') or item.get('text') or '').strip()
+        # исходный текст апелляции — без старых блоков «Решение» (иначе дубли)
+        base_body = str(item.get('text') or snap.get('body') or '').strip()
+        if '\n\n**Решение**' in base_body:
+            base_body = base_body.split('\n\n**Решение**', 1)[0].strip()
         who = None
         if reviewer is not None and not isinstance(reviewer, str):
             mention = getattr(reviewer, 'mention', None)

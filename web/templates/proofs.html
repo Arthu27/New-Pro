@@ -2,21 +2,42 @@
 {% block title %}Демки{% endblock %}
 {% block heading %}Демки{% endblock %}
 {% block body %}
-<p class="lead">Доказательства из дел — ссылки на скрины и видео.</p>
+<p class="lead">Доказательства к наказаниям: кто выдал, кому, за что, статус проверки и файл.</p>
 
 <section class="panel rise">
   <h2>Доказательства <span class="count">{{ rows|length }}</span></h2>
-  {% if not rows %}<div class="empty">Пока пусто — демки обычно идут в Discord-канал</div>
+  {% if not rows %}<div class="empty">Пока пусто — демки появятся после наказаний с вложением</div>
   {% else %}
-  <div class="history-list">
+  <div class="proof-grid">
     {% for r in rows %}
-    <div class="history-item">
-      <div class="history-body">
-        {% if r.user_id %}<a href="{{ url_for('member', q=r.user_id) }}"><strong>{{ r.title }}</strong></a>{% else %}<strong>{{ r.title }}</strong>{% endif %}
-        <span class="dim">{{ r.detail }}</span>
+    <article class="proof-card">
+      <div class="proof-card__head">
+        <span class="pill pill-{% if r.status == 'approved' or r.status == 'accepted' %}ok{% elif r.status == 'rejected' %}ban{% else %}warn{% endif %}">
+          {% if r.status == 'rejected' %}отклонена{% elif r.status in ('approved','accepted') %}принята{% else %}на проверке{% endif %}
+        </span>
+        <span class="dim">{{ r.when or '—' }}</span>
       </div>
-      <span class="history-when">{{ r.when or '—' }}</span>
-    </div>
+      <div class="proof-card__title">{{ r.title }}</div>
+      <div class="proof-card__meta">
+        <div>кому · {% if r.user_id %}<a href="{{ url_for('member', q=r.user_id) }}"><b>{{ r.user_name }}</b></a>{% else %}<b>{{ r.user_name }}</b>{% endif %}</div>
+        <div>выдал · {% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod_name }}</a>{% else %}{{ r.mod_name }}{% endif %}</div>
+        {% if r.reviewer %}<div>проверил · <b>{{ r.reviewer }}</b></div>{% endif %}
+      </div>
+      {% if r.reason %}<div class="proof-card__reason">{{ r.reason }}</div>{% endif %}
+      {% if r.media_url %}
+        {% if r.media_kind == 'video' %}
+        <video class="proof-card__media" controls preload="metadata" src="{{ r.media_url }}"></video>
+        {% else %}
+        <a class="proof-card__media-link" href="{{ r.media_url }}" target="_blank" rel="noopener">
+          <img class="proof-card__media" src="{{ r.media_url }}" alt="{{ r.media_name or 'демка' }}">
+        </a>
+        {% endif %}
+      {% elif r.link %}
+        <a class="btn btn-ghost" href="{{ r.link }}" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Открыть в Discord</a>
+      {% else %}
+        <div class="dim">Файл не сохранён локально</div>
+      {% endif %}
+    </article>
     {% endfor %}
   </div>
   {% endif %}

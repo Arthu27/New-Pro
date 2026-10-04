@@ -2,7 +2,7 @@
 {% block title %}Апелляции{% endblock %}
 {% block heading %}Апелляции{% endblock %}
 {% block body %}
-<p class="lead">Очередь апелляций. Решения — в Discord.</p>
+<p class="lead">Очередь апелляций. В колонке «Решил» — кто принял или отклонил.</p>
 
 <section class="panel rise">
   <h2>Очередь <span class="count">{{ rows|length }}</span></h2>
@@ -10,7 +10,7 @@
   {% else %}
   <div class="table-scroll">
   <table>
-    <thead><tr><th>#</th><th>Кто</th><th>Статус</th><th>Текст</th><th>Мод</th><th>Время</th></tr></thead>
+    <thead><tr><th>#</th><th>Кто</th><th>Статус</th><th>Текст</th><th>Решил</th><th>Подано</th><th>Решение</th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr class="{% if r.user_id %}click-row{% endif %}" {% if r.user_id %}data-href="{{ url_for('member', q=r.user_id) }}"{% endif %}>
@@ -21,8 +21,9 @@
           <span class="pill {% if 'accept' in st or 'принят' in st or 'approved' in st %}pill-ok{% elif 'reject' in st or 'отклон' in st %}pill-ban{% else %}pill-warn{% endif %}">{{ r.status }}</span>
         </td>
         <td class="dim">{{ r.reason }}</td>
-        <td>{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod }}</a>{% else %}{{ r.mod }}{% endif %}</td>
+        <td>{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}"><b>{{ r.mod }}</b></a>{% else %}<b>{{ r.mod }}</b>{% endif %}</td>
         <td class="dim">{{ r.when }}</td>
+        <td class="dim">{{ r.decided or '—' }}</td>
       </tr>
     {% endfor %}
     </tbody>

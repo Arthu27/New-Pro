@@ -332,12 +332,14 @@ class Moderation (commands .Cog ):
             log.info(f'[MOD] auto-warn: {_aw_e}')
 
     def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ,mod_name=None ,
-    duration=None ):
+    duration=None ,user_name=None ):
         """Записать дело наказания в data/mod_data.json.
 
         duration — срок в МИНУТАХ (муты из /modpanel). Пишем отдельным ключом
         duration_minutes: его уже читают /api/mod-stats и посев демо-панели,
         а «История решений» показывает срок мута прямо в таблице.
+        user_name — ник цели в момент наказания (баненый потом пропадает
+        из кэша гильдии → журнал без имени).
         """
         os .makedirs ('data',exist_ok =True )
         filepath ='data/mod_data.json'
@@ -350,7 +352,7 @@ class Moderation (commands .Cog ):
                 # (например, {'case': ..., 'notes': ...}). Не теряем их записи,
                 # а лишь гарантируем ключ 'cases'.
                 if isinstance (loaded ,dict ):
-                    data =loaded
+                    data =loaded 
                 data .setdefault ('cases',{})
             gid =str (guild_id )
             if gid not in data ['cases']:
@@ -362,6 +364,7 @@ class Moderation (commands .Cog ):
             # Имя модератора в момент наказания: панель показывает его,
             # даже если имя так и не попало в карту имён сервера.
             'mod_name':str (mod_name or ''),
+            'user_name':str (user_name or ''),
             'reason':reason or 'Не указана',
             'timestamp':datetime .now (timezone .utc ).isoformat ()
             }
@@ -1158,10 +1161,14 @@ class Moderation (commands .Cog ):
                 try :
                     import asyncio as _aio_sc
                     # запись дела (файл) — в рабочем потоке, без блокировки loop
+                    _target_name =(
+                        getattr (user ,'display_name' ,None )
+                        or getattr (user ,'name' ,None )
+                        or str (getattr (user ,'id' ,'')or ''))
                     case_id =await _aio_sc .to_thread (
                         self .save_case ,guild .id ,action ,user .id ,interaction .user .id ,reason ,
                         getattr (interaction .user ,'display_name' ,None )or str (interaction .user ),
-                        _case_minutes )
+                        _case_minutes ,_target_name )
                 except Exception as _case_e :
                     case_id =0
                     aux_errors .append ("дело не записано")
