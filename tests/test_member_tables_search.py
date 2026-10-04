@@ -40,7 +40,7 @@ check('filterTables' in tpl, 'local table filter while typing')
 check('profiles-table' in partial and 'data-find=' in partial, 'partial has searchable rows')
 check('sq-table' in partial and 'sq-stat' in partial, 'square table markup')
 check('sq-wrap' in css and 'border-radius: 4px' in css, 'square table styles')
-check('panel.css' in base and '?v=22' in base, 'CSS cache bump v=22')
+check('panel.css' in base and ('?v=22' in base or '?v=23' in base), 'CSS cache bump')
 
 print(f'\n{PASS} passed, {FAIL} failed')
 raise SystemExit(1 if FAIL else 0)

@@ -9,9 +9,10 @@
 Публичного меню в канале апелляций НЕТ (владелец 2026-09-24): канал —
 только для карточек модерации после подачи из ЛС.
 
-Модераторы получают карточку с select «Принять / Отклонить / Взять в работу»
-(стикеры). Принят — пользователь разбанен и получает добрую весть в ЛС.
-Отклонён — отказ в ЛС.
+Модераторы получают карточку с select
+«Принять / Отклонить / Чёрный список / Взять в работу» (стикеры).
+Принят — пользователь разбанен и получает добрую весть в ЛС.
+Отклонён — отказ в ЛС. Чёрный список — отказ + закрытие подачи насовсем.
 
 Хранилище — SQLite (GuildData 'appeals'). Select живёт в persistent view
 и переживает рестарт бота. Метки — aware UTC.
@@ -67,7 +68,41 @@ DM_FOOTER = 'Hakumo · Апелляции'
 # ─── чистые функции (покрыты тестом) ────────────────────────────────────────
 
 def empty_state():
-    return {'next_id': 1, 'items': [], 'log_channel_id': 0}
+    return {'next_id': 1, 'items': [], 'log_channel_id': 0, 'blacklist': {}}
+
+
+def appeal_blacklist_of(state):
+    bl = (state or {}).get('blacklist')
+    return bl if isinstance(bl, dict) else {}
+
+
+def is_appeal_blacklisted(state, user_id) -> bool:
+    try:
+        return str(int(user_id)) in appeal_blacklist_of(state)
+    except (TypeError, ValueError):
+        return str(user_id) in appeal_blacklist_of(state)
+
+
+def blacklist_appeal_user(state, user_id, *, by='', reason='', now=None):
+    """Насовсем закрыть подачу апелляций для user_id."""
+    if not isinstance(state, dict):
+        return None
+    try:
+        uid = str(int(user_id))
+    except (TypeError, ValueError):
+        uid = str(user_id or '').strip()
+    if not uid:
+        return None
+    bl = dict(appeal_blacklist_of(state))
+    ts = now or datetime.now(UTC)
+    row = {
+        'by': str(by or '')[:80],
+        'reason': str(reason or '')[:200],
+        'at': ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
+    }
+    bl[uid] = row
+    state['blacklist'] = bl
+    return row
 
 
 def _clamp_hours(raw_val, default, lo, hi):
@@ -287,6 +322,8 @@ def create_appeal(state, user_id, user_name, text, now):
         return None, f'максимум {MAX_TEXT} символов'
     # Дубликаты: пока апелляция на рассмотрении, новую не принимаем —
     # одна заявка, одна карточка (жалоба владельца на дубли 2026-09-06).
+    if is_appeal_blacklisted(state, user_id):
+        return None, 'вы в чёрном списке апелляций — подача закрыта'
     pend = user_pending(state, user_id)
     if pend:
         return None, (f'апелляция #{pend[0]["id"]} уже на рассмотрении — '
@@ -386,7 +423,9 @@ def _appeal_select_emoji(kind: str):
         # фон: при первом клике стикеры уже могут быть в кэше
         return emoji_for_appeal(kind)
     except Exception:
-        return {'accept': '✅', 'reject': '❌', 'claim': '✋'}.get(kind, '❔')
+        return {
+            'accept': '✅', 'reject': '❌', 'claim': '✋', 'blacklist': '🚷',
+        }.get(kind, '❔')
 
 
 class AppealView(discord.ui.LayoutView):
@@ -461,6 +500,10 @@ class AppealView(discord.ui.LayoutView):
                 description='Оставить наказание · отказ в ЛС',
                 emoji=_appeal_select_emoji('reject')),
             discord.SelectOption(
+                label='Чёрный список', value='blacklist',
+                description='Отклонить и закрыть подачу насовсем',
+                emoji=_appeal_select_emoji('blacklist')),
+            discord.SelectOption(
                 label=claim_label[:100], value='claim',
                 description=claim_desc[:100],
                 emoji=_appeal_select_emoji('claim')),
@@ -516,7 +559,7 @@ class AppealView(discord.ui.LayoutView):
         return self._claim_btn_ref
 
     async def _on_select(self, interaction):
-        """Маршрутизация select → claim / accept / reject."""
+        """Маршрутизация select → claim / accept / reject / blacklist."""
         values = []
         try:
             data = getattr(interaction, 'data', None) or {}
@@ -535,6 +578,8 @@ class AppealView(discord.ui.LayoutView):
             await self._resolve(interaction, True)
         elif action == 'reject':
             await self._resolve(interaction, False)
+        elif action == 'blacklist':
+            await self._resolve(interaction, False, blacklist=True)
         else:
             try:
                 await interaction.response.send_message(
@@ -682,7 +727,7 @@ class AppealView(discord.ui.LayoutView):
             await self._resolve(interaction, accept)
         return _cb
 
-    async def _resolve(self, interaction, accept):
+    async def _resolve(self, interaction, accept, *, blacklist=False):
         # Кто видит канал апелляций — может решить карточку.
         # ACL «Бан» больше не блокирует (владелец 2026-09-24).
         gid = self.guild_id
@@ -693,6 +738,8 @@ class AppealView(discord.ui.LayoutView):
             except Exception as _ex:
                 log.debug('appeals: resolve deny reply: %s', _ex)
             return
+        if blacklist:
+            accept = False
         if accept:
             # Лимиты стаффа: принятие апелляции = разбан, расходка «unban»
             # (та же, что у /unban и панели). Проверяем ДО решения и только
@@ -712,12 +759,25 @@ class AppealView(discord.ui.LayoutView):
         _who = (getattr(interaction.user, 'display_name', None)
                 or getattr(interaction.user, 'name', None)
                 or str(interaction.user))
+        reply = None
+        if blacklist and not accept:
+            reply = 'Подача апелляций закрыта — чёрный список'
         item, err = resolve_appeal(
             state, self.appeal_id, accept, _who, datetime.now(UTC),
+            reply=reply,
             reviewer_id=getattr(interaction.user, 'id', None))
         if err:
             await interaction.response.send_message(err, ephemeral=True)
             return
+        if blacklist:
+            try:
+                blacklist_appeal_user(
+                    state, item.get('user_id'), by=_who,
+                    reason=f'апелляция #{item.get("id")}',
+                    now=datetime.now(UTC))
+                item['blacklisted'] = True
+            except Exception as _ex:
+                log.debug('appeals: blacklist save: %s', _ex)
         self.cog._save(gid, state)
         unbanned = False
         member_present = False
@@ -789,8 +849,14 @@ class AppealView(discord.ui.LayoutView):
             guild_id=gid)
 
         # Карточка остаётся: V2-блок обновляется — кто решил, исход, без кнопок.
-        status = ('принята (разбанен)' if (accept and unbanned)
-                  else ('принята' if accept else 'отклонена'))
+        if accept and unbanned:
+            status = 'принята (разбанен)'
+        elif accept:
+            status = 'принята'
+        elif blacklist:
+            status = 'отклонена · чёрный список'
+        else:
+            status = 'отклонена'
         try:
             await interaction.response.defer(ephemeral=True)
         except Exception as _ex:

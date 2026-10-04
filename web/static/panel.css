@@ -659,6 +659,39 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
   .member-kpis { grid-template-columns: repeat(2, 1fr); }
   .sq-table .col-roles { min-width: 140px; }
 }
+
+/* ── Appeals decide ───────────────────────────────────── */
+.ap-text { max-width: 320px; }
+.ap-reason { font-size: .86rem; line-height: 1.35; color: var(--ink-2); }
+.ap-reply { margin-top: 4px; font-size: .75rem; }
+.ap-actions { flex-wrap: wrap; justify-content: flex-end; }
+.sq-btn.ap-btn.ok, button.sq-btn.ok {
+  border-color: rgba(79,209,139,.45); color: #8ee6b6;
+}
+.sq-btn.ap-btn.ok:hover, button.sq-btn.ok:hover {
+  background: rgba(79,209,139,.14); color: #b6f0d0;
+}
+.sq-btn.ap-btn.danger, button.sq-btn.danger, .ap-confirm.danger {
+  border-color: rgba(255,107,107,.45); color: #ff9a9a;
+}
+.sq-btn.ap-btn.danger:hover, button.sq-btn.danger:hover, .ap-confirm.danger:hover {
+  background: rgba(255,107,107,.14); color: #ffc0c0;
+}
+.ap-dlg {
+  border: 1px solid var(--line-2); border-radius: 6px;
+  background: #101116; color: var(--ink);
+  padding: 0; max-width: 420px; width: calc(100% - 24px);
+  box-shadow: var(--shadow);
+}
+.ap-dlg::backdrop { background: rgba(0,0,0,.65); }
+.ap-dlg__body { display: grid; gap: 10px; padding: 16px; margin: 0; }
+.ap-dlg__body h3 { margin: 0; font-size: 1.05rem; }
+.ap-dlg__label { font-size: .78rem; font-weight: 700; color: var(--muted); }
+.ap-dlg textarea.input {
+  border-radius: 4px !important; resize: vertical; min-height: 72px;
+  font: inherit; width: 100%;
+}
+.ap-dlg__actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .mp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .mp-card { padding: 20px; }
 .mp-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }

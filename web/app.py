@@ -1412,16 +1412,131 @@ def _fmt(ts):
     return d.astimezone().strftime('%d.%m %H:%M')
 
 
-def _appeals_list(gid):
+def _appeals_state(gid):
     try:
         from db import GuildData
-        state = GuildData('appeals').get(gid or '0', 'state', {}) or {}
-        items = state.get('items') if isinstance(state, dict) else []
+        from cogs.appeals import empty_state
+        st = GuildData('appeals').get(gid or '0', 'state', empty_state()) or empty_state()
+        return st if isinstance(st, dict) else empty_state()
+    except Exception:
+        try:
+            from cogs.appeals import empty_state
+            return empty_state()
+        except Exception:
+            return {'next_id': 1, 'items': [], 'blacklist': {}}
+
+
+def _appeals_save(gid, state):
+    from db import GuildData
+    GuildData('appeals').set(gid or '0', 'state', state)
+
+
+def _appeals_list(gid):
+    try:
+        items = _appeals_state(gid).get('items') or []
         if not isinstance(items, list):
             return []
         return list(reversed(items[-100:]))
     except Exception:
         return []
+
+
+async def _panel_appeal_side_effects(gid, item, *, accept, blacklist=False,
+                                     reviewer_name='', reviewer_id=0):
+    """Разбан / ЛС / карточка — как кнопка в Discord."""
+    bot = bot_instance
+    if not bot:
+        return {'offline': True, 'unbanned': False}
+    cog = bot.get_cog('Appeals') or bot.get_cog('appeals')
+    guild = None
+    try:
+        guild = bot.get_guild(int(gid))
+    except Exception:
+        guild = None
+    unbanned = False
+    member_present = False
+    if accept and guild is not None:
+        try:
+            await cog._log_unban_decision(
+                guild, item, reviewer_id or 0, reviewer_name or 'панель'
+            ) if cog else None
+        except Exception:
+            pass
+        member = guild.get_member(int(item['user_id']))
+        member_present = member is not None
+        if member is not None:
+            try:
+                from services import punish_roles as PR
+                rid = PR.role_for(int(gid), 'ban')
+                role = guild.get_role(rid) if rid else None
+                if role is not None and role in getattr(member, 'roles', []):
+                    await member.remove_roles(
+                        role, reason=f'Апелляция #{item["id"]} принята')
+                    PR.clear(int(gid), member.id, rid)
+            except Exception:
+                pass
+            try:
+                mod = bot.get_cog('Moderation') or bot.get_cog('moderation')
+                if mod is not None:
+                    await mod._unisolate_member(guild, member)
+                    rest = getattr(mod, '_restore_roles_after_unban', None)
+                    if callable(rest):
+                        await rest(guild, member)
+                from services import mute_state
+                await mute_state.clear_all_mutes(guild, member)
+            except Exception:
+                pass
+        try:
+            import discord as _d
+            await guild.unban(
+                _d.Object(id=int(item['user_id'])),
+                reason=f'Апелляция #{item["id"]} принята')
+            unbanned = True
+        except Exception as ex:
+            # NotFound = уже разбанен
+            if 'NotFound' in type(ex).__name__ or '404' in str(ex):
+                unbanned = True
+    elif (not accept) and cog and guild is not None:
+        try:
+            await cog._log_reject_decision(
+                guild, item, reviewer_id or 0, reviewer_name or 'панель')
+        except Exception:
+            pass
+
+    if cog is not None:
+        try:
+            from cogs.appeals import settings_of
+            state = _appeals_state(gid)
+            settings = settings_of(state)
+            invite_url = None
+            if accept and unbanned and not member_present and guild is not None:
+                try:
+                    invite_url = await cog._make_return_invite(guild, settings)
+                except Exception:
+                    invite_url = None
+            await cog._notify_user(
+                item, accept, unbanned,
+                cooldown_hours=settings.get('cooldown_hours') or 0,
+                guild_name=str(getattr(guild, 'name', '') or ''),
+                member_present=member_present,
+                invite_url=invite_url,
+                guild_id=int(gid) if gid else 0)
+        except Exception:
+            pass
+        try:
+            state = _appeals_state(gid)
+            await cog._finalize_appeal_card(
+                guild, state, item,
+                accept=bool(accept), unbanned=bool(unbanned),
+                reviewer=reviewer_name or 'панель')
+        except Exception:
+            pass
+    return {
+        'offline': False,
+        'unbanned': bool(unbanned),
+        'blacklisted': bool(blacklist),
+        'member_present': bool(member_present),
+    }
 
 
 def _reasons_bundle(gid):
@@ -3309,20 +3424,28 @@ def warns():
 @role_required('mod')
 def appeals():
     gid = _main_guild()
-    items = _appeals_list(gid)
+    state = _appeals_state(gid)
+    items = list(reversed((state.get('items') or [])[-100:]))
     book = _namebook(gid)
+    bl = state.get('blacklist') if isinstance(state.get('blacklist'), dict) else {}
     view = []
+    pending_n = 0
     for it in items:
         uid = str(it.get('user_id') or it.get('author_id') or '')
         mid = str(it.get('reviewer_id') or it.get('mod_id') or '')
         reviewer = str(it.get('reviewed_by') or it.get('mod_name') or '').strip()
         st_raw = str(it.get('status') or '').lower()
+        if st_raw == 'pending':
+            pending_n += 1
         st_ru = {
             'pending': 'ожидает',
             'accepted': 'принята',
             'rejected': 'отклонена',
             'auto_closed': 'закрыта',
         }.get(st_raw, st_raw or '—')
+        if it.get('blacklisted') or (uid and uid in bl and st_raw == 'rejected'):
+            if st_raw == 'rejected':
+                st_ru = 'отклонена · ЧС'
         decided = _fmt(it.get('reviewed_at')) if it.get('reviewed_at') else ''
         view.append({
             'id': it.get('id') or it.get('case_id') or '—',
@@ -3330,7 +3453,10 @@ def appeals():
             'user': _best_name(it.get('user_name') or it.get('username'), uid, book),
             'status': st_ru,
             'status_raw': st_raw,
-            'reason': (it.get('text') or it.get('reason') or '')[:160],
+            'pending': st_raw == 'pending',
+            'blacklisted': bool(it.get('blacklisted') or (uid and uid in bl)),
+            'reason': (it.get('text') or it.get('reason') or '')[:220],
+            'reply': (it.get('reply') or '')[:160],
             'when': _fmt(it.get('created_at') or it.get('timestamp')),
             'decided': decided,
             'mod_id': mid if _is_id(mid) else '',
@@ -3338,7 +3464,141 @@ def appeals():
             'mod': _best_name(reviewer, mid, book,
                               fallback='ожидает' if st_raw == 'pending' else '—'),
         })
-    return render_template('appeals.html', rows=view)
+    return render_template(
+        'appeals.html', rows=view, pending_n=pending_n,
+        blacklist_n=len(bl),
+        can_decide=LEVEL.get(session.get('role') or '', 0) >= LEVEL['mod'],
+    )
+
+
+@app.post('/api/appeals/<int:aid>/decide')
+@login_required
+@role_required('mod')
+def api_appeals_decide(aid):
+    """Принять / отклонить / в чёрный список — из панели."""
+    from datetime import datetime, timezone
+    from cogs.appeals import (
+        resolve_appeal, blacklist_appeal_user, settings_of, get_appeal,
+    )
+    data = request.get_json(silent=True) or request.form or {}
+    decision = str(data.get('decision') or '').strip().lower()
+    reply = str(data.get('reply') or '').strip()[:300]
+    accept = decision in ('accept', 'accepted', 'approve', 'ok', 'принять')
+    reject = decision in ('reject', 'rejected', 'deny', 'отклон', 'отклонить')
+    blacklist = decision in (
+        'blacklist', 'black', 'чс', 'чёрный', 'черный', 'чёрный список',
+        'черный список',
+    )
+    if not accept and not reject and not blacklist:
+        return jsonify({
+            'ok': False,
+            'error': 'decision: accept | reject | blacklist',
+        }), 400
+    if blacklist:
+        accept = False
+        reject = True
+        if not reply:
+            reply = 'Подача апелляций закрыта — чёрный список'
+
+    gid = _main_guild()
+    if not gid:
+        return jsonify({'ok': False, 'error': 'Сервер не настроен'}), 503
+    state = _appeals_state(gid)
+    item = get_appeal(state, int(aid))
+    if item is None:
+        return jsonify({'ok': False, 'error': f'Апелляция #{aid} не найдена'}), 404
+    if str(item.get('status') or '') != 'pending':
+        return jsonify({
+            'ok': False,
+            'error': f'Апелляция #{aid} уже рассмотрена',
+        }), 409
+
+    settings = settings_of(state)
+    if reject and settings.get('require_reply_on_reject') and not reply:
+        return jsonify({
+            'ok': False,
+            'error': 'При отказе нужен комментарий',
+        }), 400
+
+    reviewer = (
+        session.get('discord_display')
+        or session.get('username')
+        or 'панель'
+    )
+    try:
+        reviewer_id = int(session.get('discord_id') or 0)
+    except Exception:
+        reviewer_id = 0
+
+    # лимит unban при принятии
+    if accept and not _viewer_is_limit_exempt():
+        try:
+            from services.staff_limits import check_limit, limit_deny_text, get_windows
+            actor = str(session.get('discord_id') or '').strip()
+            if actor.isdigit():
+                role_ids = _session_discord_role_ids()
+                ok_l, used, lim = check_limit(gid, actor, 'unban', 1, role_ids)
+                if not ok_l and lim > 0:
+                    win = (get_windows(gid) or {}).get('unban')
+                    return jsonify({
+                        'ok': False,
+                        'error': limit_deny_text('unban', used, lim, 1, window=win),
+                    }), 429
+        except Exception:
+            pass
+
+    now = datetime.now(timezone.utc)
+    item, err = resolve_appeal(
+        state, int(aid), bool(accept), reviewer, now,
+        reply=reply or None, reviewer_id=reviewer_id or None)
+    if err:
+        return jsonify({'ok': False, 'error': err}), 409
+    if blacklist:
+        blacklist_appeal_user(
+            state, item.get('user_id'), by=reviewer,
+            reason=f'апелляция #{aid}', now=now)
+        item['blacklisted'] = True
+    _appeals_save(gid, state)
+
+    effects = {'offline': True, 'unbanned': False, 'blacklisted': blacklist}
+    try:
+        effects = _run_on_bot(
+            _panel_appeal_side_effects(
+                gid, item, accept=bool(accept), blacklist=bool(blacklist),
+                reviewer_name=reviewer, reviewer_id=reviewer_id,
+            ),
+            timeout=30,
+        )
+    except Exception as e:
+        effects = {
+            'offline': True, 'unbanned': False, 'blacklisted': blacklist,
+            'error': str(e)[:160],
+        }
+
+    if accept and effects.get('unbanned') and not _viewer_is_limit_exempt():
+        try:
+            from services.staff_limits import record_hit
+            actor = str(session.get('discord_id') or '').strip()
+            if actor.isdigit():
+                record_hit(gid, actor, 'unban', 1)
+        except Exception:
+            pass
+
+    if accept and effects.get('unbanned'):
+        status_text = 'принята (разбанен)'
+    elif accept:
+        status_text = 'принята'
+    elif blacklist:
+        status_text = 'отклонена · чёрный список'
+    else:
+        status_text = 'отклонена'
+    return jsonify({
+        'ok': True,
+        'id': aid,
+        'status': item.get('status'),
+        'status_text': status_text,
+        'effects': effects,
+    })
 
 
 def _panel_can_decide_proof() -> bool:
