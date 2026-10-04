@@ -1026,7 +1026,18 @@ def _entry_id_from_message(interaction) -> int:
     return 0
 
 
-def _can_review_proof(member) -> bool:
+def _admin_tier_role_ids() -> set:
+    try:
+        from services.staff_roles import (
+            KNOWN_ADMIN_ROLE_ID, KNOWN_STAFF_ADMIN_ROLE_ID,
+        )
+        return {int(KNOWN_ADMIN_ROLE_ID), int(KNOWN_STAFF_ADMIN_ROLE_ID)}
+    except Exception:
+        return {1189999426631122964, 1549118975110152263}
+
+
+def _can_redecide_proof(member) -> bool:
+    """Owner / Admin / Staff Admin — могут перерешить уже закрытую демку."""
     if member is None:
         return False
     try:
@@ -1039,6 +1050,19 @@ def _can_review_proof(member) -> bool:
             return True
     except Exception:
         pass
+    try:
+        ids = {int(getattr(r, 'id', 0) or 0)
+               for r in (getattr(member, 'roles', None) or [])}
+        return bool(ids & _admin_tier_role_ids())
+    except Exception:
+        return False
+
+
+def _can_review_proof(member) -> bool:
+    if member is None:
+        return False
+    if _can_redecide_proof(member):
+        return True
     try:
         ids = {int(getattr(r, 'id', 0) or 0)
                for r in (getattr(member, 'roles', None) or [])}
@@ -1177,7 +1201,10 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
     except Exception:
         pass
     if not _can_review_proof(reviewer):
-        return False, f'Только <@&{PROOF_REVIEW_ROLE_ID}> принимает/отклоняет демки.'
+        return False, (
+            f'Только <@&{PROOF_REVIEW_ROLE_ID}>, Admin / Staff Admin '
+            f'или owner принимает/отклоняет демки.'
+        )
     entry = None
     for en in proof_list(guild_id, limit=500):
         if int(en.get('id') or 0) == int(entry_id):
@@ -1185,7 +1212,8 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
             break
     if not entry:
         return False, f'Демка #{entry_id} не найдена.'
-    if entry.get('review_status') in ('accepted', 'rejected'):
+    already = entry.get('review_status') in ('accepted', 'rejected')
+    if already and not _can_redecide_proof(reviewer):
         # Карточка могла остаться со select — закрыть повторно
         try:
             await _close_proof_card(
@@ -1202,21 +1230,38 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
 
     status = 'accepted' if accept else 'rejected'
     undo = ''
+    prev = str(entry.get('review_status') or 'pending')
     if accept:
         proof_update(guild_id, entry_id,
                      review_status=status,
                      reviewed_by=str(getattr(reviewer, 'id', '')),
-                     review_reason='')
-        reply = 'Демка принята — наказание остаётся.'
+                     reviewed_by_name=str(
+                         getattr(reviewer, 'display_name', None)
+                         or getattr(reviewer, 'name', None)
+                         or reviewer),
+                     review_reason=(reason or '')[:400],
+                     redecide_from=prev if already else None)
+        reply = ('Демка перерешена: принята.' if already
+                 else 'Демка принята — наказание остаётся.')
     else:
-        undo = await _undo_punishment(
-            bot, guild, entry, reviewer, reason or 'демка отклонена')
+        # при повторном reject не снимаем наказание второй раз
+        if prev != 'rejected':
+            undo = await _undo_punishment(
+                bot, guild, entry, reviewer, reason or 'демка отклонена')
+        else:
+            undo = entry.get('undo_note') or 'уже снимали'
         proof_update(guild_id, entry_id,
                      review_status=status,
                      reviewed_by=str(getattr(reviewer, 'id', '')),
+                     reviewed_by_name=str(
+                         getattr(reviewer, 'display_name', None)
+                         or getattr(reviewer, 'name', None)
+                         or reviewer),
                      review_reason=(reason or '')[:400],
-                     undo_note=undo)
-        reply = f'Демка отклонена. {undo}'
+                     undo_note=undo,
+                     redecide_from=prev if already else None)
+        reply = (f'Демка перерешена: отклонена. {undo}' if already
+                 else f'Демка отклонена. {undo}')
 
     # Свежая запись после update
     entry = proof_get(guild_id, entry_id) or entry
@@ -1232,14 +1277,113 @@ async def _review_proof(interaction, guild_id, entry_id, *, accept: bool,
             '[PROOF] карточка #%s не закрылась после %s',
             entry_id, 'accept' if accept else 'reject')
 
-    # Локальный файл демки — удалить после решения (не хранить зря)
-    try:
-        if proof_delete_media(guild_id, entry):
-            proof_update(guild_id, entry_id, media=None)
-            log.info('[PROOF] #%s локальный файл удалён после решения', entry_id)
-    except Exception as ex:
-        log.warning('[PROOF] delete media #%s: %s', entry_id, ex)
+    # Локальный файл оставляем — панель/перерешение должны видеть медиа
+    return True, reply
 
+
+async def review_proof_panel(bot, guild_id, entry_id, *, accept: bool,
+                             reason: str, reviewer_id: int,
+                             reviewer_name: str = '') -> tuple:
+    """Решение/перерешение демки из веб-панели (owner / admin / staff admin)."""
+    guild = bot.get_guild(int(guild_id or 0)) if bot else None
+    if guild is None:
+        return False, 'Сервер не найден (бот офлайн).'
+    reviewer = guild.get_member(int(reviewer_id or 0))
+    if reviewer is None:
+        try:
+            reviewer = await guild.fetch_member(int(reviewer_id or 0))
+        except Exception:
+            reviewer = None
+    # Панельный owner может не быть в гильдии кэше — пропускаем member-check
+    # если caller уже проверил session role owner/admin.
+    can = _can_redecide_proof(reviewer) if reviewer is not None else False
+    if not can:
+        try:
+            from config import Config
+            if int(reviewer_id or 0) in Config.all_owner_ids():
+                can = True
+        except Exception:
+            pass
+    if not can:
+        return False, 'Только owner / Admin / Staff Admin могут решать демки из панели.'
+    entry = proof_get(guild_id, entry_id)
+    if not entry:
+        return False, f'Демка #{entry_id} не найдена.'
+    already = entry.get('review_status') in ('accepted', 'rejected')
+    status = 'accepted' if accept else 'rejected'
+    prev = str(entry.get('review_status') or 'pending')
+    who_name = (
+        reviewer_name
+        or (getattr(reviewer, 'display_name', None) if reviewer else '')
+        or str(reviewer_id)
+    )
+    undo = ''
+    if accept:
+        proof_update(
+            guild_id, entry_id,
+            review_status=status,
+            reviewed_by=str(reviewer_id),
+            reviewed_by_name=str(who_name)[:80],
+            review_reason=(reason or '')[:400],
+            redecide_from=prev if already else None,
+            decided_via='panel',
+        )
+        reply = ('Перерешено: принята.' if already
+                 else 'Принята — наказание остаётся.')
+    else:
+        if prev != 'rejected' and reviewer is not None:
+            undo = await _undo_punishment(
+                bot, guild, entry, reviewer, reason or 'демка отклонена')
+        elif prev == 'rejected':
+            undo = entry.get('undo_note') or 'уже снимали'
+        else:
+            undo = 'бот не видит модератора на сервере — наказание не трогали'
+        proof_update(
+            guild_id, entry_id,
+            review_status=status,
+            reviewed_by=str(reviewer_id),
+            reviewed_by_name=str(who_name)[:80],
+            review_reason=(reason or '')[:400],
+            undo_note=undo,
+            redecide_from=prev if already else None,
+            decided_via='panel',
+        )
+        reply = (f'Перерешено: отклонена. {undo}' if already
+                 else f'Отклонена. {undo}')
+    # Обновить Discord-карточку без interaction (best-effort)
+    try:
+        entry = proof_get(guild_id, entry_id) or entry
+        mid = int(entry.get('msg_id') or 0)
+        cid = int(entry.get('channel_id') or 0)
+        if mid and cid:
+            ch = guild.get_channel(cid)
+            if ch is None and hasattr(guild, 'fetch_channel'):
+                ch = await guild.fetch_channel(cid)
+            if ch is not None:
+                msg = await ch.fetch_message(mid)
+                body = _proof_card_body(entry)
+
+                class _Fake:
+                    display_name = who_name
+                    id = int(reviewer_id or 0)
+                    mention = f'<@{reviewer_id}>'
+
+                status_label, note, accent = _proof_decision_note(
+                    'accept' if accept else 'reject', _Fake(),
+                    extra=undo, reject_reason=reason or '')
+                media_urls = _media_urls_from_source(msg, entry)
+                view = ProofReviewDoneView(
+                    entry_id=int(entry_id),
+                    action=entry.get('action') or '',
+                    body=body,
+                    status=status_label,
+                    note=note,
+                    media_urls=media_urls,
+                    accent=accent,
+                )
+                await msg.edit(view=view)
+    except Exception as ex:
+        log.debug('[PROOF] panel card update #%s: %s', entry_id, ex)
     return True, reply
 
 

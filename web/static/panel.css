@@ -339,6 +339,7 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
 }
 .tag.owner, .tag-owner { background: var(--accent-soft); color: #ff8a7a; border-color: rgba(255,77,61,.3); }
 .tag-admin { background: rgba(255,107,107,.12); color: #ff9a9a; }
+.tag-assistent { background: rgba(255,180,84,.14); color: #ffc78a; }
 .tag-curator { background: rgba(192,132,252,.12); color: #d2b0ff; }
 .tag-mod { background: rgba(143,166,255,.12); color: #b4c3ff; }
 .tag-helper { background: rgba(79,209,139,.12); color: #8ee6b6; }
@@ -489,7 +490,9 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
   display: flex; flex-direction: column; gap: 8px;
   padding: 14px; border-radius: var(--r-md);
   border: 1px solid var(--line); background: rgba(0,0,0,.28);
+  color: inherit; text-decoration: none; transition: border-color .15s, transform .15s;
 }
+a.proof-card:hover { border-color: var(--line-2); transform: translateY(-2px); color: inherit; }
 .proof-card__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .proof-card__title { font-weight: 800; font-size: .95rem; }
 .proof-card__meta { font-size: .8rem; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
@@ -503,6 +506,52 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
   border-radius: var(--r-sm); border: 1px solid var(--line); background: #000;
 }
 .proof-card__media-link { display: block; }
+.proof-card__more {
+  margin-top: auto; font-size: .78rem; font-weight: 800;
+  letter-spacing: .04em; color: var(--muted);
+}
+.proof-card:hover .proof-card__more { color: var(--accent); }
+.proof-detail {
+  display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .9fr);
+  gap: 16px; align-items: start;
+}
+@media (max-width: 900px) {
+  .proof-detail { grid-template-columns: 1fr; }
+}
+.proof-detail__media {
+  padding: 14px; border-radius: var(--r-md);
+  border: 1px solid var(--line); background: rgba(0,0,0,.35);
+}
+.proof-detail__media img,
+.proof-detail__media video {
+  width: 100%; max-height: 70vh; object-fit: contain;
+  border-radius: var(--r-sm); background: #000; display: block;
+}
+.proof-detail__side {
+  padding: 18px 20px; border-radius: var(--r-md);
+  border: 1px solid var(--line); background: var(--glass-2);
+}
+.proof-detail__status { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.proof-detail__title {
+  font-family: var(--display); font-size: 1.35rem; letter-spacing: -.03em;
+  font-weight: 800; margin: 0 0 12px;
+}
+.proof-decide {
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.proof-decide h3 { margin: 0; font-size: 1rem; }
+.proof-decide .field { display: flex; flex-direction: column; gap: 6px; }
+.proof-decide textarea {
+  width: 100%; resize: vertical; min-height: 64px;
+  padding: 10px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: rgba(0,0,0,.35);
+  color: var(--ink); font: inherit;
+}
+.btn-danger { background: #c23b3b; color: #fff; border-color: transparent; }
+.btn-danger:hover { filter: brightness(1.08); }
+.mp-val.ok { color: #8ee6b6; }
+.mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .84em; }
 
 /* ── Limits ───────────────────────────────────────────── */
 .limits-card {
@@ -787,6 +836,14 @@ h2 .seg { margin-left: auto; font-weight: 800; }
 }
 .ch-cap.on { background: var(--ink); color: #0a0a0c; border-color: transparent; }
 .ch-cap.warn.on { background: var(--accent); color: #fff; }
+.ch-ow { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ch-ow__row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+  padding: 8px 10px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: rgba(0,0,0,.22);
+  font-size: .78rem;
+}
+.ch-ow__row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ch-none { text-align: center; padding: 28px 0; }
 
 @media (max-width: 1080px) {

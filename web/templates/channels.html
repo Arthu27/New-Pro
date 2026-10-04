@@ -2,13 +2,14 @@
 {% block title %}Каналы{% endblock %}
 {% block heading %}Каналы{% endblock %}
 {% block body %}
-<p class="lead">Права @everyone. Белая плашка — можно, пустая — закрыто. Нажми карточку: откроется полный список прав.</p>
+<p class="lead">Каждый канал — с правами @everyone, лимитами и ролью в боте. Открой карточку: полный разбор.</p>
 
 <div class="kpis rise">
   <div class="kpi"><b>{{ kpi.total }}</b><span>каналов</span></div>
   <div class="kpi"><b>{{ kpi.text }}</b><span>текст</span></div>
   <div class="kpi"><b>{{ kpi.voice }}</b><span>голос</span></div>
   <div class="kpi"><b>{{ kpi.closed }}</b><span>скрыты</span></div>
+  <div class="kpi"><b>{{ kpi.routes }}</b><span>маршруты</span></div>
 </div>
 
 <div class="ch-bar rise">
@@ -17,10 +18,11 @@
     <button type="button" data-f="text">Текст</button>
     <button type="button" data-f="voice">Голос</button>
     <button type="button" data-f="closed">Скрытые</button>
+    <button type="button" data-f="route">Маршруты</button>
   </div>
   <label class="ch-find">
     <i class="fas fa-magnifying-glass"></i>
-    <input id="chq" type="search" placeholder="Найти канал…" autocomplete="off">
+    <input id="chq" type="search" placeholder="Найти канал или ID…" autocomplete="off">
   </label>
 </div>
 
@@ -32,13 +34,13 @@
   <h2>{{ g.name }} <span class="count ch-count">{{ g['items']|length }}</span></h2>
   <div class="ch-grid">
     {% for r in g['items'] %}
-    <details class="ch-card" data-group="{{ r.group }}" data-closed="{{ 0 if r.view else 1 }}" data-name="{{ (r.name ~ ' ' ~ r.cat)|lower }}">
+    <details class="ch-card" data-group="{{ r.group }}" data-closed="{{ 0 if r.view else 1 }}" data-route="{{ 1 if r.route_key else 0 }}" data-name="{{ (r.name ~ ' ' ~ r.cat ~ ' ' ~ r.id ~ ' ' ~ (r.route_label or ''))|lower }}">
       <summary>
         <div class="ch-card__top">
           <span class="ch-ico {% if not r.view %}is-lock{% endif %}"><i class="fas {{ r.icon }}"></i></span>
           <div class="ch-card__name">
             <strong>{% if r.group != 'voice' %}#{% endif %}{{ r.name }}</strong>
-            <span class="dim">{{ r.kind }}{% if not r.view %} · скрыт{% endif %} · открой</span>
+            <span class="dim">{{ r.kind }}{% if not r.view %} · скрыт{% endif %}{% if r.route_label %} · {{ r.route_label }}{% endif %}</span>
           </div>
           <i class="fas fa-chevron-down ch-chev" aria-hidden="true"></i>
         </div>
@@ -48,21 +50,52 @@
           <span class="ch-cap {% if r.connect %}on{% endif %}">зайти</span>
           <span class="ch-cap {% if r.speak %}on{% endif %}">говорить</span>
           <span class="ch-cap {% if r.stream %}on{% endif %}">стрим</span>
+          {% if r.voice_now %}<span class="ch-cap on">{{ r.voice_now }} в войсе</span>{% endif %}
           {% else %}
           <span class="ch-cap {% if r.send %}on{% endif %}">писать</span>
+          {% if r.slowmode %}<span class="ch-cap on">{{ r.slowmode }}с</span>{% endif %}
+          {% if r.nsfw %}<span class="ch-cap warn on">nsfw</span>{% endif %}
           {% endif %}
           <span class="ch-cap {% if r.manage %}on warn{% endif %}">управлять</span>
         </div>
       </summary>
       <div class="ch-more">
+        <div class="mp-row"><span class="mp-key">ID</span><span class="mp-val mono">{{ r.id }}</span></div>
         <div class="mp-row"><span class="mp-key">Категория</span><span class="mp-val">{{ r.cat }}</span></div>
         <div class="mp-row"><span class="mp-key">Тип</span><span class="mp-val">{{ r.kind }}</span></div>
+        {% if r.topic %}<div class="mp-row"><span class="mp-key">Тема</span><span class="mp-val">{{ r.topic }}</span></div>{% endif %}
+        {% if r.route_label %}<div class="mp-row"><span class="mp-key">Маршрут бота</span><span class="mp-val accent">{{ r.route_label }}</span></div>{% endif %}
         <div class="mp-row"><span class="mp-key">Смотреть</span><span class="mp-val {% if r.view %}ok{% endif %}">{% if r.view %}да{% else %}нет{% endif %}</span></div>
         <div class="mp-row"><span class="mp-key">Писать</span><span class="mp-val {% if r.send %}ok{% endif %}">{% if r.send %}да{% else %}нет{% endif %}</span></div>
         <div class="mp-row"><span class="mp-key">Зайти</span><span class="mp-val {% if r.connect %}ok{% endif %}">{% if r.connect %}да{% else %}нет{% endif %}</span></div>
         <div class="mp-row"><span class="mp-key">Говорить</span><span class="mp-val {% if r.speak %}ok{% endif %}">{% if r.speak %}да{% else %}нет{% endif %}</span></div>
         <div class="mp-row"><span class="mp-key">Стрим</span><span class="mp-val {% if r.stream %}ok{% endif %}">{% if r.stream %}да{% else %}нет{% endif %}</span></div>
         <div class="mp-row"><span class="mp-key">Управлять</span><span class="mp-val {% if r.manage %}ok{% endif %}">{% if r.manage %}да{% else %}нет{% endif %}</span></div>
+        {% if r.group == 'voice' %}
+        <div class="mp-row"><span class="mp-key">Битрейт</span><span class="mp-val">{% if r.bitrate %}{{ r.bitrate }} kbps{% else %}—{% endif %}</span></div>
+        <div class="mp-row"><span class="mp-key">Лимит</span><span class="mp-val">{% if r.user_limit %}{{ r.user_limit }}{% else %}∞{% endif %}</span></div>
+        <div class="mp-row"><span class="mp-key">Сейчас</span><span class="mp-val">{{ r.voice_now }}</span></div>
+        {% else %}
+        <div class="mp-row"><span class="mp-key">Slowmode</span><span class="mp-val">{% if r.slowmode %}{{ r.slowmode }} сек{% else %}нет{% endif %}</span></div>
+        <div class="mp-row"><span class="mp-key">NSFW</span><span class="mp-val">{% if r.nsfw %}да{% else %}нет{% endif %}</span></div>
+        {% endif %}
+        {% if r.overwrites %}
+        <div class="ch-ow">
+          <div class="mp-section">Перезаписи ролей</div>
+          {% for ow in r.overwrites %}
+          <div class="ch-ow__row">
+            <b>{{ ow.name }}</b>
+            <span class="dim">+ {{ ow.allow }}</span>
+            <span class="dim">− {{ ow.deny }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if r.jump %}
+        <div class="mp-actions">
+          <a class="btn btn-ghost" href="{{ r.jump }}" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Открыть</a>
+        </div>
+        {% endif %}
       </div>
     </details>
     {% endfor %}
@@ -83,7 +116,9 @@
     let shown = 0;
     document.querySelectorAll('.ch-card').forEach(card => {
       const okMode = mode === 'all'
-        || (mode === 'closed' ? card.dataset.closed === '1' : card.dataset.group === mode);
+        || (mode === 'closed' ? card.dataset.closed === '1'
+          : mode === 'route' ? card.dataset.route === '1'
+          : card.dataset.group === mode);
       const okQ = !needle || (card.dataset.name || '').includes(needle);
       const on = okMode && okQ;
       card.hidden = !on;

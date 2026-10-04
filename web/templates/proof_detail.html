@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Демка #{{ r.id }}{% endblock %}
+{% block heading %}Демка #{{ r.id }}{% endblock %}
+{% block body %}
+<p class="lead"><a href="{{ url_for('proofs') }}">← ко всем демкам</a></p>
+
+<section class="proof-detail rise">
+  <div class="proof-detail__media">
+    {% if r.media_url %}
+      {% if r.media_kind == 'video' %}
+      <video controls preload="metadata" src="{{ r.media_url }}"></video>
+      {% else %}
+      <a href="{{ r.media_url }}" target="_blank" rel="noopener">
+        <img src="{{ r.media_url }}" alt="{{ r.media_name or 'демка' }}">
+      </a>
+      {% endif %}
+    {% elif r.link %}
+      <a class="btn" href="{{ r.link }}" target="_blank" rel="noopener">Открыть в Discord</a>
+    {% else %}
+      <div class="empty">Медиа нет — только запись</div>
+    {% endif %}
+  </div>
+
+  <div class="proof-detail__side">
+    <div class="proof-detail__status">
+      <span class="pill pill-{% if r.status == 'accepted' or r.status == 'approved' %}ok{% elif r.status == 'rejected' %}ban{% else %}warn{% endif %}">
+        {% if r.status == 'rejected' %}отклонена{% elif r.status in ('accepted','approved') %}принята{% else %}на проверке{% endif %}
+      </span>
+      <span class="dim">{{ r.when or '—' }}</span>
+    </div>
+    <h2 class="proof-detail__title">{{ r.title }}</h2>
+
+    <div class="mp-row"><span class="mp-key">Кому</span>
+      <span class="mp-val">{% if r.user_id %}<a href="{{ url_for('member', q=r.user_id) }}">{{ r.user_name }}</a>{% else %}{{ r.user_name }}{% endif %}</span>
+    </div>
+    <div class="mp-row"><span class="mp-key">Выдал</span>
+      <span class="mp-val">{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod_name }}</a>{% else %}{{ r.mod_name }}{% endif %}</span>
+    </div>
+    <div class="mp-row"><span class="mp-key">Наказание</span><span class="mp-val">{{ r.action or '—' }}</span></div>
+    <div class="mp-row"><span class="mp-key">Причина</span><span class="mp-val">{{ r.reason or '—' }}</span></div>
+    <div class="mp-row"><span class="mp-key">Решил</span><span class="mp-val">{{ r.reviewer or 'ожидает' }}</span></div>
+    {% if r.review_reason %}<div class="mp-row"><span class="mp-key">Комментарий</span><span class="mp-val">{{ r.review_reason }}</span></div>{% endif %}
+    {% if r.undo_note %}<div class="mp-row"><span class="mp-key">Снято</span><span class="mp-val">{{ r.undo_note }}</span></div>{% endif %}
+    {% if r.redecide_from %}<div class="mp-row"><span class="mp-key">Было</span><span class="mp-val">{{ r.redecide_from }}</span></div>{% endif %}
+    {% if r.decided_via %}<div class="mp-row"><span class="mp-key">Где решили</span><span class="mp-val">{{ r.decided_via }}</span></div>{% endif %}
+    {% if r.link %}
+    <div class="mp-actions">
+      <a class="btn btn-ghost" href="{{ r.link }}" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Discord</a>
+    </div>
+    {% endif %}
+
+    {% if can_decide %}
+    <form class="proof-decide" id="proofDecide" data-pid="{{ r.id }}">
+      <h3>Перерешение</h3>
+      <p class="dim">Owner и Staff Admin / Admin могут принять или отклонить заново.</p>
+      <label class="field">
+        <span>Комментарий</span>
+        <textarea name="reason" rows="2" maxlength="400" placeholder="почему так решаешь…"></textarea>
+      </label>
+      <div class="mp-actions">
+        <button type="submit" name="decision" value="accept" class="btn">Принять</button>
+        <button type="submit" name="decision" value="reject" class="btn btn-danger">Отклонить</button>
+      </div>
+      <div class="proof-decide__msg dim" id="proofDecideMsg" hidden></div>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+{% if can_decide %}
+<script>
+(function () {
+  const form = document.getElementById('proofDecide');
+  if (!form) return;
+  const msg = document.getElementById('proofDecideMsg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.submitter;
+    const decision = btn && btn.value ? btn.value : 'accept';
+    const reason = (form.reason && form.reason.value) || '';
+    msg.hidden = false;
+    msg.textContent = 'Сохраняю…';
+    try {
+      const res = await fetch('/api/proofs/' + form.dataset.pid + '/decide', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({decision, reason}),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        msg.textContent = data.error || 'ошибка';
+        return;
+      }
+      msg.textContent = data.message || 'готово';
+      location.reload();
+    } catch (err) {
+      msg.textContent = String(err);
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

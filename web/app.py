@@ -30,18 +30,21 @@ ACCESS_FILE = DATA / 'panel_access.json'
 SECRET_FILE = DATA / 'panel_secret.txt'
 DISCORD_API = 'https://discord.com/api/v10'
 
-# helper < mod < curator < admin < owner
+# helper < mod < curator < assistent < admin < owner
+# Staff Admin → admin (лейбл «Staff Admin»), Staff Assistent → assistent
 LEVEL = {
     'helper': 1,
     'mod': 2,
     'curator': 3,
-    'admin': 4,
+    'assistent': 4,
+    'admin': 5,
     'owner': 9,
 }
 ROLE_LABELS = {
     'helper': 'Helper',
     'mod': 'Moderator',
     'curator': 'Curator',
+    'assistent': 'Assistent',
     'admin': 'Admin',
     'owner': 'Owner',
 }
@@ -81,6 +84,10 @@ ROLE_PAGE_KEYS = {
         'today', 'logs', 'staff', 'users', 'member', 'channels',
         'warns', 'appeals', 'proofs', 'reasons',
     },
+    'assistent': {
+        'today', 'logs', 'staff', 'users', 'member', 'channels',
+        'warns', 'appeals', 'proofs', 'reasons',
+    },
     'admin': {
         'today', 'logs', 'staff', 'users', 'member', 'channels',
         'warns', 'appeals', 'proofs', 'reasons', 'anticrash',
@@ -93,6 +100,7 @@ ROLE_PUNISH_ACTIONS = {
     'helper': ('warn', 'mute'),
     'mod': ('warn', 'mute', 'kick', 'ban'),
     'curator': ('warn', 'mute', 'kick', 'ban'),
+    'assistent': ('warn', 'mute', 'kick', 'ban'),
     'admin': ('warn', 'mute', 'kick', 'ban'),
     'owner': ('warn', 'mute', 'kick', 'ban'),
 }
@@ -101,6 +109,7 @@ ROLE_HIDDEN_KINDS = {
     'helper': frozenset({'ban', 'kick'}),
     'mod': frozenset(),
     'curator': frozenset(),
+    'assistent': frozenset(),
     'admin': frozenset(),
     'owner': frozenset(),
 }
@@ -134,11 +143,18 @@ ROLE_CARDS = [
         'pages': ['Как Moderator'],
     },
     {
+        'key': 'assistent',
+        'title': 'Assistent',
+        'tag': '@Assistent / @Staff Assistent',
+        'blurb': 'Выше куратора: полная мод-панель, демки, каналы.',
+        'pages': ['Как Curator'],
+    },
+    {
         'key': 'admin',
-        'title': 'Admin',
-        'tag': '@Admin',
-        'blurb': 'Мод-панель + антикраш. Без бота/модулей/команд.',
-        'pages': ['Мод-панель', 'Антикраш'],
+        'title': 'Admin / Staff Admin',
+        'tag': '@Admin · @Staff Admin',
+        'blurb': 'Мод-панель + антикраш + перерешение демок. Без бота/модулей.',
+        'pages': ['Мод-панель', 'Антикраш', 'Перерешение демок'],
     },
     {
         'key': 'owner',
@@ -433,6 +449,12 @@ def _pages_for_role(role: str):
 
 def _session_discord_role_ids():
     """Роли Discord текущего пользователя панели (для staff_limits)."""
+    cached = session.get('discord_role_ids') or []
+    if cached:
+        try:
+            return [int(x) for x in cached if str(x).isdigit()]
+        except Exception:
+            pass
     uid = str(session.get('discord_id') or '').strip()
     if not uid.isdigit():
         return []
@@ -674,18 +696,24 @@ def _staff_role_id_set() -> dict:
     """Наборы Discord role id → уровень панели."""
     try:
         from services.staff_roles import (
-            KNOWN_ADMIN_ROLE_ID, KNOWN_CURATOR_BY_KIND, KNOWN_CURATOR_ROLE_ID,
+            KNOWN_ADMIN_ROLE_ID, KNOWN_STAFF_ADMIN_ROLE_ID,
+            KNOWN_ASSISTENT_ROLE_ID, KNOWN_STAFF_ASSISTENT_ROLE_ID,
+            KNOWN_CURATOR_BY_KIND, KNOWN_CURATOR_ROLE_ID,
             KNOWN_HELPER_ROLE_ID, KNOWN_MASTER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID,
-            KNOWN_GRANT_BY_KIND,
+            KNOWN_GRANT_BY_KIND, KNOWN_COMMON_STAFF_ROLE_ID,
         )
     except Exception:
         KNOWN_ADMIN_ROLE_ID = 1189999426631122964
+        KNOWN_STAFF_ADMIN_ROLE_ID = 1549118975110152263
+        KNOWN_ASSISTENT_ROLE_ID = 1552815174115664013
+        KNOWN_STAFF_ASSISTENT_ROLE_ID = 1554932049528225842
         KNOWN_CURATOR_BY_KIND = {}
         KNOWN_CURATOR_ROLE_ID = 807030012301541377
         KNOWN_HELPER_ROLE_ID = 948969471916249119
         KNOWN_MASTER_ROLE_ID = 1552637932907667466
         KNOWN_MODERATOR_ROLE_ID = 803553848396349510
         KNOWN_GRANT_BY_KIND = {}
+        KNOWN_COMMON_STAFF_ROLE_ID = 0
 
     def _env_rid(*names):
         out = set()
@@ -699,7 +727,14 @@ def _staff_role_id_set() -> dict:
                 out.add(v)
         return out
 
-    admin = {int(KNOWN_ADMIN_ROLE_ID)} | _env_rid()
+    admin = {
+        int(KNOWN_ADMIN_ROLE_ID),
+        int(KNOWN_STAFF_ADMIN_ROLE_ID),
+    } | _env_rid('STAFF_ADMIN_ROLE_ID', 'ADMIN_ROLE_ID')
+    assistent = {
+        int(KNOWN_ASSISTENT_ROLE_ID),
+        int(KNOWN_STAFF_ASSISTENT_ROLE_ID),
+    } | _env_rid('STAFF_ASSISTENT_ROLE_ID', 'ASSISTENT_ROLE_ID')
     curator = {int(KNOWN_CURATOR_ROLE_ID)} | {
         int(v) for v in (KNOWN_CURATOR_BY_KIND or {}).values() if v
     } | _env_rid(
@@ -710,15 +745,52 @@ def _staff_role_id_set() -> dict:
     mod = {int(KNOWN_MODERATOR_ROLE_ID), int(KNOWN_MASTER_ROLE_ID)} | _env_rid(
         'STAFF_MODERATOR_ROLE_ID',
     )
-    # event/broadcaster → как mod для панели
+    # event/broadcaster/support/closemod/creative → как mod для панели
     for k, rid in (KNOWN_GRANT_BY_KIND or {}).items():
-        if k in ('event', 'broadcaster', 'moderator') and rid:
+        if k in ('event', 'broadcaster', 'moderator', 'support',
+                 'closemod', 'creative') and rid:
             mod.add(int(rid))
     helper = {int(KNOWN_HELPER_ROLE_ID)} | _env_rid('STAFF_HELPER_ROLE_ID')
     for k, rid in (KNOWN_GRANT_BY_KIND or {}).items():
         if k == 'helper' and rid:
             helper.add(int(rid))
-    return {'admin': admin, 'curator': curator, 'mod': mod, 'helper': helper}
+    if KNOWN_COMMON_STAFF_ROLE_ID:
+        # общая staff-роль — минимум helper, чтобы человек попал в список
+        helper.add(int(KNOWN_COMMON_STAFF_ROLE_ID))
+    return {
+        'admin': admin,
+        'assistent': assistent,
+        'curator': curator,
+        'mod': mod,
+        'helper': helper,
+    }
+
+
+def panel_role_display(role: str, role_ids=None) -> str:
+    """Красивый лейбл: Staff Admin / Staff Assistent, не просто Admin."""
+    role = str(role or '')
+    try:
+        ids = {int(r) for r in (role_ids or []) if r is not None and str(r).isdigit()}
+    except Exception:
+        ids = set()
+    try:
+        from services.staff_roles import (
+            KNOWN_STAFF_ADMIN_ROLE_ID, KNOWN_STAFF_ASSISTENT_ROLE_ID,
+            KNOWN_ASSISTENT_ROLE_ID,
+        )
+    except Exception:
+        KNOWN_STAFF_ADMIN_ROLE_ID = 1549118975110152263
+        KNOWN_STAFF_ASSISTENT_ROLE_ID = 1554932049528225842
+        KNOWN_ASSISTENT_ROLE_ID = 1552815174115664013
+    if role == 'admin' and int(KNOWN_STAFF_ADMIN_ROLE_ID) in ids:
+        return 'Staff Admin'
+    if role == 'assistent':
+        if int(KNOWN_STAFF_ASSISTENT_ROLE_ID) in ids:
+            return 'Staff Assistent'
+        if int(KNOWN_ASSISTENT_ROLE_ID) in ids:
+            return 'Assistent'
+        return 'Assistent'
+    return ROLE_LABELS.get(role, role or '')
 
 
 def resolve_discord_panel_role(discord_user_id, role_ids) -> str | None:
@@ -740,6 +812,8 @@ def resolve_discord_panel_role(discord_user_id, role_ids) -> str | None:
     bags = _staff_role_id_set()
     if ids & bags['admin']:
         return 'admin'
+    if ids & bags.get('assistent', set()):
+        return 'assistent'
     if ids & bags['curator']:
         return 'curator'
     if ids & bags['mod']:
@@ -774,12 +848,19 @@ def _fetch_guild_member_roles(discord_user_id: str):
     return [str(r) for r in roles], ''
 
 
-def _start_session(*, username, role, discord_user=None):
+def _start_session(*, username, role, discord_user=None, role_ids=None,
+                   role_label=None):
     session.clear()
     session['logged_in'] = True
     session['username'] = username
     session['role'] = role
-    session['role_label'] = ROLE_LABELS.get(role, role)
+    session['role_label'] = (
+        role_label
+        or panel_role_display(role, role_ids)
+        or ROLE_LABELS.get(role, role)
+    )
+    if role_ids is not None:
+        session['discord_role_ids'] = [str(x) for x in role_ids]
     if discord_user:
         session['discord_id'] = str(discord_user.get('id') or '')
         session['discord_handle'] = _discord_handle(discord_user)
@@ -1350,10 +1431,15 @@ def _proofs_list(gid):
             jump = ''
         link = str(e.get('url') or e.get('link') or jump or '').strip()
         status = str(e.get('review_status') or 'pending').lower()
-        reviewer = str(e.get('reviewed_by') or '').strip()
+        rid_rev = str(e.get('reviewed_by') or '').strip()
+        reviewer = _best_name(
+            e.get('reviewed_by_name'), rid_rev, book, fallback='')
+        if not reviewer and rid_rev and not rid_rev.isdigit():
+            reviewer = rid_rev
         items.append({
             'id': e.get('id'),
             'title': f"#{e.get('id')} · {e.get('action') or 'демка'}",
+            'action': e.get('action') or '',
             'user_id': uid if _is_id(uid) else '',
             'user_name': _best_name(e.get('user_name'), uid, book),
             'mod_id': mid if _is_id(mid) else '',
@@ -1363,10 +1449,14 @@ def _proofs_list(gid):
             'when': _fmt(e.get('set_at')),
             'status': status,
             'reviewer': reviewer,
+            'review_reason': str(e.get('review_reason') or ''),
+            'undo_note': str(e.get('undo_note') or ''),
             'link': link,
             'media_url': media_url,
             'media_kind': media_kind,
             'media_name': media_name,
+            'decided_via': e.get('decided_via') or '',
+            'redecide_from': e.get('redecide_from') or '',
         })
     return items[:80]
 
@@ -1431,12 +1521,16 @@ def _guild_member_snapshot(m, *, role=None):
         or str(m.id)
     )
     handle = getattr(m, 'name', '') or ''
+    try:
+        rids = [getattr(r, 'id', r) for r in (getattr(m, 'roles', None) or [])]
+    except Exception:
+        rids = []
     return {
         'id': str(m.id),
         'name': display,
         'handle': handle,
         'role': role or '',
-        'role_label': ROLE_LABELS.get(role, role or ''),
+        'role_label': panel_role_display(role, rids) if role else '',
         'avatar': _member_avatar_url(m),
         'joined': getattr(m, 'joined_at', None),
         'created': getattr(getattr(m, 'created_at', None), 'isoformat', lambda: None)(),
@@ -1465,12 +1559,13 @@ def _snapshot_from_api_member(row: dict, *, role=None) -> dict:
         or handle
         or uid
     )
+    rids = row.get('roles') or []
     return {
         'id': uid,
         'name': str(display),
         'handle': handle,
         'role': role or '',
-        'role_label': ROLE_LABELS.get(role, role or ''),
+        'role_label': panel_role_display(role, rids) if role else '',
         'avatar': _avatar_url_from_user_payload(user),
         'joined': row.get('joined_at'),
         'created': None,
@@ -1623,7 +1718,10 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
 
     people = list(by_id.values())
     if staff_only:
-        order = {'owner': 0, 'admin': 1, 'curator': 2, 'mod': 3, 'helper': 4}
+        order = {
+            'owner': 0, 'admin': 1, 'assistent': 2,
+            'curator': 3, 'mod': 4, 'helper': 5,
+        }
         people.sort(key=lambda p: (
             int(p.get('_rank', 50)),
             order.get(p.get('role'), 9),
@@ -1903,6 +2001,7 @@ def login():
                             role = resolve_discord_panel_role(member.id, role_ids) or 'mod'
                         except Exception:
                             role = 'mod'
+                            role_ids = []
                         if role == 'owner':
                             role = 'admin'
                         if role not in LEVEL:
@@ -1916,13 +2015,13 @@ def login():
                             display_name=display,
                             avatar=_member_avatar_url(member),
                         )
-                        _start_session(username=username, role=role)
+                        _start_session(
+                            username=username, role=role, role_ids=role_ids)
                         session['discord_id'] = str(member.id)
                         session['discord_handle'] = handle
                         session['discord_display'] = display
                         session['discord_avatar'] = _member_avatar_url(member)
                         session['auth_via'] = 'register'
-                        session['role_label'] = ROLE_LABELS.get(role, role)
                         return redirect(nxt)
         elif mode == 'forgot':
             username = (request.form.get('username') or '').strip()
@@ -2068,7 +2167,10 @@ def auth_discord_callback():
         handle = _discord_handle(user)
         return redirect(url_for(
             'login',
-            error=f'@{handle}: нет staff-роли на сервере (Helper / Mod / Curator / Admin)',
+            error=(
+                f'@{handle}: нет staff-роли на сервере '
+                f'(Helper / Mod / Curator / Assistent / Admin / Staff Admin)'
+            ),
         ))
     nxt = session.pop('oauth_next', None) or url_for('today')
     session.pop('oauth_state', None)
@@ -2076,6 +2178,7 @@ def auth_discord_callback():
         username=_discord_display(user),
         role=panel_role,
         discord_user=user,
+        role_ids=roles,
     )
     return redirect(_safe_next(nxt))
 
@@ -2340,10 +2443,34 @@ def staff_page():
 @login_required
 @role_required('mod')
 def channels_page():
-    """Таблица способностей каналов (чтение)."""
+    """Подробная карта каналов: права, лимиты, маршруты бота."""
     gid = _main_guild()
     rows = []
     bot = bot_instance
+    route_by_id = {}
+    try:
+        from services import channel_routes as CR
+        for key, cid in (CR.KNOWN_CHANNELS or {}).items():
+            if cid:
+                route_by_id[str(int(cid))] = key
+        try:
+            stored = CR.all_routes(gid) if hasattr(CR, 'all_routes') else {}
+        except Exception:
+            stored = {}
+        if isinstance(stored, dict):
+            for key, cid in stored.items():
+                try:
+                    if cid:
+                        route_by_id[str(int(cid))] = key
+                except Exception:
+                    continue
+        route_labels = {
+            s.get('key'): s.get('label')
+            for s in (getattr(CR, 'ROUTE_SPECS', None) or [])
+            if isinstance(s, dict) and s.get('key')
+        }
+    except Exception:
+        route_labels = {}
     try:
         guild = bot.get_guild(int(gid)) if bot and gid else None
     except Exception:
@@ -2376,8 +2503,61 @@ def channels_page():
             def flag(name, _p=perms):
                 return bool(getattr(_p, name, False)) if _p else False
 
+            # перезаписи ролей (кратко)
+            overs = []
+            try:
+                mapping = getattr(ch, 'overwrites', None) or {}
+                for target, ow in list(mapping.items())[:12]:
+                    tname = getattr(target, 'name', None) or str(
+                        getattr(target, 'id', '?'))
+                    allow, deny = [], []
+                    try:
+                        for perm, val in ow:
+                            if val is True:
+                                allow.append(str(perm))
+                            elif val is False:
+                                deny.append(str(perm))
+                    except Exception:
+                        try:
+                            a, d = ow.pair()
+                            allow = [n for n, v in a if v]
+                            deny = [n for n, v in d if v]
+                        except Exception:
+                            continue
+                    if not allow and not deny:
+                        continue
+                    overs.append({
+                        'name': tname,
+                        'allow': ', '.join(allow[:6]) if allow else '—',
+                        'deny': ', '.join(deny[:6]) if deny else '—',
+                    })
+            except Exception:
+                overs = []
+            overs = overs[:8]
+
+            topic = str(getattr(ch, 'topic', None) or '').strip()
+            slow = int(getattr(ch, 'slowmode_delay', 0) or 0)
+            nsfw = bool(getattr(ch, 'nsfw', False))
+            bitrate = int(getattr(ch, 'bitrate', 0) or 0)
+            ulimit = getattr(ch, 'user_limit', None)
+            try:
+                ulimit = int(ulimit or 0)
+            except Exception:
+                ulimit = 0
+            voice_now = 0
+            try:
+                members = getattr(ch, 'members', None)
+                if members is not None:
+                    voice_now = len(list(members))
+            except Exception:
+                voice_now = 0
+            rid = str(ch.id)
+            route_key = route_by_id.get(rid) or ''
+            route_label = route_labels.get(route_key) or (
+                route_key.replace('_', ' ') if route_key else '')
+
             rows.append({
-                'id': str(ch.id),
+                'id': rid,
                 'name': getattr(ch, 'name', '?'),
                 'kind': kind,
                 'group': group,
@@ -2389,6 +2569,16 @@ def channels_page():
                 'connect': flag('connect'),
                 'manage': flag('manage_channels'),
                 'stream': flag('stream'),
+                'topic': topic[:220],
+                'slowmode': slow,
+                'nsfw': nsfw,
+                'bitrate': bitrate // 1000 if bitrate else 0,
+                'user_limit': ulimit,
+                'voice_now': voice_now,
+                'overwrites': overs,
+                'route_key': route_key,
+                'route_label': route_label,
+                'jump': f'https://discord.com/channels/{gid}/{rid}' if gid else '',
             })
     shown = [r for r in rows if r.get('group') != 'category']
     groups, seen = [], {}
@@ -2403,6 +2593,7 @@ def channels_page():
         'text': sum(1 for r in shown if r['group'] == 'text'),
         'voice': sum(1 for r in shown if r['group'] == 'voice'),
         'closed': sum(1 for r in shown if not r['view']),
+        'routes': sum(1 for r in shown if r.get('route_key')),
     }
     return render_template('channels.html', rows=shown, groups=groups, kpi=kpi)
 
@@ -2907,12 +3098,147 @@ def appeals():
     return render_template('appeals.html', rows=view)
 
 
+def _panel_can_decide_proof() -> bool:
+    """Owner / Admin / Staff Admin (session role admin|owner)."""
+    role = session.get('role') or ''
+    if role in ('owner', 'admin'):
+        return True
+    uid = str(session.get('discord_id') or '').strip()
+    if uid.isdigit():
+        try:
+            from config import Config
+            if int(uid) in Config.all_owner_ids():
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def _proof_detail(gid, pid):
+    """Одна демка для детальной страницы."""
+    rows = _proofs_list(gid)
+    for r in rows:
+        if str(r.get('id')) == str(pid):
+            return r
+    # fallback сырой записи
+    try:
+        from cogs.proof_cog import proof_get
+        e = proof_get(int(gid), int(pid)) if gid else None
+    except Exception:
+        e = None
+    if not isinstance(e, dict):
+        return None
+    book = _namebook(gid)
+    uid = str(e.get('user_id') or '')
+    mid = str(e.get('mod_id') or '')
+    media = e.get('media') if isinstance(e.get('media'), dict) else {}
+    local = str(media.get('file') or '').strip()
+    media_url = ''
+    if local:
+        name = Path(local).name
+        if (DATA / 'uploads' / 'proofs' / name).is_file() or Path(local).is_file():
+            media_url = f'/proof-media/{name}'
+    return {
+        'id': e.get('id'),
+        'title': f"#{e.get('id')} · {e.get('action') or 'демка'}",
+        'user_id': uid if _is_id(uid) else '',
+        'user_name': _best_name(e.get('user_name'), uid, book),
+        'mod_id': mid if _is_id(mid) else '',
+        'mod_name': _best_name(e.get('mod_name'), mid, book),
+        'reason': str(e.get('reason') or '')[:400],
+        'detail': str(e.get('reason') or '')[:400],
+        'when': _fmt(e.get('set_at')),
+        'status': str(e.get('review_status') or 'pending').lower(),
+        'reviewer': str(
+            e.get('reviewed_by_name') or e.get('reviewed_by') or '').strip(),
+        'review_reason': str(e.get('review_reason') or ''),
+        'undo_note': str(e.get('undo_note') or ''),
+        'link': str(e.get('url') or ''),
+        'media_url': media_url,
+        'media_kind': media.get('kind') or '',
+        'media_name': media.get('name') or '',
+        'action': e.get('action') or '',
+        'decided_via': e.get('decided_via') or '',
+        'redecide_from': e.get('redecide_from') or '',
+    }
+
+
 @app.route('/proofs')
 @login_required
 @role_required('mod')
 def proofs():
     gid = _main_guild()
-    return render_template('proofs.html', rows=_proofs_list(gid))
+    return render_template(
+        'proofs.html',
+        rows=_proofs_list(gid),
+        can_decide=_panel_can_decide_proof(),
+    )
+
+
+@app.route('/proofs/<int:pid>')
+@login_required
+@role_required('mod')
+def proof_detail(pid):
+    gid = _main_guild()
+    row = _proof_detail(gid, pid)
+    if not row:
+        abort(404)
+    return render_template(
+        'proof_detail.html',
+        r=row,
+        can_decide=_panel_can_decide_proof(),
+    )
+
+
+@app.post('/api/proofs/<int:pid>/decide')
+@login_required
+@role_required('admin')
+def api_proof_decide(pid):
+    """Принять / отклонить / перерешить демку (owner + admin/staff admin)."""
+    if not _panel_can_decide_proof():
+        return jsonify({'ok': False, 'error': 'Нет прав на перерешение'}), 403
+    data = request.get_json(silent=True) or request.form
+    decision = str(data.get('decision') or data.get('action') or '').lower()
+    accept = decision in ('accept', 'accepted', 'approve', 'ok', 'принять')
+    reject = decision in ('reject', 'rejected', 'deny', 'отклон', 'отклонить')
+    if not accept and not reject:
+        return jsonify({'ok': False, 'error': 'Нужно decision=accept|reject'}), 400
+    reason = str(data.get('reason') or '').strip()[:400]
+    gid = _main_guild()
+    if not gid:
+        return jsonify({'ok': False, 'error': 'Нет MAIN_GUILD_ID'}), 500
+    reviewer_id = str(session.get('discord_id') or '').strip()
+    if not reviewer_id.isdigit():
+        # парольный owner без discord_id — берём OWNER_ID
+        try:
+            from config import Config
+            oids = list(Config.all_owner_ids())
+            reviewer_id = str(oids[0]) if oids else '0'
+        except Exception:
+            reviewer_id = '0'
+    reviewer_name = (
+        session.get('discord_display')
+        or session.get('username')
+        or session.get('role_label')
+        or 'owner'
+    )
+    try:
+        from cogs.proof_cog import review_proof_panel
+        ok, msg = _run_on_bot(
+            review_proof_panel(
+                bot_instance, int(gid), int(pid),
+                accept=accept, reason=reason,
+                reviewer_id=int(reviewer_id or 0),
+                reviewer_name=str(reviewer_name),
+            ),
+            timeout=30,
+        )
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)}), 500
+    if not ok:
+        return jsonify({'ok': False, 'error': msg}), 400
+    row = _proof_detail(gid, pid)
+    return jsonify({'ok': True, 'message': msg, 'proof': row})
 
 
 @app.route('/proof-media/<path:name>')
