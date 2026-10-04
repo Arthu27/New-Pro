@@ -866,8 +866,13 @@ class Moderation (commands .Cog ):
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
-                'Варн выдан',f'**{who }** · `{uid }`\n{text }',guild =guild ),
+                'Варн выдан',
+                f'**{who }** · `{uid }`\n{text }\n'
+                f'🧹 чищу его последние {self.PURGE_AFTER_PUNISH} сообщ…',
+                guild =guild ),
                 ephemeral =True )
+                # фон: последние сообщения ИМЕННО этого человека
+                self._schedule_purge_after_punish(interaction, user or uid)
                 try :
                     from cogs .proof_cog import offer_proof_after_punish
                     await offer_proof_after_punish (
@@ -1044,9 +1049,12 @@ class Moderation (commands .Cog ):
                             f"«{n}»" for n in _extra_roles)
                     # Сразу ответ модератору — фон добьёт timeout/лог/демку.
                     confirm = mod_result_embed(
-                        title='Мут', user=user, body=msg,
+                        title='Мут', user=user,
+                        body=(msg + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
                         reason=reason, case_id=0)
                     await _respond(interaction, embed=confirm, ephemeral=True)
+                    self._schedule_purge_after_punish(interaction, user)
                     _aio_mute.create_task(self._mute_aftermath(
                         interaction=interaction, guild=guild, user=user,
                         action=action, reason=reason, amount=amount,
@@ -1080,9 +1088,12 @@ class Moderation (commands .Cog ):
                     msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
                            f"(роль «{_mrole.name}»); голос не тронут")
                     confirm = mod_result_embed(
-                        title='Мут чата', user=user, body=msg,
+                        title='Мут чата', user=user,
+                        body=(msg + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
                         reason=reason, case_id=0)
                     await _respond(interaction, embed=confirm, ephemeral=True)
+                    self._schedule_purge_after_punish(interaction, user)
                     _aio_mute.create_task(self._mute_aftermath(
                         interaction=interaction, guild=guild, user=user,
                         action=action, reason=reason, amount=amount,
@@ -1132,9 +1143,12 @@ class Moderation (commands .Cog ):
                           +(" · микрофон закрыт" if _mic else "")
                           +", снимется по сроку")
                     confirm = mod_result_embed(
-                        title='Войс-мут', user=user, body=msg,
+                        title='Войс-мут', user=user,
+                        body=(msg + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
                         reason=reason, case_id=0)
                     await _respond(interaction, embed=confirm, ephemeral=True)
+                    self._schedule_purge_after_punish(interaction, user)
                     _aio_mute.create_task(self._mute_aftermath(
                         interaction=interaction, guild=guild, user=user,
                         action=action, reason=reason, amount=amount,
@@ -1222,7 +1236,18 @@ class Moderation (commands .Cog ):
                         (confirm.description or '')
                         + "\n⚠️ " + " · ".join(aux_errors))
                 # Сначала ответ модератору — логи/ЛС/демка могут идти секундами.
+                if action == 'ban':
+                    try:
+                        confirm.description = (
+                            (confirm.description or '')
+                            + f'\n🧹 чищу его последние '
+                              f'{self.PURGE_AFTER_PUNISH} сообщ…')
+                    except Exception:
+                        pass
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
+                # Бан → в фоне снести последние сообщения именно его
+                if action == 'ban':
+                    self._schedule_purge_after_punish(interaction, user)
                 try :
                     dm =mod_dm_embed (action ,guild ,interaction .user ,reason )
                     # ЛС о бане — с кнопкой «Подать апелляцию» внизу:
@@ -1674,6 +1699,9 @@ class Moderation (commands .Cog ):
         except Exception as _ex :
             log .debug (f'[MODPANEL] restore on join: {_ex}')
 
+    # После варна/мута/бана — снести последние N сообщений ИМЕННО нарушителя
+    PURGE_AFTER_PUNISH = 30
+
     async def _purge_user_messages(self, channel, user_id: int, count: int):
         """Удалить до `count` последних сообщений участника в канале.
 
@@ -1725,6 +1753,104 @@ class Moderation (commands .Cog ):
                 except Exception as _dx:
                     log.debug('[MODPANEL] msg.delete fallback: %s', _dx)
         return deleted
+
+    async def _purge_user_recent(self, guild, prefer_channel, user_id: int,
+                                 count: int = None):
+        """До `count` последних сообщений ЭТОГО человека (чужие не трогаем).
+
+        1) канал, где выдали наказание;
+        2) если мало — другие текстовые каналы сервера (до 20).
+        """
+        need = int(count if count is not None else self.PURGE_AFTER_PUNISH)
+        need = max(1, min(need, 100))
+        uid = int(user_id)
+        deleted_all = []
+        seen_ids = set()
+
+        channels = []
+        if prefer_channel is not None and hasattr(prefer_channel, 'history'):
+            channels.append(prefer_channel)
+        if guild is not None:
+            try:
+                for ch in list(getattr(guild, 'text_channels', None) or []):
+                    if prefer_channel is not None and getattr(ch, 'id', None) == getattr(
+                            prefer_channel, 'id', None):
+                        continue
+                    if not hasattr(ch, 'history'):
+                        continue
+                    channels.append(ch)
+                    if len(channels) >= 21:  # prefer + 20
+                        break
+            except Exception as _ex:
+                log.debug('[MODPANEL] purge channel list: %s', _ex)
+
+        for ch in channels:
+            if len(deleted_all) >= need:
+                break
+            left = need - len(deleted_all)
+            try:
+                batch = await self._purge_user_messages(ch, uid, left)
+            except discord.Forbidden:
+                log.debug('[MODPANEL] purge: нет прав в #%s',
+                          getattr(ch, 'name', '?'))
+                continue
+            except Exception as _ex:
+                log.debug('[MODPANEL] purge in #%s: %s',
+                          getattr(ch, 'name', '?'), _ex)
+                continue
+            for msg in batch or []:
+                mid = getattr(msg, 'id', None)
+                if mid in seen_ids:
+                    continue
+                seen_ids.add(mid)
+                deleted_all.append(msg)
+        return deleted_all
+
+    def _schedule_purge_after_punish(self, interaction, user, *, count: int = None):
+        """Фон: после наказания удалить последние сообщения нарушителя."""
+        import asyncio as _aio
+        if user is None:
+            return
+        try:
+            uid = int(getattr(user, 'id', 0) or 0)
+        except Exception:
+            return
+        if not uid:
+            return
+        guild = getattr(interaction, 'guild', None)
+        channel = getattr(interaction, 'channel', None)
+        n = int(count if count is not None else self.PURGE_AFTER_PUNISH)
+
+        async def _run():
+            try:
+                deleted = await self._purge_user_recent(
+                    guild, channel, uid, n)
+                n_del = len(deleted or [])
+                if n_del <= 0:
+                    return
+                who = (getattr(user, 'mention', None)
+                       or getattr(user, 'display_name', None)
+                       or f'<@{uid}>')
+                text = (f'🧹 Удалено **{n_del}** сообщ. от {who} '
+                        f'— только его, чужие не трогали.')
+                try:
+                    await _respond(interaction, content=text, ephemeral=True)
+                except Exception:
+                    try:
+                        follow = getattr(interaction, 'followup', None)
+                        if follow is not None:
+                            await follow.send(text, ephemeral=True)
+                    except Exception as _fe:
+                        log.debug('[MODPANEL] purge followup: %s', _fe)
+                log.info('[MODPANEL] purge-after-punish uid=%s n=%s',
+                         uid, n_del)
+            except Exception as _ex:
+                log.warning('[MODPANEL] purge-after-punish: %s', _ex)
+
+        try:
+            _aio.create_task(_run(), name='modpanel-purge-after-punish')
+        except Exception as _ex:
+            log.debug('[MODPANEL] schedule purge: %s', _ex)
 
     async def _clear_voice_mute (self ,guild ,user ):
         """Снять любое голосовое заглушение (роль войс-мута или нативный
