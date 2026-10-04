@@ -947,6 +947,27 @@ def _proof_name_hints(gid_filter=''):
     return hints
 
 
+def _appeal_name_hints(gid_filter=''):
+    """Имена из апелляций (автор + кто решил)."""
+    hints = {}
+    try:
+        items = _appeals_list(gid_filter) if gid_filter else []
+    except Exception:
+        items = []
+    for e in items:
+        if not isinstance(e, dict):
+            continue
+        for key_id, key_name in (
+                ('user_id', 'user_name'),
+                ('reviewer_id', 'reviewed_by'),
+                ('mod_id', 'mod_name')):
+            uid = str(e.get(key_id) or '').strip()
+            nm = str(e.get(key_name) or '').strip()
+            if uid.isdigit() and nm and not nm.isdigit() and nm.lower() not in ('none', 'null'):
+                hints.setdefault(uid, nm)
+    return hints
+
+
 def _collect_cases(gid_filter=''):
     """Дела панели + варны → список наказаний, новые сверху."""
     out = []
@@ -1006,6 +1027,7 @@ def _collect_cases(gid_filter=''):
              or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     book = _namebook(gid_filter)
     book.update(_proof_name_hints(gid_filter))
+    book.update(_appeal_name_hints(gid_filter))
     for row in out:
         row['user_name'] = _best_name(row.get('user_name'), row.get('user_id'), book)
         row['mod_name'] = _best_name(row.get('mod_name'), row.get('mod_id'), book)
@@ -1292,10 +1314,32 @@ def _proofs_list(gid):
         media = e.get('media') if isinstance(e.get('media'), dict) else {}
         local = str(media.get('file') or '').strip()
         media_url = ''
-        if local and Path(local).is_file():
-            media_url = f'/proof-media/{Path(local).name}'
-        elif local and (ROOT / local).is_file():
-            media_url = f'/proof-media/{Path(local).name}'
+        media_kind = str(media.get('kind') or '').strip()
+        media_name = str(media.get('name') or '').strip()
+        resolved = None
+        if local:
+            for cand in (Path(local), ROOT / local, DATA / 'uploads' / 'proofs' / Path(local).name):
+                try:
+                    if cand.is_file():
+                        resolved = cand
+                        break
+                except OSError:
+                    pass
+        # fallback: файл по шаблону {gid}_{id}.* (старые записи без media.file)
+        if resolved is None and gid and e.get('id') is not None:
+            base = DATA / 'uploads' / 'proofs'
+            if base.is_dir():
+                for cand in sorted(base.glob(f"{gid}_{e.get('id')}.*")):
+                    if cand.is_file():
+                        resolved = cand
+                        break
+        if resolved is not None:
+            media_url = f'/proof-media/{resolved.name}'
+            if not media_kind:
+                ext = resolved.suffix.lower()
+                media_kind = 'video' if ext in ('.mp4', '.webm', '.mov') else 'image'
+            if not media_name:
+                media_name = resolved.name
         jump = ''
         try:
             ch = int(e.get('channel_id') or 0)
@@ -1321,8 +1365,8 @@ def _proofs_list(gid):
             'reviewer': reviewer,
             'link': link,
             'media_url': media_url,
-            'media_kind': media.get('kind') or '',
-            'media_name': media.get('name') or '',
+            'media_kind': media_kind,
+            'media_name': media_name,
         })
     return items[:80]
 
@@ -2062,8 +2106,14 @@ def _audit_events(gid: str, limit=300):
 
 
 def _staff_feed(gid: str, limit=80):
-    """Лента staff: наказания + входы/выходы + mute/mod из audit."""
+    """Лента staff: наказания + решения по апелляциям + важные audit.
+
+    Join/leave/смены ролей сюда НЕ кладём — они отдельно на /logs,
+    иначе забивают ленту и пропадают «кто отклонил».
+    """
     book = _namebook(gid)
+    book.update(_proof_name_hints(gid))
+    book.update(_appeal_name_hints(gid))
     feed = []
     for r in _collect_cases(gid)[:120]:
         feed.append({
@@ -2096,14 +2146,23 @@ def _staff_feed(gid: str, limit=80):
             'when': _fmt(it.get('reviewed_at') or it.get('created_at')),
             'ts': it.get('reviewed_at') or it.get('created_at') or '',
         })
+    # Шум: входы/выходы/роли/войс — на /logs отдельным блоком, не в staff-ленте
+    _audit_noise = {
+        'Участник вошёл', 'Участник вышел', 'Изменение ролей',
+        'Пользователю включили звук', 'Пользователю выключили звук',
+        'Пользователя заглушили', 'С пользователя сняли заглушение',
+    }
     for ev in _audit_events(gid, 400):
         act = str(ev.get('action') or '')
+        if act in _audit_noise:
+            continue
         cat = str(ev.get('category') or '')
+        al = act.lower()
         interesting = (
-            cat in ('member', 'mod', 'mute')
-            or act in ('Участник вошёл', 'Участник вышел')
-            or 'бан' in act.lower() or 'кик' in act.lower()
-            or 'мут' in act.lower() or 'варн' in act.lower()
+            cat in ('mod', 'mute')
+            or 'бан' in al or 'кик' in al
+            or 'мут' in al or 'варн' in al
+            or 'тайм' in al or 'timeout' in al
             or bool(ev.get('mod_name') or ev.get('mod_id'))
         )
         if not interesting:
@@ -2125,8 +2184,16 @@ def _staff_feed(gid: str, limit=80):
             'when': _fmt(ev.get('timestamp')),
             'ts': ev.get('timestamp') or '',
         })
-    feed.sort(key=lambda x: str(x.get('ts') or ''), reverse=True)
-    return feed[:limit]
+    # Наказания и апелляции не должны вытесняться audit-хвостом:
+    # сначала режем audit, потом мержим по времени.
+    core = [f for f in feed if f.get('kind') in ('punish', 'appeal')]
+    audit = [f for f in feed if f.get('kind') == 'audit']
+    core.sort(key=lambda x: str(x.get('ts') or ''), reverse=True)
+    audit.sort(key=lambda x: str(x.get('ts') or ''), reverse=True)
+    room = max(0, int(limit) - len(core))
+    merged = core + audit[:room]
+    merged.sort(key=lambda x: str(x.get('ts') or ''), reverse=True)
+    return merged[:limit]
 
 
 def _fuzzy_match(q: str, *parts) -> bool:

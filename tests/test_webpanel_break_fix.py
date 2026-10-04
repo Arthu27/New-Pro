@@ -50,6 +50,8 @@ check('Решил' in (ROOT / 'web' / 'templates' / 'appeals.html').read_text(en
       'appeals column Решил')
 check("'отклонена'" in src and 'st_ru' in src, 'appeals status RU labels')
 check('appeal_reject' in src, 'journal knows appeal_reject')
+check('_audit_noise' in src and 'Участник вошёл' in src, 'staff feed drops join/leave noise')
+check('_appeal_name_hints' in src, 'appeal name hints helper')
 ap = (ROOT / 'cogs' / 'appeals.py').read_text(encoding='utf-8')
 check('reviewer_id' in ap and 'display_name' in ap, 'resolve stores reviewer_id + display_name')
 check('_log_reject_decision' in ap, 'reject writes journal case')
@@ -138,6 +140,36 @@ with mock.patch.object(W, 'session', {'role': 'owner', 'discord_id': '1111111111
     check(card.get('show') is False, f'owner limits hidden ({card})')
     check(card.get('exempt') is True, 'owner marked exempt')
     check(W._viewer_is_limit_exempt() is True, 'limit exempt True')
+
+print('== runtime: staff_feed keeps rejects ==')
+# proof #2 has media={} but file exists by pattern — fallback
+Path(f'data/uploads/proofs/{gid}_2.png').write_bytes(b'\x89PNG')
+rows2 = W._proofs_list(gid)
+check(any(r.get('id') == 2 and r.get('media_url') for r in rows2),
+      'proof media fallback by gid_id', rows2)
+
+fake_appeals = [
+    {'id': 9, 'status': 'rejected', 'reviewed_by': 'Boss', 'reviewer_id': 555,
+     'user_id': 222, 'user_name': 'Victim', 'text': 'please',
+     'reviewed_at': '2026-09-01T10:00:00+00:00', 'created_at': '2026-09-01T09:00:00+00:00'},
+]
+noisy_audit = [
+    {'action': 'Участник вошёл', 'category': 'member',
+     'user_id': '1', 'user_name': 'a', 'timestamp': f'2026-10-0{i}T12:00:00+00:00'}
+    for i in range(1, 10)
+] + [
+    {'action': 'Изменение ролей', 'category': 'member', 'mod_id': '9',
+     'mod_name': 'x', 'user_id': '1', 'timestamp': f'2026-10-0{i}T13:00:00+00:00'}
+    for i in range(1, 10)
+]
+with mock.patch.object(W, '_appeals_list', return_value=fake_appeals), \
+     mock.patch.object(W, '_audit_events', return_value=noisy_audit):
+    feed = W._staff_feed(gid, 20)
+check(any(f.get('kind') == 'appeal' and 'отклон' in str(f.get('action') or '').lower()
+          for f in feed), 'staff_feed keeps appeal reject', feed)
+check(not any(f.get('action') in ('Участник вошёл', 'Изменение ролей') for f in feed),
+      'staff_feed drops join/role noise', feed)
+check(any(f.get('who') == 'Boss' for f in feed), 'reject shows who', feed)
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
