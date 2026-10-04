@@ -38,10 +38,12 @@
     <div class="mp-row"><span class="mp-key">Всего мер</span><span class="mp-val">{{ profile.total }}</span></div>
     {% if punish_actions %}
     <div class="mp-actions">
-      {% for a in punish_actions %}
-      <button type="button" class="ghost punish-btn {% if a == 'ban' %}danger{% elif a in ('unwarn','unmute','unban') %}lift{% endif %}"
-              data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="{{ a }}">{{ punish_labels.get(a, a) }}</button>
-      {% endfor %}
+      <div class="mp-act-grid">
+        {% for a in punish_actions %}
+        <button type="button" class="mp-chip punish-btn"
+                data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="{{ a }}">{{ punish_labels.get(a, a) }}</button>
+        {% endfor %}
+      </div>
     </div>
     {% endif %}
   </div>

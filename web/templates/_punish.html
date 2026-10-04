@@ -12,10 +12,9 @@
     <input type="hidden" id="punishUid">
 
     <label>Мера
-      <div class="seg" id="punishSeg">
+      <div class="punish-acts" id="punishSeg">
         {% for a in punish_actions %}
-        <button type="button" data-act="{{ a }}"
-          class="{% if a == 'ban' %}danger-seg{% elif a in ('unwarn','unmute','unban') %}lift-seg{% endif %}">{{ punish_labels.get(a, a) }}</button>
+        <button type="button" data-act="{{ a }}">{{ punish_labels.get(a, a) }}</button>
         {% endfor %}
       </div>
     </label>
@@ -109,10 +108,7 @@
         : 'выбери меру и правило';
     }
     const go = $('punishGo');
-    if (go) {
-      go.textContent = lift ? 'Снять' : 'Выдать';
-      go.classList.toggle('danger', a === 'ban' || a === 'unban');
-    }
+    if (go) go.textContent = lift ? 'Снять' : 'Выдать';
     if (!lift) loadRules();
     else { $('punishRule').value = ''; msg.textContent = ''; }
   }

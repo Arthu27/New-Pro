@@ -35,11 +35,12 @@ check('remove_last_warning' in app, 'unwarn uses warnings cog')
 check('clear_all_mutes' in app, 'unmute clears mute roles')
 check('_unban_role' in app, 'unban clears ban role')
 
-check('unwarn' in tpl and 'unmute' in tpl and 'unban' in tpl, 'punish dialog lift seg')
+check('punish-acts' in tpl and 'unwarn' in tpl, 'punish dialog act grid')
 check('isLift' in tpl and "textContent = lift ? 'Снять'" in tpl, 'dialog switches to Снять')
-check("a in ('unwarn','unmute','unban')" in mem or "unwarn','unmute','unban" in mem,
-      'member profile lift buttons')
-check('?v=25' in base, 'css bump')
+check('mp-act-grid' in mem and 'mp-chip' in mem, 'member compact act chips')
+check('punish-acts' in (ROOT / 'web' / 'static' / 'panel.css').read_text(encoding='utf-8'),
+      'uniform punish act styles')
+check('?v=26' in base, 'css bump')
 
 print(f'\n{PASS} passed, {FAIL} failed')
 raise SystemExit(1 if FAIL else 0)
