@@ -6,7 +6,7 @@
 
 {% include '_limits.html' %}
 
-<div class="kpis rise">
+<div class="member-kpis rise">
   <div class="kpi"><b>{{ kpi.total }}</b><span>в списке</span></div>
   <div class="kpi"><b>{{ kpi.warns }}</b><span>варны</span></div>
   <div class="kpi"><b>{{ kpi.mutes }}</b><span>муты</span></div>
@@ -14,66 +14,18 @@
   {% if 'ban' not in (hidden_kinds or []) %}<div class="kpi"><b>{{ kpi.bans }}</b><span>баны</span></div>{% endif %}
 </div>
 
-<div class="search-live panel rise">
+<form class="mp-searchbar rise" id="uform" autocomplete="off" onsubmit="return false;">
   <label class="sr-only" for="uq">Поиск</label>
-  <input id="uq" class="input input-lg" type="search" value="{{ q }}" placeholder="Имя, ник или ID…" autocomplete="off" autofocus>
+  <input id="uq" class="input input-lg" type="search" value="{{ q }}" placeholder="Поиск: имя, @ник или Discord ID" autocomplete="off" autofocus>
   <div id="usuggest" class="suggest" hidden></div>
-</div>
+  <button type="button" class="primary-btn" id="ugo">Найти</button>
+</form>
 
-<section class="panel rise" style="margin-top:12px">
+<section class="panel rise people-block" style="margin-top:12px">
   <h2>Профили{% if q %} · «{{ q }}»{% endif %} <span class="count" data-base="{{ rows|length }}">{{ rows|length }}</span></h2>
-  {% if not rows %}
-  <div class="empty">Никого — введи ник выше</div>
-  {% else %}
-  <div class="table-scroll">
-  <table class="profiles-table">
-    <thead>
-      <tr>
-        <th>Профиль</th>
-        <th>Роли</th>
-        <th>Мер</th>
-        <th>Варн</th>
-        <th>Мут</th>
-        {% if 'kick' not in (hidden_kinds or []) %}<th>Кик</th>{% endif %}
-        {% if 'ban' not in (hidden_kinds or []) %}<th>Бан</th>{% endif %}
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for r in rows %}
-      <tr class="click-row" data-href="{{ url_for('member', q=r.user_id) }}" data-find="{{ r.name }} {{ r.handle }} {{ r.user_id }}">
-        <td>
-          <a class="profile-cell" href="{{ url_for('member', q=r.user_id) }}">
-            <img class="profile-ava" src="{{ r.avatar }}" alt="" width="42" height="42" loading="lazy">
-            <span class="profile-meta">
-              <strong>{{ r.name }}</strong>
-              {% if r.handle %}<span class="dim">@{{ r.handle }}</span>{% endif %}
-            </span>
-          </a>
-        </td>
-        <td class="roles-cell">
-          {% if r.roles %}
-            {% for role in r.roles[:3] %}<span class="mp-role">{{ role }}</span>{% endfor %}
-            {% if r.roles|length > 3 %}<span class="dim">+{{ r.roles|length - 3 }}</span>{% endif %}
-          {% else %}<span class="dim">—</span>{% endif %}
-        </td>
-        <td class="num">{{ r.total }}</td>
-        <td class="num dim">{{ r.warns }}</td>
-        <td class="num dim">{{ r.mutes }}</td>
-        {% if 'kick' not in (hidden_kinds or []) %}<td class="num dim">{{ r.kicks }}</td>{% endif %}
-        {% if 'ban' not in (hidden_kinds or []) %}<td class="num dim">{{ r.bans }}</td>{% endif %}
-        <td class="row-actions">
-          <a href="{{ url_for('member', q=r.user_id) }}">история</a>
-          {% if punish_actions %}
-          <button type="button" class="ghost punish-btn" data-uid="{{ r.user_id }}" data-name="{{ r.name }}">наказать</button>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-  {% endif %}
+  {% with rows=rows, empty_text='Никого — введи ник выше', table_id='tbl-users' %}
+  {% include '_profiles_table.html' %}
+  {% endwith %}
 </section>
 
 {% include '_punish.html' %}
@@ -82,41 +34,81 @@
 (function () {
   const input = document.getElementById('uq');
   const box = document.getElementById('usuggest');
+  const goBtn = document.getElementById('ugo');
+  if (!input) return;
   let t = null;
+  let sel = -1;
+  let items = [];
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  const countEl = document.querySelector('.profiles-table')?.closest('.panel')?.querySelector('.count');
+  const countEl = document.querySelector('.people-block h2 .count');
+
   function filterTable() {
     const q = input.value.trim().toLowerCase();
     let n = 0;
     document.querySelectorAll('.profiles-table tbody tr').forEach(tr => {
       const blob = (tr.dataset.find || '').toLowerCase();
-      const on = !q || blob.includes(q);
+      const on = !q || blob.includes(q) || q.split(/\s+/).every(tok => !tok || blob.includes(tok));
       tr.hidden = !on;
       if (on) n += 1;
     });
     if (countEl) countEl.textContent = q ? String(n) : (countEl.dataset.base || String(n));
   }
+
+  function paintSuggest() {
+    if (!items.length) { box.hidden = true; box.innerHTML = ''; sel = -1; return; }
+    box.hidden = false;
+    box.innerHTML = items.map((it, i) => `<button type="button" class="suggest-item${i===sel?' is-active':''}" data-id="${esc(it.id)}">
+      <img src="${esc(it.avatar)}" alt=""><span><b>${esc(it.name)}</b><small>@${esc(it.handle)}</small></span></button>`).join('');
+  }
+
   input.addEventListener('input', () => {
     clearTimeout(t);
     filterTable();
     const q = input.value.trim();
     t = setTimeout(async () => {
-      if (!q) { box.hidden = true; box.innerHTML = ''; return; }
-      const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
-      const j = await r.json();
-      const items = j.items || [];
-      if (!items.length) { box.hidden = true; return; }
-      box.hidden = false;
-      box.innerHTML = items.map(it => `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
-        <img src="${esc(it.avatar)}" alt=""><span><b>${esc(it.name)}</b><small>@${esc(it.handle)}</small></span></button>`).join('');
+      if (!q) { items = []; paintSuggest(); return; }
+      try {
+        const r = await fetch('/api/users/search?q=' + encodeURIComponent(q) + '&limit=24');
+        const j = await r.json();
+        items = j.items || [];
+        sel = items.length ? 0 : -1;
+        paintSuggest();
+      } catch (_) { items = []; paintSuggest(); }
     }, 120);
   });
+
+  input.addEventListener('keydown', e => {
+    const open = !box.hidden && items.length;
+    if (e.key === 'ArrowDown' && open) { e.preventDefault(); sel = (sel + 1) % items.length; paintSuggest(); return; }
+    if (e.key === 'ArrowUp' && open) { e.preventDefault(); sel = (sel - 1 + items.length) % items.length; paintSuggest(); return; }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (open && sel >= 0 && items[sel]) {
+        location.href = '/member?q=' + encodeURIComponent(items[sel].id);
+        return;
+      }
+      const q = input.value.trim();
+      if (/^\d{15,20}$/.test(q)) location.href = '/member?q=' + encodeURIComponent(q);
+      else location.href = '/users?q=' + encodeURIComponent(q);
+    }
+  });
+
   box.addEventListener('click', e => {
     const b = e.target.closest('.suggest-item'); if (!b) return;
     location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
   });
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); location.href = '/users?q=' + encodeURIComponent(input.value.trim()); }
+  if (goBtn) goBtn.addEventListener('click', () => {
+    const q = input.value.trim();
+    if (/^\d{15,20}$/.test(q)) location.href = '/member?q=' + encodeURIComponent(q);
+    else location.href = '/users?q=' + encodeURIComponent(q);
+  });
+
+  document.querySelectorAll('.profiles-table').forEach(tbl => {
+    tbl.addEventListener('click', e => {
+      if (e.target.closest('a,button')) return;
+      const tr = e.target.closest('tr.click-row');
+      if (tr && tr.dataset.href) location.href = tr.dataset.href;
+    });
   });
 })();
 </script>

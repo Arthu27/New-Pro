@@ -1,0 +1,60 @@
+{# rows, hidden_kinds, empty_text, table_id optional #}
+{% if not rows %}
+<div class="empty empty-sm">{{ empty_text or 'Никого' }}</div>
+{% else %}
+<div class="sq-wrap">
+<table class="profiles-table sq-table" {% if table_id %}id="{{ table_id }}"{% endif %}>
+  <thead>
+    <tr>
+      <th class="col-profile">Профиль</th>
+      <th class="col-roles">Роли</th>
+      <th class="col-num">Мер</th>
+      <th class="col-num">Варн</th>
+      <th class="col-num">Мут</th>
+      {% if 'kick' not in (hidden_kinds or []) %}<th class="col-num">Кик</th>{% endif %}
+      {% if 'ban' not in (hidden_kinds or []) %}<th class="col-num">Бан</th>{% endif %}
+      <th class="col-act"></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr class="click-row" data-href="{{ url_for('member', q=r.user_id) }}" data-find="{{ r.name }} {{ r.handle }} {{ r.user_id }} {{ r.panel_label or '' }}">
+      <td class="col-profile">
+        <a class="profile-cell" href="{{ url_for('member', q=r.user_id) }}">
+          <img class="profile-ava" src="{{ r.avatar }}" alt="" width="36" height="36" loading="lazy">
+          <span class="profile-meta">
+            <strong>{{ r.name }}</strong>
+            <span class="profile-sub">
+              {% if r.handle %}<span class="dim">@{{ r.handle }}</span>{% endif %}
+              {% if r.panel_label %}<span class="sq-badge {% if r.panel_role %}tag-{{ r.panel_role }}{% endif %}">{{ r.panel_label }}</span>{% endif %}
+            </span>
+          </span>
+        </a>
+      </td>
+      <td class="col-roles">
+        {% if r.roles %}
+          <div class="sq-roles">
+            {% for role in r.roles[:4] %}<span class="sq-chip">{{ role }}</span>{% endfor %}
+            {% if r.roles|length > 4 %}<span class="sq-more">+{{ r.roles|length - 4 }}</span>{% endif %}
+          </div>
+        {% else %}<span class="dim">—</span>{% endif %}
+      </td>
+      <td class="col-num"><span class="sq-stat">{{ r.total }}</span></td>
+      <td class="col-num"><span class="sq-stat dim">{{ r.warns }}</span></td>
+      <td class="col-num"><span class="sq-stat dim">{{ r.mutes }}</span></td>
+      {% if 'kick' not in (hidden_kinds or []) %}<td class="col-num"><span class="sq-stat dim">{{ r.kicks }}</span></td>{% endif %}
+      {% if 'ban' not in (hidden_kinds or []) %}<td class="col-num"><span class="sq-stat dim">{{ r.bans }}</span></td>{% endif %}
+      <td class="col-act">
+        <div class="sq-actions">
+          <a class="sq-link" href="{{ url_for('member', q=r.user_id) }}">профиль</a>
+          {% if punish_actions %}
+          <button type="button" class="sq-btn punish-btn" data-uid="{{ r.user_id }}" data-name="{{ r.name }}">наказать</button>
+          {% endif %}
+        </div>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
