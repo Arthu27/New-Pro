@@ -7,30 +7,6 @@
 </p>
 
 <div class="proof-layout rise">
-  <section class="panel proof-panel">
-    <div class="proof-panel__head">
-      <h2>Медиа</h2>
-      {% if r.media_name %}<span class="dim">{{ r.media_name }}</span>{% endif %}
-    </div>
-    <div class="proof-media">
-      {% if r.media_url %}
-        {% if r.media_kind == 'video' %}
-        <video controls preload="metadata" src="{{ r.media_url }}"></video>
-        {% else %}
-        <a href="{{ r.media_url }}" target="_blank" rel="noopener" title="Открыть оригинал">
-          <img src="{{ r.media_url }}" alt="{{ r.media_name or 'демка' }}">
-        </a>
-        {% endif %}
-      {% elif r.link %}
-        <div class="proof-media__empty">
-          <a class="btn" href="{{ r.link }}" target="_blank" rel="noopener">Открыть в Discord</a>
-        </div>
-      {% else %}
-        <div class="proof-media__empty dim">Медиа нет — только запись</div>
-      {% endif %}
-    </div>
-  </section>
-
   <div class="proof-side">
     <section class="panel proof-panel">
       <div class="proof-panel__head">
@@ -73,9 +49,9 @@
       <p class="dim proof-decide-card__hint">Owner и Staff Admin / Admin могут принять или отклонить заново.</p>
       <form class="proof-decide-form" id="proofDecide" data-pid="{{ r.id }}">
         <label class="proof-decide-form__label" for="proofReason">Комментарий</label>
-        <textarea id="proofReason" name="reason" rows="3" maxlength="400" placeholder="почему так решаешь…"></textarea>
-        <div class="proof-actions">
-          <button type="submit" name="decision" value="accept" class="btn">Принять</button>
+        <textarea class="input proof-decide-form__input" id="proofReason" name="reason" rows="3" maxlength="400" placeholder="почему так решаешь…"></textarea>
+        <div class="proof-actions proof-decide-form__actions">
+          <button type="submit" name="decision" value="accept" class="btn btn-ok">Принять</button>
           <button type="submit" name="decision" value="reject" class="btn btn-danger">Отклонить</button>
         </div>
         <div class="dim" id="proofDecideMsg" hidden></div>
@@ -83,6 +59,30 @@
     </section>
     {% endif %}
   </div>
+
+  <section class="panel proof-panel proof-media-card">
+    <div class="proof-panel__head">
+      <h2>Медиа</h2>
+      {% if r.media_name %}<span class="dim">{{ r.media_name }}</span>{% endif %}
+    </div>
+    <div class="proof-media">
+      {% if r.media_url %}
+        {% if r.media_kind == 'video' %}
+        <video controls preload="metadata" src="{{ r.media_url }}"></video>
+        {% else %}
+        <a class="proof-media__link" href="{{ r.media_url }}" target="_blank" rel="noopener" title="Открыть оригинал">
+          <img src="{{ r.media_url }}" alt="{{ r.media_name or 'демка' }}">
+        </a>
+        {% endif %}
+      {% elif r.link %}
+        <div class="proof-media__empty">
+          <a class="btn btn-ghost" href="{{ r.link }}" target="_blank" rel="noopener">Открыть в Discord</a>
+        </div>
+      {% else %}
+        <div class="proof-media__empty dim">Медиа нет — только запись</div>
+      {% endif %}
+    </div>
+  </section>
 </div>
 
 {% if can_decide %}
