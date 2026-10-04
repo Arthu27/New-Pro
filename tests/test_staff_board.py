@@ -72,6 +72,8 @@ check(helper_top['top'][0]['name'] == 'HelpOne', 'helper #1 among helpers')
 check(helper_top['top'][0]['actions'] == 5, 'helper actions')
 check('Staff Admin' in ROLE_TITLE.values(), 'staff admin title')
 check('Master' in ROLE_TITLE.values() and 'master' in ROLE_ORDER, 'master role on board')
+for k in ('creative', 'broadcaster', 'event', 'support', 'closemod'):
+    check(k in ROLE_ORDER and k in ROLE_TITLE, f'branch {k} on board')
 
 print('== templates / css ==')
 act = (ROOT / 'web' / 'templates' / '_activity.html').read_text(encoding='utf-8')

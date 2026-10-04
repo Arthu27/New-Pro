@@ -362,6 +362,26 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
   border-color: rgba(94, 210, 220, .35);
 }
 .tag-mod { background: rgba(143,166,255,.12); color: #b4c3ff; border-color: rgba(143,166,255,.25); }
+.tag-creative {
+  background: rgba(255, 140, 200, .14); color: #ffb3d9;
+  border-color: rgba(255, 140, 200, .35);
+}
+.tag-broadcaster {
+  background: rgba(120, 200, 255, .14); color: #9fd4ff;
+  border-color: rgba(120, 200, 255, .35);
+}
+.tag-event {
+  background: rgba(255, 200, 90, .14); color: #ffd27a;
+  border-color: rgba(255, 200, 90, .35);
+}
+.tag-support {
+  background: rgba(140, 220, 170, .14); color: #a8e8c0;
+  border-color: rgba(140, 220, 170, .35);
+}
+.tag-closemod {
+  background: rgba(180, 160, 255, .14); color: #c8b8ff;
+  border-color: rgba(180, 160, 255, .35);
+}
 .tag-helper { background: rgba(79,209,139,.12); color: #8ee6b6; border-color: rgba(79,209,139,.25); }
 .tag.off { color: var(--muted); }
 .tag.on { background: rgba(79,209,139,.14); color: var(--ok); border-color: rgba(79,209,139,.3); }
@@ -1112,6 +1132,11 @@ h2 .seg { margin-left: auto; font-weight: 800; }
 .act-role-block.role-master { border-left-color: #9ee8ef; }
 .act-role-block.role-helper { border-left-color: #8ee6b6; }
 .act-role-block.role-mod { border-left-color: #b4c3ff; }
+.act-role-block.role-creative { border-left-color: #ffb3d9; }
+.act-role-block.role-broadcaster { border-left-color: #9fd4ff; }
+.act-role-block.role-event { border-left-color: #ffd27a; }
+.act-role-block.role-support { border-left-color: #a8e8c0; }
+.act-role-block.role-closemod { border-left-color: #c8b8ff; }
 .act-role-block.role-curator { border-left-color: #d2b0ff; }
 .act-role-block.role-assistent,
 .act-role-block.role-staff-assistent { border-left-color: #ffc78a; }

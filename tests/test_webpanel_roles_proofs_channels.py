@@ -78,6 +78,18 @@ check(rm == 'master', f'Master → master ({rm})')
 check(W.panel_role_display('master', [KNOWN_MASTER_ROLE_ID]) == 'Master',
       'label Master')
 
+from services.staff_roles import KNOWN_GRANT_BY_KIND
+for kind, label in (
+    ('creative', 'Creative'), ('broadcaster', 'Broadcaster'),
+    ('event', 'Event'), ('support', 'Support'), ('closemod', 'Close mod'),
+):
+    rid = int(KNOWN_GRANT_BY_KIND[kind])
+    check(rid in bags.get(kind, set()), f'{kind} in own bag')
+    check(rid not in bags['mod'], f'{kind} not lumped into mod')
+    got = W.resolve_discord_panel_role(f'88{rid % 1000}', [rid])
+    check(got == kind, f'{kind} → {kind} ({got})')
+    check(W.panel_role_display(kind, [rid]) == label, f'label {label}')
+
 r = W.resolve_discord_panel_role('999', [KNOWN_STAFF_ADMIN_ROLE_ID])
 check(r == 'admin', f'Staff Admin → admin ({r})')
 lab = W.panel_role_display(r, [KNOWN_STAFF_ADMIN_ROLE_ID])
@@ -145,6 +157,9 @@ check(W.panel_role_tag('master', []) == 'master', 'tag master')
 css = (ROOT / 'web' / 'static' / 'panel.css').read_text(encoding='utf-8')
 check('tag-staff-admin' in css and 'tag-staff-assistent' in css, 'CSS staff tags')
 check('tag-master' in css, 'CSS tag for master')
+check(all(f'tag-{k}' in css for k in (
+    'creative', 'broadcaster', 'event', 'support', 'closemod')),
+      'CSS tags for branch roles')
 check('p-card__body' in css and 'text-overflow: ellipsis' in css, 'staff card no-overlap CSS')
 check('proof-decide-form__input' in css and 'max-height: 160px' in css, 'proof detail compact/dark')
 check('act-podium--3' in css or 'act-podium__medal' in css, 'activity podium polish')

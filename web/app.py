@@ -32,8 +32,15 @@ DISCORD_API = 'https://discord.com/api/v10'
 
 # helper < mod < curator < assistent < admin < owner
 # Staff Admin → admin (лейбл «Staff Admin»), Staff Assistent → assistent
+# Ветки (creative/event/…) по доступу = mod, но отдельный лейбл на /staff.
+_BRANCH_ROLES = ('creative', 'broadcaster', 'event', 'support', 'closemod')
 LEVEL = {
     'helper': 1,
+    'creative': 2,
+    'broadcaster': 2,
+    'event': 2,
+    'support': 2,
+    'closemod': 2,
     'mod': 2,
     'master': 3,
     'curator': 4,
@@ -44,6 +51,11 @@ LEVEL = {
 ROLE_LABELS = {
     'helper': 'Helper',
     'mod': 'Moderator',
+    'creative': 'Creative',
+    'broadcaster': 'Broadcaster',
+    'event': 'Event',
+    'support': 'Support',
+    'closemod': 'Close mod',
     'master': 'Master',
     'curator': 'Curator',
     'assistent': 'Assistent',
@@ -76,45 +88,50 @@ PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
 # Какие ключи страниц видит роль (накопительно по уровню)
 # Admin НЕ видит бот/модули/команды — только owner.
 # Helper видит Правила (не причины наказаний как отдельный список).
+_MOD_PAGES = {
+    'today', 'logs', 'staff', 'users', 'member', 'channels',
+    'warns', 'appeals', 'proofs', 'reasons',
+}
 ROLE_PAGE_KEYS = {
     'helper': {'today', 'logs', 'staff', 'users', 'member', 'warns', 'reasons'},
-    'mod': {
-        'today', 'logs', 'staff', 'users', 'member', 'channels',
-        'warns', 'appeals', 'proofs', 'reasons',
-    },
-    'master': {
-        'today', 'logs', 'staff', 'users', 'member', 'channels',
-        'warns', 'appeals', 'proofs', 'reasons',
-    },
-    'curator': {
-        'today', 'logs', 'staff', 'users', 'member', 'channels',
-        'warns', 'appeals', 'proofs', 'reasons',
-    },
-    'assistent': {
-        'today', 'logs', 'staff', 'users', 'member', 'channels',
-        'warns', 'appeals', 'proofs', 'reasons',
-    },
-    'admin': {
-        'today', 'logs', 'staff', 'users', 'member', 'channels',
-        'warns', 'appeals', 'proofs', 'reasons', 'anticrash',
-    },
+    'mod': set(_MOD_PAGES),
+    'creative': set(_MOD_PAGES),
+    'broadcaster': set(_MOD_PAGES),
+    'event': set(_MOD_PAGES),
+    'support': set(_MOD_PAGES),
+    'closemod': set(_MOD_PAGES),
+    'master': set(_MOD_PAGES),
+    'curator': set(_MOD_PAGES),
+    'assistent': set(_MOD_PAGES),
+    'admin': set(_MOD_PAGES) | {'anticrash'},
     'owner': {p[0] for p in PAGES_ALL},
 }
 
 # Меры, которые роль может ВЫДАТЬ из панели
+_MOD_PUNISH = ('warn', 'mute', 'kick', 'ban')
 ROLE_PUNISH_ACTIONS = {
     'helper': ('warn', 'mute'),
-    'mod': ('warn', 'mute', 'kick', 'ban'),
-    'master': ('warn', 'mute', 'kick', 'ban'),
-    'curator': ('warn', 'mute', 'kick', 'ban'),
-    'assistent': ('warn', 'mute', 'kick', 'ban'),
-    'admin': ('warn', 'mute', 'kick', 'ban'),
-    'owner': ('warn', 'mute', 'kick', 'ban'),
+    'mod': _MOD_PUNISH,
+    'creative': _MOD_PUNISH,
+    'broadcaster': _MOD_PUNISH,
+    'event': _MOD_PUNISH,
+    'support': _MOD_PUNISH,
+    'closemod': _MOD_PUNISH,
+    'master': _MOD_PUNISH,
+    'curator': _MOD_PUNISH,
+    'assistent': _MOD_PUNISH,
+    'admin': _MOD_PUNISH,
+    'owner': _MOD_PUNISH,
 }
 # Виды в журнале/истории, которые роль НЕ видит
 ROLE_HIDDEN_KINDS = {
     'helper': frozenset({'ban', 'kick'}),
     'mod': frozenset(),
+    'creative': frozenset(),
+    'broadcaster': frozenset(),
+    'event': frozenset(),
+    'support': frozenset(),
+    'closemod': frozenset(),
     'master': frozenset(),
     'curator': frozenset(),
     'assistent': frozenset(),
@@ -142,6 +159,41 @@ ROLE_CARDS = [
         'tag': '@Moderator',
         'blurb': 'Полная мод-панель: апелляции, демки, каналы, правила.',
         'pages': ['Всё у Helper', '+ Каналы', 'Апелляции', 'Демки', 'Правила'],
+    },
+    {
+        'key': 'creative',
+        'title': 'Creative',
+        'tag': '@Creative',
+        'blurb': 'Ветка Creative — отдельный бейдж на /staff, доступ как у Moderator.',
+        'pages': ['Как Moderator'],
+    },
+    {
+        'key': 'broadcaster',
+        'title': 'Broadcaster',
+        'tag': '@Broadcaster',
+        'blurb': 'Ветка Broadcaster — отдельный бейдж на /staff.',
+        'pages': ['Как Moderator'],
+    },
+    {
+        'key': 'event',
+        'title': 'Event',
+        'tag': '@Eventsmod',
+        'blurb': 'Ветка Event / Eventsmod — отдельный бейдж на /staff.',
+        'pages': ['Как Moderator'],
+    },
+    {
+        'key': 'support',
+        'title': 'Support',
+        'tag': '@Support',
+        'blurb': 'Ветка Support — отдельный бейдж на /staff.',
+        'pages': ['Как Moderator'],
+    },
+    {
+        'key': 'closemod',
+        'title': 'Close mod',
+        'tag': '@Close mod',
+        'blurb': 'Ветка Close mod — отдельный бейдж на /staff.',
+        'pages': ['Как Moderator'],
     },
     {
         'key': 'master',
@@ -773,11 +825,23 @@ def _staff_role_id_set() -> dict:
     )
     master = {int(KNOWN_MASTER_ROLE_ID)} | _env_rid('STAFF_MASTER_ROLE_ID')
     mod = {int(KNOWN_MODERATOR_ROLE_ID)} | _env_rid('STAFF_MODERATOR_ROLE_ID')
-    # event/broadcaster/support/closemod/creative → как mod для панели
     for k, rid in (KNOWN_GRANT_BY_KIND or {}).items():
-        if k in ('event', 'broadcaster', 'moderator', 'support',
-                 'closemod', 'creative') and rid:
+        if k == 'moderator' and rid:
             mod.add(int(rid))
+    # Ветки — отдельные бейджи (не схлопывать в Moderator)
+    _branch_env = {
+        'event': ('STAFF_EVENT_ROLE_ID',),
+        'broadcaster': ('STAFF_BROADCASTER_ROLE_ID',),
+        'support': ('STAFF_SUPPORT_ROLE_ID',),
+        'closemod': ('STAFF_CLOSEMOD_ROLE_ID',),
+        'creative': ('STAFF_CREATIVE_ROLE_ID',),
+    }
+    branches = {k: set() for k in _BRANCH_ROLES}
+    for k, rid in (KNOWN_GRANT_BY_KIND or {}).items():
+        if k in branches and rid:
+            branches[k].add(int(rid))
+    for k, names in _branch_env.items():
+        branches[k] |= _env_rid(*names)
     helper = {int(KNOWN_HELPER_ROLE_ID)} | _env_rid('STAFF_HELPER_ROLE_ID')
     for k, rid in (KNOWN_GRANT_BY_KIND or {}).items():
         if k == 'helper' and rid:
@@ -785,7 +849,7 @@ def _staff_role_id_set() -> dict:
     if KNOWN_COMMON_STAFF_ROLE_ID:
         # общая staff-роль — минимум helper, чтобы человек попал в список
         helper.add(int(KNOWN_COMMON_STAFF_ROLE_ID))
-    return {
+    out = {
         'admin': admin,
         'assistent': assistent,
         'curator': curator,
@@ -793,6 +857,8 @@ def _staff_role_id_set() -> dict:
         'mod': mod,
         'helper': helper,
     }
+    out.update(branches)
+    return out
 
 
 def panel_role_display(role: str, role_ids=None) -> str:
@@ -834,6 +900,11 @@ def panel_role_tag(role: str, role_ids=None, role_label: str | None = None) -> s
         'Curator': 'curator',
         'Master': 'master',
         'Moderator': 'mod',
+        'Creative': 'creative',
+        'Broadcaster': 'broadcaster',
+        'Event': 'event',
+        'Support': 'support',
+        'Close mod': 'closemod',
         'Helper': 'helper',
     }
     if lab in mapping:
@@ -842,28 +913,30 @@ def panel_role_tag(role: str, role_ids=None, role_label: str | None = None) -> s
 
 
 def staff_board_rank(role: str, role_label: str = '') -> int:
-    """Порядок на /staff: Staff Admin / Staff Assistent выше Admin; Master выше Mod."""
+    """Порядок на /staff: Staff* выше Admin; ветки отдельно от Moderator."""
     lab = (role_label or '').strip().lower()
     role = str(role or '').strip().lower()
-    if role == 'owner' or lab == 'owner':
-        return 0
-    if lab == 'staff admin':
-        return 1
-    if lab == 'staff assistent':
-        return 2
-    if role == 'admin' or lab == 'admin':
-        return 3
-    if role == 'assistent' or lab == 'assistent':
-        return 4
-    if role == 'curator':
-        return 5
-    if role == 'master' or lab == 'master':
-        return 6
-    if role == 'mod':
-        return 7
-    if role == 'helper':
-        return 8
-    return 9
+    order = {
+        'owner': 0,
+        'staff admin': 1,
+        'staff assistent': 2,
+        'admin': 3,
+        'assistent': 4,
+        'curator': 5,
+        'master': 6,
+        'mod': 7, 'moderator': 7,
+        'creative': 8,
+        'broadcaster': 9,
+        'event': 10,
+        'support': 11,
+        'closemod': 12, 'close mod': 12,
+        'helper': 13,
+    }
+    if lab in order:
+        return order[lab]
+    if role in order:
+        return order[role]
+    return 20
 
 
 def resolve_discord_panel_role(discord_user_id, role_ids) -> str | None:
@@ -893,6 +966,10 @@ def resolve_discord_panel_role(discord_user_id, role_ids) -> str | None:
         return 'master'
     if ids & bags['mod']:
         return 'mod'
+    # Ветки — отдельные лейблы (Creative / Event / …)
+    for key in _BRANCH_ROLES:
+        if ids & bags.get(key, set()):
+            return key
     if ids & bags['helper']:
         return 'helper'
     return None

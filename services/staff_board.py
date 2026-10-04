@@ -12,7 +12,9 @@ from typing import Any
 
 ROLE_ORDER = (
     'owner', 'staff-admin', 'staff-assistent', 'admin',
-    'assistent', 'curator', 'master', 'mod', 'helper',
+    'assistent', 'curator', 'master', 'mod',
+    'creative', 'broadcaster', 'event', 'support', 'closemod',
+    'helper',
 )
 
 ROLE_TITLE = {
@@ -24,6 +26,11 @@ ROLE_TITLE = {
     'curator': 'Curator',
     'master': 'Master',
     'mod': 'Moderator',
+    'creative': 'Creative',
+    'broadcaster': 'Broadcaster',
+    'event': 'Event',
+    'support': 'Support',
+    'closemod': 'Close mod',
     'helper': 'Helper',
 }
 
