@@ -35,14 +35,16 @@ DISCORD_API = 'https://discord.com/api/v10'
 LEVEL = {
     'helper': 1,
     'mod': 2,
-    'curator': 3,
-    'assistent': 4,
-    'admin': 5,
+    'master': 3,
+    'curator': 4,
+    'assistent': 5,
+    'admin': 6,
     'owner': 9,
 }
 ROLE_LABELS = {
     'helper': 'Helper',
     'mod': 'Moderator',
+    'master': 'Master',
     'curator': 'Curator',
     'assistent': 'Assistent',
     'admin': 'Admin',
@@ -80,6 +82,10 @@ ROLE_PAGE_KEYS = {
         'today', 'logs', 'staff', 'users', 'member', 'channels',
         'warns', 'appeals', 'proofs', 'reasons',
     },
+    'master': {
+        'today', 'logs', 'staff', 'users', 'member', 'channels',
+        'warns', 'appeals', 'proofs', 'reasons',
+    },
     'curator': {
         'today', 'logs', 'staff', 'users', 'member', 'channels',
         'warns', 'appeals', 'proofs', 'reasons',
@@ -99,6 +105,7 @@ ROLE_PAGE_KEYS = {
 ROLE_PUNISH_ACTIONS = {
     'helper': ('warn', 'mute'),
     'mod': ('warn', 'mute', 'kick', 'ban'),
+    'master': ('warn', 'mute', 'kick', 'ban'),
     'curator': ('warn', 'mute', 'kick', 'ban'),
     'assistent': ('warn', 'mute', 'kick', 'ban'),
     'admin': ('warn', 'mute', 'kick', 'ban'),
@@ -108,6 +115,7 @@ ROLE_PUNISH_ACTIONS = {
 ROLE_HIDDEN_KINDS = {
     'helper': frozenset({'ban', 'kick'}),
     'mod': frozenset(),
+    'master': frozenset(),
     'curator': frozenset(),
     'assistent': frozenset(),
     'admin': frozenset(),
@@ -134,6 +142,13 @@ ROLE_CARDS = [
         'tag': '@Moderator',
         'blurb': 'Полная мод-панель: апелляции, демки, каналы, правила.',
         'pages': ['Всё у Helper', '+ Каналы', 'Апелляции', 'Демки', 'Правила'],
+    },
+    {
+        'key': 'master',
+        'title': 'Master',
+        'tag': '@Master',
+        'blurb': 'Выше Moderator, ниже Curator. Полная мод-панель.',
+        'pages': ['Как Moderator'],
     },
     {
         'key': 'curator',
@@ -756,9 +771,8 @@ def _staff_role_id_set() -> dict:
         'STAFF_MODERATOR_CURATOR_ROLE_ID', 'STAFF_EVENT_CURATOR_ROLE_ID',
         'STAFF_BROADCASTER_CURATOR_ROLE_ID',
     )
-    mod = {int(KNOWN_MODERATOR_ROLE_ID), int(KNOWN_MASTER_ROLE_ID)} | _env_rid(
-        'STAFF_MODERATOR_ROLE_ID',
-    )
+    master = {int(KNOWN_MASTER_ROLE_ID)} | _env_rid('STAFF_MASTER_ROLE_ID')
+    mod = {int(KNOWN_MODERATOR_ROLE_ID)} | _env_rid('STAFF_MODERATOR_ROLE_ID')
     # event/broadcaster/support/closemod/creative → как mod для панели
     for k, rid in (KNOWN_GRANT_BY_KIND or {}).items():
         if k in ('event', 'broadcaster', 'moderator', 'support',
@@ -775,6 +789,7 @@ def _staff_role_id_set() -> dict:
         'admin': admin,
         'assistent': assistent,
         'curator': curator,
+        'master': master,
         'mod': mod,
         'helper': helper,
     }
@@ -817,6 +832,7 @@ def panel_role_tag(role: str, role_ids=None, role_label: str | None = None) -> s
         'Admin': 'admin',
         'Assistent': 'assistent',
         'Curator': 'curator',
+        'Master': 'master',
         'Moderator': 'mod',
         'Helper': 'helper',
     }
@@ -826,7 +842,7 @@ def panel_role_tag(role: str, role_ids=None, role_label: str | None = None) -> s
 
 
 def staff_board_rank(role: str, role_label: str = '') -> int:
-    """Порядок на /staff: Staff Admin и Staff Assistent выше обычных Admin."""
+    """Порядок на /staff: Staff Admin / Staff Assistent выше Admin; Master выше Mod."""
     lab = (role_label or '').strip().lower()
     role = str(role or '').strip().lower()
     if role == 'owner' or lab == 'owner':
@@ -841,10 +857,12 @@ def staff_board_rank(role: str, role_label: str = '') -> int:
         return 4
     if role == 'curator':
         return 5
-    if role == 'mod':
+    if role == 'master' or lab == 'master':
         return 6
-    if role == 'helper':
+    if role == 'mod':
         return 7
+    if role == 'helper':
+        return 8
     return 9
 
 
@@ -871,6 +889,8 @@ def resolve_discord_panel_role(discord_user_id, role_ids) -> str | None:
         return 'assistent'
     if ids & bags['curator']:
         return 'curator'
+    if ids & bags.get('master', set()):
+        return 'master'
     if ids & bags['mod']:
         return 'mod'
     if ids & bags['helper']:

@@ -35,8 +35,7 @@ def check(ok, msg, extra=''):
 
 print('== source maps ==')
 src = (ROOT / 'web' / 'app.py').read_text(encoding='utf-8')
-check("'assistent': 4" in src or "'assistent':4" in src.replace(' ', ''),
-      'LEVEL has assistent')
+check("'assistent':" in src and "'master':" in src, 'LEVEL has assistent + master')
 check('KNOWN_STAFF_ADMIN_ROLE_ID' in src, 'staff role bags include Staff Admin')
 check('KNOWN_ASSISTENT_ROLE_ID' in src and 'KNOWN_STAFF_ASSISTENT_ROLE_ID' in src,
       'staff role bags include Assistent')
@@ -64,7 +63,7 @@ W.bot_instance = None
 from services.staff_roles import (
     KNOWN_STAFF_ADMIN_ROLE_ID, KNOWN_ADMIN_ROLE_ID,
     KNOWN_ASSISTENT_ROLE_ID, KNOWN_STAFF_ASSISTENT_ROLE_ID,
-    KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID,
+    KNOWN_HELPER_ROLE_ID, KNOWN_MODERATOR_ROLE_ID, KNOWN_MASTER_ROLE_ID,
 )
 
 bags = W._staff_role_id_set()
@@ -72,6 +71,12 @@ check(int(KNOWN_STAFF_ADMIN_ROLE_ID) in bags['admin'], 'Staff Admin in admin bag
 check(int(KNOWN_ASSISTENT_ROLE_ID) in bags['assistent'], 'Assistent in assistent bag')
 check(int(KNOWN_STAFF_ASSISTENT_ROLE_ID) in bags['assistent'],
       'Staff Assistent in assistent bag')
+check(int(KNOWN_MASTER_ROLE_ID) in bags.get('master', set()), 'Master in master bag')
+check(int(KNOWN_MASTER_ROLE_ID) not in bags['mod'], 'Master not lumped into mod')
+rm = W.resolve_discord_panel_role('991', [KNOWN_MASTER_ROLE_ID])
+check(rm == 'master', f'Master → master ({rm})')
+check(W.panel_role_display('master', [KNOWN_MASTER_ROLE_ID]) == 'Master',
+      'label Master')
 
 r = W.resolve_discord_panel_role('999', [KNOWN_STAFF_ADMIN_ROLE_ID])
 check(r == 'admin', f'Staff Admin → admin ({r})')
@@ -115,6 +120,8 @@ with mock.patch.object(W, 'session', {'role': 'mod', 'discord_id': '1'}):
     check(W._panel_can_decide_proof() is False, 'mod cannot redecide')
 
 print('== LEVEL order ==')
+check(W.LEVEL['master'] > W.LEVEL['mod'], 'master > mod')
+check(W.LEVEL['curator'] > W.LEVEL['master'], 'curator > master')
 check(W.LEVEL['assistent'] > W.LEVEL['curator'], 'assistent > curator')
 check(W.LEVEL['admin'] > W.LEVEL['assistent'], 'admin > assistent')
 check(W.LEVEL['owner'] > W.LEVEL['admin'], 'owner > admin')
@@ -126,16 +133,21 @@ check(W.staff_board_rank('assistent', 'Staff Assistent') < W.staff_board_rank('a
       'Staff Assistent выше Admin на доске')
 check(W.staff_board_rank('admin', 'Staff Admin') < W.staff_board_rank('assistent', 'Staff Assistent'),
       'Staff Admin выше Staff Assistent')
+check(W.staff_board_rank('master', 'Master') < W.staff_board_rank('mod', 'Moderator'),
+      'Master выше Moderator на доске')
 check(W.panel_role_tag('admin', [KNOWN_STAFF_ADMIN_ROLE_ID]) == 'staff-admin',
       'tag staff-admin')
 check(W.panel_role_tag('assistent', [KNOWN_STAFF_ASSISTENT_ROLE_ID]) == 'staff-assistent',
       'tag staff-assistent')
 check(W.panel_role_tag('admin', [KNOWN_ADMIN_ROLE_ID]) == 'admin', 'tag admin')
+check(W.panel_role_tag('master', []) == 'master', 'tag master')
 
 css = (ROOT / 'web' / 'static' / 'panel.css').read_text(encoding='utf-8')
 check('tag-staff-admin' in css and 'tag-staff-assistent' in css, 'CSS staff tags')
-check('p-card__top' in css and 'text-overflow: ellipsis' in css, 'staff card no-overlap CSS')
+check('tag-master' in css, 'CSS tag for master')
+check('p-card__body' in css and 'text-overflow: ellipsis' in css, 'staff card no-overlap CSS')
 check('proof-decide-form__input' in css and 'max-height: 160px' in css, 'proof detail compact/dark')
+check('act-podium--3' in css or 'act-podium__medal' in css, 'activity podium polish')
 staff_html = (ROOT / 'web' / 'templates' / 'staff.html').read_text(encoding='utf-8')
 check('role_tag' in staff_html and 'p-card__name' in staff_html, 'staff template uses role_tag')
 

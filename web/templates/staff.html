@@ -16,13 +16,9 @@
     <a class="p-card" href="{{ url_for('member', q=p.id) }}">
       <img class="p-card__ava" src="{{ p.avatar }}" alt="">
       <div class="p-card__body">
-        <div class="p-card__top">
-          <div class="p-card__who">
-            <strong class="p-card__name">{{ p.name }}</strong>
-            <span class="p-card__handle dim">@{{ p.handle }}</span>
-          </div>
-          <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
-        </div>
+        <strong class="p-card__name">{{ p.name }}</strong>
+        <span class="p-card__handle dim">@{{ p.handle }}</span>
+        <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
       </div>
     </a>
     {% endfor %}

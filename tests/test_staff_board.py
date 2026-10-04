@@ -29,7 +29,7 @@ def check(ok, msg, extra=''):
 
 
 print('== staff_board unit ==')
-from services.staff_board import build_staff_board, fmt_voice, ROLE_TITLE
+from services.staff_board import build_staff_board, fmt_voice, ROLE_TITLE, ROLE_ORDER
 
 check(fmt_voice(0) == '0 мин', 'fmt 0')
 check(fmt_voice(125) == '2 мин', 'fmt minutes')
@@ -71,6 +71,7 @@ helper_top = next(r for r in board['role_tops'] if r['key'] == 'helper')
 check(helper_top['top'][0]['name'] == 'HelpOne', 'helper #1 among helpers')
 check(helper_top['top'][0]['actions'] == 5, 'helper actions')
 check('Staff Admin' in ROLE_TITLE.values(), 'staff admin title')
+check('Master' in ROLE_TITLE.values() and 'master' in ROLE_ORDER, 'master role on board')
 
 print('== templates / css ==')
 act = (ROOT / 'web' / 'templates' / '_activity.html').read_text(encoding='utf-8')
