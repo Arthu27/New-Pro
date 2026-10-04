@@ -2808,14 +2808,20 @@ def api_login_members():
 @role_required('helper')
 def api_users_search():
     q = (request.args.get('q') or '').strip()
-    people, _ = _search_guild_members(q, staff_only=False, limit=20)
+    try:
+        limit = min(40, max(8, int(request.args.get('limit') or 24)))
+    except Exception:
+        limit = 24
+    people, err = _search_guild_members(q, staff_only=False, limit=limit)
     items = [{
         'id': p['id'],
         'name': p['name'],
         'handle': p.get('handle') or '',
         'avatar': p.get('avatar') or '',
+        'role': p.get('role') or '',
+        'role_label': p.get('role_label') or ROLE_LABELS.get(p.get('role') or '', ''),
     } for p in people]
-    return jsonify({'ok': True, 'items': items})
+    return jsonify({'ok': True, 'items': items, 'error': err or ''})
 
 
 @app.post('/api/punish')
@@ -2960,24 +2966,26 @@ def api_punish():
         return jsonify({'ok': False, 'error': str(e)[:200]}), 500
 
 
-@app.route('/users')
-@login_required
-@role_required('helper')
-def users_page():
-    """Участники сервера — профили таблицей + счётчики мер."""
+def _users_directory(q: str = '', *, limit: int = 300):
+    """Справочник участников: профили + счётчики мер. (rows, kpi)."""
     gid = _main_guild()
-    q = (request.args.get('q') or '').strip()
-    ql = q.lower()
+    ql = (q or '').strip().lower()
     names = {}
     avatars = {}
     handles = {}
     role_names = {}
+    panel_roles = {}
 
     try:
         bot = bot_instance
         if bot and gid:
             guild = bot.get_guild(int(gid))
             if guild is not None:
+                try:
+                    from config import Config
+                    owner_ids = {int(x) for x in Config.all_owner_ids()}
+                except Exception:
+                    owner_ids = set()
                 for m in guild.members:
                     if getattr(m, 'bot', False):
                         continue
@@ -3007,6 +3015,15 @@ def users_page():
                         role_names[uid] = roles[:8]
                     except Exception:
                         role_names[uid] = []
+                    try:
+                        rids = [r.id for r in getattr(m, 'roles', []) or []]
+                        prole = resolve_discord_panel_role(m.id, rids)
+                        if not prole and int(m.id) in owner_ids:
+                            prole = 'owner'
+                        if prole:
+                            panel_roles[uid] = prole
+                    except Exception:
+                        pass
     except Exception:
         pass
 
@@ -3074,12 +3091,15 @@ def users_page():
             if tokens and not all(tok in blob for tok in tokens):
                 if ql not in blob and ql not in uid:
                     continue
+        prole = panel_roles.get(uid) or ''
         rows.append({
             'user_id': uid,
             'name': display,
             'handle': handles.get(uid) or '',
             'avatar': avatars.get(uid) or f'https://cdn.discordapp.com/embed/avatars/{(int(uid) >> 22) % 6 if uid.isdigit() else 0}.png',
             'roles': role_names.get(uid) or [],
+            'panel_role': prole,
+            'panel_label': ROLE_LABELS.get(prole, prole) if prole else '',
             'warns': st.get('warns', 0),
             'mutes': st.get('mutes', 0),
             'bans': st.get('bans', 0),
@@ -3095,8 +3115,18 @@ def users_page():
         'bans': sum(r['bans'] for r in rows),
         'kicks': sum(r['kicks'] for r in rows),
     }
+    return rows[: max(1, int(limit))], kpi
+
+
+@app.route('/users')
+@login_required
+@role_required('helper')
+def users_page():
+    """Участники сервера — профили таблицей + счётчики мер."""
+    q = (request.args.get('q') or '').strip()
+    rows, kpi = _users_directory(q, limit=300)
     return render_template(
-        'users.html', rows=rows[:300], q=q, kpi=kpi,
+        'users.html', rows=rows, q=q, kpi=kpi,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
@@ -3235,8 +3265,29 @@ def member():
                     break
         except Exception:
             proofs = []
+
+    # пустой стейт / не найдено — таблицы людей + живой поиск
+    staff_rows = []
+    punished_rows = []
+    people_rows = []
+    people_kpi = {'total': 0, 'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0}
+    if not profile:
+        directory, people_kpi = _users_directory('', limit=400)
+        staff_rows = [
+            r for r in directory if r.get('panel_role')
+        ]
+        staff_rows.sort(key=lambda r: (
+            staff_board_rank(r.get('panel_role') or '', r.get('panel_label') or ''),
+            str(r.get('name') or '').lower(),
+        ))
+        staff_rows = staff_rows[:80]
+        punished_rows = [r for r in directory if int(r.get('total') or 0) > 0][:60]
+        people_rows = directory[:120]
+
     return render_template(
         'member.html', q=q, rows=rows, profile=profile, proofs=proofs,
+        staff_rows=staff_rows, punished_rows=punished_rows,
+        people_rows=people_rows, people_kpi=people_kpi,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )

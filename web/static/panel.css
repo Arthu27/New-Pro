@@ -510,9 +510,16 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
 .profile-meta .dim { font-size: .8rem; }
 .roles-cell { max-width: 260px; }
 
-.mp-searchbar { display: flex; gap: 10px; align-items: stretch; position: relative; max-width: 760px; margin-bottom: 16px; }
+.mp-searchbar { display: flex; gap: 10px; align-items: stretch; position: relative; max-width: 860px; margin-bottom: 8px; }
 .mp-searchbar .input-lg { flex: 1; min-width: 200px; }
-.mp-searchbar .suggest { left: 0; right: 130px; top: calc(100% + 6px); }
+.mp-searchbar .suggest { left: 0; right: 120px; top: calc(100% + 6px); }
+.mp-search-hint { margin: 0 0 14px; font-size: .82rem; max-width: 860px; }
+.suggest-item.is-active { background: var(--glass-3); outline: 1px solid var(--line-2); }
+.mp-role-panel { margin-top: 4px; border-color: rgba(120,180,255,.35); color: #9ec5ff; }
+.people-block.is-dim { opacity: .55; }
+.miss-banner .empty { padding: 18px; }
+#mlive { margin-bottom: 12px; }
+#mlive .mono { font-size: .74rem; opacity: .75; }
 .mp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .mp-card { padding: 20px; }
 .mp-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }

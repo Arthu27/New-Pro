@@ -1,0 +1,54 @@
+{# rows, hidden_kinds, empty_text, table_id optional #}
+{% if not rows %}
+<div class="empty">{{ empty_text or 'Никого' }}</div>
+{% else %}
+<div class="table-scroll">
+<table class="profiles-table" {% if table_id %}id="{{ table_id }}"{% endif %}>
+  <thead>
+    <tr>
+      <th>Профиль</th>
+      <th>Роли</th>
+      <th>Мер</th>
+      <th>Варн</th>
+      <th>Мут</th>
+      {% if 'kick' not in (hidden_kinds or []) %}<th>Кик</th>{% endif %}
+      {% if 'ban' not in (hidden_kinds or []) %}<th>Бан</th>{% endif %}
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr class="click-row" data-href="{{ url_for('member', q=r.user_id) }}" data-find="{{ r.name }} {{ r.handle }} {{ r.user_id }} {{ r.panel_label or '' }}">
+      <td>
+        <a class="profile-cell" href="{{ url_for('member', q=r.user_id) }}">
+          <img class="profile-ava" src="{{ r.avatar }}" alt="" width="42" height="42" loading="lazy">
+          <span class="profile-meta">
+            <strong>{{ r.name }}</strong>
+            {% if r.handle %}<span class="dim">@{{ r.handle }}</span>{% endif %}
+            {% if r.panel_label %}<span class="mp-role mp-role-panel">{{ r.panel_label }}</span>{% endif %}
+          </span>
+        </a>
+      </td>
+      <td class="roles-cell">
+        {% if r.roles %}
+          {% for role in r.roles[:3] %}<span class="mp-role">{{ role }}</span>{% endfor %}
+          {% if r.roles|length > 3 %}<span class="dim">+{{ r.roles|length - 3 }}</span>{% endif %}
+        {% else %}<span class="dim">—</span>{% endif %}
+      </td>
+      <td class="num">{{ r.total }}</td>
+      <td class="num dim">{{ r.warns }}</td>
+      <td class="num dim">{{ r.mutes }}</td>
+      {% if 'kick' not in (hidden_kinds or []) %}<td class="num dim">{{ r.kicks }}</td>{% endif %}
+      {% if 'ban' not in (hidden_kinds or []) %}<td class="num dim">{{ r.bans }}</td>{% endif %}
+      <td class="row-actions">
+        <a href="{{ url_for('member', q=r.user_id) }}">профиль</a>
+        {% if punish_actions %}
+        <button type="button" class="ghost punish-btn" data-uid="{{ r.user_id }}" data-name="{{ r.name }}">наказать</button>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
