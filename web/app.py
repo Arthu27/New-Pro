@@ -895,6 +895,8 @@ def _punish_kind(action):
     a = str(action or '').lower()
     if not a:
         return ''
+    if 'appeal_reject' in a or ('апелляц' in a and 'отклон' in a):
+        return 'appeal_reject'
     if 'разбан' in a or 'unban' in a or 'бан снят' in a:
         return 'unban'
     if ('размут' in a or 'unmute' in a or 'untimeout' in a
@@ -916,6 +918,7 @@ def _label(kind, raw=''):
     return {
         'ban': 'Бан', 'kick': 'Кик', 'warn': 'Варн', 'mute': 'Мут',
         'timeout': 'Таймаут', 'unban': 'Разбан', 'unmute': 'Размут',
+        'appeal_reject': 'Апелляция · отклонена',
     }.get(kind) or (raw or kind or '—')
 
 
@@ -2074,6 +2077,25 @@ def _staff_feed(gid: str, limit=80):
             'when': _fmt(r.get('timestamp')),
             'ts': r.get('timestamp') or '',
         })
+    # Решения по апелляциям (в т.ч. старые reject без дела) — кто принял/отклонил
+    for it in _appeals_list(gid):
+        st = str(it.get('status') or '').lower()
+        if st not in ('accepted', 'rejected'):
+            continue
+        uid = str(it.get('user_id') or '')
+        rid = str(it.get('reviewer_id') or it.get('mod_id') or '')
+        who = str(it.get('reviewed_by') or '').strip()
+        feed.append({
+            'kind': 'appeal',
+            'action': 'Апелляция · принята' if st == 'accepted' else 'Апелляция · отклонена',
+            'who': _best_name(who, rid, book, fallback='—'),
+            'who_id': rid if rid.isdigit() else '',
+            'target': _best_name(it.get('user_name'), uid, book),
+            'target_id': uid if uid.isdigit() else '',
+            'detail': (it.get('text') or it.get('reason') or '')[:160],
+            'when': _fmt(it.get('reviewed_at') or it.get('created_at')),
+            'ts': it.get('reviewed_at') or it.get('created_at') or '',
+        })
     for ev in _audit_events(gid, 400):
         act = str(ev.get('action') or '')
         cat = str(ev.get('category') or '')
@@ -2784,20 +2806,27 @@ def appeals():
         uid = str(it.get('user_id') or it.get('author_id') or '')
         mid = str(it.get('reviewer_id') or it.get('mod_id') or '')
         reviewer = str(it.get('reviewed_by') or it.get('mod_name') or '').strip()
-        st = str(it.get('status') or '—')
+        st_raw = str(it.get('status') or '').lower()
+        st_ru = {
+            'pending': 'ожидает',
+            'accepted': 'принята',
+            'rejected': 'отклонена',
+            'auto_closed': 'закрыта',
+        }.get(st_raw, st_raw or '—')
         decided = _fmt(it.get('reviewed_at')) if it.get('reviewed_at') else ''
         view.append({
             'id': it.get('id') or it.get('case_id') or '—',
             'user_id': uid if _is_id(uid) else '',
             'user': _best_name(it.get('user_name') or it.get('username'), uid, book),
-            'status': st,
+            'status': st_ru,
+            'status_raw': st_raw,
             'reason': (it.get('text') or it.get('reason') or '')[:160],
             'when': _fmt(it.get('created_at') or it.get('timestamp')),
             'decided': decided,
             'mod_id': mid if _is_id(mid) else '',
             # кто отклонил/принял — reviewed_by (имя), не пустой «—»
             'mod': _best_name(reviewer, mid, book,
-                              fallback='ожидает' if st == 'pending' else '—'),
+                              fallback='ожидает' if st_raw == 'pending' else '—'),
         })
     return render_template('appeals.html', rows=view)
 

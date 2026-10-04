@@ -17,7 +17,7 @@
         <td class="mono dim">{{ r.id }}</td>
         <td>{% if r.user_id %}<a href="{{ url_for('member', q=r.user_id) }}"><b>{{ r.user }}</b></a>{% else %}<b>{{ r.user }}</b>{% endif %}</td>
         <td>
-          {% set st = (r.status|string)|lower %}
+          {% set st = (r.status_raw or r.status|string)|lower %}
           <span class="pill {% if 'accept' in st or 'принят' in st or 'approved' in st %}pill-ok{% elif 'reject' in st or 'отклон' in st %}pill-ban{% else %}pill-warn{% endif %}">{{ r.status }}</span>
         </td>
         <td class="dim">{{ r.reason }}</td>

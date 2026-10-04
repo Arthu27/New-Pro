@@ -48,8 +48,11 @@ print('== source: appeals reviewer ==')
 check('reviewer_id' in src and 'reviewed_by' in src, 'appeals show reviewed_by')
 check('Решил' in (ROOT / 'web' / 'templates' / 'appeals.html').read_text(encoding='utf-8'),
       'appeals column Решил')
+check("'отклонена'" in src and 'st_ru' in src, 'appeals status RU labels')
+check('appeal_reject' in src, 'journal knows appeal_reject')
 ap = (ROOT / 'cogs' / 'appeals.py').read_text(encoding='utf-8')
 check('reviewer_id' in ap and 'display_name' in ap, 'resolve stores reviewer_id + display_name')
+check('_log_reject_decision' in ap, 'reject writes journal case')
 
 print('== source: cases store user_name ==')
 mod = (ROOT / 'cogs' / 'moderation.py').read_text(encoding='utf-8')

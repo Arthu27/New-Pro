@@ -722,13 +722,18 @@ class AppealView(discord.ui.LayoutView):
         unbanned = False
         member_present = False
         guild = self.cog.bot.get_guild(gid)
-        if accept and guild is not None:
-            # Дело «unban» + карточка «Блокировка снята» с автором решения —
-            # ДО снятия роли: тогда слушатели логов видят свежее дело и не
-            # рисуют дубль карточки без автора (владелец 2026-09-06).
-            await self.cog._log_unban_decision(
-                guild, item, interaction.user.id,
-                interaction.user.display_name or str(interaction.user))
+        if guild is not None:
+            if accept:
+                # Дело «unban» + карточка «Блокировка снята» с автором решения —
+                # ДО снятия роли: тогда слушатели логов видят свежее дело и не
+                # рисуют дубль карточки без автора (владелец 2026-09-06).
+                await self.cog._log_unban_decision(
+                    guild, item, interaction.user.id, _who)
+            else:
+                # Отклонение тоже пишем в дела — иначе в журнале/панели
+                # не видно, кто «откинул» апелляцию.
+                await self.cog._log_reject_decision(
+                    guild, item, interaction.user.id, _who)
         if accept:
             if guild is not None:
                 member = guild.get_member(item['user_id'])
@@ -2082,6 +2087,33 @@ class Appeals(commands.Cog):
             return status, _iso
         return 'failed', None
 
+    async def _log_reject_decision(self, guild, item, mod_id, mod_name):
+        """Дело «appeal_reject» — кто отклонил апелляцию (след в журнале)."""
+        if guild is None:
+            return None
+        case_id = None
+        try:
+            mod_cog = self.bot.get_cog('Moderation')
+            save = getattr(mod_cog, 'save_case', None)
+            if callable(save):
+                import asyncio as _aio
+                _uname = str(item.get('user_name') or '')
+                try:
+                    case_id = await _aio.to_thread(
+                        save, guild.id, 'appeal_reject', int(item['user_id']),
+                        int(mod_id or 0),
+                        f'Апелляция #{item["id"]} отклонена',
+                        str(mod_name or 'модератор'), None, _uname)
+                except TypeError:
+                    case_id = await _aio.to_thread(
+                        save, guild.id, 'appeal_reject', int(item['user_id']),
+                        int(mod_id or 0),
+                        f'Апелляция #{item["id"]} отклонена',
+                        str(mod_name or 'модератор'))
+        except Exception as _ex:
+            log.debug('appeals: дело отклонения #%s: %s', item.get('id'), _ex)
+        return case_id
+
     async def _log_unban_decision(self, guild, item, mod_id, mod_name):
         """Дело «unban» + карточка «Блокировка снята» с автором решения.
 
@@ -2098,10 +2130,17 @@ class Appeals(commands.Cog):
             save = getattr(mod_cog, 'save_case', None)
             if callable(save):
                 import asyncio as _aio
-                case_id = await _aio.to_thread(
-                    save, guild.id, 'unban', int(item['user_id']),
-                    int(mod_id or 0), f'Апелляция #{item["id"]} принята',
-                    str(mod_name or 'модератор'))
+                _uname = str(item.get('user_name') or '')
+                try:
+                    case_id = await _aio.to_thread(
+                        save, guild.id, 'unban', int(item['user_id']),
+                        int(mod_id or 0), f'Апелляция #{item["id"]} принята',
+                        str(mod_name or 'модератор'), None, _uname)
+                except TypeError:
+                    case_id = await _aio.to_thread(
+                        save, guild.id, 'unban', int(item['user_id']),
+                        int(mod_id or 0), f'Апелляция #{item["id"]} принята',
+                        str(mod_name or 'модератор'))
         except Exception as _ex:
             log.debug('appeals: дело разбана #%s: %s', item.get('id'), _ex)
         try:
