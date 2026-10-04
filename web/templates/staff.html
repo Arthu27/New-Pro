@@ -2,7 +2,7 @@
 {% block title %}Staff{% endblock %}
 {% block heading %}Staff{% endblock %}
 {% block body %}
-<p class="lead">Команда сервера и что она делала. Клик по карточке — профиль.</p>
+<p class="lead">Команда сервера и что она делала. Клик по карточке — профиль. Staff Admin и Staff Assistent выше Admin.</p>
 
 <section class="panel rise">
   <h2>Команда на сервере <span class="count">{{ people|length }}</span></h2>
@@ -12,12 +12,16 @@
   <div class="people-board">
     {% for p in people %}
     <a class="p-card" href="{{ url_for('member', q=p.id) }}">
-      <img src="{{ p.avatar }}" alt="">
-      <div style="min-width:0">
-        <strong>{{ p.name }}</strong>
-        <div class="dim" style="font-size:.8rem">@{{ p.handle }}</div>
+      <img class="p-card__ava" src="{{ p.avatar }}" alt="">
+      <div class="p-card__body">
+        <div class="p-card__top">
+          <div class="p-card__who">
+            <strong class="p-card__name">{{ p.name }}</strong>
+            <span class="p-card__handle dim">@{{ p.handle }}</span>
+          </div>
+          <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
+        </div>
       </div>
-      <span class="tag tag-{{ p.role }}">{{ p.role_label }}</span>
     </a>
     {% endfor %}
   </div>

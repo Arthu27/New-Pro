@@ -119,5 +119,25 @@ check(W.LEVEL['assistent'] > W.LEVEL['curator'], 'assistent > curator')
 check(W.LEVEL['admin'] > W.LEVEL['assistent'], 'admin > assistent')
 check(W.LEVEL['owner'] > W.LEVEL['admin'], 'owner > admin')
 
+print('== staff board rank / tags ==')
+check(W.staff_board_rank('admin', 'Staff Admin') < W.staff_board_rank('admin', 'Admin'),
+      'Staff Admin выше Admin на доске')
+check(W.staff_board_rank('assistent', 'Staff Assistent') < W.staff_board_rank('admin', 'Admin'),
+      'Staff Assistent выше Admin на доске')
+check(W.staff_board_rank('admin', 'Staff Admin') < W.staff_board_rank('assistent', 'Staff Assistent'),
+      'Staff Admin выше Staff Assistent')
+check(W.panel_role_tag('admin', [KNOWN_STAFF_ADMIN_ROLE_ID]) == 'staff-admin',
+      'tag staff-admin')
+check(W.panel_role_tag('assistent', [KNOWN_STAFF_ASSISTENT_ROLE_ID]) == 'staff-assistent',
+      'tag staff-assistent')
+check(W.panel_role_tag('admin', [KNOWN_ADMIN_ROLE_ID]) == 'admin', 'tag admin')
+
+css = (ROOT / 'web' / 'static' / 'panel.css').read_text(encoding='utf-8')
+check('tag-staff-admin' in css and 'tag-staff-assistent' in css, 'CSS staff tags')
+check('p-card__top' in css and 'text-overflow: ellipsis' in css, 'staff card no-overlap CSS')
+check('proof-decide-form__input' in css and 'max-height: 160px' in css, 'proof detail compact/dark')
+staff_html = (ROOT / 'web' / 'templates' / 'staff.html').read_text(encoding='utf-8')
+check('role_tag' in staff_html and 'p-card__name' in staff_html, 'staff template uses role_tag')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

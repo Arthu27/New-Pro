@@ -145,15 +145,29 @@ ROLE_CARDS = [
     {
         'key': 'assistent',
         'title': 'Assistent',
-        'tag': '@Assistent / @Staff Assistent',
+        'tag': '@Assistent',
         'blurb': 'Выше куратора: полная мод-панель, демки, каналы.',
         'pages': ['Как Curator'],
     },
     {
         'key': 'admin',
-        'title': 'Admin / Staff Admin',
-        'tag': '@Admin · @Staff Admin',
-        'blurb': 'Мод-панель + антикраш + перерешение демок. Без бота/модулей.',
+        'title': 'Admin',
+        'tag': '@Admin',
+        'blurb': 'Мод-панель + антикраш + перерешение демок. Ниже Staff Admin / Staff Assistent.',
+        'pages': ['Мод-панель', 'Антикраш', 'Перерешение демок'],
+    },
+    {
+        'key': 'staff_assistent',
+        'title': 'Staff Assistent',
+        'tag': '@Staff Assistent',
+        'blurb': 'Выше обычных Admin на доске staff. Старший ассистент.',
+        'pages': ['Как Assistent'],
+    },
+    {
+        'key': 'staff_admin',
+        'title': 'Staff Admin',
+        'tag': '@Staff Admin',
+        'blurb': 'Выше Admin и Staff Assistent. Перерешение демок, антикраш.',
         'pages': ['Мод-панель', 'Антикраш', 'Перерешение демок'],
     },
     {
@@ -791,6 +805,47 @@ def panel_role_display(role: str, role_ids=None) -> str:
             return 'Assistent'
         return 'Assistent'
     return ROLE_LABELS.get(role, role or '')
+
+
+def panel_role_tag(role: str, role_ids=None, role_label: str | None = None) -> str:
+    """CSS-класс бейджа. Staff* отделены от обычных Admin/Assistent."""
+    lab = role_label or panel_role_display(role, role_ids)
+    mapping = {
+        'Owner': 'owner',
+        'Staff Admin': 'staff-admin',
+        'Staff Assistent': 'staff-assistent',
+        'Admin': 'admin',
+        'Assistent': 'assistent',
+        'Curator': 'curator',
+        'Moderator': 'mod',
+        'Helper': 'helper',
+    }
+    if lab in mapping:
+        return mapping[lab]
+    return str(role or 'helper')
+
+
+def staff_board_rank(role: str, role_label: str = '') -> int:
+    """Порядок на /staff: Staff Admin и Staff Assistent выше обычных Admin."""
+    lab = (role_label or '').strip().lower()
+    role = str(role or '').strip().lower()
+    if role == 'owner' or lab == 'owner':
+        return 0
+    if lab == 'staff admin':
+        return 1
+    if lab == 'staff assistent':
+        return 2
+    if role == 'admin' or lab == 'admin':
+        return 3
+    if role == 'assistent' or lab == 'assistent':
+        return 4
+    if role == 'curator':
+        return 5
+    if role == 'mod':
+        return 6
+    if role == 'helper':
+        return 7
+    return 9
 
 
 def resolve_discord_panel_role(discord_user_id, role_ids) -> str | None:
@@ -1525,12 +1580,14 @@ def _guild_member_snapshot(m, *, role=None):
         rids = [getattr(r, 'id', r) for r in (getattr(m, 'roles', None) or [])]
     except Exception:
         rids = []
+    label = panel_role_display(role, rids) if role else ''
     return {
         'id': str(m.id),
         'name': display,
         'handle': handle,
         'role': role or '',
-        'role_label': panel_role_display(role, rids) if role else '',
+        'role_label': label,
+        'role_tag': panel_role_tag(role, rids, label) if role else '',
         'avatar': _member_avatar_url(m),
         'joined': getattr(m, 'joined_at', None),
         'created': getattr(getattr(m, 'created_at', None), 'isoformat', lambda: None)(),
@@ -1560,12 +1617,14 @@ def _snapshot_from_api_member(row: dict, *, role=None) -> dict:
         or uid
     )
     rids = row.get('roles') or []
+    label = panel_role_display(role, rids) if role else ''
     return {
         'id': uid,
         'name': str(display),
         'handle': handle,
         'role': role or '',
-        'role_label': panel_role_display(role, rids) if role else '',
+        'role_label': label,
+        'role_tag': panel_role_tag(role, rids, label) if role else '',
         'avatar': _avatar_url_from_user_payload(user),
         'joined': row.get('joined_at'),
         'created': None,
@@ -1718,13 +1777,9 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
 
     people = list(by_id.values())
     if staff_only:
-        order = {
-            'owner': 0, 'admin': 1, 'assistent': 2,
-            'curator': 3, 'mod': 4, 'helper': 5,
-        }
         people.sort(key=lambda p: (
             int(p.get('_rank', 50)),
-            order.get(p.get('role'), 9),
+            staff_board_rank(p.get('role') or '', p.get('role_label') or ''),
             str(p.get('name') or '').lower(),
         ))
     else:
