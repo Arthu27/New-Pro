@@ -2,145 +2,331 @@
 {% block title %}Каналы{% endblock %}
 {% block heading %}Каналы{% endblock %}
 {% block body %}
-<p class="lead">Каждый канал — с правами @everyone, лимитами и ролью в боте. Открой карточку: полный разбор.</p>
-
-<div class="kpis rise">
-  <div class="kpi"><b>{{ kpi.total }}</b><span>каналов</span></div>
-  <div class="kpi"><b>{{ kpi.text }}</b><span>текст</span></div>
-  <div class="kpi"><b>{{ kpi.voice }}</b><span>голос</span></div>
-  <div class="kpi"><b>{{ kpi.closed }}</b><span>скрыты</span></div>
-  <div class="kpi"><b>{{ kpi.routes }}</b><span>маршруты</span></div>
-</div>
-
-<div class="ch-bar rise">
-  <div class="seg" id="chFilter" role="tablist">
-    <button type="button" class="on" data-f="all">Все</button>
-    <button type="button" data-f="text">Текст</button>
-    <button type="button" data-f="voice">Голос</button>
-    <button type="button" data-f="closed">Скрытые</button>
-    <button type="button" data-f="route">Маршруты</button>
-  </div>
-  <label class="ch-find">
-    <i class="fas fa-magnifying-glass"></i>
-    <input id="chq" type="search" placeholder="Найти канал или ID…" autocomplete="off">
-  </label>
-</div>
+<p class="lead dc-lead">Как в Discord: слева каналы, справа сообщения. Можно читать и писать.</p>
 
 {% if not groups %}
 <section class="panel rise"><div class="empty">Каналы недоступны — бот ещё не в сети</div></section>
 {% else %}
-{% for g in groups %}
-<section class="panel rise ch-group" data-cat="{{ g.name|lower }}">
-  <h2>{{ g.name }} <span class="count ch-count">{{ g['items']|length }}</span></h2>
-  <div class="ch-grid">
-    {% for r in g['items'] %}
-    <details class="ch-card" data-group="{{ r.group }}" data-closed="{{ 0 if r.view else 1 }}" data-route="{{ 1 if r.route_key else 0 }}" data-name="{{ (r.name ~ ' ' ~ r.cat ~ ' ' ~ r.id ~ ' ' ~ (r.route_label or ''))|lower }}">
-      <summary>
-        <div class="ch-card__top">
-          <span class="ch-ico {% if not r.view %}is-lock{% endif %}"><i class="fas {{ r.icon }}"></i></span>
-          <div class="ch-card__name">
-            <strong>{% if r.group != 'voice' %}#{% endif %}{{ r.name }}</strong>
-            <span class="dim">{{ r.kind }}{% if not r.view %} · скрыт{% endif %}{% if r.route_label %} · {{ r.route_label }}{% endif %}</span>
-          </div>
-          <i class="fas fa-chevron-down ch-chev" aria-hidden="true"></i>
-        </div>
-        <div class="ch-caps">
-          <span class="ch-cap {% if r.view %}on{% endif %}">смотреть</span>
-          {% if r.group == 'voice' %}
-          <span class="ch-cap {% if r.connect %}on{% endif %}">зайти</span>
-          <span class="ch-cap {% if r.speak %}on{% endif %}">говорить</span>
-          <span class="ch-cap {% if r.stream %}on{% endif %}">стрим</span>
-          {% if r.voice_now %}<span class="ch-cap on">{{ r.voice_now }} в войсе</span>{% endif %}
-          {% else %}
-          <span class="ch-cap {% if r.send %}on{% endif %}">писать</span>
-          {% if r.slowmode %}<span class="ch-cap on">{{ r.slowmode }}с</span>{% endif %}
-          {% if r.nsfw %}<span class="ch-cap warn on">nsfw</span>{% endif %}
-          {% endif %}
-          <span class="ch-cap {% if r.manage %}on warn{% endif %}">управлять</span>
-        </div>
-      </summary>
-      <div class="ch-more">
-        <div class="mp-row"><span class="mp-key">ID</span><span class="mp-val mono">{{ r.id }}</span></div>
-        <div class="mp-row"><span class="mp-key">Категория</span><span class="mp-val">{{ r.cat }}</span></div>
-        <div class="mp-row"><span class="mp-key">Тип</span><span class="mp-val">{{ r.kind }}</span></div>
-        {% if r.topic %}<div class="mp-row"><span class="mp-key">Тема</span><span class="mp-val">{{ r.topic }}</span></div>{% endif %}
-        {% if r.route_label %}<div class="mp-row"><span class="mp-key">Маршрут бота</span><span class="mp-val accent">{{ r.route_label }}</span></div>{% endif %}
-        <div class="mp-row"><span class="mp-key">Смотреть</span><span class="mp-val {% if r.view %}ok{% endif %}">{% if r.view %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Писать</span><span class="mp-val {% if r.send %}ok{% endif %}">{% if r.send %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Зайти</span><span class="mp-val {% if r.connect %}ok{% endif %}">{% if r.connect %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Говорить</span><span class="mp-val {% if r.speak %}ok{% endif %}">{% if r.speak %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Стрим</span><span class="mp-val {% if r.stream %}ok{% endif %}">{% if r.stream %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Управлять</span><span class="mp-val {% if r.manage %}ok{% endif %}">{% if r.manage %}да{% else %}нет{% endif %}</span></div>
-        {% if r.group == 'voice' %}
-        <div class="mp-row"><span class="mp-key">Битрейт</span><span class="mp-val">{% if r.bitrate %}{{ r.bitrate }} kbps{% else %}—{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Лимит</span><span class="mp-val">{% if r.user_limit %}{{ r.user_limit }}{% else %}∞{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Сейчас</span><span class="mp-val">{{ r.voice_now }}</span></div>
-        {% else %}
-        <div class="mp-row"><span class="mp-key">Slowmode</span><span class="mp-val">{% if r.slowmode %}{{ r.slowmode }} сек{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">NSFW</span><span class="mp-val">{% if r.nsfw %}да{% else %}нет{% endif %}</span></div>
-        {% endif %}
-        {% if r.overwrites %}
-        <div class="ch-ow">
-          <div class="mp-section">Перезаписи ролей</div>
-          {% for ow in r.overwrites %}
-          <div class="ch-ow__row">
-            <b>{{ ow.name }}</b>
-            <span class="dim">+ {{ ow.allow }}</span>
-            <span class="dim">− {{ ow.deny }}</span>
-          </div>
+<div class="dc rise" id="dcApp"
+     data-selected="{{ selected or '' }}"
+     data-can-send="{{ 1 if selected_row and selected_row.group not in ('voice',) else 0 }}">
+  <aside class="dc-side">
+    <div class="dc-side__head">
+      <label class="dc-find">
+        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+        <input id="dcq" type="search" placeholder="Найти канал…" autocomplete="off">
+      </label>
+    </div>
+    <div class="dc-side__list" id="dcList">
+      {% for g in groups %}
+      <div class="dc-cat" data-cat="{{ g.name|lower }}">
+        <button type="button" class="dc-cat__toggle" aria-expanded="true">
+          <i class="fas fa-chevron-down" aria-hidden="true"></i>
+          <span class="dc-cat__name" title="{{ g.name }}">{{ g.name }}</span>
+        </button>
+        <div class="dc-cat__items">
+          {% for r in g['items'] %}
+          <a class="dc-ch {% if r.id == selected %}on{% endif %}"
+             href="{{ url_for('channels_page', c=r.id) }}"
+             data-id="{{ r.id }}"
+             data-group="{{ r.group }}"
+             data-send="{{ 1 if r.group != 'voice' else 0 }}"
+             data-name="{{ (r.name ~ ' ' ~ r.cat ~ ' ' ~ r.id ~ ' ' ~ (r.route_label or ''))|lower }}"
+             title="#{{ r.name }}{% if r.route_label %} · {{ r.route_label }}{% endif %}">
+            <i class="fas {{ r.icon }} dc-ch__ico {% if not r.view %}is-lock{% endif %}" aria-hidden="true"></i>
+            <span class="dc-ch__name">{{ r.name }}</span>
+            {% if r.route_label %}<span class="dc-ch__route" title="{{ r.route_label }}">{{ r.route_label }}</span>{% endif %}
+            {% if r.group == 'voice' and r.voice_now %}<span class="dc-ch__n">{{ r.voice_now }}</span>{% endif %}
+            {% if not r.view %}<i class="fas fa-lock dc-ch__lock" aria-hidden="true"></i>{% endif %}
+          </a>
           {% endfor %}
         </div>
-        {% endif %}
-        {% if r.jump %}
-        <div class="mp-actions">
-          <a class="btn btn-ghost" href="{{ r.jump }}" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Открыть</a>
+      </div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <section class="dc-main">
+    <header class="dc-head" id="dcHead">
+      {% if selected_row %}
+      <div class="dc-head__title">
+        <i class="fas {{ selected_row.icon }}" aria-hidden="true"></i>
+        <div>
+          <strong id="dcName">{% if selected_row.group != 'voice' %}#{% endif %}{{ selected_row.name }}</strong>
+          {% if selected_row.topic %}
+          <span class="dc-head__topic" id="dcTopic">{{ selected_row.topic }}</span>
+          {% else %}
+          <span class="dc-head__topic" id="dcTopic">{% if selected_row.route_label %}{{ selected_row.route_label }}{% elif selected_row.group == 'voice' %}Голосовой канал{% else %}Текстовый канал{% endif %}</span>
+          {% endif %}
         </div>
+      </div>
+      <div class="dc-head__meta">
+        {% if selected_row.route_label %}<span class="dc-pill">{{ selected_row.route_label }}</span>{% endif %}
+        {% if selected_row.slowmode %}<span class="dc-pill">{{ selected_row.slowmode }}с</span>{% endif %}
+        {% if selected_row.nsfw %}<span class="dc-pill warn">NSFW</span>{% endif %}
+        {% if selected_row.jump %}
+        <a class="dc-pill link" href="{{ selected_row.jump }}" target="_blank" rel="noopener" title="Открыть в Discord">
+          <i class="fas fa-arrow-up-right-from-square"></i>
+        </a>
         {% endif %}
       </div>
-    </details>
-    {% endfor %}
-  </div>
-</section>
-{% endfor %}
-<p class="ch-none dim" id="chNone" hidden>Ничего не подошло под фильтр</p>
+      {% else %}
+      <div class="dc-head__title">
+        <i class="fas fa-hashtag" aria-hidden="true"></i>
+        <div><strong>Выбери канал</strong><span class="dc-head__topic">Слева список</span></div>
+      </div>
+      {% endif %}
+    </header>
+
+    <div class="dc-feed" id="dcFeed" role="log" aria-live="polite">
+      <div class="dc-feed__status" id="dcStatus">Загрузка…</div>
+    </div>
+
+    <form class="dc-compose" id="dcCompose" autocomplete="off">
+      <div class="dc-compose__box">
+        <textarea id="dcInput" rows="1" maxlength="1900"
+          placeholder="{% if selected_row and selected_row.group != 'voice' %}Написать в #{{ selected_row.name }}…{% else %}В этот канал писать нельзя{% endif %}"
+          {% if not selected_row or selected_row.group == 'voice' %}disabled{% endif %}></textarea>
+        <button type="submit" class="dc-send" id="dcSend"
+          {% if not selected_row or selected_row.group == 'voice' %}disabled{% endif %}
+          title="Отправить">
+          <i class="fas fa-paper-plane" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="dc-compose__hint">Enter — отправить · Shift+Enter — новая строка · от имени бота</div>
+    </form>
+  </section>
+</div>
 {% endif %}
 
 <script>
 (function () {
-  const filter = document.getElementById('chFilter');
-  const q = document.getElementById('chq');
-  if (!filter) return;
-  let mode = 'all';
-  function apply() {
-    const needle = (q.value || '').trim().toLowerCase();
-    let shown = 0;
-    document.querySelectorAll('.ch-card').forEach(card => {
-      const okMode = mode === 'all'
-        || (mode === 'closed' ? card.dataset.closed === '1'
-          : mode === 'route' ? card.dataset.route === '1'
-          : card.dataset.group === mode);
-      const okQ = !needle || (card.dataset.name || '').includes(needle);
-      const on = okMode && okQ;
-      card.hidden = !on;
-      if (on) shown += 1;
-    });
-    document.querySelectorAll('.ch-group').forEach(g => {
-      const n = g.querySelectorAll('.ch-card:not([hidden])').length;
-      g.hidden = n === 0;
-      const c = g.querySelector('.ch-count');
-      if (c) c.textContent = n;
-    });
-    const none = document.getElementById('chNone');
-    if (none) none.hidden = shown !== 0;
+  const app = document.getElementById('dcApp');
+  if (!app) return;
+
+  const feed = document.getElementById('dcFeed');
+  const status = document.getElementById('dcStatus');
+  const input = document.getElementById('dcInput');
+  const form = document.getElementById('dcCompose');
+  const sendBtn = document.getElementById('dcSend');
+  const q = document.getElementById('dcq');
+  let cid = app.dataset.selected || '';
+  let loading = false;
+  let lastIds = new Set();
+
+  const esc = (s) => String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  function linkify(text) {
+    const raw = esc(text);
+    return raw.replace(/(https?:\/\/[^\s<]+)/g, (u) =>
+      `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
   }
-  filter.addEventListener('click', e => {
-    const b = e.target.closest('button[data-f]');
-    if (!b) return;
-    mode = b.dataset.f;
-    filter.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    apply();
+
+  function renderMsg(m, groupWithPrev) {
+    const ava = m.avatar
+      ? `<img class="dc-msg__ava" src="${esc(m.avatar)}" alt="">`
+      : `<span class="dc-msg__ava dc-msg__ava--fb">${esc((m.author || '?')[0]).toUpperCase()}</span>`;
+    const atts = (m.attachments || []).map(a => {
+      if (a.image) {
+        return `<a class="dc-att dc-att--img" href="${esc(a.url)}" target="_blank" rel="noopener">
+          <img src="${esc(a.url)}" alt="${esc(a.name)}" loading="lazy"></a>`;
+      }
+      return `<a class="dc-att" href="${esc(a.url)}" target="_blank" rel="noopener">
+        <i class="fas fa-paperclip"></i> ${esc(a.name)}</a>`;
+    }).join('');
+    const body = linkify(m.content || '') || (atts ? '' : '<span class="dim">пусто</span>');
+    const bot = m.bot ? '<span class="dc-bot">BOT</span>' : '';
+    if (groupWithPrev) {
+      return `<article class="dc-msg is-cont" data-id="${esc(m.id)}" data-aid="${esc(m.author_id)}">
+        <div class="dc-msg__gutter"><time>${esc((m.when || '').slice(-5))}</time></div>
+        <div class="dc-msg__body">
+          <div class="dc-msg__text">${body}</div>${atts}
+        </div>
+      </article>`;
+    }
+    return `<article class="dc-msg" data-id="${esc(m.id)}" data-aid="${esc(m.author_id)}">
+      ${ava}
+      <div class="dc-msg__body">
+        <div class="dc-msg__meta">
+          <strong>${esc(m.author)}</strong>${bot}
+          <time>${esc(m.when)}</time>
+        </div>
+        <div class="dc-msg__text">${body}</div>${atts}
+      </div>
+    </article>`;
+  }
+
+  function paint(items) {
+    lastIds = new Set((items || []).map(m => String(m.id)));
+    if (!items || !items.length) {
+      feed.innerHTML = '<div class="dc-feed__empty"><i class="fas fa-comment-dots"></i><p>Пока тихо — напиши первое сообщение</p></div>';
+      return;
+    }
+    let html = '';
+    let prevAid = '';
+    let prevWhen = '';
+    items.forEach((m, i) => {
+      const same = i > 0 && String(m.author_id) === prevAid && m.when === prevWhen;
+      html += renderMsg(m, same);
+      prevAid = String(m.author_id || '');
+      prevWhen = m.when || '';
+    });
+    feed.innerHTML = html;
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function setStatus(text, isErr) {
+    feed.innerHTML = `<div class="dc-feed__status${isErr ? ' is-err' : ''}">${esc(text)}</div>`;
+  }
+
+  async function loadMessages() {
+    if (!cid) { setStatus('Выбери канал слева'); return; }
+    const ch = document.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
+    if (ch && ch.dataset.group === 'voice') {
+      setStatus('Голосовой канал — сообщений нет. Выбери текстовый.');
+      return;
+    }
+    loading = true;
+    setStatus('Загрузка сообщений…');
+    try {
+      const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/messages?limit=50');
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'ошибка');
+      paint(j.items || []);
+      if (j.topic) {
+        const t = document.getElementById('dcTopic');
+        if (t && j.topic) t.textContent = j.topic;
+      }
+    } catch (e) {
+      setStatus(String(e.message || e), true);
+    } finally {
+      loading = false;
+    }
+  }
+
+  function autoSize() {
+    if (!input) return;
+    input.style.height = 'auto';
+    input.style.height = Math.min(140, Math.max(44, input.scrollHeight)) + 'px';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!cid || sendBtn.disabled) return;
+    const content = (input.value || '').trim();
+    if (!content) return;
+    sendBtn.disabled = true;
+    try {
+      const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'не отправилось');
+      input.value = '';
+      autoSize();
+      const item = j.item;
+      if (item && !lastIds.has(String(item.id))) {
+        const empty = feed.querySelector('.dc-feed__empty, .dc-feed__status');
+        if (empty) feed.innerHTML = '';
+        const last = feed.querySelector('.dc-msg:last-child');
+        const group = last && last.dataset.aid === String(item.author_id);
+        feed.insertAdjacentHTML('beforeend', renderMsg(item, !!group));
+        lastIds.add(String(item.id));
+        feed.scrollTop = feed.scrollHeight;
+      } else {
+        await loadMessages();
+      }
+    } catch (err) {
+      const hint = form.querySelector('.dc-compose__hint');
+      if (hint) {
+        hint.classList.add('is-err');
+        hint.textContent = String(err.message || err);
+        setTimeout(() => {
+          hint.classList.remove('is-err');
+          hint.textContent = 'Enter — отправить · Shift+Enter — новая строка · от имени бота';
+        }, 3200);
+      }
+    } finally {
+      sendBtn.disabled = app.dataset.canSend !== '1';
+      input.focus();
+    }
   });
-  q.addEventListener('input', apply);
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  input.addEventListener('input', autoSize);
+
+  q.addEventListener('input', () => {
+    const needle = (q.value || '').trim().toLowerCase();
+    document.querySelectorAll('.dc-ch').forEach(a => {
+      const on = !needle || (a.dataset.name || '').includes(needle);
+      a.hidden = !on;
+    });
+    document.querySelectorAll('.dc-cat').forEach(cat => {
+      const n = cat.querySelectorAll('.dc-ch:not([hidden])').length;
+      cat.hidden = n === 0;
+    });
+  });
+
+  document.getElementById('dcList').addEventListener('click', (e) => {
+    const tog = e.target.closest('.dc-cat__toggle');
+    if (!tog) return;
+    e.preventDefault();
+    const cat = tog.closest('.dc-cat');
+    const open = tog.getAttribute('aria-expanded') !== 'false';
+    tog.setAttribute('aria-expanded', open ? 'false' : 'true');
+    cat.classList.toggle('is-collapsed', open);
+  });
+
+  // SPA-like select without full reload when possible
+  document.getElementById('dcList').addEventListener('click', (e) => {
+    const a = e.target.closest('a.dc-ch');
+    if (!a || e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    document.querySelectorAll('.dc-ch.on').forEach(x => x.classList.remove('on'));
+    a.classList.add('on');
+    cid = a.dataset.id;
+    app.dataset.selected = cid;
+    const isVoice = a.dataset.group === 'voice';
+    const canSend = !isVoice && a.dataset.send === '1';
+    app.dataset.canSend = canSend ? '1' : '0';
+    input.disabled = !canSend;
+    sendBtn.disabled = !canSend;
+    const name = (a.querySelector('.dc-ch__name') || {}).textContent || '';
+    const nm = document.getElementById('dcName');
+    const tp = document.getElementById('dcTopic');
+    if (nm) nm.textContent = (isVoice ? '' : '#') + name;
+    if (tp) tp.textContent = isVoice ? 'Голосовой канал' : 'Текстовый канал';
+    input.placeholder = canSend ? `Написать в #${name}…` : 'В этот канал писать нельзя';
+    history.replaceState(null, '', '/channels?c=' + encodeURIComponent(cid));
+    loadMessages();
+  });
+
+  loadMessages();
+  autoSize();
+  // soft poll
+  setInterval(() => {
+    if (document.hidden || loading || !cid) return;
+    const ch = document.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
+    if (ch && ch.dataset.group === 'voice') return;
+    fetch('/api/channels/' + encodeURIComponent(cid) + '/messages?limit=50')
+      .then(r => r.json())
+      .then(j => {
+        if (!j.ok || !j.items) return;
+        const ids = j.items.map(m => String(m.id)).join(',');
+        const cur = [...lastIds].join(',');
+        if (ids !== cur) paint(j.items);
+      })
+      .catch(() => {});
+  }, 12000);
 })();
 </script>
 {% endblock %}

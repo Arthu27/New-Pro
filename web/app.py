@@ -68,7 +68,7 @@ PAGES_ALL = [
     ('staff', '/staff', 'Staff', 'fa-user-shield'),
     ('users', '/users', 'Участники', 'fa-users'),
     ('member', '/member', 'Участник', 'fa-user'),
-    ('channels', '/channels', 'Каналы', 'fa-table'),
+    ('channels', '/channels', 'Каналы', 'fa-hashtag'),
     ('warns', '/warns', 'Варны', 'fa-triangle-exclamation'),
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
@@ -3059,7 +3059,158 @@ def channels_page():
         'closed': sum(1 for r in shown if not r['view']),
         'routes': sum(1 for r in shown if r.get('route_key')),
     }
-    return render_template('channels.html', rows=shown, groups=groups, kpi=kpi)
+    selected = (request.args.get('c') or '').strip()
+    if not selected:
+        for r in shown:
+            if r.get('group') == 'text':
+                selected = r['id']
+                break
+        if not selected and shown:
+            selected = shown[0]['id']
+    selected_row = next((r for r in shown if r['id'] == selected), None)
+    return render_template(
+        'channels.html', rows=shown, groups=groups, kpi=kpi,
+        selected=selected, selected_row=selected_row,
+    )
+
+
+def _serialize_discord_message(msg) -> dict:
+    """Короткий снимок сообщения для чата в панели."""
+    author = getattr(msg, 'author', None)
+    name = (
+        getattr(author, 'display_name', None)
+        or getattr(author, 'global_name', None)
+        or getattr(author, 'name', None)
+        or '?'
+    )
+    try:
+        avatar = str(author.display_avatar.url) if author is not None else ''
+    except Exception:
+        avatar = ''
+    created = getattr(msg, 'created_at', None)
+    when = ''
+    if created is not None:
+        try:
+            when = created.astimezone(timezone.utc).strftime('%d.%m %H:%M')
+        except Exception:
+            when = str(created)[:16]
+    atts = []
+    for a in list(getattr(msg, 'attachments', None) or [])[:6]:
+        url = str(getattr(a, 'url', '') or '')
+        ct = str(getattr(a, 'content_type', '') or '')
+        atts.append({
+            'url': url,
+            'name': getattr(a, 'filename', 'file') or 'file',
+            'image': ct.startswith('image/') or url.lower().endswith(
+                ('.png', '.jpg', '.jpeg', '.gif', '.webp')),
+        })
+    content = str(getattr(msg, 'content', '') or '')
+    if not content and getattr(msg, 'embeds', None):
+        try:
+            emb = msg.embeds[0]
+            content = (getattr(emb, 'title', None)
+                       or getattr(emb, 'description', None)
+                       or '[эмбед]')
+            content = str(content)[:400]
+        except Exception:
+            content = '[эмбед]'
+    return {
+        'id': str(getattr(msg, 'id', '')),
+        'author': str(name),
+        'author_id': str(getattr(author, 'id', '') or ''),
+        'bot': bool(getattr(author, 'bot', False)),
+        'avatar': avatar,
+        'content': content[:2000],
+        'when': when,
+        'attachments': atts,
+    }
+
+
+@app.get('/api/channels/<cid>/messages')
+@login_required
+@role_required('mod')
+def api_channel_messages(cid):
+    """Последние сообщения канала — как лента Discord."""
+    cid = str(cid or '').strip()
+    if not cid.isdigit():
+        return jsonify({'ok': False, 'error': 'channel id'}), 400
+    try:
+        limit = int(request.args.get('limit') or 40)
+    except Exception:
+        limit = 40
+    limit = max(5, min(limit, 60))
+    bot = bot_instance
+    gid = _main_guild()
+    if not bot or not gid:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _load():
+        ch = bot.get_channel(int(cid))
+        if ch is None:
+            try:
+                ch = await bot.fetch_channel(int(cid))
+            except Exception as ex:
+                raise RuntimeError(f'Канал недоступен: {ex}') from ex
+        # Только текстовые / треды
+        if not hasattr(ch, 'history'):
+            raise RuntimeError('Здесь нет истории сообщений')
+        out = []
+        async for m in ch.history(limit=limit):
+            out.append(_serialize_discord_message(m))
+        out.reverse()
+        return {
+            'id': str(getattr(ch, 'id', cid)),
+            'name': getattr(ch, 'name', '?'),
+            'topic': str(getattr(ch, 'topic', None) or '')[:220],
+            'items': out,
+        }
+
+    try:
+        data = _run_on_bot(_load(), timeout=20)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, **data})
+
+
+@app.post('/api/channels/<cid>/messages')
+@login_required
+@role_required('mod')
+def api_channel_send(cid):
+    """Отправить сообщение в канал от имени бота."""
+    cid = str(cid or '').strip()
+    if not cid.isdigit():
+        return jsonify({'ok': False, 'error': 'channel id'}), 400
+    data = request.get_json(silent=True) or {}
+    content = str(data.get('content') or request.form.get('content') or '').strip()
+    if not content:
+        return jsonify({'ok': False, 'error': 'Пустое сообщение'}), 400
+    if len(content) > 1900:
+        content = content[:1900]
+    who = (session.get('discord_display')
+           or session.get('username')
+           or 'panel')
+    # Подпись, чтобы было видно, кто писал из панели
+    stamped = f'{content}\n-# панель · {who}'
+    if len(stamped) > 2000:
+        stamped = content[:2000]
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _send():
+        ch = bot.get_channel(int(cid))
+        if ch is None:
+            ch = await bot.fetch_channel(int(cid))
+        if not hasattr(ch, 'send'):
+            raise RuntimeError('В этот канал писать нельзя')
+        msg = await ch.send(stamped)
+        return _serialize_discord_message(msg)
+
+    try:
+        item = _run_on_bot(_send(), timeout=15)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, 'item': item})
 
 
 @app.get('/api/login/accounts')
