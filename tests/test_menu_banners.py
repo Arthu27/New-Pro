@@ -261,5 +261,15 @@ check('# Набор в команду сервера' in STAFF_MENU_BODY
       or STAFF_MENU_BODY.split('\n', 1)[0] in blob,
       'шапка набора')
 
+print('== rules banner HTTPS ==')
+rules_path = MB.ensure_rules_public_banner()
+check(os.path.isfile(rules_path) and os.path.getsize(rules_path) > 1000,
+      f'PNG правил на месте ({os.path.getsize(rules_path) if os.path.isfile(rules_path) else 0} B)')
+rules_url = MB.public_rules_banner_url()
+check(rules_url.startswith('https://') and MB.RULES_BANNER_NAME in rules_url,
+      f'HTTPS URL правил: {rules_url}')
+check('attachment://' not in rules_url, 'rules URL без attachment://')
+check('cdn.discordapp.com' not in rules_url, 'rules URL не Discord CDN')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 raise SystemExit(1 if FAIL else 0)
