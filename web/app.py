@@ -2203,9 +2203,12 @@ def _safe_next(raw: str | None) -> str:
 def login():
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    mode = (request.values.get('mode') or 'people').strip().lower()
-    if mode not in ('people', 'password', 'pin', 'register', 'forgot'):
-        mode = 'people'
+    mode = (request.values.get('mode') or 'password').strip().lower()
+    # PIN-вход (people → ЛС) убран: только Discord OAuth / пароль / регистрация.
+    if mode in ('people', 'pin'):
+        return redirect(url_for('login', mode='password', next=request.args.get('next')))
+    if mode not in ('password', 'register', 'forgot'):
+        mode = 'password'
     err = (request.args.get('error') or '').strip()
     ok = (request.args.get('ok') or '').strip()
     nxt = _safe_next(request.args.get('next') or request.form.get('next'))
@@ -2215,47 +2218,14 @@ def login():
 
     if request.method == 'POST':
         mode = (request.form.get('mode') or mode).strip().lower()
-        if mode == 'people':
-            action = (request.form.get('action') or 'send').strip()
-            selected_id = (request.form.get('uid') or '').strip()
-            people_q = (request.form.get('pq') or '').strip()
-            if not selected_id:
-                err = 'Выбери человека'
-            else:
-                msg, e2 = _issue_pin_to_dm(selected_id)
-                if e2:
-                    err = e2
-                else:
-                    # PIN вводится на отдельной странице
-                    return redirect(url_for(
-                        'login', mode='pin', uid=selected_id,
-                        next=nxt, ok=msg,
-                    ))
-        elif mode == 'password':
+        if mode in ('people', 'pin'):
+            return redirect(url_for('login', mode='password', next=nxt))
+        if mode == 'password':
             got = _auth_user(request.form.get('username', ''), request.form.get('password', ''))
             if got:
                 _start_session(username=got[0], role=got[1])
                 return redirect(nxt)
             err = 'Неверный логин или пароль'
-        elif mode == 'pin':
-            uid = (request.form.get('uid') or '').strip()
-            selected_id = uid
-            if uid:
-                gotp = _auth_pending_pin(uid, request.form.get('pin', ''))
-                if gotp:
-                    _start_session(username=gotp['username'], role=gotp['role'])
-                    session['discord_id'] = gotp['discord_id']
-                    session['discord_handle'] = gotp.get('handle') or ''
-                    session['discord_display'] = gotp['username']
-                    session['discord_avatar'] = gotp.get('avatar') or ''
-                    session['auth_via'] = 'pin-dm'
-                    session['role_label'] = ROLE_LABELS.get(gotp['role'], gotp['role'])
-                    return redirect(nxt)
-            got = _auth_pin(request.form.get('username', ''), request.form.get('pin', ''))
-            if got:
-                _start_session(username=got[0], role=got[1])
-                return redirect(nxt)
-            err = 'Неверный или просроченный PIN'
         elif mode == 'register':
             invite = request.form.get('invite', '')
             password = request.form.get('password') or ''
@@ -2707,8 +2677,12 @@ def logs():
              if e.get('action') in ('Участник вошёл', 'Участник вышел')][:40]
     for e in joins:
         e['when'] = _fmt(e.get('timestamp'))
-        e['user_name'] = _best_name(e.get('user_name'), e.get('user_id'), book)
-        e['user_id'] = str(e.get('user_id') or '')
+        uid = str(e.get('user_id') or '')
+        # Сначала книга имён по id — str(member) / username#0 часто кривые.
+        e['user_name'] = _best_name(uid, e.get('user_name'), book)
+        e['user_id'] = uid
+        e['left'] = 'вышел' in str(e.get('action') or '')
+        e['avatar'] = str(e.get('avatar') or '').strip()
     people, _err = _list_login_people()
     return render_template(
         'logs.html', rows=rows, feed=feed, joins=joins,

@@ -472,11 +472,24 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
   background: rgba(0,0,0,.3); border: 1px solid var(--line);
   font-size: .88rem; color: var(--ink-2);
 }
-.join-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.join-list { padding: 12px; display: flex; flex-direction: column; gap: 6px; }
 .join-row {
-  display: grid; grid-template-columns: 150px 1fr auto; gap: 12px; align-items: center;
-  padding: 10px 14px; border-radius: var(--r-sm); border: 1px solid var(--line); background: rgba(0,0,0,.25);
+  display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 10px 12px; border-radius: 6px; border: 1px solid var(--line); background: rgba(0,0,0,.25);
 }
+.join-row .pill { min-width: 64px; text-align: center; font-size: .72rem; padding: 4px 8px; }
+.join-who {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  font-size: .95rem; overflow: hidden;
+}
+.join-who a, .join-who b {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.join-ava {
+  width: 28px; height: 28px; border-radius: 6px; object-fit: cover;
+  flex: 0 0 28px; background: #1a1b22;
+}
+.join-when { font-size: .78rem; white-space: nowrap; }
 
 /* ── Search / suggest ─────────────────────────────────── */
 .search-live { position: relative; padding: 12px; }
@@ -1546,7 +1559,11 @@ h2 .seg { margin-left: auto; font-weight: 800; }
   .main { padding: 20px 16px 40px; }
   .top { grid-template-columns: 1fr; }
   .gsearch { min-width: 0; width: 100%; }
-  .join-row { grid-template-columns: 1fr; }
+  .join-row {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 8px 10px;
+  }
+  .join-when { grid-column: 2; font-size: .72rem; }
   .roles-cell { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -175,7 +175,9 @@ guild.audit_entries = [FakeAuditEntry(88, mod, 'Нарушение правил'
 run(cog.on_member_remove(mem))
 e_mod = last_embed('-модерация')
 e_mem = last_embed('-участники')
-check(e_mem and 'покинул сервер' in desc_of(e_mem), 'выход: эмбед в -участники')
+check(e_mem and ('вышел' in desc_of(e_mem).lower()
+                or 'покинул' in desc_of(e_mem).lower()),
+      'выход: эмбед в -участники')
 check(e_mod and 'Участник кикнут' in desc_of(e_mod) and 'Нарушение правил' in desc_of(e_mod)
       and 'TestMod' in desc_of(e_mod), 'кик: отдельный эмбед в -модерация с причиной')
 

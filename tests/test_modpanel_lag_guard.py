@@ -53,9 +53,9 @@ check('_ack_or_busy' in uks and 'thinking=True' in uks,
 # no double schedule 0.45 after every step
 ras = src[src.index('async def _reset_after_step'):src.index('def _bg_reset_after_step')]
 check('delay=0.45' not in ras, 'нет обязательного второго reset через 0.45с')
-check('multi-fix-v20' in src or 'multi-fix-v19' in src or 'multi-fix-v18' in src
-      or 'multi-fix-v17' in src,
-      'build tag v20+')
+check('multi-fix-v21' in src or 'multi-fix-v20' in src or 'multi-fix-v19' in src
+      or 'multi-fix-v18' in src or 'multi-fix-v17' in src,
+      'build tag v21+')
 check('_allowed_cache_key' in src, 'кэш allowed на rebuild')
 check('successor' in src or 'нет живого successor' in src
       or '_reset_task' in src[src.index('except _aio.CancelledError'):

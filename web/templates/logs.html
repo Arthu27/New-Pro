@@ -72,9 +72,12 @@
   <div class="join-list">
     {% for e in joins %}
     <div class="join-row click-row" {% if e.user_id %}data-href="{{ url_for('member', q=e.user_id) }}"{% endif %}>
-      <span class="pill {% if 'вошёл' in e.action %}pill-ok{% else %}pill-leave{% endif %}">{{ e.action }}</span>
-      <span>{% if e.user_id %}<a href="{{ url_for('member', q=e.user_id) }}"><b>{{ e.user_name }}</b></a>{% else %}<b>{{ e.user_name }}</b>{% endif %}</span>
-      <span class="dim">{{ e.when }}</span>
+      <span class="pill {% if e.left %}pill-leave{% else %}pill-ok{% endif %}">{% if e.left %}вышел{% else %}вошёл{% endif %}</span>
+      <span class="join-who">
+        {% if e.avatar %}<img class="join-ava" src="{{ e.avatar }}" alt="" width="28" height="28" loading="lazy">{% endif %}
+        {% if e.user_id %}<a href="{{ url_for('member', q=e.user_id) }}"><b>{{ e.user_name }}</b></a>{% else %}<b>{{ e.user_name }}</b>{% endif %}
+      </span>
+      <span class="dim join-when">{{ e.when }}</span>
     </div>
     {% endfor %}
   </div>

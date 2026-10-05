@@ -497,7 +497,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v20',
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v21',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None),
                  getattr(target, 'id', None))
@@ -548,31 +548,9 @@ class Moderation (commands .Cog ):
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
-        banner = None
-        try:
-            # Только из process-cache — без PIL на горячем пути открытия.
-            banner = view._banner_file or view._make_banner_file(cache_only=True)
-        except Exception as _bex:
-            log.warning('modpanel banner: %s — открываем без баннера', _bex)
-        # Если кэш пуст — греем в фоне, панель уже на экране.
-        if banner is None:
-            try:
-                from services.menu_banners import warm_menu_banners as _warm_b
-
-                async def _warm():
-                    await _aio.to_thread(_warm_b, ('modpanel',))
-
-                _aio.create_task(_warm(), name='modpanel-banner-warm')
-            except Exception as _bw:
-                log.debug('modpanel banner warm bg: %s', _bw)
-        # LayoutView / Components V2: только view (+ attachments).
-        # НЕ передавать embed= вместе с embeds= — discord.py падает
-        # «Cannot mix embed and embeds», панель уезжает в followup,
-        # селект «Участник» отвечает «Ошибка взаимодействия».
-        edit_kw = {
-            'view': view,
-            'attachments': [banner] if banner is not None else [],
-        }
+        # Баннер на /modpanel не шлём: на телефоне PNG 1200×520 съедает
+        # весь экран, селекты уезжают вниз. Layout только view=.
+        edit_kw = {'view': view}
         panel_msg = None
         try:
             # Панель = original response (тот же токен, что и сброс селектов)
@@ -580,10 +558,8 @@ class Moderation (commands .Cog ):
         except Exception as ex:
             log.warning('modpanel edit_original: %s — followup fallback', ex)
             try:
-                fu_kw = {'view': view, 'ephemeral': True, 'wait': True}
-                if banner is not None:
-                    fu_kw['file'] = banner
-                panel_msg = await interaction.followup.send(**fu_kw)
+                panel_msg = await interaction.followup.send(
+                    view=view, ephemeral=True, wait=True)
             except Exception as ex2:
                 log.warning('modpanel followup: %s', ex2)
                 return
@@ -599,7 +575,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v20',
+        log.info('modpanel ready msg=%s build=multi-fix-v21',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -3961,11 +3937,10 @@ class ModPanelView(discord.ui.LayoutView):
         except Exception:
             self._actor_label = ''
         self._rebuild(None)
-        # Баннер — только из process-cache (PIL уже прогрет в cog_load).
-        try:
-            self._make_banner_file(force=False, cache_only=True)
-        except Exception as _ex:
-            log.debug('moderation: banner cache: %s', _ex)
+        # Баннер отключён на /modpanel (мобильный UX) — не греем PIL.
+        self._banner_name = None
+        self._banner_file = None
+        self._banner_bytes = None
 
     def _action_label(self, action):
         for value, label, _d, _k in (self.allowed or MODPANEL_ACTIONS):
@@ -4109,20 +4084,15 @@ class ModPanelView(discord.ui.LayoutView):
         self.action_buttons = []
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
-        # Имя баннера для MediaGallery — без нового File (upload только при
-        # первом /modpanel; на refresh оставляем старый attachment).
-        from services.v2_layouts import SHOW_MENU_BANNER
-        if SHOW_MENU_BANNER and not self._banner_name:
-            self._banner_name = 'hakumo_modpanel_banner_v15.png'
-        if not SHOW_MENU_BANNER:
-            self._banner_name = None
+        self._banner_name = None
         if V2_AVAILABLE and self._use_v2:
             items = build_modpanel_items(
-                banner_filename=self._banner_name,
+                banner_filename=None,
                 status=self._status_text(),
                 footer=self._footer_text(guild),
                 target_select=self.target_select,
                 action_select=self.action_select,
+                show_banner=False,
             )
             if items:
                 for item in items:

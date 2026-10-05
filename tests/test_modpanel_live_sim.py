@@ -175,9 +175,10 @@ check(view.action_select is not None, 'есть action_select (не кнопки
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
 _ms = open(os.path.join(ROOT, 'cogs/moderation.py')).read()
-check('multi-fix-v20' in _ms or 'multi-fix-v19' in _ms or 'multi-fix-v18' in _ms
-      or 'multi-fix-v17' in _ms or 'multi-fix-v16' in _ms or 'multi-fix-v13' in _ms,
-      'build tag multi-fix-v20')
+check('multi-fix-v21' in _ms or 'multi-fix-v20' in _ms or 'multi-fix-v19' in _ms
+      or 'multi-fix-v18' in _ms or 'multi-fix-v17' in _ms or 'multi-fix-v16' in _ms
+      or 'multi-fix-v13' in _ms,
+      'build tag multi-fix-v21')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
@@ -402,7 +403,7 @@ async def _member_status():
     await _drain_bg()
     check(view_t.selected_uid == str(target.id), 'uid записан')
     check(inter.response.done, 'ACK defer после участника')
-    check(f'участник <@{target.id}>' in view_t._status_text(),
+    check(f'<@{target.id}>' in view_t._status_text(),
           'статус панели показывает выбранного')
     check(id(view_t.target_select) != sel_before,
           'UserSelect пересобран — sticky сброшен, можно выбрать другого')
@@ -424,7 +425,7 @@ async def _preselect_open():
     view_p = M.ModPanelView(None, opener, allowed=allowed, preselect=preselect_obj)
     check(view_p.selected_uid == str(target.id),
           'preselect: selected_uid выставлен до первого клика')
-    check(f'участник <@{target.id}>' in view_p._status_text(),
+    check(f'<@{target.id}>' in view_p._status_text(),
           'preselect: статус на панели сразу показывает участника')
     dv = list(getattr(view_p.target_select, 'default_values', None) or [])
     check(len(dv) == 1 and getattr(dv[0], 'id', None) == target.id,
