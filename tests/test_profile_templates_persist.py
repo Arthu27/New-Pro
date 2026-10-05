@@ -76,6 +76,7 @@ check((persist / 'profile-card.png').is_file(), 'restored from pin when seed gon
 print('== public routes, no login ==')
 app_src = (ROOT / 'web' / 'app.py').read_text(encoding='utf-8')
 check("@app.route('/profiles')" in app_src, 'route /profiles')
+check("/static/profiles" in app_src, 'legacy route /static/profiles')
 check('def profiles_file' in app_src and 'def profiles_gallery' in app_src,
       'gallery + file handlers')
 check('ensure_profile_templates' in app_src, 'ensure on app load')
@@ -88,12 +89,19 @@ client = app.test_client()
 for name in ('profile-card.png', 'most-active.png', 'couple-card.png'):
     resp = client.get('/profiles/' + name)
     check(resp.status_code == 200, f'GET /profiles/{name}', str(resp.status_code))
+    legacy = client.get('/static/profiles/' + name)
+    check(legacy.status_code == 200, f'GET /static/profiles/{name}',
+          str(legacy.status_code))
+    check(legacy.data == resp.data, f'/static/profiles/{name} same bytes')
     check(resp.mimetype == 'image/png', f'{name} is png', resp.mimetype)
     check('login' not in (resp.headers.get('Location') or ''), f'{name} not redirected')
     check('Content-Disposition' not in resp.headers, f'{name} is not a download')
     check(resp.headers.get('Access-Control-Allow-Origin') == '*', f'{name} is embeddable')
 gallery = client.get('/profiles/')
 check(gallery.status_code == 200, 'gallery 200', str(gallery.status_code))
+legacy_gallery = client.get('/static/profiles/')
+check(legacy_gallery.status_code == 200, 'legacy gallery 200',
+      str(legacy_gallery.status_code))
 body = gallery.get_data(as_text=True)
 check('profile-card.png' in body and 'couple-card.png' in body and 'most-active.png' in body,
       'gallery lists all three')

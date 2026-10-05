@@ -323,14 +323,21 @@ def _public_file(folder: str, name: str, *, mimetype: str | None = None):
 
 @app.route('/profiles')
 @app.route('/profiles/')
+@app.route('/static/profiles')
+@app.route('/static/profiles/')
 def profiles_gallery():
     folder = _profiles_folder()
     return _public_file(folder, 'index.html', mimetype='text/html')
 
 
 @app.route('/profiles/<path:filename>')
+@app.route('/static/profiles/<path:filename>')
 def profiles_file(filename):
-    """Короткие ссылки: /profiles/couple-card.png и соседние карточки."""
+    """Короткие ссылки: /profiles/couple-card.png и соседние карточки.
+
+    Старый путь /static/profiles/*.png оставлен — Discord и макеты
+    «Самый активный» / баннер сервера часто ссылаются именно на него.
+    """
     name = os.path.basename(str(filename or '').replace('\\', '/'))
     if name not in _PROFILE_PUBLIC:
         abort(404)

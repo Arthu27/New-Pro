@@ -127,6 +127,22 @@ def profiles_dir() -> Path:
     return ensure_profile_templates(overwrite=False)
 
 
+def public_base_url() -> str:
+    for key in ('PANEL_PUBLIC_URL', 'PUBLIC_BASE_URL', 'PANEL_URL'):
+        raw = (os.environ.get(key) or '').strip().rstrip('/')
+        if raw.startswith('http'):
+            return raw
+    return 'https://hakumods.xyz'
+
+
+def public_profile_url(name: str, *, legacy_static: bool = False) -> str:
+    """HTTPS на карточку профиля (/profiles или legacy /static/profiles)."""
+    base = public_base_url()
+    fname = os.path.basename(str(name or '').replace('\\', '/'))
+    prefix = '/static/profiles' if legacy_static else '/profiles'
+    return f'{base}{prefix}/{fname}'
+
+
 def status() -> dict:
     """Краткий статус для диагностики (без содержимого файлов)."""
     dest = persist_dir()
