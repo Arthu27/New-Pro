@@ -108,10 +108,11 @@ html, body.gate-body {
 .gate-body a.welcome-cta {
   display: inline-flex; align-items: center; gap: 10px;
   padding: 15px 26px; border-radius: 8px;
-  background: #f4f6fb; color: #05060a; font-weight: 800;
+  background: #5865F2; color: #fff !important; font-weight: 800;
+  box-shadow: 0 8px 28px rgba(88, 101, 242, .35);
 }
-.gate-body a.welcome-cta:hover { background: var(--accent); color: #fff; transform: translateY(-2px); }
-.gate-body a.welcome-cta svg { width: 16px; height: 16px; }
+.gate-body a.welcome-cta:hover { background: #4752c4; color: #fff !important; transform: translateY(-2px); }
+.gate-body a.welcome-cta svg { width: 16px; height: 16px; stroke: #fff; }
 .welcome-sub {
   font-weight: 700; color: var(--mute); border-bottom: 1px solid var(--line); padding-bottom: 2px;
 }
@@ -199,18 +200,27 @@ html, body.gate-body {
 .login-submit {
   margin-top: 4px; width: 100%; padding: 14px;
   border: 0; border-radius: 10px; cursor: pointer;
-  background: #f4f6fb; color: #05060a;
+  background: var(--accent); color: #fff;
   font: 800 1rem/1 var(--font);
   transition: .2s transform, .2s background;
 }
-.login-submit:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
+.login-submit:hover { background: #ff704f; color: #fff; transform: translateY(-1px); }
 
+a.login-submit.discord-btn,
+.gate-body a.discord-btn,
 .discord-btn {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  margin-bottom: 12px; padding: 14px 16px; border-radius: 10px;
-  background: #5865F2; color: #fff !important; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; margin: 0 0 14px; padding: 14px 16px;
+  border: 0; border-radius: 10px; cursor: pointer;
+  background: #5865F2 !important; color: #fff !important;
+  font: 800 1rem/1 var(--font); text-decoration: none !important;
+  box-shadow: 0 8px 24px rgba(88, 101, 242, .32);
 }
-.discord-btn--off { background: #2a3040; color: #9aa3b5 !important; cursor: not-allowed; }
+.gate-body a.discord-btn:hover,
+.discord-btn:hover {
+  background: #4752c4 !important; color: #fff !important; transform: translateY(-1px);
+}
+.discord-btn--off { background: #2a3040 !important; color: #9aa3b5 !important; cursor: not-allowed; box-shadow: none; }
 .login-note { margin: 12px 0 0; text-align: center; font-size: .82rem; color: var(--mute); }
 
 /* People */

@@ -759,8 +759,15 @@ def _discord_oauth_ready():
 
 
 def _discord_login_ready():
-    """Discord-вход доступен: OAuth или ссылка в ЛС через бота."""
+    """Discord-вход доступен почти всегда: OAuth или выбор staff + ссылка в ЛС.
+
+    Кнопку не прячем из‑за гонки bot_instance — иначе на welcome
+    «Войти через Discord» пропадает (белый/пустой экран без CTA).
+    """
     if _discord_oauth_ready():
+        return True
+    # TOKEN есть → бот сможет слать ЛС после ready; кнопку показываем сразу.
+    if (os.environ.get('TOKEN') or '').strip():
         return True
     return bool(bot_instance and getattr(bot_instance, 'loop', None))
 
@@ -2338,13 +2345,13 @@ def _safe_next(raw: str | None) -> str:
 def login():
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    mode = (request.values.get('mode') or 'password').strip().lower()
+    mode = (request.values.get('mode') or 'discord').strip().lower()
     # Старый PIN убран. mode=discord — вход ссылкой в ЛС (без OAuth secret).
     if mode in ('people', 'pin'):
         return redirect(url_for(
             'login', mode='discord', next=request.args.get('next')))
     if mode not in ('password', 'register', 'forgot', 'discord'):
-        mode = 'password'
+        mode = 'discord'
     err = (request.args.get('error') or '').strip()
     ok = (request.args.get('ok') or '').strip()
     nxt = _safe_next(request.args.get('next') or request.form.get('next'))

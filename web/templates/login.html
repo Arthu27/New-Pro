@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=8">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=9">
   <style>
     html, body { margin:0; background:#05060a; color:#f4f6fb; }
   </style>
@@ -40,12 +40,12 @@
         {% endif %}
       </p>
 
-      {% if discord_ready and mode != 'discord' %}
-      <a class="login-submit" href="{{ url_for('auth_discord', next=next) }}" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:14px">Войти через Discord</a>
+      {% if mode != 'discord' %}
+      <a class="discord-btn" href="{{ url_for('auth_discord', next=next) }}">Войти через Discord</a>
       {% endif %}
 
       <nav class="login-tabs login-tabs--3" aria-label="Способ входа">
-        <a href="{{ url_for('auth_discord', next=next) if discord_ready else url_for('login', mode='password', next=next) }}" class="{% if mode == 'discord' %}on{% endif %}">Discord</a>
+        <a href="{{ url_for('auth_discord', next=next) }}" class="{% if mode == 'discord' %}on{% endif %}">Discord</a>
         <a href="{{ url_for('login', mode='password', next=next) }}" class="{% if mode == 'password' %}on{% endif %}">Пароль</a>
         <a href="{{ url_for('login', mode='register', next=next) }}" class="{% if mode == 'register' %}on{% endif %}">Создать</a>
       </nav>
@@ -254,11 +254,11 @@
       </div>
 
       <div class="login-foot">
-        {% if mode != 'password' %}
-        <a href="{{ url_for('login', mode='password', next=next) }}">К паролю</a>
-        {% endif %}
-        {% if discord_ready and mode != 'discord' %}
+        {% if mode != 'discord' %}
         <a href="{{ url_for('auth_discord', next=next) }}">Discord</a>
+        {% endif %}
+        {% if mode != 'password' %}
+        <a href="{{ url_for('login', mode='password', next=next) }}">Пароль</a>
         {% endif %}
         {% if mode != 'forgot' %}
         <a href="{{ url_for('login', mode='forgot', next=next) }}">Сброс</a>

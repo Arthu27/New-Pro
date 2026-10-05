@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=8">
+  <link rel="stylesheet" href="{{ url_for('static', filename='auth-new.css') }}?v=9">
   <style>html,body{margin:0;background:#05060a;color:#f4f6fb}</style>
 </head>
 <body class="gate-body">
@@ -22,29 +22,20 @@
   <div class="welcome">
     <header class="welcome-top">
       <a class="welcome-brand-link" href="{{ url_for('welcome') }}">Hakumo</a>
-      <a class="welcome-enter" href="{{ url_for('login', mode='password') }}">Войти</a>
+      <a class="welcome-enter" href="{{ url_for('auth_discord') }}">Войти</a>
     </header>
 
     <main class="welcome-stage">
       <h1 class="welcome-name">Haku<span>mo</span></h1>
       <p class="welcome-lead">Панель модерации</p>
       <div class="welcome-actions">
-        {% if discord_ready %}
         <a class="welcome-cta" href="{{ url_for('auth_discord') }}">
-          Discord
+          Войти через Discord
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </a>
         <a class="welcome-sub" href="{{ url_for('login', mode='password') }}">Пароль</a>
-        {% else %}
-        <a class="welcome-cta" href="{{ url_for('login', mode='password') }}">
-          Войти
-          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </a>
-        {% endif %}
       </div>
     </main>
   </div>
