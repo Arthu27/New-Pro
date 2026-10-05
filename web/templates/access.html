@@ -8,11 +8,14 @@
 <section class="panel rise" style="margin-bottom:12px">
   <h2>Discord OAuth</h2>
   <p class="dim" style="margin:0;padding:14px 18px">
-    {% if discord_ready %}
-    Настроен — кнопка «Войти через Discord» работает, роль = Helper / Mod / Curator / Admin / Owner.
+    {% if oauth_ready is defined and oauth_ready %}
+    OAuth настроен — «Войти через Discord» сразу открывает Discord.
+    {% elif discord_ready %}
+    Discord-вход работает через ссылку в ЛС (без Client Secret). Для классического OAuth добавь
+    <code class="mono">DISCORD_CLIENT_SECRET</code> в .env (Portal → OAuth2).
+    Redirect: <code class="mono">/auth/discord/callback</code>.
     {% else %}
-    Не настроен — добавь <code class="mono">DISCORD_CLIENT_ID</code> и <code class="mono">DISCORD_CLIENT_SECRET</code> в .env.
-    Redirect: <code class="mono">/auth/discord/callback</code>. Без него — вход по паролю.
+    Бот офлайн или нет secret — пока вход по паролю. Когда бот online, Discord снова появится.
     {% endif %}
   </p>
 </section>

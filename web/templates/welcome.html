@@ -29,6 +29,7 @@
       <h1 class="welcome-name">Haku<span>mo</span></h1>
       <p class="welcome-lead">Панель модерации</p>
       <div class="welcome-actions">
+        {% if discord_ready %}
         <a class="welcome-cta" href="{{ url_for('auth_discord') }}">
           Discord
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -36,6 +37,14 @@
           </svg>
         </a>
         <a class="welcome-sub" href="{{ url_for('login', mode='password') }}">Пароль</a>
+        {% else %}
+        <a class="welcome-cta" href="{{ url_for('login', mode='password') }}">
+          Войти
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        {% endif %}
       </div>
     </main>
   </div>

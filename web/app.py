@@ -695,6 +695,7 @@ def _viewer_limits_card():
 def _http_json(method, url, *, headers=None, form=None, timeout=12):
     data = None
     hdrs = dict(headers or {})
+    hdrs.setdefault('User-Agent', 'HakumoPanel (https://hakumods.xyz, 1.0)')
     if form is not None:
         data = urllib.parse.urlencode(form).encode('utf-8')
         hdrs.setdefault('Content-Type', 'application/x-www-form-urlencoded')
@@ -732,12 +733,36 @@ def _discord_client_creds():
             )
             if st == 200 and data.get('id'):
                 cid = str(data['id'])
+                # кэш в процесс — следующий запрос без REST
+                try:
+                    os.environ['DISCORD_CLIENT_ID'] = cid
+                except Exception:
+                    pass
+            if not cid:
+                # bot token = base64(user_id).… — для классического бота = app id
+                try:
+                    import base64 as _b64
+                    part = (token.split('.')[0] or '')
+                    pad = '=' * (-len(part) % 4)
+                    cid = _b64.b64decode(part + pad).decode('utf-8')
+                    if cid.isdigit():
+                        os.environ.setdefault('DISCORD_CLIENT_ID', cid)
+                except Exception:
+                    pass
     return cid, secret
 
 
 def _discord_oauth_ready():
+    """Полный OAuth (нужен Client Secret из Discord Developer Portal)."""
     cid, secret = _discord_client_creds()
     return bool(cid and secret)
+
+
+def _discord_login_ready():
+    """Discord-вход доступен: OAuth или ссылка в ЛС через бота."""
+    if _discord_oauth_ready():
+        return True
+    return bool(bot_instance and getattr(bot_instance, 'loop', None))
 
 
 def _panel_public_base():
@@ -2157,6 +2182,112 @@ def _issue_pin_to_dm(discord_id: str):
     return f'PIN отправлен в Discord ЛС → @{person.get("handle") or person["name"]}', ''
 
 
+LOGIN_TICKETS_FILE = DATA / 'panel_login_tickets.json'
+TICKET_TTL_SEC = 10 * 60
+
+
+def _load_login_tickets():
+    raw = _read_json(LOGIN_TICKETS_FILE, {})
+    return raw if isinstance(raw, dict) else {}
+
+
+def _save_login_tickets(data: dict):
+    DATA.mkdir(parents=True, exist_ok=True)
+    LOGIN_TICKETS_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    try:
+        os.chmod(LOGIN_TICKETS_FILE, 0o600)
+    except OSError:
+        pass
+
+
+def _purge_login_tickets(data: dict | None = None) -> dict:
+    data = dict(data if data is not None else _load_login_tickets())
+    now = datetime.now(timezone.utc).timestamp()
+    changed = False
+    for tok in list(data.keys()):
+        row = data.get(tok) or {}
+        try:
+            exp = float(row.get('exp') or 0)
+        except Exception:
+            exp = 0
+        if exp and exp < now:
+            data.pop(tok, None)
+            changed = True
+    if changed:
+        _save_login_tickets(data)
+    return data
+
+
+def _issue_login_ticket_to_dm(discord_id: str):
+    """Ссылка входа в ЛС (без PIN и без OAuth Client Secret). (ok, err)."""
+    bot = bot_instance
+    if not bot or not getattr(bot, 'loop', None):
+        return '', 'Бот не готов — подожди пару секунд и обнови'
+    people, _ = _list_login_people()
+    person = next((p for p in people if p['id'] == str(discord_id)), None)
+    if not person:
+        return '', 'Этот человек не в staff-списке'
+    token = secrets.token_urlsafe(24)
+    data = _purge_login_tickets()
+    data[token] = {
+        'discord_id': str(discord_id),
+        'role': person['role'],
+        'name': person['name'],
+        'handle': person.get('handle') or '',
+        'avatar': person.get('avatar') or '',
+        'exp': datetime.now(timezone.utc).timestamp() + TICKET_TTL_SEC,
+    }
+    _save_login_tickets(data)
+    link = f"{_panel_public_base()}/auth/ticket/{token}"
+
+    async def _send():
+        user = bot.get_user(int(discord_id))
+        if user is None:
+            user = await bot.fetch_user(int(discord_id))
+        text = (
+            f"**Hakumo** — вход в панель\n"
+            f"{link}\n"
+            f"Ссылка действует {TICKET_TTL_SEC // 60} мин. Никому не пересылай."
+        )
+        await user.send(text)
+
+    import asyncio
+    try:
+        fut = asyncio.run_coroutine_threadsafe(_send(), bot.loop)
+        fut.result(timeout=20)
+    except Exception as e:
+        data.pop(token, None)
+        _save_login_tickets(data)
+        msg = str(e)
+        if 'Cannot send messages to this user' in msg or '50007' in msg:
+            return '', 'Не смог написать в ЛС — открой личку с ботом'
+        return '', f'ЛС не отправилось: {msg[:160]}'
+    handle = person.get('handle') or person['name']
+    return f'Ссылка входа ушла в Discord ЛС → @{handle}', ''
+
+
+def _consume_login_ticket(token: str):
+    token = (token or '').strip()
+    if not token or len(token) < 16:
+        return None
+    data = _purge_login_tickets()
+    row = data.pop(token, None)
+    if not row:
+        return None
+    _save_login_tickets(data)
+    role = str(row.get('role') or 'mod')
+    if role not in LEVEL:
+        role = 'mod'
+    return {
+        'username': row.get('name') or row.get('handle') or row.get('discord_id'),
+        'role': role,
+        'discord_id': str(row.get('discord_id') or ''),
+        'handle': row.get('handle') or '',
+        'avatar': row.get('avatar') or '',
+    }
+
+
 def _auth_pending_pin(discord_id: str, pin: str):
     pin = (pin or '').strip()
     if not pin.isdigit() or not (4 <= len(pin) <= 8):
@@ -2189,7 +2320,11 @@ def welcome():
     """Публичная витрина — отдельный gate-дизайн (auth-new.css)."""
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    return render_template('welcome.html')
+    return render_template(
+        'welcome.html',
+        discord_ready=_discord_login_ready(),
+        oauth_ready=_discord_oauth_ready(),
+    )
 
 
 def _safe_next(raw: str | None) -> str:
@@ -2204,10 +2339,11 @@ def login():
     if session.get('logged_in'):
         return redirect(url_for('today'))
     mode = (request.values.get('mode') or 'password').strip().lower()
-    # PIN-вход (people → ЛС) убран: только Discord OAuth / пароль / регистрация.
+    # Старый PIN убран. mode=discord — вход ссылкой в ЛС (без OAuth secret).
     if mode in ('people', 'pin'):
-        return redirect(url_for('login', mode='password', next=request.args.get('next')))
-    if mode not in ('password', 'register', 'forgot'):
+        return redirect(url_for(
+            'login', mode='discord', next=request.args.get('next')))
+    if mode not in ('password', 'register', 'forgot', 'discord'):
         mode = 'password'
     err = (request.args.get('error') or '').strip()
     ok = (request.args.get('ok') or '').strip()
@@ -2219,8 +2355,20 @@ def login():
     if request.method == 'POST':
         mode = (request.form.get('mode') or mode).strip().lower()
         if mode in ('people', 'pin'):
-            return redirect(url_for('login', mode='password', next=nxt))
-        if mode == 'password':
+            return redirect(url_for('login', mode='discord', next=nxt))
+        if mode == 'discord':
+            selected_id = (request.form.get('uid') or '').strip()
+            people_q = (request.form.get('pq') or '').strip()
+            if not selected_id:
+                err = 'Выбери себя в списке'
+            else:
+                msg, e2 = _issue_login_ticket_to_dm(selected_id)
+                if e2:
+                    err = e2
+                else:
+                    return redirect(url_for(
+                        'login', mode='discord', next=nxt, ok=msg))
+        elif mode == 'password':
             got = _auth_user(request.form.get('username', ''), request.form.get('password', ''))
             if got:
                 _start_session(username=got[0], role=got[1])
@@ -2309,8 +2457,9 @@ def login():
                 ok = 'Пароль обновлён — теперь войди'
                 mode = 'password'
 
-    people, people_err = _list_login_people(people_q) if mode == 'people' else ([], '')
-    if mode == 'people' and people_err and not err:
+    people, people_err = (
+        _list_login_people(people_q) if mode == 'discord' else ([], ''))
+    if mode == 'discord' and people_err and not err:
         err = people_err
 
     reg_person = None
@@ -2353,7 +2502,8 @@ def login():
         error=err,
         ok=ok,
         hint=hint,
-        discord_ready=_discord_oauth_ready(),
+        discord_ready=_discord_login_ready(),
+        oauth_ready=_discord_oauth_ready(),
         mode=mode,
         next=nxt,
         people=people,
@@ -2368,27 +2518,47 @@ def login():
 
 @app.route('/auth/discord')
 def auth_discord():
-    """Быстрый вход через Discord → роль с сервера (Helper/Mod/Curator/Admin/Owner)."""
+    """Вход через Discord: OAuth (если secret есть) или ссылка в ЛС."""
     if session.get('logged_in'):
         return redirect(url_for('today'))
+    nxt = _safe_next(request.args.get('next'))
     cid, secret = _discord_client_creds()
-    if not cid or not secret:
+    if cid and secret:
+        state = secrets.token_urlsafe(24)
+        session['oauth_state'] = state
+        session['oauth_next'] = nxt
+        params = {
+            'client_id': cid,
+            'response_type': 'code',
+            'scope': 'identify',
+            'redirect_uri': _discord_redirect_uri(),
+            'state': state,
+        }
+        url = ('https://discord.com/api/oauth2/authorize?'
+               + urllib.parse.urlencode(params))
+        return redirect(url)
+    # Без Client Secret — выбор себя + ссылка в Discord ЛС
+    return redirect(url_for('login', mode='discord', next=nxt))
+
+
+@app.route('/auth/ticket/<token>')
+def auth_ticket(token):
+    """Одноразовая ссылка из Discord ЛС → сессия панели."""
+    if session.get('logged_in'):
+        return redirect(url_for('today'))
+    got = _consume_login_ticket(token)
+    if not got:
         return redirect(url_for(
-            'login',
-            error='Discord-вход не настроен: задай DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET в .env',
-        ))
-    state = secrets.token_urlsafe(24)
-    session['oauth_state'] = state
-    session['oauth_next'] = _safe_next(request.args.get('next'))
-    params = {
-        'client_id': cid,
-        'response_type': 'code',
-        'scope': 'identify',
-        'redirect_uri': _discord_redirect_uri(),
-        'state': state,
-    }
-    url = 'https://discord.com/api/oauth2/authorize?' + urllib.parse.urlencode(params)
-    return redirect(url)
+            'login', mode='discord',
+            error='Ссылка устарела или уже использована — запроси новую'))
+    _start_session(username=got['username'], role=got['role'])
+    session['discord_id'] = got['discord_id']
+    session['discord_handle'] = got.get('handle') or ''
+    session['discord_display'] = got['username']
+    session['discord_avatar'] = got.get('avatar') or ''
+    session['auth_via'] = 'discord-dm'
+    session['role_label'] = ROLE_LABELS.get(got['role'], got['role'])
+    return redirect(url_for('today'))
 
 
 @app.route('/auth/discord/callback')
@@ -4129,7 +4299,8 @@ def access_page():
         owner_user=env_u,
         error=err,
         role_cards=ROLE_CARDS,
-        discord_ready=_discord_oauth_ready(),
+        discord_ready=_discord_login_ready(),
+        oauth_ready=_discord_oauth_ready(),
     )
 
 
