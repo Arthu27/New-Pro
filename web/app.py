@@ -3249,7 +3249,9 @@ def api_channel_voice_act(cid):
 
     async def _act():
         import discord as _d
+        from services.voice_stay_health import set_panel_voice_hold
         if action == 'leave':
+            set_panel_voice_hold(None)
             left = False
             for vc in list(bot.voice_clients or []):
                 try:
@@ -3259,7 +3261,6 @@ def api_channel_voice_act(cid):
                 except Exception:
                     continue
             if not left:
-                # выйти из любого войса гильдии этого канала
                 ch0 = bot.get_channel(int(cid))
                 gid = getattr(getattr(ch0, 'guild', None), 'id', None)
                 for vc in list(bot.voice_clients or []):
@@ -3269,20 +3270,45 @@ def api_channel_voice_act(cid):
                             left = True
                     except Exception:
                         continue
+            # вернуть stay в дефолтный VOICE_CHANNEL_ID
+            try:
+                import main as _main
+                if getattr(_main, 'VOICE_CHANNEL_ID', None):
+                    _main._schedule_main_voice_rejoin('panel-leave', force=True)
+            except Exception:
+                pass
             return {'action': 'leave', 'ok': True, 'left': left}
 
+        # Hold ДО connect — иначе monitor утащит обратно в stay
+        set_panel_voice_hold(int(cid), minutes=240)
         ch = bot.get_channel(int(cid))
         if ch is None:
             ch = await bot.fetch_channel(int(cid))
         if not isinstance(ch, _d.VoiceChannel):
+            set_panel_voice_hold(None)
             raise RuntimeError('Это не голосовой канал')
         vc = _d.utils.get(bot.voice_clients, guild=ch.guild)
         if vc and getattr(vc, 'channel', None) is not None:
             if getattr(vc.channel, 'id', None) == ch.id:
+                try:
+                    await ch.guild.change_voice_state(
+                        channel=ch, self_mute=False, self_deaf=False)
+                except Exception:
+                    pass
                 return {'action': 'join', 'ok': True, 'already': True}
             await vc.move_to(ch)
+            try:
+                await ch.guild.change_voice_state(
+                    channel=ch, self_mute=False, self_deaf=False)
+            except Exception:
+                pass
             return {'action': 'join', 'ok': True, 'moved': True}
         await ch.connect(self_deaf=False, self_mute=False, reconnect=True)
+        try:
+            await ch.guild.change_voice_state(
+                channel=ch, self_mute=False, self_deaf=False)
+        except Exception:
+            pass
         return {'action': 'join', 'ok': True}
 
     try:

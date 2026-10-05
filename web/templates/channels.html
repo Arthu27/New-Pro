@@ -78,7 +78,7 @@
         <div>
           <div class="dc-voice__kicker">Голосовой канал</div>
           <h2 id="dcVoiceTitle">Войс</h2>
-          <p class="dc-voice__hint">Микрофон — только в Discord-клиенте. Здесь: кто в войсе, бот зайти/выйти, наказание по клику.</p>
+          <p class="dc-voice__hint">Голосом говоришь ты в Discord-клиенте («Открыть в Discord»). Из панели бот пишет текстом в чат-каналы. Бот зайти — без мута, stay не выкинет.</p>
         </div>
         <div class="dc-voice__acts">
           <a class="dc-voice__btn primary" id="dcVoiceOpen" href="#" target="_blank" rel="noopener">
@@ -284,17 +284,19 @@
     }).join('');
   }
 
-  async function loadVoice() {
+  async function loadVoice({soft} = {}) {
     if (!cid) return;
     setMode('voice');
-    if (voicePeople) voicePeople.innerHTML = '<div class="dc-feed__status">Загрузка…</div>';
+    if (!soft && voicePeople && !voicePeople.querySelector('.dc-voice__person')) {
+      voicePeople.innerHTML = '<div class="dc-feed__status">Загрузка…</div>';
+    }
     try {
       const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/voice');
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'ошибка');
       paintVoice(j);
     } catch (e) {
-      if (voicePeople) {
+      if (!soft && voicePeople) {
         voicePeople.innerHTML = `<div class="dc-feed__status is-err">${esc(e.message || e)}</div>`;
       }
     }
@@ -304,7 +306,7 @@
     if (!cid) { setMode('text'); setStatus('Выбери канал слева'); return; }
     const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
     if (ch && ch.dataset.group === 'voice') {
-      await loadVoice();
+      await loadVoice({ soft: !!soft });
       return;
     }
     setMode('text');
@@ -336,7 +338,7 @@
     if (document.hidden || loading || polling || !cid) return;
     const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
     if (ch && ch.dataset.group === 'voice') {
-      if (mode === 'voice') loadVoice();
+      if (mode === 'voice') loadVoice({ soft: true });
       return;
     }
     if (!lastId) return;
