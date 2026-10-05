@@ -175,8 +175,9 @@ check(view.action_select is not None, 'есть action_select (не кнопки
 check(not getattr(view, 'action_buttons', None),
       'action_buttons пусто — без кнопок')
 _ms = open(os.path.join(ROOT, 'cogs/moderation.py')).read()
-check('multi-fix-v18' in _ms or 'multi-fix-v17' in _ms or 'multi-fix-v16' in _ms or 'multi-fix-v13' in _ms,
-      'build tag multi-fix-v16')
+check('multi-fix-v20' in _ms or 'multi-fix-v19' in _ms or 'multi-fix-v18' in _ms
+      or 'multi-fix-v17' in _ms or 'multi-fix-v16' in _ms or 'multi-fix-v13' in _ms,
+      'build tag multi-fix-v20')
 
 
 print('== LIVE 2. Участник → Бан → модалка; то же сообщение; без нового окна ==')
