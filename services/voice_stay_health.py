@@ -180,3 +180,42 @@ def needs_soft_reconnect(last_join_ts: float, now: float,
     if not last_join_ts:
         return False
     return (now - last_join_ts) >= interval
+
+
+# ── Panel voice hold (owner /channels) ───────────────────────────────
+# Пока owner держит бота в выбранном войсе, stay-monitor НЕ тянет
+# обратно в VOICE_CHANNEL_ID.
+_panel_hold_cid = 0
+_panel_hold_until = 0.0
+
+
+def set_panel_voice_hold(cid: int | None, minutes: float = 240.0) -> None:
+    """cid=None — снять hold и вернуть stay на дефолтный канал."""
+    global _panel_hold_cid, _panel_hold_until
+    import time as _t
+    if cid:
+        _panel_hold_cid = int(cid)
+        _panel_hold_until = _t.time() + max(5.0, float(minutes) * 60.0)
+        log.info('panel voice hold → %s for %.0fm', _panel_hold_cid, minutes)
+    else:
+        _panel_hold_cid = 0
+        _panel_hold_until = 0.0
+        log.info('panel voice hold cleared')
+
+
+def panel_voice_hold_cid() -> int:
+    import time as _t
+    if _panel_hold_cid and _t.time() < _panel_hold_until:
+        return int(_panel_hold_cid)
+    return 0
+
+
+def effective_stay_channel_id(default_cid: int | None) -> int:
+    """Куда stay должен возвращать бота прямо сейчас."""
+    held = panel_voice_hold_cid()
+    if held:
+        return held
+    try:
+        return int(default_cid or 0)
+    except Exception:
+        return 0

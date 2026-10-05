@@ -68,7 +68,7 @@ PAGES_ALL = [
     ('staff', '/staff', 'Staff', 'fa-user-shield'),
     ('users', '/users', 'Участники', 'fa-users'),
     ('member', '/member', 'Участник', 'fa-user'),
-    ('channels', '/channels', 'Каналы', 'fa-table'),
+    ('channels', '/channels', 'Каналы', 'fa-hashtag'),
     ('warns', '/warns', 'Варны', 'fa-triangle-exclamation'),
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
@@ -88,12 +88,16 @@ PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
 # Какие ключи страниц видит роль (накопительно по уровню)
 # Admin НЕ видит бот/модули/команды — только owner.
 # Helper видит Правила (не причины наказаний как отдельный список).
+# Каналы: смотреть могут все staff; писать/управлять ботом — только owner.
 _MOD_PAGES = {
     'today', 'logs', 'staff', 'users', 'member', 'channels',
     'warns', 'appeals', 'proofs', 'reasons',
 }
 ROLE_PAGE_KEYS = {
-    'helper': {'today', 'logs', 'staff', 'users', 'member', 'warns', 'reasons'},
+    'helper': {
+        'today', 'logs', 'staff', 'users', 'member', 'channels',
+        'warns', 'reasons',
+    },
     'mod': set(_MOD_PAGES),
     'creative': set(_MOD_PAGES),
     'broadcaster': set(_MOD_PAGES),
@@ -695,6 +699,7 @@ def _viewer_limits_card():
 def _http_json(method, url, *, headers=None, form=None, timeout=12):
     data = None
     hdrs = dict(headers or {})
+    hdrs.setdefault('User-Agent', 'HakumoPanel (https://hakumods.xyz, 1.0)')
     if form is not None:
         data = urllib.parse.urlencode(form).encode('utf-8')
         hdrs.setdefault('Content-Type', 'application/x-www-form-urlencoded')
@@ -732,12 +737,50 @@ def _discord_client_creds():
             )
             if st == 200 and data.get('id'):
                 cid = str(data['id'])
+                # кэш в процесс — следующий запрос без REST
+                try:
+                    os.environ['DISCORD_CLIENT_ID'] = cid
+                except Exception:
+                    pass
+            if not cid:
+                # bot token = base64(user_id).… — для классического бота = app id
+                try:
+                    import base64 as _b64
+                    part = (token.split('.')[0] or '')
+                    pad = '=' * (-len(part) % 4)
+                    cid = _b64.b64decode(part + pad).decode('utf-8')
+                    if cid.isdigit():
+                        os.environ.setdefault('DISCORD_CLIENT_ID', cid)
+                except Exception:
+                    pass
     return cid, secret
 
 
 def _discord_oauth_ready():
-    cid, secret = _discord_client_creds()
-    return bool(cid and secret)
+    """OAuth через Discord: достаточно Client ID (PKCE, без Client Secret)."""
+    cid, _secret = _discord_client_creds()
+    return bool(cid)
+
+
+def _discord_login_ready():
+    """Кнопка Discord: OAuth (PKCE) или запасной вход ссылкой в ЛС."""
+    if _discord_oauth_ready():
+        return True
+    if (os.environ.get('TOKEN') or '').strip():
+        return True
+    return bool(bot_instance and getattr(bot_instance, 'loop', None))
+
+
+def _pkce_pair():
+    """PKCE verifier + S256 challenge — вход без Client Secret."""
+    import base64
+    import hashlib
+    verifier = secrets.token_urlsafe(64)
+    if len(verifier) > 128:
+        verifier = verifier[:128]
+    digest = hashlib.sha256(verifier.encode('ascii')).digest()
+    challenge = base64.urlsafe_b64encode(digest).rstrip(b'=').decode('ascii')
+    return verifier, challenge
 
 
 def _panel_public_base():
@@ -1090,7 +1133,8 @@ def inject_nav():
         'mod_nav_keys': {
             'today', 'logs', 'staff', 'users', 'member', 'channels',
             'warns', 'appeals', 'proofs', 'reasons'},
-        'owner_nav_keys': {'bot', 'modules', 'commands', 'anticrash', 'access'},
+        'owner_nav_keys': {
+            'bot', 'modules', 'commands', 'anticrash', 'access'},
         'viewer_limits': limits,
         'punish_actions': _viewer_punish_actions(role) if role else [],
         'punish_labels': PUNISH_LABELS,
@@ -2157,6 +2201,112 @@ def _issue_pin_to_dm(discord_id: str):
     return f'PIN отправлен в Discord ЛС → @{person.get("handle") or person["name"]}', ''
 
 
+LOGIN_TICKETS_FILE = DATA / 'panel_login_tickets.json'
+TICKET_TTL_SEC = 10 * 60
+
+
+def _load_login_tickets():
+    raw = _read_json(LOGIN_TICKETS_FILE, {})
+    return raw if isinstance(raw, dict) else {}
+
+
+def _save_login_tickets(data: dict):
+    DATA.mkdir(parents=True, exist_ok=True)
+    LOGIN_TICKETS_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    try:
+        os.chmod(LOGIN_TICKETS_FILE, 0o600)
+    except OSError:
+        pass
+
+
+def _purge_login_tickets(data: dict | None = None) -> dict:
+    data = dict(data if data is not None else _load_login_tickets())
+    now = datetime.now(timezone.utc).timestamp()
+    changed = False
+    for tok in list(data.keys()):
+        row = data.get(tok) or {}
+        try:
+            exp = float(row.get('exp') or 0)
+        except Exception:
+            exp = 0
+        if exp and exp < now:
+            data.pop(tok, None)
+            changed = True
+    if changed:
+        _save_login_tickets(data)
+    return data
+
+
+def _issue_login_ticket_to_dm(discord_id: str):
+    """Ссылка входа в ЛС (без PIN и без OAuth Client Secret). (ok, err)."""
+    bot = bot_instance
+    if not bot or not getattr(bot, 'loop', None):
+        return '', 'Бот не готов — подожди пару секунд и обнови'
+    people, _ = _list_login_people()
+    person = next((p for p in people if p['id'] == str(discord_id)), None)
+    if not person:
+        return '', 'Этот человек не в staff-списке'
+    token = secrets.token_urlsafe(24)
+    data = _purge_login_tickets()
+    data[token] = {
+        'discord_id': str(discord_id),
+        'role': person['role'],
+        'name': person['name'],
+        'handle': person.get('handle') or '',
+        'avatar': person.get('avatar') or '',
+        'exp': datetime.now(timezone.utc).timestamp() + TICKET_TTL_SEC,
+    }
+    _save_login_tickets(data)
+    link = f"{_panel_public_base()}/auth/ticket/{token}"
+
+    async def _send():
+        user = bot.get_user(int(discord_id))
+        if user is None:
+            user = await bot.fetch_user(int(discord_id))
+        text = (
+            f"**Hakumo** — вход в панель\n"
+            f"{link}\n"
+            f"Ссылка действует {TICKET_TTL_SEC // 60} мин. Никому не пересылай."
+        )
+        await user.send(text)
+
+    import asyncio
+    try:
+        fut = asyncio.run_coroutine_threadsafe(_send(), bot.loop)
+        fut.result(timeout=20)
+    except Exception as e:
+        data.pop(token, None)
+        _save_login_tickets(data)
+        msg = str(e)
+        if 'Cannot send messages to this user' in msg or '50007' in msg:
+            return '', 'Не смог написать в ЛС — открой личку с ботом'
+        return '', f'ЛС не отправилось: {msg[:160]}'
+    handle = person.get('handle') or person['name']
+    return f'Ссылка входа ушла в Discord ЛС → @{handle}', ''
+
+
+def _consume_login_ticket(token: str):
+    token = (token or '').strip()
+    if not token or len(token) < 16:
+        return None
+    data = _purge_login_tickets()
+    row = data.pop(token, None)
+    if not row:
+        return None
+    _save_login_tickets(data)
+    role = str(row.get('role') or 'mod')
+    if role not in LEVEL:
+        role = 'mod'
+    return {
+        'username': row.get('name') or row.get('handle') or row.get('discord_id'),
+        'role': role,
+        'discord_id': str(row.get('discord_id') or ''),
+        'handle': row.get('handle') or '',
+        'avatar': row.get('avatar') or '',
+    }
+
+
 def _auth_pending_pin(discord_id: str, pin: str):
     pin = (pin or '').strip()
     if not pin.isdigit() or not (4 <= len(pin) <= 8):
@@ -2189,7 +2339,11 @@ def welcome():
     """Публичная витрина — отдельный gate-дизайн (auth-new.css)."""
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    return render_template('welcome.html')
+    return render_template(
+        'welcome.html',
+        discord_ready=_discord_login_ready(),
+        oauth_ready=_discord_oauth_ready(),
+    )
 
 
 def _safe_next(raw: str | None) -> str:
@@ -2203,9 +2357,15 @@ def _safe_next(raw: str | None) -> str:
 def login():
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    mode = (request.values.get('mode') or 'people').strip().lower()
-    if mode not in ('people', 'password', 'pin', 'register', 'forgot'):
-        mode = 'people'
+    mode = (request.values.get('mode') or 'password').strip().lower()
+    # Discord OAuth — отдельный /auth/discord. Старые people/pin/discord → пароль.
+    if mode in ('people', 'pin', 'discord'):
+        if mode == 'discord' and request.method == 'GET':
+            return redirect(url_for('auth_discord', next=request.args.get('next')))
+        return redirect(url_for(
+            'login', mode='password', next=request.args.get('next')))
+    if mode not in ('password', 'register', 'forgot'):
+        mode = 'password'
     err = (request.args.get('error') or '').strip()
     ok = (request.args.get('ok') or '').strip()
     nxt = _safe_next(request.args.get('next') or request.form.get('next'))
@@ -2215,47 +2375,14 @@ def login():
 
     if request.method == 'POST':
         mode = (request.form.get('mode') or mode).strip().lower()
-        if mode == 'people':
-            action = (request.form.get('action') or 'send').strip()
-            selected_id = (request.form.get('uid') or '').strip()
-            people_q = (request.form.get('pq') or '').strip()
-            if not selected_id:
-                err = 'Выбери человека'
-            else:
-                msg, e2 = _issue_pin_to_dm(selected_id)
-                if e2:
-                    err = e2
-                else:
-                    # PIN вводится на отдельной странице
-                    return redirect(url_for(
-                        'login', mode='pin', uid=selected_id,
-                        next=nxt, ok=msg,
-                    ))
-        elif mode == 'password':
+        if mode in ('people', 'pin', 'discord'):
+            return redirect(url_for('auth_discord', next=nxt))
+        if mode == 'password':
             got = _auth_user(request.form.get('username', ''), request.form.get('password', ''))
             if got:
                 _start_session(username=got[0], role=got[1])
                 return redirect(nxt)
             err = 'Неверный логин или пароль'
-        elif mode == 'pin':
-            uid = (request.form.get('uid') or '').strip()
-            selected_id = uid
-            if uid:
-                gotp = _auth_pending_pin(uid, request.form.get('pin', ''))
-                if gotp:
-                    _start_session(username=gotp['username'], role=gotp['role'])
-                    session['discord_id'] = gotp['discord_id']
-                    session['discord_handle'] = gotp.get('handle') or ''
-                    session['discord_display'] = gotp['username']
-                    session['discord_avatar'] = gotp.get('avatar') or ''
-                    session['auth_via'] = 'pin-dm'
-                    session['role_label'] = ROLE_LABELS.get(gotp['role'], gotp['role'])
-                    return redirect(nxt)
-            got = _auth_pin(request.form.get('username', ''), request.form.get('pin', ''))
-            if got:
-                _start_session(username=got[0], role=got[1])
-                return redirect(nxt)
-            err = 'Неверный или просроченный PIN'
         elif mode == 'register':
             invite = request.form.get('invite', '')
             password = request.form.get('password') or ''
@@ -2339,9 +2466,7 @@ def login():
                 ok = 'Пароль обновлён — теперь войди'
                 mode = 'password'
 
-    people, people_err = _list_login_people(people_q) if mode == 'people' else ([], '')
-    if mode == 'people' and people_err and not err:
-        err = people_err
+    people, people_err = [], ''
 
     reg_person = None
     if mode == 'register' and reg_id:
@@ -2383,7 +2508,8 @@ def login():
         error=err,
         ok=ok,
         hint=hint,
-        discord_ready=_discord_oauth_ready(),
+        discord_ready=_discord_login_ready(),
+        oauth_ready=_discord_oauth_ready(),
         mode=mode,
         next=nxt,
         people=people,
@@ -2398,70 +2524,120 @@ def login():
 
 @app.route('/auth/discord')
 def auth_discord():
-    """Быстрый вход через Discord → роль с сервера (Helper/Mod/Curator/Admin/Owner)."""
+    """Вход через Discord OAuth (экран Discord → доступ к аккаунту).
+
+    PKCE: Client Secret не нужен. Пароль / создание — отдельные вкладки.
+    """
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    cid, secret = _discord_client_creds()
-    if not cid or not secret:
+    nxt = _safe_next(request.args.get('next'))
+    cid, _secret = _discord_client_creds()
+    if not cid:
         return redirect(url_for(
-            'login',
-            error='Discord-вход не настроен: задай DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET в .env',
-        ))
+            'login', mode='password', next=nxt,
+            error='Нет DISCORD_CLIENT_ID — не могу открыть Discord-вход'))
     state = secrets.token_urlsafe(24)
+    verifier, challenge = _pkce_pair()
     session['oauth_state'] = state
-    session['oauth_next'] = _safe_next(request.args.get('next'))
+    session['oauth_next'] = nxt
+    session['oauth_pkce_verifier'] = verifier
     params = {
         'client_id': cid,
         'response_type': 'code',
         'scope': 'identify',
         'redirect_uri': _discord_redirect_uri(),
         'state': state,
+        'code_challenge': challenge,
+        'code_challenge_method': 'S256',
+        'prompt': 'consent',
     }
-    url = 'https://discord.com/api/oauth2/authorize?' + urllib.parse.urlencode(params)
+    url = ('https://discord.com/api/oauth2/authorize?'
+           + urllib.parse.urlencode(params))
     return redirect(url)
+
+
+@app.route('/auth/ticket/<token>')
+def auth_ticket(token):
+    """Запасной путь: одноразовая ссылка из Discord ЛС → сессия панели."""
+    if session.get('logged_in'):
+        return redirect(url_for('today'))
+    got = _consume_login_ticket(token)
+    if not got:
+        return redirect(url_for(
+            'login', mode='password',
+            error='Ссылка устарела или уже использована — войди через Discord'))
+    _start_session(username=got['username'], role=got['role'])
+    session['discord_id'] = got['discord_id']
+    session['discord_handle'] = got.get('handle') or ''
+    session['discord_display'] = got['username']
+    session['discord_avatar'] = got.get('avatar') or ''
+    session['auth_via'] = 'discord-dm'
+    session['role_label'] = ROLE_LABELS.get(got['role'], got['role'])
+    return redirect(url_for('today'))
 
 
 @app.route('/auth/discord/callback')
 def auth_discord_callback():
-    err = (request.args.get('error_description') or request.args.get('error') or '').strip()
+    """Callback OAuth: Discord отдал code → access_token → роль staff."""
+    err = (request.args.get('error_description')
+           or request.args.get('error') or '').strip()
     if err:
-        return redirect(url_for('login', error=f'Discord: {err}'))
+        return redirect(url_for('login', mode='password',
+                                error=f'Discord: {err}'))
     state = request.args.get('state') or ''
     if not state or state != session.get('oauth_state'):
-        return redirect(url_for('login', error='Сессия входа устарела — попробуй ещё раз'))
+        return redirect(url_for(
+            'login', mode='password',
+            error='Сессия входа устарела — нажми «Войти через Discord» ещё раз'))
     code = request.args.get('code') or ''
     if not code:
-        return redirect(url_for('login', error='Discord не вернул код'))
+        return redirect(url_for('login', mode='password',
+                                error='Discord не вернул код'))
     cid, secret = _discord_client_creds()
+    verifier = (session.get('oauth_pkce_verifier') or '').strip()
+    form = {
+        'client_id': cid,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': _discord_redirect_uri(),
+    }
+    if verifier:
+        form['code_verifier'] = verifier
+    if secret:
+        form['client_secret'] = secret
     st, token_data = _http_json(
         'POST',
         'https://discord.com/api/oauth2/token',
-        form={
-            'client_id': cid,
-            'client_secret': secret,
-            'grant_type': 'authorization_code',
-            'code': code,
-            'redirect_uri': _discord_redirect_uri(),
-        },
+        form=form,
     )
     if st != 200 or not token_data.get('access_token'):
-        msg = token_data.get('error_description') or token_data.get('error') or f'HTTP {st}'
-        return redirect(url_for('login', error=f'Токен Discord: {msg}'))
+        msg = (token_data.get('error_description')
+               or token_data.get('error') or f'HTTP {st}')
+        # Частая причина: Redirect URI не добавлен в Portal → OAuth2
+        hint = ''
+        if 'redirect' in str(msg).lower() or st in (400, 401):
+            hint = (f' · Проверь Redirect URI в Discord Portal: '
+                    f'{_discord_redirect_uri()}')
+        return redirect(url_for(
+            'login', mode='password',
+            error=f'Tокен Discord: {msg}{hint}'))
     st, user = _http_json(
         'GET',
         f'{DISCORD_API}/users/@me',
         headers={'Authorization': f"Bearer {token_data['access_token']}"},
     )
     if st != 200 or not user.get('id'):
-        return redirect(url_for('login', error='Не удалось получить профиль Discord'))
+        return redirect(url_for(
+            'login', mode='password',
+            error='Не удалось получить профиль Discord'))
     roles, role_err = _fetch_guild_member_roles(str(user['id']))
     if role_err:
-        return redirect(url_for('login', error=role_err))
+        return redirect(url_for('login', mode='password', error=role_err))
     panel_role = resolve_discord_panel_role(user['id'], roles)
     if not panel_role:
         handle = _discord_handle(user)
         return redirect(url_for(
-            'login',
+            'login', mode='password',
             error=(
                 f'@{handle}: нет staff-роли на сервере '
                 f'(Helper / Mod / Curator / Assistent / Admin / Staff Admin)'
@@ -2469,6 +2645,7 @@ def auth_discord_callback():
         ))
     nxt = session.pop('oauth_next', None) or url_for('today')
     session.pop('oauth_state', None)
+    session.pop('oauth_pkce_verifier', None)
     _start_session(
         username=_discord_display(user),
         role=panel_role,
@@ -2688,36 +2865,26 @@ def today():
 @login_required
 @role_required('helper')
 def logs():
+    """Журнал: наказания + входы/выходы. Staff-лента и топы — на /staff."""
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
     rows = _filter_cases_for_viewer(_collect_cases(gid))[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
-    feed = _staff_feed(gid, 60)
     hidden = _viewer_hidden_kinds()
-    if hidden:
-        feed = [
-            f for f in feed
-            if not any(h in str(f.get('action') or '').lower()
-                       for h in ('бан', 'ban', 'кик', 'kick'))
-        ]
     book = _namebook(gid)
     joins = [e for e in _audit_events(gid, 200)
              if e.get('action') in ('Участник вошёл', 'Участник вышел')][:40]
     for e in joins:
         e['when'] = _fmt(e.get('timestamp'))
-        e['user_name'] = _best_name(e.get('user_name'), e.get('user_id'), book)
-        e['user_id'] = str(e.get('user_id') or '')
-    people, _err = _list_login_people()
+        uid = str(e.get('user_id') or '')
+        e['user_name'] = _best_name(uid, e.get('user_name'), book)
+        e['user_id'] = uid
+        e['left'] = 'вышел' in str(e.get('action') or '')
+        e['avatar'] = str(e.get('avatar') or '').strip()
     return render_template(
-        'logs.html', rows=rows, feed=feed, joins=joins,
+        'logs.html', rows=rows, joins=joins,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(hidden),
-        activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
-        span=span,
-        role_filter=(request.args.get('role') or '').strip() or None,
     )
 
 
@@ -2743,13 +2910,14 @@ def staff_page():
 
 @app.route('/channels')
 @login_required
-@role_required('mod')
+@role_required('helper')
 def channels_page():
-    """Подробная карта каналов: права, лимиты, маршруты бота."""
+    """Discord-чат: смотреть — staff; писать/войс-бот — только owner."""
     gid = _main_guild()
     rows = []
     bot = bot_instance
     route_by_id = {}
+    route_labels = {}
     try:
         from services import channel_routes as CR
         for key, cid in (CR.KNOWN_CHANNELS or {}).items():
@@ -2772,14 +2940,12 @@ def channels_page():
             if isinstance(s, dict) and s.get('key')
         }
     except Exception:
-        route_labels = {}
+        pass
     try:
         guild = bot.get_guild(int(gid)) if bot and gid else None
     except Exception:
         guild = None
     if guild is not None:
-        everyone = guild.default_role
-
         def _order(c):
             cat = getattr(c, 'category', None)
             cp = getattr(cat, 'position', -1) if cat is not None else -1
@@ -2788,116 +2954,467 @@ def channels_page():
         for ch in sorted(guild.channels, key=_order):
             cls = type(ch).__name__
             if 'Category' in cls:
-                group, kind, icon = 'category', 'категория', 'fa-folder'
-            elif 'Voice' in cls or 'Stage' in cls:
-                group, kind, icon = 'voice', 'голос', 'fa-volume-high'
+                continue
+            if 'Voice' in cls or 'Stage' in cls:
+                group, icon = 'voice', 'fa-volume-high'
             elif 'Forum' in cls:
-                group, kind, icon = 'forum', 'форум', 'fa-comments'
+                group, icon = 'forum', 'fa-comments'
             else:
-                group, kind, icon = 'text', 'текст', 'fa-hashtag'
+                group, icon = 'text', 'fa-hashtag'
             cat = getattr(getattr(ch, 'category', None), 'name', None) or 'Без категории'
-            perms = None
+            view = True
             try:
-                perms = ch.permissions_for(everyone) if everyone else None
+                me = guild.me
+                if me is not None:
+                    view = bool(ch.permissions_for(me).view_channel)
             except Exception:
-                perms = None
-
-            def flag(name, _p=perms):
-                return bool(getattr(_p, name, False)) if _p else False
-
-            # перезаписи ролей (кратко)
-            overs = []
-            try:
-                mapping = getattr(ch, 'overwrites', None) or {}
-                for target, ow in list(mapping.items())[:12]:
-                    tname = getattr(target, 'name', None) or str(
-                        getattr(target, 'id', '?'))
-                    allow, deny = [], []
-                    try:
-                        for perm, val in ow:
-                            if val is True:
-                                allow.append(str(perm))
-                            elif val is False:
-                                deny.append(str(perm))
-                    except Exception:
-                        try:
-                            a, d = ow.pair()
-                            allow = [n for n, v in a if v]
-                            deny = [n for n, v in d if v]
-                        except Exception:
-                            continue
-                    if not allow and not deny:
-                        continue
-                    overs.append({
-                        'name': tname,
-                        'allow': ', '.join(allow[:6]) if allow else '—',
-                        'deny': ', '.join(deny[:6]) if deny else '—',
-                    })
-            except Exception:
-                overs = []
-            overs = overs[:8]
-
-            topic = str(getattr(ch, 'topic', None) or '').strip()
-            slow = int(getattr(ch, 'slowmode_delay', 0) or 0)
-            nsfw = bool(getattr(ch, 'nsfw', False))
-            bitrate = int(getattr(ch, 'bitrate', 0) or 0)
-            ulimit = getattr(ch, 'user_limit', None)
-            try:
-                ulimit = int(ulimit or 0)
-            except Exception:
-                ulimit = 0
+                view = True
             voice_now = 0
-            try:
-                members = getattr(ch, 'members', None)
-                if members is not None:
-                    voice_now = len(list(members))
-            except Exception:
-                voice_now = 0
+            if group == 'voice':
+                try:
+                    members = getattr(ch, 'members', None)
+                    if members is not None:
+                        voice_now = len(list(members))
+                except Exception:
+                    voice_now = 0
             rid = str(ch.id)
             route_key = route_by_id.get(rid) or ''
             route_label = route_labels.get(route_key) or (
                 route_key.replace('_', ' ') if route_key else '')
-
             rows.append({
                 'id': rid,
                 'name': getattr(ch, 'name', '?'),
-                'kind': kind,
                 'group': group,
                 'icon': icon,
                 'cat': cat,
-                'view': flag('view_channel'),
-                'send': flag('send_messages'),
-                'speak': flag('speak'),
-                'connect': flag('connect'),
-                'manage': flag('manage_channels'),
-                'stream': flag('stream'),
-                'topic': topic[:220],
-                'slowmode': slow,
-                'nsfw': nsfw,
-                'bitrate': bitrate // 1000 if bitrate else 0,
-                'user_limit': ulimit,
+                'view': view,
+                'topic': str(getattr(ch, 'topic', None) or '').strip()[:220],
+                'slowmode': int(getattr(ch, 'slowmode_delay', 0) or 0),
+                'nsfw': bool(getattr(ch, 'nsfw', False)),
                 'voice_now': voice_now,
-                'overwrites': overs,
                 'route_key': route_key,
                 'route_label': route_label,
                 'jump': f'https://discord.com/channels/{gid}/{rid}' if gid else '',
             })
-    shown = [r for r in rows if r.get('group') != 'category']
     groups, seen = [], {}
-    for r in shown:
+    for r in rows:
         key = r['cat']
         if key not in seen:
             seen[key] = {'name': key, 'items': []}
             groups.append(seen[key])
         seen[key]['items'].append(r)
-    kpi = {
-        'total': len(shown),
-        'text': sum(1 for r in shown if r['group'] == 'text'),
-        'voice': sum(1 for r in shown if r['group'] == 'voice'),
-        'closed': sum(1 for r in shown if not r['view']),
-        'routes': sum(1 for r in shown if r.get('route_key')),
+    selected = (request.args.get('c') or '').strip()
+    if not selected:
+        for r in rows:
+            if r.get('group') == 'text':
+                selected = r['id']
+                break
+        if not selected and rows:
+            selected = rows[0]['id']
+    selected_row = next((r for r in rows if r['id'] == selected), None)
+    can_control = (session.get('role') or '') == 'owner'
+    limits = _viewer_limits_card()
+    if limits and not limits.get('exempt'):
+        limits = dict(limits)
+        limits['show'] = bool(limits.get('slots'))
+    return render_template(
+        'channels.html', rows=rows, groups=groups,
+        selected=selected, selected_row=selected_row,
+        can_control_bot=can_control,
+        limits=limits,
+    )
+
+
+def _serialize_discord_message(msg) -> dict:
+    """Короткий снимок сообщения для чата в панели."""
+    author = getattr(msg, 'author', None)
+    name = (
+        getattr(author, 'display_name', None)
+        or getattr(author, 'global_name', None)
+        or getattr(author, 'name', None)
+        or '?'
+    )
+    try:
+        avatar = str(author.display_avatar.url) if author is not None else ''
+    except Exception:
+        avatar = ''
+    created = getattr(msg, 'created_at', None)
+    when = ''
+    if created is not None:
+        try:
+            when = created.astimezone(timezone.utc).strftime('%d.%m %H:%M')
+        except Exception:
+            when = str(created)[:16]
+    atts = []
+    for a in list(getattr(msg, 'attachments', None) or [])[:6]:
+        url = str(getattr(a, 'url', '') or '')
+        ct = str(getattr(a, 'content_type', '') or '')
+        atts.append({
+            'url': url,
+            'name': getattr(a, 'filename', 'file') or 'file',
+            'image': ct.startswith('image/') or url.lower().endswith(
+                ('.png', '.jpg', '.jpeg', '.gif', '.webp')),
+        })
+    content = str(getattr(msg, 'content', '') or '')
+    if not content and getattr(msg, 'embeds', None):
+        try:
+            emb = msg.embeds[0]
+            content = (getattr(emb, 'title', None)
+                       or getattr(emb, 'description', None)
+                       or '[эмбед]')
+            content = str(content)[:400]
+        except Exception:
+            content = '[эмбед]'
+    reply = None
+    try:
+        ref = getattr(msg, 'reference', None)
+        resolved = getattr(ref, 'resolved', None) if ref is not None else None
+        if resolved is not None and hasattr(resolved, 'id'):
+            ra = getattr(resolved, 'author', None)
+            rname = (
+                getattr(ra, 'display_name', None)
+                or getattr(ra, 'global_name', None)
+                or getattr(ra, 'name', None)
+                or '?'
+            )
+            reply = {
+                'id': str(getattr(resolved, 'id', '') or ''),
+                'author': str(rname),
+                'author_id': str(getattr(ra, 'id', '') or ''),
+                'content': str(getattr(resolved, 'content', '') or '')[:160],
+            }
+        elif ref is not None and getattr(ref, 'message_id', None):
+            reply = {
+                'id': str(ref.message_id),
+                'author': 'сообщение',
+                'author_id': '',
+                'content': '',
+            }
+    except Exception:
+        reply = None
+    return {
+        'id': str(getattr(msg, 'id', '')),
+        'author': str(name),
+        'author_id': str(getattr(author, 'id', '') or ''),
+        'bot': bool(getattr(author, 'bot', False)),
+        'avatar': avatar,
+        'content': content[:2000],
+        'when': when,
+        'attachments': atts,
+        'reply': reply,
     }
-    return render_template('channels.html', rows=shown, groups=groups, kpi=kpi)
+
+
+@app.get('/api/channels/<cid>/messages')
+@login_required
+@role_required('helper')
+def api_channel_messages(cid):
+    """Сообщения канала. ?after=<id> — только новые (live), без полной перерисовки."""
+    cid = str(cid or '').strip()
+    if not cid.isdigit():
+        return jsonify({'ok': False, 'error': 'channel id'}), 400
+    try:
+        limit = int(request.args.get('limit') or 40)
+    except Exception:
+        limit = 40
+    limit = max(5, min(limit, 60))
+    after = (request.args.get('after') or '').strip()
+    if after and not after.isdigit():
+        after = ''
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _load():
+        import discord as _d
+        ch = bot.get_channel(int(cid))
+        if ch is None:
+            try:
+                ch = await bot.fetch_channel(int(cid))
+            except Exception as ex:
+                raise RuntimeError(f'Канал недоступен: {ex}') from ex
+        if not hasattr(ch, 'history'):
+            raise RuntimeError('Здесь нет истории сообщений')
+        out = []
+        if after:
+            async for m in ch.history(
+                limit=limit,
+                after=_d.Object(id=int(after)),
+                oldest_first=True,
+            ):
+                out.append(_serialize_discord_message(m))
+            return {
+                'id': str(getattr(ch, 'id', cid)),
+                'name': getattr(ch, 'name', '?'),
+                'topic': str(getattr(ch, 'topic', None) or '')[:220],
+                'items': out,
+                'incremental': True,
+            }
+        async for m in ch.history(limit=limit):
+            out.append(_serialize_discord_message(m))
+        out.reverse()
+        return {
+            'id': str(getattr(ch, 'id', cid)),
+            'name': getattr(ch, 'name', '?'),
+            'topic': str(getattr(ch, 'topic', None) or '')[:220],
+            'items': out,
+            'incremental': False,
+        }
+
+    try:
+        data = _run_on_bot(_load(), timeout=12)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, **data})
+
+
+@app.post('/api/channels/<cid>/messages')
+@login_required
+@role_required('owner')
+def api_channel_send(cid):
+    """Отправить сообщение в канал от имени бота — без подписи в чат."""
+    cid = str(cid or '').strip()
+    if not cid.isdigit():
+        return jsonify({'ok': False, 'error': 'channel id'}), 400
+    data = request.get_json(silent=True) or {}
+    content = str(data.get('content') or request.form.get('content') or '').strip()
+    if not content:
+        return jsonify({'ok': False, 'error': 'Пустое сообщение'}), 400
+    if len(content) > 2000:
+        content = content[:2000]
+    reply_to = str(data.get('reply_to') or '').strip()
+    if reply_to and not reply_to.isdigit():
+        reply_to = ''
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _send():
+        import discord as _d
+        ch = bot.get_channel(int(cid))
+        if ch is None:
+            ch = await bot.fetch_channel(int(cid))
+        if not hasattr(ch, 'send'):
+            raise RuntimeError('В этот канал писать нельзя')
+        kwargs = {}
+        if reply_to:
+            kwargs['reference'] = _d.MessageReference(
+                message_id=int(reply_to),
+                channel_id=int(getattr(ch, 'id', cid)),
+                fail_if_not_exists=False,
+            )
+            kwargs['mention_author'] = True
+        msg = await ch.send(content, **kwargs)
+        return _serialize_discord_message(msg)
+
+    try:
+        item = _run_on_bot(_send(), timeout=15)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, 'item': item})
+
+
+@app.post('/api/dm')
+@login_required
+@role_required('owner')
+def api_dm_send():
+    """Личка от бота любому Discord user id."""
+    data = request.get_json(silent=True) or {}
+    uid = str(data.get('user_id') or '').strip()
+    content = str(data.get('content') or '').strip()
+    if not uid.isdigit():
+        return jsonify({'ok': False, 'error': 'user id'}), 400
+    if not content:
+        return jsonify({'ok': False, 'error': 'Пустое сообщение'}), 400
+    if len(content) > 2000:
+        content = content[:2000]
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _dm():
+        user = bot.get_user(int(uid))
+        if user is None:
+            user = await bot.fetch_user(int(uid))
+        dm = user.dm_channel
+        if dm is None:
+            dm = await user.create_dm()
+        msg = await dm.send(content)
+        return {
+            **_serialize_discord_message(msg),
+            'to_id': str(uid),
+            'to_name': (
+                getattr(user, 'global_name', None)
+                or getattr(user, 'name', None)
+                or uid
+            ),
+        }
+
+    try:
+        item = _run_on_bot(_dm(), timeout=20)
+    except Exception as ex:
+        err = str(ex)[:220]
+        low = err.lower()
+        if '50007' in err or 'cannot send messages to this user' in low:
+            err = 'Человек закрыл ЛС от ботов — написать нельзя.'
+        elif '50013' in err or 'missing permissions' in low:
+            err = 'Нет прав Discord у бота (50013) для ЛС.'
+        return jsonify({'ok': False, 'error': err}), 502
+    return jsonify({'ok': True, 'item': item})
+
+
+@app.get('/api/channels/<cid>/voice')
+@login_required
+@role_required('helper')
+def api_channel_voice(cid):
+    """Кто в войсе + где сейчас бот."""
+    cid = str(cid or '').strip()
+    if not cid.isdigit():
+        return jsonify({'ok': False, 'error': 'channel id'}), 400
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _load():
+        import discord as _d
+        ch = bot.get_channel(int(cid))
+        if ch is None:
+            ch = await bot.fetch_channel(int(cid))
+        if not isinstance(ch, _d.VoiceChannel):
+            raise RuntimeError('Это не голосовой канал')
+        people = []
+        for m in list(getattr(ch, 'members', None) or []):
+            try:
+                ava = str(m.display_avatar.url)
+            except Exception:
+                ava = ''
+            people.append({
+                'id': str(m.id),
+                'name': (
+                    getattr(m, 'display_name', None)
+                    or getattr(m, 'global_name', None)
+                    or getattr(m, 'name', None)
+                    or '?'
+                ),
+                'avatar': ava,
+                'bot': bool(getattr(m, 'bot', False)),
+                'mute': bool(getattr(getattr(m, 'voice', None), 'mute', False)
+                             or getattr(getattr(m, 'voice', None), 'self_mute', False)),
+                'deaf': bool(getattr(getattr(m, 'voice', None), 'deaf', False)
+                             or getattr(getattr(m, 'voice', None), 'self_deaf', False)),
+            })
+        bot_here = False
+        bot_ch = ''
+        try:
+            vc = _d.utils.get(bot.voice_clients, guild=ch.guild)
+            if vc and getattr(vc, 'channel', None) is not None:
+                bot_ch = str(vc.channel.id)
+                bot_here = bot_ch == str(ch.id)
+        except Exception:
+            pass
+        gid = str(getattr(ch.guild, 'id', '') or '')
+        return {
+            'id': str(ch.id),
+            'name': getattr(ch, 'name', '?'),
+            'people': people,
+            'bot_here': bot_here,
+            'bot_channel': bot_ch,
+            'jump': f'https://discord.com/channels/{gid}/{ch.id}' if gid else '',
+            'user_limit': int(getattr(ch, 'user_limit', 0) or 0),
+        }
+
+    try:
+        data = _run_on_bot(_load(), timeout=10)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, **data})
+
+
+@app.post('/api/channels/<cid>/voice')
+@login_required
+@role_required('owner')
+def api_channel_voice_act(cid):
+    """Бот заходит / выходит / переезжает в голосовой канал."""
+    cid = str(cid or '').strip()
+    if not cid.isdigit():
+        return jsonify({'ok': False, 'error': 'channel id'}), 400
+    data = request.get_json(silent=True) or {}
+    action = str(data.get('action') or 'join').strip().lower()
+    if action not in ('join', 'leave'):
+        return jsonify({'ok': False, 'error': 'action'}), 400
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _act():
+        import discord as _d
+        from services.voice_stay_health import set_panel_voice_hold
+        if action == 'leave':
+            set_panel_voice_hold(None)
+            left = False
+            for vc in list(bot.voice_clients or []):
+                try:
+                    if getattr(getattr(vc, 'channel', None), 'id', None) == int(cid):
+                        await vc.disconnect(force=True)
+                        left = True
+                except Exception:
+                    continue
+            if not left:
+                ch0 = bot.get_channel(int(cid))
+                gid = getattr(getattr(ch0, 'guild', None), 'id', None)
+                for vc in list(bot.voice_clients or []):
+                    try:
+                        if gid and getattr(vc.guild, 'id', None) == gid:
+                            await vc.disconnect(force=True)
+                            left = True
+                    except Exception:
+                        continue
+            # вернуть stay в дефолтный VOICE_CHANNEL_ID
+            try:
+                import main as _main
+                if getattr(_main, 'VOICE_CHANNEL_ID', None):
+                    _main._schedule_main_voice_rejoin('panel-leave', force=True)
+            except Exception:
+                pass
+            return {'action': 'leave', 'ok': True, 'left': left}
+
+        # Hold ДО connect — иначе monitor утащит обратно в stay
+        set_panel_voice_hold(int(cid), minutes=240)
+        ch = bot.get_channel(int(cid))
+        if ch is None:
+            ch = await bot.fetch_channel(int(cid))
+        if not isinstance(ch, _d.VoiceChannel):
+            set_panel_voice_hold(None)
+            raise RuntimeError('Это не голосовой канал')
+        vc = _d.utils.get(bot.voice_clients, guild=ch.guild)
+        if vc and getattr(vc, 'channel', None) is not None:
+            if getattr(vc.channel, 'id', None) == ch.id:
+                try:
+                    await ch.guild.change_voice_state(
+                        channel=ch, self_mute=True, self_deaf=True)
+                except Exception:
+                    pass
+                return {'action': 'join', 'ok': True, 'already': True}
+            await vc.move_to(ch)
+            try:
+                await ch.guild.change_voice_state(
+                    channel=ch, self_mute=True, self_deaf=True)
+            except Exception:
+                pass
+            return {'action': 'join', 'ok': True, 'moved': True}
+        await ch.connect(self_deaf=True, self_mute=True, reconnect=True)
+        try:
+            await ch.guild.change_voice_state(
+                channel=ch, self_mute=True, self_deaf=True)
+        except Exception:
+            pass
+        return {'action': 'join', 'ok': True}
+
+    try:
+        data = _run_on_bot(_act(), timeout=20)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, **data})
 
 
 @app.get('/api/login/accounts')
@@ -2956,6 +3473,9 @@ def api_punish():
     rule = str(data.get('rule') or '').strip()
     note = str(data.get('note') or '').strip()[:200]
     legacy_reason = str(data.get('reason') or '').strip()[:400]
+    mute_kind = str(data.get('mute_kind') or 'timeout').strip().lower()
+    if mute_kind not in ('timeout', 'mute_chat', 'vmute'):
+        mute_kind = 'timeout'
     try:
         minutes = int(data.get('minutes') or 10)
     except Exception:
@@ -2979,6 +3499,20 @@ def api_punish():
     # хелперу мут — максимум час
     if action == 'mute' and (session.get('role') or 'helper') == 'helper':
         minutes = min(max(1, minutes), 60)
+    minutes = max(1, min(int(minutes or 10), 40320))
+
+    def _discord_err(ex: BaseException) -> str:
+        text_e = str(ex or '')
+        low = text_e.lower()
+        if '50013' in text_e or 'missing permissions' in low:
+            return (
+                'Нет прав Discord у бота (50013): роль бота ниже цели, '
+                'или нет «Управлять ролями» / «Тайм-аут участников». '
+                'Проверь роли наказаний и иерархию.'
+            )
+        if '50007' in text_e or 'cannot send messages to this user' in low:
+            return 'Человек закрыл ЛС от ботов — написать нельзя.'
+        return text_e[:220]
 
     # причина = правило из каталога (+ комментарий); снятие — без правила
     reason = ''
@@ -2988,7 +3522,8 @@ def api_punish():
             if rule:
                 if not is_known(rule):
                     return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
-                act_key = 'timeout' if action == 'mute' else action
+                # mute → timeout/mute_chat/vmute (все = mute в каталоге)
+                act_key = mute_kind if action == 'mute' else action
                 if action != 'kick' and not allows(rule, act_key):
                     return jsonify({
                         'ok': False,
@@ -3041,6 +3576,7 @@ def api_punish():
 
     async def _do():
         import discord as _d
+        from datetime import timedelta
         guild = bot.get_guild(int(gid))
         if guild is None:
             raise RuntimeError('guild not found')
@@ -3064,6 +3600,23 @@ def api_punish():
         act = action
         extra = ''
 
+        async def _add_punish_role(kind: str):
+            if cog is None or not hasattr(cog, '_punish_role'):
+                raise RuntimeError('Модуль модерации офлайн')
+            role = cog._punish_role(guild, kind)
+            if role is None:
+                label = 'чат-мута' if kind == 'mute' else 'войс-мута'
+                raise RuntimeError(
+                    f'Не выбрана роль {label}. Панель → Роли наказаний.')
+            if role not in (getattr(member, 'roles', None) or []):
+                try:
+                    await member.add_roles(role, reason=ban_reason)
+                except Exception as ex:
+                    raise RuntimeError(_discord_err(ex)) from ex
+            if hasattr(cog, '_remember_temp'):
+                cog._remember_temp(guild, member, role, minutes * 60)
+            return role
+
         if action == 'warn':
             warns = bot.get_cog('warnings') or bot.get_cog('Warnings')
             if warns is None:
@@ -3080,32 +3633,79 @@ def api_punish():
             act = 'unwarn'
             extra = f"снято #{removed.get('id')} · осталось {total}"
         elif action == 'mute':
-            from datetime import timedelta
-            until = datetime.now(timezone.utc) + timedelta(minutes=max(1, minutes))
-            await member.timeout(until, reason=ban_reason)
-            act = 'timeout'
+            # Как /modpanel: чат / войс / оба — роли (+ timeout при «оба»)
+            if cog and hasattr(cog, '_clear_mutes_if_needed'):
+                try:
+                    await cog._clear_mutes_if_needed(
+                        guild, member, for_action=mute_kind)
+                except Exception:
+                    pass
+            names = []
+            if mute_kind in ('timeout', 'mute_chat'):
+                role = await _add_punish_role('mute')
+                names.append(getattr(role, 'name', 'чат'))
+            if mute_kind in ('timeout', 'vmute'):
+                role = await _add_punish_role('vmute')
+                names.append(getattr(role, 'name', 'войс'))
+                try:
+                    if getattr(getattr(member, 'voice', None), 'channel', None):
+                        await member.edit(mute=True, reason=ban_reason)
+                except Exception:
+                    pass
+            if mute_kind == 'timeout':
+                # нативный таймаут — бонус; роли уже выданы
+                try:
+                    until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+                    await member.timeout(until, reason=ban_reason)
+                except Exception:
+                    pass
+            act = mute_kind
+            kind_ru = {
+                'mute_chat': 'чат-мут',
+                'vmute': 'войс-мут',
+                'timeout': 'мут (чат + войс)',
+            }.get(mute_kind, 'мут')
+            extra = f'{kind_ru} · {minutes}м'
+            if names:
+                extra += ' · ' + ', '.join(f'«{n}»' for n in names)
         elif action == 'unmute':
-            # таймаут + роли чат/войс-мута — как кнопка размута в /modpanel
-            try:
-                await member.timeout(None, reason=ban_reason)
-            except Exception:
-                pass
+            lift_kind = {
+                'timeout': 'untimeout',
+                'mute_chat': 'unmute_chat',
+                'vmute': 'vunmute',
+            }.get(mute_kind, 'untimeout')
             try:
                 from services import mute_state
-                await mute_state.clear_all_mutes(guild, member)
+                if lift_kind == 'unmute_chat':
+                    await mute_state.clear_chat_mute(guild, member)
+                    extra = 'чат-мут снят'
+                elif lift_kind == 'vunmute':
+                    await mute_state.clear_voice_mute(guild, member)
+                    extra = 'войс-мут снят'
+                else:
+                    await mute_state.clear_all_mutes(guild, member)
+                    extra = 'мут снят (чат и войс)'
             except Exception as ex:
-                raise RuntimeError(f'Не удалось снять мут: {ex}') from ex
-            if cog and hasattr(cog, '_unisolate_member'):
+                raise RuntimeError(
+                    _discord_err(ex) or f'Не удалось снять мут: {ex}'
+                ) from ex
+            if cog and hasattr(cog, '_unisolate_member') and lift_kind == 'untimeout':
                 try:
                     await cog._unisolate_member(guild, member)
                 except Exception:
                     pass
-            act = 'unmute'
+            act = lift_kind
         elif action == 'kick':
-            await member.kick(reason=ban_reason)
+            try:
+                await member.kick(reason=ban_reason)
+            except Exception as ex:
+                raise RuntimeError(_discord_err(ex)) from ex
             act = 'kick'
         elif action == 'ban':
-            await member.ban(reason=ban_reason, delete_message_days=0)
+            try:
+                await member.ban(reason=ban_reason, delete_message_days=0)
+            except Exception as ex:
+                raise RuntimeError(_discord_err(ex)) from ex
             act = 'ban'
         elif action == 'unban':
             unban_done = False
@@ -3132,7 +3732,7 @@ def api_punish():
                 unban_done = True  # уже не в бане
             except Exception as ex:
                 if member is None:
-                    raise RuntimeError(f'Разбан не удался: {ex}') from ex
+                    raise RuntimeError(_discord_err(ex)) from ex
             act = 'unban'
             extra = 'разбанен' if unban_done else 'изоляция снята'
         else:
@@ -3172,7 +3772,8 @@ def api_punish():
                 pass
         return jsonify({'ok': True, **result})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)[:200]}), 500
+        return jsonify({'ok': False, 'error': _discord_err(e)}), 500
+
 
 
 def _users_directory(q: str = '', *, limit: int = 300):
@@ -4155,7 +4756,8 @@ def access_page():
         owner_user=env_u,
         error=err,
         role_cards=ROLE_CARDS,
-        discord_ready=_discord_oauth_ready(),
+        discord_ready=_discord_login_ready(),
+        oauth_ready=_discord_oauth_ready(),
     )
 
 

@@ -79,10 +79,10 @@ for child in view.children:
     ac = getattr(child, 'accent_colour', None) or getattr(child, 'accent_color', None)
     if ac is not None:
         accents.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
-check(len(view.children) == 3, f'3 карточки (шапка·участник·действие): {len(view.children)}')
+check(len(view.children) == 1, f'1 компактная карточка (мобильный UX): {len(view.children)}')
 check(accents and all(a == 0 for a in accents), f'accent чёрный: {accents}')
 from services.v2_layouts import SHOW_MENU_BANNER  # noqa: E402
-check(SHOW_MENU_BANNER is True, 'баннер включён')
+check(SHOW_MENU_BANNER is True, 'баннер глобально включён (другие меню)')
 
 
 def _collect_texts(v):
@@ -99,14 +99,15 @@ def _collect_texts(v):
 
 
 joined = _collect_texts(view)
-check('Панель модерации' in joined and 'HAKUMO' in joined,
-      f'шапка с заголовком: {joined!r}')
-check('**Участник**' in joined and '**Действие**' in joined,
-      'заголовки блоков Участник / Действие')
+check('Модерация' in joined, f'компактный заголовок: {joined!r}')
+check('Участник' in joined and 'Действие' in joined,
+      'подписи Участник / Действие')
 check('кого наказать' not in joined and 'что сделать' not in joined,
       f'без дублей подсказок в TextDisplay: {joined!r}')
-check('Выберите участника и действие ниже.' in joined,
-      f'инструкция под баннером: {joined!r}')
+check('Участник и действие' in joined or 'участник' in joined.lower(),
+      f'короткий статус: {joined!r}')
+check(getattr(view, '_banner_name', None) in (None, ''),
+      'баннер /modpanel выключен на телефоне')
 check('SPEED OK' not in joined,
       f'без SPEED надписи в шапке: {joined!r}')
 check('Порядок любой' not in joined and 'порядок любой' not in joined.lower()
@@ -114,25 +115,25 @@ check('Порядок любой' not in joined and 'порядок любой' 
       f'без «порядок любой»: {joined!r}')
 check('Hakumo · модерация' not in joined,
       f'без футера: {joined!r}')
-# MediaGallery внутри шапки-Container
-check(any(type(k).__name__ == 'MediaGallery'
-          for child in view.children
-          for k in list(getattr(child, 'children', []) or [])),
-      'MediaGallery в шапке')
+# Баннер на /modpanel выключен — на телефоне съедает экран
+check(not any(type(k).__name__ == 'MediaGallery'
+              for child in view.children
+              for k in list(getattr(child, 'children', []) or [])),
+      'без MediaGallery в /modpanel')
 view.selected_uid = '424242424242424242'
 view._rebuild(None)
 st_joined = _collect_texts(view)
 check('<@424242424242424242>' in st_joined and 'Участник:' not in st_joined,
       f'после выбора краткий статус: {st_joined!r}')
-check('v15' in (view._banner_name or ''),
-      f'banner filename v15: {view._banner_name!r}')
+check(not (view._banner_name or ''),
+      f'banner filename пуст: {view._banner_name!r}')
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == '',
       f"footer выключен: {view._footer_text(g)!r}")
 g2 = type('G', (), {'name': 'My Server'})()
 check(view._footer_text(g2) == '',
       f"footer other выключен: {view._footer_text(g2)!r}")
-check(view._banner_file is not None, 'banner file attached')
+check(view._banner_file is None, 'banner file не прикладывается')
 
 print('== select refresh: ACK first, no banner re-upload ==')
 import asyncio as _aio
@@ -188,7 +189,7 @@ check(bool(ri.edits), 'после ACK — edit_original_response')
 kw = ri.edits[-1] if ri.edits else {}
 check(set(kw.keys()) == {'view'} or 'view' in kw,
       'refresh V2 — только view= (attachments ломают селекты)')
-check('участник <@111>' in _collect_texts(view2),
+check('<@111>' in _collect_texts(view2),
       'статус обновился после выбора')
 
 # ModTargetSelect больше не зовёт refresh — только defer
@@ -197,8 +198,8 @@ mts = src_mod[src_mod.index('class ModTargetSelect'):
               src_mod.index('class ModPanelView')]
 check('await view.refresh' not in mts,
       'ModTargetSelect: без view.refresh (ACK + silent reset)')
-check('_silent_reset_panel' in mts,
-      'ModTargetSelect: статус участника через _silent_reset_panel')
+check('_bg_reset_after_step' in mts,
+      'ModTargetSelect: статус участника через _bg_reset_after_step')
 
 print('== select placeholders ==')
 check((getattr(view.target_select, 'placeholder', None) or '') == '',
