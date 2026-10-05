@@ -3253,7 +3253,13 @@ def api_dm_send():
     try:
         item = _run_on_bot(_dm(), timeout=20)
     except Exception as ex:
-        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+        err = str(ex)[:220]
+        low = err.lower()
+        if '50007' in err or 'cannot send messages to this user' in low:
+            err = 'Человек закрыл ЛС от ботов — написать нельзя.'
+        elif '50013' in err or 'missing permissions' in low:
+            err = 'Нет прав Discord у бота (50013) для ЛС.'
+        return jsonify({'ok': False, 'error': err}), 502
     return jsonify({'ok': True, 'item': item})
 
 
@@ -3467,6 +3473,9 @@ def api_punish():
     rule = str(data.get('rule') or '').strip()
     note = str(data.get('note') or '').strip()[:200]
     legacy_reason = str(data.get('reason') or '').strip()[:400]
+    mute_kind = str(data.get('mute_kind') or 'timeout').strip().lower()
+    if mute_kind not in ('timeout', 'mute_chat', 'vmute'):
+        mute_kind = 'timeout'
     try:
         minutes = int(data.get('minutes') or 10)
     except Exception:
@@ -3490,6 +3499,20 @@ def api_punish():
     # хелперу мут — максимум час
     if action == 'mute' and (session.get('role') or 'helper') == 'helper':
         minutes = min(max(1, minutes), 60)
+    minutes = max(1, min(int(minutes or 10), 40320))
+
+    def _discord_err(ex: BaseException) -> str:
+        text_e = str(ex or '')
+        low = text_e.lower()
+        if '50013' in text_e or 'missing permissions' in low:
+            return (
+                'Нет прав Discord у бота (50013): роль бота ниже цели, '
+                'или нет «Управлять ролями» / «Тайм-аут участников». '
+                'Проверь роли наказаний и иерархию.'
+            )
+        if '50007' in text_e or 'cannot send messages to this user' in low:
+            return 'Человек закрыл ЛС от ботов — написать нельзя.'
+        return text_e[:220]
 
     # причина = правило из каталога (+ комментарий); снятие — без правила
     reason = ''
@@ -3499,7 +3522,8 @@ def api_punish():
             if rule:
                 if not is_known(rule):
                     return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
-                act_key = 'timeout' if action == 'mute' else action
+                # mute → timeout/mute_chat/vmute (все = mute в каталоге)
+                act_key = mute_kind if action == 'mute' else action
                 if action != 'kick' and not allows(rule, act_key):
                     return jsonify({
                         'ok': False,
@@ -3552,6 +3576,7 @@ def api_punish():
 
     async def _do():
         import discord as _d
+        from datetime import timedelta
         guild = bot.get_guild(int(gid))
         if guild is None:
             raise RuntimeError('guild not found')
@@ -3575,6 +3600,23 @@ def api_punish():
         act = action
         extra = ''
 
+        async def _add_punish_role(kind: str):
+            if cog is None or not hasattr(cog, '_punish_role'):
+                raise RuntimeError('Модуль модерации офлайн')
+            role = cog._punish_role(guild, kind)
+            if role is None:
+                label = 'чат-мута' if kind == 'mute' else 'войс-мута'
+                raise RuntimeError(
+                    f'Не выбрана роль {label}. Панель → Роли наказаний.')
+            if role not in (getattr(member, 'roles', None) or []):
+                try:
+                    await member.add_roles(role, reason=ban_reason)
+                except Exception as ex:
+                    raise RuntimeError(_discord_err(ex)) from ex
+            if hasattr(cog, '_remember_temp'):
+                cog._remember_temp(guild, member, role, minutes * 60)
+            return role
+
         if action == 'warn':
             warns = bot.get_cog('warnings') or bot.get_cog('Warnings')
             if warns is None:
@@ -3591,32 +3633,79 @@ def api_punish():
             act = 'unwarn'
             extra = f"снято #{removed.get('id')} · осталось {total}"
         elif action == 'mute':
-            from datetime import timedelta
-            until = datetime.now(timezone.utc) + timedelta(minutes=max(1, minutes))
-            await member.timeout(until, reason=ban_reason)
-            act = 'timeout'
+            # Как /modpanel: чат / войс / оба — роли (+ timeout при «оба»)
+            if cog and hasattr(cog, '_clear_mutes_if_needed'):
+                try:
+                    await cog._clear_mutes_if_needed(
+                        guild, member, for_action=mute_kind)
+                except Exception:
+                    pass
+            names = []
+            if mute_kind in ('timeout', 'mute_chat'):
+                role = await _add_punish_role('mute')
+                names.append(getattr(role, 'name', 'чат'))
+            if mute_kind in ('timeout', 'vmute'):
+                role = await _add_punish_role('vmute')
+                names.append(getattr(role, 'name', 'войс'))
+                try:
+                    if getattr(getattr(member, 'voice', None), 'channel', None):
+                        await member.edit(mute=True, reason=ban_reason)
+                except Exception:
+                    pass
+            if mute_kind == 'timeout':
+                # нативный таймаут — бонус; роли уже выданы
+                try:
+                    until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+                    await member.timeout(until, reason=ban_reason)
+                except Exception:
+                    pass
+            act = mute_kind
+            kind_ru = {
+                'mute_chat': 'чат-мут',
+                'vmute': 'войс-мут',
+                'timeout': 'мут (чат + войс)',
+            }.get(mute_kind, 'мут')
+            extra = f'{kind_ru} · {minutes}м'
+            if names:
+                extra += ' · ' + ', '.join(f'«{n}»' for n in names)
         elif action == 'unmute':
-            # таймаут + роли чат/войс-мута — как кнопка размута в /modpanel
-            try:
-                await member.timeout(None, reason=ban_reason)
-            except Exception:
-                pass
+            lift_kind = {
+                'timeout': 'untimeout',
+                'mute_chat': 'unmute_chat',
+                'vmute': 'vunmute',
+            }.get(mute_kind, 'untimeout')
             try:
                 from services import mute_state
-                await mute_state.clear_all_mutes(guild, member)
+                if lift_kind == 'unmute_chat':
+                    await mute_state.clear_chat_mute(guild, member)
+                    extra = 'чат-мут снят'
+                elif lift_kind == 'vunmute':
+                    await mute_state.clear_voice_mute(guild, member)
+                    extra = 'войс-мут снят'
+                else:
+                    await mute_state.clear_all_mutes(guild, member)
+                    extra = 'мут снят (чат и войс)'
             except Exception as ex:
-                raise RuntimeError(f'Не удалось снять мут: {ex}') from ex
-            if cog and hasattr(cog, '_unisolate_member'):
+                raise RuntimeError(
+                    _discord_err(ex) or f'Не удалось снять мут: {ex}'
+                ) from ex
+            if cog and hasattr(cog, '_unisolate_member') and lift_kind == 'untimeout':
                 try:
                     await cog._unisolate_member(guild, member)
                 except Exception:
                     pass
-            act = 'unmute'
+            act = lift_kind
         elif action == 'kick':
-            await member.kick(reason=ban_reason)
+            try:
+                await member.kick(reason=ban_reason)
+            except Exception as ex:
+                raise RuntimeError(_discord_err(ex)) from ex
             act = 'kick'
         elif action == 'ban':
-            await member.ban(reason=ban_reason, delete_message_days=0)
+            try:
+                await member.ban(reason=ban_reason, delete_message_days=0)
+            except Exception as ex:
+                raise RuntimeError(_discord_err(ex)) from ex
             act = 'ban'
         elif action == 'unban':
             unban_done = False
@@ -3643,7 +3732,7 @@ def api_punish():
                 unban_done = True  # уже не в бане
             except Exception as ex:
                 if member is None:
-                    raise RuntimeError(f'Разбан не удался: {ex}') from ex
+                    raise RuntimeError(_discord_err(ex)) from ex
             act = 'unban'
             extra = 'разбанен' if unban_done else 'изоляция снята'
         else:
@@ -3683,7 +3772,8 @@ def api_punish():
                 pass
         return jsonify({'ok': True, **result})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)[:200]}), 500
+        return jsonify({'ok': False, 'error': _discord_err(e)}), 500
+
 
 
 def _users_directory(q: str = '', *, limit: int = 300):

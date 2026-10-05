@@ -1072,6 +1072,35 @@ button.pd-btn--no {
 }
 
 .punish-dur label { margin-bottom: 0; }
+.punish-kind { margin-top: 2px; }
+.punish-kind label { margin-bottom: 6px; }
+.punish-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.punish-kinds button {
+  height: 48px; margin: 0; padding: 6px 8px;
+  border-radius: 12px !important;
+  border: 1px solid var(--line-2) !important;
+  background: rgba(0,0,0,.4) !important;
+  color: var(--ink-2) !important;
+  font: 800 .78rem var(--font) !important;
+  letter-spacing: .01em;
+  cursor: pointer; transform: none !important;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px;
+}
+.punish-kinds button i { font-size: .9rem; opacity: .85; }
+.punish-kinds button:hover {
+  border-color: rgba(255,255,255,.28) !important;
+  color: var(--ink) !important;
+}
+.punish-kinds button.on {
+  background: rgba(88,101,242,.22) !important;
+  border-color: rgba(88,101,242,.55) !important;
+  color: #c9d1ff !important;
+}
 .dur-chips {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));

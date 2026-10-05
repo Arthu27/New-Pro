@@ -43,6 +43,27 @@
       </div>
     </label>
 
+    {% if 'mute' in punish_actions or 'unmute' in punish_actions %}
+    <div id="punishKindWrap" class="punish-kind" {% if 'mute' not in punish_actions and 'unmute' not in punish_actions %}hidden{% endif %}>
+      <label id="punishKindLabel">Вид мута</label>
+      <div class="punish-kinds" id="punishKinds" role="group" aria-label="Вид мута">
+        <button type="button" data-kind="mute_chat" title="Только текстовые каналы">
+          <i class="fas fa-comment-slash" aria-hidden="true"></i>
+          <span>Чат</span>
+        </button>
+        <button type="button" data-kind="vmute" title="Только голос / микрофон">
+          <i class="fas fa-microphone-slash" aria-hidden="true"></i>
+          <span>Войс</span>
+        </button>
+        <button type="button" data-kind="timeout" class="on" title="Чат + войс (как в /modpanel)">
+          <i class="fas fa-ban" aria-hidden="true"></i>
+          <span>Чат + войс</span>
+        </button>
+      </div>
+      <input type="hidden" id="punishKind" value="timeout">
+    </div>
+    {% endif %}
+
     <div id="punishRuleWrap">
       <label>Правило
         <div class="rule-picker" id="rulePicker"><div class="empty dim">Загружаю правила…</div></div>
@@ -86,9 +107,16 @@
   const $ = id => document.getElementById(id);
   const seg = $('punishSeg'), picker = $('rulePicker'), msg = $('punishMsg');
   const chips = $('durChips');
+  const kinds = $('punishKinds');
   const LIFT = { unwarn: 1, unmute: 1, unban: 1 };
+  const MUTE_KINDS = {
+    mute_chat: { issue: 'mute_chat', lift: 'unmute_chat', label: 'чат' },
+    vmute: { issue: 'vmute', lift: 'vunmute', label: 'войс' },
+    timeout: { issue: 'timeout', lift: 'untimeout', label: 'чат + войс' },
+  };
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   let action = seg.querySelector('button').dataset.act;
+  let muteKind = 'timeout';
   const rulesCache = {};
 
   function isLift(a) { return !!LIFT[a]; }
@@ -100,6 +128,18 @@
     if (chips) {
       chips.querySelectorAll('button').forEach(b => {
         b.classList.toggle('on', b.dataset.min === n);
+      });
+    }
+  }
+
+  function setMuteKind(k) {
+    if (!MUTE_KINDS[k]) k = 'timeout';
+    muteKind = k;
+    const hid = $('punishKind');
+    if (hid) hid.value = k;
+    if (kinds) {
+      kinds.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('on', b.dataset.kind === k);
       });
     }
   }
@@ -141,6 +181,13 @@
     action = a;
     seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.act === a));
     const lift = isLift(a);
+    const isMuteFamily = a === 'mute' || a === 'unmute';
+    const kw = $('punishKindWrap');
+    if (kw) {
+      kw.hidden = !isMuteFamily;
+      const lab = $('punishKindLabel');
+      if (lab) lab.textContent = a === 'unmute' ? 'Что снять' : 'Вид мута';
+    }
     const mw = $('punishMinWrap');
     if (mw) mw.style.display = a === 'mute' ? '' : 'none';
     const rw = $('punishRuleWrap');
@@ -151,9 +198,10 @@
     if (kicker) kicker.textContent = lift ? 'Снятие' : 'Наказание';
     const sub = $('punishSub');
     if (sub) {
-      sub.textContent = lift
-        ? ({ unwarn: 'снять последний варн', unmute: 'снять мут (чат/войс/таймаут)', unban: 'снять бан / изоляцию' }[a] || 'снять меру')
-        : 'выбери меру, правило и время';
+      if (a === 'mute') sub.textContent = 'выбери вид: чат / войс / оба';
+      else if (a === 'unmute') sub.textContent = 'снять чат, войс или всё сразу';
+      else if (lift) sub.textContent = ({ unwarn: 'снять последний варн', unban: 'снять бан / изоляцию' }[a] || 'снять меру');
+      else sub.textContent = 'выбери меру, правило и время';
     }
     const go = $('punishGo');
     if (go) {
@@ -168,6 +216,10 @@
   seg.addEventListener('click', e => {
     const b = e.target.closest('button[data-act]'); if (!b) return;
     setAction(b.dataset.act);
+  });
+  if (kinds) kinds.addEventListener('click', e => {
+    const b = e.target.closest('button[data-kind]'); if (!b) return;
+    setMuteKind(b.dataset.kind);
   });
   if (chips) chips.addEventListener('click', e => {
     const b = e.target.closest('button[data-min]'); if (!b) return;
@@ -186,6 +238,7 @@
     $('punishNote').value = '';
     msg.textContent = '';
     setMinutes(($('punishMin') || {}).value || 10);
+    setMuteKind('timeout');
     setAction(act && seg.querySelector(`button[data-act="${act}"]`) ? act : seg.querySelector('button').dataset.act);
     dlg.showModal();
   };
@@ -209,6 +262,9 @@
       note: $('punishNote').value,
       minutes: ($('punishMin') || {}).value || 10,
     };
+    if (action === 'mute' || action === 'unmute') {
+      body.mute_kind = muteKind || 'timeout';
+    }
     try {
       const r = await fetch('/api/punish', {
         method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
@@ -216,7 +272,6 @@
       const j = await r.json();
       if (j.ok) {
         msg.textContent = 'Готово · ' + (j.extra || j.reason || j.action);
-        // обновить цифру лимита в диалоге
         const lim = document.querySelector(`.punish-lim[data-key="${action === 'mute' ? 'mute' : action}"] span`);
         if (lim && /\d+\/\d+/.test(lim.textContent)) {
           const [u, t] = lim.textContent.split('/').map(Number);
