@@ -3065,6 +3065,33 @@ def _serialize_discord_message(msg) -> dict:
             content = str(content)[:400]
         except Exception:
             content = '[эмбед]'
+    reply = None
+    try:
+        ref = getattr(msg, 'reference', None)
+        resolved = getattr(ref, 'resolved', None) if ref is not None else None
+        if resolved is not None and hasattr(resolved, 'id'):
+            ra = getattr(resolved, 'author', None)
+            rname = (
+                getattr(ra, 'display_name', None)
+                or getattr(ra, 'global_name', None)
+                or getattr(ra, 'name', None)
+                or '?'
+            )
+            reply = {
+                'id': str(getattr(resolved, 'id', '') or ''),
+                'author': str(rname),
+                'author_id': str(getattr(ra, 'id', '') or ''),
+                'content': str(getattr(resolved, 'content', '') or '')[:160],
+            }
+        elif ref is not None and getattr(ref, 'message_id', None):
+            reply = {
+                'id': str(ref.message_id),
+                'author': 'сообщение',
+                'author_id': '',
+                'content': '',
+            }
+    except Exception:
+        reply = None
     return {
         'id': str(getattr(msg, 'id', '')),
         'author': str(name),
@@ -3074,6 +3101,7 @@ def _serialize_discord_message(msg) -> dict:
         'content': content[:2000],
         'when': when,
         'attachments': atts,
+        'reply': reply,
     }
 
 
@@ -3154,21 +3182,76 @@ def api_channel_send(cid):
         return jsonify({'ok': False, 'error': 'Пустое сообщение'}), 400
     if len(content) > 2000:
         content = content[:2000]
+    reply_to = str(data.get('reply_to') or '').strip()
+    if reply_to and not reply_to.isdigit():
+        reply_to = ''
     bot = bot_instance
     if not bot:
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
 
     async def _send():
+        import discord as _d
         ch = bot.get_channel(int(cid))
         if ch is None:
             ch = await bot.fetch_channel(int(cid))
         if not hasattr(ch, 'send'):
             raise RuntimeError('В этот канал писать нельзя')
-        msg = await ch.send(content)
+        kwargs = {}
+        if reply_to:
+            kwargs['reference'] = _d.MessageReference(
+                message_id=int(reply_to),
+                channel_id=int(getattr(ch, 'id', cid)),
+                fail_if_not_exists=False,
+            )
+            kwargs['mention_author'] = True
+        msg = await ch.send(content, **kwargs)
         return _serialize_discord_message(msg)
 
     try:
         item = _run_on_bot(_send(), timeout=15)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, 'item': item})
+
+
+@app.post('/api/dm')
+@login_required
+@role_required('owner')
+def api_dm_send():
+    """Личка от бота любому Discord user id."""
+    data = request.get_json(silent=True) or {}
+    uid = str(data.get('user_id') or '').strip()
+    content = str(data.get('content') or '').strip()
+    if not uid.isdigit():
+        return jsonify({'ok': False, 'error': 'user id'}), 400
+    if not content:
+        return jsonify({'ok': False, 'error': 'Пустое сообщение'}), 400
+    if len(content) > 2000:
+        content = content[:2000]
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _dm():
+        user = bot.get_user(int(uid))
+        if user is None:
+            user = await bot.fetch_user(int(uid))
+        dm = user.dm_channel
+        if dm is None:
+            dm = await user.create_dm()
+        msg = await dm.send(content)
+        return {
+            **_serialize_discord_message(msg),
+            'to_id': str(uid),
+            'to_name': (
+                getattr(user, 'global_name', None)
+                or getattr(user, 'name', None)
+                or uid
+            ),
+        }
+
+    try:
+        item = _run_on_bot(_dm(), timeout=20)
     except Exception as ex:
         return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
     return jsonify({'ok': True, 'item': item})
