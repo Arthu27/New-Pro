@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Вход — Hakumo</title>
-  <meta name="description" content="Вход в панель Hakumo — Discord или пароль.">
+  <meta name="description" content="Вход в панель Hakumo.">
   <meta name="theme-color" content="#05060a">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,9 +33,9 @@
       <p class="login-kicker">Вход</p>
       <h1 class="login-mark">Haku<em>mo</em></h1>
       <p class="login-hint">
-        {% if mode == 'register' %}Найди себя по имени, введи код приглашения и пароль.
-        {% elif mode == 'forgot' %}Сброс пароля по коду восстановления.
-        {% else %}Discord или пароль — PIN больше не нужен.
+        {% if mode == 'register' %}Код приглашения и пароль.
+        {% elif mode == 'forgot' %}Сброс пароля.
+        {% else %}Вход
         {% endif %}
       </p>
 

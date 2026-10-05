@@ -878,8 +878,7 @@ class Moderation (commands .Cog ):
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
                 'Варн выдан',
-                f'**{who }** · `{uid }`\n{text }\n'
-                f'🧹 чищу его последние {self.PURGE_AFTER_PUNISH} сообщ…',
+                f'**{who }** · `{uid }`\n{text }',
                 guild =guild ),
                 ephemeral =True )
                 # фон: последние сообщения ИМЕННО этого человека
@@ -1000,9 +999,7 @@ class Moderation (commands .Cog ):
                           "кнопкой в ЛС бота; комната апелляции откроется "
                           "после подачи заявки")
                     confirm = mod_result_embed(
-                        title='Бан', user=user,
-                        body=(msg + f'\n🧹 чищу его последние '
-                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        title='Бан', user=user, body=msg,
                         reason=reason, case_id=0)
                     await _respond(interaction, embed=confirm, ephemeral=True)
                     self._schedule_purge_after_punish(interaction, user)
@@ -1069,9 +1066,7 @@ class Moderation (commands .Cog ):
                             f"«{n}»" for n in _extra_roles)
                     # Сразу ответ модератору — фон добьёт timeout/лог/демку.
                     confirm = mod_result_embed(
-                        title='Мут', user=user,
-                        body=(msg + f'\n🧹 чищу его последние '
-                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        title='Мут', user=user, body=msg,
                         reason=reason, case_id=0)
                     await _respond(interaction, embed=confirm, ephemeral=True)
                     self._schedule_purge_after_punish(interaction, user)
@@ -1109,9 +1104,7 @@ class Moderation (commands .Cog ):
                     msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
                            f"(роль «{_mrole.name}»); голос не тронут")
                     confirm = mod_result_embed(
-                        title='Мут чата', user=user,
-                        body=(msg + f'\n🧹 чищу его последние '
-                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        title='Мут чата', user=user, body=msg,
                         reason=reason, case_id=0)
                     await _respond(interaction, embed=confirm, ephemeral=True)
                     self._schedule_purge_after_punish(interaction, user)
@@ -1155,9 +1148,7 @@ class Moderation (commands .Cog ):
                           +(" · глушу микрофон…" if _in_voice else "")
                           +", снимется по сроку")
                     confirm = mod_result_embed(
-                        title='Войс-мут', user=user,
-                        body=(msg + f'\n🧹 чищу его последние '
-                              f'{self.PURGE_AFTER_PUNISH} сообщ…'),
+                        title='Войс-мут', user=user, body=msg,
                         reason=reason, case_id=0)
                     await _respond(interaction, embed=confirm, ephemeral=True)
                     self._schedule_purge_after_punish(interaction, user)
@@ -1248,14 +1239,6 @@ class Moderation (commands .Cog ):
                         (confirm.description or '')
                         + "\n⚠️ " + " · ".join(aux_errors))
                 # Сначала ответ модератору — логи/ЛС/демка могут идти секундами.
-                if action == 'ban':
-                    try:
-                        confirm.description = (
-                            (confirm.description or '')
-                            + f'\n🧹 чищу его последние '
-                              f'{self.PURGE_AFTER_PUNISH} сообщ…')
-                    except Exception:
-                        pass
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
                 # Бан → в фоне снести последние сообщения именно его
                 if action == 'ban':
@@ -1840,20 +1823,7 @@ class Moderation (commands .Cog ):
                 n_del = len(deleted or [])
                 if n_del <= 0:
                     return
-                who = (getattr(user, 'mention', None)
-                       or getattr(user, 'display_name', None)
-                       or f'<@{uid}>')
-                text = (f'🧹 Удалено **{n_del}** сообщ. от {who} '
-                        f'— только его, чужие не трогали.')
-                try:
-                    await _respond(interaction, content=text, ephemeral=True)
-                except Exception:
-                    try:
-                        follow = getattr(interaction, 'followup', None)
-                        if follow is not None:
-                            await follow.send(text, ephemeral=True)
-                    except Exception as _fe:
-                        log.debug('[MODPANEL] purge followup: %s', _fe)
+                # Без отдельного ephemeral-спама: очистка тихая, только лог.
                 log.info('[MODPANEL] purge-after-punish uid=%s n=%s',
                          uid, n_del)
             except Exception as _ex:
