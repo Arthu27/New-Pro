@@ -88,8 +88,8 @@ check('staff_board' in (ROOT / 'web' / 'app.py').read_text(encoding='utf-8'),
 
 print('== modpanel speed markers ==')
 mod = (ROOT / 'cogs' / 'moderation.py').read_text(encoding='utf-8')
-check('show_banner=False' in mod or '_banner_name = None' in mod,
-      'modpanel без баннера (мобильный UX)')
+check('public_modpanel_banner_url' in mod or 'show_banner=bool' in mod,
+      'modpanel с HTTPS-баннером')
 check('for_action=' in mod and "for_action='mute_chat'" in mod,
       'selective mute clear')
 check('multi-fix-v21' in mod, 'build bump v21')

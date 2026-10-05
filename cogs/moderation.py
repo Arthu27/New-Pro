@@ -548,8 +548,8 @@ class Moderation (commands .Cog ):
         view._guild = interaction.guild
         # followup = resend свежей панели после действия (без Collector)
         view._mod_followup = interaction.followup
-        # Баннер на /modpanel не шлём: на телефоне PNG 1200×520 съедает
-        # весь экран, селекты уезжают вниз. Layout только view=.
+        # Баннер — HTTPS в MediaGallery (в view). Не attachment://:
+        # иначе CDN/файл отваливается, а edit с attachments ломает селекты.
         edit_kw = {'view': view}
         panel_msg = None
         try:
@@ -4054,15 +4054,22 @@ class ModPanelView(discord.ui.LayoutView):
         self.action_buttons = []
 
         from services.v2_layouts import V2_AVAILABLE, build_modpanel_items
-        self._banner_name = None
+        banner = None
+        try:
+            from services.menu_banners import public_modpanel_banner_url
+            banner = public_modpanel_banner_url()
+        except Exception as _bx:
+            log.debug('modpanel banner url: %s', _bx)
+            banner = None
+        self._banner_name = banner
         if V2_AVAILABLE and self._use_v2:
             items = build_modpanel_items(
-                banner_filename=None,
+                banner_filename=banner,
                 status=self._status_text(),
                 footer=self._footer_text(guild),
                 target_select=self.target_select,
                 action_select=self.action_select,
-                show_banner=False,
+                show_banner=bool(banner),
             )
             if items:
                 for item in items:

@@ -462,14 +462,16 @@ def menu_banner_file(kind: str = 'modpanel', filename: str = None):
     return bio, name
 
 
-# Баннер набора лежит на сайте: MediaGallery с attachment:// теряет файл,
-# и в Discord остаётся битая картинка. Новое имя — чтобы не взять старый кэш.
+# Баннеры меню/правил лежат на сайте: MediaGallery с attachment:// теряет
+# файл (или CDN-ссылка с ?ex=… истекает), и в Discord остаётся битая картинка.
 STAFF_BANNER_NAME = 'hakumo_staff_banner_v17.png'
+MODPANEL_BANNER_NAME = 'hakumo_modpanel_banner_v15.png'
+RULES_BANNER_NAME = 'hakumo_server_rules_banner.png'
 PUBLIC_MENU_DIR = os.path.join(ROOT, 'web', 'static', 'menu')
 
 
 def public_base_url() -> str:
-    """База панели. Баннер набора Discord открывает по этому HTTPS."""
+    """База панели. Баннер Discord открывает по этому HTTPS."""
     for key in ('PANEL_PUBLIC_URL', 'PUBLIC_BASE_URL', 'PANEL_URL'):
         raw = (os.environ.get(key) or '').strip().rstrip('/')
         if raw.startswith('http'):
@@ -494,6 +496,41 @@ def public_staff_banner_url() -> str:
     """Постоянный HTTPS баннера набора — не attachment://."""
     ensure_staff_public_banner()
     return f'{public_base_url()}/static/menu/{STAFF_BANNER_NAME}'
+
+
+def ensure_modpanel_public_banner() -> str:
+    """Положить PNG /modpanel в web/static/menu/ (пересоздать, если нет)."""
+    os.makedirs(PUBLIC_MENU_DIR, exist_ok=True)
+    path = os.path.join(PUBLIC_MENU_DIR, MODPANEL_BANNER_NAME)
+    if not os.path.isfile(path) or os.path.getsize(path) < 1000:
+        raw = menu_banner_bytes('modpanel')
+        tmp = path + '.tmp'
+        with open(tmp, 'wb') as fh:
+            fh.write(raw)
+        os.replace(tmp, path)
+    return path
+
+
+def public_modpanel_banner_url() -> str:
+    """Постоянный HTTPS баннера /modpanel — не attachment:// / CDN."""
+    ensure_modpanel_public_banner()
+    return f'{public_base_url()}/static/menu/{MODPANEL_BANNER_NAME}'
+
+
+def ensure_rules_public_banner() -> str:
+    """Путь к PNG баннера правил в web/static/menu/ (без перезаписи)."""
+    os.makedirs(PUBLIC_MENU_DIR, exist_ok=True)
+    return os.path.join(PUBLIC_MENU_DIR, RULES_BANNER_NAME)
+
+
+def public_rules_banner_url() -> str:
+    """Постоянный HTTPS баннера правил."""
+    path = ensure_rules_public_banner()
+    if not os.path.isfile(path) or os.path.getsize(path) < 1000:
+        raise FileNotFoundError(
+            f'rules banner missing: {path} '
+            f'(put {RULES_BANNER_NAME} under web/static/menu/)')
+    return f'{public_base_url()}/static/menu/{RULES_BANNER_NAME}'
 
 
 def select_label(text: str) -> str:

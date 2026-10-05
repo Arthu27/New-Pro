@@ -79,10 +79,10 @@ for child in view.children:
     ac = getattr(child, 'accent_colour', None) or getattr(child, 'accent_color', None)
     if ac is not None:
         accents.append(int(ac.value) if hasattr(ac, 'value') else int(ac))
-check(len(view.children) == 1, f'1 компактная карточка (мобильный UX): {len(view.children)}')
+check(len(view.children) == 3, f'3 карточки (шапка·участник·действие): {len(view.children)}')
 check(accents and all(a == 0 for a in accents), f'accent чёрный: {accents}')
 from services.v2_layouts import SHOW_MENU_BANNER  # noqa: E402
-check(SHOW_MENU_BANNER is True, 'баннер глобально включён (другие меню)')
+check(SHOW_MENU_BANNER is True, 'баннер включён')
 
 
 def _collect_texts(v):
@@ -99,15 +99,14 @@ def _collect_texts(v):
 
 
 joined = _collect_texts(view)
-check('Модерация' in joined, f'компактный заголовок: {joined!r}')
+check('Панель модерации' in joined and 'HAKUMO' in joined,
+      f'шапка с заголовком: {joined!r}')
 check('Участник' in joined and 'Действие' in joined,
-      'подписи Участник / Действие')
+      'заголовки блоков Участник / Действие')
 check('кого наказать' not in joined and 'что сделать' not in joined,
       f'без дублей подсказок в TextDisplay: {joined!r}')
-check('Участник и действие' in joined or 'участник' in joined.lower(),
-      f'короткий статус: {joined!r}')
-check(getattr(view, '_banner_name', None) in (None, ''),
-      'баннер /modpanel выключен на телефоне')
+check('Выберите участника' in joined or 'участник' in joined.lower(),
+      f'инструкция под баннером: {joined!r}')
 check('SPEED OK' not in joined,
       f'без SPEED надписи в шапке: {joined!r}')
 check('Порядок любой' not in joined and 'порядок любой' not in joined.lower()
@@ -115,25 +114,27 @@ check('Порядок любой' not in joined and 'порядок любой' 
       f'без «порядок любой»: {joined!r}')
 check('Hakumo · модерация' not in joined,
       f'без футера: {joined!r}')
-# Баннер на /modpanel выключен — на телефоне съедает экран
-check(not any(type(k).__name__ == 'MediaGallery'
-              for child in view.children
-              for k in list(getattr(child, 'children', []) or [])),
-      'без MediaGallery в /modpanel')
+# Баннер по HTTPS в MediaGallery (не attachment — иначе пропадает)
+has_gallery = any(
+    type(k).__name__ == 'MediaGallery'
+    for child in view.children
+    for k in list(getattr(child, 'children', []) or []))
+check(has_gallery or bool(getattr(view, '_banner_name', None)),
+      'MediaGallery или HTTPS banner в шапке')
 view.selected_uid = '424242424242424242'
 view._rebuild(None)
 st_joined = _collect_texts(view)
 check('<@424242424242424242>' in st_joined and 'Участник:' not in st_joined,
       f'после выбора краткий статус: {st_joined!r}')
-check(not (view._banner_name or ''),
-      f'banner filename пуст: {view._banner_name!r}')
+check(bool(view._banner_name) and str(view._banner_name).startswith('http'),
+      f'banner HTTPS: {view._banner_name!r}')
 g = type('G', (), {'name': 'HAKUMO'})()
 check(view._footer_text(g) == '',
       f"footer выключен: {view._footer_text(g)!r}")
 g2 = type('G', (), {'name': 'My Server'})()
 check(view._footer_text(g2) == '',
       f"footer other выключен: {view._footer_text(g2)!r}")
-check(view._banner_file is None, 'banner file не прикладывается')
+check(view._banner_file is None, 'banner file не прикладывается (HTTPS)')
 
 print('== select refresh: ACK first, no banner re-upload ==')
 import asyncio as _aio
