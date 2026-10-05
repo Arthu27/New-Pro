@@ -497,7 +497,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v19',
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v20',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None),
                  getattr(target, 'id', None))
@@ -599,7 +599,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v19',
+        log.info('modpanel ready msg=%s build=multi-fix-v20',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -3154,7 +3154,7 @@ async def _push_panel_view(panel, interaction=None):
     msg = getattr(panel, '_panel_message', None)
     kw = {'view': panel}  # строго только view — иначе селекты мрут
     errors = []
-    _PUSH_TO = 2.0
+    _PUSH_TO = 2.5
 
     async def _ok(new_msg, *, known_target=False):
         """known_target=True: edit уже ушёл в известное panel-сообщение."""
