@@ -2,14 +2,12 @@
 {% block title %}Каналы{% endblock %}
 {% block heading %}Каналы{% endblock %}
 {% block body %}
-<p class="lead dc-lead">Как в Discord: слева каналы, справа сообщения. Можно читать и писать.</p>
-
 {% if not groups %}
 <section class="panel rise"><div class="empty">Каналы недоступны — бот ещё не в сети</div></section>
 {% else %}
-<div class="dc rise" id="dcApp"
+<div class="dc" id="dcApp"
      data-selected="{{ selected or '' }}"
-     data-can-send="{{ 1 if selected_row and selected_row.group not in ('voice',) else 0 }}">
+     data-can-send="{{ 1 if selected_row and selected_row.group != 'voice' else 0 }}">
   <aside class="dc-side">
     <div class="dc-side__head">
       <label class="dc-find">
@@ -31,11 +29,11 @@
              data-id="{{ r.id }}"
              data-group="{{ r.group }}"
              data-send="{{ 1 if r.group != 'voice' else 0 }}"
+             data-topic="{{ r.topic or '' }}"
              data-name="{{ (r.name ~ ' ' ~ r.cat ~ ' ' ~ r.id ~ ' ' ~ (r.route_label or ''))|lower }}"
              title="#{{ r.name }}{% if r.route_label %} · {{ r.route_label }}{% endif %}">
             <i class="fas {{ r.icon }} dc-ch__ico {% if not r.view %}is-lock{% endif %}" aria-hidden="true"></i>
             <span class="dc-ch__name">{{ r.name }}</span>
-            {% if r.route_label %}<span class="dc-ch__route" title="{{ r.route_label }}">{{ r.route_label }}</span>{% endif %}
             {% if r.group == 'voice' and r.voice_now %}<span class="dc-ch__n">{{ r.voice_now }}</span>{% endif %}
             {% if not r.view %}<i class="fas fa-lock dc-ch__lock" aria-hidden="true"></i>{% endif %}
           </a>
@@ -50,30 +48,23 @@
     <header class="dc-head" id="dcHead">
       {% if selected_row %}
       <div class="dc-head__title">
-        <i class="fas {{ selected_row.icon }}" aria-hidden="true"></i>
+        <i class="fas {{ selected_row.icon }}" id="dcHeadIco" aria-hidden="true"></i>
         <div>
           <strong id="dcName">{% if selected_row.group != 'voice' %}#{% endif %}{{ selected_row.name }}</strong>
-          {% if selected_row.topic %}
-          <span class="dc-head__topic" id="dcTopic">{{ selected_row.topic }}</span>
-          {% else %}
-          <span class="dc-head__topic" id="dcTopic">{% if selected_row.route_label %}{{ selected_row.route_label }}{% elif selected_row.group == 'voice' %}Голосовой канал{% else %}Текстовый канал{% endif %}</span>
-          {% endif %}
+          <span class="dc-head__topic" id="dcTopic">{% if selected_row.topic %}{{ selected_row.topic }}{% elif selected_row.group == 'voice' %}Голосовой канал{% else %}Текстовый канал{% endif %}</span>
         </div>
       </div>
       <div class="dc-head__meta">
-        {% if selected_row.route_label %}<span class="dc-pill">{{ selected_row.route_label }}</span>{% endif %}
-        {% if selected_row.slowmode %}<span class="dc-pill">{{ selected_row.slowmode }}с</span>{% endif %}
-        {% if selected_row.nsfw %}<span class="dc-pill warn">NSFW</span>{% endif %}
         {% if selected_row.jump %}
-        <a class="dc-pill link" href="{{ selected_row.jump }}" target="_blank" rel="noopener" title="Открыть в Discord">
+        <a class="dc-pill link" id="dcJump" href="{{ selected_row.jump }}" target="_blank" rel="noopener" title="Открыть в Discord">
           <i class="fas fa-arrow-up-right-from-square"></i>
         </a>
         {% endif %}
       </div>
       {% else %}
       <div class="dc-head__title">
-        <i class="fas fa-hashtag" aria-hidden="true"></i>
-        <div><strong>Выбери канал</strong><span class="dc-head__topic">Слева список</span></div>
+        <i class="fas fa-hashtag" id="dcHeadIco" aria-hidden="true"></i>
+        <div><strong id="dcName">Выбери канал</strong><span class="dc-head__topic" id="dcTopic">Слева список</span></div>
       </div>
       {% endif %}
     </header>
@@ -85,34 +76,40 @@
     <form class="dc-compose" id="dcCompose" autocomplete="off">
       <div class="dc-compose__box">
         <textarea id="dcInput" rows="1" maxlength="1900"
-          placeholder="{% if selected_row and selected_row.group != 'voice' %}Написать в #{{ selected_row.name }}…{% else %}В этот канал писать нельзя{% endif %}"
+          placeholder="{% if selected_row and selected_row.group != 'voice' %}Сообщение в #{{ selected_row.name }}…{% else %}Выбери текстовый канал{% endif %}"
           {% if not selected_row or selected_row.group == 'voice' %}disabled{% endif %}></textarea>
         <button type="submit" class="dc-send" id="dcSend"
           {% if not selected_row or selected_row.group == 'voice' %}disabled{% endif %}
-          title="Отправить">
+          title="Отправить от бота">
           <i class="fas fa-paper-plane" aria-hidden="true"></i>
         </button>
       </div>
-      <div class="dc-compose__hint">Enter — отправить · Shift+Enter — новая строка · от имени бота</div>
+      <div class="dc-compose__hint">Enter — отправить · Mouse4 — фокус · клик по нику — наказать</div>
     </form>
   </section>
 </div>
+
+{% include '_punish.html' %}
 {% endif %}
 
 <script>
 (function () {
   const app = document.getElementById('dcApp');
   if (!app) return;
+  window.punishNoReload = true;
 
   const feed = document.getElementById('dcFeed');
-  const status = document.getElementById('dcStatus');
   const input = document.getElementById('dcInput');
   const form = document.getElementById('dcCompose');
   const sendBtn = document.getElementById('dcSend');
   const q = document.getElementById('dcq');
+  const list = document.getElementById('dcList');
   let cid = app.dataset.selected || '';
   let loading = false;
-  let lastIds = new Set();
+  let polling = false;
+  let lastId = '';
+  let known = new Set();
+  let abortCtrl = null;
 
   const esc = (s) => String(s || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -120,7 +117,6 @@
 
   function linkify(text) {
     let raw = esc(text);
-    // сначала ссылки (пока эмодзи ещё &lt;:name:id&gt;, без https)
     raw = raw.replace(/(https?:\/\/[^\s<&]+)/g, (u) =>
       `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
     raw = raw.replace(/&lt;(a?):([A-Za-z0-9_]+):(\d+)&gt;/g, (_, a, name, id) => {
@@ -130,10 +126,21 @@
     return raw;
   }
 
+  function nearBottom() {
+    return feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+  }
+
   function renderMsg(m, groupWithPrev) {
-    const ava = m.avatar
-      ? `<img class="dc-msg__ava" src="${esc(m.avatar)}" alt="">`
-      : `<span class="dc-msg__ava dc-msg__ava--fb">${esc((m.author || '?')[0]).toUpperCase()}</span>`;
+    const canPunish = m.author_id && !m.bot && typeof window.openPunish === 'function';
+    const whoData = canPunish
+      ? ` data-uid="${esc(m.author_id)}" data-name="${esc(m.author)}" title="Наказать"`
+      : '';
+    const avaInner = m.avatar
+      ? `<img src="${esc(m.avatar)}" alt="">`
+      : `<span class="dc-msg__ava--fb">${esc((m.author || '?')[0]).toUpperCase()}</span>`;
+    const ava = canPunish
+      ? `<button type="button" class="dc-msg__ava dc-msg__who"${whoData}>${avaInner}</button>`
+      : `<span class="dc-msg__ava">${avaInner}</span>`;
     const atts = (m.attachments || []).map(a => {
       if (a.image) {
         return `<a class="dc-att dc-att--img" href="${esc(a.url)}" target="_blank" rel="noopener">
@@ -144,72 +151,113 @@
     }).join('');
     const body = linkify(m.content || '') || (atts ? '' : '<span class="dim">пусто</span>');
     const bot = m.bot ? '<span class="dc-bot">BOT</span>' : '';
+    const nameHtml = canPunish
+      ? `<button type="button" class="dc-msg__nick dc-msg__who"${whoData}>${esc(m.author)}</button>`
+      : `<strong>${esc(m.author)}</strong>`;
     if (groupWithPrev) {
       return `<article class="dc-msg is-cont" data-id="${esc(m.id)}" data-aid="${esc(m.author_id)}">
         <div class="dc-msg__gutter"><time>${esc((m.when || '').slice(-5))}</time></div>
-        <div class="dc-msg__body">
-          <div class="dc-msg__text">${body}</div>${atts}
-        </div>
+        <div class="dc-msg__body"><div class="dc-msg__text">${body}</div>${atts}</div>
       </article>`;
     }
     return `<article class="dc-msg" data-id="${esc(m.id)}" data-aid="${esc(m.author_id)}">
       ${ava}
       <div class="dc-msg__body">
-        <div class="dc-msg__meta">
-          <strong>${esc(m.author)}</strong>${bot}
-          <time>${esc(m.when)}</time>
-        </div>
+        <div class="dc-msg__meta">${nameHtml}${bot}<time>${esc(m.when)}</time></div>
         <div class="dc-msg__text">${body}</div>${atts}
       </div>
     </article>`;
   }
 
-  function paint(items) {
-    lastIds = new Set((items || []).map(m => String(m.id)));
+  function appendItems(items, {reset} = {}) {
+    if (reset) {
+      known = new Set();
+      lastId = '';
+      feed.innerHTML = '';
+    }
     if (!items || !items.length) {
-      feed.innerHTML = '<div class="dc-feed__empty"><i class="fas fa-comment-dots"></i><p>Пока тихо — напиши первое сообщение</p></div>';
+      if (reset || !feed.querySelector('.dc-msg')) {
+        feed.innerHTML = '<div class="dc-feed__empty"><i class="fas fa-comment-dots"></i><p>Пока тихо — напиши первое</p></div>';
+      }
       return;
     }
+    const empty = feed.querySelector('.dc-feed__empty, .dc-feed__status');
+    if (empty) empty.remove();
+    const stick = reset || nearBottom();
     let html = '';
     let prevAid = '';
     let prevWhen = '';
-    items.forEach((m, i) => {
-      const same = i > 0 && String(m.author_id) === prevAid && m.when === prevWhen;
+    const last = feed.querySelector('.dc-msg:last-child');
+    if (last && !reset) {
+      prevAid = last.dataset.aid || '';
+      const t = last.querySelector('time');
+      prevWhen = t ? t.textContent : '';
+    }
+    items.forEach((m) => {
+      const id = String(m.id);
+      if (known.has(id)) return;
+      known.add(id);
+      const same = prevAid && String(m.author_id) === prevAid && m.when === prevWhen;
       html += renderMsg(m, same);
       prevAid = String(m.author_id || '');
       prevWhen = m.when || '';
+      lastId = id;
     });
-    feed.innerHTML = html;
-    feed.scrollTop = feed.scrollHeight;
+    if (html) {
+      feed.insertAdjacentHTML('beforeend', html);
+      if (stick) feed.scrollTop = feed.scrollHeight;
+    }
   }
 
   function setStatus(text, isErr) {
     feed.innerHTML = `<div class="dc-feed__status${isErr ? ' is-err' : ''}">${esc(text)}</div>`;
   }
 
-  async function loadMessages() {
+  async function loadMessages({soft} = {}) {
     if (!cid) { setStatus('Выбери канал слева'); return; }
-    const ch = document.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
+    const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
     if (ch && ch.dataset.group === 'voice') {
-      setStatus('Голосовой канал — сообщений нет. Выбери текстовый.');
+      setStatus('Голосовой канал — выбери текстовый, чтобы писать.');
       return;
     }
+    if (abortCtrl) abortCtrl.abort();
+    abortCtrl = new AbortController();
     loading = true;
-    setStatus('Загрузка сообщений…');
+    if (!soft) setStatus('Загрузка…');
     try {
-      const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/messages?limit=50');
+      const r = await fetch(
+        '/api/channels/' + encodeURIComponent(cid) + '/messages?limit=50',
+        { signal: abortCtrl.signal }
+      );
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'ошибка');
-      paint(j.items || []);
+      appendItems(j.items || [], { reset: true });
       if (j.topic) {
         const t = document.getElementById('dcTopic');
-        if (t && j.topic) t.textContent = j.topic;
+        if (t) t.textContent = j.topic;
       }
     } catch (e) {
+      if (e.name === 'AbortError') return;
       setStatus(String(e.message || e), true);
     } finally {
       loading = false;
     }
+  }
+
+  async function liveTick() {
+    if (document.hidden || loading || polling || !cid || !lastId) return;
+    const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
+    if (ch && ch.dataset.group === 'voice') return;
+    polling = true;
+    try {
+      const r = await fetch(
+        '/api/channels/' + encodeURIComponent(cid)
+          + '/messages?limit=30&after=' + encodeURIComponent(lastId)
+      );
+      const j = await r.json();
+      if (j.ok && j.items && j.items.length) appendItems(j.items);
+    } catch (_) { /* soft */ }
+    finally { polling = false; }
   }
 
   function autoSize() {
@@ -218,43 +266,63 @@
     input.style.height = Math.min(140, Math.max(44, input.scrollHeight)) + 'px';
   }
 
+  function selectChannel(a, {push} = {}) {
+    if (!a) return;
+    list.querySelectorAll('.dc-ch.on').forEach(x => x.classList.remove('on'));
+    a.classList.add('on');
+    a.scrollIntoView({ block: 'nearest' });
+    cid = a.dataset.id;
+    app.dataset.selected = cid;
+    const isVoice = a.dataset.group === 'voice';
+    const canSend = !isVoice && a.dataset.send === '1';
+    app.dataset.canSend = canSend ? '1' : '0';
+    input.disabled = !canSend;
+    sendBtn.disabled = !canSend;
+    const name = (a.querySelector('.dc-ch__name') || {}).textContent || '';
+    const nm = document.getElementById('dcName');
+    const tp = document.getElementById('dcTopic');
+    if (nm) nm.textContent = (isVoice ? '' : '#') + name;
+    if (tp) tp.textContent = a.dataset.topic || (isVoice ? 'Голосовой канал' : 'Текстовый канал');
+    input.placeholder = canSend ? `Сообщение в #${name}…` : 'Выбери текстовый канал';
+    const jump = document.getElementById('dcJump');
+    if (jump) jump.href = 'https://discord.com/channels/@me/' + cid;
+    history.replaceState(null, '', '/channels?c=' + encodeURIComponent(cid));
+    known = new Set();
+    lastId = '';
+    loadMessages();
+    if (canSend) setTimeout(() => input.focus(), 80);
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!cid || sendBtn.disabled) return;
+    if (!cid || sendBtn.disabled || input.disabled) return;
     const content = (input.value || '').trim();
     if (!content) return;
     sendBtn.disabled = true;
+    const pending = content;
+    input.value = '';
+    autoSize();
     try {
       const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content: pending }),
       });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'не отправилось');
-      input.value = '';
-      autoSize();
-      const item = j.item;
-      if (item && !lastIds.has(String(item.id))) {
-        const empty = feed.querySelector('.dc-feed__empty, .dc-feed__status');
-        if (empty) feed.innerHTML = '';
-        const last = feed.querySelector('.dc-msg:last-child');
-        const group = last && last.dataset.aid === String(item.author_id);
-        feed.insertAdjacentHTML('beforeend', renderMsg(item, !!group));
-        lastIds.add(String(item.id));
-        feed.scrollTop = feed.scrollHeight;
-      } else {
-        await loadMessages();
-      }
+      if (j.item) appendItems([j.item]);
+      else await liveTick();
     } catch (err) {
+      input.value = pending;
+      autoSize();
       const hint = form.querySelector('.dc-compose__hint');
       if (hint) {
         hint.classList.add('is-err');
         hint.textContent = String(err.message || err);
         setTimeout(() => {
           hint.classList.remove('is-err');
-          hint.textContent = 'Enter — отправить · Shift+Enter — новая строка · от имени бота';
-        }, 3200);
+          hint.textContent = 'Enter — отправить · Mouse4 — фокус · клик по нику — наказать';
+        }, 3500);
       }
     } finally {
       sendBtn.disabled = app.dataset.canSend !== '1';
@@ -270,69 +338,62 @@
   });
   input.addEventListener('input', autoSize);
 
+  // Mouse4 (browser Back) = radio focus on compose
+  window.addEventListener('mousedown', (e) => {
+    if (e.button !== 3) return;
+    if (!app.contains(e.target) && e.target !== document.documentElement) return;
+    e.preventDefault();
+    if (input.disabled) return;
+    form.classList.add('is-radio');
+    input.focus();
+    setTimeout(() => form.classList.remove('is-radio'), 450);
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 3) e.preventDefault();
+  });
+  window.addEventListener('auxclick', (e) => {
+    if (e.button === 3) e.preventDefault();
+  });
+
   q.addEventListener('input', () => {
     const needle = (q.value || '').trim().toLowerCase();
-    document.querySelectorAll('.dc-ch').forEach(a => {
-      const on = !needle || (a.dataset.name || '').includes(needle);
-      a.hidden = !on;
+    list.querySelectorAll('.dc-ch').forEach(a => {
+      a.hidden = !(!needle || (a.dataset.name || '').includes(needle));
     });
-    document.querySelectorAll('.dc-cat').forEach(cat => {
-      const n = cat.querySelectorAll('.dc-ch:not([hidden])').length;
-      cat.hidden = n === 0;
+    list.querySelectorAll('.dc-cat').forEach(cat => {
+      cat.hidden = cat.querySelectorAll('.dc-ch:not([hidden])').length === 0;
     });
   });
 
-  document.getElementById('dcList').addEventListener('click', (e) => {
+  list.addEventListener('click', (e) => {
     const tog = e.target.closest('.dc-cat__toggle');
-    if (!tog) return;
-    e.preventDefault();
-    const cat = tog.closest('.dc-cat');
-    const open = tog.getAttribute('aria-expanded') !== 'false';
-    tog.setAttribute('aria-expanded', open ? 'false' : 'true');
-    cat.classList.toggle('is-collapsed', open);
-  });
-
-  // SPA-like select without full reload when possible
-  document.getElementById('dcList').addEventListener('click', (e) => {
+    if (tog) {
+      e.preventDefault();
+      const cat = tog.closest('.dc-cat');
+      const open = tog.getAttribute('aria-expanded') !== 'false';
+      tog.setAttribute('aria-expanded', open ? 'false' : 'true');
+      cat.classList.toggle('is-collapsed', open);
+      return;
+    }
     const a = e.target.closest('a.dc-ch');
     if (!a || e.metaKey || e.ctrlKey) return;
     e.preventDefault();
-    document.querySelectorAll('.dc-ch.on').forEach(x => x.classList.remove('on'));
-    a.classList.add('on');
-    cid = a.dataset.id;
-    app.dataset.selected = cid;
-    const isVoice = a.dataset.group === 'voice';
-    const canSend = !isVoice && a.dataset.send === '1';
-    app.dataset.canSend = canSend ? '1' : '0';
-    input.disabled = !canSend;
-    sendBtn.disabled = !canSend;
-    const name = (a.querySelector('.dc-ch__name') || {}).textContent || '';
-    const nm = document.getElementById('dcName');
-    const tp = document.getElementById('dcTopic');
-    if (nm) nm.textContent = (isVoice ? '' : '#') + name;
-    if (tp) tp.textContent = isVoice ? 'Голосовой канал' : 'Текстовый канал';
-    input.placeholder = canSend ? `Написать в #${name}…` : 'В этот канал писать нельзя';
-    history.replaceState(null, '', '/channels?c=' + encodeURIComponent(cid));
-    loadMessages();
+    selectChannel(a);
+  });
+
+  feed.addEventListener('click', (e) => {
+    const who = e.target.closest('.dc-msg__who');
+    if (!who || !window.openPunish) return;
+    e.preventDefault();
+    window.openPunish(who.dataset.uid, who.dataset.name, 'mute');
   });
 
   loadMessages();
   autoSize();
-  // soft poll
-  setInterval(() => {
-    if (document.hidden || loading || !cid) return;
-    const ch = document.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
-    if (ch && ch.dataset.group === 'voice') return;
-    fetch('/api/channels/' + encodeURIComponent(cid) + '/messages?limit=50')
-      .then(r => r.json())
-      .then(j => {
-        if (!j.ok || !j.items) return;
-        const ids = j.items.map(m => String(m.id)).join(',');
-        const cur = [...lastIds].join(',');
-        if (ids !== cur) paint(j.items);
-      })
-      .catch(() => {});
-  }, 12000);
+  setInterval(liveTick, 2500);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) liveTick();
+  });
 })();
 </script>
 {% endblock %}

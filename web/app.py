@@ -2907,11 +2907,12 @@ def staff_page():
 @login_required
 @role_required('mod')
 def channels_page():
-    """Подробная карта каналов: права, лимиты, маршруты бота."""
+    """Discord-чат: лёгкий список каналов без тяжёлых overwrite-проходов."""
     gid = _main_guild()
     rows = []
     bot = bot_instance
     route_by_id = {}
+    route_labels = {}
     try:
         from services import channel_routes as CR
         for key, cid in (CR.KNOWN_CHANNELS or {}).items():
@@ -2934,14 +2935,12 @@ def channels_page():
             if isinstance(s, dict) and s.get('key')
         }
     except Exception:
-        route_labels = {}
+        pass
     try:
         guild = bot.get_guild(int(gid)) if bot and gid else None
     except Exception:
         guild = None
     if guild is not None:
-        everyone = guild.default_role
-
         def _order(c):
             cat = getattr(c, 'category', None)
             cp = getattr(cat, 'position', -1) if cat is not None else -1
@@ -2950,126 +2949,66 @@ def channels_page():
         for ch in sorted(guild.channels, key=_order):
             cls = type(ch).__name__
             if 'Category' in cls:
-                group, kind, icon = 'category', 'категория', 'fa-folder'
-            elif 'Voice' in cls or 'Stage' in cls:
-                group, kind, icon = 'voice', 'голос', 'fa-volume-high'
+                continue
+            if 'Voice' in cls or 'Stage' in cls:
+                group, icon = 'voice', 'fa-volume-high'
             elif 'Forum' in cls:
-                group, kind, icon = 'forum', 'форум', 'fa-comments'
+                group, icon = 'forum', 'fa-comments'
             else:
-                group, kind, icon = 'text', 'текст', 'fa-hashtag'
+                group, icon = 'text', 'fa-hashtag'
             cat = getattr(getattr(ch, 'category', None), 'name', None) or 'Без категории'
-            perms = None
+            view = True
             try:
-                perms = ch.permissions_for(everyone) if everyone else None
+                me = guild.me
+                if me is not None:
+                    view = bool(ch.permissions_for(me).view_channel)
             except Exception:
-                perms = None
-
-            def flag(name, _p=perms):
-                return bool(getattr(_p, name, False)) if _p else False
-
-            # перезаписи ролей (кратко)
-            overs = []
-            try:
-                mapping = getattr(ch, 'overwrites', None) or {}
-                for target, ow in list(mapping.items())[:12]:
-                    tname = getattr(target, 'name', None) or str(
-                        getattr(target, 'id', '?'))
-                    allow, deny = [], []
-                    try:
-                        for perm, val in ow:
-                            if val is True:
-                                allow.append(str(perm))
-                            elif val is False:
-                                deny.append(str(perm))
-                    except Exception:
-                        try:
-                            a, d = ow.pair()
-                            allow = [n for n, v in a if v]
-                            deny = [n for n, v in d if v]
-                        except Exception:
-                            continue
-                    if not allow and not deny:
-                        continue
-                    overs.append({
-                        'name': tname,
-                        'allow': ', '.join(allow[:6]) if allow else '—',
-                        'deny': ', '.join(deny[:6]) if deny else '—',
-                    })
-            except Exception:
-                overs = []
-            overs = overs[:8]
-
-            topic = str(getattr(ch, 'topic', None) or '').strip()
-            slow = int(getattr(ch, 'slowmode_delay', 0) or 0)
-            nsfw = bool(getattr(ch, 'nsfw', False))
-            bitrate = int(getattr(ch, 'bitrate', 0) or 0)
-            ulimit = getattr(ch, 'user_limit', None)
-            try:
-                ulimit = int(ulimit or 0)
-            except Exception:
-                ulimit = 0
+                view = True
             voice_now = 0
-            try:
-                members = getattr(ch, 'members', None)
-                if members is not None:
-                    voice_now = len(list(members))
-            except Exception:
-                voice_now = 0
+            if group == 'voice':
+                try:
+                    members = getattr(ch, 'members', None)
+                    if members is not None:
+                        voice_now = len(list(members))
+                except Exception:
+                    voice_now = 0
             rid = str(ch.id)
             route_key = route_by_id.get(rid) or ''
             route_label = route_labels.get(route_key) or (
                 route_key.replace('_', ' ') if route_key else '')
-
             rows.append({
                 'id': rid,
                 'name': getattr(ch, 'name', '?'),
-                'kind': kind,
                 'group': group,
                 'icon': icon,
                 'cat': cat,
-                'view': flag('view_channel'),
-                'send': flag('send_messages'),
-                'speak': flag('speak'),
-                'connect': flag('connect'),
-                'manage': flag('manage_channels'),
-                'stream': flag('stream'),
-                'topic': topic[:220],
-                'slowmode': slow,
-                'nsfw': nsfw,
-                'bitrate': bitrate // 1000 if bitrate else 0,
-                'user_limit': ulimit,
+                'view': view,
+                'topic': str(getattr(ch, 'topic', None) or '').strip()[:220],
+                'slowmode': int(getattr(ch, 'slowmode_delay', 0) or 0),
+                'nsfw': bool(getattr(ch, 'nsfw', False)),
                 'voice_now': voice_now,
-                'overwrites': overs,
                 'route_key': route_key,
                 'route_label': route_label,
                 'jump': f'https://discord.com/channels/{gid}/{rid}' if gid else '',
             })
-    shown = [r for r in rows if r.get('group') != 'category']
     groups, seen = [], {}
-    for r in shown:
+    for r in rows:
         key = r['cat']
         if key not in seen:
             seen[key] = {'name': key, 'items': []}
             groups.append(seen[key])
         seen[key]['items'].append(r)
-    kpi = {
-        'total': len(shown),
-        'text': sum(1 for r in shown if r['group'] == 'text'),
-        'voice': sum(1 for r in shown if r['group'] == 'voice'),
-        'closed': sum(1 for r in shown if not r['view']),
-        'routes': sum(1 for r in shown if r.get('route_key')),
-    }
     selected = (request.args.get('c') or '').strip()
     if not selected:
-        for r in shown:
+        for r in rows:
             if r.get('group') == 'text':
                 selected = r['id']
                 break
-        if not selected and shown:
-            selected = shown[0]['id']
-    selected_row = next((r for r in shown if r['id'] == selected), None)
+        if not selected and rows:
+            selected = rows[0]['id']
+    selected_row = next((r for r in rows if r['id'] == selected), None)
     return render_template(
-        'channels.html', rows=shown, groups=groups, kpi=kpi,
+        'channels.html', rows=rows, groups=groups,
         selected=selected, selected_row=selected_row,
     )
 
@@ -3130,7 +3069,7 @@ def _serialize_discord_message(msg) -> dict:
 @login_required
 @role_required('mod')
 def api_channel_messages(cid):
-    """Последние сообщения канала — как лента Discord."""
+    """Сообщения канала. ?after=<id> — только новые (live), без полной перерисовки."""
     cid = str(cid or '').strip()
     if not cid.isdigit():
         return jsonify({'ok': False, 'error': 'channel id'}), 400
@@ -3139,22 +3078,38 @@ def api_channel_messages(cid):
     except Exception:
         limit = 40
     limit = max(5, min(limit, 60))
+    after = (request.args.get('after') or '').strip()
+    if after and not after.isdigit():
+        after = ''
     bot = bot_instance
-    gid = _main_guild()
-    if not bot or not gid:
+    if not bot:
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
 
     async def _load():
+        import discord as _d
         ch = bot.get_channel(int(cid))
         if ch is None:
             try:
                 ch = await bot.fetch_channel(int(cid))
             except Exception as ex:
                 raise RuntimeError(f'Канал недоступен: {ex}') from ex
-        # Только текстовые / треды
         if not hasattr(ch, 'history'):
             raise RuntimeError('Здесь нет истории сообщений')
         out = []
+        if after:
+            async for m in ch.history(
+                limit=limit,
+                after=_d.Object(id=int(after)),
+                oldest_first=True,
+            ):
+                out.append(_serialize_discord_message(m))
+            return {
+                'id': str(getattr(ch, 'id', cid)),
+                'name': getattr(ch, 'name', '?'),
+                'topic': str(getattr(ch, 'topic', None) or '')[:220],
+                'items': out,
+                'incremental': True,
+            }
         async for m in ch.history(limit=limit):
             out.append(_serialize_discord_message(m))
         out.reverse()
@@ -3163,10 +3118,11 @@ def api_channel_messages(cid):
             'name': getattr(ch, 'name', '?'),
             'topic': str(getattr(ch, 'topic', None) or '')[:220],
             'items': out,
+            'incremental': False,
         }
 
     try:
-        data = _run_on_bot(_load(), timeout=20)
+        data = _run_on_bot(_load(), timeout=12)
     except Exception as ex:
         return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
     return jsonify({'ok': True, **data})

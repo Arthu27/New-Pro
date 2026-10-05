@@ -158,7 +158,11 @@
       const j = await r.json();
       if (j.ok) {
         msg.textContent = 'Готово · ' + (j.extra || j.reason || j.action);
-        setTimeout(() => location.reload(), 700);
+        if (window.punishNoReload) {
+          setTimeout(() => dlg.close(), 700);
+        } else {
+          setTimeout(() => location.reload(), 700);
+        }
       } else {
         msg.textContent = j.error || 'Ошибка';
       }
