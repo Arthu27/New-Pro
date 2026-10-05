@@ -80,16 +80,17 @@ PAGES_ALL = [
     ('access', '/access', 'Доступ', 'fa-key'),
 ]
 PAGES_MOD = [p for p in PAGES_ALL if p[0] in {
-    'today', 'logs', 'staff', 'users', 'member', 'channels',
+    'today', 'logs', 'staff', 'users', 'member',
     'warns', 'appeals', 'proofs', 'reasons'}]
 PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
-    'bot', 'modules', 'commands', 'anticrash', 'access'}]
+    'channels', 'bot', 'modules', 'commands', 'anticrash', 'access'}]
 
 # Какие ключи страниц видит роль (накопительно по уровню)
 # Admin НЕ видит бот/модули/команды — только owner.
 # Helper видит Правила (не причины наказаний как отдельный список).
+# Каналы (чат/войс панель) — только owner.
 _MOD_PAGES = {
-    'today', 'logs', 'staff', 'users', 'member', 'channels',
+    'today', 'logs', 'staff', 'users', 'member',
     'warns', 'appeals', 'proofs', 'reasons',
 }
 ROLE_PAGE_KEYS = {
@@ -1127,9 +1128,10 @@ def inject_nav():
         'is_owner': role == 'owner',
         'auth_via': session.get('auth_via') or '',
         'mod_nav_keys': {
-            'today', 'logs', 'staff', 'users', 'member', 'channels',
+            'today', 'logs', 'staff', 'users', 'member',
             'warns', 'appeals', 'proofs', 'reasons'},
-        'owner_nav_keys': {'bot', 'modules', 'commands', 'anticrash', 'access'},
+        'owner_nav_keys': {
+            'channels', 'bot', 'modules', 'commands', 'anticrash', 'access'},
         'viewer_limits': limits,
         'punish_actions': _viewer_punish_actions(role) if role else [],
         'punish_labels': PUNISH_LABELS,
@@ -2905,7 +2907,7 @@ def staff_page():
 
 @app.route('/channels')
 @login_required
-@role_required('mod')
+@role_required('owner')
 def channels_page():
     """Discord-чат: лёгкий список каналов без тяжёлых overwrite-проходов."""
     gid = _main_guild()
@@ -3067,7 +3069,7 @@ def _serialize_discord_message(msg) -> dict:
 
 @app.get('/api/channels/<cid>/messages')
 @login_required
-@role_required('mod')
+@role_required('owner')
 def api_channel_messages(cid):
     """Сообщения канала. ?after=<id> — только новые (live), без полной перерисовки."""
     cid = str(cid or '').strip()
@@ -3130,9 +3132,9 @@ def api_channel_messages(cid):
 
 @app.post('/api/channels/<cid>/messages')
 @login_required
-@role_required('mod')
+@role_required('owner')
 def api_channel_send(cid):
-    """Отправить сообщение в канал от имени бота."""
+    """Отправить сообщение в канал от имени бота — без подписи в чат."""
     cid = str(cid or '').strip()
     if not cid.isdigit():
         return jsonify({'ok': False, 'error': 'channel id'}), 400
@@ -3140,15 +3142,8 @@ def api_channel_send(cid):
     content = str(data.get('content') or request.form.get('content') or '').strip()
     if not content:
         return jsonify({'ok': False, 'error': 'Пустое сообщение'}), 400
-    if len(content) > 1900:
-        content = content[:1900]
-    who = (session.get('discord_display')
-           or session.get('username')
-           or 'panel')
-    # Подпись, чтобы было видно, кто писал из панели
-    stamped = f'{content}\n-# панель · {who}'
-    if len(stamped) > 2000:
-        stamped = content[:2000]
+    if len(content) > 2000:
+        content = content[:2000]
     bot = bot_instance
     if not bot:
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
@@ -3159,7 +3154,7 @@ def api_channel_send(cid):
             ch = await bot.fetch_channel(int(cid))
         if not hasattr(ch, 'send'):
             raise RuntimeError('В этот канал писать нельзя')
-        msg = await ch.send(stamped)
+        msg = await ch.send(content)
         return _serialize_discord_message(msg)
 
     try:
@@ -3167,6 +3162,134 @@ def api_channel_send(cid):
     except Exception as ex:
         return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
     return jsonify({'ok': True, 'item': item})
+
+
+@app.get('/api/channels/<cid>/voice')
+@login_required
+@role_required('owner')
+def api_channel_voice(cid):
+    """Кто в войсе + где сейчас бот."""
+    cid = str(cid or '').strip()
+    if not cid.isdigit():
+        return jsonify({'ok': False, 'error': 'channel id'}), 400
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _load():
+        import discord as _d
+        ch = bot.get_channel(int(cid))
+        if ch is None:
+            ch = await bot.fetch_channel(int(cid))
+        if not isinstance(ch, _d.VoiceChannel):
+            raise RuntimeError('Это не голосовой канал')
+        people = []
+        for m in list(getattr(ch, 'members', None) or []):
+            try:
+                ava = str(m.display_avatar.url)
+            except Exception:
+                ava = ''
+            people.append({
+                'id': str(m.id),
+                'name': (
+                    getattr(m, 'display_name', None)
+                    or getattr(m, 'global_name', None)
+                    or getattr(m, 'name', None)
+                    or '?'
+                ),
+                'avatar': ava,
+                'bot': bool(getattr(m, 'bot', False)),
+                'mute': bool(getattr(getattr(m, 'voice', None), 'mute', False)
+                             or getattr(getattr(m, 'voice', None), 'self_mute', False)),
+                'deaf': bool(getattr(getattr(m, 'voice', None), 'deaf', False)
+                             or getattr(getattr(m, 'voice', None), 'self_deaf', False)),
+            })
+        bot_here = False
+        bot_ch = ''
+        try:
+            vc = _d.utils.get(bot.voice_clients, guild=ch.guild)
+            if vc and getattr(vc, 'channel', None) is not None:
+                bot_ch = str(vc.channel.id)
+                bot_here = bot_ch == str(ch.id)
+        except Exception:
+            pass
+        gid = str(getattr(ch.guild, 'id', '') or '')
+        return {
+            'id': str(ch.id),
+            'name': getattr(ch, 'name', '?'),
+            'people': people,
+            'bot_here': bot_here,
+            'bot_channel': bot_ch,
+            'jump': f'https://discord.com/channels/{gid}/{ch.id}' if gid else '',
+            'user_limit': int(getattr(ch, 'user_limit', 0) or 0),
+        }
+
+    try:
+        data = _run_on_bot(_load(), timeout=10)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, **data})
+
+
+@app.post('/api/channels/<cid>/voice')
+@login_required
+@role_required('owner')
+def api_channel_voice_act(cid):
+    """Бот заходит / выходит / переезжает в голосовой канал."""
+    cid = str(cid or '').strip()
+    if not cid.isdigit():
+        return jsonify({'ok': False, 'error': 'channel id'}), 400
+    data = request.get_json(silent=True) or {}
+    action = str(data.get('action') or 'join').strip().lower()
+    if action not in ('join', 'leave'):
+        return jsonify({'ok': False, 'error': 'action'}), 400
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _act():
+        import discord as _d
+        if action == 'leave':
+            left = False
+            for vc in list(bot.voice_clients or []):
+                try:
+                    if getattr(getattr(vc, 'channel', None), 'id', None) == int(cid):
+                        await vc.disconnect(force=True)
+                        left = True
+                except Exception:
+                    continue
+            if not left:
+                # выйти из любого войса гильдии этого канала
+                ch0 = bot.get_channel(int(cid))
+                gid = getattr(getattr(ch0, 'guild', None), 'id', None)
+                for vc in list(bot.voice_clients or []):
+                    try:
+                        if gid and getattr(vc.guild, 'id', None) == gid:
+                            await vc.disconnect(force=True)
+                            left = True
+                    except Exception:
+                        continue
+            return {'action': 'leave', 'ok': True, 'left': left}
+
+        ch = bot.get_channel(int(cid))
+        if ch is None:
+            ch = await bot.fetch_channel(int(cid))
+        if not isinstance(ch, _d.VoiceChannel):
+            raise RuntimeError('Это не голосовой канал')
+        vc = _d.utils.get(bot.voice_clients, guild=ch.guild)
+        if vc and getattr(vc, 'channel', None) is not None:
+            if getattr(vc.channel, 'id', None) == ch.id:
+                return {'action': 'join', 'ok': True, 'already': True}
+            await vc.move_to(ch)
+            return {'action': 'join', 'ok': True, 'moved': True}
+        await ch.connect(self_deaf=False, self_mute=False, reconnect=True)
+        return {'action': 'join', 'ok': True}
+
+    try:
+        data = _run_on_bot(_act(), timeout=20)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    return jsonify({'ok': True, **data})
 
 
 @app.get('/api/login/accounts')

@@ -30,6 +30,7 @@
              data-group="{{ r.group }}"
              data-send="{{ 1 if r.group != 'voice' else 0 }}"
              data-topic="{{ r.topic or '' }}"
+             data-jump="{{ r.jump or '' }}"
              data-name="{{ (r.name ~ ' ' ~ r.cat ~ ' ' ~ r.id ~ ' ' ~ (r.route_label or ''))|lower }}"
              title="#{{ r.name }}{% if r.route_label %} · {{ r.route_label }}{% endif %}">
             <i class="fas {{ r.icon }} dc-ch__ico {% if not r.view %}is-lock{% endif %}" aria-hidden="true"></i>
@@ -72,10 +73,28 @@
     <div class="dc-feed" id="dcFeed" role="log" aria-live="polite">
       <div class="dc-feed__status" id="dcStatus">Загрузка…</div>
     </div>
+    <div class="dc-voice" id="dcVoice" hidden>
+      <div class="dc-voice__hero">
+        <div>
+          <div class="dc-voice__kicker">Голосовой канал</div>
+          <h2 id="dcVoiceTitle">Войс</h2>
+          <p class="dc-voice__hint">Микрофон — только в Discord-клиенте. Здесь: кто в войсе, бот зайти/выйти, наказание по клику.</p>
+        </div>
+        <div class="dc-voice__acts">
+          <a class="dc-voice__btn primary" id="dcVoiceOpen" href="#" target="_blank" rel="noopener">
+            <i class="fas fa-arrow-up-right-from-square"></i> Открыть в Discord
+          </a>
+          <button type="button" class="dc-voice__btn" id="dcVoiceJoin"><i class="fas fa-headset"></i> Бот зайти</button>
+          <button type="button" class="dc-voice__btn ghost" id="dcVoiceLeave"><i class="fas fa-right-from-bracket"></i> Бот выйти</button>
+        </div>
+      </div>
+      <div class="dc-voice__status" id="dcVoiceStatus"></div>
+      <div class="dc-voice__people" id="dcVoicePeople"></div>
+    </div>
 
     <form class="dc-compose" id="dcCompose" autocomplete="off">
       <div class="dc-compose__box">
-        <textarea id="dcInput" rows="1" maxlength="1900"
+        <textarea id="dcInput" rows="1" maxlength="2000"
           placeholder="{% if selected_row and selected_row.group != 'voice' %}Сообщение в #{{ selected_row.name }}…{% else %}Выбери текстовый канал{% endif %}"
           {% if not selected_row or selected_row.group == 'voice' %}disabled{% endif %}></textarea>
         <button type="submit" class="dc-send" id="dcSend"
@@ -209,17 +228,86 @@
     }
   }
 
+  const voiceBox = document.getElementById('dcVoice');
+  const voicePeople = document.getElementById('dcVoicePeople');
+  const voiceStatus = document.getElementById('dcVoiceStatus');
+  const voiceOpen = document.getElementById('dcVoiceOpen');
+  const voiceJoin = document.getElementById('dcVoiceJoin');
+  const voiceLeave = document.getElementById('dcVoiceLeave');
+  const voiceTitle = document.getElementById('dcVoiceTitle');
+  let mode = 'text';
+
+  function setMode(next) {
+    mode = next;
+    const isVoice = next === 'voice';
+    feed.hidden = isVoice;
+    if (voiceBox) voiceBox.hidden = !isVoice;
+    form.style.display = isVoice ? 'none' : '';
+  }
+
   function setStatus(text, isErr) {
     feed.innerHTML = `<div class="dc-feed__status${isErr ? ' is-err' : ''}">${esc(text)}</div>`;
   }
 
-  async function loadMessages({soft} = {}) {
-    if (!cid) { setStatus('Выбери канал слева'); return; }
-    const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
-    if (ch && ch.dataset.group === 'voice') {
-      setStatus('Голосовой канал — выбери текстовый, чтобы писать.');
+  function paintVoice(data) {
+    if (!voiceBox) return;
+    if (voiceTitle) voiceTitle.textContent = data.name || 'Войс';
+    if (voiceOpen && data.jump) voiceOpen.href = data.jump;
+    if (voiceStatus) {
+      voiceStatus.innerHTML = data.bot_here
+        ? '<span class="ok">Бот в этом войсе</span>'
+        : (data.bot_channel
+          ? `<span class="dim">Бот в другом войсе</span>`
+          : '<span class="dim">Бот не в войсе</span>');
+    }
+    const people = data.people || [];
+    if (!people.length) {
+      voicePeople.innerHTML = '<div class="dc-feed__empty"><i class="fas fa-microphone-slash"></i><p>Пусто — зайди сам через Discord</p></div>';
       return;
     }
+    voicePeople.innerHTML = people.map(p => {
+      const can = p.id && !p.bot && typeof window.openPunish === 'function';
+      const flags = [
+        p.mute ? '<i class="fas fa-microphone-slash" title="мут"></i>' : '',
+        p.deaf ? '<i class="fas fa-headphones" title="деаф"></i>' : '',
+        p.bot ? '<span class="dc-bot">BOT</span>' : '',
+      ].filter(Boolean).join(' ');
+      const ava = p.avatar
+        ? `<img src="${esc(p.avatar)}" alt="">`
+        : `<span class="dc-msg__ava--fb">${esc((p.name || '?')[0]).toUpperCase()}</span>`;
+      return `<button type="button" class="dc-voice__person ${can ? 'dc-msg__who' : ''}"
+        ${can ? `data-uid="${esc(p.id)}" data-name="${esc(p.name)}"` : 'disabled'}
+        title="${can ? 'Наказать' : ''}">
+        <span class="dc-msg__ava">${ava}</span>
+        <span class="dc-voice__person-meta"><b>${esc(p.name)}</b>${flags}</span>
+      </button>`;
+    }).join('');
+  }
+
+  async function loadVoice() {
+    if (!cid) return;
+    setMode('voice');
+    if (voicePeople) voicePeople.innerHTML = '<div class="dc-feed__status">Загрузка…</div>';
+    try {
+      const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/voice');
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'ошибка');
+      paintVoice(j);
+    } catch (e) {
+      if (voicePeople) {
+        voicePeople.innerHTML = `<div class="dc-feed__status is-err">${esc(e.message || e)}</div>`;
+      }
+    }
+  }
+
+  async function loadMessages({soft} = {}) {
+    if (!cid) { setMode('text'); setStatus('Выбери канал слева'); return; }
+    const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
+    if (ch && ch.dataset.group === 'voice') {
+      await loadVoice();
+      return;
+    }
+    setMode('text');
     if (abortCtrl) abortCtrl.abort();
     abortCtrl = new AbortController();
     loading = true;
@@ -245,9 +333,13 @@
   }
 
   async function liveTick() {
-    if (document.hidden || loading || polling || !cid || !lastId) return;
+    if (document.hidden || loading || polling || !cid) return;
     const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
-    if (ch && ch.dataset.group === 'voice') return;
+    if (ch && ch.dataset.group === 'voice') {
+      if (mode === 'voice') loadVoice();
+      return;
+    }
+    if (!lastId) return;
     polling = true;
     try {
       const r = await fetch(
@@ -266,7 +358,7 @@
     input.style.height = Math.min(140, Math.max(44, input.scrollHeight)) + 'px';
   }
 
-  function selectChannel(a, {push} = {}) {
+  function selectChannel(a) {
     if (!a) return;
     list.querySelectorAll('.dc-ch.on').forEach(x => x.classList.remove('on'));
     a.classList.add('on');
@@ -281,16 +373,38 @@
     const name = (a.querySelector('.dc-ch__name') || {}).textContent || '';
     const nm = document.getElementById('dcName');
     const tp = document.getElementById('dcTopic');
+    const ico = document.getElementById('dcHeadIco');
     if (nm) nm.textContent = (isVoice ? '' : '#') + name;
     if (tp) tp.textContent = a.dataset.topic || (isVoice ? 'Голосовой канал' : 'Текстовый канал');
+    if (ico) ico.className = 'fas ' + (isVoice ? 'fa-volume-high' : 'fa-hashtag');
     input.placeholder = canSend ? `Сообщение в #${name}…` : 'Выбери текстовый канал';
     const jump = document.getElementById('dcJump');
-    if (jump) jump.href = 'https://discord.com/channels/@me/' + cid;
+    if (jump) jump.href = a.dataset.jump || ('https://discord.com/channels/@me/' + cid);
     history.replaceState(null, '', '/channels?c=' + encodeURIComponent(cid));
     known = new Set();
     lastId = '';
     loadMessages();
     if (canSend) setTimeout(() => input.focus(), 80);
+  }
+
+  async function voiceAct(action) {
+    if (!cid) return;
+    const btn = action === 'join' ? voiceJoin : voiceLeave;
+    if (btn) btn.disabled = true;
+    try {
+      const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'ошибка');
+      await loadVoice();
+    } catch (e) {
+      if (voiceStatus) voiceStatus.innerHTML = `<span class="is-err">${esc(e.message || e)}</span>`;
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   form.addEventListener('submit', async (e) => {
@@ -387,6 +501,14 @@
     e.preventDefault();
     window.openPunish(who.dataset.uid, who.dataset.name, 'mute');
   });
+  if (voicePeople) voicePeople.addEventListener('click', (e) => {
+    const who = e.target.closest('.dc-msg__who');
+    if (!who || !window.openPunish) return;
+    e.preventDefault();
+    window.openPunish(who.dataset.uid, who.dataset.name, 'mute');
+  });
+  if (voiceJoin) voiceJoin.addEventListener('click', () => voiceAct('join'));
+  if (voiceLeave) voiceLeave.addEventListener('click', () => voiceAct('leave'));
 
   loadMessages();
   autoSize();
