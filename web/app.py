@@ -753,23 +753,30 @@ def _discord_client_creds():
 
 
 def _discord_oauth_ready():
-    """Полный OAuth (нужен Client Secret из Discord Developer Portal)."""
-    cid, secret = _discord_client_creds()
-    return bool(cid and secret)
+    """OAuth через Discord: достаточно Client ID (PKCE, без Client Secret)."""
+    cid, _secret = _discord_client_creds()
+    return bool(cid)
 
 
 def _discord_login_ready():
-    """Discord-вход доступен почти всегда: OAuth или выбор staff + ссылка в ЛС.
-
-    Кнопку не прячем из‑за гонки bot_instance — иначе на welcome
-    «Войти через Discord» пропадает (белый/пустой экран без CTA).
-    """
+    """Кнопка Discord: OAuth (PKCE) или запасной вход ссылкой в ЛС."""
     if _discord_oauth_ready():
         return True
-    # TOKEN есть → бот сможет слать ЛС после ready; кнопку показываем сразу.
     if (os.environ.get('TOKEN') or '').strip():
         return True
     return bool(bot_instance and getattr(bot_instance, 'loop', None))
+
+
+def _pkce_pair():
+    """PKCE verifier + S256 challenge — вход без Client Secret."""
+    import base64
+    import hashlib
+    verifier = secrets.token_urlsafe(64)
+    if len(verifier) > 128:
+        verifier = verifier[:128]
+    digest = hashlib.sha256(verifier.encode('ascii')).digest()
+    challenge = base64.urlsafe_b64encode(digest).rstrip(b'=').decode('ascii')
+    return verifier, challenge
 
 
 def _panel_public_base():
@@ -2345,13 +2352,15 @@ def _safe_next(raw: str | None) -> str:
 def login():
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    mode = (request.values.get('mode') or 'discord').strip().lower()
-    # Старый PIN убран. mode=discord — вход ссылкой в ЛС (без OAuth secret).
-    if mode in ('people', 'pin'):
+    mode = (request.values.get('mode') or 'password').strip().lower()
+    # Discord OAuth — отдельный /auth/discord. Старые people/pin/discord → пароль.
+    if mode in ('people', 'pin', 'discord'):
+        if mode == 'discord' and request.method == 'GET':
+            return redirect(url_for('auth_discord', next=request.args.get('next')))
         return redirect(url_for(
-            'login', mode='discord', next=request.args.get('next')))
-    if mode not in ('password', 'register', 'forgot', 'discord'):
-        mode = 'discord'
+            'login', mode='password', next=request.args.get('next')))
+    if mode not in ('password', 'register', 'forgot'):
+        mode = 'password'
     err = (request.args.get('error') or '').strip()
     ok = (request.args.get('ok') or '').strip()
     nxt = _safe_next(request.args.get('next') or request.form.get('next'))
@@ -2361,21 +2370,9 @@ def login():
 
     if request.method == 'POST':
         mode = (request.form.get('mode') or mode).strip().lower()
-        if mode in ('people', 'pin'):
-            return redirect(url_for('login', mode='discord', next=nxt))
-        if mode == 'discord':
-            selected_id = (request.form.get('uid') or '').strip()
-            people_q = (request.form.get('pq') or '').strip()
-            if not selected_id:
-                err = 'Выбери себя в списке'
-            else:
-                msg, e2 = _issue_login_ticket_to_dm(selected_id)
-                if e2:
-                    err = e2
-                else:
-                    return redirect(url_for(
-                        'login', mode='discord', next=nxt, ok=msg))
-        elif mode == 'password':
+        if mode in ('people', 'pin', 'discord'):
+            return redirect(url_for('auth_discord', next=nxt))
+        if mode == 'password':
             got = _auth_user(request.form.get('username', ''), request.form.get('password', ''))
             if got:
                 _start_session(username=got[0], role=got[1])
@@ -2464,10 +2461,7 @@ def login():
                 ok = 'Пароль обновлён — теперь войди'
                 mode = 'password'
 
-    people, people_err = (
-        _list_login_people(people_q) if mode == 'discord' else ([], ''))
-    if mode == 'discord' and people_err and not err:
-        err = people_err
+    people, people_err = [], ''
 
     reg_person = None
     if mode == 'register' and reg_id:
@@ -2525,39 +2519,48 @@ def login():
 
 @app.route('/auth/discord')
 def auth_discord():
-    """Вход через Discord: OAuth (если secret есть) или ссылка в ЛС."""
+    """Вход через Discord OAuth (экран Discord → доступ к аккаунту).
+
+    PKCE: Client Secret не нужен. Пароль / создание — отдельные вкладки.
+    """
     if session.get('logged_in'):
         return redirect(url_for('today'))
     nxt = _safe_next(request.args.get('next'))
-    cid, secret = _discord_client_creds()
-    if cid and secret:
-        state = secrets.token_urlsafe(24)
-        session['oauth_state'] = state
-        session['oauth_next'] = nxt
-        params = {
-            'client_id': cid,
-            'response_type': 'code',
-            'scope': 'identify',
-            'redirect_uri': _discord_redirect_uri(),
-            'state': state,
-        }
-        url = ('https://discord.com/api/oauth2/authorize?'
-               + urllib.parse.urlencode(params))
-        return redirect(url)
-    # Без Client Secret — выбор себя + ссылка в Discord ЛС
-    return redirect(url_for('login', mode='discord', next=nxt))
+    cid, _secret = _discord_client_creds()
+    if not cid:
+        return redirect(url_for(
+            'login', mode='password', next=nxt,
+            error='Нет DISCORD_CLIENT_ID — не могу открыть Discord-вход'))
+    state = secrets.token_urlsafe(24)
+    verifier, challenge = _pkce_pair()
+    session['oauth_state'] = state
+    session['oauth_next'] = nxt
+    session['oauth_pkce_verifier'] = verifier
+    params = {
+        'client_id': cid,
+        'response_type': 'code',
+        'scope': 'identify',
+        'redirect_uri': _discord_redirect_uri(),
+        'state': state,
+        'code_challenge': challenge,
+        'code_challenge_method': 'S256',
+        'prompt': 'consent',
+    }
+    url = ('https://discord.com/api/oauth2/authorize?'
+           + urllib.parse.urlencode(params))
+    return redirect(url)
 
 
 @app.route('/auth/ticket/<token>')
 def auth_ticket(token):
-    """Одноразовая ссылка из Discord ЛС → сессия панели."""
+    """Запасной путь: одноразовая ссылка из Discord ЛС → сессия панели."""
     if session.get('logged_in'):
         return redirect(url_for('today'))
     got = _consume_login_ticket(token)
     if not got:
         return redirect(url_for(
-            'login', mode='discord',
-            error='Ссылка устарела или уже использована — запроси новую'))
+            'login', mode='password',
+            error='Ссылка устарела или уже использована — войди через Discord'))
     _start_session(username=got['username'], role=got['role'])
     session['discord_id'] = got['discord_id']
     session['discord_handle'] = got.get('handle') or ''
@@ -2570,45 +2573,66 @@ def auth_ticket(token):
 
 @app.route('/auth/discord/callback')
 def auth_discord_callback():
-    err = (request.args.get('error_description') or request.args.get('error') or '').strip()
+    """Callback OAuth: Discord отдал code → access_token → роль staff."""
+    err = (request.args.get('error_description')
+           or request.args.get('error') or '').strip()
     if err:
-        return redirect(url_for('login', error=f'Discord: {err}'))
+        return redirect(url_for('login', mode='password',
+                                error=f'Discord: {err}'))
     state = request.args.get('state') or ''
     if not state or state != session.get('oauth_state'):
-        return redirect(url_for('login', error='Сессия входа устарела — попробуй ещё раз'))
+        return redirect(url_for(
+            'login', mode='password',
+            error='Сессия входа устарела — нажми «Войти через Discord» ещё раз'))
     code = request.args.get('code') or ''
     if not code:
-        return redirect(url_for('login', error='Discord не вернул код'))
+        return redirect(url_for('login', mode='password',
+                                error='Discord не вернул код'))
     cid, secret = _discord_client_creds()
+    verifier = (session.get('oauth_pkce_verifier') or '').strip()
+    form = {
+        'client_id': cid,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': _discord_redirect_uri(),
+    }
+    if verifier:
+        form['code_verifier'] = verifier
+    if secret:
+        form['client_secret'] = secret
     st, token_data = _http_json(
         'POST',
         'https://discord.com/api/oauth2/token',
-        form={
-            'client_id': cid,
-            'client_secret': secret,
-            'grant_type': 'authorization_code',
-            'code': code,
-            'redirect_uri': _discord_redirect_uri(),
-        },
+        form=form,
     )
     if st != 200 or not token_data.get('access_token'):
-        msg = token_data.get('error_description') or token_data.get('error') or f'HTTP {st}'
-        return redirect(url_for('login', error=f'Токен Discord: {msg}'))
+        msg = (token_data.get('error_description')
+               or token_data.get('error') or f'HTTP {st}')
+        # Частая причина: Redirect URI не добавлен в Portal → OAuth2
+        hint = ''
+        if 'redirect' in str(msg).lower() or st in (400, 401):
+            hint = (f' · Проверь Redirect URI в Discord Portal: '
+                    f'{_discord_redirect_uri()}')
+        return redirect(url_for(
+            'login', mode='password',
+            error=f'Tокен Discord: {msg}{hint}'))
     st, user = _http_json(
         'GET',
         f'{DISCORD_API}/users/@me',
         headers={'Authorization': f"Bearer {token_data['access_token']}"},
     )
     if st != 200 or not user.get('id'):
-        return redirect(url_for('login', error='Не удалось получить профиль Discord'))
+        return redirect(url_for(
+            'login', mode='password',
+            error='Не удалось получить профиль Discord'))
     roles, role_err = _fetch_guild_member_roles(str(user['id']))
     if role_err:
-        return redirect(url_for('login', error=role_err))
+        return redirect(url_for('login', mode='password', error=role_err))
     panel_role = resolve_discord_panel_role(user['id'], roles)
     if not panel_role:
         handle = _discord_handle(user)
         return redirect(url_for(
-            'login',
+            'login', mode='password',
             error=(
                 f'@{handle}: нет staff-роли на сервере '
                 f'(Helper / Mod / Curator / Assistent / Admin / Staff Admin)'
@@ -2616,6 +2640,7 @@ def auth_discord_callback():
         ))
     nxt = session.pop('oauth_next', None) or url_for('today')
     session.pop('oauth_state', None)
+    session.pop('oauth_pkce_verifier', None)
     _start_session(
         username=_discord_display(user),
         role=panel_role,

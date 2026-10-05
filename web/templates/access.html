@@ -8,13 +8,11 @@
 <section class="panel rise" style="margin-bottom:12px">
   <h2>Discord OAuth</h2>
   <p class="dim" style="margin:0;padding:14px 18px">
+    Вход через Discord (OAuth + PKCE) — без PIN и без пароля.
     Client ID: <code class="mono">1421418700451348520</code>.
-    Redirect URI в Portal → OAuth2: <code class="mono">https://hakumods.xyz/auth/discord/callback</code>.
-    {% if oauth_ready is defined and oauth_ready %}
-    OAuth secret есть — вход одним кликом через Discord.
-    {% else %}
-    Secret ещё нет — вход: выбери себя → ссылка в ЛС. Чтобы OAuth: Portal → OAuth2 → Client Secret → в .env <code class="mono">DISCORD_CLIENT_SECRET=…</code>
-    {% endif %}
+    В Discord Developer Portal → OAuth2 → Redirects добавь ровно:
+    <code class="mono">https://hakumods.xyz/auth/discord/callback</code>.
+    Пароль / создать аккаунт остаются отдельными вкладками.
   </p>
 </section>
 
