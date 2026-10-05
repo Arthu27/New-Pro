@@ -166,14 +166,14 @@ def rules_embed(title: str, items: list, footer: str = ''):
 # ── МОДЕРАЦИЯ /modpanel ──────────────────────────────────────────────
 
 def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
-    """Короткая подпись — на телефоне длинный статус съедает экран."""
+    """Подпись под баннером в шапке панели."""
     if selected_uid and pending_label:
-        return f'<@{selected_uid}> · {pending_label}'
+        return f'участник <@{selected_uid}> · «{pending_label}»'
     if selected_uid:
-        return f'<@{selected_uid}>'
+        return f'участник <@{selected_uid}>'
     if pending_label:
-        return f'Участник · {pending_label}'
-    return 'Участник и действие'
+        return f'Выберите участника · «{pending_label}»'
+    return 'Выберите участника и действие ниже.'
 
 
 # Чёрный акцент Container (рамка/полоса слева) — селекты Discord
@@ -218,35 +218,42 @@ def build_modpanel_items(*, banner_filename: str, status: str,
                          footer: str = '',
                          target_select=None, action_select=None,
                          show_banner: bool = None):
-    """Компактный /modpanel: один блок — удобно на телефоне.
+    """/modpanel: шапка + баннер (HTTPS) + два блока селектов.
 
-    Баннер по умолчанию выключен (на мобиле съедает весь экран).
-    Оба селекта в одном Container — меньше скролла.
+    Баннер по умолчанию ВКЛ через SHOW_MENU_BANNER. Передавай HTTPS URL
+    в banner_filename — attachment:// на телефоне отваливается.
     """
     if not V2_AVAILABLE:
         return None
-    # Баннер на /modpanel отключён: на телефоне огромный PNG + 3 карточки —
-    # селекты уезжают вниз. Остальные меню (staff/mafia) по SHOW_MENU_BANNER.
     if show_banner is None:
-        show_banner = False
-    children = [
-        _ui.TextDisplay('**Модерация**'),
+        show_banner = SHOW_MENU_BANNER
+    items = []
+    head = [
+        _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if status:
-        children.append(_ui.TextDisplay(f'-# {status}'))
     if show_banner and banner_filename:
-        children.append(_gallery(banner_filename))
+        gal = _gallery(banner_filename)
+        if gal is not None:
+            head.append(gal)
+    if status:
+        head.append(_ui.TextDisplay(status))
+    items.append(black_container(*head))
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
-        children.append(_ui.TextDisplay('Участник'))
-        children.append(row)
+        items.append(black_container(
+            _ui.TextDisplay('**Участник**'),
+            row,
+        ))
     if action_select is not None:
         row = _ui.ActionRow()
         row.add_item(action_select)
-        children.append(_ui.TextDisplay('Действие'))
-        children.append(row)
-    return [black_container(*children)]
+        items.append(black_container(
+            _ui.TextDisplay('**Действие**'),
+            row,
+        ))
+    return items
 
 
 def build_modpanel_container(*, banner_filename: str, status: str,
@@ -257,14 +264,17 @@ def build_modpanel_container(*, banner_filename: str, status: str,
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
-        show_banner = False
+        show_banner = SHOW_MENU_BANNER
     children = [
-        _ui.TextDisplay('**Модерация**'),
+        _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
+        _ui.Separator(spacing=SeparatorSpacing.large),
     ]
-    if status:
-        children.append(_ui.TextDisplay(f'-# {status}'))
     if show_banner and banner_filename:
-        children.append(_gallery(banner_filename))
+        gal = _gallery(banner_filename)
+        if gal is not None:
+            children.append(gal)
+    if status:
+        children.append(_ui.TextDisplay(status))
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)

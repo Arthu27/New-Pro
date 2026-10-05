@@ -291,9 +291,9 @@ check((getattr(view.action_select, 'placeholder', None) or '') == '',
       f'action select пустой: {getattr(view.action_select, "placeholder", None)!r}')
 check('Hakumo · модерация' not in joined,
       'без футера')
-check('Модерация' in joined,
-      'компактный заголовок Модерация')
-check(len(view.children) == 1, 'один блок (мобильный UX)')
+check('Модерация' in joined or 'Панель модерации' in joined,
+      'заголовок панели')
+check(len(view.children) >= 1, 'есть блоки панели')
 check(view.has_components_v2(), 'Components V2 LayoutView')
 check('в любом порядке' not in joined.lower(),
       'без «в любом порядке»')
