@@ -80,21 +80,24 @@ PAGES_ALL = [
     ('access', '/access', 'Доступ', 'fa-key'),
 ]
 PAGES_MOD = [p for p in PAGES_ALL if p[0] in {
-    'today', 'logs', 'staff', 'users', 'member',
+    'today', 'logs', 'staff', 'users', 'member', 'channels',
     'warns', 'appeals', 'proofs', 'reasons'}]
 PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
-    'channels', 'bot', 'modules', 'commands', 'anticrash', 'access'}]
+    'bot', 'modules', 'commands', 'anticrash', 'access'}]
 
 # Какие ключи страниц видит роль (накопительно по уровню)
 # Admin НЕ видит бот/модули/команды — только owner.
 # Helper видит Правила (не причины наказаний как отдельный список).
-# Каналы (чат/войс панель) — только owner.
+# Каналы: смотреть могут все staff; писать/управлять ботом — только owner.
 _MOD_PAGES = {
-    'today', 'logs', 'staff', 'users', 'member',
+    'today', 'logs', 'staff', 'users', 'member', 'channels',
     'warns', 'appeals', 'proofs', 'reasons',
 }
 ROLE_PAGE_KEYS = {
-    'helper': {'today', 'logs', 'staff', 'users', 'member', 'warns', 'reasons'},
+    'helper': {
+        'today', 'logs', 'staff', 'users', 'member', 'channels',
+        'warns', 'reasons',
+    },
     'mod': set(_MOD_PAGES),
     'creative': set(_MOD_PAGES),
     'broadcaster': set(_MOD_PAGES),
@@ -1128,10 +1131,10 @@ def inject_nav():
         'is_owner': role == 'owner',
         'auth_via': session.get('auth_via') or '',
         'mod_nav_keys': {
-            'today', 'logs', 'staff', 'users', 'member',
+            'today', 'logs', 'staff', 'users', 'member', 'channels',
             'warns', 'appeals', 'proofs', 'reasons'},
         'owner_nav_keys': {
-            'channels', 'bot', 'modules', 'commands', 'anticrash', 'access'},
+            'bot', 'modules', 'commands', 'anticrash', 'access'},
         'viewer_limits': limits,
         'punish_actions': _viewer_punish_actions(role) if role else [],
         'punish_labels': PUNISH_LABELS,
@@ -2907,9 +2910,9 @@ def staff_page():
 
 @app.route('/channels')
 @login_required
-@role_required('owner')
+@role_required('helper')
 def channels_page():
-    """Discord-чат: лёгкий список каналов без тяжёлых overwrite-проходов."""
+    """Discord-чат: смотреть — staff; писать/войс-бот — только owner."""
     gid = _main_guild()
     rows = []
     bot = bot_instance
@@ -3009,9 +3012,16 @@ def channels_page():
         if not selected and rows:
             selected = rows[0]['id']
     selected_row = next((r for r in rows if r['id'] == selected), None)
+    can_control = (session.get('role') or '') == 'owner'
+    limits = _viewer_limits_card()
+    if limits and not limits.get('exempt'):
+        limits = dict(limits)
+        limits['show'] = bool(limits.get('slots'))
     return render_template(
         'channels.html', rows=rows, groups=groups,
         selected=selected, selected_row=selected_row,
+        can_control_bot=can_control,
+        limits=limits,
     )
 
 
@@ -3069,7 +3079,7 @@ def _serialize_discord_message(msg) -> dict:
 
 @app.get('/api/channels/<cid>/messages')
 @login_required
-@role_required('owner')
+@role_required('helper')
 def api_channel_messages(cid):
     """Сообщения канала. ?after=<id> — только новые (live), без полной перерисовки."""
     cid = str(cid or '').strip()
@@ -3166,7 +3176,7 @@ def api_channel_send(cid):
 
 @app.get('/api/channels/<cid>/voice')
 @login_required
-@role_required('owner')
+@role_required('helper')
 def api_channel_voice(cid):
     """Кто в войсе + где сейчас бот."""
     cid = str(cid or '').strip()
@@ -3292,21 +3302,21 @@ def api_channel_voice_act(cid):
             if getattr(vc.channel, 'id', None) == ch.id:
                 try:
                     await ch.guild.change_voice_state(
-                        channel=ch, self_mute=False, self_deaf=False)
+                        channel=ch, self_mute=True, self_deaf=True)
                 except Exception:
                     pass
                 return {'action': 'join', 'ok': True, 'already': True}
             await vc.move_to(ch)
             try:
                 await ch.guild.change_voice_state(
-                    channel=ch, self_mute=False, self_deaf=False)
+                    channel=ch, self_mute=True, self_deaf=True)
             except Exception:
                 pass
             return {'action': 'join', 'ok': True, 'moved': True}
-        await ch.connect(self_deaf=False, self_mute=False, reconnect=True)
+        await ch.connect(self_deaf=True, self_mute=True, reconnect=True)
         try:
             await ch.guild.change_voice_state(
-                channel=ch, self_mute=False, self_deaf=False)
+                channel=ch, self_mute=True, self_deaf=True)
         except Exception:
             pass
         return {'action': 'join', 'ok': True}

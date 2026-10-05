@@ -945,11 +945,10 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
     except Exception:
         return False, 'бот не ready'
 
-    # Panel hold на этот канал → микрофон/наушники вкл. Иначе stay глухой.
-    from services.voice_stay_health import panel_voice_hold_cid
-    _open_mic = int(panel_voice_hold_cid() or 0) == int(cid)
-    _self_mute = not _open_mic
-    _self_deaf = not _open_mic
+    # Stay и panel — всегда глухой (mute+deaf). Open mic выключен.
+    _self_mute = True
+    _self_deaf = True
+    _open_mic = False
 
     if not force:
         ok, vc, reason = really_in_channel(bot, cid)

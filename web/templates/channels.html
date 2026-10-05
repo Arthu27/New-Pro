@@ -5,9 +5,11 @@
 {% if not groups %}
 <section class="panel rise"><div class="empty">Каналы недоступны — бот ещё не в сети</div></section>
 {% else %}
+{% if limits %}{% include '_limits.html' %}{% endif %}
 <div class="dc" id="dcApp"
      data-selected="{{ selected or '' }}"
-     data-can-send="{{ 1 if selected_row and selected_row.group != 'voice' else 0 }}">
+     data-can-control="{{ 1 if can_control_bot else 0 }}"
+     data-can-send="{{ 1 if can_control_bot and selected_row and selected_row.group != 'voice' else 0 }}">
   <aside class="dc-side">
     <div class="dc-side__head">
       <label class="dc-find">
@@ -78,14 +80,16 @@
         <div>
           <div class="dc-voice__kicker">Голосовой канал</div>
           <h2 id="dcVoiceTitle">Войс</h2>
-          <p class="dc-voice__hint">Голосом говоришь ты в Discord-клиенте («Открыть в Discord»). Из панели бот пишет текстом в чат-каналы. Бот зайти — без мута, stay не выкинет.</p>
+          <p class="dc-voice__hint">Голосом — в Discord-клиенте. Бот всегда с выключенным микрофоном и наушниками. Управлять ботом (зайти/выйти) может только owner.</p>
         </div>
         <div class="dc-voice__acts">
           <a class="dc-voice__btn primary" id="dcVoiceOpen" href="#" target="_blank" rel="noopener">
             <i class="fas fa-arrow-up-right-from-square"></i> Открыть в Discord
           </a>
+          {% if can_control_bot %}
           <button type="button" class="dc-voice__btn" id="dcVoiceJoin"><i class="fas fa-headset"></i> Бот зайти</button>
           <button type="button" class="dc-voice__btn ghost" id="dcVoiceLeave"><i class="fas fa-right-from-bracket"></i> Бот выйти</button>
+          {% endif %}
         </div>
       </div>
       <div class="dc-voice__status" id="dcVoiceStatus"></div>
@@ -95,15 +99,15 @@
     <form class="dc-compose" id="dcCompose" autocomplete="off">
       <div class="dc-compose__box">
         <textarea id="dcInput" rows="1" maxlength="2000"
-          placeholder="{% if selected_row and selected_row.group != 'voice' %}Сообщение в #{{ selected_row.name }}…{% else %}Выбери текстовый канал{% endif %}"
-          {% if not selected_row or selected_row.group == 'voice' %}disabled{% endif %}></textarea>
+          placeholder="{% if not can_control_bot %}Только owner может писать от бота{% elif selected_row and selected_row.group != 'voice' %}Сообщение в #{{ selected_row.name }}…{% else %}Выбери текстовый канал{% endif %}"
+          {% if not can_control_bot or not selected_row or selected_row.group == 'voice' %}disabled{% endif %}></textarea>
         <button type="submit" class="dc-send" id="dcSend"
-          {% if not selected_row or selected_row.group == 'voice' %}disabled{% endif %}
-          title="Отправить от бота">
+          {% if not can_control_bot or not selected_row or selected_row.group == 'voice' %}disabled{% endif %}
+          title="{% if can_control_bot %}Отправить от бота{% else %}Только owner{% endif %}">
           <i class="fas fa-paper-plane" aria-hidden="true"></i>
         </button>
       </div>
-      <div class="dc-compose__hint">Enter — отправить · Mouse4 — фокус · клик по нику — наказать</div>
+      <div class="dc-compose__hint">{% if can_control_bot %}Enter — отправить · Mouse4 — фокус · клик по нику — наказать{% else %}Просмотр · писать от бота может только owner · клик по нику — наказать{% endif %}</div>
     </form>
   </section>
 </div>
@@ -124,6 +128,7 @@
   const q = document.getElementById('dcq');
   const list = document.getElementById('dcList');
   let cid = app.dataset.selected || '';
+  const canControl = app.dataset.canControl === '1';
   let loading = false;
   let polling = false;
   let lastId = '';
@@ -368,7 +373,7 @@
     cid = a.dataset.id;
     app.dataset.selected = cid;
     const isVoice = a.dataset.group === 'voice';
-    const canSend = !isVoice && a.dataset.send === '1';
+    const canSend = canControl && !isVoice && a.dataset.send === '1';
     app.dataset.canSend = canSend ? '1' : '0';
     input.disabled = !canSend;
     sendBtn.disabled = !canSend;
@@ -379,7 +384,9 @@
     if (nm) nm.textContent = (isVoice ? '' : '#') + name;
     if (tp) tp.textContent = a.dataset.topic || (isVoice ? 'Голосовой канал' : 'Текстовый канал');
     if (ico) ico.className = 'fas ' + (isVoice ? 'fa-volume-high' : 'fa-hashtag');
-    input.placeholder = canSend ? `Сообщение в #${name}…` : 'Выбери текстовый канал';
+    input.placeholder = canSend
+      ? `Сообщение в #${name}…`
+      : (canControl ? 'Выбери текстовый канал' : 'Только owner может писать от бота');
     const jump = document.getElementById('dcJump');
     if (jump) jump.href = a.dataset.jump || ('https://discord.com/channels/@me/' + cid);
     history.replaceState(null, '', '/channels?c=' + encodeURIComponent(cid));
@@ -390,7 +397,7 @@
   }
 
   async function voiceAct(action) {
-    if (!cid) return;
+    if (!canControl || !cid) return;
     const btn = action === 'join' ? voiceJoin : voiceLeave;
     if (btn) btn.disabled = true;
     try {
@@ -411,7 +418,7 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!cid || sendBtn.disabled || input.disabled) return;
+    if (!canControl || !cid || sendBtn.disabled || input.disabled) return;
     const content = (input.value || '').trim();
     if (!content) return;
     sendBtn.disabled = true;
@@ -454,9 +461,10 @@
   });
   input.addEventListener('input', autoSize);
 
-  // Mouse4 (browser Back) = radio focus on compose
+  // Mouse4 (browser Back) = radio focus on compose — только owner
   window.addEventListener('mousedown', (e) => {
     if (e.button !== 3) return;
+    if (!canControl) return;
     if (!app.contains(e.target) && e.target !== document.documentElement) return;
     e.preventDefault();
     if (input.disabled) return;
