@@ -119,7 +119,11 @@
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   function linkify(text) {
-    const raw = esc(text);
+    let raw = esc(text);
+    raw = raw.replace(/&lt;(a?):([A-Za-z0-9_]+):(\d+)&gt;/g, (_, a, name, id) => {
+      const ext = a === 'a' ? 'gif' : 'png';
+      return `<img class="dc-emoji" src="https://cdn.discordapp.com/emojis/${id}.${ext}?size=48" alt=":${esc(name)}:" title=":${esc(name)}:" loading="lazy">`;
+    });
     return raw.replace(/(https?:\/\/[^\s<]+)/g, (u) =>
       `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
   }
