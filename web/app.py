@@ -2860,40 +2860,26 @@ def today():
 @login_required
 @role_required('helper')
 def logs():
+    """Журнал: наказания + входы/выходы. Staff-лента и топы — на /staff."""
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
     rows = _filter_cases_for_viewer(_collect_cases(gid))[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
-    feed = _staff_feed(gid, 60)
     hidden = _viewer_hidden_kinds()
-    if hidden:
-        feed = [
-            f for f in feed
-            if not any(h in str(f.get('action') or '').lower()
-                       for h in ('бан', 'ban', 'кик', 'kick'))
-        ]
     book = _namebook(gid)
     joins = [e for e in _audit_events(gid, 200)
              if e.get('action') in ('Участник вошёл', 'Участник вышел')][:40]
     for e in joins:
         e['when'] = _fmt(e.get('timestamp'))
         uid = str(e.get('user_id') or '')
-        # Сначала книга имён по id — str(member) / username#0 часто кривые.
         e['user_name'] = _best_name(uid, e.get('user_name'), book)
         e['user_id'] = uid
         e['left'] = 'вышел' in str(e.get('action') or '')
         e['avatar'] = str(e.get('avatar') or '').strip()
-    people, _err = _list_login_people()
     return render_template(
-        'logs.html', rows=rows, feed=feed, joins=joins,
+        'logs.html', rows=rows, joins=joins,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(hidden),
-        activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
-        span=span,
-        role_filter=(request.args.get('role') or '').strip() or None,
     )
 
 

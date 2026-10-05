@@ -2,17 +2,14 @@
 {% block title %}Журнал{% endblock %}
 {% block heading %}Журнал{% endblock %}
 {% block body %}
-<p class="lead">Имена, не номера. Клик по человеку открывает профиль и историю.{% if hidden_kinds %} Скрыто: <b>{{ hidden_kinds|join(', ') }}</b>.{% endif %}</p>
+<p class="lead">Наказания и входы/выходы. Активность команды — в разделе Staff.{% if hidden_kinds %} Скрыто: <b>{{ hidden_kinds|join(', ') }}</b>.{% endif %}</p>
 
 {% include '_limits.html' %}
 
-<section class="split-3 rise" style="margin-bottom:12px">
+<section class="split-2 rise" style="margin-bottom:12px">
   <article class="stat-card"><div class="stat-k">Наказания</div><div class="stat-v">{{ rows|length }}</div></article>
-  <article class="stat-card"><div class="stat-k">Staff лента</div><div class="stat-v">{{ feed|length }}</div></article>
   <article class="stat-card"><div class="stat-k">Входы / выходы</div><div class="stat-v">{{ joins|length }}</div></article>
 </section>
-
-{% include '_activity.html' %}
 
 <section class="panel rise">
   <h2>Наказания <span class="count">{{ rows|length }}</span></h2>
@@ -39,27 +36,6 @@
         {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
       </div>
     </article>
-    {% endfor %}
-  </div>
-  {% endif %}
-</section>
-
-<section class="panel rise" style="margin-top:12px">
-  <h2>Staff · действия <span class="count">{{ feed|length }}</span></h2>
-  {% if not feed %}<div class="empty">Пока тихо</div>
-  {% else %}
-  <div class="feed">
-    {% for f in feed %}
-    <div class="feed-row">
-      <div class="feed-act">{{ f.action }}</div>
-      <div class="feed-body">
-        {% if f.who_id %}<a href="{{ url_for('member', q=f.who_id) }}"><strong>{{ f.who }}</strong></a>{% else %}<strong>{{ f.who }}</strong>{% endif %}
-        <span class="dim">→</span>
-        {% if f.target_id %}<a href="{{ url_for('member', q=f.target_id) }}">{{ f.target }}</a>{% else %}{{ f.target }}{% endif %}
-        {% if f.detail %}<div class="dim">{{ f.detail }}</div>{% endif %}
-      </div>
-      <div class="feed-when">{{ f.when }}</div>
-    </div>
     {% endfor %}
   </div>
   {% endif %}

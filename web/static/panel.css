@@ -262,6 +262,7 @@ a:hover { color: var(--ink); }
 .stat-k { color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .stat-v { font-family: var(--display); font-size: 2rem; letter-spacing: -.04em; margin-top: 8px; line-height: 1; }
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.split-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .split-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 
 /* ── Table ─────────────────────────────────────────────── */
@@ -1549,7 +1550,7 @@ h2 .seg { margin-left: auto; font-weight: 800; }
 }
 
 @media (max-width: 1080px) {
-  .split-3 { grid-template-columns: 1fr; }
+  .split-2, .split-3 { grid-template-columns: 1fr; }
   .feed-row { grid-template-columns: 1fr; }
   .mp-grid, .split, .form-row { grid-template-columns: 1fr; }
 }
