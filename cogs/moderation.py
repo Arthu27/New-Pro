@@ -3907,8 +3907,7 @@ class ModPanelView(discord.ui.LayoutView):
         except Exception:
             self._actor_label = ''
         self._rebuild(None)
-        # Баннер отключён на /modpanel (мобильный UX) — не греем PIL.
-        self._banner_name = None
+        # Баннер уже в LayoutView как HTTPS MediaGallery — attachment не нужен.
         self._banner_file = None
         self._banner_bytes = None
 
