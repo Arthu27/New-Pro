@@ -17,6 +17,19 @@ log = get_logger("voice_tracker")
 import json
 import os
 
+# Активный VoiceTracker — чтобы voice_all() видел live-сессии и буфер
+# до flush (панель Staff не ждёт выхода из войса).
+_ACTIVE_TRACKER = None
+
+
+def _set_active_tracker(cog):
+    global _ACTIVE_TRACKER
+    _ACTIVE_TRACKER = cog
+
+
+def _get_active_tracker():
+    return _ACTIVE_TRACKER
+
 
 # ═════════════════════ единый доступ к голосовой статистике ═════════════════
 # Данные живут в SQLite — GuildData("voice_stats") {uid: {name, avatar,
@@ -113,13 +126,56 @@ def _migrate_legacy_json(guild_id):
 
 def voice_all(guild_id):
     # Все записи голосовой статистики сервера: {uid: {...}} (с автомиграцией).
+    # Плюс live: буфер tick'ов и текущие сессии (ещё не в SQLite) —
+    # иначе панель видит войс только после выхода из канала.
     _migrate_legacy_json(guild_id)
     try:
         data = _voice_db().get_all(int(guild_id)) or {}
     except Exception as _ex:
         log.debug('voice_all(): подавлено: %s', _ex)
         return {}
-    return {str(uid): rec for uid, rec in data.items() if isinstance(rec, dict)}
+    out = {str(uid): dict(rec) for uid, rec in data.items() if isinstance(rec, dict)}
+    try:
+        out = _merge_live_voice(int(guild_id), out)
+    except Exception as _ex:
+        log.debug('voice_all live merge: %s', _ex)
+    return out
+
+
+def _merge_live_voice(guild_id: int, data: dict) -> dict:
+    """Наложить pending + незакрытый кусок текущей сессии поверх SQLite."""
+    tr = _get_active_tracker()
+    if tr is None:
+        return data
+    today = str(date.today())
+    now = time.time()
+    out = dict(data)
+
+    pending = getattr(tr, '_pending', None) or {}
+    for (gid, uid), rec in list(pending.items()):
+        if int(gid) != int(guild_id) or not isinstance(rec, dict):
+            continue
+        out[str(uid)] = dict(rec)
+
+    sessions = (getattr(tr, 'sessions', None) or {}).get(int(guild_id), {}) or {}
+    for uid, join_time in list(sessions.items()):
+        try:
+            elapsed = int(now - float(join_time))
+        except (TypeError, ValueError):
+            continue
+        if elapsed <= 0:
+            continue
+        uid = str(uid)
+        base = out.get(uid) or {
+            'name': uid, 'avatar': '', 'total_seconds': 0, 'daily': {},
+        }
+        rec = dict(base)
+        rec['total_seconds'] = int(rec.get('total_seconds', 0) or 0) + elapsed
+        daily = dict(rec.get('daily') or {})
+        daily[today] = int(daily.get(today, 0) or 0) + elapsed
+        rec['daily'] = daily
+        out[uid] = rec
+    return out
 
 
 def voice_seconds(guild_id, user_id):
@@ -219,17 +275,27 @@ class VoiceTracker(commands.Cog):
         # получает «не ответило вовремя». Сливаем пачкой раз в N сек.
         # ключ (gid, uid) -> rec dict
         self._pending: dict = {}
+        _set_active_tracker(self)
         self._flush_voice_stats.start()
+        self._tick_live_sessions.start()
 
     def cog_unload(self):
+        try:
+            self._tick_live_sessions.cancel()
+        except Exception as _ex:
+            log.debug('voice_tracker: except tick cancel: %s', _ex)
         try:
             self._flush_voice_stats.cancel()
         except Exception as _ex:
             log.debug('voice_tracker: except@227: %s', _ex)
         try:
+            # добить активные сессии в буфер, потом flush
+            self._credit_live_sessions()
             self._flush_sync()
         except Exception as _ex:
             log.debug('voice_tracker: except@231: %s', _ex)
+        if _get_active_tracker() is self:
+            _set_active_tracker(None)
 
     # ── Запись статистики ────────────────────────────────────────────────
 
@@ -280,7 +346,7 @@ class VoiceTracker(commands.Cog):
             except Exception as ex:
                 log.debug('voice_stats flush %s/%s: %s', gid, uid, ex)
 
-    @tasks.loop(seconds=10.0)
+    @tasks.loop(seconds=3.0)
     async def _flush_voice_stats(self):
         if not self._pending:
             return
@@ -292,6 +358,50 @@ class VoiceTracker(commands.Cog):
 
     @_flush_voice_stats.before_loop
     async def _flush_voice_stats_wait(self):
+        await self.bot.wait_until_ready()
+
+    def _credit_live_sessions(self):
+        """Списать накопленное время у тех, кто СЕЙЧАС в войсе.
+
+        Раньше писали только на leave — панель Staff видела войс с задержкой
+        до выхода. Теперь режем сессию на куски: записали elapsed → сдвинули
+        join_time, leave допишет остаток.
+        """
+        now = time.time()
+        for gid, users in list(self.sessions.items()):
+            if not users:
+                continue
+            guild = self.bot.get_guild(int(gid)) if self.bot else None
+            for uid, join_time in list(users.items()):
+                try:
+                    elapsed = int(now - float(join_time))
+                except (TypeError, ValueError):
+                    continue
+                if elapsed < 3:
+                    continue
+                member = None
+                if guild is not None:
+                    try:
+                        member = guild.get_member(int(uid))
+                    except (TypeError, ValueError):
+                        member = None
+                if member is None:
+                    # мембера нет в кэше — всё равно двигаем якорь, чтобы
+                    # не накрутить гигантский кусок после реконнекта
+                    self.sessions[gid][uid] = now
+                    continue
+                self._record(int(gid), member, elapsed)
+                self.sessions[gid][uid] = now
+
+    @tasks.loop(seconds=15.0)
+    async def _tick_live_sessions(self):
+        try:
+            self._credit_live_sessions()
+        except Exception as ex:
+            log.debug('voice live tick: %s', ex)
+
+    @_tick_live_sessions.before_loop
+    async def _tick_live_sessions_wait(self):
         await self.bot.wait_until_ready()
 
     # ── События ──────────────────────────────────────────────────────────
