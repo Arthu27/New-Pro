@@ -285,6 +285,15 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = _secret_key()
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+# Запоминать вход (Discord/PIN/пароль) — не просить логин после закрытия вкладки.
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+_panel_https = (
+    (os.environ.get('PANEL_URL') or os.environ.get('PANEL_PUBLIC_URL') or '')
+    .strip().lower().startswith('https://')
+)
+app.config['SESSION_COOKIE_SECURE'] = _panel_https
+app.config['SESSION_COOKIE_NAME'] = 'hakumo_session'
 
 
 @app.after_request
@@ -1095,6 +1104,7 @@ def _fetch_guild_member_roles(discord_user_id: str):
 def _start_session(*, username, role, discord_user=None, role_ids=None,
                    role_label=None):
     session.clear()
+    session.permanent = True  # cookie ~30 дней, не сбрасывать при закрытии браузера
     session['logged_in'] = True
     session['username'] = username
     session['role'] = role
