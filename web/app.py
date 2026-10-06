@@ -15,7 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from functools import wraps
 from pathlib import Path
 
@@ -1343,17 +1343,37 @@ def _best_name(primary, secondary, book, fallback='—'):
     return fallback
 
 
-def _mod_activity(gid, days):
-    """Сколько мер каждый модератор выдал за N дней."""
+def _mod_activity(gid, days, *, since=None, date_keys=None):
+    """Сколько мер каждый модератор выдал за N дней / явные даты."""
     from datetime import timedelta
-    edge = datetime.now(timezone.utc) - timedelta(days=max(1, int(days)))
+    key_set = set(str(k) for k in date_keys) if date_keys else None
+    if since is not None:
+        edge = since
+    elif key_set:
+        try:
+            first = min(date.fromisoformat(k) for k in key_set)
+            edge = datetime(first.year, first.month, first.day,
+                            tzinfo=timezone.utc)
+        except Exception:
+            edge = datetime.now(timezone.utc) - timedelta(days=max(1, int(days)))
+    else:
+        edge = datetime.now(timezone.utc) - timedelta(days=max(1, int(days)))
     hidden = _viewer_hidden_kinds()
     stats = {}
     for r in _collect_cases(gid):
         if r.get('kind') in hidden:
             continue
         ts = _parse_ts(r.get('timestamp'))
-        if ts is None or ts < edge:
+        if ts is None:
+            continue
+        if key_set is not None:
+            try:
+                local_d = ts.astimezone().date().isoformat()
+            except Exception:
+                continue
+            if local_d not in key_set:
+                continue
+        elif ts < edge:
             continue
         key = str(r.get('mod_id') or r.get('mod_name') or '—')
         st = stats.setdefault(key, {
@@ -1374,25 +1394,31 @@ def _mod_activity(gid, days):
     return sorted(stats.values(), key=lambda x: (-x['total'], str(x['name']).lower()))
 
 
-def _staff_board_for(gid, days, people):
-    """Красивая сводка: меры + чат + войс, топы по ролям."""
+def _staff_board_for(gid, days, people, *, span='week'):
+    """Сводка: меры + чат + войс, ветки Админ/Мастер/Ассистент/Хелпер…"""
     try:
-        from services.staff_board import build_staff_board
+        from services.staff_board import build_staff_board, resolve_span
+        meta = resolve_span(span)
         return build_staff_board(
             guild_id=gid,
-            days=days,
+            days=meta['days'],
+            span=meta['span'],
+            date_keys=meta['keys'],
             people=people or [],
-            mod_rows=_mod_activity(gid, days),
+            mod_rows=_mod_activity(gid, meta['days'], date_keys=meta['keys']),
             hidden_kinds=_viewer_hidden_kinds(),
+            include_zero=True,
         )
     except Exception:
         return {
             'summary': {
                 'staff_active': 0, 'staff_total': len(people or []),
                 'actions': 0, 'messages': 0, 'voice_s': 0, 'voice': '0 мин',
-                'days': days,
+                'days': days, 'span': span, 'span_label': span,
+                'range_label': '',
             },
             'rows': [], 'podium': [], 'role_tops': [], 'by_role': {},
+            'by_branch': {}, 'branches': [],
         }
 
 
@@ -1672,6 +1698,64 @@ def _purge_pending_pins(data: dict | None = None) -> dict:
     return data
 
 
+LOGIN_TICKETS_FILE = DATA / 'panel_login_tickets.json'
+
+
+def _load_login_tickets():
+    raw = _read_json(LOGIN_TICKETS_FILE, {})
+    return raw if isinstance(raw, dict) else {}
+
+
+def _save_login_tickets(data: dict):
+    DATA.mkdir(parents=True, exist_ok=True)
+    LOGIN_TICKETS_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    try:
+        os.chmod(LOGIN_TICKETS_FILE, 0o600)
+    except OSError:
+        pass
+
+
+def _purge_login_tickets(data: dict | None = None) -> dict:
+    data = dict(data if data is not None else _load_login_tickets())
+    now = datetime.now(timezone.utc).timestamp()
+    changed = False
+    for key in list(data.keys()):
+        row = data.get(key) or {}
+        try:
+            exp = float(row.get('exp') or 0)
+        except Exception:
+            exp = 0
+        if exp and exp < now:
+            data.pop(key, None)
+            changed = True
+    if changed:
+        _save_login_tickets(data)
+    return data
+
+
+def _consume_login_ticket(token: str):
+    token = (token or '').strip()
+    if not token or len(token) < 16:
+        return None
+    data = _purge_login_tickets()
+    row = data.pop(token, None)
+    if not row:
+        return None
+    _save_login_tickets(data)
+    role = str(row.get('role') or 'mod')
+    if role not in LEVEL:
+        role = 'mod'
+    return {
+        'username': row.get('name') or row.get('handle') or str(row.get('uid') or ''),
+        'role': role,
+        'discord_id': str(row.get('uid') or ''),
+        'handle': row.get('handle') or '',
+        'avatar': row.get('avatar') or '',
+        'role_ids': list(row.get('role_ids') or []),
+    }
+
+
 def _member_avatar_url(member) -> str:
     try:
         av = getattr(member, 'display_avatar', None)
@@ -1707,6 +1791,7 @@ def _guild_member_snapshot(m, *, role=None):
         'role': role or '',
         'role_label': label,
         'role_tag': panel_role_tag(role, rids, label) if role else '',
+        'role_ids': [int(x) for x in rids if str(x).isdigit()],
         'avatar': _member_avatar_url(m),
         'joined': getattr(m, 'joined_at', None),
         'created': getattr(getattr(m, 'created_at', None), 'isoformat', lambda: None)(),
@@ -1744,6 +1829,7 @@ def _snapshot_from_api_member(row: dict, *, role=None) -> dict:
         'role': role or '',
         'role_label': label,
         'role_tag': panel_role_tag(role, rids, label) if role else '',
+        'role_ids': [int(x) for x in rids if str(x).isdigit()],
         'avatar': _avatar_url_from_user_payload(user),
         'joined': row.get('joined_at'),
         'created': None,
@@ -1916,8 +2002,50 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
 
 
 def _list_login_people(q: str = ''):
-    """Staff с сервера для выбора на логине."""
-    return _search_guild_members(q, staff_only=True, limit=80)
+    """Staff с сервера для выбора на логине (до 300, чтобы всех было видно)."""
+    return _search_guild_members(q, staff_only=True, limit=300)
+
+
+def _resolve_staff_person(discord_id: str):
+    """Staff по Discord ID — не из обрезанного списка логина."""
+    uid = str(discord_id or '').strip()
+    if not uid.isdigit():
+        return None
+    try:
+        from config import Config
+        owner_ids = {int(x) for x in Config.all_owner_ids()}
+    except Exception:
+        owner_ids = set()
+
+    member = _find_guild_member(uid)
+    if member is not None:
+        try:
+            role_ids = [r.id for r in getattr(member, 'roles', []) or []]
+        except Exception:
+            role_ids = []
+        role = resolve_discord_panel_role(member.id, role_ids)
+        if not role and int(uid) in owner_ids:
+            role = 'owner'
+        if not role:
+            return None
+        return _guild_member_snapshot(member, role=role)
+
+    row = _rest_guild_member(uid)
+    if row is None:
+        return None
+    try:
+        user = row.get('user') or {}
+        if user.get('bot'):
+            return None
+        role_ids = [int(x) for x in (row.get('roles') or []) if str(x).isdigit()]
+        role = resolve_discord_panel_role(uid, role_ids)
+        if not role and int(uid) in owner_ids:
+            role = 'owner'
+        if not role:
+            return None
+        return _snapshot_from_api_member(row, role=role)
+    except Exception:
+        return None
 
 
 def _find_guild_member(uid: str):
@@ -1993,14 +2121,13 @@ class _RestMember:
 
 
 def _issue_pin_to_dm(discord_id: str):
-    """Сгенерировать PIN, сохранить pending, отправить в ЛС. (ok_msg, err)."""
+    """Сгенерировать PIN + ссылку входа, отправить в ЛС. (ok_msg, err)."""
     bot = bot_instance
     if not bot or not getattr(bot, 'loop', None):
         return '', 'Бот не готов отправлять ЛС'
-    people, _ = _list_login_people()
-    person = next((p for p in people if p['id'] == str(discord_id)), None)
+    person = _resolve_staff_person(discord_id)
     if not person:
-        return '', 'Этот человек не в staff-списке'
+        return '', 'Этот человек не в staff (нет staff-роли на сервере)'
     pin = f'{secrets.randbelow(10**6):06d}'
     data = _purge_pending_pins()
     data[str(discord_id)] = {
@@ -2009,17 +2136,34 @@ def _issue_pin_to_dm(discord_id: str):
         'name': person['name'],
         'handle': person.get('handle') or '',
         'avatar': person.get('avatar') or '',
+        'role_ids': list(person.get('role_ids') or []),
         'exp': datetime.now(timezone.utc).timestamp() + PIN_TTL_SEC,
     }
     _save_pending_pins(data)
+
+    # Одноразовая ссылка — вход без ввода PIN (ЛС часто удобнее)
+    ticket = secrets.token_urlsafe(24)
+    tickets = _purge_login_tickets()
+    tickets[ticket] = {
+        'uid': str(discord_id),
+        'role': person['role'],
+        'name': person['name'],
+        'handle': person.get('handle') or '',
+        'avatar': person.get('avatar') or '',
+        'role_ids': list(person.get('role_ids') or []),
+        'exp': datetime.now(timezone.utc).timestamp() + PIN_TTL_SEC,
+    }
+    _save_login_tickets(tickets)
+    link = f"{_panel_public_base()}/auth/ticket/{ticket}"
 
     async def _send():
         user = bot.get_user(int(discord_id))
         if user is None:
             user = await bot.fetch_user(int(discord_id))
         text = (
-            f"**Hakumo** — код входа в панель\n"
-            f"PIN: `{pin}`\n"
+            f"**Hakumo** — вход в панель\n"
+            f"Жми ссылку: {link}\n"
+            f"или PIN: `{pin}`\n"
             f"Действует {PIN_TTL_SEC // 60} мин. Никому не пересылай."
         )
         await user.send(text)
@@ -2030,10 +2174,22 @@ def _issue_pin_to_dm(discord_id: str):
         fut.result(timeout=20)
     except Exception as e:
         msg = str(e)
+        # ссылка уже сохранена — можно открыть, даже если ЛС закрыты? нет, юзер не увидит.
+        data.pop(str(discord_id), None)
+        _save_pending_pins(data)
+        tickets.pop(ticket, None)
+        _save_login_tickets(tickets)
         if 'Cannot send messages to this user' in msg or '50007' in msg:
-            return '', 'Не смог написать в ЛС — открой личку с ботом (Allow DMs)'
+            return '', (
+                'Не смог написать в ЛС. Открой личку с ботом: '
+                'Настройки Discord → Конфиденциальность → личные сообщения '
+                'с участников сервера, затем зайди ещё раз.'
+            )
         return '', f'ЛС не отправилось: {msg[:160]}'
-    return f'PIN отправлен в Discord ЛС → @{person.get("handle") or person["name"]}', ''
+    return (
+        f'Ссылка и PIN отправлены в Discord ЛС → '
+        f'@{person.get("handle") or person["name"]}'
+    ), ''
 
 
 def _auth_pending_pin(discord_id: str, pin: str):
@@ -2058,6 +2214,7 @@ def _auth_pending_pin(discord_id: str, pin: str):
         'discord_id': str(discord_id),
         'handle': row.get('handle') or '',
         'avatar': row.get('avatar') or '',
+        'role_ids': list(row.get('role_ids') or []),
     }
 
 
@@ -2122,7 +2279,9 @@ def login():
             if uid:
                 gotp = _auth_pending_pin(uid, request.form.get('pin', ''))
                 if gotp:
-                    _start_session(username=gotp['username'], role=gotp['role'])
+                    _start_session(
+                        username=gotp['username'], role=gotp['role'],
+                        role_ids=gotp.get('role_ids'))
                     session['discord_id'] = gotp['discord_id']
                     session['discord_handle'] = gotp.get('handle') or ''
                     session['discord_display'] = gotp['username']
@@ -2277,15 +2436,15 @@ def login():
 
 @app.route('/auth/discord')
 def auth_discord():
-    """Быстрый вход через Discord → роль с сервера (Helper/Mod/Curator/Admin/Owner)."""
+    """Быстрый вход через Discord OAuth (нужен Client Secret)."""
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    cid, secret = _discord_client_creds()
-    if not cid or not secret:
+    if not _discord_oauth_ready():
         return redirect(url_for(
-            'login',
-            error='Discord-вход не настроен: задай DISCORD_CLIENT_ID и DISCORD_CLIENT_SECRET в .env',
+            'login', mode='people',
+            error='OAuth без Client Secret — выбери себя в списке: ссылка придёт в ЛС',
         ))
+    cid, _secret = _discord_client_creds()
     state = secrets.token_urlsafe(24)
     session['oauth_state'] = state
     session['oauth_next'] = _safe_next(request.args.get('next'))
@@ -2298,6 +2457,28 @@ def auth_discord():
     }
     url = 'https://discord.com/api/oauth2/authorize?' + urllib.parse.urlencode(params)
     return redirect(url)
+
+
+@app.route('/auth/ticket/<token>')
+def auth_ticket(token):
+    """Одноразовая ссылка из Discord ЛС → сразу в панель."""
+    if session.get('logged_in'):
+        return redirect(url_for('today'))
+    got = _consume_login_ticket(token)
+    if not got:
+        return redirect(url_for(
+            'login', mode='people',
+            error='Ссылка входа устарела или уже использована — запроси новую'))
+    _start_session(
+        username=got['username'], role=got['role'],
+        role_ids=got.get('role_ids'))
+    session['discord_id'] = got['discord_id']
+    session['discord_handle'] = got.get('handle') or ''
+    session['discord_display'] = got['username']
+    session['discord_avatar'] = got.get('avatar') or ''
+    session['auth_via'] = 'dm-ticket'
+    session['role_label'] = ROLE_LABELS.get(got['role'], got['role'])
+    return redirect(url_for('today'))
 
 
 @app.route('/auth/discord/callback')
@@ -2568,8 +2749,16 @@ def today():
 @role_required('helper')
 def logs():
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
+    raw_span = (request.args.get('span') or 'week').strip().lower()
+    if raw_span in ('day', 'today', 'день'):
+        span = 'day'
+    elif raw_span in ('month', 'месяц'):
+        span = 'month'
+    else:
+        span = 'week'
+    from services.staff_board import resolve_span, BRANCH_KEYS
+    meta = resolve_span(span)
+    days = meta['days']
     rows = _filter_cases_for_viewer(_collect_cases(gid))[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
@@ -2589,14 +2778,19 @@ def logs():
         e['user_name'] = _best_name(e.get('user_name'), e.get('user_id'), book)
         e['user_id'] = str(e.get('user_id') or '')
     people, _err = _list_login_people()
+    branch_filter = (request.args.get('branch') or '').strip() or None
+    if branch_filter and branch_filter not in BRANCH_KEYS:
+        branch_filter = None
     return render_template(
         'logs.html', rows=rows, feed=feed, joins=joins,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(hidden),
-        activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
+        activity=_mod_activity(gid, days, date_keys=meta['keys']),
+        staff_board=_staff_board_for(gid, days, people, span=span),
         span=span,
+        span_meta=meta,
         role_filter=(request.args.get('role') or '').strip() or None,
+        branch_filter=branch_filter,
     )
 
 
@@ -2605,17 +2799,46 @@ def logs():
 @role_required('helper')
 def staff_page():
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
+    raw_span = (request.args.get('span') or 'week').strip().lower()
+    if raw_span in ('day', 'today', 'день'):
+        span = 'day'
+    elif raw_span in ('month', 'месяц'):
+        span = 'month'
+    else:
+        span = 'week'
+    from services.staff_board import resolve_span, BRANCH_KEYS, person_org_branches
+    meta = resolve_span(span)
+    days = meta['days']
     feed = _staff_feed(gid, 100)
     people, err = _list_login_people()
+    # branch=moderator|helper|… или legacy role=helper/mod/…
+    branch_filter = (request.args.get('branch') or '').strip() or None
     role_filter = (request.args.get('role') or '').strip() or None
+    if branch_filter and branch_filter not in BRANCH_KEYS:
+        branch_filter = None
+    # сгруппировать команду по орг-веткам (человек может быть в нескольких)
+    people_by_branch = []
+    try:
+        from services.staff_board import BRANCH_GROUPS
+        bags = {k: [] for k, _, __ in BRANCH_GROUPS}
+        for p in people or []:
+            for bk in person_org_branches(p):
+                bags.setdefault(bk, []).append(p)
+        for k, title, _ in BRANCH_GROUPS:
+            bag = bags.get(k) or []
+            if bag:
+                people_by_branch.append({'key': k, 'title': title, 'people': bag})
+    except Exception:
+        people_by_branch = []
     return render_template(
         'staff.html', feed=feed, people=people, error=err,
-        activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
+        people_by_branch=people_by_branch,
+        activity=_mod_activity(gid, days, date_keys=meta['keys']),
+        staff_board=_staff_board_for(gid, days, people, span=span),
         span=span,
+        span_meta=meta,
         role_filter=role_filter,
+        branch_filter=branch_filter,
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
 

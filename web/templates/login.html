@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Вход — Hakumo</title>
-  <meta name="description" content="Вход в панель Hakumo — выбери себя, PIN придёт в ЛС.">
+  <meta name="description" content="Вход в панель Hakumo — выбери себя, ссылка придёт в ЛС.">
   <meta name="theme-color" content="#05060a">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,8 +33,8 @@
       <p class="login-kicker">Вход</p>
       <h1 class="login-mark">Haku<em>mo</em></h1>
       <p class="login-hint">
-        {% if mode == 'people' %}Выбери себя — PIN уйдёт в Discord ЛС.
-        {% elif mode == 'pin' %}Введи PIN из лички Discord.
+        {% if mode == 'people' %}Выбери себя — ссылка и PIN уйдут в Discord ЛС.
+        {% elif mode == 'pin' %}Введи PIN из лички Discord (или жми ссылку из ЛС).
         {% elif mode == 'register' %}Найди себя по имени, введи код приглашения и пароль.
         {% elif mode == 'forgot' %}Сброс пароля по коду восстановления.
         {% else %}Вход по паролю.
@@ -83,7 +83,7 @@
             {% endfor %}
           </div>
           {% endif %}
-          <p class="login-note">Кликни по себе — PIN уйдёт в личку, ввод на отдельном экране</p>
+          <p class="login-note">Кликни по себе — ссылка и PIN уйдут в личку Discord</p>
 
         {% elif mode == 'pin' %}
           {% if pin_person %}
