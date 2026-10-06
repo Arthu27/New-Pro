@@ -6,7 +6,7 @@
   <title>{% block title %}Панель{% endblock %} · Hakumo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=37">
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=38">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <meta name="theme-color" content="#07080a">
   <style>html,body{background:#07080a;color:#f2f4f8}</style>
@@ -128,9 +128,9 @@
   });
 })();
 
-/* Авто-обновление данных панели без F5 */
+/* Авто-обновление данных панели без F5 (тихий morph, без мигания) */
 (function () {
-  const INTERVAL_MS = 5000;
+  const INTERVAL_MS = 8000;
   const SKIP_PREFIXES = ['/channels', '/member', '/login', '/auth', '/anticrash', '/access'];
   let busy = false;
   let lastInteract = 0;
@@ -177,9 +177,125 @@
   }
 
   function stripScripts(root) {
-    /* Скрипты страницы живут один раз (делегирование на document).
-       Повторный eval при live-refresh плодит слушатели. */
     root.querySelectorAll('script').forEach(s => s.remove());
+  }
+
+  function elKey(el) {
+    if (!el || el.nodeType !== 1) return '';
+    return [
+      el.tagName,
+      el.id || '',
+      el.getAttribute('data-id') || '',
+      el.getAttribute('data-href') || '',
+      el.getAttribute('data-key') || '',
+      el.className || '',
+    ].join('|');
+  }
+
+  function syncAttrs(from, to) {
+    const keep = { value: 1, checked: 1, selected: 1 };
+    const names = new Set();
+    for (const a of to.attributes) names.add(a.name);
+    for (const a of Array.from(from.attributes)) {
+      if (keep[a.name]) continue;
+      if (!names.has(a.name)) from.removeAttribute(a.name);
+    }
+    for (const a of to.attributes) {
+      if (keep[a.name]) continue;
+      if (from.getAttribute(a.name) !== a.value) from.setAttribute(a.name, a.value);
+    }
+  }
+
+  /* Тихо обновляет DOM на месте — без innerHTML и без replay анимаций. */
+  function morph(from, to) {
+    if (!from || !to) return;
+    if (from.nodeType === 3 && to.nodeType === 3) {
+      if (from.nodeValue !== to.nodeValue) from.nodeValue = to.nodeValue;
+      return;
+    }
+    if (from.nodeType !== 1 || to.nodeType !== 1) {
+      from.replaceWith(to.cloneNode(true));
+      return;
+    }
+    if (from.tagName !== to.tagName) {
+      from.replaceWith(to.cloneNode(true));
+      return;
+    }
+    /* Не трогаем открытые dialog / то что печатают */
+    if (from.tagName === 'DIALOG' && from.open) return;
+    if (from === document.activeElement) return;
+
+    syncAttrs(from, to);
+
+    const fromKids = Array.from(from.childNodes);
+    const toKids = Array.from(to.childNodes);
+    const used = new Set();
+    const out = [];
+
+    for (let i = 0; i < toKids.length; i++) {
+      const tk = toKids[i];
+      let match = null;
+      if (tk.nodeType === 1) {
+        const key = elKey(tk);
+        if (key) {
+          for (let j = 0; j < fromKids.length; j++) {
+            const fk = fromKids[j];
+            if (used.has(j) || fk.nodeType !== 1) continue;
+            if (elKey(fk) === key) { match = fk; used.add(j); break; }
+          }
+        }
+        if (!match) {
+          for (let j = 0; j < fromKids.length; j++) {
+            const fk = fromKids[j];
+            if (used.has(j) || fk.nodeType !== 1) continue;
+            if (fk.tagName === tk.tagName && (fk.className || '') === (tk.className || '')) {
+              match = fk; used.add(j); break;
+            }
+          }
+        }
+      } else if (tk.nodeType === 3) {
+        for (let j = 0; j < fromKids.length; j++) {
+          const fk = fromKids[j];
+          if (used.has(j) || fk.nodeType !== 3) continue;
+          match = fk; used.add(j); break;
+        }
+      }
+      if (match) {
+        morph(match, tk);
+        out.push(match);
+      } else {
+        out.push(tk.cloneNode(true));
+      }
+    }
+
+    while (from.firstChild) from.removeChild(from.firstChild);
+    out.forEach(n => from.appendChild(n));
+  }
+
+  function quietPatch(cur, next) {
+    document.body.classList.add('is-live-updating');
+    try {
+      /* убрать entrance-анимации у новых кусков */
+      next.querySelectorAll('.rise').forEach(el => {
+        el.classList.remove('rise');
+        el.style.opacity = '1';
+        el.style.transform = 'none';
+      });
+      morph(cur, next);
+    } finally {
+      requestAnimationFrame(() => {
+        document.body.classList.remove('is-live-updating');
+      });
+    }
+  }
+
+  function fingerprint(el) {
+    /* Игнор мигающих пингов/секунд — сравниваем структуру списков */
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.kpi b, .live-dot, time, .log-when').forEach(n => {
+      n.textContent = '';
+    });
+    return clone.innerHTML.replace(/\s+/g, ' ').trim();
   }
 
   async function tick() {
@@ -201,15 +317,34 @@
       if (!next || !cur) { mark(false); return; }
       if (typingOrModal()) return;
       stripScripts(next);
-      const nextHtml = next.innerHTML;
-      if (nextHtml === cur.innerHTML) { mark(true); return; }
-      const y = window.scrollY;
-      cur.innerHTML = nextHtml;
+
+      /* Всегда тихо обновляем KPI/числа; полный morph только если структура списков изменилась */
+      const sameShape = fingerprint(cur) === fingerprint(next);
+      if (sameShape) {
+        /* точечно: kpi + counts + heading */
+        const curKpis = cur.querySelectorAll('.kpi');
+        const nextKpis = next.querySelectorAll('.kpi');
+        for (let i = 0; i < curKpis.length && i < nextKpis.length; i++) {
+          const cb = curKpis[i].querySelector('b');
+          const nb = nextKpis[i].querySelector('b');
+          if (cb && nb && cb.innerHTML !== nb.innerHTML) {
+            cb.innerHTML = nb.innerHTML;
+            if (nb.getAttribute('style')) cb.setAttribute('style', nb.getAttribute('style'));
+            else cb.removeAttribute('style');
+          }
+        }
+        cur.querySelectorAll('.count').forEach((c, i) => {
+          const n = next.querySelectorAll('.count')[i];
+          if (n && c.textContent !== n.textContent) c.textContent = n.textContent;
+        });
+      } else {
+        quietPatch(cur, next);
+      }
+
       const nh = doc.querySelector('#live-heading');
       const ch = document.querySelector('#live-heading');
-      if (nh && ch) ch.innerHTML = nh.innerHTML;
+      if (nh && ch && ch.innerHTML !== nh.innerHTML) ch.innerHTML = nh.innerHTML;
       syncNav(doc);
-      window.scrollTo(0, y);
       document.dispatchEvent(new CustomEvent('panel:live'));
       mark(true);
     } catch (e) {
@@ -225,12 +360,11 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) tick();
   });
-
   document.addEventListener('panel:live-now', () => { tick(); });
 
   if (!pathSkipped()) {
     timer = setInterval(tick, INTERVAL_MS);
-    setTimeout(tick, 1500);
+    setTimeout(tick, 2500);
   }
 })();
 </script>

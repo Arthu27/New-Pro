@@ -215,6 +215,14 @@ a:hover { color: var(--ink); }
 }
 .live-dot--ok { background: #3dd68c; box-shadow: 0 0 8px rgba(61,214,140,.45); }
 .live-dot--err { background: #ff6b6b; }
+
+/* Во время live-patch не проигрывать entrance-анимации — иначе «как F5» */
+body.is-live-updating .rise,
+body.is-live-updating .rule-card {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
 .chip-btn img, .chip-btn .ava-fb {
   width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
 }
