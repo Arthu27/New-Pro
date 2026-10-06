@@ -253,6 +253,19 @@ bot_instance = None
 def set_bot_instance(bot):
     global bot_instance
     bot_instance = bot
+    # Прогрев staff-кэша в фоне — первый клик /staff не ждёт ~1с
+    try:
+        import threading
+
+        def _warm():
+            try:
+                _list_login_people()
+            except Exception:
+                pass
+
+        threading.Thread(target=_warm, name='panel-staff-warm', daemon=True).start()
+    except Exception:
+        pass
 
 
 def _secret_key():
