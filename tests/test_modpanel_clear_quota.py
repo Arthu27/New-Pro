@@ -75,13 +75,12 @@ check("'clear',1 )" in src or "'clear', 1)" in src,
 check('например: 25' not in src,
       'модалка больше не подсказывает 25 (это сразу било старую квоту 10 сообщ.)')
 
-print('== 5. Панель /purge тоже считает операцию ==')
-web = open(os.path.join(ROOT, 'web', 'routes', 'member_ops.py'), encoding='utf-8').read()
-check("_panel_limit_deny (bot ,int (guild_id ),_acl_m ,'clear',1)" in web
-      or "_panel_limit_deny(bot, int(guild_id), _acl_m, 'clear', 1)" in web.replace(' ', ''),
-      'веб-purge проверяет clear с amount=1')
-check("_panel_limit_record" in web and "'clear',1" in web.replace(' ', ''),
-      'веб-purge записывает 1 хит после успеха')
+print('== 5. Clear только в /modpanel (legacy web purge снят) ==')
+legacy_ops = os.path.join(ROOT, 'web', 'routes', 'member_ops.py')
+check(not os.path.isfile(legacy_ops),
+      'legacy web/routes/member_ops нет — чистка не дублируется в вебе')
+check("'clear',1 )" in src or "'clear', 1)" in src,
+      'успешная чистка в /modpanel по-прежнему пишет 1 хит')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

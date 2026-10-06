@@ -70,8 +70,10 @@ check('silence' in doc.lower() or 'VOICE_SILENCE_PING' in doc
 
 check('_ensure_main_voice_joined' in src, 'ensure_voice helper есть')
 check('_schedule_main_voice_rejoin' in src, 'schedule rejoin есть')
-check('self_deaf=True' in src and 'self_mute=True' in src,
-      'self_deaf/self_mute для stay')
+check(('self_deaf=True' in src and 'self_mute=True' in src)
+      or ('self_deaf=_self_deaf' in src and 'self_mute=_self_mute' in src),
+      'self_deaf/self_mute для stay (или panel open_mic)')
+check('effective_stay_channel_id' in src, 'panel hold через effective_stay')
 check('kicked-or-moved' in src, 'rejoin по кику')
 check('force=True' in src, 'force rejoin на kick/resume')
 check('soft-reconnect' in src, 'soft reconnect против zombie')

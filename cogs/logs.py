@@ -989,8 +989,12 @@ def _verify_ru(v):
     return _VERIFY_RU.get(str(name).lower(), str(name))
 
 
-def _person_block(user, fallback=None):
-    """Человек столбиком: @тег, ник, id."""
+def _person_block(user, fallback=None, *, compact=False):
+    """Человек столбиком: @тег, ник [, id].
+
+    compact=True — без сырого snowflake (вход/выход: id в цитате
+    выглядит мусором на телефоне).
+    """
     if user is None:
         return fallback or '—'
     mention = getattr(user, 'mention', None)
@@ -1004,13 +1008,41 @@ def _person_block(user, fallback=None):
         lines.append(str(mention))
     if uname and str(uname) not in (str(mention or ''),):
         lines.append(str(uname))
-    try:
-        uid = int(uid or 0)
-    except (TypeError, ValueError):
-        uid = 0
-    if uid:
-        lines.append(str(uid))
+    if not compact:
+        try:
+            uid = int(uid or 0)
+        except (TypeError, ValueError):
+            uid = 0
+        if uid:
+            lines.append(str(uid))
     return _bullet(*lines) if lines else (fallback or '—')
+
+
+def _roles_short(roles, *, limit=5):
+    """Роли коротко: до limit упоминаний + «и ещё N»."""
+    items = [r for r in (roles or []) if r not in (None, '', '@everyone')]
+    if not items:
+        return _bullet('нет')
+    labels = []
+    seen = set()
+    for r in items:
+        if isinstance(r, str):
+            lab = r
+        else:
+            lab = (getattr(r, 'mention', None)
+                   or getattr(r, 'name', None)
+                   or '')
+        if not lab or lab in seen:
+            continue
+        seen.add(lab)
+        labels.append(str(lab))
+    if not labels:
+        return _bullet('нет')
+    shown = labels[:limit]
+    extra = len(labels) - len(shown)
+    if extra > 0:
+        shown.append(f'и ещё {extra}')
+    return _bullet(*shown)
 
 
 def _channel_block(ch):
@@ -2428,7 +2460,10 @@ class Logs (commands .Cog ):
         age_days =(datetime.datetime.now(datetime.timezone.utc)-member .created_at ).days 
         save_event (member .guild .id ,'member','Участник вошёл',{
         'user_id':str (member .id ),
-        'user_name':str (member ),
+        'user_name':(getattr(member, 'display_name', None)
+                     or getattr(member, 'global_name', None)
+                     or getattr(member, 'name', None)
+                     or str(member.id)),
         'avatar':str (member .display_avatar .url ),
         'account_age_days':age_days ,
         })
@@ -2474,19 +2509,15 @@ class Logs (commands .Cog ):
         join_ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
         fields = [
-            ('Пользователь', _person_block(member)),
+            ('Участник', _person_block(member, compact=True)),
+            ('Аккаунт', _bullet(age_text)),
+            ('Присоединился', _bullet(f"<t:{join_ts}:R>")),
+            ('На сервере', _bullet(f'{member_count} чел.')),
         ]
-        _jp = _profile_cell(member)
-        if _jp:
-            fields.append(('Профиль', _jp))
-        else:
-            fields.append(('Аккаунт', _bullet(age_text)))
-        fields.append(('Присоединился', _bullet(f"<t:{join_ts}:f>", f"<t:{join_ts}:R>")))
-        fields.append(('На сервере сейчас', _bullet(f'{member_count} чел.')))
         card_rows = [
-            ('Участник', f"{member.display_name} ({member.id})"),
+            ('Участник', str(member.display_name or member.name or member.id)),
             ('Аккаунт', age_text),
-            ('Всего участников', str(member_count)),
+            ('Всего', str(member_count)),
         ]
         e = _styled_log_embed(member.guild, 'member', 'Новый участник на сервере',
                               fields=fields, card_rows=card_rows,
@@ -2498,9 +2529,12 @@ class Logs (commands .Cog ):
     async def on_member_remove (self ,member ):
         save_event (member .guild .id ,'member','Участник вышел',{
         'user_id':str (member .id ),
-        'user_name':str (member ),
+        'user_name':(getattr(member, 'display_name', None)
+                     or getattr(member, 'global_name', None)
+                     or getattr(member, 'name', None)
+                     or str(member.id)),
         'avatar':str (member .display_avatar .url ),
-        'role':[r .name for r in member .roles [1 :]],
+        'role':[r .name for r in member .roles [1 :]][:12],
         })
 
         # Прощальное сообщение
@@ -2526,7 +2560,7 @@ class Logs (commands .Cog ):
         if not ch :
             return 
 
-        roles_str =", ".join (r .name for r in member .roles [1 :])if member .roles [1 :]else "нет"
+        roles_list = list(member.roles[1:]) if member.roles else []
         member_count =member .guild .member_count 
         # Считаем, сколько участник был на сервере
         joined_ago =""
@@ -2543,21 +2577,22 @@ class Logs (commands .Cog ):
             else :
                 joined_ago =f"{days_on_server // 365} г. {days_on_server % 365 // 30} мес."
 
+        # Компактно: имя без snowflake, роли без простыни «@role | Name».
         fields = [
-            ('Пользователь', _person_block(member)),
-            ('Был на сервере', _bullet(joined_ago or "менее дня")),
-            ('Роли', _roles_cell(list(member.roles[1:])) or _bullet(roles_str[:200])),
-            ('На сервере сейчас', _bullet(f'{member_count} чел.')),
+            ('Участник', _person_block(member, compact=True)),
+            ('Был', _bullet(joined_ago or "менее дня")),
+            ('Роли', _roles_short(roles_list, limit=5)),
+            ('Сейчас', _bullet(f'{member_count} чел.')),
         ]
-        _lp = _profile_cell(member)
-        if _lp:
-            fields.append(('Профиль', _lp))
+        _nick = (getattr(member, 'display_name', None)
+                 or getattr(member, 'name', None)
+                 or str(member.id))
         card_rows = [
-            ('Участник', f"{member.display_name} ({member.id})"),
-            ('Был на сервере', joined_ago or "менее дня"),
-            ('Роли', roles_str[:90]),
+            ('Участник', str(_nick)),
+            ('Был', joined_ago or "менее дня"),
+            ('Роли', ', '.join(r.name for r in roles_list[:5]) or 'нет'),
         ]
-        e = _styled_log_embed(member.guild, 'member', 'Участник покинул сервер',
+        e = _styled_log_embed(member.guild, 'member', 'Участник вышел',
                               fields=fields, card_rows=card_rows,
                               color=0xE74C3C, thumbnail=str(member.display_avatar.url))
 

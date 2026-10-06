@@ -2,18 +2,17 @@
 {% block title %}Доступ{% endblock %}
 {% block heading %}Доступ{% endblock %}
 {% block body %}
-<p class="lead">Staff заходит по себе (PIN в ЛС) или создаёт логин по коду приглашения. Роль всегда с Discord.</p>
+<p class="lead">Доступ в панель: Discord или пароль.</p>
 {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
 
 <section class="panel rise" style="margin-bottom:12px">
   <h2>Discord OAuth</h2>
   <p class="dim" style="margin:0;padding:14px 18px">
-    {% if discord_ready %}
-    Настроен — кнопка «Войти через Discord» работает, роль = Helper / Mod / Curator / Admin / Owner.
-    {% else %}
-    Не настроен — добавь <code class="mono">DISCORD_CLIENT_ID</code> и <code class="mono">DISCORD_CLIENT_SECRET</code> в .env.
-    Redirect: <code class="mono">/auth/discord/callback</code>. Без него работает вход по PIN в ЛС.
-    {% endif %}
+    Вход через Discord (OAuth + PKCE) — без PIN и без пароля.
+    Client ID: <code class="mono">1421418700451348520</code>.
+    В Discord Developer Portal → OAuth2 → Redirects добавь ровно:
+    <code class="mono">https://hakumods.xyz/auth/discord/callback</code>.
+    Пароль / создать аккаунт остаются отдельными вкладками.
   </p>
 </section>
 
@@ -36,7 +35,6 @@
     <input type="hidden" name="action" value="add">
     <label>Логин<input class="input" name="username" required autocomplete="off"></label>
     <label>Пароль<input class="input" type="password" name="password" required autocomplete="new-password"></label>
-    <label>PIN<input class="input" name="pin" inputmode="numeric" pattern="[0-9]{4,8}" placeholder="4–8 цифр"></label>
     <label>Заметка<input class="input" name="note" placeholder="@ник в Discord"></label>
     <button type="submit">Выдать · mod</button>
   </form>
@@ -44,7 +42,7 @@
 
 <section class="panel rise" style="margin-top:12px">
   <h2>Парольные аккаунты <span class="count">{{ users|length }}</span></h2>
-  {% if not users %}<div class="empty">Пока никого — staff входит по PIN, owner через .env</div>
+  {% if not users %}<div class="empty">Пока никого — staff через Discord, owner через .env</div>
   {% else %}
   <table>
     <thead><tr><th>Логин</th><th>Роль</th><th>Discord</th><th>Заметка</th><th></th></tr></thead>

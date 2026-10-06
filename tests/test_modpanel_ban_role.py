@@ -158,9 +158,11 @@ check('Вас будет обслуживать' in _appeals_src,
       'кнопка «Взять в работу» объявляет в комнате ведущего')
 _web_src = open(os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    'web', 'routes', 'appeals_panel.py'), encoding='utf-8').read()
-check('Вас будет обслуживать' in _web_src,
-      '«Взять в работу» из веб-панели делает то же объявление')
+    'web', 'app.py'), encoding='utf-8').read()
+check('def api_appeals_decide' in _web_src and 'blacklist' in _web_src,
+      'веб-панель умеет принять / отклонить / ЧС по апелляции')
+check('Вас будет обслуживать' in _appeals_src,
+      '«Взять в работу» в Discord объявляет ведущего в комнате')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

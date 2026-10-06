@@ -281,18 +281,19 @@ joined = '\n'.join(
     getattr(k, 'content', '') or ''
     for child in view.children
     for k in list(getattr(child, 'children', []) or []))
-check('**Участник**' in joined and 'кого наказать' not in joined,
-      'заголовок Участник без дубля в select')
+check('Участник' in joined and 'кого наказать' not in joined,
+      'подпись Участник без дубля в select')
 check((getattr(view.target_select, 'placeholder', None) or '') == '',
       f'view select пустой: {getattr(view.target_select, "placeholder", None)!r}')
-check('**Действие**' in joined and 'что сделать' not in joined,
-      'заголовок Действие без дубля в select')
+check('Действие' in joined and 'что сделать' not in joined,
+      'подпись Действие без дубля в select')
 check((getattr(view.action_select, 'placeholder', None) or '') == '',
       f'action select пустой: {getattr(view.action_select, "placeholder", None)!r}')
 check('Hakumo · модерация' not in joined,
       'без футера')
-check('Панель модерации' in joined and 'HAKUMO' in joined,
-      'шапка Панель модерации / HAKUMO')
+check('Модерация' in joined or 'Панель модерации' in joined,
+      'заголовок панели')
+check(len(view.children) >= 1, 'есть блоки панели')
 check(view.has_components_v2(), 'Components V2 LayoutView')
 check('в любом порядке' not in joined.lower(),
       'без «в любом порядке»')

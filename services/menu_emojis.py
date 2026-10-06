@@ -190,13 +190,14 @@ _APPEAL_UNICODE = {
     'accept': '✅',
     'reject': '❌',
     'claim': '✋',
+    'blacklist': '🚷',
     'appeal': '📋',
 }
 
 
 def emoji_for_appeal(kind: str):
     """Стикер пункта меню апелляции или unicode-фолбек."""
-    # reject → decline (общий арт набора)
+    # reject → decline (общий арт набора); blacklist — общий стикер набора
     key = 'decline' if kind == 'reject' else kind
     em = _cache.get(key) or _cache.get(kind)
     if em is not None:
