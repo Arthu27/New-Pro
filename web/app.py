@@ -703,6 +703,11 @@ def _viewer_limits_card():
 def _http_json(method, url, *, headers=None, form=None, timeout=12):
     data = None
     hdrs = dict(headers or {})
+    # Cloudflare на discord.com режет запросы без UA (1010 / 403).
+    hdrs.setdefault(
+        'User-Agent',
+        'HakumoPanel (https://hakumods.xyz, 1.0)',
+    )
     if form is not None:
         data = urllib.parse.urlencode(form).encode('utf-8')
         hdrs.setdefault('Content-Type', 'application/x-www-form-urlencoded')
@@ -722,6 +727,55 @@ def _http_json(method, url, *, headers=None, form=None, timeout=12):
         return 0, {'error': str(e)}
 
 
+def _client_id_from_bot_token(token: str) -> str:
+    """Первая часть bot-токена — base64(application/user id)."""
+    token = (token or '').strip()
+    if not token or '.' not in token:
+        return ''
+    part = token.split('.', 1)[0]
+    pad = '=' * ((4 - len(part) % 4) % 4)
+    try:
+        import base64
+        raw = base64.b64decode(part + pad)
+        cid = raw.decode('ascii').strip()
+        return cid if cid.isdigit() else ''
+    except Exception:
+        return ''
+
+
+def _upsert_dotenv(key: str, value: str) -> None:
+    """Записать/обновить KEY=value в ROOT/.env и в os.environ (hot)."""
+    key = (key or '').strip()
+    value = (value or '').strip()
+    if not key:
+        return
+    path = ROOT / '.env'
+    lines: list[str] = []
+    if path.exists():
+        try:
+            lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
+        except Exception:
+            lines = []
+    prefix = f'{key}='
+    out: list[str] = []
+    found = False
+    for line in lines:
+        if line.startswith(prefix) or line.startswith(f'# {prefix}'):
+            if not found:
+                out.append(f'{prefix}{value}')
+                found = True
+            # drop duplicate / commented old keys
+            continue
+        out.append(line)
+    if not found:
+        if out and out[-1].strip():
+            out.append('')
+        out.append(f'# Discord OAuth (панель)')
+        out.append(f'{prefix}{value}')
+    path.write_text('\n'.join(out) + '\n', encoding='utf-8')
+    os.environ[key] = value
+
+
 def _discord_client_creds():
     cid = (
         (os.environ.get('DISCORD_CLIENT_ID') or '').strip()
@@ -731,6 +785,8 @@ def _discord_client_creds():
         (os.environ.get('DISCORD_CLIENT_SECRET') or '').strip()
         or (os.environ.get('ACTIVITY_CLIENT_SECRET') or '').strip()
     )
+    if not cid:
+        cid = _client_id_from_bot_token(os.environ.get('TOKEN') or '')
     if not cid:
         token = (os.environ.get('TOKEN') or '').strip()
         if token:
@@ -4319,7 +4375,22 @@ def access_page():
     err = ''
     if request.method == 'POST':
         action = request.form.get('action') or ''
-        if action == 'add':
+        if action == 'oauth_secret':
+            secret = (request.form.get('client_secret') or '').strip()
+            if len(secret) < 16:
+                err = 'Client Secret слишком короткий — скопируй из Discord Developer Portal → OAuth2'
+            else:
+                cid, _ = _discord_client_creds()
+                if cid:
+                    _upsert_dotenv('DISCORD_CLIENT_ID', cid)
+                _upsert_dotenv(
+                    'DISCORD_REDIRECT_URI',
+                    f'{_panel_public_base()}/auth/discord/callback',
+                )
+                _upsert_dotenv('DISCORD_CLIENT_SECRET', secret)
+                flash('OAuth сохранён — на /login появится «Войти через Discord»', 'ok')
+                return redirect(url_for('access_page'))
+        elif action == 'add':
             username = (request.form.get('username') or '').strip()
             password = request.form.get('password') or ''
             pin = (request.form.get('pin') or '').strip()
@@ -4345,6 +4416,7 @@ def access_page():
             flash('Доступ снят', 'ok')
             return redirect(url_for('access_page'))
     env_u, _ = _env_owner_creds()
+    cid, _secret = _discord_client_creds()
     return render_template(
         'access.html',
         users=data['users'],
@@ -4352,6 +4424,8 @@ def access_page():
         error=err,
         role_cards=ROLE_CARDS,
         discord_ready=_discord_oauth_ready(),
+        discord_client_id=cid or '',
+        discord_redirect=_discord_redirect_uri(),
     )
 
 
