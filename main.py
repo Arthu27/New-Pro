@@ -1131,10 +1131,11 @@ def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
 
 
 async def _monitor_voice():
-    """Держим войс 24/7 по Discord-truth + soft reconnect + silence keepalive.
+    """Держим войс 24/7 по Discord-truth + soft reconnect + непрерывная тишина.
 
-    Каждые 2с: me.voice и latency. Zombie → force rejoin. Soft reconnect
-    ~раз в 20ч. Silence ping по умолчанию ВЫКЛ (без libopus play ломает WS).
+    Каждые 2с: me.voice и latency. Выкинуло — сразу rejoin.
+    Пока онлайн, крутим LoopSilence (RTP не замолкает) — Discord не кикает idle.
+    Выключить пинг: VOICE_SILENCE_PING=0. Без libopus play не зовём.
     """
     global _voice_last_silence_ts, _voice_last_join_ts
     from services.voice_stay_health import (
@@ -1189,21 +1190,16 @@ async def _monitor_voice():
                       (now - _voice_last_join_ts) / 3600.0)
             _schedule_main_voice_rejoin('soft-reconnect', force=True)
             continue
-        if _silence and (now - _voice_last_silence_ts) > 60:
+        if _silence and vc and discord.opus.is_loaded() and not vc.is_playing():
             try:
-                if vc and not vc.is_playing() and discord.opus.is_loaded():
-                    import io
-                    silence = io.BytesIO(b'\x00' * 3840)
-                    source = discord.PCMAudio(silence)
-                    await asyncio.wait_for(
-                        asyncio.to_thread(vc.play, source), timeout=10.0)
-                _voice_last_silence_ts = now
+                from services.voice_stay_health import silence_source
+                await asyncio.wait_for(
+                    asyncio.to_thread(vc.play, silence_source()), timeout=10.0)
             except asyncio.TimeoutError:
                 _log.warning('_monitor_voice: silence timeout — force rejoin')
                 _schedule_main_voice_rejoin('silence-timeout', force=True)
             except Exception as _ex:
                 _log.debug('_monitor_voice silence: %s', _ex)
-                _voice_last_silence_ts = now
 
 
 @bot.event

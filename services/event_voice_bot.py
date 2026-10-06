@@ -616,22 +616,17 @@ async def _monitor_event_voice(client: discord.Client) -> None:
                      (now - _last_join_ts) / 3600.0)
             _schedule_rejoin(client, 'soft-reconnect', force=True)
             continue
-        if _silence and (now - _last_silence_ts) > 60:
+        if (_silence and vc and discord.opus.is_loaded()
+                and not vc.is_playing()):
             try:
-                if (vc and not vc.is_playing()
-                        and discord.opus.is_loaded()):
-                    import io
-                    silence = io.BytesIO(b'\x00' * 3840)
-                    source = discord.PCMAudio(silence)
-                    await asyncio.wait_for(
-                        asyncio.to_thread(vc.play, source), timeout=10.0)
-                _last_silence_ts = now
+                from services.voice_stay_health import silence_source
+                await asyncio.wait_for(
+                    asyncio.to_thread(vc.play, silence_source()), timeout=10.0)
             except asyncio.TimeoutError:
                 log.warning('event-bot silence timeout — force rejoin')
                 _schedule_rejoin(client, 'silence-timeout', force=True)
             except Exception as ex:
                 log.debug('event-bot silence: %s', ex)
-                _last_silence_ts = now
 
 
 async def start_event_bot() -> Optional[discord.Client]:

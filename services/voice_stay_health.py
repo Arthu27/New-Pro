@@ -22,9 +22,26 @@ log = get_logger('voice_stay_health')
 
 # Редкий force-reconnect: Discord иногда рвёт idle-сессию ~сутки.
 # Раньше было 45 мин — бот сам «отлетал» из войса каждые 45 минут
-# (владелец 2026-09-29: скрин Events). Silence keepalive держит UDP;
+# (владелец 2026-09-29: скрин Events). Непрерывный silence держит UDP;
 # полный reconnect только если здоровы уже ~20ч, либо при zombie.
 SOFT_RECONNECT_SEC = 20 * 3600  # 20 часов
+
+# 20 мс PCM 48 kHz stereo s16le — кадр, который discord.py ждёт от AudioSource.
+_SILENCE_FRAME = b'\x00' * 3840
+
+
+class LoopSilence(discord.AudioSource):
+    """Бесконечная тишина: RTP не прекращается, Discord не кикает idle-бота."""
+
+    def read(self) -> bytes:
+        return _SILENCE_FRAME
+
+    def is_opus(self) -> bool:
+        return False
+
+
+def silence_source() -> LoopSilence:
+    return LoopSilence()
 
 
 def _member_voice_state(guild: discord.Guild, user_id: int):
