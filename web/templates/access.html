@@ -7,14 +7,23 @@
 
 <section class="panel rise" style="margin-bottom:12px">
   <h2>Discord OAuth</h2>
-  <p class="dim" style="margin:0;padding:14px 18px">
+  <div class="dim" style="margin:0;padding:14px 18px">
     {% if discord_ready %}
-    Настроен — кнопка «Войти через Discord» работает, роль = Helper / Mod / Curator / Admin / Owner.
+    <p style="margin:0 0 10px">Настроен — кнопка «Войти через Discord» на /login работает.</p>
     {% else %}
-    Не настроен — добавь <code class="mono">DISCORD_CLIENT_ID</code> и <code class="mono">DISCORD_CLIENT_SECRET</code> в .env.
-    Redirect: <code class="mono">/auth/discord/callback</code>. Без него работает вход по PIN в ЛС.
+    <p style="margin:0 0 10px">Нужен <b>Client Secret</b> из Discord Developer Portal (приложение бота → OAuth2). Redirect уже такой:</p>
     {% endif %}
-  </p>
+    <p style="margin:0 0 6px">Client ID: <code class="mono">{{ discord_client_id or '—' }}</code></p>
+    <p style="margin:0 0 12px">Redirect URI: <code class="mono">{{ discord_redirect }}</code></p>
+    <p style="margin:0 0 10px;font-size:.85rem">В Portal → OAuth2 → Redirects добавь этот URI (один в один), скопируй Client Secret и вставь ниже.</p>
+    <form method="post" class="form form-row" style="padding:0">
+      <input type="hidden" name="action" value="oauth_secret">
+      <label style="flex:1">Client Secret
+        <input class="input" name="client_secret" type="password" autocomplete="off" required placeholder="из Discord Developer Portal → OAuth2" style="min-width:220px">
+      </label>
+      <button type="submit">{% if discord_ready %}Обновить secret{% else %}Сохранить OAuth{% endif %}</button>
+    </form>
+  </div>
 </section>
 
 <section class="kpis rise" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
