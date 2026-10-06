@@ -2192,7 +2192,7 @@ class _RestMember:
 
 
 def _issue_pin_to_dm(discord_id: str):
-    """Сгенерировать PIN + ссылку входа, отправить в ЛС. (ok_msg, err)."""
+    """Сгенерировать PIN и отправить ТОЛЬКО код в ЛС (без ссылок на панель)."""
     bot = bot_instance
     if not bot or not getattr(bot, 'loop', None):
         return '', 'Бот не готов отправлять ЛС'
@@ -2212,30 +2212,15 @@ def _issue_pin_to_dm(discord_id: str):
     }
     _save_pending_pins(data)
 
-    # Одноразовая ссылка — вход без ввода PIN (ЛС часто удобнее)
-    ticket = secrets.token_urlsafe(24)
-    tickets = _purge_login_tickets()
-    tickets[ticket] = {
-        'uid': str(discord_id),
-        'role': person['role'],
-        'name': person['name'],
-        'handle': person.get('handle') or '',
-        'avatar': person.get('avatar') or '',
-        'role_ids': list(person.get('role_ids') or []),
-        'exp': datetime.now(timezone.utc).timestamp() + PIN_TTL_SEC,
-    }
-    _save_login_tickets(tickets)
-    link = f"{_panel_public_base()}/auth/ticket/{ticket}"
-
     async def _send():
         user = bot.get_user(int(discord_id))
         if user is None:
             user = await bot.fetch_user(int(discord_id))
         text = (
-            f"**Hakumo** — вход в панель\n"
-            f"Жми ссылку: {link}\n"
-            f"или PIN: `{pin}`\n"
-            f"Действует {PIN_TTL_SEC // 60} мин. Никому не пересылай."
+            f"**Hakumo** — код входа в панель\n"
+            f"PIN: `{pin}`\n"
+            f"Действует {PIN_TTL_SEC // 60} мин. Введи его на сайте. "
+            f"Никому не пересылай."
         )
         await user.send(text)
 
@@ -2245,11 +2230,8 @@ def _issue_pin_to_dm(discord_id: str):
         fut.result(timeout=20)
     except Exception as e:
         msg = str(e)
-        # ссылка уже сохранена — можно открыть, даже если ЛС закрыты? нет, юзер не увидит.
         data.pop(str(discord_id), None)
         _save_pending_pins(data)
-        tickets.pop(ticket, None)
-        _save_login_tickets(tickets)
         if 'Cannot send messages to this user' in msg or '50007' in msg:
             return '', (
                 'Не смог написать в ЛС. Открой личку с ботом: '
@@ -2258,8 +2240,9 @@ def _issue_pin_to_dm(discord_id: str):
             )
         return '', f'ЛС не отправилось: {msg[:160]}'
     return (
-        f'Ссылка и PIN отправлены в Discord ЛС → '
-        f'@{person.get("handle") or person["name"]}'
+        f'PIN отправлен в Discord ЛС → '
+        f'@{person.get("handle") or person["name"]}. '
+        f'Введи код на вкладке «PIN».'
     ), ''
 
 
@@ -2513,7 +2496,7 @@ def auth_discord():
     if not _discord_oauth_ready():
         return redirect(url_for(
             'login', mode='people',
-            error='OAuth без Client Secret — выбери себя в списке: ссылка придёт в ЛС',
+            error='Быстрый OAuth не настроен — выбери себя в списке, PIN придёт в ЛС',
         ))
     cid, _secret = _discord_client_creds()
     state = secrets.token_urlsafe(24)
