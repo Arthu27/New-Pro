@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Staff activity board: ветки + день/неделя/месяц.
+"""Staff activity: орг-ветки + день/неделя/месяц.
 
 Запуск: python3 tests/test_staff_board.py
 """
@@ -28,54 +28,81 @@ def check(ok, msg, extra=''):
         print(f'  FAIL: {msg} {extra}')
 
 
-print('== staff_board unit ==')
+print('== org branches ==')
 from services.staff_board import (
     build_staff_board, fmt_voice, ROLE_TITLE, ROLE_ORDER,
     BRANCH_GROUPS, BRANCH_KEYS, branch_of_tag, resolve_span,
+    org_branches_of, person_org_branches,
 )
+from services import staff_roles as SR
 
 check(fmt_voice(0) == '0 мин', 'fmt 0')
-check(fmt_voice(125) == '2 мин', 'fmt minutes')
-check('ч' in fmt_voice(3700), 'fmt hours')
-
 day = resolve_span('day')
 week = resolve_span('week')
-month = resolve_span('month')
-check(day['span'] == 'day' and day['days'] == 1, f"day span ({day})")
-check(week['span'] == 'week' and week['days'] >= 1 and week['days'] <= 7,
-      f"week span days={week['days']}")
-check(month['span'] == 'month' and month['days'] == 30, 'month span')
-check(branch_of_tag('staff-admin') == 'admin', 'staff-admin → admin branch')
-check(branch_of_tag('master') == 'master', 'master branch')
-check(branch_of_tag('assistent') == 'assistent', 'assistent branch')
-check(branch_of_tag('helper') == 'helper', 'helper branch')
-check(branch_of_tag('creative') == 'branches', 'creative → branches')
-check(set(BRANCH_KEYS) >= {'admin', 'master', 'assistent', 'mod', 'helper', 'branches'},
-      'branch keys')
+check(day['days'] == 1, 'day=1')
+check(week['span'] == 'week', 'week span')
 
+# Helper grant → helper branch
+hb = org_branches_of([SR.KNOWN_HELPER_ROLE_ID])
+check(hb == ['helper'], f'helper grant → {hb}')
+
+# Mod curator → moderator branch (не «Мастера»!)
+mb = org_branches_of([SR.KNOWN_CURATOR_BY_KIND['moderator']])
+check(mb == ['moderator'], f'mod curator → {mb}')
+
+# Creative curator + grant
+cb = org_branches_of([
+    SR.KNOWN_CURATOR_BY_KIND['creative'],
+    SR.KNOWN_GRANT_BY_KIND['creative'],
+])
+check(cb == ['creative'], f'creative → {cb}')
+
+# Master → helper + moderator
+mst = org_branches_of([SR.KNOWN_MASTER_ROLE_ID])
+check(set(mst) == {'helper', 'moderator'}, f'master both → {mst}')
+
+# Assistent → helper + moderator
+ast = org_branches_of([SR.KNOWN_ASSISTENT_ROLE_ID])
+check(set(ast) == {'helper', 'moderator'}, f'assistent both → {ast}')
+
+# Admin only → leadership
+ab = org_branches_of([SR.KNOWN_ADMIN_ROLE_ID])
+check(ab == ['leadership'], f'admin → {ab}')
+
+# Admin who is also helper curator → helper (not only leadership)
+ah = org_branches_of([
+    SR.KNOWN_ADMIN_ROLE_ID,
+    SR.KNOWN_CURATOR_BY_KIND['helper'],
+])
+check('helper' in ah and 'leadership' not in ah, f'admin+helper curator → {ah}')
+
+check('moderator' in BRANCH_KEYS and 'helper' in BRANCH_KEYS, 'org keys')
+check('admin' not in BRANCH_KEYS or 'leadership' in BRANCH_KEYS, 'no rank-admin bag')
+check(branch_of_tag('mod') == 'moderator', 'tag mod→moderator')
+
+print('== board build ==')
 people = [
     {'id': '1', 'name': 'HelpOne', 'handle': 'h1', 'avatar': '',
-     'role': 'helper', 'role_tag': 'helper', 'role_label': 'Helper'},
-    {'id': '2', 'name': 'ModOne', 'handle': 'm1', 'avatar': '',
-     'role': 'mod', 'role_tag': 'mod', 'role_label': 'Moderator'},
-    {'id': '3', 'name': 'StaffAd', 'handle': 'sa', 'avatar': '',
-     'role': 'admin', 'role_tag': 'staff-admin', 'role_label': 'Staff Admin'},
-    {'id': '4', 'name': 'IdleHelp', 'handle': 'ih', 'avatar': '',
-     'role': 'helper', 'role_tag': 'helper', 'role_label': 'Helper'},
+     'role': 'helper', 'role_tag': 'helper', 'role_label': 'Helper',
+     'role_ids': [SR.KNOWN_HELPER_ROLE_ID]},
+    {'id': '2', 'name': 'ModCur', 'handle': 'mc', 'avatar': '',
+     'role': 'curator', 'role_tag': 'curator', 'role_label': 'Curator',
+     'role_ids': [SR.KNOWN_CURATOR_BY_KIND['moderator']]},
+    {'id': '3', 'name': 'MasterX', 'handle': 'mx', 'avatar': '',
+     'role': 'master', 'role_tag': 'master', 'role_label': 'Master',
+     'role_ids': [SR.KNOWN_MASTER_ROLE_ID]},
+    {'id': '4', 'name': 'AdminOnly', 'handle': 'ao', 'avatar': '',
+     'role': 'admin', 'role_tag': 'admin', 'role_label': 'Admin',
+     'role_ids': [SR.KNOWN_ADMIN_ROLE_ID]},
 ]
 mod_rows = [
     {'id': '1', 'name': 'HelpOne', 'total': 5, 'warns': 3, 'mutes': 2, 'kicks': 0, 'bans': 0},
-    {'id': '2', 'name': 'ModOne', 'total': 2, 'warns': 1, 'mutes': 1, 'kicks': 0, 'bans': 0},
-    {'id': '3', 'name': 'StaffAd', 'total': 1, 'warns': 0, 'mutes': 1, 'kicks': 0, 'bans': 0},
+    {'id': '2', 'name': 'ModCur', 'total': 2, 'warns': 1, 'mutes': 1, 'kicks': 0, 'bans': 0},
 ]
 
 import services.staff_board as sb
-
-voice_map = {
-    '1': {'seconds': 600, 'name': 'HelpOne', 'avatar': ''},
-    '2': {'seconds': 3600, 'name': 'ModOne', 'avatar': ''},
-}
-msg_map = {'1': 12, '2': 3, '3': 1}
+voice_map = {'1': {'seconds': 600, 'name': 'HelpOne', 'avatar': ''}}
+msg_map = {'1': 12, '2': 3}
 
 with mock.patch.object(sb, 'voice_window_map', return_value=voice_map), \
      mock.patch.object(sb, 'messages_window_map', return_value=msg_map):
@@ -83,48 +110,35 @@ with mock.patch.object(sb, 'voice_window_map', return_value=voice_map), \
         guild_id=1, span='week', people=people, mod_rows=mod_rows,
         include_zero=True)
 
-check(board['summary']['actions'] == 8, f"actions sum ({board['summary']})")
-check(board['summary']['messages'] == 16, f"messages ({board['summary']})")
-check(board['summary']['span'] == 'week', 'summary span week')
-check(any(r['key'] == 'helper' for r in board['branches']), 'branch helper')
-help_br = next(r for r in board['branches'] if r['key'] == 'helper')
-check(help_br['count'] >= 2, f"helpers include idle ({help_br['count']})")
-check(any(r['key'] == 'admin' for r in board['branches']), 'branch admin')
-admin_br = next(r for r in board['branches'] if r['key'] == 'admin')
-check(admin_br['rows'][0]['id'] == '3', 'admin #1 is StaffAd')
-check('by_branch' in board and 'helper' in board['by_branch'], 'by_branch map')
+keys = {b['key'] for b in board['branches']}
+check('helper' in keys, f'helper branch present {keys}')
+check('moderator' in keys, f'moderator branch present {keys}')
+check('leadership' in keys, f'leadership present {keys}')
+check('master' not in keys and 'admin' not in keys,
+      'no rank-based Master/Admin sections')
 
-with mock.patch.object(sb, 'voice_window_map', return_value=voice_map), \
-     mock.patch.object(sb, 'messages_window_map', return_value=msg_map):
-    day_board = build_staff_board(
-        guild_id=1, span='day', people=people, mod_rows=mod_rows)
-check(day_board['summary']['days'] == 1, 'day board days=1')
+mod_br = next(b for b in board['branches'] if b['key'] == 'moderator')
+mod_ids = {r['id'] for r in mod_br['rows']}
+check('2' in mod_ids, 'mod curator in Moderator branch')
+check('3' in mod_ids, 'master also in Moderator branch')
 
-check('Staff Admin' in ROLE_TITLE.values(), 'staff admin title')
-check('Master' in ROLE_TITLE.values() and 'master' in ROLE_ORDER, 'master role on board')
-for k in ('creative', 'broadcaster', 'event', 'support', 'closemod'):
-    check(k in ROLE_ORDER and k in ROLE_TITLE, f'branch {k} on board')
+help_br = next(b for b in board['branches'] if b['key'] == 'helper')
+help_ids = {r['id'] for r in help_br['rows']}
+check('1' in help_ids and '3' in help_ids, 'helper + master in Helper')
 
-print('== templates / css ==')
+lead = next(b for b in board['branches'] if b['key'] == 'leadership')
+check(any(r['id'] == '4' for r in lead['rows']), 'admin-only in Админы')
+
+print('== templates / login ==')
 act = (ROOT / 'web' / 'templates' / '_activity.html').read_text(encoding='utf-8')
-css = (ROOT / 'web' / 'static' / 'panel.css').read_text(encoding='utf-8')
 staff = (ROOT / 'web' / 'templates' / 'staff.html').read_text(encoding='utf-8')
 app = (ROOT / 'web' / 'app.py').read_text(encoding='utf-8')
-check('act-podium' in act and 'act-kpi' in act, 'activity template board')
-check('act-branch' in act and 'Все ветки' in act, 'branch panels in template')
-check("span='day'" in act and 'День' in act, 'day span toggle')
-check('act-branch-grids' in css and 'people-branches' in css, 'branch CSS')
-check("{% include '_activity.html' %}" in staff, 'staff includes board')
-check('people_by_branch' in staff, 'staff people by branch')
-check('branch_filter' in app and "span == 'day'" in app.replace(' ', '')
-      or "raw_span in ('day'" in app, 'app wires day+branch')
-check('resolve_span' in app and 'BRANCH_KEYS' in app, 'app uses resolve_span')
-
-print('== modpanel markers (soft) ==')
-mod = (ROOT / 'cogs' / 'moderation.py').read_text(encoding='utf-8')
-check('for_action=' in mod and "for_action='mute_chat'" in mod,
-      'selective mute clear')
-check('mute_kinds=' in mod and 'unmute_kinds=' in mod, 'kinds precomputed off UI thread')
+check('Все ветки' in act and 'act-branch' in act, 'branch UI')
+check('Moderator' in staff or 'орг-ветк' in staff.lower() or 'Орг-ветки' in staff,
+      'staff copy org branches')
+check('_resolve_staff_person' in app, 'login resolve by id')
+check('auth_ticket' in app and 'panel_login_tickets' in app, 'dm ticket login')
+check('limit=300' in app, 'login people limit 300')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

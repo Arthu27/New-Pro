@@ -2,7 +2,8 @@
 """Сводка активности staff для веб-панели.
 
 Склеивает: наказания, сообщения в чате, время в войсе.
-Ветки: Админы / Мастера / Ассистенты / Модераторы / Хелперы / Ветки.
+Орг-ветки (Moderator / Helper / Event / …): в каждой — свои
+админы/мастера/кураторы/ассистенты/стафф вместе.
 Сроки: день · текущая неделя (пн→сегодня) · месяц.
 """
 from __future__ import annotations
@@ -35,27 +36,114 @@ ROLE_TITLE = {
     'helper': 'Helper',
 }
 
-# Крупные ветки для слежки в панели (как просил владелец).
+# Организационные ветки сервера (не ранги!).
+# В каждой ветке — весь её штат: curator / master / assistent / grant / …
 BRANCH_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-    ('admin', 'Админы', ('owner', 'staff-admin', 'admin')),
-    ('master', 'Мастера', ('master', 'curator')),
-    ('assistent', 'Ассистенты', ('staff-assistent', 'assistent')),
-    ('mod', 'Модераторы', ('mod',)),
-    ('helper', 'Хелперы', ('helper',)),
-    ('branches', 'Ветки', (
-        'creative', 'broadcaster', 'event', 'support', 'closemod',
-    )),
+    ('moderator', 'Moderator', ()),
+    ('helper', 'Helper', ()),
+    ('event', 'Event', ()),
+    ('support', 'Support', ()),
+    ('closemod', 'Close mod', ()),
+    ('creative', 'Creative', ()),
+    ('broadcaster', 'Broadcaster', ()),
+    ('leadership', 'Админы', ()),  # owner/admin без орг-ветки
 )
 
 BRANCH_KEYS = tuple(k for k, _, __ in BRANCH_GROUPS)
-_TAG_TO_BRANCH: dict[str, str] = {}
-for _bk, _bt, _tags in BRANCH_GROUPS:
-    for _t in _tags:
-        _TAG_TO_BRANCH[_t] = _bk
+
+# fallback по role_tag, если нет Discord role_ids
+_TAG_TO_BRANCH: dict[str, str] = {
+    'mod': 'moderator',
+    'helper': 'helper',
+    'creative': 'creative',
+    'broadcaster': 'broadcaster',
+    'event': 'event',
+    'support': 'support',
+    'closemod': 'closemod',
+    'owner': 'leadership',
+    'admin': 'leadership',
+    'staff-admin': 'leadership',
+    # без role_ids кураторов/мастеров кладём в helper (общая ветка)
+    'curator': 'helper',
+    'master': 'helper',
+    'assistent': 'helper',
+    'staff-assistent': 'helper',
+}
 
 
 def branch_of_tag(tag: str) -> str:
+    """Legacy: один ключ ветки по role_tag (лучше org_branches_of)."""
     return _TAG_TO_BRANCH.get(str(tag or ''), 'helper')
+
+
+def org_branches_of(role_ids) -> list[str]:
+    """Орг-ветки участника по Discord role IDs (grant + curator).
+
+    Master / Assistent → Helper + Moderator (обе ветки).
+    Admin / Owner без grant/curator → leadership.
+    Участник может быть в нескольких ветках.
+    """
+    try:
+        ids = {int(x) for x in (role_ids or []) if x is not None and str(x).isdigit()}
+    except Exception:
+        ids = set()
+    if not ids:
+        return []
+
+    out: list[str] = []
+    try:
+        from services import staff_roles as SR
+    except Exception:
+        SR = None
+
+    if SR is not None:
+        for kind in SR.POSITIONS:
+            grant = int(SR.KNOWN_GRANT_BY_KIND.get(kind) or 0)
+            curator = int(SR.KNOWN_CURATOR_BY_KIND.get(kind) or 0)
+            hit = False
+            for rid in (grant, curator):
+                if rid and rid in ids:
+                    hit = True
+                    break
+            if hit and kind not in out:
+                out.append(kind)
+
+        master_ids = {int(SR.KNOWN_MASTER_ROLE_ID)}
+        asst_ids = {int(x) for x in SR.KNOWN_ASSISTENT_ROLE_IDS}
+        if (ids & master_ids) or (ids & asst_ids):
+            for k in ('helper', 'moderator'):
+                if k not in out:
+                    out.append(k)
+
+        admin_ids = {
+            int(SR.KNOWN_ADMIN_ROLE_ID),
+            int(SR.KNOWN_STAFF_ADMIN_ROLE_ID),
+        }
+        # Глобальные админы без орг-ветки — в «Админы»
+        if (ids & admin_ids) and not out:
+            out.append('leadership')
+
+        common = int(getattr(SR, 'KNOWN_COMMON_STAFF_ROLE_ID', 0) or 0)
+        if not out and common and common in ids:
+            out.append('helper')
+
+    return out
+
+
+def person_org_branches(person: dict) -> list[str]:
+    """Ветки человека: сначала по role_ids, иначе fallback по tag/role."""
+    rids = person.get('role_ids') if isinstance(person, dict) else None
+    branches = org_branches_of(rids or [])
+    if branches:
+        return branches
+    role = ''
+    tag = ''
+    if isinstance(person, dict):
+        role = str(person.get('role') or '')
+        tag = str(person.get('role_tag') or role or '')
+    if role in ('owner', 'admin') or tag in ('owner', 'admin', 'staff-admin'):
+        return ['leadership']
+    return [branch_of_tag(tag)]
 
 
 def fmt_voice(seconds: int) -> str:
@@ -293,6 +381,9 @@ def build_staff_board(
                 and messages <= 0 and voice_s <= 0):
             continue
         tag = str(p.get('role_tag') or p.get('role') or 'helper')
+        rids = p.get('role_ids') or []
+        branches = person_org_branches(p)
+        primary = branches[0] if branches else branch_of_tag(tag)
         rows.append({
             'id': uid,
             'name': p.get('name') or m.get('name') or (voice.get(uid) or {}).get('name') or uid,
@@ -301,7 +392,9 @@ def build_staff_board(
             'role': p.get('role') or '',
             'role_tag': tag,
             'role_label': p.get('role_label') or ROLE_TITLE.get(tag, tag),
-            'branch': branch_of_tag(tag),
+            'role_ids': list(rids) if rids else [],
+            'branches': branches,
+            'branch': primary,
             'actions': actions,
             'warns': warns,
             'mutes': mutes,
@@ -330,7 +423,9 @@ def build_staff_board(
             'role': 'mod',
             'role_tag': 'mod',
             'role_label': 'Moderator',
-            'branch': 'mod',
+            'role_ids': [],
+            'branches': ['moderator'],
+            'branch': 'moderator',
             'actions': actions,
             'warns': int(m.get('warns') or 0),
             'mutes': int(m.get('mutes') or 0),
@@ -354,7 +449,8 @@ def build_staff_board(
     by_branch: dict[str, list] = {}
     for r in rows:
         by_role.setdefault(r['role_tag'], []).append(r)
-        by_branch.setdefault(r['branch'], []).append(r)
+        for bk in (r.get('branches') or [r.get('branch') or 'helper']):
+            by_branch.setdefault(str(bk), []).append(r)
 
     role_tops = []
     for key in ROLE_ORDER:
@@ -372,15 +468,30 @@ def build_staff_board(
             'voice': fmt_voice(sum(int(x['voice_s']) for x in bucket)),
         })
 
+    # иерархия внутри ветки: админ → ассистент → куратор → мастер → стафф
+    _rank_order = {
+        'owner': 0, 'staff-admin': 1, 'admin': 2,
+        'staff-assistent': 3, 'assistent': 4,
+        'curator': 5, 'master': 6,
+        'mod': 7, 'helper': 8,
+        'creative': 8, 'broadcaster': 8, 'event': 8,
+        'support': 8, 'closemod': 8,
+    }
+
+    def _hier_key(r):
+        tag = str(r.get('role_tag') or r.get('role') or '')
+        return (
+            _rank_order.get(tag, 50),
+            -int(r.get('score') or 0),
+            str(r.get('name') or '').lower(),
+        )
+
     branches = []
     for key, title, _tags in BRANCH_GROUPS:
         bucket = list(by_branch.get(key) or [])
-        # для пустых веток всё равно показываем карточку, если есть people
-        people_in = [p for p in people
-                     if branch_of_tag(p.get('role_tag') or p.get('role')) == key]
+        people_in = [p for p in people if key in person_org_branches(p)]
         if not bucket and not people_in:
             continue
-        # дописать нулевых из people, которых нет в bucket
         seen = {str(x['id']) for x in bucket}
         for p in people_in:
             pid = str(p.get('id') or '')
@@ -397,14 +508,14 @@ def build_staff_board(
                 'role': p.get('role') or '',
                 'role_tag': tag,
                 'role_label': p.get('role_label') or ROLE_TITLE.get(tag, tag),
+                'role_ids': list(p.get('role_ids') or []),
+                'branches': person_org_branches(p),
                 'branch': key,
                 'actions': 0, 'warns': 0, 'mutes': 0, 'kicks': 0, 'bans': 0,
                 'messages': 0, 'voice_s': 0, 'voice': '0 мин', 'score': 0,
                 'rank': 0, 'bar': 4,
             })
-        bucket.sort(key=lambda r: (-int(r['score']), -int(r['actions']),
-                                   -int(r['messages']), -int(r['voice_s']),
-                                   str(r['name']).lower()))
+        bucket.sort(key=_hier_key)
         bmax = max((int(r['score']) for r in bucket), default=1) or 1
         for i, r in enumerate(bucket, 1):
             r['rank'] = i
@@ -433,7 +544,7 @@ def build_staff_board(
     }
     return {
         'summary': summary,
-        'rows': active_rows if not include_zero else rows,
+        'rows': active_rows,
         'podium': active_rows[:3],
         'role_tops': role_tops,
         'by_role': by_role,
