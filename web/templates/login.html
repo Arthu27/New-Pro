@@ -47,6 +47,8 @@
         Войти через Discord
       </a>
       <p class="login-note" style="margin:-4px 0 14px">или выбери себя ниже — PIN придёт в ЛС</p>
+      {% elif mode == 'people' %}
+      <p class="login-note" style="margin:0 0 14px">Это и есть вход через Discord: кликни по себе — PIN придёт в ЛС бота.</p>
       {% endif %}
 
       <nav class="login-tabs login-tabs--3" aria-label="Способ входа">
@@ -164,7 +166,12 @@
 
         {% elif mode == 'register' %}
           {% if not invite_set %}
-          <div class="people-empty">Код приглашения ещё не задан в .env (PANEL_INVITE_CODE). Попроси owner.</div>
+          <div class="people-empty">
+            Регистрация по коду выключена (owner ещё не задал приглашение).
+            <br><br>
+            <a href="{{ url_for('login', mode='people', next=next) }}">← Войти через Discord</a>
+            — выбери себя в списке, PIN придёт в ЛС.
+          </div>
           {% else %}
           <div class="reg-search-wrap">
             <label class="reg-label">Найди себя по имени
