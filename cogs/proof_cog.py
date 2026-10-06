@@ -891,16 +891,14 @@ class ProofOfferSelect(discord.ui.Select):
                 from discord import ui as dui, SeparatorSpacing
                 done = dui.LayoutView(timeout=1)
                 done.add_item(black_container(
-                    dui.TextDisplay('# 🤍 Доказательство'),
-                    dui.Separator(spacing=SeparatorSpacing.small),
-                    dui.TextDisplay('Пропущено · наказание уже выдано'),
+                    dui.TextDisplay('**Демка** · пропущено'),
                 ))
                 await interaction.response.edit_message(view=done)
                 return
         except Exception:
             pass
         await interaction.response.edit_message(
-            content='Пропущено · наказание уже выдано', view=None)
+            content='Пропущено', view=None)
 
 
 def build_proof_offer_view(*, guild_id: int, user_id: int, mod_id: int,
@@ -918,12 +916,8 @@ def build_proof_offer_view(*, guild_id: int, user_id: int, mod_id: int,
         row = dui.ActionRow()
         row.add_item(sel)
         view.add_item(black_container(
-            dui.TextDisplay('# 🤍 Доказательство'),
-            dui.TextDisplay('-# HAKUMO · демка к наказанию'),
-            dui.Separator(spacing=SeparatorSpacing.large),
-            dui.TextDisplay(
-                f'Наказание **{action_ru}** уже выдано.\n'
-                'Прикрепи фото или видео **файлом** — необязательно.'),
+            dui.TextDisplay(f'**Демка** · {action_ru}'),
+            dui.TextDisplay('-# Файл необязателен'),
             dui.Separator(),
             row,
         ))
@@ -1690,9 +1684,7 @@ async def offer_proof_after_punish(interaction, *, user, action, reason,
             from services.v2_layouts import V2_AVAILABLE
             kwargs = {'view': view, 'ephemeral': True}
             if not V2_AVAILABLE:
-                kwargs['content'] = (
-                    f'Доказательство · наказание уже выдано.\n'
-                    f'Прикрепи файл или пропусти.')
+                kwargs['content'] = 'Демка (необязательно): файл или пропусти.'
             await send.send(**kwargs)
     except Exception as ex:
         log.debug('[PROOF] offer after punish: %s', ex)

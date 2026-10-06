@@ -301,7 +301,9 @@ check('не указана' in eval_ and '"не указана"' not in eval_,
 check('send_action_log' in open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
       and 'срок наказания истёк' in open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read(),
       'снятие бана и истечение роли — той же карточкой, не тонкой строкой')
-check('_clean_reason' in lsrc2 and 'На сервере сейчас' in lsrc2,
+check('_clean_reason' in lsrc2
+      and ('На сервере сейчас' in lsrc2 or "('На сервере'" in lsrc2
+           or "'На сервере'" in lsrc2),
       'вход без «#N», причина чистится от заглушек')
 tval2 = next(f.value for f in to.fields if f.name == 'Срок')
 check('30 мин' in tval2 and '"30 мин"' not in tval2,

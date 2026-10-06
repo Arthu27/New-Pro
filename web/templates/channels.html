@@ -1,146 +1,1025 @@
 {% extends "base.html" %}
 {% block title %}Каналы{% endblock %}
 {% block heading %}Каналы{% endblock %}
+{% block live %}off{% endblock %}
 {% block body %}
-<p class="lead">Каждый канал — с правами @everyone, лимитами и ролью в боте. Открой карточку: полный разбор.</p>
-
-<div class="kpis rise">
-  <div class="kpi"><b>{{ kpi.total }}</b><span>каналов</span></div>
-  <div class="kpi"><b>{{ kpi.text }}</b><span>текст</span></div>
-  <div class="kpi"><b>{{ kpi.voice }}</b><span>голос</span></div>
-  <div class="kpi"><b>{{ kpi.closed }}</b><span>скрыты</span></div>
-  <div class="kpi"><b>{{ kpi.routes }}</b><span>маршруты</span></div>
-</div>
-
-<div class="ch-bar rise">
-  <div class="seg" id="chFilter" role="tablist">
-    <button type="button" class="on" data-f="all">Все</button>
-    <button type="button" data-f="text">Текст</button>
-    <button type="button" data-f="voice">Голос</button>
-    <button type="button" data-f="closed">Скрытые</button>
-    <button type="button" data-f="route">Маршруты</button>
-  </div>
-  <label class="ch-find">
-    <i class="fas fa-magnifying-glass"></i>
-    <input id="chq" type="search" placeholder="Найти канал или ID…" autocomplete="off">
-  </label>
-</div>
-
 {% if not groups %}
 <section class="panel rise"><div class="empty">Каналы недоступны — бот ещё не в сети</div></section>
 {% else %}
-{% for g in groups %}
-<section class="panel rise ch-group" data-cat="{{ g.name|lower }}">
-  <h2>{{ g.name }} <span class="count ch-count">{{ g['items']|length }}</span></h2>
-  <div class="ch-grid">
-    {% for r in g['items'] %}
-    <details class="ch-card" data-group="{{ r.group }}" data-closed="{{ 0 if r.view else 1 }}" data-route="{{ 1 if r.route_key else 0 }}" data-name="{{ (r.name ~ ' ' ~ r.cat ~ ' ' ~ r.id ~ ' ' ~ (r.route_label or ''))|lower }}">
-      <summary>
-        <div class="ch-card__top">
-          <span class="ch-ico {% if not r.view %}is-lock{% endif %}"><i class="fas {{ r.icon }}"></i></span>
-          <div class="ch-card__name">
-            <strong>{% if r.group != 'voice' %}#{% endif %}{{ r.name }}</strong>
-            <span class="dim">{{ r.kind }}{% if not r.view %} · скрыт{% endif %}{% if r.route_label %} · {{ r.route_label }}{% endif %}</span>
-          </div>
-          <i class="fas fa-chevron-down ch-chev" aria-hidden="true"></i>
-        </div>
-        <div class="ch-caps">
-          <span class="ch-cap {% if r.view %}on{% endif %}">смотреть</span>
-          {% if r.group == 'voice' %}
-          <span class="ch-cap {% if r.connect %}on{% endif %}">зайти</span>
-          <span class="ch-cap {% if r.speak %}on{% endif %}">говорить</span>
-          <span class="ch-cap {% if r.stream %}on{% endif %}">стрим</span>
-          {% if r.voice_now %}<span class="ch-cap on">{{ r.voice_now }} в войсе</span>{% endif %}
-          {% else %}
-          <span class="ch-cap {% if r.send %}on{% endif %}">писать</span>
-          {% if r.slowmode %}<span class="ch-cap on">{{ r.slowmode }}с</span>{% endif %}
-          {% if r.nsfw %}<span class="ch-cap warn on">nsfw</span>{% endif %}
-          {% endif %}
-          <span class="ch-cap {% if r.manage %}on warn{% endif %}">управлять</span>
-        </div>
-      </summary>
-      <div class="ch-more">
-        <div class="mp-row"><span class="mp-key">ID</span><span class="mp-val mono">{{ r.id }}</span></div>
-        <div class="mp-row"><span class="mp-key">Категория</span><span class="mp-val">{{ r.cat }}</span></div>
-        <div class="mp-row"><span class="mp-key">Тип</span><span class="mp-val">{{ r.kind }}</span></div>
-        {% if r.topic %}<div class="mp-row"><span class="mp-key">Тема</span><span class="mp-val">{{ r.topic }}</span></div>{% endif %}
-        {% if r.route_label %}<div class="mp-row"><span class="mp-key">Маршрут бота</span><span class="mp-val accent">{{ r.route_label }}</span></div>{% endif %}
-        <div class="mp-row"><span class="mp-key">Смотреть</span><span class="mp-val {% if r.view %}ok{% endif %}">{% if r.view %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Писать</span><span class="mp-val {% if r.send %}ok{% endif %}">{% if r.send %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Зайти</span><span class="mp-val {% if r.connect %}ok{% endif %}">{% if r.connect %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Говорить</span><span class="mp-val {% if r.speak %}ok{% endif %}">{% if r.speak %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Стрим</span><span class="mp-val {% if r.stream %}ok{% endif %}">{% if r.stream %}да{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Управлять</span><span class="mp-val {% if r.manage %}ok{% endif %}">{% if r.manage %}да{% else %}нет{% endif %}</span></div>
-        {% if r.group == 'voice' %}
-        <div class="mp-row"><span class="mp-key">Битрейт</span><span class="mp-val">{% if r.bitrate %}{{ r.bitrate }} kbps{% else %}—{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Лимит</span><span class="mp-val">{% if r.user_limit %}{{ r.user_limit }}{% else %}∞{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">Сейчас</span><span class="mp-val">{{ r.voice_now }}</span></div>
-        {% else %}
-        <div class="mp-row"><span class="mp-key">Slowmode</span><span class="mp-val">{% if r.slowmode %}{{ r.slowmode }} сек{% else %}нет{% endif %}</span></div>
-        <div class="mp-row"><span class="mp-key">NSFW</span><span class="mp-val">{% if r.nsfw %}да{% else %}нет{% endif %}</span></div>
-        {% endif %}
-        {% if r.overwrites %}
-        <div class="ch-ow">
-          <div class="mp-section">Перезаписи ролей</div>
-          {% for ow in r.overwrites %}
-          <div class="ch-ow__row">
-            <b>{{ ow.name }}</b>
-            <span class="dim">+ {{ ow.allow }}</span>
-            <span class="dim">− {{ ow.deny }}</span>
-          </div>
+{% if limits %}{% include '_limits.html' %}{% endif %}
+<div class="dc" id="dcApp"
+     data-selected="{{ selected or '' }}"
+     data-can-control="{{ 1 if can_control_bot else 0 }}"
+     data-can-send="{{ 1 if can_control_bot and selected_row and selected_row.group != 'voice' else 0 }}">
+  <aside class="dc-side">
+    <div class="dc-side__head">
+      <label class="dc-find">
+        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+        <input id="dcq" type="search" placeholder="Найти канал…" autocomplete="off">
+      </label>
+    </div>
+    <div class="dc-side__list" id="dcList">
+      {% for g in groups %}
+      <div class="dc-cat" data-cat="{{ g.name|lower }}">
+        <button type="button" class="dc-cat__toggle" aria-expanded="true">
+          <i class="fas fa-chevron-down" aria-hidden="true"></i>
+          <span class="dc-cat__name" title="{{ g.name }}">{{ g.name }}</span>
+        </button>
+        <div class="dc-cat__items">
+          {% for r in g['items'] %}
+          <a class="dc-ch {% if r.id == selected %}on{% endif %}"
+             href="{{ url_for('channels_page', c=r.id) }}"
+             data-id="{{ r.id }}"
+             data-group="{{ r.group }}"
+             data-send="{{ 1 if r.group != 'voice' else 0 }}"
+             data-topic="{{ r.topic or '' }}"
+             data-jump="{{ r.jump or '' }}"
+             data-name="{{ (r.name ~ ' ' ~ r.cat ~ ' ' ~ r.id ~ ' ' ~ (r.route_label or ''))|lower }}"
+             title="#{{ r.name }}{% if r.route_label %} · {{ r.route_label }}{% endif %}">
+            <i class="fas {{ r.icon }} dc-ch__ico {% if not r.view %}is-lock{% endif %}" aria-hidden="true"></i>
+            <span class="dc-ch__name">{{ r.name }}</span>
+            {% if r.group == 'voice' and r.voice_now %}<span class="dc-ch__n">{{ r.voice_now }}</span>{% endif %}
+            {% if not r.view %}<i class="fas fa-lock dc-ch__lock" aria-hidden="true"></i>{% endif %}
+          </a>
           {% endfor %}
         </div>
-        {% endif %}
-        {% if r.jump %}
-        <div class="mp-actions">
-          <a class="btn btn-ghost" href="{{ r.jump }}" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Открыть</a>
+      </div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <section class="dc-main">
+    <header class="dc-head" id="dcHead">
+      {% if selected_row %}
+      <div class="dc-head__title">
+        <i class="fas {{ selected_row.icon }}" id="dcHeadIco" aria-hidden="true"></i>
+        <div>
+          <strong id="dcName">{% if selected_row.group != 'voice' %}#{% endif %}{{ selected_row.name }}</strong>
+          <span class="dc-head__topic" id="dcTopic">{% if selected_row.topic %}{{ selected_row.topic }}{% elif selected_row.group == 'voice' %}Голосовой канал{% else %}Текстовый канал{% endif %}</span>
         </div>
+      </div>
+      {% else %}
+      <div class="dc-head__title">
+        <i class="fas fa-hashtag" id="dcHeadIco" aria-hidden="true"></i>
+        <div><strong id="dcName">Выбери канал</strong><span class="dc-head__topic" id="dcTopic">Слева список</span></div>
+      </div>
+      {% endif %}
+      <div class="dc-head__meta">
+        {% if can_control_bot %}
+        <button type="button" class="dc-pill" id="dcDmOpen" title="Личное сообщение">
+          <i class="fas fa-envelope"></i> ЛС
+        </button>
+        {% endif %}
+        {% if selected_row and selected_row.jump %}
+        <a class="dc-pill link" id="dcJump" href="{{ selected_row.jump }}" target="_blank" rel="noopener" title="Открыть в Discord">
+          <i class="fas fa-arrow-up-right-from-square"></i>
+        </a>
+        {% else %}
+        <a class="dc-pill link" id="dcJump" href="#" target="_blank" rel="noopener" title="Открыть в Discord" hidden>
+          <i class="fas fa-arrow-up-right-from-square"></i>
+        </a>
         {% endif %}
       </div>
-    </details>
-    {% endfor %}
+    </header>
+
+    <div class="dc-feed" id="dcFeed" role="log" aria-live="polite">
+      <div class="dc-feed__status" id="dcStatus">Загрузка…</div>
+    </div>
+    <div class="dc-voice" id="dcVoice" hidden>
+      <div class="dc-voice__hero">
+        <div>
+          <div class="dc-voice__kicker">Голосовой канал</div>
+          <h2 id="dcVoiceTitle">Войс</h2>
+          <p class="dc-voice__hint">Голосом — в Discord-клиенте. Бот всегда с выключенным микрофоном и наушниками. Управлять ботом (зайти/выйти) может только owner.</p>
+        </div>
+        <div class="dc-voice__acts">
+          <a class="dc-voice__btn primary" id="dcVoiceOpen" href="#" target="_blank" rel="noopener">
+            <i class="fas fa-arrow-up-right-from-square"></i> Открыть в Discord
+          </a>
+          {% if can_control_bot %}
+          <button type="button" class="dc-voice__btn" id="dcVoiceJoin"><i class="fas fa-headset"></i> Бот зайти</button>
+          <button type="button" class="dc-voice__btn ghost" id="dcVoiceLeave"><i class="fas fa-right-from-bracket"></i> Бот выйти</button>
+          {% endif %}
+        </div>
+      </div>
+      <div class="dc-voice__status" id="dcVoiceStatus"></div>
+      <div class="dc-voice__people" id="dcVoicePeople"></div>
+    </div>
+
+    <form class="dc-compose" id="dcCompose" autocomplete="off">
+      <div class="dc-reply" id="dcReplyBar" hidden>
+        <div class="dc-reply__rail" aria-hidden="true"></div>
+        <div class="dc-reply__body">
+          <div class="dc-reply__label">Ответ <b id="dcReplyWho"></b></div>
+          <div class="dc-reply__snip" id="dcReplySnip"></div>
+        </div>
+        <button type="button" class="dc-reply__x" id="dcReplyClear" title="Отменить ответ" aria-label="Отменить">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+      <div class="dc-compose__wrap">
+        <div class="dc-mention" id="dcMention" hidden role="listbox"></div>
+        <div class="dc-compose__box">
+          <textarea id="dcInput" rows="1" maxlength="2000"
+            placeholder="{% if not can_control_bot %}Только owner может писать от бота{% elif selected_row and selected_row.group != 'voice' %}Сообщение в #{{ selected_row.name }}…  @ — тег{% else %}Выбери текстовый канал{% endif %}"
+            {% if not can_control_bot or not selected_row or selected_row.group == 'voice' %}disabled{% endif %}></textarea>
+          <button type="submit" class="dc-send" id="dcSend"
+            {% if not can_control_bot or not selected_row or selected_row.group == 'voice' %}disabled{% endif %}
+            title="{% if can_control_bot %}Отправить от бота{% else %}Только owner{% endif %}">
+            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div class="dc-compose__hint">{% if can_control_bot %}Enter — отправить · @ — тег · ↩ на сообщении — ответ · ЛС сверху{% else %}Просмотр · писать / ЛС — только owner · клик по нику — наказать{% endif %}</div>
+    </form>
+  </section>
+</div>
+
+{% if can_control_bot %}
+<div class="dc-dm" id="dcDm" hidden>
+  <div class="dc-dm__panel" role="dialog" aria-modal="true" aria-labelledby="dcDmTitle">
+    <header class="dc-dm__head">
+      <div>
+        <div class="dc-dm__kicker">Личка от бота</div>
+        <h3 id="dcDmTitle">Написать в ЛС</h3>
+      </div>
+      <button type="button" class="dc-dm__x" id="dcDmClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+    </header>
+    <label class="dc-dm__field">
+      <span>Кому</span>
+      <input type="search" id="dcDmQ" placeholder="Ник или Discord ID…" autocomplete="off">
+    </label>
+    <div class="dc-dm__suggest" id="dcDmSuggest" hidden></div>
+    <div class="dc-dm__picked" id="dcDmPicked" hidden>
+      <img id="dcDmAva" alt="">
+      <div>
+        <b id="dcDmName"></b>
+        <small id="dcDmHandle"></small>
+      </div>
+      <button type="button" class="dc-dm__clear" id="dcDmClearPick">сменить</button>
+    </div>
+    <label class="dc-dm__field">
+      <span>Сообщение</span>
+      <textarea id="dcDmText" rows="4" maxlength="2000" placeholder="Текст личного сообщения…"></textarea>
+    </label>
+    <div class="dc-dm__foot">
+      <span class="dc-dm__status" id="dcDmStatus"></span>
+      <button type="button" class="dc-dm__send" id="dcDmSend" disabled>
+        <i class="fas fa-paper-plane"></i> Отправить ЛС
+      </button>
+    </div>
   </div>
-</section>
-{% endfor %}
-<p class="ch-none dim" id="chNone" hidden>Ничего не подошло под фильтр</p>
+</div>
+{% endif %}
+
+{% include '_punish.html' %}
 {% endif %}
 
 <script>
 (function () {
-  const filter = document.getElementById('chFilter');
-  const q = document.getElementById('chq');
-  if (!filter) return;
-  let mode = 'all';
-  function apply() {
-    const needle = (q.value || '').trim().toLowerCase();
-    let shown = 0;
-    document.querySelectorAll('.ch-card').forEach(card => {
-      const okMode = mode === 'all'
-        || (mode === 'closed' ? card.dataset.closed === '1'
-          : mode === 'route' ? card.dataset.route === '1'
-          : card.dataset.group === mode);
-      const okQ = !needle || (card.dataset.name || '').includes(needle);
-      const on = okMode && okQ;
-      card.hidden = !on;
-      if (on) shown += 1;
+  const app = document.getElementById('dcApp');
+  if (!app) return;
+  window.punishNoReload = true;
+
+  const feed = document.getElementById('dcFeed');
+  const input = document.getElementById('dcInput');
+  const form = document.getElementById('dcCompose');
+  const sendBtn = document.getElementById('dcSend');
+  const q = document.getElementById('dcq');
+  const list = document.getElementById('dcList');
+  const mentionBox = document.getElementById('dcMention');
+  const replyBar = document.getElementById('dcReplyBar');
+  const replyWho = document.getElementById('dcReplyWho');
+  const replySnip = document.getElementById('dcReplySnip');
+  const replyClear = document.getElementById('dcReplyClear');
+  let cid = app.dataset.selected || '';
+  const canControl = app.dataset.canControl === '1';
+  let loading = false;
+  let polling = false;
+  let lastId = '';
+  let known = new Set();
+  let abortCtrl = null;
+  let replyTo = null;
+  let mentionItems = [];
+  let mentionIdx = -1;
+  let mentionTimer = null;
+  let mentionRange = null;
+
+  const HINT_OK = canControl
+    ? 'Enter — отправить · @ — тег · ↩ на сообщении — ответ · ЛС сверху'
+    : 'Просмотр · писать / ЛС — только owner · клик по нику — наказать';
+
+  const esc = (s) => String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  function linkify(text) {
+    let raw = esc(text);
+    raw = raw.replace(/&lt;@!?(\d+)&gt;/g, (_, id) =>
+      `<span class="dc-tag" data-uid="${id}" title="ID ${id}">@${id}</span>`);
+    raw = raw.replace(/&lt;@&amp;(\d+)&gt;/g, (_, id) =>
+      `<span class="dc-tag dc-tag--role" title="роль ${id}">@роль</span>`);
+    raw = raw.replace(/(https?:\/\/[^\s<&]+)/g, (u) =>
+      `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+    raw = raw.replace(/&lt;(a?):([A-Za-z0-9_]+):(\d+)&gt;/g, (_, a, name, id) => {
+      const ext = a === 'a' ? 'gif' : 'png';
+      return `<img class="dc-emoji" src="https://cdn.discordapp.com/emojis/${id}.${ext}?size=48" alt=":${esc(name)}:" title=":${esc(name)}:" loading="lazy">`;
     });
-    document.querySelectorAll('.ch-group').forEach(g => {
-      const n = g.querySelectorAll('.ch-card:not([hidden])').length;
-      g.hidden = n === 0;
-      const c = g.querySelector('.ch-count');
-      if (c) c.textContent = n;
-    });
-    const none = document.getElementById('chNone');
-    if (none) none.hidden = shown !== 0;
+    return raw;
   }
-  filter.addEventListener('click', e => {
-    const b = e.target.closest('button[data-f]');
-    if (!b) return;
-    mode = b.dataset.f;
-    filter.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    apply();
+
+  function nearBottom() {
+    return feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+  }
+
+  function setReply(m) {
+    if (!canControl || !m || !m.id) return;
+    replyTo = {
+      id: String(m.id),
+      author: m.author || 'сообщение',
+      content: (m.content || '').slice(0, 120),
+    };
+    if (replyWho) replyWho.textContent = replyTo.author;
+    if (replySnip) replySnip.textContent = replyTo.content || '…';
+    if (replyBar) replyBar.hidden = false;
+    if (input && !input.disabled) {
+      input.focus();
+    }
+  }
+
+  function clearReply() {
+    replyTo = null;
+    if (replyBar) replyBar.hidden = true;
+    if (replyWho) replyWho.textContent = '';
+    if (replySnip) replySnip.textContent = '';
+  }
+
+  function renderMsg(m, groupWithPrev) {
+    const canPunish = m.author_id && !m.bot && typeof window.openPunish === 'function';
+    const whoData = canPunish
+      ? ` data-uid="${esc(m.author_id)}" data-name="${esc(m.author)}" title="Наказать"`
+      : '';
+    const avaInner = m.avatar
+      ? `<img src="${esc(m.avatar)}" alt="">`
+      : `<span class="dc-msg__ava--fb">${esc((m.author || '?')[0]).toUpperCase()}</span>`;
+    const ava = canPunish
+      ? `<button type="button" class="dc-msg__ava dc-msg__who"${whoData}>${avaInner}</button>`
+      : `<span class="dc-msg__ava">${avaInner}</span>`;
+    const atts = (m.attachments || []).map(a => {
+      if (a.image) {
+        return `<a class="dc-att dc-att--img" href="${esc(a.url)}" target="_blank" rel="noopener">
+          <img src="${esc(a.url)}" alt="${esc(a.name)}" loading="lazy"></a>`;
+      }
+      return `<a class="dc-att" href="${esc(a.url)}" target="_blank" rel="noopener">
+        <i class="fas fa-paperclip"></i> ${esc(a.name)}</a>`;
+    }).join('');
+    const body = linkify(m.content || '') || (atts ? '' : '<span class="dim">пусто</span>');
+    const bot = m.bot ? '<span class="dc-bot">BOT</span>' : '';
+    const nameHtml = canPunish
+      ? `<button type="button" class="dc-msg__nick dc-msg__who"${whoData}>${esc(m.author)}</button>`
+      : `<strong>${esc(m.author)}</strong>`;
+    const replyHtml = m.reply ? `<button type="button" class="dc-msg__ref" data-jump="${esc(m.reply.id)}" title="К исходному">
+      <span class="dc-msg__ref-who">${esc(m.reply.author || 'сообщение')}</span>
+      <span class="dc-msg__ref-txt">${esc(m.reply.content || '…')}</span>
+    </button>` : '';
+    const acts = canControl
+      ? `<div class="dc-msg__acts">
+          <button type="button" class="dc-msg__act" data-act="reply"
+            data-id="${esc(m.id)}" data-author="${esc(m.author)}"
+            data-content="${esc((m.content || '').slice(0, 160))}" title="Ответить">
+            <i class="fas fa-reply"></i>
+          </button>
+          ${m.author_id && !m.bot ? `<button type="button" class="dc-msg__act" data-act="mention"
+            data-uid="${esc(m.author_id)}" data-name="${esc(m.author)}" title="Тегнуть">
+            <i class="fas fa-at"></i>
+          </button>` : ''}
+          ${m.author_id && !m.bot ? `<button type="button" class="dc-msg__act" data-act="dm"
+            data-uid="${esc(m.author_id)}" data-name="${esc(m.author)}"
+            data-avatar="${esc(m.avatar || '')}" title="ЛС">
+            <i class="fas fa-envelope"></i>
+          </button>` : ''}
+        </div>`
+      : '';
+    const dataAttrs = `data-id="${esc(m.id)}" data-aid="${esc(m.author_id)}" data-author="${esc(m.author)}" data-content="${esc((m.content || '').slice(0, 160))}"`;
+    if (groupWithPrev) {
+      return `<article class="dc-msg is-cont" ${dataAttrs}>
+        <div class="dc-msg__gutter"><time>${esc((m.when || '').slice(-5))}</time></div>
+        <div class="dc-msg__body">${replyHtml}<div class="dc-msg__text">${body}</div>${atts}${acts}</div>
+      </article>`;
+    }
+    return `<article class="dc-msg" ${dataAttrs}>
+      ${ava}
+      <div class="dc-msg__body">
+        ${replyHtml}
+        <div class="dc-msg__meta">${nameHtml}${bot}<time>${esc(m.when)}</time></div>
+        <div class="dc-msg__text">${body}</div>${atts}${acts}
+      </div>
+    </article>`;
+  }
+
+  function appendItems(items, {reset} = {}) {
+    if (reset) {
+      known = new Set();
+      lastId = '';
+      feed.innerHTML = '';
+    }
+    if (!items || !items.length) {
+      if (reset || !feed.querySelector('.dc-msg')) {
+        feed.innerHTML = '<div class="dc-feed__empty"><i class="fas fa-comment-dots"></i><p>Пока тихо — напиши первое</p></div>';
+      }
+      return;
+    }
+    const empty = feed.querySelector('.dc-feed__empty, .dc-feed__status');
+    if (empty) empty.remove();
+    const stick = reset || nearBottom();
+    let html = '';
+    let prevAid = '';
+    let prevWhen = '';
+    const last = feed.querySelector('.dc-msg:last-child');
+    if (last && !reset) {
+      prevAid = last.dataset.aid || '';
+      const t = last.querySelector('time');
+      prevWhen = t ? t.textContent : '';
+    }
+    items.forEach((m) => {
+      const id = String(m.id);
+      if (known.has(id)) return;
+      known.add(id);
+      const same = prevAid && String(m.author_id) === prevAid && m.when === prevWhen && !m.reply;
+      html += renderMsg(m, same);
+      prevAid = String(m.author_id || '');
+      prevWhen = m.when || '';
+      lastId = id;
+    });
+    if (html) {
+      feed.insertAdjacentHTML('beforeend', html);
+      if (stick) feed.scrollTop = feed.scrollHeight;
+    }
+  }
+
+  const voiceBox = document.getElementById('dcVoice');
+  const voicePeople = document.getElementById('dcVoicePeople');
+  const voiceStatus = document.getElementById('dcVoiceStatus');
+  const voiceOpen = document.getElementById('dcVoiceOpen');
+  const voiceJoin = document.getElementById('dcVoiceJoin');
+  const voiceLeave = document.getElementById('dcVoiceLeave');
+  const voiceTitle = document.getElementById('dcVoiceTitle');
+  let mode = 'text';
+
+  function setMode(next) {
+    mode = next;
+    const isVoice = next === 'voice';
+    feed.hidden = isVoice;
+    if (voiceBox) voiceBox.hidden = !isVoice;
+    form.style.display = isVoice ? 'none' : '';
+    if (isVoice) {
+      hideMention();
+      clearReply();
+    }
+  }
+
+  function setStatus(text, isErr) {
+    feed.innerHTML = `<div class="dc-feed__status${isErr ? ' is-err' : ''}">${esc(text)}</div>`;
+  }
+
+  function paintVoice(data) {
+    if (!voiceBox) return;
+    if (voiceTitle) voiceTitle.textContent = data.name || 'Войс';
+    if (voiceOpen && data.jump) voiceOpen.href = data.jump;
+    if (voiceStatus) {
+      voiceStatus.innerHTML = data.bot_here
+        ? '<span class="ok">Бот в этом войсе</span>'
+        : (data.bot_channel
+          ? `<span class="dim">Бот в другом войсе</span>`
+          : '<span class="dim">Бот не в войсе</span>');
+    }
+    const people = data.people || [];
+    if (!people.length) {
+      voicePeople.innerHTML = '<div class="dc-feed__empty"><i class="fas fa-microphone-slash"></i><p>Пусто — зайди сам через Discord</p></div>';
+      return;
+    }
+    voicePeople.innerHTML = people.map(p => {
+      const can = p.id && !p.bot && typeof window.openPunish === 'function';
+      const flags = [
+        p.mute ? '<i class="fas fa-microphone-slash" title="мут"></i>' : '',
+        p.deaf ? '<i class="fas fa-headphones" title="деаф"></i>' : '',
+        p.bot ? '<span class="dc-bot">BOT</span>' : '',
+      ].filter(Boolean).join(' ');
+      const ava = p.avatar
+        ? `<img src="${esc(p.avatar)}" alt="">`
+        : `<span class="dc-msg__ava--fb">${esc((p.name || '?')[0]).toUpperCase()}</span>`;
+      return `<button type="button" class="dc-voice__person ${can ? 'dc-msg__who' : ''}"
+        ${can ? `data-uid="${esc(p.id)}" data-name="${esc(p.name)}"` : 'disabled'}
+        title="${can ? 'Наказать' : ''}">
+        <span class="dc-msg__ava">${ava}</span>
+        <span class="dc-voice__person-meta"><b>${esc(p.name)}</b>${flags}</span>
+      </button>`;
+    }).join('');
+  }
+
+  async function loadVoice({soft} = {}) {
+    if (!cid) return;
+    setMode('voice');
+    if (!soft && voicePeople && !voicePeople.querySelector('.dc-voice__person')) {
+      voicePeople.innerHTML = '<div class="dc-feed__status">Загрузка…</div>';
+    }
+    try {
+      const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/voice');
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'ошибка');
+      paintVoice(j);
+    } catch (e) {
+      if (!soft && voicePeople) {
+        voicePeople.innerHTML = `<div class="dc-feed__status is-err">${esc(e.message || e)}</div>`;
+      }
+    }
+  }
+
+  async function loadMessages({soft} = {}) {
+    if (!cid) { setMode('text'); setStatus('Выбери канал слева'); return; }
+    const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
+    if (ch && ch.dataset.group === 'voice') {
+      await loadVoice({ soft: !!soft });
+      return;
+    }
+    setMode('text');
+    if (abortCtrl) abortCtrl.abort();
+    abortCtrl = new AbortController();
+    loading = true;
+    if (!soft) setStatus('Загрузка…');
+    try {
+      const r = await fetch(
+        '/api/channels/' + encodeURIComponent(cid) + '/messages?limit=50',
+        { signal: abortCtrl.signal }
+      );
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'ошибка');
+      appendItems(j.items || [], { reset: true });
+      if (j.topic) {
+        const t = document.getElementById('dcTopic');
+        if (t) t.textContent = j.topic;
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      setStatus(String(e.message || e), true);
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function liveTick() {
+    if (document.hidden || loading || polling || !cid) return;
+    const ch = list.querySelector(`.dc-ch[data-id="${CSS.escape(cid)}"]`);
+    if (ch && ch.dataset.group === 'voice') {
+      if (mode === 'voice') loadVoice({ soft: true });
+      return;
+    }
+    if (!lastId) return;
+    polling = true;
+    try {
+      const r = await fetch(
+        '/api/channels/' + encodeURIComponent(cid)
+          + '/messages?limit=30&after=' + encodeURIComponent(lastId)
+      );
+      const j = await r.json();
+      if (j.ok && j.items && j.items.length) appendItems(j.items);
+    } catch (_) { /* soft */ }
+    finally { polling = false; }
+  }
+
+  function autoSize() {
+    if (!input) return;
+    input.style.height = 'auto';
+    input.style.height = Math.min(140, Math.max(44, input.scrollHeight)) + 'px';
+  }
+
+  function hideMention() {
+    if (mentionBox) {
+      mentionBox.hidden = true;
+      mentionBox.innerHTML = '';
+    }
+    mentionItems = [];
+    mentionIdx = -1;
+    mentionRange = null;
+  }
+
+  function paintMention(items) {
+    mentionItems = items || [];
+    mentionIdx = items.length ? 0 : -1;
+    if (!mentionBox) return;
+    if (!items.length) {
+      mentionBox.hidden = false;
+      mentionBox.innerHTML = '<div class="dc-mention__empty">Никого не нашли</div>';
+      return;
+    }
+    mentionBox.hidden = false;
+    mentionBox.innerHTML = items.map((it, i) => {
+      const ava = it.avatar
+        ? `<img src="${esc(it.avatar)}" alt="">`
+        : `<span class="dc-msg__ava--fb">${esc((it.name || '?')[0]).toUpperCase()}</span>`;
+      return `<button type="button" class="dc-mention__item${i === 0 ? ' is-on' : ''}" role="option"
+        data-idx="${i}" data-id="${esc(it.id)}" data-name="${esc(it.name)}">
+        <span class="dc-msg__ava">${ava}</span>
+        <span><b>${esc(it.name)}</b><small>@${esc(it.handle || it.id)}</small></span>
+      </button>`;
+    }).join('');
+  }
+
+  function highlightMention(idx) {
+    if (!mentionBox || !mentionItems.length) return;
+    mentionIdx = (idx + mentionItems.length) % mentionItems.length;
+    mentionBox.querySelectorAll('.dc-mention__item').forEach((el, i) => {
+      el.classList.toggle('is-on', i === mentionIdx);
+      if (i === mentionIdx) el.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  function insertMention(user) {
+    if (!input || !user) return;
+    const val = input.value || '';
+    const start = input.selectionStart || 0;
+    let from = mentionRange ? mentionRange.from : start;
+    let to = mentionRange ? mentionRange.to : start;
+    if (from < 0) from = 0;
+    const tag = `<@${user.id}> `;
+    input.value = val.slice(0, from) + tag + val.slice(to);
+    const caret = from + tag.length;
+    input.setSelectionRange(caret, caret);
+    hideMention();
+    autoSize();
+    input.focus();
+  }
+
+  function insertAtTag(uid) {
+    if (!input || input.disabled || !uid) return;
+    const tag = `<@${uid}> `;
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const val = input.value || '';
+    input.value = val.slice(0, start) + tag + val.slice(end);
+    const caret = start + tag.length;
+    input.setSelectionRange(caret, caret);
+    autoSize();
+    input.focus();
+  }
+
+  async function lookupMention(query) {
+    try {
+      const r = await fetch('/api/users/search?q=' + encodeURIComponent(query) + '&limit=8');
+      const j = await r.json();
+      if (!mentionRange) return;
+      paintMention(j.items || []);
+    } catch (_) {
+      hideMention();
+    }
+  }
+
+  function checkMention() {
+    if (!canControl || !input || input.disabled) { hideMention(); return; }
+    const val = input.value || '';
+    const caret = input.selectionStart || 0;
+    const before = val.slice(0, caret);
+    const m = before.match(/(^|[\s([{"'`])@([^\s@]{0,32})$/);
+    if (!m) { hideMention(); return; }
+    const qstr = m[2] || '';
+    const atPos = caret - qstr.length - 1;
+    mentionRange = { from: atPos, to: caret };
+    clearTimeout(mentionTimer);
+    if (!qstr) {
+      paintMention([]);
+      mentionBox.innerHTML = '<div class="dc-mention__empty">Начни вводить ник…</div>';
+      mentionBox.hidden = false;
+      return;
+    }
+    mentionTimer = setTimeout(() => lookupMention(qstr), 120);
+  }
+
+  function selectChannel(a) {
+    if (!a) return;
+    list.querySelectorAll('.dc-ch.on').forEach(x => x.classList.remove('on'));
+    a.classList.add('on');
+    a.scrollIntoView({ block: 'nearest' });
+    cid = a.dataset.id;
+    app.dataset.selected = cid;
+    const isVoice = a.dataset.group === 'voice';
+    const canSend = canControl && !isVoice && a.dataset.send === '1';
+    app.dataset.canSend = canSend ? '1' : '0';
+    input.disabled = !canSend;
+    sendBtn.disabled = !canSend;
+    clearReply();
+    hideMention();
+    const name = (a.querySelector('.dc-ch__name') || {}).textContent || '';
+    const nm = document.getElementById('dcName');
+    const tp = document.getElementById('dcTopic');
+    const ico = document.getElementById('dcHeadIco');
+    if (nm) nm.textContent = (isVoice ? '' : '#') + name;
+    if (tp) tp.textContent = a.dataset.topic || (isVoice ? 'Голосовой канал' : 'Текстовый канал');
+    if (ico) ico.className = 'fas ' + (isVoice ? 'fa-volume-high' : 'fa-hashtag');
+    input.placeholder = canSend
+      ? `Сообщение в #${name}…  @ — тег`
+      : (canControl ? 'Выбери текстовый канал' : 'Только owner может писать от бота');
+    const jump = document.getElementById('dcJump');
+    if (jump) {
+      jump.href = a.dataset.jump || ('https://discord.com/channels/@me/' + cid);
+      jump.hidden = false;
+    }
+    history.replaceState(null, '', '/channels?c=' + encodeURIComponent(cid));
+    known = new Set();
+    lastId = '';
+    loadMessages();
+    if (canSend) setTimeout(() => input.focus(), 80);
+  }
+
+  async function voiceAct(action) {
+    if (!canControl || !cid) return;
+    const btn = action === 'join' ? voiceJoin : voiceLeave;
+    if (btn) btn.disabled = true;
+    try {
+      const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'ошибка');
+      await loadVoice();
+    } catch (e) {
+      if (voiceStatus) voiceStatus.innerHTML = `<span class="is-err">${esc(e.message || e)}</span>`;
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!canControl || !cid || sendBtn.disabled || input.disabled) return;
+    const content = (input.value || '').trim();
+    if (!content) return;
+    sendBtn.disabled = true;
+    const pending = content;
+    const pendingReply = replyTo ? replyTo.id : '';
+    input.value = '';
+    clearReply();
+    hideMention();
+    autoSize();
+    try {
+      const payload = { content: pending };
+      if (pendingReply) payload.reply_to = pendingReply;
+      const r = await fetch('/api/channels/' + encodeURIComponent(cid) + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'не отправилось');
+      if (j.item) appendItems([j.item]);
+      else await liveTick();
+    } catch (err) {
+      input.value = pending;
+      if (pendingReply) {
+        replyTo = { id: pendingReply, author: 'сообщение', content: '' };
+        if (replyBar) replyBar.hidden = false;
+      }
+      autoSize();
+      const hint = form.querySelector('.dc-compose__hint');
+      if (hint) {
+        hint.classList.add('is-err');
+        hint.textContent = String(err.message || err);
+        setTimeout(() => {
+          hint.classList.remove('is-err');
+          hint.textContent = HINT_OK;
+        }, 3500);
+      }
+    } finally {
+      sendBtn.disabled = app.dataset.canSend !== '1';
+      input.focus();
+    }
   });
-  q.addEventListener('input', apply);
+
+  input.addEventListener('keydown', (e) => {
+    if (!mentionBox.hidden && mentionItems.length) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        highlightMention(mentionIdx + 1);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightMention(mentionIdx - 1);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const it = mentionItems[mentionIdx];
+        if (it) insertMention(it);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        hideMention();
+        return;
+      }
+    }
+    if (e.key === 'Escape' && replyTo) {
+      e.preventDefault();
+      clearReply();
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  input.addEventListener('input', () => {
+    autoSize();
+    checkMention();
+  });
+  input.addEventListener('click', checkMention);
+  input.addEventListener('keyup', (e) => {
+    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) checkMention();
+  });
+
+  if (mentionBox) {
+    mentionBox.addEventListener('mousedown', (e) => {
+      const btn = e.target.closest('.dc-mention__item');
+      if (!btn) return;
+      e.preventDefault();
+      const it = mentionItems[Number(btn.dataset.idx)];
+      if (it) insertMention(it);
+    });
+  }
+  if (replyClear) replyClear.addEventListener('click', clearReply);
+
+  // Mouse4 (browser Back) = radio focus on compose — только owner
+  window.addEventListener('mousedown', (e) => {
+    if (e.button !== 3) return;
+    if (!canControl) return;
+    if (!app.contains(e.target) && e.target !== document.documentElement) return;
+    e.preventDefault();
+    if (input.disabled) return;
+    form.classList.add('is-radio');
+    input.focus();
+    setTimeout(() => form.classList.remove('is-radio'), 450);
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 3) e.preventDefault();
+  });
+  window.addEventListener('auxclick', (e) => {
+    if (e.button === 3) e.preventDefault();
+  });
+
+  q.addEventListener('input', () => {
+    const needle = (q.value || '').trim().toLowerCase();
+    list.querySelectorAll('.dc-ch').forEach(a => {
+      a.hidden = !(!needle || (a.dataset.name || '').includes(needle));
+    });
+    list.querySelectorAll('.dc-cat').forEach(cat => {
+      cat.hidden = cat.querySelectorAll('.dc-ch:not([hidden])').length === 0;
+    });
+  });
+
+  list.addEventListener('click', (e) => {
+    const tog = e.target.closest('.dc-cat__toggle');
+    if (tog) {
+      e.preventDefault();
+      const cat = tog.closest('.dc-cat');
+      const open = tog.getAttribute('aria-expanded') !== 'false';
+      tog.setAttribute('aria-expanded', open ? 'false' : 'true');
+      cat.classList.toggle('is-collapsed', open);
+      return;
+    }
+    const a = e.target.closest('a.dc-ch');
+    if (!a || e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    selectChannel(a);
+  });
+
+  feed.addEventListener('click', (e) => {
+    const act = e.target.closest('.dc-msg__act');
+    if (act && canControl) {
+      e.preventDefault();
+      e.stopPropagation();
+      const kind = act.dataset.act;
+      if (kind === 'reply') {
+        setReply({
+          id: act.dataset.id,
+          author: act.dataset.author,
+          content: act.dataset.content,
+        });
+        return;
+      }
+      if (kind === 'mention') {
+        insertAtTag(act.dataset.uid);
+        return;
+      }
+      if (kind === 'dm') {
+        openDm({
+          id: act.dataset.uid,
+          name: act.dataset.name,
+          avatar: act.dataset.avatar || '',
+        });
+        return;
+      }
+    }
+    const ref = e.target.closest('.dc-msg__ref');
+    if (ref && ref.dataset.jump) {
+      e.preventDefault();
+      const target = feed.querySelector(`.dc-msg[data-id="${CSS.escape(ref.dataset.jump)}"]`);
+      if (target) {
+        target.classList.add('is-flash');
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        setTimeout(() => target.classList.remove('is-flash'), 1200);
+      }
+      return;
+    }
+    const who = e.target.closest('.dc-msg__who');
+    if (!who || !window.openPunish) return;
+    e.preventDefault();
+    window.openPunish(who.dataset.uid, who.dataset.name, 'mute');
+  });
+  if (voicePeople) voicePeople.addEventListener('click', (e) => {
+    const who = e.target.closest('.dc-msg__who');
+    if (!who || !window.openPunish) return;
+    e.preventDefault();
+    window.openPunish(who.dataset.uid, who.dataset.name, 'mute');
+  });
+  if (voiceJoin) voiceJoin.addEventListener('click', () => voiceAct('join'));
+  if (voiceLeave) voiceLeave.addEventListener('click', () => voiceAct('leave'));
+
+  /* ——— DM ——— */
+  const dmRoot = document.getElementById('dcDm');
+  const dmOpenBtn = document.getElementById('dcDmOpen');
+  const dmCloseBtn = document.getElementById('dcDmClose');
+  const dmQ = document.getElementById('dcDmQ');
+  const dmSuggest = document.getElementById('dcDmSuggest');
+  const dmPicked = document.getElementById('dcDmPicked');
+  const dmAva = document.getElementById('dcDmAva');
+  const dmName = document.getElementById('dcDmName');
+  const dmHandle = document.getElementById('dcDmHandle');
+  const dmClearPick = document.getElementById('dcDmClearPick');
+  const dmText = document.getElementById('dcDmText');
+  const dmSend = document.getElementById('dcDmSend');
+  const dmStatus = document.getElementById('dcDmStatus');
+  let dmUser = null;
+  let dmTimer = null;
+
+  function dmReady() {
+    if (dmSend) dmSend.disabled = !(dmUser && dmUser.id && (dmText.value || '').trim());
+  }
+
+  function pickDmUser(u) {
+    dmUser = u ? { id: String(u.id), name: u.name || u.id, handle: u.handle || '', avatar: u.avatar || '' } : null;
+    if (!dmUser) {
+      if (dmPicked) dmPicked.hidden = true;
+      if (dmQ) { dmQ.hidden = false; dmQ.value = ''; dmQ.focus(); }
+      if (dmSuggest) { dmSuggest.hidden = true; dmSuggest.innerHTML = ''; }
+      dmReady();
+      return;
+    }
+    if (dmPicked) dmPicked.hidden = false;
+    if (dmQ) dmQ.hidden = true;
+    if (dmSuggest) { dmSuggest.hidden = true; dmSuggest.innerHTML = ''; }
+    if (dmAva) {
+      if (dmUser.avatar) {
+        dmAva.src = dmUser.avatar;
+        dmAva.hidden = false;
+      } else {
+        dmAva.removeAttribute('src');
+        dmAva.hidden = true;
+      }
+    }
+    if (dmName) dmName.textContent = dmUser.name;
+    if (dmHandle) dmHandle.textContent = dmUser.handle ? '@' + dmUser.handle : 'ID ' + dmUser.id;
+    dmReady();
+    if (dmText) dmText.focus();
+  }
+
+  function openDm(prefill) {
+    if (!canControl || !dmRoot) return;
+    dmRoot.hidden = false;
+    if (dmStatus) { dmStatus.textContent = ''; dmStatus.className = 'dc-dm__status'; }
+    if (prefill && prefill.id) {
+      pickDmUser(prefill);
+      if (dmText) dmText.value = '';
+    } else {
+      pickDmUser(null);
+      if (dmText) dmText.value = '';
+    }
+    dmReady();
+  }
+
+  function closeDm() {
+    if (!dmRoot) return;
+    dmRoot.hidden = true;
+    pickDmUser(null);
+    if (dmText) dmText.value = '';
+    if (dmStatus) dmStatus.textContent = '';
+  }
+
+  async function searchDm(query) {
+    if (!dmSuggest) return;
+    const raw = (query || '').trim();
+    if (!raw) {
+      dmSuggest.hidden = true;
+      dmSuggest.innerHTML = '';
+      return;
+    }
+    if (/^\d{16,20}$/.test(raw)) {
+      dmSuggest.hidden = false;
+      dmSuggest.innerHTML = `<button type="button" class="dc-dm__hit" data-id="${esc(raw)}" data-name="${esc(raw)}">
+        <span class="dc-msg__ava"><span class="dc-msg__ava--fb">#</span></span>
+        <span><b>ID ${esc(raw)}</b><small>отправить по Discord ID</small></span>
+      </button>`;
+      return;
+    }
+    try {
+      const r = await fetch('/api/users/search?q=' + encodeURIComponent(raw) + '&limit=10');
+      const j = await r.json();
+      const items = j.items || [];
+      if (!items.length) {
+        dmSuggest.hidden = false;
+        dmSuggest.innerHTML = '<div class="dc-mention__empty">Никого не нашли</div>';
+        return;
+      }
+      dmSuggest.hidden = false;
+      dmSuggest.innerHTML = items.map(it => {
+        const ava = it.avatar
+          ? `<img src="${esc(it.avatar)}" alt="">`
+          : `<span class="dc-msg__ava--fb">${esc((it.name || '?')[0]).toUpperCase()}</span>`;
+        return `<button type="button" class="dc-dm__hit" data-id="${esc(it.id)}"
+          data-name="${esc(it.name)}" data-handle="${esc(it.handle || '')}" data-avatar="${esc(it.avatar || '')}">
+          <span class="dc-msg__ava">${ava}</span>
+          <span><b>${esc(it.name)}</b><small>@${esc(it.handle || it.id)}</small></span>
+        </button>`;
+      }).join('');
+    } catch (_) {
+      dmSuggest.hidden = true;
+    }
+  }
+
+  if (dmOpenBtn) dmOpenBtn.addEventListener('click', () => openDm(null));
+  if (dmCloseBtn) dmCloseBtn.addEventListener('click', closeDm);
+  if (dmRoot) dmRoot.addEventListener('click', (e) => {
+    if (e.target === dmRoot) closeDm();
+  });
+  if (dmClearPick) dmClearPick.addEventListener('click', () => pickDmUser(null));
+  if (dmQ) dmQ.addEventListener('input', () => {
+    clearTimeout(dmTimer);
+    dmTimer = setTimeout(() => searchDm(dmQ.value), 120);
+  });
+  if (dmSuggest) dmSuggest.addEventListener('click', (e) => {
+    const hit = e.target.closest('.dc-dm__hit');
+    if (!hit) return;
+    pickDmUser({
+      id: hit.dataset.id,
+      name: hit.dataset.name,
+      handle: hit.dataset.handle || '',
+      avatar: hit.dataset.avatar || '',
+    });
+  });
+  if (dmText) dmText.addEventListener('input', dmReady);
+  if (dmSend) dmSend.addEventListener('click', async () => {
+    if (!dmUser || !dmUser.id) return;
+    const content = (dmText.value || '').trim();
+    if (!content) return;
+    dmSend.disabled = true;
+    if (dmStatus) { dmStatus.textContent = 'Отправка…'; dmStatus.className = 'dc-dm__status'; }
+    try {
+      const r = await fetch('/api/dm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: dmUser.id, content }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'не отправилось');
+      if (dmStatus) {
+        dmStatus.textContent = 'Отправлено → ' + (j.item && j.item.to_name ? j.item.to_name : dmUser.name);
+        dmStatus.className = 'dc-dm__status is-ok';
+      }
+      if (dmText) dmText.value = '';
+      dmReady();
+      setTimeout(closeDm, 900);
+    } catch (err) {
+      if (dmStatus) {
+        dmStatus.textContent = String(err.message || err);
+        dmStatus.className = 'dc-dm__status is-err';
+      }
+      dmReady();
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && dmRoot && !dmRoot.hidden) {
+      e.preventDefault();
+      closeDm();
+    }
+  });
+
+  loadMessages();
+  autoSize();
+  setInterval(liveTick, 2500);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) liveTick();
+  });
 })();
 </script>
 {% endblock %}

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Демка #{{ r.id }}{% endblock %}
 {% block heading %}Демка #{{ r.id }}{% endblock %}
+{% block live %}off{% endblock %}
 {% block body %}
 <p class="lead"><a href="{{ url_for('proofs') }}">← ко всем демкам</a>
   {% if r.user_id %} · <a href="{{ url_for('member', q=r.user_id) }}">логи {{ r.user_name }}</a>{% endif %}
@@ -11,7 +12,7 @@
     <section class="panel proof-panel">
       <div class="proof-panel__head">
         <h2>{{ r.title }}</h2>
-        <span class="pill pill-{% if r.status == 'accepted' or r.status == 'approved' %}ok{% elif r.status == 'rejected' %}ban{% else %}warn{% endif %}">
+        <span class="sq-badge {% if r.status == 'accepted' or r.status == 'approved' %}tag-helper{% elif r.status == 'rejected' %}tag-admin{% else %}tag-mod{% endif %}">
           {% if r.status == 'rejected' %}отклонена{% elif r.status in ('accepted','approved') %}принята{% else %}на проверке{% endif %}
         </span>
       </div>
@@ -33,28 +34,29 @@
       </div>
       <div class="proof-actions">
         {% if r.user_id %}
-        <a class="btn btn-ghost" href="{{ url_for('member', q=r.user_id) }}"><i class="fas fa-book-open"></i> Логи человека</a>
+        <a class="sq-btn" href="{{ url_for('member', q=r.user_id) }}"><i class="fas fa-book-open"></i> Логи</a>
         {% endif %}
         {% if r.link %}
-        <a class="btn btn-ghost" href="{{ r.link }}" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Discord</a>
+        <a class="sq-btn" href="{{ r.link }}" target="_blank" rel="noopener"><i class="fab fa-discord"></i> Discord</a>
         {% endif %}
       </div>
     </section>
 
     {% if can_decide %}
-    <section class="panel proof-panel proof-decide-card">
+    <section class="panel proof-panel pd-card">
       <div class="proof-panel__head">
         <h2>Перерешение</h2>
       </div>
-      <p class="dim proof-decide-card__hint">Owner и Staff Admin / Admin могут принять или отклонить заново.</p>
-      <form class="proof-decide-form" id="proofDecide" data-pid="{{ r.id }}">
-        <label class="proof-decide-form__label" for="proofReason">Комментарий</label>
-        <textarea class="input proof-decide-form__input" id="proofReason" name="reason" rows="3" maxlength="400" placeholder="почему так решаешь…"></textarea>
-        <div class="proof-actions proof-decide-form__actions">
-          <button type="submit" name="decision" value="accept" class="btn btn-ok">Принять</button>
-          <button type="submit" name="decision" value="reject" class="btn btn-danger">Отклонить</button>
+      <p class="pd-hint">Owner / Staff Admin / Admin — принять или отклонить заново.</p>
+      <form class="pd-form" id="proofDecide" data-pid="{{ r.id }}" autocomplete="off">
+        <label class="pd-label" for="proofReason">Комментарий</label>
+        <textarea id="proofReason" name="reason" class="pd-input" rows="3" maxlength="400"
+          placeholder="почему так решаешь…" autocomplete="off"></textarea>
+        <div class="pd-actions">
+          <button type="submit" name="decision" value="accept" class="pd-btn pd-btn--ok">Принять</button>
+          <button type="submit" name="decision" value="reject" class="pd-btn pd-btn--no">Отклонить</button>
         </div>
-        <div class="dim" id="proofDecideMsg" hidden></div>
+        <div class="pd-msg dim" id="proofDecideMsg" hidden></div>
       </form>
     </section>
     {% endif %}
@@ -76,7 +78,7 @@
         {% endif %}
       {% elif r.link %}
         <div class="proof-media__empty">
-          <a class="btn btn-ghost" href="{{ r.link }}" target="_blank" rel="noopener">Открыть в Discord</a>
+          <a class="sq-btn" href="{{ r.link }}" target="_blank" rel="noopener">Открыть в Discord</a>
         </div>
       {% else %}
         <div class="proof-media__empty dim">Медиа нет — только запись</div>
@@ -98,6 +100,7 @@
     const reason = (form.reason && form.reason.value) || '';
     msg.hidden = false;
     msg.textContent = 'Сохраняю…';
+    form.querySelectorAll('button').forEach(b => { b.disabled = true; });
     try {
       const res = await fetch('/api/proofs/' + form.dataset.pid + '/decide', {
         method: 'POST',
@@ -107,12 +110,14 @@
       const data = await res.json();
       if (!data.ok) {
         msg.textContent = data.error || 'ошибка';
+        form.querySelectorAll('button').forEach(b => { b.disabled = false; });
         return;
       }
       msg.textContent = data.message || 'готово';
       location.reload();
     } catch (err) {
       msg.textContent = String(err);
+      form.querySelectorAll('button').forEach(b => { b.disabled = false; });
     }
   });
 })();

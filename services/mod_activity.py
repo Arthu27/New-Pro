@@ -54,7 +54,8 @@ def _ensure_flusher():
 
 def _flush_loop():
     while True:
-        time.sleep(60)
+        # Быстрее слив — Staff/панель видят чат live, не раз в минуту.
+        time.sleep(10)
         try:
             flush()
         except Exception as _ex:

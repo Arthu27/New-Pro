@@ -2,28 +2,61 @@
 {% block title %}Апелляции{% endblock %}
 {% block heading %}Апелляции{% endblock %}
 {% block body %}
-<p class="lead">Очередь апелляций. В колонке «Решил» — кто принял или отклонил.</p>
+<p class="lead">Очередь пересмотра: принять, отклонить или в чёрный список. В колонке «Решил» — кто вынес вердикт.</p>
 
-<section class="panel rise">
+<div class="member-kpis rise">
+  <div class="kpi"><b>{{ pending_n }}</b><span>ожидают</span></div>
+  <div class="kpi"><b>{{ rows|length }}</b><span>в списке</span></div>
+  <div class="kpi"><b>{{ blacklist_n }}</b><span>в чёрном списке</span></div>
+</div>
+
+<section class="panel rise people-block">
   <h2>Очередь <span class="count">{{ rows|length }}</span></h2>
-  {% if not rows %}<div class="empty">Апелляций нет</div>
+  {% if not rows %}
+  <div class="empty empty-sm">Апелляций нет</div>
   {% else %}
-  <div class="table-scroll">
-  <table>
-    <thead><tr><th>#</th><th>Кто</th><th>Статус</th><th>Текст</th><th>Решил</th><th>Подано</th><th>Решение</th></tr></thead>
+  <div class="sq-wrap">
+  <table class="profiles-table sq-table" id="ap-table">
+    <thead>
+      <tr>
+        <th class="col-num">#</th>
+        <th class="col-profile">Кто</th>
+        <th>Статус</th>
+        <th>Текст</th>
+        <th>Решил</th>
+        <th>Подано</th>
+        <th class="col-act">Действие</th>
+      </tr>
+    </thead>
     <tbody>
     {% for r in rows %}
-      <tr class="{% if r.user_id %}click-row{% endif %}" {% if r.user_id %}data-href="{{ url_for('member', q=r.user_id) }}"{% endif %}>
-        <td class="mono dim">{{ r.id }}</td>
-        <td>{% if r.user_id %}<a href="{{ url_for('member', q=r.user_id) }}"><b>{{ r.user }}</b></a>{% else %}<b>{{ r.user }}</b>{% endif %}</td>
+      <tr data-id="{{ r.id }}" class="{% if r.user_id %}click-row{% endif %}" {% if r.user_id %}data-href="{{ url_for('member', q=r.user_id) }}"{% endif %}>
+        <td class="col-num"><span class="sq-stat dim">{{ r.id }}</span></td>
+        <td class="col-profile">
+          {% if r.user_id %}<a class="profile-cell" href="{{ url_for('member', q=r.user_id) }}"><strong>{{ r.user }}</strong></a>
+          {% else %}<strong>{{ r.user }}</strong>{% endif %}
+        </td>
         <td>
           {% set st = (r.status_raw or r.status|string)|lower %}
-          <span class="pill {% if 'accept' in st or 'принят' in st or 'approved' in st %}pill-ok{% elif 'reject' in st or 'отклон' in st %}pill-ban{% else %}pill-warn{% endif %}">{{ r.status }}</span>
+          <span class="sq-badge {% if 'accept' in st or 'принят' in st %}tag-helper{% elif 'reject' in st or 'отклон' in st or r.blacklisted %}tag-admin{% else %}tag-mod{% endif %}">{{ r.status }}</span>
         </td>
-        <td class="dim">{{ r.reason }}</td>
+        <td class="ap-text">
+          <div class="ap-reason">{{ r.reason }}</div>
+          {% if r.reply %}<div class="ap-reply dim">↳ {{ r.reply }}</div>{% endif %}
+        </td>
         <td>{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}"><b>{{ r.mod }}</b></a>{% else %}<b>{{ r.mod }}</b>{% endif %}</td>
-        <td class="dim">{{ r.when }}</td>
-        <td class="dim">{{ r.decided or '—' }}</td>
+        <td class="dim">{{ r.when }}{% if r.decided %}<div class="dim" style="font-size:.72rem">реш. {{ r.decided }}</div>{% endif %}</td>
+        <td class="col-act">
+          {% if r.pending and can_decide %}
+          <div class="sq-actions ap-actions">
+            <button type="button" class="sq-btn ap-btn ok" data-act="accept" data-id="{{ r.id }}">принять</button>
+            <button type="button" class="sq-btn ap-btn" data-act="reject" data-id="{{ r.id }}">отклонить</button>
+            <button type="button" class="sq-btn ap-btn danger" data-act="blacklist" data-id="{{ r.id }}">ЧС</button>
+          </div>
+          {% else %}
+          <span class="dim">—</span>
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
     </tbody>
@@ -31,4 +64,92 @@
   </div>
   {% endif %}
 </section>
+
+<dialog id="apDlg" class="ap-dlg">
+  <form method="dialog" id="apForm" class="ap-dlg__body">
+    <h3 id="apDlgTitle">Решение</h3>
+    <p class="dim" id="apDlgHint"></p>
+    <label class="ap-dlg__label" for="apReply">Комментарий <span class="dim">(необязательно)</span></label>
+    <textarea id="apReply" class="input" rows="3" maxlength="300" placeholder="Причина для ЛС…"></textarea>
+    <div class="ap-dlg__actions">
+      <button type="submit" value="cancel" class="sq-btn">Отмена</button>
+      <button type="submit" value="ok" class="sq-btn ap-confirm" id="apConfirm">Подтвердить</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  if (window.__appealsLiveBound) return;
+  window.__appealsLiveBound = true;
+  let pending = null;
+
+  const labels = {
+    accept: ['Принять апелляцию', 'Бан/изоляция будут сняты, человек получит ЛС.'],
+    reject: ['Отклонить апелляцию', 'Наказание останется, отказ уйдёт в ЛС.'],
+    blacklist: ['В чёрный список', 'Отклонить и насовсем закрыть подачу апелляций.'],
+  };
+
+  function els() {
+    return {
+      dlg: document.getElementById('apDlg'),
+      form: document.getElementById('apForm'),
+      title: document.getElementById('apDlgTitle'),
+      hint: document.getElementById('apDlgHint'),
+      reply: document.getElementById('apReply'),
+      confirmBtn: document.getElementById('apConfirm'),
+    };
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.ap-btn');
+    if (!btn || !btn.closest('#live-root')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const { dlg, form, title, hint, reply, confirmBtn } = els();
+    if (!dlg || !form) return;
+    pending = { id: btn.dataset.id, act: btn.dataset.act, btn };
+    const L = labels[pending.act] || ['Решение', ''];
+    title.textContent = L[0] + ' #' + pending.id;
+    hint.textContent = L[1];
+    reply.value = pending.act === 'blacklist' ? 'Подача апелляций закрыта — чёрный список' : '';
+    confirmBtn.classList.toggle('danger', pending.act !== 'accept');
+    confirmBtn.classList.toggle('ok', pending.act === 'accept');
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else form.requestSubmit();
+  });
+
+  document.addEventListener('submit', async (e) => {
+    const form = e.target;
+    if (!form || form.id !== 'apForm') return;
+    const val = e.submitter && e.submitter.value;
+    if (val === 'cancel' || !pending) return;
+    e.preventDefault();
+    const { dlg, reply } = els();
+    const { id, act, btn } = pending;
+    const row = btn && btn.closest('tr');
+    const box = row && row.querySelector('.ap-actions');
+    if (box) box.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    try {
+      const r = await fetch('/api/appeals/' + encodeURIComponent(id) + '/decide', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: JSON.stringify({ decision: act, reply: ((reply && reply.value) || '').trim() }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) {
+        alert((j && j.error) || ('Ошибка ' + r.status));
+        if (box) box.querySelectorAll('button').forEach(b => { b.disabled = false; });
+        return;
+      }
+      if (dlg && dlg.open) dlg.close();
+      pending = null;
+      document.dispatchEvent(new CustomEvent('panel:live-now'));
+    } catch (err) {
+      alert('Сеть: ' + (err && err.message || err));
+      if (box) box.querySelectorAll('button').forEach(b => { b.disabled = false; });
+    }
+  });
+})();
+</script>
 {% endblock %}
