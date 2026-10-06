@@ -11,11 +11,12 @@ import hashlib
 import json
 import os
 import secrets
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 import asyncio
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 
@@ -773,8 +774,19 @@ def _discord_display(user: dict) -> str:
     return (user.get('global_name') or user.get('username') or 'Discord').strip()
 
 
+_STAFF_ROLE_BAGS = None
+_STAFF_ROLE_BAGS_TS = 0.0
+_STAFF_ROLE_ANY: set = set()
+_STAFF_PEOPLE_CACHE: dict = {'ts': 0.0, 'q': None, 'people': None, 'err': ''}
+_APPEALS_BADGE_CACHE: dict = {'ts': 0.0, 'n': 0}
+
+
 def _staff_role_id_set() -> dict:
-    """Наборы Discord role id → уровень панели."""
+    """Наборы Discord role id → уровень панели (кэш 5 мин)."""
+    global _STAFF_ROLE_BAGS, _STAFF_ROLE_BAGS_TS, _STAFF_ROLE_ANY
+    now = time.time()
+    if _STAFF_ROLE_BAGS is not None and (now - _STAFF_ROLE_BAGS_TS) < 300:
+        return _STAFF_ROLE_BAGS
     try:
         from services.staff_roles import (
             KNOWN_ADMIN_ROLE_ID, KNOWN_STAFF_ADMIN_ROLE_ID,
@@ -858,7 +870,18 @@ def _staff_role_id_set() -> dict:
         'helper': helper,
     }
     out.update(branches)
+    any_ids: set = set()
+    for s in out.values():
+        any_ids |= set(s or ())
+    _STAFF_ROLE_ANY = any_ids
+    _STAFF_ROLE_BAGS = out
+    _STAFF_ROLE_BAGS_TS = now
     return out
+
+
+def _any_staff_role_ids() -> set:
+    _staff_role_id_set()
+    return _STAFF_ROLE_ANY
 
 
 def panel_role_display(role: str, role_ids=None) -> str:
@@ -1063,10 +1086,17 @@ def inject_nav():
     badges = {}
     if session.get('logged_in') and LEVEL.get(role, 0) >= LEVEL['mod']:
         try:
-            pend = sum(
-                1 for it in _appeals_list(_main_guild())
-                if str(it.get('status') or '').lower() in ('pending', 'open', 'new', 'ожидает', '')
-            )
+            now = time.time()
+            if (now - float(_APPEALS_BADGE_CACHE.get('ts') or 0)) < 20:
+                pend = int(_APPEALS_BADGE_CACHE.get('n') or 0)
+            else:
+                pend = sum(
+                    1 for it in _appeals_list(_main_guild())
+                    if str(it.get('status') or '').lower() in (
+                        'pending', 'open', 'new', 'ожидает', '')
+                )
+                _APPEALS_BADGE_CACHE['ts'] = now
+                _APPEALS_BADGE_CACHE['n'] = pend
             if pend:
                 badges['appeals'] = pend
         except Exception:
@@ -1957,11 +1987,25 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
             except Exception:
                 continue
 
-    for m in list(getattr(guild, 'members', []) or []):
+    # staff_only без поиска: не гоняем resolve по всем ~20k участников
+    staff_ids = _any_staff_role_ids() if staff_only else set()
+    members_iter = list(getattr(guild, 'members', []) or [])
+    for m in members_iter:
         try:
             if getattr(m, 'bot', False):
                 continue
-            role_ids = [r.id for r in getattr(m, 'roles', []) or []]
+            try:
+                role_ids = [r.id for r in getattr(m, 'roles', []) or []]
+            except Exception:
+                role_ids = []
+            if staff_only and staff_ids:
+                try:
+                    mid = int(m.id)
+                except Exception:
+                    mid = 0
+                if mid not in owner_ids:
+                    if not (set(role_ids) & staff_ids):
+                        continue
             role = resolve_discord_panel_role(m.id, role_ids)
             if not role and int(m.id) in owner_ids:
                 role = 'owner'
@@ -2002,8 +2046,22 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
 
 
 def _list_login_people(q: str = ''):
-    """Staff с сервера для выбора на логине (до 300, чтобы всех было видно)."""
-    return _search_guild_members(q, staff_only=True, limit=300)
+    """Staff с сервера для выбора на логине (до 300). Кэш 45с без поиска."""
+    ql = (q or '').strip()
+    now = time.time()
+    if (not ql
+            and _STAFF_PEOPLE_CACHE.get('people') is not None
+            and (now - float(_STAFF_PEOPLE_CACHE.get('ts') or 0)) < 45):
+        # копии, чтобы вызывающий не портил кэш
+        return [dict(p) for p in _STAFF_PEOPLE_CACHE['people']], (
+            _STAFF_PEOPLE_CACHE.get('err') or '')
+    people, err = _search_guild_members(ql, staff_only=True, limit=300)
+    if not ql:
+        _STAFF_PEOPLE_CACHE['ts'] = now
+        _STAFF_PEOPLE_CACHE['q'] = ''
+        _STAFF_PEOPLE_CACHE['people'] = [dict(p) for p in people]
+        _STAFF_PEOPLE_CACHE['err'] = err or ''
+    return people, err
 
 
 def _resolve_staff_person(discord_id: str):
@@ -2847,8 +2905,18 @@ def staff_page():
 @login_required
 @role_required('mod')
 def channels_page():
-    """Подробная карта каналов: права, лимиты, маршруты бота."""
+    """Карта каналов. Кэш 60с — полный разбор overwrites был ~12с."""
     gid = _main_guild()
+    now = time.time()
+    cache = getattr(channels_page, '_cache', None)
+    if (isinstance(cache, dict)
+            and cache.get('gid') == gid
+            and (now - float(cache.get('ts') or 0)) < 60
+            and cache.get('payload')):
+        p = cache['payload']
+        return render_template(
+            'channels.html', rows=p['rows'], groups=p['groups'], kpi=p['kpi'])
+
     rows = []
     bot = bot_instance
     route_by_id = {}
@@ -2907,37 +2975,22 @@ def channels_page():
             def flag(name, _p=perms):
                 return bool(getattr(_p, name, False)) if _p else False
 
-            # перезаписи ролей (кратко)
+            # Лёгкие overwrites: только имена + счётчик, без обхода всех perm
             overs = []
             try:
                 mapping = getattr(ch, 'overwrites', None) or {}
-                for target, ow in list(mapping.items())[:12]:
+                for target, _ow in list(mapping.items())[:6]:
                     tname = getattr(target, 'name', None) or str(
                         getattr(target, 'id', '?'))
-                    allow, deny = [], []
-                    try:
-                        for perm, val in ow:
-                            if val is True:
-                                allow.append(str(perm))
-                            elif val is False:
-                                deny.append(str(perm))
-                    except Exception:
-                        try:
-                            a, d = ow.pair()
-                            allow = [n for n, v in a if v]
-                            deny = [n for n, v in d if v]
-                        except Exception:
-                            continue
-                    if not allow and not deny:
+                    if tname == '@everyone':
                         continue
                     overs.append({
                         'name': tname,
-                        'allow': ', '.join(allow[:6]) if allow else '—',
-                        'deny': ', '.join(deny[:6]) if deny else '—',
+                        'allow': '…',
+                        'deny': '…',
                     })
             except Exception:
                 overs = []
-            overs = overs[:8]
 
             topic = str(getattr(ch, 'topic', None) or '').strip()
             slow = int(getattr(ch, 'slowmode_delay', 0) or 0)
@@ -2949,12 +3002,14 @@ def channels_page():
             except Exception:
                 ulimit = 0
             voice_now = 0
-            try:
-                members = getattr(ch, 'members', None)
-                if members is not None:
-                    voice_now = len(list(members))
-            except Exception:
-                voice_now = 0
+            if group == 'voice':
+                try:
+                    voice_now = len(getattr(ch, 'voice_states', None) or {})
+                except Exception:
+                    try:
+                        voice_now = len(list(getattr(ch, 'members', None) or [])[:50])
+                    except Exception:
+                        voice_now = 0
             rid = str(ch.id)
             route_key = route_by_id.get(rid) or ''
             route_label = route_labels.get(route_key) or (
@@ -2999,7 +3054,12 @@ def channels_page():
         'closed': sum(1 for r in shown if not r['view']),
         'routes': sum(1 for r in shown if r.get('route_key')),
     }
+    channels_page._cache = {
+        'gid': gid, 'ts': now,
+        'payload': {'rows': shown, 'groups': groups, 'kpi': kpi},
+    }
     return render_template('channels.html', rows=shown, groups=groups, kpi=kpi)
+
 
 
 @app.get('/api/login/accounts')
@@ -3187,7 +3247,7 @@ def api_punish():
 @login_required
 @role_required('helper')
 def users_page():
-    """Участники сервера — профили таблицей + счётчики мер."""
+    """Участники с мерами — без обхода всех ~20k members на каждый клик."""
     gid = _main_guild()
     q = (request.args.get('q') or '').strip()
     ql = q.lower()
@@ -3196,57 +3256,17 @@ def users_page():
     handles = {}
     role_names = {}
 
-    try:
-        bot = bot_instance
-        if bot and gid:
-            guild = bot.get_guild(int(gid))
-            if guild is not None:
-                for m in guild.members:
-                    if getattr(m, 'bot', False):
-                        continue
-                    uid = str(m.id)
-                    display = (
-                        getattr(m, 'display_name', None)
-                        or getattr(m, 'global_name', None)
-                        or getattr(m, 'name', None)
-                        or uid
-                    )
-                    handle = getattr(m, 'name', '') or ''
-                    parts = [
-                        display, handle,
-                        getattr(m, 'global_name', None) or '',
-                        getattr(m, 'nick', None) or '',
-                        uid,
-                    ]
-                    names[uid] = display
-                    handles[uid] = handle
-                    avatars[uid] = _member_avatar_url(m)
-                    names[uid + '::__q'] = ' '.join(p for p in parts if p).lower()
-                    try:
-                        roles = [
-                            r.name for r in getattr(m, 'roles', []) or []
-                            if getattr(r, 'name', None) and r.name != '@everyone'
-                        ]
-                        role_names[uid] = roles[:8]
-                    except Exception:
-                        role_names[uid] = []
-    except Exception:
-        pass
-
+    # Имена из файла (быстро) + только те, у кого есть меры
     prefer = DATA / f'member_names_{gid}.json' if gid else None
-    paths = [prefer] if prefer and prefer.exists() else []
-    paths += [p for p in sorted(DATA.glob('member_names_*.json')) if p not in paths]
-    for p in paths:
-        raw = _read_json(p, {})
+    if prefer and prefer.exists():
+        raw = _read_json(prefer, {})
         if isinstance(raw, dict):
             for uid, name in raw.items():
                 uid = str(uid)
                 if uid.endswith('::__q'):
                     continue
-                names.setdefault(uid, str(name))
-                names.setdefault(uid + '::__q', f"{name} {uid}".lower())
-        if any(not k.endswith('::__q') for k in names) and gid and prefer and p == prefer:
-            break
+                names[uid] = str(name)
+                names[uid + '::__q'] = f"{name} {uid}".lower()
 
     stats = {}
     for ev in _collect_cases(gid):
@@ -3273,12 +3293,30 @@ def users_page():
         blob = names.get(uid + '::__q', '')
         names[uid + '::__q'] = (blob + ' ' + str(st['name']) + ' ' + uid).lower()
 
-    uids = [k for k in names if not k.endswith('::__q')]
-    for uid in list(stats.keys()):
-        if uid not in names:
-            names[uid] = stats[uid].get('name') or uid
-            names[uid + '::__q'] = f"{names[uid]} {uid}".lower()
-            uids.append(uid)
+    # Поиск по имени — точечный, не полный dump гильдии
+    if ql and len(ql) >= 2:
+        people, _ = _search_guild_members(q, staff_only=False, limit=40)
+        for p in people:
+            uid = str(p.get('id') or '')
+            if not uid:
+                continue
+            names[uid] = p.get('name') or uid
+            handles[uid] = p.get('handle') or ''
+            avatars[uid] = p.get('avatar') or ''
+            names[uid + '::__q'] = (
+                f"{p.get('name') or ''} {p.get('handle') or ''} {uid}".lower()
+            )
+            stats.setdefault(uid, {
+                'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0, 'total': 0,
+                'name': p.get('name') or uid, 'last': '',
+            })
+
+    uids = list(stats.keys()) if not ql else [
+        k for k in names if not k.endswith('::__q')
+    ]
+    if not ql:
+        # без поиска — только с мерами (сортировка по total)
+        uids = list(stats.keys())
 
     rows = []
     for uid in uids:
@@ -3301,7 +3339,9 @@ def users_page():
             'user_id': uid,
             'name': display,
             'handle': handles.get(uid) or '',
-            'avatar': avatars.get(uid) or f'https://cdn.discordapp.com/embed/avatars/{(int(uid) >> 22) % 6 if uid.isdigit() else 0}.png',
+            'avatar': avatars.get(uid) or (
+                f'https://cdn.discordapp.com/embed/avatars/'
+                f'{(int(uid) >> 22) % 6 if uid.isdigit() else 0}.png'),
             'roles': role_names.get(uid) or [],
             'warns': st.get('warns', 0),
             'mutes': st.get('mutes', 0),
@@ -3311,6 +3351,36 @@ def users_page():
             'last': _fmt(st.get('last')),
         })
     rows.sort(key=lambda r: (-r['total'], str(r['name']).lower()))
+
+    # Аватары/ники только для видимых строк (дёшево)
+    try:
+        bot = bot_instance
+        guild = bot.get_guild(int(gid)) if bot and gid else None
+    except Exception:
+        guild = None
+    if guild is not None:
+        for r in rows[:300]:
+            try:
+                m = guild.get_member(int(r['user_id']))
+            except Exception:
+                m = None
+            if m is None:
+                continue
+            r['name'] = (
+                getattr(m, 'display_name', None)
+                or getattr(m, 'name', None)
+                or r['name']
+            )
+            r['handle'] = getattr(m, 'name', '') or r['handle']
+            r['avatar'] = _member_avatar_url(m) or r['avatar']
+            try:
+                r['roles'] = [
+                    x.name for x in (getattr(m, 'roles', None) or [])
+                    if getattr(x, 'name', None) and x.name != '@everyone'
+                ][:6]
+            except Exception:
+                pass
+
     kpi = {
         'total': len(rows),
         'warns': sum(r['warns'] for r in rows),
@@ -3346,17 +3416,17 @@ def member():
                     if q.isdigit():
                         member_obj = guild.get_member(int(q))
                     else:
-                        for m in guild.members:
-                            blob = ' '.join([
-                                getattr(m, 'display_name', '') or '',
-                                getattr(m, 'name', '') or '',
-                                getattr(m, 'global_name', None) or '',
-                                getattr(m, 'nick', None) or '',
-                            ]).lower()
-                            if ql in blob or all(t in blob for t in ql.split() if t):
-                                extra_ids.add(str(m.id))
-                                if member_obj is None:
-                                    member_obj = m
+                        found, _ = _search_guild_members(
+                            q, staff_only=False, limit=25)
+                        for p in found:
+                            pid = str(p.get('id') or '')
+                            if pid:
+                                extra_ids.add(pid)
+                        if found:
+                            try:
+                                member_obj = guild.get_member(int(found[0]['id']))
+                            except Exception:
+                                member_obj = None
         except Exception:
             pass
 
@@ -3458,10 +3528,31 @@ def member():
                     break
         except Exception:
             proofs = []
+    # Совместимость с расширенным member.html (people_kpi / staff tables)
+    people_kpi = {'total': 0, 'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0}
+    staff_rows, punished_rows = [], []
+    if not profile:
+        try:
+            people, _ = _list_login_people()
+            staff_rows = [{
+                'user_id': p.get('id'),
+                'name': p.get('name') or p.get('id'),
+                'handle': p.get('handle') or '',
+                'avatar': p.get('avatar') or '',
+                'roles': [p.get('role_label') or p.get('role') or ''],
+                'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0, 'total': 0,
+                'last': '',
+            } for p in (people or [])[:80]]
+            people_kpi['total'] = len(people or [])
+        except Exception:
+            pass
     return render_template(
         'member.html', q=q, rows=rows, profile=profile, proofs=proofs,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
+        people_kpi=people_kpi,
+        staff_rows=staff_rows,
+        punished_rows=punished_rows,
     )
 
 
