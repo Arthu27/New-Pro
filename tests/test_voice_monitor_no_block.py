@@ -60,8 +60,7 @@ check('backoff_until' not in body,
       'нет backoff_until в мониторе')
 check('_ensure_main_voice_joined' in body or '_schedule_main_voice_rejoin' in body,
       'монитор зовёт ensure/rejoin')
-check("_schedule_main_voice_rejoin('latency-heal'" not in body
-      and 'latency-heal', force=True)" not in body,
+check("_schedule_main_voice_rejoin('latency-heal'" not in body,
       'монитор НЕ делает latency-heal force (сам выкидывал из войса)')
 check("_schedule_main_voice_rejoin('soft-reconnect'" not in body,
       'монитор не force soft-reconnect пока Discord in')
