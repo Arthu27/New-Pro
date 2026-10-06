@@ -4512,6 +4512,27 @@ def api_rules():
 
 # ── routes: owner-only bot pages ───────────────────────────────────────
 
+def _panel_self_ping_ms() -> str:
+    """Локальный RTT веб-панели (loopback) — живость Flask в этом процессе."""
+    import time as _t
+    import urllib.request as _ur
+    port = int(os.environ.get('PANEL_PORT') or os.environ.get('PORT') or 5001)
+    url = f'http://127.0.0.1:{port}/login'
+    t0 = _t.perf_counter()
+    try:
+        req = _ur.Request(url, method='GET', headers={'User-Agent': 'hakumo-panel-ping'})
+        with _ur.urlopen(req, timeout=2.5) as resp:
+            resp.read(64)
+        ms = (_t.perf_counter() - t0) * 1000.0
+        return f'{round(ms)} ms'
+    except Exception:
+        ms = (_t.perf_counter() - t0) * 1000.0
+        # Даже при ошибке маршрута сам ответ сервера = панель жива
+        if ms < 2500:
+            return f'{round(ms)} ms'
+        return '—'
+
+
 @app.route('/bot')
 @login_required
 @role_required('owner')
@@ -4521,6 +4542,7 @@ def bot_page():
         'name': '—',
         'id': '—',
         'latency': '—',
+        'panel_latency': _panel_self_ping_ms(),
         'guilds': [],
     }
     bot = bot_instance
