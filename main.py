@@ -1142,9 +1142,10 @@ async def _monitor_voice():
 
     await bot.wait_until_ready()
     await asyncio.sleep(1)
-    # Silence keepalive только если явно включён И opus загружен.
-    # Без libopus play() ломает voice WS → leave/join каждые ~20с.
-    _silence_env = (os.environ.get('VOICE_SILENCE_PING') or '0').strip().lower()
+    # Silence keepalive по умолчанию ВКЛ (opus есть). Без RTP Discord
+    # сам выкидывает бота из войса, хотя процесс не рестартился.
+    # Выключить: VOICE_SILENCE_PING=0. Без libopus play() ломает WS — тогда OFF.
+    _silence_env = (os.environ.get('VOICE_SILENCE_PING') or '1').strip().lower()
     _silence = _silence_env in ('1', 'true', 'yes', 'on')
     if _silence and not discord.opus.is_loaded():
         _log.warning(
