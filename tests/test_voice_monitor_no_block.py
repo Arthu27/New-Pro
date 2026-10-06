@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Voice keep-alive: всегда вкл, без лимитов, play не блокирует цикл.
+"""Voice keep-alive: всегда вкл, без лимитов; silence play opt-in и не блокирует.
 
 По умолчанию — ТОЛЬКО connect (без vc.play). Silence-ping только при
-VOICE_SILENCE_PING=1, и тогда play строго через to_thread + wait_for.
-Connect без wait_for/таймаута — бесконечный rejoin как у Event-бота.
+VOICE_SILENCE_PING=1 через start_silence_keepalive (без to_thread —
+play() мгновенный; to_thread+PCM раньше флапал WS ~каждые 20с).
 
 Запуск: python3 tests/test_voice_monitor_no_block.py
 """
@@ -60,10 +60,13 @@ check('backoff_until' not in body,
       'нет backoff_until в мониторе')
 check('_ensure_main_voice_joined' in body or '_schedule_main_voice_rejoin' in body,
       'монитор зовёт ensure/rejoin')
-check('to_thread' in body, 'если play — только через to_thread')
+check('start_silence_keepalive' in body or 'silence_ping_enabled' in body,
+      'silence через helper (opt-in)')
 bad = [ln.strip() for ln in body.splitlines()
-       if 'vc.play(' in ln and 'to_thread' not in ln]
-check(not bad, f'нет голого vc.play: {bad}')
+       if 'vc.play(' in ln and 'start_silence' not in ln]
+check(not bad, f'нет голого vc.play в мониторе: {bad}')
+check('to_thread' not in body or 'to_thread(vc.play' not in body.replace(' ', ''),
+      'нет to_thread(vc.play) — флапало WS')
 check('silence' in doc.lower() or 'VOICE_SILENCE_PING' in doc
       or 'keepalive' in doc.lower(),
       'докстринг: silence keepalive')
@@ -83,12 +86,14 @@ check("os.environ.get('VOICE_STAY_ENABLED')" not in src
       'нет выключателя VOICE_STAY_ENABLED')
 check('_bind_voice_gw_listeners' in src,
       'gw listeners через add_listener (error_handler-safe)')
+check('+ 25.0' in src or '+25.0' in src.replace(' ', ''),
+      'suppress после join ≥25с (анти-флап)')
 
 class _Finder(ast.NodeVisitor):
     def __init__(self):
         self.threaded_play = 0
         self.wait_for_connect = 0
-        self.wait_for_play = 0
+        self.silence_helper = 0
 
     def visit_Call(self, node):
         name = _call_name(node.func)
@@ -104,8 +109,8 @@ class _Finder(ast.NodeVisitor):
                         isinstance(inner.func, ast.Attribute)
                         and inner.func.attr == 'connect'):
                     self.wait_for_connect += 1
-                if iname == 'to_thread':
-                    self.wait_for_play += 1
+        if name == 'start_silence_keepalive':
+            self.silence_helper += 1
         self.generic_visit(node)
 
 
@@ -114,10 +119,10 @@ if fn:
     f.visit(fn)
     check(f.wait_for_connect == 0,
           f'нет wait_for(connect) в мониторе ({f.wait_for_connect})')
-    check(f.threaded_play >= 1,
-          f'to_thread(vc.play) есть в keepalive ({f.threaded_play})')
-    check(f.wait_for_play >= 1,
-          f'wait_for(to_thread(play)) в keepalive ({f.wait_for_play})')
+    check(f.threaded_play == 0,
+          f'нет to_thread(vc.play) в keepalive ({f.threaded_play})')
+    check(f.silence_helper >= 1 or 'start_silence_keepalive' in body,
+          'start_silence_keepalive в мониторе (если silence ON)')
 
 print('== config/voice_stay.json ==')
 import json  # noqa: E402
@@ -125,13 +130,27 @@ cfg = json.load(open(os.path.join(ROOT, 'config', 'voice_stay.json'), encoding='
 check(bool(cfg.get('channel_id')), f'channel_id={cfg.get("channel_id")}')
 check(cfg.get('stay_enabled') is True, 'stay_enabled=true в json')
 
-print('== runtime: to_thread не стопорит loop ==')
+print('== silence_ping default OFF ==')
+import services.voice_stay_health as H  # noqa: E402
+old = os.environ.pop('VOICE_SILENCE_PING', None)
+try:
+    check(H.silence_ping_enabled() is False, 'default silence OFF')
+    os.environ['VOICE_SILENCE_PING'] = '1'
+    check(H.silence_ping_enabled() is True, 'VOICE_SILENCE_PING=1 → ON')
+    src_obj = H.silence_source()
+    check(src_obj.is_opus() is True, 'LoopSilence is_opus=True (не PCM)')
+    frame = src_obj.read()
+    check(frame == b'\xf8\xff\xfe', 'opus silence frame')
+finally:
+    if old is None:
+        os.environ.pop('VOICE_SILENCE_PING', None)
+    else:
+        os.environ['VOICE_SILENCE_PING'] = old
+
+print('== runtime: sync play не стопорит loop ==')
 
 
 async def _sim():
-    def blocking_play(_src=None):
-        time.sleep(0.35)
-
     ticks = 0
 
     async def ticker():
@@ -141,14 +160,14 @@ async def _sim():
             ticks += 1
 
     task = asyncio.create_task(ticker())
-    await asyncio.wait_for(asyncio.to_thread(blocking_play, object()),
-                           timeout=15.0)
+    # play() sync and instant — just yield
+    await asyncio.sleep(0)
     await task
     return ticks
 
 
 ticks = asyncio.run(_sim())
-check(ticks >= 5, f'ticker успел 5 тиков пока play «висел» ({ticks})')
+check(ticks >= 5, f'ticker успел 5 тиков ({ticks})')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

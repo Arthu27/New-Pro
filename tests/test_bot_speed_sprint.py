@@ -104,8 +104,8 @@ check('VOICE_SILENCE_PING' in main_src,
 check('silence keepalive' in main_src.lower() or "or '0')" in main_src
       or "or '1')" in main_src or 'soft-reconnect' in main_src,
       'voice: silence keepalive / soft-reconnect против 24ч zombie')
-check('to_thread(vc.play' in main_src.replace(' ', ''),
-      'voice: если play — только to_thread')
+check('start_silence_keepalive' in main_src or 'silence_ping_enabled' in main_src,
+      'voice: silence через helper (без to_thread play)')
 check('_loop_lag_watchdog' in main_src or 'EVENT-LOOP lag' in main_src,
       'main: watchdog лага event loop')
 vt = open(os.path.join(ROOT, 'cogs', 'voice_tracker.py'), encoding='utf-8').read()

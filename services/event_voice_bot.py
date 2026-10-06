@@ -200,7 +200,7 @@ async def ensure_voice_joined(client: discord.Client | None = None,
     except asyncio.TimeoutError:
         return False, 'ensure занят — retry'
     _joining = True
-    _suppress_rejoin_until = time.time() + 3.0
+    _suppress_rejoin_until = time.time() + 5.0
     try:
         channel = client.get_channel(cid)
         if channel is None:
@@ -268,8 +268,8 @@ async def ensure_voice_joined(client: discord.Client | None = None,
             return False, f'Не удалось зайти: {ex or type(ex).__name__}'
     finally:
         _joining = False
-        # короткий suppress — свой VOICE_STATE после reconnect
-        _suppress_rejoin_until = time.time() + 3.0
+        # 25с suppress — не штормить leave/rejoin после reconnect
+        _suppress_rejoin_until = time.time() + 25.0
         try:
             lock.release()
         except Exception:
@@ -548,10 +548,23 @@ def build_event_client():
             return
         if before_id == target or after_id is None or after_id != target:
             log.warning(
-                'event-bot left voice (before=%s after=%s) — FORCE return to %s',
+                'event-bot left voice (before=%s after=%s) — return to %s',
                 before_id, after_id, target)
-            _suppress_rejoin_until = 0.0
-            _schedule_rejoin(bot, 'kicked-or-moved', force=True)
+
+            async def _debounced():
+                await asyncio.sleep(1.5)
+                if _joining or time.time() < _suppress_rejoin_until:
+                    return
+                from services.voice_stay_health import really_in_channel
+                ok, _, _ = really_in_channel(bot, target)
+                if ok:
+                    return
+                _schedule_rejoin(bot, 'kicked-or-moved', force=True)
+            try:
+                bot.loop.create_task(
+                    _debounced(), name='event-voice-kick-debounce')
+            except Exception:
+                _schedule_rejoin(bot, 'kicked-or-moved', force=True)
 
     @bot.event
     async def on_disconnect():
@@ -569,15 +582,22 @@ def client_ready(client) -> bool:
 
 
 async def _monitor_event_voice(client: discord.Client) -> None:
-    """Каждые 2с: Discord-truth + soft reconnect + silence keepalive."""
+    """Каждые 2с: Discord-truth + soft reconnect (+ opt-in silence)."""
     global _last_silence_ts, _last_join_ts
     from services.voice_stay_health import (
-        really_in_channel, needs_soft_reconnect)
+        really_in_channel, needs_soft_reconnect,
+        silence_ping_enabled, start_silence_keepalive)
 
     await client.wait_until_ready()
     await asyncio.sleep(1)
-    _silence_env = (os.environ.get('VOICE_SILENCE_PING') or '1').strip().lower()
-    _silence = _silence_env not in ('0', 'false', 'no', 'off')
+    _silence = silence_ping_enabled()
+    if _silence and not discord.opus.is_loaded():
+        log.warning('event-bot: VOICE_SILENCE_PING=1 без libopus — silence OFF')
+        _silence = False
+    if _silence:
+        log.info('event-bot silence keepalive ON')
+    else:
+        log.info('event-bot silence keepalive OFF (default)')
     while not client.is_closed() and not _stop_runner:
         await asyncio.sleep(2)
         if _joining or time.time() < _suppress_rejoin_until:
@@ -616,15 +636,10 @@ async def _monitor_event_voice(client: discord.Client) -> None:
                      (now - _last_join_ts) / 3600.0)
             _schedule_rejoin(client, 'soft-reconnect', force=True)
             continue
-        if (_silence and vc and discord.opus.is_loaded()
-                and not vc.is_playing()):
+        if _silence and vc and not vc.is_playing():
             try:
-                from services.voice_stay_health import silence_source
-                await asyncio.wait_for(
-                    asyncio.to_thread(vc.play, silence_source()), timeout=10.0)
-            except asyncio.TimeoutError:
-                log.warning('event-bot silence timeout — force rejoin')
-                _schedule_rejoin(client, 'silence-timeout', force=True)
+                start_silence_keepalive(vc)
+                _last_silence_ts = now
             except Exception as ex:
                 log.debug('event-bot silence: %s', ex)
 
