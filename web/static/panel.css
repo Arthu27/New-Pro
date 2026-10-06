@@ -1152,12 +1152,76 @@ h2 .seg { margin-left: auto; font-weight: 800; }
   margin: 0; font-size: .95rem; font-weight: 800; color: var(--ink);
 }
 .act-role-block__head .dim { font-size: .74rem; }
+
+/* ── Staff branches (Админ / Мастер / Ассистент / …) ── */
+.act-roles--branches { margin-bottom: 18px; }
+.act-roles__chip.branch-admin { border-color: rgba(255,154,154,.35); }
+.act-roles__chip.branch-master { border-color: rgba(158,232,239,.35); }
+.act-roles__chip.branch-assistent { border-color: rgba(255,199,138,.35); }
+.act-roles__chip.branch-mod { border-color: rgba(180,195,255,.35); }
+.act-roles__chip.branch-helper { border-color: rgba(142,230,182,.35); }
+.act-roles__chip.branch-branches { border-color: rgba(255,179,217,.35); }
+.act-branch-grids {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.act-branch {
+  padding: 14px 14px 12px; border-radius: var(--r-md);
+  border: 1px solid var(--line); background: rgba(0,0,0,.28);
+  border-left: 3px solid var(--line-2);
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+}
+.act-branch.branch-admin { border-left-color: #ff9a9a; }
+.act-branch.branch-master { border-left-color: #9ee8ef; }
+.act-branch.branch-assistent { border-left-color: #ffc78a; }
+.act-branch.branch-mod { border-left-color: #b4c3ff; }
+.act-branch.branch-helper { border-left-color: #8ee6b6; }
+.act-branch.branch-branches { border-left-color: #ffb3d9; }
+.act-branch__head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.act-branch__title {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.act-branch__title h3 {
+  margin: 0; font-size: 1rem; font-weight: 800; color: var(--ink);
+  font-family: var(--display); letter-spacing: -.02em;
+}
+.act-branch__link {
+  font-size: .72rem; font-weight: 800; white-space: nowrap;
+  text-decoration: none;
+}
+.act-branch__link:hover { color: var(--ink); }
+.act-branch__kpi {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  font-size: .74rem; color: var(--muted);
+}
+.act-branch__kpi b { color: var(--ink-2); font-weight: 800; }
+.act-branch__more { font-size: .72rem; padding: 0 4px; }
 .act-mini { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 .act-mini a {
-  display: grid; grid-template-columns: 20px 26px minmax(0, 1fr) auto;
+  display: grid;
+  grid-template-columns: 20px 26px minmax(0, 1fr) auto auto;
   gap: 8px; align-items: center;
   padding: 7px 8px; border-radius: 10px; color: inherit;
 }
+.act-mini li.is-idle a { opacity: .55; }
+.act-row.is-idle { opacity: .55; }
+.people-branches { display: flex; flex-direction: column; gap: 18px; padding: 4px 0 8px; }
+.people-branch__head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin: 0 4px 10px;
+}
+.people-branch__head h3 {
+  margin: 0; font-size: 1rem; font-weight: 800;
+  font-family: var(--display); letter-spacing: -.02em;
+}
+.people-branch.branch-admin .people-branch__head h3 { color: #ff9a9a; }
+.people-branch.branch-master .people-branch__head h3 { color: #9ee8ef; }
+.people-branch.branch-assistent .people-branch__head h3 { color: #ffc78a; }
+.people-branch.branch-mod .people-branch__head h3 { color: #b4c3ff; }
+.people-branch.branch-helper .people-branch__head h3 { color: #8ee6b6; }
+.people-branch.branch-branches .people-branch__head h3 { color: #ffb3d9; }
 .act-mini a:hover { background: var(--glass-3); }
 .act-mini__n { font-weight: 800; font-size: .75rem; color: var(--muted); text-align: center; }
 .act-mini__ava {

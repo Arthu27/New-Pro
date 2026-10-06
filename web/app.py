@@ -15,7 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import asyncio
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from functools import wraps
 from pathlib import Path
 
@@ -1343,17 +1343,37 @@ def _best_name(primary, secondary, book, fallback='—'):
     return fallback
 
 
-def _mod_activity(gid, days):
-    """Сколько мер каждый модератор выдал за N дней."""
+def _mod_activity(gid, days, *, since=None, date_keys=None):
+    """Сколько мер каждый модератор выдал за N дней / явные даты."""
     from datetime import timedelta
-    edge = datetime.now(timezone.utc) - timedelta(days=max(1, int(days)))
+    key_set = set(str(k) for k in date_keys) if date_keys else None
+    if since is not None:
+        edge = since
+    elif key_set:
+        try:
+            first = min(date.fromisoformat(k) for k in key_set)
+            edge = datetime(first.year, first.month, first.day,
+                            tzinfo=timezone.utc)
+        except Exception:
+            edge = datetime.now(timezone.utc) - timedelta(days=max(1, int(days)))
+    else:
+        edge = datetime.now(timezone.utc) - timedelta(days=max(1, int(days)))
     hidden = _viewer_hidden_kinds()
     stats = {}
     for r in _collect_cases(gid):
         if r.get('kind') in hidden:
             continue
         ts = _parse_ts(r.get('timestamp'))
-        if ts is None or ts < edge:
+        if ts is None:
+            continue
+        if key_set is not None:
+            try:
+                local_d = ts.astimezone().date().isoformat()
+            except Exception:
+                continue
+            if local_d not in key_set:
+                continue
+        elif ts < edge:
             continue
         key = str(r.get('mod_id') or r.get('mod_name') or '—')
         st = stats.setdefault(key, {
@@ -1374,25 +1394,31 @@ def _mod_activity(gid, days):
     return sorted(stats.values(), key=lambda x: (-x['total'], str(x['name']).lower()))
 
 
-def _staff_board_for(gid, days, people):
-    """Красивая сводка: меры + чат + войс, топы по ролям."""
+def _staff_board_for(gid, days, people, *, span='week'):
+    """Сводка: меры + чат + войс, ветки Админ/Мастер/Ассистент/Хелпер…"""
     try:
-        from services.staff_board import build_staff_board
+        from services.staff_board import build_staff_board, resolve_span
+        meta = resolve_span(span)
         return build_staff_board(
             guild_id=gid,
-            days=days,
+            days=meta['days'],
+            span=meta['span'],
+            date_keys=meta['keys'],
             people=people or [],
-            mod_rows=_mod_activity(gid, days),
+            mod_rows=_mod_activity(gid, meta['days'], date_keys=meta['keys']),
             hidden_kinds=_viewer_hidden_kinds(),
+            include_zero=True,
         )
     except Exception:
         return {
             'summary': {
                 'staff_active': 0, 'staff_total': len(people or []),
                 'actions': 0, 'messages': 0, 'voice_s': 0, 'voice': '0 мин',
-                'days': days,
+                'days': days, 'span': span, 'span_label': span,
+                'range_label': '',
             },
             'rows': [], 'podium': [], 'role_tops': [], 'by_role': {},
+            'by_branch': {}, 'branches': [],
         }
 
 
@@ -2568,8 +2594,16 @@ def today():
 @role_required('helper')
 def logs():
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
+    raw_span = (request.args.get('span') or 'week').strip().lower()
+    if raw_span in ('day', 'today', 'день'):
+        span = 'day'
+    elif raw_span in ('month', 'месяц'):
+        span = 'month'
+    else:
+        span = 'week'
+    from services.staff_board import resolve_span, BRANCH_KEYS
+    meta = resolve_span(span)
+    days = meta['days']
     rows = _filter_cases_for_viewer(_collect_cases(gid))[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
@@ -2589,14 +2623,19 @@ def logs():
         e['user_name'] = _best_name(e.get('user_name'), e.get('user_id'), book)
         e['user_id'] = str(e.get('user_id') or '')
     people, _err = _list_login_people()
+    branch_filter = (request.args.get('branch') or '').strip() or None
+    if branch_filter and branch_filter not in BRANCH_KEYS:
+        branch_filter = None
     return render_template(
         'logs.html', rows=rows, feed=feed, joins=joins,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(hidden),
-        activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
+        activity=_mod_activity(gid, days, date_keys=meta['keys']),
+        staff_board=_staff_board_for(gid, days, people, span=span),
         span=span,
+        span_meta=meta,
         role_filter=(request.args.get('role') or '').strip() or None,
+        branch_filter=branch_filter,
     )
 
 
@@ -2605,17 +2644,46 @@ def logs():
 @role_required('helper')
 def staff_page():
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
+    raw_span = (request.args.get('span') or 'week').strip().lower()
+    if raw_span in ('day', 'today', 'день'):
+        span = 'day'
+    elif raw_span in ('month', 'месяц'):
+        span = 'month'
+    else:
+        span = 'week'
+    from services.staff_board import resolve_span, BRANCH_KEYS, branch_of_tag
+    meta = resolve_span(span)
+    days = meta['days']
     feed = _staff_feed(gid, 100)
     people, err = _list_login_people()
+    # branch=admin|master|… или legacy role=helper/mod/…
+    branch_filter = (request.args.get('branch') or '').strip() or None
     role_filter = (request.args.get('role') or '').strip() or None
+    if branch_filter and branch_filter not in BRANCH_KEYS:
+        branch_filter = None
+    # сгруппировать команду по веткам для нижней секции
+    people_by_branch = []
+    try:
+        from services.staff_board import BRANCH_GROUPS
+        bags = {k: [] for k, _, __ in BRANCH_GROUPS}
+        for p in people or []:
+            bk = branch_of_tag(p.get('role_tag') or p.get('role'))
+            bags.setdefault(bk, []).append(p)
+        for k, title, _ in BRANCH_GROUPS:
+            bag = bags.get(k) or []
+            if bag:
+                people_by_branch.append({'key': k, 'title': title, 'people': bag})
+    except Exception:
+        people_by_branch = []
     return render_template(
         'staff.html', feed=feed, people=people, error=err,
-        activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
+        people_by_branch=people_by_branch,
+        activity=_mod_activity(gid, days, date_keys=meta['keys']),
+        staff_board=_staff_board_for(gid, days, people, span=span),
         span=span,
+        span_meta=meta,
         role_filter=role_filter,
+        branch_filter=branch_filter,
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
 

@@ -2,14 +2,37 @@
 {% block title %}Staff{% endblock %}
 {% block heading %}Staff{% endblock %}
 {% block body %}
-<p class="lead">Активность команды: меры, чат, войс. Топы по ролям · неделя / месяц.</p>
+<p class="lead">Слежка по веткам: Админы · Мастера · Ассистенты · Модераторы · Хелперы. День / неделя до вс / месяц.</p>
 
 {% include '_activity.html' %}
 
 <section class="panel rise" style="margin-top:12px">
-  <h2>Команда на сервере <span class="count">{{ people|length }}</span></h2>
+  <h2>Команда по веткам <span class="count">{{ people|length }}</span></h2>
   {% if error %}<div class="flash err" style="margin:12px">{{ error }}</div>{% endif %}
   {% if not people %}<div class="empty">Staff не загрузился</div>
+  {% elif people_by_branch %}
+  <div class="people-branches">
+    {% for br in people_by_branch %}
+    <div class="people-branch branch-{{ br.key }}">
+      <div class="people-branch__head">
+        <h3>{{ br.title }}</h3>
+        <span class="count">{{ br.people|length }}</span>
+      </div>
+      <div class="people-board">
+        {% for p in br.people %}
+        <a class="p-card" href="{{ url_for('member', q=p.id) }}">
+          <img class="p-card__ava" src="{{ p.avatar }}" alt="">
+          <div class="p-card__body">
+            <strong class="p-card__name">{{ p.name }}</strong>
+            <span class="p-card__handle dim">@{{ p.handle }}</span>
+            <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
   {% else %}
   <div class="people-board">
     {% for p in people %}
