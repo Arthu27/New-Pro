@@ -511,10 +511,10 @@ def build_event_client():
 
     @bot.event
     async def on_resumed():
-        log.info('event-bot resumed — FORCE voice rebuild (после ready)')
+        # Gateway resume ≠ voice dead. Сначала Discord-truth, без force_drop.
+        log.info('event-bot resumed — soft voice check (без force rebuild)')
 
         async def _after_ready():
-            # дать gateway стабилизироваться, потом force join
             for _ in range(20):
                 try:
                     if client_ready(bot):
@@ -523,12 +523,22 @@ def build_event_client():
                     pass
                 await asyncio.sleep(0.25)
             await asyncio.sleep(0.5)
-            _schedule_rejoin(bot, 'resume', force=True)
+            cid = _resolve_event_voice_channel_id()
+            if not cid:
+                return
+            from services.voice_stay_health import really_in_channel
+            ok, _, why = really_in_channel(bot, cid)
+            if ok:
+                log.info('event-bot resume: voice already ok (%s)', why)
+                return
+            # Только если реально выпал — reconnect (zombie → force)
+            force = (why or '').startswith('zombie') or why == 'discord-in-lib-dead'
+            _schedule_rejoin(bot, 'resume', force=force)
 
         try:
             bot.loop.create_task(_after_ready(), name='event-voice-after-resume')
         except Exception:
-            _schedule_rejoin(bot, 'resume', force=True)
+            _schedule_rejoin(bot, 'resume', force=False)
 
     @bot.event
     async def on_voice_state_update(member, before, after):
@@ -585,7 +595,7 @@ async def _monitor_event_voice(client: discord.Client) -> None:
     """Каждые 2с: Discord-truth + soft reconnect (+ opt-in silence)."""
     global _last_silence_ts, _last_join_ts
     from services.voice_stay_health import (
-        really_in_channel, needs_soft_reconnect,
+        really_in_channel,
         silence_ping_enabled, start_silence_keepalive)
 
     await client.wait_until_ready()
@@ -624,18 +634,8 @@ async def _monitor_event_voice(client: discord.Client) -> None:
                 log.warning('event-bot monitor: %s', msg)
                 _schedule_rejoin(client, 'monitor-miss', force=True)
             continue
-        # ok / ok-latency-high / lib-ok-discord-unknown — сидим
-        if why == 'ok-latency-high' and needs_soft_reconnect(
-                _last_join_ts, now, interval=120):
-            # latency плохая >2 мин после join — мягкий heal
-            log.warning('event-bot latency bad >2min — soft heal')
-            _schedule_rejoin(client, 'latency-heal', force=True)
-            continue
-        if needs_soft_reconnect(_last_join_ts, now):
-            log.info('event-bot soft-reconnect after %.1f h (редко, не каждые 45м)',
-                     (now - _last_join_ts) / 3600.0)
-            _schedule_rejoin(client, 'soft-reconnect', force=True)
-            continue
+        # ok / ok-latency-high / lib-ok-discord-unknown — сидим.
+        # latency-heal / soft-reconnect force сами выкидывали бота из войса.
         if _silence and vc and not vc.is_playing():
             try:
                 start_silence_keepalive(vc)

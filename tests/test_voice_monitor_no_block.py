@@ -60,8 +60,10 @@ check('backoff_until' not in body,
       'нет backoff_until в мониторе')
 check('_ensure_main_voice_joined' in body or '_schedule_main_voice_rejoin' in body,
       'монитор зовёт ensure/rejoin')
-check('start_silence_keepalive' in body or 'silence_ping_enabled' in body,
-      'silence через helper (opt-in)')
+check('latency-heal' not in body,
+      'монитор НЕ делает latency-heal force (сам выкидывал из войса)')
+check('soft-reconnect' not in body or 'НЕ делаем' in body or 'сидим' in body.lower(),
+      'монитор не force soft-reconnect пока Discord in')
 bad = [ln.strip() for ln in body.splitlines()
        if 'vc.play(' in ln and 'start_silence' not in ln]
 check(not bad, f'нет голого vc.play в мониторе: {bad}')

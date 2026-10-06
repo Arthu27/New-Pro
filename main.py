@@ -1157,7 +1157,7 @@ async def _monitor_voice():
     """
     global _voice_last_silence_ts, _voice_last_join_ts
     from services.voice_stay_health import (
-        really_in_channel, needs_soft_reconnect, effective_stay_channel_id,
+        really_in_channel, effective_stay_channel_id,
         silence_ping_enabled, start_silence_keepalive)
 
     await bot.wait_until_ready()
@@ -1195,16 +1195,13 @@ async def _monitor_voice():
                 _log.warning('main voice monitor: %s', msg)
                 _schedule_main_voice_rejoin('monitor-miss', force=True)
             continue
-        if why == 'ok-latency-high' and needs_soft_reconnect(
-                _voice_last_join_ts, now, interval=120):
-            _log.warning('main voice latency bad >2min — soft heal')
-            _schedule_main_voice_rejoin('latency-heal', force=True)
-            continue
-        if needs_soft_reconnect(_voice_last_join_ts, now):
-            _log.info('main voice soft-reconnect after %.1f h (редко, не каждые 45м)',
-                      (now - _voice_last_join_ts) / 3600.0)
-            _schedule_main_voice_rejoin('soft-reconnect', force=True)
-            continue
+        # ok / ok-latency-high / lib-ok-discord-unknown — СИДИМ.
+        # НЕ делаем latency-heal / soft-reconnect force: они сами
+        # disconnect'ят бота (leave виден в Discord). Latency inf при
+        # mute+deaf — норма, не повод выходить.
+        if why == 'ok-latency-high' and (now - (_voice_last_join_ts or now)) > 600:
+            _log.debug('main voice latency high (сидим, без heal) join=%.0fs ago',
+                       now - (_voice_last_join_ts or now))
         if _silence and vc and not vc.is_playing():
             try:
                 start_silence_keepalive(vc)
