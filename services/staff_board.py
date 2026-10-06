@@ -37,7 +37,7 @@ ROLE_TITLE = {
 }
 
 # Организационные ветки сервера (не ранги!).
-# В каждой ветке — весь её штат: curator / master / assistent / grant / …
+# В ветку — только grant/curator этой ветки. Старшие без ветки → «Админы».
 BRANCH_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ('moderator', 'Moderator', ()),
     ('helper', 'Helper', ()),
@@ -46,7 +46,7 @@ BRANCH_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ('closemod', 'Close mod', ()),
     ('creative', 'Creative', ()),
     ('broadcaster', 'Broadcaster', ()),
-    ('leadership', 'Админы', ()),  # owner/admin без орг-ветки
+    ('leadership', 'Админы / старшие', ()),
 )
 
 BRANCH_KEYS = tuple(k for k, _, __ in BRANCH_GROUPS)
@@ -54,6 +54,7 @@ BRANCH_KEYS = tuple(k for k, _, __ in BRANCH_GROUPS)
 # fallback по role_tag, если нет Discord role_ids
 _TAG_TO_BRANCH: dict[str, str] = {
     'mod': 'moderator',
+    'moderator': 'moderator',
     'helper': 'helper',
     'creative': 'creative',
     'broadcaster': 'broadcaster',
@@ -63,11 +64,11 @@ _TAG_TO_BRANCH: dict[str, str] = {
     'owner': 'leadership',
     'admin': 'leadership',
     'staff-admin': 'leadership',
-    # без role_ids кураторов/мастеров кладём в helper (общая ветка)
-    'curator': 'helper',
-    'master': 'helper',
-    'assistent': 'helper',
-    'staff-assistent': 'helper',
+    # без role_ids НЕ кидаем кураторов/мастеров в Helper
+    'curator': 'leadership',
+    'master': 'leadership',
+    'assistent': 'leadership',
+    'staff-assistent': 'leadership',
 }
 
 
@@ -77,11 +78,11 @@ def branch_of_tag(tag: str) -> str:
 
 
 def org_branches_of(role_ids) -> list[str]:
-    """Орг-ветки участника по Discord role IDs (grant + curator).
+    """Орг-ветки участника по Discord role IDs.
 
-    Master / Assistent → Helper + Moderator (обе ветки).
-    Admin / Owner без grant/curator → leadership.
-    Участник может быть в нескольких ветках.
+    В ветку попадают ТОЛЬКО grant или curator ЭТОЙ ветки.
+    Master / Assistent без grant/curator → не засоряют Helper/Mod
+    (идут в leadership / «Старшие»).
     """
     try:
         ids = {int(x) for x in (role_ids or []) if x is not None and str(x).isdigit()}
@@ -94,44 +95,39 @@ def org_branches_of(role_ids) -> list[str]:
     try:
         from services import staff_roles as SR
     except Exception:
-        SR = None
+        return []
 
-    if SR is not None:
-        for kind in SR.POSITIONS:
-            grant = int(SR.KNOWN_GRANT_BY_KIND.get(kind) or 0)
-            curator = int(SR.KNOWN_CURATOR_BY_KIND.get(kind) or 0)
-            hit = False
-            for rid in (grant, curator):
-                if rid and rid in ids:
-                    hit = True
-                    break
-            if hit and kind not in out:
+    for kind in SR.POSITIONS:
+        grant = int(SR.KNOWN_GRANT_BY_KIND.get(kind) or 0)
+        curator = int(SR.KNOWN_CURATOR_BY_KIND.get(kind) or 0)
+        if (grant and grant in ids) or (curator and curator in ids):
+            if kind not in out:
                 out.append(kind)
 
-        master_ids = {int(SR.KNOWN_MASTER_ROLE_ID)}
-        asst_ids = {int(x) for x in SR.KNOWN_ASSISTENT_ROLE_IDS}
-        if (ids & master_ids) or (ids & asst_ids):
-            for k in ('helper', 'moderator'):
-                if k not in out:
-                    out.append(k)
+    if out:
+        return out
 
-        admin_ids = {
-            int(SR.KNOWN_ADMIN_ROLE_ID),
-            int(SR.KNOWN_STAFF_ADMIN_ROLE_ID),
-        }
-        # Глобальные админы без орг-ветки — в «Админы»
-        if (ids & admin_ids) and not out:
-            out.append('leadership')
+    # Нет орг-grant/curator — старшие / админы в отдельный блок
+    senior = {
+        int(SR.KNOWN_MASTER_ROLE_ID),
+        int(SR.KNOWN_ASSISTENT_ROLE_ID),
+        int(SR.KNOWN_STAFF_ASSISTENT_ROLE_ID),
+        int(SR.KNOWN_ADMIN_ROLE_ID),
+        int(SR.KNOWN_STAFF_ADMIN_ROLE_ID),
+    }
+    if ids & senior:
+        return ['leadership']
 
-        common = int(getattr(SR, 'KNOWN_COMMON_STAFF_ROLE_ID', 0) or 0)
-        if not out and common and common in ids:
-            out.append('helper')
+    common = int(getattr(SR, 'KNOWN_COMMON_STAFF_ROLE_ID', 0) or 0)
+    if common and common in ids:
+        # общая staff-роль без ветки — не угадываем Helper
+        return ['leadership']
 
-    return out
+    return []
 
 
 def person_org_branches(person: dict) -> list[str]:
-    """Ветки человека: сначала по role_ids, иначе fallback по tag/role."""
+    """Ветки человека: сначала по role_ids, иначе осторожный fallback по tag."""
     rids = person.get('role_ids') if isinstance(person, dict) else None
     branches = org_branches_of(rids or [])
     if branches:
@@ -141,9 +137,16 @@ def person_org_branches(person: dict) -> list[str]:
     if isinstance(person, dict):
         role = str(person.get('role') or '')
         tag = str(person.get('role_tag') or role or '')
-    if role in ('owner', 'admin') or tag in ('owner', 'admin', 'staff-admin'):
+    # Прямые орг-теги (creative/event/…) — ок
+    if tag in ('helper', 'mod', 'moderator', 'creative', 'broadcaster',
+               'event', 'support', 'closemod'):
+        return [branch_of_tag(tag)]
+    # curator/master/assistent/admin без role_ids — НЕ в Helper
+    if role in ('owner', 'admin', 'assistent', 'master', 'curator') or tag in (
+            'owner', 'admin', 'staff-admin', 'staff-assistent', 'assistent',
+            'master', 'curator'):
         return ['leadership']
-    return [branch_of_tag(tag)]
+    return [branch_of_tag(tag)] if tag else ['leadership']
 
 
 def fmt_voice(seconds: int) -> str:

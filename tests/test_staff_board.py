@@ -57,13 +57,24 @@ cb = org_branches_of([
 ])
 check(cb == ['creative'], f'creative → {cb}')
 
-# Master → helper + moderator
+# Master без grant/curator → только leadership (не Helper!)
 mst = org_branches_of([SR.KNOWN_MASTER_ROLE_ID])
-check(set(mst) == {'helper', 'moderator'}, f'master both → {mst}')
+check(mst == ['leadership'], f'master alone → {mst}')
 
-# Assistent → helper + moderator
+# Assistent без grant/curator → leadership
 ast = org_branches_of([SR.KNOWN_ASSISTENT_ROLE_ID])
-check(set(ast) == {'helper', 'moderator'}, f'assistent both → {ast}')
+check(ast == ['leadership'], f'assistent alone → {ast}')
+
+# Master + helper grant → только Helper
+mh = org_branches_of([SR.KNOWN_MASTER_ROLE_ID, SR.KNOWN_HELPER_ROLE_ID])
+check(mh == ['helper'], f'master+helper → {mh}')
+
+# Assistent + mod curator → только Moderator
+am = org_branches_of([
+    SR.KNOWN_ASSISTENT_ROLE_ID,
+    SR.KNOWN_CURATOR_BY_KIND['moderator'],
+])
+check(am == ['moderator'], f'asst+mod curator → {am}')
 
 # Admin only → leadership
 ab = org_branches_of([SR.KNOWN_ADMIN_ROLE_ID])
@@ -76,9 +87,18 @@ ah = org_branches_of([
 ])
 check('helper' in ah and 'leadership' not in ah, f'admin+helper curator → {ah}')
 
+# Common staff без ветки → не Helper
+cm = org_branches_of([SR.KNOWN_COMMON_STAFF_ROLE_ID])
+check(cm == ['leadership'], f'common staff → {cm}')
+
+# fallback tag curator без role_ids → leadership (не Helper)
+fb = person_org_branches({'role': 'curator', 'role_tag': 'curator'})
+check(fb == ['leadership'], f'tag curator fallback → {fb}')
+
 check('moderator' in BRANCH_KEYS and 'helper' in BRANCH_KEYS, 'org keys')
 check('admin' not in BRANCH_KEYS or 'leadership' in BRANCH_KEYS, 'no rank-admin bag')
 check(branch_of_tag('mod') == 'moderator', 'tag mod→moderator')
+check(branch_of_tag('assistent') == 'leadership', 'tag asst→leadership')
 
 print('== board build ==')
 people = [
@@ -94,6 +114,9 @@ people = [
     {'id': '4', 'name': 'AdminOnly', 'handle': 'ao', 'avatar': '',
      'role': 'admin', 'role_tag': 'admin', 'role_label': 'Admin',
      'role_ids': [SR.KNOWN_ADMIN_ROLE_ID]},
+    {'id': '5', 'name': 'HelpMaster', 'handle': 'hm', 'avatar': '',
+     'role': 'master', 'role_tag': 'master', 'role_label': 'Master',
+     'role_ids': [SR.KNOWN_MASTER_ROLE_ID, SR.KNOWN_HELPER_ROLE_ID]},
 ]
 mod_rows = [
     {'id': '1', 'name': 'HelpOne', 'total': 5, 'warns': 3, 'mutes': 2, 'kicks': 0, 'bans': 0},
@@ -120,14 +143,17 @@ check('master' not in keys and 'admin' not in keys,
 mod_br = next(b for b in board['branches'] if b['key'] == 'moderator')
 mod_ids = {r['id'] for r in mod_br['rows']}
 check('2' in mod_ids, 'mod curator in Moderator branch')
-check('3' in mod_ids, 'master also in Moderator branch')
+check('3' not in mod_ids, 'lone master NOT in Moderator')
 
 help_br = next(b for b in board['branches'] if b['key'] == 'helper')
 help_ids = {r['id'] for r in help_br['rows']}
-check('1' in help_ids and '3' in help_ids, 'helper + master in Helper')
+check('1' in help_ids, 'helper grant in Helper')
+check('3' not in help_ids, 'lone master NOT in Helper')
+check('5' in help_ids, 'master+helper grant in Helper')
 
 lead = next(b for b in board['branches'] if b['key'] == 'leadership')
-check(any(r['id'] == '4' for r in lead['rows']), 'admin-only in Админы')
+lead_ids = {r['id'] for r in lead['rows']}
+check('4' in lead_ids and '3' in lead_ids, 'admin + lone master in Старшие')
 
 print('== templates / login ==')
 act = (ROOT / 'web' / 'templates' / '_activity.html').read_text(encoding='utf-8')
