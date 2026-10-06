@@ -932,7 +932,8 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
     global _voice_last_join_ts
     from services.voice_stay_health import (
         really_in_channel, force_drop_voice, voice_client_alive,
-        effective_stay_channel_id)
+        effective_stay_channel_id, silence_ping_enabled,
+        start_silence_keepalive)
 
     cid = int(channel_id or effective_stay_channel_id(VOICE_CHANNEL_ID) or 0)
     if not cid:
@@ -945,11 +946,12 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
     except Exception:
         return False, 'бот не ready'
 
-    # Stay и panel — всегда глухой (mute+deaf). Open mic выключен.
-    _self_mute = True
+    # Stay: mute+deaf по умолчанию. Если VOICE_SILENCE_PING=1 — unmute
+    # (иначе RTP speaking при mute рвёт voice WS ~каждые 20с).
+    _silence_on = silence_ping_enabled() and discord.opus.is_loaded()
+    _self_mute = not _silence_on
     _self_deaf = True
     _open_mic = False
-
     if not force:
         ok, vc, reason = really_in_channel(bot, cid)
         if ok:
@@ -1009,11 +1011,19 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
                     timeout=20.0),
                 timeout=25.0)
             _voice_last_join_ts = time.time()
-            _log.info('main voice joined %s (open_mic=%s)', cid, _open_mic)
+            _log.info('main voice joined %s (open_mic=%s silence=%s)',
+                      cid, _open_mic, _silence_on)
             if _open_mic:
                 try:
                     await channel.guild.change_voice_state(
                         channel=channel, self_mute=False, self_deaf=False)
+                except Exception:
+                    pass
+            if _silence_on:
+                try:
+                    vc_now = discord.utils.get(
+                        bot.voice_clients, guild=channel.guild)
+                    start_silence_keepalive(vc_now)
                 except Exception:
                     pass
             return True, f'зашёл в <#{cid}>'
@@ -1035,15 +1045,22 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
                                 channel=channel, self_mute=False, self_deaf=False)
                         except Exception:
                             pass
+                    if _silence_on:
+                        try:
+                            vc_now = discord.utils.get(
+                                bot.voice_clients, guild=channel.guild)
+                            start_silence_keepalive(vc_now)
+                        except Exception:
+                            pass
                     return True, f'перезашёл в <#{cid}>'
                 except Exception as ex2:
                     return False, f'не удалось зайти: {ex2 or type(ex2).__name__}'
             return False, f'не удалось зайти: {ex or type(ex).__name__}'
     finally:
         _voice_joining = False
-        # 8с suppress — свой VOICE_STATE after=None после reconnect не штормит
-        # (3с мало: Discord иногда шлёт leave после settle → двойной rejoin)
-        _voice_suppress_rejoin_until = time.time() + 8.0
+        # 25с suppress — свой leave после reconnect + settle Discord
+        # не должен мгновенно штормить force-rejoin (флап ~20с).
+        _voice_suppress_rejoin_until = time.time() + 25.0
 
 
 def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
@@ -1131,30 +1148,30 @@ def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
 
 
 async def _monitor_voice():
-    """Держим войс 24/7 по Discord-truth + soft reconnect + silence keepalive.
+    """Держим войс 24/7 по Discord-truth + soft reconnect.
 
-    Каждые 2с: me.voice и latency. Zombie → force rejoin. Soft reconnect
-    ~раз в 20ч. Silence ping по умолчанию ВЫКЛ (без libopus play ломает WS).
+    Каждые 2с: me.voice и latency. Выкинуло — rejoin.
+    Silence play (VOICE_SILENCE_PING=1) — opt-in: на проде continuous
+    PCM/RTP при mute рвал voice WS (~20с leave/join). По умолчанию OFF;
+    UDP keepalive discord.py + mute/deaf хватает.
     """
     global _voice_last_silence_ts, _voice_last_join_ts
     from services.voice_stay_health import (
-        really_in_channel, needs_soft_reconnect, effective_stay_channel_id)
+        really_in_channel, effective_stay_channel_id,
+        silence_ping_enabled, start_silence_keepalive)
 
     await bot.wait_until_ready()
     await asyncio.sleep(1)
-    # Silence keepalive только если явно включён И opus загружен.
-    # Без libopus play() ломает voice WS → leave/join каждые ~20с.
-    _silence_env = (os.environ.get('VOICE_SILENCE_PING') or '0').strip().lower()
-    _silence = _silence_env in ('1', 'true', 'yes', 'on')
+    _silence = silence_ping_enabled()
     if _silence and not discord.opus.is_loaded():
         _log.warning(
             '_monitor_voice: VOICE_SILENCE_PING=1, но libopus нет — '
             'silence выключен (иначе войс флапает)')
         _silence = False
     if _silence:
-        _log.info('_monitor_voice: silence keepalive ON (VOICE_SILENCE_PING)')
+        _log.info('_monitor_voice: silence keepalive ON (VOICE_SILENCE_PING=1)')
     else:
-        _log.info('_monitor_voice: silence keepalive OFF')
+        _log.info('_monitor_voice: silence keepalive OFF (default — без play)')
     while not bot.is_closed():
         await asyncio.sleep(2)
         stay_cid = effective_stay_channel_id(VOICE_CHANNEL_ID)
@@ -1178,36 +1195,24 @@ async def _monitor_voice():
                 _log.warning('main voice monitor: %s', msg)
                 _schedule_main_voice_rejoin('monitor-miss', force=True)
             continue
-        if why == 'ok-latency-high' and needs_soft_reconnect(
-                _voice_last_join_ts, now, interval=120):
-            _log.warning('main voice latency bad >2min — soft heal')
-            _schedule_main_voice_rejoin('latency-heal', force=True)
-            continue
-        if needs_soft_reconnect(_voice_last_join_ts, now):
-            _log.info('main voice soft-reconnect after %.1f h (редко, не каждые 45м)',
-                      (now - _voice_last_join_ts) / 3600.0)
-            _schedule_main_voice_rejoin('soft-reconnect', force=True)
-            continue
-        if _silence and (now - _voice_last_silence_ts) > 60:
+        # ok / ok-latency-high / lib-ok-discord-unknown — СИДИМ.
+        # НЕ делаем latency-heal / soft-reconnect force: они сами
+        # disconnect'ят бота (leave виден в Discord). Latency inf при
+        # mute+deaf — норма, не повод выходить.
+        if why == 'ok-latency-high' and (now - (_voice_last_join_ts or now)) > 600:
+            _log.debug('main voice latency high (сидим, без heal) join=%.0fs ago',
+                       now - (_voice_last_join_ts or now))
+        if _silence and vc and not vc.is_playing():
             try:
-                if vc and not vc.is_playing() and discord.opus.is_loaded():
-                    import io
-                    silence = io.BytesIO(b'\x00' * 3840)
-                    source = discord.PCMAudio(silence)
-                    await asyncio.wait_for(
-                        asyncio.to_thread(vc.play, source), timeout=10.0)
+                start_silence_keepalive(vc)
                 _voice_last_silence_ts = now
-            except asyncio.TimeoutError:
-                _log.warning('_monitor_voice: silence timeout — force rejoin')
-                _schedule_main_voice_rejoin('silence-timeout', force=True)
             except Exception as _ex:
                 _log.debug('_monitor_voice silence: %s', _ex)
-                _voice_last_silence_ts = now
 
 
 @bot.event
 async def on_voice_state_update(member, before, after):
-    """Кик/перенос основного бота из stay-канала → мгновенный force-rejoin."""
+    """Кик/перенос основного бота из stay-канала → force-rejoin (с debounce)."""
     global _voice_suppress_rejoin_until
     from services.voice_stay_health import effective_stay_channel_id
     stay_cid = effective_stay_channel_id(VOICE_CHANNEL_ID)
@@ -1228,10 +1233,23 @@ async def on_voice_state_update(member, before, after):
         return
     if before_id == target or after_id is None or after_id != target:
         _log.warning(
-            'main left voice (before=%s after=%s) — FORCE return to %s',
+            'main left voice (before=%s after=%s) — return to %s',
             before_id, after_id, target)
-        _voice_suppress_rejoin_until = 0.0
-        _schedule_main_voice_rejoin('kicked-or-moved', force=True)
+        # Не сбрасываем suppress в 0 — иначе monitor+kick штормят.
+        # Короткая пауза: Discord иногда шлёт leave при settle.
+        async def _debounced():
+            await asyncio.sleep(1.5)
+            if _voice_joining or time.time() < _voice_suppress_rejoin_until:
+                return
+            from services.voice_stay_health import really_in_channel
+            ok, _, _ = really_in_channel(bot, target)
+            if ok:
+                return
+            _schedule_main_voice_rejoin('kicked-or-moved', force=True)
+        try:
+            bot.loop.create_task(_debounced(), name='main-voice-kick-debounce')
+        except Exception:
+            _schedule_main_voice_rejoin('kicked-or-moved', force=True)
 
 
 @bot.event

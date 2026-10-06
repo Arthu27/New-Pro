@@ -124,12 +124,12 @@ check('soft-reconnect' in main, 'main soft-reconnect')
 check('really_in_channel' in ev and 'force=True' in ev,
       'event uses Discord-truth + force')
 check('timeout=20' in main and 'timeout=20' in ev, 'connect timeout=20')
-check("VOICE_SILENCE_PING') or '0'" in main
-      or "VOICE_SILENCE_PING') or \"0\"" in main
-      or "or '0').strip()" in main,
-      'silence keepalive default OFF in main (без opus флапает)')
-check('discord.opus.is_loaded()' in main,
-      'main не шлёт silence без libopus')
+check("VOICE_SILENCE_PING') or '0'" in open(
+          os.path.join(ROOT, 'services', 'voice_stay_health.py'), encoding='utf-8').read()
+      or 'silence_ping_enabled' in main,
+      'silence keepalive default OFF (play флапал WS)')
+check('silence_ping_enabled' in main or 'discord.opus.is_loaded()' in main,
+      'main гейтит silence (helper / opus)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

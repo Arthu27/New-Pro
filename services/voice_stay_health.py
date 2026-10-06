@@ -22,10 +22,47 @@ log = get_logger('voice_stay_health')
 
 # Редкий force-reconnect: Discord иногда рвёт idle-сессию ~сутки.
 # Раньше было 45 мин — бот сам «отлетал» из войса каждые 45 минут
-# (владелец 2026-09-29: скрин Events). Silence keepalive держит UDP;
-# полный reconnect только если здоровы уже ~20ч, либо при zombie.
+# (владелец 2026-09-29: скрин Events). Полный reconnect ~20ч / zombie.
 SOFT_RECONNECT_SEC = 20 * 3600  # 20 часов
 
+# Opus silence frame (20ms). Без PCM→opus encode: encode + self_mute
+# ломал voice WS heartbeat (~20с leave/rejoin loop на проде 2026-10-06).
+_OPUS_SILENCE = b'\xf8\xff\xfe'
+
+
+class LoopSilence(discord.AudioSource):
+    """Бесконечные opus-silence кадры (opt-in через VOICE_SILENCE_PING=1)."""
+
+    def read(self) -> bytes:
+        return _OPUS_SILENCE
+
+    def is_opus(self) -> bool:
+        return True
+
+
+def silence_source() -> LoopSilence:
+    return LoopSilence()
+
+
+def start_silence_keepalive(vc) -> bool:
+    """Запустить silence на event-loop (play() мгновенный). Без to_thread."""
+    if vc is None:
+        return False
+    try:
+        if vc.is_playing():
+            return True
+        vc.play(silence_source())
+        return bool(vc.is_playing())
+    except Exception as ex:
+        log.debug('start_silence_keepalive: %s', ex)
+        return False
+
+
+def silence_ping_enabled() -> bool:
+    """По умолчанию OFF: continuous play флапал войс каждые ~20с."""
+    import os
+    raw = (os.environ.get('VOICE_SILENCE_PING') or '0').strip().lower()
+    return raw in ('1', 'true', 'yes', 'on')
 
 def _member_voice_state(guild: discord.Guild, user_id: int):
     """(known, channel_id|None). known=False если me/member недоступен."""
