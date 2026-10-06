@@ -206,7 +206,15 @@ a:hover { color: var(--ink); }
   height: 46px; padding: 0 14px 0 8px; border-radius: 999px;
   border: 1px solid var(--line-2); background: var(--glass-2);
   color: var(--ink); font-weight: 700; font-size: .86rem;
+  position: relative;
 }
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #3a3f4d; box-shadow: 0 0 0 2px rgba(0,0,0,.25);
+  margin-left: 2px;
+}
+.live-dot--ok { background: #3dd68c; box-shadow: 0 0 8px rgba(61,214,140,.45); }
+.live-dot--err { background: #ff6b6b; }
 .chip-btn img, .chip-btn .ava-fb {
   width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
 }

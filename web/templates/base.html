@@ -6,12 +6,12 @@
   <title>{% block title %}Панель{% endblock %} · Hakumo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=36">
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=37">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <meta name="theme-color" content="#07080a">
   <style>html,body{background:#07080a;color:#f2f4f8}</style>
 </head>
-<body>
+<body data-live="{% block live %}on{% endblock %}">
 {% if hide_shell %}
   {% block bare %}{% endblock %}
 {% else %}
@@ -21,11 +21,11 @@
     <div class="brand">haku<em>mo</em><span>mod core</span></div>
     <div class="side-rule"></div>
 
-    <nav class="nav">
+    <nav class="nav" id="side-nav">
       <div class="group">Меню</div>
       {% for key, href, label, icon in nav_pages %}
         {% if key in mod_nav_keys %}
-        <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}">
+        <a href="{{ href }}" data-nav="{{ key }}" class="{% if request.path == href %}on{% endif %}">
           <i class="fas {{ icon }}"></i><span>{{ label }}</span>
           {% if nav_badges and nav_badges.get(key) %}<span class="badge-dot" title="{{ nav_badges.get(key) }}"></span>{% endif %}
         </a>
@@ -41,7 +41,7 @@
       <div class="group">Сервер</div>
       {% for key, href, label, icon in nav_pages %}
         {% if key in owner_nav_keys %}
-        <a href="{{ href }}" class="{% if request.path == href %}on{% endif %}">
+        <a href="{{ href }}" data-nav="{{ key }}" class="{% if request.path == href %}on{% endif %}">
           <i class="fas {{ icon }}"></i><span>{{ label }}</span>
         </a>
         {% endif %}
@@ -68,60 +68,170 @@
 
   <main class="main">
     <div class="top">
-      <h1>{% block heading %}{% endblock %}</h1>
+      <h1 id="live-heading">{% block heading %}{% endblock %}</h1>
       <div class="top-tools">
         <form class="gsearch" action="{{ url_for('users_page') }}" method="get" autocomplete="off">
           <span class="gsearch__ico"><i class="fas fa-magnifying-glass"></i></span>
           <input id="gq" name="q" placeholder="Найти участника…">
           <div id="gsuggest" class="suggest" hidden></div>
         </form>
-        <span class="chip-btn">
+        <span class="chip-btn" title="авто-обновление">
           {% if user_avatar %}<img src="{{ user_avatar }}" alt="">{% else %}<span class="ava-fb"><i class="fas fa-user"></i></span>{% endif %}
           <span class="role-pill">{{ user_role_label or user_role }}</span>
+          <span class="live-dot" id="live-dot" aria-hidden="true"></span>
         </span>
       </div>
     </div>
+    <div id="live-root">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}
         <div class="flash {% if cat == 'err' %}err{% endif %}">{{ msg }}</div>
       {% endfor %}
     {% endwith %}
     {% block body %}{% endblock %}
+    </div>
   </main>
 </div>
 <script>
 (function () {
   const inp = document.getElementById('gq');
   const box = document.getElementById('gsuggest');
-  if (!inp || !box) return;
-  let t = null;
-  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  inp.addEventListener('input', () => {
-    clearTimeout(t);
-    const q = inp.value.trim();
-    t = setTimeout(async () => {
-      if (!q) { box.hidden = true; box.innerHTML = ''; return; }
-      try {
-        const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
-        const j = await r.json();
-        const items = j.items || [];
-        if (!items.length) { box.hidden = true; return; }
-        box.hidden = false;
-        box.innerHTML = items.slice(0, 8).map(it => `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
-          <img src="${esc(it.avatar)}" alt=""><span><b>${esc(it.name)}</b><small>@${esc(it.handle)}</small></span></button>`).join('');
-      } catch (e) { box.hidden = true; }
-    }, 120);
-  });
-  box.addEventListener('click', e => {
-    const b = e.target.closest('.suggest-item'); if (!b) return;
-    location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
-  });
-  document.addEventListener('click', e => { if (!e.target.closest('.gsearch')) box.hidden = true; });
+  if (inp && box) {
+    let t = null;
+    const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+    inp.addEventListener('input', () => {
+      clearTimeout(t);
+      const q = inp.value.trim();
+      t = setTimeout(async () => {
+        if (!q) { box.hidden = true; box.innerHTML = ''; return; }
+        try {
+          const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
+          const j = await r.json();
+          const items = j.items || [];
+          if (!items.length) { box.hidden = true; return; }
+          box.hidden = false;
+          box.innerHTML = items.slice(0, 8).map(it => `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
+            <img src="${esc(it.avatar)}" alt=""><span><b>${esc(it.name)}</b><small>@${esc(it.handle)}</small></span></button>`).join('');
+        } catch (e) { box.hidden = true; }
+      }, 120);
+    });
+    box.addEventListener('click', e => {
+      const b = e.target.closest('.suggest-item'); if (!b) return;
+      location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
+    });
+    document.addEventListener('click', e => { if (!e.target.closest('.gsearch')) box.hidden = true; });
+  }
   document.addEventListener('click', e => {
     if (e.target.closest('a, button, input, select, summary, label')) return;
     const row = e.target.closest('.click-row[data-href]');
     if (row) location.href = row.dataset.href;
   });
+})();
+
+/* Авто-обновление данных панели без F5 */
+(function () {
+  const INTERVAL_MS = 5000;
+  const SKIP_PREFIXES = ['/channels', '/member', '/login', '/auth', '/anticrash', '/access'];
+  let busy = false;
+  let lastInteract = 0;
+  let timer = null;
+  const dot = document.getElementById('live-dot');
+
+  function pathSkipped() {
+    const p = location.pathname || '';
+    if ((document.body.dataset.live || 'on') === 'off') return true;
+    return SKIP_PREFIXES.some(x => p === x || p.startsWith(x + '/'));
+  }
+
+  function typingOrModal() {
+    const el = document.activeElement;
+    if (el) {
+      const tag = (el.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable) return true;
+    }
+    if (document.querySelector('.modal.open, .modal[open], dialog[open], .overlay.open, .punish-modal.open, .dc-modal.open')) return true;
+    if (Date.now() - lastInteract < 2500) return true;
+    return false;
+  }
+
+  function mark(ok) {
+    if (!dot) return;
+    dot.classList.toggle('live-dot--ok', !!ok);
+    dot.classList.toggle('live-dot--err', ok === false);
+  }
+
+  function syncNav(doc) {
+    const nextNav = doc.querySelector('#side-nav');
+    const curNav = document.querySelector('#side-nav');
+    if (!nextNav || !curNav) return;
+    curNav.querySelectorAll('a[data-nav]').forEach(a => {
+      const key = a.getAttribute('data-nav');
+      const b = nextNav.querySelector('a[data-nav="' + key + '"]');
+      if (!b) return;
+      const had = a.querySelector('.badge-dot');
+      const want = b.querySelector('.badge-dot');
+      if (want && !had) a.insertAdjacentHTML('beforeend', want.outerHTML);
+      else if (!want && had) had.remove();
+      else if (want && had) had.title = want.title || '';
+    });
+  }
+
+  function stripScripts(root) {
+    /* Скрипты страницы живут один раз (делегирование на document).
+       Повторный eval при live-refresh плодит слушатели. */
+    root.querySelectorAll('script').forEach(s => s.remove());
+  }
+
+  async function tick() {
+    if (busy || document.hidden || pathSkipped() || typingOrModal()) return;
+    busy = true;
+    try {
+      const url = location.pathname + location.search;
+      const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'X-Panel-Live': '1', 'Accept': 'text/html' },
+        cache: 'no-store',
+      });
+      if (r.status === 401 || r.status === 403) { location.href = '/login'; return; }
+      if (!r.ok) { mark(false); return; }
+      const html = await r.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const next = doc.querySelector('#live-root');
+      const cur = document.querySelector('#live-root');
+      if (!next || !cur) { mark(false); return; }
+      if (typingOrModal()) return;
+      stripScripts(next);
+      const nextHtml = next.innerHTML;
+      if (nextHtml === cur.innerHTML) { mark(true); return; }
+      const y = window.scrollY;
+      cur.innerHTML = nextHtml;
+      const nh = doc.querySelector('#live-heading');
+      const ch = document.querySelector('#live-heading');
+      if (nh && ch) ch.innerHTML = nh.innerHTML;
+      syncNav(doc);
+      window.scrollTo(0, y);
+      document.dispatchEvent(new CustomEvent('panel:live'));
+      mark(true);
+    } catch (e) {
+      mark(false);
+    } finally {
+      busy = false;
+    }
+  }
+
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
+    document.addEventListener(ev, () => { lastInteract = Date.now(); }, { passive: true });
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) tick();
+  });
+
+  document.addEventListener('panel:live-now', () => { tick(); });
+
+  if (!pathSkipped()) {
+    timer = setInterval(tick, INTERVAL_MS);
+    setTimeout(tick, 1500);
+  }
 })();
 </script>
 {% endif %}

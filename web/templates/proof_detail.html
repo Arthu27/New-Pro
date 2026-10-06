@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Демка #{{ r.id }}{% endblock %}
 {% block heading %}Демка #{{ r.id }}{% endblock %}
+{% block live %}off{% endblock %}
 {% block body %}
 <p class="lead"><a href="{{ url_for('proofs') }}">← ко всем демкам</a>
   {% if r.user_id %} · <a href="{{ url_for('member', q=r.user_id) }}">логи {{ r.user_name }}</a>{% endif %}

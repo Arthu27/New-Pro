@@ -280,7 +280,12 @@
         if (window.punishNoReload) {
           setTimeout(() => dlg.close(), 700);
         } else {
-          setTimeout(() => location.reload(), 700);
+          setTimeout(() => {
+            dlg.close();
+            document.dispatchEvent(new CustomEvent('panel:live-now'));
+            // member page is outside live-refresh — soft fallback
+            if ((location.pathname || '') === '/member') location.reload();
+          }, 700);
         }
       } else {
         msg.textContent = j.error || 'Ошибка';

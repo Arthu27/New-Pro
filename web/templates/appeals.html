@@ -80,12 +80,8 @@
 
 <script>
 (function () {
-  const dlg = document.getElementById('apDlg');
-  const form = document.getElementById('apForm');
-  const title = document.getElementById('apDlgTitle');
-  const hint = document.getElementById('apDlgHint');
-  const reply = document.getElementById('apReply');
-  const confirmBtn = document.getElementById('apConfirm');
+  if (window.__appealsLiveBound) return;
+  window.__appealsLiveBound = true;
   let pending = null;
 
   const labels = {
@@ -94,35 +90,51 @@
     blacklist: ['В чёрный список', 'Отклонить и насовсем закрыть подачу апелляций.'],
   };
 
-  document.querySelectorAll('.ap-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      pending = { id: btn.dataset.id, act: btn.dataset.act, btn };
-      const L = labels[pending.act] || ['Решение', ''];
-      title.textContent = L[0] + ' #' + pending.id;
-      hint.textContent = L[1];
-      reply.value = pending.act === 'blacklist' ? 'Подача апелляций закрыта — чёрный список' : '';
-      confirmBtn.classList.toggle('danger', pending.act !== 'accept');
-      confirmBtn.classList.toggle('ok', pending.act === 'accept');
-      if (typeof dlg.showModal === 'function') dlg.showModal();
-      else form.requestSubmit();
-    });
+  function els() {
+    return {
+      dlg: document.getElementById('apDlg'),
+      form: document.getElementById('apForm'),
+      title: document.getElementById('apDlgTitle'),
+      hint: document.getElementById('apDlgHint'),
+      reply: document.getElementById('apReply'),
+      confirmBtn: document.getElementById('apConfirm'),
+    };
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.ap-btn');
+    if (!btn || !btn.closest('#live-root')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const { dlg, form, title, hint, reply, confirmBtn } = els();
+    if (!dlg || !form) return;
+    pending = { id: btn.dataset.id, act: btn.dataset.act, btn };
+    const L = labels[pending.act] || ['Решение', ''];
+    title.textContent = L[0] + ' #' + pending.id;
+    hint.textContent = L[1];
+    reply.value = pending.act === 'blacklist' ? 'Подача апелляций закрыта — чёрный список' : '';
+    confirmBtn.classList.toggle('danger', pending.act !== 'accept');
+    confirmBtn.classList.toggle('ok', pending.act === 'accept');
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else form.requestSubmit();
   });
 
-  form.addEventListener('submit', async (e) => {
+  document.addEventListener('submit', async (e) => {
+    const form = e.target;
+    if (!form || form.id !== 'apForm') return;
     const val = e.submitter && e.submitter.value;
     if (val === 'cancel' || !pending) return;
     e.preventDefault();
+    const { dlg, reply } = els();
     const { id, act, btn } = pending;
-    const row = btn.closest('tr');
+    const row = btn && btn.closest('tr');
     const box = row && row.querySelector('.ap-actions');
     if (box) box.querySelectorAll('button').forEach(b => { b.disabled = true; });
     try {
       const r = await fetch('/api/appeals/' + encodeURIComponent(id) + '/decide', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: JSON.stringify({ decision: act, reply: (reply.value || '').trim() }),
+        body: JSON.stringify({ decision: act, reply: ((reply && reply.value) || '').trim() }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) {
@@ -130,19 +142,13 @@
         if (box) box.querySelectorAll('button').forEach(b => { b.disabled = false; });
         return;
       }
-      if (dlg.open) dlg.close();
-      location.reload();
+      if (dlg && dlg.open) dlg.close();
+      pending = null;
+      document.dispatchEvent(new CustomEvent('panel:live-now'));
     } catch (err) {
       alert('Сеть: ' + (err && err.message || err));
       if (box) box.querySelectorAll('button').forEach(b => { b.disabled = false; });
     }
-  });
-
-  document.querySelectorAll('#ap-table tr.click-row').forEach(tr => {
-    tr.addEventListener('click', e => {
-      if (e.target.closest('a,button,dialog')) return;
-      if (tr.dataset.href) location.href = tr.dataset.href;
-    });
   });
 })();
 </script>
