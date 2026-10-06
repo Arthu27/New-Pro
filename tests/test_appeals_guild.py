@@ -189,11 +189,16 @@ check('Выберите сервер' not in src and 'ID сервера' not in 
       'ни одной просьбы ввести/выбрать сервер')
 check('def _main_guild' in src and 'MAIN_GUILD_ID' in src,
       'сервер — из конфигурации (Config.MAIN_GUILD_ID)')
-panel = open(os.path.join(ROOT, 'web/routes/appeals_panel.py'), encoding='utf-8').read()
-check('active_guild_id()' in panel, 'API панели замкнут на главный сервер')
+panel = open(os.path.join(ROOT, 'web/app.py'), encoding='utf-8').read()
+check("def api_appeals_decide" in panel and "_main_guild()" in panel,
+      'API решения апелляций замкнут на главный сервер')
+check("'/api/appeals/" in panel and 'blacklist' in panel,
+      'панель: accept/reject/blacklist API')
 tpl = open(os.path.join(ROOT, 'web/templates/appeals.html'), encoding='utf-8').read()
 check('ID сервера' not in tpl and 'guild-select' not in tpl,
       'в панели апелляций нет поля выбора/ввода сервера')
+check('data-act="accept"' in tpl and 'data-act="blacklist"' in tpl,
+      'кнопки принять / ЧС на странице апелляций')
 # Заказ 2026-08-29 «две апелляции»: серверная /appeal удалена.
 # 2026-09-08: и /апелляция убрана — «она у нас в кнопке» (владелец).
 rsrc = open(os.path.join(ROOT, 'cogs/reports.py'), encoding='utf-8').read()

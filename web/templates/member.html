@@ -6,15 +6,17 @@
 
 {% include '_limits.html' %}
 
-<form method="get" class="mp-searchbar rise" action="{{ url_for('member') }}">
+<form method="get" class="mp-searchbar rise" action="{{ url_for('member') }}" id="mform" autocomplete="off">
   <label class="sr-only" for="mq">Поиск</label>
-  <input id="mq" class="input input-lg" type="search" name="q" value="{{ q }}" placeholder="Имя участника или ID…" autocomplete="off" {% if not profile %}autofocus{% endif %}>
+  <input id="mq" class="input input-lg" type="search" name="q" value="{{ q }}" placeholder="Поиск: имя, @ник или Discord ID" autocomplete="off" {% if not profile %}autofocus{% endif %}>
   <div id="msuggest" class="suggest" hidden></div>
-  <button type="submit" class="primary-btn">Загрузить</button>
+  <button type="submit" class="primary-btn" id="mload">Найти</button>
 </form>
 
 {% if profile %}
 <nav class="crumb rise">
+  <a href="{{ url_for('member') }}">← к списку</a>
+  <span aria-hidden="true">›</span>
   <a href="{{ url_for('users_page') }}">Участники</a>
   <span aria-hidden="true">›</span>
   <b>{{ profile.name }}</b>
@@ -36,10 +38,12 @@
     <div class="mp-row"><span class="mp-key">Всего мер</span><span class="mp-val">{{ profile.total }}</span></div>
     {% if punish_actions %}
     <div class="mp-actions">
-      {% for a in punish_actions %}
-      <button type="button" class="ghost punish-btn {% if a == 'ban' %}danger{% endif %}"
-              data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="{{ a }}">{{ punish_labels.get(a, a) }}</button>
-      {% endfor %}
+      <div class="mp-act-grid">
+        {% for a in punish_actions %}
+        <button type="button" class="mp-chip punish-btn"
+                data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="{{ a }}">{{ punish_labels.get(a, a) }}</button>
+        {% endfor %}
+      </div>
     </div>
     {% endif %}
   </div>
@@ -110,10 +114,57 @@
   {% endif %}
 </section>
 
-{% elif q %}
-<div class="panel rise"><div class="empty">Ничего не найдено по «{{ q }}»</div></div>
 {% else %}
-<div class="panel rise"><div class="empty">Введи имя или ID участника</div></div>
+{% if q %}
+<div class="panel rise miss-banner" id="mmiss">
+  <div class="empty">Ничего не найдено по «{{ q }}» — выбери из таблицы ниже или уточни поиск</div>
+</div>
+{% endif %}
+
+<section class="panel rise people-block" id="mlive" hidden>
+  <h2>Результаты поиска <span class="count" id="mlive-count">0</span></h2>
+  <div class="sq-wrap">
+    <table class="profiles-table sq-table" id="mlive-table">
+      <thead>
+        <tr>
+          <th class="col-profile">Профиль</th>
+          <th>Роль</th>
+          <th class="col-act"></th>
+        </tr>
+      </thead>
+      <tbody id="mlive-body"></tbody>
+    </table>
+  </div>
+  <div class="empty empty-sm" id="mlive-empty" hidden>Никого не нашли — попробуй другой ник или ID</div>
+</section>
+
+<div class="member-kpis rise" id="mkpis">
+  <div class="kpi"><b>{{ people_kpi.total }}</b><span>в справочнике</span></div>
+  <div class="kpi"><b>{{ staff_rows|length }}</b><span>staff</span></div>
+  <div class="kpi"><b>{{ punished_rows|length }}</b><span>с мерами</span></div>
+  <div class="kpi"><b>{{ people_kpi.warns }}</b><span>варны</span></div>
+</div>
+
+<section class="panel rise people-block" id="mstaff">
+  <h2>Staff <span class="count">{{ staff_rows|length }}</span></h2>
+  {% with rows=staff_rows, empty_text='Staff пока не подтянулся — бот офлайн или роли не заданы', table_id='tbl-staff' %}
+  {% include '_profiles_table.html' %}
+  {% endwith %}
+</section>
+
+<section class="panel rise people-block" id="mpunished" style="margin-top:12px">
+  <h2>С мерами <span class="count">{{ punished_rows|length }}</span></h2>
+  {% with rows=punished_rows, empty_text='Пока нет кейсов в журнале', table_id='tbl-punished' %}
+  {% include '_profiles_table.html' %}
+  {% endwith %}
+</section>
+
+<section class="panel rise people-block" id="mpeople" style="margin-top:12px">
+  <h2>Участники <span class="count" data-base="{{ people_rows|length }}">{{ people_rows|length }}</span></h2>
+  {% with rows=people_rows, empty_text='Список пуст — подожди кэш участников или введи ник выше', table_id='tbl-people' %}
+  {% include '_profiles_table.html' %}
+  {% endwith %}
+</section>
 {% endif %}
 
 {% include '_punish.html' %}
@@ -122,27 +173,171 @@
 (function () {
   const input = document.getElementById('mq');
   const box = document.getElementById('msuggest');
+  const live = document.getElementById('mlive');
+  const liveBody = document.getElementById('mlive-body');
+  const liveCount = document.getElementById('mlive-count');
+  const liveEmpty = document.getElementById('mlive-empty');
+  const liveTable = document.getElementById('mlive-table');
+  const miss = document.getElementById('mmiss');
   if (!input) return;
+
   let t = null;
+  let sel = -1;
+  let items = [];
+  let seq = 0;
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+  function go(id) {
+    if (!id) return;
+    location.href = '/member?q=' + encodeURIComponent(id);
+  }
+
+  function filterTables(q) {
+    const ql = (q || '').trim().toLowerCase();
+    document.querySelectorAll('.people-block').forEach(sec => {
+      const countEl = sec.querySelector('h2 .count');
+      let n = 0, total = 0;
+      sec.querySelectorAll('.profiles-table tbody tr').forEach(tr => {
+        total += 1;
+        const blob = (tr.dataset.find || '').toLowerCase();
+        const on = !ql || blob.includes(ql) || ql.split(/\s+/).every(tok => !tok || blob.includes(tok));
+        tr.hidden = !on;
+        if (on) n += 1;
+      });
+      if (countEl) {
+        const base = countEl.dataset.base || String(total);
+        countEl.textContent = ql ? String(n) : base;
+      }
+      sec.classList.toggle('is-dim', !!ql && n === 0);
+    });
+  }
+
+  function paintSuggest() {
+    if (!items.length) {
+      box.hidden = true;
+      box.innerHTML = '';
+      sel = -1;
+      return;
+    }
+    box.hidden = false;
+    box.innerHTML = items.map((it, i) => `<button type="button" class="suggest-item${i===sel?' is-active':''}" data-id="${esc(it.id)}" data-i="${i}">
+      <img src="${esc(it.avatar)}" alt=""><span><b>${esc(it.name)}</b><small>@${esc(it.handle)}${it.role_label ? ' · ' + esc(it.role_label) : ''}</small></span></button>`).join('');
+  }
+
+  function paintLive() {
+    if (!live) return;
+    if (!items.length) {
+      live.hidden = !(input.value.trim());
+      if (liveBody) liveBody.innerHTML = '';
+      if (liveCount) liveCount.textContent = '0';
+      if (liveTable) liveTable.hidden = true;
+      if (liveEmpty) liveEmpty.hidden = !input.value.trim();
+      return;
+    }
+    live.hidden = false;
+    if (liveEmpty) liveEmpty.hidden = true;
+    if (liveTable) liveTable.hidden = false;
+    if (liveCount) liveCount.textContent = String(items.length);
+    if (liveBody) {
+      liveBody.innerHTML = items.map(it => `<tr class="click-row" data-href="/member?q=${esc(it.id)}" data-find="${esc(it.name)} ${esc(it.handle)} ${esc(it.id)} ${esc(it.role_label || '')}">
+        <td class="col-profile"><a class="profile-cell" href="/member?q=${esc(it.id)}">
+          <img class="profile-ava" src="${esc(it.avatar)}" alt="" width="36" height="36">
+          <span class="profile-meta"><strong>${esc(it.name)}</strong>
+          <span class="profile-sub">${it.handle ? `<span class="dim">@${esc(it.handle)}</span>` : ''}<span class="dim mono">${esc(it.id)}</span></span></span></a></td>
+        <td>${it.role_label ? `<span class="sq-badge${it.role ? ' tag-' + esc(it.role) : ''}">${esc(it.role_label)}</span>` : '<span class="dim">—</span>'}</td>
+        <td class="col-act"><div class="sq-actions"><a class="sq-link" href="/member?q=${esc(it.id)}">открыть</a></div></td>
+      </tr>`).join('');
+    }
+  }
+
+  async function runSearch(q) {
+    const my = ++seq;
+    if (!q) {
+      items = [];
+      paintSuggest();
+      if (live) { live.hidden = true; }
+      if (liveBody) liveBody.innerHTML = '';
+      if (miss) miss.hidden = false;
+      return;
+    }
+    try {
+      const r = await fetch('/api/users/search?q=' + encodeURIComponent(q) + '&limit=24');
+      const j = await r.json();
+      if (my !== seq) return;
+      items = j.items || [];
+      sel = items.length ? 0 : -1;
+      paintSuggest();
+      paintLive();
+      if (miss) miss.hidden = true;
+    } catch (_) {
+      if (my !== seq) return;
+      items = [];
+      paintSuggest();
+      paintLive();
+    }
+  }
+
   input.addEventListener('input', () => {
     clearTimeout(t);
     const q = input.value.trim();
-    t = setTimeout(async () => {
-      if (!q) { box.hidden = true; box.innerHTML = ''; return; }
-      const r = await fetch('/api/users/search?q=' + encodeURIComponent(q));
-      const j = await r.json();
-      const items = j.items || [];
-      if (!items.length) { box.hidden = true; return; }
-      box.hidden = false;
-      box.innerHTML = items.map(it => `<button type="button" class="suggest-item" data-id="${esc(it.id)}">
-        <img src="${esc(it.avatar)}" alt=""><span><b>${esc(it.name)}</b><small>@${esc(it.handle)}</small></span></button>`).join('');
-    }, 120);
+    filterTables(q);
+    t = setTimeout(() => runSearch(q), 140);
   });
+
+  input.addEventListener('keydown', e => {
+    const open = !box.hidden && items.length;
+    if (e.key === 'ArrowDown' && open) {
+      e.preventDefault();
+      sel = (sel + 1) % items.length;
+      paintSuggest();
+      return;
+    }
+    if (e.key === 'ArrowUp' && open) {
+      e.preventDefault();
+      sel = (sel - 1 + items.length) % items.length;
+      paintSuggest();
+      return;
+    }
+    if (e.key === 'Escape') {
+      box.hidden = true;
+      sel = -1;
+      return;
+    }
+    if (e.key === 'Enter') {
+      if (open && sel >= 0 && items[sel]) {
+        e.preventDefault();
+        go(items[sel].id);
+        return;
+      }
+      const q = input.value.trim();
+      if (/^\d{15,20}$/.test(q)) {
+        e.preventDefault();
+        go(q);
+      }
+    }
+  });
+
   box.addEventListener('click', e => {
     const b = e.target.closest('.suggest-item'); if (!b) return;
-    location.href = '/member?q=' + encodeURIComponent(b.dataset.id);
+    go(b.dataset.id);
   });
+
+  document.addEventListener('click', e => {
+    if (!box.contains(e.target) && e.target !== input) box.hidden = true;
+  });
+
+  document.querySelectorAll('.profiles-table').forEach(tbl => {
+    tbl.addEventListener('click', e => {
+      if (e.target.closest('a,button')) return;
+      const tr = e.target.closest('tr.click-row');
+      if (tr && tr.dataset.href) location.href = tr.dataset.href;
+    });
+  });
+
+  if (input.value.trim() && !document.querySelector('.mp-grid')) {
+    filterTables(input.value.trim());
+    runSearch(input.value.trim());
+  }
 })();
 </script>
 {% endblock %}

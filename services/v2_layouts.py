@@ -166,7 +166,7 @@ def rules_embed(title: str, items: list, footer: str = ''):
 # ── МОДЕРАЦИЯ /modpanel ──────────────────────────────────────────────
 
 def modpanel_status_text(selected_uid=None, pending_label=None) -> str:
-    """Подпись под баннером в шапке панели (без «порядок любой»)."""
+    """Подпись под баннером в шапке панели."""
     if selected_uid and pending_label:
         return f'участник <@{selected_uid}> · «{pending_label}»'
     if selected_uid:
@@ -218,23 +218,27 @@ def build_modpanel_items(*, banner_filename: str, status: str,
                          footer: str = '',
                          target_select=None, action_select=None,
                          show_banner: bool = None):
-    """Финальный /modpanel: шапка + баннер + два чёрных блока с селектами."""
+    """/modpanel: шапка + баннер (HTTPS) + два блока селектов.
+
+    Баннер по умолчанию ВКЛ через SHOW_MENU_BANNER. Передавай HTTPS URL
+    в banner_filename — attachment:// на телефоне отваливается.
+    """
     if not V2_AVAILABLE:
         return None
     if show_banner is None:
         show_banner = SHOW_MENU_BANNER
     items = []
-    # 1) шапка
     head = [
         _ui.TextDisplay('# Панель модерации\n-# HAKUMO'),
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
     if show_banner and banner_filename:
-        head.append(_gallery(banner_filename))
+        gal = _gallery(banner_filename)
+        if gal is not None:
+            head.append(gal)
     if status:
         head.append(_ui.TextDisplay(status))
     items.append(black_container(*head))
-    # 2) участник — заголовок + селект (placeholder отдельный, без дубля)
     if target_select is not None:
         row = _ui.ActionRow()
         row.add_item(target_select)
@@ -242,7 +246,6 @@ def build_modpanel_items(*, banner_filename: str, status: str,
             _ui.TextDisplay('**Участник**'),
             row,
         ))
-    # 3) действие
     if action_select is not None:
         row = _ui.ActionRow()
         row.add_item(action_select)
@@ -267,7 +270,9 @@ def build_modpanel_container(*, banner_filename: str, status: str,
         _ui.Separator(spacing=SeparatorSpacing.large),
     ]
     if show_banner and banner_filename:
-        children.append(_gallery(banner_filename))
+        gal = _gallery(banner_filename)
+        if gal is not None:
+            children.append(gal)
     if status:
         children.append(_ui.TextDisplay(status))
     if target_select is not None:

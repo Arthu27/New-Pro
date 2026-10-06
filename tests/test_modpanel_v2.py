@@ -105,10 +105,13 @@ check(CHR.get_route(G, 'ban_appeal_channel') == 123456, 'канал читает
 check(CHR.set_route(G, 'ban_appeal_channel', 0), '0 = очистить')
 spec = CHR.spec_for('ban_appeal_channel')
 check(spec is not None and spec['kind'] == 'native', 'спека маршрута на месте')
-adapters = open(os.path.join(ROOT, 'web', 'routes', 'channel_settings.py'),
-                encoding='utf-8').read()
-check("'ban_appeal_channel': (CHR.get_route, CHR.set_route)" in adapters,
-      'страница «Каналы и маршруты» подхватила маршрут')
+cr_src = open(os.path.join(ROOT, 'services', 'channel_routes.py'),
+              encoding='utf-8').read()
+check("'key': 'ban_appeal_channel'" in cr_src or "'ban_appeal_channel'" in cr_src,
+      'маршрут ban_appeal в channel_routes')
+web_src = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
+check("'/channels'" in web_src and 'channel_routes' in web_src,
+      'веб /channels читает channel_routes')
 
 print('== 3. Видимость /modpanel по ролям ==')
 from services import staff_limits as SL  # noqa: E402

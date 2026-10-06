@@ -1,43 +1,91 @@
-{# Диалог наказания: мера → правило (1.1–1.9) → длительность → комментарий #}
+{# Диалог наказания: мера → правило → время (чипы) → лимиты → комментарий #}
 {% if punish_actions %}
-<dialog id="punishDlg" class="dlg">
-  <form method="dialog" class="dlg-card" id="punishForm">
+<dialog id="punishDlg" class="dlg punish-dlg">
+  <form method="dialog" class="dlg-card punish-card" id="punishForm">
     <div class="dlg-head">
       <div>
-        <h3>Наказать <span id="punishName"></span></h3>
-        <div class="dim" id="punishSub">выбери меру и правило</div>
+        <div class="punish-kicker" id="punishKicker">Наказание</div>
+        <h3><span id="punishVerb">Наказать</span> <span id="punishName"></span></h3>
+        <div class="dim" id="punishSub">выбери меру</div>
       </div>
       <button type="button" class="dlg-x" id="punishClose" aria-label="Закрыть">×</button>
     </div>
     <input type="hidden" id="punishUid">
+    <input type="hidden" id="punishMin" value="10">
+
+    {% if viewer_limits and viewer_limits.slots %}
+    <div class="punish-limits" id="punishLimits" aria-label="Лимиты">
+      {% for it in viewer_limits.slots %}
+      <div class="punish-lim {% if it.locked %}is-locked{% elif it.left == 0 %}is-empty{% endif %}"
+           data-key="{{ it.key }}">
+        <b>{{ it.title }}</b>
+        {% if it.locked %}
+        <span>нет</span>
+        {% elif it.limit %}
+        <span>{{ it.used }}/{{ it.limit }}</span>
+        {% else %}
+        <span>∞</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% elif viewer_limits and viewer_limits.exempt %}
+    <div class="punish-limits punish-limits--ok" id="punishLimits">
+      <div class="punish-lim is-ok"><b>Лимиты</b><span>без квот</span></div>
+    </div>
+    {% endif %}
 
     <label>Мера
-      <div class="seg" id="punishSeg">
+      <div class="punish-acts" id="punishSeg">
         {% for a in punish_actions %}
-        <button type="button" data-act="{{ a }}" class="{% if a == 'ban' %}danger-seg{% endif %}">{{ punish_labels.get(a, a) }}</button>
+        <button type="button" data-act="{{ a }}" class="{% if a in ('ban','kick') %}danger-seg{% elif a in ('unwarn','unmute','unban') %}lift-seg{% endif %}">{{ punish_labels.get(a, a) }}</button>
         {% endfor %}
       </div>
     </label>
 
-    <label>Правило
-      <div class="rule-picker" id="rulePicker"><div class="empty dim">Загружаю правила…</div></div>
-    </label>
-    <input type="hidden" id="punishRule">
+    {% if 'mute' in punish_actions or 'unmute' in punish_actions %}
+    <div id="punishKindWrap" class="punish-kind" {% if 'mute' not in punish_actions and 'unmute' not in punish_actions %}hidden{% endif %}>
+      <label id="punishKindLabel">Вид мута</label>
+      <div class="punish-kinds" id="punishKinds" role="group" aria-label="Вид мута">
+        <button type="button" data-kind="mute_chat" title="Только текстовые каналы">
+          <i class="fas fa-comment-slash" aria-hidden="true"></i>
+          <span>Чат</span>
+        </button>
+        <button type="button" data-kind="vmute" title="Только голос / микрофон">
+          <i class="fas fa-microphone-slash" aria-hidden="true"></i>
+          <span>Войс</span>
+        </button>
+        <button type="button" data-kind="timeout" class="on" title="Чат + войс (как в /modpanel)">
+          <i class="fas fa-ban" aria-hidden="true"></i>
+          <span>Чат + войс</span>
+        </button>
+      </div>
+      <input type="hidden" id="punishKind" value="timeout">
+    </div>
+    {% endif %}
+
+    <div id="punishRuleWrap">
+      <label>Правило
+        <div class="rule-picker" id="rulePicker"><div class="empty dim">Загружаю правила…</div></div>
+      </label>
+      <input type="hidden" id="punishRule">
+    </div>
 
     {% if 'mute' in punish_actions %}
-    <label id="punishMinWrap">Длительность мута
-      <select id="punishMin">
-        <option value="5">5 минут</option>
-        <option value="10" selected>10 минут</option>
-        <option value="30">30 минут</option>
-        <option value="60">1 час</option>
+    <div id="punishMinWrap" class="punish-dur">
+      <label>Длительность</label>
+      <div class="dur-chips" id="durChips" role="group" aria-label="Длительность мута">
+        <button type="button" data-min="5">5м</button>
+        <button type="button" data-min="10" class="on">10м</button>
+        <button type="button" data-min="30">30м</button>
+        <button type="button" data-min="60">1ч</button>
         {% if user_role != 'helper' %}
-        <option value="180">3 часа</option>
-        <option value="720">12 часов</option>
-        <option value="1440">1 день</option>
+        <button type="button" data-min="180">3ч</button>
+        <button type="button" data-min="720">12ч</button>
+        <button type="button" data-min="1440">1д</button>
         {% endif %}
-      </select>
-    </label>
+      </div>
+    </div>
     {% endif %}
 
     <label>Комментарий <span class="dim" style="text-transform:none;letter-spacing:0">(необязательно)</span>
@@ -58,21 +106,57 @@
   if (!dlg) return;
   const $ = id => document.getElementById(id);
   const seg = $('punishSeg'), picker = $('rulePicker'), msg = $('punishMsg');
+  const chips = $('durChips');
+  const kinds = $('punishKinds');
+  const LIFT = { unwarn: 1, unmute: 1, unban: 1 };
+  const MUTE_KINDS = {
+    mute_chat: { issue: 'mute_chat', lift: 'unmute_chat', label: 'чат' },
+    vmute: { issue: 'vmute', lift: 'vunmute', label: 'войс' },
+    timeout: { issue: 'timeout', lift: 'untimeout', label: 'чат + войс' },
+  };
   const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   let action = seg.querySelector('button').dataset.act;
+  let muteKind = 'timeout';
   const rulesCache = {};
 
+  function isLift(a) { return !!LIFT[a]; }
+
+  function setMinutes(v) {
+    const n = String(v || '10');
+    const hid = $('punishMin');
+    if (hid) hid.value = n;
+    if (chips) {
+      chips.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('on', b.dataset.min === n);
+      });
+    }
+  }
+
+  function setMuteKind(k) {
+    if (!MUTE_KINDS[k]) k = 'timeout';
+    muteKind = k;
+    const hid = $('punishKind');
+    if (hid) hid.value = k;
+    if (kinds) {
+      kinds.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('on', b.dataset.kind === k);
+      });
+    }
+  }
+
   async function loadRules() {
+    if (!picker) return;
     picker.innerHTML = '<div class="empty dim">Загружаю правила…</div>';
     $('punishRule').value = '';
-    let items = rulesCache[action];
+    const qAct = action === 'mute' ? 'mute' : action;
+    let items = rulesCache[qAct];
     if (!items) {
       try {
-        const r = await fetch('/api/rules?action=' + encodeURIComponent(action));
+        const r = await fetch('/api/rules?action=' + encodeURIComponent(qAct));
         const j = await r.json();
         items = j.items || [];
       } catch (e) { items = []; }
-      rulesCache[action] = items;
+      rulesCache[qAct] = items;
     }
     if (!items.length) {
       picker.innerHTML = '<div class="empty dim">Нет правил для этой меры</div>';
@@ -83,18 +167,65 @@
       <span class="rule-opt__body"><strong>${esc(it.title)}</strong><small>${esc(it.punish)} · ${esc(it.duration)}</small></span>
     </button>`).join('');
   }
+
+  function highlightLimit(a) {
+    const box = $('punishLimits');
+    if (!box) return;
+    const key = ({ mute: 'mute', warn: 'warn', kick: 'kick', ban: 'ban' })[a] || '';
+    box.querySelectorAll('.punish-lim').forEach(el => {
+      el.classList.toggle('is-focus', key && el.dataset.key === key);
+    });
+  }
+
   function setAction(a) {
     action = a;
     seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.act === a));
+    const lift = isLift(a);
+    const isMuteFamily = a === 'mute' || a === 'unmute';
+    const kw = $('punishKindWrap');
+    if (kw) {
+      kw.hidden = !isMuteFamily;
+      const lab = $('punishKindLabel');
+      if (lab) lab.textContent = a === 'unmute' ? 'Что снять' : 'Вид мута';
+    }
     const mw = $('punishMinWrap');
     if (mw) mw.style.display = a === 'mute' ? '' : 'none';
-    loadRules();
+    const rw = $('punishRuleWrap');
+    if (rw) rw.hidden = lift;
+    const verb = $('punishVerb');
+    if (verb) verb.textContent = lift ? 'Снять с' : 'Наказать';
+    const kicker = $('punishKicker');
+    if (kicker) kicker.textContent = lift ? 'Снятие' : 'Наказание';
+    const sub = $('punishSub');
+    if (sub) {
+      if (a === 'mute') sub.textContent = 'выбери вид: чат / войс / оба';
+      else if (a === 'unmute') sub.textContent = 'снять чат, войс или всё сразу';
+      else if (lift) sub.textContent = ({ unwarn: 'снять последний варн', unban: 'снять бан / изоляцию' }[a] || 'снять меру');
+      else sub.textContent = 'выбери меру, правило и время';
+    }
+    const go = $('punishGo');
+    if (go) {
+      go.textContent = lift ? 'Снять' : 'Выдать';
+      go.classList.toggle('is-danger', a === 'ban' || a === 'kick');
+    }
+    highlightLimit(a);
+    if (!lift) loadRules();
+    else { $('punishRule').value = ''; msg.textContent = ''; }
   }
+
   seg.addEventListener('click', e => {
     const b = e.target.closest('button[data-act]'); if (!b) return;
     setAction(b.dataset.act);
   });
-  picker.addEventListener('click', e => {
+  if (kinds) kinds.addEventListener('click', e => {
+    const b = e.target.closest('button[data-kind]'); if (!b) return;
+    setMuteKind(b.dataset.kind);
+  });
+  if (chips) chips.addEventListener('click', e => {
+    const b = e.target.closest('button[data-min]'); if (!b) return;
+    setMinutes(b.dataset.min);
+  });
+  if (picker) picker.addEventListener('click', e => {
     const b = e.target.closest('.rule-opt'); if (!b) return;
     picker.querySelectorAll('.rule-opt').forEach(x => x.classList.toggle('on', x === b));
     $('punishRule').value = b.dataset.code;
@@ -106,6 +237,8 @@
     $('punishName').textContent = name;
     $('punishNote').value = '';
     msg.textContent = '';
+    setMinutes(($('punishMin') || {}).value || 10);
+    setMuteKind('timeout');
     setAction(act && seg.querySelector(`button[data-act="${act}"]`) ? act : seg.querySelector('button').dataset.act);
     dlg.showModal();
   };
@@ -118,9 +251,10 @@
   $('punishCancel').addEventListener('click', () => dlg.close());
 
   $('punishGo').addEventListener('click', async () => {
-    const rule = $('punishRule').value;
-    if (!rule) { msg.textContent = 'Выбери правило'; return; }
-    msg.textContent = 'Отправляю…';
+    const lift = isLift(action);
+    const rule = ($('punishRule') || {}).value || '';
+    if (!lift && !rule) { msg.textContent = 'Выбери правило'; return; }
+    msg.textContent = lift ? 'Снимаю…' : 'Отправляю…';
     const body = {
       user_id: $('punishUid').value,
       action: action,
@@ -128,14 +262,26 @@
       note: $('punishNote').value,
       minutes: ($('punishMin') || {}).value || 10,
     };
+    if (action === 'mute' || action === 'unmute') {
+      body.mute_kind = muteKind || 'timeout';
+    }
     try {
       const r = await fetch('/api/punish', {
         method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
       });
       const j = await r.json();
       if (j.ok) {
-        msg.textContent = 'Готово · ' + (j.reason || j.action);
-        setTimeout(() => location.reload(), 700);
+        msg.textContent = 'Готово · ' + (j.extra || j.reason || j.action);
+        const lim = document.querySelector(`.punish-lim[data-key="${action === 'mute' ? 'mute' : action}"] span`);
+        if (lim && /\d+\/\d+/.test(lim.textContent)) {
+          const [u, t] = lim.textContent.split('/').map(Number);
+          if (!Number.isNaN(u) && !Number.isNaN(t)) lim.textContent = `${Math.min(t, u + 1)}/${t}`;
+        }
+        if (window.punishNoReload) {
+          setTimeout(() => dlg.close(), 700);
+        } else {
+          setTimeout(() => location.reload(), 700);
+        }
       } else {
         msg.textContent = j.error || 'Ошибка';
       }

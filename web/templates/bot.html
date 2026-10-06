@@ -4,8 +4,9 @@
 {% block body %}
 <p class="lead">Состояние процесса. Видно только владельцу.</p>
 <div class="kpis rise">
-  <div class="kpi"><b style="color:{% if info.online %}var(--ok){% else %}var(--danger){% endif %}">{% if info.online %}online{% else %}offline{% endif %}</b><span>статус</span></div>
-  <div class="kpi"><b>{{ info.latency }}</b><span>пинг</span></div>
+  <div class="kpi"><b style="color:{% if info.online %}var(--ok){% else %}var(--danger){% endif %}">{% if info.online %}online{% else %}offline{% endif %}</b><span>статус бота</span></div>
+  <div class="kpi"><b>{{ info.latency }}</b><span>пинг бота (Discord)</span></div>
+  <div class="kpi"><b>{{ info.panel_latency }}</b><span>пинг веб-панели</span></div>
   <div class="kpi"><b style="font-size:1.2rem">{{ info.name }}</b><span>имя · <span class="mono">{{ info.id }}</span></span></div>
 </div>
 <section class="panel rise">

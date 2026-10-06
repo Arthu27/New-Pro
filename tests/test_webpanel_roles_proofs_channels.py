@@ -161,7 +161,11 @@ check(all(f'tag-{k}' in css for k in (
     'creative', 'broadcaster', 'event', 'support', 'closemod')),
       'CSS tags for branch roles')
 check('p-card__body' in css and 'text-overflow: ellipsis' in css, 'staff card no-overlap CSS')
-check('proof-decide-form__input' in css and 'max-height: 160px' in css, 'proof detail compact/dark')
+check(('pd-input' in css or 'proof-decide-form__input' in css) and 'max-height: 160px' in css,
+      'proof detail compact/dark')
+pd_tpl = (ROOT / 'web' / 'templates' / 'proof_detail.html').read_text(encoding='utf-8')
+check('pd-input' in pd_tpl and 'pd-btn--ok' in pd_tpl and 'pd-btn--no' in pd_tpl,
+      'proof redecide uses dark square controls')
 check('act-podium--3' in css or 'act-podium__medal' in css, 'activity podium polish')
 staff_html = (ROOT / 'web' / 'templates' / 'staff.html').read_text(encoding='utf-8')
 check('role_tag' in staff_html and 'p-card__name' in staff_html, 'staff template uses role_tag')

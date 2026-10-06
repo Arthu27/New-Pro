@@ -931,9 +931,10 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
     global _voice_joining, _voice_suppress_rejoin_until, VOICE_CHANNEL_ID
     global _voice_last_join_ts
     from services.voice_stay_health import (
-        really_in_channel, force_drop_voice, voice_client_alive)
+        really_in_channel, force_drop_voice, voice_client_alive,
+        effective_stay_channel_id)
 
-    cid = int(channel_id or VOICE_CHANNEL_ID or 0)
+    cid = int(channel_id or effective_stay_channel_id(VOICE_CHANNEL_ID) or 0)
     if not cid:
         return False, 'канал не задан'
     if bot.is_closed():
@@ -943,6 +944,11 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
             return False, 'бот ещё не ready'
     except Exception:
         return False, 'бот не ready'
+
+    # Stay и panel — всегда глухой (mute+deaf). Open mic выключен.
+    _self_mute = True
+    _self_deaf = True
+    _open_mic = False
 
     if not force:
         ok, vc, reason = really_in_channel(bot, cid)
@@ -999,11 +1005,17 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
         try:
             await asyncio.wait_for(
                 channel.connect(
-                    self_deaf=True, self_mute=True, reconnect=True,
+                    self_deaf=_self_deaf, self_mute=_self_mute, reconnect=True,
                     timeout=20.0),
                 timeout=25.0)
             _voice_last_join_ts = time.time()
-            _log.info('main voice joined %s', cid)
+            _log.info('main voice joined %s (open_mic=%s)', cid, _open_mic)
+            if _open_mic:
+                try:
+                    await channel.guild.change_voice_state(
+                        channel=channel, self_mute=False, self_deaf=False)
+                except Exception:
+                    pass
             return True, f'зашёл в <#{cid}>'
         except Exception as ex:
             msg = str(ex).lower() or type(ex).__name__
@@ -1013,10 +1025,16 @@ async def _ensure_main_voice_joined(channel_id=None, *, force: bool = False):
                     await force_drop_voice(bot, channel.guild)
                     await asyncio.wait_for(
                         channel.connect(
-                            self_deaf=True, self_mute=True, reconnect=True,
-                            timeout=20.0),
+                            self_deaf=_self_deaf, self_mute=_self_mute,
+                            reconnect=True, timeout=20.0),
                         timeout=25.0)
                     _voice_last_join_ts = time.time()
+                    if _open_mic:
+                        try:
+                            await channel.guild.change_voice_state(
+                                channel=channel, self_mute=False, self_deaf=False)
+                        except Exception:
+                            pass
                     return True, f'перезашёл в <#{cid}>'
                 except Exception as ex2:
                     return False, f'не удалось зайти: {ex2 or type(ex2).__name__}'
@@ -1036,7 +1054,9 @@ def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
     /modpanel «Ошибка взаимодействия», хотя наказание потом всё равно уходит.
     """
     global _voice_rejoin_task, _voice_suppress_rejoin_until, _voice_last_schedule_ts
-    if not VOICE_CHANNEL_ID or bot.is_closed():
+    from services.voice_stay_health import effective_stay_channel_id
+    stay_cid = effective_stay_channel_id(VOICE_CHANNEL_ID)
+    if not stay_cid or bot.is_closed():
         return
     now = time.time()
     # debounce soft-rejoin: не ставить 10 задач на один blip
@@ -1052,7 +1072,8 @@ def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
     _voice_last_schedule_ts = now
 
     async def _go():
-        from services.voice_stay_health import really_in_channel
+        from services.voice_stay_health import (
+            really_in_channel, effective_stay_channel_id as _eff)
         attempt = 0
         while not bot.is_closed():
             attempt += 1
@@ -1069,7 +1090,7 @@ def _schedule_main_voice_rejoin(reason='', *, force: bool = False):
                     continue
             except Exception:
                 continue
-            cid = VOICE_CHANNEL_ID
+            cid = _eff(VOICE_CHANNEL_ID)
             if not cid:
                 return
             # resume/gateway — НЕ force с первой попытки (иначе шторм connect)
@@ -1117,7 +1138,7 @@ async def _monitor_voice():
     """
     global _voice_last_silence_ts, _voice_last_join_ts
     from services.voice_stay_health import (
-        really_in_channel, needs_soft_reconnect)
+        really_in_channel, needs_soft_reconnect, effective_stay_channel_id)
 
     await bot.wait_until_ready()
     await asyncio.sleep(1)
@@ -1136,13 +1157,14 @@ async def _monitor_voice():
         _log.info('_monitor_voice: silence keepalive OFF')
     while not bot.is_closed():
         await asyncio.sleep(2)
-        if not VOICE_CHANNEL_ID:
+        stay_cid = effective_stay_channel_id(VOICE_CHANNEL_ID)
+        if not stay_cid:
             continue
         if _voice_joining or time.time() < _voice_suppress_rejoin_until:
             continue
         if not bot.is_ready():
             continue
-        cid = VOICE_CHANNEL_ID
+        cid = stay_cid
         now = time.time()
         ok, vc, why = really_in_channel(bot, cid)
         if not ok:
@@ -1187,7 +1209,9 @@ async def _monitor_voice():
 async def on_voice_state_update(member, before, after):
     """Кик/перенос основного бота из stay-канала → мгновенный force-rejoin."""
     global _voice_suppress_rejoin_until
-    if not VOICE_CHANNEL_ID:
+    from services.voice_stay_health import effective_stay_channel_id
+    stay_cid = effective_stay_channel_id(VOICE_CHANNEL_ID)
+    if not stay_cid:
         return
     me = bot.user
     if me is None or member is None:
@@ -1197,7 +1221,7 @@ async def on_voice_state_update(member, before, after):
     # Свой disconnect во время connect/force_drop — не штормить
     if _voice_joining or time.time() < _voice_suppress_rejoin_until:
         return
-    target = VOICE_CHANNEL_ID
+    target = stay_cid
     before_id = getattr(getattr(before, 'channel', None), 'id', None)
     after_id = getattr(getattr(after, 'channel', None), 'id', None)
     if after_id == target:

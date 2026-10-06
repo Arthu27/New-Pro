@@ -1562,6 +1562,40 @@ class ErrorHandler:
             await self._respond(interaction, embed=embed)
             return
 
+        # /modpanel target: «madtooth.» / оффлайн — TransformerError до callback.
+        # Не «непредвиденная ошибка»: открываем панель без преселекта.
+        if isinstance(error, app_commands.TransformerError):
+            cmd = interaction.command
+            qn = ''
+            try:
+                qn = (getattr(cmd, 'qualified_name', None)
+                      or getattr(cmd, 'name', None)
+                      or '')
+            except Exception:
+                qn = ''
+            if str(qn).endswith('modpanel') or str(qn) == 'modpanel':
+                log.warning(
+                    'modpanel target transform fail (%s) — open without target',
+                    error)
+                try:
+                    cog = interaction.client.get_cog('Moderation')
+                    if cog is not None and hasattr(cog, 'modpanel'):
+                        await cog.modpanel.callback(cog, interaction, None)
+                        return
+                except Exception as _retry_ex:
+                    log.warning('modpanel soft-retry: %s', _retry_ex)
+                embed = self._error_embed(
+                    'Участник не найден',
+                    'Не удалось распознать участника. Вызови `/modpanel` '
+                    'без параметра и выбери человека из списка.')
+                await self._respond(interaction, embed=embed)
+                return
+            embed = self._error_embed(
+                'Неверный аргумент',
+                'Не удалось распознать значение. Проверь написание и попробуй ещё раз.')
+            await self._respond(interaction, embed=embed)
+            return
+
         cmd_name = interaction.command.name if interaction.command else "unknown"
         module = None
         try:
