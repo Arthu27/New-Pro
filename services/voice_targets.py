@@ -61,10 +61,18 @@ def ensure_table() -> None:
 
 
 def set_target(bot_id: str, guild_id: int, channel_id: int) -> None:
-    """Запомнить, где бот должен сидеть (после /join или конфига)."""
+    """Запомнить, где бот должен сидеть (после /join или конфига).
+
+    guild_id=0 — pending seed из env/json до resolve канала в on_ready.
+    """
     ensure_table()
     bid = str(bot_id or '').strip()
-    if not bid or not guild_id or not channel_id:
+    cid = int(channel_id or 0)
+    if not bid or not cid:
+        return
+    gid = int(guild_id or 0)
+    # guild_id=0 разрешён как pending; отрицательные — нет
+    if gid < 0:
         return
     with _LOCK:
         conn = _conn()
@@ -75,11 +83,11 @@ def set_target(bot_id: str, guild_id: int, channel_id: int) -> None:
                    ON CONFLICT(bot_id, guild_id) DO UPDATE SET
                      channel_id=excluded.channel_id,
                      updated_at=CURRENT_TIMESTAMP''',
-                (bid, int(guild_id), int(channel_id)),
+                (bid, gid, cid),
             )
             conn.commit()
             _log.info('voice_targets set %s guild=%s → channel=%s',
-                      bid, guild_id, channel_id)
+                      bid, gid, cid)
         finally:
             conn.close()
 

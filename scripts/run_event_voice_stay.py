@@ -43,8 +43,10 @@ from services.instance_lock import acquire as _il_acquire  # noqa: E402
 if not _il_acquire('event'):
     sys.exit(9)
 
-# Сколько подряд heartbeat'ов с voice=False → hard restart клиента
-_MISS_LIMIT = 2  # 2 × 10с ≈ 20с без войса → перезапуск сессии
+# Сколько подряд heartbeat'ов с voice=False → hard restart клиента.
+# 6 × 10с ≈ 60с: даём on_ready/slash-sync/fetch_channel успеть join'ить
+# до hard-restart (раньше 20с убивало сессию при pending guild=0).
+_MISS_LIMIT = 6
 
 
 async def _hard_restart_client(reason: str) -> None:

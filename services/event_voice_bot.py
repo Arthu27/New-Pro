@@ -394,6 +394,17 @@ def build_event_client():
             ctrl.seed_from_channel_id(int(cid))
             ctrl.bind_gateway_listeners()
             await ctrl.on_ready_once()
+            # fallback: если seed/pending не сработали — join по channel_id
+            try:
+                from services.voice_stay_health import really_in_channel
+                ok_now, _, _ = really_in_channel(bot, int(cid))
+            except Exception:
+                ok_now = False
+            if not ok_now:
+                ok, msg = await ctrl.ensure_joined(
+                    None, int(cid), force=True, reason='on_ready-fallback')
+                log.info('event-bot voice fallback ch=%s → %s %s',
+                         cid, ok, msg)
         if _monitor_task is None or _monitor_task.done():
             _monitor_task = bot.loop.create_task(
                 _monitor_event_voice(bot), name='event-voice-monitor')

@@ -121,13 +121,21 @@ class VoiceStayController:
         # guild неизвестен — сохраним с guild=0 как «pending», resolve в on_ready
         VT.set_target(self.bot_id, 0, cid)
 
-    def _resolve_pending_targets(self) -> None:
-        """guild_id=0 → резолвим канал и переписываем запись."""
+    async def _resolve_pending_targets(self) -> None:
+        """guild_id=0 → резолвим канал (cache → fetch) и переписываем запись."""
         pending = [c for g, c in self.all_targets() if g == 0]
+        if not pending or self.client is None:
+            return
         for cid in pending:
             ch = self.client.get_channel(cid)
             if ch is None:
-                continue
+                try:
+                    ch = await self.client.fetch_channel(cid)
+                except Exception as ex:
+                    log.warning(
+                        '[%s] pending channel %s ещё не доступен: %s',
+                        self.bot_id, cid, ex)
+                    continue
             gid = getattr(getattr(ch, 'guild', None), 'id', None)
             if not gid:
                 continue
@@ -243,6 +251,9 @@ class VoiceStayController:
             if not isinstance(channel, discord.VoiceChannel):
                 return False, 'ID не голосовой канал'
             gid = int(channel.guild.id)
+            # снять pending guild=0, если заходили по channel_id из seed
+            if VT.get_target(self.bot_id, 0) == cid:
+                VT.clear_target(self.bot_id, 0)
             self.set_target(gid, cid)
 
             me = channel.guild.me
@@ -463,16 +474,21 @@ class VoiceStayController:
         if self._ready_once:
             return
         self._ready_once = True
-        self._resolve_pending_targets()
+        await self._resolve_pending_targets()
+        targets = list(self.all_targets())
         log.info('[%s] voice stay on_ready — targets=%s',
-                 self.bot_id, self.all_targets())
-        for gid, cid in self.all_targets():
-            if not gid or not cid:
+                 self.bot_id, targets)
+        for gid, cid in targets:
+            if not cid:
                 continue
+            # guild=0 (pending): всё равно join по channel_id —
+            # ensure_joined сам fetch'ит канал и пишет реальный guild.
             ok, msg = await self.ensure_joined(
-                gid, cid, force=True, reason='on_ready')
+                gid if gid else None, cid, force=True, reason='on_ready')
             log.info('[%s] on_ready join guild=%s ch=%s → %s %s',
                      self.bot_id, gid, cid, ok, msg)
+        # если после join остался pending — повторим resolve
+        await self._resolve_pending_targets()
         self.start_watchdog()
 
     async def handle_voice_state(self, member, before, after) -> None:
@@ -523,6 +539,14 @@ class VoiceStayController:
             await asyncio.sleep(_WATCHDOG_SEC)
             if not self.client.is_ready():
                 continue
+            # pending guild=0 — попробовать resolve + join по channel_id
+            pending = [c for g, c in self.all_targets() if g == 0 and c]
+            if pending:
+                await self._resolve_pending_targets()
+                for pcid in pending:
+                    if VT.get_target(self.bot_id, 0) == pcid:
+                        await self.ensure_joined(
+                            None, pcid, force=True, reason='watchdog-pending')
             for gid, cid in list(self.all_targets()):
                 if not gid or not cid:
                     continue

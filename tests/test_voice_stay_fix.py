@@ -35,6 +35,13 @@ check(VT.get_target('main', 111) == 222, 'set/get target')
 check(VT.list_targets('main') == [(111, 222)], 'list targets')
 VT.clear_target('main', 111)
 check(VT.get_target('main', 111) is None, 'clear = intentional leave')
+# pending seed (guild=0) — раньше отбрасывался → event targets=[]
+VT.set_target('event', 0, 1550986919981351043)
+check(VT.get_target('event', 0) == 1550986919981351043,
+      'pending guild=0 seed сохраняется')
+check((0, 1550986919981351043) in VT.list_targets('event'),
+      'pending в list_targets')
+VT.clear_target('event', 0)
 
 print('== 2. instance_lock ==')
 from services import instance_lock as IL  # noqa: E402
@@ -65,6 +72,12 @@ check('timeout=30' in vs and 'reconnect=True' in vs, 'connect timeout=30 reconne
 check('self_deaf=True' in vs, 'self_deaf')
 check('soft-reconnect' in vs, 'soft-reconnect')
 check('really_in_channel' in vs, 'Discord-truth')
+check('await self._resolve_pending_targets()' in vs, 'async pending resolve')
+check("reason='on_ready-fallback'" in open(
+    os.path.join(ROOT, 'services/event_voice_bot.py'), encoding='utf-8').read()
+    or 'on_ready-fallback' in open(
+        os.path.join(ROOT, 'services/event_voice_bot.py'), encoding='utf-8').read(),
+    'event on_ready fallback join')
 
 print('== 5. main + event используют контроллер ==')
 main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
