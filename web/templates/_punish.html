@@ -19,7 +19,7 @@
       </div>
     </label>
 
-    <label>Правило
+    <label id="punishRuleLab">Правило
       <div class="rule-picker" id="rulePicker"><div class="empty dim">Загружаю правила…</div></div>
     </label>
     <input type="hidden" id="punishRule">
@@ -83,12 +83,25 @@
       <span class="rule-opt__body"><strong>${esc(it.title)}</strong><small>${esc(it.punish)} · ${esc(it.duration)}</small></span>
     </button>`).join('');
   }
+  const reverseActs = {unwarn: 1, unban: 1};
   function setAction(a) {
     action = a;
     seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.act === a));
     const mw = $('punishMinWrap');
     if (mw) mw.style.display = a === 'mute' ? '' : 'none';
-    loadRules();
+    const ruleLab = $('punishRuleLab');
+    if (reverseActs[a]) {
+      if (ruleLab) ruleLab.style.display = 'none';
+      $('punishRule').value = '';
+      picker.innerHTML = '<div class="empty dim">Для снятия правило не нужно</div>';
+      $('punishSub').textContent = 'снятие меры — без правила';
+      $('punishGo').textContent = 'Снять';
+    } else {
+      if (ruleLab) ruleLab.style.display = '';
+      $('punishSub').textContent = 'выбери меру и правило';
+      $('punishGo').textContent = 'Выдать';
+      loadRules();
+    }
   }
   seg.addEventListener('click', e => {
     const b = e.target.closest('button[data-act]'); if (!b) return;
@@ -119,12 +132,12 @@
 
   $('punishGo').addEventListener('click', async () => {
     const rule = $('punishRule').value;
-    if (!rule) { msg.textContent = 'Выбери правило'; return; }
+    if (!reverseActs[action] && !rule) { msg.textContent = 'Выбери правило'; return; }
     msg.textContent = 'Отправляю…';
     const body = {
       user_id: $('punishUid').value,
       action: action,
-      rule: rule,
+      rule: reverseActs[action] ? '' : rule,
       note: $('punishNote').value,
       minutes: ($('punishMin') || {}).value || 10,
     };
