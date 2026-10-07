@@ -359,32 +359,20 @@ async def main():
           'ПКМ-команды регистрируются вместе с модерацией')
 
     print('== 6. Снять варн: панель ==')
-    wc = W.warnings.__new__(W.warnings)
-    wc.db = types.SimpleNamespace(
-        set=lambda *a, **k: None)
-    wc._warns_cache = {}
+    from services import warn_store as WS
+    WS.ensure_table()
+    WS.add_warn(guild.id, target.id, 1, 'спам', is_staff_target=False)
+    wc = W.warnings(None)
     bot2 = _Bot(guild, {'Moderation': cog, 'warnings': wc})
     cog.bot = bot2
-    # подсунуть warns: один варн
-    wc._get_warns = lambda gid, uid: ([{
-        'id': 1, 'reason': 'спам', 'mod': 'X', 'mod_id': '1',
-        'timestamp': '2026-09-05T00:00:00+00:00'}]
-        if uid == 3000000000000000300 else [])
-    wc._save_warns = lambda gid, uid, warns: None
-    removed_holder = {}
-
-    async def _fake_sync(g, u, total):
-        removed_holder.setdefault('total', total)
-    wc._sync_warn_level_roles = _fake_sync
-    from cogs.logs import ensure_log_channel as _orig_ensure
+    import cogs.logs as _logs_mod
     async def _fake_ensure(guild, name):
         return None
-    import cogs.logs as _logs_mod
     _logs_mod.ensure_log_channel = _fake_ensure
     ok, text = await cog.apply_panel_action(
         guild, target, 'unwarn', reason='1.9', actor='Панель')
     check(ok and 'Снято' in text, 'панель сняла последний варн', f'→ {text}')
-    clean = _Member(9990000000000000999, 'Чистый', guild=guild)
+    clean = _Member(999000000000000099, 'Чистый', guild=guild)
     guild.members.append(clean)
     ok, text = await cog.apply_panel_action(
         guild, clean, 'unwarn', reason='1.9', actor='Панель')

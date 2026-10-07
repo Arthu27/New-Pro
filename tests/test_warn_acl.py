@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Warn ACL: участникам — мод+; стаффу — только «× Отвечаю за …».
 
+Staff-цель → отдельное меню (только warn-семейство).
 Запуск: python3 tests/test_warn_acl.py
 """
 import os
@@ -92,6 +93,8 @@ ok, deny = WA.manual_warn_check(g, bot, uye)
 check(ok is True, 'бот → участник OK')
 ok, deny = WA.manual_warn_check(g, otv_h, uye)
 check(ok is True, 'отвечаю → участник OK')
+ok, deny = WA.manual_warn_check(g, mod_actor, mod_actor)
+check(ok is False, f'себе DENY ({deny})')
 
 print('== 2. стаффу — только отвечаю за ==')
 ok, deny = WA.manual_warn_check(g, mod_actor, helper_staff)
@@ -116,11 +119,20 @@ check(WA.filter_modpanel_actions(mod_actor, acts)
       'без цели — warn скрыт')
 check(WA.filter_modpanel_actions(mod_actor, acts, target=uye, guild=g) == acts,
       'модер + участник — warn виден')
-check(WA.filter_modpanel_actions(mod_actor, acts, target=helper_staff, guild=g)
-      == [('mute', 'Мут', '', 'mute'), ('ban', 'Бан', '', 'ban')],
-      'модер + стафф — warn скрыт')
-check(WA.filter_modpanel_actions(otv_h, acts, target=helper_staff, guild=g) == acts,
-      'отвечаю + свой стафф — warn виден')
+
+# Стафф-цель: только warn-меню (модеру чужая ветка → пусто)
+staff_menu_mod = WA.filter_modpanel_actions(
+    mod_actor, acts, target=helper_staff, guild=g)
+check(staff_menu_mod == [],
+      f'модер + стафф — пустое staff-меню: {staff_menu_mod}')
+
+staff_menu = WA.filter_modpanel_actions(
+    otv_h, acts, target=helper_staff, guild=g)
+keys = [a[0] for a in staff_menu]
+check(keys[0] == 'warn' and 'mute' not in keys and 'ban' not in keys,
+      f'отвечаю + свой стафф — только warn-меню: {keys}')
+check('warn_history' in keys and 'unwarn' in keys,
+      f'staff-меню содержит историю и снятие: {keys}')
 
 print('== 4. правила: warn/ban по коду ==')
 from services import mod_reasons as MR  # noqa: E402

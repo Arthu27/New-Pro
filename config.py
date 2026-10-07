@@ -173,6 +173,8 @@ class Config:
     
     # === Moderation ===
     MOD_LOG_CHANNEL_ID: int = _env_int("MOD_LOG_CHANNEL_ID", 0)
+    # Единая роль warn (счётчик — в БД, не уровнями warn_1/2/3).
+    WARN_ROLE_ID: int = _env_int('WARN_ROLE_ID', 1545468739221327942)
     
     # === Limits ===
     MAX_WARNINGS_BEFORE_BAN: int = 5

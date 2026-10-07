@@ -919,6 +919,43 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,embed =error_embed (text ),ephemeral =True )
             return
 
+        if action == 'warn_history':
+            user, uid = self._resolve_member(guild, target)
+            if not user:
+                await _respond(interaction, embed=error_embed(
+                    'Не нашёл участника. Нужен @ник или ID.'),
+                    ephemeral=True)
+                return
+            # права перепроверяем на сервере
+            try:
+                from services.warn_acl import can_issue_manual_warn
+                from services.permission_acl import check_action as _acl
+                if not (can_issue_manual_warn(interaction.user, user, guild)
+                        or _acl(guild.id, interaction.user, 'warn')
+                        or _acl(guild.id, interaction.user, 'unwarn')):
+                    await _respond(interaction, embed=error_embed(
+                        'Нет прав на просмотр истории варнов.'),
+                        ephemeral=True)
+                    return
+            except Exception as _hx:
+                log.debug('warn_history acl: %s', _hx)
+            try:
+                from cogs.warnings import WarnHistoryView
+                embed, page, total_pages = await WarnHistoryView.build_embed(
+                    guild, user, 0)
+                view = WarnHistoryView(
+                    guild.id, user.id, page,
+                    getattr(interaction.user, 'id', 0) or 0)
+                if page >= total_pages - 1 and len(view.children) > 1:
+                    view.children[1].disabled = True
+                await _respond(interaction, embed=embed, view=view,
+                               ephemeral=True)
+            except Exception as _he:
+                log.warning('warn_history: %s', _he)
+                await _respond(interaction, embed=error_embed(
+                    'Не удалось открыть историю варнов.'), ephemeral=True)
+            return
+
         if action =='unwarn':
             # «Снять варн» из /modpanel — тот же единый путь, что в панели
             user ,uid =self ._resolve_member (guild ,target )
@@ -927,6 +964,22 @@ class Moderation (commands .Cog ):
                 'Не нашёл участника по цели. Нужен @ник, ТОЧНОЕ имя или ID.'),
                 ephemeral =True )
                 return
+            # ветковые права для стаффа — перепроверка на сервере
+            try:
+                from services.warn_acl import (
+                    _is_staff_target, manual_warn_check)
+                if _is_staff_target(guild, user):
+                    _wok, _wdeny = manual_warn_check(
+                        guild, interaction.user, user)
+                    if not _wok:
+                        await _respond(
+                            interaction,
+                            embed=error_embed(
+                                _wdeny or 'Нет права снять варн.'),
+                            ephemeral=True)
+                        return
+            except Exception as _ue:
+                log.debug('unwarn branch: %s', _ue)
             ok ,text =await self .apply_panel_action (
             guild ,user ,'unwarn',
             reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
@@ -1514,16 +1567,23 @@ class Moderation (commands .Cog ):
                         'Это действие тебе не выдано.'), ephemeral=True)
                     return False
                 return True
-            # Варн: участникам — мод+; стаффу — только «× Отвечаю за …»
-            if action == 'warn':
+            # Варн / история: участникам — мод+; стаффу — «× Отвечаю за …».
+            # Ветковый куратор/админ может варннуть стафф своей ветки даже
+            # без пункта ACL в панели (меню inject'ится по праву ветки).
+            if action in ('warn', 'warn_history'):
                 try:
-                    from services.warn_acl import can_issue_manual_warn
-                    if not can_issue_manual_warn(interaction.user):
+                    from services.warn_acl import (
+                        can_issue_manual_warn, issuer_branches_of)
+                    if not (can_issue_manual_warn(interaction.user)
+                            or issuer_branches_of(interaction.user)):
                         await _respond(interaction, embed=error_embed(
                             'Нет права на варн. Участникам — модераторы; '
                             'стаффу — только «× Отвечаю за …» своей ветки.'),
                             ephemeral=True)
                         return False
+                    # ветковый куратор — ACL-пункт warn не обязателен
+                    if issuer_branches_of(interaction.user):
+                        return True
                 except Exception as _wex:
                     log.debug('[MODPANEL] warn issuer: %s', _wex)
             from services.permission_acl import check_action as _acl_check
@@ -2712,6 +2772,7 @@ MODPANEL_ACTIONS = [
     # такое подробное и тупое»): селект — выбор действия, не инструкция.
     # Мут/размут — ОДИН пункт, вид (чат/войс/оба) прячется во второй селект.
     ("warn", "Варн", "Предупреждение за нарушение", "warn"),
+    ("warn_history", "История варнов", "Список варнов с пагинацией", "warn"),
     ("unwarn", "Снять варн", "Убрать последний варн", "warn"),
     ("mute", "Мут", "Выдать мут", "mute"),
     ("unmute", "Снять мут", "Снять мут", "unmute"),
@@ -2724,6 +2785,7 @@ MODPANEL_ACTIONS = [
 # стикеры через services.menu_emojis.emoji_for_action.
 MODPANEL_EMOJI = {
     "warn": "⚠️",
+    "warn_history": "📋",
     "unwarn": "✖️",
     "ban": "⛔",
     "mute": "🔇",
@@ -2752,6 +2814,7 @@ MODPANEL_EMOJI = {
 # Discord-права не учитываются — система прав полностью своя.
 MODPANEL_ACL_KEYS = {
     "warn": "warn",
+    "warn_history": "warn",
     "unwarn": "unwarn",
     "ban": "ban",
     "unban": "ban",
@@ -3530,6 +3593,17 @@ async def _launch_action(cog, interaction, action, prefill, panel=None):
     Бан/варн/… → send_modal сразу. Мут с несколькими видами → подменю.
     kinds только из кэша панели (без SQLite на пути ACK).
     """
+    # История / снять варн — без модалки причины
+    if action in ('warn_history', 'unwarn'):
+        if not interaction.response.is_done():
+            if not await _ack_or_busy(interaction, thinking=True):
+                return
+        await cog._execute_mod_action(
+            interaction, action, prefill,
+            '' if action == 'warn_history' else 'Снято через панель',
+            '', proof_link=None)
+        _bg_reset_after_step(interaction, panel, prefer_resend=False)
+        return
     if action == "mute":
         kinds = getattr(panel, '_mute_kinds_cache', None) if panel else None
         if not kinds:
@@ -3629,6 +3703,12 @@ class ModActionSelect(discord.ui.Select):
                 description=(desc or '')[:100],
                 emoji=emoji_for_action(value))
             options.append(opt)
+        # Discord требует ≥1 option: чужая ветка / нет прав → заглушка
+        if not options:
+            options = [discord.SelectOption(
+                label=select_label('Нет доступных действий'),
+                value='_none',
+                description='Чужая ветка или нет прав на эту цель')]
         super().__init__(
             placeholder="",
             options=options,
@@ -3658,6 +3738,16 @@ class ModActionSelect(discord.ui.Select):
                 log.debug('modpanel action busy-nack: %s', _ex)
                 return
         action = self.values[0]
+        if action == '_none':
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        content='Нет доступных действий для этой цели '
+                                '(чужая ветка или недостаточно прав).',
+                        ephemeral=True)
+            except Exception:
+                pass
+            return
         prefill = ""
         if view is not None:
             prefill = str(getattr(view, 'selected_uid', None) or '')
@@ -3991,7 +4081,39 @@ class ModPanelView(discord.ui.LayoutView):
         pending = None
         if self.pending_action:
             pending = self._action_label(self.pending_action)
-        return modpanel_status_text(self.selected_uid, pending)
+        base = modpanel_status_text(self.selected_uid, pending)
+        # Доп. инфо по варнам выбранной цели
+        extra = self._warn_status_extra()
+        if extra:
+            return f'{base}\n{extra}'
+        return base
+
+    def _warn_status_extra(self) -> str:
+        """Строка: активные варны + ветка (для стаффа)."""
+        uid = getattr(self, 'selected_uid', None)
+        g = getattr(self, '_guild', None) or getattr(
+            self.member, 'guild', None)
+        if not uid or g is None:
+            return ''
+        try:
+            member = g.get_member(int(uid))
+        except (TypeError, ValueError):
+            return ''
+        if member is None:
+            return ''
+        try:
+            from services import warn_store as WS
+            from services.warn_acl import is_staff_target, branches_of
+            from services.warn_config import format_branches
+            n = WS.count_active(g.id, member.id)
+            bits = [f'-# варнов: **{n}**']
+            if is_staff_target(g, member):
+                bits.append(
+                    f'· стафф · ветка **{format_branches(branches_of(member))}**')
+                bits.append('· меню: только варн')
+            return ' '.join(bits)
+        except Exception:
+            return ''
 
     def _footer_text(self, guild):
         """Футер отключён — панель без нижней полоски."""
