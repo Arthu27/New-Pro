@@ -1029,10 +1029,42 @@ def _start_session(*, username, role, discord_user=None, role_ids=None,
 
 # ── auth helpers ───────────────────────────────────────────────────────
 
+# Краулеры превью (Discord/Telegram/Slack) — не гоняем на OAuth Discord,
+# иначе в эмбеде чужая надпись «Discord — Group Chat…».
+_LINK_PREVIEW_UA = (
+    'discordbot', 'twitterbot', 'telegrambot', 'slackbot',
+    'facebookexternalhit', 'linkedinbot', 'whatsapp', 'vkshare',
+    'embedly', 'quora link preview', 'pinterest', 'redditbot',
+    'applebot', 'bingpreview', 'yandex',
+)
+
+
+def _is_link_preview_bot() -> bool:
+    ua = (request.headers.get('User-Agent') or '').lower()
+    if not ua:
+        return False
+    return any(k in ua for k in _LINK_PREVIEW_UA)
+
+
+def _render_og_landing():
+    """Публичная витрина с личными OG-мета для превью ссылки."""
+    return render_template(
+        'welcome.html',
+        og_title='Hakumo — своя панель модерации',
+        og_desc=('Своя панель. Свои меры. Свой сервер. '
+                 'Варн, мут, бан, демки и антикраш — без чужих надписей.'),
+        og_url='https://hakumods.xyz/',
+        og_image='https://hakumods.xyz/static/og-hakumo.png',
+    )
+
+
 def login_required(f):
     @wraps(f)
     def wrapped(*a, **kw):
         if not session.get('logged_in'):
+            # Discordbot и др. — сразу витрина с нашей карточкой, не /login→OAuth
+            if _is_link_preview_bot():
+                return _render_og_landing()
             return redirect(url_for('login', next=request.path))
         return f(*a, **kw)
     return wrapped
@@ -2066,9 +2098,9 @@ def _auth_pending_pin(discord_id: str, pin: str):
 @app.route('/welcome')
 def welcome():
     """Публичная витрина — отдельный gate-дизайн (auth-new.css)."""
-    if session.get('logged_in'):
+    if session.get('logged_in') and not _is_link_preview_bot():
         return redirect(url_for('today'))
-    return render_template('welcome.html')
+    return _render_og_landing()
 
 
 def _safe_next(raw: str | None) -> str:
@@ -2080,8 +2112,11 @@ def _safe_next(raw: str | None) -> str:
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if session.get('logged_in'):
+    if session.get('logged_in') and not _is_link_preview_bot():
         return redirect(url_for('today'))
+    # Превью-боты: никогда не уводим на Discord OAuth (чужая карточка).
+    if request.method == 'GET' and _is_link_preview_bot():
+        return _render_og_landing()
     mode = (request.values.get('mode') or 'people').strip().lower()
     if mode not in ('people', 'password', 'pin', 'register', 'forgot'):
         mode = 'people'
@@ -2280,6 +2315,9 @@ def auth_discord():
     """Быстрый вход через Discord → роль с сервера (Helper/Mod/Curator/Admin/Owner)."""
     if session.get('logged_in'):
         return redirect(url_for('today'))
+    # Краулер превью не должен уезжать на discord.com — иначе эмбед чужой.
+    if _is_link_preview_bot():
+        return _render_og_landing()
     cid, secret = _discord_client_creds()
     if not cid or not secret:
         return redirect(url_for(

@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Вход — Hakumo</title>
-  <meta name="description" content="Вход в панель Hakumo — выбери себя, PIN придёт в ЛС.">
-  <meta name="theme-color" content="#05060a">
+  {% with og_title='Hakumo — вход в панель', og_desc='Своя панель. Свои меры. Свой сервер. Вход для команды Hakumo.', og_url='https://hakumods.xyz/login' %}
+  {% include '_og.html' %}
+  {% endwith %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
