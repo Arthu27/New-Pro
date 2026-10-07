@@ -37,9 +37,16 @@ os.environ.setdefault('EVENT_VOICE_CHANNEL_ID', '1550986919981351043')
 os.environ['EVENT_VOICE_STAY_ENABLED'] = '1'
 
 from services import event_voice_bot as EV  # noqa: E402
+from services.instance_lock import acquire as _il_acquire  # noqa: E402
 
-# Сколько подряд heartbeat'ов с voice=False → hard restart клиента
-_MISS_LIMIT = 2  # 2 × 10с ≈ 20с без войса → перезапуск сессии
+# Защита от двойного запуска event-бота с одним токеном
+if not _il_acquire('event'):
+    sys.exit(9)
+
+# Сколько подряд heartbeat'ов с voice=False → hard restart клиента.
+# 6 × 10с ≈ 60с: даём on_ready/slash-sync/fetch_channel успеть join'ить
+# до hard-restart (раньше 20с убивало сессию при pending guild=0).
+_MISS_LIMIT = 6
 
 
 async def _hard_restart_client(reason: str) -> None:
@@ -99,9 +106,16 @@ async def _run_once(stop: asyncio.Event) -> int:
             miss += 1
             print(f'voice miss #{miss}/{_MISS_LIMIT}', flush=True)
             try:
-                EV._schedule_rejoin(c, 'daemon-heartbeat', force=True)
+                # прямой ensure по channel_id (pending guild=0 тоже)
+                asyncio.get_running_loop().create_task(
+                    EV.ensure_voice_joined(c, force=True),
+                    name='daemon-voice-ensure')
             except Exception as ex:
-                print(f'heartbeat rejoin: {ex}', flush=True)
+                print(f'heartbeat ensure: {ex}', flush=True)
+                try:
+                    EV._schedule_rejoin(c, 'daemon-heartbeat', force=True)
+                except Exception as ex2:
+                    print(f'heartbeat rejoin: {ex2}', flush=True)
             if miss >= _MISS_LIMIT:
                 await _hard_restart_client(f'voice miss ×{miss}')
                 break
