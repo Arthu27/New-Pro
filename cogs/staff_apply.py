@@ -13,7 +13,7 @@ import json
 import os
 import io
 import types
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import aiohttp
 from PIL import Image, ImageDraw, ImageFont
@@ -445,13 +445,38 @@ def load_apps():
     os.makedirs("data", exist_ok=True)
     if os.path.exists(APPS_FILE):
         with open(APPS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            try:
+                import fcntl
+                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+            except Exception:
+                pass
+            try:
+                return json.load(f)
+            finally:
+                try:
+                    import fcntl
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                except Exception:
+                    pass
     return {}
 
 
 def save_apps(data):
-    with open(APPS_FILE, "w", encoding="utf-8") as f:
+    os.makedirs("data", exist_ok=True)
+    tmp = APPS_FILE + '.tmp'
+    with open(tmp, "w", encoding="utf-8") as f:
+        try:
+            import fcntl
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        except Exception:
+            pass
         json.dump(data, f, indent=2, ensure_ascii=False)
+        f.flush()
+        try:
+            os.fsync(f.fileno())
+        except Exception:
+            pass
+    os.replace(tmp, APPS_FILE)
 
 
 def app_storage_key(user_id, kind: str) -> str:
@@ -545,6 +570,23 @@ def apply_blocked_reason(user_id, kind: str, *, member=None) -> str:
     if not want:
         return 'Должность не указана.'
     label = position_label(want)
+    full_until = apply_ban_until(user_id)
+    if full_until:
+        try:
+            ts = str(full_until).replace('Z', '+00:00')
+            dt = datetime.fromisoformat(ts)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            left = max(0, int((dt - datetime.now(timezone.utc)).total_seconds()
+                              // 86400))
+            when = dt.strftime('%d.%m.%Y')
+        except Exception:
+            left, when = 0, full_until[:10]
+        return (
+            f'Набор закрыт до **{when}**'
+            + (f' (~{left} дн.)' if left else '')
+            + '.\nСняты со стаффа после 3 варнов — анкету пока подать нельзя.'
+        )
     if is_blacklisted(user_id, want):
         return (
             f'Вы в чёрном списке ветки **{label}**.\n'
@@ -613,10 +655,13 @@ def load_blacklist():
                 'guild_id': entry.get('guild_id'),
                 'reason': str(entry.get('reason') or ''),
             }
+            if entry.get('until'):
+                kinds[kind]['until'] = str(entry.get('until'))
             migrated = True
         else:
             for kind, row in entry.items():
-                if kind in ('user_id', 'role', 'by', 'at', 'guild_id', 'reason'):
+                if kind in ('user_id', 'role', 'by', 'at', 'guild_id',
+                            'reason', 'until'):
                     continue
                 nk = normalize_position(kind) or str(kind or '').lower()
                 if not nk or not isinstance(row, dict):
@@ -627,6 +672,8 @@ def load_blacklist():
                     'guild_id': row.get('guild_id'),
                     'reason': str(row.get('reason') or ''),
                 }
+                if row.get('until'):
+                    kinds[nk]['until'] = str(row.get('until'))
         if kinds:
             out[str(uid)] = kinds
     if migrated:
@@ -643,30 +690,103 @@ def save_blacklist(data):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def _entry_active(entry) -> bool:
+    """Запись ЧС активна? (until в прошлом → нет)."""
+    if not isinstance(entry, dict):
+        return False
+    until = entry.get('until')
+    if not until:
+        return True
+    try:
+        ts = str(until).replace('Z', '+00:00')
+        dt = datetime.fromisoformat(ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt > datetime.now(timezone.utc)
+    except Exception:
+        return True
+
+
+def _purge_expired_row(uid: str, row: dict) -> dict:
+    """Убрать просроченные ветки; вернуть очищенный row."""
+    if not isinstance(row, dict):
+        return {}
+    keep = {k: v for k, v in row.items()
+            if isinstance(v, dict) and _entry_active(v)}
+    if keep != row:
+        bl = load_blacklist()
+        if keep:
+            bl[str(uid)] = keep
+        else:
+            bl.pop(str(uid), None)
+        try:
+            save_blacklist(bl)
+        except Exception as _ex:
+            log.debug('blacklist purge: %s', _ex)
+    return keep
+
+
 def is_blacklisted(user_id, position=None) -> bool:
-    """ЧС только своей ветки. Без position — есть ли хоть одна ветка в ЧС."""
+    """ЧС только своей ветки. Без position — есть ли хоть одна ветка в ЧС.
+
+    Учитывает временный бан набора (until): после срока запись снимается.
+    """
     row = load_blacklist().get(str(user_id)) or {}
+    if not row:
+        return False
+    row = _purge_expired_row(str(user_id), row)
     if not row:
         return False
     if position is None:
         return True
     from services.staff_roles import normalize_position
     kind = normalize_position(position)
-    return bool(kind and kind in row)
+    return bool(kind and kind in row and _entry_active(row.get(kind)))
 
 
 def blacklisted_kinds(user_id) -> list:
     row = load_blacklist().get(str(user_id)) or {}
-    return sorted(row.keys())
+    row = _purge_expired_row(str(user_id), row)
+    return sorted(k for k, v in row.items() if _entry_active(v))
+
+
+def apply_ban_until(user_id) -> str:
+    """ISO until полного бана набора (все ветки с until), или ''."""
+    row = load_blacklist().get(str(user_id)) or {}
+    row = _purge_expired_row(str(user_id), row)
+    untils = []
+    for v in row.values():
+        if not isinstance(v, dict):
+            continue
+        u = v.get('until')
+        if u and _entry_active(v):
+            untils.append(str(u))
+    if not untils:
+        return ''
+    # если все активные ветки с until — считаем полным баном набора
+    from services.staff_roles import POSITIONS
+    kinds = set(row.keys())
+    if kinds >= set(POSITIONS):
+        return min(untils)
+    return ''
 
 
 def add_to_blacklist(user_id, *, by: str = '', role: str = '',
-                     guild_id=None, reason: str = '') -> dict:
-    """Добавить в ЧС только ветки должности заявки."""
+                     guild_id=None, reason: str = '',
+                     until: str = None, days: int = 0) -> dict:
+    """Добавить в ЧС только ветки должности заявки.
+
+    until — ISO конца бана; days — альтернатива (сейчас+N дней).
+    """
     from services.staff_roles import normalize_position
     kind = normalize_position(role) or 'moderator'
     bl = load_blacklist()
     row = bl.setdefault(str(user_id), {})
+    until_iso = until
+    if not until_iso and int(days or 0) > 0:
+        until_iso = (
+            datetime.now(timezone.utc) + timedelta(days=int(days))
+        ).isoformat()
     entry = {
         'by': str(by or ''),
         'role': kind,
@@ -674,10 +794,29 @@ def add_to_blacklist(user_id, *, by: str = '', role: str = '',
         'reason': str(reason or ''),
         'at': datetime.now(timezone.utc).isoformat(),
     }
+    if until_iso:
+        entry['until'] = str(until_iso)
     row[kind] = entry
     save_blacklist(bl)
     return entry
 
+
+def ban_staff_apply(user_id, *, days: int = 30, by: str = '',
+                    reason: str = '', guild_id=None) -> dict:
+    """Запрет подавать анкету на ВСЕ ветки на N дней (после 3 варнов стаффу)."""
+    from services.staff_roles import POSITIONS
+    from services.punish_roles import STAFF_APPLY_BAN_DAYS
+    n = int(days or STAFF_APPLY_BAN_DAYS or 30)
+    until_iso = (
+        datetime.now(timezone.utc) + timedelta(days=n)
+    ).isoformat()
+    out = {}
+    for kind in POSITIONS:
+        out[kind] = add_to_blacklist(
+            user_id, by=by, role=kind, guild_id=guild_id,
+            reason=reason or f'{n} дней без набора (3 варна)',
+            until=until_iso)
+    return {'until': until_iso, 'days': n, 'kinds': list(POSITIONS)}
 
 def remove_from_blacklist(user_id, position=None) -> bool:
     """Снять ЧС: одну ветку или все."""
@@ -848,7 +987,8 @@ class StaffApplyModal(discord.ui.Modal):
                     age=v1, activity=v2, experience=v3, reason=v4,
                     extra=v5, member=member, kind=kind, answers=answers)
                 try:
-                    card = StaffAppCardView(title=role_label, body=body)
+                    card = StaffAppCardView(
+                        title=role_label, body=body, store_key=store_key)
                     # Пинг «× Отвечаю за …» со звуком — иначе кураторы
                     # не замечают заявки (особенно Moderator).
                     msg = await _send_staff_card(
@@ -857,6 +997,9 @@ class StaffApplyModal(discord.ui.Modal):
                     apps[store_key]["message_id"] = str(msg.id)
                     apps[store_key]["curator_tag"] = tag or None
                     apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')
+                    apps[store_key]["store_key"] = store_key
+                    # Сразу сохранить message_id — иначе accept → «не найдена»
+                    save_apps(apps)
                     delivered = True
                     delivery_ch = ch
                 except (discord.Forbidden, discord.HTTPException) as _ex:
@@ -1031,7 +1174,8 @@ class StaffAppCardButtonsLegacyView(discord.ui.View):
 class StaffAppCardView(discord.ui.LayoutView):
     """Карточка заявки куратору — V2: должность, ответы, select решения."""
 
-    def __init__(self, *, title: str, body: str, footer: str = ''):
+    def __init__(self, *, title: str, body: str, footer: str = '',
+                 store_key: str = ''):
         super().__init__(timeout=None)
         from services.v2_layouts import V2_AVAILABLE, black_container
         from discord import SeparatorSpacing
@@ -1039,6 +1183,9 @@ class StaffAppCardView(discord.ui.LayoutView):
         foot = footer or (
             'HAKUMO · решение — select ниже · только куратор этой ветки'
         )
+        # ref в футере — чтобы accept нашёл заявку даже если message_id потерялся
+        if store_key:
+            foot = f'{foot} · ref:{store_key}'
         sel = StaffReviewSelect()
         if V2_AVAILABLE:
             from discord import ui as dui
@@ -1097,11 +1244,51 @@ class StaffReviewView(discord.ui.View):
         super().__init__(timeout=None)
 
     @staticmethod
-    def _find_app_by_message(message_id):
+    def _find_app_by_message(message_id, *, message=None):
         apps = load_apps()
+        mid = str(message_id or '')
         for key, app in apps.items():
-            if str(app.get("message_id") or "") == str(message_id):
+            if str(app.get("message_id") or "") == mid:
                 return key, app, apps
+        # fallback: ref:{store_key} в тексте карточки
+        try:
+            import re
+            content = ''
+            if message is not None:
+                content = str(getattr(message, 'content', '') or '')
+                for emb in list(getattr(message, 'embeds', None) or []):
+                    content += ' ' + str(getattr(emb, 'description', '') or '')
+                    content += ' ' + str(getattr(emb, 'footer', None)
+                                        and getattr(emb.footer, 'text', '') or '')
+                # V2 components → text displays
+                for comp in list(getattr(message, 'components', None) or []):
+                    content += ' ' + str(comp)
+            m = re.search(r'ref:([^\s·]+)', content or '')
+            if m:
+                sk = m.group(1).strip()
+                if sk in apps:
+                    apps[sk]['message_id'] = mid  # починить связь
+                    save_apps(apps)
+                    return sk, apps[sk], apps
+        except Exception:
+            pass
+        # fallback: единственная pending в этом канале
+        try:
+            ch_id = str(getattr(getattr(message, 'channel', None), 'id', '') or '')
+            if ch_id:
+                pending = [
+                    (k, a) for k, a in apps.items()
+                    if isinstance(a, dict)
+                    and str(a.get('status') or '') == 'pending'
+                    and str(a.get('channel_id') or '') == ch_id
+                ]
+                if len(pending) == 1:
+                    k, a = pending[0]
+                    a['message_id'] = mid
+                    save_apps(apps)
+                    return k, a, apps
+        except Exception:
+            pass
         return None, None, apps
 
     async def _review(self, interaction: discord.Interaction, action: str):
@@ -1109,7 +1296,8 @@ class StaffReviewView(discord.ui.View):
             reply_text_v2, respond_v2, send_dm_v2, V2_AVAILABLE)
         from services.staff_roles import can_review_position, position_label
 
-        key, app, apps = self._find_app_by_message(interaction.message.id)
+        key, app, apps = self._find_app_by_message(
+            interaction.message.id, message=interaction.message)
         if not app:
             if not interaction.response.is_done():
                 await interaction.response.defer(ephemeral=True)
@@ -1260,14 +1448,19 @@ class StaffReviewView(discord.ui.View):
             granted = res.get("role_name")
             if granted:
                 app["granted_role"] = granted
+                if res.get("role_id"):
+                    app["granted_role_id"] = int(res["role_id"])
                 app.pop("grant_error", None)
             else:
                 grant_note = role_hint(res)
                 app["grant_error"] = grant_note
+                if res.get("role_id"):
+                    app["granted_role_id"] = int(res["role_id"])
                 log.warning(
-                    "STAFF: роль не выдана user=%s role=%s → %s (%s)",
+                    "STAFF: роль не выдана user=%s role=%s → %s (%s) "
+                    "role_id=%s",
                     app.get("user_id"), app.get("role"),
-                    res.get("reason"), grant_note)
+                    res.get("reason"), grant_note, res.get("role_id"))
         elif action == "blacklist":
             try:
                 gid = int(app.get("guild_id") or 0)
@@ -1707,6 +1900,32 @@ class StaffApply(commands.Cog):
             except Exception as _ex:
                 log.warning('STAFF: ensure menu guild=%s: %s', guild.id, _ex)
 
+    async def _heal_grants_once(self):
+        """После старта: довыдать роли по approved, где Discord пустой."""
+        try:
+            await self.bot.wait_until_ready()
+        except Exception:
+            return
+        try:
+            import asyncio
+            await asyncio.sleep(8)
+        except Exception:
+            pass
+        try:
+            from services.staff_roles import heal_missing_grants
+            stats = await heal_missing_grants(self.bot, limit=50)
+            if stats.get("healed") or stats.get("failed"):
+                log.info(
+                    "STAFF: heal grants checked=%s healed=%s failed=%s "
+                    "skipped=%s",
+                    stats.get("checked"), stats.get("healed"),
+                    stats.get("failed"), stats.get("skipped"))
+            elif stats.get("errors"):
+                log.warning("STAFF: heal grants errors: %s",
+                            stats.get("errors")[:5])
+        except Exception as _ex:
+            log.warning("STAFF: heal grants: %s", _ex)
+
     @commands.Cog.listener()
     async def on_ready(self):
         try:
@@ -1728,7 +1947,9 @@ class StaffApply(commands.Cog):
             self._menu_task_started = True
             try:
                 import asyncio
-                asyncio.get_running_loop().create_task(self._ensure_staff_menu())
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._ensure_staff_menu())
+                loop.create_task(self._heal_grants_once())
             except Exception as _ex:
                 log.debug('staff menu task: %s', _ex)
 

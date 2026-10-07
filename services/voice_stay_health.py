@@ -22,10 +22,55 @@ log = get_logger('voice_stay_health')
 
 # Редкий force-reconnect: Discord иногда рвёт idle-сессию ~сутки.
 # Раньше было 45 мин — бот сам «отлетал» из войса каждые 45 минут
-# (владелец 2026-09-29: скрин Events). Silence keepalive держит UDP;
-# полный reconnect только если здоровы уже ~20ч, либо при zombie.
+# (владелец 2026-09-29: скрин Events). Полный reconnect ~20ч / zombie.
 SOFT_RECONNECT_SEC = 20 * 3600  # 20 часов
 
+# Opus silence frame (20ms). Без PCM→opus encode: encode + self_mute
+# ломал voice WS heartbeat (~20с leave/rejoin loop на проде 2026-10-06).
+_OPUS_SILENCE = b'\xf8\xff\xfe'
+
+
+class LoopSilence(discord.AudioSource):
+    """Бесконечные opus-silence кадры (opt-in через VOICE_SILENCE_PING=1)."""
+
+    def read(self) -> bytes:
+        return _OPUS_SILENCE
+
+    def is_opus(self) -> bool:
+        return True
+
+
+def silence_source() -> LoopSilence:
+    return LoopSilence()
+
+
+def start_silence_keepalive(vc) -> bool:
+    """Запустить silence на event-loop (play() мгновенный). Без to_thread."""
+    if vc is None:
+        return False
+    try:
+        if vc.is_playing():
+            return True
+        vc.play(silence_source())
+        return bool(vc.is_playing())
+    except Exception as ex:
+        log.debug('start_silence_keepalive: %s', ex)
+        return False
+
+
+def silence_ping_enabled() -> bool:
+    """UDP keepalive через opus-silence.
+
+    По умолчанию ON (unmute + LoopSilence). Без keepalive Discord рвёт
+    idle voice ~после gateway blip → leave/rejoin каждые ~25с.
+    Старый флап был от PCM play при self_mute — теперь unmute + opus frame.
+    VOICE_SILENCE_PING=0 — выключить.
+    """
+    import os
+    raw = (os.environ.get('VOICE_SILENCE_PING') or '1').strip().lower()
+    if raw in ('0', 'false', 'no', 'off'):
+        return False
+    return True
 
 def _member_voice_state(guild: discord.Guild, user_id: int):
     """(known, channel_id|None). known=False если me/member недоступен."""
@@ -180,3 +225,42 @@ def needs_soft_reconnect(last_join_ts: float, now: float,
     if not last_join_ts:
         return False
     return (now - last_join_ts) >= interval
+
+
+# ── Panel voice hold (owner /channels) ───────────────────────────────
+# Пока owner держит бота в выбранном войсе, stay-monitor НЕ тянет
+# обратно в VOICE_CHANNEL_ID.
+_panel_hold_cid = 0
+_panel_hold_until = 0.0
+
+
+def set_panel_voice_hold(cid: int | None, minutes: float = 240.0) -> None:
+    """cid=None — снять hold и вернуть stay на дефолтный канал."""
+    global _panel_hold_cid, _panel_hold_until
+    import time as _t
+    if cid:
+        _panel_hold_cid = int(cid)
+        _panel_hold_until = _t.time() + max(5.0, float(minutes) * 60.0)
+        log.info('panel voice hold → %s for %.0fm', _panel_hold_cid, minutes)
+    else:
+        _panel_hold_cid = 0
+        _panel_hold_until = 0.0
+        log.info('panel voice hold cleared')
+
+
+def panel_voice_hold_cid() -> int:
+    import time as _t
+    if _panel_hold_cid and _t.time() < _panel_hold_until:
+        return int(_panel_hold_cid)
+    return 0
+
+
+def effective_stay_channel_id(default_cid: int | None) -> int:
+    """Куда stay должен возвращать бота прямо сейчас."""
+    held = panel_voice_hold_cid()
+    if held:
+        return held
+    try:
+        return int(default_cid or 0)
+    except Exception:
+        return 0
