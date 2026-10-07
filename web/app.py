@@ -3354,6 +3354,8 @@ def api_punish():
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
 
     async def _do():
+        import time as _time
+        from services import punish_roles as PR
         guild = bot.get_guild(int(gid))
         if guild is None:
             raise RuntimeError('guild not found')
@@ -3362,6 +3364,15 @@ def api_punish():
             member = await guild.fetch_member(int(uid))
         mod_name = session.get('discord_display') or session.get('username') or 'panel'
         mod_id = session.get('discord_id') or '0'
+        # Реальный модератор с Discord (не бот) — лимиты/ACL/лог корректны
+        moderator = guild.me
+        if mod_id.isdigit():
+            moderator = guild.get_member(int(mod_id)) or moderator
+            if getattr(moderator, 'id', None) != int(mod_id):
+                try:
+                    moderator = await guild.fetch_member(int(mod_id))
+                except Exception:
+                    moderator = guild.me
         target_name = (
             getattr(member, 'display_name', None)
             or getattr(member, 'name', None)
@@ -3370,21 +3381,71 @@ def api_punish():
         # В audit Discord исполнителем будет бот — имя модератора в reason
         ban_reason = f'{reason} · панель: {mod_name}'[:512]
         cog = bot.get_cog('moderation') or bot.get_cog('Moderation')
+        role_note = ''
         if action == 'warn':
             warns = bot.get_cog('warnings')
             if warns is None:
                 raise RuntimeError('warnings cog offline')
-            await warns.add_warning(member, guild.me, reason)
+            got = await warns.add_warning(member, moderator, reason)
+            # add_warning → (warn_id, total) или (0, total, None) при отказе
+            warn_id = got[0] if got else 0
+            total = got[1] if got and len(got) > 1 else 0
+            if not warn_id:
+                raise RuntimeError(
+                    'Варн не записан (лимит или ACL). Роль не выдана.')
+            # роль уровня — ещё раз убедиться (add_warning уже sync'нул)
+            ok_role = await warns._sync_warn_level_roles(guild, member, total)
+            if ok_role is False:
+                role_note = 'варн записан, но роль уровня не выдана — проверь «Роли наказаний» / иерархию'
+            else:
+                role_note = 'роль warn выдана'
             act = 'warn'
         elif action == 'mute':
-            from datetime import timedelta
-            until = datetime.now(timezone.utc) + timedelta(minutes=max(1, minutes))
-            await member.timeout(until, reason=ban_reason)
+            # Как в modpanel: роль mute (+ vmute если есть), иначе native timeout
+            mins = max(1, min(int(minutes or 10), 40320))
+            given = []
+            for kind in ('mute', 'vmute'):
+                rid = PR.role_for(guild.id, kind)
+                role = guild.get_role(rid) if rid else None
+                if role is None:
+                    continue
+                if role not in (getattr(member, 'roles', None) or []):
+                    await member.add_roles(role, reason=ban_reason)
+                PR.add_temp(guild.id, member.id, role.id,
+                            _time.time() + mins * 60)
+                given.append(role.name)
+            if given:
+                role_note = 'роли: ' + ', '.join(f'«{n}»' for n in given)
+                # native timeout — доп. страховка (чат)
+                try:
+                    from datetime import timedelta
+                    until = datetime.now(timezone.utc) + timedelta(minutes=mins)
+                    await member.timeout(until, reason=ban_reason)
+                except Exception:
+                    pass
+            else:
+                from datetime import timedelta
+                until = datetime.now(timezone.utc) + timedelta(minutes=mins)
+                await member.timeout(until, reason=ban_reason)
+                role_note = 'мут-роль не настроена — поставлен Discord timeout'
             act = 'timeout'
         elif action == 'kick':
             raise RuntimeError('Кик полностью отключён')
         elif action == 'ban':
-            await member.ban(reason=ban_reason, delete_message_days=0)
+            # Как в modpanel: роль бана, не discord.ban()
+            rid = PR.role_for(guild.id, 'ban')
+            brole = guild.get_role(rid) if rid else None
+            if brole is None:
+                raise RuntimeError(
+                    'Не выбрана роль бана — панель → Роли наказаний → Бан')
+            if brole not in (getattr(member, 'roles', None) or []):
+                await member.add_roles(brole, reason=ban_reason)
+            try:
+                if getattr(getattr(member, 'voice', None), 'channel', None):
+                    await member.move_to(None, reason=ban_reason)
+            except Exception:
+                pass
+            role_note = f'роль бана «{brole.name}»'
             act = 'ban'
         else:
             act = action
@@ -3400,8 +3461,11 @@ def api_punish():
                     guild.id, act, member.id, mod_id, reason,
                     mod_name=mod_name,
                     duration=minutes if action == 'mute' else None)
-        return {'action': act, 'user': str(member), 'id': str(member.id),
-                'mod': mod_name, 'reason': (rule or reason)[:80]}
+        return {
+            'action': act, 'user': str(member), 'id': str(member.id),
+            'mod': mod_name, 'reason': (rule or reason)[:80],
+            'role_note': role_note,
+        }
 
     try:
         result = _run_on_bot(_do())
