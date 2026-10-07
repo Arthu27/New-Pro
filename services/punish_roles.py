@@ -276,6 +276,46 @@ def role_for(gid, kind):
     return int(get(gid).get(kind) or 0)
 
 
+def auto_seed_warn_role(guild) -> bool:
+    """Если warn_N не заданы — привязать роль с именем warn/варн/warn 1 → warn_1.
+
+    Возвращает True, если что-то записали. Идемпотентно.
+    """
+    try:
+        gid = int(getattr(guild, 'id', 0) or 0)
+    except (TypeError, ValueError):
+        return False
+    if not gid:
+        return False
+    if warn_levels(get(gid)):
+        return False
+    names = {
+        'warn', 'варн', 'warn 1', 'варн 1', 'warning', 'предупреждение',
+        'warn1', 'варн1',
+    }
+    found = None
+    for role in list(getattr(guild, 'roles', None) or []):
+        n = str(getattr(role, 'name', '') or '').strip().lower()
+        if n in names:
+            found = role
+            break
+    if found is None:
+        # частичное совпадение: начинается с warn / варн
+        for role in list(getattr(guild, 'roles', None) or []):
+            n = str(getattr(role, 'name', '') or '').strip().lower()
+            if n.startswith('warn') or n.startswith('варн'):
+                found = role
+                break
+    if found is None:
+        return False
+    set_roles(gid, who='auto-seed-warn', warn_1=int(found.id))
+    add_level(gid, 1)  # карточка уровня (если ещё нет)
+    log.warning(
+        'punish_roles: auto-seed warn_1=%s (%s) guild=%s',
+        found.id, found.name, gid)
+    return True
+
+
 # ── временные выдачи (авто-снятие по сроку) ─────────────────────────────
 
 def add_temp(gid, uid, role_id, until_ts):
