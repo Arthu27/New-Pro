@@ -213,12 +213,24 @@
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-  function linkify(text) {
+  function linkify(text, mentions, roleMentions) {
+    const byUser = Object.create(null);
+    (mentions || []).forEach((m) => {
+      if (m && m.id) byUser[String(m.id)] = m.name || m.id;
+    });
+    const byRole = Object.create(null);
+    (roleMentions || []).forEach((m) => {
+      if (m && m.id) byRole[String(m.id)] = m.name || 'роль';
+    });
     let raw = esc(text);
-    raw = raw.replace(/&lt;@!?(\d+)&gt;/g, (_, id) =>
-      `<span class="dc-tag" data-uid="${id}" title="ID ${id}">@${id}</span>`);
-    raw = raw.replace(/&lt;@&amp;(\d+)&gt;/g, (_, id) =>
-      `<span class="dc-tag dc-tag--role" title="роль ${id}">@роль</span>`);
+    raw = raw.replace(/&lt;@!?(\d+)&gt;/g, (_, id) => {
+      const name = byUser[id] || id;
+      return `<span class="dc-tag" data-uid="${id}" title="@${esc(name)} · ${id}">@${esc(name)}</span>`;
+    });
+    raw = raw.replace(/&lt;@&amp;(\d+)&gt;/g, (_, id) => {
+      const name = byRole[id] || 'роль';
+      return `<span class="dc-tag dc-tag--role" title="роль ${id}">@${esc(name)}</span>`;
+    });
     raw = raw.replace(/(https?:\/\/[^\s<&]+)/g, (u) =>
       `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
     raw = raw.replace(/&lt;(a?):([A-Za-z0-9_]+):(\d+)&gt;/g, (_, a, name, id) => {
@@ -273,13 +285,25 @@
       return `<a class="dc-att" href="${esc(a.url)}" target="_blank" rel="noopener">
         <i class="fas fa-paperclip"></i> ${esc(a.name)}</a>`;
     }).join('');
-    const body = linkify(m.content || '') || (atts ? '' : '<span class="dim">пусто</span>');
+    const body = linkify(m.content || '', m.mentions, m.role_mentions)
+      || (atts ? '' : '<span class="dim">пусто</span>');
     const bot = m.bot ? '<span class="dc-bot">BOT</span>' : '';
     const nameHtml = canPunish
       ? `<button type="button" class="dc-msg__nick dc-msg__who"${whoData}>${esc(m.author)}</button>`
       : `<strong>${esc(m.author)}</strong>`;
-    const replyHtml = m.reply ? `<button type="button" class="dc-msg__ref" data-jump="${esc(m.reply.id)}" title="К исходному">
-      <span class="dc-msg__ref-who">${esc(m.reply.author || 'сообщение')}</span>
+    const tagged = (m.mentions || []).filter((x) => x && x.name);
+    const tagLine = tagged.length
+      ? `<div class="dc-msg__tags" title="Кого тегнули">тег: ${tagged.map((t) =>
+          `<span class="dc-tag" data-uid="${esc(t.id)}">@${esc(t.name)}</span>`
+        ).join(' ')}</div>`
+      : '';
+    const replyHtml = m.reply ? `<button type="button" class="dc-msg__ref" data-jump="${esc(m.reply.id)}" title="К сообщению">
+      <span class="dc-msg__ref-arrow"><i class="fas fa-reply"></i></span>
+      <span class="dc-msg__ref-line">
+        <span class="dc-msg__ref-who">${esc(m.author)}</span>
+        <span class="dc-msg__ref-verb">ответил</span>
+        <span class="dc-msg__ref-who">${esc(m.reply.author || 'сообщению')}</span>
+      </span>
       <span class="dc-msg__ref-txt">${esc(m.reply.content || '…')}</span>
     </button>` : '';
     const acts = canControl
@@ -302,16 +326,17 @@
       : '';
     const dataAttrs = `data-id="${esc(m.id)}" data-aid="${esc(m.author_id)}" data-author="${esc(m.author)}" data-content="${esc((m.content || '').slice(0, 160))}"`;
     if (groupWithPrev) {
-      return `<article class="dc-msg is-cont" ${dataAttrs}>
+      return `<article class="dc-msg is-cont${m.reply ? ' has-reply' : ''}" ${dataAttrs}>
         <div class="dc-msg__gutter"><time>${esc((m.when || '').slice(-5))}</time></div>
-        <div class="dc-msg__body">${replyHtml}<div class="dc-msg__text">${body}</div>${atts}${acts}</div>
+        <div class="dc-msg__body">${replyHtml}${tagLine}<div class="dc-msg__text">${body}</div>${atts}${acts}</div>
       </article>`;
     }
-    return `<article class="dc-msg" ${dataAttrs}>
+    return `<article class="dc-msg${m.reply ? ' has-reply' : ''}" ${dataAttrs}>
       ${ava}
       <div class="dc-msg__body">
         ${replyHtml}
         <div class="dc-msg__meta">${nameHtml}${bot}<time>${esc(m.when)}</time></div>
+        ${tagLine}
         <div class="dc-msg__text">${body}</div>${atts}${acts}
       </div>
     </article>`;

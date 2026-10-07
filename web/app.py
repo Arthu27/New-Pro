@@ -2913,15 +2913,19 @@ def channels_page():
     )
 
 
-def _serialize_discord_message(msg) -> dict:
-    """Короткий снимок сообщения для чата в панели."""
-    author = getattr(msg, 'author', None)
-    name = (
+def _msg_author_name(author) -> str:
+    return str(
         getattr(author, 'display_name', None)
         or getattr(author, 'global_name', None)
         or getattr(author, 'name', None)
         or '?'
     )
+
+
+def _serialize_discord_message(msg) -> dict:
+    """Короткий снимок сообщения для чата в панели (ответ + теги)."""
+    author = getattr(msg, 'author', None)
+    name = _msg_author_name(author)
     try:
         avatar = str(author.display_avatar.url) if author is not None else ''
     except Exception:
@@ -2953,6 +2957,43 @@ def _serialize_discord_message(msg) -> dict:
             content = str(content)[:400]
         except Exception:
             content = '[эмбед]'
+    # кого тегнули
+    mentions = []
+    for u in list(getattr(msg, 'mentions', None) or [])[:20]:
+        mentions.append({
+            'id': str(getattr(u, 'id', '') or ''),
+            'name': _msg_author_name(u),
+        })
+    role_mentions = []
+    for r in list(getattr(msg, 'role_mentions', None) or [])[:12]:
+        role_mentions.append({
+            'id': str(getattr(r, 'id', '') or ''),
+            'name': str(getattr(r, 'name', '') or 'роль'),
+        })
+    # на что ответили
+    reply = None
+    ref = getattr(msg, 'reference', None)
+    if ref is not None:
+        resolved = getattr(ref, 'resolved', None)
+        rid = getattr(ref, 'message_id', None) or getattr(resolved, 'id', None)
+        if resolved is not None and hasattr(resolved, 'content'):
+            r_author = getattr(resolved, 'author', None)
+            r_content = str(getattr(resolved, 'content', '') or '')
+            if not r_content and getattr(resolved, 'embeds', None):
+                r_content = '[эмбед]'
+            reply = {
+                'id': str(getattr(resolved, 'id', '') or rid or ''),
+                'author': _msg_author_name(r_author),
+                'author_id': str(getattr(r_author, 'id', '') or ''),
+                'content': r_content[:160],
+            }
+        elif rid:
+            reply = {
+                'id': str(rid),
+                'author': 'сообщение',
+                'author_id': '',
+                'content': '…',
+            }
     return {
         'id': str(getattr(msg, 'id', '')),
         'author': str(name),
@@ -2962,6 +3003,9 @@ def _serialize_discord_message(msg) -> dict:
         'content': content[:2000],
         'when': when,
         'attachments': atts,
+        'mentions': mentions,
+        'role_mentions': role_mentions,
+        'reply': reply,
     }
 
 
@@ -3064,23 +3108,104 @@ def api_channel_send(cid):
         return jsonify({'ok': False, 'error': 'Пустое сообщение'}), 400
     if len(content) > 2000:
         content = content[:2000]
+    reply_to = str(data.get('reply_to') or '').strip()
+    if reply_to and not reply_to.isdigit():
+        reply_to = ''
     bot = bot_instance
     if not bot:
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
 
     async def _send():
+        import discord as _d
         ch = bot.get_channel(int(cid))
         if ch is None:
             ch = await bot.fetch_channel(int(cid))
         if not hasattr(ch, 'send'):
             raise RuntimeError('В этот канал писать нельзя')
-        msg = await ch.send(content)
+        kwargs = {}
+        if reply_to:
+            kwargs['reference'] = _d.MessageReference(
+                message_id=int(reply_to),
+                channel_id=int(getattr(ch, 'id', cid) or cid),
+                guild_id=getattr(getattr(ch, 'guild', None), 'id', None),
+                fail_if_not_exists=False,
+            )
+            kwargs['mention_author'] = True
+        msg = await ch.send(content, **kwargs)
         return _serialize_discord_message(msg)
 
     try:
         item = _run_on_bot(_send(), timeout=15)
     except Exception as ex:
         return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    # сбросить кэш истории — сразу видно ответ
+    _CHANNEL_MSG_CACHE.pop(cid, None)
+    return jsonify({'ok': True, 'item': item})
+
+
+@app.post('/api/dm')
+@login_required
+@role_required('owner')
+def api_dm_send():
+    """Личка от бота участнику (панель → Каналы → ЛС)."""
+    data = request.get_json(silent=True) or {}
+    uid = str(data.get('user_id') or '').strip()
+    content = str(data.get('content') or '').strip()
+    if not uid.isdigit():
+        return jsonify({'ok': False, 'error': 'Укажи Discord ID получателя'}), 400
+    if not content:
+        return jsonify({'ok': False, 'error': 'Пустое сообщение'}), 400
+    if len(content) > 2000:
+        content = content[:2000]
+    bot = bot_instance
+    if not bot:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    async def _send():
+        # дождаться ready — иначе fetch_user даёт странный MissingSentinel
+        try:
+            if not bot.is_ready():
+                await bot.wait_until_ready()
+        except Exception:
+            pass
+        user = bot.get_user(int(uid))
+        if user is None:
+            gid = _main_guild()
+            if gid:
+                g = bot.get_guild(int(gid))
+                if g is not None:
+                    mem = g.get_member(int(uid))
+                    if mem is not None:
+                        user = mem
+            if user is None:
+                try:
+                    user = await bot.fetch_user(int(uid))
+                except Exception as ex:
+                    raise RuntimeError(
+                        f'Пользователь не найден ({uid})'
+                    ) from ex
+        try:
+            msg = await user.send(content)
+        except Exception as ex:
+            err = str(ex)
+            if '50007' in err or 'Cannot send messages' in err:
+                raise RuntimeError(
+                    'ЛС закрыты у пользователя — пусть откроет личку с ботом '
+                    '(Настройки → Конфиденциальность → ЛС с участников сервера)'
+                ) from ex
+            raise RuntimeError(f'ЛС не ушло: {err[:160]}') from ex
+        name = _msg_author_name(user)
+        return {
+            'id': str(getattr(msg, 'id', '')),
+            'to_id': str(uid),
+            'to_name': name,
+            'content': content[:200],
+        }
+
+    try:
+        item = _run_on_bot(_send(), timeout=20)
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)[:220]}), 502
     return jsonify({'ok': True, 'item': item})
 
 
