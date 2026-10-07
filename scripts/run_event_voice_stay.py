@@ -106,9 +106,16 @@ async def _run_once(stop: asyncio.Event) -> int:
             miss += 1
             print(f'voice miss #{miss}/{_MISS_LIMIT}', flush=True)
             try:
-                EV._schedule_rejoin(c, 'daemon-heartbeat', force=True)
+                # прямой ensure по channel_id (pending guild=0 тоже)
+                asyncio.get_running_loop().create_task(
+                    EV.ensure_voice_joined(c, force=True),
+                    name='daemon-voice-ensure')
             except Exception as ex:
-                print(f'heartbeat rejoin: {ex}', flush=True)
+                print(f'heartbeat ensure: {ex}', flush=True)
+                try:
+                    EV._schedule_rejoin(c, 'daemon-heartbeat', force=True)
+                except Exception as ex2:
+                    print(f'heartbeat rejoin: {ex2}', flush=True)
             if miss >= _MISS_LIMIT:
                 await _hard_restart_client(f'voice miss ×{miss}')
                 break

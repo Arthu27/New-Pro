@@ -363,7 +363,31 @@ def build_event_client():
         except Exception as ex:
             log.debug('event-bot presence: %s', ex)
 
-        # Команды — /mafia у Event-бота (без event-panel)
+        # Voice FIRST — slash-sync может висеть десятки секунд и блокировал
+        # join → daemon hard-restart до входа в канал.
+        cid = _resolve_event_voice_channel_id()
+        if cid:
+            ctrl = _get_event_ctrl(bot)
+            if ctrl is not None:
+                ctrl.seed_from_channel_id(int(cid))
+                ctrl.bind_gateway_listeners()
+                await ctrl.on_ready_once()
+                try:
+                    from services.voice_stay_health import really_in_channel
+                    ok_now, _, _ = really_in_channel(bot, int(cid))
+                except Exception:
+                    ok_now = False
+                if not ok_now:
+                    ok, msg = await ctrl.ensure_joined(
+                        None, int(cid), force=True,
+                        reason='on_ready-fallback')
+                    log.info('event-bot voice fallback ch=%s → %s %s',
+                             cid, ok, msg)
+            if _monitor_task is None or _monitor_task.done():
+                _monitor_task = bot.loop.create_task(
+                    _monitor_event_voice(bot), name='event-voice-monitor')
+
+        # Команды — /mafia у Event-бота (после войса)
         if not _commands_synced or bot.get_cog('mafia') is None:
             try:
                 names = await _load_and_sync_event_commands(bot)
@@ -384,30 +408,6 @@ def build_event_client():
             ensure_sticker_pack()
         except Exception:
             pass
-
-        # Stay всегда включён — voice_targets + watchdog (45с) + backoff
-        cid = _resolve_event_voice_channel_id()
-        if not cid:
-            return
-        ctrl = _get_event_ctrl(bot)
-        if ctrl is not None:
-            ctrl.seed_from_channel_id(int(cid))
-            ctrl.bind_gateway_listeners()
-            await ctrl.on_ready_once()
-            # fallback: если seed/pending не сработали — join по channel_id
-            try:
-                from services.voice_stay_health import really_in_channel
-                ok_now, _, _ = really_in_channel(bot, int(cid))
-            except Exception:
-                ok_now = False
-            if not ok_now:
-                ok, msg = await ctrl.ensure_joined(
-                    None, int(cid), force=True, reason='on_ready-fallback')
-                log.info('event-bot voice fallback ch=%s → %s %s',
-                         cid, ok, msg)
-        if _monitor_task is None or _monitor_task.done():
-            _monitor_task = bot.loop.create_task(
-                _monitor_event_voice(bot), name='event-voice-monitor')
 
     @bot.event
     async def on_resumed():

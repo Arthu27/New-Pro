@@ -403,7 +403,8 @@ class VoiceStayController:
             if cid:
                 targets = [(int(guild_id), int(cid))]
         else:
-            targets = [(g, c) for g, c in self.all_targets() if g]
+            # включая pending guild=0 — join по channel_id
+            targets = [(g, c) for g, c in self.all_targets() if c]
         for gid, cid in targets:
             if self._joining.get(gid) and not force:
                 continue
