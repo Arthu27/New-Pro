@@ -434,12 +434,13 @@ async def _get_channel_context (channel ,limit :int =16 )->list :
 
 def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =None ,channel_context :list =None )->str :
     try :
-        # AI-слой жил в веб-панели (web.ai_helper) — панель снята.
+        # AI-слой (web.ai_helper) в mod-core v2 пока не подключён —
+        # молчим, не спамим канал заглушкой «панель снята».
         try :
             from web .ai_helper import ai_assistant 
         except ImportError :
-            return ('AI-помощник панели снят вместе с веб-панелью. '
-                    'См. docs/PANEL-REMOVED.md.')
+            log .debug ('[AI] ai_helper отсутствует — без ответа')
+            return ''
         # Свежие знания/инструкции с диска
         global _knowledge_base ,_instructions ,_histories 
         try :
@@ -1252,6 +1253,9 @@ class AIChat (commands .Cog ):
             message .guild if not is_dm else None ,
             recent_msgs ,channel_ctx 
             )
+
+        if not (answer or '').strip ():
+            return  # нет бэкенда / пустой ответ — не пишем в чат
 
         if _has_profanity (answer ):
             answer ="Я не могу это сказать. "

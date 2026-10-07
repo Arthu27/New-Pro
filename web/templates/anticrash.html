@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Антикраш{% endblock %}
-{% block heading %}Антикраш сервера{% endblock %}
+{% block title %}Антикраш · Саботаж{% endblock %}
+{% block heading %}Антикраш · защита от саботажа{% endblock %}
 {% block body %}
-<p class="lead">Щит гильдии. Всё выключено по умолчанию — включаешь только нужное. Сервер <b class="mono">{{ gid }}</b></p>
+<p class="lead">Щит гильдии и защита от саботажа (owner). Всё выключено по умолчанию — включаешь только нужное. Сервер <b class="mono">{{ gid }}</b></p>
 {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
 
 {% set f = snap.flags %}
@@ -100,6 +100,43 @@
       </button>
     </form>
   </div>
+
+  {# ── Саботаж (owner): мера для ботов + кто может звать ботов ── #}
+  <div class="panel" style="margin:12px 0;padding:14px 16px;border:1px solid color-mix(in srgb, var(--text) 12%, transparent);border-radius:12px">
+    <h3 style="margin:0 0 6px;font-size:14px">Саботаж · боты-нарушители</h3>
+    <p class="dim" style="margin:0 0 12px">Если бот с правами начнёт сносить сервер (взлом токена / чужой бот) — своя мера, не человеческая. Кто может звать ботов — белый список (владелец сервера всегда может).</p>
+    <form method="post" class="form" style="display:grid;gap:10px;grid-template-columns:1fr 1fr;align-items:end">
+      <input type="hidden" name="system" value="guardian">
+      <input type="hidden" name="key" value="bot_action">
+      <label>Мера для ботов-нарушителей
+        <select class="input" name="value">
+          {% set ba = snap.guardian.bot_action or 'ban' %}
+          <option value="strip" {% if ba == 'strip' %}selected{% endif %}>Снять все роли</option>
+          <option value="kick" {% if ba == 'kick' %}selected{% endif %}>Кикнуть</option>
+          <option value="ban" {% if ba == 'ban' %}selected{% endif %}>Забанить</option>
+          <option value="alert" {% if ba == 'alert' %}selected{% endif %}>Только тревога</option>
+        </select>
+      </label>
+      <button type="submit" class="primary-btn">Сохранить меру</button>
+    </form>
+    <form method="post" class="form" style="margin-top:12px;display:grid;gap:10px">
+      <input type="hidden" name="system" value="guardian">
+      <input type="hidden" name="key" value="bot_whitelist_users">
+      <label>Кто может добавлять ботов (ID пользователей, через пробел)
+        <input class="input" name="value" value="{{ (snap.guardian.bot_whitelist_users or [])|join(' ') }}" placeholder="123456789012345678 …">
+      </label>
+      <button type="submit" class="ghost">Сохранить список людей</button>
+    </form>
+    <form method="post" class="form" style="margin-top:10px;display:grid;gap:10px">
+      <input type="hidden" name="system" value="guardian">
+      <input type="hidden" name="key" value="bot_whitelist_roles">
+      <label>Роли, которым можно звать ботов (ID ролей, через пробел)
+        <input class="input" name="value" value="{{ (snap.guardian.bot_whitelist_roles or [])|join(' ') }}" placeholder="123456789012345678 …">
+      </label>
+      <button type="submit" class="ghost">Сохранить список ролей</button>
+    </form>
+  </div>
+
   {% for spec in snap.guardian_specs %}
   {% set ev = (snap.guardian.events or {}).get(spec.key) or {} %}
   <div class="toggle-row">
