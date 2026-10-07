@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Права на ручной варн (заказ 2026-09-30).
+"""Права на ручной варн.
 
 Правила:
-  • Участникам (не стафф) — варн вручную снова можно (мод+ с ACL warn),
-    причина только из правил 1.1–1.9, где есть Варн/Пред.
-  • Стаффу — только роли «× Отвечаю за …» своей ветки (кросс-ветка нельзя).
-  • В /modpanel пункт «Варн» появляется после выбора цели:
-      – участник → если у модера есть warn в ACL;
-      – стафф → если «отвечаю за» той же ветки.
-  • Обычным участникам авто-варн бота по-прежнему работает.
+  • Участникам (не стафф) — мод+ / администрация с ACL warn.
+  • Стаффу — только «× Отвечаю за …» / админ своей ветки
+    (пересечение веток issuer ∩ target). Кросс-ветка — отказ.
+  • В /modpanel:
+      – цель участник → обычное меню + кнопка Warn (если ACL ок);
+      – цель стафф → ТОЛЬКО Warn (+ история / снять варн при правах).
+  • Проверка прав — на сервере при каждом действии (не только скрытие кнопок).
+  • Нельзя варннуть себя; иерархия через staff_hierarchy.
 """
 from __future__ import annotations
 
@@ -20,8 +21,8 @@ _log = get_logger('warn_acl')
 def _grant_role_ids() -> dict:
     out = {}
     try:
-        from services.staff_roles import KNOWN_GRANT_BY_KIND
-        for kind, rid in (KNOWN_GRANT_BY_KIND or {}).items():
+        from services.warn_config import branch_grant_roles
+        for kind, rid in (branch_grant_roles() or {}).items():
             try:
                 out[str(kind)] = str(int(rid))
             except (TypeError, ValueError):
@@ -36,8 +37,8 @@ def _grant_role_ids() -> dict:
 def _curator_role_ids() -> dict:
     out = {}
     try:
-        from services.staff_roles import KNOWN_CURATOR_BY_KIND
-        for kind, rid in (KNOWN_CURATOR_BY_KIND or {}).items():
+        from services.warn_config import branch_curator_roles
+        for kind, rid in (branch_curator_roles() or {}).items():
             try:
                 out[str(kind)] = str(int(rid))
             except (TypeError, ValueError):
@@ -48,7 +49,11 @@ def _curator_role_ids() -> dict:
 
 
 def issuer_branches_of(member) -> frozenset:
-    """Ветки «× Отвечаю за …»."""
+    """Ветки, за которые отвечает исполнитель («× Отвечаю за …»).
+
+    Куратор и администратор ветки определяются этой ролью — единый
+    источник «своей ветки» для правил варна стаффу.
+    """
     if member is None:
         return frozenset()
     by_cur = {rid: kind for kind, rid in _curator_role_ids().items()}
@@ -112,13 +117,16 @@ def _is_staff_target(guild, target) -> bool:
     if branches_of(target):
         return True
     try:
-        # Только role_map / known roles — manage_messages у участника
-        # не делает его «стаффом» для ветки варна.
         from services.staff_hierarchy import best_mapped_tier, RANK
         mapped = best_mapped_tier(target)
         return RANK.get(mapped, -1) >= RANK.get('helper', 1)
     except Exception:
         return False
+
+
+def is_staff_target(guild, target) -> bool:
+    """Публичный алиас."""
+    return _is_staff_target(guild, target)
 
 
 def _mod_plus(actor) -> bool:
@@ -130,14 +138,12 @@ def _mod_plus(actor) -> bool:
     try:
         from services.staff_hierarchy import best_mapped_tier, RANK
         mapped = best_mapped_tier(actor)
-        # helper и mod оба RANK=1 — смотрим имя тира, не число
-        if mapped in ('mod', 'master', 'curator', 'admin', 'owner'):
+        if mapped in ('mod', 'master', 'curator', 'assistent', 'admin', 'owner'):
             return True
         if RANK.get(mapped, -1) > RANK.get('helper', 1):
             return True
     except Exception as _ex:
         _log.debug('mod_plus: %s', _ex)
-    # «× Отвечаю за …» тоже может варннуть участника
     return bool(issuer_branches_of(actor))
 
 
@@ -148,7 +154,6 @@ def can_issue_manual_warn(actor, target=None, guild=None) -> bool:
     if getattr(actor, 'is_panel', False) or _is_bot_owner(actor):
         return True
     if target is None:
-        # без цели — пункт появится после выбора; заранее: мод+ или отвечаю
         return _mod_plus(actor) or bool(issuer_branches_of(actor))
     g = guild or getattr(actor, 'guild', None) or getattr(target, 'guild', None)
     if _is_staff_target(g, target):
@@ -157,7 +162,7 @@ def can_issue_manual_warn(actor, target=None, guild=None) -> bool:
 
 
 def warn_role_eligible(member) -> bool:
-    """Discord-роль warn (≥3) — стафф с «отвечаю» / owner."""
+    """Кто может управлять ролью warn у стаффа (ветковой ACL)."""
     return bool(issuer_branches_of(member)) or _is_bot_owner(member)
 
 
@@ -169,6 +174,13 @@ def manual_warn_check(guild, actor, target) -> tuple:
         return False, 'Нет исполнителя варна.'
     if target is None:
         return False, 'Участник не найден.'
+
+    # себе нельзя
+    try:
+        if int(getattr(actor, 'id', 0)) == int(getattr(target, 'id', 0)):
+            return False, 'Себе варн выдать нельзя.'
+    except Exception:
+        pass
 
     is_owner = bool(
         getattr(actor, 'is_panel', False) or _is_bot_owner(actor))
@@ -188,11 +200,12 @@ def manual_warn_check(guild, actor, target) -> tuple:
             _log.debug('manual_warn member hierarchy: %s', _ex)
         return True, None
 
-    # ── Стафф: только «× Отвечаю за …» своей ветки ───────────────
+    # ── Стафф: куратор/админ только своей ветки ──────────────────
     a_br = issuer_branches_of(actor)
     if not is_owner and not a_br:
         return False, (
-            'Варн стаффу выдают только роли **× Отвечаю за …** своей ветки.')
+            'Варн стаффу выдают только куратор/админ своей ветки '
+            '(роль «× Отвечаю за …»).')
 
     if not is_owner:
         t_br = branches_of(target)
@@ -202,12 +215,13 @@ def manual_warn_check(guild, actor, target) -> tuple:
                 'такой варн только у владельца.')
         if not (a_br & t_br):
             return False, (
-                f'Нельзя варн через ветку: ты отвечаешь за '
+                f'Чужая ветка: ты отвечаешь за '
                 f'**{", ".join(sorted(a_br))}**, '
                 f'цель — **{", ".join(sorted(t_br))}**.')
 
     try:
         from services.staff_hierarchy import check as _hchk
+        # для веткового варна исполнитель действует как минимум curator
         a_role = 'owner' if is_owner else 'curator'
         ok, deny, _a, _t = _hchk(
             guild, actor, target, 'warn', actor_role=a_role)
@@ -219,23 +233,69 @@ def manual_warn_check(guild, actor, target) -> tuple:
     return True, None
 
 
+# Действия, допустимые в staff-only меню /modpanel
+_STAFF_MENU_KEYS = frozenset({'warn', 'unwarn', 'warn_history'})
+
+
 def filter_modpanel_actions(member, actions, *, target=None, guild=None):
-    """Варн в меню после выбора цели: участник или свой стафф."""
-    out = []
+    """Меню /modpanel с учётом цели.
+
+    Без цели — пункт Warn скрыт (откроется после выбора); остальное как есть.
+    Цель-участник — обычное меню + Warn в начале (если ACL ок).
+    Цель-стафф — ТОЛЬКО Warn / История / Снять варн (при правах ветки).
+    """
+    g = guild or getattr(member, 'guild', None)
+    if target is not None:
+        g = g or getattr(target, 'guild', None)
+
+    def _key(a):
+        return a[0] if isinstance(a, (tuple, list)) else a
+
     warn_row = None
+    history_row = None
+    rest = []
     for a in (actions or []):
-        key = a[0] if isinstance(a, (tuple, list)) else a
-        if key == 'warn':
+        k = _key(a)
+        if k == 'warn':
             warn_row = a
-            continue
-        out.append(a)
-    if warn_row is None:
-        return out
-    # без выбранного человека — warn скрыт (откроется после выбора)
+        elif k == 'warn_history':
+            history_row = a
+        else:
+            rest.append(a)
+
+    # без цели — обычное меню без Warn (unwarn остаётся, как раньше)
     if target is None:
+        return rest
+
+    staff = _is_staff_target(g, target)
+
+    if staff:
+        # Отдельное меню стаффа: Warn (+ история / снять) по праву ветки.
+        # Inject defaults — даже если ACL «warn» не выдан роли в панели,
+        # ветковый куратор/админ всё равно видит своё меню.
+        out = []
+        ok_warn, _deny = manual_warn_check(g, member, target)
+        _WARN = ('warn', 'Варн', 'Предупреждение за нарушение', 'warn')
+        _HIST = ('warn_history', 'История варнов',
+                 'Список варнов с пагинацией', 'warn')
+        _UNWARN = ('unwarn', 'Снять варн', 'Убрать последний варн', 'warn')
+        if ok_warn:
+            out.append(warn_row or _WARN)
+            out.append(history_row or _HIST)
+            # unwarn из rest или дефолт
+            unwarn = next((a for a in rest if _key(a) == 'unwarn'), _UNWARN)
+            out.append(unwarn)
+        elif (_is_bot_owner(member)
+              or getattr(member, 'is_panel', False)):
+            out.append(history_row or _HIST)
         return out
-    g = guild or getattr(member, 'guild', None) or getattr(target, 'guild', None)
+
+    # обычный участник
+    out = list(rest)
     ok, _deny = manual_warn_check(g, member, target)
-    if ok:
+    if ok and warn_row is not None:
         out = [warn_row] + out
+    if ok and history_row is not None:
+        insert_at = 1 if out and _key(out[0]) == 'warn' else 0
+        out.insert(insert_at, history_row)
     return out
