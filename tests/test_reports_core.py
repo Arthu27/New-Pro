@@ -119,11 +119,13 @@ check('add_view(ReportPanelView())' in src,
       'панель персистентная — переживает рестарт')
 check('create_thread' in src and 'private_thread' in src,
       'репорт открывает приватную ветку')
-# Доказательства снова в /report: FileUpload в модалке → канал доказательств.
+# Доказательства в /report: FileUpload → демка в канал модерации.
 check('FileUpload' in src and 'proof_upload' in src,
       '/report модалка принимает фото/видео (FileUpload)')
 check('deliver_report_proofs' in src,
-      '/report шлёт вложения в канал доказательств')
+      '/report шлёт вложения демкой (deliver_report_proofs)')
+check('канал модерации' in src,
+      'демки из /report идут в канал модерации, не в #-доказательства')
 check('proof_file' not in src,
       'нет устаревшего параметра proof_file у слеш-команды')
 check('zlib' in open(os.path.join(ROOT, 'services', 'reports_core.py'),

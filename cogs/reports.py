@@ -6,13 +6,14 @@ Hakumo — Система репортов (ТЗ 2026-08-26)
 в канал модерации (тег роли), модераторы разбирают его прямо там
 (Принять / Отклонить / «Открыть разбор» — отдельная ветка с панелью:
 режим обсуждения, слова, вынесение решения). В модалке можно сразу
-приложить фото/видео — они уходят в канал доказательств вместе с
-вызовом. Переписка при закрытии сжимается zlib и уходит в архив
-(services/reports_core). /my_violations — мои нарушения (обжалование
-наказаний — кнопка апелляции: в ЛС боту и в «своих наказаниях»).
+приложить фото/видео — демка с плеером уходит в тот же канал модерации
+(рядом с карточкой), свои стикеры HAKUMO. Переписка при закрытии
+сжимается zlib и уходит в архив (services/reports_core).
+/my_violations — мои нарушения (обжалование наказаний — кнопка
+апелляции: в ЛС боту и в «своих наказаниях»).
 
 Хранение: SQLite data/reports.db + data/reports_<gid>.json (без Postgres —
-его на VDS нет, данных мизер). Оформление: чистые эмбеды без эмодзи.
+его на VDS нет, данных мизер). Оформление: V2 + свои стикеры.
 """
 import json as _json
 from datetime import datetime, timedelta, timezone
@@ -702,32 +703,43 @@ def _report_card_body(*, caller, target, against: str, location: str,
                       voice_name: str, channel_mention: str, reason: str,
                       violations_text: str, days, target_tier: str = '',
                       escalation_label: str = '') -> str:
-    """Текст V2-карточки вызова — секции вместо полей эмбеда."""
+    """Текст V2-карточки вызова — свои стикеры, секции вместо полей эмбеда."""
     from services.staff_hierarchy import LABELS as _TIER_LABELS
-    against_label = ('🛡️ Состав модерации (стафф)' if against == 'staff'
-                     else '👤 Обычный участник')
-    location_label = ('🔊 Голосовой канал' if location == 'voice'
-                      else '💬 Чат')
+    try:
+        from services.menu_emojis import sticker as _st
+        s_user = _st('user')
+        s_staff = _st('staff')
+        s_heart = _st('heart')
+        s_warn = _st('warn')
+        s_mod = _st('moderator')
+    except Exception:
+        s_user, s_staff, s_heart, s_warn, s_mod = (
+            '👤', '🛡️', '🤍', '⚠️', '🛎️')
+    against_label = (f'{s_staff} Состав модерации (стафф)'
+                     if against == 'staff'
+                     else f'{s_user} Обычный участник')
+    location_label = (f'{s_heart} Голосовой канал' if location == 'voice'
+                      else f'{s_heart} Чат')
     lines = []
     if against == 'staff':
         tier_label = _TIER_LABELS.get(target_tier, '') if target_tier else ''
         who = f' ({tier_label})' if tier_label else ''
-        lines.append(f'⚠️ **Жалоба касается персонала{who}** — конфликт '
+        lines.append(f'{s_warn} **Жалоба касается персонала{who}** — конфликт '
                      'интересов, разбирает старший состав.')
         if escalation_label:
             lines.append(f'**Кто разбирает:** {escalation_label}')
         lines.append('')
     lines += [
-        f'**Кто вызвал:** {caller.mention}',
-        f'**Из-за кого:** {target.mention} · `{target.id}`',
-        f'**Категория:** {against_label}',
+        f'{s_heart} **Кто вызвал:** {caller.mention}',
+        f'{s_user} **Из-за кого:** {target.mention} · `{target.id}`',
+        f'{s_mod} **Категория:** {against_label}',
         f'**Где произошло:** {location_label}',
     ]
     if voice_name:
-        lines.append(f'**Сейчас в войсе:** {voice_name}')
+        lines.append(f'{s_heart} **Сейчас в войсе:** {voice_name}')
     lines.append(f'**Откуда вызов:** {channel_mention}')
     lines.append('')
-    lines.append(f'**Что случилось**\n{reason}')
+    lines.append(f'{s_warn} **Что случилось**\n{reason}')
     lines.append('')
     lines.append(f'**Прошлые нарушения ({days} дн.)**\n{violations_text}')
     return '\n'.join(lines)
@@ -745,7 +757,17 @@ class ReportCardView(discord.ui.LayoutView):
     def __init__(self, *, title: str = None, body: str = '',
                 footer: str = '', accent: int = None):
         super().__init__(timeout=None)
-        self._title = title or '🛎️ Вызов модератора'
+        try:
+            from services.menu_emojis import (
+                sticker as _st, emoji_for_review, emoji_heart)
+            _title_default = f'{_st("heart")} Вызов модератора'
+            _em_ok = emoji_for_review('approve')
+            _em_no = emoji_for_review('reject')
+            _em_th = emoji_heart()
+        except Exception:
+            _title_default = '🤍 Вызов модератора'
+            _em_ok, _em_no, _em_th = '✅', '❌', '🤍'
+        self._title = title or _title_default
         self._body = body or ''
         self._footer = footer or ''
         self._accent = accent if accent is not None else 0xE74C3C
@@ -753,15 +775,15 @@ class ReportCardView(discord.ui.LayoutView):
         self._status_line = None
         self._accept_btn = discord.ui.Button(
             label='Принять', style=discord.ButtonStyle.success,
-            emoji='✅', custom_id='rcard_accept')
+            emoji=_em_ok, custom_id='rcard_accept')
         self._accept_btn.callback = self.accept
         self._reject_btn = discord.ui.Button(
             label='Отклонить', style=discord.ButtonStyle.danger,
-            emoji='❌', custom_id='rcard_reject')
+            emoji=_em_no, custom_id='rcard_reject')
         self._reject_btn.callback = self.reject
         self._thread_btn = discord.ui.Button(
             label='Открыть разбор', style=discord.ButtonStyle.primary,
-            emoji='🧵', custom_id='rcard_thread')
+            emoji=_em_th, custom_id='rcard_thread')
         self._thread_btn.callback = self.open_thread
         self._rebuild()
 
@@ -802,7 +824,12 @@ class ReportCardView(discord.ui.LayoutView):
                                            'label': 'Вызов принят'}),
                       closed=datetime.now(timezone.utc).timestamp())
         self._resolved = True
-        self._status_line = f'✅ **Принято** — {interaction.user.mention}'
+        try:
+            from services.menu_emojis import sticker as _st
+            _ok = _st('accept')
+        except Exception:
+            _ok = '✅'
+        self._status_line = f'{_ok} **Принято** — {interaction.user.mention}'
         self._accent = 0x2ECC71
         self._rebuild()
         # V2: edit только view= — content/embed в edit ломают компоненты.
@@ -820,7 +847,12 @@ class ReportCardView(discord.ui.LayoutView):
                                            'label': 'Отклонено'}),
                       closed=datetime.now(timezone.utc).timestamp())
         self._resolved = True
-        self._status_line = f'❌ **Отклонено** — {interaction.user.mention}'
+        try:
+            from services.menu_emojis import sticker as _st
+            _no = _st('decline')
+        except Exception:
+            _no = '❌'
+        self._status_line = f'{_no} **Отклонено** — {interaction.user.mention}'
         self._accent = 0x99AAB5
         self._rebuild()
         await interaction.response.edit_message(view=self)
@@ -947,13 +979,14 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
 
     Порядок полей = порядок общения с модератором: кого выбрали,
     на кого жалоба (пользователь/стафф), где случилось, почему,
-    доказательства (фото/видео → канал доказательств).
+    доказательства (фото/видео → демка в канал модерации).
     Discord: максимум 5 Label в модалке — все заняты.
     """
 
     def __init__(self):
         super().__init__()
-        from services.menu_emojis import emoji_for_report
+        from services.menu_emojis import emoji_for_report, emoji_heart
+        _loc = emoji_heart()
         self.target_select = discord.ui.UserSelect(required=True)
         self.against_select = discord.ui.Select(
             required=True,
@@ -968,14 +1001,14 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
         self.location_select = discord.ui.Select(
             required=True,
             options=[
-                discord.SelectOption(label='Чат', value='chat', emoji='💬'),
+                discord.SelectOption(label='Чат', value='chat', emoji=_loc),
                 discord.SelectOption(label='Голосовой канал', value='voice',
-                                     emoji='🔊'),
+                                     emoji=_loc),
             ])
         self.reason_input = discord.ui.TextInput(
             style=discord.TextStyle.paragraph, required=True,
             max_length=1000, placeholder='Опишите причину жалобы...')
-        # Доказательства сразу в форму — уйдут в канал доказательств.
+        # Фото/видео → демка с плеером в канал модерации (рядом с вызовом).
         self.proof_upload = discord.ui.FileUpload(
             required=False, max_values=4)
         self.add_item(discord.ui.Label(text='Выберите нарушителя',
@@ -988,7 +1021,7 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
                                        component=self.reason_input))
         self.add_item(discord.ui.Label(
             text='Доказательства',
-            description='Фото или видео — сразу в канал доказательств',
+            description='Фото или видео — демка сразу в канал модерации',
             component=self.proof_upload))
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -1037,7 +1070,7 @@ async def _deliver_report(interaction, target, reason: str, against: str,
 
     Вынесено из /report в отдельную функцию: модалка (ReportModal) и
     команда зовут один и тот же путь, без дублирования логики.
-    proof_attachments — фото/видео из модалки → канал доказательств.
+    proof_attachments — фото/видео из модалки → демка в канал модерации.
     """
     guild = interaction.guild
     cfg = _cfg(guild.id)
@@ -1088,6 +1121,13 @@ async def _deliver_report(interaction, target, reason: str, against: str,
     else:
         ping_roles = _mod_ping_roles(guild)
 
+    try:
+        from services.menu_emojis import sticker as _st
+        s_heart = _st('heart')
+        s_warn = _st('warn')
+    except Exception:
+        s_heart, s_warn = '🤍', '⚠️'
+
     body = _report_card_body(
         caller=interaction.user, target=target, against=against,
         location=location, voice_name=(vc.name if vc is not None else ''),
@@ -1096,12 +1136,12 @@ async def _deliver_report(interaction, target, reason: str, against: str,
         violations_text=_violations_field(guild.id, target.id, cfg),
         target_tier=target_tier, escalation_label=escalation_label)
     if proof_attachments:
-        body += (f'\n\n**Доказательства:** {len(proof_attachments)} влож. '
-                 '→ канал доказательств')
+        body += (f'\n\n{s_warn} **Демка:** {len(proof_attachments)} влож. '
+                 '→ ниже в этом канале (смотреть сразу, без скачивания)')
     accent = 0xF39C12 if against == 'staff' else 0xE74C3C
     card_view = ReportCardView(
-        title='🛎️ Вызов модератора', body=body,
-        footer=f'{guild.name} · /report', accent=accent)
+        title=f'{s_heart} Вызов модератора', body=body,
+        footer=f'{guild.name} · /report · HAKUMO', accent=accent)
 
     ping = ' '.join(r.mention for r in ping_roles)
     if not ping:
@@ -1134,7 +1174,7 @@ async def _deliver_report(interaction, target, reason: str, against: str,
                     f'**{interaction.user.display_name}** вызвал '
                     f'модератора из-за **{target.display_name}**: {reason[:120]}')
 
-    # Фото/видео из модалки → канал доказательств (сразу при отправке).
+    # Фото/видео → демка в канал модерации (рядом с карточкой вызова).
     proof_ids = []
     if proof_attachments:
         try:
@@ -1148,11 +1188,11 @@ async def _deliver_report(interaction, target, reason: str, against: str,
     note = (f'Модератор вызван: сигнал ушёл в {ch.mention} — модерация '
             'уже видит его и разберёт прямо там.')
     if proof_ids:
-        note += (' Доказательства: '
+        note += (' Демки: '
                  + ', '.join(f'#{i}' for i in proof_ids)
-                 + ' — в канале доказательств.')
+                 + ' — в канале модерации, смотрятся сразу.')
     elif proof_attachments:
-        note += (' Файлы приложены, но канал доказательств недоступен '
+        note += (' Файлы приложены, но канал модерации недоступен '
                  '(права бота / маршрут в панели).')
     if vc is not None:
         note += f' Если ты в голосовом канале «{vc.name}» — к тебе зайдут.'

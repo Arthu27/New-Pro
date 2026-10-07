@@ -8,7 +8,7 @@
     «Причина жалобы» (текст), «Доказательства» (FileUpload);
   • сигнал уходит V2-карточкой (Components V2, чёрный блок) в канал
     модерации, тег роли модераторов — отдельным сообщением (живой пуш);
-  • фото/видео из модалки уходят в канал доказательств (deliver_report_proofs);
+  • фото/видео из модалки уходят демкой в канал модерации (deliver_report_proofs);
   • карточка отвечает на вопросы: куда идти, кто вызвал, из-за кого, что
     случилось, категория (пользователь/стафф), место нарушения
     (+ голосовой канал вызывавшего, если он в войсе);
@@ -180,7 +180,9 @@ _src = open(os.path.join(os.path.dirname(os.path.dirname(
 check('FileUpload' in _src and 'proof_upload' in _src,
       'в модалке /report есть FileUpload для доказательств')
 check('deliver_report_proofs' in _src,
-      '/report отдаёт вложения в канал доказательств')
+      '/report отдаёт вложения демкой (deliver_report_proofs)')
+check('канал модерации' in _src and 'sticker' in _src,
+      'карточка /report — свои стикеры, демки в канал модерации')
 check('discord.ui.Label' in _src and 'discord.ui.UserSelect' in _src,
       'модалка использует Components V2 (Label + UserSelect/Select)')
 check('Выберите нарушителя' in _src and 'На кого жалоба?' in _src
