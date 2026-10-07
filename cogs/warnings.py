@@ -258,6 +258,11 @@ class warnings(commands.Cog):
         """
         try:
             from services import punish_roles as PR
+            # Жёсткие warn_1/2/3 от владельца — всегда на месте
+            try:
+                PR.ensure_known_warn_roles(guild.id, who='warn-sync')
+            except Exception as _se:
+                log.debug('[WARNS] ensure known warn roles: %s', _se)
             add_id, remove_ids = PR.level_transition(guild.id, warn_count)
             if not add_id and not remove_ids:
                 # Авто-привязка: на сервере есть роль warn, а в конфиге пусто
@@ -316,8 +321,84 @@ class warnings(commands.Cog):
         except Exception as _ex:
             _log.debug("send_dm(): подавлено: %s", _ex)
 
+    async def _ban_member_at_max_warns(self, guild, member, warn_count):
+        """Участник (не стафф) после 3 варнов — бан ролью или Discord-бан."""
+        from services import punish_roles as PR
+        rid = PR.role_for(guild.id, 'ban')
+        role = guild.get_role(rid) if rid else None
+        why = f'Авто: {warn_count} предупреждений (порог {PR.MAX_WARN_BEFORE_PUNISH})'
+        if role is not None:
+            await member.add_roles(role, reason=why)
+            try:
+                from services.channel_routes import get_route
+                cid = int(get_route(guild.id, 'ban_appeal_channel') or 0)
+                iso = guild.get_channel(cid) if cid else None
+                if iso is not None:
+                    await iso.set_permissions(
+                        member, view_channel=True, send_messages=True)
+            except Exception as _ex:
+                log.debug('бан-ролью: канал апелляции не открыт: %s', _ex)
+            return f'Бан: роль «{role.name}» + апелляция (варн {warn_count})'
+        await member.ban(reason=why)
+        return f'Бан Discord (варн {warn_count})'
+
+    async def _punish_staff_at_max_warns(self, guild, member, warn_count):
+        """Стафф после 3 варнов: снять со стаффа + месяц без анкет."""
+        from services import punish_roles as PR
+        from services.staff_roles import strip_staff_roles
+        days = int(PR.STAFF_APPLY_BAN_DAYS or 30)
+        strip = await strip_staff_roles(
+            guild, member,
+            reason=f'{warn_count} варна — снятие со стаффа')
+        try:
+            from cogs.staff_apply import ban_staff_apply
+            ban_staff_apply(
+                member.id, days=days, by='system:warn3',
+                reason=f'{warn_count} варна — бан набора {days}д',
+                guild_id=getattr(guild, 'id', None))
+        except Exception as _be:
+            log.warning('[WARNS] staff apply ban: %s', _be)
+            return (
+                f'Снят со стаффа ({len(strip.get("removed") or [])} ролей), '
+                f'но бан набора не записан: {_be}')
+        n_rm = len(strip.get('removed') or [])
+        return (
+            f'Снят со стаффа ({n_rm} ролей) + набор закрыт на {days} дн. '
+            f'(варн {warn_count})'
+        )
+
     async def apply_warn_punishment(self, guild, member, warn_count):
-        """Автоматическое наказание по количеству предупреждений"""
+        """Автоматическое наказание по количеству предупреждений.
+
+        Жёсткое правило владельца: при ≥3 варнах —
+          • обычный участник → бан;
+          • стафф → снятие staff-ролей + 30 дней без анкеты.
+        Ниже порога — лестница из warn_config (steps/thresholds), если есть.
+        """
+        from services import punish_roles as PR
+        try:
+            count = int(warn_count or 0)
+        except (TypeError, ValueError):
+            count = 0
+
+        # ── Порог 3: всегда, даже без steps в конфиге ───────────────
+        if count >= int(PR.MAX_WARN_BEFORE_PUNISH or 3):
+            try:
+                from services.warn_acl import _is_staff_target
+                is_staff = bool(_is_staff_target(guild, member))
+            except Exception as _se:
+                log.debug('[WARNS] staff check: %s', _se)
+                is_staff = False
+            try:
+                if is_staff:
+                    return await self._punish_staff_at_max_warns(
+                        guild, member, count)
+                return await self._ban_member_at_max_warns(
+                    guild, member, count)
+            except Exception as e:
+                log.error(f'Ошибка авто-наказания (порог 3): {e}')
+                return None
+
         cfg = load_warn_config(str(guild.id))
         # Панель сохраняет ключ 'thresholds', старые данные — 'steps'; принимаем оба
         steps = cfg.get('steps') or cfg.get('thresholds') or []
@@ -326,7 +407,14 @@ class warnings(commands.Cog):
 
         matched = None
         for step in sorted(steps, key=lambda x: x['count']):
-            if warn_count >= step['count']:
+            # ступени ≥ порога 3 не дублируем — уже обработаны выше
+            try:
+                sc = int(step.get('count') or 0)
+            except (TypeError, ValueError):
+                sc = 0
+            if sc >= int(PR.MAX_WARN_BEFORE_PUNISH or 3):
+                continue
+            if count >= sc:
                 matched = step
 
         if not matched:
@@ -340,7 +428,6 @@ class warnings(commands.Cog):
         try:
             # Роли наказаний (панель → «Настройки модерации») главнее
             # таймаута/бана: владелец сам выбрал, какими роли наказывать.
-            from services import punish_roles as PR
             if action in ('mute', 'timeout'):
                 # чат-мут/таймаут глушат чат (таймаут — ещё и голос): снимаем
                 # любой висящий отдельный войс-мут, чтобы не было двух ограничений
@@ -391,28 +478,11 @@ class warnings(commands.Cog):
                 await member.kick(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Кик'
             elif action == 'ban':
-                rid = PR.role_for(guild.id, 'ban')
-                role = guild.get_role(rid) if rid else None
-                if role is not None:
-                    # «бан» ролью: участник остаётся на сервере, апелляция —
-                    # в канале апелляции (если выбран)
-                    await member.add_roles(role, reason=f'Авто: {warn_count} предупреждений')
-                    try:
-                        from services.channel_routes import get_route
-                        cid = int(get_route(guild.id, 'ban_appeal_channel') or 0)
-                        iso = guild.get_channel(cid) if cid else None
-                        if iso is not None:
-                            await iso.set_permissions(
-                                member, view_channel=True, send_messages=True)
-                    except Exception as _ex:
-                        log.debug(f'бан-ролью: канал апелляции не открыт: {_ex}')
-                    return f'Бан: роль «{role.name}» + апелляция'
-                await member.ban(reason=f'Авто-наказание: {warn_count} предупреждений')
-                return 'Бан'
+                return await self._ban_member_at_max_warns(
+                    guild, member, warn_count)
         except Exception as e:
             log.error(f'Ошибка авто-наказания: {e}')
         return None
-
     # ── /warn ────────────────────────────────────────────────────────────
     async def add_warn(self, interaction, user: discord.Member, reason: str = None):
         """Общее ядро warn: запись + DM + автоматическое наказание.

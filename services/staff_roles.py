@@ -592,6 +592,85 @@ def _member_has_role(member, role_id: int) -> bool:
     return False
 
 
+def staff_role_ids_to_strip() -> list:
+    """ID ролей «стафф-идентичности», снимаемых при 3 варнах у стаффа."""
+    ids = set()
+    for rid in (KNOWN_GRANT_BY_KIND or {}).values():
+        try:
+            ids.add(int(rid))
+        except (TypeError, ValueError):
+            continue
+    for rid in (KNOWN_CURATOR_BY_KIND or {}).values():
+        try:
+            ids.add(int(rid))
+        except (TypeError, ValueError):
+            continue
+    for rid in (
+            KNOWN_COMMON_STAFF_ROLE_ID,
+            KNOWN_MASTER_ROLE_ID,
+            KNOWN_ASSISTENT_ROLE_ID,
+            KNOWN_STAFF_ASSISTENT_ROLE_ID,
+            KNOWN_HELPER_ROLE_ID,
+            KNOWN_MODERATOR_ROLE_ID,
+    ):
+        try:
+            if int(rid or 0):
+                ids.add(int(rid))
+        except (TypeError, ValueError):
+            continue
+    return sorted(ids)
+
+
+async def strip_staff_roles(guild, member, *, reason: str = '') -> dict:
+    """Снять роли стаффа (ветки / кураторы / common / master / assistent).
+
+    Admin-роли не трогаем. Возвращает {removed: [ids], failed: [...], ...}.
+    """
+    out = {"removed": [], "failed": [], "skipped": 0}
+    if guild is None or member is None:
+        out["reason"] = "no_member"
+        return out
+    want = set(staff_role_ids_to_strip())
+    have = []
+    for r in list(getattr(member, "roles", None) or []):
+        try:
+            rid = int(getattr(r, "id", 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        if rid in want:
+            have.append(r)
+    if not have:
+        out["skipped"] = 1
+        return out
+    why = reason or "3 варна — снятие со стаффа (Hakumo)"
+    try:
+        await member.remove_roles(*have, reason=why)
+        out["removed"] = [int(r.id) for r in have]
+        # тестовые фейки без Discord-кэша
+        try:
+            if hasattr(member, "roles"):
+                keep = [r for r in list(member.roles or [])
+                        if int(getattr(r, "id", 0) or 0) not in want]
+                member.roles = keep
+        except Exception:
+            pass
+        log.info(
+            "[staff_roles] снято со стаффа %s → %s ролей (%s)",
+            getattr(member, "id", "?"), len(have), why)
+    except Exception as e:
+        # по одной — чтобы часть всё же слетела
+        for r in have:
+            try:
+                await member.remove_roles(r, reason=why)
+                out["removed"].append(int(r.id))
+            except Exception as e2:
+                out["failed"].append({"id": int(r.id), "error": str(e2)})
+        if not out["removed"]:
+            out["error"] = str(e)
+            log.warning("[staff_roles] strip_staff_roles: %s", e)
+    return out
+
+
 async def ensure_common_staff_role(guild, member) -> dict:
     """Общая роль на все ветки — выдать, если ещё нет."""
     out = {"role_id": KNOWN_COMMON_STAFF_ROLE_ID, "granted": False,

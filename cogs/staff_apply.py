@@ -13,7 +13,7 @@ import json
 import os
 import io
 import types
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import aiohttp
 from PIL import Image, ImageDraw, ImageFont
@@ -570,6 +570,23 @@ def apply_blocked_reason(user_id, kind: str, *, member=None) -> str:
     if not want:
         return 'Должность не указана.'
     label = position_label(want)
+    full_until = apply_ban_until(user_id)
+    if full_until:
+        try:
+            ts = str(full_until).replace('Z', '+00:00')
+            dt = datetime.fromisoformat(ts)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            left = max(0, int((dt - datetime.now(timezone.utc)).total_seconds()
+                              // 86400))
+            when = dt.strftime('%d.%m.%Y')
+        except Exception:
+            left, when = 0, full_until[:10]
+        return (
+            f'Набор закрыт до **{when}**'
+            + (f' (~{left} дн.)' if left else '')
+            + '.\nСняты со стаффа после 3 варнов — анкету пока подать нельзя.'
+        )
     if is_blacklisted(user_id, want):
         return (
             f'Вы в чёрном списке ветки **{label}**.\n'
@@ -638,10 +655,13 @@ def load_blacklist():
                 'guild_id': entry.get('guild_id'),
                 'reason': str(entry.get('reason') or ''),
             }
+            if entry.get('until'):
+                kinds[kind]['until'] = str(entry.get('until'))
             migrated = True
         else:
             for kind, row in entry.items():
-                if kind in ('user_id', 'role', 'by', 'at', 'guild_id', 'reason'):
+                if kind in ('user_id', 'role', 'by', 'at', 'guild_id',
+                            'reason', 'until'):
                     continue
                 nk = normalize_position(kind) or str(kind or '').lower()
                 if not nk or not isinstance(row, dict):
@@ -652,6 +672,8 @@ def load_blacklist():
                     'guild_id': row.get('guild_id'),
                     'reason': str(row.get('reason') or ''),
                 }
+                if row.get('until'):
+                    kinds[nk]['until'] = str(row.get('until'))
         if kinds:
             out[str(uid)] = kinds
     if migrated:
@@ -668,30 +690,103 @@ def save_blacklist(data):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def _entry_active(entry) -> bool:
+    """Запись ЧС активна? (until в прошлом → нет)."""
+    if not isinstance(entry, dict):
+        return False
+    until = entry.get('until')
+    if not until:
+        return True
+    try:
+        ts = str(until).replace('Z', '+00:00')
+        dt = datetime.fromisoformat(ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt > datetime.now(timezone.utc)
+    except Exception:
+        return True
+
+
+def _purge_expired_row(uid: str, row: dict) -> dict:
+    """Убрать просроченные ветки; вернуть очищенный row."""
+    if not isinstance(row, dict):
+        return {}
+    keep = {k: v for k, v in row.items()
+            if isinstance(v, dict) and _entry_active(v)}
+    if keep != row:
+        bl = load_blacklist()
+        if keep:
+            bl[str(uid)] = keep
+        else:
+            bl.pop(str(uid), None)
+        try:
+            save_blacklist(bl)
+        except Exception as _ex:
+            log.debug('blacklist purge: %s', _ex)
+    return keep
+
+
 def is_blacklisted(user_id, position=None) -> bool:
-    """ЧС только своей ветки. Без position — есть ли хоть одна ветка в ЧС."""
+    """ЧС только своей ветки. Без position — есть ли хоть одна ветка в ЧС.
+
+    Учитывает временный бан набора (until): после срока запись снимается.
+    """
     row = load_blacklist().get(str(user_id)) or {}
+    if not row:
+        return False
+    row = _purge_expired_row(str(user_id), row)
     if not row:
         return False
     if position is None:
         return True
     from services.staff_roles import normalize_position
     kind = normalize_position(position)
-    return bool(kind and kind in row)
+    return bool(kind and kind in row and _entry_active(row.get(kind)))
 
 
 def blacklisted_kinds(user_id) -> list:
     row = load_blacklist().get(str(user_id)) or {}
-    return sorted(row.keys())
+    row = _purge_expired_row(str(user_id), row)
+    return sorted(k for k, v in row.items() if _entry_active(v))
+
+
+def apply_ban_until(user_id) -> str:
+    """ISO until полного бана набора (все ветки с until), или ''."""
+    row = load_blacklist().get(str(user_id)) or {}
+    row = _purge_expired_row(str(user_id), row)
+    untils = []
+    for v in row.values():
+        if not isinstance(v, dict):
+            continue
+        u = v.get('until')
+        if u and _entry_active(v):
+            untils.append(str(u))
+    if not untils:
+        return ''
+    # если все активные ветки с until — считаем полным баном набора
+    from services.staff_roles import POSITIONS
+    kinds = set(row.keys())
+    if kinds >= set(POSITIONS):
+        return min(untils)
+    return ''
 
 
 def add_to_blacklist(user_id, *, by: str = '', role: str = '',
-                     guild_id=None, reason: str = '') -> dict:
-    """Добавить в ЧС только ветки должности заявки."""
+                     guild_id=None, reason: str = '',
+                     until: str = None, days: int = 0) -> dict:
+    """Добавить в ЧС только ветки должности заявки.
+
+    until — ISO конца бана; days — альтернатива (сейчас+N дней).
+    """
     from services.staff_roles import normalize_position
     kind = normalize_position(role) or 'moderator'
     bl = load_blacklist()
     row = bl.setdefault(str(user_id), {})
+    until_iso = until
+    if not until_iso and int(days or 0) > 0:
+        until_iso = (
+            datetime.now(timezone.utc) + timedelta(days=int(days))
+        ).isoformat()
     entry = {
         'by': str(by or ''),
         'role': kind,
@@ -699,10 +794,29 @@ def add_to_blacklist(user_id, *, by: str = '', role: str = '',
         'reason': str(reason or ''),
         'at': datetime.now(timezone.utc).isoformat(),
     }
+    if until_iso:
+        entry['until'] = str(until_iso)
     row[kind] = entry
     save_blacklist(bl)
     return entry
 
+
+def ban_staff_apply(user_id, *, days: int = 30, by: str = '',
+                    reason: str = '', guild_id=None) -> dict:
+    """Запрет подавать анкету на ВСЕ ветки на N дней (после 3 варнов стаффу)."""
+    from services.staff_roles import POSITIONS
+    from services.punish_roles import STAFF_APPLY_BAN_DAYS
+    n = int(days or STAFF_APPLY_BAN_DAYS or 30)
+    until_iso = (
+        datetime.now(timezone.utc) + timedelta(days=n)
+    ).isoformat()
+    out = {}
+    for kind in POSITIONS:
+        out[kind] = add_to_blacklist(
+            user_id, by=by, role=kind, guild_id=guild_id,
+            reason=reason or f'{n} дней без набора (3 варна)',
+            until=until_iso)
+    return {'until': until_iso, 'days': n, 'kinds': list(POSITIONS)}
 
 def remove_from_blacklist(user_id, position=None) -> bool:
     """Снять ЧС: одну ветку или все."""
