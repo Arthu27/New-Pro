@@ -614,13 +614,15 @@ def build_event_client():
         if after_id == target:
             return
         if before_id == target or after_id is None or after_id != target:
-            if (time.time() - (_last_join_ts or 0)) < 3.0:
+            # settle после join — не штормить force_drop (флап 20с)
+            if (time.time() - (_last_join_ts or 0)) < 25.0:
+                return
+            if time.time() < _suppress_rejoin_until:
                 return
             log.warning(
-                'event-bot left voice (before=%s after=%s) — return NOW to %s',
+                'event-bot left voice (before=%s after=%s) — soft return to %s',
                 before_id, after_id, target)
-            _suppress_rejoin_until = 0.0
-            _schedule_rejoin(bot, 'kicked-or-moved', force=True)
+            _schedule_rejoin(bot, 'kicked-or-moved', force=False)
 
     @bot.event
     async def on_disconnect():

@@ -108,8 +108,9 @@ ROLE_PAGE_KEYS = {
     'owner': {p[0] for p in PAGES_ALL},
 }
 
-# Меры, которые роль может ВЫДАТЬ из панели
-_MOD_PUNISH = ('warn', 'mute', 'kick', 'ban')
+# Меры, которые роль может ВЫДАТЬ из панели.
+# kick полностью выключен (владелец 2026-10): ни у кого, даже у owner.
+_MOD_PUNISH = ('warn', 'mute', 'ban')
 ROLE_PUNISH_ACTIONS = {
     'helper': ('warn', 'mute'),
     'mod': _MOD_PUNISH,
@@ -638,7 +639,7 @@ def _viewer_limits_card():
         role_ids = _session_discord_role_ids()
         if gid:
             lim_map, win_map = effective_limits(gid, role_ids)
-        for key in ('warn', 'mute', 'kick', 'ban'):
+        for key in ('warn', 'mute', 'ban'):
             title = PUNISH_LABELS.get(key) or ACTION_TITLES.get(key, key)
             if key in hidden or key not in allowed:
                 items.append({
@@ -679,7 +680,7 @@ def _viewer_limits_card():
                 'hint': f'{used}/{lim} за {human_window(win_map.get(key) or 86400)}',
             })
     except Exception:
-        for key in ('warn', 'mute', 'kick', 'ban'):
+        for key in ('warn', 'mute', 'ban'):
             title = PUNISH_LABELS.get(key, key)
             locked = key in hidden or key not in allowed
             items.append({
@@ -2258,58 +2259,8 @@ class _RestMember:
 
 
 def _issue_pin_to_dm(discord_id: str):
-    """Сгенерировать PIN и отправить ТОЛЬКО код в ЛС (без ссылок на панель)."""
-    bot = bot_instance
-    if not bot or not getattr(bot, 'loop', None):
-        return '', 'Бот не готов отправлять ЛС'
-    person = _resolve_staff_person(discord_id)
-    if not person:
-        return '', 'Этот человек не в staff (нет staff-роли на сервере)'
-    pin = f'{secrets.randbelow(10**6):06d}'
-    data = _purge_pending_pins()
-    data[str(discord_id)] = {
-        'pin': _hash_secret(pin),
-        'role': person['role'],
-        'name': person['name'],
-        'handle': person.get('handle') or '',
-        'avatar': person.get('avatar') or '',
-        'role_ids': list(person.get('role_ids') or []),
-        'exp': datetime.now(timezone.utc).timestamp() + PIN_TTL_SEC,
-    }
-    _save_pending_pins(data)
-
-    async def _send():
-        user = bot.get_user(int(discord_id))
-        if user is None:
-            user = await bot.fetch_user(int(discord_id))
-        text = (
-            f"**Hakumo** — код входа в панель\n"
-            f"PIN: `{pin}`\n"
-            f"Действует {PIN_TTL_SEC // 60} мин. Введи его на сайте. "
-            f"Никому не пересылай."
-        )
-        await user.send(text)
-
-    import asyncio
-    try:
-        fut = asyncio.run_coroutine_threadsafe(_send(), bot.loop)
-        fut.result(timeout=20)
-    except Exception as e:
-        msg = str(e)
-        data.pop(str(discord_id), None)
-        _save_pending_pins(data)
-        if 'Cannot send messages to this user' in msg or '50007' in msg:
-            return '', (
-                'Не смог написать в ЛС. Открой личку с ботом: '
-                'Настройки Discord → Конфиденциальность → личные сообщения '
-                'с участников сервера, затем зайди ещё раз.'
-            )
-        return '', f'ЛС не отправилось: {msg[:160]}'
-    return (
-        f'PIN отправлен в Discord ЛС → '
-        f'@{person.get("handle") or person["name"]}. '
-        f'Введи код на вкладке «PIN».'
-    ), ''
+    """Отключено: вход только через Discord OAuth (PIN спамил чужие ЛС)."""
+    return '', 'Вход только через Discord — PIN отключён'
 
 
 def _auth_pending_pin(discord_id: str, pin: str):
@@ -2357,200 +2308,44 @@ def _safe_next(raw: str | None) -> str:
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Вход только через Discord OAuth. PIN/список staff убраны (спамили ЛС).
+
+    Аварийный owner-пароль: /login?mode=owner (не в меню).
+    """
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    mode = (request.values.get('mode') or 'people').strip().lower()
-    if mode not in ('people', 'password', 'pin', 'register', 'forgot'):
-        mode = 'people'
+    mode = (request.values.get('mode') or '').strip().lower()
+    if mode not in ('', 'discord', 'owner'):
+        mode = ''
     err = (request.args.get('error') or '').strip()
     ok = (request.args.get('ok') or '').strip()
     nxt = _safe_next(request.args.get('next') or request.form.get('next'))
-    selected_id = (request.values.get('uid') or '').strip()
-    people_q = (request.values.get('pq') or '').strip()
-    reg_id = (request.values.get('member_id') or request.values.get('reg_id') or '').strip()
 
-    if request.method == 'POST':
-        mode = (request.form.get('mode') or mode).strip().lower()
-        if mode == 'people':
-            action = (request.form.get('action') or 'send').strip()
-            selected_id = (request.form.get('uid') or '').strip()
-            people_q = (request.form.get('pq') or '').strip()
-            if not selected_id:
-                err = 'Выбери человека'
-            else:
-                msg, e2 = _issue_pin_to_dm(selected_id)
-                if e2:
-                    err = e2
-                else:
-                    # PIN вводится на отдельной странице
-                    return redirect(url_for(
-                        'login', mode='pin', uid=selected_id,
-                        next=nxt, ok=msg,
-                    ))
-        elif mode == 'password':
-            got = _auth_user(request.form.get('username', ''), request.form.get('password', ''))
-            if got:
-                _start_session(username=got[0], role=got[1])
-                return redirect(nxt)
-            err = 'Неверный логин или пароль'
-        elif mode == 'pin':
-            uid = (request.form.get('uid') or '').strip()
-            selected_id = uid
-            if uid:
-                gotp = _auth_pending_pin(uid, request.form.get('pin', ''))
-                if gotp:
-                    _start_session(
-                        username=gotp['username'], role=gotp['role'],
-                        role_ids=gotp.get('role_ids'))
-                    session['discord_id'] = gotp['discord_id']
-                    session['discord_handle'] = gotp.get('handle') or ''
-                    session['discord_display'] = gotp['username']
-                    session['discord_avatar'] = gotp.get('avatar') or ''
-                    session['auth_via'] = 'pin-dm'
-                    session['role_label'] = ROLE_LABELS.get(gotp['role'], gotp['role'])
-                    return redirect(nxt)
-            got = _auth_pin(request.form.get('username', ''), request.form.get('pin', ''))
-            if got:
-                _start_session(username=got[0], role=got[1])
-                return redirect(nxt)
-            err = 'Неверный или просроченный PIN'
-        elif mode == 'register':
-            invite = request.form.get('invite', '')
-            password = request.form.get('password') or ''
-            reg_id = (request.form.get('member_id') or request.form.get('reg_id') or '').strip()
-            username = (request.form.get('username') or '').strip()
-            env_u, _ = _env_owner_creds()
-            member = _find_guild_member(reg_id) if reg_id else None
-            if member is None and reg_id:
-                row = _rest_guild_member(reg_id)
-                if row is not None:
-                    member = _RestMember(row)
-            if not _invite_ok(invite):
-                err = 'Неверный код приглашения'
-            elif not member:
-                err = 'Найди себя по имени Discord и выбери из списка'
-            elif len(password) < 6:
-                err = 'Пароль минимум 6 символов'
-            else:
-                handle = getattr(member, 'name', '') or ''
-                display = (
-                    getattr(member, 'display_name', None)
-                    or getattr(member, 'global_name', None)
-                    or handle
-                    or str(member.id)
-                )
-                username = (username or handle or display).strip()
-                if len(username) < 3:
-                    err = 'Логин слишком короткий'
-                elif username == env_u:
-                    err = 'Этот логин занят владельцем'
-                else:
-                    existing = _find_access_user(username)
-                    if existing and str(existing.get('discord_id') or '') not in ('', str(member.id)):
-                        err = 'Такой логин уже есть'
-                    else:
-                        try:
-                            role_ids = [r.id for r in getattr(member, 'roles', []) or []]
-                            role = resolve_discord_panel_role(member.id, role_ids) or 'mod'
-                        except Exception:
-                            role = 'mod'
-                            role_ids = []
-                        if role == 'owner':
-                            role = 'admin'
-                        if role not in LEVEL:
-                            role = 'mod'
-                        _upsert_access_user(
-                            username=username,
-                            password=password,
-                            role=role,
-                            note=f'@{handle}' if handle else '',
-                            discord_id=str(member.id),
-                            display_name=display,
-                            avatar=_member_avatar_url(member),
-                        )
-                        _start_session(
-                            username=username, role=role, role_ids=role_ids)
-                        session['discord_id'] = str(member.id)
-                        session['discord_handle'] = handle
-                        session['discord_display'] = display
-                        session['discord_avatar'] = _member_avatar_url(member)
-                        session['auth_via'] = 'register'
-                        return redirect(nxt)
-        elif mode == 'forgot':
-            username = (request.form.get('username') or '').strip()
-            recovery = request.form.get('recovery', '')
-            password = request.form.get('password') or ''
-            pin = (request.form.get('pin') or '').strip()
-            env_u, _ = _env_owner_creds()
-            if not _recovery_ok(recovery):
-                err = 'Неверный код восстановления'
-            elif len(password) < 6:
-                err = 'Новый пароль минимум 6 символов'
-            elif pin and (not pin.isdigit() or not (4 <= len(pin) <= 8)):
-                err = 'PIN — 4–8 цифр'
-            elif username == env_u:
-                err = 'Пароль owner меняй в .env (PANEL_PASSWORD)'
-            elif not _find_access_user(username):
-                err = 'Такого логина нет'
-            else:
-                _upsert_access_user(username=username, password=password, pin=pin if pin else None)
-                ok = 'Пароль обновлён — теперь войди'
-                mode = 'password'
+    if request.method == 'POST' and (request.form.get('mode') or '') == 'owner':
+        got = _auth_user(
+            request.form.get('username', ''),
+            request.form.get('password', ''),
+        )
+        env_u, _ = _env_owner_creds()
+        if got and got[0] == env_u and got[1] == 'owner':
+            _start_session(username=got[0], role=got[1])
+            session['auth_via'] = 'owner-password'
+            return redirect(nxt)
+        err = 'Только owner из .env. Staff — через Discord.'
+        mode = 'owner'
 
-    people, people_err = _list_login_people(people_q) if mode == 'people' else ([], '')
-    if mode == 'people' and people_err and not err:
-        err = people_err
+    # Staff: сразу на Discord authorize, если OAuth готов и не owner-форма
+    if mode != 'owner' and _discord_oauth_ready() and request.method == 'GET':
+        if (request.args.get('stay') or '') != '1' and not err and not ok:
+            return redirect(url_for('auth_discord', next=nxt))
 
-    reg_person = None
-    if mode == 'register' and reg_id:
-        m = _find_guild_member(reg_id)
-        if m is not None:
-            reg_person = _guild_member_snapshot(m)
-        else:
-            row = _rest_guild_member(reg_id)
-            if row is not None:
-                try:
-                    from config import Config
-                    owner_ids = {int(x) for x in Config.all_owner_ids()}
-                except Exception:
-                    owner_ids = set()
-                user = row.get('user') or {}
-                uid = int(user.get('id') or 0)
-                role_ids = [
-                    int(x) for x in (row.get('roles') or []) if str(x).isdigit()
-                ]
-                role = resolve_discord_panel_role(uid, role_ids)
-                if not role and uid in owner_ids:
-                    role = 'owner'
-                reg_person = _snapshot_from_api_member(row, role=role)
-
-    pin_person = None
-    if mode == 'pin' and selected_id:
-        m = _find_guild_member(selected_id)
-        if m is not None:
-            pin_person = _guild_member_snapshot(m)
-        else:
-            people_all, _ = _list_login_people()
-            pin_person = next((p for p in people_all if p['id'] == selected_id), None)
-
-    _, env_pw = _env_owner_creds()
-    hint = '' if env_pw else 'Задайте PANEL_PASSWORD в .env'
-    invite_set = bool((os.environ.get('PANEL_INVITE_CODE') or '').strip())
     return render_template(
         'login.html',
         error=err,
         ok=ok,
-        hint=hint,
         discord_ready=_discord_oauth_ready(),
-        mode=mode,
+        mode=mode if mode == 'owner' else 'discord',
         next=nxt,
-        people=people,
-        people_q=people_q,
-        selected_id=selected_id,
-        reg_id=reg_id,
-        reg_person=reg_person,
-        pin_person=pin_person,
-        invite_set=invite_set,
     )
 
 
@@ -2561,8 +2356,8 @@ def auth_discord():
         return redirect(url_for('today'))
     if not _discord_oauth_ready():
         return redirect(url_for(
-            'login', mode='people',
-            error='Быстрый OAuth не настроен — выбери себя в списке, PIN придёт в ЛС',
+            'login', stay='1',
+            error='Discord OAuth не настроен — owner: Client Secret на /access',
         ))
     cid, _secret = _discord_client_creds()
     state = secrets.token_urlsafe(24)
@@ -2581,24 +2376,13 @@ def auth_discord():
 
 @app.route('/auth/ticket/<token>')
 def auth_ticket(token):
-    """Одноразовая ссылка из Discord ЛС → сразу в панель."""
+    """Старые одноразовые ссылки из ЛС — больше не выдаём; ведём на Discord OAuth."""
     if session.get('logged_in'):
         return redirect(url_for('today'))
-    got = _consume_login_ticket(token)
-    if not got:
-        return redirect(url_for(
-            'login', mode='people',
-            error='Ссылка входа устарела или уже использована — запроси новую'))
-    _start_session(
-        username=got['username'], role=got['role'],
-        role_ids=got.get('role_ids'))
-    session['discord_id'] = got['discord_id']
-    session['discord_handle'] = got.get('handle') or ''
-    session['discord_display'] = got['username']
-    session['discord_avatar'] = got.get('avatar') or ''
-    session['auth_via'] = 'dm-ticket'
-    session['role_label'] = ROLE_LABELS.get(got['role'], got['role'])
-    return redirect(url_for('today'))
+    _consume_login_ticket(token)  # погасить, если ещё жива
+    return redirect(url_for(
+        'login', stay='1',
+        error='Ссылки из ЛС отключены — войди через Discord'))
 
 
 @app.route('/auth/discord/callback')
@@ -2950,11 +2734,27 @@ def staff_page():
                 people_by_branch.append({'key': k, 'title': title, 'people': bag})
     except Exception:
         people_by_branch = []
+    board = _staff_board_for(gid, days, people, span=span)
+    # uid → статистика за выбранный span (по умолчанию неделя) для карточек
+    week_stats = {}
+    try:
+        for row in (board or {}).get('rows') or []:
+            rid = str(row.get('id') or '')
+            if rid:
+                week_stats[rid] = {
+                    'actions': int(row.get('actions') or 0),
+                    'messages': int(row.get('messages') or 0),
+                    'voice': row.get('voice') or '0 мин',
+                    'score': int(row.get('score') or 0),
+                }
+    except Exception:
+        week_stats = {}
     return render_template(
         'staff.html', feed=feed, people=people, error=err,
         people_by_branch=people_by_branch,
         activity=_mod_activity(gid, days, date_keys=meta['keys']),
-        staff_board=_staff_board_for(gid, days, people, span=span),
+        staff_board=board,
+        week_stats=week_stats,
         span=span,
         span_meta=meta,
         role_filter=role_filter,
@@ -3165,6 +2965,11 @@ def _serialize_discord_message(msg) -> dict:
     }
 
 
+# Короткий кэш истории каналов — иначе каждый poll бьёт Discord history.
+_CHANNEL_MSG_CACHE: dict[str, tuple[float, dict]] = {}
+_CHANNEL_MSG_TTL = 4.0  # секунды для полного snapshot
+
+
 @app.get('/api/channels/<cid>/messages')
 @login_required
 @role_required('helper')
@@ -3184,6 +2989,16 @@ def api_channel_messages(cid):
     bot = bot_instance
     if not bot:
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    # Полный snapshot — из кэша (live after= не кэшируем)
+    if not after:
+        hit = _CHANNEL_MSG_CACHE.get(cid)
+        if hit and (time.time() - hit[0]) < _CHANNEL_MSG_TTL:
+            cached = dict(hit[1])
+            items = list(cached.get('items') or [])[-limit:]
+            cached['items'] = items
+            cached['cached'] = True
+            return jsonify({'ok': True, **cached})
 
     async def _load():
         import discord as _d
@@ -3225,6 +3040,13 @@ def api_channel_messages(cid):
         data = _run_on_bot(_load(), timeout=12)
     except Exception as ex:
         return jsonify({'ok': False, 'error': str(ex)[:200]}), 502
+    if not after:
+        _CHANNEL_MSG_CACHE[cid] = (time.time(), dict(data))
+        # не раздувать: держим ~40 каналов
+        if len(_CHANNEL_MSG_CACHE) > 40:
+            oldest = sorted(_CHANNEL_MSG_CACHE.items(), key=lambda kv: kv[1][0])
+            for k, _ in oldest[: len(_CHANNEL_MSG_CACHE) - 40]:
+                _CHANNEL_MSG_CACHE.pop(k, None)
     return jsonify({'ok': True, **data})
 
 
@@ -3469,8 +3291,10 @@ def api_punish():
         minutes = int(data.get('minutes') or 10)
     except Exception:
         minutes = 10
-    if action not in ('warn', 'mute', 'kick', 'ban'):
-        return jsonify({'ok': False, 'error': 'action: warn|mute|kick|ban'}), 400
+    if action == 'kick':
+        return jsonify({'ok': False, 'error': 'Кик полностью отключён'}), 403
+    if action not in ('warn', 'mute', 'ban'):
+        return jsonify({'ok': False, 'error': 'action: warn|mute|ban'}), 400
     allowed = _viewer_punish_actions()
     if action not in allowed:
         return jsonify({
@@ -3558,8 +3382,7 @@ def api_punish():
             await member.timeout(until, reason=ban_reason)
             act = 'timeout'
         elif action == 'kick':
-            await member.kick(reason=ban_reason)
-            act = 'kick'
+            raise RuntimeError('Кик полностью отключён')
         elif action == 'ban':
             await member.ban(reason=ban_reason, delete_message_days=0)
             act = 'ban'

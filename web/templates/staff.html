@@ -2,12 +2,12 @@
 {% block title %}Staff{% endblock %}
 {% block heading %}Staff{% endblock %}
 {% block body %}
-<p class="lead">Орг-ветки: Moderator · Helper · Event · Support · Close · Creative · Broadcaster. В каждой — свои админы/мастера/кураторы/ассистенты/стафф. День / неделя / месяц.</p>
+<p class="lead">Недельный отчёт по каждому: меры · чат · войс. Новые в команде сразу попадают в рейтинг. День / неделя / месяц сверху.</p>
 
 {% include '_activity.html' %}
 
 <section class="panel rise" style="margin-top:12px">
-  <h2>Команда по веткам <span class="count">{{ people|length }}</span></h2>
+  <h2>Команда · отчёт {% if span == 'day' %}за день{% elif span == 'month' %}за месяц{% else %}за неделю{% endif %} <span class="count">{{ people|length }}</span></h2>
   {% if error %}<div class="flash err" style="margin:12px">{{ error }}</div>{% endif %}
   {% if not people %}<div class="empty">Staff не загрузился</div>
   {% elif people_by_branch %}
@@ -20,12 +20,20 @@
       </div>
       <div class="people-board">
         {% for p in br.people %}
+        {% set st = week_stats.get(p.id) if week_stats else none %}
         <a class="p-card" href="{{ url_for('member', q=p.id) }}">
           <img class="p-card__ava" src="{{ p.avatar }}" alt="">
           <div class="p-card__body">
             <strong class="p-card__name">{{ p.name }}</strong>
             <span class="p-card__handle dim">@{{ p.handle }}</span>
             <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
+            <span class="p-card__stats dim">
+              {% if st %}
+              <b>{{ st.actions }}</b> мер · <b>{{ st.messages }}</b> чат · <b>{{ st.voice }}</b> войс
+              {% else %}
+              0 мер · 0 чат · 0 войс
+              {% endif %}
+            </span>
           </div>
         </a>
         {% endfor %}
@@ -36,12 +44,20 @@
   {% else %}
   <div class="people-board">
     {% for p in people %}
+    {% set st = week_stats.get(p.id) if week_stats else none %}
     <a class="p-card" href="{{ url_for('member', q=p.id) }}">
       <img class="p-card__ava" src="{{ p.avatar }}" alt="">
       <div class="p-card__body">
         <strong class="p-card__name">{{ p.name }}</strong>
         <span class="p-card__handle dim">@{{ p.handle }}</span>
         <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
+        <span class="p-card__stats dim">
+          {% if st %}
+          <b>{{ st.actions }}</b> мер · <b>{{ st.messages }}</b> чат · <b>{{ st.voice }}</b> войс
+          {% else %}
+          0 мер · 0 чат · 0 войс
+          {% endif %}
+        </span>
       </div>
     </a>
     {% endfor %}

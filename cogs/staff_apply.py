@@ -445,13 +445,38 @@ def load_apps():
     os.makedirs("data", exist_ok=True)
     if os.path.exists(APPS_FILE):
         with open(APPS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            try:
+                import fcntl
+                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+            except Exception:
+                pass
+            try:
+                return json.load(f)
+            finally:
+                try:
+                    import fcntl
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                except Exception:
+                    pass
     return {}
 
 
 def save_apps(data):
-    with open(APPS_FILE, "w", encoding="utf-8") as f:
+    os.makedirs("data", exist_ok=True)
+    tmp = APPS_FILE + '.tmp'
+    with open(tmp, "w", encoding="utf-8") as f:
+        try:
+            import fcntl
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        except Exception:
+            pass
         json.dump(data, f, indent=2, ensure_ascii=False)
+        f.flush()
+        try:
+            os.fsync(f.fileno())
+        except Exception:
+            pass
+    os.replace(tmp, APPS_FILE)
 
 
 def app_storage_key(user_id, kind: str) -> str:
@@ -848,7 +873,8 @@ class StaffApplyModal(discord.ui.Modal):
                     age=v1, activity=v2, experience=v3, reason=v4,
                     extra=v5, member=member, kind=kind, answers=answers)
                 try:
-                    card = StaffAppCardView(title=role_label, body=body)
+                    card = StaffAppCardView(
+                        title=role_label, body=body, store_key=store_key)
                     # Пинг «× Отвечаю за …» со звуком — иначе кураторы
                     # не замечают заявки (особенно Moderator).
                     msg = await _send_staff_card(
@@ -857,6 +883,9 @@ class StaffApplyModal(discord.ui.Modal):
                     apps[store_key]["message_id"] = str(msg.id)
                     apps[store_key]["curator_tag"] = tag or None
                     apps[store_key]["channel_id"] = str(getattr(ch, 'id', '') or '')
+                    apps[store_key]["store_key"] = store_key
+                    # Сразу сохранить message_id — иначе accept → «не найдена»
+                    save_apps(apps)
                     delivered = True
                     delivery_ch = ch
                 except (discord.Forbidden, discord.HTTPException) as _ex:
@@ -1031,7 +1060,8 @@ class StaffAppCardButtonsLegacyView(discord.ui.View):
 class StaffAppCardView(discord.ui.LayoutView):
     """Карточка заявки куратору — V2: должность, ответы, select решения."""
 
-    def __init__(self, *, title: str, body: str, footer: str = ''):
+    def __init__(self, *, title: str, body: str, footer: str = '',
+                 store_key: str = ''):
         super().__init__(timeout=None)
         from services.v2_layouts import V2_AVAILABLE, black_container
         from discord import SeparatorSpacing
@@ -1039,6 +1069,9 @@ class StaffAppCardView(discord.ui.LayoutView):
         foot = footer or (
             'HAKUMO · решение — select ниже · только куратор этой ветки'
         )
+        # ref в футере — чтобы accept нашёл заявку даже если message_id потерялся
+        if store_key:
+            foot = f'{foot} · ref:{store_key}'
         sel = StaffReviewSelect()
         if V2_AVAILABLE:
             from discord import ui as dui
@@ -1097,11 +1130,51 @@ class StaffReviewView(discord.ui.View):
         super().__init__(timeout=None)
 
     @staticmethod
-    def _find_app_by_message(message_id):
+    def _find_app_by_message(message_id, *, message=None):
         apps = load_apps()
+        mid = str(message_id or '')
         for key, app in apps.items():
-            if str(app.get("message_id") or "") == str(message_id):
+            if str(app.get("message_id") or "") == mid:
                 return key, app, apps
+        # fallback: ref:{store_key} в тексте карточки
+        try:
+            import re
+            content = ''
+            if message is not None:
+                content = str(getattr(message, 'content', '') or '')
+                for emb in list(getattr(message, 'embeds', None) or []):
+                    content += ' ' + str(getattr(emb, 'description', '') or '')
+                    content += ' ' + str(getattr(emb, 'footer', None)
+                                        and getattr(emb.footer, 'text', '') or '')
+                # V2 components → text displays
+                for comp in list(getattr(message, 'components', None) or []):
+                    content += ' ' + str(comp)
+            m = re.search(r'ref:([^\s·]+)', content or '')
+            if m:
+                sk = m.group(1).strip()
+                if sk in apps:
+                    apps[sk]['message_id'] = mid  # починить связь
+                    save_apps(apps)
+                    return sk, apps[sk], apps
+        except Exception:
+            pass
+        # fallback: единственная pending в этом канале
+        try:
+            ch_id = str(getattr(getattr(message, 'channel', None), 'id', '') or '')
+            if ch_id:
+                pending = [
+                    (k, a) for k, a in apps.items()
+                    if isinstance(a, dict)
+                    and str(a.get('status') or '') == 'pending'
+                    and str(a.get('channel_id') or '') == ch_id
+                ]
+                if len(pending) == 1:
+                    k, a = pending[0]
+                    a['message_id'] = mid
+                    save_apps(apps)
+                    return k, a, apps
+        except Exception:
+            pass
         return None, None, apps
 
     async def _review(self, interaction: discord.Interaction, action: str):
@@ -1109,7 +1182,8 @@ class StaffReviewView(discord.ui.View):
             reply_text_v2, respond_v2, send_dm_v2, V2_AVAILABLE)
         from services.staff_roles import can_review_position, position_label
 
-        key, app, apps = self._find_app_by_message(interaction.message.id)
+        key, app, apps = self._find_app_by_message(
+            interaction.message.id, message=interaction.message)
         if not app:
             if not interaction.response.is_done():
                 await interaction.response.defer(ephemeral=True)

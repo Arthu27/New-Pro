@@ -1269,14 +1269,16 @@ async def on_voice_state_update(member, before, after):
     if after_id == target:
         return
     if before_id == target or after_id is None or after_id != target:
-        # свой settle leave в первые секунды после join — игнор
-        if (time.time() - (_voice_last_join_ts or 0)) < 3.0:
+        # свой settle leave после join / reconnect — игнор (было 3с → флап)
+        if (time.time() - (_voice_last_join_ts or 0)) < 25.0:
+            return
+        if time.time() < _voice_suppress_rejoin_until:
             return
         _log.warning(
-            'main left voice (before=%s after=%s) — return NOW to %s',
+            'main left voice (before=%s after=%s) — soft return to %s',
             before_id, after_id, target)
-        _voice_suppress_rejoin_until = 0.0
-        _schedule_main_voice_rejoin('kicked-or-moved', force=True)
+        # soft: не force_drop — иначе leave/rejoin шторм при gateway blip
+        _schedule_main_voice_rejoin('kicked-or-moved', force=False)
 
 
 @bot.event

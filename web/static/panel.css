@@ -443,6 +443,11 @@ button.on { background: var(--ok); color: #05130c; border-color: transparent; }
   margin-top: 4px; max-width: 100%;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.p-card__stats {
+  display: block; margin-top: 6px; font-size: .72rem; line-height: 1.35;
+  color: var(--muted, #9aa3b5);
+}
+.p-card__stats b { color: var(--ink, #e8ecf4); font-weight: 650; }
 
 .log-timeline { padding: 10px 18px 18px; display: flex; flex-direction: column; }
 .log-item {
