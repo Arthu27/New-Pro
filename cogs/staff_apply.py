@@ -1334,14 +1334,19 @@ class StaffReviewView(discord.ui.View):
             granted = res.get("role_name")
             if granted:
                 app["granted_role"] = granted
+                if res.get("role_id"):
+                    app["granted_role_id"] = int(res["role_id"])
                 app.pop("grant_error", None)
             else:
                 grant_note = role_hint(res)
                 app["grant_error"] = grant_note
+                if res.get("role_id"):
+                    app["granted_role_id"] = int(res["role_id"])
                 log.warning(
-                    "STAFF: роль не выдана user=%s role=%s → %s (%s)",
+                    "STAFF: роль не выдана user=%s role=%s → %s (%s) "
+                    "role_id=%s",
                     app.get("user_id"), app.get("role"),
-                    res.get("reason"), grant_note)
+                    res.get("reason"), grant_note, res.get("role_id"))
         elif action == "blacklist":
             try:
                 gid = int(app.get("guild_id") or 0)
@@ -1781,6 +1786,32 @@ class StaffApply(commands.Cog):
             except Exception as _ex:
                 log.warning('STAFF: ensure menu guild=%s: %s', guild.id, _ex)
 
+    async def _heal_grants_once(self):
+        """После старта: довыдать роли по approved, где Discord пустой."""
+        try:
+            await self.bot.wait_until_ready()
+        except Exception:
+            return
+        try:
+            import asyncio
+            await asyncio.sleep(8)
+        except Exception:
+            pass
+        try:
+            from services.staff_roles import heal_missing_grants
+            stats = await heal_missing_grants(self.bot, limit=50)
+            if stats.get("healed") or stats.get("failed"):
+                log.info(
+                    "STAFF: heal grants checked=%s healed=%s failed=%s "
+                    "skipped=%s",
+                    stats.get("checked"), stats.get("healed"),
+                    stats.get("failed"), stats.get("skipped"))
+            elif stats.get("errors"):
+                log.warning("STAFF: heal grants errors: %s",
+                            stats.get("errors")[:5])
+        except Exception as _ex:
+            log.warning("STAFF: heal grants: %s", _ex)
+
     @commands.Cog.listener()
     async def on_ready(self):
         try:
@@ -1802,7 +1833,9 @@ class StaffApply(commands.Cog):
             self._menu_task_started = True
             try:
                 import asyncio
-                asyncio.get_running_loop().create_task(self._ensure_staff_menu())
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._ensure_staff_menu())
+                loop.create_task(self._heal_grants_once())
             except Exception as _ex:
                 log.debug('staff menu task: %s', _ex)
 
