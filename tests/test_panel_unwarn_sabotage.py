@@ -46,8 +46,10 @@ pun = open(os.path.join(ROOT, 'web', 'templates', '_punish.html'),
            encoding='utf-8').read()
 check('punish_actions' in mem and 'punish-btn' in mem,
       'профиль показывает кнопки мер')
-check('reverseActs' in pun and 'unwarn' in pun,
-      'диалог наказания: снятие без правила')
+check('punish-row-lab--lift' in pun and 'Снять' in pun and 'unwarn' in pun,
+      'диалог: отдельный ряд «Снять» с unwarn/unban')
+check('isLift' in pun and "unban: 'снять бан" in pun,
+      'снятие без правила, подпись понятная')
 
 print('== антикраш: саботаж owner ==')
 ac = open(os.path.join(ROOT, 'web', 'templates', 'anticrash.html'),

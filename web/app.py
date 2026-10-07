@@ -107,11 +107,11 @@ ROLE_PAGE_KEYS = {
     'owner': {p[0] for p in PAGES_ALL},
 }
 
-# Меры, которые роль может ВЫДАТЬ / СНЯТЬ из панели.
-# unwarn/unban — пара к warn/ban (заказ владельца 2026-10-07).
-_MOD_PUNISH = ('warn', 'unwarn', 'mute', 'kick', 'ban', 'unban')
+# Меры в диалоге «Наказать»: Выдать + отдельный ряд Снять.
+# kick выключен в UI (заказ владельца); unwarn/unban всегда рядом с warn/ban.
+_MOD_PUNISH = ('warn', 'mute', 'ban', 'unwarn', 'unban')
 ROLE_PUNISH_ACTIONS = {
-    'helper': ('warn', 'unwarn', 'mute'),
+    'helper': ('warn', 'mute', 'unwarn'),
     'mod': _MOD_PUNISH,
     'creative': _MOD_PUNISH,
     'broadcaster': _MOD_PUNISH,
