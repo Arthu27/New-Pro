@@ -115,21 +115,23 @@ check(H.needs_soft_reconnect(1, 1 + 45 * 60) is False,
 check(H.needs_soft_reconnect(1, 1 + H.SOFT_RECONNECT_SEC + 1),
       'soft after long interval')
 
-print('== wiring in main + event ==')
+print('== wiring in voice_stay + main/event ==')
+vs = open(os.path.join(ROOT, 'services/voice_stay.py'), encoding='utf-8').read()
 main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 ev = open(os.path.join(ROOT, 'services/event_voice_bot.py'), encoding='utf-8').read()
-check('really_in_channel' in main and 'force=True' in main,
-      'main uses Discord-truth + force')
-check('soft-reconnect' in main, 'main soft-reconnect')
-check('really_in_channel' in ev and 'force=True' in ev,
-      'event uses Discord-truth + force')
-check('timeout=20' in main and 'timeout=20' in ev, 'connect timeout=20')
-check("VOICE_SILENCE_PING') or '0'" in main
-      or "VOICE_SILENCE_PING') or \"0\"" in main
-      or "or '0').strip()" in main,
-      'silence keepalive default OFF in main (без opus флапает)')
-check('discord.opus.is_loaded()' in main,
-      'main не шлёт silence без libopus')
+check('really_in_channel' in vs and 'force=True' in vs,
+      'voice_stay uses Discord-truth + force')
+check('soft-reconnect' in vs, 'voice_stay soft-reconnect')
+check('timeout=30' in vs, 'connect timeout=30')
+check('_get_voice_ctrl' in main or 'voice_stay' in main,
+      'main wired to voice_stay')
+check('_get_event_ctrl' in ev or 'voice_stay' in ev,
+      'event wired to voice_stay')
+check("VOICE_SILENCE_PING') or '0'" in vs
+      or "or '0').strip().lower()" in vs,
+      'silence keepalive default OFF (без opus флапает)')
+check('discord.opus.is_loaded()' in vs,
+      'не шлём silence без libopus')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

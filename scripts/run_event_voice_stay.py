@@ -37,6 +37,11 @@ os.environ.setdefault('EVENT_VOICE_CHANNEL_ID', '1550986919981351043')
 os.environ['EVENT_VOICE_STAY_ENABLED'] = '1'
 
 from services import event_voice_bot as EV  # noqa: E402
+from services.instance_lock import acquire as _il_acquire  # noqa: E402
+
+# Защита от двойного запуска event-бота с одним токеном
+if not _il_acquire('event'):
+    sys.exit(9)
 
 # Сколько подряд heartbeat'ов с voice=False → hard restart клиента
 _MISS_LIMIT = 2  # 2 × 10с ≈ 20с без войса → перезапуск сессии
