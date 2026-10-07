@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Proof — «демки» к наказаниям: доказательства в одном канале.
+"""Proof — «демки» к наказаниям: в канал модерации, плеер Discord, свои стикеры.
 
 Идея: модератор выдал наказание → демка падает в канал
 #-доказательства (создаётся автоматически в категории «Логи»): кто наказал,
@@ -41,8 +41,9 @@ PURPLE = 0x9B59B6
 GREEN = 0x2ECC71
 RED = 0xE74C3C
 
-# больше этого размера бот не сможет перезалить файл (лимит Discord без Nitro)
-MAX_REUPLOAD_BYTES = 8 * 1024 * 1024
+# Лимит перезалива вложения в канал (Discord: до 25 МБ на обычном сервере).
+# Раньше было 8 МБ — 15 МБ видео уходило ссылкой «скачай / протухнет».
+MAX_REUPLOAD_BYTES = 25 * 1024 * 1024
 
 # В выборе НЕТ ни «таймаута», ни «тихого мута»: дубликаты (жалоба владельца
 # 2026-09-04). Мут в боте — нативный таймаут Discord, а «тихий мут» для
@@ -381,49 +382,72 @@ class ProofCog(commands.Cog):
         self.bot = bot
 
     async def _proof_channel(self, guild):
-        """Канал доказательств: панель → KNOWN (1552088029047423027) → авто."""
+        """Куда постить демку: канал модерации (/report), не #-доказательства.
+
+        Заказ владельца 2026-10-07: видео смотрят моды в своём канале,
+        сладко и сразу — без отдельного «доказательства».
+        Фолбэк: proof_channel → авто #-доказательства.
+        """
         try:
             from services.channel_routes import (
-                get_route, KNOWN_CHANNELS, channel_on_guild)
-            cid = (get_route(guild.id, 'proof_channel')
-                   or KNOWN_CHANNELS.get('proof_channel')
-                   or 1552088029047423027)
-            if cid:
-                ch = channel_on_guild(guild, int(cid))
+                get_route, KNOWN_CHANNELS, channel_on_guild, MODS_CHANNEL_ID)
+            candidates = []
+            for key in ('report_channel', 'proof_channel'):
+                cid = (get_route(guild.id, key)
+                       or KNOWN_CHANNELS.get(key) or 0)
+                if cid:
+                    candidates.append(int(cid))
+            if MODS_CHANNEL_ID:
+                candidates.append(int(MODS_CHANNEL_ID))
+            # unique keep order
+            seen = set()
+            for cid in candidates:
+                if not cid or cid in seen:
+                    continue
+                seen.add(cid)
+                ch = channel_on_guild(guild, cid)
                 if ch is None:
                     getter = getattr(guild, 'get_channel', None)
-                    ch = getter(int(cid)) if callable(getter) else None
+                    ch = getter(cid) if callable(getter) else None
                 if ch is not None:
                     return ch
-                log.warning('[PROOF] канал #%s не найден — фолбэк', cid)
+                log.warning('[PROOF] канал #%s не найден — следующий', cid)
         except Exception as _ex:
             _log.debug("_proof_channel(): маршруты: %s", _ex)
         try:
             from cogs import logs as _logs
             return await _logs.ensure_log_channel(guild, 'proof')
         except Exception as e:
-            log.warning(f'[PROOF] канал доказательств: {e}')
+            log.warning(f'[PROOF] канал демки: {e}')
             return None
 
     def _proof_embed(self, user, entry, extra_note=None):
+        try:
+            from services.menu_emojis import sticker
+            heart = sticker('heart')
+            warn = sticker('warn')
+        except Exception:
+            heart, warn = '🤍', '⚠️'
         color = ACTION_COLORS.get(entry['action'].lower(), PURPLE)
         e = discord.Embed(
-            title=f"Демка #{entry['id']} · {entry['action']}",
+            title=f"{heart} Демка #{entry['id']} · {entry['action']}",
             color=color,
             timestamp=_now())
-        e.add_field(name='Нарушитель', value=f'{user} (`{entry["user_id"]}`)', inline=True)
+        e.add_field(name=f'{warn} Нарушитель',
+                    value=f'{user} (`{entry["user_id"]}`)', inline=True)
         e.add_field(name='Модератор', value=f'`{entry["mod_name"]}`', inline=True)
         e.add_field(name='Наказание', value=entry['action'], inline=True)
         e.add_field(name='Причина', value=entry['reason'] or '—', inline=False)
-        if entry.get('link'):
-            e.add_field(name='Ссылка на демку', value=entry['link'][:900], inline=False)
+        # Ссылку-скачивалку не пишем, если файл идёт вложением —
+        # видео смотрят прямо в сообщении (как демка).
+        if entry.get('link') and not entry.get('_file_attached'):
+            e.add_field(name='Медиа', value=entry['link'][:900], inline=False)
         if extra_note:
             e.add_field(name='Внимание', value=extra_note, inline=False)
-        e.set_footer(text='Hakumo · Доказательства · листай канал — тут все демки')
+        e.set_footer(text='Hakumo · демка в канале модерации')
         return e
-
     async def _post_proof(self, guild, entry, file=None, image_inline=False, note=None):
-        """Запостить демку в канал и записать msg_id/url в запись."""
+        """Запостить демку в канал модерации (плеер Discord, свои стикеры)."""
         ch = await self._proof_channel(guild)
         if not ch:
             return False
@@ -431,31 +455,75 @@ class ProofCog(commands.Cog):
         e = self._proof_embed(fake_user, entry, extra_note=note)
         if image_inline and file:
             e.set_image(url=f'attachment://{file.filename}')
-        try:
-            from services.discord_retry import call as _dcall
-            if file:
-                # File нельзя переиспользовать после неудачи — клонируем bytes
-                raw = file.fp.read() if hasattr(file.fp, 'read') else None
-                if raw is not None:
+
+        # bytes для ретраев / V2 MediaGallery (плеер как у review-карточки)
+        raw = None
+        fname = None
+        if file is not None:
+            fname = file.filename
+            try:
+                if hasattr(file.fp, 'read'):
+                    raw = file.fp.read()
                     try:
                         file.fp.seek(0)
                     except Exception:
                         pass
+            except Exception:
+                raw = None
 
-                    async def _send_file():
-                        import io as _io
-                        f2 = discord.File(_io.BytesIO(raw),
-                                          filename=file.filename)
-                        return await ch.send(embed=e, file=f2)
+        try:
+            from services.discord_retry import call as _dcall
+            from services.v2_layouts import V2_AVAILABLE, black_container
 
-                    msg = await _dcall(_send_file, label='proof send file')
-                else:
-                    msg = await _dcall(
-                        lambda: ch.send(embed=e, file=file),
-                        label='proof send file')
+            async def _send_v2():
+                from discord import ui as dui, SeparatorSpacing
+                from discord.components import MediaGalleryItem
+                try:
+                    from services.menu_emojis import sticker as _st
+                    s_heart, s_warn = _st('heart'), _st('warn')
+                except Exception:
+                    s_heart, s_warn = '🤍', '⚠️'
+                body = _proof_card_body(entry)
+                if note:
+                    body = f'{body}\n\n-# {note[:280]}'
+                head = (f'# {s_heart} Демка #{entry["id"]} · '
+                        f'{s_warn} {entry.get("action") or "—"}')
+                children = [
+                    dui.TextDisplay(head[:500]),
+                    dui.TextDisplay(
+                        f'-# {s_heart} HAKUMO · демка · канал модерации'),
+                    dui.Separator(spacing=SeparatorSpacing.large),
+                    dui.TextDisplay(body[:3500]),
+                ]
+                fl = None
+                if raw is not None and fname:
+                    fl = [discord.File(io.BytesIO(raw), filename=fname)]
+                    children.append(dui.Separator())
+                    children.append(dui.MediaGallery(
+                        MediaGalleryItem(f'attachment://{fname}')))
+                    children.append(dui.TextDisplay(
+                        '-# Видео/фото смотрится сразу — скачивать не нужно.'))
+                lv = dui.LayoutView(timeout=1)
+                lv.add_item(black_container(*children))
+                return await ch.send(view=lv, files=fl)
+
+            async def _send_embed_file():
+                if raw is not None and fname:
+                    f2 = discord.File(io.BytesIO(raw), filename=fname)
+                    return await ch.send(embed=e, file=f2)
+                if file is not None:
+                    return await ch.send(embed=e, file=file)
+                return await ch.send(embed=e)
+
+            if V2_AVAILABLE and (raw is not None or file is None):
+                try:
+                    msg = await _dcall(_send_v2, label='proof send v2')
+                except Exception as _vx:
+                    log.debug('[PROOF] V2 демка → embed: %s', _vx)
+                    msg = await _dcall(_send_embed_file,
+                                       label='proof send file')
             else:
-                msg = await _dcall(
-                    lambda: ch.send(embed=e), label='proof send')
+                msg = await _dcall(_send_embed_file, label='proof send file')
         except discord.Forbidden:
             log.warning(f'[PROOF] нет прав писать в #{ch.id}')
             return False
@@ -477,7 +545,7 @@ class ProofCog(commands.Cog):
     # ── /proof ────────────────────────────────────────────────────────────
     async def _create_and_post(self, guild, moderator, user, action, reason,
                                attachment=None, link=None):
-        """Ядро: запись → (перезалив вложения) → постинг в канал доказательств.
+        """Ядро: запись → перезалив вложения → постинг в канал модерации.
 
         Возвращает (ok, entry, note). Общая точка для команд бота и для
         «демка прямо в /warn|/moderate» — одна логика, ноль дубляжа.
@@ -489,42 +557,57 @@ class ProofCog(commands.Cog):
         image_inline = False
         note = None
         if attachment is not None:
-            size = attachment.size or 0
-            too_big = bool(attachment.size) and size > MAX_REUPLOAD_BYTES
+            size = int(attachment.size or 0)
             kind = _media_kind(attachment.filename,
                                getattr(attachment, 'content_type', None))
             raw = None
-            # читаем файл один раз: и для перезалива в канал, и для панели
-            if not too_big or (kind and size <= LOCAL_MEDIA_MAX):
+            # читаем всегда (до LOCAL_MEDIA_MAX): видео должно уйти вложением,
+            # чтобы моды смотрели плеер Discord, а не «скачать mp4»
+            if size <= LOCAL_MEDIA_MAX or not size:
                 try:
                     raw = await attachment.read()
                 except Exception:
                     raw = None
-            # локальная копия для панели — видео/фото смотрятся прямо там,
-            # даже если файл тяжёлый и в канал не перезаливается
             if raw is not None and kind and len(raw) <= LOCAL_MEDIA_MAX:
                 media = proof_save_media(guild.id, entry['id'], attachment.filename,
                                          raw, getattr(attachment, 'content_type', None))
                 if media:
                     proof_update(guild.id, entry['id'], media=media)
                     entry['media'] = media
-            if too_big:
-                # файл тяжёлый — не перезаливаем, оставляем исходную ссылку
-                note = (f'Файл большой ({(attachment.size or 0) // 1024 // 1024} МБ) — не перезалит, '
-                        f'ссылка может протухнуть: {attachment.url}')
-                if entry.get('media'):
-                    note += ' · в панели (/proofs) видео доступно'
-                entry['link'] = entry['link'] or attachment.url
-            elif raw is not None:
+            # перезалив в канал — до 25 МБ (лимит Discord)
+            if raw is not None and len(raw) <= MAX_REUPLOAD_BYTES:
                 file = discord.File(io.BytesIO(raw), filename=attachment.filename)
                 image_inline = _is_image_name(attachment.filename)
+                entry['_file_attached'] = True
+            elif raw is not None and len(raw) > MAX_REUPLOAD_BYTES:
+                # всё равно пробуем отправить — на буст-сервере лимит выше
+                try:
+                    file = discord.File(io.BytesIO(raw),
+                                        filename=attachment.filename)
+                    image_inline = _is_image_name(attachment.filename)
+                    entry['_file_attached'] = True
+                    note = None
+                except Exception:
+                    file = None
+                if file is None:
+                    note = (f'Файл {len(raw) // 1024 // 1024} МБ — '
+                            'не влез в лимит Discord; смотри в панели /proofs')
+                    entry['link'] = entry['link'] or attachment.url
             else:
-                note = 'Не смог перезалить вложение — оставил ссылку.'
+                note = 'Не смог прочитать вложение — оставил ссылку.'
                 entry['link'] = entry['link'] or getattr(attachment, 'url', None)
         if note:
             proof_update(guild.id, entry['id'], link=entry.get('link'), note=note)
         ok = await self._post_proof(guild, entry, file=file,
                                     image_inline=image_inline, note=note)
+        # если вложение отвергли (слишком большое) — один ретрай без файла
+        if not ok and file is not None:
+            entry.pop('_file_attached', None)
+            entry['link'] = entry.get('link') or getattr(
+                attachment, 'url', None)
+            note = (note or 'Вложение не принято Discord — оставил ссылку.')
+            ok = await self._post_proof(
+                guild, entry, file=None, image_inline=False, note=note)
         return ok, entry, note
 
     # Команды /proof больше НЕТ (заказ владельца 2026-09-04: «/proof убери
@@ -611,8 +694,8 @@ async def try_deliver_proof(bot, guild, moderator, user, action, reason,
             guild, moderator, user, action, reason,
             attachment=attachment, link=(link or None))
         if not ok:
-            return 'Демку записал, но канал доказательств недоступен (права бота?).'
-        txt = f'Демка #{entry["id"]} — в канале доказательств.'
+            return 'Демку записал, но канал модерации недоступен (права бота?).'
+        txt = f'Демка #{entry["id"]} — в канале модерации (видео смотрится сразу).'
         if note:
             txt += f'\nВнимание: {note[:200]}'
         return txt
@@ -623,7 +706,7 @@ async def try_deliver_proof(bot, guild, moderator, user, action, reason,
 
 async def deliver_report_proofs(bot, guild, reporter, accused, reason,
                                 attachments, *, report_msg_id=None):
-    """Файлы из /report → канал доказательств сразу при отправке жалобы.
+    """Файлы из /report → канал модерации сразу (рядом с карточкой вызова).
 
     Returns: (list[int] proof ids, list[str] notes). Не бросает — репорт
     уже ушёл карточкой, демка не должна ронять вызов модератора.
@@ -660,7 +743,7 @@ async def deliver_report_proofs(bot, guild, reporter, accused, reason,
                         log.debug('[PROOF] report case_id: %s', _ux)
                 if not ok:
                     notes.append(
-                        f'#{pid or "?"} записана, канал доказательств недоступен')
+                        f'#{pid or "?"} записана, канал модерации недоступен')
             if note:
                 notes.append(str(note)[:200])
         except Exception as ex:
@@ -827,16 +910,22 @@ class ProofFileModal(discord.ui.Modal, title='Доказательство'):
                 f'Не удалось отправить демку: {ex}', ephemeral=True)
         if not ok:
             return await interaction.followup.send(
-                'Канал доказательств недоступен (права бота?).', ephemeral=True)
+                'Канал модерации недоступен (права бота?).', ephemeral=True)
         try:
             from services.v2_layouts import V2_AVAILABLE, black_container
             if V2_AVAILABLE:
                 from discord import ui as dui, SeparatorSpacing
+                try:
+                    from services.menu_emojis import sticker as _st
+                    _h = _st('heart')
+                except Exception:
+                    _h = '🤍'
                 done = dui.LayoutView(timeout=1)
                 done.add_item(black_container(
-                    dui.TextDisplay(f'# 🤍 Демка #{entry["id"]}'),
+                    dui.TextDisplay(f'# {_h} Демка #{entry["id"]}'),
                     dui.Separator(spacing=SeparatorSpacing.small),
-                    dui.TextDisplay('В канале доказательств · на проверке'),
+                    dui.TextDisplay(
+                        f'{_h} В канале модерации · видео смотрится сразу'),
                 ))
                 await interaction.followup.send(view=done, ephemeral=True)
             else:
@@ -1428,7 +1517,14 @@ async def _close_proof_card(interaction, entry, entry_id, *, accept: bool,
 
 
 def _proof_card_body(entry: dict) -> str:
-    """Текст карточки демки (как до решения)."""
+    """Текст карточки демки (как до решения) — свои стикеры."""
+    try:
+        from services.menu_emojis import sticker
+        s_user = sticker('user')
+        s_warn = sticker('warn')
+        s_heart = sticker('heart')
+    except Exception:
+        s_user, s_warn, s_heart = '👤', '⚠️', '🤍'
     uid = entry.get('user_id')
     mention = f'<@{uid}>' if uid else '—'
     mod = entry.get('mod_name') or entry.get('mod_id') or '—'
@@ -1436,9 +1532,9 @@ def _proof_card_body(entry: dict) -> str:
     reason = entry.get('reason') or '—'
     pid = entry.get('id') or '?'
     lines = [
-        f'**Нарушитель** · {mention} (`{uid}`)',
-        f'**Модератор** · `{mod}`',
-        f'**Наказание** · {action}',
+        f'{s_user} **Нарушитель** · {mention} (`{uid}`)',
+        f'{s_heart} **Модератор** · `{mod}`',
+        f'{s_warn} **Наказание** · {action}',
         f'**Причина** · {reason}',
         f'**Дело** · #{pid}',
     ]
@@ -1479,18 +1575,25 @@ class ProofReviewDoneView(discord.ui.LayoutView):
         from services.v2_layouts import V2_AVAILABLE, black_container
         from discord import SeparatorSpacing
         from discord.components import MediaGalleryItem
-        head = f'# 🤍 Демка #{entry_id}'
+        try:
+            from services.menu_emojis import sticker as _st
+            _heart = _st('heart')
+            _warn = _st('warn')
+        except Exception:
+            _heart, _warn = '🤍', '⚠️'
+        head = f'# {_heart} Демка #{entry_id}'
         if action:
-            head = f'{head} · {action}'
+            head = f'{head} · {_warn} {action}'
         # Крупный статус сразу под шапкой — видно без select
         status_line = f'## {status}'
         if note:
             status_line = f'{status_line}\n-# {note}'
         if V2_AVAILABLE:
             from discord import ui as dui
+            brand = f'-# {_heart} HAKUMO · демка · канал модерации'
             children = [
                 dui.TextDisplay(head[:500]),
-                dui.TextDisplay('-# HAKUMO · доказательство'),
+                dui.TextDisplay(brand[:200]),
                 dui.Separator(spacing=SeparatorSpacing.large),
                 dui.TextDisplay(status_line[:800]),
                 dui.Separator(),
@@ -1510,7 +1613,7 @@ class ProofReviewDoneView(discord.ui.LayoutView):
 
 async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
                                  attachments, case_id=None, warn_id=None):
-    """Карточка в канал доказательств: медиа + принять/отклонить."""
+    """Карточка в канал модерации: медиа (плеер) + принять/отклонить."""
     from services.v2_layouts import V2_AVAILABLE, black_container
     from discord.components import MediaGalleryItem
 
@@ -1575,13 +1678,19 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
 
     mention = getattr(user, 'mention', None) or f'<@{user.id}>'
     mod_m = getattr(moderator, 'mention', None) or str(moderator)
+    try:
+        from services.menu_emojis import sticker as _st
+        s_user, s_warn, s_heart = _st('user'), _st('warn'), _st('heart')
+    except Exception:
+        s_user, s_warn, s_heart = '👤', '⚠️', '🤍'
     body = (
-        f'**Нарушитель** · {mention} (`{user.id}`)\n'
-        f'**Модератор** · {mod_m}\n'
-        f'**Наказание** · {action_ru}\n'
+        f'{s_user} **Нарушитель** · {mention} (`{user.id}`)\n'
+        f'{s_heart} **Модератор** · {mod_m}\n'
+        f'{s_warn} **Наказание** · {action_ru}\n'
         f'**Причина** · {(reason or "—")[:500]}\n'
         f'**Дело** · #{entry["id"]}'
         + (f' · case `{case_id}`' if case_id else '')
+        + '\n\n-# Видео/фото смотрится сразу ниже — скачивать не нужно.'
     )
 
     # silent ping «отвечаю за мод»
@@ -1608,15 +1717,17 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
         fl = _rebuild_files() if raw_saved else (files or None)
         if V2_AVAILABLE:
             from discord import ui as dui, SeparatorSpacing
-            head = f'# 🤍 Демка #{entry["id"]} · {action_ru}'
+            head = f'# {s_heart} Демка #{entry["id"]} · {s_warn} {action_ru}'
             children = [
                 dui.TextDisplay(head[:500]),
-                dui.TextDisplay('-# HAKUMO · доказательство'),
+                dui.TextDisplay(
+                    f'-# {s_heart} HAKUMO · демка · канал модерации'),
                 dui.Separator(spacing=SeparatorSpacing.large),
                 dui.TextDisplay(body[:3500]),
             ]
             names = [f.filename for f in (fl or [])]
             if names:
+                # MediaGallery + files = плеер Discord (фото и видео)
                 items = [MediaGalleryItem(f'attachment://{n}')
                          for n in names[:10]]
                 children.append(dui.Separator())
@@ -1629,14 +1740,14 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
             lv.add_item(black_container(*children))
             return await ch.send(view=lv, files=fl or None)
         e = discord.Embed(
-            title=f'Демка #{entry["id"]} · {action_ru}',
+            title=f'{s_heart} Демка #{entry["id"]} · {action_ru}',
             description=body, color=0x000000, timestamp=_now())
-        e.set_footer(text='HAKUMO · доказательство')
+        e.set_footer(text='HAKUMO · демка · канал модерации')
         names = [f.filename for f in (fl or [])]
         if names and _is_image_name(names[0]):
             e.set_image(url=f'attachment://{names[0]}')
+        # видео: file attachment → Discord показывает плеер
         return await ch.send(embed=e, files=fl or None, view=rev)
-
     try:
         msg = await _dcall(_send_review, label='proof review card',
                            attempts=3)
@@ -1646,7 +1757,7 @@ async def post_proof_review_card(bot, guild, moderator, user, *, action, reason,
             e = discord.Embed(
                 title=f'Демка #{entry["id"]} · {action_ru}',
                 description=body, color=0x000000)
-            e.set_footer(text='HAKUMO · доказательство')
+            e.set_footer(text='HAKUMO · демка · канал модерации')
             fl = _rebuild_files() if raw_saved else None
             msg = await _dcall(
                 lambda: ch.send(embed=e, files=fl or None, view=rev),

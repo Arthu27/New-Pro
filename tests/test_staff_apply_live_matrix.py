@@ -530,6 +530,94 @@ check('name="staff-panel"' not in src and '_ensure_staff_menu' in src,
 check('apply_blocked_reason' in src and 'app_storage_key' in src,
       'повтор заявок на ветку блокируется')
 
+print('== 9. Support grant: no false success / hierarchy / heal ==')
+
+
+class MemNoop(Mem):
+    async def add_roles(self, role, **kw):
+        # притворяемся, что Discord принял, но роль не повесил
+        return None
+
+
+m_noop = MemNoop(91001)
+g._m[m_noop.id] = m_noop
+res_noop = loop.run_until_complete(
+    SR.grant_staff_role(g, m_noop.id, 'Support'))
+check(res_noop.get('reason') == 'not_applied' and not res_noop.get('role_name'),
+      'Support: нет роли после add → not_applied (не ложный успех)',
+      res_noop)
+
+# иерархия: роль Support выше top_role бота
+class _Top:
+    position = 1
+
+
+class _Me:
+    top_role = _Top()
+    guild_permissions = types.SimpleNamespace(manage_roles=True)
+
+
+g.me = _Me()
+for r in g.roles:
+    if r.id == SR.KNOWN_GRANT_BY_KIND['support']:
+        r.position = 50
+    else:
+        if not hasattr(r, 'position'):
+            r.position = 0
+m_hi = Mem(91002)
+g._m[m_hi.id] = m_hi
+res_hi = loop.run_until_complete(
+    SR.grant_staff_role(g, m_hi.id, 'Support'))
+check(res_hi.get('reason') == 'hierarchy' and not res_hi.get('role_name'),
+      'Support выше бота → hierarchy', res_hi)
+g.me = None
+for r in g.roles:
+    if hasattr(r, 'position') and r.id == SR.KNOWN_GRANT_BY_KIND['support']:
+        r.position = 0
+
+# имя ・Support резолвится, если known id отсутствует
+ghost = G([R(999001, '・Support'), R(SR.KNOWN_COMMON_STAFF_ROLE_ID, 'Staff')])
+role_nm, _ = SR.resolve_staff_role(ghost, 'support')
+check(role_nm is not None and role_nm.id == 999001,
+      'resolve ・Support по имени когда known нет')
+
+# known важнее кривой панели
+os.makedirs('data', exist_ok=True)
+json.dump({str(g.id): {'support_role': 948969471916249119}},
+          open('data/staff_apply_settings.json', 'w'))
+role_pref, _ = SR.resolve_staff_role(g, 'support')
+check(role_pref is not None and role_pref.id == SR.KNOWN_GRANT_BY_KIND['support'],
+      'KNOWN Support важнее panel support_role=Helper',
+      getattr(role_pref, 'id', None))
+
+# heal: approved без роли → выдаёт
+apps_heal = [{
+    'user_id': '91003',
+    'role': 'Support',
+    'status': 'approved',
+    'guild_id': str(g.id),
+    'granted_role': '・Support',
+    'grant_error': None,
+    'reviewed_at': '2099-01-01T00:00:00+00:00',
+}]
+json.dump(apps_heal, open('data/staff_apps.json', 'w'))
+m_heal = Mem(91003)
+g._m[m_heal.id] = m_heal
+
+
+class _Bot:
+    def get_guild(self, gid):
+        return g if int(gid) == int(g.id) else None
+
+    guilds = [g]
+
+
+heal_stats = loop.run_until_complete(SR.heal_missing_grants(_Bot(), limit=10))
+check(heal_stats.get('healed') == 1,
+      'heal выдаёт Support по approved без роли', heal_stats)
+check(SR.KNOWN_GRANT_BY_KIND['support'] in m_heal.added,
+      'heal: Support id в member.added')
+
 loop.close()
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

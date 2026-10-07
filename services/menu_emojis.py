@@ -170,11 +170,66 @@ def emoji_heart():
     return _cache.get('heart') or '🤍'
 
 
+def emoji_md(em) -> str:
+    """Emoji/PartialEmoji → markdown для текста карточек (`<:name:id>`)."""
+    if em is None:
+        return ''
+    if isinstance(em, str):
+        return em
+    try:
+        eid = getattr(em, 'id', None)
+        name = getattr(em, 'name', None) or 'e'
+        if eid:
+            pref = 'a' if getattr(em, 'animated', False) else ''
+            return f'<{pref}:{name}:{int(eid)}>'
+        return str(getattr(em, 'name', '') or em)
+    except Exception:
+        return '🤍'
+
+
 # /report: «На кого жалоба?» — свой стикер вместо родовых эмодзи Discord.
 _REPORT_UNICODE = {
     'staff': '🛡️',
     'user': '👤',
 }
+
+# unicode-фолбеки для sticker() в тексте карточек (пока application emoji нет)
+_STICKER_FALLBACK = {
+    **_UNICODE,
+    **_ROLE_UNICODE,
+    **_REVIEW_UNICODE,
+    **_REPORT_UNICODE,
+    'heart': '🤍',
+    'accept': '✅',
+    'decline': '❌',
+    'blacklist': '🚷',
+    'claim': '✋',
+    'reject': '❌',
+    'report': '🤍',
+    'proof': '⚠️',
+    'demo': '⚠️',
+    'voice': '🤍',
+    'chat': '🤍',
+}
+
+
+def sticker(key: str, fallback: str = None) -> str:
+    """Свой стикер по ключу (warn/heart/user/staff/…) для текста V2."""
+    em = _cache.get(key)
+    if em is not None:
+        return emoji_md(em) or (fallback or _STICKER_FALLBACK.get(key, '🤍'))
+    # алиасы
+    alt = {
+        'report': 'heart',
+        'proof': 'warn',
+        'demo': 'warn',
+        'voice': 'heart',
+        'chat': 'heart',
+    }.get(key)
+    if alt and _cache.get(alt) is not None:
+        return emoji_md(_cache.get(alt)) or (
+            fallback or _STICKER_FALLBACK.get(key, '🤍'))
+    return fallback or _STICKER_FALLBACK.get(key, '🤍')
 
 
 def emoji_for_report(kind: str):

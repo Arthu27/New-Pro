@@ -4,12 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Панель{% endblock %} · Hakumo</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=20">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=22">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"></noscript>
   <meta name="theme-color" content="#07080a">
   <style>html,body{background:#07080a;color:#f2f4f8}</style>
+  {% if nav_pages %}
+  {% for key, href, label, icon in nav_pages[:8] %}
+  <link rel="prefetch" href="{{ href }}">
+  {% endfor %}
+  {% endif %}
 </head>
 <body>
 {% if hide_shell %}
@@ -91,6 +95,23 @@
 </div>
 <script>
 (function () {
+  // Prefetch страниц меню при наведении — переход почти мгновенный
+  const warmed = new Set();
+  document.querySelectorAll('nav.nav a[href]').forEach(a => {
+    const warm = () => {
+      const href = a.getAttribute('href');
+      if (!href || warmed.has(href)) return;
+      warmed.add(href);
+      const l = document.createElement('link');
+      l.rel = 'prefetch';
+      l.href = href;
+      document.head.appendChild(l);
+      try { fetch(href, {credentials: 'same-origin', priority: 'low'}); } catch (e) {}
+    };
+    a.addEventListener('mouseenter', warm, {passive: true});
+    a.addEventListener('touchstart', warm, {passive: true});
+  });
+
   const inp = document.getElementById('gq');
   const box = document.getElementById('gsuggest');
   if (!inp || !box) return;

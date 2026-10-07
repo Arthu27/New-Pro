@@ -42,6 +42,16 @@ WARN_LEVEL_MAX = 100
 _WARN_KEY_RE = re.compile(r'^warn_(\d+)$')
 MAX_SECONDS = 28 * 86400            # роли дольше 28 дней не выдаём
 
+# Жёсткие роли уровней варна (владелец 2026-10-07)
+KNOWN_WARN_ROLE_BY_LEVEL = {
+    1: 1545468739221327942,  # warn 1
+    2: 1557474469394518187,  # warn 2
+    3: 1557474898069430394,  # warn 3
+}
+# После N варнов: участник → бан; стафф → снятие staff + бан набора
+MAX_WARN_BEFORE_PUNISH = 3
+STAFF_APPLY_BAN_DAYS = 30
+
 _lock = threading.Lock()
 
 
@@ -275,6 +285,86 @@ def role_for(gid, kind):
     """ID выбранной роли для наказания (0 — не выбрано)."""
     return int(get(gid).get(kind) or 0)
 
+
+def ensure_known_warn_roles(gid, *, who: str = 'known-warn') -> dict:
+    """Прописать warn_1/2/3 из KNOWN_WARN_ROLE_BY_LEVEL (идемпотентно).
+
+    Не затирает уже заданные уровни с другим id — только пустые слоты
+    и гарантирует карточки уровней 1..3.
+    """
+    try:
+        gid = int(gid or 0)
+    except (TypeError, ValueError):
+        return {}
+    if not gid:
+        return {}
+    cur = get(gid)
+    patch = {}
+    for lvl, rid in KNOWN_WARN_ROLE_BY_LEVEL.items():
+        key = f'warn_{int(lvl)}'
+        try:
+            have = int(cur.get(key) or 0)
+        except (TypeError, ValueError):
+            have = 0
+        if have <= 0:
+            patch[key] = int(rid)
+    if patch:
+        set_roles(gid, who=who, **patch)
+    for lvl in KNOWN_WARN_ROLE_BY_LEVEL:
+        try:
+            add_level(gid, int(lvl))
+        except Exception:
+            pass
+    return get(gid)
+
+
+def auto_seed_warn_role(guild) -> bool:
+    """Если warn_N не заданы — сначала KNOWN ids, иначе имя warn/варн → warn_1.
+
+    Возвращает True, если что-то записали. Идемпотентно.
+    """
+    try:
+        gid = int(getattr(guild, 'id', 0) or 0)
+    except (TypeError, ValueError):
+        return False
+    if not gid:
+        return False
+    before = dict(warn_levels(get(gid)))
+    # 1) жёсткие ID владельца (warn 1/2/3)
+    ensure_known_warn_roles(gid, who='auto-seed-known-warn')
+    after = warn_levels(get(gid))
+    if after != before:
+        log.warning(
+            'punish_roles: auto-seed known warn roles guild=%s → %s',
+            gid, after)
+        return True
+    if after:
+        return False
+    names = {
+        'warn', 'варн', 'warn 1', 'варн 1', 'warning', 'предупреждение',
+        'warn1', 'варн1',
+    }
+    found = None
+    for role in list(getattr(guild, 'roles', None) or []):
+        n = str(getattr(role, 'name', '') or '').strip().lower()
+        if n in names:
+            found = role
+            break
+    if found is None:
+        # частичное совпадение: начинается с warn / варн
+        for role in list(getattr(guild, 'roles', None) or []):
+            n = str(getattr(role, 'name', '') or '').strip().lower()
+            if n.startswith('warn') or n.startswith('варн'):
+                found = role
+                break
+    if found is None:
+        return False
+    set_roles(gid, who='auto-seed-warn', warn_1=int(found.id))
+    add_level(gid, 1)  # карточка уровня (если ещё нет)
+    log.warning(
+        'punish_roles: auto-seed warn_1=%s (%s) guild=%s',
+        found.id, found.name, gid)
+    return True
 
 # ── временные выдачи (авто-снятие по сроку) ─────────────────────────────
 

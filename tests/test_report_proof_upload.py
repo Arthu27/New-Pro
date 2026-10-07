@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""/report FileUpload → канал доказательств (deliver_report_proofs)."""
+"""/report FileUpload → демка в канал модерации (deliver_report_proofs)."""
 import asyncio
 import io
 import os
