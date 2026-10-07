@@ -474,7 +474,11 @@ def save_role_map(mapping: dict) -> None:
 
 
 def _norm_name(name: str) -> str:
-    return " ".join(str(name or "").lower().replace("—", "-").split())
+    """Имя роли → ключ сравнения (без × / ・ / декора)."""
+    s = str(name or "").lower().replace("—", "-").replace("–", "-")
+    for ch in ("×", "・", "•", "●", "✦", "★", "☆", "❖", "◆", "▪", "▫"):
+        s = s.replace(ch, " ")
+    return " ".join(s.split())
 
 
 def _panel_role_key(kind: str) -> str:
@@ -498,12 +502,26 @@ def _env_role_id(kind: str) -> int:
 
 
 def resolve_staff_role(guild, kind: str):
-    """Найти роль сервера для должности. Вернуть (role, искали_имена)."""
+    """Найти роль сервера для должности. Вернуть (role, искали_имена).
+
+    Порядок: жёсткий KNOWN_GRANT → панель/.env → staff_roles.json → имя.
+    KNOWN первым: ошибочный support_role в панели больше не подменит × Support.
+    """
     if not guild or kind not in NAME_VARIANTS:
         return None, []
     variants = NAME_VARIANTS[kind]
 
-    # 1) Панель / .env
+    # 1) Известные grant-ID (владелец) — главный источник правды
+    try:
+        known = int(KNOWN_GRANT_BY_KIND.get(kind) or 0)
+    except (TypeError, ValueError):
+        known = 0
+    if known:
+        role = guild.get_role(known)
+        if role:
+            return role, []
+
+    # 2) Панель / .env (только если known нет на сервере)
     try:
         panel_id = setting(getattr(guild, "id", 0),
                            _panel_role_key(kind), _env_role_id(kind))
@@ -514,29 +532,47 @@ def resolve_staff_role(guild, kind: str):
     except Exception as _ex:
         log.debug("staff_roles resolve panel: %s", _ex)
 
-    # 2) data/staff_roles.json
+    # 3) data/staff_roles.json
     mapped = str(load_role_map().get(kind, "") or "")
     if mapped.isdigit():
         role = guild.get_role(int(mapped))
         if role:
             return role, []
 
-    # 3) Известные grant-ID (Eventsmod / Broadcaster / Helper)
-    try:
-        known = int(KNOWN_GRANT_BY_KIND.get(kind) or 0)
-    except (TypeError, ValueError):
-        known = 0
-    if known:
-        role = guild.get_role(known)
-        if role:
-            return role, []
-
-    # 4) По имени на сервере
+    # 4) По имени на сервере (× Support / ・Support → support)
     for role in getattr(guild, "roles", []):
         if _norm_name(role.name) in variants:
             return role, variants
     return None, variants
 
+
+def _bot_can_assign(guild, role) -> tuple:
+    """Может ли бот выдать роль (иерархия + manage_roles)."""
+    if guild is None or role is None:
+        return False, "no_guild"
+    me = getattr(guild, "me", None)
+    if me is None:
+        return True, ""  # нет кэша — пусть API решит
+    try:
+        perms = getattr(me, "guild_permissions", None)
+        if perms is not None and not getattr(perms, "manage_roles", True):
+            return False, "no_perms"
+    except Exception:
+        pass
+    try:
+        top = getattr(me, "top_role", None)
+        if top is not None and hasattr(role, "position"):
+            if int(getattr(role, "position", 0) or 0) >= int(
+                    getattr(top, "position", 0) or 0):
+                return False, "hierarchy"
+    except Exception as _ex:
+        log.debug("staff_roles hierarchy check: %s", _ex)
+    try:
+        if getattr(role, "managed", False):
+            return False, "managed"
+    except Exception:
+        pass
+    return True, ""
 
 def _member_has_role(member, role_id: int) -> bool:
     try:
@@ -584,11 +620,36 @@ async def ensure_common_staff_role(guild, member) -> dict:
     return out
 
 
+async def _verify_member_role(guild, member, role_id: int, uid: int):
+    """Проверить, что роль реально на участнике (fetch + кэш + тестовый added)."""
+    check_m = member
+    fetched = False
+    if guild is not None and hasattr(guild, "fetch_member") and uid:
+        try:
+            fresh = await guild.fetch_member(uid)
+            if fresh is not None:
+                check_m = fresh
+                fetched = True
+        except Exception as _fe:
+            log.debug("staff_roles verify fetch: %s", _fe)
+    has = _member_has_role(check_m, role_id)
+    if not has:
+        added = list(getattr(check_m, "added", None)
+                     or getattr(member, "added", None)
+                     or [])
+        try:
+            if int(role_id) in {int(x) for x in added if str(x).isdigit()}:
+                has = True
+        except (TypeError, ValueError):
+            pass
+    return has, fetched, check_m
+
+
 async def grant_staff_role(guild, user_id, position, *, client=None):
     """Выдать участнику роль по должности заявки + общую staff-роль.
 
-    После add_roles проверяем, что роль реально на участнике
-    (иначе в базе «выдано», а в Discord пусто).
+    Успех ТОЛЬКО если роль реально на участнике после add_roles
+    (иначе раньше логировали «выдана», а в Discord пусто — Support-баг).
     """
     kind = normalize_position(position)
     if not guild:
@@ -628,51 +689,76 @@ async def grant_staff_role(guild, user_id, position, *, client=None):
     try:
         if _member_has_role(member, role.id):
             return {"kind": kind, "role_name": role.name, "reason": None,
-                    "searched": searched, "already": True, "common": common}
+                    "searched": searched, "already": True, "common": common,
+                    "role_id": int(role.id)}
     except Exception as _ex:
         log.debug('staff_roles: except@476: %s', _ex)
 
-    try:
-        await member.add_roles(role, reason="Заявка в команду одобрена (Hakumo)")
-    except Exception as e:
-        log.warning(f"[staff_roles] add_roles({role.name}): {e}")
-        return {"kind": kind, "role_name": None, "reason": "forbidden",
-                "searched": searched, "error": str(e), "common": common}
-
-    # проверка: роль реально повисла (только если fetch_member доступен)
-    has = False
-    verified = False
-    try:
-        fresh = None
-        if hasattr(guild, "fetch_member"):
-            try:
-                fresh = await guild.fetch_member(uid)
-                verified = fresh is not None
-            except Exception:
-                fresh = None
-        check_m = fresh or member
-        has = _member_has_role(check_m, role.id)
-        if not has:
-            added = list(getattr(check_m, "added", None)
-                         or getattr(member, "added", None)
-                         or [])
-            if role.name in added or int(role.id) in {
-                    int(x) for x in added if str(x).isdigit()}:
-                has = True
-    except Exception as _ve:
-        log.debug("staff_roles verify: %s", _ve)
-
-    if verified and not has:
+    ok_assign, why = _bot_can_assign(guild, role)
+    if not ok_assign:
         log.warning(
-            "[staff_roles] add_roles(%s) ок, но роли нет у %s — иерархия/права?",
-            role.name, uid)
-        return {"kind": kind, "role_name": None, "reason": "not_applied",
-                "searched": searched, "common": common}
+            "[staff_roles] нельзя выдать «%s» (%s) → %s: %s",
+            getattr(role, "name", "?"), getattr(role, "id", "?"), uid, why)
+        return {"kind": kind, "role_name": None, "reason": why or "forbidden",
+                "searched": searched, "common": common,
+                "role_id": int(role.id)}
 
-    log.info("[staff_roles] выдана «%s» → %s (kind=%s)", role.name, uid, kind)
-    return {"kind": kind, "role_name": role.name, "reason": None,
-            "searched": searched, "common": common}
+    last_err = None
+    for attempt in (1, 2):
+        try:
+            await member.add_roles(
+                role, reason="Заявка в команду одобрена (Hakumo)")
+            last_err = None
+        except Exception as e:
+            last_err = e
+            log.warning(
+                "[staff_roles] add_roles(%s) try=%s: %s",
+                role.name, attempt, e)
+            if attempt == 1:
+                try:
+                    import asyncio
+                    await asyncio.sleep(0.6)
+                except Exception:
+                    pass
+                continue
+            return {"kind": kind, "role_name": None, "reason": "forbidden",
+                    "searched": searched, "error": str(e), "common": common,
+                    "role_id": int(role.id)}
 
+        has, fetched, check_m = await _verify_member_role(
+            guild, member, role.id, uid)
+        if has:
+            # обновить кэш ссылки на member для последующих шагов
+            member = check_m or member
+            log.info(
+                "[staff_roles] выдана «%s» → %s (kind=%s, id=%s, try=%s)",
+                role.name, uid, kind, role.id, attempt)
+            return {"kind": kind, "role_name": role.name, "reason": None,
+                    "searched": searched, "common": common,
+                    "role_id": int(role.id), "verified": bool(fetched or has)}
+
+        # роли нет — повтор или fail (НИКОГДА не успех без роли)
+        log.warning(
+            "[staff_roles] add_roles(%s) ok, но роли нет у %s "
+            "(try=%s, fetched=%s) — иерархия/права/лаг Discord?",
+            role.name, uid, attempt, fetched)
+        if attempt == 1:
+            try:
+                import asyncio
+                await asyncio.sleep(0.8)
+            except Exception:
+                pass
+            # обновить member перед ретраем
+            if fetched and check_m is not None:
+                member = check_m
+            continue
+
+    if last_err is not None:
+        return {"kind": kind, "role_name": None, "reason": "forbidden",
+                "searched": searched, "error": str(last_err), "common": common,
+                "role_id": int(role.id)}
+    return {"kind": kind, "role_name": None, "reason": "not_applied",
+            "searched": searched, "common": common, "role_id": int(role.id)}
 
 def role_hint(result: dict) -> str:
     """Почему роль не выдана."""
@@ -690,6 +776,13 @@ def role_hint(result: dict) -> str:
         return "участник не найден"
     if reason == "forbidden":
         return f"нет прав выдать **{label}** (роль бота ниже)"
+    if reason == "hierarchy":
+        return (f"роль **{label}** выше роли бота — "
+                "поднимите бота выше × Support/ветки в списке ролей")
+    if reason == "no_perms":
+        return f"у бота нет Manage Roles — нельзя выдать **{label}**"
+    if reason == "managed":
+        return f"роль **{label}** управляемая (бот/интеграция) — выдать нельзя"
     if reason == "not_applied":
         return (f"роль **{label}** не повисла после выдачи "
                 "(проверьте иерархию ролей бота)")
@@ -705,3 +798,114 @@ def role_hint(result: dict) -> str:
         }.get(kind, "STAFF_MODERATOR_ROLE_ID")
         return (f"роль {searched or f'«{label}»'} не найдена — задайте {env}")
     return reason or "неизвестно"
+
+
+async def heal_missing_grants(bot, *, limit: int = 40) -> dict:
+    """Повторно выдать роли по approved-заявкам, где роль не повисла.
+
+    Чинит кейсы вроде Support-accept: в логе «выдана», в Discord пусто.
+    """
+    from datetime import datetime, timezone
+
+    out = {"checked": 0, "healed": 0, "failed": 0, "skipped": 0, "errors": []}
+    path = "data/staff_apps.json"
+    try:
+        if not os.path.exists(path):
+            return out
+        with open(path, "r", encoding="utf-8") as f:
+            apps = json.load(f)
+        if not isinstance(apps, list):
+            return out
+    except Exception as e:
+        out["errors"].append(str(e))
+        return out
+
+    # свежие approved сначала
+    candidates = [
+        a for a in apps
+        if isinstance(a, dict) and a.get("status") == "approved"
+        and a.get("user_id") and a.get("role")
+    ]
+    candidates.sort(
+        key=lambda a: str(a.get("reviewed_at") or a.get("submitted_at") or ""),
+        reverse=True)
+
+    dirty = False
+    for app in candidates[: max(1, int(limit or 40))]:
+        out["checked"] += 1
+        try:
+            gid = int(app.get("guild_id") or 0)
+        except (TypeError, ValueError):
+            gid = 0
+        guild = bot.get_guild(gid) if gid else None
+        if guild is None and hasattr(bot, "guilds"):
+            # фолбек: единственный/основной гильд
+            try:
+                from config import Config
+                mg = int(getattr(Config, "MAIN_GUILD_ID", 0) or 0)
+            except Exception:
+                mg = 0
+            guild = bot.get_guild(mg) if mg else None
+            if guild is None and bot.guilds:
+                guild = bot.guilds[0]
+        if guild is None:
+            out["skipped"] += 1
+            continue
+
+        kind = normalize_position(app.get("role"))
+        role, _ = resolve_staff_role(guild, kind) if kind else (None, [])
+        if role is None:
+            out["skipped"] += 1
+            continue
+
+        try:
+            uid = int(app.get("user_id"))
+        except (TypeError, ValueError):
+            out["skipped"] += 1
+            continue
+
+        member = guild.get_member(uid)
+        if member is None and hasattr(guild, "fetch_member"):
+            try:
+                member = await guild.fetch_member(uid)
+            except Exception:
+                member = None
+        if member is None:
+            out["skipped"] += 1
+            continue
+
+        if _member_has_role(member, role.id):
+            # уже есть — подчистить grant_error если был
+            if app.get("grant_error") or not app.get("granted_role"):
+                app["granted_role"] = role.name
+                app.pop("grant_error", None)
+                dirty = True
+            out["skipped"] += 1
+            continue
+
+        # роли нет — пробуем выдать снова
+        res = await grant_staff_role(
+            guild, uid, app.get("role"), client=bot)
+        if res.get("role_name"):
+            app["granted_role"] = res["role_name"]
+            app.pop("grant_error", None)
+            app["grant_healed_at"] = datetime.now(timezone.utc).isoformat()
+            dirty = True
+            out["healed"] += 1
+            log.info(
+                "[staff_roles] heal «%s» → %s (kind=%s)",
+                res["role_name"], uid, kind)
+        else:
+            hint = role_hint(res)
+            app["grant_error"] = hint
+            dirty = True
+            out["failed"] += 1
+            out["errors"].append(f"{uid}:{kind}:{res.get('reason')}")
+
+    if dirty:
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(apps, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            out["errors"].append(f"save:{e}")
+    return out
