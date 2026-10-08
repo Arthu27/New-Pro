@@ -423,17 +423,18 @@ def stats_active(guild_id: int) -> Dict[str, int]:
                 'WHERE guild_id=? AND active=1',
                 (int(guild_id),),
             ).fetchone()['c'] or 0)
-            members = int(conn.execute(
-                'SELECT COUNT(DISTINCT user_id) AS c FROM warns '
-                'WHERE guild_id=? AND active=1 AND '
-                "(reason_type='member' OR "
-                "(reason_type IS NULL AND is_staff_target=0))",
-                (int(guild_id),),
-            ).fetchone()['c'] or 0)
+            # Стафф приоритетнее: is_staff_target=1 или reason_type=staff.
+            # Иначе один user попадает и в members, и в staff.
             staff = int(conn.execute(
                 'SELECT COUNT(DISTINCT user_id) AS c FROM warns '
                 'WHERE guild_id=? AND active=1 AND '
                 "(reason_type='staff' OR is_staff_target=1)",
+                (int(guild_id),),
+            ).fetchone()['c'] or 0)
+            members = int(conn.execute(
+                'SELECT COUNT(DISTINCT user_id) AS c FROM warns '
+                'WHERE guild_id=? AND active=1 AND '
+                "NOT (reason_type='staff' OR is_staff_target=1)",
                 (int(guild_id),),
             ).fetchone()['c'] or 0)
             return {
