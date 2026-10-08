@@ -72,6 +72,33 @@ def load_opus() -> bool:
     return False
 
 
+class SilenceAudioSource(discord.AudioSource):
+    """Бесконечная PCM-тишина (20ms / 48kHz stereo) — UDP keepalive.
+
+    Без исходящих пакетов Discord рвёт voice ~каждые 30с
+    (особенно при self_mute). PCMAudio(BytesIO) заканчивается сразу —
+    нужен looping source.
+    """
+    FRAME = b'\x00' * 3840
+
+    def read(self) -> bytes:
+        return self.FRAME
+
+    def is_opus(self) -> bool:
+        return False
+
+
+def silence_keepalive_enabled() -> bool:
+    """VOICE_SILENCE_PING: 1/on — вкл; 0/off — выкл; auto/пусто — вкл если opus."""
+    raw = (os.environ.get('VOICE_SILENCE_PING') or 'auto').strip().lower()
+    if raw in ('0', 'false', 'no', 'off'):
+        return False
+    if raw in ('1', 'true', 'yes', 'on'):
+        return load_opus()
+    # auto / пусто / неизвестное
+    return load_opus()
+
+
 class VoiceStayController:
     """Один контроллер на процесс бота (main / event)."""
 
@@ -219,6 +246,8 @@ class VoiceStayController:
             ok, _vc, why = really_in_channel(client, cid)
             if ok:
                 self._reset_backoff(gid)
+                if gid:
+                    self._start_silence_keepalive(gid)
                 return True, f'уже в <#{cid}>'
             if why.startswith('zombie'):
                 force = True
@@ -308,6 +337,7 @@ class VoiceStayController:
                     ok2, _, _ = really_in_channel(client, cid)
                     if ok2:
                         self._reset_backoff(gid)
+                        self._start_silence_keepalive(gid)
                         return True, f'уже в <#{cid}>'
                     try:
                         await vc.disconnect(force=True)
@@ -320,6 +350,7 @@ class VoiceStayController:
                         self._reset_backoff(gid)
                         log.info('[%s] moved → %s (reason=%s)',
                                  self.bot_id, cid, reason or '—')
+                        self._start_silence_keepalive(gid)
                         return True, f'переехал в <#{cid}>'
                     except Exception:
                         try:
@@ -328,15 +359,17 @@ class VoiceStayController:
                             pass
 
             try:
+                # self_mute=False: иначе Discord не принимает UDP и кикает ~30с
                 await asyncio.wait_for(
                     channel.connect(
                         timeout=30.0, reconnect=True,
-                        self_deaf=True, self_mute=True),
+                        self_deaf=True, self_mute=False),
                     timeout=35.0)
                 self._last_join_ts[gid] = time.time()
                 self._reset_backoff(gid)
                 log.info('[%s] joined %s guild=%s reason=%s',
                          self.bot_id, cid, gid, reason or '—')
+                self._start_silence_keepalive(gid)
                 return True, f'зашёл в <#{cid}>'
             except asyncio.TimeoutError:
                 delay = self._bump_backoff(gid)
@@ -351,10 +384,11 @@ class VoiceStayController:
                         await asyncio.wait_for(
                             channel.connect(
                                 timeout=30.0, reconnect=True,
-                                self_deaf=True, self_mute=True),
+                                self_deaf=True, self_mute=False),
                             timeout=35.0)
                         self._last_join_ts[gid] = time.time()
                         self._reset_backoff(gid)
+                        self._start_silence_keepalive(gid)
                         return True, f'перезашёл в <#{cid}>'
                     except Exception as ex2:
                         delay = self._bump_backoff(gid)
@@ -525,15 +559,38 @@ class VoiceStayController:
         except Exception as ex:
             log.debug('start_watchdog: %s', ex)
 
+    def _start_silence_keepalive(self, guild_id: int) -> None:
+        """Крутить SilenceAudioSource на VoiceClient — иначе Discord кикает ~30с."""
+        if not silence_keepalive_enabled():
+            return
+        gid = int(guild_id or 0)
+        client = self.client
+        if client is None or not gid:
+            return
+        try:
+            guild = client.get_guild(gid)
+            vc = discord.utils.get(client.voice_clients, guild=guild) if guild else None
+            if vc is None or not voice_client_alive(vc):
+                return
+            if vc.is_playing():
+                self._last_silence_ts[gid] = time.time()
+                return
+            vc.play(SilenceAudioSource())
+            self._last_silence_ts[gid] = time.time()
+            log.info('[%s] silence keepalive ON guild=%s', self.bot_id, gid)
+        except Exception as ex:
+            log.warning('[%s] silence keepalive fail guild=%s: %s',
+                        self.bot_id, gid, ex)
+
     async def _watchdog(self) -> None:
         await self.client.wait_until_ready()
         await asyncio.sleep(2)
-        silence_env = (os.environ.get('VOICE_SILENCE_PING') or '0').strip().lower()
-        silence = silence_env in ('1', 'true', 'yes', 'on')
-        if silence and not discord.opus.is_loaded():
-            log.warning('[%s] VOICE_SILENCE_PING=1, но libopus нет — silence OFF',
-                        self.bot_id)
-            silence = False
+        silence = silence_keepalive_enabled()
+        if not silence:
+            log.warning(
+                '[%s] silence keepalive OFF — Discord может кикать войс ~30с '
+                '(поставь VOICE_SILENCE_PING=1 или auto + libopus)',
+                self.bot_id)
         log.info('[%s] watchdog every %.0fs silence=%s',
                  self.bot_id, _WATCHDOG_SEC, silence)
         while not self.client.is_closed():
@@ -586,22 +643,14 @@ class VoiceStayController:
                     self.schedule_rejoin(
                         gid, reason='soft-reconnect', force=True)
                     continue
-                if silence and (now - self._last_silence_ts.get(gid, 0)) > 60:
+                # silence мог остановиться — поднять снова
+                if silence:
                     try:
-                        if vc and not vc.is_playing() and discord.opus.is_loaded():
-                            import io
-                            silence_buf = io.BytesIO(b'\x00' * 3840)
-                            source = discord.PCMAudio(silence_buf)
-                            await asyncio.wait_for(
-                                asyncio.to_thread(vc.play, source), timeout=10.0)
-                        self._last_silence_ts[gid] = now
-                    except asyncio.TimeoutError:
-                        log.warning('[%s] silence timeout — rejoin', self.bot_id)
-                        self.schedule_rejoin(
-                            gid, reason='silence-timeout', force=True)
-                    except Exception as ex:
-                        log.debug('silence: %s', ex)
-                        self._last_silence_ts[gid] = now
+                        playing = bool(vc and vc.is_playing())
+                    except Exception:
+                        playing = False
+                    if not playing:
+                        self._start_silence_keepalive(gid)
 
     async def _alert_log_channel(self, guild, text: str) -> None:
         """Важные сбои stay — в мод-лог, если настроен."""
