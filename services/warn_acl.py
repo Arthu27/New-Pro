@@ -129,6 +129,31 @@ def is_staff_target(guild, target) -> bool:
     return _is_staff_target(guild, target)
 
 
+def get_staff_info(member) -> tuple:
+    """Текущий статус из ролей: (is_staff, branch|None, rank).
+
+    Истина — только роли Discord. Не читать is_staff из БД/варна.
+    """
+    if member is None:
+        return False, None, 0
+    guild = getattr(member, 'guild', None)
+    is_staff = bool(_is_staff_target(guild, member))
+    branch = None
+    rank = 0
+    try:
+        from services.warn_config import member_rank_snapshot
+        rank, _rid, _name = member_rank_snapshot(member)
+    except Exception:
+        rank = 0
+    if is_staff:
+        try:
+            br = branches_of(member)
+            branch = sorted(br)[0] if br else None
+        except Exception:
+            branch = None
+    return is_staff, branch, int(rank or 0)
+
+
 def _mod_plus(actor) -> bool:
     """Может варннуть обычного участника (тир mod+, не helper)."""
     if actor is None:
