@@ -1105,8 +1105,12 @@ def _panel_actor_member(guild):
     return m
 
 
-async def _run_bot(coro):
-    """Выполнить coroutine в loop бота (панель и бот — один процесс)."""
+def _run_bot(coro):
+    """Выполнить coroutine в loop бота (панель и бот — один процесс).
+
+    Синхронная обёртка: Flask-поток блокируется до результата.
+    Не async — иначе вызов без await вернёт coroutine вместо данных.
+    """
     bot = bot_instance
     if bot is None or getattr(bot, 'loop', None) is None:
         raise RuntimeError('Бот офлайн')
