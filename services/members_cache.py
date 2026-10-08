@@ -210,15 +210,46 @@ def search(
     with _LOCK:
         conn = _conn()
         try:
+            # берём с запасом и сортируем по качеству совпадения в питоне
             rows = conn.execute(
                 f'''SELECT * FROM members_cache WHERE {wh}
                     ORDER BY in_guild DESC, display_name COLLATE NOCASE
                     LIMIT ?''',
-                params + [lim],
+                params + [max(lim * 8, 40)],
             ).fetchall()
-            return [_row(r) for r in rows]
+            items = [_row(r) for r in rows]
         finally:
             conn.close()
+
+    if not q:
+        return items[:lim]
+
+    ql = q.lower().lstrip('@')
+
+    def _rank(h: Dict[str, Any]) -> tuple:
+        un = (h.get('username') or '').lower()
+        dn = (h.get('display_name') or '').lower()
+        uid = str(h.get('user_id') or '')
+        if uid == q:
+            score = 0
+        elif un == ql:
+            score = 1
+        elif dn == ql:
+            score = 2
+        elif un.startswith(ql):
+            score = 3
+        elif dn.startswith(ql):
+            score = 4
+        elif ql in un:
+            score = 5
+        elif ql in dn:
+            score = 6
+        else:
+            score = 7
+        return (0 if h.get('in_guild') else 1, score, dn)
+
+    items.sort(key=_rank)
+    return items[:lim]
 
 
 async def sync_guild(guild) -> int:
