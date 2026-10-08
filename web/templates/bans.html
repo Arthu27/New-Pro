@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Баны{% endblock %}
+{% block heading %}Баны{% endblock %}
+{% block body %}
+<p class="lead">Список забаненных Discord. Разбан — только при правах (ACL unban / UNBAN_PANEL_ROLE_IDS).</p>
+<p><a href="{{ url_for('warns') }}">← Варны</a></p>
+
+<section class="panel rise">
+  {% if error %}
+  <div class="flash err">{{ error }}</div>
+  {% endif %}
+  {% if not rows %}
+  <div class="empty">Банов нет или бот офлайн</div>
+  {% else %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr>
+        <th>Пользователь</th><th>ID</th><th>Причина</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for b in rows %}
+        <tr>
+          <td>
+            {% if b.avatar %}<img src="{{ b.avatar }}" alt="" style="width:28px;height:28px;border-radius:50%;vertical-align:middle"> {% endif %}
+            <b>{{ b.name }}</b>
+          </td>
+          <td><code>{{ b.user_id }}</code></td>
+          <td>{{ b.reason or '—' }}</td>
+          <td>
+            {% if can_unban %}
+            <button type="button" class="ghost sm btn-unban" data-uid="{{ b.user_id }}" data-name="{{ b.name }}">Разбанить</button>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+<script>
+(function(){
+  const csrf = {{ csrf_token|tojson }};
+  document.querySelectorAll('.btn-unban').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Разбанить ' + btn.dataset.name + ' (' + btn.dataset.uid + ')?')) return;
+      const r = await fetch('/api/bans/unban', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({user_id: btn.dataset.uid, csrf})});
+      const j = await r.json();
+      if (!j.ok) { alert(j.error || 'Ошибка'); return; }
+      location.reload();
+    });
+  });
+})();
+</script>
+{% endblock %}

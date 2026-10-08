@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Варны · {{ profile.name }}{% endblock %}
+{% block heading %}Варны · {{ profile.name }}{% endblock %}
+{% block body %}
+<p class="lead">
+  <a href="{{ url_for('warns') }}">← к списку</a>
+  · ID <code>{{ uid }}</code>
+  · активных: <b>{{ active_count }}</b>
+  · тип: {{ 'стафф' if is_staff else 'участник' }}
+</p>
+
+<section class="panel rise">
+  <div class="dlg-actions" style="justify-content:flex-start;gap:8px;margin-bottom:12px">
+    {% if can_manage %}
+    <button type="button" class="primary-btn" id="btnIssue">Выдать варн</button>
+    {% if active_count %}
+    <button type="button" class="ghost" id="btnClearAll">Снять все варны</button>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  {% if not history %}
+  <div class="empty">История пуста</div>
+  {% else %}
+  <div class="log-timeline">
+    {% for w in history %}
+    <article class="log-item {% if w.active %}log-warn{% else %}dim{% endif %}">
+      <div class="log-rail"></div>
+      <div>
+        <div class="log-top">
+          <span class="pill {% if w.reason_type=='staff' %}pill-danger{% else %}pill-warn{% endif %}">
+            #{{ w.id }} · {{ 'стафф' if w.reason_type=='staff' else 'участник' }}
+            {% if not w.active %} · снят{% endif %}
+          </span>
+          <span class="log-when">{{ w.when }}</span>
+        </div>
+        <div class="log-meta">
+          код {{ w.reason_code or '—' }}
+          · выдал <b>{{ w.mod_name }}</b>
+          {% if w.branch %} · ветка {{ w.branch_label }}{% endif %}
+          · {{ w.source or 'discord' }}
+        </div>
+        <div class="log-reason">{{ w.reason }}</div>
+        {% if not w.active %}
+        <div class="log-meta">снял {{ w.removed_by_name or w.removed_by }} · {{ w.removed_when }}
+          {% if w.removed_reason %} · {{ w.removed_reason }}{% endif %}
+        </div>
+        {% elif can_manage %}
+        <button type="button" class="ghost sm btn-rm" data-wid="{{ w.id }}">Снять варн</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<dialog id="warnDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3>Выдать варн</h3>
+      <button type="button" class="dlg-x" id="warnClose">×</button></div>
+    <label>Причина
+      <select id="warnCode">
+        {% for r in reason_opts %}
+        <option value="{{ r.code }}">{{ r.code }} · {{ r.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Формулировка
+      <textarea id="warnDetail" required maxlength="400" rows="3"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="warnCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="warnGo">Выдать</button>
+    </div>
+    <p id="warnMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  const csrf = {{ csrf_token|tojson }};
+  const uid = {{ uid|tojson }};
+  const rtype = {{ ('staff' if is_staff else 'member')|tojson }};
+  const $ = id => document.getElementById(id);
+  const dlg = $('warnDlg');
+  $('btnIssue')?.addEventListener('click', () => dlg.showModal());
+  $('warnClose')?.addEventListener('click', () => dlg.close());
+  $('warnCancel')?.addEventListener('click', () => dlg.close());
+  $('warnGo')?.addEventListener('click', async () => {
+    const detail = $('warnDetail').value.trim();
+    if (!detail) { $('warnMsg').textContent = 'Нужна формулировка'; return; }
+    const r = await fetch('/api/warns/issue', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        user_id: uid, reason_type: rtype,
+        reason_code: $('warnCode').value, detail, csrf})});
+    const j = await r.json();
+    if (!j.ok) { $('warnMsg').textContent = j.error || 'Ошибка'; return; }
+    location.reload();
+  });
+  document.querySelectorAll('.btn-rm').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const reason = prompt('Причина снятия:') || '';
+      if (!confirm('Снять варн #' + btn.dataset.wid + '?')) return;
+      const r = await fetch('/api/warns/remove', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({warn_id: Number(btn.dataset.wid), user_id: uid,
+          removed_reason: reason, csrf})});
+      const j = await r.json();
+      if (!j.ok) { alert(j.error||'Ошибка'); return; }
+      location.reload();
+    });
+  });
+  $('btnClearAll')?.addEventListener('click', async () => {
+    const reason = prompt('Причина снятия всех:') || '';
+    if (!confirm('Снять ВСЕ активные варны?')) return;
+    const r = await fetch('/api/warns/remove_all', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: uid, removed_reason: reason, csrf})});
+    const j = await r.json();
+    if (!j.ok) { alert(j.error||'Ошибка'); return; }
+    location.reload();
+  });
+})();
+</script>
+{% endblock %}

@@ -779,7 +779,8 @@ class Moderation (commands .Cog ):
         return ('Проверьте: роль бота выше роли нарушителя и у бота есть нужное '
                 'право (Настройки сервера → Роли).')
 
-    async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ,proof_link =None ):
+    async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ,proof_link =None ,
+                                   *, reason_code=None, reason_type=None, detail=None):
         """Выполнить выбранное действие модерации."""
         # 3с-окно Discord закрываем ДО ролей/DM/логов: иначе наказание
         # уже выдано, а клиент рисует «приложение не ответило».
@@ -897,7 +898,9 @@ class Moderation (commands .Cog ):
             # и пропускает проверку ветки как «owner».
             ok ,text =await self .apply_panel_action (
             guild ,(user if user is not None else uid ),'warn',
-            reason =reason ,actor =interaction .user )
+            reason =reason ,actor =interaction .user ,
+            reason_code =reason_code ,reason_type =reason_type ,
+            detail =detail )
             if ok :
                 who =getattr (user ,'display_name',None )or str (uid )
                 await _respond (interaction ,embed =success_embed (
@@ -1602,7 +1605,8 @@ class Moderation (commands .Cog ):
         return True
 
     async def apply_panel_action (self ,guild ,target ,action ,reason ='' ,
-    amount =None ,proof_link =None ,actor ='Панель' ,duration_cap =None ):
+    amount =None ,proof_link =None ,actor ='Панель' ,duration_cap =None ,
+    reason_code =None ,reason_type =None ,detail =None ,source ='discord'):
         """Наказание из веб-панели («Пользователи») — единый путь с /modpanel.
 
         target — discord.Member (на сервере) или строка-ID (ушёл с сервера).
@@ -1671,9 +1675,14 @@ class Moderation (commands .Cog ):
                 w =self .bot .get_cog ('warnings')
                 if w is None :
                     return False ,'Модуль варнов не загружен'
-                # add_warning сам пишет варн, ДМ участнику и лог в канал
-                res =await w .add_warning (target ,moderator =_actor ,
-                reason =reason or None )
+                # add_warning → warn_actions (БД + DM member/staff + sync роли)
+                res =await w .add_warning (
+                    target ,moderator =_actor ,
+                    reason =reason or None ,
+                    reason_code =reason_code ,
+                    reason_type =reason_type ,
+                    detail =detail ,
+                    source =source or 'discord')
                 _total =res [1 ]if isinstance (res ,tuple )else None 
                 return True ,f'Варн выдан (всего: {_total if _total is not None else "?"})'
             except Exception as _ex :
@@ -2446,8 +2455,20 @@ PANEL_ACTIONS = ('warn', 'unwarn', 'timeout', 'mute_chat', 'vmute', 'ban',
 #  (владелец 2026-09-05: «чтобы через ПКМ»). Те же ACL, лимиты и дела,
 #  что у /modpanel и панели — единый путь apply_panel_action.
 # ═══════════════════════════════════════════════════════════════════════════
-def _rule_select_options(action: str):
-    """SelectOption[] для правила под действие (warn/ban/mute)."""
+def _rule_select_options(action: str, *, reason_type: str | None = None):
+    """SelectOption[] для правила под действие (warn/ban/mute).
+
+    Для warn: отдельные списки member/staff (services.warn_reasons).
+    """
+    if action == 'warn':
+        from services import warn_reasons as _WR
+        kind = 'staff' if reason_type == 'staff' else 'member'
+        return [
+            discord.SelectOption(
+                label=o['label'], value=o['value'],
+                description=o['description'])
+            for o in _WR.select_options_data(kind)
+        ]
     from services import mod_reasons as _MR
     return [
         discord.SelectOption(
@@ -3793,14 +3814,15 @@ _REASON_RULE_ACTIONS = ("warn", "ban", "timeout", "mute_chat", "vmute")
 
 
 class ModActionModal(discord.ui.Modal):
-    """Модальное окно — правило 1.1–1.9 сверху, затем срок/демка.
+    """Модальное окно — правило сверху, затем срок/демка.
 
-    Свободный текст «токс» больше не принимается для наказаний.
+    Для warn: причины member|staff + обязательный свободный текст.
     """
 
     def __init__(self, cog, action, guild=None, prefill_target="", user=None):
         self.cog = cog
         self.action = action
+        self._guild = guild
         titles = {
             "warn": "Варн",
             "ban": "Бан",
@@ -3817,10 +3839,25 @@ class ModActionModal(discord.ui.Modal):
         self.fixed_target_id = str(prefill_target or "").strip() or None
         self.reason_select = None
         self.reason = None
+        self.detail = None
+        self.warn_reason_type = 'member'
+
+        # Для варна: тип причин по цели (стафф / участник)
+        if action == 'warn' and guild is not None and self.fixed_target_id:
+            try:
+                from services.warn_reasons import reason_type_for_target
+                _tm = guild.get_member(int(self.fixed_target_id))
+                if _tm is not None:
+                    self.warn_reason_type = reason_type_for_target(guild, _tm)
+            except Exception as _ex:
+                log.debug('warn reason_type: %s', _ex)
 
         # 1) Правило СВЕРХУ — селект открывается вниз.
         if action in _REASON_RULE_ACTIONS:
-            opts = _rule_select_options(action)
+            opts = _rule_select_options(
+                action, reason_type=self.warn_reason_type)
+            # Discord Select max 25 options
+            opts = opts[:25]
             if not opts:
                 self.reason = discord.ui.TextInput(
                     label="Причина (правило не загрузилось)",
@@ -3828,19 +3865,37 @@ class ModActionModal(discord.ui.Modal):
                     style=discord.TextStyle.short)
                 self.add_item(self.reason)
             else:
-                _ph = {
-                    'warn': 'Правила для варна…',
-                    'ban': 'Правила для бана…',
-                    'timeout': 'Правила для мута…',
-                    'mute_chat': 'Правила для мута…',
-                    'vmute': 'Правила для мута…',
-                }.get(action, 'Выберите правило…')
+                if action == 'warn':
+                    _ph = ('Причины для стаффа…'
+                           if self.warn_reason_type == 'staff'
+                           else 'Причины для участника…')
+                    _label = ('Служебная причина'
+                              if self.warn_reason_type == 'staff'
+                              else 'Какое правило нарушено?')
+                else:
+                    _ph = {
+                        'ban': 'Правила для бана…',
+                        'timeout': 'Правила для мута…',
+                        'mute_chat': 'Правила для мута…',
+                        'vmute': 'Правила для мута…',
+                    }.get(action, 'Выберите правило…')
+                    _label = 'Какое правило нарушено?'
                 self.reason_select = discord.ui.Select(
                     required=True, options=opts, min_values=1, max_values=1,
                     placeholder=_ph)
                 self.add_item(discord.ui.Label(
-                    text='Какое правило нарушено?',
-                    component=self.reason_select))
+                    text=_label, component=self.reason_select))
+
+        # Варн: обязательный свободный текст (деталь)
+        if action == 'warn':
+            self.detail = discord.ui.TextInput(
+                label='Своя формулировка (обязательно)',
+                required=True,
+                placeholder='Кратко опишите ситуацию…',
+                style=discord.TextStyle.paragraph,
+                max_length=400,
+            )
+            self.add_item(self.detail)
 
         # 2) Цель / срок / кол-во
         if action != "clear" and not self.fixed_target_id:
@@ -3881,7 +3936,41 @@ class ModActionModal(discord.ui.Modal):
             return
         _t = getattr(self, 'target', None)
         _a = getattr(self, 'amount', None)
-        if self.reason_select is not None:
+        _warn_code = None
+        _warn_type = getattr(self, 'warn_reason_type', 'member')
+        _warn_detail = None
+        if self.action == 'warn' and self.reason_select is not None:
+            from services import warn_reasons as _WR
+            _warn_code = (self.reason_select.values or [''])[0]
+            _warn_detail = (
+                (self.detail.value if self.detail else '') or '').strip()
+            if not _warn_detail:
+                await _respond(
+                    interaction,
+                    content='Напишите свою формулировку причины.',
+                    ephemeral=True)
+                return
+            # если цель введена вручную — уточним тип
+            if not self.fixed_target_id and _t is not None:
+                try:
+                    from services.warn_reasons import reason_type_for_target
+                    _raw_t = (_t.value or '').strip()
+                    _digits = ''.join(c for c in _raw_t if c.isdigit())
+                    if len(_digits) >= 15 and interaction.guild:
+                        _tm = interaction.guild.get_member(int(_digits))
+                        if _tm:
+                            _warn_type = reason_type_for_target(
+                                interaction.guild, _tm)
+                except Exception:
+                    pass
+            if not _WR.is_known(_warn_type, _warn_code):
+                await _respond(
+                    interaction,
+                    content='Неизвестная причина варна.',
+                    ephemeral=True)
+                return
+            _reason = _WR.format_reason(_warn_type, _warn_code, _warn_detail)
+        elif self.reason_select is not None:
             from services import mod_reasons as _MR
             _code = (self.reason_select.values or [''])[0]
             if not _MR.allows(_code, self.action):
@@ -3921,6 +4010,9 @@ class ModActionModal(discord.ui.Modal):
             _reason,
             (_a.value or "").strip() if _a else "5",
             proof_link="",
+            reason_code=_warn_code,
+            reason_type=_warn_type if self.action == 'warn' else None,
+            detail=_warn_detail,
         )
 
 

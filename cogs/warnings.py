@@ -388,37 +388,20 @@ class warnings(commands.Cog):
             log.error('Ошибка авто-наказания: %s', e)
         return None
 
-    # ── ядро выдачи варна ───────────────────────────────────────────
+    # ── ядро выдачи варна (через services.warn_actions) ─────────────
     async def _issue_warn(self, guild, user, moderator, reason: str = None,
-                          *, check_acl: bool = True, interaction=None):
+                          *, check_acl: bool = True, interaction=None,
+                          reason_code: str = None, reason_type: str = None,
+                          detail: str = None, source: str = 'discord'):
         """Запись в БД + sync роли + лог + DM + авто-наказание.
 
         Возвращает (warn_id, total, punishment_result) или (0, total, None)
         при отказе.
         """
         from services import warn_store as WS
-        from services.warn_role import sync_warn_role, is_staff_member
-        from services.warn_acl import branches_of
-        from services.warn_config import format_branches
+        from services import warn_actions as WA
 
-        if check_acl:
-            try:
-                from services.warn_acl import manual_warn_check
-                ok, deny = manual_warn_check(guild, moderator, user)
-                if not ok:
-                    if interaction is not None:
-                        from cogs.embed_utils import error_embed as _err
-                        try:
-                            await interaction.followup.send(
-                                embed=_err(deny or 'Нет права на варн.'),
-                                ephemeral=True)
-                        except Exception:
-                            pass
-                    return (0, WS.count_active(guild.id, user.id), None)
-            except Exception as _hex:
-                log.debug('warn_acl: %s', _hex)
-
-        # лимиты стаффа
+        # лимиты стаффа (до записи)
         try:
             _sl_uid = getattr(moderator, 'id', 0)
             try:
@@ -450,39 +433,25 @@ class warnings(commands.Cog):
         except Exception as _ex:
             _log.debug('_issue_warn staff_limit: %s', _ex)
 
-        is_staff = is_staff_member(guild, user)
-        branch = _target_branch(user) if is_staff else None
+        ok, msg, payload = await WA.issue_warn(
+            guild, user, moderator,
+            reason=reason, reason_code=reason_code, reason_type=reason_type,
+            detail=detail, source=source, check_acl=check_acl,
+            apply_auto_punish=False)
+        if not ok or not payload:
+            if interaction is not None:
+                from cogs.embed_utils import error_embed as _err
+                try:
+                    await interaction.followup.send(
+                        embed=_err(msg or 'Нет права на варн.'),
+                        ephemeral=True)
+                except Exception:
+                    pass
+            return (0, WS.count_active(guild.id, user.id), None)
 
-        row = WS.add_warn(
-            guild.id, user.id, getattr(moderator, 'id', 0) or 0,
-            reason or 'Не указана',
-            is_staff_target=is_staff,
-            branch=branch,
-        )
-        warn_id = int(row['id'])
-        total = WS.count_active(guild.id, user.id)
-        try:
-            WS.mirror_json(guild.id, user.id)
-        except Exception:
-            pass
-
-        # роль warn: стаффу никогда; обычному — если active > 0
-        try:
-            await sync_warn_role(user)
-        except Exception as e:
-            log.warning('sync после варна: %s', e)
-
-        try:
-            from services.mute_progression import reset_on_warn
-            reset_on_warn(guild.id, user.id)
-        except Exception as _ex:
-            _log.debug('mute_progression: %s', _ex)
-
-        try:
-            from services.staff_limits import record_hit as _sl_rec
-            _sl_rec(guild.id, moderator.id, 'warn', 1)
-        except Exception as _ex:
-            _log.debug('record_hit: %s', _ex)
+        warn_id = int(payload['warn_id'])
+        total = int(payload['total'])
+        is_staff = bool(payload.get('is_staff'))
 
         try:
             from services.panel_notify import notify_panel_event as _np
@@ -490,68 +459,37 @@ class warnings(commands.Cog):
                 _np(interaction, 'warn',
                     f'Предупреждение: {user.display_name}',
                     f'Модератор: {moderator.display_name} · Всего: {total} · '
-                    f'Причина: {reason or "Не указана"}')
+                    f'Причина: {payload.get("reason") or "Не указана"}')
         except Exception as _ex:
             _log.debug('panel_notify: %s', _ex)
 
-        br_label = format_branches({branch}) if branch else None
-        await _log_warn_to_channel(
-            guild, user, moderator, reason, warn_id, total,
-            branch=br_label, is_staff=is_staff)
-
-        # DM
-        try:
-            from services.async_io import load_json_async
-            dm_file = f'data/warn_dm_{guild.id}.json'
-            dm_cfg = await load_json_async(dm_file, {}, log=_log) or {}
-            custom_dm = dm_cfg.get('message')
-            if custom_dm:
-                msg = (custom_dm
-                       .replace('{user}', user.display_name)
-                       .replace('{reason}', reason or 'Не указана')
-                       .replace('{mod}', moderator.display_name)
-                       .replace('{сервер}', guild.name))
-                dm_embed = discord.Embed(
-                    color=discord.Color.dark_grey(),
-                    timestamp=datetime.now(timezone.utc))
-                dm_embed.description = (
-                    f'## Предупреждение #{warn_id}\n{msg}\n\n'
-                    f'Сервер: **{guild.name}**\n'
-                    f'Модератор: **{moderator.display_name}**\n'
-                    f'Причина: {reason or "Не указана"}')
-                dm_embed.set_thumbnail(
-                    url=guild.icon.url if guild.icon else None)
-                dm_embed.set_footer(text=f'{guild.name}')
-                await self.send_dm(user, dm_embed)
-            else:
-                await self.send_dm(
-                    user, mod_dm_embed('warn', guild, moderator, reason))
-        except Exception as _ex:
-            _log.debug('DM warn: %s', _ex)
-
-        try:
-            punishment_result = await self.apply_warn_punishment(
-                guild, user, total)
-        except Exception as _pun_e:
-            log.warning('Авто-наказание не применено: %s', _pun_e)
-            punishment_result = None
-        if punishment_result:
-            await _log_punish_to_channel(
-                guild, user, punishment_result, total)
+        punishment_result = None
+        if not is_staff:
+            try:
+                punishment_result = await self.apply_warn_punishment(
+                    guild, user, total)
+            except Exception as _pun_e:
+                log.warning('Авто-наказание не применено: %s', _pun_e)
+            if punishment_result:
+                await _log_punish_to_channel(
+                    guild, user, punishment_result, total)
         return warn_id, total, punishment_result
 
     async def add_warn(self, interaction, user: discord.Member,
-                       reason: str = None):
+                       reason: str = None, *, reason_code: str = None,
+                       reason_type: str = None, detail: str = None):
         """Ядро /warn и контекстных меню."""
         return await self._issue_warn(
             interaction.guild, user, interaction.user, reason,
-            check_acl=True, interaction=interaction)
+            check_acl=True, interaction=interaction,
+            reason_code=reason_code, reason_type=reason_type, detail=detail)
 
     async def add_warning(self, user: discord.Member,
-                          moderator: discord.Member, reason: str = None):
+                          moderator: discord.Member, reason: str = None,
+                          *, reason_code: str = None, reason_type: str = None,
+                          detail: str = None, source: str = 'discord'):
         """Путь AI / панели / автофильтра (без interaction)."""
         guild = user.guild
-        # лимит уже внутри _issue_warn; ACL для бота пропускается отдельно
         try:
             from services.warn_acl import _is_bot_actor
             is_bot = _is_bot_actor(moderator)
@@ -559,36 +497,21 @@ class warnings(commands.Cog):
             is_bot = bool(getattr(moderator, 'bot', False))
         return await self._issue_warn(
             guild, user, moderator, reason,
-            check_acl=not is_bot, interaction=None)
+            check_acl=not is_bot, interaction=None,
+            reason_code=reason_code, reason_type=reason_type,
+            detail=detail, source=source)
 
-    async def remove_last_warning(self, user, moderator):
+    async def remove_last_warning(self, user, moderator, *,
+                                  removed_reason: str = None,
+                                  source: str = 'discord'):
         """Снять последний активный варн (soft) + sync роли."""
-        from services import warn_store as WS
-        from services.warn_role import sync_warn_role
-
-        guild = user.guild
-        removed = WS.deactivate_last_active(
-            guild.id, user.id, getattr(moderator, 'id', 0) or 0)
-        if not removed:
+        from services import warn_actions as WA
+        ok, msg, payload = await WA.remove_warn(
+            user.guild, user, moderator,
+            removed_reason=removed_reason, source=source, check_acl=False)
+        if not ok or not payload:
             return None, 0
-        total = WS.count_active(guild.id, user.id)
-        try:
-            WS.mirror_json(guild.id, user.id)
-        except Exception:
-            pass
-        try:
-            await sync_warn_role(user)
-        except Exception as e:
-            log.warning('sync после unwarn: %s', e)
-        try:
-            from cogs.logs import send_action_log
-            await send_action_log(
-                guild, 'unwarn', user, moderator,
-                reason=removed.get('reason', 'Не указана'),
-                extra=f'Снято #{removed.get("id")} · осталось {total}')
-        except Exception as _ulog_e:
-            log.debug('лог снятия: %s', _ulog_e)
-        return removed, total
+        return payload.get('removed'), int(payload.get('total') or 0)
 
     # ── /warnings ───────────────────────────────────────────────────
     @app_commands.command(name='warnings',
