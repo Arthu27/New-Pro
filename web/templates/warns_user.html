@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Warn · {{ profile.name }}{% endblock %}
+{% block heading %}Профиль варна{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=5">
+<div class="warn-page">
+<nav class="crumb rise">
+  <a href="{{ url_for('warns', tab='staff' if is_staff else 'members') }}">Warn</a>
+  <span aria-hidden="true">›</span>
+  <b>{{ profile.name }}</b>
+</nav>
+
+<section class="wp-hero rise">
+  {% if profile.avatar %}
+  <img src="{{ profile.avatar }}" alt="">
+  {% else %}
+  <span class="warn-ava-fb" style="width:96px;height:96px;font-size:32px">{{ (profile.name or '?')[:1]|upper }}</span>
+  {% endif %}
+  <div>
+    <h2>{{ profile.name }}</h2>
+    <div class="dim">{% if profile.handle %}@{{ profile.handle }} · {% endif %}<code>{{ uid }}</code>
+      {% if not profile.on_server %} · <span style="color:#ff8a7a">вышел</span>{% endif %}
+    </div>
+    <div class="wp-meta">
+      <span class="st-pill {% if is_staff %}st-active{% else %}st-gone{% endif %}">{{ 'стафф' if is_staff else 'участник' }}</span>
+      {% if profile.role_style %}
+      <span class="rbadge" style="color:{{ profile.role_style.color }};background:{{ profile.role_style.color }}22;border-color:{{ profile.role_style.color }}66">{{ profile.role_style.label }}</span>
+      {% endif %}
+      {% if profile.branch_style %}
+      <span class="rbadge" style="color:{{ profile.branch_style.color }};background:{{ profile.branch_style.color }}22;border-color:{{ profile.branch_style.color }}66">{{ profile.branch_style.label }}</span>
+      {% endif %}
+      {% if active_count %}<span class="wbadge w{{ '3' if active_count >= 3 else active_count }}">{{ active_count }}</span>{% endif %}
+    </div>
+    <div class="wp-stats">
+      <span>активных <b>{{ active_count }}</b></span>
+      <span>всего <b>{{ history|length }}</b></span>
+      <span>первый <b>{{ profile.first_at or '—' }}</b></span>
+      <span>последний <b>{{ profile.last_at or '—' }}</b></span>
+    </div>
+    {% if can_manage %}
+    <div class="wp-btns">
+      <button type="button" class="primary-btn" id="btnIssue">Выдать варн</button>
+      {% if active_count %}
+      <button type="button" class="ghost" id="btnClearAll">Снять все (разрешённые)</button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="warn-shell rise">
+  <h2 style="margin:0 0 14px;font:800 16px/1.2 var(--display, Syne, sans-serif)">
+    История <span class="count">{{ history|length }}</span>
+  </h2>
+  {% if not history %}
+  <div class="warn-empty"><b>История пуста</b></div>
+  {% else %}
+  <div class="warn-list">
+    {% for w in history %}
+    <article class="warn-card" style="grid-template-columns:auto minmax(0,1.4fr) auto minmax(100px,.7fr) auto auto">
+      <div><b style="font-size:13px">#{{ w.id }}</b></div>
+      <div>
+        <div class="warn-reason" title="{{ w.reason }}">{{ w.reason }}</div>
+        <div class="dim" style="font-size:11px;margin-top:4px">
+          {{ 'стафф' if w.reason_type=='staff' else 'участник' }}{% if w.reason_code %} · {{ w.reason_code }}{% endif %}
+        </div>
+      </div>
+      <div class="warn-issuer">
+        <span>
+          <span class="wp-name">{{ w.mod_name }}</span>
+          {% if w.mod_role_style %}
+          <span class="rbadge" style="font-size:10px;color:{{ w.mod_role_style.color }};background:{{ w.mod_role_style.color }}22;border-color:{{ w.mod_role_style.color }}66">{{ w.mod_role_style.label }}</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="warn-date">{{ w.when }}
+        {% if w.active and w.expires_text %}
+        <div class="warn-expires {% if w.expires_urgent %}is-urgent{% endif %}">{{ w.expires_text }}</div>
+        {% endif %}
+      </div>
+      <div>
+        {% if w.status == 'expired' or w.expired %}
+        <span class="st-pill st-expired">истёк</span>
+        {% elif w.active %}<span class="st-pill st-active">активен</span>
+        {% else %}<span class="st-pill st-gone">снят</span>{% endif %}
+        {% if not w.active %}
+        <div class="dim" style="font-size:11px;margin-top:4px;max-width:140px">
+          {% if w.status == 'expired' or w.expired %}система (истёк)
+          {% else %}{{ w.removed_by_name or w.removed_by or '' }}{% endif %}
+          {% if w.removed_when %}<br>{{ w.removed_when }}{% endif %}
+          {% if w.removed_reason %}<br>{{ w.removed_reason }}{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="warn-actions">
+        {% if w.active and w.can_remove %}
+        <button type="button" class="btn-rm btn-danger" data-wid="{{ w.id }}">снять</button>
+        {% elif w.active and can_manage %}
+        <button type="button" disabled title="{{ w.remove_deny or 'Нет права' }}">снять</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+</div>
+
+<dialog id="warnDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3>Выдать варн</h3>
+      <button type="button" class="dlg-x" id="warnClose">×</button></div>
+    <label>Причина
+      <select id="warnCode" class="input">
+        {% for r in reason_opts %}
+        <option value="{{ r.code }}">{{ r.code }} · {{ r.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Формулировка
+      <textarea id="warnDetail" class="input" required maxlength="400" rows="3"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="warnCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="warnGo">Выдать</button>
+    </div>
+    <p id="warnMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<dialog id="rmDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3 id="rmTitle">Снять варн</h3>
+      <button type="button" class="dlg-x" id="rmClose">×</button></div>
+    <label>Причина <span class="dim">(необязательно)</span>
+      <textarea id="rmReason" class="input" maxlength="200" rows="2"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="rmCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="rmGo">Подтвердить</button>
+    </div>
+    <p id="rmMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  const csrf = {{ csrf_token|tojson }};
+  const uid = {{ uid|tojson }};
+  const rtype = {{ ('staff' if is_staff else 'member')|tojson }};
+  const $ = id => document.getElementById(id);
+  const dlg = $('warnDlg'), rmDlg = $('rmDlg');
+  let mode='one', rmWid=0;
+  $('btnIssue')?.addEventListener('click', () => dlg.showModal());
+  $('warnClose')?.addEventListener('click', () => dlg.close());
+  $('warnCancel')?.addEventListener('click', () => dlg.close());
+  $('warnGo')?.addEventListener('click', async () => {
+    const detail = $('warnDetail').value.trim();
+    if (!detail) { $('warnMsg').textContent = 'Нужна формулировка'; return; }
+    const r = await fetch('/api/warns/issue', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: uid, reason_type: rtype, reason_code: $('warnCode').value, detail, csrf})});
+    const j = await r.json();
+    if (!j.ok) { $('warnMsg').textContent = j.error || 'Ошибка'; return; }
+    location.reload();
+  });
+  function openRm(title, wid){
+    mode = wid ? 'one' : 'all'; rmWid = wid || 0;
+    $('rmTitle').textContent = title; $('rmReason').value=''; $('rmMsg').textContent='';
+    rmDlg.showModal();
+  }
+  $('rmClose')?.addEventListener('click', () => rmDlg.close());
+  $('rmCancel')?.addEventListener('click', () => rmDlg.close());
+  document.querySelectorAll('.btn-rm').forEach(btn => {
+    btn.addEventListener('click', () => openRm('Снять варн #' + btn.dataset.wid, Number(btn.dataset.wid)));
+  });
+  $('btnClearAll')?.addEventListener('click', () => openRm('Снять все разрешённые варны', 0));
+  $('rmGo')?.addEventListener('click', async () => {
+    $('rmMsg').textContent='…';
+    const body = {user_id: uid, removed_reason: $('rmReason').value.trim(), csrf};
+    let url = '/api/warns/remove_all';
+    if (mode === 'one') { url = '/api/warns/remove'; body.warn_id = rmWid; }
+    const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    const j = await r.json();
+    if (!j.ok) { $('rmMsg').textContent = j.error || 'Ошибка'; return; }
+    location.reload();
+  });
+})();
+</script>
+{% endblock %}
