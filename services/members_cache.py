@@ -317,10 +317,19 @@ async def sync_guild(guild) -> int:
     n = 0
     try:
         members = list(getattr(guild, 'members', []) or [])
-        if not members:
+        expected = int(getattr(guild, 'member_count', 0) or 0)
+        # chunking ещё не закончен → тянем полный roster через API
+        incomplete = (
+            not members
+            or (expected > 0 and len(members) < max(50, int(expected * 0.85)))
+        )
+        if incomplete:
             try:
+                fetched: List = []
                 async for m in guild.fetch_members(limit=None):
-                    members.append(m)
+                    fetched.append(m)
+                if fetched:
+                    members = fetched
             except Exception as ex:
                 _log.debug('fetch_members: %s', ex)
 
@@ -353,17 +362,28 @@ async def sync_guild(guild) -> int:
 
         await _flush()
 
-        # Полный снимок: кто не в Discord — снять in_guild/is_staff
+        # Полный снимок: кто не в Discord — снять in_guild/is_staff.
+        # Не prune'им, если roster явно неполный (иначе сотрём 20k кэш).
         present = {
             int(getattr(m, 'id', 0) or 0)
             for m in members
             if getattr(m, 'id', None)
         }
-        pruned = await loop.run_in_executor(
-            None, mark_absent, gid, present)
-        if pruned:
-            _log.info(
-                'members_cache prune guild=%s left=%s', guild.id, pruned)
+        expected = int(getattr(guild, 'member_count', 0) or 0)
+        roster_ok = (
+            len(present) >= 50
+            and (not expected or len(present) >= max(50, int(expected * 0.85)))
+        )
+        if roster_ok:
+            pruned = await loop.run_in_executor(
+                None, mark_absent, gid, present)
+            if pruned:
+                _log.info(
+                    'members_cache prune guild=%s left=%s', guild.id, pruned)
+        else:
+            _log.warning(
+                'members_cache skip prune guild=%s present=%s expected=%s',
+                guild.id, len(present), expected)
         _log.info('members_cache sync guild=%s n=%s', guild.id, n)
     except Exception as ex:
         _log.warning('sync_guild: %s', ex)
