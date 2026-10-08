@@ -91,11 +91,25 @@ def _row(r: sqlite3.Row) -> Dict[str, Any]:
     }
 
 
-def upsert_member(guild_id: int, member) -> None:
-    """Записать/обновить участника из discord.Member."""
+_UPSERT_SQL = '''INSERT INTO members_cache
+   (guild_id, user_id, username, display_name, avatar_url,
+    top_role_id, is_staff, branch, in_guild, updated_at)
+   VALUES (?,?,?,?,?,?,?,?,1,?)
+   ON CONFLICT(guild_id, user_id) DO UPDATE SET
+     username=excluded.username,
+     display_name=excluded.display_name,
+     avatar_url=excluded.avatar_url,
+     top_role_id=excluded.top_role_id,
+     is_staff=excluded.is_staff,
+     branch=excluded.branch,
+     in_guild=1,
+     updated_at=excluded.updated_at'''
+
+
+def _member_row(guild_id: int, member) -> Optional[tuple]:
+    """Снимок участника для INSERT (без записи в БД)."""
     if member is None:
-        return
-    ensure_table()
+        return None
     from services.warn_config import member_rank_snapshot
     from services.warn_acl import branches_of, is_staff_target
 
@@ -123,29 +137,33 @@ def upsert_member(guild_id: int, member) -> None:
             branch = sorted(br)[0] if br else None
     except Exception:
         pass
+    return (
+        int(guild_id), uid, username, display, avatar,
+        top_rid, is_staff, branch, _now(),
+    )
+
+
+def _bulk_upsert_rows(rows: List[tuple]) -> int:
+    """Одна транзакция на пачку — не блокируем event-loop 20k commit'ами."""
+    if not rows:
+        return 0
+    ensure_table()
     with _LOCK:
         conn = _conn()
         try:
-            conn.execute(
-                '''INSERT INTO members_cache
-                   (guild_id, user_id, username, display_name, avatar_url,
-                    top_role_id, is_staff, branch, in_guild, updated_at)
-                   VALUES (?,?,?,?,?,?,?,?,1,?)
-                   ON CONFLICT(guild_id, user_id) DO UPDATE SET
-                     username=excluded.username,
-                     display_name=excluded.display_name,
-                     avatar_url=excluded.avatar_url,
-                     top_role_id=excluded.top_role_id,
-                     is_staff=excluded.is_staff,
-                     branch=excluded.branch,
-                     in_guild=1,
-                     updated_at=excluded.updated_at''',
-                (int(guild_id), uid, username, display, avatar,
-                 top_rid, is_staff, branch, _now()),
-            )
+            conn.executemany(_UPSERT_SQL, rows)
             conn.commit()
+            return len(rows)
         finally:
             conn.close()
+
+
+def upsert_member(guild_id: int, member) -> None:
+    """Записать/обновить участника из discord.Member."""
+    row = _member_row(guild_id, member)
+    if row is None:
+        return
+    _bulk_upsert_rows([row])
 
 
 def mark_left(guild_id: int, user_id: int) -> None:
@@ -253,7 +271,14 @@ def search(
 
 
 async def sync_guild(guild) -> int:
-    """Полная синхронизация участников гильдии. Возвращает число записей."""
+    """Полная синхронизация участников гильдии.
+
+    Снимки собираем в event-loop чанками (с yield), запись в SQLite —
+    через executor одной/несколькими транзакциями. Раньше 20k sync
+    commit'ов вешали цикл на минуты и рвали voice transport.
+    """
+    import asyncio
+
     if guild is None:
         return 0
     ensure_table()
@@ -266,12 +291,35 @@ async def sync_guild(guild) -> int:
                     members.append(m)
             except Exception as ex:
                 _log.debug('fetch_members: %s', ex)
-        for m in members:
+
+        gid = int(guild.id)
+        batch: List[tuple] = []
+        chunk = 200
+        loop = asyncio.get_running_loop()
+
+        async def _flush() -> None:
+            nonlocal n, batch
+            if not batch:
+                return
+            rows = batch
+            batch = []
+            written = await loop.run_in_executor(None, _bulk_upsert_rows, rows)
+            n += int(written or 0)
+
+        for i, m in enumerate(members):
             try:
-                upsert_member(guild.id, m)
-                n += 1
+                row = _member_row(gid, m)
+                if row:
+                    batch.append(row)
             except Exception as ex:
-                _log.debug('upsert %s: %s', getattr(m, 'id', '?'), ex)
+                _log.debug('snapshot %s: %s', getattr(m, 'id', '?'), ex)
+            if len(batch) >= chunk:
+                await _flush()
+            # отдаём цикл раз в chunk — войс/gateway не голодают
+            if (i + 1) % chunk == 0:
+                await asyncio.sleep(0)
+
+        await _flush()
         _log.info('members_cache sync guild=%s n=%s', guild.id, n)
     except Exception as ex:
         _log.warning('sync_guild: %s', ex)

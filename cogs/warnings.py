@@ -680,17 +680,25 @@ class warnings(commands.Cog):
                     log.debug('warn sync guild %s: %s', guild.id, e)
         except Exception as e:
             log.warning('on_ready warn sync: %s', e)
+        # members_cache — только в фоне: полный sync на main гильдии
+        # иначе вешает event-loop и бот не заходит в войс.
         try:
+            import asyncio as _aio
             from services import members_cache as MC
             from config import Config
             main_gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
-            for guild in list(self.bot.guilds):
-                if main_gid and int(guild.id) != main_gid:
-                    continue
-                try:
-                    await MC.sync_guild(guild)
-                except Exception as e:
-                    log.debug('members_cache sync %s: %s', guild.id, e)
+
+            async def _bg_members_cache():
+                for guild in list(self.bot.guilds):
+                    if main_gid and int(guild.id) != main_gid:
+                        continue
+                    try:
+                        await MC.sync_guild(guild)
+                    except Exception as e:
+                        log.debug('members_cache sync %s: %s', guild.id, e)
+
+            self.bot.loop.create_task(
+                _bg_members_cache(), name='members-cache-sync')
         except Exception as e:
             log.debug('members_cache on_ready: %s', e)
         try:
