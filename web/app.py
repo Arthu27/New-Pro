@@ -1297,8 +1297,17 @@ def _appeal_name_hints(gid_filter=''):
     return hints
 
 
-def _collect_cases(gid_filter=''):
+def _collect_cases(gid_filter='', *, _skip_cache=False):
     """Дела панели + варны → список наказаний, новые сверху."""
+    cache_key = f'cases:{gid_filter or "all"}'
+    if not _skip_cache:
+        try:
+            from services import panel_cache as PC
+            hit = PC.get(cache_key)
+            if hit is not None:
+                return hit
+        except Exception:
+            pass
     out = []
     md = _read_json(DATA / 'mod_data.json', {})
     cases = (md.get('cases') or md.get('case') or {}) if isinstance(md, dict) else {}
@@ -1360,13 +1369,25 @@ def _collect_cases(gid_filter=''):
     for row in out:
         row['user_name'] = _best_name(row.get('user_name'), row.get('user_id'), book)
         row['mod_name'] = _best_name(row.get('mod_name'), row.get('mod_id'), book)
+    try:
+        from services import panel_cache as PC
+        PC.set(cache_key, out, ttl=30.0)
+    except Exception:
+        pass
     return out
 
 
 def _namebook(gid=''):
     """id → отображаемое имя: живой кэш Discord и сохранённые ники."""
-    book = {}
     gid = str(gid or _main_guild() or '')
+    try:
+        from services import panel_cache as PC
+        hit = PC.get(f'namebook:{gid}')
+        if isinstance(hit, dict):
+            return dict(hit)
+    except Exception:
+        pass
+    book = {}
     try:
         bot = bot_instance
         if bot and gid:
@@ -1400,6 +1421,11 @@ def _namebook(gid=''):
             label = str(name or '').strip()
             if label and not label.isdigit():
                 book.setdefault(uid, label)
+    try:
+        from services import panel_cache as PC
+        PC.set(f'namebook:{gid}', dict(book), ttl=60.0)
+    except Exception:
+        pass
     return book
 
 
@@ -3079,6 +3105,15 @@ def _users_directory(q: str = '', *, limit: int = 300):
     """Справочник участников: профили + счётчики мер. (rows, kpi)."""
     gid = _main_guild()
     ql = (q or '').strip().lower()
+    cache_key = f'users_dir:{gid}:{ql}:{int(limit)}'
+    if not ql:
+        try:
+            from services import panel_cache as PC
+            hit = PC.get(cache_key)
+            if hit is not None:
+                return hit
+        except Exception:
+            pass
     names = {}
     avatars = {}
     handles = {}
@@ -3224,7 +3259,14 @@ def _users_directory(q: str = '', *, limit: int = 300):
         'bans': sum(r['bans'] for r in rows),
         'kicks': sum(r['kicks'] for r in rows),
     }
-    return rows[: max(1, int(limit))], kpi
+    result = (rows[: max(1, int(limit))], kpi)
+    if not ql:
+        try:
+            from services import panel_cache as PC
+            PC.set(cache_key, result, ttl=45.0)
+        except Exception:
+            pass
+    return result
 
 
 @app.route('/users')

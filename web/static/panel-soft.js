@@ -135,12 +135,19 @@
     softGoto(location.href, false);
   });
 
-  // idle prefetch первых пунктов меню
+  // idle prefetch: только лёгкие пункты, без тяжёлых /member /users /logs /channels
+  const HEAVY = /\/(member|users|logs|channels|staff|org)(\?|$)/i;
+  function lightPrefetch() {
+    let n = 0;
+    document.querySelectorAll('.side .nav a').forEach((a) => {
+      if (n >= 2 || !shouldSoft(a) || HEAVY.test(a.getAttribute('href') || '')) return;
+      prefetch(a.href);
+      n += 1;
+    });
+  }
   if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => {
-      document.querySelectorAll('.side .nav a').forEach((a, i) => {
-        if (i < 6 && shouldSoft(a)) prefetch(a.href);
-      });
-    }, { timeout: 2500 });
+    requestIdleCallback(lightPrefetch, { timeout: 8000 });
+  } else {
+    setTimeout(lightPrefetch, 4000);
   }
 })();

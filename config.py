@@ -179,6 +179,9 @@ class Config:
     WARN_DURATION_DAYS: int = _env_int('WARN_DURATION_DAYS', 7)
     # Канал живой сводки варнов (бот редактирует 2 сообщения). 0 = авто (имя warn / создать).
     WARN_BOARD_CHANNEL_ID: int = _env_int('WARN_BOARD_CHANNEL_ID', 0)
+    # Канал селфи: фото/видео → роль (владелец 2026-10-08).
+    SELFIE_CHANNEL_ID: int = _env_int('SELFIE_CHANNEL_ID', 1312434029278134294)
+    SELFIE_ROLE_ID: int = _env_int('SELFIE_ROLE_ID', 920462510769975306)
     
     # === Limits ===
     MAX_WARNINGS_BEFORE_BAN: int = 5
