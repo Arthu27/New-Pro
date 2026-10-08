@@ -164,16 +164,49 @@ def upsert_member(guild_id: int, member) -> None:
 
 
 def mark_left(guild_id: int, user_id: int) -> None:
+    """Участник вышел: не в гильдии и больше не staff."""
     ensure_table()
     with _LOCK:
         conn = _conn()
         try:
             conn.execute(
-                'UPDATE members_cache SET in_guild=0, updated_at=? '
+                'UPDATE members_cache SET in_guild=0, is_staff=0, '
+                'branch=NULL, updated_at=? '
                 'WHERE guild_id=? AND user_id=?',
                 (_now(), int(guild_id), int(user_id)),
             )
             conn.commit()
+        finally:
+            conn.close()
+
+
+def mark_absent(
+    guild_id: int,
+    present_ids: set[int] | list[int] | None,
+) -> int:
+    """Всех, кого нет в present_ids, пометить как вышедших (не staff)."""
+    ensure_table()
+    gid = int(guild_id)
+    alive = {int(x) for x in (present_ids or []) if x is not None}
+    with _LOCK:
+        conn = _conn()
+        try:
+            rows = conn.execute(
+                'SELECT user_id FROM members_cache '
+                'WHERE guild_id=? AND COALESCE(in_guild,1)=1',
+                (gid,),
+            ).fetchall()
+            gone = [int(r[0]) for r in rows if int(r[0]) not in alive]
+            if not gone:
+                return 0
+            now = _now()
+            conn.executemany(
+                'UPDATE members_cache SET in_guild=0, is_staff=0, '
+                'branch=NULL, updated_at=? WHERE guild_id=? AND user_id=?',
+                [(now, gid, uid) for uid in gone],
+            )
+            conn.commit()
+            return len(gone)
         finally:
             conn.close()
 
@@ -206,7 +239,9 @@ def search(
     where = ['guild_id=?']
     params: list = [int(guild_id)]
     if staff_only is True:
+        # Только живой стафф на сервере — не призраки после demote/leave
         where.append('is_staff=1')
+        where.append('COALESCE(in_guild,1)=1')
     elif staff_only is False:
         where.append('is_staff=0')
     if q:
@@ -317,6 +352,18 @@ async def sync_guild(guild) -> int:
                 await asyncio.sleep(0)
 
         await _flush()
+
+        # Полный снимок: кто не в Discord — снять in_guild/is_staff
+        present = {
+            int(getattr(m, 'id', 0) or 0)
+            for m in members
+            if getattr(m, 'id', None)
+        }
+        pruned = await loop.run_in_executor(
+            None, mark_absent, gid, present)
+        if pruned:
+            _log.info(
+                'members_cache prune guild=%s left=%s', guild.id, pruned)
         _log.info('members_cache sync guild=%s n=%s', guild.id, n)
     except Exception as ex:
         _log.warning('sync_guild: %s', ex)

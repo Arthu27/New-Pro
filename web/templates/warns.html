@@ -131,8 +131,9 @@
       </div>
       {% endif %}
 
-      <div>
+      <div class="wbadge-wrap" title="Активных варнов: {{ r.active_count }}">
         <span class="wbadge w{{ '3' if r.active_count >= 3 else r.active_count }}">{{ r.active_count }}</span>
+        <span class="wbadge-label">варн</span>
       </div>
 
       <div class="warn-reason" title="{{ r.reason }}">{{ r.reason }}</div>
