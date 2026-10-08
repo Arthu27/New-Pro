@@ -87,10 +87,12 @@ check('voice_stay' in main and '_get_voice_ctrl' in main,
 check('instance_lock' in main, 'main instance_lock')
 check('_get_event_ctrl' in ev and 'voice_stay' in ev,
       'event → VoiceStayController')
-check("VOICE_SILENCE_PING') or '0'" in main
-      or "or '0').strip()" in open(
-          os.path.join(ROOT, 'services/voice_stay.py'), encoding='utf-8').read(),
-      'silence default OFF')
+vs_full = open(os.path.join(ROOT, 'services/voice_stay.py'), encoding='utf-8').read()
+check('SilenceAudioSource' in vs_full, 'looping silence source')
+check('self_mute=False' in vs_full, 'connect без self_mute (UDP keepalive)')
+check('silence_keepalive_enabled' in vs_full, 'silence auto/on gate')
+check("or 'auto')" in vs_full or "or 'auto').strip()" in vs_full,
+      'silence default auto (opus → ON)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
