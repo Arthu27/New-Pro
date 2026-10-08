@@ -91,56 +91,26 @@ def _set_page(guild_id: int, kind: str, page: int) -> None:
         pass
 
 
+def board_enabled() -> bool:
+    """Сводка в Discord только если явно задан WARN_BOARD_CHANNEL_ID > 0.
+
+    Канал НЕ создаём и НЕ ищем по имени — без ID в .env board выключен.
+    """
+    return board_channel_id() > 0
+
+
 async def resolve_channel(guild) -> Optional[discord.TextChannel]:
-    """Найти/создать канал warn. ID сохраняется в settings."""
-    if guild is None:
+    """Вернуть канал сводки только при явном WARN_BOARD_CHANNEL_ID. Без автосоздания."""
+    if guild is None or not board_enabled():
         return None
     cid = board_channel_id()
-    if not cid:
-        try:
-            saved = _gd().get(int(guild.id), _KEY_CHANNEL)
-            if saved:
-                cid = int(saved)
-        except Exception:
-            cid = 0
-
-    ch = None
-    if cid:
-        ch = guild.get_channel(int(cid))
-        if ch is None:
-            try:
-                ch = await guild.fetch_channel(int(cid))
-            except Exception:
-                ch = None
-
+    ch = guild.get_channel(int(cid))
     if ch is None:
-        # поиск по имени
-        for c in getattr(guild, 'text_channels', []) or []:
-            n = (getattr(c, 'name', '') or '').lower()
-            if n in ('warn', 'варн') or n.endswith('-warn') or n.endswith('・warn'):
-                ch = c
-                break
-
-    if ch is None:
-        # создать под Staff log
-        parent = None
-        for c in getattr(guild, 'categories', []) or []:
-            n = (getattr(c, 'name', '') or '')
-            if 'Staff log' in n or 'staff log' in n.lower():
-                parent = c
-                break
         try:
-            ch = await guild.create_text_channel(
-                'warn',
-                category=parent,
-                topic='Сводка активных варнов · бот редактирует сообщения',
-                reason='Warn board channel',
-            )
-            _log.info('warn_board: создан канал #%s (%s)', ch.name, ch.id)
+            ch = await guild.fetch_channel(int(cid))
         except Exception as ex:
-            _log.warning('warn_board: не удалось создать канал: %s', ex)
+            _log.warning('warn_board: канал %s недоступен: %s', cid, ex)
             return None
-
     try:
         _gd().set(int(guild.id), _KEY_CHANNEL, int(ch.id))
     except Exception:
@@ -307,9 +277,12 @@ async def update_warn_board(
     guild, *, force: bool = False, member_page: int | None = None,
     staff_page: int | None = None,
 ) -> bool:
-    """Обновить оба сообщения-сводки. Вызывать после issue/remove."""
+    """Обновить оба сообщения-сводки. Вызывать после issue/remove.
+
+    Без WARN_BOARD_CHANNEL_ID — no-op (канал не трогаем).
+    """
     global _last_update
-    if guild is None:
+    if guild is None or not board_enabled():
         return False
     async with _UPDATE_LOCK:
         import time
