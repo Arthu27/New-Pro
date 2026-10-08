@@ -3535,11 +3535,8 @@ def _warn_user_row(w, book, guild=None, actor=None):
     return base
 
 
-@app.route('/warns')
-@login_required
-@role_required('helper')
-def warns():
-    """Warn: вкладки Участники / Стафф, агрегация по людям."""
+def _warns_view_data():
+    """Общий каркас Warn (страница + live API)."""
     import time as _time
     _t0 = _time.perf_counter()
     from services import warn_store as WS
@@ -3574,6 +3571,7 @@ def warns():
         'active_warns': 0, 'users_member': 0, 'users_staff': 0,
         'users_total': 0, 'removed_7d': 0,
     }
+    err = ''
     cache_key = (
         f'warns:list:{gid}:{tab}:{scope}:{f_branch}:{f_mod}:{sort}:'
         f'{page}:{q}')
@@ -3583,7 +3581,6 @@ def warns():
     elif gid:
         try:
             mod_id = int(f_mod) if f_mod.isdigit() else None
-            # ник → members_cache (без Discord API)
             q_use = q
             if q and not (q.isdigit() and len(q) >= 5):
                 try:
@@ -3613,7 +3610,7 @@ def warns():
             if not q:
                 PC.set(cache_key, (rows_raw, total, stats))
         except Exception as ex:
-            flash(f'БД варнов: {ex}', 'err')
+            err = str(ex)
 
     rows = [_warn_user_row(w, book, guild, actor=actor) for w in rows_raw]
     pages = max(1, (total + per - 1) // per)
@@ -3621,22 +3618,72 @@ def warns():
     can_admin = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('admin', 4)
     can_extend = can_admin or (session.get('role') == 'owner')
     ms = int((_time.perf_counter() - _t0) * 1000)
-    app.logger.info('warns page %sms tab=%s q=%r total=%s', ms, tab, q, total)
-    return render_template(
-        'warns.html',
-        rows=rows, total=total, page=page, pages=pages,
-        tab=tab, q=q, scope=scope, f_branch=f_branch, f_mod=f_mod, sort=sort,
-        stats=stats,
-        branches=sorted(branch_grant_roles().keys()),
-        branch_labels=branch_labels(),
-        reasons_json=_json.dumps(WR.as_public_dict(), ensure_ascii=False),
-        styles_json=_json.dumps(styles_public_dict(), ensure_ascii=False),
-        csrf_token=_ensure_csrf(),
-        can_manage=can_manage,
-        can_admin=can_admin,
-        can_extend=can_extend,
-        timing_ms=ms,
-    )
+    qs = {
+        'tab': tab, 'scope': scope, 'sort': sort, 'page': page,
+    }
+    if q:
+        qs['q'] = q
+    if f_branch and tab == 'staff':
+        qs['branch'] = f_branch
+    if f_mod:
+        qs['mod'] = f_mod
+    url = url_for('warns', **qs)
+    ctx = {
+        'rows': rows, 'total': total, 'page': page, 'pages': pages,
+        'tab': tab, 'q': q, 'scope': scope, 'f_branch': f_branch,
+        'f_mod': f_mod, 'sort': sort, 'stats': stats,
+        'branches': sorted(branch_grant_roles().keys()),
+        'branch_labels': branch_labels(),
+        'reasons_json': _json.dumps(WR.as_public_dict(), ensure_ascii=False),
+        'styles_json': _json.dumps(styles_public_dict(), ensure_ascii=False),
+        'csrf_token': _ensure_csrf(),
+        'can_manage': can_manage,
+        'can_admin': can_admin,
+        'can_extend': can_extend,
+        'timing_ms': ms,
+        'url': url,
+        'error': err,
+    }
+    return ctx
+
+
+@app.route('/warns')
+@login_required
+@role_required('helper')
+def warns():
+    """Warn: вкладки Участники / Стафф, агрегация по людям."""
+    ctx = _warns_view_data()
+    if ctx.get('error'):
+        flash(f'БД варнов: {ctx["error"]}', 'err')
+    app.logger.info(
+        'warns page %sms tab=%s q=%r total=%s',
+        ctx['timing_ms'], ctx['tab'], ctx['q'], ctx['total'])
+    return render_template('warns.html', **ctx)
+
+
+@app.get('/api/warns/live')
+@login_required
+@role_required('helper')
+def api_warns_live():
+    """Live-фрагмент Warn без полной перезагрузки страницы."""
+    ctx = _warns_view_data()
+    if ctx.get('error'):
+        return jsonify({'ok': False, 'error': ctx['error']}), 500
+    html = render_template('_warns_live.html', **ctx)
+    app.logger.info(
+        'warns live %sms tab=%s q=%r total=%s',
+        ctx['timing_ms'], ctx['tab'], ctx['q'], ctx['total'])
+    return jsonify({
+        'ok': True,
+        'html': html,
+        'tab': ctx['tab'],
+        'total': ctx['total'],
+        'page': ctx['page'],
+        'pages': ctx['pages'],
+        'url': ctx['url'],
+        'ms': ctx['timing_ms'],
+        'stats': ctx['stats'],
+    })
 
 
 @app.get('/api/warns/search')
@@ -3784,28 +3831,24 @@ def api_warns_extend():
     return jsonify({'ok': True, 'row': row, 'expires_at': row.get('expires_at')})
 
 
-@app.route('/warns/user/<uid>')
-@login_required
-@role_required('helper')
-def warns_user(uid):
+def _warns_user_view_data(uid):
     from services import warn_store as WS
     from services import warn_reasons as WR
     from services import warn_actions as WA
     from services import members_cache as MC
     from services.warn_config import (
-        format_branches, role_style, branch_style, member_rank_snapshot)
+        role_style, branch_style, member_rank_snapshot)
     from services.warn_acl import is_staff_target, branches_of
 
     gid = _main_guild()
     if not str(uid).isdigit() or not gid:
-        abort(404)
+        return None
     book = _namebook(gid)
     bot = bot_instance
     guild = bot.get_guild(int(gid)) if bot and gid else None
     actor = _panel_actor_member(guild) if guild else None
     member = guild.get_member(int(uid)) if guild else None
     cached = MC.get_member(int(gid), int(uid))
-    # текущий staff — из ролей / cache, не из записи варна
     if member is not None:
         try:
             from services.warn_acl import get_staff_info
@@ -3882,10 +3925,9 @@ def warns_user(uid):
             branch_st = branch_style(cached['branch'])
         on_server = bool(cached.get('in_guild'))
 
-    return render_template(
-        'warns_user.html',
-        uid=str(uid),
-        profile={
+    return {
+        'uid': str(uid),
+        'profile': {
             'name': name,
             'handle': handle,
             'avatar': avatar,
@@ -3897,13 +3939,39 @@ def warns_user(uid):
             'last_at': last_at,
             'on_server': on_server,
         },
-        history=history,
-        active_count=active_count,
-        is_staff=is_staff,
-        reason_opts=WR.select_options_data(rtype),
-        csrf_token=_ensure_csrf(),
-        can_manage=can_manage,
-    )
+        'history': history,
+        'active_count': active_count,
+        'is_staff': is_staff,
+        'reason_opts': WR.select_options_data(rtype),
+        'csrf_token': _ensure_csrf(),
+        'can_manage': can_manage,
+    }
+
+
+@app.route('/warns/user/<uid>')
+@login_required
+@role_required('helper')
+def warns_user(uid):
+    ctx = _warns_user_view_data(uid)
+    if ctx is None:
+        abort(404)
+    return render_template('warns_user.html', **ctx)
+
+
+@app.get('/api/warns/user/<uid>/live')
+@login_required
+@role_required('helper')
+def api_warns_user_live(uid):
+    ctx = _warns_user_view_data(uid)
+    if ctx is None:
+        return jsonify({'ok': False, 'error': 'not found'}), 404
+    html = render_template('_warns_user_live.html', **ctx)
+    return jsonify({
+        'ok': True,
+        'html': html,
+        'is_staff': bool(ctx.get('is_staff')),
+        'active_count': ctx.get('active_count') or 0,
+    })
 
 
 @app.route('/bans')
@@ -4016,6 +4084,11 @@ def api_warns_issue():
     if not ok:
         status = 403 if 'ветк' in (msg or '').lower() or 'права' in (msg or '').lower() else 400
         return jsonify({'ok': False, 'error': msg}), status
+    try:
+        from services import panel_cache as PC
+        PC.invalidate('warns')
+    except Exception:
+        pass
     return jsonify({'ok': True, 'message': msg, 'warn_id': (payload or {}).get('warn_id')})
 
 
@@ -4069,6 +4142,11 @@ def api_warns_remove():
     if not ok:
         status = 403 if 'ветк' in (msg or '').lower() else 400
         return jsonify({'ok': False, 'error': msg}), status
+    try:
+        from services import panel_cache as PC
+        PC.invalidate('warns')
+    except Exception:
+        pass
     return jsonify({'ok': True, 'message': msg})
 
 
@@ -4103,6 +4181,11 @@ def api_warns_remove_all():
         return jsonify({'ok': False, 'error': str(ex)}), 500
     if not ok:
         return jsonify({'ok': False, 'error': msg}), 400
+    try:
+        from services import panel_cache as PC
+        PC.invalidate('warns')
+    except Exception:
+        pass
     return jsonify({'ok': True, 'message': msg})
 
 
