@@ -688,8 +688,17 @@ def _viewer_limits_card():
 # ── Discord OAuth ──────────────────────────────────────────────────────
 
 def _http_json(method, url, *, headers=None, form=None, timeout=12):
+    """HTTP JSON к Discord API.
+
+    Без User-Agent Cloudflare на discord.com отвечает 403 (error code 1010) —
+    из‑за этого OAuth показывал «Токен Discord: HTTP 403».
+    """
     data = None
     hdrs = dict(headers or {})
+    hdrs.setdefault(
+        'User-Agent',
+        'HakumoPanel (https://hakumods.xyz, 1.0)',
+    )
     if form is not None:
         data = urllib.parse.urlencode(form).encode('utf-8')
         hdrs.setdefault('Content-Type', 'application/x-www-form-urlencoded')
@@ -703,7 +712,13 @@ def _http_json(method, url, *, headers=None, form=None, timeout=12):
             body = e.read().decode('utf-8')
             payload = json.loads(body) if body else {}
         except Exception:
-            payload = {}
+            payload = {'error': f'HTTP {e.code}', 'raw': (body[:200] if 'body' in dir() else '')}
+        # Cloudflare HTML/1010 → понятное сообщение
+        if e.code == 403 and not payload.get('error') and not payload.get('error_description'):
+            payload = {
+                'error': 'forbidden',
+                'error_description': 'HTTP 403 (Cloudflare/Discord blocked request)',
+            }
         return e.code, payload
     except Exception as e:
         return 0, {'error': str(e)}
