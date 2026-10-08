@@ -12,7 +12,7 @@ from logger import get_logger
 _log = get_logger('warnings')
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
 from datetime import datetime, timezone, timedelta
 import os
@@ -261,6 +261,7 @@ async def _log_punish_to_channel(guild, user, punishment_result, total):
 class warnings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self._board_loop_started = False
         try:
             from services import warn_store as WS
             WS.ensure_table()
@@ -388,37 +389,20 @@ class warnings(commands.Cog):
             log.error('Ошибка авто-наказания: %s', e)
         return None
 
-    # ── ядро выдачи варна ───────────────────────────────────────────
+    # ── ядро выдачи варна (через services.warn_actions) ─────────────
     async def _issue_warn(self, guild, user, moderator, reason: str = None,
-                          *, check_acl: bool = True, interaction=None):
+                          *, check_acl: bool = True, interaction=None,
+                          reason_code: str = None, reason_type: str = None,
+                          detail: str = None, source: str = 'discord'):
         """Запись в БД + sync роли + лог + DM + авто-наказание.
 
         Возвращает (warn_id, total, punishment_result) или (0, total, None)
         при отказе.
         """
         from services import warn_store as WS
-        from services.warn_role import sync_warn_role, is_staff_member
-        from services.warn_acl import branches_of
-        from services.warn_config import format_branches
+        from services import warn_actions as WA
 
-        if check_acl:
-            try:
-                from services.warn_acl import manual_warn_check
-                ok, deny = manual_warn_check(guild, moderator, user)
-                if not ok:
-                    if interaction is not None:
-                        from cogs.embed_utils import error_embed as _err
-                        try:
-                            await interaction.followup.send(
-                                embed=_err(deny or 'Нет права на варн.'),
-                                ephemeral=True)
-                        except Exception:
-                            pass
-                    return (0, WS.count_active(guild.id, user.id), None)
-            except Exception as _hex:
-                log.debug('warn_acl: %s', _hex)
-
-        # лимиты стаффа
+        # лимиты стаффа (до записи)
         try:
             _sl_uid = getattr(moderator, 'id', 0)
             try:
@@ -450,39 +434,25 @@ class warnings(commands.Cog):
         except Exception as _ex:
             _log.debug('_issue_warn staff_limit: %s', _ex)
 
-        is_staff = is_staff_member(guild, user)
-        branch = _target_branch(user) if is_staff else None
+        ok, msg, payload = await WA.issue_warn(
+            guild, user, moderator,
+            reason=reason, reason_code=reason_code, reason_type=reason_type,
+            detail=detail, source=source, check_acl=check_acl,
+            apply_auto_punish=False)
+        if not ok or not payload:
+            if interaction is not None:
+                from cogs.embed_utils import error_embed as _err
+                try:
+                    await interaction.followup.send(
+                        embed=_err(msg or 'Нет права на варн.'),
+                        ephemeral=True)
+                except Exception:
+                    pass
+            return (0, WS.count_active(guild.id, user.id), None)
 
-        row = WS.add_warn(
-            guild.id, user.id, getattr(moderator, 'id', 0) or 0,
-            reason or 'Не указана',
-            is_staff_target=is_staff,
-            branch=branch,
-        )
-        warn_id = int(row['id'])
-        total = WS.count_active(guild.id, user.id)
-        try:
-            WS.mirror_json(guild.id, user.id)
-        except Exception:
-            pass
-
-        # роль warn: стаффу никогда; обычному — если active > 0
-        try:
-            await sync_warn_role(user)
-        except Exception as e:
-            log.warning('sync после варна: %s', e)
-
-        try:
-            from services.mute_progression import reset_on_warn
-            reset_on_warn(guild.id, user.id)
-        except Exception as _ex:
-            _log.debug('mute_progression: %s', _ex)
-
-        try:
-            from services.staff_limits import record_hit as _sl_rec
-            _sl_rec(guild.id, moderator.id, 'warn', 1)
-        except Exception as _ex:
-            _log.debug('record_hit: %s', _ex)
+        warn_id = int(payload['warn_id'])
+        total = int(payload['total'])
+        is_staff = bool(payload.get('is_staff'))
 
         try:
             from services.panel_notify import notify_panel_event as _np
@@ -490,68 +460,37 @@ class warnings(commands.Cog):
                 _np(interaction, 'warn',
                     f'Предупреждение: {user.display_name}',
                     f'Модератор: {moderator.display_name} · Всего: {total} · '
-                    f'Причина: {reason or "Не указана"}')
+                    f'Причина: {payload.get("reason") or "Не указана"}')
         except Exception as _ex:
             _log.debug('panel_notify: %s', _ex)
 
-        br_label = format_branches({branch}) if branch else None
-        await _log_warn_to_channel(
-            guild, user, moderator, reason, warn_id, total,
-            branch=br_label, is_staff=is_staff)
-
-        # DM
-        try:
-            from services.async_io import load_json_async
-            dm_file = f'data/warn_dm_{guild.id}.json'
-            dm_cfg = await load_json_async(dm_file, {}, log=_log) or {}
-            custom_dm = dm_cfg.get('message')
-            if custom_dm:
-                msg = (custom_dm
-                       .replace('{user}', user.display_name)
-                       .replace('{reason}', reason or 'Не указана')
-                       .replace('{mod}', moderator.display_name)
-                       .replace('{сервер}', guild.name))
-                dm_embed = discord.Embed(
-                    color=discord.Color.dark_grey(),
-                    timestamp=datetime.now(timezone.utc))
-                dm_embed.description = (
-                    f'## Предупреждение #{warn_id}\n{msg}\n\n'
-                    f'Сервер: **{guild.name}**\n'
-                    f'Модератор: **{moderator.display_name}**\n'
-                    f'Причина: {reason or "Не указана"}')
-                dm_embed.set_thumbnail(
-                    url=guild.icon.url if guild.icon else None)
-                dm_embed.set_footer(text=f'{guild.name}')
-                await self.send_dm(user, dm_embed)
-            else:
-                await self.send_dm(
-                    user, mod_dm_embed('warn', guild, moderator, reason))
-        except Exception as _ex:
-            _log.debug('DM warn: %s', _ex)
-
-        try:
-            punishment_result = await self.apply_warn_punishment(
-                guild, user, total)
-        except Exception as _pun_e:
-            log.warning('Авто-наказание не применено: %s', _pun_e)
-            punishment_result = None
-        if punishment_result:
-            await _log_punish_to_channel(
-                guild, user, punishment_result, total)
+        punishment_result = None
+        if not is_staff:
+            try:
+                punishment_result = await self.apply_warn_punishment(
+                    guild, user, total)
+            except Exception as _pun_e:
+                log.warning('Авто-наказание не применено: %s', _pun_e)
+            if punishment_result:
+                await _log_punish_to_channel(
+                    guild, user, punishment_result, total)
         return warn_id, total, punishment_result
 
     async def add_warn(self, interaction, user: discord.Member,
-                       reason: str = None):
+                       reason: str = None, *, reason_code: str = None,
+                       reason_type: str = None, detail: str = None):
         """Ядро /warn и контекстных меню."""
         return await self._issue_warn(
             interaction.guild, user, interaction.user, reason,
-            check_acl=True, interaction=interaction)
+            check_acl=True, interaction=interaction,
+            reason_code=reason_code, reason_type=reason_type, detail=detail)
 
     async def add_warning(self, user: discord.Member,
-                          moderator: discord.Member, reason: str = None):
+                          moderator: discord.Member, reason: str = None,
+                          *, reason_code: str = None, reason_type: str = None,
+                          detail: str = None, source: str = 'discord'):
         """Путь AI / панели / автофильтра (без interaction)."""
         guild = user.guild
-        # лимит уже внутри _issue_warn; ACL для бота пропускается отдельно
         try:
             from services.warn_acl import _is_bot_actor
             is_bot = _is_bot_actor(moderator)
@@ -559,36 +498,21 @@ class warnings(commands.Cog):
             is_bot = bool(getattr(moderator, 'bot', False))
         return await self._issue_warn(
             guild, user, moderator, reason,
-            check_acl=not is_bot, interaction=None)
+            check_acl=not is_bot, interaction=None,
+            reason_code=reason_code, reason_type=reason_type,
+            detail=detail, source=source)
 
-    async def remove_last_warning(self, user, moderator):
+    async def remove_last_warning(self, user, moderator, *,
+                                  removed_reason: str = None,
+                                  source: str = 'discord'):
         """Снять последний активный варн (soft) + sync роли."""
-        from services import warn_store as WS
-        from services.warn_role import sync_warn_role
-
-        guild = user.guild
-        removed = WS.deactivate_last_active(
-            guild.id, user.id, getattr(moderator, 'id', 0) or 0)
-        if not removed:
+        from services import warn_actions as WA
+        ok, msg, payload = await WA.remove_warn(
+            user.guild, user, moderator,
+            removed_reason=removed_reason, source=source, check_acl=False)
+        if not ok or not payload:
             return None, 0
-        total = WS.count_active(guild.id, user.id)
-        try:
-            WS.mirror_json(guild.id, user.id)
-        except Exception:
-            pass
-        try:
-            await sync_warn_role(user)
-        except Exception as e:
-            log.warning('sync после unwarn: %s', e)
-        try:
-            from cogs.logs import send_action_log
-            await send_action_log(
-                guild, 'unwarn', user, moderator,
-                reason=removed.get('reason', 'Не указана'),
-                extra=f'Снято #{removed.get("id")} · осталось {total}')
-        except Exception as _ulog_e:
-            log.debug('лог снятия: %s', _ulog_e)
-        return removed, total
+        return payload.get('removed'), int(payload.get('total') or 0)
 
     # ── /warnings ───────────────────────────────────────────────────
     @app_commands.command(name='warnings',
@@ -740,7 +664,7 @@ class warnings(commands.Cog):
             _log.debug('_collect_mod_data notes: %s', _ex)
         return warns, cases, notes
 
-    # ── события: sync роли ──────────────────────────────────────────
+    # ── события: sync роли + members_cache + сводка канала warn ─────
     @commands.Cog.listener()
     async def on_ready(self):
         try:
@@ -756,6 +680,66 @@ class warnings(commands.Cog):
                     log.debug('warn sync guild %s: %s', guild.id, e)
         except Exception as e:
             log.warning('on_ready warn sync: %s', e)
+        # members_cache — только в фоне: полный sync на main гильдии
+        # иначе вешает event-loop и бот не заходит в войс.
+        try:
+            import asyncio as _aio
+            from services import members_cache as MC
+            from config import Config
+            main_gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+
+            async def _bg_members_cache():
+                for guild in list(self.bot.guilds):
+                    if main_gid and int(guild.id) != main_gid:
+                        continue
+                    try:
+                        await MC.sync_guild(guild)
+                    except Exception as e:
+                        log.debug('members_cache sync %s: %s', guild.id, e)
+
+            self.bot.loop.create_task(
+                _bg_members_cache(), name='members-cache-sync')
+        except Exception as e:
+            log.debug('members_cache on_ready: %s', e)
+        try:
+            from services.warn_board import update_warn_board
+            from config import Config
+            main_gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+            for guild in list(self.bot.guilds):
+                if main_gid and int(guild.id) != main_gid:
+                    continue
+                try:
+                    await update_warn_board(guild, force=True)
+                except Exception as e:
+                    log.debug('warn board on_ready %s: %s', guild.id, e)
+        except Exception as e:
+            log.debug('warn board on_ready: %s', e)
+        if not getattr(self, '_board_loop_started', False):
+            try:
+                self._warn_board_loop.start()
+                self._board_loop_started = True
+            except Exception as e:
+                log.debug('warn board loop start: %s', e)
+
+    @tasks.loop(minutes=3)
+    async def _warn_board_loop(self):
+        try:
+            from services.warn_board import update_warn_board
+            from config import Config
+            gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+            for guild in list(self.bot.guilds):
+                if gid and int(guild.id) != gid:
+                    continue
+                try:
+                    await update_warn_board(guild, force=False)
+                except Exception as e:
+                    log.debug('warn board loop %s: %s', guild.id, e)
+        except Exception as e:
+            log.debug('warn board loop: %s', e)
+
+    @_warn_board_loop.before_loop
+    async def _warn_board_before(self):
+        await self.bot.wait_until_ready()
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -764,10 +748,28 @@ class warnings(commands.Cog):
             await sync_warn_role(member)
         except Exception as e:
             log.debug('on_member_join warn sync: %s', e)
+        try:
+            from services import members_cache as MC
+            MC.upsert_member(member.guild.id, member)
+        except Exception as e:
+            log.debug('on_member_join cache: %s', e)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        try:
+            from services import members_cache as MC
+            MC.mark_left(member.guild.id, member.id)
+        except Exception as e:
+            log.debug('on_member_remove cache: %s', e)
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
         """Стал/перестал быть стаффом или вручную трогали роль warn."""
+        try:
+            from services import members_cache as MC
+            MC.upsert_member(after.guild.id, after)
+        except Exception:
+            pass
         try:
             before_ids = {
                 getattr(r, 'id', None)
@@ -775,7 +777,10 @@ class warnings(commands.Cog):
             after_ids = {
                 getattr(r, 'id', None)
                 for r in (getattr(after, 'roles', None) or [])}
-            if before_ids == after_ids:
+            nick_chg = (
+                getattr(before, 'display_name', None)
+                != getattr(after, 'display_name', None))
+            if before_ids == after_ids and not nick_chg:
                 return
             from services.warn_role import sync_warn_role
             await sync_warn_role(after)
@@ -1034,9 +1039,8 @@ class PWView(discord.ui.View):
 
 async def setup(bot):
     await bot.add_cog(warnings(bot))
-    # Persistent: кнопки истории после рестарта
+    # Persistent: кнопки истории + сводки канала warn после рестарта
     try:
-        # Регистрируем динамический обработчик через on_interaction
         @bot.listen('on_interaction')
         async def _warn_hist_router(interaction):
             try:
@@ -1044,8 +1048,11 @@ async def setup(bot):
                 cid = str(data.get('custom_id') or '')
                 if cid.startswith('warnhist:'):
                     await handle_warn_history_button(interaction)
+                elif cid.startswith('warnboard:'):
+                    from services.warn_board import handle_board_button
+                    await handle_board_button(interaction)
             except Exception as e:
-                log.debug('warnhist router: %s', e)
+                log.debug('warnhist/board router: %s', e)
     except Exception as e:
         log.debug('warnhist listen: %s', e)
-    log.info('Warnings загружен (единая роль warn + SQLite)')
+    log.info('Warnings загружен (единая роль warn + SQLite + board)')

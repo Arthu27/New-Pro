@@ -15,7 +15,7 @@ import os
 import sqlite3
 import threading
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from logger import get_logger
 
@@ -49,6 +49,26 @@ def _conn() -> sqlite3.Connection:
     return conn
 
 
+def _table_columns(conn: sqlite3.Connection) -> set:
+    try:
+        rows = conn.execute('PRAGMA table_info(warns)').fetchall()
+        return {str(r[1] if not isinstance(r, sqlite3.Row) else r['name'])
+                for r in rows}
+    except Exception:
+        return set()
+
+
+def _ensure_column(conn: sqlite3.Connection, name: str, ddl: str) -> None:
+    cols = _table_columns(conn)
+    if name in cols:
+        return
+    try:
+        conn.execute(f'ALTER TABLE warns ADD COLUMN {ddl}')
+        _log.info('warn_store: добавлена колонка %s', name)
+    except Exception as ex:
+        _log.warning('warn_store ALTER %s: %s', name, ex)
+
+
 def ensure_table(conn: sqlite3.Connection | None = None) -> None:
     own = conn is None
     if own:
@@ -69,12 +89,23 @@ def ensure_table(conn: sqlite3.Connection | None = None) -> None:
                 removed_at TEXT
             )
         ''')
+        # Безопасная миграция: существующие строки сохраняются.
+        _ensure_column(conn, 'reason_type',
+                       "reason_type TEXT NOT NULL DEFAULT 'member'")
+        _ensure_column(conn, 'reason_code', 'reason_code TEXT')
+        _ensure_column(conn, 'removed_reason', 'removed_reason TEXT')
+        _ensure_column(conn, 'source', "source TEXT DEFAULT 'discord'")
+        _ensure_column(conn, 'issuer_rank', 'issuer_rank INTEGER DEFAULT 0')
+        _ensure_column(conn, 'issuer_role_id', 'issuer_role_id INTEGER')
         conn.execute(
             'CREATE INDEX IF NOT EXISTS idx_warns_user_active '
             'ON warns(guild_id, user_id, active)')
         conn.execute(
             'CREATE INDEX IF NOT EXISTS idx_warns_guild '
             'ON warns(guild_id)')
+        conn.execute(
+            'CREATE INDEX IF NOT EXISTS idx_warns_type_active '
+            'ON warns(guild_id, reason_type, active)')
         conn.commit()
     finally:
         if own:
@@ -82,6 +113,19 @@ def ensure_table(conn: sqlite3.Connection | None = None) -> None:
 
 
 def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
+    keys = set(row.keys()) if hasattr(row, 'keys') else set()
+
+    def _get(k, default=None):
+        if k in keys:
+            try:
+                return row[k]
+            except Exception:
+                return default
+        return default
+
+    is_staff = int(_get('is_staff_target') or 0)
+    rtype = (_get('reason_type') or '').strip() or (
+        'staff' if is_staff else 'member')
     return {
         'id': int(row['id']),
         'guild_id': int(row['guild_id']),
@@ -89,14 +133,22 @@ def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
         'moderator_id': int(row['moderator_id']),
         'reason': row['reason'] or 'Не указана',
         'created_at': row['created_at'] or '',
-        'is_staff_target': int(row['is_staff_target'] or 0),
-        'branch': row['branch'] or None,
-        'active': int(row['active'] or 0),
-        'removed_by': int(row['removed_by']) if row['removed_by'] else None,
-        'removed_at': row['removed_at'] or None,
+        'is_staff_target': is_staff,
+        'branch': _get('branch') or None,
+        'active': int(_get('active') or 0),
+        'removed_by': int(_get('removed_by')) if _get('removed_by') else None,
+        'removed_at': _get('removed_at') or None,
+        'reason_type': rtype,
+        'reason_code': _get('reason_code') or None,
+        'removed_reason': _get('removed_reason') or None,
+        'source': _get('source') or 'discord',
+        'issuer_rank': int(_get('issuer_rank') or 0),
+        'issuer_role_id': (
+            int(_get('issuer_role_id')) if _get('issuer_role_id') else None),
         # совместимость со старым форматом (панель / досье)
         'mod_id': str(row['moderator_id']),
         'mod': str(row['moderator_id']),
+        'issuer_id': int(row['moderator_id']),
         'timestamp': row['created_at'] or '',
     }
 
@@ -172,25 +224,40 @@ def add_warn(
     is_staff_target: bool = False,
     branch: str | None = None,
     created_at: str | None = None,
+    reason_type: str | None = None,
+    reason_code: str | None = None,
+    source: str = 'discord',
+    issuer_rank: int = 0,
+    issuer_role_id: int | None = None,
 ) -> Dict[str, Any]:
     """Добавить активный варн. Возвращает запись."""
     ensure_table()
     migrate_guild(guild_id)
     ts = created_at or datetime.now(timezone.utc).isoformat()
     reason = (reason or 'Не указана').strip() or 'Не указана'
+    rtype = (reason_type or ('staff' if is_staff_target else 'member')).strip()
+    if rtype not in ('member', 'staff'):
+        rtype = 'staff' if is_staff_target else 'member'
     with _LOCK:
         conn = _conn()
         try:
             cur = conn.execute(
                 '''INSERT INTO warns
                    (guild_id, user_id, moderator_id, reason, created_at,
-                    is_staff_target, branch, active)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 1)''',
+                    is_staff_target, branch, active,
+                    reason_type, reason_code, source,
+                    issuer_rank, issuer_role_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)''',
                 (
                     int(guild_id), int(user_id), int(moderator_id),
                     reason, ts,
                     1 if is_staff_target else 0,
                     branch or None,
+                    rtype,
+                    (reason_code or None),
+                    (source or 'discord')[:32],
+                    int(issuer_rank or 0),
+                    int(issuer_role_id) if issuer_role_id else None,
                 ),
             )
             conn.commit()
@@ -208,6 +275,7 @@ def deactivate_warn(
     removed_by: int,
     *,
     removed_at: str | None = None,
+    removed_reason: str | None = None,
 ) -> Optional[Dict[str, Any]]:
     """Снять варн (soft): active=0. Возвращает запись или None."""
     ensure_table()
@@ -222,9 +290,10 @@ def deactivate_warn(
             if not row:
                 return None
             conn.execute(
-                'UPDATE warns SET active=0, removed_by=?, removed_at=? '
-                'WHERE id=?',
-                (int(removed_by), ts, int(warn_id)),
+                'UPDATE warns SET active=0, removed_by=?, removed_at=?, '
+                'removed_reason=? WHERE id=?',
+                (int(removed_by), ts,
+                 (removed_reason or None), int(warn_id)),
             )
             conn.commit()
             row2 = conn.execute(
@@ -237,12 +306,281 @@ def deactivate_warn(
 
 def deactivate_last_active(
     guild_id: int, user_id: int, removed_by: int,
+    *, removed_reason: str | None = None,
 ) -> Optional[Dict[str, Any]]:
     """Снять самый свежий активный варн пользователя."""
     active = list_warns(guild_id, user_id, active_only=True, limit=1)
     if not active:
         return None
-    return deactivate_warn(active[0]['id'], removed_by)
+    return deactivate_warn(
+        active[0]['id'], removed_by, removed_reason=removed_reason)
+
+
+def get_warn(warn_id: int) -> Optional[Dict[str, Any]]:
+    ensure_table()
+    with _LOCK:
+        conn = _conn()
+        try:
+            row = conn.execute(
+                'SELECT * FROM warns WHERE id=?', (int(warn_id),)
+            ).fetchone()
+            return _row_to_dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def deactivate_all_active(
+    guild_id: int, user_id: int, removed_by: int,
+    *, removed_reason: str | None = None,
+) -> List[Dict[str, Any]]:
+    """Снять все активные варны пользователя. Возвращает снятые записи."""
+    active = list_warns(guild_id, user_id, active_only=True)
+    out = []
+    for w in active:
+        row = deactivate_warn(
+            w['id'], removed_by, removed_reason=removed_reason)
+        if row:
+            out.append(row)
+    return out
+
+
+def list_guild_warns(
+    guild_id: int,
+    *,
+    active_only: bool = True,
+    reason_type: str | None = None,
+    branch: str | None = None,
+    moderator_id: int | None = None,
+    user_id: int | None = None,
+    q: str | None = None,
+    sort: str = 'date_desc',
+    limit: int = 50,
+    offset: int = 0,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Список варнов гильдии + total для пагинации.
+
+    q — поиск по user_id (цифры) или подстроке reason.
+    sort: date_desc|date_asc|count_desc|count_asc
+    """
+    ensure_table()
+    migrate_guild(guild_id)
+    where = ['guild_id=?']
+    params: list = [int(guild_id)]
+    if active_only:
+        where.append('active=1')
+    if reason_type in ('member', 'staff'):
+        where.append('reason_type=?')
+        params.append(reason_type)
+    if branch:
+        where.append('branch=?')
+        params.append(str(branch))
+    if moderator_id:
+        where.append('moderator_id=?')
+        params.append(int(moderator_id))
+    if user_id:
+        where.append('user_id=?')
+        params.append(int(user_id))
+    q = (q or '').strip()
+    if q:
+        if q.isdigit() and len(q) >= 5:
+            where.append('user_id=?')
+            params.append(int(q))
+        else:
+            where.append('(reason LIKE ? OR CAST(user_id AS TEXT) LIKE ?)')
+            like = f'%{q}%'
+            params.extend([like, like])
+    wh = ' AND '.join(where)
+
+    order = 'id DESC'
+    if sort == 'date_asc':
+        order = 'id ASC'
+    elif sort == 'count_desc':
+        # сортировка по числу активных у юзера — через подзапрос
+        order = (
+            '(SELECT COUNT(*) FROM warns w2 WHERE w2.guild_id=warns.guild_id '
+            'AND w2.user_id=warns.user_id AND w2.active=1) DESC, id DESC')
+    elif sort == 'count_asc':
+        order = (
+            '(SELECT COUNT(*) FROM warns w2 WHERE w2.guild_id=warns.guild_id '
+            'AND w2.user_id=warns.user_id AND w2.active=1) ASC, id DESC')
+
+    with _LOCK:
+        conn = _conn()
+        try:
+            total = int(conn.execute(
+                f'SELECT COUNT(*) AS c FROM warns WHERE {wh}', params
+            ).fetchone()['c'] or 0)
+            lim = max(1, min(200, int(limit or 50)))
+            off = max(0, int(offset or 0))
+            rows = conn.execute(
+                f'SELECT * FROM warns WHERE {wh} ORDER BY {order} '
+                f'LIMIT ? OFFSET ?',
+                params + [lim, off],
+            ).fetchall()
+            return [_row_to_dict(r) for r in rows], total
+        finally:
+            conn.close()
+
+
+def stats_active(guild_id: int) -> Dict[str, int]:
+    """Счётчики активных варнов для шапки панели."""
+    ensure_table()
+    migrate_guild(guild_id)
+    with _LOCK:
+        conn = _conn()
+        try:
+            total = int(conn.execute(
+                'SELECT COUNT(*) AS c FROM warns '
+                'WHERE guild_id=? AND active=1',
+                (int(guild_id),),
+            ).fetchone()['c'] or 0)
+            # Стафф приоритетнее: is_staff_target=1 или reason_type=staff.
+            # Иначе один user попадает и в members, и в staff.
+            staff = int(conn.execute(
+                'SELECT COUNT(DISTINCT user_id) AS c FROM warns '
+                'WHERE guild_id=? AND active=1 AND '
+                "(reason_type='staff' OR is_staff_target=1)",
+                (int(guild_id),),
+            ).fetchone()['c'] or 0)
+            members = int(conn.execute(
+                'SELECT COUNT(DISTINCT user_id) AS c FROM warns '
+                'WHERE guild_id=? AND active=1 AND '
+                "NOT (reason_type='staff' OR is_staff_target=1)",
+                (int(guild_id),),
+            ).fetchone()['c'] or 0)
+            removed_7d = 0
+            try:
+                from datetime import timedelta
+                cut = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+                removed_7d = int(conn.execute(
+                    'SELECT COUNT(*) AS c FROM warns '
+                    'WHERE guild_id=? AND active=0 AND removed_at>=?',
+                    (int(guild_id), cut),
+                ).fetchone()['c'] or 0)
+            except Exception:
+                removed_7d = 0
+            return {
+                'active_warns': total,
+                'users_member': members,
+                'users_staff': staff,
+                'users_total': members + staff,
+                'removed_7d': removed_7d,
+            }
+        finally:
+            conn.close()
+
+
+def list_users_aggregated(
+    guild_id: int,
+    *,
+    reason_type: str = 'member',
+    active_only: bool = True,
+    branch: str | None = None,
+    moderator_id: int | None = None,
+    q: str | None = None,
+    sort: str = 'count_desc',
+    limit: int = 40,
+    offset: int = 0,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Одна строка на пользователя: active_count + последний варн.
+
+    reason_type: member|staff
+    sort: count_desc|count_asc|date_desc|date_asc
+    """
+    ensure_table()
+    migrate_guild(guild_id)
+    gid = int(guild_id)
+    rtype = reason_type if reason_type in ('member', 'staff') else 'member'
+    where = ['guild_id=?']
+    params: list = [gid]
+    if active_only:
+        where.append('active=1')
+    if rtype == 'staff':
+        where.append(
+            "(reason_type='staff' OR is_staff_target=1)")
+    else:
+        where.append(
+            "(COALESCE(reason_type,'member')!='staff' "
+            "AND COALESCE(is_staff_target,0)=0)")
+    if branch:
+        where.append('branch=?')
+        params.append(str(branch))
+    if moderator_id:
+        where.append('moderator_id=?')
+        params.append(int(moderator_id))
+    q = (q or '').strip()
+    if q:
+        if q.isdigit() and len(q) >= 5:
+            where.append('user_id=?')
+            params.append(int(q))
+        else:
+            where.append(
+                '(CAST(user_id AS TEXT) LIKE ? OR reason LIKE ?)')
+            like = f'%{q}%'
+            params.extend([like, like])
+    wh = ' AND '.join(where)
+
+    if sort == 'count_asc':
+        order = 'active_count ASC, t.last_id DESC'
+    elif sort == 'date_asc':
+        order = 't.last_id ASC'
+    elif sort == 'date_desc':
+        order = 't.last_id DESC'
+    else:
+        order = 'active_count DESC, t.last_id DESC'
+
+    lim = max(1, min(200, int(limit or 40)))
+    off = max(0, int(offset or 0))
+
+    with _LOCK:
+        conn = _conn()
+        try:
+            total = int(conn.execute(
+                f'SELECT COUNT(DISTINCT user_id) AS c FROM warns WHERE {wh}',
+                params,
+            ).fetchone()['c'] or 0)
+            # последняя запись + число активных на юзера
+            sql = f'''
+                SELECT w.*,
+                  (SELECT COUNT(*) FROM warns w2
+                   WHERE w2.guild_id=w.guild_id AND w2.user_id=w.user_id
+                     AND w2.active=1) AS active_count,
+                  (SELECT MIN(created_at) FROM warns w3
+                   WHERE w3.guild_id=w.guild_id AND w3.user_id=w.user_id
+                     AND w3.active=1) AS first_warn_at
+                FROM warns w
+                INNER JOIN (
+                  SELECT user_id, MAX(id) AS last_id
+                  FROM warns WHERE {wh}
+                  GROUP BY user_id
+                ) t ON w.user_id=t.user_id AND w.id=t.last_id
+                ORDER BY {order}
+                LIMIT ? OFFSET ?
+            '''
+            rows = conn.execute(sql, params + [lim, off]).fetchall()
+            out = []
+            for r in rows:
+                d = _row_to_dict(r)
+                keys = set(r.keys()) if hasattr(r, 'keys') else set()
+                d['active_count'] = int(
+                    r['active_count'] if 'active_count' in keys else 0)
+                d['first_warn_at'] = (
+                    r['first_warn_at'] if 'first_warn_at' in keys else None)
+                d['last_id'] = d.get('id')
+                out.append(d)
+            return out, total
+        finally:
+            conn.close()
+
+
+def list_board_rows(
+    guild_id: int, *, reason_type: str = 'member', limit: int = 200,
+) -> List[Dict[str, Any]]:
+    """Активные пользователи для Discord-сводки (без пагинации UI)."""
+    rows, _ = list_users_aggregated(
+        guild_id, reason_type=reason_type, active_only=True,
+        sort='count_desc', limit=limit, offset=0)
+    return rows
 
 
 def mirror_json(guild_id: int, user_id: int) -> None:
