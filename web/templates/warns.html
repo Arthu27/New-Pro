@@ -2,23 +2,26 @@
 {% block title %}Warn{% endblock %}
 {% block heading %}Warn{% endblock %}
 {% block body %}
-<p class="lead">Активные предупреждения из БД. Стаффу роль warn не выдаётся.</p>
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=3">
+<div class="warn-page">
+<p class="lead">Активные предупреждения. Стаффу роль warn не выдаётся.</p>
 
-<div class="kpis rise">
-  <div class="kpi"><b>{{ stats.active_warns }}</b><span>активных</span></div>
-  <div class="kpi"><b>{{ stats.users_member }}</b><span>участников</span></div>
-  <div class="kpi"><b>{{ stats.users_staff }}</b><span>стаффа</span></div>
+<div class="warn-kpis rise">
+  <div class="wk"><b>{{ stats.active_warns }}</b><span>активных</span></div>
+  <div class="wk"><b>{{ stats.users_total or (stats.users_member + stats.users_staff) }}</b><span>людей</span></div>
+  <div class="wk"><b>{{ stats.users_staff }}</b><span>из них стафф</span></div>
+  <div class="wk"><b>{{ stats.removed_7d or 0 }}</b><span>снято за 7 дн.</span></div>
 </div>
 
-<section class="panel rise warn-shell">
-  <div class="warn-toolbar">
-    <div class="warn-tabs" role="tablist">
+<section class="warn-panel rise">
+  <div class="warn-bar">
+    <div class="warn-seg">
       <a class="{% if tab=='members' %}on{% endif %}"
          href="{{ url_for('warns', tab='members', q=q, scope=scope, sort=sort) }}">Участники</a>
       <a class="{% if tab=='staff' %}on{% endif %}"
          href="{{ url_for('warns', tab='staff', q=q, scope=scope, branch=f_branch, sort=sort) }}">Стафф</a>
     </div>
-    <div class="warn-toolbar__right">
+    <div class="warn-bar__actions">
       <a class="ghost sm" href="{{ url_for('bans_page') }}">Баны</a>
       {% if can_manage %}
       <button type="button" class="primary-btn" id="btnIssueWarn">Выдать варн</button>
@@ -26,43 +29,55 @@
     </div>
   </div>
 
-  <form class="warn-filters" method="get" action="{{ url_for('warns') }}">
+  <form class="warn-filters" method="get" action="{{ url_for('warns') }}" id="warnFilterForm">
     <input type="hidden" name="tab" value="{{ tab }}">
-    <input class="input" type="search" name="q" value="{{ q }}" placeholder="Ник или ID…">
-    <select class="input" name="scope">
+    <div style="position:relative">
+      <input class="wf-input" type="search" name="q" id="wq" value="{{ q }}"
+             placeholder="Ник, username или ID…" autocomplete="off">
+      <div id="wqSuggest" class="warn-suggest" hidden></div>
+    </div>
+    <select name="scope">
       <option value="active" {% if scope=='active' %}selected{% endif %}>Активные</option>
       <option value="all" {% if scope=='all' %}selected{% endif %}>Вся история</option>
     </select>
     {% if tab=='staff' %}
-    <select class="input" name="branch">
+    <select name="branch">
       <option value="">Все ветки</option>
       {% for b in branches %}
       <option value="{{ b }}" {% if f_branch==b %}selected{% endif %}>{{ branch_labels.get(b, b) }}</option>
       {% endfor %}
     </select>
+    {% else %}
+    <input type="hidden" name="branch" value="">
+    <select disabled><option>Ветка</option></select>
     {% endif %}
-    <input class="input warn-filters__mod" type="search" name="mod" value="{{ f_mod }}" placeholder="ID выдавшего">
-    <select class="input" name="sort">
-      <option value="count_desc" {% if sort=='count_desc' %}selected{% endif %}>Кол-во ↓</option>
-      <option value="count_asc" {% if sort=='count_asc' %}selected{% endif %}>Кол-во ↑</option>
+    <div style="position:relative">
+      <input class="wf-input" type="search" name="mod" id="wmod" value="{{ f_mod }}"
+             placeholder="Кто выдал…" autocomplete="off">
+      <div id="wmodSuggest" class="warn-suggest" hidden></div>
+    </div>
+    <select name="sort">
+      <option value="count_desc" {% if sort=='count_desc' %}selected{% endif %}>Варны ↓</option>
+      <option value="count_asc" {% if sort=='count_asc' %}selected{% endif %}>Варны ↑</option>
       <option value="date_desc" {% if sort=='date_desc' %}selected{% endif %}>Дата ↓</option>
       <option value="date_asc" {% if sort=='date_asc' %}selected{% endif %}>Дата ↑</option>
     </select>
     <button type="submit" class="ghost">Применить</button>
   </form>
 
-  <h2>{% if tab=='staff' %}Стафф{% else %}Участники{% endif %} <span class="count">{{ total }}</span></h2>
+  <h2 style="margin:0 0 12px;font:800 16px/1.2 var(--display)">{% if tab=='staff' %}Стафф{% else %}Участники{% endif %}
+    <span class="count">{{ total }}</span></h2>
 
   {% if not rows %}
-  <div class="empty">Нет записей</div>
+  <div class="warn-empty"><b>Варнов нет</b>По выбранным фильтрам записей нет</div>
   {% else %}
-  <div class="table-scroll">
-    <table class="profiles-table warn-table">
+  <div class="warn-table-wrap">
+    <table class="warn-table">
       <thead>
         <tr>
           <th>Профиль</th>
+          {% if tab=='staff' %}<th>Роль</th><th>Ветка</th>{% endif %}
           <th>Варны</th>
-          {% if tab=='staff' %}<th>Ветка</th><th>Роль</th>{% endif %}
           <th>Причина</th>
           <th>Выдал</th>
           <th>Дата</th>
@@ -70,64 +85,85 @@
         </tr>
       </thead>
       <tbody>
-        {% for r in rows %}
+      {% for r in rows %}
         <tr>
-          <td>
-            <a class="profile-cell" href="{{ url_for('warns_user', uid=r.user_id) }}">
-              {% if r.avatar %}
-              <img class="profile-ava" src="{{ r.avatar }}" alt="" width="40" height="40" loading="lazy">
-              {% else %}
-              <span class="profile-ava profile-ava--fb">{{ (r.user_name or '?')[:1]|upper }}</span>
-              {% endif %}
-              <span class="profile-meta">
-                <strong>{{ r.user_name }}</strong>
-                <span class="dim mono">{{ r.user_id }}</span>
+          <td data-label="Профиль">
+            <a class="warn-person" href="{{ url_for('warns_user', uid=r.user_id) }}">
+              {% if r.avatar %}<img src="{{ r.avatar }}" alt="" loading="lazy">
+              {% else %}<span class="warn-ava-fb">{{ (r.user_name or '?')[:1]|upper }}</span>{% endif %}
+              <span>
+                <span class="wp-name">{{ r.user_name }}</span>
+                <span class="wp-sub">{% if r.handle %}@{{ r.handle }} · {% endif %}{{ r.user_id }}</span>
               </span>
             </a>
           </td>
-          <td>
-            <span class="wb wb-{{ 'hi' if r.active_count >= 3 else ('mid' if r.active_count == 2 else 'lo') }}">{{ r.active_count }}</span>
-          </td>
           {% if tab=='staff' %}
-          <td>{% if r.branch_label %}<span class="mp-role">{{ r.branch_label }}</span>{% else %}<span class="dim">—</span>{% endif %}</td>
-          <td class="dim">{{ r.role_label or '—' }}</td>
+          <td data-label="Роль">
+            {% if r.role_style %}
+            <span class="rbadge" style="color:{{ r.role_style.color }};background:{{ r.role_style.color }}22;border-color:{{ r.role_style.color }}66">{{ r.role_style.label }}</span>
+            {% else %}<span class="dim">—</span>{% endif %}
+          </td>
+          <td data-label="Ветка">
+            {% if r.branch_style %}
+            <span class="rbadge" style="color:{{ r.branch_style.color }};background:{{ r.branch_style.color }}22;border-color:{{ r.branch_style.color }}66">{{ r.branch_style.label }}</span>
+            {% else %}<span class="dim">—</span>{% endif %}
+          </td>
           {% endif %}
-          <td class="warn-reason" title="{{ r.reason }}">{{ r.reason[:72] }}{% if r.reason|length > 72 %}…{% endif %}</td>
-          <td class="dim">{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod_name }}</a>{% else %}{{ r.mod_name }}{% endif %}</td>
-          <td class="dim nowrap">{{ r.when }}</td>
-          <td class="row-actions">
+          <td data-label="Варны">
+            <span class="wbadge w{{ '3' if r.active_count >= 3 else r.active_count }}">{{ r.active_count }}</span>
+          </td>
+          <td data-label="Причина" class="warn-reason" title="{{ r.reason }}">{{ r.reason[:70] }}{% if r.reason|length > 70 %}…{% endif %}</td>
+          <td data-label="Выдал">
+            <span class="warn-person" style="cursor:default">
+              {% if r.mod_avatar %}<img src="{{ r.mod_avatar }}" alt="" style="width:24px;height:24px">{% endif %}
+              <span>
+                <span class="wp-name" style="font-size:12px">{{ r.mod_name }}</span>
+                {% if r.mod_role_style %}
+                <span class="rbadge" style="font-size:10px;color:{{ r.mod_role_style.color }};background:{{ r.mod_role_style.color }}22;border-color:{{ r.mod_role_style.color }}66">{{ r.mod_role_style.label }}</span>
+                {% endif %}
+              </span>
+            </span>
+          </td>
+          <td data-label="Дата" class="dim" style="white-space:nowrap">{{ r.when }}</td>
+          <td data-label="Действия" class="warn-actions">
             <a href="{{ url_for('warns_user', uid=r.user_id) }}">профиль</a>
-            {% if can_manage and r.active_count %}
-            <button type="button" class="ghost sm btn-unwarn" data-wid="{{ r.id }}" data-uid="{{ r.user_id }}" data-name="{{ r.user_name }}">снять</button>
-            {% endif %}
             {% if can_manage %}
-            <button type="button" class="ghost sm btn-issue-row" data-uid="{{ r.user_id }}" data-kind="{{ 'staff' if tab=='staff' else 'member' }}">варн</button>
+            <button type="button" class="btn-issue-row" data-uid="{{ r.user_id }}" data-kind="{{ 'staff' if tab=='staff' else 'member' }}" data-name="{{ r.user_name }}">выдать</button>
+            {% endif %}
+            {% if r.can_remove %}
+            <button type="button" class="btn-unwarn" data-wid="{{ r.id }}" data-uid="{{ r.user_id }}" data-name="{{ r.user_name }}">снять</button>
+            {% elif can_manage and r.active_count %}
+            <button type="button" class="is-disabled" disabled title="{{ r.remove_deny or 'Нет права' }}">снять</button>
             {% endif %}
           </td>
         </tr>
-        {% endfor %}
+      {% endfor %}
       </tbody>
     </table>
   </div>
   {% if pages > 1 %}
-  <div class="pager">
-    {% if page > 1 %}<a class="ghost sm" href="{{ url_for('warns', page=page-1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">← назад</a>{% endif %}
-    <span class="dim">{{ page }} / {{ pages }}</span>
-    {% if page < pages %}<a class="ghost sm" href="{{ url_for('warns', page=page+1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">вперёд →</a>{% endif %}
+  <div class="warn-pager">
+    {% if page > 1 %}<a href="{{ url_for('warns', page=page-1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">←</a>{% endif %}
+    <span>{{ page }} / {{ pages }}</span>
+    {% if page < pages %}<a href="{{ url_for('warns', page=page+1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">→</a>{% endif %}
   </div>
   {% endif %}
   {% endif %}
 </section>
+</div>
 
 <dialog id="warnDlg" class="dlg">
   <form method="dialog" class="dlg-card">
-    <div class="dlg-head">
-      <h3>Выдать варн</h3>
-      <button type="button" class="dlg-x" id="warnClose" aria-label="Закрыть">×</button>
-    </div>
-    <label>User ID
-      <input id="warnUid" class="input" required placeholder="Discord ID">
+    <div class="dlg-head"><h3>Выдать варн</h3>
+      <button type="button" class="dlg-x" id="warnClose">×</button></div>
+    <label>Кому
+      <div style="position:relative">
+        <input id="warnUidSearch" class="input" placeholder="Ник или ID…" autocomplete="off">
+        <input type="hidden" id="warnUid">
+        <div id="warnUidSuggest" class="warn-suggest" hidden></div>
+      </div>
     </label>
+    <p id="warnPicked" class="dim" style="margin:0"></p>
     <label>Тип
       <select id="warnKind" class="input">
         <option value="member">Участник</option>
@@ -138,7 +174,7 @@
       <select id="warnCode" class="input"></select>
     </label>
     <label>Формулировка
-      <textarea id="warnDetail" class="input" required maxlength="400" rows="3" placeholder="Кратко опишите ситуацию…"></textarea>
+      <textarea id="warnDetail" class="input" required maxlength="400" rows="3" placeholder="Обязательно…"></textarea>
     </label>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="warnCancel">Отмена</button>
@@ -150,13 +186,11 @@
 
 <dialog id="rmDlg" class="dlg">
   <form method="dialog" class="dlg-card">
-    <div class="dlg-head">
-      <h3>Снять варн</h3>
-      <button type="button" class="dlg-x" id="rmClose" aria-label="Закрыть">×</button>
-    </div>
+    <div class="dlg-head"><h3>Снять варн</h3>
+      <button type="button" class="dlg-x" id="rmClose">×</button></div>
     <p class="dim" id="rmHint"></p>
-    <label>Причина снятия <span class="dim">(необязательно)</span>
-      <textarea id="rmReason" class="input" maxlength="200" rows="2" placeholder="ошибка, апелляция…"></textarea>
+    <label>Причина <span class="dim">(необязательно)</span>
+      <textarea id="rmReason" class="input" maxlength="200" rows="2"></textarea>
     </label>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="rmCancel">Отмена</button>
@@ -166,129 +200,139 @@
   </form>
 </dialog>
 
-<style>
-.warn-shell{padding-bottom:8px}
-.warn-toolbar{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);
-}
-.warn-tabs{display:inline-flex;padding:3px;border-radius:999px;background:var(--glass-2);border:1px solid var(--line)}
-.warn-tabs a{
-  padding:8px 16px;border-radius:999px;font:700 13px/1 var(--font);color:var(--muted);
-  text-decoration:none;transition:background .15s,color .15s;
-}
-.warn-tabs a:hover{color:var(--ink)}
-.warn-tabs a.on{background:#fff;color:#111}
-.warn-toolbar__right{display:flex;gap:8px;align-items:center}
-.warn-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px}
-.warn-filters .input{min-width:0;flex:0 1 auto}
-.warn-filters__mod{width:140px;max-width:100%}
-.warn-table td{vertical-align:middle}
-.warn-reason{max-width:260px;color:var(--ink-2);font-size:13px}
-.nowrap{white-space:nowrap}
-.profile-ava--fb{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:40px;height:40px;border-radius:50%;background:var(--glass-3);
-  font:800 14px/1 var(--display);color:var(--ink-2);
-}
-.wb{
-  display:inline-flex;min-width:28px;height:28px;padding:0 9px;
-  align-items:center;justify-content:center;border-radius:999px;
-  font:800 13px/1 var(--font);
-}
-.wb-lo{background:rgba(240,180,41,.22);color:#f0b429;border:1px solid rgba(240,180,41,.35)}
-.wb-mid{background:rgba(230,126,34,.22);color:#f0a060;border:1px solid rgba(230,126,34,.4)}
-.wb-hi{background:rgba(255,77,61,.18);color:#ff7a6e;border:1px solid rgba(255,77,61,.35)}
-.pager{display:flex;gap:12px;justify-content:center;align-items:center;padding:14px 0 6px}
-.mono{font-variant-numeric:tabular-nums;letter-spacing:.02em}
-@media(max-width:720px){
-  .warn-filters__mod{width:100%}
-  .warn-reason{max-width:160px}
-  .row-actions{flex-wrap:wrap;justify-content:flex-start}
-}
-</style>
-
 <script>
 (function(){
   const reasons = {{ reasons_json|safe }};
+  const styles = {{ styles_json|safe }};
   const csrf = {{ csrf_token|tojson }};
+  const tab = {{ tab|tojson }};
   const $ = id => document.getElementById(id);
-  const dlg = $('warnDlg');
-  const codeSel = $('warnCode');
-  const kindSel = $('warnKind');
-  const msg = $('warnMsg');
-  let rmWid = 0, rmUid = '';
 
+  function roleBadge(rid){
+    const st = (styles.roles || {})[String(rid||'')] || null;
+    if (!st) return '';
+    return `<span class="rbadge" style="color:${st.color};background:${st.color}22;border-color:${st.color}66">${st.label}</span>`;
+  }
+
+  function wireSuggest(input, box, onPick, staffOnly){
+    let t = null;
+    async function run(){
+      const q = (input.value || '').trim();
+      if (q.length < 1) { box.hidden = true; box.innerHTML=''; return; }
+      const params = new URLSearchParams({q, limit: '10'});
+      if (staffOnly === true) params.set('staff', '1');
+      if (staffOnly === false) params.set('staff', '0');
+      try {
+        const r = await fetch('/api/warns/search?' + params);
+        const j = await r.json();
+        const items = (j.items || []).slice(0, 10);
+        if (!items.length) { box.hidden = true; return; }
+        box.innerHTML = items.map(it => `
+          <button type="button" data-id="${it.id}">
+            ${it.avatar ? `<img src="${it.avatar}" alt="">` : `<span class="warn-ava-fb">${(it.name||'?')[0]}</span>`}
+            <span class="ws-meta">
+              <strong>${it.name || it.id}</strong>
+              <small>${it.handle ? '@'+it.handle+' · ' : ''}${it.id}${it.in_guild ? '' : ' · вышел'}</small>
+            </span>
+            <span class="ws-right">
+              ${it.role_badge || ''}
+              ${it.warns != null ? `<span class="wbadge w${it.warns>=3?3:it.warns}">${it.warns}</span>` : ''}
+            </span>
+          </button>`).join('');
+        box.hidden = false;
+        box.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const it = items.find(x => String(x.id) === btn.dataset.id);
+            if (it) onPick(it);
+            box.hidden = true;
+          });
+        });
+      } catch(e) { box.hidden = true; }
+    }
+    input.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(run, 250);
+    });
+    input.addEventListener('blur', () => setTimeout(() => { box.hidden = true; }, 180));
+  }
+
+  wireSuggest($('wq'), $('wqSuggest'), (it) => {
+    $('wq').value = it.name || it.id;
+    $('warnFilterForm').submit();
+  }, tab === 'staff' ? true : (tab === 'members' ? false : null));
+
+  wireSuggest($('wmod'), $('wmodSuggest'), (it) => {
+    $('wmod').value = it.id;
+  }, null);
+
+  // issue dialog
+  const dlg = $('warnDlg'), codeSel = $('warnCode'), kindSel = $('warnKind'), msg = $('warnMsg');
   function fillCodes(){
     const list = reasons[kindSel.value] || [];
-    codeSel.innerHTML = list.map(r =>
-      `<option value="${r.code}">${r.code} · ${r.label}</option>`).join('');
+    codeSel.innerHTML = list.map(r => `<option value="${r.code}">${r.code} · ${r.label}</option>`).join('');
   }
-  kindSel.addEventListener('change', fillCodes);
-  fillCodes();
+  kindSel.addEventListener('change', fillCodes); fillCodes();
 
-  function openIssue(uid, kind){
+  function openIssue(uid, kind, name){
     msg.textContent = '';
-    if (uid) $('warnUid').value = uid;
+    $('warnUid').value = uid || '';
+    $('warnUidSearch').value = name || uid || '';
+    $('warnPicked').textContent = uid ? (`Выбран: ${name || ''} · ${uid}`) : '';
     if (kind) { kindSel.value = kind; fillCodes(); }
     dlg.showModal();
   }
-  $('btnIssueWarn')?.addEventListener('click', () =>
-    openIssue('', '{{ tab }}' === 'staff' ? 'staff' : 'member'));
+  $('btnIssueWarn')?.addEventListener('click', () => openIssue('', tab === 'staff' ? 'staff' : 'member'));
   $('warnClose')?.addEventListener('click', () => dlg.close());
   $('warnCancel')?.addEventListener('click', () => dlg.close());
   document.querySelectorAll('.btn-issue-row').forEach(btn => {
-    btn.addEventListener('click', () => openIssue(btn.dataset.uid, btn.dataset.kind));
+    btn.addEventListener('click', () => openIssue(btn.dataset.uid, btn.dataset.kind, btn.dataset.name));
   });
+  wireSuggest($('warnUidSearch'), $('warnUidSuggest'), (it) => {
+    $('warnUid').value = it.id;
+    $('warnUidSearch').value = it.name || it.id;
+    $('warnPicked').textContent = `Выбран: ${it.name} · ${it.id}`;
+    if (it.is_staff) { kindSel.value = 'staff'; fillCodes(); }
+    else { kindSel.value = 'member'; fillCodes(); }
+  }, null);
 
   $('warnGo')?.addEventListener('click', async () => {
     msg.textContent = '…';
     const body = {
-      user_id: $('warnUid').value.trim(),
+      user_id: $('warnUid').value.trim() || $('warnUidSearch').value.trim(),
       reason_type: kindSel.value,
       reason_code: codeSel.value,
       detail: $('warnDetail').value.trim(),
       csrf,
     };
-    if (!body.user_id || !body.detail) {
-      msg.textContent = 'ID и формулировка обязательны'; return;
-    }
-    try {
-      const r = await fetch('/api/warns/issue', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(body)});
-      const j = await r.json();
-      if (!j.ok) { msg.textContent = j.error || 'Ошибка'; return; }
-      location.reload();
-    } catch (e) { msg.textContent = String(e); }
+    if (!body.user_id || !body.detail) { msg.textContent = 'Выбери человека и формулировку'; return; }
+    const r = await fetch('/api/warns/issue', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)});
+    const j = await r.json();
+    if (!j.ok) { msg.textContent = j.error || 'Ошибка'; return; }
+    location.reload();
   });
 
+  let rmWid=0, rmUid='';
   const rmDlg = $('rmDlg');
   $('rmClose')?.addEventListener('click', () => rmDlg.close());
   $('rmCancel')?.addEventListener('click', () => rmDlg.close());
   document.querySelectorAll('.btn-unwarn').forEach(btn => {
     btn.addEventListener('click', () => {
-      rmWid = Number(btn.dataset.wid);
-      rmUid = btn.dataset.uid;
-      $('rmReason').value = '';
-      $('rmMsg').textContent = '';
+      rmWid = Number(btn.dataset.wid); rmUid = btn.dataset.uid;
+      $('rmReason').value=''; $('rmMsg').textContent='';
       $('rmHint').textContent = 'Снять варн у ' + (btn.dataset.name || rmUid) + '?';
       rmDlg.showModal();
     });
   });
   $('rmGo')?.addEventListener('click', async () => {
-    $('rmMsg').textContent = '…';
-    try {
-      const r = await fetch('/api/warns/remove', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          warn_id: rmWid, user_id: rmUid,
-          removed_reason: $('rmReason').value.trim(), csrf,
-        })});
-      const j = await r.json();
-      if (!j.ok) { $('rmMsg').textContent = j.error || 'Ошибка'; return; }
-      location.reload();
-    } catch (e) { $('rmMsg').textContent = String(e); }
+    $('rmMsg').textContent='…';
+    const r = await fetch('/api/warns/remove', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({warn_id: rmWid, user_id: rmUid, removed_reason: $('rmReason').value.trim(), csrf})});
+    const j = await r.json();
+    if (!j.ok) { $('rmMsg').textContent = j.error || 'Ошибка'; return; }
+    location.reload();
   });
 })();
 </script>

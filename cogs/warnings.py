@@ -664,7 +664,7 @@ class warnings(commands.Cog):
             _log.debug('_collect_mod_data notes: %s', _ex)
         return warns, cases, notes
 
-    # ── события: sync роли + сводка канала warn ─────────────────────
+    # ── события: sync роли + members_cache + сводка канала warn ─────
     @commands.Cog.listener()
     async def on_ready(self):
         try:
@@ -680,6 +680,19 @@ class warnings(commands.Cog):
                     log.debug('warn sync guild %s: %s', guild.id, e)
         except Exception as e:
             log.warning('on_ready warn sync: %s', e)
+        try:
+            from services import members_cache as MC
+            from config import Config
+            main_gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+            for guild in list(self.bot.guilds):
+                if main_gid and int(guild.id) != main_gid:
+                    continue
+                try:
+                    await MC.sync_guild(guild)
+                except Exception as e:
+                    log.debug('members_cache sync %s: %s', guild.id, e)
+        except Exception as e:
+            log.debug('members_cache on_ready: %s', e)
         try:
             from services.warn_board import update_warn_board
             from config import Config
@@ -727,10 +740,28 @@ class warnings(commands.Cog):
             await sync_warn_role(member)
         except Exception as e:
             log.debug('on_member_join warn sync: %s', e)
+        try:
+            from services import members_cache as MC
+            MC.upsert_member(member.guild.id, member)
+        except Exception as e:
+            log.debug('on_member_join cache: %s', e)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        try:
+            from services import members_cache as MC
+            MC.mark_left(member.guild.id, member.id)
+        except Exception as e:
+            log.debug('on_member_remove cache: %s', e)
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
         """Стал/перестал быть стаффом или вручную трогали роль warn."""
+        try:
+            from services import members_cache as MC
+            MC.upsert_member(after.guild.id, after)
+        except Exception:
+            pass
         try:
             before_ids = {
                 getattr(r, 'id', None)
@@ -738,7 +769,10 @@ class warnings(commands.Cog):
             after_ids = {
                 getattr(r, 'id', None)
                 for r in (getattr(after, 'roles', None) or [])}
-            if before_ids == after_ids:
+            nick_chg = (
+                getattr(before, 'display_name', None)
+                != getattr(after, 'display_name', None))
+            if before_ids == after_ids and not nick_chg:
                 return
             from services.warn_role import sync_warn_role
             await sync_warn_role(after)

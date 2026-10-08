@@ -708,11 +708,12 @@ def _http_json(method, url, *, headers=None, form=None, timeout=12):
             raw = resp.read().decode('utf-8')
             return resp.status, json.loads(raw) if raw else {}
     except urllib.error.HTTPError as e:
+        body = ''
         try:
             body = e.read().decode('utf-8')
             payload = json.loads(body) if body else {}
         except Exception:
-            payload = {'error': f'HTTP {e.code}', 'raw': (body[:200] if 'body' in dir() else '')}
+            payload = {'error': f'HTTP {e.code}', 'raw': (body or '')[:200]}
         # Cloudflare HTML/1010 → понятное сообщение
         if e.code == 403 and not payload.get('error') and not payload.get('error_description'):
             payload = {
@@ -3421,33 +3422,81 @@ def _staff_role_label(guild, member) -> str:
     return ''
 
 
-def _warn_user_row(w, book, guild=None):
-    """Строка агрегированного списка (один юзер)."""
+def _warn_user_row(w, book, guild=None, actor=None):
+    """Строка агрегированного списка (один юзер) + стили + can_remove."""
+    from services.warn_config import (
+        role_style, branch_style, member_rank_snapshot)
+    from services import warn_actions as WA
+    from services import members_cache as MC
+
     base = _warn_view_row(w, book, guild, {
         int(w.get('user_id') or 0): int(w.get('active_count') or 0)})
     base['active_count'] = int(w.get('active_count') or base.get('active_count') or 0)
     base['first_warn_at'] = _fmt(w.get('first_warn_at'))
     base['role_label'] = ''
-    if guild and str(base.get('user_id') or '').isdigit():
-        m = guild.get_member(int(base['user_id']))
+    base['handle'] = ''
+    base['role_style'] = None
+    base['branch_style'] = branch_style(w.get('branch')) if w.get('branch') else None
+    base['mod_avatar'] = ''
+    base['mod_role_style'] = None
+    base['can_remove'] = False
+    base['remove_deny'] = ''
+
+    uid = str(base.get('user_id') or '')
+    gid = int(w.get('guild_id') or (_main_guild() or 0) or 0)
+    cached = None
+    if gid and uid.isdigit():
+        try:
+            cached = MC.get_member(gid, int(uid))
+        except Exception:
+            cached = None
+    if cached:
+        base['user_name'] = cached.get('display_name') or base['user_name']
+        base['handle'] = cached.get('username') or ''
+        base['avatar'] = cached.get('avatar_url') or base.get('avatar') or ''
+        if cached.get('top_role_id'):
+            base['role_style'] = role_style(cached['top_role_id'])
+            base['role_label'] = base['role_style'].get('label') or ''
+        if cached.get('branch') and not base.get('branch_style'):
+            base['branch_style'] = branch_style(cached.get('branch'))
+
+    if guild and uid.isdigit():
+        m = guild.get_member(int(uid))
         if m is not None:
-            base['role_label'] = _staff_role_label(guild, m)
-            if not base.get('avatar'):
-                try:
-                    base['avatar'] = str(m.display_avatar.url)
-                except Exception:
-                    pass
-            base['user_name'] = (
-                getattr(m, 'display_name', None)
-                or base.get('user_name') or base['user_id'])
-    # бейдж цвета
+            base['role_label'] = _staff_role_label(guild, m) or base['role_label']
+            try:
+                base['avatar'] = str(m.display_avatar.url)
+            except Exception:
+                pass
+            base['user_name'] = getattr(m, 'display_name', None) or base['user_name']
+            base['handle'] = getattr(m, 'name', '') or base['handle']
+            _rk, rid, _nm = member_rank_snapshot(m)
+            if rid:
+                base['role_style'] = role_style(rid)
+
+    # issuer styling
+    mid = str(base.get('mod_id') or '')
+    if mid.isdigit() and gid:
+        try:
+            mc = MC.get_member(gid, int(mid))
+            if mc:
+                base['mod_name'] = mc.get('display_name') or base['mod_name']
+                base['mod_avatar'] = mc.get('avatar_url') or ''
+                if mc.get('top_role_id'):
+                    base['mod_role_style'] = role_style(mc['top_role_id'])
+        except Exception:
+            pass
+    if not base.get('mod_role_style') and w.get('issuer_role_id'):
+        base['mod_role_style'] = role_style(w.get('issuer_role_id'))
+
+    if actor is not None and base.get('active_count'):
+        ok, deny = WA.can_remove_warn(actor, w, guild=guild)
+        base['can_remove'] = bool(ok)
+        base['remove_deny'] = deny or ''
+
     ac = base['active_count']
-    if ac >= 3:
-        base['badge_class'] = 'badge-red'
-    elif ac == 2:
-        base['badge_class'] = 'badge-orange'
-    else:
-        base['badge_class'] = 'badge-yellow'
+    base['badge_class'] = (
+        'badge-red' if ac >= 3 else ('badge-orange' if ac == 2 else 'badge-yellow'))
     return base
 
 
@@ -3457,7 +3506,8 @@ def _warn_user_row(w, book, guild=None):
 def warns():
     """Warn: вкладки Участники / Стафф, агрегация по людям."""
     from services import warn_store as WS
-    from services.warn_config import branch_labels, branch_grant_roles
+    from services.warn_config import (
+        branch_labels, branch_grant_roles, styles_public_dict)
     from services import warn_reasons as WR
     import json as _json
 
@@ -3478,29 +3528,48 @@ def warns():
     book = _namebook(gid)
     bot = bot_instance
     guild = bot.get_guild(int(gid)) if bot and gid else None
+    actor = _panel_actor_member(guild) if guild else None
 
     rtype = 'staff' if tab == 'staff' else 'member'
     rows_raw, total = ([], 0)
-    stats = {'active_warns': 0, 'users_member': 0, 'users_staff': 0}
+    stats = {
+        'active_warns': 0, 'users_member': 0, 'users_staff': 0,
+        'users_total': 0, 'removed_7d': 0,
+    }
     if gid:
         try:
             mod_id = int(f_mod) if f_mod.isdigit() else None
+            # если q — ник (не ID), резолвим через members_cache
+            q_use = q
+            if q and not (q.isdigit() and len(q) >= 5):
+                try:
+                    from services import members_cache as MC
+                    hits = MC.search(
+                        int(gid), q, limit=10,
+                        staff_only=(True if tab == 'staff' else False))
+                    if len(hits) == 1:
+                        q_use = str(hits[0]['user_id'])
+                except Exception:
+                    pass
             rows_raw, total = WS.list_users_aggregated(
                 int(gid),
                 reason_type=rtype,
                 active_only=(scope != 'all'),
                 branch=f_branch or None,
                 moderator_id=mod_id,
-                q=q or None,
+                q=q_use or None,
                 sort=sort,
                 limit=per,
                 offset=(page - 1) * per,
             )
             stats = WS.stats_active(int(gid))
+            stats['users_total'] = (
+                int(stats.get('users_member') or 0)
+                + int(stats.get('users_staff') or 0))
         except Exception as ex:
             flash(f'БД варнов: {ex}', 'err')
 
-    rows = [_warn_user_row(w, book, guild) for w in rows_raw]
+    rows = [_warn_user_row(w, book, guild, actor=actor) for w in rows_raw]
     pages = max(1, (total + per - 1) // per)
     can_manage = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('mod', 2)
     return render_template(
@@ -3511,9 +3580,70 @@ def warns():
         branches=sorted(branch_grant_roles().keys()),
         branch_labels=branch_labels(),
         reasons_json=_json.dumps(WR.as_public_dict(), ensure_ascii=False),
+        styles_json=_json.dumps(styles_public_dict(), ensure_ascii=False),
         csrf_token=_ensure_csrf(),
         can_manage=can_manage,
     )
+
+
+@app.get('/api/warns/search')
+@login_required
+@role_required('helper')
+def api_warns_search():
+    """Живой поиск участников для Warn (debounce 250мс на фронте)."""
+    from services import members_cache as MC
+    from services import warn_store as WS
+    from services.warn_config import role_style, branch_style
+    q = (request.args.get('q') or '').strip()
+    staff = (request.args.get('staff') or '').strip()
+    staff_only = None
+    if staff == '1':
+        staff_only = True
+    elif staff == '0':
+        staff_only = False
+    try:
+        limit = min(10, max(1, int(request.args.get('limit') or 10)))
+    except Exception:
+        limit = 10
+    gid = _main_guild()
+    if not gid:
+        return jsonify({'ok': True, 'items': []})
+    items = []
+    try:
+        hits = MC.search(int(gid), q, limit=limit, staff_only=staff_only)
+        for h in hits:
+            warns = 0
+            try:
+                warns = WS.count_active(int(gid), int(h['user_id']))
+            except Exception:
+                warns = 0
+            rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
+            badge = ''
+            if rs and h.get('is_staff'):
+                badge = (
+                    f'<span class="rbadge" style="color:{rs["color"]};'
+                    f'background:{rs["color"]}22;border-color:{rs["color"]}66">'
+                    f'{rs["label"]}</span>')
+            elif h.get('branch'):
+                bs = branch_style(h['branch'])
+                badge = (
+                    f'<span class="rbadge" style="color:{bs["color"]};'
+                    f'background:{bs["color"]}22;border-color:{bs["color"]}66">'
+                    f'{bs["label"]}</span>')
+            items.append({
+                'id': str(h['user_id']),
+                'name': h.get('display_name') or str(h['user_id']),
+                'handle': h.get('username') or '',
+                'avatar': h.get('avatar_url') or '',
+                'is_staff': bool(h.get('is_staff')),
+                'branch': h.get('branch'),
+                'in_guild': bool(h.get('in_guild')),
+                'warns': warns,
+                'role_badge': badge,
+            })
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex), 'items': []}), 500
+    return jsonify({'ok': True, 'items': items})
 
 
 @app.route('/warns/user/<uid>')
@@ -3522,7 +3652,10 @@ def warns():
 def warns_user(uid):
     from services import warn_store as WS
     from services import warn_reasons as WR
-    from services.warn_config import format_branches, branch_labels
+    from services import warn_actions as WA
+    from services import members_cache as MC
+    from services.warn_config import (
+        format_branches, role_style, branch_style, member_rank_snapshot)
     from services.warn_acl import is_staff_target, branches_of
 
     gid = _main_guild()
@@ -3531,8 +3664,12 @@ def warns_user(uid):
     book = _namebook(gid)
     bot = bot_instance
     guild = bot.get_guild(int(gid)) if bot and gid else None
+    actor = _panel_actor_member(guild) if guild else None
     member = guild.get_member(int(uid)) if guild else None
-    is_staff = bool(member and is_staff_target(guild, member))
+    cached = MC.get_member(int(gid), int(uid))
+    is_staff = bool(
+        (member and is_staff_target(guild, member))
+        or (cached and cached.get('is_staff')))
     history_raw = WS.list_warns(int(gid), int(uid), active_only=False)
     history = []
     for w in history_raw:
@@ -3540,50 +3677,73 @@ def warns_user(uid):
         row['removed_when'] = _fmt(w.get('removed_at'))
         rb = w.get('removed_by')
         row['removed_by_name'] = _best_name(None, str(rb or ''), book) if rb else ''
+        if w.get('issuer_role_id'):
+            row['mod_role_style'] = role_style(w.get('issuer_role_id'))
+        else:
+            row['mod_role_style'] = None
+        if actor is not None and row.get('active'):
+            ok, deny = WA.can_remove_warn(actor, w, guild=guild)
+            row['can_remove'] = bool(ok)
+            row['remove_deny'] = deny or ''
+        else:
+            row['can_remove'] = False
+            row['remove_deny'] = ''
         history.append(row)
     active_count = WS.count_active(int(gid), int(uid))
     rtype = 'staff' if is_staff else 'member'
     can_manage = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('mod', 2)
-    avatar = ''
-    branch_txt = ''
-    role_label = ''
-    first_at = ''
-    last_at = ''
+
+    avatar = (cached or {}).get('avatar_url') or ''
+    handle = (cached or {}).get('username') or ''
+    name = (cached or {}).get('display_name') or _best_name(
+        getattr(member, 'display_name', None), str(uid), book)
+    role_st = None
+    branch_st = None
+    on_server = bool(member) or bool((cached or {}).get('in_guild'))
+    first_at = last_at = ''
     if history_raw:
-        actives = [h for h in history_raw if h.get('active')]
-        src = actives or history_raw
-        try:
-            stamps = [h.get('created_at') or '' for h in src if h.get('created_at')]
-            if stamps:
-                first_at = _fmt(sorted(stamps)[0])
-                last_at = _fmt(sorted(stamps, reverse=True)[0])
-        except Exception:
-            first_at = last_at = ''
+        stamps = [h.get('created_at') or '' for h in history_raw if h.get('created_at')]
+        if stamps:
+            first_at = _fmt(sorted(stamps)[0])
+            last_at = _fmt(sorted(stamps, reverse=True)[0])
     if member is not None:
         try:
             avatar = str(member.display_avatar.url)
         except Exception:
-            avatar = ''
-        role_label = _staff_role_label(guild, member)
+            pass
+        handle = getattr(member, 'name', '') or handle
+        name = getattr(member, 'display_name', None) or name
+        _rk, rid, _nm = member_rank_snapshot(member)
+        if rid:
+            role_st = role_style(rid)
         try:
-            branch_txt = format_branches(branches_of(member))
+            br = branches_of(member)
+            if br:
+                branch_st = branch_style(sorted(br)[0])
         except Exception:
-            branch_txt = ''
-    name = _best_name(
-        getattr(member, 'display_name', None), str(uid), book)
-    ac = active_count
-    badge = 'badge-red' if ac >= 3 else ('badge-orange' if ac == 2 else 'badge-yellow')
+            pass
+        on_server = True
+    elif cached:
+        if cached.get('top_role_id'):
+            role_st = role_style(cached['top_role_id'])
+        if cached.get('branch'):
+            branch_st = branch_style(cached['branch'])
+        on_server = bool(cached.get('in_guild'))
+
     return render_template(
         'warns_user.html',
         uid=str(uid),
         profile={
             'name': name,
+            'handle': handle,
             'avatar': avatar,
-            'branch': branch_txt,
-            'role_label': role_label,
+            'branch': (branch_st or {}).get('label') if branch_st else '',
+            'role_label': (role_st or {}).get('label') if role_st else '',
+            'role_style': role_st,
+            'branch_style': branch_st,
             'first_at': first_at,
             'last_at': last_at,
-            'badge_class': badge,
+            'on_server': on_server,
         },
         history=history,
         active_count=active_count,

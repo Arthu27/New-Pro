@@ -95,6 +95,8 @@ def ensure_table(conn: sqlite3.Connection | None = None) -> None:
         _ensure_column(conn, 'reason_code', 'reason_code TEXT')
         _ensure_column(conn, 'removed_reason', 'removed_reason TEXT')
         _ensure_column(conn, 'source', "source TEXT DEFAULT 'discord'")
+        _ensure_column(conn, 'issuer_rank', 'issuer_rank INTEGER DEFAULT 0')
+        _ensure_column(conn, 'issuer_role_id', 'issuer_role_id INTEGER')
         conn.execute(
             'CREATE INDEX IF NOT EXISTS idx_warns_user_active '
             'ON warns(guild_id, user_id, active)')
@@ -140,9 +142,13 @@ def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
         'reason_code': _get('reason_code') or None,
         'removed_reason': _get('removed_reason') or None,
         'source': _get('source') or 'discord',
+        'issuer_rank': int(_get('issuer_rank') or 0),
+        'issuer_role_id': (
+            int(_get('issuer_role_id')) if _get('issuer_role_id') else None),
         # совместимость со старым форматом (панель / досье)
         'mod_id': str(row['moderator_id']),
         'mod': str(row['moderator_id']),
+        'issuer_id': int(row['moderator_id']),
         'timestamp': row['created_at'] or '',
     }
 
@@ -221,6 +227,8 @@ def add_warn(
     reason_type: str | None = None,
     reason_code: str | None = None,
     source: str = 'discord',
+    issuer_rank: int = 0,
+    issuer_role_id: int | None = None,
 ) -> Dict[str, Any]:
     """Добавить активный варн. Возвращает запись."""
     ensure_table()
@@ -237,8 +245,9 @@ def add_warn(
                 '''INSERT INTO warns
                    (guild_id, user_id, moderator_id, reason, created_at,
                     is_staff_target, branch, active,
-                    reason_type, reason_code, source)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)''',
+                    reason_type, reason_code, source,
+                    issuer_rank, issuer_role_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)''',
                 (
                     int(guild_id), int(user_id), int(moderator_id),
                     reason, ts,
@@ -247,6 +256,8 @@ def add_warn(
                     rtype,
                     (reason_code or None),
                     (source or 'discord')[:32],
+                    int(issuer_rank or 0),
+                    int(issuer_role_id) if issuer_role_id else None,
                 ),
             )
             conn.commit()
@@ -437,10 +448,23 @@ def stats_active(guild_id: int) -> Dict[str, int]:
                 "NOT (reason_type='staff' OR is_staff_target=1)",
                 (int(guild_id),),
             ).fetchone()['c'] or 0)
+            removed_7d = 0
+            try:
+                from datetime import timedelta
+                cut = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+                removed_7d = int(conn.execute(
+                    'SELECT COUNT(*) AS c FROM warns '
+                    'WHERE guild_id=? AND active=0 AND removed_at>=?',
+                    (int(guild_id), cut),
+                ).fetchone()['c'] or 0)
+            except Exception:
+                removed_7d = 0
             return {
                 'active_warns': total,
                 'users_member': members,
                 'users_staff': staff,
+                'users_total': members + staff,
+                'removed_7d': removed_7d,
             }
         finally:
             conn.close()

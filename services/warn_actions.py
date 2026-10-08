@@ -22,6 +22,75 @@ def _target_branch(member) -> Optional[str]:
         return None
 
 
+def can_remove_warn(actor, warn_row, guild=None) -> Tuple[bool, str]:
+    """Снять варн может только тот, чей ранг СТРОГО выше ранга выдавшего.
+
+    Равный ранг — нельзя. Owner — можно всё.
+    ISSUER_CAN_REMOVE_OWN_WARN — опционально свой варн.
+    Для стафф-цели дополнительно проверка ветки (куратор/админ своей).
+    """
+    if actor is None or not warn_row:
+        return False, 'Нет исполнителя или записи'
+    try:
+        from services.warn_config import (
+            member_rank_snapshot, issuer_can_remove_own, role_style)
+        from services.warn_acl import _is_bot_owner, is_staff_target, manual_warn_check
+    except Exception as ex:
+        return False, f'Конфиг: {ex}'
+
+    if _is_bot_owner(actor):
+        return True, ''
+
+    actor_id = int(getattr(actor, 'id', 0) or 0)
+    issuer_id = int(
+        warn_row.get('issuer_id')
+        or warn_row.get('moderator_id')
+        or 0)
+    snap_rank = int(warn_row.get('issuer_rank') or 0)
+    snap_role = warn_row.get('issuer_role_id')
+
+    # текущий ранг выдающего (если на сервере) vs снимок — берём max
+    effective_issuer_rank = snap_rank
+    issuer_label = role_style(snap_role).get('label') or 'модератор'
+    if guild is not None and issuer_id:
+        issuer_m = guild.get_member(issuer_id)
+        if issuer_m is not None:
+            cur_rank, cur_rid, cur_name = member_rank_snapshot(issuer_m)
+            if cur_rank > effective_issuer_rank:
+                effective_issuer_rank = cur_rank
+                issuer_label = cur_name or issuer_label
+                snap_role = cur_rid or snap_role
+
+    actor_rank, _arid, actor_name = member_rank_snapshot(actor)
+
+    if issuer_can_remove_own() and actor_id and actor_id == issuer_id:
+        return True, ''
+
+    if actor_id and actor_id == issuer_id and not issuer_can_remove_own():
+        return False, 'Свой варн снять нельзя (ISSUER_CAN_REMOVE_OWN_WARN=0)'
+
+    if actor_rank <= effective_issuer_rank:
+        return False, (
+            f'Этот варн выдал {issuer_label}. '
+            f'Снять его может только тот, кто выше по рангу '
+            f'(ваш ранг: {actor_name}).'
+        )
+
+    # ветка стаффа
+    try:
+        if guild is not None and int(warn_row.get('is_staff_target') or 0):
+            uid = int(warn_row.get('user_id') or 0)
+            target = guild.get_member(uid) if uid else None
+            if target is not None and is_staff_target(guild, target):
+                ok, deny = manual_warn_check(guild, actor, target)
+                if not ok:
+                    return False, deny or 'Нет права на стафф этой ветки'
+    except Exception as ex:
+        _log.debug('can_remove branch: %s', ex)
+
+    return True, ''
+
+
 async def issue_warn(
     guild,
     target,
@@ -84,6 +153,9 @@ async def issue_warn(
     # если пришёл только code — допускаем (автофильтр).
     branch = _target_branch(target) if is_staff else None
 
+    from services.warn_config import member_rank_snapshot
+    issuer_rank, issuer_role_id, _issuer_name = member_rank_snapshot(actor)
+
     row = WS.add_warn(
         guild.id, target.id, getattr(actor, 'id', 0) or 0,
         reason_txt,
@@ -92,6 +164,8 @@ async def issue_warn(
         reason_type=rtype,
         reason_code=code,
         source=source or 'discord',
+        issuer_rank=issuer_rank,
+        issuer_role_id=issuer_role_id,
     )
     warn_id = int(row['id'])
     total = WS.count_active(guild.id, target.id)
@@ -204,46 +278,28 @@ async def remove_warn(
     except Exception:
         pass
 
-    if check_acl:
-        try:
-            from services.warn_acl import (
-                manual_warn_check, is_staff_target, _is_bot_owner)
-            if is_staff_target(guild, target):
-                ok, deny = manual_warn_check(guild, actor, target)
-                if not ok:
-                    return False, deny or 'Нет права снять варн стаффу', None
-            else:
-                # обычный unwarn — ACL + иерархия
-                if not _is_bot_owner(actor) and not getattr(actor, 'is_panel', False):
-                    try:
-                        from services.permission_acl import check_action as _acl
-                        if not _acl(guild.id, actor, 'unwarn'):
-                            # fallback: кто может варн — может снять
-                            ok, deny = manual_warn_check(guild, actor, target)
-                            if not ok:
-                                return False, deny or 'Нет права на снятие варна', None
-                    except Exception:
-                        pass
-                try:
-                    from services.staff_hierarchy import check as _hchk
-                    ok, deny, _, _ = _hchk(guild, actor, target, 'unwarn')
-                    if not ok:
-                        return False, deny or 'Иерархия', None
-                except Exception:
-                    pass
-        except Exception as ex:
-            _log.debug('remove_warn acl: %s', ex)
-
+    # найти запись до снятия — для can_remove_warn
+    pending = None
     if warn_id:
-        removed = WS.deactivate_warn(
-            int(warn_id), getattr(actor, 'id', 0) or 0,
-            removed_reason=removed_reason)
-        if removed and int(removed.get('user_id') or 0) != int(target.id):
+        pending = WS.get_warn(int(warn_id))
+        if not pending or not pending.get('active'):
+            return False, 'Варн не найден или уже снят', None
+        if int(pending.get('user_id') or 0) != int(target.id):
             return False, 'Варн принадлежит другому пользователю', None
     else:
-        removed = WS.deactivate_last_active(
-            guild.id, target.id, getattr(actor, 'id', 0) or 0,
-            removed_reason=removed_reason)
+        active = WS.list_warns(guild.id, target.id, active_only=True, limit=1)
+        pending = active[0] if active else None
+        if not pending:
+            return False, 'Активных варнов нет', None
+
+    if check_acl:
+        ok, deny = can_remove_warn(actor, pending, guild=guild)
+        if not ok:
+            return False, deny or 'Нет права снять варн', None
+
+    removed = WS.deactivate_warn(
+        int(pending['id']), getattr(actor, 'id', 0) or 0,
+        removed_reason=removed_reason)
 
     if not removed:
         return False, 'Активных варнов нет', None
@@ -311,6 +367,7 @@ async def remove_all_warns(
     source: str = 'discord',
     check_acl: bool = True,
 ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    """Снимает только те варны, на которые есть право. Остальные пропускает."""
     from services import warn_store as WS
     from services.warn_role import sync_warn_role
 
@@ -318,25 +375,36 @@ async def remove_all_warns(
     if not active:
         return False, 'Активных варнов нет', None
     removed_rows = []
+    skipped = 0
     last_err = None
     for w in active:
+        if check_acl:
+            ok_acl, deny = can_remove_warn(actor, w, guild=guild)
+            if not ok_acl:
+                skipped += 1
+                last_err = deny
+                continue
         ok, msg, payload = await remove_warn(
             guild, target, actor, warn_id=int(w['id']),
             removed_reason=removed_reason, source=source,
-            check_acl=check_acl)
+            check_acl=False)
         if ok and payload:
             removed_rows.append(payload.get('removed'))
         else:
+            skipped += 1
             last_err = msg
     try:
         await sync_warn_role(target)
     except Exception:
         pass
     if not removed_rows:
-        return False, last_err or 'Не удалось снять', None
+        return False, last_err or 'Нечего снимать (нет прав)', None
     total = WS.count_active(guild.id, target.id)
-    return True, f'Снято {len(removed_rows)}, осталось {total}', {
-        'removed': removed_rows, 'total': total,
+    msg = f'Снято {len(removed_rows)}, осталось {total}'
+    if skipped:
+        msg += f', пропущено {skipped}'
+    return True, msg, {
+        'removed': removed_rows, 'total': total, 'skipped': skipped,
     }
 
 

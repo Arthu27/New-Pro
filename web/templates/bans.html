@@ -2,52 +2,45 @@
 {% block title %}Баны{% endblock %}
 {% block heading %}Баны{% endblock %}
 {% block body %}
-<p class="lead">Забаненные на сервере. Разбан — только при правах.</p>
-
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=3">
+<div class="warn-page">
+<p class="lead">Забаненные на сервере. Разбан — по ролям из конфига.</p>
 <nav class="crumb rise">
   <a href="{{ url_for('warns') }}">Warn</a>
   <span aria-hidden="true">›</span>
   <b>Баны</b>
 </nav>
 
-<section class="panel rise">
-  <div class="warn-toolbar" style="border:0;padding:0;margin-bottom:14px">
-    <h2 style="margin:0">Список <span class="count">{{ rows|length }}</span></h2>
-    <input class="input" type="search" id="banQ" placeholder="Ник или ID…" style="max-width:240px">
+<section class="warn-panel rise">
+  <div class="warn-bar" style="border:0;padding:0;margin-bottom:14px">
+    <h2 style="margin:0;font:800 16px/1.2 var(--display)">Список <span class="count">{{ rows|length }}</span></h2>
+    <div style="position:relative;min-width:240px">
+      <input class="wf-input" type="search" id="banQ" placeholder="Ник или ID…" autocomplete="off"
+             style="width:100%;background:var(--wp-card-2);border:1px solid var(--wp-line);color:var(--wp-text);border-radius:10px;padding:10px 12px">
+      <div id="banSuggest" class="warn-suggest" hidden></div>
+    </div>
   </div>
-
-  {% if error %}
-  <div class="flash err">{{ error }}</div>
-  {% endif %}
+  {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
   {% if not rows %}
-  <div class="empty">Банов нет или бот офлайн</div>
+  <div class="warn-empty"><b>Банов нет</b>или бот офлайн</div>
   {% else %}
-  <div class="table-scroll">
-    <table class="profiles-table" id="banTable">
-      <thead>
-        <tr>
-          <th>Профиль</th>
-          <th>ID</th>
-          <th>Причина</th>
-          <th></th>
-        </tr>
-      </thead>
+  <div class="warn-table-wrap">
+    <table class="warn-table" id="banTable">
+      <thead><tr><th>Профиль</th><th>ID</th><th>Причина</th><th></th></tr></thead>
       <tbody>
       {% for b in rows %}
         <tr data-q="{{ (b.name ~ ' ' ~ b.user_id)|lower }}">
-          <td>
-            <span class="profile-cell">
-              {% if b.avatar %}
-              <img class="profile-ava" src="{{ b.avatar }}" alt="" width="40" height="40" loading="lazy">
-              {% endif %}
-              <span class="profile-meta"><strong>{{ b.name }}</strong></span>
+          <td data-label="Профиль">
+            <span class="warn-person">
+              {% if b.avatar %}<img src="{{ b.avatar }}" alt="">{% endif %}
+              <span class="wp-name">{{ b.name }}</span>
             </span>
           </td>
-          <td class="mono dim">{{ b.user_id }}</td>
-          <td class="warn-reason">{{ b.reason or '—' }}</td>
-          <td class="row-actions">
+          <td data-label="ID" class="dim">{{ b.user_id }}</td>
+          <td data-label="Причина" class="warn-reason">{{ b.reason or '—' }}</td>
+          <td data-label="" class="warn-actions">
             {% if can_unban %}
-            <button type="button" class="ghost sm btn-unban" data-uid="{{ b.user_id }}" data-name="{{ b.name }}">разбанить</button>
+            <button type="button" class="btn-unban" data-uid="{{ b.user_id }}" data-name="{{ b.name }}">разбанить</button>
             {% endif %}
           </td>
         </tr>
@@ -57,6 +50,7 @@
   </div>
   {% endif %}
 </section>
+</div>
 
 <dialog id="unbanDlg" class="dlg">
   <form method="dialog" class="dlg-card">
@@ -71,12 +65,6 @@
   </form>
 </dialog>
 
-<style>
-.warn-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.warn-reason{max-width:360px;color:var(--ink-2);font-size:13px}
-.mono{font-variant-numeric:tabular-nums}
-</style>
-
 <script>
 (function(){
   const csrf = {{ csrf_token|tojson }};
@@ -87,25 +75,23 @@
       tr.hidden = !!(q && !(tr.dataset.q || '').includes(q));
     });
   });
-  let uid = '', name = '';
-  const dlg = $('unbanDlg');
+  let uid='', name='';
+  const dlg=$('unbanDlg');
   $('ubClose')?.addEventListener('click', () => dlg.close());
   $('ubCancel')?.addEventListener('click', () => dlg.close());
   document.querySelectorAll('.btn-unban').forEach(btn => {
     btn.addEventListener('click', () => {
-      uid = btn.dataset.uid; name = btn.dataset.name;
-      $('ubHint').textContent = 'Разбанить ' + name + ' (' + uid + ')?';
-      $('ubMsg').textContent = '';
-      dlg.showModal();
+      uid=btn.dataset.uid; name=btn.dataset.name;
+      $('ubHint').textContent='Разбанить '+name+' ('+uid+')?';
+      $('ubMsg').textContent=''; dlg.showModal();
     });
   });
   $('ubGo')?.addEventListener('click', async () => {
-    $('ubMsg').textContent = '…';
-    const r = await fetch('/api/bans/unban', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({user_id: uid, csrf})});
-    const j = await r.json();
-    if (!j.ok) { $('ubMsg').textContent = j.error || 'Ошибка'; return; }
+    $('ubMsg').textContent='…';
+    const r=await fetch('/api/bans/unban',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:uid,csrf})});
+    const j=await r.json();
+    if(!j.ok){$('ubMsg').textContent=j.error||'Ошибка';return;}
     location.reload();
   });
 })();
