@@ -2,39 +2,52 @@
 {% block title %}Баны{% endblock %}
 {% block heading %}Баны{% endblock %}
 {% block body %}
-<p class="lead">Список забаненных. Разбан — только при правах (ACL unban / UNBAN_PANEL_ROLE_IDS).</p>
-<p><a href="{{ url_for('warns') }}">← Warn</a></p>
+<p class="lead">Забаненные на сервере. Разбан — только при правах.</p>
+
+<nav class="crumb rise">
+  <a href="{{ url_for('warns') }}">Warn</a>
+  <span aria-hidden="true">›</span>
+  <b>Баны</b>
+</nav>
 
 <section class="panel rise">
-  <form class="filters" onsubmit="return false;">
-    <input type="search" id="banQ" placeholder="Ник или ID…">
-  </form>
-</section>
+  <div class="warn-toolbar" style="border:0;padding:0;margin-bottom:14px">
+    <h2 style="margin:0">Список <span class="count">{{ rows|length }}</span></h2>
+    <input class="input" type="search" id="banQ" placeholder="Ник или ID…" style="max-width:240px">
+  </div>
 
-<section class="panel rise">
   {% if error %}
   <div class="flash err">{{ error }}</div>
   {% endif %}
   {% if not rows %}
   <div class="empty">Банов нет или бот офлайн</div>
   {% else %}
-  <div class="table-wrap">
-    <table class="data-table" id="banTable">
-      <thead><tr>
-        <th>Пользователь</th><th>ID</th><th>Причина</th><th></th>
-      </tr></thead>
+  <div class="table-scroll">
+    <table class="profiles-table" id="banTable">
+      <thead>
+        <tr>
+          <th>Профиль</th>
+          <th>ID</th>
+          <th>Причина</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
       {% for b in rows %}
         <tr data-q="{{ (b.name ~ ' ' ~ b.user_id)|lower }}">
           <td>
-            {% if b.avatar %}<img src="{{ b.avatar }}" alt="" style="width:28px;height:28px;border-radius:50%;vertical-align:middle"> {% endif %}
-            <b>{{ b.name }}</b>
+            <span class="profile-cell">
+              {% if b.avatar %}
+              <img class="profile-ava" src="{{ b.avatar }}" alt="" width="40" height="40" loading="lazy">
+              {% endif %}
+              <span class="profile-meta"><strong>{{ b.name }}</strong></span>
+            </span>
           </td>
-          <td><code>{{ b.user_id }}</code></td>
-          <td>{{ b.reason or '—' }}</td>
-          <td>
+          <td class="mono dim">{{ b.user_id }}</td>
+          <td class="warn-reason">{{ b.reason or '—' }}</td>
+          <td class="row-actions">
             {% if can_unban %}
-            <button type="button" class="ghost sm btn-unban" data-uid="{{ b.user_id }}" data-name="{{ b.name }}">Разбанить</button>
+            <button type="button" class="ghost sm btn-unban" data-uid="{{ b.user_id }}" data-name="{{ b.name }}">разбанить</button>
             {% endif %}
           </td>
         </tr>
@@ -49,7 +62,7 @@
   <form method="dialog" class="dlg-card">
     <div class="dlg-head"><h3>Разбанить</h3>
       <button type="button" class="dlg-x" id="ubClose">×</button></div>
-    <p id="ubHint"></p>
+    <p id="ubHint" class="dim"></p>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="ubCancel">Отмена</button>
       <button type="button" class="primary-btn" id="ubGo">Разбанить</button>
@@ -59,12 +72,9 @@
 </dialog>
 
 <style>
-.filters{display:flex;gap:8px;margin-bottom:4px}
-.filters input{background:var(--solid);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px;min-width:220px}
-.table-wrap{overflow:auto}
-.data-table{width:100%;border-collapse:collapse;font-size:13px}
-.data-table th,.data-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
-.ghost.sm{padding:4px 8px;font-size:12px}
+.warn-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.warn-reason{max-width:360px;color:var(--ink-2);font-size:13px}
+.mono{font-variant-numeric:tabular-nums}
 </style>
 
 <script>
@@ -74,7 +84,7 @@
   $('banQ')?.addEventListener('input', () => {
     const q = ($('banQ').value || '').toLowerCase().trim();
     document.querySelectorAll('#banTable tbody tr').forEach(tr => {
-      tr.style.display = !q || (tr.dataset.q || '').includes(q) ? '' : 'none';
+      tr.hidden = !!(q && !(tr.dataset.q || '').includes(q));
     });
   });
   let uid = '', name = '';

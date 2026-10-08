@@ -2,66 +2,69 @@
 {% block title %}Warn{% endblock %}
 {% block heading %}Warn{% endblock %}
 {% block body %}
-<p class="lead">Активные предупреждения. Стаффу роль warn не выдаётся.</p>
+<p class="lead">Активные предупреждения из БД. Стаффу роль warn не выдаётся.</p>
 
-<section class="panel rise stats-row">
-  <div class="stat"><b>{{ stats.active_warns }}</b><span>активных варнов</span></div>
-  <div class="stat"><b>{{ stats.users_member }}</b><span>у участников</span></div>
-  <div class="stat"><b>{{ stats.users_staff }}</b><span>у стаффа</span></div>
-</section>
+<div class="kpis rise">
+  <div class="kpi"><b>{{ stats.active_warns }}</b><span>активных</span></div>
+  <div class="kpi"><b>{{ stats.users_member }}</b><span>участников</span></div>
+  <div class="kpi"><b>{{ stats.users_staff }}</b><span>стаффа</span></div>
+</div>
 
-<nav class="tabs rise">
-  <a class="tab {% if tab=='members' %}on{% endif %}"
-     href="{{ url_for('warns', tab='members', q=q, scope=scope, sort=sort) }}">Участники</a>
-  <a class="tab {% if tab=='staff' %}on{% endif %}"
-     href="{{ url_for('warns', tab='staff', q=q, scope=scope, branch=f_branch, sort=sort) }}">Стафф</a>
-  <a class="tab ghost-link" href="{{ url_for('bans_page') }}">Баны →</a>
-</nav>
+<section class="panel rise warn-shell">
+  <div class="warn-toolbar">
+    <div class="warn-tabs" role="tablist">
+      <a class="{% if tab=='members' %}on{% endif %}"
+         href="{{ url_for('warns', tab='members', q=q, scope=scope, sort=sort) }}">Участники</a>
+      <a class="{% if tab=='staff' %}on{% endif %}"
+         href="{{ url_for('warns', tab='staff', q=q, scope=scope, branch=f_branch, sort=sort) }}">Стафф</a>
+    </div>
+    <div class="warn-toolbar__right">
+      <a class="ghost sm" href="{{ url_for('bans_page') }}">Баны</a>
+      {% if can_manage %}
+      <button type="button" class="primary-btn" id="btnIssueWarn">Выдать варн</button>
+      {% endif %}
+    </div>
+  </div>
 
-<section class="panel rise">
-  <form class="filters" method="get" action="{{ url_for('warns') }}">
+  <form class="warn-filters" method="get" action="{{ url_for('warns') }}">
     <input type="hidden" name="tab" value="{{ tab }}">
-    <input type="search" name="q" value="{{ q }}" placeholder="Ник или ID…">
-    <select name="scope">
-      <option value="active" {% if scope=='active' %}selected{% endif %}>Только активные</option>
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="Ник или ID…">
+    <select class="input" name="scope">
+      <option value="active" {% if scope=='active' %}selected{% endif %}>Активные</option>
       <option value="all" {% if scope=='all' %}selected{% endif %}>Вся история</option>
     </select>
     {% if tab=='staff' %}
-    <select name="branch">
+    <select class="input" name="branch">
       <option value="">Все ветки</option>
       {% for b in branches %}
       <option value="{{ b }}" {% if f_branch==b %}selected{% endif %}>{{ branch_labels.get(b, b) }}</option>
       {% endfor %}
     </select>
     {% endif %}
-    <input type="search" name="mod" value="{{ f_mod }}" placeholder="ID выдавшего…" style="max-width:140px">
-    <select name="sort">
+    <input class="input warn-filters__mod" type="search" name="mod" value="{{ f_mod }}" placeholder="ID выдавшего">
+    <select class="input" name="sort">
       <option value="count_desc" {% if sort=='count_desc' %}selected{% endif %}>Кол-во ↓</option>
       <option value="count_asc" {% if sort=='count_asc' %}selected{% endif %}>Кол-во ↑</option>
       <option value="date_desc" {% if sort=='date_desc' %}selected{% endif %}>Дата ↓</option>
       <option value="date_asc" {% if sort=='date_asc' %}selected{% endif %}>Дата ↑</option>
     </select>
-    <button type="submit" class="primary-btn">Фильтр</button>
-    {% if can_manage %}
-    <button type="button" class="ghost" id="btnIssueWarn">Выдать варн</button>
-    {% endif %}
+    <button type="submit" class="ghost">Применить</button>
   </form>
-</section>
 
-<section class="panel rise">
   <h2>{% if tab=='staff' %}Стафф{% else %}Участники{% endif %} <span class="count">{{ total }}</span></h2>
+
   {% if not rows %}
   <div class="empty">Нет записей</div>
   {% else %}
-  <div class="table-wrap">
-    <table class="data-table">
+  <div class="table-scroll">
+    <table class="profiles-table warn-table">
       <thead>
         <tr>
-          <th>Пользователь</th>
+          <th>Профиль</th>
           <th>Варны</th>
-          {% if tab=='staff' %}<th>Ветка</th><th>Должность</th>{% endif %}
-          <th>Последняя причина</th>
-          <th>Кто выдал</th>
+          {% if tab=='staff' %}<th>Ветка</th><th>Роль</th>{% endif %}
+          <th>Причина</th>
+          <th>Выдал</th>
           <th>Дата</th>
           <th></th>
         </tr>
@@ -70,26 +73,35 @@
         {% for r in rows %}
         <tr>
           <td>
-            <a class="user-chip" href="{{ url_for('warns_user', uid=r.user_id) }}">
-              {% if r.avatar %}<img src="{{ r.avatar }}" alt="">{% endif %}
-              <span><b>{{ r.user_name }}</b><small>{{ r.user_id }}</small></span>
+            <a class="profile-cell" href="{{ url_for('warns_user', uid=r.user_id) }}">
+              {% if r.avatar %}
+              <img class="profile-ava" src="{{ r.avatar }}" alt="" width="40" height="40" loading="lazy">
+              {% else %}
+              <span class="profile-ava profile-ava--fb">{{ (r.user_name or '?')[:1]|upper }}</span>
+              {% endif %}
+              <span class="profile-meta">
+                <strong>{{ r.user_name }}</strong>
+                <span class="dim mono">{{ r.user_id }}</span>
+              </span>
             </a>
           </td>
-          <td><span class="warn-badge {{ r.badge_class }}">{{ r.active_count }}</span></td>
+          <td>
+            <span class="wb wb-{{ 'hi' if r.active_count >= 3 else ('mid' if r.active_count == 2 else 'lo') }}">{{ r.active_count }}</span>
+          </td>
           {% if tab=='staff' %}
-          <td>{{ r.branch_label or '—' }}</td>
-          <td>{{ r.role_label or '—' }}</td>
+          <td>{% if r.branch_label %}<span class="mp-role">{{ r.branch_label }}</span>{% else %}<span class="dim">—</span>{% endif %}</td>
+          <td class="dim">{{ r.role_label or '—' }}</td>
           {% endif %}
-          <td class="reason-cell" title="{{ r.reason }}">{{ r.reason[:80] }}{% if r.reason|length > 80 %}…{% endif %}</td>
-          <td>{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod_name }}</a>{% else %}{{ r.mod_name }}{% endif %}</td>
-          <td>{{ r.when }}</td>
-          <td class="actions">
-            <a class="ghost sm" href="{{ url_for('warns_user', uid=r.user_id) }}">Профиль</a>
+          <td class="warn-reason" title="{{ r.reason }}">{{ r.reason[:72] }}{% if r.reason|length > 72 %}…{% endif %}</td>
+          <td class="dim">{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod_name }}</a>{% else %}{{ r.mod_name }}{% endif %}</td>
+          <td class="dim nowrap">{{ r.when }}</td>
+          <td class="row-actions">
+            <a href="{{ url_for('warns_user', uid=r.user_id) }}">профиль</a>
             {% if can_manage and r.active_count %}
-            <button type="button" class="ghost sm btn-unwarn" data-wid="{{ r.id }}" data-uid="{{ r.user_id }}">Снять варн</button>
+            <button type="button" class="ghost sm btn-unwarn" data-wid="{{ r.id }}" data-uid="{{ r.user_id }}" data-name="{{ r.user_name }}">снять</button>
             {% endif %}
             {% if can_manage %}
-            <button type="button" class="ghost sm btn-issue-row" data-uid="{{ r.user_id }}" data-kind="{{ 'staff' if tab=='staff' else 'member' }}">Выдать варн</button>
+            <button type="button" class="ghost sm btn-issue-row" data-uid="{{ r.user_id }}" data-kind="{{ 'staff' if tab=='staff' else 'member' }}">варн</button>
             {% endif %}
           </td>
         </tr>
@@ -99,34 +111,34 @@
   </div>
   {% if pages > 1 %}
   <div class="pager">
-    {% if page > 1 %}<a href="{{ url_for('warns', page=page-1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">←</a>{% endif %}
-    <span>{{ page }} / {{ pages }}</span>
-    {% if page < pages %}<a href="{{ url_for('warns', page=page+1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">→</a>{% endif %}
+    {% if page > 1 %}<a class="ghost sm" href="{{ url_for('warns', page=page-1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">← назад</a>{% endif %}
+    <span class="dim">{{ page }} / {{ pages }}</span>
+    {% if page < pages %}<a class="ghost sm" href="{{ url_for('warns', page=page+1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">вперёд →</a>{% endif %}
   </div>
   {% endif %}
   {% endif %}
 </section>
 
 <dialog id="warnDlg" class="dlg">
-  <form method="dialog" class="dlg-card" id="warnForm">
+  <form method="dialog" class="dlg-card">
     <div class="dlg-head">
       <h3>Выдать варн</h3>
-      <button type="button" class="dlg-x" id="warnClose">×</button>
+      <button type="button" class="dlg-x" id="warnClose" aria-label="Закрыть">×</button>
     </div>
     <label>User ID
-      <input id="warnUid" required placeholder="discord snowflake">
+      <input id="warnUid" class="input" required placeholder="Discord ID">
     </label>
-    <label>Тип цели
-      <select id="warnKind">
+    <label>Тип
+      <select id="warnKind" class="input">
         <option value="member">Участник</option>
         <option value="staff">Стафф</option>
       </select>
     </label>
     <label>Причина
-      <select id="warnCode"></select>
+      <select id="warnCode" class="input"></select>
     </label>
-    <label>Своя формулировка (обязательно)
-      <textarea id="warnDetail" required maxlength="400" rows="3" placeholder="Опишите ситуацию…"></textarea>
+    <label>Формулировка
+      <textarea id="warnDetail" class="input" required maxlength="400" rows="3" placeholder="Кратко опишите ситуацию…"></textarea>
     </label>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="warnCancel">Отмена</button>
@@ -138,11 +150,13 @@
 
 <dialog id="rmDlg" class="dlg">
   <form method="dialog" class="dlg-card">
-    <div class="dlg-head"><h3>Снять варн</h3>
-      <button type="button" class="dlg-x" id="rmClose">×</button></div>
-    <p class="dim" id="rmHint">Подтвердите снятие.</p>
+    <div class="dlg-head">
+      <h3>Снять варн</h3>
+      <button type="button" class="dlg-x" id="rmClose" aria-label="Закрыть">×</button>
+    </div>
+    <p class="dim" id="rmHint"></p>
     <label>Причина снятия <span class="dim">(необязательно)</span>
-      <textarea id="rmReason" maxlength="200" rows="2" placeholder="ошибка / апелляция…"></textarea>
+      <textarea id="rmReason" class="input" maxlength="200" rows="2" placeholder="ошибка, апелляция…"></textarea>
     </label>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="rmCancel">Отмена</button>
@@ -153,32 +167,45 @@
 </dialog>
 
 <style>
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
-.stats-row .stat{background:var(--glass-2);border:1px solid var(--line);border-radius:var(--r-md);padding:16px 18px}
-.stats-row .stat b{display:block;font:800 28px/1.1 var(--display)}
-.stats-row .stat span{color:var(--muted);font-size:13px}
-.tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.tab{padding:10px 18px;border-radius:999px;border:1px solid var(--line);background:var(--solid);color:var(--ink);text-decoration:none;font-weight:600;font-size:14px}
-.tab.on{background:#fff;color:#111;border-color:#fff}
-.tab.ghost-link{margin-left:auto;opacity:.75;font-weight:500}
-.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.filters input,.filters select{background:var(--solid);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px}
-.table-wrap{overflow:auto}
-.data-table{width:100%;border-collapse:collapse;font-size:13px}
-.data-table th,.data-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
-.data-table th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-.user-chip{display:inline-flex;gap:8px;align-items:center;color:inherit;text-decoration:none}
-.user-chip img{width:32px;height:32px;border-radius:50%}
-.user-chip small{display:block;color:var(--muted);font-size:11px}
-.warn-badge{display:inline-flex;min-width:28px;height:28px;align-items:center;justify-content:center;padding:0 8px;border-radius:999px;font-weight:800;font-size:13px;color:#111}
-.badge-yellow{background:#f1c40f}
-.badge-orange{background:#e67e22;color:#fff}
-.badge-red{background:#e74c3c;color:#fff}
-.reason-cell{max-width:280px}
-.actions{white-space:nowrap}
-.ghost.sm{padding:4px 8px;font-size:12px}
-.pager{display:flex;gap:12px;justify-content:center;margin-top:14px}
-@media(max-width:800px){.stats-row{grid-template-columns:1fr}.actions{white-space:normal}}
+.warn-shell{padding-bottom:8px}
+.warn-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line);
+}
+.warn-tabs{display:inline-flex;padding:3px;border-radius:999px;background:var(--glass-2);border:1px solid var(--line)}
+.warn-tabs a{
+  padding:8px 16px;border-radius:999px;font:700 13px/1 var(--font);color:var(--muted);
+  text-decoration:none;transition:background .15s,color .15s;
+}
+.warn-tabs a:hover{color:var(--ink)}
+.warn-tabs a.on{background:#fff;color:#111}
+.warn-toolbar__right{display:flex;gap:8px;align-items:center}
+.warn-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px}
+.warn-filters .input{min-width:0;flex:0 1 auto}
+.warn-filters__mod{width:140px;max-width:100%}
+.warn-table td{vertical-align:middle}
+.warn-reason{max-width:260px;color:var(--ink-2);font-size:13px}
+.nowrap{white-space:nowrap}
+.profile-ava--fb{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;border-radius:50%;background:var(--glass-3);
+  font:800 14px/1 var(--display);color:var(--ink-2);
+}
+.wb{
+  display:inline-flex;min-width:28px;height:28px;padding:0 9px;
+  align-items:center;justify-content:center;border-radius:999px;
+  font:800 13px/1 var(--font);
+}
+.wb-lo{background:rgba(240,180,41,.22);color:#f0b429;border:1px solid rgba(240,180,41,.35)}
+.wb-mid{background:rgba(230,126,34,.22);color:#f0a060;border:1px solid rgba(230,126,34,.4)}
+.wb-hi{background:rgba(255,77,61,.18);color:#ff7a6e;border:1px solid rgba(255,77,61,.35)}
+.pager{display:flex;gap:12px;justify-content:center;align-items:center;padding:14px 0 6px}
+.mono{font-variant-numeric:tabular-nums;letter-spacing:.02em}
+@media(max-width:720px){
+  .warn-filters__mod{width:100%}
+  .warn-reason{max-width:160px}
+  .row-actions{flex-wrap:wrap;justify-content:flex-start}
+}
 </style>
 
 <script>
@@ -193,8 +220,7 @@
   let rmWid = 0, rmUid = '';
 
   function fillCodes(){
-    const kind = kindSel.value;
-    const list = (reasons[kind] || []);
+    const list = reasons[kindSel.value] || [];
     codeSel.innerHTML = list.map(r =>
       `<option value="${r.code}">${r.code} · ${r.label}</option>`).join('');
   }
@@ -202,12 +228,13 @@
   fillCodes();
 
   function openIssue(uid, kind){
-    msg.textContent='';
+    msg.textContent = '';
     if (uid) $('warnUid').value = uid;
     if (kind) { kindSel.value = kind; fillCodes(); }
     dlg.showModal();
   }
-  $('btnIssueWarn')?.addEventListener('click', () => openIssue('', '{{ tab }}' === 'staff' ? 'staff' : 'member'));
+  $('btnIssueWarn')?.addEventListener('click', () =>
+    openIssue('', '{{ tab }}' === 'staff' ? 'staff' : 'member'));
   $('warnClose')?.addEventListener('click', () => dlg.close());
   $('warnCancel')?.addEventListener('click', () => dlg.close());
   document.querySelectorAll('.btn-issue-row').forEach(btn => {
@@ -223,15 +250,17 @@
       detail: $('warnDetail').value.trim(),
       csrf,
     };
-    if (!body.user_id || !body.detail) { msg.textContent = 'ID и формулировка обязательны'; return; }
+    if (!body.user_id || !body.detail) {
+      msg.textContent = 'ID и формулировка обязательны'; return;
+    }
     try {
       const r = await fetch('/api/warns/issue', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(body)});
       const j = await r.json();
       if (!j.ok) { msg.textContent = j.error || 'Ошибка'; return; }
       location.reload();
-    } catch(e) { msg.textContent = String(e); }
+    } catch (e) { msg.textContent = String(e); }
   });
 
   const rmDlg = $('rmDlg');
@@ -243,7 +272,7 @@
       rmUid = btn.dataset.uid;
       $('rmReason').value = '';
       $('rmMsg').textContent = '';
-      $('rmHint').textContent = 'Снять последний/выбранный варн у ' + rmUid + '?';
+      $('rmHint').textContent = 'Снять варн у ' + (btn.dataset.name || rmUid) + '?';
       rmDlg.showModal();
     });
   });
@@ -251,16 +280,15 @@
     $('rmMsg').textContent = '…';
     try {
       const r = await fetch('/api/warns/remove', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+        method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           warn_id: rmWid, user_id: rmUid,
-          removed_reason: $('rmReason').value.trim(),
-          csrf,
+          removed_reason: $('rmReason').value.trim(), csrf,
         })});
       const j = await r.json();
       if (!j.ok) { $('rmMsg').textContent = j.error || 'Ошибка'; return; }
       location.reload();
-    } catch(e) { $('rmMsg').textContent = String(e); }
+    } catch (e) { $('rmMsg').textContent = String(e); }
   });
 })();
 </script>

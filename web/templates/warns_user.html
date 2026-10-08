@@ -2,65 +2,102 @@
 {% block title %}Warn · {{ profile.name }}{% endblock %}
 {% block heading %}Профиль варна{% endblock %}
 {% block body %}
-<p class="lead"><a href="{{ url_for('warns', tab='staff' if is_staff else 'members') }}">← Warn</a></p>
+<nav class="crumb rise">
+  <a href="{{ url_for('warns', tab='staff' if is_staff else 'members') }}">Warn</a>
+  <span aria-hidden="true">›</span>
+  <b>{{ profile.name }}</b>
+</nav>
 
-<section class="panel rise profile-card">
-  <div class="pc-avatar">
-    {% if profile.avatar %}<img src="{{ profile.avatar }}" alt="">{% else %}<div class="pc-ph"></div>{% endif %}
-  </div>
-  <div class="pc-meta">
-    <h2>{{ profile.name }}</h2>
-    <div class="pc-id"><code>{{ uid }}</code>
-      <span class="pill {% if is_staff %}pill-danger{% else %}pill-warn{% endif %}">
-        {{ 'стафф' if is_staff else 'участник' }}
-      </span>
-      {% if active_count %}<span class="warn-badge {{ profile.badge_class }}">{{ active_count }}</span>{% endif %}
+<div class="mp-grid rise">
+  <div class="mp-card">
+    <div class="mp-head">
+      {% if profile.avatar %}
+      <img class="mp-av" src="{{ profile.avatar }}" alt="">
+      {% else %}
+      <span class="mp-av" style="display:inline-flex;align-items:center;justify-content:center;background:var(--glass-3);font:800 28px/1 var(--display)">{{ (profile.name or '?')[:1]|upper }}</span>
+      {% endif %}
+      <div>
+        <div class="mp-name">{{ profile.name }}</div>
+        <div class="mp-sub">
+          <span class="pill {% if is_staff %}pill-danger{% else %}pill-warn{% endif %}">{{ 'стафф' if is_staff else 'участник' }}</span>
+          {% if active_count %}
+          <span class="wb wb-{{ 'hi' if active_count >= 3 else ('mid' if active_count == 2 else 'lo') }}">{{ active_count }}</span>
+          {% endif %}
+        </div>
+      </div>
     </div>
+    <div class="mp-row"><span class="mp-key">ID</span><span class="mp-val mono">{{ uid }}</span></div>
     {% if is_staff %}
-    <div class="pc-line">Ветка: <b>{{ profile.branch or '—' }}</b>
-      {% if profile.role_label %} · должность: <b>{{ profile.role_label }}</b>{% endif %}
-    </div>
+    <div class="mp-row"><span class="mp-key">Ветка</span><span class="mp-val">{{ profile.branch or '—' }}</span></div>
+    <div class="mp-row"><span class="mp-key">Должность</span><span class="mp-val">{{ profile.role_label or '—' }}</span></div>
     {% endif %}
-    <div class="pc-line dim">
-      Первый варн: {{ profile.first_at or '—' }} · последний: {{ profile.last_at or '—' }}
-    </div>
-    <div class="dlg-actions" style="justify-content:flex-start;gap:8px;margin-top:12px">
-      {% if can_manage %}
+    <div class="mp-row"><span class="mp-key">Активных</span><span class="mp-val accent">{{ active_count }}</span></div>
+    <div class="mp-row"><span class="mp-key">Первый</span><span class="mp-val">{{ profile.first_at or '—' }}</span></div>
+    <div class="mp-row"><span class="mp-key">Последний</span><span class="mp-val">{{ profile.last_at or '—' }}</span></div>
+    {% if can_manage %}
+    <div class="mp-actions">
       <button type="button" class="primary-btn" id="btnIssue">Выдать варн</button>
       {% if active_count %}
-      <button type="button" class="ghost" id="btnClearAll">Снять все варны</button>
-      {% endif %}
+      <button type="button" class="ghost" id="btnClearAll">Снять все</button>
       {% endif %}
     </div>
+    {% endif %}
   </div>
-</section>
 
-<section class="panel rise">
-  <h2>История</h2>
+  <div class="mp-card">
+    <div class="mp-section">Сводка</div>
+    <div class="mp-mini-kpis">
+      <div><b>{{ active_count }}</b><span>активных</span></div>
+      <div><b>{{ history|length }}</b><span>всего записей</span></div>
+      <div><b>{{ history|rejectattr('active')|list|length }}</b><span>снято</span></div>
+    </div>
+    <p class="dim" style="margin:14px 0 0;font-size:13px">
+      Счётчик = число записей с active = 1. Роль warn {% if is_staff %}<b>не</b> выдаётся стаффу{% else %}синхронизируется с участником{% endif %}.
+    </p>
+  </div>
+</div>
+
+<section class="panel rise" style="margin-top:12px">
+  <h2>История <span class="count">{{ history|length }}</span></h2>
   {% if not history %}
   <div class="empty">История пуста</div>
   {% else %}
-  <div class="table-wrap">
-    <table class="data-table">
+  <div class="table-scroll">
+    <table class="profiles-table">
       <thead>
         <tr>
-          <th>№</th><th>Причина</th><th>Тип</th><th>Кто выдал</th>
-          <th>Дата</th><th>Статус</th><th>Снятие</th><th></th>
+          <th>№</th>
+          <th>Причина</th>
+          <th>Код</th>
+          <th>Выдал</th>
+          <th>Дата</th>
+          <th>Статус</th>
+          <th>Снятие</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for w in history %}
-        <tr class="{% if not w.active %}dim{% endif %}">
-          <td><b>#{{ w.id }}</b></td>
-          <td class="reason-cell" title="{{ w.reason }}">{{ w.reason[:100] }}{% if w.reason|length > 100 %}…{% endif %}</td>
-          <td>{{ w.reason_code or w.reason_type or '—' }}</td>
+        <tr class="{% if not w.active %}is-dim{% endif %}">
+          <td class="mono"><b>#{{ w.id }}</b></td>
+          <td class="warn-reason" title="{{ w.reason }}">{{ w.reason[:90] }}{% if w.reason|length > 90 %}…{% endif %}</td>
+          <td class="dim">{{ w.reason_code or '—' }}</td>
           <td>{{ w.mod_name }}</td>
-          <td>{{ w.when }}</td>
-          <td>{% if w.active %}<span class="pill pill-warn">активен</span>{% else %}<span class="pill">снят</span>{% endif %}</td>
-          <td class="dim">{% if not w.active %}{{ w.removed_by_name or w.removed_by }} · {{ w.removed_when }}{% if w.removed_reason %}<br>{{ w.removed_reason }}{% endif %}{% else %}—{% endif %}</td>
+          <td class="dim nowrap">{{ w.when }}</td>
           <td>
+            {% if w.active %}<span class="pill pill-warn">активен</span>
+            {% else %}<span class="pill">снят</span>{% endif %}
+          </td>
+          <td class="dim" style="font-size:12px">
+            {% if not w.active %}
+              {{ w.removed_by_name or w.removed_by or '—' }}
+              {% if w.removed_when %}<br>{{ w.removed_when }}{% endif %}
+              {% if w.removed_reason %}<br>{{ w.removed_reason }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="row-actions">
             {% if w.active and can_manage %}
-            <button type="button" class="ghost sm btn-rm" data-wid="{{ w.id }}">Снять</button>
+            <button type="button" class="ghost sm btn-rm" data-wid="{{ w.id }}">снять</button>
             {% endif %}
           </td>
         </tr>
@@ -76,14 +113,14 @@
     <div class="dlg-head"><h3>Выдать варн</h3>
       <button type="button" class="dlg-x" id="warnClose">×</button></div>
     <label>Причина
-      <select id="warnCode">
+      <select id="warnCode" class="input">
         {% for r in reason_opts %}
         <option value="{{ r.code }}">{{ r.code }} · {{ r.label }}</option>
         {% endfor %}
       </select>
     </label>
     <label>Формулировка
-      <textarea id="warnDetail" required maxlength="400" rows="3"></textarea>
+      <textarea id="warnDetail" class="input" required maxlength="400" rows="3"></textarea>
     </label>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="warnCancel">Отмена</button>
@@ -98,7 +135,7 @@
     <div class="dlg-head"><h3 id="rmTitle">Снять варн</h3>
       <button type="button" class="dlg-x" id="rmClose">×</button></div>
     <label>Причина снятия <span class="dim">(необязательно)</span>
-      <textarea id="rmReason" maxlength="200" rows="2"></textarea>
+      <textarea id="rmReason" class="input" maxlength="200" rows="2"></textarea>
     </label>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="rmCancel">Отмена</button>
@@ -109,20 +146,14 @@
 </dialog>
 
 <style>
-.profile-card{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
-.pc-avatar img,.pc-ph{width:96px;height:96px;border-radius:50%;object-fit:cover;background:var(--glass-2)}
-.pc-meta h2{margin:0 0 6px;font:800 26px/1.15 var(--display)}
-.pc-id{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
-.pc-line{margin:4px 0;font-size:14px}
-.warn-badge{display:inline-flex;min-width:28px;height:28px;align-items:center;justify-content:center;padding:0 8px;border-radius:999px;font-weight:800;font-size:13px;color:#111}
-.badge-yellow{background:#f1c40f}.badge-orange{background:#e67e22;color:#fff}.badge-red{background:#e74c3c;color:#fff}
-.table-wrap{overflow:auto}
-.data-table{width:100%;border-collapse:collapse;font-size:13px}
-.data-table th,.data-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-.data-table th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase}
-.reason-cell{max-width:320px}
-.ghost.sm{padding:4px 8px;font-size:12px}
-@media(max-width:700px){.profile-card{flex-direction:column;align-items:center;text-align:center}.pc-id{justify-content:center}}
+.wb{display:inline-flex;min-width:26px;height:26px;padding:0 8px;align-items:center;justify-content:center;border-radius:999px;font:800 12px/1 var(--font);margin-left:6px;vertical-align:middle}
+.wb-lo{background:rgba(240,180,41,.22);color:#f0b429;border:1px solid rgba(240,180,41,.35)}
+.wb-mid{background:rgba(230,126,34,.22);color:#f0a060;border:1px solid rgba(230,126,34,.4)}
+.wb-hi{background:rgba(255,77,61,.18);color:#ff7a6e;border:1px solid rgba(255,77,61,.35)}
+.warn-reason{max-width:320px;color:var(--ink-2);font-size:13px}
+.nowrap{white-space:nowrap}
+.mono{font-variant-numeric:tabular-nums}
+tr.is-dim{opacity:.55}
 </style>
 
 <script>
@@ -164,7 +195,7 @@
   document.querySelectorAll('.btn-rm').forEach(btn => {
     btn.addEventListener('click', () => openRm('Снять варн #' + btn.dataset.wid, Number(btn.dataset.wid)));
   });
-  $('btnClearAll')?.addEventListener('click', () => openRm('Снять ВСЕ активные варны', 0));
+  $('btnClearAll')?.addEventListener('click', () => openRm('Снять все активные варны', 0));
   $('rmGo')?.addEventListener('click', async () => {
     $('rmMsg').textContent = '…';
     const body = {user_id: uid, removed_reason: $('rmReason').value.trim(), csrf};
