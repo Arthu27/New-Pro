@@ -89,6 +89,39 @@ def warn_role_id() -> int:
         return _DEFAULT_WARN_ROLE_ID
 
 
+def warn_duration_days() -> int:
+    """Срок действия варна в днях (WARN_DURATION_DAYS, по умолчанию 7)."""
+    raw = (os.getenv('WARN_DURATION_DAYS') or '').strip()
+    if raw:
+        try:
+            return max(1, min(365, int(raw)))
+        except (TypeError, ValueError):
+            _log.warning('WARN_DURATION_DAYS=%r не число — 7', raw)
+    try:
+        from config import Config
+        return max(1, int(getattr(Config, 'WARN_DURATION_DAYS', 7) or 7))
+    except Exception:
+        return 7
+
+
+def warn_expire_loop_minutes() -> float:
+    """Интервал фоновой проверки истечения (1–5 мин)."""
+    raw = (os.getenv('WARN_EXPIRE_LOOP_MINUTES') or '2').strip()
+    try:
+        return max(1.0, min(5.0, float(raw)))
+    except (TypeError, ValueError):
+        return 2.0
+
+
+def panel_cache_ttl_sec() -> float:
+    """TTL оперативного кэша панели (сек)."""
+    raw = (os.getenv('PANEL_CACHE_TTL') or '45').strip()
+    try:
+        return max(5.0, min(300.0, float(raw)))
+    except (TypeError, ValueError):
+        return 45.0
+
+
 def issuer_can_remove_own() -> bool:
     raw = (os.getenv('ISSUER_CAN_REMOVE_OWN_WARN') or '0').strip().lower()
     return raw in ('1', 'true', 'yes', 'on')

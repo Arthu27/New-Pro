@@ -680,27 +680,53 @@ class warnings(commands.Cog):
                     log.debug('warn sync guild %s: %s', guild.id, e)
         except Exception as e:
             log.warning('on_ready warn sync: %s', e)
-        # members_cache — только в фоне: полный sync на main гильдии
-        # иначе вешает event-loop и бот не заходит в войс.
+        # Кэши + истечение — только в фоне (не блокируем войс).
         try:
-            import asyncio as _aio
-            from services import members_cache as MC
             from config import Config
             main_gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
 
-            async def _bg_members_cache():
+            async def _bg_full_resync():
+                from services import members_cache as MC
+                from services import roles_cache as RC
+                from services import channels_cache as CC
+                from services.warn_expire import process_expired_warns
                 for guild in list(self.bot.guilds):
                     if main_gid and int(guild.id) != main_gid:
                         continue
                     try:
+                        await process_expired_warns(self.bot, guild.id)
+                    except Exception as e:
+                        log.debug('expire on_ready %s: %s', guild.id, e)
+                    try:
                         await MC.sync_guild(guild)
                     except Exception as e:
                         log.debug('members_cache sync %s: %s', guild.id, e)
+                    try:
+                        RC.sync_guild(guild)
+                    except Exception as e:
+                        log.debug('roles_cache sync %s: %s', guild.id, e)
+                    try:
+                        CC.sync_guild(guild)
+                    except Exception as e:
+                        log.debug('channels_cache sync %s: %s', guild.id, e)
+                    # после смены staff/member — роли warn заново
+                    try:
+                        from services.warn_role import sync_guild_active_warns
+                        await sync_guild_active_warns(guild)
+                    except Exception as e:
+                        log.debug('warn role resync %s: %s', guild.id, e)
 
             self.bot.loop.create_task(
-                _bg_members_cache(), name='members-cache-sync')
+                _bg_full_resync(), name='warn-full-resync')
         except Exception as e:
-            log.debug('members_cache on_ready: %s', e)
+            log.debug('cache on_ready: %s', e)
+        if not getattr(self, '_expire_loop_started', False):
+            try:
+                self._warn_expire_loop.start()
+                self._expire_loop_started = True
+            except Exception as e:
+                log.debug('expire loop start: %s', e)
+
         try:
             from services.warn_board import update_warn_board
             from config import Config
@@ -741,6 +767,59 @@ class warnings(commands.Cog):
     async def _warn_board_before(self):
         await self.bot.wait_until_ready()
 
+    @tasks.loop(minutes=2)
+    async def _warn_expire_loop(self):
+        try:
+            from services.warn_expire import process_expired_warns
+            from config import Config
+            gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+            n = await process_expired_warns(
+                self.bot, gid if gid else None)
+            if n:
+                log.info('warn expire loop: истекло %s', n)
+        except Exception as e:
+            log.debug('warn expire loop: %s', e)
+
+    @_warn_expire_loop.before_loop
+    async def _warn_expire_before(self):
+        await self.bot.wait_until_ready()
+
+    @app_commands.command(
+        name='sync_members',
+        description='Пересинхронизировать кэш участников/ролей/каналов')
+    @app_commands.checks.has_permissions(administrator=True)
+    async def sync_members_cmd(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+        if guild is None:
+            await interaction.followup.send('Только на сервере.', ephemeral=True)
+            return
+        from services import members_cache as MC
+        from services import roles_cache as RC
+        from services import channels_cache as CC
+        from services.warn_role import sync_guild_active_warns
+        from services.warn_expire import process_expired_warns
+        n_exp = await process_expired_warns(self.bot, guild.id)
+        n_m = await MC.sync_guild(guild)
+        n_r = RC.sync_guild(guild)
+        n_c = CC.sync_guild(guild)
+        n_w = await sync_guild_active_warns(guild)
+        try:
+            import asyncio
+            from services.warn_board import schedule_board_refresh
+            asyncio.create_task(schedule_board_refresh(guild))
+        except Exception:
+            pass
+        try:
+            from services import panel_cache as PC
+            PC.invalidate_all()
+        except Exception:
+            pass
+        await interaction.followup.send(
+            f'Синк: participants={n_m}, roles={n_r}, channels={n_c}, '
+            f'warn_roles={n_w}, expired={n_exp}',
+            ephemeral=True)
+
     @commands.Cog.listener()
     async def on_member_join(self, member):
         try:
@@ -761,31 +840,108 @@ class warnings(commands.Cog):
             MC.mark_left(member.guild.id, member.id)
         except Exception as e:
             log.debug('on_member_remove cache: %s', e)
+        try:
+            import asyncio
+            from services.warn_board import schedule_board_refresh
+            asyncio.create_task(schedule_board_refresh(member.guild))
+        except Exception:
+            pass
+        try:
+            from services import panel_cache as PC
+            PC.invalidate('warns')
+        except Exception:
+            pass
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
-        """Стал/перестал быть стаффом или вручную трогали роль warn."""
+        """Смена ролей → live staff, cache, роль warn, board."""
+        before_ids = {
+            getattr(r, 'id', None)
+            for r in (getattr(before, 'roles', None) or [])}
+        after_ids = {
+            getattr(r, 'id', None)
+            for r in (getattr(after, 'roles', None) or [])}
+        nick_chg = (
+            getattr(before, 'display_name', None)
+            != getattr(after, 'display_name', None))
+        if before_ids == after_ids and not nick_chg:
+            return
         try:
             from services import members_cache as MC
             MC.upsert_member(after.guild.id, after)
         except Exception:
             pass
         try:
-            before_ids = {
-                getattr(r, 'id', None)
-                for r in (getattr(before, 'roles', None) or [])}
-            after_ids = {
-                getattr(r, 'id', None)
-                for r in (getattr(after, 'roles', None) or [])}
-            nick_chg = (
-                getattr(before, 'display_name', None)
-                != getattr(after, 'display_name', None))
-            if before_ids == after_ids and not nick_chg:
-                return
             from services.warn_role import sync_warn_role
             await sync_warn_role(after)
         except Exception as e:
             log.debug('on_member_update warn sync: %s', e)
+        if before_ids != after_ids:
+            try:
+                import asyncio
+                from services.warn_board import schedule_board_refresh
+                asyncio.create_task(schedule_board_refresh(after.guild))
+            except Exception:
+                pass
+            try:
+                from services import panel_cache as PC
+                PC.invalidate('warns')
+            except Exception:
+                pass
+
+    @commands.Cog.listener()
+    async def on_guild_role_create(self, role):
+        try:
+            from services import roles_cache as RC
+            RC.upsert_role(role.guild.id, role)
+        except Exception as e:
+            log.debug('role_create cache: %s', e)
+
+    @commands.Cog.listener()
+    async def on_guild_role_update(self, before, after):
+        try:
+            from services import roles_cache as RC
+            RC.upsert_role(after.guild.id, after)
+        except Exception as e:
+            log.debug('role_update cache: %s', e)
+
+    @commands.Cog.listener()
+    async def on_guild_role_delete(self, role):
+        try:
+            from services import roles_cache as RC
+            RC.delete_role(role.guild.id, role.id)
+        except Exception as e:
+            log.debug('role_delete cache: %s', e)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_create(self, channel):
+        try:
+            from services import channels_cache as CC
+            g = getattr(channel, 'guild', None)
+            if g:
+                CC.upsert_channel(g.id, channel)
+        except Exception as e:
+            log.debug('channel_create cache: %s', e)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_update(self, before, after):
+        try:
+            from services import channels_cache as CC
+            g = getattr(after, 'guild', None)
+            if g:
+                CC.upsert_channel(g.id, after)
+        except Exception as e:
+            log.debug('channel_update cache: %s', e)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_delete(self, channel):
+        try:
+            from services import channels_cache as CC
+            g = getattr(channel, 'guild', None)
+            if g:
+                CC.delete_channel(g.id, channel.id)
+        except Exception as e:
+            log.debug('channel_delete cache: %s', e)
 
 
 # ═══════════════════════════════════════════════════════════════════

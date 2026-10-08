@@ -3422,10 +3422,33 @@ def _staff_role_label(guild, member) -> str:
     return ''
 
 
+def _warn_remaining(expires_at) -> dict:
+    """{'text': '3д 4ч', 'urgent': bool, 'iso': ...} из expires_at."""
+    out = {'text': '—', 'urgent': False, 'iso': expires_at or ''}
+    if not expires_at:
+        return out
+    dt = _parse_ts(expires_at)
+    if dt is None:
+        return out
+    now = datetime.now(timezone.utc)
+    sec = int((dt - now).total_seconds())
+    if sec <= 0:
+        return {'text': 'истёк', 'urgent': True, 'iso': expires_at}
+    days, rem = divmod(sec, 86400)
+    hours, rem = divmod(rem, 3600)
+    mins = rem // 60
+    if days > 0:
+        text = f'{days}д {hours}ч'
+    elif hours > 0:
+        text = f'{hours}ч {mins}м'
+    else:
+        text = f'{mins}м'
+    return {'text': f'осталось {text}', 'urgent': sec < 86400, 'iso': expires_at}
+
+
 def _warn_user_row(w, book, guild=None, actor=None):
-    """Строка агрегированного списка (один юзер) + стили + can_remove."""
-    from services.warn_config import (
-        role_style, branch_style, member_rank_snapshot)
+    """Строка агрегированного списка — данные из members_cache, не Discord API."""
+    from services.warn_config import role_style, branch_style
     from services import warn_actions as WA
     from services import members_cache as MC
 
@@ -3436,11 +3459,21 @@ def _warn_user_row(w, book, guild=None, actor=None):
     base['role_label'] = ''
     base['handle'] = ''
     base['role_style'] = None
-    base['branch_style'] = branch_style(w.get('branch')) if w.get('branch') else None
+    live_branch = w.get('live_branch') or w.get('branch')
+    base['branch_style'] = branch_style(live_branch) if live_branch else None
     base['mod_avatar'] = ''
     base['mod_role_style'] = None
     base['can_remove'] = False
     base['remove_deny'] = ''
+    base['in_guild'] = True
+    base['left_server'] = False
+    rem = _warn_remaining(w.get('next_expires_at') or w.get('expires_at'))
+    base['expires_text'] = rem['text']
+    base['expires_urgent'] = rem['urgent']
+    base['expires_at'] = rem['iso']
+    base['status'] = w.get('status') or (
+        'active' if int(w.get('active') or 0) else (
+            'expired' if int(w.get('expired') or 0) else 'removed'))
 
     uid = str(base.get('user_id') or '')
     gid = int(w.get('guild_id') or (_main_guild() or 0) or 0)
@@ -3450,31 +3483,33 @@ def _warn_user_row(w, book, guild=None, actor=None):
             cached = MC.get_member(gid, int(uid))
         except Exception:
             cached = None
+    # live fields из JOIN
+    if w.get('live_display_name'):
+        base['user_name'] = w['live_display_name']
+    if w.get('live_username') is not None:
+        base['handle'] = w.get('live_username') or ''
+    if w.get('live_avatar'):
+        base['avatar'] = w['live_avatar']
+    if w.get('live_top_role_id'):
+        base['role_style'] = role_style(w['live_top_role_id'])
+        base['role_label'] = (base['role_style'] or {}).get('label') or ''
+    if 'live_in_guild' in w:
+        base['in_guild'] = bool(int(w.get('live_in_guild') or 0))
+        base['left_server'] = not base['in_guild']
+
     if cached:
         base['user_name'] = cached.get('display_name') or base['user_name']
-        base['handle'] = cached.get('username') or ''
+        base['handle'] = cached.get('username') or base.get('handle') or ''
         base['avatar'] = cached.get('avatar_url') or base.get('avatar') or ''
-        if cached.get('top_role_id'):
+        if cached.get('top_role_id') and not base.get('role_style'):
             base['role_style'] = role_style(cached['top_role_id'])
             base['role_label'] = base['role_style'].get('label') or ''
         if cached.get('branch') and not base.get('branch_style'):
             base['branch_style'] = branch_style(cached.get('branch'))
+        base['in_guild'] = bool(int(cached.get('in_guild') or 0))
+        base['left_server'] = not base['in_guild']
 
-    if guild and uid.isdigit():
-        m = guild.get_member(int(uid))
-        if m is not None:
-            base['role_label'] = _staff_role_label(guild, m) or base['role_label']
-            try:
-                base['avatar'] = str(m.display_avatar.url)
-            except Exception:
-                pass
-            base['user_name'] = getattr(m, 'display_name', None) or base['user_name']
-            base['handle'] = getattr(m, 'name', '') or base['handle']
-            _rk, rid, _nm = member_rank_snapshot(m)
-            if rid:
-                base['role_style'] = role_style(rid)
-
-    # issuer styling
+    # issuer styling — только cache
     mid = str(base.get('mod_id') or '')
     if mid.isdigit() and gid:
         try:
@@ -3505,10 +3540,13 @@ def _warn_user_row(w, book, guild=None, actor=None):
 @role_required('helper')
 def warns():
     """Warn: вкладки Участники / Стафф, агрегация по людям."""
+    import time as _time
+    _t0 = _time.perf_counter()
     from services import warn_store as WS
     from services.warn_config import (
         branch_labels, branch_grant_roles, styles_public_dict)
     from services import warn_reasons as WR
+    from services import panel_cache as PC
     import json as _json
 
     gid = _main_guild()
@@ -3524,7 +3562,7 @@ def warns():
         page = max(1, int(request.args.get('page') or 1))
     except Exception:
         page = 1
-    per = 40
+    per = 25
     book = _namebook(gid)
     bot = bot_instance
     guild = bot.get_guild(int(gid)) if bot and gid else None
@@ -3536,10 +3574,16 @@ def warns():
         'active_warns': 0, 'users_member': 0, 'users_staff': 0,
         'users_total': 0, 'removed_7d': 0,
     }
-    if gid:
+    cache_key = (
+        f'warns:list:{gid}:{tab}:{scope}:{f_branch}:{f_mod}:{sort}:'
+        f'{page}:{q}')
+    cached = PC.get(cache_key) if not q else None
+    if cached:
+        rows_raw, total, stats = cached
+    elif gid:
         try:
             mod_id = int(f_mod) if f_mod.isdigit() else None
-            # если q — ник (не ID), резолвим через members_cache
+            # ник → members_cache (без Discord API)
             q_use = q
             if q and not (q.isdigit() and len(q) >= 5):
                 try:
@@ -3566,12 +3610,18 @@ def warns():
             stats['users_total'] = (
                 int(stats.get('users_member') or 0)
                 + int(stats.get('users_staff') or 0))
+            if not q:
+                PC.set(cache_key, (rows_raw, total, stats))
         except Exception as ex:
             flash(f'БД варнов: {ex}', 'err')
 
     rows = [_warn_user_row(w, book, guild, actor=actor) for w in rows_raw]
     pages = max(1, (total + per - 1) // per)
     can_manage = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('mod', 2)
+    can_admin = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('admin', 4)
+    can_extend = can_admin or (session.get('role') == 'owner')
+    ms = int((_time.perf_counter() - _t0) * 1000)
+    app.logger.info('warns page %sms tab=%s q=%r total=%s', ms, tab, q, total)
     return render_template(
         'warns.html',
         rows=rows, total=total, page=page, pages=pages,
@@ -3583,6 +3633,9 @@ def warns():
         styles_json=_json.dumps(styles_public_dict(), ensure_ascii=False),
         csrf_token=_ensure_csrf(),
         can_manage=can_manage,
+        can_admin=can_admin,
+        can_extend=can_extend,
+        timing_ms=ms,
     )
 
 
@@ -3590,10 +3643,9 @@ def warns():
 @login_required
 @role_required('helper')
 def api_warns_search():
-    """Живой поиск участников для Warn (debounce на фронте).
-
-    Сначала members_cache; если пусто — Discord REST / guild.members.
-    """
+    """Живой поиск только из members_cache (без Discord API)."""
+    import time as _time
+    _t0 = _time.perf_counter()
     from services import members_cache as MC
     from services import warn_store as WS
     from services.warn_config import role_style, branch_style
@@ -3610,87 +3662,126 @@ def api_warns_search():
         limit = 10
     gid = _main_guild()
     if not gid or not q:
-        return jsonify({'ok': True, 'items': []})
+        return jsonify({'ok': True, 'items': [], 'ms': 0})
     items = []
-    seen = set()
-
-    def _badge_for(is_staff, top_role_id, branch):
-        badge = ''
-        rs = role_style(top_role_id) if top_role_id else None
-        if rs and is_staff:
-            badge = (
-                f'<span class="rbadge" style="color:{rs["color"]};'
-                f'background:{rs["color"]}22;border-color:{rs["color"]}66">'
-                f'{rs["label"]}</span>')
-        elif branch:
-            bs = branch_style(branch)
-            badge = (
-                f'<span class="rbadge" style="color:{bs["color"]};'
-                f'background:{bs["color"]}22;border-color:{bs["color"]}66">'
-                f'{bs["label"]}</span>')
-        return badge
-
-    def _push(uid, name, handle, avatar, is_staff, branch, in_guild, top_role_id):
-        uid = str(uid)
-        if not uid or uid in seen:
-            return
-        seen.add(uid)
-        warns = 0
-        try:
-            warns = WS.count_active(int(gid), int(uid))
-        except Exception:
-            warns = 0
-        items.append({
-            'id': uid,
-            'name': name or uid,
-            'handle': handle or '',
-            'avatar': avatar or '',
-            'is_staff': bool(is_staff),
-            'branch': branch,
-            'in_guild': bool(in_guild),
-            'warns': warns,
-            'role_badge': _badge_for(is_staff, top_role_id, branch),
-        })
-
     try:
         hits = MC.search(int(gid), q, limit=limit, staff_only=staff_only)
         for h in hits:
-            _push(
-                h.get('user_id'),
-                h.get('display_name') or str(h.get('user_id')),
-                h.get('username') or '',
-                h.get('avatar_url') or '',
-                h.get('is_staff'),
-                h.get('branch'),
-                h.get('in_guild'),
-                h.get('top_role_id'),
-            )
-        # fallback: Discord live search если кэш пустой/тонкий
-        if len(items) < limit and q:
-            want_staff = True if staff_only is True else False
-            people, _err = _search_guild_members(
-                q, staff_only=want_staff, limit=max(limit * 2, 20))
-            for p in (people or []):
-                has_role = bool(p.get('role'))
-                if staff_only is True and not has_role:
-                    continue
-                if staff_only is False and has_role:
-                    continue
-                _push(
-                    p.get('id'),
-                    p.get('name'),
-                    p.get('handle') or '',
-                    p.get('avatar') or '',
-                    has_role,
-                    p.get('branch'),
-                    True,
-                    p.get('top_role_id') or p.get('role_id'),
-                )
-                if len(items) >= limit:
-                    break
+            warns = 0
+            try:
+                warns = WS.count_active(int(gid), int(h['user_id']))
+            except Exception:
+                warns = 0
+            rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
+            badge = ''
+            if rs and h.get('is_staff'):
+                badge = (
+                    f'<span class="rbadge" style="color:{rs["color"]};'
+                    f'background:{rs["color"]}22;border-color:{rs["color"]}66">'
+                    f'{rs["label"]}</span>')
+            elif h.get('branch'):
+                bs = branch_style(h['branch'])
+                badge = (
+                    f'<span class="rbadge" style="color:{bs["color"]};'
+                    f'background:{bs["color"]}22;border-color:{bs["color"]}66">'
+                    f'{bs["label"]}</span>')
+            items.append({
+                'id': str(h['user_id']),
+                'name': h.get('display_name') or str(h['user_id']),
+                'handle': h.get('username') or '',
+                'avatar': h.get('avatar_url') or '',
+                'is_staff': bool(h.get('is_staff')),
+                'branch': h.get('branch'),
+                'in_guild': bool(h.get('in_guild')),
+                'warns': warns,
+                'role_badge': badge,
+            })
     except Exception as ex:
         return jsonify({'ok': False, 'error': str(ex), 'items': []}), 500
-    return jsonify({'ok': True, 'items': items[:limit]})
+    ms = int((_time.perf_counter() - _t0) * 1000)
+    app.logger.info('warns search %sms q=%r n=%s', ms, q, len(items))
+    return jsonify({'ok': True, 'items': items, 'ms': ms})
+
+
+@app.post('/api/warns/resync')
+@login_required
+@role_required('admin')
+def api_warns_resync():
+    """Админ: пересинхронизировать members/roles/channels + expire + warn roles."""
+    data = request.get_json(silent=True) or {}
+    if not _check_csrf(data):
+        return jsonify({'ok': False, 'error': 'CSRF'}), 403
+    bot = bot_instance
+    gid = _main_guild()
+    if not bot or not gid:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+    guild = bot.get_guild(int(gid))
+    if guild is None:
+        return jsonify({'ok': False, 'error': 'Гильдия не найдена'}), 503
+
+    async def _do():
+        from services import members_cache as MC
+        from services import roles_cache as RC
+        from services import channels_cache as CC
+        from services.warn_role import sync_guild_active_warns
+        from services.warn_expire import process_expired_warns
+        n_exp = await process_expired_warns(bot, int(gid))
+        n_m = await MC.sync_guild(guild)
+        n_r = RC.sync_guild(guild)
+        n_c = CC.sync_guild(guild)
+        n_w = await sync_guild_active_warns(guild)
+        try:
+            import asyncio
+            from services.warn_board import schedule_board_refresh
+            asyncio.create_task(schedule_board_refresh(guild))
+        except Exception:
+            pass
+        return {
+            'members': n_m, 'roles': n_r, 'channels': n_c,
+            'warn_roles': n_w, 'expired': n_exp,
+        }
+
+    try:
+        result = _run_bot(_do())
+        from services import panel_cache as PC
+        PC.invalidate_all()
+        return jsonify({'ok': True, **(result or {})})
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)}), 500
+
+
+@app.post('/api/warns/extend')
+@login_required
+@role_required('admin')
+def api_warns_extend():
+    """Продлить варн (owner/admin)."""
+    data = request.get_json(silent=True) or {}
+    if not _check_csrf(data):
+        return jsonify({'ok': False, 'error': 'CSRF'}), 403
+    try:
+        wid = int(data.get('warn_id') or 0)
+    except Exception:
+        wid = 0
+    if not wid:
+        return jsonify({'ok': False, 'error': 'warn_id'}), 400
+    from services import warn_store as WS
+    from services.warn_config import warn_duration_days
+    days = data.get('days')
+    try:
+        days = int(days) if days is not None else warn_duration_days()
+    except Exception:
+        days = warn_duration_days()
+    actor_id = session.get('discord_id') or 0
+    try:
+        actor_id = int(actor_id)
+    except Exception:
+        actor_id = 0
+    row = WS.extend_warn(wid, days=days, actor_id=actor_id or None)
+    if not row:
+        return jsonify({'ok': False, 'error': 'Не удалось продлить'}), 400
+    from services import panel_cache as PC
+    PC.invalidate('warns')
+    return jsonify({'ok': True, 'row': row, 'expires_at': row.get('expires_at')})
 
 
 @app.route('/warns/user/<uid>')
@@ -3714,13 +3805,27 @@ def warns_user(uid):
     actor = _panel_actor_member(guild) if guild else None
     member = guild.get_member(int(uid)) if guild else None
     cached = MC.get_member(int(gid), int(uid))
-    is_staff = bool(
-        (member and is_staff_target(guild, member))
-        or (cached and cached.get('is_staff')))
+    # текущий staff — из ролей / cache, не из записи варна
+    if member is not None:
+        try:
+            from services.warn_acl import get_staff_info
+            is_staff, _br, _rk = get_staff_info(member)
+        except Exception:
+            is_staff = bool(is_staff_target(guild, member))
+    else:
+        is_staff = bool(cached and cached.get('is_staff') and cached.get('in_guild'))
     history_raw = WS.list_warns(int(gid), int(uid), active_only=False)
     history = []
     for w in history_raw:
         row = _warn_view_row(w, book, guild)
+        st = w.get('status') or WS.warn_status(w)
+        row['status'] = st
+        row['expired'] = int(w.get('expired') or 0) or (st == 'expired')
+        row['active'] = (st == 'active')
+        rem = _warn_remaining(w.get('expires_at'))
+        row['expires_text'] = rem['text']
+        row['expires_urgent'] = rem['urgent']
+        row['expires_at'] = rem['iso']
         row['removed_when'] = _fmt(w.get('removed_at'))
         rb = w.get('removed_by')
         row['removed_by_name'] = _best_name(None, str(rb or ''), book) if rb else ''

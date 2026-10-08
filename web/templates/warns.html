@@ -2,7 +2,7 @@
 {% block title %}Warn{% endblock %}
 {% block heading %}Warn{% endblock %}
 {% block body %}
-<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=5">
 <div class="warn-page">
 
 <div class="warn-kpis rise">
@@ -22,6 +22,9 @@
     </div>
     <div class="warn-top__right">
       <a class="ghost sm" href="{{ url_for('bans_page') }}">Баны</a>
+      {% if can_admin %}
+      <button type="button" class="ghost sm" id="btnResync">Пересинхронизировать</button>
+      {% endif %}
       {% if can_manage %}
       <button type="button" class="primary-btn" id="btnIssueWarn">Выдать варн</button>
       {% endif %}
@@ -107,10 +110,10 @@
     {% for r in rows %}
     <article class="warn-card {% if tab=='staff' %}is-staff{% endif %}">
       <a class="warn-person" href="{{ url_for('warns_user', uid=r.user_id) }}">
-        {% if r.avatar %}<img src="{{ r.avatar }}" alt="" loading="lazy">
+        {% if r.avatar %}<img src="{{ r.avatar }}" alt="" loading="lazy" width="42" height="42">
         {% else %}<span class="warn-ava-fb">{{ (r.user_name or '?')[:1]|upper }}</span>{% endif %}
         <span>
-          <span class="wp-name">{{ r.user_name }}</span>
+          <span class="wp-name">{{ r.user_name }}{% if r.left_server %} <span class="st-pill st-gone">вышел</span>{% endif %}</span>
           <span class="wp-sub">{% if r.handle %}@{{ r.handle }} · {% endif %}{{ r.user_id }}</span>
         </span>
       </a>
@@ -135,7 +138,7 @@
       <div class="warn-reason" title="{{ r.reason }}">{{ r.reason }}</div>
 
       <div class="warn-issuer">
-        {% if r.mod_avatar %}<img src="{{ r.mod_avatar }}" alt="" loading="lazy">{% endif %}
+        {% if r.mod_avatar %}<img src="{{ r.mod_avatar }}" alt="" loading="lazy" width="26" height="26">{% endif %}
         <span>
           <span class="wp-name">{{ r.mod_name }}</span>
           {% if r.mod_role_style %}
@@ -144,7 +147,12 @@
         </span>
       </div>
 
-      <div class="warn-date">{{ r.when }}</div>
+      <div class="warn-date">
+        <div>{{ r.when }}</div>
+        {% if r.expires_text and r.expires_text != '—' %}
+        <div class="warn-expires {% if r.expires_urgent %}is-urgent{% endif %}">{{ r.expires_text }}</div>
+        {% endif %}
+      </div>
 
       <div class="warn-actions">
         <a href="{{ url_for('warns_user', uid=r.user_id) }}">профиль</a>
@@ -153,6 +161,10 @@
                 data-uid="{{ r.user_id }}"
                 data-kind="{{ 'staff' if tab=='staff' else 'member' }}"
                 data-name="{{ r.user_name }}">выдать</button>
+        {% endif %}
+        {% if can_extend and r.active_count %}
+        <button type="button" class="btn-extend"
+                data-wid="{{ r.id }}" data-name="{{ r.user_name }}">продлить</button>
         {% endif %}
         {% if r.can_remove %}
         <button type="button" class="btn-unwarn btn-danger"
@@ -278,12 +290,41 @@
     $(id)?.addEventListener('change', () => submitFilter());
   });
 
-  /** Live suggest: mousedown (не click) — blur не съедает выбор */
+  $('btnResync')?.addEventListener('click', async () => {
+    if (!confirm('Пересинхронизировать кэш участников, ролей и каналов?')) return;
+    const btn = $('btnResync');
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const r = await fetch('/api/warns/resync', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({csrf})});
+      const j = await r.json();
+      if (!j.ok) { alert(j.error || 'Ошибка'); return; }
+      location.reload();
+    } catch(e) { alert('Сеть'); }
+    finally { btn.disabled = false; btn.textContent = 'Пересинхронизировать'; }
+  });
+
+  document.querySelectorAll('.btn-extend').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Продлить варн #' + btn.dataset.wid + '?')) return;
+      const r = await fetch('/api/warns/extend', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({warn_id: Number(btn.dataset.wid), csrf})});
+      const j = await r.json();
+      if (!j.ok) { alert(j.error || 'Ошибка'); return; }
+      location.reload();
+    });
+  });
+
+  /** Live suggest: mousedown + AbortController */
   function wireSuggest(input, box, onPick, staffOnly){
     let t = null;
     let items = [];
     let active = -1;
     let req = 0;
+    let ctrl = null;
+    const clientCache = new Map();
 
     function hide(){
       box.hidden = true;
@@ -334,18 +375,34 @@
       if (clearBtn && clearBtn.id === 'wqClear') clearBtn.hidden = q.length < 1;
 
       if (q.length < 1) { hide(); return; }
+      const cacheKey = q.toLowerCase() + '|' + staffOnly;
+      if (clientCache.has(cacheKey)) {
+        items = clientCache.get(cacheKey);
+        active = items.length ? 0 : -1;
+        paint();
+        return;
+      }
       const my = ++req;
+      if (ctrl) try { ctrl.abort(); } catch(_){}
+      ctrl = new AbortController();
       const params = new URLSearchParams({q, limit: '10'});
       if (staffOnly === true) params.set('staff', '1');
       if (staffOnly === false) params.set('staff', '0');
       try {
-        const r = await fetch('/api/warns/search?' + params, {credentials: 'same-origin'});
+        const r = await fetch('/api/warns/search?' + params, {
+          credentials: 'same-origin', signal: ctrl.signal});
         const j = await r.json();
         if (my !== req) return;
         items = (j.items || []).slice(0, 10);
+        clientCache.set(cacheKey, items);
+        if (clientCache.size > 40) {
+          const k = clientCache.keys().next().value;
+          clientCache.delete(k);
+        }
         active = items.length ? 0 : -1;
         paint();
       } catch (e) {
+        if (e && e.name === 'AbortError') return;
         if (my === req) hide();
       }
     }

@@ -16,8 +16,22 @@ def _ts() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _fmt_until(expires_at: str | None) -> str:
+    if not expires_at:
+        return '—'
+    try:
+        s = str(expires_at).replace('Z', '+00:00')
+        d = datetime.fromisoformat(s)
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=timezone.utc)
+        return d.astimezone(timezone.utc).strftime('%d.%m.%Y %H:%M UTC')
+    except Exception:
+        return str(expires_at)[:19]
+
+
 def build_member_warn_dm(
     guild, moderator, *, reason: str, warn_id: int, active_count: int,
+    expires_at: str | None = None,
 ) -> discord.Embed:
     """Жёлтый/оранжевый embed для обычного участника."""
     from services.warn_config import appeal_hint_member
@@ -27,13 +41,15 @@ def build_member_warn_dm(
         color=0xF39C12,
         timestamp=_ts(),
     )
+    until = _fmt_until(expires_at)
     e.description = (
         f'На сервере **{getattr(guild, "name", "сервер")}** вам выдали '
         f'предупреждение.\n\n'
         f'**Причина:** {reason or "Не указана"}\n'
         f'**Выдал:** {getattr(moderator, "display_name", moderator)}\n'
         f'**Варн №:** {warn_id}\n'
-        f'**Активных варнов:** {active_count}\n\n'
+        f'**Активных варнов:** {active_count}\n'
+        f'**Действует до:** {until}\n\n'
         f'Вам выдана роль **warn**. При накоплении предупреждений возможны '
         f'более строгие меры.\n\n'
         f'> {appeal_hint_member()}'
@@ -50,6 +66,7 @@ def build_member_warn_dm(
 def build_staff_warn_dm(
     guild, moderator, *, reason: str, warn_id: int, active_count: int,
     branch: str | None = None, role_label: str | None = None,
+    expires_at: str | None = None,
 ) -> discord.Embed:
     """Строгий красный embed для сотрудника."""
     from services.warn_config import (
@@ -62,6 +79,7 @@ def build_staff_warn_dm(
         timestamp=_ts(),
     )
     issuer = getattr(moderator, 'display_name', None) or str(moderator)
+    until = _fmt_until(expires_at)
     e.description = (
         f'Вам вынесено **официальное предупреждение** на сервере '
         f'**{getattr(guild, "name", "сервер")}**.\n\n'
@@ -70,12 +88,53 @@ def build_staff_warn_dm(
         f'**Причина:** {reason or "Не указана"}\n'
         f'**Выдал:** {issuer} (куратор / администрация)\n'
         f'**Варн №:** {warn_id}\n'
-        f'**Активных варнов в личном деле:** {active_count}\n\n'
+        f'**Активных варнов в личном деле:** {active_count}\n'
+        f'**Действует до:** {until}\n\n'
         f'Роль warn сотрудникам **не выдаётся** — предупреждение '
         f'зафиксировано только в личном деле.\n'
         f'При **{thr}** и более активных варнах вопрос о снятии с должности '
         f'выносится на рассмотрение.\n\n'
         f'> {appeal_hint_staff()}'
+    )
+    e.set_footer(text=f'{getattr(guild, "name", "Hakumo")} · staff record')
+    return e
+
+
+def build_member_expire_dm(
+    guild, *, reason: str, warn_id: int, active_count: int,
+) -> discord.Embed:
+    e = discord.Embed(
+        title='Срок предупреждения истёк',
+        color=0x95A5A6,
+        timestamp=_ts(),
+    )
+    e.description = (
+        f'На сервере **{getattr(guild, "name", "сервер")}** истёк срок '
+        f'предупреждения #{warn_id}.\n\n'
+        f'**Было за:** {reason or "—"}\n'
+        f'**Активных варнов осталось:** {active_count}\n\n'
+        + ('Роль warn снята.' if active_count <= 0
+           else 'Роль warn остаётся, пока есть активные варны.')
+    )
+    e.set_footer(text=f'{getattr(guild, "name", "Hakumo")} · участник')
+    return e
+
+
+def build_staff_expire_dm(
+    guild, *, reason: str, warn_id: int, active_count: int,
+    branch: str | None = None,
+) -> discord.Embed:
+    e = discord.Embed(
+        title='Срок предупреждения в личном деле истёк',
+        color=0x7F8C8D,
+        timestamp=_ts(),
+    )
+    e.description = (
+        f'Официальное предупреждение **#{warn_id}** истекло в вашем '
+        f'личном деле на **{getattr(guild, "name", "сервер")}**.\n\n'
+        f'**Ветка:** {branch or "—"}\n'
+        f'**Было за:** {reason or "—"}\n'
+        f'**Активных варнов осталось:** {active_count}'
     )
     e.set_footer(text=f'{getattr(guild, "name", "Hakumo")} · staff record')
     return e

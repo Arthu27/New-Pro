@@ -209,20 +209,27 @@ async def issue_warn(
     # DM
     dm_ok = False
     try:
+        exp = (row or {}).get('expires_at')
         if is_staff:
             embed = WDM.build_staff_warn_dm(
                 guild, actor, reason=reason_txt, warn_id=warn_id,
                 active_count=total, branch=br_label,
-                role_label=WDM.staff_role_label(target))
+                role_label=WDM.staff_role_label(target),
+                expires_at=exp)
         else:
             embed = WDM.build_member_warn_dm(
                 guild, actor, reason=reason_txt, warn_id=warn_id,
-                active_count=total)
+                active_count=total, expires_at=exp)
         dm_ok = await WDM.send_warn_dm(
             target, embed, guild=guild,
             log_channel_hint=f'warn #{warn_id} ({src_label})')
     except Exception as ex:
         _log.debug('issue_warn dm: %s', ex)
+    try:
+        from services import panel_cache as PC
+        PC.invalidate('warns')
+    except Exception:
+        pass
 
     punish = None
     if apply_auto_punish and not is_staff:

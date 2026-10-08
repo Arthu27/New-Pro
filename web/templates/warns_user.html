@@ -2,7 +2,7 @@
 {% block title %}Warn · {{ profile.name }}{% endblock %}
 {% block heading %}Профиль варна{% endblock %}
 {% block body %}
-<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=5">
 <div class="warn-page">
 <nav class="crumb rise">
   <a href="{{ url_for('warns', tab='staff' if is_staff else 'members') }}">Warn</a>
@@ -73,13 +73,20 @@
           {% endif %}
         </span>
       </div>
-      <div class="warn-date">{{ w.when }}</div>
+      <div class="warn-date">{{ w.when }}
+        {% if w.active and w.expires_text %}
+        <div class="warn-expires {% if w.expires_urgent %}is-urgent{% endif %}">{{ w.expires_text }}</div>
+        {% endif %}
+      </div>
       <div>
-        {% if w.active %}<span class="st-pill st-active">активен</span>
+        {% if w.status == 'expired' or w.expired %}
+        <span class="st-pill st-expired">истёк</span>
+        {% elif w.active %}<span class="st-pill st-active">активен</span>
         {% else %}<span class="st-pill st-gone">снят</span>{% endif %}
         {% if not w.active %}
         <div class="dim" style="font-size:11px;margin-top:4px;max-width:140px">
-          {{ w.removed_by_name or w.removed_by or '' }}
+          {% if w.status == 'expired' or w.expired %}система (истёк)
+          {% else %}{{ w.removed_by_name or w.removed_by or '' }}{% endif %}
           {% if w.removed_when %}<br>{{ w.removed_when }}{% endif %}
           {% if w.removed_reason %}<br>{{ w.removed_reason }}{% endif %}
         </div>

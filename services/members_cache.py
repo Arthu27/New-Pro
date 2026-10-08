@@ -66,6 +66,9 @@ def ensure_table(conn: sqlite3.Connection | None = None) -> None:
         conn.execute(
             'CREATE INDEX IF NOT EXISTS idx_mc_user '
             'ON members_cache(guild_id, username)')
+        conn.execute(
+            'CREATE INDEX IF NOT EXISTS idx_mc_staff '
+            'ON members_cache(guild_id, is_staff, in_guild)')
         conn.commit()
     finally:
         if own:
@@ -107,11 +110,14 @@ _UPSERT_SQL = '''INSERT INTO members_cache
 
 
 def _member_row(guild_id: int, member) -> Optional[tuple]:
-    """Снимок участника для INSERT (без записи в БД)."""
+    """Снимок участника для INSERT (без записи в БД).
+
+    is_staff/branch — только из get_staff_info(member), не из варнов.
+    """
     if member is None:
         return None
     from services.warn_config import member_rank_snapshot
-    from services.warn_acl import branches_of, is_staff_target
+    from services.warn_acl import get_staff_info
 
     uid = int(member.id)
     username = str(getattr(member, 'name', '') or '')
@@ -127,19 +133,10 @@ def _member_row(guild_id: int, member) -> Optional[tuple]:
     except Exception:
         pass
     _rank, top_rid, _name = member_rank_snapshot(member)
-    is_staff = 0
-    branch = None
-    try:
-        guild = getattr(member, 'guild', None)
-        if guild and is_staff_target(guild, member):
-            is_staff = 1
-            br = branches_of(member)
-            branch = sorted(br)[0] if br else None
-    except Exception:
-        pass
+    is_staff_b, branch, _r = get_staff_info(member)
     return (
         int(guild_id), uid, username, display, avatar,
-        top_rid, is_staff, branch, _now(),
+        top_rid, 1 if is_staff_b else 0, branch, _now(),
     )
 
 

@@ -266,6 +266,10 @@ body:has(.warn-page) {
 .warn-issuer img { width: 26px; height: 26px; border-radius: 50%; }
 .warn-issuer .wp-name { font-size: 12px; font-weight: 700; }
 .warn-date { color: var(--wp-dim); font-size: 12px; white-space: nowrap; }
+.warn-expires { margin-top: 4px; font-size: 11px; color: var(--wp-muted); }
+.warn-expires.is-urgent { color: #ff8a7a; font-weight: 700; }
+.st-expired { color: #9aa1ae; background: rgba(154,161,174,.12); border: 1px solid rgba(154,161,174,.3); }
+
 .warn-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .warn-actions a,
 .warn-actions button {

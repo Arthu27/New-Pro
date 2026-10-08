@@ -97,6 +97,8 @@ def ensure_table(conn: sqlite3.Connection | None = None) -> None:
         _ensure_column(conn, 'source', "source TEXT DEFAULT 'discord'")
         _ensure_column(conn, 'issuer_rank', 'issuer_rank INTEGER DEFAULT 0')
         _ensure_column(conn, 'issuer_role_id', 'issuer_role_id INTEGER')
+        _ensure_column(conn, 'expires_at', 'expires_at TEXT')
+        _ensure_column(conn, 'expired', 'expired INTEGER NOT NULL DEFAULT 0')
         conn.execute(
             'CREATE INDEX IF NOT EXISTS idx_warns_user_active '
             'ON warns(guild_id, user_id, active)')
@@ -106,10 +108,100 @@ def ensure_table(conn: sqlite3.Connection | None = None) -> None:
         conn.execute(
             'CREATE INDEX IF NOT EXISTS idx_warns_type_active '
             'ON warns(guild_id, reason_type, active)')
+        conn.execute(
+            'CREATE INDEX IF NOT EXISTS idx_warns_expires '
+            'ON warns(guild_id, active, expires_at)')
+        conn.execute(
+            'CREATE INDEX IF NOT EXISTS idx_warns_created '
+            'ON warns(guild_id, created_at)')
         conn.commit()
+        _migrate_expires_at(conn)
     finally:
         if own:
             conn.close()
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_iso(raw: str | None) -> Optional[datetime]:
+    if not raw:
+        return None
+    try:
+        s = str(raw).strip().replace('Z', '+00:00')
+        d = datetime.fromisoformat(s)
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=timezone.utc)
+        return d.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _active_clause(alias: str = '') -> str:
+    """active=1 AND (expires_at IS NULL OR expires_at > :now)."""
+    p = f'{alias}.' if alias else ''
+    return (
+        f'({p}active=1 AND ({p}expires_at IS NULL OR {p}expires_at > ?))'
+    )
+
+
+def _migrate_expires_at(conn: sqlite3.Connection) -> None:
+    """Старым активным без expires_at → created_at + WARN_DURATION_DAYS."""
+    try:
+        from services.warn_config import warn_duration_days
+        from datetime import timedelta
+        days = int(warn_duration_days())
+    except Exception:
+        days = 7
+        from datetime import timedelta  # noqa: F811
+    try:
+        rows = conn.execute(
+            'SELECT id, created_at FROM warns '
+            'WHERE active=1 AND (expires_at IS NULL OR expires_at="")'
+        ).fetchall()
+    except Exception:
+        return
+    if not rows:
+        return
+    n = 0
+    already_due = 0
+    now = datetime.now(timezone.utc)
+    for r in rows:
+        created = _parse_iso(r['created_at']) or now
+        exp = created + timedelta(days=days)
+        conn.execute(
+            'UPDATE warns SET expires_at=? WHERE id=?',
+            (exp.isoformat(), int(r['id'])),
+        )
+        n += 1
+        if exp <= now:
+            already_due += 1
+    if n:
+        conn.commit()
+        _log.info(
+            'warn_store: миграция expires_at для %s активных '
+            '(из них уже просрочено %s — истекут на первой проверке)',
+            n, already_due,
+        )
+
+
+def warn_status(row: Dict[str, Any] | None) -> str:
+    """active | removed | expired."""
+    if not row:
+        return 'removed'
+    if int(row.get('expired') or 0):
+        return 'expired'
+    if int(row.get('active') or 0) != 1:
+        return 'removed'
+    exp = _parse_iso(row.get('expires_at'))
+    if exp and exp <= datetime.now(timezone.utc):
+        return 'expired'
+    return 'active'
+
+
+def is_warn_active(row: Dict[str, Any] | None) -> bool:
+    return warn_status(row) == 'active'
 
 
 def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
@@ -126,7 +218,7 @@ def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
     is_staff = int(_get('is_staff_target') or 0)
     rtype = (_get('reason_type') or '').strip() or (
         'staff' if is_staff else 'member')
-    return {
+    d = {
         'id': int(row['id']),
         'guild_id': int(row['guild_id']),
         'user_id': int(row['user_id']),
@@ -145,24 +237,29 @@ def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
         'issuer_rank': int(_get('issuer_rank') or 0),
         'issuer_role_id': (
             int(_get('issuer_role_id')) if _get('issuer_role_id') else None),
+        'expires_at': _get('expires_at') or None,
+        'expired': int(_get('expired') or 0),
         # совместимость со старым форматом (панель / досье)
         'mod_id': str(row['moderator_id']),
         'mod': str(row['moderator_id']),
         'issuer_id': int(row['moderator_id']),
         'timestamp': row['created_at'] or '',
     }
+    d['status'] = warn_status(d)
+    return d
 
 
 def count_active(guild_id: int, user_id: int) -> int:
     ensure_table()
     migrate_guild(guild_id)
+    now = _now_iso()
     with _LOCK:
         conn = _conn()
         try:
             row = conn.execute(
                 'SELECT COUNT(*) AS c FROM warns '
-                'WHERE guild_id=? AND user_id=? AND active=1',
-                (int(guild_id), int(user_id)),
+                f'WHERE guild_id=? AND user_id=? AND {_active_clause()}',
+                (int(guild_id), int(user_id), now),
             ).fetchone()
             return int(row['c'] if row else 0)
         finally:
@@ -180,12 +277,19 @@ def list_warns(
     """История варнов (новые сверху)."""
     ensure_table()
     migrate_guild(guild_id)
-    sql = (
-        'SELECT * FROM warns WHERE guild_id=? AND user_id=?'
-        + (' AND active=1' if active_only else '')
-        + ' ORDER BY id DESC'
-    )
-    params: list = [int(guild_id), int(user_id)]
+    now = _now_iso()
+    if active_only:
+        sql = (
+            'SELECT * FROM warns WHERE guild_id=? AND user_id=? '
+            f'AND {_active_clause()} ORDER BY id DESC'
+        )
+        params: list = [int(guild_id), int(user_id), now]
+    else:
+        sql = (
+            'SELECT * FROM warns WHERE guild_id=? AND user_id=? '
+            'ORDER BY id DESC'
+        )
+        params = [int(guild_id), int(user_id)]
     if limit and limit > 0:
         sql += ' LIMIT ? OFFSET ?'
         params.extend([int(limit), int(offset or 0)])
@@ -202,13 +306,14 @@ def list_active_user_ids(guild_id: int) -> List[int]:
     """Все user_id с active-варнами на сервере (для sync при старте)."""
     ensure_table()
     migrate_guild(guild_id)
+    now = _now_iso()
     with _LOCK:
         conn = _conn()
         try:
             rows = conn.execute(
                 'SELECT DISTINCT user_id FROM warns '
-                'WHERE guild_id=? AND active=1',
-                (int(guild_id),),
+                f'WHERE guild_id=? AND {_active_clause()}',
+                (int(guild_id), now),
             ).fetchall()
             return [int(r['user_id']) for r in rows]
         finally:
@@ -233,7 +338,12 @@ def add_warn(
     """Добавить активный варн. Возвращает запись."""
     ensure_table()
     migrate_guild(guild_id)
+    from datetime import timedelta
+    from services.warn_config import warn_duration_days
+
     ts = created_at or datetime.now(timezone.utc).isoformat()
+    created_dt = _parse_iso(ts) or datetime.now(timezone.utc)
+    expires = (created_dt + timedelta(days=int(warn_duration_days()))).isoformat()
     reason = (reason or 'Не указана').strip() or 'Не указана'
     rtype = (reason_type or ('staff' if is_staff_target else 'member')).strip()
     if rtype not in ('member', 'staff'):
@@ -246,8 +356,8 @@ def add_warn(
                    (guild_id, user_id, moderator_id, reason, created_at,
                     is_staff_target, branch, active,
                     reason_type, reason_code, source,
-                    issuer_rank, issuer_role_id)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)''',
+                    issuer_rank, issuer_role_id, expires_at, expired)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 0)''',
                 (
                     int(guild_id), int(user_id), int(moderator_id),
                     reason, ts,
@@ -258,6 +368,7 @@ def add_warn(
                     (source or 'discord')[:32],
                     int(issuer_rank or 0),
                     int(issuer_role_id) if issuer_role_id else None,
+                    expires,
                 ),
             )
             conn.commit()
@@ -290,8 +401,8 @@ def deactivate_warn(
             if not row:
                 return None
             conn.execute(
-                'UPDATE warns SET active=0, removed_by=?, removed_at=?, '
-                'removed_reason=? WHERE id=?',
+                'UPDATE warns SET active=0, expired=0, removed_by=?, '
+                'removed_at=?, removed_reason=? WHERE id=?',
                 (int(removed_by), ts,
                  (removed_reason or None), int(warn_id)),
             )
@@ -300,6 +411,95 @@ def deactivate_warn(
                 'SELECT * FROM warns WHERE id=?', (int(warn_id),)
             ).fetchone()
             return _row_to_dict(row2) if row2 else None
+        finally:
+            conn.close()
+
+
+def expire_due_warns(guild_id: int | None = None) -> List[Dict[str, Any]]:
+    """Пометить просроченные: active=0, expired=1, removed_by=NULL.
+
+    Возвращает список затронутых записей (для sync роли / DM).
+    """
+    ensure_table()
+    now = _now_iso()
+    with _LOCK:
+        conn = _conn()
+        try:
+            where = (
+                'active=1 AND expires_at IS NOT NULL AND expires_at!="" '
+                'AND expires_at<=?'
+            )
+            params: list = [now]
+            if guild_id is not None:
+                where += ' AND guild_id=?'
+                params.append(int(guild_id))
+            rows = conn.execute(
+                f'SELECT * FROM warns WHERE {where}', params
+            ).fetchall()
+            out = []
+            for r in rows:
+                wid = int(r['id'])
+                exp_at = r['expires_at'] or now
+                conn.execute(
+                    'UPDATE warns SET active=0, expired=1, removed_by=NULL, '
+                    'removed_at=?, removed_reason=? WHERE id=?',
+                    (exp_at, 'истёк срок', wid),
+                )
+                row2 = conn.execute(
+                    'SELECT * FROM warns WHERE id=?', (wid,)
+                ).fetchone()
+                if row2:
+                    out.append(_row_to_dict(row2))
+            if out:
+                conn.commit()
+                _log.info('warn_store: истекло %s варнов', len(out))
+            return out
+        finally:
+            conn.close()
+
+
+def extend_warn(
+    warn_id: int,
+    *,
+    days: int | None = None,
+    actor_id: int | None = None,
+) -> Optional[Dict[str, Any]]:
+    """Продлить активный варн на N дней от max(now, expires_at)."""
+    ensure_table()
+    from datetime import timedelta
+    from services.warn_config import warn_duration_days
+    add_days = int(days if days is not None else warn_duration_days())
+    add_days = max(1, min(365, add_days))
+    with _LOCK:
+        conn = _conn()
+        try:
+            row = conn.execute(
+                'SELECT * FROM warns WHERE id=?', (int(warn_id),)
+            ).fetchone()
+            if not row:
+                return None
+            d = _row_to_dict(row)
+            if not is_warn_active(d):
+                return None
+            now = datetime.now(timezone.utc)
+            base = _parse_iso(d.get('expires_at')) or now
+            if base < now:
+                base = now
+            new_exp = (base + timedelta(days=add_days)).isoformat()
+            conn.execute(
+                'UPDATE warns SET expires_at=?, expired=0, active=1 WHERE id=?',
+                (new_exp, int(warn_id)),
+            )
+            # лёгкая метка в removed_reason не трогаем — история через reason note?
+            conn.commit()
+            row2 = conn.execute(
+                'SELECT * FROM warns WHERE id=?', (int(warn_id),)
+            ).fetchone()
+            out = _row_to_dict(row2) if row2 else None
+            if out and actor_id:
+                out['_extended_by'] = int(actor_id)
+                out['_extended_days'] = add_days
+            return out
         finally:
             conn.close()
 
@@ -366,8 +566,10 @@ def list_guild_warns(
     migrate_guild(guild_id)
     where = ['guild_id=?']
     params: list = [int(guild_id)]
+    now = _now_iso()
     if active_only:
-        where.append('active=1')
+        where.append(_active_clause())
+        params.append(now)
     if reason_type in ('member', 'staff'):
         where.append('reason_type=?')
         params.append(reason_type)
@@ -390,19 +592,22 @@ def list_guild_warns(
             like = f'%{q}%'
             params.extend([like, like])
     wh = ' AND '.join(where)
+    now_lit = now.replace("'", "''")
+    act2_lit = (
+        f"(w2.active=1 AND (w2.expires_at IS NULL OR w2.expires_at > '{now_lit}'))"
+    )
 
     order = 'id DESC'
     if sort == 'date_asc':
         order = 'id ASC'
     elif sort == 'count_desc':
-        # сортировка по числу активных у юзера — через подзапрос
         order = (
-            '(SELECT COUNT(*) FROM warns w2 WHERE w2.guild_id=warns.guild_id '
-            'AND w2.user_id=warns.user_id AND w2.active=1) DESC, id DESC')
+            f'(SELECT COUNT(*) FROM warns w2 WHERE w2.guild_id=warns.guild_id '
+            f'AND w2.user_id=warns.user_id AND {act2_lit}) DESC, id DESC')
     elif sort == 'count_asc':
         order = (
-            '(SELECT COUNT(*) FROM warns w2 WHERE w2.guild_id=warns.guild_id '
-            'AND w2.user_id=warns.user_id AND w2.active=1) ASC, id DESC')
+            f'(SELECT COUNT(*) FROM warns w2 WHERE w2.guild_id=warns.guild_id '
+            f'AND w2.user_id=warns.user_id AND {act2_lit}) ASC, id DESC')
 
     with _LOCK:
         conn = _conn()
@@ -423,30 +628,46 @@ def list_guild_warns(
 
 
 def stats_active(guild_id: int) -> Dict[str, int]:
-    """Счётчики активных варнов для шапки панели."""
+    """Счётчики активных варнов. Вкладки — по ТЕКУЩЕМУ is_staff в cache."""
     ensure_table()
     migrate_guild(guild_id)
+    try:
+        from services import members_cache as MC
+        MC.ensure_table()
+    except Exception:
+        pass
+    now = _now_iso()
+    gid = int(guild_id)
     with _LOCK:
         conn = _conn()
         try:
             total = int(conn.execute(
                 'SELECT COUNT(*) AS c FROM warns '
-                'WHERE guild_id=? AND active=1',
-                (int(guild_id),),
+                f'WHERE guild_id=? AND {_active_clause()}',
+                (gid, now),
             ).fetchone()['c'] or 0)
-            # Стафф приоритетнее: is_staff_target=1 или reason_type=staff.
-            # Иначе один user попадает и в members, и в staff.
+            # Текущий стафф = members_cache.is_staff=1 AND in_guild=1
             staff = int(conn.execute(
-                'SELECT COUNT(DISTINCT user_id) AS c FROM warns '
-                'WHERE guild_id=? AND active=1 AND '
-                "(reason_type='staff' OR is_staff_target=1)",
-                (int(guild_id),),
+                f'''SELECT COUNT(DISTINCT w.user_id) AS c
+                    FROM warns w
+                    INNER JOIN members_cache mc
+                      ON mc.guild_id=w.guild_id AND mc.user_id=w.user_id
+                    WHERE w.guild_id=? AND {_active_clause('w')}
+                      AND mc.is_staff=1 AND COALESCE(mc.in_guild,1)=1''',
+                (gid, now),
             ).fetchone()['c'] or 0)
             members = int(conn.execute(
-                'SELECT COUNT(DISTINCT user_id) AS c FROM warns '
-                'WHERE guild_id=? AND active=1 AND '
-                "NOT (reason_type='staff' OR is_staff_target=1)",
-                (int(guild_id),),
+                f'''SELECT COUNT(DISTINCT w.user_id) AS c
+                    FROM warns w
+                    LEFT JOIN members_cache mc
+                      ON mc.guild_id=w.guild_id AND mc.user_id=w.user_id
+                    WHERE w.guild_id=? AND {_active_clause('w')}
+                      AND (
+                        mc.user_id IS NULL
+                        OR COALESCE(mc.is_staff,0)=0
+                        OR COALESCE(mc.in_guild,1)=0
+                      )''',
+                (gid, now),
             ).fetchone()['c'] or 0)
             removed_7d = 0
             try:
@@ -455,7 +676,7 @@ def stats_active(guild_id: int) -> Dict[str, int]:
                 removed_7d = int(conn.execute(
                     'SELECT COUNT(*) AS c FROM warns '
                     'WHERE guild_id=? AND active=0 AND removed_at>=?',
-                    (int(guild_id), cut),
+                    (gid, cut),
                 ).fetchone()['c'] or 0)
             except Exception:
                 removed_7d = 0
@@ -482,42 +703,52 @@ def list_users_aggregated(
     limit: int = 40,
     offset: int = 0,
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Одна строка на пользователя: active_count + последний варн.
+    """Одна строка на пользователя. Вкладка = ТЕКУЩИЙ staff из members_cache.
 
-    reason_type: member|staff
-    sort: count_desc|count_asc|date_desc|date_asc
+    is_staff_target / reason_type в записи варна — только история «кому выдали».
     """
     ensure_table()
     migrate_guild(guild_id)
+    try:
+        from services import members_cache as MC
+        MC.ensure_table()
+    except Exception:
+        pass
     gid = int(guild_id)
     rtype = reason_type if reason_type in ('member', 'staff') else 'member'
-    where = ['guild_id=?']
+    now = _now_iso()
+    where = ['w.guild_id=?']
     params: list = [gid]
     if active_only:
-        where.append('active=1')
+        where.append(_active_clause('w'))
+        params.append(now)
+    # вкладка по текущему статусу
     if rtype == 'staff':
-        where.append(
-            "(reason_type='staff' OR is_staff_target=1)")
+        where.append('mc.is_staff=1 AND COALESCE(mc.in_guild,1)=1')
     else:
         where.append(
-            "(COALESCE(reason_type,'member')!='staff' "
-            "AND COALESCE(is_staff_target,0)=0)")
+            '(mc.user_id IS NULL OR COALESCE(mc.is_staff,0)=0 '
+            'OR COALESCE(mc.in_guild,1)=0)')
     if branch:
-        where.append('branch=?')
+        # ветка текущая из cache, иначе историческая
+        where.append('COALESCE(mc.branch, w.branch)=?')
         params.append(str(branch))
     if moderator_id:
-        where.append('moderator_id=?')
+        where.append('w.moderator_id=?')
         params.append(int(moderator_id))
     q = (q or '').strip()
     if q:
         if q.isdigit() and len(q) >= 5:
-            where.append('user_id=?')
+            where.append('w.user_id=?')
             params.append(int(q))
         else:
             where.append(
-                '(CAST(user_id AS TEXT) LIKE ? OR reason LIKE ?)')
+                '(CAST(w.user_id AS TEXT) LIKE ? OR w.reason LIKE ? '
+                'OR LOWER(COALESCE(mc.display_name,"")) LIKE ? '
+                'OR LOWER(COALESCE(mc.username,"")) LIKE ?)')
             like = f'%{q}%'
-            params.extend([like, like])
+            like_l = f'%{q.lower()}%'
+            params.extend([like, like, like_l, like_l])
     wh = ' AND '.join(where)
 
     if sort == 'count_asc':
@@ -531,33 +762,62 @@ def list_users_aggregated(
 
     lim = max(1, min(200, int(limit or 40)))
     off = max(0, int(offset or 0))
+    join = (
+        'LEFT JOIN members_cache mc '
+        'ON mc.guild_id=w.guild_id AND mc.user_id=w.user_id'
+    )
+    if rtype == 'staff':
+        join = (
+            'INNER JOIN members_cache mc '
+            'ON mc.guild_id=w.guild_id AND mc.user_id=w.user_id'
+        )
 
     with _LOCK:
         conn = _conn()
         try:
             total = int(conn.execute(
-                f'SELECT COUNT(DISTINCT user_id) AS c FROM warns WHERE {wh}',
+                f'SELECT COUNT(DISTINCT w.user_id) AS c FROM warns w {join} '
+                f'WHERE {wh}',
                 params,
             ).fetchone()['c'] or 0)
-            # последняя запись + число активных на юзера
+            act = _active_clause('w2')
             sql = f'''
                 SELECT w.*,
+                  mc.is_staff AS live_is_staff,
+                  mc.branch AS live_branch,
+                  mc.in_guild AS live_in_guild,
+                  mc.display_name AS live_display_name,
+                  mc.username AS live_username,
+                  mc.avatar_url AS live_avatar,
+                  mc.top_role_id AS live_top_role_id,
                   (SELECT COUNT(*) FROM warns w2
                    WHERE w2.guild_id=w.guild_id AND w2.user_id=w.user_id
-                     AND w2.active=1) AS active_count,
+                     AND {act}) AS active_count,
                   (SELECT MIN(created_at) FROM warns w3
                    WHERE w3.guild_id=w.guild_id AND w3.user_id=w.user_id
-                     AND w3.active=1) AS first_warn_at
+                     AND w3.active=1
+                     AND (w3.expires_at IS NULL OR w3.expires_at > ?))
+                     AS first_warn_at,
+                  (SELECT MIN(expires_at) FROM warns w4
+                   WHERE w4.guild_id=w.guild_id AND w4.user_id=w.user_id
+                     AND w4.active=1
+                     AND (w4.expires_at IS NULL OR w4.expires_at > ?))
+                     AS next_expires_at
                 FROM warns w
+                {join}
                 INNER JOIN (
-                  SELECT user_id, MAX(id) AS last_id
-                  FROM warns WHERE {wh}
-                  GROUP BY user_id
+                  SELECT w.user_id AS user_id, MAX(w.id) AS last_id
+                  FROM warns w {join}
+                  WHERE {wh}
+                  GROUP BY w.user_id
                 ) t ON w.user_id=t.user_id AND w.id=t.last_id
                 ORDER BY {order}
                 LIMIT ? OFFSET ?
             '''
-            rows = conn.execute(sql, params + [lim, off]).fetchall()
+            # ? order: active_count, first, next, JOIN wh params, lim/off
+            rows = conn.execute(
+                sql, [now, now, now] + params + [lim, off]
+            ).fetchall()
             out = []
             for r in rows:
                 d = _row_to_dict(r)
@@ -566,7 +826,28 @@ def list_users_aggregated(
                     r['active_count'] if 'active_count' in keys else 0)
                 d['first_warn_at'] = (
                     r['first_warn_at'] if 'first_warn_at' in keys else None)
+                d['next_expires_at'] = (
+                    r['next_expires_at'] if 'next_expires_at' in keys
+                    else d.get('expires_at'))
                 d['last_id'] = d.get('id')
+                # live staff snapshot for UI
+                if 'live_is_staff' in keys:
+                    d['live_is_staff'] = int(r['live_is_staff'] or 0)
+                if 'live_branch' in keys and r['live_branch']:
+                    d['live_branch'] = r['live_branch']
+                    d['branch'] = r['live_branch'] or d.get('branch')
+                if 'live_in_guild' in keys:
+                    d['live_in_guild'] = int(
+                        1 if r['live_in_guild'] is None
+                        else r['live_in_guild'])
+                if 'live_display_name' in keys and r['live_display_name']:
+                    d['live_display_name'] = r['live_display_name']
+                if 'live_username' in keys:
+                    d['live_username'] = r['live_username'] or ''
+                if 'live_avatar' in keys:
+                    d['live_avatar'] = r['live_avatar'] or ''
+                if 'live_top_role_id' in keys:
+                    d['live_top_role_id'] = r['live_top_role_id']
                 out.append(d)
             return out, total
         finally:
