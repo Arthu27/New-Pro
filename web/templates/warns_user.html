@@ -2,7 +2,7 @@
 {% block title %}Warn · {{ profile.name }}{% endblock %}
 {% block heading %}Профиль варна{% endblock %}
 {% block body %}
-<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=3">
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=4">
 <div class="warn-page">
 <nav class="crumb rise">
   <a href="{{ url_for('warns', tab='staff' if is_staff else 'members') }}">Warn</a>
@@ -48,54 +48,52 @@
   </div>
 </section>
 
-<section class="warn-panel rise">
-  <h2 style="margin:0 0 12px;font:800 16px/1.2 var(--display)">История <span class="count">{{ history|length }}</span></h2>
+<section class="warn-shell rise">
+  <h2 style="margin:0 0 14px;font:800 16px/1.2 var(--display, Syne, sans-serif)">
+    История <span class="count">{{ history|length }}</span>
+  </h2>
   {% if not history %}
   <div class="warn-empty"><b>История пуста</b></div>
   {% else %}
-  <div class="warn-table-wrap">
-    <table class="warn-table">
-      <thead>
-        <tr>
-          <th>№</th><th>Причина</th><th>Тип</th><th>Выдал</th>
-          <th>Дата</th><th>Статус</th><th>Снятие</th><th></th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for w in history %}
-        <tr>
-          <td data-label="№"><b>#{{ w.id }}</b></td>
-          <td data-label="Причина" class="warn-reason" title="{{ w.reason }}">{{ w.reason[:90] }}{% if w.reason|length > 90 %}…{% endif %}</td>
-          <td data-label="Тип" class="dim">{{ 'стафф' if w.reason_type=='staff' else 'участник' }}{% if w.reason_code %} · {{ w.reason_code }}{% endif %}</td>
-          <td data-label="Выдал">
-            {{ w.mod_name }}
-            {% if w.mod_role_style %}
-            <span class="rbadge" style="font-size:10px;color:{{ w.mod_role_style.color }};background:{{ w.mod_role_style.color }}22;border-color:{{ w.mod_role_style.color }}66">{{ w.mod_role_style.label }}</span>
-            {% endif %}
-          </td>
-          <td data-label="Дата" class="dim">{{ w.when }}</td>
-          <td data-label="Статус">
-            {% if w.active %}<span class="st-pill st-active">активен</span>
-            {% else %}<span class="st-pill st-gone">снят</span>{% endif %}
-          </td>
-          <td data-label="Снятие" class="dim" style="font-size:12px">
-            {% if not w.active %}
-              {{ w.removed_by_name or w.removed_by or '—' }}
-              {% if w.removed_when %}<br>{{ w.removed_when }}{% endif %}
-              {% if w.removed_reason %}<br>{{ w.removed_reason }}{% endif %}
-            {% else %}—{% endif %}
-          </td>
-          <td data-label="" class="warn-actions">
-            {% if w.active and w.can_remove %}
-            <button type="button" class="btn-rm" data-wid="{{ w.id }}">снять</button>
-            {% elif w.active and can_manage %}
-            <button type="button" class="is-disabled" disabled title="{{ w.remove_deny or 'Нет права' }}">снять</button>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+  <div class="warn-list">
+    {% for w in history %}
+    <article class="warn-card" style="grid-template-columns:auto minmax(0,1.4fr) auto minmax(100px,.7fr) auto auto">
+      <div><b style="font-size:13px">#{{ w.id }}</b></div>
+      <div>
+        <div class="warn-reason" title="{{ w.reason }}">{{ w.reason }}</div>
+        <div class="dim" style="font-size:11px;margin-top:4px">
+          {{ 'стафф' if w.reason_type=='staff' else 'участник' }}{% if w.reason_code %} · {{ w.reason_code }}{% endif %}
+        </div>
+      </div>
+      <div class="warn-issuer">
+        <span>
+          <span class="wp-name">{{ w.mod_name }}</span>
+          {% if w.mod_role_style %}
+          <span class="rbadge" style="font-size:10px;color:{{ w.mod_role_style.color }};background:{{ w.mod_role_style.color }}22;border-color:{{ w.mod_role_style.color }}66">{{ w.mod_role_style.label }}</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="warn-date">{{ w.when }}</div>
+      <div>
+        {% if w.active %}<span class="st-pill st-active">активен</span>
+        {% else %}<span class="st-pill st-gone">снят</span>{% endif %}
+        {% if not w.active %}
+        <div class="dim" style="font-size:11px;margin-top:4px;max-width:140px">
+          {{ w.removed_by_name or w.removed_by or '' }}
+          {% if w.removed_when %}<br>{{ w.removed_when }}{% endif %}
+          {% if w.removed_reason %}<br>{{ w.removed_reason }}{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="warn-actions">
+        {% if w.active and w.can_remove %}
+        <button type="button" class="btn-rm btn-danger" data-wid="{{ w.id }}">снять</button>
+        {% elif w.active and can_manage %}
+        <button type="button" disabled title="{{ w.remove_deny or 'Нет права' }}">снять</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
   </div>
   {% endif %}
 </section>

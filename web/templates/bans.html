@@ -2,51 +2,54 @@
 {% block title %}Баны{% endblock %}
 {% block heading %}Баны{% endblock %}
 {% block body %}
-<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=3">
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=4">
 <div class="warn-page">
-<p class="lead">Забаненные на сервере. Разбан — по ролям из конфига.</p>
 <nav class="crumb rise">
   <a href="{{ url_for('warns') }}">Warn</a>
   <span aria-hidden="true">›</span>
   <b>Баны</b>
 </nav>
 
-<section class="warn-panel rise">
-  <div class="warn-bar" style="border:0;padding:0;margin-bottom:14px">
-    <h2 style="margin:0;font:800 16px/1.2 var(--display)">Список <span class="count">{{ rows|length }}</span></h2>
-    <div style="position:relative;min-width:240px">
-      <input class="wf-input" type="search" id="banQ" placeholder="Ник или ID…" autocomplete="off"
-             style="width:100%;background:var(--wp-card-2);border:1px solid var(--wp-line);color:var(--wp-text);border-radius:10px;padding:10px 12px">
-      <div id="banSuggest" class="warn-suggest" hidden></div>
+<section class="warn-shell rise">
+  <div class="warn-top">
+    <h2 style="margin:0;font:800 16px/1.2 var(--display, Syne, sans-serif)">
+      Список <span class="count">{{ rows|length }}</span>
+    </h2>
+  </div>
+
+  <div class="warn-search" id="banSearchWrap">
+    <div class="warn-search__box">
+      <span style="color:var(--wp-dim);font-weight:800;font-size:13px" aria-hidden="true">⌕</span>
+      <input type="search" id="banQ" placeholder="Ник или ID…"
+             autocomplete="off" spellcheck="false">
+      <button type="button" class="warn-search__clear" id="banClear" hidden>очистить</button>
     </div>
   </div>
+
   {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
   {% if not rows %}
   <div class="warn-empty"><b>Банов нет</b>или бот офлайн</div>
   {% else %}
-  <div class="warn-table-wrap">
-    <table class="warn-table" id="banTable">
-      <thead><tr><th>Профиль</th><th>ID</th><th>Причина</th><th></th></tr></thead>
-      <tbody>
-      {% for b in rows %}
-        <tr data-q="{{ (b.name ~ ' ' ~ b.user_id)|lower }}">
-          <td data-label="Профиль">
-            <span class="warn-person">
-              {% if b.avatar %}<img src="{{ b.avatar }}" alt="">{% endif %}
-              <span class="wp-name">{{ b.name }}</span>
-            </span>
-          </td>
-          <td data-label="ID" class="dim">{{ b.user_id }}</td>
-          <td data-label="Причина" class="warn-reason">{{ b.reason or '—' }}</td>
-          <td data-label="" class="warn-actions">
-            {% if can_unban %}
-            <button type="button" class="btn-unban" data-uid="{{ b.user_id }}" data-name="{{ b.name }}">разбанить</button>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+  <div class="warn-list" id="banList">
+    {% for b in rows %}
+    <article class="warn-card" data-q="{{ (b.name ~ ' ' ~ b.user_id)|lower }}"
+             style="grid-template-columns:minmax(180px,1.2fr) minmax(0,1fr) auto">
+      <span class="warn-person">
+        {% if b.avatar %}<img src="{{ b.avatar }}" alt="" loading="lazy">{% endif %}
+        <span>
+          <span class="wp-name">{{ b.name }}</span>
+          <span class="wp-sub">{{ b.user_id }}</span>
+        </span>
+      </span>
+      <div class="warn-reason">{{ b.reason or '—' }}</div>
+      <div class="warn-actions">
+        {% if can_unban %}
+        <button type="button" class="btn-unban btn-danger"
+                data-uid="{{ b.user_id }}" data-name="{{ b.name }}">разбанить</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
   </div>
   {% endif %}
 </section>
@@ -69,11 +72,20 @@
 (function(){
   const csrf = {{ csrf_token|tojson }};
   const $ = id => document.getElementById(id);
-  $('banQ')?.addEventListener('input', () => {
-    const q = ($('banQ').value || '').toLowerCase().trim();
-    document.querySelectorAll('#banTable tbody tr').forEach(tr => {
-      tr.hidden = !!(q && !(tr.dataset.q || '').includes(q));
+  const input = $('banQ');
+  const clear = $('banClear');
+  function apply(){
+    const q = (input.value || '').toLowerCase().trim();
+    if (clear) clear.hidden = q.length < 1;
+    document.querySelectorAll('#banList .warn-card').forEach(card => {
+      card.hidden = !!(q && !(card.dataset.q || '').includes(q));
     });
+  }
+  input?.addEventListener('input', apply);
+  clear?.addEventListener('click', () => {
+    input.value = '';
+    apply();
+    input.focus();
   });
   let uid='', name='';
   const dlg=$('unbanDlg');

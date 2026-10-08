@@ -3590,7 +3590,10 @@ def warns():
 @login_required
 @role_required('helper')
 def api_warns_search():
-    """Живой поиск участников для Warn (debounce 250мс на фронте)."""
+    """Живой поиск участников для Warn (debounce на фронте).
+
+    Сначала members_cache; если пусто — Discord REST / guild.members.
+    """
     from services import members_cache as MC
     from services import warn_store as WS
     from services.warn_config import role_style, branch_style
@@ -3606,44 +3609,88 @@ def api_warns_search():
     except Exception:
         limit = 10
     gid = _main_guild()
-    if not gid:
+    if not gid or not q:
         return jsonify({'ok': True, 'items': []})
     items = []
+    seen = set()
+
+    def _badge_for(is_staff, top_role_id, branch):
+        badge = ''
+        rs = role_style(top_role_id) if top_role_id else None
+        if rs and is_staff:
+            badge = (
+                f'<span class="rbadge" style="color:{rs["color"]};'
+                f'background:{rs["color"]}22;border-color:{rs["color"]}66">'
+                f'{rs["label"]}</span>')
+        elif branch:
+            bs = branch_style(branch)
+            badge = (
+                f'<span class="rbadge" style="color:{bs["color"]};'
+                f'background:{bs["color"]}22;border-color:{bs["color"]}66">'
+                f'{bs["label"]}</span>')
+        return badge
+
+    def _push(uid, name, handle, avatar, is_staff, branch, in_guild, top_role_id):
+        uid = str(uid)
+        if not uid or uid in seen:
+            return
+        seen.add(uid)
+        warns = 0
+        try:
+            warns = WS.count_active(int(gid), int(uid))
+        except Exception:
+            warns = 0
+        items.append({
+            'id': uid,
+            'name': name or uid,
+            'handle': handle or '',
+            'avatar': avatar or '',
+            'is_staff': bool(is_staff),
+            'branch': branch,
+            'in_guild': bool(in_guild),
+            'warns': warns,
+            'role_badge': _badge_for(is_staff, top_role_id, branch),
+        })
+
     try:
         hits = MC.search(int(gid), q, limit=limit, staff_only=staff_only)
         for h in hits:
-            warns = 0
-            try:
-                warns = WS.count_active(int(gid), int(h['user_id']))
-            except Exception:
-                warns = 0
-            rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
-            badge = ''
-            if rs and h.get('is_staff'):
-                badge = (
-                    f'<span class="rbadge" style="color:{rs["color"]};'
-                    f'background:{rs["color"]}22;border-color:{rs["color"]}66">'
-                    f'{rs["label"]}</span>')
-            elif h.get('branch'):
-                bs = branch_style(h['branch'])
-                badge = (
-                    f'<span class="rbadge" style="color:{bs["color"]};'
-                    f'background:{bs["color"]}22;border-color:{bs["color"]}66">'
-                    f'{bs["label"]}</span>')
-            items.append({
-                'id': str(h['user_id']),
-                'name': h.get('display_name') or str(h['user_id']),
-                'handle': h.get('username') or '',
-                'avatar': h.get('avatar_url') or '',
-                'is_staff': bool(h.get('is_staff')),
-                'branch': h.get('branch'),
-                'in_guild': bool(h.get('in_guild')),
-                'warns': warns,
-                'role_badge': badge,
-            })
+            _push(
+                h.get('user_id'),
+                h.get('display_name') or str(h.get('user_id')),
+                h.get('username') or '',
+                h.get('avatar_url') or '',
+                h.get('is_staff'),
+                h.get('branch'),
+                h.get('in_guild'),
+                h.get('top_role_id'),
+            )
+        # fallback: Discord live search если кэш пустой/тонкий
+        if len(items) < limit and q:
+            want_staff = True if staff_only is True else False
+            people, _err = _search_guild_members(
+                q, staff_only=want_staff, limit=max(limit * 2, 20))
+            for p in (people or []):
+                has_role = bool(p.get('role'))
+                if staff_only is True and not has_role:
+                    continue
+                if staff_only is False and has_role:
+                    continue
+                _push(
+                    p.get('id'),
+                    p.get('name'),
+                    p.get('handle') or '',
+                    p.get('avatar') or '',
+                    has_role,
+                    p.get('branch'),
+                    True,
+                    p.get('top_role_id') or p.get('role_id'),
+                )
+                if len(items) >= limit:
+                    break
     except Exception as ex:
         return jsonify({'ok': False, 'error': str(ex), 'items': []}), 500
-    return jsonify({'ok': True, 'items': items})
+    return jsonify({'ok': True, 'items': items[:limit]})
 
 
 @app.route('/warns/user/<uid>')

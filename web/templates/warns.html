@@ -2,9 +2,8 @@
 {% block title %}Warn{% endblock %}
 {% block heading %}Warn{% endblock %}
 {% block body %}
-<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=3">
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=4">
 <div class="warn-page">
-<p class="lead">Активные предупреждения. Стаффу роль warn не выдаётся.</p>
 
 <div class="warn-kpis rise">
   <div class="wk"><b>{{ stats.active_warns }}</b><span>активных</span></div>
@@ -13,15 +12,15 @@
   <div class="wk"><b>{{ stats.removed_7d or 0 }}</b><span>снято за 7 дн.</span></div>
 </div>
 
-<section class="warn-panel rise">
-  <div class="warn-bar">
+<section class="warn-shell rise">
+  <div class="warn-top">
     <div class="warn-seg">
       <a class="{% if tab=='members' %}on{% endif %}"
-         href="{{ url_for('warns', tab='members', q=q, scope=scope, sort=sort) }}">Участники</a>
+         href="{{ url_for('warns', tab='members', scope=scope, sort=sort) }}">Участники</a>
       <a class="{% if tab=='staff' %}on{% endif %}"
-         href="{{ url_for('warns', tab='staff', q=q, scope=scope, branch=f_branch, sort=sort) }}">Стафф</a>
+         href="{{ url_for('warns', tab='staff', scope=scope, branch=f_branch, sort=sort) }}">Стафф</a>
     </div>
-    <div class="warn-bar__actions">
+    <div class="warn-top__right">
       <a class="ghost sm" href="{{ url_for('bans_page') }}">Баны</a>
       {% if can_manage %}
       <button type="button" class="primary-btn" id="btnIssueWarn">Выдать варн</button>
@@ -29,118 +28,144 @@
     </div>
   </div>
 
-  <form class="warn-filters" method="get" action="{{ url_for('warns') }}" id="warnFilterForm">
+  <form method="get" action="{{ url_for('warns') }}" id="warnFilterForm" autocomplete="off">
     <input type="hidden" name="tab" value="{{ tab }}">
-    <div style="position:relative">
-      <input class="wf-input" type="search" name="q" id="wq" value="{{ q }}"
-             placeholder="Ник, username или ID…" autocomplete="off">
+    <input type="hidden" name="q" id="wqHidden" value="{{ q }}">
+    <input type="hidden" name="mod" id="wmodHidden" value="{{ f_mod }}">
+
+    <div class="warn-search" id="wqWrap">
+      <div class="warn-search__box">
+        <span style="color:var(--wp-dim);font-weight:800;font-size:13px" aria-hidden="true">⌕</span>
+        <input type="search" id="wq" value=""
+               placeholder="Поиск по нику, @username или ID…"
+               autocomplete="off" spellcheck="false">
+        <button type="button" class="warn-search__clear" id="wqClear" hidden>очистить</button>
+      </div>
       <div id="wqSuggest" class="warn-suggest" hidden></div>
     </div>
-    <select name="scope">
-      <option value="active" {% if scope=='active' %}selected{% endif %}>Активные</option>
-      <option value="all" {% if scope=='all' %}selected{% endif %}>Вся история</option>
-    </select>
-    {% if tab=='staff' %}
-    <select name="branch">
-      <option value="">Все ветки</option>
-      {% for b in branches %}
-      <option value="{{ b }}" {% if f_branch==b %}selected{% endif %}>{{ branch_labels.get(b, b) }}</option>
-      {% endfor %}
-    </select>
-    {% else %}
-    <input type="hidden" name="branch" value="">
-    <select disabled><option>Ветка</option></select>
-    {% endif %}
-    <div style="position:relative">
-      <input class="wf-input" type="search" name="mod" id="wmod" value="{{ f_mod }}"
-             placeholder="Кто выдал…" autocomplete="off">
-      <div id="wmodSuggest" class="warn-suggest" hidden></div>
+
+    {% if q %}
+    <div class="warn-chip" id="wqChip">
+      <span>фильтр: <b>{{ q }}</b></span>
+      <button type="button" id="wqChipX" title="Убрать" aria-label="Убрать">×</button>
     </div>
-    <select name="sort">
-      <option value="count_desc" {% if sort=='count_desc' %}selected{% endif %}>Варны ↓</option>
-      <option value="count_asc" {% if sort=='count_asc' %}selected{% endif %}>Варны ↑</option>
-      <option value="date_desc" {% if sort=='date_desc' %}selected{% endif %}>Дата ↓</option>
-      <option value="date_asc" {% if sort=='date_asc' %}selected{% endif %}>Дата ↑</option>
-    </select>
-    <button type="submit" class="ghost">Применить</button>
+    {% endif %}
+
+    <div class="warn-filters-row">
+      <select name="scope" id="wScope">
+        <option value="active" {% if scope=='active' %}selected{% endif %}>Активные</option>
+        <option value="all" {% if scope=='all' %}selected{% endif %}>Вся история</option>
+      </select>
+      {% if tab=='staff' %}
+      <select name="branch" id="wBranch">
+        <option value="">Все ветки</option>
+        {% for b in branches %}
+        <option value="{{ b }}" {% if f_branch==b %}selected{% endif %}>{{ branch_labels.get(b, b) }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <input type="hidden" name="branch" value="">
+      {% endif %}
+      <div class="warn-search" style="margin:0;flex:1;min-width:180px" id="wmodWrap">
+        <div class="warn-search__box" style="padding:0 4px 0 12px">
+          <input type="search" id="wmod" value=""
+                 placeholder="Кто выдал…"
+                 autocomplete="off" spellcheck="false"
+                 style="padding:9px 4px;font-size:13px">
+          {% if f_mod %}
+          <button type="button" class="warn-search__clear" id="wmodClear">×</button>
+          {% endif %}
+        </div>
+        <div id="wmodSuggest" class="warn-suggest" hidden></div>
+      </div>
+      {% if f_mod %}
+      <div class="warn-chip" id="wmodChip" style="margin:0">
+        <span>мод: <b>{{ f_mod }}</b></span>
+        <button type="button" id="wmodChipX" title="Убрать">×</button>
+      </div>
+      {% endif %}
+      <select name="sort" id="wSort">
+        <option value="count_desc" {% if sort=='count_desc' %}selected{% endif %}>Варны ↓</option>
+        <option value="count_asc" {% if sort=='count_asc' %}selected{% endif %}>Варны ↑</option>
+        <option value="date_desc" {% if sort=='date_desc' %}selected{% endif %}>Дата ↓</option>
+        <option value="date_asc" {% if sort=='date_asc' %}selected{% endif %}>Дата ↑</option>
+      </select>
+    </div>
   </form>
 
-  <h2 style="margin:0 0 12px;font:800 16px/1.2 var(--display)">{% if tab=='staff' %}Стафф{% else %}Участники{% endif %}
-    <span class="count">{{ total }}</span></h2>
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:4px 0 14px">
+    <h2 style="margin:0;font:800 16px/1.2 var(--display, Syne, sans-serif)">
+      {% if tab=='staff' %}Стафф{% else %}Участники{% endif %}
+      <span class="count">{{ total }}</span>
+    </h2>
+  </div>
 
   {% if not rows %}
   <div class="warn-empty"><b>Варнов нет</b>По выбранным фильтрам записей нет</div>
   {% else %}
-  <div class="warn-table-wrap">
-    <table class="warn-table">
-      <thead>
-        <tr>
-          <th>Профиль</th>
-          {% if tab=='staff' %}<th>Роль</th><th>Ветка</th>{% endif %}
-          <th>Варны</th>
-          <th>Причина</th>
-          <th>Выдал</th>
-          <th>Дата</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for r in rows %}
-        <tr>
-          <td data-label="Профиль">
-            <a class="warn-person" href="{{ url_for('warns_user', uid=r.user_id) }}">
-              {% if r.avatar %}<img src="{{ r.avatar }}" alt="" loading="lazy">
-              {% else %}<span class="warn-ava-fb">{{ (r.user_name or '?')[:1]|upper }}</span>{% endif %}
-              <span>
-                <span class="wp-name">{{ r.user_name }}</span>
-                <span class="wp-sub">{% if r.handle %}@{{ r.handle }} · {% endif %}{{ r.user_id }}</span>
-              </span>
-            </a>
-          </td>
-          {% if tab=='staff' %}
-          <td data-label="Роль">
-            {% if r.role_style %}
-            <span class="rbadge" style="color:{{ r.role_style.color }};background:{{ r.role_style.color }}22;border-color:{{ r.role_style.color }}66">{{ r.role_style.label }}</span>
-            {% else %}<span class="dim">—</span>{% endif %}
-          </td>
-          <td data-label="Ветка">
-            {% if r.branch_style %}
-            <span class="rbadge" style="color:{{ r.branch_style.color }};background:{{ r.branch_style.color }}22;border-color:{{ r.branch_style.color }}66">{{ r.branch_style.label }}</span>
-            {% else %}<span class="dim">—</span>{% endif %}
-          </td>
+  <div class="warn-list">
+    {% for r in rows %}
+    <article class="warn-card {% if tab=='staff' %}is-staff{% endif %}">
+      <a class="warn-person" href="{{ url_for('warns_user', uid=r.user_id) }}">
+        {% if r.avatar %}<img src="{{ r.avatar }}" alt="" loading="lazy">
+        {% else %}<span class="warn-ava-fb">{{ (r.user_name or '?')[:1]|upper }}</span>{% endif %}
+        <span>
+          <span class="wp-name">{{ r.user_name }}</span>
+          <span class="wp-sub">{% if r.handle %}@{{ r.handle }} · {% endif %}{{ r.user_id }}</span>
+        </span>
+      </a>
+
+      {% if tab=='staff' %}
+      <div>
+        {% if r.role_style %}
+        <span class="rbadge" style="color:{{ r.role_style.color }};background:{{ r.role_style.color }}22;border-color:{{ r.role_style.color }}66">{{ r.role_style.label }}</span>
+        {% else %}<span class="dim">—</span>{% endif %}
+      </div>
+      <div>
+        {% if r.branch_style %}
+        <span class="rbadge" style="color:{{ r.branch_style.color }};background:{{ r.branch_style.color }}22;border-color:{{ r.branch_style.color }}66">{{ r.branch_style.label }}</span>
+        {% else %}<span class="dim">—</span>{% endif %}
+      </div>
+      {% endif %}
+
+      <div>
+        <span class="wbadge w{{ '3' if r.active_count >= 3 else r.active_count }}">{{ r.active_count }}</span>
+      </div>
+
+      <div class="warn-reason" title="{{ r.reason }}">{{ r.reason }}</div>
+
+      <div class="warn-issuer">
+        {% if r.mod_avatar %}<img src="{{ r.mod_avatar }}" alt="" loading="lazy">{% endif %}
+        <span>
+          <span class="wp-name">{{ r.mod_name }}</span>
+          {% if r.mod_role_style %}
+          <span class="rbadge" style="font-size:10px;color:{{ r.mod_role_style.color }};background:{{ r.mod_role_style.color }}22;border-color:{{ r.mod_role_style.color }}66">{{ r.mod_role_style.label }}</span>
           {% endif %}
-          <td data-label="Варны">
-            <span class="wbadge w{{ '3' if r.active_count >= 3 else r.active_count }}">{{ r.active_count }}</span>
-          </td>
-          <td data-label="Причина" class="warn-reason" title="{{ r.reason }}">{{ r.reason[:70] }}{% if r.reason|length > 70 %}…{% endif %}</td>
-          <td data-label="Выдал">
-            <span class="warn-person" style="cursor:default">
-              {% if r.mod_avatar %}<img src="{{ r.mod_avatar }}" alt="" style="width:24px;height:24px">{% endif %}
-              <span>
-                <span class="wp-name" style="font-size:12px">{{ r.mod_name }}</span>
-                {% if r.mod_role_style %}
-                <span class="rbadge" style="font-size:10px;color:{{ r.mod_role_style.color }};background:{{ r.mod_role_style.color }}22;border-color:{{ r.mod_role_style.color }}66">{{ r.mod_role_style.label }}</span>
-                {% endif %}
-              </span>
-            </span>
-          </td>
-          <td data-label="Дата" class="dim" style="white-space:nowrap">{{ r.when }}</td>
-          <td data-label="Действия" class="warn-actions">
-            <a href="{{ url_for('warns_user', uid=r.user_id) }}">профиль</a>
-            {% if can_manage %}
-            <button type="button" class="btn-issue-row" data-uid="{{ r.user_id }}" data-kind="{{ 'staff' if tab=='staff' else 'member' }}" data-name="{{ r.user_name }}">выдать</button>
-            {% endif %}
-            {% if r.can_remove %}
-            <button type="button" class="btn-unwarn" data-wid="{{ r.id }}" data-uid="{{ r.user_id }}" data-name="{{ r.user_name }}">снять</button>
-            {% elif can_manage and r.active_count %}
-            <button type="button" class="is-disabled" disabled title="{{ r.remove_deny or 'Нет права' }}">снять</button>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+        </span>
+      </div>
+
+      <div class="warn-date">{{ r.when }}</div>
+
+      <div class="warn-actions">
+        <a href="{{ url_for('warns_user', uid=r.user_id) }}">профиль</a>
+        {% if can_manage %}
+        <button type="button" class="btn-issue-row"
+                data-uid="{{ r.user_id }}"
+                data-kind="{{ 'staff' if tab=='staff' else 'member' }}"
+                data-name="{{ r.user_name }}">выдать</button>
+        {% endif %}
+        {% if r.can_remove %}
+        <button type="button" class="btn-unwarn btn-danger"
+                data-wid="{{ r.id }}" data-uid="{{ r.user_id }}"
+                data-name="{{ r.user_name }}">снять</button>
+        {% elif can_manage and r.active_count %}
+        <button type="button" disabled title="{{ r.remove_deny or 'Нет права' }}">снять</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
   </div>
+
   {% if pages > 1 %}
   <div class="warn-pager">
     {% if page > 1 %}<a href="{{ url_for('warns', page=page-1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">←</a>{% endif %}
@@ -157,8 +182,11 @@
     <div class="dlg-head"><h3>Выдать варн</h3>
       <button type="button" class="dlg-x" id="warnClose">×</button></div>
     <label>Кому
-      <div style="position:relative">
-        <input id="warnUidSearch" class="input" placeholder="Ник или ID…" autocomplete="off">
+      <div class="warn-search" style="margin:0" id="warnUidWrap">
+        <div class="warn-search__box">
+          <input id="warnUidSearch" type="search" placeholder="Ник или ID…"
+                 autocomplete="off" spellcheck="false">
+        </div>
         <input type="hidden" id="warnUid">
         <div id="warnUidSuggest" class="warn-suggest" hidden></div>
       </div>
@@ -207,69 +235,182 @@
   const csrf = {{ csrf_token|tojson }};
   const tab = {{ tab|tojson }};
   const $ = id => document.getElementById(id);
+  const form = $('warnFilterForm');
 
-  function roleBadge(rid){
-    const st = (styles.roles || {})[String(rid||'')] || null;
-    if (!st) return '';
-    return `<span class="rbadge" style="color:${st.color};background:${st.color}22;border-color:${st.color}66">${st.label}</span>`;
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  function submitFilter(){
+    form.submit();
+  }
+
+  function clearQ(){
+    $('wqHidden').value = '';
+    $('wq').value = '';
+    $('wqSuggest').hidden = true;
+    $('wqSuggest').innerHTML = '';
+    const chip = $('wqChip');
+    if (chip) chip.remove();
+    const btn = $('wqClear');
+    if (btn) btn.hidden = true;
+    submitFilter();
+  }
+
+  function clearMod(){
+    $('wmodHidden').value = '';
+    $('wmod').value = '';
+    $('wmodSuggest').hidden = true;
+    $('wmodSuggest').innerHTML = '';
+    const chip = $('wmodChip');
+    if (chip) chip.remove();
+    submitFilter();
+  }
+
+  $('wqClear')?.addEventListener('click', (e) => { e.preventDefault(); clearQ(); });
+  $('wqChipX')?.addEventListener('click', (e) => { e.preventDefault(); clearQ(); });
+  $('wmodClear')?.addEventListener('click', (e) => { e.preventDefault(); clearMod(); });
+  $('wmodChipX')?.addEventListener('click', (e) => { e.preventDefault(); clearMod(); });
+
+  ['wScope','wBranch','wSort'].forEach(id => {
+    $(id)?.addEventListener('change', () => submitFilter());
+  });
+
+  /** Live suggest: mousedown (не click) — blur не съедает выбор */
   function wireSuggest(input, box, onPick, staffOnly){
     let t = null;
+    let items = [];
+    let active = -1;
+    let req = 0;
+
+    function hide(){
+      box.hidden = true;
+      box.innerHTML = '';
+      active = -1;
+    }
+
+    function paint(){
+      if (!items.length) {
+        box.innerHTML = '<div class="warn-suggest__empty">Никого не найдено</div>';
+        box.hidden = false;
+        return;
+      }
+      box.innerHTML = items.map((it, i) => {
+        const av = it.avatar
+          ? `<img src="${esc(it.avatar)}" alt="">`
+          : `<span class="warn-suggest__fb">${esc((it.name||'?')[0]||'?').toUpperCase()}</span>`;
+        const handle = it.handle ? '@'+esc(it.handle)+' · ' : '';
+        const gone = it.in_guild ? '' : ' · вышел';
+        const badge = it.role_badge || '';
+        const wb = (it.warns != null)
+          ? `<span class="wbadge w${it.warns>=3?3:it.warns}">${it.warns}</span>` : '';
+        return `<button type="button" class="warn-suggest__item${i===active?' is-active':''}" data-i="${i}">
+          ${av}
+          <span class="warn-suggest__meta">
+            <strong>${esc(it.name || it.id)}</strong>
+            <small>${handle}${esc(it.id)}${gone}</small>
+          </span>
+          <span class="warn-suggest__right">${badge}${wb}</span>
+        </button>`;
+      }).join('');
+      box.hidden = false;
+      box.querySelectorAll('.warn-suggest__item').forEach(btn => {
+        // mousedown + preventDefault: input не теряет фокус до выбора
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const it = items[Number(btn.dataset.i)];
+          if (it) onPick(it);
+          hide();
+        });
+      });
+    }
+
     async function run(){
       const q = (input.value || '').trim();
-      if (q.length < 1) { box.hidden = true; box.innerHTML=''; return; }
+      const clearBtn = input.closest('.warn-search__box')?.querySelector('.warn-search__clear');
+      if (clearBtn && clearBtn.id === 'wqClear') clearBtn.hidden = q.length < 1;
+
+      if (q.length < 1) { hide(); return; }
+      const my = ++req;
       const params = new URLSearchParams({q, limit: '10'});
       if (staffOnly === true) params.set('staff', '1');
       if (staffOnly === false) params.set('staff', '0');
       try {
-        const r = await fetch('/api/warns/search?' + params);
+        const r = await fetch('/api/warns/search?' + params, {credentials: 'same-origin'});
         const j = await r.json();
-        const items = (j.items || []).slice(0, 10);
-        if (!items.length) { box.hidden = true; return; }
-        box.innerHTML = items.map(it => `
-          <button type="button" data-id="${it.id}">
-            ${it.avatar ? `<img src="${it.avatar}" alt="">` : `<span class="warn-ava-fb">${(it.name||'?')[0]}</span>`}
-            <span class="ws-meta">
-              <strong>${it.name || it.id}</strong>
-              <small>${it.handle ? '@'+it.handle+' · ' : ''}${it.id}${it.in_guild ? '' : ' · вышел'}</small>
-            </span>
-            <span class="ws-right">
-              ${it.role_badge || ''}
-              ${it.warns != null ? `<span class="wbadge w${it.warns>=3?3:it.warns}">${it.warns}</span>` : ''}
-            </span>
-          </button>`).join('');
-        box.hidden = false;
-        box.querySelectorAll('button').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const it = items.find(x => String(x.id) === btn.dataset.id);
-            if (it) onPick(it);
-            box.hidden = true;
-          });
-        });
-      } catch(e) { box.hidden = true; }
+        if (my !== req) return;
+        items = (j.items || []).slice(0, 10);
+        active = items.length ? 0 : -1;
+        paint();
+      } catch (e) {
+        if (my === req) hide();
+      }
     }
+
     input.addEventListener('input', () => {
       clearTimeout(t);
-      t = setTimeout(run, 250);
+      t = setTimeout(run, 180);
     });
-    input.addEventListener('blur', () => setTimeout(() => { box.hidden = true; }, 180));
+    input.addEventListener('keydown', (e) => {
+      if (box.hidden || !items.length) {
+        if (e.key === 'Enter' && (input.value || '').trim()) {
+          e.preventDefault();
+          onPick({ id: input.value.trim(), name: input.value.trim() });
+          hide();
+        }
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        active = (active + 1) % items.length;
+        paint();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = (active - 1 + items.length) % items.length;
+        paint();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (active >= 0 && items[active]) {
+          onPick(items[active]);
+          hide();
+        }
+      } else if (e.key === 'Escape') {
+        hide();
+      }
+    });
+    input.addEventListener('blur', () => {
+      // не трогаем выбор — mousedown уже сработал; просто прячем список
+      setTimeout(() => { if (document.activeElement !== input) hide(); }, 120);
+    });
+    input.addEventListener('focus', () => {
+      if ((input.value || '').trim().length >= 1) run();
+    });
   }
 
+  const staffFilter = tab === 'staff' ? true : (tab === 'members' ? false : null);
+
   wireSuggest($('wq'), $('wqSuggest'), (it) => {
-    $('wq').value = it.name || it.id;
-    $('warnFilterForm').submit();
-  }, tab === 'staff' ? true : (tab === 'members' ? false : null));
+    $('wqHidden').value = it.id || it.name || '';
+    $('wq').value = '';
+    submitFilter();
+  }, staffFilter);
 
   wireSuggest($('wmod'), $('wmodSuggest'), (it) => {
-    $('wmod').value = it.id;
+    $('wmodHidden').value = it.id || '';
+    $('wmod').value = '';
+    submitFilter();
   }, null);
 
   // issue dialog
   const dlg = $('warnDlg'), codeSel = $('warnCode'), kindSel = $('warnKind'), msg = $('warnMsg');
   function fillCodes(){
     const list = reasons[kindSel.value] || [];
-    codeSel.innerHTML = list.map(r => `<option value="${r.code}">${r.code} · ${r.label}</option>`).join('');
+    codeSel.innerHTML = list.map(r =>
+      `<option value="${esc(r.code)}">${esc(r.code)} · ${esc(r.label)}</option>`
+    ).join('');
   }
   kindSel.addEventListener('change', fillCodes); fillCodes();
 
@@ -280,6 +421,7 @@
     $('warnPicked').textContent = uid ? (`Выбран: ${name || ''} · ${uid}`) : '';
     if (kind) { kindSel.value = kind; fillCodes(); }
     dlg.showModal();
+    if (!uid) setTimeout(() => $('warnUidSearch').focus(), 40);
   }
   $('btnIssueWarn')?.addEventListener('click', () => openIssue('', tab === 'staff' ? 'staff' : 'member'));
   $('warnClose')?.addEventListener('click', () => dlg.close());
@@ -290,15 +432,15 @@
   wireSuggest($('warnUidSearch'), $('warnUidSuggest'), (it) => {
     $('warnUid').value = it.id;
     $('warnUidSearch').value = it.name || it.id;
-    $('warnPicked').textContent = `Выбран: ${it.name} · ${it.id}`;
-    if (it.is_staff) { kindSel.value = 'staff'; fillCodes(); }
-    else { kindSel.value = 'member'; fillCodes(); }
+    $('warnPicked').textContent = `Выбран: ${it.name || ''} · ${it.id}`;
+    kindSel.value = it.is_staff ? 'staff' : 'member';
+    fillCodes();
   }, null);
 
   $('warnGo')?.addEventListener('click', async () => {
     msg.textContent = '…';
     const body = {
-      user_id: $('warnUid').value.trim() || $('warnUidSearch').value.trim(),
+      user_id: ($('warnUid').value.trim() || $('warnUidSearch').value.trim()),
       reason_type: kindSel.value,
       reason_code: codeSel.value,
       detail: $('warnDetail').value.trim(),
