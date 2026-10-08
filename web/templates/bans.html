@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Баны{% endblock %}
+{% block heading %}Баны{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=4">
+<div class="warn-page">
+<nav class="crumb rise">
+  <a href="{{ url_for('warns') }}">Warn</a>
+  <span aria-hidden="true">›</span>
+  <b>Баны</b>
+</nav>
+
+<section class="warn-shell rise">
+  <div class="warn-top">
+    <h2 style="margin:0;font:800 16px/1.2 var(--display, Syne, sans-serif)">
+      Список <span class="count">{{ rows|length }}</span>
+    </h2>
+  </div>
+
+  <div class="warn-search" id="banSearchWrap">
+    <div class="warn-search__box">
+      <span style="color:var(--wp-dim);font-weight:800;font-size:13px" aria-hidden="true">⌕</span>
+      <input type="search" id="banQ" placeholder="Ник или ID…"
+             autocomplete="off" spellcheck="false">
+      <button type="button" class="warn-search__clear" id="banClear" hidden>очистить</button>
+    </div>
+  </div>
+
+  {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+  {% if not rows %}
+  <div class="warn-empty"><b>Банов нет</b>или бот офлайн</div>
+  {% else %}
+  <div class="warn-list" id="banList">
+    {% for b in rows %}
+    <article class="warn-card" data-q="{{ (b.name ~ ' ' ~ b.user_id)|lower }}"
+             style="grid-template-columns:minmax(180px,1.2fr) minmax(0,1fr) auto">
+      <span class="warn-person">
+        {% if b.avatar %}<img src="{{ b.avatar }}" alt="" loading="lazy">{% endif %}
+        <span>
+          <span class="wp-name">{{ b.name }}</span>
+          <span class="wp-sub">{{ b.user_id }}</span>
+        </span>
+      </span>
+      <div class="warn-reason">{{ b.reason or '—' }}</div>
+      <div class="warn-actions">
+        {% if can_unban %}
+        <button type="button" class="btn-unban btn-danger"
+                data-uid="{{ b.user_id }}" data-name="{{ b.name }}">разбанить</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+</div>
+
+<dialog id="unbanDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3>Разбанить</h3>
+      <button type="button" class="dlg-x" id="ubClose">×</button></div>
+    <p id="ubHint" class="dim"></p>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="ubCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="ubGo">Разбанить</button>
+    </div>
+    <p id="ubMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  const csrf = {{ csrf_token|tojson }};
+  const $ = id => document.getElementById(id);
+  const input = $('banQ');
+  const clear = $('banClear');
+  function apply(){
+    const q = (input.value || '').toLowerCase().trim();
+    if (clear) clear.hidden = q.length < 1;
+    document.querySelectorAll('#banList .warn-card').forEach(card => {
+      card.hidden = !!(q && !(card.dataset.q || '').includes(q));
+    });
+  }
+  input?.addEventListener('input', apply);
+  clear?.addEventListener('click', () => {
+    input.value = '';
+    apply();
+    input.focus();
+  });
+  let uid='', name='';
+  const dlg=$('unbanDlg');
+  $('ubClose')?.addEventListener('click', () => dlg.close());
+  $('ubCancel')?.addEventListener('click', () => dlg.close());
+  document.querySelectorAll('.btn-unban').forEach(btn => {
+    btn.addEventListener('click', () => {
+      uid=btn.dataset.uid; name=btn.dataset.name;
+      $('ubHint').textContent='Разбанить '+name+' ('+uid+')?';
+      $('ubMsg').textContent=''; dlg.showModal();
+    });
+  });
+  $('ubGo')?.addEventListener('click', async () => {
+    $('ubMsg').textContent='…';
+    const r=await fetch('/api/bans/unban',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_id:uid,csrf})});
+    const j=await r.json();
+    if(!j.ok){$('ubMsg').textContent=j.error||'Ошибка';return;}
+    location.reload();
+  });
+})();
+</script>
+{% endblock %}
