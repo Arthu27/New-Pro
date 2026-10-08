@@ -432,14 +432,38 @@ async def _get_channel_context (channel ,limit :int =16 )->list :
         return []
 
 
+# Кэш: AI-бэкенд панели снят — не спамить заглушкой в каждый пост канала.
+_AI_BACKEND_AVAILABLE :bool |None =None 
+
+
+def _ai_backend_available ()->bool :
+    """web.ai_helper жил в веб-панели; после PANEL-REMOVED импорта нет."""
+    global _AI_BACKEND_AVAILABLE 
+    if _AI_BACKEND_AVAILABLE is not None :
+        return _AI_BACKEND_AVAILABLE 
+    try :
+        from web .ai_helper import ai_assistant  # noqa: F401
+        _AI_BACKEND_AVAILABLE =True 
+    except ImportError :
+        _AI_BACKEND_AVAILABLE =False 
+        log .info ('[AI] web.ai_helper недоступен (панель снята) — '
+                   'канал-ответы отключены')
+    except Exception as ex :
+        _AI_BACKEND_AVAILABLE =False 
+        log .warning ('[AI] backend check fail: %s — ответы выкл',ex )
+    return _AI_BACKEND_AVAILABLE 
+
+
 def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =None ,channel_context :list =None )->str :
     try :
         # AI-слой жил в веб-панели (web.ai_helper) — панель снята.
+        # Не шлём заглушку в чат: пустой ответ → on_message молчит.
+        if not _ai_backend_available ():
+            return ''
         try :
             from web .ai_helper import ai_assistant 
         except ImportError :
-            return ('AI-помощник панели снят вместе с веб-панелью. '
-                    'См. docs/PANEL-REMOVED.md.')
+            return ''
         # Свежие знания/инструкции с диска
         global _knowledge_base ,_instructions ,_histories 
         try :
@@ -1153,6 +1177,11 @@ class AIChat (commands .Cog ):
 
         is_ticket_channel =False 
         cfg =_ai_chat_cfg ()
+        # Бэкенд панели снят — не слушаем каналы (иначе спам заглушкой).
+        if not _ai_backend_available ():
+            return 
+        if not cfg .get ('enabled',True ):
+            return 
         allowed =_ai_allowed_channel_ids ()
         is_ai_channel =message .channel .id in allowed 
 
@@ -1252,6 +1281,12 @@ class AIChat (commands .Cog ):
             message .guild if not is_dm else None ,
             recent_msgs ,channel_ctx 
             )
+
+        # Пустой / stub ответ (панель снята) — молчим, не reply
+        if not (answer or '').strip ():
+            return 
+        if 'PANEL-REMOVED' in answer or 'AI-помощник панели снят' in answer :
+            return 
 
         if _has_profanity (answer ):
             answer ="Я не могу это сказать. "

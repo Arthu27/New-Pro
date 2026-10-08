@@ -20,13 +20,15 @@ SETTINGS_FILE = 'data/ai_chat_settings.json'
 DEFAULT_CHAT_CHANNEL_ID = 1312434963941167134
 
 DEFAULT_SETTINGS: dict[str, Any] = {
-    'enabled': True,
+    # OFF по умолчанию: web.ai_helper снят с панелью (docs/PANEL-REMOVED.md).
+    # Иначе бот спамил заглушкой на каждое сообщение в модераторском чате.
+    'enabled': False,
     # Каналы, где ИИ отвечает на сообщения (и на reply к своим).
     'channels': [DEFAULT_CHAT_CHANNEL_ID],
     # Отвечать, когда человек делает reply на сообщение бота в этих каналах.
     'reply_to_bot': True,
     # Отвечать на любое сообщение в канале (не только mention/reply).
-    'respond_all': True,
+    'respond_all': False,
     # Требовать @упоминание бота (если respond_all=False).
     'require_mention': False,
     # Сила ответа Discord-чата (пусто = AI_MODEL / mistral-large-latest).
