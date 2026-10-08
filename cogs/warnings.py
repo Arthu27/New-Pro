@@ -12,7 +12,7 @@ from logger import get_logger
 _log = get_logger('warnings')
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
 from datetime import datetime, timezone, timedelta
 import os
@@ -261,6 +261,7 @@ async def _log_punish_to_channel(guild, user, punishment_result, total):
 class warnings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self._board_loop_started = False
         try:
             from services import warn_store as WS
             WS.ensure_table()
@@ -663,7 +664,7 @@ class warnings(commands.Cog):
             _log.debug('_collect_mod_data notes: %s', _ex)
         return warns, cases, notes
 
-    # ── события: sync роли ──────────────────────────────────────────
+    # ── события: sync роли + сводка канала warn ─────────────────────
     @commands.Cog.listener()
     async def on_ready(self):
         try:
@@ -679,6 +680,41 @@ class warnings(commands.Cog):
                     log.debug('warn sync guild %s: %s', guild.id, e)
         except Exception as e:
             log.warning('on_ready warn sync: %s', e)
+        try:
+            from services.warn_board import update_warn_board
+            for guild in list(self.bot.guilds):
+                try:
+                    await update_warn_board(guild, force=True)
+                except Exception as e:
+                    log.debug('warn board on_ready %s: %s', guild.id, e)
+        except Exception as e:
+            log.debug('warn board on_ready: %s', e)
+        if not getattr(self, '_board_loop_started', False):
+            try:
+                self._warn_board_loop.start()
+                self._board_loop_started = True
+            except Exception as e:
+                log.debug('warn board loop start: %s', e)
+
+    @tasks.loop(minutes=3)
+    async def _warn_board_loop(self):
+        try:
+            from services.warn_board import update_warn_board
+            from config import Config
+            gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+            for guild in list(self.bot.guilds):
+                if gid and int(guild.id) != gid:
+                    continue
+                try:
+                    await update_warn_board(guild, force=False)
+                except Exception as e:
+                    log.debug('warn board loop %s: %s', guild.id, e)
+        except Exception as e:
+            log.debug('warn board loop: %s', e)
+
+    @_warn_board_loop.before_loop
+    async def _warn_board_before(self):
+        await self.bot.wait_until_ready()
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -957,9 +993,8 @@ class PWView(discord.ui.View):
 
 async def setup(bot):
     await bot.add_cog(warnings(bot))
-    # Persistent: кнопки истории после рестарта
+    # Persistent: кнопки истории + сводки канала warn после рестарта
     try:
-        # Регистрируем динамический обработчик через on_interaction
         @bot.listen('on_interaction')
         async def _warn_hist_router(interaction):
             try:
@@ -967,8 +1002,11 @@ async def setup(bot):
                 cid = str(data.get('custom_id') or '')
                 if cid.startswith('warnhist:'):
                     await handle_warn_history_button(interaction)
+                elif cid.startswith('warnboard:'):
+                    from services.warn_board import handle_board_button
+                    await handle_board_button(interaction)
             except Exception as e:
-                log.debug('warnhist router: %s', e)
+                log.debug('warnhist/board router: %s', e)
     except Exception as e:
         log.debug('warnhist listen: %s', e)
-    log.info('Warnings загружен (единая роль warn + SQLite)')
+    log.info('Warnings загружен (единая роль warn + SQLite + board)')

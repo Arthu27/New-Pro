@@ -1,84 +1,96 @@
 {% extends "base.html" %}
-{% block title %}Варны{% endblock %}
-{% block heading %}Варны{% endblock %}
+{% block title %}Warn{% endblock %}
+{% block heading %}Warn{% endblock %}
 {% block body %}
-<p class="lead">Активные предупреждения из БД бота. Стаффу роль warn не выдаётся.</p>
+<p class="lead">Активные предупреждения. Стаффу роль warn не выдаётся.</p>
 
 <section class="panel rise stats-row">
   <div class="stat"><b>{{ stats.active_warns }}</b><span>активных варнов</span></div>
-  <div class="stat"><b>{{ stats.users_member }}</b><span>участников</span></div>
-  <div class="stat"><b>{{ stats.users_staff }}</b><span>стаффа</span></div>
+  <div class="stat"><b>{{ stats.users_member }}</b><span>у участников</span></div>
+  <div class="stat"><b>{{ stats.users_staff }}</b><span>у стаффа</span></div>
 </section>
+
+<nav class="tabs rise">
+  <a class="tab {% if tab=='members' %}on{% endif %}"
+     href="{{ url_for('warns', tab='members', q=q, scope=scope, sort=sort) }}">Участники</a>
+  <a class="tab {% if tab=='staff' %}on{% endif %}"
+     href="{{ url_for('warns', tab='staff', q=q, scope=scope, branch=f_branch, sort=sort) }}">Стафф</a>
+  <a class="tab ghost-link" href="{{ url_for('bans_page') }}">Баны →</a>
+</nav>
 
 <section class="panel rise">
   <form class="filters" method="get" action="{{ url_for('warns') }}">
+    <input type="hidden" name="tab" value="{{ tab }}">
     <input type="search" name="q" value="{{ q }}" placeholder="Ник или ID…">
-    <select name="type">
-      <option value="" {% if not f_type %}selected{% endif %}>Все типы</option>
-      <option value="member" {% if f_type=='member' %}selected{% endif %}>Участники</option>
-      <option value="staff" {% if f_type=='staff' %}selected{% endif %}>Стафф</option>
-    </select>
     <select name="scope">
       <option value="active" {% if scope=='active' %}selected{% endif %}>Только активные</option>
       <option value="all" {% if scope=='all' %}selected{% endif %}>Вся история</option>
     </select>
+    {% if tab=='staff' %}
     <select name="branch">
       <option value="">Все ветки</option>
       {% for b in branches %}
       <option value="{{ b }}" {% if f_branch==b %}selected{% endif %}>{{ branch_labels.get(b, b) }}</option>
       {% endfor %}
     </select>
+    {% endif %}
+    <input type="search" name="mod" value="{{ f_mod }}" placeholder="ID выдавшего…" style="max-width:140px">
     <select name="sort">
-      <option value="date_desc" {% if sort=='date_desc' %}selected{% endif %}>Дата ↓</option>
-      <option value="date_asc" {% if sort=='date_asc' %}selected{% endif %}>Дата ↑</option>
       <option value="count_desc" {% if sort=='count_desc' %}selected{% endif %}>Кол-во ↓</option>
       <option value="count_asc" {% if sort=='count_asc' %}selected{% endif %}>Кол-во ↑</option>
+      <option value="date_desc" {% if sort=='date_desc' %}selected{% endif %}>Дата ↓</option>
+      <option value="date_asc" {% if sort=='date_asc' %}selected{% endif %}>Дата ↑</option>
     </select>
     <button type="submit" class="primary-btn">Фильтр</button>
+    {% if can_manage %}
     <button type="button" class="ghost" id="btnIssueWarn">Выдать варн</button>
-    <a class="ghost" href="{{ url_for('bans_page') }}">Баны →</a>
+    {% endif %}
   </form>
 </section>
 
 <section class="panel rise">
-  <h2>Список <span class="count">{{ total }}</span></h2>
+  <h2>{% if tab=='staff' %}Стафф{% else %}Участники{% endif %} <span class="count">{{ total }}</span></h2>
   {% if not rows %}
-  <div class="empty">Варнов нет</div>
+  <div class="empty">Нет записей</div>
   {% else %}
   <div class="table-wrap">
     <table class="data-table">
       <thead>
         <tr>
           <th>Пользователь</th>
-          <th>Тип</th>
-          <th>Ветка</th>
-          <th>Активных</th>
-          <th>Причина</th>
-          <th>Выдал</th>
+          <th>Варны</th>
+          {% if tab=='staff' %}<th>Ветка</th><th>Должность</th>{% endif %}
+          <th>Последняя причина</th>
+          <th>Кто выдал</th>
           <th>Дата</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         {% for r in rows %}
-        <tr class="{% if not r.active %}dim{% endif %}">
+        <tr>
           <td>
             <a class="user-chip" href="{{ url_for('warns_user', uid=r.user_id) }}">
               {% if r.avatar %}<img src="{{ r.avatar }}" alt="">{% endif %}
               <span><b>{{ r.user_name }}</b><small>{{ r.user_id }}</small></span>
             </a>
           </td>
-          <td><span class="pill {% if r.reason_type=='staff' %}pill-danger{% else %}pill-warn{% endif %}">{{ 'стафф' if r.reason_type=='staff' else 'участник' }}</span></td>
+          <td><span class="warn-badge {{ r.badge_class }}">{{ r.active_count }}</span></td>
+          {% if tab=='staff' %}
           <td>{{ r.branch_label or '—' }}</td>
-          <td><b>{{ r.active_count }}</b></td>
+          <td>{{ r.role_label or '—' }}</td>
+          {% endif %}
           <td class="reason-cell" title="{{ r.reason }}">{{ r.reason[:80] }}{% if r.reason|length > 80 %}…{% endif %}</td>
           <td>{% if r.mod_id %}<a href="{{ url_for('member', q=r.mod_id) }}">{{ r.mod_name }}</a>{% else %}{{ r.mod_name }}{% endif %}</td>
           <td>{{ r.when }}</td>
           <td class="actions">
-            {% if r.active and can_manage %}
-            <button type="button" class="ghost sm btn-unwarn" data-wid="{{ r.id }}" data-uid="{{ r.user_id }}">Снять</button>
+            <a class="ghost sm" href="{{ url_for('warns_user', uid=r.user_id) }}">Профиль</a>
+            {% if can_manage and r.active_count %}
+            <button type="button" class="ghost sm btn-unwarn" data-wid="{{ r.id }}" data-uid="{{ r.user_id }}">Снять варн</button>
             {% endif %}
-            <a class="ghost sm" href="{{ url_for('warns_user', uid=r.user_id) }}">История</a>
+            {% if can_manage %}
+            <button type="button" class="ghost sm btn-issue-row" data-uid="{{ r.user_id }}" data-kind="{{ 'staff' if tab=='staff' else 'member' }}">Выдать варн</button>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -87,9 +99,9 @@
   </div>
   {% if pages > 1 %}
   <div class="pager">
-    {% if page > 1 %}<a href="{{ url_for('warns', page=page-1, q=q, type=f_type, scope=scope, branch=f_branch, sort=sort) }}">←</a>{% endif %}
+    {% if page > 1 %}<a href="{{ url_for('warns', page=page-1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">←</a>{% endif %}
     <span>{{ page }} / {{ pages }}</span>
-    {% if page < pages %}<a href="{{ url_for('warns', page=page+1, q=q, type=f_type, scope=scope, branch=f_branch, sort=sort) }}">→</a>{% endif %}
+    {% if page < pages %}<a href="{{ url_for('warns', page=page+1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}">→</a>{% endif %}
   </div>
   {% endif %}
   {% endif %}
@@ -124,26 +136,49 @@
   </form>
 </dialog>
 
+<dialog id="rmDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3>Снять варн</h3>
+      <button type="button" class="dlg-x" id="rmClose">×</button></div>
+    <p class="dim" id="rmHint">Подтвердите снятие.</p>
+    <label>Причина снятия <span class="dim">(необязательно)</span>
+      <textarea id="rmReason" maxlength="200" rows="2" placeholder="ошибка / апелляция…"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="rmCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="rmGo">Снять</button>
+    </div>
+    <p id="rmMsg" class="dim"></p>
+  </form>
+</dialog>
+
 <style>
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
 .stats-row .stat{background:var(--glass-2);border:1px solid var(--line);border-radius:var(--r-md);padding:16px 18px}
 .stats-row .stat b{display:block;font:800 28px/1.1 var(--display)}
 .stats-row .stat span{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:10px 18px;border-radius:999px;border:1px solid var(--line);background:var(--solid);color:var(--ink);text-decoration:none;font-weight:600;font-size:14px}
+.tab.on{background:#fff;color:#111;border-color:#fff}
+.tab.ghost-link{margin-left:auto;opacity:.75;font-weight:500}
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .filters input,.filters select{background:var(--solid);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px}
 .table-wrap{overflow:auto}
 .data-table{width:100%;border-collapse:collapse;font-size:13px}
-.data-table th,.data-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.data-table th,.data-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 .data-table th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
 .user-chip{display:inline-flex;gap:8px;align-items:center;color:inherit;text-decoration:none}
-.user-chip img{width:28px;height:28px;border-radius:50%}
+.user-chip img{width:32px;height:32px;border-radius:50%}
 .user-chip small{display:block;color:var(--muted);font-size:11px}
-.pill-danger{background:rgba(255,77,61,.18);color:#ff8a7a}
+.warn-badge{display:inline-flex;min-width:28px;height:28px;align-items:center;justify-content:center;padding:0 8px;border-radius:999px;font-weight:800;font-size:13px;color:#111}
+.badge-yellow{background:#f1c40f}
+.badge-orange{background:#e67e22;color:#fff}
+.badge-red{background:#e74c3c;color:#fff}
 .reason-cell{max-width:280px}
 .actions{white-space:nowrap}
 .ghost.sm{padding:4px 8px;font-size:12px}
 .pager{display:flex;gap:12px;justify-content:center;margin-top:14px}
-@media(max-width:800px){.stats-row{grid-template-columns:1fr}}
+@media(max-width:800px){.stats-row{grid-template-columns:1fr}.actions{white-space:normal}}
 </style>
 
 <script>
@@ -155,6 +190,7 @@
   const codeSel = $('warnCode');
   const kindSel = $('warnKind');
   const msg = $('warnMsg');
+  let rmWid = 0, rmUid = '';
 
   function fillCodes(){
     const kind = kindSel.value;
@@ -165,9 +201,18 @@
   kindSel.addEventListener('change', fillCodes);
   fillCodes();
 
-  $('btnIssueWarn')?.addEventListener('click', () => { msg.textContent=''; dlg.showModal(); });
+  function openIssue(uid, kind){
+    msg.textContent='';
+    if (uid) $('warnUid').value = uid;
+    if (kind) { kindSel.value = kind; fillCodes(); }
+    dlg.showModal();
+  }
+  $('btnIssueWarn')?.addEventListener('click', () => openIssue('', '{{ tab }}' === 'staff' ? 'staff' : 'member'));
   $('warnClose')?.addEventListener('click', () => dlg.close());
   $('warnCancel')?.addEventListener('click', () => dlg.close());
+  document.querySelectorAll('.btn-issue-row').forEach(btn => {
+    btn.addEventListener('click', () => openIssue(btn.dataset.uid, btn.dataset.kind));
+  });
 
   $('warnGo')?.addEventListener('click', async () => {
     msg.textContent = '…';
@@ -189,24 +234,33 @@
     } catch(e) { msg.textContent = String(e); }
   });
 
+  const rmDlg = $('rmDlg');
+  $('rmClose')?.addEventListener('click', () => rmDlg.close());
+  $('rmCancel')?.addEventListener('click', () => rmDlg.close());
   document.querySelectorAll('.btn-unwarn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const reason = prompt('Причина снятия (необязательно):') || '';
-      if (!confirm('Снять этот варн?')) return;
-      try {
-        const r = await fetch('/api/warns/remove', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
-            warn_id: Number(btn.dataset.wid),
-            user_id: btn.dataset.uid,
-            removed_reason: reason,
-            csrf,
-          })});
-        const j = await r.json();
-        if (!j.ok) { alert(j.error || 'Ошибка'); return; }
-        location.reload();
-      } catch(e) { alert(e); }
+    btn.addEventListener('click', () => {
+      rmWid = Number(btn.dataset.wid);
+      rmUid = btn.dataset.uid;
+      $('rmReason').value = '';
+      $('rmMsg').textContent = '';
+      $('rmHint').textContent = 'Снять последний/выбранный варн у ' + rmUid + '?';
+      rmDlg.showModal();
     });
+  });
+  $('rmGo')?.addEventListener('click', async () => {
+    $('rmMsg').textContent = '…';
+    try {
+      const r = await fetch('/api/warns/remove', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          warn_id: rmWid, user_id: rmUid,
+          removed_reason: $('rmReason').value.trim(),
+          csrf,
+        })});
+      const j = await r.json();
+      if (!j.ok) { $('rmMsg').textContent = j.error || 'Ошибка'; return; }
+      location.reload();
+    } catch(e) { $('rmMsg').textContent = String(e); }
   });
 })();
 </script>

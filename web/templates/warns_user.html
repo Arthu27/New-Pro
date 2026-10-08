@@ -1,56 +1,72 @@
 {% extends "base.html" %}
-{% block title %}Варны · {{ profile.name }}{% endblock %}
-{% block heading %}Варны · {{ profile.name }}{% endblock %}
+{% block title %}Warn · {{ profile.name }}{% endblock %}
+{% block heading %}Профиль варна{% endblock %}
 {% block body %}
-<p class="lead">
-  <a href="{{ url_for('warns') }}">← к списку</a>
-  · ID <code>{{ uid }}</code>
-  · активных: <b>{{ active_count }}</b>
-  · тип: {{ 'стафф' if is_staff else 'участник' }}
-</p>
+<p class="lead"><a href="{{ url_for('warns', tab='staff' if is_staff else 'members') }}">← Warn</a></p>
+
+<section class="panel rise profile-card">
+  <div class="pc-avatar">
+    {% if profile.avatar %}<img src="{{ profile.avatar }}" alt="">{% else %}<div class="pc-ph"></div>{% endif %}
+  </div>
+  <div class="pc-meta">
+    <h2>{{ profile.name }}</h2>
+    <div class="pc-id"><code>{{ uid }}</code>
+      <span class="pill {% if is_staff %}pill-danger{% else %}pill-warn{% endif %}">
+        {{ 'стафф' if is_staff else 'участник' }}
+      </span>
+      {% if active_count %}<span class="warn-badge {{ profile.badge_class }}">{{ active_count }}</span>{% endif %}
+    </div>
+    {% if is_staff %}
+    <div class="pc-line">Ветка: <b>{{ profile.branch or '—' }}</b>
+      {% if profile.role_label %} · должность: <b>{{ profile.role_label }}</b>{% endif %}
+    </div>
+    {% endif %}
+    <div class="pc-line dim">
+      Первый варн: {{ profile.first_at or '—' }} · последний: {{ profile.last_at or '—' }}
+    </div>
+    <div class="dlg-actions" style="justify-content:flex-start;gap:8px;margin-top:12px">
+      {% if can_manage %}
+      <button type="button" class="primary-btn" id="btnIssue">Выдать варн</button>
+      {% if active_count %}
+      <button type="button" class="ghost" id="btnClearAll">Снять все варны</button>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</section>
 
 <section class="panel rise">
-  <div class="dlg-actions" style="justify-content:flex-start;gap:8px;margin-bottom:12px">
-    {% if can_manage %}
-    <button type="button" class="primary-btn" id="btnIssue">Выдать варн</button>
-    {% if active_count %}
-    <button type="button" class="ghost" id="btnClearAll">Снять все варны</button>
-    {% endif %}
-    {% endif %}
-  </div>
-
+  <h2>История</h2>
   {% if not history %}
   <div class="empty">История пуста</div>
   {% else %}
-  <div class="log-timeline">
-    {% for w in history %}
-    <article class="log-item {% if w.active %}log-warn{% else %}dim{% endif %}">
-      <div class="log-rail"></div>
-      <div>
-        <div class="log-top">
-          <span class="pill {% if w.reason_type=='staff' %}pill-danger{% else %}pill-warn{% endif %}">
-            #{{ w.id }} · {{ 'стафф' if w.reason_type=='staff' else 'участник' }}
-            {% if not w.active %} · снят{% endif %}
-          </span>
-          <span class="log-when">{{ w.when }}</span>
-        </div>
-        <div class="log-meta">
-          код {{ w.reason_code or '—' }}
-          · выдал <b>{{ w.mod_name }}</b>
-          {% if w.branch %} · ветка {{ w.branch_label }}{% endif %}
-          · {{ w.source or 'discord' }}
-        </div>
-        <div class="log-reason">{{ w.reason }}</div>
-        {% if not w.active %}
-        <div class="log-meta">снял {{ w.removed_by_name or w.removed_by }} · {{ w.removed_when }}
-          {% if w.removed_reason %} · {{ w.removed_reason }}{% endif %}
-        </div>
-        {% elif can_manage %}
-        <button type="button" class="ghost sm btn-rm" data-wid="{{ w.id }}">Снять варн</button>
-        {% endif %}
-      </div>
-    </article>
-    {% endfor %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>№</th><th>Причина</th><th>Тип</th><th>Кто выдал</th>
+          <th>Дата</th><th>Статус</th><th>Снятие</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in history %}
+        <tr class="{% if not w.active %}dim{% endif %}">
+          <td><b>#{{ w.id }}</b></td>
+          <td class="reason-cell" title="{{ w.reason }}">{{ w.reason[:100] }}{% if w.reason|length > 100 %}…{% endif %}</td>
+          <td>{{ w.reason_code or w.reason_type or '—' }}</td>
+          <td>{{ w.mod_name }}</td>
+          <td>{{ w.when }}</td>
+          <td>{% if w.active %}<span class="pill pill-warn">активен</span>{% else %}<span class="pill">снят</span>{% endif %}</td>
+          <td class="dim">{% if not w.active %}{{ w.removed_by_name or w.removed_by }} · {{ w.removed_when }}{% if w.removed_reason %}<br>{{ w.removed_reason }}{% endif %}{% else %}—{% endif %}</td>
+          <td>
+            {% if w.active and can_manage %}
+            <button type="button" class="ghost sm btn-rm" data-wid="{{ w.id }}">Снять</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   {% endif %}
 </section>
@@ -77,6 +93,38 @@
   </form>
 </dialog>
 
+<dialog id="rmDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3 id="rmTitle">Снять варн</h3>
+      <button type="button" class="dlg-x" id="rmClose">×</button></div>
+    <label>Причина снятия <span class="dim">(необязательно)</span>
+      <textarea id="rmReason" maxlength="200" rows="2"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="rmCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="rmGo">Подтвердить</button>
+    </div>
+    <p id="rmMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<style>
+.profile-card{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+.pc-avatar img,.pc-ph{width:96px;height:96px;border-radius:50%;object-fit:cover;background:var(--glass-2)}
+.pc-meta h2{margin:0 0 6px;font:800 26px/1.15 var(--display)}
+.pc-id{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.pc-line{margin:4px 0;font-size:14px}
+.warn-badge{display:inline-flex;min-width:28px;height:28px;align-items:center;justify-content:center;padding:0 8px;border-radius:999px;font-weight:800;font-size:13px;color:#111}
+.badge-yellow{background:#f1c40f}.badge-orange{background:#e67e22;color:#fff}.badge-red{background:#e74c3c;color:#fff}
+.table-wrap{overflow:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th,.data-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.data-table th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase}
+.reason-cell{max-width:320px}
+.ghost.sm{padding:4px 8px;font-size:12px}
+@media(max-width:700px){.profile-card{flex-direction:column;align-items:center;text-align:center}.pc-id{justify-content:center}}
+</style>
+
 <script>
 (function(){
   const csrf = {{ csrf_token|tojson }};
@@ -84,6 +132,9 @@
   const rtype = {{ ('staff' if is_staff else 'member')|tojson }};
   const $ = id => document.getElementById(id);
   const dlg = $('warnDlg');
+  const rmDlg = $('rmDlg');
+  let mode = 'one', rmWid = 0;
+
   $('btnIssue')?.addEventListener('click', () => dlg.showModal());
   $('warnClose')?.addEventListener('click', () => dlg.close());
   $('warnCancel')?.addEventListener('click', () => dlg.close());
@@ -99,27 +150,31 @@
     if (!j.ok) { $('warnMsg').textContent = j.error || 'Ошибка'; return; }
     location.reload();
   });
+
+  function openRm(title, wid){
+    mode = wid ? 'one' : 'all';
+    rmWid = wid || 0;
+    $('rmTitle').textContent = title;
+    $('rmReason').value = '';
+    $('rmMsg').textContent = '';
+    rmDlg.showModal();
+  }
+  $('rmClose')?.addEventListener('click', () => rmDlg.close());
+  $('rmCancel')?.addEventListener('click', () => rmDlg.close());
   document.querySelectorAll('.btn-rm').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const reason = prompt('Причина снятия:') || '';
-      if (!confirm('Снять варн #' + btn.dataset.wid + '?')) return;
-      const r = await fetch('/api/warns/remove', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({warn_id: Number(btn.dataset.wid), user_id: uid,
-          removed_reason: reason, csrf})});
-      const j = await r.json();
-      if (!j.ok) { alert(j.error||'Ошибка'); return; }
-      location.reload();
-    });
+    btn.addEventListener('click', () => openRm('Снять варн #' + btn.dataset.wid, Number(btn.dataset.wid)));
   });
-  $('btnClearAll')?.addEventListener('click', async () => {
-    const reason = prompt('Причина снятия всех:') || '';
-    if (!confirm('Снять ВСЕ активные варны?')) return;
-    const r = await fetch('/api/warns/remove_all', {
+  $('btnClearAll')?.addEventListener('click', () => openRm('Снять ВСЕ активные варны', 0));
+  $('rmGo')?.addEventListener('click', async () => {
+    $('rmMsg').textContent = '…';
+    const body = {user_id: uid, removed_reason: $('rmReason').value.trim(), csrf};
+    let url = '/api/warns/remove_all';
+    if (mode === 'one') { url = '/api/warns/remove'; body.warn_id = rmWid; }
+    const r = await fetch(url, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({user_id: uid, removed_reason: reason, csrf})});
+      body: JSON.stringify(body)});
     const j = await r.json();
-    if (!j.ok) { alert(j.error||'Ошибка'); return; }
+    if (!j.ok) { $('rmMsg').textContent = j.error || 'Ошибка'; return; }
     location.reload();
   });
 })();

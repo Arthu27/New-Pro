@@ -445,6 +445,119 @@ def stats_active(guild_id: int) -> Dict[str, int]:
             conn.close()
 
 
+def list_users_aggregated(
+    guild_id: int,
+    *,
+    reason_type: str = 'member',
+    active_only: bool = True,
+    branch: str | None = None,
+    moderator_id: int | None = None,
+    q: str | None = None,
+    sort: str = 'count_desc',
+    limit: int = 40,
+    offset: int = 0,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Одна строка на пользователя: active_count + последний варн.
+
+    reason_type: member|staff
+    sort: count_desc|count_asc|date_desc|date_asc
+    """
+    ensure_table()
+    migrate_guild(guild_id)
+    gid = int(guild_id)
+    rtype = reason_type if reason_type in ('member', 'staff') else 'member'
+    where = ['guild_id=?']
+    params: list = [gid]
+    if active_only:
+        where.append('active=1')
+    if rtype == 'staff':
+        where.append(
+            "(reason_type='staff' OR is_staff_target=1)")
+    else:
+        where.append(
+            "(COALESCE(reason_type,'member')!='staff' "
+            "AND COALESCE(is_staff_target,0)=0)")
+    if branch:
+        where.append('branch=?')
+        params.append(str(branch))
+    if moderator_id:
+        where.append('moderator_id=?')
+        params.append(int(moderator_id))
+    q = (q or '').strip()
+    if q:
+        if q.isdigit() and len(q) >= 5:
+            where.append('user_id=?')
+            params.append(int(q))
+        else:
+            where.append(
+                '(CAST(user_id AS TEXT) LIKE ? OR reason LIKE ?)')
+            like = f'%{q}%'
+            params.extend([like, like])
+    wh = ' AND '.join(where)
+
+    if sort == 'count_asc':
+        order = 'active_count ASC, t.last_id DESC'
+    elif sort == 'date_asc':
+        order = 't.last_id ASC'
+    elif sort == 'date_desc':
+        order = 't.last_id DESC'
+    else:
+        order = 'active_count DESC, t.last_id DESC'
+
+    lim = max(1, min(200, int(limit or 40)))
+    off = max(0, int(offset or 0))
+
+    with _LOCK:
+        conn = _conn()
+        try:
+            total = int(conn.execute(
+                f'SELECT COUNT(DISTINCT user_id) AS c FROM warns WHERE {wh}',
+                params,
+            ).fetchone()['c'] or 0)
+            # последняя запись + число активных на юзера
+            sql = f'''
+                SELECT w.*,
+                  (SELECT COUNT(*) FROM warns w2
+                   WHERE w2.guild_id=w.guild_id AND w2.user_id=w.user_id
+                     AND w2.active=1) AS active_count,
+                  (SELECT MIN(created_at) FROM warns w3
+                   WHERE w3.guild_id=w.guild_id AND w3.user_id=w.user_id
+                     AND w3.active=1) AS first_warn_at
+                FROM warns w
+                INNER JOIN (
+                  SELECT user_id, MAX(id) AS last_id
+                  FROM warns WHERE {wh}
+                  GROUP BY user_id
+                ) t ON w.user_id=t.user_id AND w.id=t.last_id
+                ORDER BY {order}
+                LIMIT ? OFFSET ?
+            '''
+            rows = conn.execute(sql, params + [lim, off]).fetchall()
+            out = []
+            for r in rows:
+                d = _row_to_dict(r)
+                keys = set(r.keys()) if hasattr(r, 'keys') else set()
+                d['active_count'] = int(
+                    r['active_count'] if 'active_count' in keys else 0)
+                d['first_warn_at'] = (
+                    r['first_warn_at'] if 'first_warn_at' in keys else None)
+                d['last_id'] = d.get('id')
+                out.append(d)
+            return out, total
+        finally:
+            conn.close()
+
+
+def list_board_rows(
+    guild_id: int, *, reason_type: str = 'member', limit: int = 200,
+) -> List[Dict[str, Any]]:
+    """Активные пользователи для Discord-сводки (без пагинации UI)."""
+    rows, _ = list_users_aggregated(
+        guild_id, reason_type=reason_type, active_only=True,
+        sort='count_desc', limit=limit, offset=0)
+    return rows
+
+
 def mirror_json(guild_id: int, user_id: int) -> None:
     """Зеркало data/warnings.json для веб-панели (только active)."""
     try:

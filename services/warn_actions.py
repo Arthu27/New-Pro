@@ -159,6 +159,13 @@ async def issue_warn(
         except Exception:
             pass
 
+    try:
+        import asyncio
+        from services.warn_board import schedule_board_refresh
+        asyncio.create_task(schedule_board_refresh(guild))
+    except Exception as ex:
+        _log.debug('issue_warn board: %s', ex)
+
     payload = {
         'warn_id': warn_id,
         'total': total,
@@ -285,6 +292,13 @@ async def remove_warn(
             log_channel_hint=f'unwarn #{removed["id"]} ({src_label})')
     except Exception as ex:
         _log.debug('remove_warn dm: %s', ex)
+
+    try:
+        import asyncio
+        from services.warn_board import schedule_board_refresh
+        asyncio.create_task(schedule_board_refresh(guild))
+    except Exception as ex:
+        _log.debug('remove_warn board: %s', ex)
 
     return True, f'Снято #{removed["id"]} · осталось {total}', {
         'removed': removed, 'total': total, 'dm_ok': dm_ok, 'is_staff': is_staff,

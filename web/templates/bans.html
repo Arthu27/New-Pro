@@ -2,8 +2,14 @@
 {% block title %}Баны{% endblock %}
 {% block heading %}Баны{% endblock %}
 {% block body %}
-<p class="lead">Список забаненных Discord. Разбан — только при правах (ACL unban / UNBAN_PANEL_ROLE_IDS).</p>
-<p><a href="{{ url_for('warns') }}">← Варны</a></p>
+<p class="lead">Список забаненных. Разбан — только при правах (ACL unban / UNBAN_PANEL_ROLE_IDS).</p>
+<p><a href="{{ url_for('warns') }}">← Warn</a></p>
+
+<section class="panel rise">
+  <form class="filters" onsubmit="return false;">
+    <input type="search" id="banQ" placeholder="Ник или ID…">
+  </form>
+</section>
 
 <section class="panel rise">
   {% if error %}
@@ -13,13 +19,13 @@
   <div class="empty">Банов нет или бот офлайн</div>
   {% else %}
   <div class="table-wrap">
-    <table class="data-table">
+    <table class="data-table" id="banTable">
       <thead><tr>
         <th>Пользователь</th><th>ID</th><th>Причина</th><th></th>
       </tr></thead>
       <tbody>
       {% for b in rows %}
-        <tr>
+        <tr data-q="{{ (b.name ~ ' ' ~ b.user_id)|lower }}">
           <td>
             {% if b.avatar %}<img src="{{ b.avatar }}" alt="" style="width:28px;height:28px;border-radius:50%;vertical-align:middle"> {% endif %}
             <b>{{ b.name }}</b>
@@ -39,19 +45,58 @@
   {% endif %}
 </section>
 
+<dialog id="unbanDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3>Разбанить</h3>
+      <button type="button" class="dlg-x" id="ubClose">×</button></div>
+    <p id="ubHint"></p>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="ubCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="ubGo">Разбанить</button>
+    </div>
+    <p id="ubMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<style>
+.filters{display:flex;gap:8px;margin-bottom:4px}
+.filters input{background:var(--solid);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px;min-width:220px}
+.table-wrap{overflow:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th,.data-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
+.ghost.sm{padding:4px 8px;font-size:12px}
+</style>
+
 <script>
 (function(){
   const csrf = {{ csrf_token|tojson }};
-  document.querySelectorAll('.btn-unban').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Разбанить ' + btn.dataset.name + ' (' + btn.dataset.uid + ')?')) return;
-      const r = await fetch('/api/bans/unban', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({user_id: btn.dataset.uid, csrf})});
-      const j = await r.json();
-      if (!j.ok) { alert(j.error || 'Ошибка'); return; }
-      location.reload();
+  const $ = id => document.getElementById(id);
+  $('banQ')?.addEventListener('input', () => {
+    const q = ($('banQ').value || '').toLowerCase().trim();
+    document.querySelectorAll('#banTable tbody tr').forEach(tr => {
+      tr.style.display = !q || (tr.dataset.q || '').includes(q) ? '' : 'none';
     });
+  });
+  let uid = '', name = '';
+  const dlg = $('unbanDlg');
+  $('ubClose')?.addEventListener('click', () => dlg.close());
+  $('ubCancel')?.addEventListener('click', () => dlg.close());
+  document.querySelectorAll('.btn-unban').forEach(btn => {
+    btn.addEventListener('click', () => {
+      uid = btn.dataset.uid; name = btn.dataset.name;
+      $('ubHint').textContent = 'Разбанить ' + name + ' (' + uid + ')?';
+      $('ubMsg').textContent = '';
+      dlg.showModal();
+    });
+  });
+  $('ubGo')?.addEventListener('click', async () => {
+    $('ubMsg').textContent = '…';
+    const r = await fetch('/api/bans/unban', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: uid, csrf})});
+    const j = await r.json();
+    if (!j.ok) { $('ubMsg').textContent = j.error || 'Ошибка'; return; }
+    location.reload();
   });
 })();
 </script>

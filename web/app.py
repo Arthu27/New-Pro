@@ -69,7 +69,7 @@ PAGES_ALL = [
     ('users', '/users', 'Участники', 'fa-users'),
     ('member', '/member', 'Участник', 'fa-user'),
     ('channels', '/channels', 'Каналы', 'fa-table'),
-    ('warns', '/warns', 'Варны', 'fa-triangle-exclamation'),
+    ('warns', '/warns', 'Warn', 'fa-triangle-exclamation'),
     ('bans', '/bans', 'Баны', 'fa-ban'),
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
@@ -1159,7 +1159,7 @@ def inject_nav():
         'auth_via': session.get('auth_via') or '',
         'mod_nav_keys': {
             'today', 'logs', 'staff', 'users', 'member', 'channels',
-            'warns', 'appeals', 'proofs', 'reasons'},
+            'warns', 'bans', 'appeals', 'proofs', 'reasons'},
         'owner_nav_keys': {'bot', 'modules', 'commands', 'anticrash', 'access'},
         'viewer_limits': limits,
         'punish_actions': _viewer_punish_actions(role) if role else [],
@@ -3376,22 +3376,74 @@ def _warn_view_row(w, book, guild=None, active_counts=None):
     }
 
 
+def _staff_role_label(guild, member) -> str:
+    try:
+        from services.warn_dm import staff_role_label
+        return staff_role_label(member) or ''
+    except Exception:
+        pass
+    if member is None:
+        return ''
+    try:
+        roles = sorted(
+            (r for r in (member.roles or []) if not getattr(r, 'is_default', lambda: False)()),
+            key=lambda r: getattr(r, 'position', 0), reverse=True)
+        if roles:
+            return getattr(roles[0], 'name', '') or ''
+    except Exception:
+        pass
+    return ''
+
+
+def _warn_user_row(w, book, guild=None):
+    """Строка агрегированного списка (один юзер)."""
+    base = _warn_view_row(w, book, guild, {
+        int(w.get('user_id') or 0): int(w.get('active_count') or 0)})
+    base['active_count'] = int(w.get('active_count') or base.get('active_count') or 0)
+    base['first_warn_at'] = _fmt(w.get('first_warn_at'))
+    base['role_label'] = ''
+    if guild and str(base.get('user_id') or '').isdigit():
+        m = guild.get_member(int(base['user_id']))
+        if m is not None:
+            base['role_label'] = _staff_role_label(guild, m)
+            if not base.get('avatar'):
+                try:
+                    base['avatar'] = str(m.display_avatar.url)
+                except Exception:
+                    pass
+            base['user_name'] = (
+                getattr(m, 'display_name', None)
+                or base.get('user_name') or base['user_id'])
+    # бейдж цвета
+    ac = base['active_count']
+    if ac >= 3:
+        base['badge_class'] = 'badge-red'
+    elif ac == 2:
+        base['badge_class'] = 'badge-orange'
+    else:
+        base['badge_class'] = 'badge-yellow'
+    return base
+
+
 @app.route('/warns')
 @login_required
 @role_required('helper')
 def warns():
-    """Раздел варнов: таблица из SQLite warns + фильтры."""
+    """Warn: вкладки Участники / Стафф, агрегация по людям."""
     from services import warn_store as WS
     from services.warn_config import branch_labels, branch_grant_roles
     from services import warn_reasons as WR
     import json as _json
 
     gid = _main_guild()
+    tab = (request.args.get('tab') or 'members').strip()
+    if tab not in ('members', 'staff'):
+        tab = 'members'
     q = (request.args.get('q') or '').strip()
-    f_type = (request.args.get('type') or '').strip()
     scope = (request.args.get('scope') or 'active').strip()
     f_branch = (request.args.get('branch') or '').strip()
-    sort = (request.args.get('sort') or 'date_desc').strip()
+    f_mod = (request.args.get('mod') or '').strip()
+    sort = (request.args.get('sort') or 'count_desc').strip()
     try:
         page = max(1, int(request.args.get('page') or 1))
     except Exception:
@@ -3401,15 +3453,18 @@ def warns():
     bot = bot_instance
     guild = bot.get_guild(int(gid)) if bot and gid else None
 
+    rtype = 'staff' if tab == 'staff' else 'member'
     rows_raw, total = ([], 0)
     stats = {'active_warns': 0, 'users_member': 0, 'users_staff': 0}
     if gid:
         try:
-            rows_raw, total = WS.list_guild_warns(
+            mod_id = int(f_mod) if f_mod.isdigit() else None
+            rows_raw, total = WS.list_users_aggregated(
                 int(gid),
+                reason_type=rtype,
                 active_only=(scope != 'all'),
-                reason_type=f_type if f_type in ('member', 'staff') else None,
                 branch=f_branch or None,
+                moderator_id=mod_id,
                 q=q or None,
                 sort=sort,
                 limit=per,
@@ -3419,23 +3474,13 @@ def warns():
         except Exception as ex:
             flash(f'БД варнов: {ex}', 'err')
 
-    # счётчики active на странице
-    active_counts = {}
-    for w in rows_raw:
-        uid = int(w.get('user_id') or 0)
-        if uid and uid not in active_counts and gid:
-            try:
-                active_counts[uid] = WS.count_active(int(gid), uid)
-            except Exception:
-                active_counts[uid] = 0
-
-    rows = [_warn_view_row(w, book, guild, active_counts) for w in rows_raw]
+    rows = [_warn_user_row(w, book, guild) for w in rows_raw]
     pages = max(1, (total + per - 1) // per)
     can_manage = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('mod', 2)
     return render_template(
         'warns.html',
         rows=rows, total=total, page=page, pages=pages,
-        q=q, f_type=f_type, scope=scope, f_branch=f_branch, sort=sort,
+        tab=tab, q=q, scope=scope, f_branch=f_branch, f_mod=f_mod, sort=sort,
         stats=stats,
         branches=sorted(branch_grant_roles().keys()),
         branch_labels=branch_labels(),
@@ -3452,7 +3497,7 @@ def warns_user(uid):
     from services import warn_store as WS
     from services import warn_reasons as WR
     from services.warn_config import format_branches, branch_labels
-    from services.warn_acl import is_staff_target
+    from services.warn_acl import is_staff_target, branches_of
 
     gid = _main_guild()
     if not str(uid).isdigit() or not gid:
@@ -3473,11 +3518,47 @@ def warns_user(uid):
     active_count = WS.count_active(int(gid), int(uid))
     rtype = 'staff' if is_staff else 'member'
     can_manage = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('mod', 2)
+    avatar = ''
+    branch_txt = ''
+    role_label = ''
+    first_at = ''
+    last_at = ''
+    if history_raw:
+        actives = [h for h in history_raw if h.get('active')]
+        src = actives or history_raw
+        try:
+            stamps = [h.get('created_at') or '' for h in src if h.get('created_at')]
+            if stamps:
+                first_at = _fmt(sorted(stamps)[0])
+                last_at = _fmt(sorted(stamps, reverse=True)[0])
+        except Exception:
+            first_at = last_at = ''
+    if member is not None:
+        try:
+            avatar = str(member.display_avatar.url)
+        except Exception:
+            avatar = ''
+        role_label = _staff_role_label(guild, member)
+        try:
+            branch_txt = format_branches(branches_of(member))
+        except Exception:
+            branch_txt = ''
+    name = _best_name(
+        getattr(member, 'display_name', None), str(uid), book)
+    ac = active_count
+    badge = 'badge-red' if ac >= 3 else ('badge-orange' if ac == 2 else 'badge-yellow')
     return render_template(
         'warns_user.html',
         uid=str(uid),
-        profile={'name': _best_name(
-            getattr(member, 'display_name', None), str(uid), book)},
+        profile={
+            'name': name,
+            'avatar': avatar,
+            'branch': branch_txt,
+            'role_label': role_label,
+            'first_at': first_at,
+            'last_at': last_at,
+            'badge_class': badge,
+        },
         history=history,
         active_count=active_count,
         is_staff=is_staff,

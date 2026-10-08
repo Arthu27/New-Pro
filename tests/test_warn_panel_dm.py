@@ -166,7 +166,13 @@ check('warn_reasons' in msrc and 'warn_reason_type' in msrc,
 wsrc = open(os.path.join(ROOT, 'web/app.py'), encoding='utf-8').read()
 check('/api/warns/issue' in wsrc and '/api/bans/unban' in wsrc,
       'web API warn/unban')
-check('list_guild_warns' in wsrc, 'web uses warn_store list')
+check('list_users_aggregated' in wsrc or 'list_guild_warns' in wsrc,
+      'web uses warn_store list')
+check("'/warns'" in wsrc or 'def warns(' in wsrc, 'warns page route')
+check("'/bans'" in wsrc, 'bans page route')
+check("'bans'" in wsrc and 'mod_nav_keys' in wsrc, 'nav wiring present')
+check(os.path.isfile(os.path.join(ROOT, 'services/warn_board.py')),
+      'warn_board exists')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
