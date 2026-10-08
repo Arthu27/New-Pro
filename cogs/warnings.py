@@ -682,7 +682,11 @@ class warnings(commands.Cog):
             log.warning('on_ready warn sync: %s', e)
         try:
             from services.warn_board import update_warn_board
+            from config import Config
+            main_gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
             for guild in list(self.bot.guilds):
+                if main_gid and int(guild.id) != main_gid:
+                    continue
                 try:
                     await update_warn_board(guild, force=True)
                 except Exception as e:
