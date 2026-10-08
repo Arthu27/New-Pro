@@ -2413,19 +2413,26 @@ def auth_discord_callback():
     if not code:
         return redirect(url_for('login', error='Discord не вернул код'))
     cid, secret = _discord_client_creds()
+    redirect_uri = _discord_redirect_uri()
     st, token_data = _http_json(
         'POST',
-        'https://discord.com/api/oauth2/token',
+        f'{DISCORD_API}/oauth2/token',
         form={
             'client_id': cid,
             'client_secret': secret,
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': _discord_redirect_uri(),
+            'redirect_uri': redirect_uri,
         },
     )
     if st != 200 or not token_data.get('access_token'):
         msg = token_data.get('error_description') or token_data.get('error') or f'HTTP {st}'
+        try:
+            from logger import get_logger
+            get_logger('panel_oauth').warning(
+                'oauth token fail st=%s msg=%s redirect=%s', st, msg, redirect_uri)
+        except Exception:
+            pass
         return redirect(url_for('login', error=f'Токен Discord: {msg}'))
     st, user = _http_json(
         'GET',
