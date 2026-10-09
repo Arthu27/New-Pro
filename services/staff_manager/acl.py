@@ -44,6 +44,8 @@ class TargetContext:
     is_staff_admin: bool = False
     entry_roles: Set[int] = field(default_factory=set)
     ladder_role_ids: Set[int] = field(default_factory=set)
+    responsible_roles: Set[int] = field(default_factory=set)
+    extra_staff_roles: Set[int] = field(default_factory=set)
     on_vacation: bool = False
 
 
@@ -151,12 +153,41 @@ def resolve_target(user_id: int, role_ids) -> TargetContext:
     staff_admin = int(cfg.get('staff_admin_role_id') or 0)
     vacation = int(cfg.get('vacation_role_id') or 0)
     placements, entry_rids, ladder_rids = _placements_from_roles(rids)
+    idx = get_index() or {}
+    resp_of = idx.get('responsible_of') or {}
+    responsible = {rid for rid in rids if rid in resp_of}
+    # если есть только «отвечаю за» — ветка из него
+    for rid in responsible:
+        b = resp_of.get(rid)
+        if b:
+            placements = placements or [{
+                'branch': b, 'key': '', 'rank': 0, 'name': 'responsible',
+                'protected': False, 'label': b, 'is_entry': False,
+            }]
+    extra = set()
+    for rid in (cfg.get('hidden_admin_role_ids') or []):
+        if int(rid or 0) in rids:
+            extra.add(int(rid))
+    for rid in (cfg.get('staff_power_role_ids') or []):
+        if int(rid or 0) in rids:
+            extra.add(int(rid))
+    if staff_admin and staff_admin in rids:
+        extra.add(staff_admin)
     ladder_pl = [p for p in placements if p.get('key')]
     branches = {p['branch'] for p in placements if p.get('branch')}
+    # ветки из responsible
+    for rid in responsible:
+        b = resp_of.get(rid)
+        if b:
+            branches.add(b)
     max_rank = max((p['rank'] for p in ladder_pl), default=0)
     primary = max(ladder_pl, key=lambda p: p['rank']) if ladder_pl else None
     if primary is None and placements:
         primary = placements[0]
+    if primary is None and responsible:
+        rid0 = next(iter(responsible))
+        b = resp_of.get(rid0)
+        primary = {'branch': b, 'key': ''}
     return TargetContext(
         user_id=int(user_id),
         role_ids=rids,
@@ -170,6 +201,8 @@ def resolve_target(user_id: int, role_ids) -> TargetContext:
         is_staff_admin=staff_admin in rids,
         entry_roles=entry_rids,
         ladder_role_ids=ladder_rids,
+        responsible_roles=responsible,
+        extra_staff_roles=extra,
         on_vacation=bool(vacation and vacation in rids),
     )
 
@@ -197,11 +230,15 @@ def get_staff_info(member_or_id, role_ids=None) -> dict:
         role_label = (item or {}).get('name') or t.primary_key
     return {
         'user_id': t.user_id,
-        'is_staff': bool(t.ladder_role_ids or t.entry_roles),
+        'is_staff': bool(
+            t.ladder_role_ids or t.entry_roles or t.responsible_roles
+            or t.extra_staff_roles),
         'primary_branch': t.primary_branch,
         'primary_key': t.primary_key,
         'branch_label': branch_label,
-        'role_label': role_label,
+        'role_label': role_label or (
+            'ответственный' if t.responsible_roles else (
+                'скрытый стафф' if t.extra_staff_roles else 'участник')),
         'role_emoji': role_emoji(t.primary_key or ''),
         'branch_emoji': branch_emoji(t.primary_branch or ''),
         'branches': sorted(t.branches),
@@ -210,6 +247,8 @@ def get_staff_info(member_or_id, role_ids=None) -> dict:
         'on_vacation': t.on_vacation,
         'ladder_role_ids': sorted(t.ladder_role_ids),
         'entry_role_ids': sorted(t.entry_roles),
+        'responsible_role_ids': sorted(t.responsible_roles),
+        'extra_staff_role_ids': sorted(t.extra_staff_roles),
         'placements': t.placements,
     }
 
@@ -329,7 +368,10 @@ def can_manage_staff(
         else:
             return False, 'Укажите ветку для назначения'
 
-    has_staff = bool(target.ladder_role_ids or target.entry_roles or target.placements)
+    has_staff = bool(
+        target.ladder_role_ids or target.entry_roles or target.placements
+        or target.responsible_roles or target.extra_staff_roles
+    )
     if action in ('promote', 'demote', 'remove', 'probation', 'vacation'):
         if not has_staff and action != 'assign':
             if action == 'remove':
@@ -459,7 +501,10 @@ def get_allowed_actions(actor: ActorContext, target: TargetContext) -> Dict[str,
                     role_keys_ok.add(key)
                     break
 
-    has_staff = bool(target.ladder_role_ids or target.entry_roles or target.placements)
+    has_staff = bool(
+        target.ladder_role_ids or target.entry_roles or target.placements
+        or target.responsible_roles or target.extra_staff_roles
+    )
     if not has_staff:
         for b in candidate_branches:
             for key in role_keys_ok:
