@@ -153,6 +153,30 @@ def ensure_tables() -> None:
             CREATE INDEX IF NOT EXISTS idx_sv_end
                 ON staff_vacations(status, end_at);
 
+            CREATE TABLE IF NOT EXISTS staff_probations (
+                id TEXT PRIMARY KEY,
+                guild_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                branch TEXT,
+                role_key TEXT,
+                days INTEGER NOT NULL,
+                start_at TEXT NOT NULL,
+                end_at TEXT NOT NULL,
+                reason TEXT,
+                status TEXT NOT NULL,
+                started_by INTEGER,
+                started_by_role_key TEXT,
+                ended_by INTEGER,
+                ended_at TEXT,
+                end_kind TEXT,
+                source TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_sp_user_status
+                ON staff_probations(guild_id, user_id, status);
+            CREATE INDEX IF NOT EXISTS idx_sp_end
+                ON staff_probations(status, end_at);
+
             CREATE TABLE IF NOT EXISTS staff_requests (
                 id TEXT PRIMARY KEY,
                 guild_id INTEGER NOT NULL,
@@ -901,3 +925,116 @@ def list_actions_filtered(
             return [dict(r) for r in rows]
         finally:
             conn.close()
+
+
+# ── probations ────────────────────────────────────────────────────────
+
+def create_probation(
+    *,
+    guild_id: int,
+    user_id: int,
+    branch: str = '',
+    role_key: str = '',
+    days: int = 0,
+    start_at: str,
+    end_at: str,
+    reason: str = '',
+    status: str = 'active',
+    started_by: int = 0,
+    started_by_role_key: str = '',
+    source: str = 'manual',
+) -> dict:
+    ensure_tables()
+    pid = new_action_id()
+    with _LOCK:
+        conn = _conn()
+        try:
+            conn.execute(
+                'INSERT INTO staff_probations '
+                '(id, guild_id, user_id, branch, role_key, days, start_at, end_at, '
+                'reason, status, started_by, started_by_role_key, ended_by, '
+                'ended_at, end_kind, source, created_at) '
+                'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                (
+                    pid, int(guild_id), int(user_id), branch or '', role_key or '',
+                    int(days), start_at, end_at, reason or '', status,
+                    int(started_by or 0) or None, started_by_role_key or '',
+                    None, None, None, source or 'manual', _now(),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    return get_probation(pid) or {'id': pid}
+
+
+def get_probation(probation_id: str) -> Optional[dict]:
+    ensure_tables()
+    with _LOCK:
+        conn = _conn()
+        try:
+            row = conn.execute(
+                'SELECT * FROM staff_probations WHERE id=?', (probation_id,)
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def active_probation_for(guild_id: int, user_id: int) -> Optional[dict]:
+    ensure_tables()
+    with _LOCK:
+        conn = _conn()
+        try:
+            row = conn.execute(
+                'SELECT * FROM staff_probations '
+                'WHERE guild_id=? AND user_id=? AND status=? '
+                'ORDER BY start_at DESC LIMIT 1',
+                (int(guild_id), int(user_id), 'active'),
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def due_probations(now_iso: str | None = None) -> List[dict]:
+    ensure_tables()
+    now = now_iso or _now()
+    with _LOCK:
+        conn = _conn()
+        try:
+            rows = conn.execute(
+                'SELECT * FROM staff_probations '
+                'WHERE status=? AND end_at<=?',
+                ('active', now),
+            ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def update_probation(probation_id: str, **fields) -> Optional[dict]:
+    ensure_tables()
+    allowed = {
+        'status', 'end_at', 'ended_by', 'ended_at', 'end_kind', 'reason', 'days',
+    }
+    sets, vals = [], []
+    for k, v in fields.items():
+        if k not in allowed:
+            continue
+        sets.append(f'{k}=?')
+        vals.append(v)
+    if not sets:
+        return get_probation(probation_id)
+    vals.append(probation_id)
+    with _LOCK:
+        conn = _conn()
+        try:
+            conn.execute(
+                f'UPDATE staff_probations SET {", ".join(sets)} WHERE id=?',
+                vals,
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    return get_probation(probation_id)

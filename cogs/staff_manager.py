@@ -273,6 +273,16 @@ def build_panel_view(
     ]
     if info.get('on_vacation'):
         status_lines.append(PANEL_VACATION)
+    if info.get('on_probation'):
+        pr = info.get('probation') or {}
+        try:
+            from services.staff_manager.probation import probation_display
+            disp = probation_display(pr)
+            status_lines.append(
+                f'-# 🕘 испытательный · осталось **{disp.get("days_left", "?")}** дн. '
+                f'(до `{str(disp.get("end_at") or "")[:10]}`)')
+        except Exception:
+            status_lines.append('-# 🕘 испытательный срок')
     if t_ctx.multi_branch:
         status_lines.append(PANEL_MULTI)
     if len(info.get('ladder_role_ids') or []) > 1 or len(info.get('entry_role_ids') or []) > 1:
@@ -445,6 +455,68 @@ def build_panel_view(
         rowk = discord.ui.ActionRow()
         rowk.add_item(ksel)
         view.add_item(_black(discord.ui.TextDisplay(PANEL_REMOVAL_KIND), rowk))
+
+    # испытательный — выбор срока (или снять, если уже идёт)
+    if sel_act == 'probation':
+        if info.get('on_probation'):
+            view.add_item(_black(discord.ui.TextDisplay(
+                '**Испытательный уже идёт**\n'
+                '-# «Подтвердить» + причина = снять досрочно')))
+        else:
+            presets = cfg.get('probation_presets') or []
+            sel_days = str(payload.get('probation_days') or '')
+            popts = []
+            for p in presets[:25]:
+                d = int(p.get('days') or 0)
+                if d <= 0:
+                    continue
+                em = p.get('emoji') or None
+                if em in ('✦', '✧', '•', None):
+                    em = None
+                popts.append(discord.SelectOption(
+                    label=str(p.get('label') or f'{d} дн.')[:100],
+                    value=str(d),
+                    emoji=em,
+                    description=f'{d} дн.'[:100],
+                    default=(str(d) == sel_days),
+                ))
+            if popts:
+                psel = discord.ui.Select(
+                    placeholder='Срок испытательного',
+                    options=popts,
+                    custom_id=f'sm:prob:days:{token}',
+                    min_values=1, max_values=1,
+                )
+
+                async def _on_pd(interaction: discord.Interaction, select=psel):
+                    st2 = load_menu_state(token)
+                    if not st2 or not interaction.guild:
+                        await interaction.response.send_message(
+                            'устарело', ephemeral=True)
+                        return
+                    payload2 = st2.get('payload') or {}
+                    payload2['action'] = 'probation'
+                    payload2['probation_days'] = int(select.values[0])
+                    save_menu_state(
+                        token, st2['guild_id'], st2['actor_id'], st2['target_id'],
+                        'probation_days', payload2)
+                    actor2 = interaction.guild.get_member(interaction.user.id)
+                    target2 = interaction.guild.get_member(int(st2['target_id']))
+                    if actor2 and target2:
+                        view2 = build_panel_view(
+                            cog, token=token, actor=actor2, target=target2)
+                        await interaction.response.edit_message(view=view2)
+                    else:
+                        await interaction.response.defer()
+
+                psel.callback = _on_pd  # type: ignore
+                rowp = discord.ui.ActionRow()
+                rowp.add_item(psel)
+                view.add_item(_black(
+                    discord.ui.TextDisplay('**Срок испытательного**'), rowp))
+                if sel_days:
+                    view.add_item(_black(discord.ui.TextDisplay(
+                        f'-# выбран срок: **{sel_days}** дн.')))
 
     async def _ok(interaction: discord.Interaction):
         await interaction.response.send_modal(ReasonModal(cog, token))
@@ -702,6 +774,13 @@ class StaffManager(commands.Cog):
             await process_due_vacations(self.bot)
         except Exception as ex:
             _log.error('vacation loop: %s\n%s', ex, traceback.format_exc())
+        try:
+            from services.staff_manager.probation import process_due_probations
+            n = process_due_probations()
+            if n:
+                _log.info('probation auto-ended n=%s', n)
+        except Exception as ex:
+            _log.error('probation loop: %s\n%s', ex, traceback.format_exc())
 
     @_vacation_loop.before_loop
     async def _before_vacation(self):
@@ -1276,6 +1355,45 @@ class StaffManager(commands.Cog):
                 'Выберите тип снятия в меню', ephemeral=True)
             return
 
+        if action == 'probation':
+            from services.staff_manager.probation import (
+                start_probation, end_probation,
+            )
+            # если уже на испытательном — кнопка подтверждения снимает досрочно
+            if t_ctx and get_staff_info(target).get('on_probation'):
+                ok, why = end_probation(
+                    guild_id=interaction.guild.id,
+                    actor_id=actor.id,
+                    user_id=target.id,
+                    end_kind='early',
+                    reason=reason or 'досрочно',
+                )
+                await interaction.followup.send(
+                    ('✅ Испытательный снят' if ok else f'❌ {why}'),
+                    ephemeral=True)
+                return
+            days = int(payload.get('probation_days') or 0)
+            if days <= 0:
+                await interaction.followup.send(
+                    'Выберите срок испытательного в меню', ephemeral=True)
+                return
+            ok, status, row = start_probation(
+                guild_id=interaction.guild.id,
+                actor_member=actor,
+                target_member=target,
+                days=days,
+                reason=reason,
+                source='manual',
+            )
+            if not ok:
+                await interaction.followup.send(f'❌ {status}', ephemeral=True)
+                return
+            await interaction.followup.send(
+                f'🕘 Испытательный · {target.mention} · **{days}** дн. '
+                f'(до `{str((row or {}).get("end_at") or "")[:10]}`)',
+                ephemeral=True)
+            return
+
         if action == 'vacation':
             from services.staff_manager.vacation import start_vacation
             days = int(payload.get('vac_days') or 0)
@@ -1371,6 +1489,25 @@ class StaffManager(commands.Cog):
                 info.get('primary_branch') or branch or '',
                 reason, promote=(action == 'promote'),
                 actor_label=actor_label)
+        if action in ('promote', 'assign') and role_key:
+            try:
+                from services.staff_manager.probation import (
+                    maybe_start_after_promote,
+                )
+                fresh = interaction.guild.get_member(target.id) or target
+                prow = maybe_start_after_promote(
+                    guild_id=interaction.guild.id,
+                    actor_member=actor,
+                    target_member=fresh,
+                    new_role_key=role_key,
+                    branch=info.get('primary_branch') or branch or '',
+                )
+                if prow:
+                    _log.info(
+                        'probation auto start target=%s days=%s',
+                        target.id, prow.get('days'))
+            except Exception as ex:
+                _log.warning('probation auto: %s', ex)
         if action == 'remove':
             await self._dm_removed(target, actor, removal_kind, reason, info)
         if result.alert_multi:

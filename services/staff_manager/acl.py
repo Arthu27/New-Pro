@@ -226,15 +226,23 @@ def get_staff_info(member_or_id, role_ids=None, *, guild_id: int | None = None) 
     cfg = get_config() or {}
 
     vac_info = None
+    prob_info = None
     on_vac = bool(t.on_vacation)
+    on_prob = False
     if guild_id:
         try:
-            from services.staff_manager.store import active_vacation_for
+            from services.staff_manager.store import (
+                active_vacation_for, active_probation_for,
+            )
             vac_info = active_vacation_for(int(guild_id), uid)
             if vac_info:
                 on_vac = True
+            prob_info = active_probation_for(int(guild_id), uid)
+            if prob_info:
+                on_prob = True
         except Exception:
             vac_info = None
+            prob_info = None
 
     primary_branch = t.primary_branch
     primary_key = t.primary_key
@@ -274,6 +282,8 @@ def get_staff_info(member_or_id, role_ids=None, *, guild_id: int | None = None) 
         'max_rank': max_rank,
         'on_vacation': on_vac,
         'vacation': vac_info,
+        'on_probation': on_prob,
+        'probation': prob_info,
         'ladder_role_ids': sorted(t.ladder_role_ids),
         'entry_role_ids': sorted(t.entry_roles),
         'responsible_role_ids': sorted(t.responsible_roles),

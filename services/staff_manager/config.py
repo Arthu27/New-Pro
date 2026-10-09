@@ -199,6 +199,24 @@ def parse_config(raw: dict) -> dict:
             {'key': 'custom', 'label': 'Своя дата', 'days': 0, 'emoji': '✍️'},
         ]
 
+    probation_presets = []
+    for p in (raw.get('PROBATION_PRESETS') or raw.get('probation_presets') or []):
+        if not isinstance(p, dict):
+            continue
+        probation_presets.append({
+            'key': str(p.get('key') or ''),
+            'label': str(p.get('label') or p.get('key') or ''),
+            'days': _as_int(p.get('days'), 0),
+            'emoji': str(p.get('emoji') or '🕘'),
+        })
+    if not probation_presets:
+        probation_presets = [
+            {'key': '3d', 'label': '3 дня', 'days': 3, 'emoji': '🕘'},
+            {'key': '7d', 'label': '7 дней', 'days': 7, 'emoji': '🗓'},
+            {'key': '14d', 'label': '14 дней', 'days': 14, 'emoji': '📆'},
+            {'key': '30d', 'label': '30 дней', 'days': 30, 'emoji': '🗒'},
+        ]
+
     require_consent = []
     for x in (raw.get('REQUIRE_CONSENT_FOR') or raw.get('require_consent_for')
               or ['transfer']):
@@ -249,6 +267,7 @@ def parse_config(raw: dict) -> dict:
             1, _as_int(raw.get('UNDO_WINDOW_MINUTES')
                        or raw.get('undo_window_minutes'), 10)),
         'vacation_presets': vacation_presets,
+        'probation_presets': probation_presets,
         'vacation_max_days_self': max(
             1, _as_int(raw.get('VACATION_MAX_DAYS_SELF')
                        or raw.get('vacation_max_days_self'), 30)),

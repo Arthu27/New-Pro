@@ -28,6 +28,12 @@
   "VACATION_COOLDOWN_DAYS": 14,
   "VACATION_AUTO_APPROVE_UP_TO_DAYS": 7,
   "VACATION_REMINDER_HOURS": 24,
+  "PROBATION_PRESETS": [
+    {"key": "3d", "label": "3 дня", "days": 3, "emoji": "🕘"},
+    {"key": "7d", "label": "7 дней", "days": 7, "emoji": "🗓"},
+    {"key": "14d", "label": "14 дней", "days": 14, "emoji": "📆"},
+    {"key": "30d", "label": "30 дней", "days": 30, "emoji": "🗒"}
+  ],
   "NICKNAME_ICON_ENABLED": false,
   "ROLE_EMOJIS": {
     "master": "⚔️",
@@ -49,7 +55,7 @@
       "add_roles": [],
       "remove_roles": [],
       "requires": {"min_days_in_role": 0, "max_active_warns": 99, "not_on_probation": false, "not_on_vacation": true},
-      "probation_days": 0,
+      "probation_days": 7,
       "announce": true,
       "dm_guide": true
     },
