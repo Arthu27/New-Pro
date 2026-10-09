@@ -1,13 +1,17 @@
 {
   "staff_admin_role_id": 1549118975110152263,
-  "owner_ids": [987430047889637426],
+  "owner_ids": [
+    987430047889637426
+  ],
   "common_staff_role_id": 1553105240398631062,
   "vacation_role_id": 0,
   "log_channel_id": 0,
   "actions_channel_id": 0,
   "CONSENT_FALLBACK_CHANNEL_ID": 0,
   "CONSENT_EXPIRE_HOURS": 48,
-  "REQUIRE_CONSENT_FOR": ["transfer"],
+  "REQUIRE_CONSENT_FOR": [
+    "transfer"
+  ],
   "SELFTEST_ROLE_ID": 1275902341291442332,
   "SELFTEST_USER_ID": 0,
   "UNDO_WINDOW_MINUTES": 10,
@@ -27,12 +31,33 @@
     "creative": ""
   },
   "ladder": [
-    {"key": "master", "name": "Master", "rank": 1},
-    {"key": "assistant", "name": "Assistent", "rank": 2},
-    {"key": "curator", "name": "Curator", "rank": 3},
-    {"key": "admin", "name": "Admin", "rank": 4, "protected": true}
+    {
+      "key": "master",
+      "name": "Master",
+      "rank": 1
+    },
+    {
+      "key": "curator",
+      "name": "Curator",
+      "rank": 2
+    },
+    {
+      "key": "assistant",
+      "name": "Assistent",
+      "rank": 3
+    },
+    {
+      "key": "admin",
+      "name": "Admin",
+      "rank": 4,
+      "protected": true
+    }
   ],
-  "responsible_can_manage": ["master", "assistant", "curator"],
+  "responsible_can_manage": [
+    "master",
+    "curator",
+    "assistant"
+  ],
   "branch_admin_can_manage": [],
   "curator_can_manage": [],
   "allow_promotion_requests": true,
@@ -44,8 +69,8 @@
       "entry_role_id": 803553848396349510,
       "roles": {
         "master": 1552637932907667466,
-        "assistant": 1552815174115664013,
         "curator": 807030012301541377,
+        "assistant": 1552815174115664013,
         "admin": 1189999426631122964
       }
     },
@@ -56,8 +81,8 @@
       "entry_role_id": 948969471916249119,
       "roles": {
         "master": 1552637932907667466,
-        "assistant": 1552815174115664013,
         "curator": 807030012301541377,
+        "assistant": 1552815174115664013,
         "admin": 1189999426631122964
       }
     },
@@ -68,8 +93,8 @@
       "entry_role_id": 852634463535759461,
       "roles": {
         "master": 1552637932907667466,
-        "assistant": 1552815174115664013,
         "curator": 807030012301541377,
+        "assistant": 1552815174115664013,
         "admin": 1189999426631122964
       }
     },
@@ -80,8 +105,8 @@
       "entry_role_id": 1551180629687664670,
       "roles": {
         "master": 1552637932907667466,
-        "assistant": 1552815174115664013,
         "curator": 807030012301541377,
+        "assistant": 1552815174115664013,
         "admin": 1189999426631122964
       }
     },
@@ -92,8 +117,8 @@
       "entry_role_id": 1553138713532563516,
       "roles": {
         "master": 1552637932907667466,
-        "assistant": 1552815174115664013,
         "curator": 807030012301541377,
+        "assistant": 1552815174115664013,
         "admin": 1189999426631122964
       }
     },
@@ -104,8 +129,8 @@
       "entry_role_id": 1553769624603201546,
       "roles": {
         "master": 1552637932907667466,
-        "assistant": 1552815174115664013,
         "curator": 807030012301541377,
+        "assistant": 1552815174115664013,
         "admin": 1189999426631122964
       }
     },
@@ -116,8 +141,8 @@
       "entry_role_id": 1553853968969638058,
       "roles": {
         "master": 1552637932907667466,
-        "assistant": 1552815174115664013,
         "curator": 807030012301541377,
+        "assistant": 1552815174115664013,
         "admin": 1189999426631122964
       }
     }

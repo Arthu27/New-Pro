@@ -23,11 +23,11 @@
   },
   "ladder": [
     {"key": "master", "name": "Master", "rank": 1, "emoji": "🟢"},
-    {"key": "assistant", "name": "Assistant", "rank": 2, "emoji": "🔵"},
-    {"key": "curator", "name": "Curator", "rank": 3, "emoji": "🟣"},
+    {"key": "curator", "name": "Curator", "rank": 2, "emoji": "🟣"},
+    {"key": "assistant", "name": "Assistent", "rank": 3, "emoji": "🔵"},
     {"key": "admin", "name": "Admin", "rank": 4, "protected": true, "emoji": "🔴"}
   ],
-  "responsible_can_manage": ["master", "assistant", "curator"],
+  "responsible_can_manage": ["master", "curator", "assistant"],
   "branch_admin_can_manage": [],
   "curator_can_manage": [],
   "allow_promotion_requests": true,

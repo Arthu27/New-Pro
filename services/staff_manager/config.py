@@ -26,8 +26,8 @@ CONFIG_PATH = os.environ.get(
 
 DEFAULT_LADDER = [
     {'key': 'master', 'name': 'Master', 'rank': 1, 'emoji': '🟢', 'protected': False},
-    {'key': 'assistant', 'name': 'Assistant', 'rank': 2, 'emoji': '🔵', 'protected': False},
-    {'key': 'curator', 'name': 'Curator', 'rank': 3, 'emoji': '🟣', 'protected': False},
+    {'key': 'curator', 'name': 'Curator', 'rank': 2, 'emoji': '🟣', 'protected': False},
+    {'key': 'assistant', 'name': 'Assistent', 'rank': 3, 'emoji': '🔵', 'protected': False},
     {'key': 'admin', 'name': 'Admin', 'rank': 4, 'emoji': '🔴', 'protected': True},
 ]
 
@@ -167,7 +167,7 @@ def parse_config(raw: dict) -> dict:
         'responsible_can_manage': [
             ('assistant' if str(x).lower() == 'assistent' else str(x).lower())
             for x in (raw.get('responsible_can_manage')
-                      or ['master', 'assistant', 'curator'])
+                      or ['master', 'curator', 'assistant'])
         ],
         'branch_admin_can_manage': [
             str(x).lower() for x in (raw.get('branch_admin_can_manage') or [])
