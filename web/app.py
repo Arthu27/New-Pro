@@ -253,6 +253,27 @@ bot_instance = None
 def set_bot_instance(bot):
     global bot_instance
     bot_instance = bot
+    # фоновый прогрев тяжёлых страниц панели (channels и т.п.)
+    try:
+        import threading
+
+        def _prewarm():
+            try:
+                gid = _main_guild()
+                if not gid:
+                    return
+                from services import panel_cache as PC
+                key = f'channels_page:{gid}'
+                if PC.get(key) is not None:
+                    return
+                payload = _build_channels_payload(gid)
+                PC.set(key, payload, ttl=120.0)
+            except Exception:
+                pass
+
+        threading.Thread(target=_prewarm, name='panel-prewarm', daemon=True).start()
+    except Exception:
+        pass
 
 
 def _secret_key():
@@ -1505,9 +1526,17 @@ def _mod_activity(gid, days):
 
 def _staff_board_for(gid, days, people):
     """Красивая сводка: меры + чат + войс, топы по ролям."""
+    cache_key = f'staff_board:{gid}:{int(days)}:{len(people or [])}'
+    try:
+        from services import panel_cache as PC
+        hit = PC.get(cache_key)
+        if hit is not None:
+            return hit
+    except Exception:
+        pass
     try:
         from services.staff_board import build_staff_board
-        return build_staff_board(
+        board = build_staff_board(
             guild_id=gid,
             days=days,
             people=people or [],
@@ -1515,7 +1544,7 @@ def _staff_board_for(gid, days, people):
             hidden_kinds=_viewer_hidden_kinds(),
         )
     except Exception:
-        return {
+        board = {
             'summary': {
                 'staff_active': 0, 'staff_total': len(people or []),
                 'actions': 0, 'messages': 0, 'voice_s': 0, 'voice': '0 мин',
@@ -1523,6 +1552,12 @@ def _staff_board_for(gid, days, people):
             },
             'rows': [], 'podium': [], 'role_tops': [], 'by_role': {},
         }
+    try:
+        from services import panel_cache as PC
+        PC.set(cache_key, board, ttl=45.0)
+    except Exception:
+        pass
+    return board
 
 
 def _is_today(ts):
@@ -2045,7 +2080,50 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
 
 
 def _list_login_people(q: str = ''):
-    """Staff с сервера для выбора на логине."""
+    """Staff с сервера для выбора на логине (members_cache, без обхода Discord)."""
+    ql = (q or '').strip()
+    gid = _main_guild()
+    cache_key = f'login_people:{gid}:{ql.lower()}'
+    if not ql:
+        try:
+            from services import panel_cache as PC
+            hit = PC.get(cache_key)
+            if hit is not None:
+                return hit
+        except Exception:
+            pass
+    # быстрый путь: SQLite members_cache
+    if gid:
+        try:
+            from services import members_cache as MC
+            from services.warn_config import role_style
+            rows = MC.list_members(
+                int(gid), limit=80, staff_only=True, q=ql)
+            people = []
+            for h in rows:
+                uid = str(h.get('user_id') or '')
+                if not uid:
+                    continue
+                rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
+                people.append({
+                    'id': uid,
+                    'name': h.get('display_name') or uid,
+                    'handle': h.get('username') or '',
+                    'avatar': h.get('avatar_url') or '',
+                    'role': 'helper' if h.get('is_staff') else '',
+                    'role_label': (rs or {}).get('label') or 'Staff',
+                })
+            if people or ql:
+                out = (people, '')
+                if not ql:
+                    try:
+                        from services import panel_cache as PC
+                        PC.set(cache_key, out, ttl=45.0)
+                    except Exception:
+                        pass
+                return out
+        except Exception:
+            pass
     return _search_guild_members(q, staff_only=True, limit=80)
 
 
@@ -2530,6 +2608,14 @@ def _staff_feed(gid: str, limit=80):
     Join/leave/смены ролей сюда НЕ кладём — они отдельно на /logs,
     иначе забивают ленту и пропадают «кто отклонил».
     """
+    cache_key = f'staff_feed:{gid}:{int(limit)}'
+    try:
+        from services import panel_cache as PC
+        hit = PC.get(cache_key)
+        if hit is not None:
+            return hit
+    except Exception:
+        pass
     book = _namebook(gid)
     book.update(_proof_name_hints(gid))
     book.update(_appeal_name_hints(gid))
@@ -2621,7 +2707,13 @@ def _staff_feed(gid: str, limit=80):
     take_audit = audit[:room]
     merged = take_appeals + take_punish + take_audit
     merged.sort(key=key, reverse=True)
-    return merged[:lim]
+    out = merged[:lim]
+    try:
+        from services import panel_cache as PC
+        PC.set(cache_key, out, ttl=30.0)
+    except Exception:
+        pass
+    return out
 
 
 def _fuzzy_match(q: str, *parts) -> bool:
@@ -2762,15 +2854,89 @@ def staff_page():
     )
 
 
-@app.route('/channels')
-@login_required
-@role_required('mod')
-def channels_page():
-    """Подробная карта каналов: права, лимиты, маршруты бота."""
-    gid = _main_guild()
+def _channel_everyone_flags(ch, everyone_id: int) -> dict:
+    """Быстрые флаги @everyone без permissions_for (дорого на больших гильдиях)."""
+    VIEW = 1 << 10
+    SEND = 1 << 11
+    CONNECT = 1 << 20
+    SPEAK = 1 << 21
+    STREAM = 1 << 9
+    MANAGE = 1 << 4
+    flags = {
+        'view': True, 'send': True, 'connect': True,
+        'speak': True, 'stream': True, 'manage': False,
+    }
+    try:
+        raw = getattr(ch, '_overwrites', None)
+        ow = raw.get(int(everyone_id)) if isinstance(raw, dict) else None
+        if ow is None:
+            return flags
+        try:
+            a, d = ow.pair()
+            allow_v = int(getattr(a, 'value', 0) or 0)
+            deny_v = int(getattr(d, 'value', 0) or 0)
+        except Exception:
+            allow_v = int(getattr(ow, 'allow', 0) or 0)
+            deny_v = int(getattr(ow, 'deny', 0) or 0)
+
+        def bit(mask, default):
+            if deny_v & mask:
+                return False
+            if allow_v & mask:
+                return True
+            return default
+
+        return {
+            'view': bit(VIEW, True),
+            'send': bit(SEND, True),
+            'connect': bit(CONNECT, True),
+            'speak': bit(SPEAK, True),
+            'stream': bit(STREAM, True),
+            'manage': bit(MANAGE, False),
+        }
+    except Exception:
+        return flags
+
+
+def _channel_overwrite_names(ch, guild, *, limit: int = 6) -> list:
+    """Имена перезаписей через _overwrites + get_role (без channel.overwrites)."""
+    overs = []
+    try:
+        raw = getattr(ch, '_overwrites', None)
+        if not isinstance(raw, dict) or not raw:
+            return overs
+        ids = list(raw.keys())
+        for tid in ids[:limit]:
+            tname = None
+            try:
+                role = guild.get_role(int(tid)) if guild else None
+                if role is not None:
+                    tname = role.name
+                else:
+                    mem = guild.get_member(int(tid)) if guild else None
+                    if mem is not None:
+                        tname = getattr(mem, 'display_name', None) or str(tid)
+            except Exception:
+                tname = None
+            overs.append({
+                'name': tname or str(tid),
+                'allow': '…',
+                'deny': '…',
+            })
+        extra = len(ids) - limit
+        if extra > 0:
+            overs.append({'name': f'+{extra}', 'allow': '—', 'deny': '—'})
+    except Exception:
+        return []
+    return overs
+
+
+def _build_channels_payload(gid):
+    """Собрать карту каналов (без render) — для страницы и фонового прогрева."""
     rows = []
     bot = bot_instance
     route_by_id = {}
+    route_labels = {}
     try:
         from services import channel_routes as CR
         for key, cid in (CR.KNOWN_CHANNELS or {}).items():
@@ -2800,12 +2966,14 @@ def channels_page():
         guild = None
     if guild is not None:
         everyone = guild.default_role
+        everyone_id = int(getattr(everyone, 'id', 0) or 0)
 
         def _order(c):
             cat = getattr(c, 'category', None)
             cp = getattr(cat, 'position', -1) if cat is not None else -1
             return (cp, getattr(c, 'position', 0), str(getattr(c, 'name', '')).lower())
 
+        # один проход без permissions_for / channel.overwrites
         for ch in sorted(guild.channels, key=_order):
             cls = type(ch).__name__
             if 'Category' in cls:
@@ -2817,46 +2985,8 @@ def channels_page():
             else:
                 group, kind, icon = 'text', 'текст', 'fa-hashtag'
             cat = getattr(getattr(ch, 'category', None), 'name', None) or 'Без категории'
-            perms = None
-            try:
-                perms = ch.permissions_for(everyone) if everyone else None
-            except Exception:
-                perms = None
-
-            def flag(name, _p=perms):
-                return bool(getattr(_p, name, False)) if _p else False
-
-            # перезаписи ролей (кратко)
-            overs = []
-            try:
-                mapping = getattr(ch, 'overwrites', None) or {}
-                for target, ow in list(mapping.items())[:12]:
-                    tname = getattr(target, 'name', None) or str(
-                        getattr(target, 'id', '?'))
-                    allow, deny = [], []
-                    try:
-                        for perm, val in ow:
-                            if val is True:
-                                allow.append(str(perm))
-                            elif val is False:
-                                deny.append(str(perm))
-                    except Exception:
-                        try:
-                            a, d = ow.pair()
-                            allow = [n for n, v in a if v]
-                            deny = [n for n, v in d if v]
-                        except Exception:
-                            continue
-                    if not allow and not deny:
-                        continue
-                    overs.append({
-                        'name': tname,
-                        'allow': ', '.join(allow[:6]) if allow else '—',
-                        'deny': ', '.join(deny[:6]) if deny else '—',
-                    })
-            except Exception:
-                overs = []
-            overs = overs[:8]
+            flags = _channel_everyone_flags(ch, everyone_id)
+            overs = _channel_overwrite_names(ch, guild, limit=6)
 
             topic = str(getattr(ch, 'topic', None) or '').strip()
             slow = int(getattr(ch, 'slowmode_delay', 0) or 0)
@@ -2869,9 +2999,9 @@ def channels_page():
                 ulimit = 0
             voice_now = 0
             try:
-                members = getattr(ch, 'members', None)
-                if members is not None:
-                    voice_now = len(list(members))
+                vs = getattr(ch, 'voice_states', None)
+                if vs is not None:
+                    voice_now = len(vs)
             except Exception:
                 voice_now = 0
             rid = str(ch.id)
@@ -2886,12 +3016,12 @@ def channels_page():
                 'group': group,
                 'icon': icon,
                 'cat': cat,
-                'view': flag('view_channel'),
-                'send': flag('send_messages'),
-                'speak': flag('speak'),
-                'connect': flag('connect'),
-                'manage': flag('manage_channels'),
-                'stream': flag('stream'),
+                'view': flags['view'],
+                'send': flags['send'],
+                'speak': flags['speak'],
+                'connect': flags['connect'],
+                'manage': flags['manage'],
+                'stream': flags['stream'],
                 'topic': topic[:220],
                 'slowmode': slow,
                 'nsfw': nsfw,
@@ -2918,7 +3048,40 @@ def channels_page():
         'closed': sum(1 for r in shown if not r['view']),
         'routes': sum(1 for r in shown if r.get('route_key')),
     }
-    return render_template('channels.html', rows=shown, groups=groups, kpi=kpi)
+    return {'rows': shown, 'groups': groups, 'kpi': kpi}
+
+
+@app.route('/channels')
+@login_required
+@role_required('mod')
+def channels_page():
+    """Подробная карта каналов: права, лимиты, маршруты бота."""
+    gid = _main_guild()
+    cache_key = f'channels_page:{gid}'
+    try:
+        from services import panel_cache as PC
+        hit = PC.get(cache_key)
+        if isinstance(hit, dict) and hit.get('groups') is not None:
+            return render_template(
+                'channels.html',
+                rows=hit.get('rows') or [],
+                groups=hit.get('groups') or [],
+                kpi=hit.get('kpi') or {},
+            )
+    except Exception:
+        pass
+    payload = _build_channels_payload(gid)
+    try:
+        from services import panel_cache as PC
+        PC.set(cache_key, payload, ttl=120.0)
+    except Exception:
+        pass
+    return render_template(
+        'channels.html',
+        rows=payload.get('rows') or [],
+        groups=payload.get('groups') or [],
+        kpi=payload.get('kpi') or {},
+    )
 
 
 @app.get('/api/login/accounts')
@@ -3127,56 +3290,84 @@ def _users_directory(q: str = '', *, limit: int = 300):
     role_names = {}
     panel_roles = {}
 
+    # быстрый путь: members_cache (без обхода всех guild.members)
     try:
-        bot = bot_instance
-        if bot and gid:
-            guild = bot.get_guild(int(gid))
-            if guild is not None:
-                try:
-                    from config import Config
-                    owner_ids = {int(x) for x in Config.all_owner_ids()}
-                except Exception:
-                    owner_ids = set()
-                for m in guild.members:
-                    if getattr(m, 'bot', False):
-                        continue
-                    uid = str(m.id)
-                    display = (
-                        getattr(m, 'display_name', None)
-                        or getattr(m, 'global_name', None)
-                        or getattr(m, 'name', None)
-                        or uid
-                    )
-                    handle = getattr(m, 'name', '') or ''
-                    parts = [
-                        display, handle,
-                        getattr(m, 'global_name', None) or '',
-                        getattr(m, 'nick', None) or '',
-                        uid,
-                    ]
-                    names[uid] = display
-                    handles[uid] = handle
-                    avatars[uid] = _member_avatar_url(m)
-                    names[uid + '::__q'] = ' '.join(p for p in parts if p).lower()
-                    try:
-                        roles = [
-                            r.name for r in getattr(m, 'roles', []) or []
-                            if getattr(r, 'name', None) and r.name != '@everyone'
-                        ]
-                        role_names[uid] = roles[:8]
-                    except Exception:
-                        role_names[uid] = []
-                    try:
-                        rids = [r.id for r in getattr(m, 'roles', []) or []]
-                        prole = resolve_discord_panel_role(m.id, rids)
-                        if not prole and int(m.id) in owner_ids:
-                            prole = 'owner'
-                        if prole:
-                            panel_roles[uid] = prole
-                    except Exception:
-                        pass
+        if gid:
+            from services import members_cache as MC
+            from services.warn_config import role_style
+            cached = MC.list_members(
+                int(gid), limit=max(int(limit), 300), q=ql)
+            for h in cached:
+                uid = str(h.get('user_id') or '')
+                if not uid:
+                    continue
+                display = h.get('display_name') or uid
+                handle = h.get('username') or ''
+                names[uid] = display
+                handles[uid] = handle
+                avatars[uid] = h.get('avatar_url') or ''
+                names[uid + '::__q'] = f'{display} {handle} {uid}'.lower()
+                rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
+                if rs:
+                    role_names[uid] = [rs.get('label') or '']
+                    panel_roles[uid] = 'helper' if h.get('is_staff') else ''
+                    if rs.get('label'):
+                        panel_roles[uid] = panel_roles[uid] or 'helper'
     except Exception:
         pass
+
+    # fallback: живой Discord-кэш только если SQLite пуст
+    if len(names) < 5:
+        try:
+            bot = bot_instance
+            if bot and gid:
+                guild = bot.get_guild(int(gid))
+                if guild is not None:
+                    try:
+                        from config import Config
+                        owner_ids = {int(x) for x in Config.all_owner_ids()}
+                    except Exception:
+                        owner_ids = set()
+                    for m in guild.members:
+                        if getattr(m, 'bot', False):
+                            continue
+                        uid = str(m.id)
+                        display = (
+                            getattr(m, 'display_name', None)
+                            or getattr(m, 'global_name', None)
+                            or getattr(m, 'name', None)
+                            or uid
+                        )
+                        handle = getattr(m, 'name', '') or ''
+                        parts = [
+                            display, handle,
+                            getattr(m, 'global_name', None) or '',
+                            getattr(m, 'nick', None) or '',
+                            uid,
+                        ]
+                        names[uid] = display
+                        handles[uid] = handle
+                        avatars[uid] = _member_avatar_url(m)
+                        names[uid + '::__q'] = ' '.join(p for p in parts if p).lower()
+                        try:
+                            roles = [
+                                r.name for r in getattr(m, 'roles', []) or []
+                                if getattr(r, 'name', None) and r.name != '@everyone'
+                            ]
+                            role_names[uid] = roles[:8]
+                        except Exception:
+                            role_names[uid] = []
+                        try:
+                            rids = [r.id for r in getattr(m, 'roles', []) or []]
+                            prole = resolve_discord_panel_role(m.id, rids)
+                            if not prole and int(m.id) in owner_ids:
+                                prole = 'owner'
+                            if prole:
+                                panel_roles[uid] = prole
+                        except Exception:
+                            pass
+        except Exception:
+            pass
 
     prefer = DATA / f'member_names_{gid}.json' if gid else None
     paths = [prefer] if prefer and prefer.exists() else []
@@ -3270,7 +3461,7 @@ def _users_directory(q: str = '', *, limit: int = 300):
     if not ql:
         try:
             from services import panel_cache as PC
-            PC.set(cache_key, result, ttl=45.0)
+            PC.set(cache_key, result, ttl=60.0)
         except Exception:
             pass
     return result

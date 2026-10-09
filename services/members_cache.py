@@ -225,6 +225,70 @@ def get_member(guild_id: int, user_id: int) -> Optional[Dict[str, Any]]:
             conn.close()
 
 
+def list_staff(guild_id: int, *, limit: int = 80) -> List[Dict[str, Any]]:
+    """Живой стафф из кэша — для логина/staff-страниц без обхода guild.members."""
+    ensure_table()
+    lim = max(1, min(200, int(limit or 80)))
+    with _LOCK:
+        conn = _conn()
+        try:
+            rows = conn.execute(
+                '''SELECT * FROM members_cache
+                   WHERE guild_id=? AND is_staff=1 AND COALESCE(in_guild,1)=1
+                   ORDER BY display_name COLLATE NOCASE
+                   LIMIT ?''',
+                (int(guild_id), lim),
+            ).fetchall()
+            return [_row(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def list_members(
+    guild_id: int,
+    *,
+    limit: int = 300,
+    staff_only: bool | None = None,
+    q: str = '',
+) -> List[Dict[str, Any]]:
+    """Список участников из SQLite-кэша (быстрый путь панели)."""
+    ensure_table()
+    lim = max(1, min(500, int(limit or 300)))
+    where = ['guild_id=?', 'COALESCE(in_guild,1)=1']
+    params: list = [int(guild_id)]
+    if staff_only is True:
+        where.append('is_staff=1')
+    elif staff_only is False:
+        where.append('is_staff=0')
+    ql = (q or '').strip()
+    if ql:
+        if ql.isdigit() and len(ql) >= 3:
+            where.append(
+                '(CAST(user_id AS TEXT) LIKE ? OR username LIKE ? '
+                'OR display_name LIKE ?)')
+            like = f'%{ql}%'
+            params.extend([like, like, like])
+        else:
+            where.append(
+                '(LOWER(username) LIKE ? OR LOWER(display_name) LIKE ? '
+                'OR CAST(user_id AS TEXT) LIKE ?)')
+            like = f'%{ql.lower()}%'
+            params.extend([like, like, f'%{ql}%'])
+    wh = ' AND '.join(where)
+    with _LOCK:
+        conn = _conn()
+        try:
+            rows = conn.execute(
+                f'''SELECT * FROM members_cache WHERE {wh}
+                    ORDER BY is_staff DESC, display_name COLLATE NOCASE
+                    LIMIT ?''',
+                params + [lim],
+            ).fetchall()
+            return [_row(r) for r in rows]
+        finally:
+            conn.close()
+
+
 def search(
     guild_id: int,
     q: str,
