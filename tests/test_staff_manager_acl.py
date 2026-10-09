@@ -451,11 +451,17 @@ class StaffAclTests(unittest.TestCase):
     def test_26_static_no_bypass_add_roles(self):
         """В cog роли меняются только через apply_staff_change (кроме selftest)."""
         src = open('cogs/staff_manager.py', encoding='utf-8').read()
-        # add_roles outside selftest / rollback comments
-        lines = [ln for ln in src.splitlines()
-                 if 'add_roles' in ln and 'selftest' not in ln.lower()
-                 and 'staff_selftest' not in ln]
-        # should be empty — apply is in actions.py
+        # запрещены прямые member.add_roles / .add_roles( — не чтение bundle.add_roles
+        lines = [
+            ln for ln in src.splitlines()
+            if (
+                'member.add_roles' in ln
+                or '.add_roles(' in ln
+                or 'await ' in ln and 'add_roles' in ln
+            )
+            and 'selftest' not in ln.lower()
+            and 'staff_selftest' not in ln
+        ]
         self.assertEqual(lines, [])
         RESULTS.append(('26 no bypass add_roles in cog', '0',
                         str(len(lines)), 'OK' if not lines else 'FAIL'))

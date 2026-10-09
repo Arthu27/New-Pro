@@ -132,8 +132,7 @@ async def start_vacation(
     from services.staff_manager.actions import apply_staff_change
 
     cfg = get_config() or {}
-    if not int(cfg.get('vacation_role_id') or 0):
-        return False, 'vacation_role_id не задан (ROLE_VACATION_ID)', None
+    # vacation_role_id опционален: статус в БД; роль — визуальный маркер
 
     for_self = int(actor_member.id) == int(target_member.id)
     actor = resolve_actor(

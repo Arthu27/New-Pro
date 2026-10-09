@@ -71,12 +71,16 @@ def _all_responsible_role_ids() -> Set[int]:
     return set((idx.get('responsible_of') or {}).keys())
 
 
-def _extra_strip_role_ids(cfg: dict) -> Set[int]:
-    """Скрытые админки + доп. стафф-права + Staff Admin — снимать при remove.
+def _never_strip_ids(cfg: dict) -> Set[int]:
+    return {int(x) for x in (cfg.get('never_strip_role_ids') or []) if int(x or 0)}
 
-    never_strip_role_ids (👑 🌺 и т.п.) никогда не попадают в список.
+
+def _hidden_grant_role_ids(cfg: dict) -> Set[int]:
+    """Скрытые админки + power (💫🦋 + 🌂☁️) — выдавать при назначении стаффа.
+
+    👑/🌺 в never_strip — бот их не выдаёт и не снимает.
     """
-    never = {int(x) for x in (cfg.get('never_strip_role_ids') or []) if int(x or 0)}
+    never = _never_strip_ids(cfg)
     out: Set[int] = set()
     for rid in (cfg.get('hidden_admin_role_ids') or []):
         if int(rid or 0):
@@ -84,6 +88,16 @@ def _extra_strip_role_ids(cfg: dict) -> Set[int]:
     for rid in (cfg.get('staff_power_role_ids') or []):
         if int(rid or 0):
             out.add(int(rid))
+    return out - never
+
+
+def _extra_strip_role_ids(cfg: dict) -> Set[int]:
+    """Скрытые админки + доп. стафф-права + Staff Admin — снимать при remove.
+
+    never_strip_role_ids (👑 🌺 и т.п.) никогда не попадают в список.
+    """
+    never = _never_strip_ids(cfg)
+    out = set(_hidden_grant_role_ids(cfg))
     sa = int(cfg.get('staff_admin_role_id') or 0)
     if sa:
         out.add(sa)
@@ -258,6 +272,10 @@ async def apply_staff_change(
         )
         add_ids.extend(b_add)
         remove_ids.extend(b_rem)
+        # скрытые админки + power (💫🦋🌂☁️)
+        for rid in _hidden_grant_role_ids(cfg):
+            if rid not in current:
+                add_ids.append(rid)
 
     elif action in ('remove', 'self_leave'):
         branch = target.primary_branch or branch
@@ -336,6 +354,9 @@ async def apply_staff_change(
         )
         add_ids.extend(b_add)
         remove_ids.extend(b_rem)
+        for rid in _hidden_grant_role_ids(cfg):
+            if rid not in current:
+                add_ids.append(rid)
         branch = new_branch
 
     elif action == 'sync_bundle':
@@ -364,6 +385,9 @@ async def apply_staff_change(
         common = int(cfg.get('common_staff_role_id') or 0)
         if common and common not in current:
             add_ids.append(common)
+        for rid in _hidden_grant_role_ids(cfg):
+            if rid not in current:
+                add_ids.append(rid)
         if not add_ids:
             record_action(
                 guild_id=guild.id, actor_id=actor.user_id,
@@ -378,16 +402,7 @@ async def apply_staff_change(
     elif action in ('probation', 'vacation', 'vacation_end', 'history', 'request'):
         if action == 'vacation':
             vac = int(cfg.get('vacation_role_id') or 0)
-            if not vac:
-                return _fail(
-                    guild_id=guild.id, actor_id=actor.user_id,
-                    target_id=target.user_id, action=action, branch=branch,
-                    old_key=old_key, new_key=new_key, reason=reason,
-                    source=source, aid=aid,
-                    msg='vacation_role_id не задан в конфиге',
-                    actor_role_key=actor_rk, actor_branch=actor_br,
-                )
-            # снять ВСЕ стафф-роли, выдать роль отпуска
+            # снять ВСЕ стафф-роли (роль отпуска опциональна — статус в БД)
             for rid in _all_ladder_role_ids():
                 if rid in current:
                     remove_ids.append(rid)
@@ -403,13 +418,21 @@ async def apply_staff_change(
             for rid in _extra_strip_role_ids(cfg):
                 if rid in current:
                     remove_ids.append(rid)
-            # common Staff оставляем? ТЗ: снять ВСЕ стафф-роли.
-            # common_staff тоже стафф-маркер — снимаем, отпуск заменяет.
+            # common Staff — стафф-маркер, снимаем
             common = int(cfg.get('common_staff_role_id') or 0)
             if common and common in current:
                 remove_ids.append(common)
-            if vac not in current:
+            if vac and vac not in current:
                 add_ids.append(vac)
+            if not remove_ids and not add_ids:
+                return _fail(
+                    guild_id=guild.id, actor_id=actor.user_id,
+                    target_id=target.user_id, action=action, branch=branch,
+                    old_key=old_key, new_key=new_key, reason=reason,
+                    source=source, aid=aid,
+                    msg='Нечего снимать для отпуска',
+                    actor_role_key=actor_rk, actor_branch=actor_br,
+                )
         elif action == 'vacation_end':
             # снять роль отпуска; восстановление ladder — отдельный assign/promote
             vac = int(cfg.get('vacation_role_id') or 0)

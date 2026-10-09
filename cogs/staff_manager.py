@@ -365,10 +365,9 @@ def build_panel_view(
         for r in roles_sorted[:25]:
             key = r['key']
             em = _opt_emoji('role', key, r.get('emoji'))
-            # иконка + название обязательно (Assistant/Admin одинаковый эмодзи)
-            label = f'{_emoji_for_role_key(key)} {r.get("name") or key}'
+            # label = только имя; кастомный emoji — в поле emoji (иначе виден <:id:>)
             ropts.append(discord.SelectOption(
-                label=label[:100],
+                label=str(r.get('name') or key)[:100],
                 value=key,
                 emoji=em,
                 description=(ROLE_DESC.get(key) or '')[:100] or None,

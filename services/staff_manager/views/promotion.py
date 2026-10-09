@@ -76,9 +76,8 @@ def build_promotion_view(
         opts = []
         for r in roles_sorted[:25]:
             key = r['key']
-            label = f'{role_em(key, branch)} {r.get("name") or key}'
             opts.append(discord.SelectOption(
-                label=label[:100],
+                label=str(r.get('name') or key)[:100],
                 value=key,
                 emoji=opt_emoji('role', key, r.get('emoji')),
                 description=(ROLE_DESC.get(key) or '')[:100] or None,
