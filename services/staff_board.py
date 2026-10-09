@@ -127,11 +127,31 @@ def org_branches_of(role_ids) -> list[str]:
 
 
 def person_org_branches(person: dict) -> list[str]:
-    """Ветки человека: сначала по role_ids, иначе осторожный fallback по tag."""
+    """Ветки человека: role_ids → branch из кэша → осторожный fallback по tag."""
     rids = person.get('role_ids') if isinstance(person, dict) else None
     branches = org_branches_of(rids or [])
     if branches:
         return branches
+    # members_cache / staff_info уже знает орг-ветку (helper/moderators/…)
+    raw_br = ''
+    if isinstance(person, dict):
+        raw_br = str(person.get('branch') or person.get('org_branch') or '').strip().lower()
+    if raw_br:
+        # staff_manager keys: moderators → moderator; leadership/admins
+        alias = {
+            'moderators': 'moderator',
+            'mod': 'moderator',
+            'helpers': 'helper',
+            'admins': 'leadership',
+            'admin': 'leadership',
+            'senior': 'leadership',
+            'старшие': 'leadership',
+        }
+        key = alias.get(raw_br, raw_br)
+        if key in BRANCH_KEYS:
+            return [key]
+        if key in _TAG_TO_BRANCH:
+            return [_TAG_TO_BRANCH[key]]
     role = ''
     tag = ''
     if isinstance(person, dict):

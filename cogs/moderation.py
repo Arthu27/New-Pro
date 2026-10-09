@@ -497,7 +497,7 @@ class Moderation (commands .Cog ):
         # original_response (пустое) — на экране селект оставался «залипшим»,
         # второй клик Discord не слал. Панель и сброс — одно сообщение.
         await _ack (interaction ,thinking =False )
-        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v19',
+        log.info('modpanel open uid=%s gid=%s target=%s build=multi-fix-v20',
                  getattr(interaction.user, 'id', None),
                  getattr(interaction.guild, 'id', None),
                  getattr(target, 'id', None))
@@ -599,7 +599,7 @@ class Moderation (commands .Cog ):
             view._root_edit = _edit_panel
         else:
             view._root_edit = interaction.edit_original_response
-        log.info('modpanel ready msg=%s build=multi-fix-v19',
+        log.info('modpanel ready msg=%s build=multi-fix-v20',
                  getattr(panel_msg, 'id', None))
 
     def _parse_target_id (self ,target :str ):
@@ -3037,17 +3037,8 @@ class MuteKindSelect(discord.ui.Select):
         action = self.values[0]
         # MuteKindView.panel → основная ModPanelView (не сама kind-view)
         panel = self.panel or getattr(self.view, 'panel', None)
-        lag = _interaction_lag_sec(interaction)
-        if lag > 2.2:
-            try:
-                if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        content=('Бот был занят и не успел ответить Discord. '
-                                 'Выбери вид мута ещё раз.'),
-                        ephemeral=True)
-            except Exception as _ex:
-                log.debug('MuteKindSelect busy-nack: %s', _ex)
-            return
+        # Не defer/nack: ACK = send_modal в _offer_mod_form.
+        # defer перед модалкой ломает форму; nack по lag → «не ответило».
         await _offer_mod_form(
             interaction, self.cog, action, self.target_id, panel=panel)
 
@@ -3238,7 +3229,8 @@ async def _push_panel_view(panel, interaction=None):
     msg = getattr(panel, '_panel_message', None)
     kw = {'view': panel}  # строго только view — иначе селекты мрут
     errors = []
-    _PUSH_TO = 2.0
+    # при EVENT-LOOP lag 1–3с короткий timeout давал «не ответило»
+    _PUSH_TO = 5.0
 
     async def _ok(new_msg, *, known_target=False):
         """known_target=True: edit уже ушёл в известное panel-сообщение."""
@@ -3747,17 +3739,8 @@ class ModActionSelect(discord.ui.Select):
         lag = _interaction_lag_sec(interaction)
         if lag > 1.0:
             log.warning('modpanel action: lag=%.2fs до колбэка (цикл занят)', lag)
-        if lag > 2.2:
-            try:
-                if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        content=('Бот был занят и не успел ответить Discord. '
-                                 'Выбери действие ещё раз.'),
-                        ephemeral=True)
-                return
-            except Exception as _ex:
-                log.debug('modpanel action busy-nack: %s', _ex)
-                return
+        # Не nack'аем по lag: send_modal / _launch_action сами ACK.
+        # Раньше порог 2.2с + занятый цикл → «Приложение не ответило».
         action = self.values[0]
         if action == '_none':
             try:
@@ -4066,17 +4049,7 @@ class ModTargetSelect(discord.ui.UserSelect):
         prefill = getattr(view, 'selected_uid', None) if view is not None else None
         if pending and prefill:
             # Действие уже ждали — модалка / вид мута сразу.
-            # Окно почти сгорело → не открываем форму (Discord откажет).
-            if _interaction_lag_sec(interaction) > 2.75:
-                try:
-                    if not interaction.response.is_done():
-                        await interaction.response.send_message(
-                            content=('Бот был занят и не успел ответить Discord. '
-                                     'Выбери действие ещё раз.'),
-                            ephemeral=True)
-                except Exception as _ex:
-                    log.debug('ModTargetSelect busy-nack: %s', _ex)
-                return
+            # ACK уже мог быть выше; _launch_action сам дожмёт ответ.
             await _launch_action(self.cog, interaction, pending, prefill, panel=view)
             return
         if view is None:

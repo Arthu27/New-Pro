@@ -1552,9 +1552,55 @@ def _mod_activity(gid, days):
     return sorted(stats.values(), key=lambda x: (-x['total'], str(x['name']).lower()))
 
 
-def _staff_board_for(gid, days, people):
+def _resolve_activity_span():
+    """День / неделя / месяц для Staff и журнала."""
+    raw = (request.args.get('span') or 'week').strip().lower()
+    if raw == 'day':
+        return 'day', 1
+    if raw == 'month':
+        return 'month', 30
+    return 'week', 7
+
+
+def _people_by_branch(people):
+    """Карточки команды по орг-веткам (Helper / Moderator / …)."""
+    try:
+        from services.staff_board import (
+            BRANCH_GROUPS, person_org_branches, ROLE_TITLE)
+    except Exception:
+        return []
+    buckets = {k: [] for k, _, __ in BRANCH_GROUPS}
+    titles = {k: t for k, t, __ in BRANCH_GROUPS}
+    for p in people or []:
+        try:
+            keys = person_org_branches(p) or ['leadership']
+        except Exception:
+            keys = ['leadership']
+        for key in keys:
+            if key not in buckets:
+                buckets[key] = []
+                titles.setdefault(key, ROLE_TITLE.get(key, key))
+            buckets[key].append(p)
+    out = []
+    for key, title, _ in BRANCH_GROUPS:
+        rows = buckets.get(key) or []
+        if not rows:
+            continue
+        rows = sorted(
+            rows,
+            key=lambda x: (
+                staff_board_rank(x.get('role') or '', x.get('role_label') or ''),
+                str(x.get('name') or '').lower(),
+            ),
+        )
+        out.append({'key': key, 'title': title, 'people': rows})
+    return out
+
+
+def _staff_board_for(gid, days, people, *, span: str | None = None):
     """Красивая сводка: меры + чат + войс, топы по ролям."""
-    cache_key = f'staff_board:{gid}:{int(days)}:{len(people or [])}'
+    span_key = (span or '').strip().lower() or str(int(days or 7))
+    cache_key = f'staff_board:{gid}:{span_key}:{len(people or [])}'
     try:
         from services import panel_cache as PC
         hit = PC.get(cache_key)
@@ -1570,6 +1616,7 @@ def _staff_board_for(gid, days, people):
             people=people or [],
             mod_rows=_mod_activity(gid, days),
             hidden_kinds=_viewer_hidden_kinds(),
+            span=span,
         )
     except Exception:
         board = {
@@ -1579,6 +1626,7 @@ def _staff_board_for(gid, days, people):
                 'days': days,
             },
             'rows': [], 'podium': [], 'role_tops': [], 'by_role': {},
+            'branches': [], 'by_branch': {},
         }
     try:
         from services import panel_cache as PC
@@ -2120,26 +2168,59 @@ def _list_login_people(q: str = ''):
                 return hit
         except Exception:
             pass
-    # быстрый путь: SQLite members_cache
+    # быстрый путь: SQLite members_cache (с branch — иначе все падают в Helper)
     if gid:
         try:
             from services import members_cache as MC
             from services.warn_config import role_style
             rows = MC.list_members(
                 int(gid), limit=80, staff_only=True, q=ql)
+            _BR_ROLE = {
+                'helper': 'helper', 'helpers': 'helper',
+                'moderator': 'mod', 'moderators': 'mod',
+                'event': 'event', 'support': 'support',
+                'closemod': 'closemod', 'creative': 'creative',
+                'broadcaster': 'broadcaster',
+                'leadership': 'admin', 'admins': 'admin',
+            }
             people = []
             for h in rows:
                 uid = str(h.get('user_id') or '')
                 if not uid:
                     continue
                 rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
+                br = str(h.get('branch') or '').strip().lower()
+                role = _BR_ROLE.get(br) or ''
+                label = (rs or {}).get('label') or ''
+                # лейбл ранга точнее ветки (Admin/Curator/…)
+                lab_l = label.lower()
+                if 'owner' in lab_l:
+                    role = 'owner'
+                elif 'staff admin' in lab_l:
+                    role = 'staff-admin'
+                elif 'staff assistent' in lab_l or 'staff assistant' in lab_l:
+                    role = 'staff-assistent'
+                elif 'assistent' in lab_l or 'assistant' in lab_l:
+                    role = 'assistent'
+                elif 'curator' in lab_l or 'куратор' in lab_l:
+                    role = 'curator'
+                elif 'master' in lab_l or 'мастер' in lab_l:
+                    role = 'master'
+                elif 'admin' in lab_l:
+                    role = 'admin'
+                elif 'moderat' in lab_l:
+                    role = 'mod'
+                elif not role and h.get('is_staff'):
+                    role = 'helper'
                 people.append({
                     'id': uid,
                     'name': h.get('display_name') or uid,
                     'handle': h.get('username') or '',
                     'avatar': h.get('avatar_url') or '',
-                    'role': 'helper' if h.get('is_staff') else '',
-                    'role_label': (rs or {}).get('label') or 'Staff',
+                    'role': role or ('helper' if h.get('is_staff') else ''),
+                    'role_label': label or 'Staff',
+                    'role_tag': role or '',
+                    'branch': br or None,
                 })
             if people or ql:
                 out = (people, '')
@@ -2830,8 +2911,7 @@ def today():
 @role_required('helper')
 def logs():
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
+    span, days = _resolve_activity_span()
     rows = _filter_cases_for_viewer(_collect_cases(gid))[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
@@ -2851,14 +2931,16 @@ def logs():
         e['user_name'] = _best_name(e.get('user_name'), e.get('user_id'), book)
         e['user_id'] = str(e.get('user_id') or '')
     people, _err = _list_login_people()
+    branch_filter = (request.args.get('branch') or '').strip() or None
     return render_template(
         'logs.html', rows=rows, feed=feed, joins=joins,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(hidden),
         activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
+        staff_board=_staff_board_for(gid, days, people, span=span),
         span=span,
         role_filter=(request.args.get('role') or '').strip() or None,
+        branch_filter=branch_filter,
     )
 
 
@@ -2867,17 +2949,19 @@ def logs():
 @role_required('helper')
 def staff_page():
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
+    span, days = _resolve_activity_span()
     feed = _staff_feed(gid, 100)
     people, err = _list_login_people()
     role_filter = (request.args.get('role') or '').strip() or None
+    branch_filter = (request.args.get('branch') or '').strip() or None
     return render_template(
         'staff.html', feed=feed, people=people, error=err,
         activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
+        staff_board=_staff_board_for(gid, days, people, span=span),
         span=span,
         role_filter=role_filter,
+        branch_filter=branch_filter,
+        people_by_branch=_people_by_branch(people),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
 

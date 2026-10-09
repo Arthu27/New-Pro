@@ -37,8 +37,11 @@
     <div class="mp-row"><span class="mp-key">Предупреждений</span><span class="mp-val accent">{{ profile.warns }}</span></div>
     <div class="mp-row"><span class="mp-key">Всего мер</span><span class="mp-val">{{ profile.total }}</span></div>
     {% if profile.is_staff %}
-    <p class="dim" style="margin:10px 0 0">Staff — как в /modpanel: без бана/мута с профиля. Доступны только снятия; варн стаффу — через ветку.</p>
-    {% endif %}
+    <p class="dim" style="margin:10px 0 0">Это staff — наказания с профиля не выдаём (как в /modpanel: только ветка). История варнов:</p>
+    <div class="mp-actions">
+      <a class="mp-chip" href="{{ url_for('warns_user', uid=profile.id) }}">Варны staff</a>
+    </div>
+    {% else %}
     {% set acts = profile_actions if profile_actions is defined else punish_actions %}
     {% if acts %}
     <div class="mp-actions">
@@ -49,6 +52,7 @@
         {% endfor %}
       </div>
     </div>
+    {% endif %}
     {% endif %}
   </div>
 
