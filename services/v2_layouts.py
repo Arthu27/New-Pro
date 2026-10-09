@@ -515,10 +515,34 @@ def build_appeal_card_items(*, title: str, body: str = '', footer: str = '',
 
 def build_report_card_items(*, title: str, body: str = '', footer: str = '',
                             buttons=None, accent: int = None):
-    """Карточка вызова модератора (/report) V2 — тот же чёрный блок,
-    что у карточек апелляций (единый стиль панелей Hakumo)."""
-    return build_appeal_card_items(title=title, body=body, footer=footer,
-                                   buttons=buttons, accent=accent)
+    """Карточка /report V2 — чёрный блок webhook-style, без эмодзи в UI.
+
+    Заголовок → разделитель → тело секциями → футер → кнопки.
+    """
+    if not V2_AVAILABLE:
+        return None
+    children = []
+    head = f'# {title}' if title else '# Вызов модератора'
+    children.append(_ui.TextDisplay(head[:500]))
+    try:
+        children.append(_ui.Separator(spacing=SeparatorSpacing.large))
+    except Exception:
+        children.append(_ui.Separator())
+    if body:
+        children.append(_ui.TextDisplay(str(body)[:3500]))
+    if footer:
+        try:
+            children.append(_ui.Separator())
+        except Exception:
+            pass
+        children.append(_ui.TextDisplay(f'-# {footer}'[:500]))
+    if buttons:
+        row = _ui.ActionRow()
+        for btn in buttons:
+            row.add_item(btn)
+        children.append(row)
+    return [black_container(
+        *children, accent=accent if accent is not None else _BLACK)]
 
 
 def build_notice_items(*, title: str, body: str = '', footer: str = '',
