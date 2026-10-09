@@ -507,7 +507,7 @@ async def apply_staff_change(
 
         try:
             from services import members_cache as MC
-            MC.upsert_member(fresh)
+            MC.upsert_member(guild.id, fresh)
         except Exception as ex:
             _log.error('members_cache upsert: %s\n%s', ex, traceback.format_exc())
 
