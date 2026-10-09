@@ -73,6 +73,30 @@ def _normalize_ladder(raw) -> List[dict]:
     return out
 
 
+def _normalize_bundle(raw) -> dict:
+    if not isinstance(raw, dict):
+        return {
+            'add_roles': [], 'remove_roles': [], 'requires': {},
+            'probation_days': 0, 'announce': True, 'dm_guide': True,
+        }
+    requires = raw.get('requires') if isinstance(raw.get('requires'), dict) else {}
+    return {
+        'add_roles': [_as_int(x) for x in (raw.get('add_roles') or []) if _as_int(x)],
+        'remove_roles': [
+            _as_int(x) for x in (raw.get('remove_roles') or []) if _as_int(x)],
+        'requires': {
+            'min_days_in_role': _as_int(requires.get('min_days_in_role'), 0),
+            'max_active_warns': _as_int(
+                requires.get('max_active_warns'), 99),
+            'not_on_probation': bool(requires.get('not_on_probation', False)),
+            'not_on_vacation': bool(requires.get('not_on_vacation', True)),
+        },
+        'probation_days': _as_int(raw.get('probation_days'), 0),
+        'announce': bool(raw.get('announce', True)),
+        'dm_guide': bool(raw.get('dm_guide', True)),
+    }
+
+
 def _normalize_branches(raw, ladder_keys: List[str]) -> Dict[str, dict]:
     if not isinstance(raw, dict):
         return {}
@@ -87,12 +111,22 @@ def _normalize_branches(raw, ladder_keys: List[str]) -> Dict[str, dict]:
             if rid is None and lk == 'assistant':
                 rid = roles_in.get('assistent')
             roles[lk] = _as_int(rid)
+        role_emojis_b = {}
+        for k, v in (b.get('role_emojis') or b.get('ROLE_EMOJIS') or {}).items():
+            role_emojis_b[str(k).lower()] = str(v or '')
+        role_bundles_b = {}
+        for k, v in (b.get('role_bundles') or b.get('ROLE_BUNDLES') or {}).items():
+            kk = 'assistant' if str(k).lower() == 'assistent' else str(k).lower()
+            role_bundles_b[kk] = _normalize_bundle(v if isinstance(v, dict) else {})
         out[str(bkey)] = {
             'key': str(bkey),
             'label': str(b.get('label') or bkey),
             'color': _as_int(b.get('color'), 0x5865F2),
             'responsible_role_id': _as_int(b.get('responsible_role_id')),
             'entry_role_id': _as_int(b.get('entry_role_id')),
+            'decisions_channel_id': _as_int(b.get('decisions_channel_id')),
+            'role_emojis': role_emojis_b,
+            'role_bundles': role_bundles_b,
             'roles': roles,
         }
     return out
@@ -129,10 +163,41 @@ def parse_config(raw: dict) -> dict:
 
     role_emojis = {}
     for k, v in (raw.get('ROLE_EMOJIS') or raw.get('role_emojis') or {}).items():
-        role_emojis[str(k).lower()] = str(v or '')
+        kk = 'assistant' if str(k).lower() == 'assistent' else str(k).lower()
+        role_emojis[kk] = str(v or '')
     branch_emojis = {}
     for k, v in (raw.get('BRANCH_EMOJIS') or raw.get('branch_emojis') or {}).items():
         branch_emojis[str(k)] = str(v or '')
+
+    role_bundles = {}
+    for k, v in (raw.get('ROLE_BUNDLES') or raw.get('role_bundles') or {}).items():
+        kk = 'assistant' if str(k).lower() == 'assistent' else str(k).lower()
+        role_bundles[kk] = _normalize_bundle(v if isinstance(v, dict) else {})
+
+    role_descriptions = {}
+    for k, v in (raw.get('role_descriptions') or raw.get('ROLE_DESCRIPTIONS')
+                 or {}).items():
+        kk = 'assistant' if str(k).lower() == 'assistent' else str(k).lower()
+        role_descriptions[kk] = str(v or '')
+
+    vacation_presets = []
+    for p in (raw.get('VACATION_PRESETS') or raw.get('vacation_presets') or []):
+        if not isinstance(p, dict):
+            continue
+        vacation_presets.append({
+            'key': str(p.get('key') or ''),
+            'label': str(p.get('label') or p.get('key') or ''),
+            'days': _as_int(p.get('days'), 0),
+            'emoji': str(p.get('emoji') or '📅'),
+        })
+    if not vacation_presets:
+        vacation_presets = [
+            {'key': '3d', 'label': '3 дня', 'days': 3, 'emoji': '📅'},
+            {'key': '1w', 'label': 'Неделя', 'days': 7, 'emoji': '🗓'},
+            {'key': '2w', 'label': '2 недели', 'days': 14, 'emoji': '📆'},
+            {'key': '1m', 'label': 'Месяц', 'days': 30, 'emoji': '🗒'},
+            {'key': 'custom', 'label': 'Своя дата', 'days': 0, 'emoji': '✍️'},
+        ]
 
     require_consent = []
     for x in (raw.get('REQUIRE_CONSENT_FOR') or raw.get('require_consent_for')
@@ -143,7 +208,8 @@ def parse_config(raw: dict) -> dict:
         'staff_admin_role_id': _as_int(raw.get('staff_admin_role_id')),
         'owner_ids': owner_ids,
         'common_staff_role_id': _as_int(raw.get('common_staff_role_id')),
-        'vacation_role_id': _as_int(raw.get('vacation_role_id')),
+        'vacation_role_id': _as_int(raw.get('vacation_role_id')
+                                    or raw.get('ROLE_VACATION_ID')),
         'hidden_admin_role_ids': [
             _as_int(x) for x in (
                 raw.get('hidden_admin_role_ids')
@@ -171,6 +237,9 @@ def parse_config(raw: dict) -> dict:
         'consent_expire_hours': max(
             1, _as_int(raw.get('CONSENT_EXPIRE_HOURS')
                        or raw.get('consent_expire_hours'), 48)),
+        'transfer_branch_expire_hours': max(
+            1, _as_int(raw.get('TRANSFER_BRANCH_EXPIRE_HOURS')
+                       or raw.get('transfer_branch_expire_hours'), 72)),
         'require_consent_for': require_consent,
         'selftest_role_id': _as_int(
             raw.get('SELFTEST_ROLE_ID') or raw.get('selftest_role_id')),
@@ -179,8 +248,32 @@ def parse_config(raw: dict) -> dict:
         'undo_window_minutes': max(
             1, _as_int(raw.get('UNDO_WINDOW_MINUTES')
                        or raw.get('undo_window_minutes'), 10)),
+        'vacation_presets': vacation_presets,
+        'vacation_max_days_self': max(
+            1, _as_int(raw.get('VACATION_MAX_DAYS_SELF')
+                       or raw.get('vacation_max_days_self'), 30)),
+        'vacation_max_days_by_admin': max(
+            1, _as_int(raw.get('VACATION_MAX_DAYS_BY_ADMIN')
+                       or raw.get('vacation_max_days_by_admin'), 90)),
+        'vacation_max_days_per_year': max(
+            1, _as_int(raw.get('VACATION_MAX_DAYS_PER_YEAR')
+                       or raw.get('vacation_max_days_per_year'), 60)),
+        'vacation_cooldown_days': max(
+            0, _as_int(raw.get('VACATION_COOLDOWN_DAYS')
+                       or raw.get('vacation_cooldown_days'), 14)),
+        'vacation_auto_approve_up_to_days': max(
+            0, _as_int(raw.get('VACATION_AUTO_APPROVE_UP_TO_DAYS')
+                       or raw.get('vacation_auto_approve_up_to_days'), 7)),
+        'vacation_reminder_hours': max(
+            1, _as_int(raw.get('VACATION_REMINDER_HOURS')
+                       or raw.get('vacation_reminder_hours'), 24)),
+        'nickname_icon_enabled': bool(
+            raw.get('NICKNAME_ICON_ENABLED')
+            or raw.get('nickname_icon_enabled')),
         'role_emojis': role_emojis,
         'branch_emojis': branch_emojis,
+        'role_bundles': role_bundles,
+        'role_descriptions': role_descriptions,
         'ladder': ladder,
         'branches': branches,
         'responsible_can_manage': [
@@ -401,9 +494,15 @@ def entry_branch(role_id: int) -> Optional[str]:
     return (idx.get('by_entry') or {}).get(int(role_id))
 
 
-def role_emoji(key: str, cfg: dict | None = None) -> str:
+def role_emoji(key: str, cfg: dict | None = None,
+               branch: str | None = None) -> str:
     cfg = cfg or get_config() or {}
     key = 'assistant' if key == 'assistent' else (key or '')
+    if branch:
+        bem = ((cfg.get('branches') or {}).get(branch) or {}).get(
+            'role_emojis') or {}
+        if bem.get(key):
+            return bem[key]
     em = (cfg.get('role_emojis') or {}).get(key) or ''
     if em:
         return em

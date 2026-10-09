@@ -111,7 +111,7 @@ def _is_bot_owner(actor) -> bool:
 
 
 def _is_staff_target(guild, target) -> bool:
-    """Стафф = роль ветки набора или mapped helper+ (не Discord-права)."""
+    """Стафф = роль ветки набора / mapped helper+ / активный отпуск Staff Manager."""
     if target is None:
         return False
     if branches_of(target):
@@ -119,9 +119,23 @@ def _is_staff_target(guild, target) -> bool:
     try:
         from services.staff_hierarchy import best_mapped_tier, RANK
         mapped = best_mapped_tier(target)
-        return RANK.get(mapped, -1) >= RANK.get('helper', 1)
+        if RANK.get(mapped, -1) >= RANK.get('helper', 1):
+            return True
     except Exception:
-        return False
+        pass
+    # отпуск: нет ladder-ролей, но остаётся стаффом (не выдавать warn)
+    try:
+        from services.staff_manager.acl import get_staff_info as sm_info
+        from services.staff_manager.config import is_enabled
+        if is_enabled():
+            gid = getattr(guild, 'id', None) or getattr(
+                getattr(target, 'guild', None), 'id', None)
+            info = sm_info(target, guild_id=gid)
+            if info.get('is_staff') or info.get('on_vacation'):
+                return True
+    except Exception:
+        pass
+    return False
 
 
 def is_staff_target(guild, target) -> bool:

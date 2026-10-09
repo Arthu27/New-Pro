@@ -14,21 +14,75 @@
   "SELFTEST_ROLE_ID": 0,
   "SELFTEST_USER_ID": 0,
   "UNDO_WINDOW_MINUTES": 10,
+  "VACATION_PRESETS": [
+    {"key": "3d", "label": "3 дня", "days": 3, "emoji": "📅"},
+    {"key": "1w", "label": "Неделя", "days": 7, "emoji": "🗓"},
+    {"key": "2w", "label": "2 недели", "days": 14, "emoji": "📆"},
+    {"key": "1m", "label": "Месяц", "days": 30, "emoji": "🗒"},
+    {"key": "custom", "label": "Своя дата", "days": 0, "emoji": "✍️"}
+  ],
+  "VACATION_MAX_DAYS_SELF": 30,
+  "VACATION_MAX_DAYS_BY_ADMIN": 90,
+  "VACATION_MAX_DAYS_PER_YEAR": 60,
+  "VACATION_COOLDOWN_DAYS": 14,
+  "VACATION_AUTO_APPROVE_UP_TO_DAYS": 7,
+  "VACATION_REMINDER_HOURS": 24,
+  "NICKNAME_ICON_ENABLED": false,
   "ROLE_EMOJIS": {
-    "master": "🟢",
-    "assistant": "🔵",
-    "curator": "🟣",
-    "admin": "🔴"
+    "master": "⚔️",
+    "curator": "🌂",
+    "assistant": "🦋",
+    "admin": "🦋"
   },
   "BRANCH_EMOJIS": {
     "moderators": "🛡️",
     "helpers": "🤝"
   },
+  "ROLE_BUNDLES": {
+    "master": {
+      "add_roles": [],
+      "remove_roles": [],
+      "requires": {"min_days_in_role": 0, "max_active_warns": 99, "not_on_probation": false, "not_on_vacation": true},
+      "probation_days": 0,
+      "announce": true,
+      "dm_guide": true
+    },
+    "curator": {
+      "add_roles": [],
+      "remove_roles": [],
+      "requires": {"min_days_in_role": 14, "max_active_warns": 0, "not_on_probation": true, "not_on_vacation": true},
+      "probation_days": 0,
+      "announce": true,
+      "dm_guide": true
+    },
+    "assistant": {
+      "add_roles": [],
+      "remove_roles": [],
+      "requires": {"min_days_in_role": 14, "max_active_warns": 0, "not_on_probation": true, "not_on_vacation": true},
+      "probation_days": 0,
+      "announce": true,
+      "dm_guide": true
+    },
+    "admin": {
+      "add_roles": [],
+      "remove_roles": [],
+      "requires": {"min_days_in_role": 14, "max_active_warns": 0, "not_on_probation": true, "not_on_vacation": true},
+      "probation_days": 0,
+      "announce": true,
+      "dm_guide": true
+    }
+  },
+  "role_descriptions": {
+    "master": "Стартовая ступень ветки.",
+    "curator": "Куратор ветки.",
+    "assistant": "Помощник администратора.",
+    "admin": "Администратор ветки."
+  },
   "ladder": [
-    {"key": "master", "name": "Master", "rank": 1, "emoji": "🟢"},
-    {"key": "curator", "name": "Curator", "rank": 2, "emoji": "🟣"},
-    {"key": "assistant", "name": "Assistent", "rank": 3, "emoji": "🔵"},
-    {"key": "admin", "name": "Admin", "rank": 4, "protected": true, "emoji": "🔴"}
+    {"key": "master", "name": "Master", "rank": 1},
+    {"key": "curator", "name": "Curator", "rank": 2},
+    {"key": "assistant", "name": "Assistent", "rank": 3},
+    {"key": "admin", "name": "Admin", "rank": 4, "protected": true}
   ],
   "responsible_can_manage": ["master", "curator", "assistant"],
   "branch_admin_can_manage": [],
@@ -40,6 +94,9 @@
       "color": 3447003,
       "responsible_role_id": 0,
       "entry_role_id": 0,
+      "role_bundles": {
+        "admin": {"add_roles": [], "remove_roles": []}
+      },
       "roles": {
         "master": 0,
         "assistant": 0,
@@ -52,6 +109,9 @@
       "color": 5763719,
       "responsible_role_id": 0,
       "entry_role_id": 0,
+      "role_bundles": {
+        "admin": {"add_roles": [], "remove_roles": []}
+      },
       "roles": {
         "master": 0,
         "assistant": 0,

@@ -107,6 +107,23 @@ ERR_PICK_REMOVAL = 'Выберите тип снятия.'
 OK_DONE = '✅ {action} · {mention}{extra}'
 OK_CONSENT_SENT = '⏳ Запрос согласия отправлен {mention}.'
 
+# ── наборы / повышение / отпуск ───────────────────────────────────────
+PROMO_MISSING = 'Нельзя повысить:\n{items}'
+PROMO_BYPASS = 'Повысить вне правил'
+PROMO_CEREMONY_TITLE = 'Церемония'
+DEMOTE_TITLE = 'Понижение'
+VACATION_CARD_TITLE = 'Открытка: отпуск'
+VACATION_WELCOME_BACK = 'С возвращением!'
+VACATION_PENDING = 'Заявка на отпуск отправлена на одобрение.'
+VACATION_IN_BLOCK = 'В отпуске'
+ACCEPTED_BY = 'Принял: {actor}'
+DECLINED_BY = 'Отклонил: {actor}'
+BUNDLE_BLOCK = 'Набор роли'
+NEXT_STEP = 'Следующая ступень'
+HISTORY_TITLE = 'История'
+ROSTER_TITLE = 'Состав стаффа'
+ROSTER_ON_VACATION = 'В отпуске'
+
 # ── согласия / DM ─────────────────────────────────────────────────────
 CONSENT_TITLE = '## Предложение: {action}'
 CONSENT_BODY = (

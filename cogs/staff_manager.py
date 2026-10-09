@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import discord
 from discord import app_commands
@@ -40,17 +40,22 @@ from services.staff_manager.texts import (
     CONSENT_ACCEPT, CONSENT_DECLINE, REMOVE_DM_TITLE, REMOVE_DM_BODY,
     ERR_STALE, ERR_NOT_FOUND, ERR_PICK_REMOVAL, OK_DONE, OK_CONSENT_SENT,
 )
+from services.staff_manager.styles import ACTION_COLORS, MIRROR_BLACK, GOLD
+from services.staff_manager.bundles import (
+    format_actor_label, format_role_label, get_promotion_requirements,
+)
+from services.staff_manager.views.profile import build_profile_view
+from services.staff_manager.views.history import build_history_view
+from services.staff_manager.views.promotion import (
+    build_promotion_view, build_ceremony_text,
+)
+from services.staff_manager.views.vacation import build_vacation_view
+from services.staff_manager.views.transfer import build_transfer_view
+from services.staff_manager.views.removal import build_removal_view
+from services.staff_manager.views.consent import build_consent_view
+from services.staff_manager.views.common import mirror_confirm_row, mirror_container
 
-ACTION_COLORS = {
-    'promote': 0xF0CD7A,
-    'demote': 0xE67E22,
-    'remove': 0xE74C3C,
-    'assign': 0x2ECC71,
-    'transfer': 0x9B59B6,
-    'self_leave': 0xE74C3C,
-}
-
-_BLACK = 0x000000
+_BLACK = MIRROR_BLACK
 
 
 def _member_role_ids(member) -> list:
@@ -114,6 +119,106 @@ class DeclineReasonModal(discord.ui.Modal, title='Причина отказа'):
         await self.cog._consent_decline(
             interaction, self.consent_id,
             str(self.reason.value or '').strip())
+
+
+class VacationDateModal(discord.ui.Modal, title='Своя дата отпуска'):
+    date_s = discord.ui.TextInput(
+        label='Дата окончания (ДД.ММ.ГГГГ)',
+        style=discord.TextStyle.short,
+        required=True, max_length=10, placeholder='31.12.2026',
+    )
+    reason = discord.ui.TextInput(
+        label='Причина', style=discord.TextStyle.paragraph,
+        required=True, max_length=400,
+    )
+
+    def __init__(self, cog: 'StaffManager', token: str):
+        super().__init__()
+        self.cog = cog
+        self.token = token
+
+    async def on_submit(self, interaction: discord.Interaction):
+        from datetime import datetime as _dt
+        raw = str(self.date_s.value or '').strip()
+        try:
+            end = _dt.strptime(raw, '%d.%m.%Y').replace(tzinfo=timezone.utc)
+        except Exception:
+            await interaction.response.send_message(
+                'Неверный формат даты. Нужен ДД.ММ.ГГГГ', ephemeral=True)
+            return
+        now = datetime.now(timezone.utc)
+        days = max(1, int((end - now).total_seconds() // 86400) + 1)
+        st = load_menu_state(self.token) or {}
+        payload = st.get('payload') or {}
+        payload['vac_days'] = days
+        payload['action'] = 'vacation'
+        save_menu_state(
+            self.token, st.get('guild_id') or interaction.guild_id,
+            st.get('actor_id') or interaction.user.id,
+            st.get('target_id') or 0, 'vac_custom', payload)
+        await self.cog._confirm_with_reason(
+            interaction, self.token, str(self.reason.value or '').strip())
+
+
+class VacationExtendModal(discord.ui.Modal, title='Продлить отпуск'):
+    choice = discord.ui.TextInput(
+        label='На сколько? (7 / 14 / 30)',
+        style=discord.TextStyle.short,
+        required=True, max_length=3, placeholder='7',
+    )
+
+    def __init__(self, cog: 'StaffManager', token: str):
+        super().__init__()
+        self.cog = cog
+        self.token = token
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            days = int(str(self.choice.value or '0').strip())
+        except Exception:
+            days = 0
+        if days not in (7, 14, 30):
+            await interaction.response.send_message(
+                'Можно 7, 14 или 30 дней', ephemeral=True)
+            return
+        await interaction.response.defer(ephemeral=True)
+        st = load_menu_state(self.token)
+        if not st or not interaction.guild:
+            await interaction.followup.send('устарело', ephemeral=True)
+            return
+        from services.staff_manager.store import active_vacation_for, update_vacation
+        from services.staff_manager.vacation import check_vacation_limits
+        target = interaction.guild.get_member(int(st['target_id']))
+        if not target:
+            await interaction.followup.send('не найден', ephemeral=True)
+            return
+        vac = active_vacation_for(interaction.guild.id, target.id)
+        if not vac:
+            await interaction.followup.send('нет активного отпуска', ephemeral=True)
+            return
+        a_ctx = resolve_actor(interaction.user.id, _member_role_ids(interaction.user))
+        ok, missing = check_vacation_limits(
+            guild_id=interaction.guild.id, user_id=target.id, days=days,
+            for_self=int(interaction.user.id) == int(target.id),
+            is_admin=bool(a_ctx.is_owner or a_ctx.is_staff_admin),
+        )
+        if not ok:
+            await interaction.followup.send(
+                'Нельзя продлить:\n• ' + '\n• '.join(missing), ephemeral=True)
+            return
+        try:
+            end = datetime.fromisoformat(vac['end_at'])
+            if end.tzinfo is None:
+                end = end.replace(tzinfo=timezone.utc)
+            new_end = end + timedelta(days=days)
+            update_vacation(
+                vac['id'], end_at=new_end.isoformat(),
+                extensions_count=int(vac.get('extensions_count') or 0) + 1)
+            await interaction.followup.send(
+                f'✅ Продлено на {days} дн. · до `{new_end.date()}`',
+                ephemeral=True)
+        except Exception as ex:
+            await interaction.followup.send(f'❌ {ex}', ephemeral=True)
 
 
 def build_panel_view(
@@ -233,8 +338,10 @@ def build_panel_view(
         for r in roles_sorted[:25]:
             key = r['key']
             em = _opt_emoji('role', key, r.get('emoji'))
+            # иконка + название обязательно (Assistant/Admin одинаковый эмодзи)
+            label = f'{_emoji_for_role_key(key)} {r.get("name") or key}'
             ropts.append(discord.SelectOption(
-                label=str(r.get('name') or key)[:100],
+                label=label[:100],
                 value=key,
                 emoji=em,
                 description=(ROLE_DESC.get(key) or '')[:100] or None,
@@ -322,16 +429,6 @@ def build_panel_view(
         rowk.add_item(ksel)
         view.add_item(_black(discord.ui.TextDisplay(PANEL_REMOVAL_KIND), rowk))
 
-    row_btn = discord.ui.ActionRow()
-    btn_ok = discord.ui.Button(
-        label=BTN_OK, style=discord.ButtonStyle.success,
-        emoji=_opt_emoji('action', 'promote') or '✅',
-        custom_id=f'sm:ok:{token}')
-    btn_no = discord.ui.Button(
-        label=BTN_CANCEL, style=discord.ButtonStyle.danger,
-        emoji=_opt_emoji('action', 'demote') or '✖️',
-        custom_id=f'sm:no:{token}')
-
     async def _ok(interaction: discord.Interaction):
         await interaction.response.send_modal(ReasonModal(cog, token))
 
@@ -342,10 +439,13 @@ def build_panel_view(
         except Exception:
             pass
 
-    btn_ok.callback = _ok  # type: ignore
-    btn_no.callback = _no  # type: ignore
-    row_btn.add_item(btn_ok)
-    row_btn.add_item(btn_no)
+    # чёрные «зеркальные» кнопки — не классический зелёный/красный
+    row_btn = mirror_confirm_row(
+        ok_id=f'sm:ok:{token}',
+        cancel_id=f'sm:no:{token}',
+        ok_callback=_ok,
+        cancel_callback=_no,
+    )
 
     pend = pending_consent_for(actor.guild.id, target.id) if actor.guild else None
     if pend and int(pend.get('initiator_id') or 0) == actor.id:
@@ -386,8 +486,8 @@ def build_panel_view(
 class ConsentAcceptButton(discord.ui.Button):
     def __init__(self, cog: 'StaffManager', consent_id: str):
         super().__init__(
-            label=CONSENT_ACCEPT, style=discord.ButtonStyle.success,
-            emoji='✅', custom_id=f'sm:cya:{consent_id}')
+            label=CONSENT_ACCEPT, style=discord.ButtonStyle.secondary,
+            emoji='✦', custom_id=f'sm:cya:{consent_id}')
         self.cog = cog
         self.consent_id = consent_id
 
@@ -398,8 +498,8 @@ class ConsentAcceptButton(discord.ui.Button):
 class ConsentDeclineButton(discord.ui.Button):
     def __init__(self, cog: 'StaffManager', consent_id: str):
         super().__init__(
-            label=CONSENT_DECLINE, style=discord.ButtonStyle.danger,
-            emoji='✖️', custom_id=f'sm:cno:{consent_id}')
+            label=CONSENT_DECLINE, style=discord.ButtonStyle.secondary,
+            emoji='✧', custom_id=f'sm:cno:{consent_id}')
         self.cog = cog
         self.consent_id = consent_id
 
@@ -409,19 +509,42 @@ class ConsentDeclineButton(discord.ui.Button):
 
 
 class ConsentPersistentView(discord.ui.LayoutView):
-    """Persistent V2 view для DM/fallback согласия."""
+    """Persistent V2 view для DM/fallback согласия — чёрное зеркало."""
 
     def __init__(self, cog: 'StaffManager', consent_id: str, body: str,
-                 color: int = 0x9B59B6):
+                 color: int = MIRROR_BLACK):
         super().__init__(timeout=None)
-        self.add_item(discord.ui.Container(
-            discord.ui.TextDisplay(body),
-            accent_colour=discord.Colour(color),
-        ))
+        self.add_item(mirror_container(
+            discord.ui.TextDisplay(body), accent=color or MIRROR_BLACK))
         row = discord.ui.ActionRow()
         row.add_item(ConsentAcceptButton(cog, consent_id))
         row.add_item(ConsentDeclineButton(cog, consent_id))
         self.add_item(row)
+
+
+def _screen_for_action(cog, *, token, actor, target, action: str):
+    """Отдельный билдер на каждый экран — не универсальный шаблон."""
+    action = (action or '').strip().lower()
+    if action in ('promote', 'demote'):
+        return build_promotion_view(
+            cog, token=token, actor=actor, target=target, mode=action)
+    if action == 'vacation':
+        return build_vacation_view(
+            cog, token=token, actor=actor, target=target)
+    if action == 'transfer':
+        return build_transfer_view(
+            cog, token=token, actor=actor, target=target)
+    if action == 'remove' or action == 'self_leave':
+        return build_removal_view(
+            cog, token=token, actor=actor, target=target)
+    if action == 'history':
+        return build_history_view(
+            cog, token=token, actor=actor, target=target)
+    if action in ('assign',):
+        return build_panel_view(
+            cog, token=token, actor=actor, target=target)
+    return build_profile_view(
+        cog, token=token, actor=actor, target=target)
 
 
 class StaffManager(commands.Cog):
@@ -437,6 +560,8 @@ class StaffManager(commands.Cog):
     async def cog_unload(self):
         if self._expire_loop.is_running():
             self._expire_loop.cancel()
+        if getattr(self, '_vacation_loop', None) and self._vacation_loop.is_running():
+            self._vacation_loop.cancel()
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -448,6 +573,16 @@ class StaffManager(commands.Cog):
         await self._reregister_consent_views()
         if not self._expire_loop.is_running():
             self._expire_loop.start()
+        if not self._vacation_loop.is_running():
+            self._vacation_loop.start()
+            # пропущенное при старте — сразу
+            try:
+                from services.staff_manager.vacation import process_due_vacations
+                n = await process_due_vacations(self.bot)
+                if n:
+                    _log.info('vacation catch-up ended=%s', n)
+            except Exception as ex:
+                _log.error('vacation catch-up: %s', ex)
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
@@ -543,6 +678,18 @@ class StaffManager(commands.Cog):
     async def _before_expire(self):
         await self.bot.wait_until_ready()
 
+    @tasks.loop(minutes=2)
+    async def _vacation_loop(self):
+        try:
+            from services.staff_manager.vacation import process_due_vacations
+            await process_due_vacations(self.bot)
+        except Exception as ex:
+            _log.error('vacation loop: %s\n%s', ex, traceback.format_exc())
+
+    @_vacation_loop.before_loop
+    async def _before_vacation(self):
+        await self.bot.wait_until_ready()
+
     async def _notify_consent_expired(self, c: dict):
         guild = self.bot.get_guild(int(c['guild_id']))
         if not guild:
@@ -577,11 +724,30 @@ class StaffManager(commands.Cog):
         save_menu_state(
             token, interaction.guild.id, actor.id, member.id,
             'card', {'action': '', 'role': '', 'branch': ''})
-        view = build_panel_view(self, token=token, actor=actor, target=member)
+        view = build_profile_view(self, token=token, actor=actor, target=member)
         try:
             self.bot.add_view(view)
         except Exception:
             pass
+        await interaction.response.send_message(view=view, ephemeral=True)
+
+    @app_commands.command(
+        name='staff_history',
+        description='Лента истории стафф-действий')
+    async def staff_history(self, interaction: discord.Interaction):
+        if not is_enabled():
+            await interaction.response.send_message(
+                last_error() or 'нет конфига', ephemeral=True)
+            return
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message('только сервер', ephemeral=True)
+            return
+        token = new_action_id()[:16]
+        save_menu_state(
+            token, interaction.guild.id, interaction.user.id, 0,
+            'history', {'hist_period': '30'})
+        view = build_history_view(
+            self, token=token, actor=interaction.user, target=None)
         await interaction.response.send_message(view=view, ephemeral=True)
 
     @app_commands.command(
@@ -705,15 +871,25 @@ class StaffManager(commands.Cog):
         branches = list((cfg.get('branches') or {}).keys())
         b0 = branches[0] if branches else ''
         fake = resolve_target(999001, [])
-        for act in ('assign', 'promote', 'demote', 'remove', 'transfer', 'history'):
+        for act in ('assign', 'promote', 'demote', 'remove', 'transfer',
+                    'history', 'vacation'):
             ok, why = can_manage_staff(
                 a_ctx, fake, act,
-                new_role_key='master' if act != 'remove' else None,
+                new_role_key='master' if act not in ('remove', 'history', 'vacation') else None,
                 new_branch=b0 if act in ('assign', 'transfer') else None,
             )
             checks.append(
                 f'{"✅" if ok else "❌"} `{act}` → '
                 f'{"разрешено" if ok else "отказ"} · {why or "—"}'
+            )
+        # dry-run условий повышения
+        for rk in ('curator', 'assistant', 'admin'):
+            ok_r, miss = get_promotion_requirements(
+                rk, branch=b0, days_in_role=0, active_warns=1,
+                on_probation=False, on_vacation=False)
+            checks.append(
+                f'📋 условия `{rk}`: '
+                + ('OK' if ok_r else '; '.join(miss) or 'отказ')
             )
         allowed = get_allowed_actions(a_ctx, fake)
         checks.append(
@@ -769,6 +945,16 @@ class StaffManager(commands.Cog):
             else:
                 live_lines.append('ℹ️ SELFTEST_USER_ID не задан — skip consent live')
 
+            vac_rid = int(cfg.get('vacation_role_id') or 0)
+            if not vac_rid:
+                live_lines.append(
+                    'ℹ️ vacation_role_id=0 — live-отпуск пропущен '
+                    '(задайте ROLE_VACATION_ID)')
+            else:
+                live_lines.append(
+                    f'ℹ️ vacation_role_id=`{vac_rid}` — для live-отпуска '
+                    f'используйте /staff → Отпуск на SELFTEST (не ломает ladder)')
+
         body = '## `/staff_selftest` · ' + (
             'live' if mode_v == 'live' else 'dry-run') + '\n\n'
         body += '### ACL\n' + '\n'.join(checks)
@@ -799,9 +985,34 @@ class StaffManager(commands.Cog):
         if not target or not actor:
             await interaction.response.send_message('не найден', ephemeral=True)
             return
-        view = build_panel_view(
-            self, token=token, actor=actor, target=target,
-            step_hint='Шаг 1 из 3 · Действие')
+        view = _screen_for_action(
+            self, token=token, actor=actor, target=target, action=action)
+        await interaction.response.edit_message(view=view)
+
+    async def _open_action_screen(self, interaction, token, action):
+        st = load_menu_state(token)
+        if not st or not interaction.guild:
+            await interaction.response.send_message('устарело', ephemeral=True)
+            return
+        payload = st.get('payload') or {}
+        payload['action'] = action
+        save_menu_state(
+            token, st['guild_id'], st['actor_id'], st['target_id'],
+            'action', payload)
+        target = interaction.guild.get_member(int(st['target_id']))
+        actor = interaction.guild.get_member(interaction.user.id)
+        if not target or not actor:
+            await interaction.response.send_message('не найден', ephemeral=True)
+            return
+        # права перепроверяются
+        a_ctx = resolve_actor(actor.id, _member_role_ids(actor))
+        t_ctx = resolve_target(target.id, _member_role_ids(target))
+        ok, why = can_manage_staff(a_ctx, t_ctx, action)
+        if not ok and action not in ('history',):
+            await interaction.response.send_message(why, ephemeral=True)
+            return
+        view = _screen_for_action(
+            self, token=token, actor=actor, target=target, action=action)
         await interaction.response.edit_message(view=view)
 
     async def _on_role_select(self, interaction, token, role_key):
@@ -819,7 +1030,9 @@ class StaffManager(commands.Cog):
         if not target or not actor:
             await interaction.response.defer()
             return
-        view = build_panel_view(self, token=token, actor=actor, target=target)
+        action = payload.get('action') or 'promote'
+        view = _screen_for_action(
+            self, token=token, actor=actor, target=target, action=action)
         await interaction.response.edit_message(view=view)
 
     async def _on_branch_select(self, interaction, token, branch):
@@ -837,8 +1050,119 @@ class StaffManager(commands.Cog):
         if not target or not actor:
             await interaction.response.defer()
             return
-        view = build_panel_view(self, token=token, actor=actor, target=target)
+        action = payload.get('action') or 'transfer'
+        view = _screen_for_action(
+            self, token=token, actor=actor, target=target, action=action)
         await interaction.response.edit_message(view=view)
+
+    async def _set_bypass_and_reason(self, interaction, token):
+        st = load_menu_state(token)
+        if not st:
+            await interaction.response.send_message('устарело', ephemeral=True)
+            return
+        payload = st.get('payload') or {}
+        payload['bypass_rules'] = True
+        save_menu_state(
+            token, st['guild_id'], st['actor_id'], st['target_id'],
+            'bypass', payload)
+        await interaction.response.send_modal(ReasonModal(self, token))
+
+    async def _history_filter(self, interaction, token, key, value):
+        st = load_menu_state(token)
+        if not st or not interaction.guild:
+            await interaction.response.send_message('устарело', ephemeral=True)
+            return
+        payload = st.get('payload') or {}
+        payload[key] = value
+        save_menu_state(
+            token, st['guild_id'], st['actor_id'], st['target_id'],
+            'history', payload)
+        actor = interaction.guild.get_member(interaction.user.id)
+        tid = int(st.get('target_id') or 0)
+        target = interaction.guild.get_member(tid) if tid else None
+        if not actor:
+            await interaction.response.defer()
+            return
+        view = build_history_view(
+            self, token=token, actor=actor, target=target, page=0)
+        await interaction.response.edit_message(view=view)
+
+    async def _history_page(self, interaction, token, page):
+        st = load_menu_state(token)
+        if not st or not interaction.guild:
+            await interaction.response.send_message('устарело', ephemeral=True)
+            return
+        actor = interaction.guild.get_member(interaction.user.id)
+        tid = int(st.get('target_id') or 0)
+        target = interaction.guild.get_member(tid) if tid else None
+        if not actor:
+            await interaction.response.defer()
+            return
+        view = build_history_view(
+            self, token=token, actor=actor, target=target, page=page)
+        await interaction.response.edit_message(view=view)
+
+    async def _vacation_preset(self, interaction, token, preset_key):
+        st = load_menu_state(token)
+        if not st or not interaction.guild:
+            await interaction.response.send_message('устарело', ephemeral=True)
+            return
+        payload = st.get('payload') or {}
+        payload['action'] = 'vacation'
+        payload['vac_preset'] = preset_key
+        cfg = get_config() or {}
+        days = 0
+        for p in (cfg.get('vacation_presets') or []):
+            if p.get('key') == preset_key:
+                days = int(p.get('days') or 0)
+                break
+        payload['vac_days'] = days
+        if preset_key == 'custom':
+            # модалка даты — через reason modal с форматом
+            save_menu_state(
+                token, st['guild_id'], st['actor_id'], st['target_id'],
+                'vac_custom', payload)
+            await interaction.response.send_modal(
+                VacationDateModal(self, token))
+            return
+        save_menu_state(
+            token, st['guild_id'], st['actor_id'], st['target_id'],
+            'vac_preset', payload)
+        target = interaction.guild.get_member(int(st['target_id']))
+        actor = interaction.guild.get_member(interaction.user.id)
+        if not target or not actor:
+            await interaction.response.defer()
+            return
+        view = build_vacation_view(
+            self, token=token, actor=actor, target=target)
+        await interaction.response.edit_message(view=view)
+
+    async def _vacation_end_now(self, interaction, token):
+        st = load_menu_state(token)
+        if not st or not interaction.guild:
+            await interaction.response.send_message('устарело', ephemeral=True)
+            return
+        await interaction.response.defer(ephemeral=True)
+        from services.staff_manager.vacation import end_vacation
+        actor = interaction.guild.get_member(interaction.user.id)
+        target = interaction.guild.get_member(int(st['target_id']))
+        if not actor or not target:
+            await interaction.followup.send('не найден', ephemeral=True)
+            return
+        ok, why, alerts = await end_vacation(
+            guild=interaction.guild, actor_member=actor,
+            target_member=target, end_kind='early', reason='early_return')
+        msg = ('✅ С возвращением!' if ok else f'❌ {why}')
+        if alerts:
+            msg += '\n' + '\n'.join(alerts)
+        await interaction.followup.send(msg, ephemeral=True)
+
+    async def _vacation_extend_menu(self, interaction, token):
+        st = load_menu_state(token)
+        if not st:
+            await interaction.response.send_message('устарело', ephemeral=True)
+            return
+        await interaction.response.send_modal(VacationExtendModal(self, token))
 
     async def _confirm_with_reason(self, interaction, token, reason):
         if not interaction.guild:
@@ -869,17 +1193,9 @@ class StaffManager(commands.Cog):
             return
 
         if action == 'history':
-            rows = list_actions(interaction.guild.id, target.id, limit=15)
-            if not rows:
-                await interaction.followup.send('пусто', ephemeral=True)
-                return
-            lines = [
-                f'`{r.get("created_at","")[:19]}` {r.get("action")} '
-                f'{r.get("old_key") or "—"}→{r.get("new_key") or "—"} '
-                f'{"✅" if r.get("ok") else "❌"}'
-                for r in rows
-            ]
-            await interaction.followup.send('\n'.join(lines)[:1800], ephemeral=True)
+            view = build_history_view(
+                self, token=token, actor=actor, target=target)
+            await interaction.followup.send(view=view, ephemeral=True)
             return
 
         if action == 'remove' and not removal_kind:
@@ -887,12 +1203,62 @@ class StaffManager(commands.Cog):
                 'Выберите тип снятия в меню', ephemeral=True)
             return
 
+        if action == 'vacation':
+            from services.staff_manager.vacation import start_vacation
+            days = int(payload.get('vac_days') or 0)
+            if days <= 0:
+                await interaction.followup.send(
+                    'Выберите срок отпуска', ephemeral=True)
+                return
+            ok, status, vac = await start_vacation(
+                guild=interaction.guild, actor_member=actor,
+                target_member=target, days=days, reason=reason,
+                force_approve=bool(payload.get('bypass_rules')),
+            )
+            if not ok:
+                await interaction.followup.send(f'❌ {status}', ephemeral=True)
+                return
+            if status == 'pending':
+                await interaction.followup.send(
+                    f'⏳ Заявка на отпуск ({days} дн.) отправлена на одобрение.',
+                    ephemeral=True)
+                return
+            await interaction.followup.send(
+                f'🏝 Отпуск · {target.mention} · {days} дн.', ephemeral=True)
+            await self._announce_vacation_card(
+                interaction.guild, target, actor, vac, days, reason)
+            return
+
+        # условия повышения (кроме bypass Стафф админ/владелец)
+        if action == 'promote' and role_key and not payload.get('bypass_rules'):
+            t_info = get_staff_info(target)
+            ok_req, missing = get_promotion_requirements(
+                role_key,
+                branch=branch or t_info.get('primary_branch'),
+                on_vacation=bool(t_info.get('on_vacation')),
+            )
+            if missing and not (a_ctx.is_owner or a_ctx.is_staff_admin):
+                await interaction.followup.send(
+                    'Нельзя повысить:\n• ' + '\n• '.join(missing),
+                    ephemeral=True)
+                return
+            if missing and (a_ctx.is_owner or a_ctx.is_staff_admin):
+                await interaction.followup.send(
+                    '⚠ Условия не выполнены. Нужна кнопка «Повысить вне правил» '
+                    'и причина.\n• ' + '\n• '.join(missing),
+                    ephemeral=True)
+                return
+
+        if payload.get('bypass_rules'):
+            reason = f'[вне правил] {reason}'
+
         # consent gate
         if requires_consent(action):
             await self._start_consent(
                 interaction, actor, target, action, role_key, branch, reason)
             return
 
+        old_key = t_ctx.primary_key or ''
         result = await apply_staff_change(
             guild=interaction.guild,
             actor_member=actor,
@@ -915,14 +1281,23 @@ class StaffManager(commands.Cog):
         label = ACTION_LABELS.get(action, action)
         info = result.staff_info or get_staff_info(
             interaction.guild.get_member(target.id) or target)
+        actor_label = format_actor_label(
+            actor.display_name, a_ctx.primary_key,
+            branch=a_ctx.primary_branch)
         await interaction.followup.send(
             f'✅ {label} · {target.mention}'
-            + (f' · `{info.get("role_label") or role_key or "—"}`' )
+            + (f' · {format_role_label(info.get("primary_key") or role_key or "", branch=info.get("primary_branch"))}')
             + (f' · {info.get("branch_label") or ""}'),
             ephemeral=True,
         )
         await self._log_staff_action(
             interaction.guild, action, actor, target, role_key, reason, ok=True)
+        if action in ('promote', 'demote', 'assign') and role_key:
+            await self._announce_ceremony(
+                interaction.guild, target, actor, old_key, role_key,
+                info.get('primary_branch') or branch or '',
+                reason, promote=(action == 'promote'),
+                actor_label=actor_label)
         if action == 'remove':
             await self._dm_removed(target, actor, removal_kind, reason, info)
         if result.alert_multi:
@@ -1177,6 +1552,68 @@ class StaffManager(commands.Cog):
                 f'Уже: {c.get("status")}', ephemeral=True)
             return
         await interaction.response.send_message('Запрос отозван.', ephemeral=True)
+
+    async def _announce_ceremony(
+        self, guild, target, actor, old_key, new_key, branch, reason,
+        *, promote=True, actor_label='',
+    ):
+        cfg = get_config() or {}
+        ch_id = int(cfg.get('actions_channel_id') or cfg.get('log_channel_id') or 0)
+        if not ch_id:
+            return
+        ch = guild.get_channel(ch_id)
+        if not ch:
+            return
+        text = build_ceremony_text(
+            target_mention=target.mention,
+            old_key=old_key or '', new_key=new_key or '',
+            branch=branch or '',
+            actor_label=actor_label or format_actor_label(
+                actor.display_name, None),
+            reason=reason or '',
+            promote=promote,
+        )
+        text += f'\n<t:{int(datetime.now(timezone.utc).timestamp())}:F>'
+        try:
+            lv = discord.ui.LayoutView(timeout=None)
+            lv.add_item(mirror_container(
+                discord.ui.TextDisplay(text),
+                accent=GOLD if promote else ACTION_COLORS.get('demote', 0xE67E22),
+            ))
+            await ch.send(view=lv)
+        except Exception as ex:
+            _log.error('ceremony: %s\n%s', ex, traceback.format_exc())
+
+    async def _announce_vacation_card(
+        self, guild, target, actor, vac, days, reason,
+    ):
+        cfg = get_config() or {}
+        ch_id = int(cfg.get('actions_channel_id') or cfg.get('log_channel_id') or 0)
+        if not ch_id:
+            return
+        ch = guild.get_channel(ch_id)
+        if not ch:
+            return
+        info = get_staff_info(target)
+        a_ctx = resolve_actor(actor.id, _member_role_ids(actor))
+        text = (
+            f'# 🏝 Открытка: отпуск\n'
+            f'**{target.display_name}** {target.mention}\n'
+            f'{format_role_label(info.get("primary_key") or "", branch=info.get("primary_branch"))}'
+            f' · {_emoji_for_branch(info.get("primary_branch") or "")} '
+            f'{info.get("branch_label") or "—"}\n'
+            f'Срок: **{days}** дн.\n'
+            f'Поставил: {format_actor_label(actor.display_name, a_ctx.primary_key)}\n'
+            f'{reason or "—"}\n'
+            f'<t:{int(datetime.now(timezone.utc).timestamp())}:F>'
+        )
+        try:
+            lv = discord.ui.LayoutView(timeout=None)
+            lv.add_item(mirror_container(
+                discord.ui.TextDisplay(text), accent=0x1ABC9C))
+            await ch.send(view=lv)
+        except Exception as ex:
+            _log.error('vacation card: %s\n%s', ex, traceback.format_exc())
 
     async def _dm_removed(self, target, actor, kind, reason, info):
         kind_l = REMOVAL_KINDS.get(kind or '', kind or '')

@@ -99,3 +99,89 @@ def api_sm_consent_cancel(consent_id: str):
     if not claimed:
         return jsonify({'ok': False, 'error': c.get('status')}), 409
     return jsonify({'ok': True, 'consent': claimed})
+
+
+def _guild_id():
+    guild_id = request.args.get('guild_id') or session.get('guild_id') or 0
+    if not str(guild_id).isdigit() or not int(guild_id):
+        try:
+            from config import Config
+            guild_id = Config.MAIN_GUILD_ID
+        except Exception:
+            return 0
+    return int(guild_id)
+
+
+@bp.get('/api/staff-manager/history')
+def api_sm_history():
+    """Таймлайн истории (не таблица) — серверная пагинация."""
+    if not _require_login():
+        return jsonify({'ok': False, 'error': 'auth'}), 401
+    from services.staff_manager.store import list_actions_filtered, ensure_tables
+    from services.staff_manager.bundles import (
+        format_transition, format_actor_label, format_role_label,
+    )
+    from services.staff_manager.config import role_emoji, branch_emoji
+    ensure_tables()
+    guild_id = _guild_id()
+    if not guild_id:
+        return jsonify({'ok': False, 'error': 'guild_id'}), 400
+    try:
+        limit = min(50, max(1, int(request.args.get('limit') or 20)))
+        offset = max(0, int(request.args.get('offset') or 0))
+    except Exception:
+        limit, offset = 20, 0
+    target_id = request.args.get('target_id')
+    rows = list_actions_filtered(
+        guild_id,
+        target_id=int(target_id) if target_id and str(target_id).isdigit() else None,
+        action=request.args.get('action') or None,
+        branch=request.args.get('branch') or None,
+        limit=limit,
+        offset=offset,
+    )
+    items = []
+    for r in rows:
+        items.append({
+            'id': r.get('id'),
+            'action': r.get('action'),
+            'transition': format_transition(
+                r.get('old_key') or '', r.get('new_key') or '',
+                branch=r.get('branch') or ''),
+            'branch': r.get('branch'),
+            'branch_emoji': branch_emoji(r.get('branch') or ''),
+            'actor_id': r.get('actor_id'),
+            'actor_label': format_actor_label(
+                str(r.get('actor_id')), r.get('actor_role_key'),
+                branch=r.get('actor_branch')),
+            'actor_role_key': r.get('actor_role_key'),
+            'actor_role_emoji': role_emoji(
+                r.get('actor_role_key') or '',
+                branch=r.get('actor_branch')),
+            'reason': r.get('reason'),
+            'ok': bool(r.get('ok')),
+            'created_at': r.get('created_at'),
+            'target_id': r.get('target_id'),
+        })
+    return jsonify({
+        'ok': True, 'items': items, 'limit': limit, 'offset': offset,
+        'layout': 'timeline',
+    })
+
+
+@bp.get('/api/staff-manager/vacations')
+def api_sm_vacations():
+    if not _require_login():
+        return jsonify({'ok': False, 'error': 'auth'}), 401
+    from services.staff_manager.store import list_vacations, ensure_tables
+    from services.staff_manager.vacation import vacation_display
+    ensure_tables()
+    guild_id = _guild_id()
+    if not guild_id:
+        return jsonify({'ok': False, 'error': 'guild_id'}), 400
+    status = request.args.get('status') or None
+    rows = list_vacations(guild_id, status=status, limit=100)
+    return jsonify({
+        'ok': True,
+        'vacations': [vacation_display(v) for v in rows],
+    })

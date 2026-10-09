@@ -127,6 +127,53 @@ def ensure_tables() -> None:
                 PRIMARY KEY (guild_id, kind, key)
             );
 
+            CREATE TABLE IF NOT EXISTS staff_vacations (
+                id TEXT PRIMARY KEY,
+                guild_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                branch TEXT,
+                role_snapshot TEXT,
+                rank_snapshot INTEGER,
+                start_at TEXT NOT NULL,
+                end_at TEXT NOT NULL,
+                original_end_at TEXT,
+                reason TEXT,
+                status TEXT NOT NULL,
+                requested_by INTEGER,
+                approved_by INTEGER,
+                approved_by_role_key TEXT,
+                ended_by INTEGER,
+                ended_at TEXT,
+                end_kind TEXT,
+                extensions_count INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_sv_user_status
+                ON staff_vacations(guild_id, user_id, status);
+            CREATE INDEX IF NOT EXISTS idx_sv_end
+                ON staff_vacations(status, end_at);
+
+            CREATE TABLE IF NOT EXISTS staff_requests (
+                id TEXT PRIMARY KEY,
+                guild_id INTEGER NOT NULL,
+                target_id INTEGER NOT NULL,
+                requester_id INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                branch TEXT,
+                role_key TEXT,
+                reason TEXT,
+                status TEXT NOT NULL,
+                decided_by INTEGER,
+                decided_by_role_key TEXT,
+                decided_at TEXT,
+                actor_role_key TEXT,
+                actor_branch TEXT,
+                created_at TEXT NOT NULL,
+                meta TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_sreq_status
+                ON staff_requests(guild_id, status);
+
             CREATE TABLE IF NOT EXISTS staff_transfer_requests (
                 id TEXT PRIMARY KEY,
                 guild_id INTEGER NOT NULL,
@@ -157,6 +204,33 @@ def ensure_tables() -> None:
             CREATE INDEX IF NOT EXISTS idx_str_status_exp
                 ON staff_transfer_requests(status, expires_at);
             ''')
+            # безопасные миграции снимка исполнителя
+            for table, cols in (
+                ('staff_actions', (
+                    ('actor_role_key', 'TEXT'),
+                    ('actor_branch', 'TEXT'),
+                )),
+                ('staff_transfer_requests', (
+                    ('actor_role_key', 'TEXT'),
+                    ('actor_branch', 'TEXT'),
+                    ('branch_decided_by_role_key', 'TEXT'),
+                    ('target_decided_by_role_key', 'TEXT'),
+                )),
+                ('staff_consents', (
+                    ('actor_role_key', 'TEXT'),
+                    ('actor_branch', 'TEXT'),
+                )),
+            ):
+                existing = {
+                    r[1] for r in conn.execute(f'PRAGMA table_info({table})')
+                }
+                for col, typ in cols:
+                    if col not in existing:
+                        try:
+                            conn.execute(
+                                f'ALTER TABLE {table} ADD COLUMN {col} {typ}')
+                        except Exception:
+                            pass
             conn.commit()
         finally:
             conn.close()
@@ -210,6 +284,8 @@ def record_action(
     ok: bool = True,
     meta: dict | None = None,
     action_id: str | None = None,
+    actor_role_key: str = '',
+    actor_branch: str = '',
 ) -> str:
     ensure_tables()
     aid = action_id or new_action_id()
@@ -219,13 +295,15 @@ def record_action(
             conn.execute(
                 'INSERT OR REPLACE INTO staff_actions '
                 '(id, guild_id, actor_id, target_id, action, branch, old_key, '
-                'new_key, reason, source, ok, meta, created_at) '
-                'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                'new_key, reason, source, ok, meta, created_at, '
+                'actor_role_key, actor_branch) '
+                'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 (
                     aid, int(guild_id), int(actor_id), int(target_id),
                     action, branch or '', old_key or '', new_key or '',
                     reason or '', source, 1 if ok else 0,
                     json.dumps(meta or {}, ensure_ascii=False), _now(),
+                    actor_role_key or '', actor_branch or '',
                 ),
             )
             conn.commit()
@@ -573,5 +651,253 @@ def pending_consent_for(guild_id: int, target_id: int) -> Optional[dict]:
             except Exception:
                 d['meta'] = {}
             return d
+        finally:
+            conn.close()
+
+
+# ── vacations ─────────────────────────────────────────────────────────
+
+def create_vacation(
+    *,
+    guild_id: int,
+    user_id: int,
+    branch: str,
+    role_snapshot: list | dict,
+    rank_snapshot: int = 0,
+    start_at: str,
+    end_at: str,
+    reason: str = '',
+    status: str = 'active',
+    requested_by: int = 0,
+    approved_by: int = 0,
+    approved_by_role_key: str = '',
+) -> dict:
+    ensure_tables()
+    vid = new_action_id()
+    with _LOCK:
+        conn = _conn()
+        try:
+            conn.execute(
+                'INSERT INTO staff_vacations '
+                '(id, guild_id, user_id, branch, role_snapshot, rank_snapshot, '
+                'start_at, end_at, original_end_at, reason, status, '
+                'requested_by, approved_by, approved_by_role_key, '
+                'ended_by, ended_at, end_kind, extensions_count, created_at) '
+                'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                (
+                    vid, int(guild_id), int(user_id), branch or '',
+                    json.dumps(role_snapshot or [], ensure_ascii=False),
+                    int(rank_snapshot or 0), start_at, end_at, end_at,
+                    reason or '', status,
+                    int(requested_by or 0) or None,
+                    int(approved_by or 0) or None,
+                    approved_by_role_key or '',
+                    None, None, None, 0, _now(),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    return get_vacation(vid) or {'id': vid}
+
+
+def get_vacation(vacation_id: str) -> Optional[dict]:
+    ensure_tables()
+    with _LOCK:
+        conn = _conn()
+        try:
+            row = conn.execute(
+                'SELECT * FROM staff_vacations WHERE id=?', (vacation_id,)
+            ).fetchone()
+            return _vac_row(row) if row else None
+        finally:
+            conn.close()
+
+
+def _vac_row(row) -> dict:
+    d = dict(row)
+    try:
+        d['role_snapshot'] = json.loads(d.get('role_snapshot') or '[]')
+    except Exception:
+        d['role_snapshot'] = []
+    return d
+
+
+def active_vacation_for(guild_id: int, user_id: int) -> Optional[dict]:
+    ensure_tables()
+    with _LOCK:
+        conn = _conn()
+        try:
+            row = conn.execute(
+                'SELECT * FROM staff_vacations '
+                'WHERE guild_id=? AND user_id=? AND status=? '
+                'ORDER BY start_at DESC LIMIT 1',
+                (int(guild_id), int(user_id), 'active'),
+            ).fetchone()
+            return _vac_row(row) if row else None
+        finally:
+            conn.close()
+
+
+def pending_vacation_for(guild_id: int, user_id: int) -> Optional[dict]:
+    ensure_tables()
+    with _LOCK:
+        conn = _conn()
+        try:
+            row = conn.execute(
+                'SELECT * FROM staff_vacations '
+                'WHERE guild_id=? AND user_id=? AND status=? '
+                'ORDER BY created_at DESC LIMIT 1',
+                (int(guild_id), int(user_id), 'pending'),
+            ).fetchone()
+            return _vac_row(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_vacations(
+    guild_id: int,
+    *,
+    status: str | None = None,
+    limit: int = 50,
+) -> List[dict]:
+    ensure_tables()
+    with _LOCK:
+        conn = _conn()
+        try:
+            if status:
+                rows = conn.execute(
+                    'SELECT * FROM staff_vacations WHERE guild_id=? AND status=? '
+                    'ORDER BY created_at DESC LIMIT ?',
+                    (int(guild_id), status, int(limit)),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    'SELECT * FROM staff_vacations WHERE guild_id=? '
+                    'ORDER BY created_at DESC LIMIT ?',
+                    (int(guild_id), int(limit)),
+                ).fetchall()
+            return [_vac_row(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def due_vacations(now_iso: str | None = None) -> List[dict]:
+    ensure_tables()
+    now = now_iso or _now()
+    with _LOCK:
+        conn = _conn()
+        try:
+            rows = conn.execute(
+                'SELECT * FROM staff_vacations '
+                'WHERE status=? AND end_at<=?',
+                ('active', now),
+            ).fetchall()
+            return [_vac_row(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def update_vacation(vacation_id: str, **fields) -> Optional[dict]:
+    ensure_tables()
+    allowed = {
+        'status', 'end_at', 'ended_by', 'ended_at', 'end_kind',
+        'extensions_count', 'approved_by', 'approved_by_role_key',
+        'reason', 'role_snapshot',
+    }
+    sets = []
+    vals = []
+    for k, v in fields.items():
+        if k not in allowed:
+            continue
+        if k == 'role_snapshot' and not isinstance(v, str):
+            v = json.dumps(v or [], ensure_ascii=False)
+        sets.append(f'{k}=?')
+        vals.append(v)
+    if not sets:
+        return get_vacation(vacation_id)
+    vals.append(vacation_id)
+    with _LOCK:
+        conn = _conn()
+        try:
+            conn.execute(
+                f'UPDATE staff_vacations SET {", ".join(sets)} WHERE id=?',
+                vals,
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    return get_vacation(vacation_id)
+
+
+def vacation_days_used_year(guild_id: int, user_id: int,
+                            year: int | None = None) -> int:
+    """Сумма дней активных/завершённых отпусков в календарном году."""
+    ensure_tables()
+    y = year or datetime.now(timezone.utc).year
+    with _LOCK:
+        conn = _conn()
+        try:
+            rows = conn.execute(
+                'SELECT start_at, end_at, original_end_at, status '
+                'FROM staff_vacations '
+                'WHERE guild_id=? AND user_id=? AND status IN (?,?,?)',
+                (int(guild_id), int(user_id), 'active', 'ended', 'cancelled'),
+            ).fetchall()
+        finally:
+            conn.close()
+    total = 0
+    for r in rows:
+        try:
+            s = datetime.fromisoformat(r['start_at'])
+            e = datetime.fromisoformat(r['end_at'] or r['original_end_at'])
+            if s.year != y and e.year != y:
+                continue
+            days = max(0, int((e - s).total_seconds() // 86400))
+            total += days
+        except Exception:
+            continue
+    return total
+
+
+def list_actions_filtered(
+    guild_id: int,
+    *,
+    target_id: int | None = None,
+    action: str | None = None,
+    branch: str | None = None,
+    status_ok: bool | None = None,
+    since_iso: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> List[dict]:
+    ensure_tables()
+    clauses = ['guild_id=?']
+    args: list = [int(guild_id)]
+    if target_id:
+        clauses.append('target_id=?')
+        args.append(int(target_id))
+    if action:
+        clauses.append('action=?')
+        args.append(action)
+    if branch:
+        clauses.append('branch=?')
+        args.append(branch)
+    if status_ok is not None:
+        clauses.append('ok=?')
+        args.append(1 if status_ok else 0)
+    if since_iso:
+        clauses.append('created_at>=?')
+        args.append(since_iso)
+    args.extend([int(limit), int(offset)])
+    sql = (
+        'SELECT * FROM staff_actions WHERE ' + ' AND '.join(clauses)
+        + ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    )
+    with _LOCK:
+        conn = _conn()
+        try:
+            rows = conn.execute(sql, args).fetchall()
+            return [dict(r) for r in rows]
         finally:
             conn.close()

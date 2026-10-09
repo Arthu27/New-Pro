@@ -207,44 +207,73 @@ def resolve_target(user_id: int, role_ids) -> TargetContext:
     )
 
 
-def get_staff_info(member_or_id, role_ids=None) -> dict:
-    """Единый источник правды о стаффе — текущие Discord-роли."""
+def get_staff_info(member_or_id, role_ids=None, *, guild_id: int | None = None) -> dict:
+    """Стафф = роли лестницы/entry/responsible ИЛИ активный отпуск в БД."""
     if role_ids is None:
         if hasattr(member_or_id, 'roles'):
             uid = int(member_or_id.id)
             role_ids = [r.id for r in (member_or_id.roles or [])]
+            if guild_id is None and hasattr(member_or_id, 'guild'):
+                guild_id = getattr(member_or_id.guild, 'id', None)
         else:
             uid = int(member_or_id)
             role_ids = []
     else:
         uid = int(member_or_id.id) if hasattr(member_or_id, 'id') else int(member_or_id)
+        if guild_id is None and hasattr(member_or_id, 'guild'):
+            guild_id = getattr(member_or_id.guild, 'id', None)
     t = resolve_target(uid, role_ids)
     cfg = get_config() or {}
+
+    vac_info = None
+    on_vac = bool(t.on_vacation)
+    if guild_id:
+        try:
+            from services.staff_manager.store import active_vacation_for
+            vac_info = active_vacation_for(int(guild_id), uid)
+            if vac_info:
+                on_vac = True
+        except Exception:
+            vac_info = None
+
+    primary_branch = t.primary_branch
+    primary_key = t.primary_key
+    max_rank = t.max_rank
+    if on_vac and vac_info:
+        snap = vac_info.get('role_snapshot') or {}
+        if isinstance(snap, dict):
+            primary_key = primary_key or snap.get('role_key') or ''
+            max_rank = max_rank or int(snap.get('rank') or vac_info.get('rank_snapshot') or 0)
+        primary_branch = primary_branch or vac_info.get('branch') or ''
+
     branch_label = ''
-    if t.primary_branch:
-        branch_label = ((cfg.get('branches') or {}).get(t.primary_branch) or {}).get(
-            'label') or t.primary_branch
+    if primary_branch:
+        branch_label = ((cfg.get('branches') or {}).get(primary_branch) or {}).get(
+            'label') or primary_branch
     role_label = ''
-    if t.primary_key:
-        item = ladder_by_key(t.primary_key, cfg)
-        role_label = (item or {}).get('name') or t.primary_key
+    if primary_key:
+        item = ladder_by_key(primary_key, cfg)
+        role_label = (item or {}).get('name') or primary_key
+    is_staff = bool(
+        t.ladder_role_ids or t.entry_roles or t.responsible_roles
+        or t.extra_staff_roles or on_vac)
     return {
         'user_id': t.user_id,
-        'is_staff': bool(
-            t.ladder_role_ids or t.entry_roles or t.responsible_roles
-            or t.extra_staff_roles),
-        'primary_branch': t.primary_branch,
-        'primary_key': t.primary_key,
+        'is_staff': is_staff,
+        'primary_branch': primary_branch,
+        'primary_key': primary_key,
         'branch_label': branch_label,
         'role_label': role_label or (
-            'ответственный' if t.responsible_roles else (
-                'скрытый стафф' if t.extra_staff_roles else 'участник')),
-        'role_emoji': role_emoji(t.primary_key or ''),
-        'branch_emoji': branch_emoji(t.primary_branch or ''),
-        'branches': sorted(t.branches),
+            'в отпуске' if on_vac else (
+                'ответственный' if t.responsible_roles else (
+                    'скрытый стафф' if t.extra_staff_roles else 'участник'))),
+        'role_emoji': role_emoji(primary_key or '', branch=primary_branch),
+        'branch_emoji': branch_emoji(primary_branch or ''),
+        'branches': sorted(t.branches or ({primary_branch} if primary_branch else set())),
         'multi_branch': t.multi_branch,
-        'max_rank': t.max_rank,
-        'on_vacation': t.on_vacation,
+        'max_rank': max_rank,
+        'on_vacation': on_vac,
+        'vacation': vac_info,
         'ladder_role_ids': sorted(t.ladder_role_ids),
         'entry_role_ids': sorted(t.entry_roles),
         'responsible_role_ids': sorted(t.responsible_roles),
@@ -301,14 +330,23 @@ def can_manage_staff(
         new_role_key = 'assistant'
 
     if int(actor.user_id) == int(target.user_id):
-        if action not in ('history', 'self_leave'):
+        if action not in ('history', 'self_leave', 'vacation'):
             return False, 'Нельзя изменить самого себя'
 
     if action == 'self_leave':
         if int(actor.user_id) != int(target.user_id):
             return False, 'self_leave только для себя'
-        if not (target.ladder_role_ids or target.entry_roles):
+        if not (target.ladder_role_ids or target.entry_roles or target.on_vacation):
             return False, 'Вы не в стаффе'
+        return True, ''
+
+    # отпуск: любой стафф себе; другому — по правам ниже
+    if action == 'vacation' and int(actor.user_id) == int(target.user_id):
+        if not (target.ladder_role_ids or target.entry_roles
+                or target.responsible_roles or target.extra_staff_roles):
+            return False, 'Вы не в стаффе'
+        if target.on_vacation:
+            return False, 'Вы уже в отпуске'
         return True, ''
 
     if action == 'history':
@@ -371,12 +409,20 @@ def can_manage_staff(
     has_staff = bool(
         target.ladder_role_ids or target.entry_roles or target.placements
         or target.responsible_roles or target.extra_staff_roles
+        or target.on_vacation
     )
     if action in ('promote', 'demote', 'remove', 'probation', 'vacation'):
         if not has_staff and action != 'assign':
             if action == 'remove':
                 return False, 'У человека нет стафф-роли'
             return False, 'Человек не в стаффе'
+
+    # в отпуске: promote/demote/transfer/снятие роли недоступны
+    # (кроме Стафф админ/владельца; remove допустимо и завершает отпуск)
+    if target.on_vacation and action in ('promote', 'demote', 'transfer', 'assign'):
+        if not _is_global(actor):
+            return False, 'Человек в отпуске — сначала верните из отпуска'
+        # глобальным разрешаем с предупреждением (caller показывает warn)
 
     if _is_global(actor):
         if new_role_key:

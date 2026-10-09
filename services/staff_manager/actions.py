@@ -12,6 +12,9 @@ from logger import get_logger
 from services.staff_manager.acl import (
     can_manage_staff, resolve_actor, resolve_target, get_staff_info,
 )
+from services.staff_manager.bundles import (
+    all_bundle_role_ids, compute_bundle_delta, get_role_bundle,
+)
 from services.staff_manager.config import get_config, get_index
 from services.staff_manager.store import (
     claim_action_once, new_action_id, record_action, upsert_staff_profile,
@@ -136,14 +139,20 @@ def _fail(
     *,
     guild_id, actor_id, target_id, action, branch, old_key, new_key,
     reason, source, aid, msg, meta=None, alert_multi=False,
+    actor_role_key='', actor_branch='',
 ) -> StaffChangeResult:
     record_action(
         guild_id=guild_id, actor_id=actor_id, target_id=target_id,
         action=action, branch=branch or '', old_key=old_key, new_key=new_key,
         reason=reason, source=source, ok=False, action_id=aid,
+        actor_role_key=actor_role_key, actor_branch=actor_branch,
         meta={**(meta or {}), 'error': msg},
     )
     return StaffChangeResult(False, msg, action_id=aid, alert_multi=alert_multi)
+
+
+def _actor_snap(actor) -> tuple:
+    return (actor.primary_key or '', actor.primary_branch or '')
 
 
 async def apply_staff_change(
@@ -205,6 +214,8 @@ async def apply_staff_change(
     new_key = new_role_key or ''
     current = {r.id for r in getattr(target_member, 'roles', []) or []}
 
+    actor_rk, actor_br = _actor_snap(actor)
+
     if action in ('assign', 'promote', 'demote'):
         if not branch or not new_role_key:
             return _fail(
@@ -212,6 +223,7 @@ async def apply_staff_change(
                 target_id=target.user_id, action=action, branch=branch,
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid, msg='Нет ветки или роли',
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
         new_rid = _role_id_for(branch, new_role_key)
         if not new_rid:
@@ -221,6 +233,7 @@ async def apply_staff_change(
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid,
                 msg=f'role_id для {new_role_key}/{branch} не найден в конфиге',
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
         # снять ВСЕ другие ladder-роли (общие)
         for rid in _all_ladder_role_ids():
@@ -238,6 +251,13 @@ async def apply_staff_change(
         common = int(cfg.get('common_staff_role_id') or 0)
         if common and common not in current:
             add_ids.append(common)
+        # ROLE_BUNDLES: доп. роли нового набора + снятие extras старого
+        b_add, b_rem = compute_bundle_delta(
+            old_key=old_key, new_key=new_role_key, branch=branch,
+            current_role_ids=current, cfg=cfg,
+        )
+        add_ids.extend(b_add)
+        remove_ids.extend(b_rem)
 
     elif action in ('remove', 'self_leave'):
         branch = target.primary_branch or branch
@@ -249,6 +269,10 @@ async def apply_staff_change(
                 remove_ids.append(rid)
         # «Отвечаю за …» / «Отвечает за …»
         for rid in _all_responsible_role_ids():
+            if rid in current:
+                remove_ids.append(rid)
+        # extras из любых бандлов
+        for rid in all_bundle_role_ids(cfg):
             if rid in current:
                 remove_ids.append(rid)
         # 4 скрытые админки + power-роли (🌂 ☁️) + Staff Admin
@@ -271,7 +295,9 @@ async def apply_staff_change(
                 target_id=target.user_id, action=action, branch=branch,
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid, msg='Нужны ветка и роль',
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
+        old_branch = target.primary_branch or branch
         for rid in _all_ladder_role_ids():
             if rid in current:
                 remove_ids.append(rid)
@@ -282,6 +308,12 @@ async def apply_staff_change(
         for rid in _all_responsible_role_ids():
             if rid in current:
                 remove_ids.append(rid)
+        # снять extras старого бандла
+        if old_key and old_branch:
+            old_extras = get_role_bundle(old_key, old_branch, cfg).get('add_roles') or []
+            for rid in old_extras:
+                if int(rid) in current:
+                    remove_ids.append(int(rid))
         new_rid = _role_id_for(new_branch, new_role_key)
         if not new_rid:
             return _fail(
@@ -289,6 +321,7 @@ async def apply_staff_change(
                 target_id=target.user_id, action=action, branch=new_branch,
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid, msg='role_id не найден',
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
         add_ids.append(new_rid)
         entry = _entry_id_for(new_branch)
@@ -297,20 +330,62 @@ async def apply_staff_change(
         common = int(cfg.get('common_staff_role_id') or 0)
         if common and common not in current:
             add_ids.append(common)
+        b_add, b_rem = compute_bundle_delta(
+            old_key='', new_key=new_role_key, branch=new_branch,
+            current_role_ids=current, cfg=cfg,
+        )
+        add_ids.extend(b_add)
+        remove_ids.extend(b_rem)
         branch = new_branch
 
-    elif action in ('probation', 'vacation', 'history', 'request'):
+    elif action in ('probation', 'vacation', 'vacation_end', 'history', 'request'):
         if action == 'vacation':
             vac = int(cfg.get('vacation_role_id') or 0)
-            if vac and vac not in current:
+            if not vac:
+                return _fail(
+                    guild_id=guild.id, actor_id=actor.user_id,
+                    target_id=target.user_id, action=action, branch=branch,
+                    old_key=old_key, new_key=new_key, reason=reason,
+                    source=source, aid=aid,
+                    msg='vacation_role_id не задан в конфиге',
+                    actor_role_key=actor_rk, actor_branch=actor_br,
+                )
+            # снять ВСЕ стафф-роли, выдать роль отпуска
+            for rid in _all_ladder_role_ids():
+                if rid in current:
+                    remove_ids.append(rid)
+            for rid in _all_entry_role_ids():
+                if rid in current:
+                    remove_ids.append(rid)
+            for rid in _all_responsible_role_ids():
+                if rid in current:
+                    remove_ids.append(rid)
+            for rid in all_bundle_role_ids(cfg):
+                if rid in current:
+                    remove_ids.append(rid)
+            for rid in _extra_strip_role_ids(cfg):
+                if rid in current:
+                    remove_ids.append(rid)
+            # common Staff оставляем? ТЗ: снять ВСЕ стафф-роли.
+            # common_staff тоже стафф-маркер — снимаем, отпуск заменяет.
+            common = int(cfg.get('common_staff_role_id') or 0)
+            if common and common in current:
+                remove_ids.append(common)
+            if vac not in current:
                 add_ids.append(vac)
-            elif not vac:
+        elif action == 'vacation_end':
+            # снять роль отпуска; восстановление ladder — отдельный assign/promote
+            vac = int(cfg.get('vacation_role_id') or 0)
+            if vac and vac in current:
+                remove_ids.append(vac)
+            if not remove_ids and not add_ids:
                 record_action(
                     guild_id=guild.id, actor_id=actor.user_id,
                     target_id=target.user_id, action=action, branch=branch or '',
                     old_key=old_key, new_key=new_key, reason=reason,
                     source=source, ok=True, action_id=aid,
-                    meta={'note': 'no vacation_role_id'},
+                    actor_role_key=actor_rk, actor_branch=actor_br,
+                    meta={'alert_multi': alert_multi},
                 )
                 return StaffChangeResult(True, '', action_id=aid, alert_multi=alert_multi)
         else:
@@ -319,6 +394,7 @@ async def apply_staff_change(
                 target_id=target.user_id, action=action, branch=branch or '',
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, ok=True, action_id=aid,
+                actor_role_key=actor_rk, actor_branch=actor_br,
                 meta={'alert_multi': alert_multi, 'removal_kind': removal_kind},
             )
             return StaffChangeResult(True, '', action_id=aid, alert_multi=alert_multi)
@@ -355,6 +431,7 @@ async def apply_staff_change(
                     f'Роль {rid} не найдена на сервере (устаревший ID в конфиге). '
                     f'Обновите data/staff_manager.json.'
                 ),
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
         block = _hierarchy_block_reason(guild, role)
         if block:
@@ -363,6 +440,7 @@ async def apply_staff_change(
                 target_id=target.user_id, action=action, branch=branch,
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid, msg=block,
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
 
     lock = _target_lock(target_member.id)
@@ -375,6 +453,7 @@ async def apply_staff_change(
                 target_id=target.user_id, action=action, branch=branch,
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid, msg='Роль исчезла во время операции',
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
 
         try:
@@ -401,6 +480,7 @@ async def apply_staff_change(
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid, msg=msg,
                 meta={'traceback': traceback.format_exc()[-1500:]},
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
 
         # VERIFY via fresh fetch
@@ -420,6 +500,7 @@ async def apply_staff_change(
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid,
                 msg=f'Не удалось проверить роли после смены: {ex}',
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
 
         have = {r.id for r in getattr(fresh, 'roles', []) or []}
@@ -427,28 +508,31 @@ async def apply_staff_change(
         leftover = [rid for rid in remove_ids if rid in have]
 
         # дабл-стафф: не больше одной ladder-роли и одной entry-роли
-        ladder_have = [rid for rid in _all_ladder_role_ids() if rid in have]
-        entry_have = [rid for rid in _all_entry_role_ids() if rid in have]
-        if len(ladder_have) > 1 or len(entry_have) > 1:
-            await _rollback(
-                fresh, added=added_roles, removed=removed_roles,
-                reason='double_staff')
-            msg = (
-                'Дабл-стафф запрещён: после смены осталось '
-                f'{len(ladder_have)} ролей лестницы и {len(entry_have)} entry. '
-                'Откат выполнен.'
-            )
-            _log.error(
-                'double staff target=%s ladder=%s entry=%s',
-                target.user_id, ladder_have, entry_have,
-            )
-            return _fail(
-                guild_id=guild.id, actor_id=actor.user_id,
-                target_id=target.user_id, action=action, branch=branch,
-                old_key=old_key, new_key=new_key, reason=reason,
-                source=source, aid=aid, msg=msg,
-                meta={'ladder_have': ladder_have, 'entry_have': entry_have},
-            )
+        # на отпуске ladder/entry сняты — не проверяем double
+        if action not in ('vacation',):
+            ladder_have = [rid for rid in _all_ladder_role_ids() if rid in have]
+            entry_have = [rid for rid in _all_entry_role_ids() if rid in have]
+            if len(ladder_have) > 1 or len(entry_have) > 1:
+                await _rollback(
+                    fresh, added=added_roles, removed=removed_roles,
+                    reason='double_staff')
+                msg = (
+                    'Нельзя оставить две стафф-роли: после смены осталось '
+                    f'{len(ladder_have)} ролей лестницы и {len(entry_have)} entry. '
+                    'Откат выполнен.'
+                )
+                _log.error(
+                    'double staff target=%s ladder=%s entry=%s',
+                    target.user_id, ladder_have, entry_have,
+                )
+                return _fail(
+                    guild_id=guild.id, actor_id=actor.user_id,
+                    target_id=target.user_id, action=action, branch=branch,
+                    old_key=old_key, new_key=new_key, reason=reason,
+                    source=source, aid=aid, msg=msg,
+                    meta={'ladder_have': ladder_have, 'entry_have': entry_have},
+                    actor_role_key=actor_rk, actor_branch=actor_br,
+                )
 
         if missing or leftover:
             await _rollback(
@@ -481,15 +565,19 @@ async def apply_staff_change(
                 old_key=old_key, new_key=new_key, reason=reason,
                 source=source, aid=aid, msg=msg,
                 meta={'missing': missing, 'leftover': leftover},
+                actor_role_key=actor_rk, actor_branch=actor_br,
             )
 
         # SUCCESS — только теперь пишем БД / кэш / warn
         info = get_staff_info(fresh)
+        status = 'removed' if action == 'remove' else (
+            'vacation' if action == 'vacation' else 'active')
         record_action(
             guild_id=guild.id, actor_id=actor.user_id,
             target_id=target.user_id, action=action, branch=branch or '',
             old_key=old_key, new_key=new_key, reason=reason,
             source=source, ok=True, action_id=aid,
+            actor_role_key=actor_rk, actor_branch=actor_br,
             meta={
                 'alert_multi': alert_multi,
                 'add': add_ids,
@@ -505,9 +593,10 @@ async def apply_staff_change(
             upsert_staff_profile(
                 guild_id=guild.id,
                 user_id=target.user_id,
-                branch=info.get('primary_branch') or '',
-                role_key=info.get('primary_key') or '',
-                status='removed' if action == 'remove' else 'active',
+                branch=info.get('primary_branch') or branch or '',
+                role_key=info.get('primary_key') or (
+                    old_key if action == 'vacation' else ''),
+                status=status,
                 assigned_by=actor.user_id,
             )
         except Exception as ex:
