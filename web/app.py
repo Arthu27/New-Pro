@@ -108,13 +108,12 @@ ROLE_PAGE_KEYS = {
     'owner': {p[0] for p in PAGES_ALL},
 }
 
-# Меры панели = как /modpanel: выдача + снятие (unwarn/unmute/unban).
-_MOD_ISSUE = ('warn', 'mute', 'kick', 'ban')
-_MOD_LIFT = ('unwarn', 'unmute', 'unban')
-_MOD_PUNISH = _MOD_ISSUE + _MOD_LIFT
+# Меры панели = как /modpanel (порядок пар: выдача → снятие).
+# kick в /modpanel нет — здесь тоже не показываем.
+_MOD_PUNISH = ('warn', 'unwarn', 'mute', 'unmute', 'ban', 'unban')
 ROLE_PUNISH_ACTIONS = {
-    # helper: варн/мут и их снятие; бан/кик скрыты
-    'helper': ('warn', 'mute', 'unwarn', 'unmute'),
+    # helper: варн/мут и снятие; бан скрыт (как hidden_kinds)
+    'helper': ('warn', 'unwarn', 'mute', 'unmute'),
     'mod': _MOD_PUNISH,
     'creative': _MOD_PUNISH,
     'broadcaster': _MOD_PUNISH,
@@ -144,15 +143,15 @@ ROLE_HIDDEN_KINDS = {
 }
 PUNISH_LABELS = {
     'warn': 'Варн',
-    'mute': 'Мут',
-    'kick': 'Кик',
-    'ban': 'Бан',
     'unwarn': 'Снять варн',
-    'unmute': 'Размут',
-    'unban': 'Разбан',
+    'mute': 'Мут',
+    'unmute': 'Снять мут',
+    'ban': 'Бан',
+    'unban': 'Снять бан',
+    'kick': 'Кик',
 }
 _LIFT_ACTIONS = frozenset({'unwarn', 'unmute', 'unban'})
-_ISSUE_ACTIONS = frozenset({'warn', 'mute', 'kick', 'ban'})
+_ISSUE_ACTIONS = frozenset({'warn', 'mute', 'ban', 'kick'})
 
 ROLE_CARDS = [
     {
