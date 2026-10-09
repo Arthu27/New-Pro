@@ -1249,3 +1249,9 @@ h2 .seg { margin-left: auto; font-weight: 800; }
 @media (prefers-reduced-motion: reduce) {
   .rise, .rule-card { animation: none !important; opacity: 1 !important; }
 }
+
+/* /member people tables */
+.mp-role-panel { margin-top: 4px; border-color: rgba(120,180,255,.35); color: #9ec5ff; }
+.people-block.is-dim { opacity: .55; }
+.member-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+@media (max-width: 720px) { .member-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

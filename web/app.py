@@ -69,7 +69,8 @@ PAGES_ALL = [
     ('users', '/users', 'Участники', 'fa-users'),
     ('member', '/member', 'Участник', 'fa-user'),
     ('channels', '/channels', 'Каналы', 'fa-table'),
-    ('warns', '/warns', 'Варны', 'fa-triangle-exclamation'),
+    ('warns', '/warns', 'Warn', 'fa-triangle-exclamation'),
+    ('bans', '/bans', 'Баны', 'fa-ban'),
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
     ('reasons', '/reasons', 'Правила', 'fa-scroll'),
@@ -81,7 +82,7 @@ PAGES_ALL = [
 ]
 PAGES_MOD = [p for p in PAGES_ALL if p[0] in {
     'today', 'logs', 'staff', 'users', 'member', 'channels',
-    'warns', 'appeals', 'proofs', 'reasons'}]
+    'warns', 'bans', 'appeals', 'proofs', 'reasons'}]
 PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
     'bot', 'modules', 'commands', 'anticrash', 'access'}]
 
@@ -90,7 +91,7 @@ PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
 # Helper видит Правила (не причины наказаний как отдельный список).
 _MOD_PAGES = {
     'today', 'logs', 'staff', 'users', 'member', 'channels',
-    'warns', 'appeals', 'proofs', 'reasons',
+    'warns', 'bans', 'appeals', 'proofs', 'reasons',
 }
 ROLE_PAGE_KEYS = {
     'helper': {'today', 'logs', 'staff', 'users', 'member', 'warns', 'reasons'},
@@ -107,10 +108,12 @@ ROLE_PAGE_KEYS = {
     'owner': {p[0] for p in PAGES_ALL},
 }
 
-# Меры, которые роль может ВЫДАТЬ из панели
-_MOD_PUNISH = ('warn', 'mute', 'kick', 'ban')
+# Меры панели = как /modpanel (порядок пар: выдача → снятие).
+# kick в /modpanel нет — здесь тоже не показываем.
+_MOD_PUNISH = ('warn', 'unwarn', 'mute', 'unmute', 'ban', 'unban')
 ROLE_PUNISH_ACTIONS = {
-    'helper': ('warn', 'mute'),
+    # helper: варн/мут и снятие; бан скрыт (как hidden_kinds)
+    'helper': ('warn', 'unwarn', 'mute', 'unmute'),
     'mod': _MOD_PUNISH,
     'creative': _MOD_PUNISH,
     'broadcaster': _MOD_PUNISH,
@@ -140,10 +143,15 @@ ROLE_HIDDEN_KINDS = {
 }
 PUNISH_LABELS = {
     'warn': 'Варн',
+    'unwarn': 'Снять варн',
     'mute': 'Мут',
-    'kick': 'Кик',
+    'unmute': 'Снять мут',
     'ban': 'Бан',
+    'unban': 'Снять бан',
+    'kick': 'Кик',
 }
+_LIFT_ACTIONS = frozenset({'unwarn', 'unmute', 'unban'})
+_ISSUE_ACTIONS = frozenset({'warn', 'mute', 'ban', 'kick'})
 
 ROLE_CARDS = [
     {
@@ -252,6 +260,27 @@ bot_instance = None
 def set_bot_instance(bot):
     global bot_instance
     bot_instance = bot
+    # фоновый прогрев тяжёлых страниц панели (channels и т.п.)
+    try:
+        import threading
+
+        def _prewarm():
+            try:
+                gid = _main_guild()
+                if not gid:
+                    return
+                from services import panel_cache as PC
+                key = f'channels_page:{gid}'
+                if PC.get(key) is not None:
+                    return
+                payload = _build_channels_payload(gid)
+                PC.set(key, payload, ttl=120.0)
+            except Exception:
+                pass
+
+        threading.Thread(target=_prewarm, name='panel-prewarm', daemon=True).start()
+    except Exception:
+        pass
 
 
 def _secret_key():
@@ -268,6 +297,13 @@ def _secret_key():
 
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+
+try:
+    from web.staff_manager_api import bp as _sm_bp
+    app.register_blueprint(_sm_bp)
+except Exception as _sm_ex:
+    import logging as _logging
+    _logging.getLogger('web').warning('staff_manager_api: %s', _sm_ex)
 app.secret_key = _secret_key()
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -553,6 +589,27 @@ def _viewer_punish_actions(role: str | None = None):
     return list(ROLE_PUNISH_ACTIONS.get(role) or ROLE_PUNISH_ACTIONS['helper'])
 
 
+def _profile_punish_actions(member_obj, *, role: str | None = None) -> list:
+    """Кнопки на /member: для staff — без ban/kick/mute (как /modpanel);
+    для обычных участников — выдача + снятие."""
+    allowed = _viewer_punish_actions(role)
+    if member_obj is None:
+        # оффлайн / только ID — оставляем снятие бана + варн-историю через API
+        return [a for a in allowed if a in ('unban', 'unwarn') or a in _ISSUE_ACTIONS]
+    is_staff = False
+    try:
+        from services.warn_acl import _is_staff_target
+        guild = getattr(member_obj, 'guild', None)
+        if guild is not None:
+            is_staff = bool(_is_staff_target(guild, member_obj))
+    except Exception:
+        is_staff = False
+    if is_staff:
+        # стафф: только снятие; выдача ban/kick/mute здесь запрещена
+        return [a for a in allowed if a in _LIFT_ACTIONS]
+    return list(allowed)
+
+
 def _viewer_hidden_kinds(role: str | None = None):
     role = role or session.get('role') or 'helper'
     return ROLE_HIDDEN_KINDS.get(role) or frozenset()
@@ -687,8 +744,17 @@ def _viewer_limits_card():
 # ── Discord OAuth ──────────────────────────────────────────────────────
 
 def _http_json(method, url, *, headers=None, form=None, timeout=12):
+    """HTTP JSON к Discord API.
+
+    Без User-Agent Cloudflare на discord.com отвечает 403 (error code 1010) —
+    из‑за этого OAuth показывал «Токен Discord: HTTP 403».
+    """
     data = None
     hdrs = dict(headers or {})
+    hdrs.setdefault(
+        'User-Agent',
+        'HakumoPanel (https://hakumods.xyz, 1.0)',
+    )
     if form is not None:
         data = urllib.parse.urlencode(form).encode('utf-8')
         hdrs.setdefault('Content-Type', 'application/x-www-form-urlencoded')
@@ -698,11 +764,18 @@ def _http_json(method, url, *, headers=None, form=None, timeout=12):
             raw = resp.read().decode('utf-8')
             return resp.status, json.loads(raw) if raw else {}
     except urllib.error.HTTPError as e:
+        body = ''
         try:
             body = e.read().decode('utf-8')
             payload = json.loads(body) if body else {}
         except Exception:
-            payload = {}
+            payload = {'error': f'HTTP {e.code}', 'raw': (body or '')[:200]}
+        # Cloudflare HTML/1010 → понятное сообщение
+        if e.code == 403 and not payload.get('error') and not payload.get('error_description'):
+            payload = {
+                'error': 'forbidden',
+                'error_description': 'HTTP 403 (Cloudflare/Discord blocked request)',
+            }
         return e.code, payload
     except Exception as e:
         return 0, {'error': str(e)}
@@ -1070,6 +1143,53 @@ def login_required(f):
     return wrapped
 
 
+def _ensure_csrf() -> str:
+    tok = session.get('csrf_token')
+    if not tok:
+        import secrets
+        tok = secrets.token_hex(16)
+        session['csrf_token'] = tok
+    return tok
+
+
+def _check_csrf(data=None) -> bool:
+    """Проверка CSRF из JSON/form или заголовка X-CSRF-Token."""
+    want = session.get('csrf_token') or ''
+    if not want:
+        return False
+    data = data if data is not None else (request.get_json(silent=True) or request.form)
+    got = ''
+    if isinstance(data, dict):
+        got = str(data.get('csrf') or data.get('csrf_token') or '')
+    if not got:
+        got = request.headers.get('X-CSRF-Token') or ''
+    return bool(got) and got == want
+
+
+def _panel_actor_member(guild):
+    """Member залогиненного Discord-пользователя на гильдии."""
+    if guild is None:
+        return None
+    uid = str(session.get('discord_id') or '').strip()
+    if not uid.isdigit():
+        return None
+    m = guild.get_member(int(uid))
+    return m
+
+
+def _run_bot(coro):
+    """Выполнить coroutine в loop бота (панель и бот — один процесс).
+
+    Синхронная обёртка: Flask-поток блокируется до результата.
+    Не async — иначе вызов без await вернёт coroutine вместо данных.
+    """
+    bot = bot_instance
+    if bot is None or getattr(bot, 'loop', None) is None:
+        raise RuntimeError('Бот офлайн')
+    fut = asyncio.run_coroutine_threadsafe(coro, bot.loop)
+    return fut.result(timeout=45)
+
+
 def role_required(min_role):
     need = LEVEL.get(min_role, 1)
 
@@ -1115,7 +1235,7 @@ def inject_nav():
         'auth_via': session.get('auth_via') or '',
         'mod_nav_keys': {
             'today', 'logs', 'staff', 'users', 'member', 'channels',
-            'warns', 'appeals', 'proofs', 'reasons'},
+            'warns', 'bans', 'appeals', 'proofs', 'reasons'},
         'owner_nav_keys': {'bot', 'modules', 'commands', 'anticrash', 'access'},
         'viewer_limits': limits,
         'punish_actions': _viewer_punish_actions(role) if role else [],
@@ -1233,8 +1353,17 @@ def _appeal_name_hints(gid_filter=''):
     return hints
 
 
-def _collect_cases(gid_filter=''):
+def _collect_cases(gid_filter='', *, _skip_cache=False):
     """Дела панели + варны → список наказаний, новые сверху."""
+    cache_key = f'cases:{gid_filter or "all"}'
+    if not _skip_cache:
+        try:
+            from services import panel_cache as PC
+            hit = PC.get(cache_key)
+            if hit is not None:
+                return hit
+        except Exception:
+            pass
     out = []
     md = _read_json(DATA / 'mod_data.json', {})
     cases = (md.get('cases') or md.get('case') or {}) if isinstance(md, dict) else {}
@@ -1296,13 +1425,25 @@ def _collect_cases(gid_filter=''):
     for row in out:
         row['user_name'] = _best_name(row.get('user_name'), row.get('user_id'), book)
         row['mod_name'] = _best_name(row.get('mod_name'), row.get('mod_id'), book)
+    try:
+        from services import panel_cache as PC
+        PC.set(cache_key, out, ttl=30.0)
+    except Exception:
+        pass
     return out
 
 
 def _namebook(gid=''):
     """id → отображаемое имя: живой кэш Discord и сохранённые ники."""
-    book = {}
     gid = str(gid or _main_guild() or '')
+    try:
+        from services import panel_cache as PC
+        hit = PC.get(f'namebook:{gid}')
+        if isinstance(hit, dict):
+            return dict(hit)
+    except Exception:
+        pass
+    book = {}
     try:
         bot = bot_instance
         if bot and gid:
@@ -1336,6 +1477,11 @@ def _namebook(gid=''):
             label = str(name or '').strip()
             if label and not label.isdigit():
                 book.setdefault(uid, label)
+    try:
+        from services import panel_cache as PC
+        PC.set(f'namebook:{gid}', dict(book), ttl=60.0)
+    except Exception:
+        pass
     return book
 
 
@@ -1406,26 +1552,88 @@ def _mod_activity(gid, days):
     return sorted(stats.values(), key=lambda x: (-x['total'], str(x['name']).lower()))
 
 
-def _staff_board_for(gid, days, people):
+def _resolve_activity_span():
+    """День / неделя / месяц для Staff и журнала."""
+    raw = (request.args.get('span') or 'week').strip().lower()
+    if raw == 'day':
+        return 'day', 1
+    if raw == 'month':
+        return 'month', 30
+    return 'week', 7
+
+
+def _people_by_branch(people):
+    """Карточки команды по орг-веткам (Helper / Moderator / …)."""
+    try:
+        from services.staff_board import (
+            BRANCH_GROUPS, person_org_branches, ROLE_TITLE)
+    except Exception:
+        return []
+    buckets = {k: [] for k, _, __ in BRANCH_GROUPS}
+    titles = {k: t for k, t, __ in BRANCH_GROUPS}
+    for p in people or []:
+        try:
+            keys = person_org_branches(p) or ['leadership']
+        except Exception:
+            keys = ['leadership']
+        for key in keys:
+            if key not in buckets:
+                buckets[key] = []
+                titles.setdefault(key, ROLE_TITLE.get(key, key))
+            buckets[key].append(p)
+    out = []
+    for key, title, _ in BRANCH_GROUPS:
+        rows = buckets.get(key) or []
+        if not rows:
+            continue
+        rows = sorted(
+            rows,
+            key=lambda x: (
+                staff_board_rank(x.get('role') or '', x.get('role_label') or ''),
+                str(x.get('name') or '').lower(),
+            ),
+        )
+        out.append({'key': key, 'title': title, 'people': rows})
+    return out
+
+
+def _staff_board_for(gid, days, people, *, span: str | None = None):
     """Красивая сводка: меры + чат + войс, топы по ролям."""
+    span_key = (span or '').strip().lower() or str(int(days or 7))
+    cache_key = f'staff_board:{gid}:{span_key}:{len(people or [])}'
+    try:
+        from services import panel_cache as PC
+        hit = PC.get(cache_key)
+        if hit is not None:
+            return hit
+    except Exception:
+        pass
     try:
         from services.staff_board import build_staff_board
-        return build_staff_board(
+        board = build_staff_board(
             guild_id=gid,
             days=days,
             people=people or [],
             mod_rows=_mod_activity(gid, days),
             hidden_kinds=_viewer_hidden_kinds(),
+            span=span,
         )
     except Exception:
-        return {
+        board = {
             'summary': {
                 'staff_active': 0, 'staff_total': len(people or []),
                 'actions': 0, 'messages': 0, 'voice_s': 0, 'voice': '0 мин',
                 'days': days,
             },
             'rows': [], 'podium': [], 'role_tops': [], 'by_role': {},
+            'branches': [], 'by_branch': {},
         }
+    try:
+        from services import panel_cache as PC
+        PC.set(cache_key, board, ttl=45.0)
+    except Exception:
+        pass
+    return board
 
 
 def _is_today(ts):
@@ -1948,7 +2156,90 @@ def _search_guild_members(q: str = '', *, staff_only=False, limit=40):
 
 
 def _list_login_people(q: str = ''):
-    """Staff с сервера для выбора на логине."""
+    """Staff с сервера для выбора на логине (members_cache, без обхода Discord)."""
+    ql = (q or '').strip()
+    gid = _main_guild()
+    cache_key = f'login_people:{gid}:{ql.lower()}'
+    if not ql:
+        try:
+            from services import panel_cache as PC
+            hit = PC.get(cache_key)
+            if hit is not None:
+                return hit
+        except Exception:
+            pass
+    # быстрый путь: SQLite members_cache (с branch — иначе все падают в Helper)
+    if gid:
+        try:
+            from services import members_cache as MC
+            from services.warn_config import role_style
+            rows = MC.list_members(
+                int(gid), limit=80, staff_only=True, q=ql)
+            _BR_ROLE = {
+                'helper': 'helper', 'helpers': 'helper',
+                'moderator': 'mod', 'moderators': 'mod',
+                'event': 'event', 'support': 'support',
+                'closemod': 'closemod', 'creative': 'creative',
+                'broadcaster': 'broadcaster',
+                'leadership': 'admin', 'admins': 'admin',
+            }
+            people = []
+            for h in rows:
+                uid = str(h.get('user_id') or '')
+                if not uid:
+                    continue
+                rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
+                br = str(h.get('branch') or '').strip().lower()
+                role = _BR_ROLE.get(br) or ''
+                label = (rs or {}).get('label') or ''
+                # лейбл ранга точнее ветки (Admin/Curator/…)
+                lab_l = label.lower()
+                if 'owner' in lab_l:
+                    role = 'owner'
+                elif 'staff admin' in lab_l:
+                    role = 'staff-admin'
+                elif 'staff assistent' in lab_l or 'staff assistant' in lab_l:
+                    role = 'staff-assistent'
+                elif 'assistent' in lab_l or 'assistant' in lab_l:
+                    role = 'assistent'
+                elif 'curator' in lab_l or 'куратор' in lab_l:
+                    role = 'curator'
+                elif 'master' in lab_l or 'мастер' in lab_l:
+                    role = 'master'
+                elif 'admin' in lab_l:
+                    role = 'admin'
+                elif 'moderat' in lab_l:
+                    role = 'mod'
+                elif not role and br:
+                    # ветка известна, ранг нет — базовый тир ветки
+                    role = _BR_ROLE.get(br) or 'helper'
+                elif not role and h.get('is_staff'):
+                    role = ''
+                # Без орг-ветки и без ранга лестницы — скрытая оболочка /
+                # мусор кэша: в Staff board не показываем.
+                if not br and not role:
+                    continue
+                people.append({
+                    'id': uid,
+                    'name': h.get('display_name') or uid,
+                    'handle': h.get('username') or '',
+                    'avatar': h.get('avatar_url') or '',
+                    'role': role or ('helper' if br else ''),
+                    'role_label': label or 'Staff',
+                    'role_tag': role or '',
+                    'branch': br or None,
+                })
+            if people or ql:
+                out = (people, '')
+                if not ql:
+                    try:
+                        from services import panel_cache as PC
+                        PC.set(cache_key, out, ttl=45.0)
+                    except Exception:
+                        pass
+                return out
+        except Exception:
+            pass
     return _search_guild_members(q, staff_only=True, limit=80)
 
 
@@ -2350,19 +2641,26 @@ def auth_discord_callback():
     if not code:
         return redirect(url_for('login', error='Discord не вернул код'))
     cid, secret = _discord_client_creds()
+    redirect_uri = _discord_redirect_uri()
     st, token_data = _http_json(
         'POST',
-        'https://discord.com/api/oauth2/token',
+        f'{DISCORD_API}/oauth2/token',
         form={
             'client_id': cid,
             'client_secret': secret,
             'grant_type': 'authorization_code',
             'code': code,
-            'redirect_uri': _discord_redirect_uri(),
+            'redirect_uri': redirect_uri,
         },
     )
     if st != 200 or not token_data.get('access_token'):
         msg = token_data.get('error_description') or token_data.get('error') or f'HTTP {st}'
+        try:
+            from logger import get_logger
+            get_logger('panel_oauth').warning(
+                'oauth token fail st=%s msg=%s redirect=%s', st, msg, redirect_uri)
+        except Exception:
+            pass
         return redirect(url_for('login', error=f'Токен Discord: {msg}'))
     st, user = _http_json(
         'GET',
@@ -2426,6 +2724,14 @@ def _staff_feed(gid: str, limit=80):
     Join/leave/смены ролей сюда НЕ кладём — они отдельно на /logs,
     иначе забивают ленту и пропадают «кто отклонил».
     """
+    cache_key = f'staff_feed:{gid}:{int(limit)}'
+    try:
+        from services import panel_cache as PC
+        hit = PC.get(cache_key)
+        if hit is not None:
+            return hit
+    except Exception:
+        pass
     book = _namebook(gid)
     book.update(_proof_name_hints(gid))
     book.update(_appeal_name_hints(gid))
@@ -2517,7 +2823,13 @@ def _staff_feed(gid: str, limit=80):
     take_audit = audit[:room]
     merged = take_appeals + take_punish + take_audit
     merged.sort(key=key, reverse=True)
-    return merged[:lim]
+    out = merged[:lim]
+    try:
+        from services import panel_cache as PC
+        PC.set(cache_key, out, ttl=30.0)
+    except Exception:
+        pass
+    return out
 
 
 def _fuzzy_match(q: str, *parts) -> bool:
@@ -2606,8 +2918,7 @@ def today():
 @role_required('helper')
 def logs():
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
+    span, days = _resolve_activity_span()
     rows = _filter_cases_for_viewer(_collect_cases(gid))[:200]
     for r in rows:
         r['when'] = _fmt(r.get('timestamp'))
@@ -2627,14 +2938,16 @@ def logs():
         e['user_name'] = _best_name(e.get('user_name'), e.get('user_id'), book)
         e['user_id'] = str(e.get('user_id') or '')
     people, _err = _list_login_people()
+    branch_filter = (request.args.get('branch') or '').strip() or None
     return render_template(
         'logs.html', rows=rows, feed=feed, joins=joins,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(hidden),
         activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
+        staff_board=_staff_board_for(gid, days, people, span=span),
         span=span,
         role_filter=(request.args.get('role') or '').strip() or None,
+        branch_filter=branch_filter,
     )
 
 
@@ -2643,30 +2956,106 @@ def logs():
 @role_required('helper')
 def staff_page():
     gid = _main_guild()
-    span = 'month' if request.args.get('span') == 'month' else 'week'
-    days = 30 if span == 'month' else 7
+    span, days = _resolve_activity_span()
     feed = _staff_feed(gid, 100)
     people, err = _list_login_people()
     role_filter = (request.args.get('role') or '').strip() or None
+    branch_filter = (request.args.get('branch') or '').strip() or None
     return render_template(
         'staff.html', feed=feed, people=people, error=err,
         activity=_mod_activity(gid, days),
-        staff_board=_staff_board_for(gid, days, people),
+        staff_board=_staff_board_for(gid, days, people, span=span),
         span=span,
         role_filter=role_filter,
+        branch_filter=branch_filter,
+        people_by_branch=_people_by_branch(people),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
 
 
-@app.route('/channels')
-@login_required
-@role_required('mod')
-def channels_page():
-    """Подробная карта каналов: права, лимиты, маршруты бота."""
-    gid = _main_guild()
+def _channel_everyone_flags(ch, everyone_id: int) -> dict:
+    """Быстрые флаги @everyone без permissions_for (дорого на больших гильдиях)."""
+    VIEW = 1 << 10
+    SEND = 1 << 11
+    CONNECT = 1 << 20
+    SPEAK = 1 << 21
+    STREAM = 1 << 9
+    MANAGE = 1 << 4
+    flags = {
+        'view': True, 'send': True, 'connect': True,
+        'speak': True, 'stream': True, 'manage': False,
+    }
+    try:
+        raw = getattr(ch, '_overwrites', None)
+        ow = raw.get(int(everyone_id)) if isinstance(raw, dict) else None
+        if ow is None:
+            return flags
+        try:
+            a, d = ow.pair()
+            allow_v = int(getattr(a, 'value', 0) or 0)
+            deny_v = int(getattr(d, 'value', 0) or 0)
+        except Exception:
+            allow_v = int(getattr(ow, 'allow', 0) or 0)
+            deny_v = int(getattr(ow, 'deny', 0) or 0)
+
+        def bit(mask, default):
+            if deny_v & mask:
+                return False
+            if allow_v & mask:
+                return True
+            return default
+
+        return {
+            'view': bit(VIEW, True),
+            'send': bit(SEND, True),
+            'connect': bit(CONNECT, True),
+            'speak': bit(SPEAK, True),
+            'stream': bit(STREAM, True),
+            'manage': bit(MANAGE, False),
+        }
+    except Exception:
+        return flags
+
+
+def _channel_overwrite_names(ch, guild, *, limit: int = 6) -> list:
+    """Имена перезаписей через _overwrites + get_role (без channel.overwrites)."""
+    overs = []
+    try:
+        raw = getattr(ch, '_overwrites', None)
+        if not isinstance(raw, dict) or not raw:
+            return overs
+        ids = list(raw.keys())
+        for tid in ids[:limit]:
+            tname = None
+            try:
+                role = guild.get_role(int(tid)) if guild else None
+                if role is not None:
+                    tname = role.name
+                else:
+                    mem = guild.get_member(int(tid)) if guild else None
+                    if mem is not None:
+                        tname = getattr(mem, 'display_name', None) or str(tid)
+            except Exception:
+                tname = None
+            overs.append({
+                'name': tname or str(tid),
+                'allow': '…',
+                'deny': '…',
+            })
+        extra = len(ids) - limit
+        if extra > 0:
+            overs.append({'name': f'+{extra}', 'allow': '—', 'deny': '—'})
+    except Exception:
+        return []
+    return overs
+
+
+def _build_channels_payload(gid):
+    """Собрать карту каналов (без render) — для страницы и фонового прогрева."""
     rows = []
     bot = bot_instance
     route_by_id = {}
+    route_labels = {}
     try:
         from services import channel_routes as CR
         for key, cid in (CR.KNOWN_CHANNELS or {}).items():
@@ -2696,12 +3085,14 @@ def channels_page():
         guild = None
     if guild is not None:
         everyone = guild.default_role
+        everyone_id = int(getattr(everyone, 'id', 0) or 0)
 
         def _order(c):
             cat = getattr(c, 'category', None)
             cp = getattr(cat, 'position', -1) if cat is not None else -1
             return (cp, getattr(c, 'position', 0), str(getattr(c, 'name', '')).lower())
 
+        # один проход без permissions_for / channel.overwrites
         for ch in sorted(guild.channels, key=_order):
             cls = type(ch).__name__
             if 'Category' in cls:
@@ -2713,46 +3104,8 @@ def channels_page():
             else:
                 group, kind, icon = 'text', 'текст', 'fa-hashtag'
             cat = getattr(getattr(ch, 'category', None), 'name', None) or 'Без категории'
-            perms = None
-            try:
-                perms = ch.permissions_for(everyone) if everyone else None
-            except Exception:
-                perms = None
-
-            def flag(name, _p=perms):
-                return bool(getattr(_p, name, False)) if _p else False
-
-            # перезаписи ролей (кратко)
-            overs = []
-            try:
-                mapping = getattr(ch, 'overwrites', None) or {}
-                for target, ow in list(mapping.items())[:12]:
-                    tname = getattr(target, 'name', None) or str(
-                        getattr(target, 'id', '?'))
-                    allow, deny = [], []
-                    try:
-                        for perm, val in ow:
-                            if val is True:
-                                allow.append(str(perm))
-                            elif val is False:
-                                deny.append(str(perm))
-                    except Exception:
-                        try:
-                            a, d = ow.pair()
-                            allow = [n for n, v in a if v]
-                            deny = [n for n, v in d if v]
-                        except Exception:
-                            continue
-                    if not allow and not deny:
-                        continue
-                    overs.append({
-                        'name': tname,
-                        'allow': ', '.join(allow[:6]) if allow else '—',
-                        'deny': ', '.join(deny[:6]) if deny else '—',
-                    })
-            except Exception:
-                overs = []
-            overs = overs[:8]
+            flags = _channel_everyone_flags(ch, everyone_id)
+            overs = _channel_overwrite_names(ch, guild, limit=6)
 
             topic = str(getattr(ch, 'topic', None) or '').strip()
             slow = int(getattr(ch, 'slowmode_delay', 0) or 0)
@@ -2765,9 +3118,9 @@ def channels_page():
                 ulimit = 0
             voice_now = 0
             try:
-                members = getattr(ch, 'members', None)
-                if members is not None:
-                    voice_now = len(list(members))
+                vs = getattr(ch, 'voice_states', None)
+                if vs is not None:
+                    voice_now = len(vs)
             except Exception:
                 voice_now = 0
             rid = str(ch.id)
@@ -2782,12 +3135,12 @@ def channels_page():
                 'group': group,
                 'icon': icon,
                 'cat': cat,
-                'view': flag('view_channel'),
-                'send': flag('send_messages'),
-                'speak': flag('speak'),
-                'connect': flag('connect'),
-                'manage': flag('manage_channels'),
-                'stream': flag('stream'),
+                'view': flags['view'],
+                'send': flags['send'],
+                'speak': flags['speak'],
+                'connect': flags['connect'],
+                'manage': flags['manage'],
+                'stream': flags['stream'],
                 'topic': topic[:220],
                 'slowmode': slow,
                 'nsfw': nsfw,
@@ -2814,7 +3167,40 @@ def channels_page():
         'closed': sum(1 for r in shown if not r['view']),
         'routes': sum(1 for r in shown if r.get('route_key')),
     }
-    return render_template('channels.html', rows=shown, groups=groups, kpi=kpi)
+    return {'rows': shown, 'groups': groups, 'kpi': kpi}
+
+
+@app.route('/channels')
+@login_required
+@role_required('mod')
+def channels_page():
+    """Подробная карта каналов: права, лимиты, маршруты бота."""
+    gid = _main_guild()
+    cache_key = f'channels_page:{gid}'
+    try:
+        from services import panel_cache as PC
+        hit = PC.get(cache_key)
+        if isinstance(hit, dict) and hit.get('groups') is not None:
+            return render_template(
+                'channels.html',
+                rows=hit.get('rows') or [],
+                groups=hit.get('groups') or [],
+                kpi=hit.get('kpi') or {},
+            )
+    except Exception:
+        pass
+    payload = _build_channels_payload(gid)
+    try:
+        from services import panel_cache as PC
+        PC.set(cache_key, payload, ttl=120.0)
+    except Exception:
+        pass
+    return render_template(
+        'channels.html',
+        rows=payload.get('rows') or [],
+        groups=payload.get('groups') or [],
+        kpi=payload.get('kpi') or {},
+    )
 
 
 @app.get('/api/login/accounts')
@@ -2846,12 +3232,18 @@ def api_login_members():
 @role_required('helper')
 def api_users_search():
     q = (request.args.get('q') or '').strip()
-    people, _ = _search_guild_members(q, staff_only=False, limit=20)
+    try:
+        limit = max(1, min(40, int(request.args.get('limit') or 24)))
+    except Exception:
+        limit = 24
+    people, _ = _search_guild_members(q, staff_only=False, limit=limit)
     items = [{
         'id': p['id'],
         'name': p['name'],
         'handle': p.get('handle') or '',
         'avatar': p.get('avatar') or '',
+        'role': p.get('role') or '',
+        'role_label': p.get('role_label') or '',
     } for p in people]
     return jsonify({'ok': True, 'items': items})
 
@@ -2860,199 +3252,275 @@ def api_users_search():
 @login_required
 @role_required('helper')
 def api_punish():
-    """Выдать меру из панели (через бота). Учитывает роль и staff_limits."""
+    """Выдать/снять меру — единый путь с /modpanel (apply_panel_action)."""
     data = request.get_json(silent=True) or request.form
     action = str(data.get('action') or '').strip().lower()
     uid = str(data.get('user_id') or '').strip()
     rule = str(data.get('rule') or '').strip()
     note = str(data.get('note') or '').strip()[:200]
     legacy_reason = str(data.get('reason') or '').strip()[:400]
+    mute_kind = str(data.get('mute_kind') or 'timeout').strip().lower()
     try:
         minutes = int(data.get('minutes') or 10)
     except Exception:
         minutes = 10
-    if action not in ('warn', 'mute', 'kick', 'ban'):
-        return jsonify({'ok': False, 'error': 'action: warn|mute|kick|ban'}), 400
+    if action not in (_ISSUE_ACTIONS | _LIFT_ACTIONS):
+        return jsonify({
+            'ok': False,
+            'error': 'action: warn|mute|kick|ban|unwarn|unmute|unban',
+        }), 400
     allowed = _viewer_punish_actions()
     if action not in allowed:
         return jsonify({
             'ok': False,
-            'error': f'Твоя роль не может выдавать: {PUNISH_LABELS.get(action, action)}',
+            'error': f'Твоя роль не может: {PUNISH_LABELS.get(action, action)}',
         }), 403
     if not uid.isdigit():
         return jsonify({'ok': False, 'error': 'user_id'}), 400
-    # хелперу мут — максимум час
     if action == 'mute' and (session.get('role') or 'helper') == 'helper':
         minutes = min(max(1, minutes), 60)
 
-    # причина = правило из каталога (+ комментарий)
+    is_lift = action in _LIFT_ACTIONS
     reason = ''
-    try:
-        from services.mod_reasons import is_known, allows, format_reason
-        if rule:
-            if not is_known(rule):
-                return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
-            act_key = 'timeout' if action == 'mute' else action
-            if action != 'kick' and not allows(rule, act_key):
-                return jsonify({
-                    'ok': False,
-                    'error': f'Правило {rule} не предусматривает: {PUNISH_LABELS.get(action, action)}',
-                }), 400
-            reason = format_reason(rule)
-        elif not legacy_reason:
-            return jsonify({'ok': False, 'error': 'Выбери правило'}), 400
-    except ImportError:
-        pass
+    if not is_lift:
+        try:
+            from services.mod_reasons import is_known, allows, format_reason
+            if rule:
+                if not is_known(rule):
+                    return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
+                act_key = 'timeout' if action == 'mute' else action
+                if action != 'kick' and not allows(rule, act_key):
+                    return jsonify({
+                        'ok': False,
+                        'error': (
+                            f'Правило {rule} не предусматривает: '
+                            f'{PUNISH_LABELS.get(action, action)}'),
+                    }), 400
+                reason = format_reason(rule)
+            elif not legacy_reason:
+                return jsonify({'ok': False, 'error': 'Выбери правило'}), 400
+        except ImportError:
+            pass
     if not reason:
-        reason = legacy_reason or 'Панель'
+        reason = legacy_reason or ('Снятие' if is_lift else 'Панель')
     if note:
         reason = f'{reason} · {note}'
     reason = reason[:400]
-    # лимиты staff_limits (owner — без квот)
-    if not _viewer_is_limit_exempt():
-        try:
-            from services.staff_limits import check_limit, limit_deny_text, human_window, get_windows
-            gid0 = _main_guild()
-            actor = str(session.get('discord_id') or '').strip()
-            if gid0 and actor.isdigit():
-                sl_key = 'mute' if action == 'mute' else action
-                role_ids = _session_discord_role_ids()
-                ok_l, used, lim = check_limit(gid0, actor, sl_key, 1, role_ids)
-                if not ok_l and lim > 0:
-                    win = (get_windows(gid0) or {}).get(sl_key)
-                    return jsonify({
-                        'ok': False,
-                        'error': limit_deny_text(sl_key, used, lim, 1, window=win),
-                    }), 429
-        except Exception:
-            pass
+
     bot = bot_instance
     gid = _main_guild()
     if not bot or not gid:
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    # UI → PANEL_ACTIONS (как /modpanel)
+    kind_map_issue = {
+        'timeout': 'timeout', 'chat': 'mute_chat', 'mute_chat': 'mute_chat',
+        'voice': 'vmute', 'vmute': 'vmute', 'both': 'timeout',
+    }
+    kind_map_lift = {
+        'timeout': 'untimeout', 'chat': 'unmute_chat',
+        'mute_chat': 'unmute_chat', 'voice': 'vunmute', 'vmute': 'vunmute',
+        'both': 'untimeout',
+    }
+    panel_action = action
+    if action == 'mute':
+        panel_action = kind_map_issue.get(mute_kind, 'timeout')
+    elif action == 'unmute':
+        panel_action = kind_map_lift.get(mute_kind, 'untimeout')
+
+    mod_name = session.get('discord_display') or session.get('username') or 'panel'
+    actor_id = str(session.get('discord_id') or '').strip()
 
     async def _do():
         guild = bot.get_guild(int(gid))
         if guild is None:
             raise RuntimeError('guild not found')
         member = guild.get_member(int(uid))
-        if member is None:
-            member = await guild.fetch_member(int(uid))
-        mod_name = session.get('discord_display') or session.get('username') or 'panel'
-        mod_id = session.get('discord_id') or '0'
-        target_name = (
-            getattr(member, 'display_name', None)
-            or getattr(member, 'name', None)
-            or str(member.id)
-        )
-        # В audit Discord исполнителем будет бот — имя модератора в reason
-        ban_reason = f'{reason} · панель: {mod_name}'[:512]
-        cog = bot.get_cog('moderation') or bot.get_cog('Moderation')
-        if action == 'warn':
-            warns = bot.get_cog('warnings')
-            if warns is None:
-                raise RuntimeError('warnings cog offline')
-            await warns.add_warning(member, guild.me, reason)
-            act = 'warn'
-        elif action == 'mute':
-            from datetime import timedelta
-            until = datetime.now(timezone.utc) + timedelta(minutes=max(1, minutes))
-            await member.timeout(until, reason=ban_reason)
-            act = 'timeout'
-        elif action == 'kick':
-            await member.kick(reason=ban_reason)
-            act = 'kick'
-        elif action == 'ban':
-            await member.ban(reason=ban_reason, delete_message_days=0)
-            act = 'ban'
-        else:
-            act = action
-        if cog and hasattr(cog, 'save_case'):
+        if member is None and action != 'unban':
             try:
-                cog.save_case(
-                    guild.id, act, member.id, mod_id, reason,
-                    mod_name=mod_name,
-                    duration=minutes if action == 'mute' else None,
-                    user_name=target_name)
-            except TypeError:
-                cog.save_case(
-                    guild.id, act, member.id, mod_id, reason,
-                    mod_name=mod_name,
-                    duration=minutes if action == 'mute' else None)
-        return {'action': act, 'user': str(member), 'id': str(member.id),
-                'mod': mod_name, 'reason': (rule or reason)[:80]}
+                member = await guild.fetch_member(int(uid))
+            except Exception:
+                member = None
+        if member is None and action not in ('unban', 'ban'):
+            raise RuntimeError('Участник не на сервере')
+
+        # staff: не выдаём ban/kick/mute с /member (иерархия + явный запрет)
+        if member is not None and action in ('ban', 'kick', 'mute'):
+            try:
+                from services.warn_acl import _is_staff_target
+                if _is_staff_target(guild, member):
+                    raise RuntimeError(
+                        'Это staff — ban/kick/mute через профиль нельзя '
+                        '(как в /modpanel). Варн стаффу — только ветка.')
+            except RuntimeError:
+                raise
+            except Exception:
+                pass
+
+        actor = None
+        if actor_id.isdigit():
+            actor = guild.get_member(int(actor_id))
+        cog = bot.get_cog('moderation') or bot.get_cog('Moderation')
+        if cog is None or not hasattr(cog, 'apply_panel_action'):
+            raise RuntimeError('moderation cog offline')
+
+        # kick — отдельный путь (нет в PANEL_ACTIONS)
+        if action == 'kick':
+            if member is None:
+                raise RuntimeError('Участник не на сервере')
+            from services.staff_hierarchy import check as _hchk
+            _actor = actor or mod_name
+            ok_h, deny_h, _, _ = _hchk(guild, _actor, member, 'kick')
+            if not ok_h:
+                raise RuntimeError(deny_h or 'Иерархия')
+            await member.kick(reason=f'{reason} · панель: {mod_name}'[:512])
+            if hasattr(cog, 'save_case'):
+                try:
+                    cog.save_case(
+                        guild.id, 'kick', member.id, actor_id or '0', reason,
+                        mod_name=mod_name,
+                        user_name=getattr(member, 'display_name', None))
+                except Exception:
+                    pass
+            return {
+                'action': 'kick', 'extra': 'Кик',
+                'user': str(member), 'id': str(member.id),
+                'mod': mod_name, 'reason': (rule or reason)[:80],
+            }
+
+        amount = None
+        if panel_action in ('timeout', 'mute_chat', 'vmute'):
+            amount = str(max(1, minutes))
+        target = member if member is not None else uid
+        ok, text = await cog.apply_panel_action(
+            guild, target, panel_action,
+            reason=reason,
+            amount=amount,
+            actor=actor or mod_name,
+            reason_code=rule or None,
+            source='web',
+        )
+        if not ok:
+            raise RuntimeError(text or 'Не получилось')
+        return {
+            'action': panel_action,
+            'extra': text,
+            'user': str(getattr(member, 'display_name', None) or uid),
+            'id': uid,
+            'mod': mod_name,
+            'reason': (rule or reason)[:80],
+        }
 
     try:
         result = _run_on_bot(_do())
-        if not _viewer_is_limit_exempt():
-            try:
-                from services.staff_limits import record_hit
-                actor = str(session.get('discord_id') or '').strip()
-                if gid and actor.isdigit():
-                    sl_key = 'mute' if action == 'mute' else action
-                    record_hit(gid, actor, sl_key, 1)
-            except Exception:
-                pass
         return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)[:200]}), 500
 
 
-@app.route('/users')
-@login_required
-@role_required('helper')
-def users_page():
-    """Участники сервера — профили таблицей + счётчики мер."""
+def _users_directory(q: str = '', *, limit: int = 300):
+    """Справочник участников: профили + счётчики мер. (rows, kpi)."""
     gid = _main_guild()
-    q = (request.args.get('q') or '').strip()
-    ql = q.lower()
+    ql = (q or '').strip().lower()
+    cache_key = f'users_dir:{gid}:{ql}:{int(limit)}'
+    if not ql:
+        try:
+            from services import panel_cache as PC
+            hit = PC.get(cache_key)
+            if hit is not None:
+                return hit
+        except Exception:
+            pass
     names = {}
     avatars = {}
     handles = {}
     role_names = {}
+    panel_roles = {}
 
+    # быстрый путь: members_cache (без обхода всех guild.members)
     try:
-        bot = bot_instance
-        if bot and gid:
-            guild = bot.get_guild(int(gid))
-            if guild is not None:
-                for m in guild.members:
-                    if getattr(m, 'bot', False):
-                        continue
-                    uid = str(m.id)
-                    display = (
-                        getattr(m, 'display_name', None)
-                        or getattr(m, 'global_name', None)
-                        or getattr(m, 'name', None)
-                        or uid
-                    )
-                    handle = getattr(m, 'name', '') or ''
-                    parts = [
-                        display, handle,
-                        getattr(m, 'global_name', None) or '',
-                        getattr(m, 'nick', None) or '',
-                        uid,
-                    ]
-                    names[uid] = display
-                    handles[uid] = handle
-                    avatars[uid] = _member_avatar_url(m)
-                    names[uid + '::__q'] = ' '.join(p for p in parts if p).lower()
-                    try:
-                        roles = [
-                            r.name for r in getattr(m, 'roles', []) or []
-                            if getattr(r, 'name', None) and r.name != '@everyone'
-                        ]
-                        role_names[uid] = roles[:8]
-                    except Exception:
-                        role_names[uid] = []
+        if gid:
+            from services import members_cache as MC
+            from services.warn_config import role_style
+            cached = MC.list_members(
+                int(gid), limit=max(int(limit), 300), q=ql)
+            for h in cached:
+                uid = str(h.get('user_id') or '')
+                if not uid:
+                    continue
+                display = h.get('display_name') or uid
+                handle = h.get('username') or ''
+                names[uid] = display
+                handles[uid] = handle
+                avatars[uid] = h.get('avatar_url') or ''
+                names[uid + '::__q'] = f'{display} {handle} {uid}'.lower()
+                rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
+                if rs:
+                    role_names[uid] = [rs.get('label') or '']
+                    panel_roles[uid] = 'helper' if h.get('is_staff') else ''
+                    if rs.get('label'):
+                        panel_roles[uid] = panel_roles[uid] or 'helper'
     except Exception:
         pass
 
+    # fallback: живой Discord-кэш только если SQLite пуст
+    if len(names) < 5:
+        try:
+            bot = bot_instance
+            if bot and gid:
+                guild = bot.get_guild(int(gid))
+                if guild is not None:
+                    try:
+                        from config import Config
+                        owner_ids = {int(x) for x in Config.all_owner_ids()}
+                    except Exception:
+                        owner_ids = set()
+                    for m in guild.members:
+                        if getattr(m, 'bot', False):
+                            continue
+                        uid = str(m.id)
+                        display = (
+                            getattr(m, 'display_name', None)
+                            or getattr(m, 'global_name', None)
+                            or getattr(m, 'name', None)
+                            or uid
+                        )
+                        handle = getattr(m, 'name', '') or ''
+                        parts = [
+                            display, handle,
+                            getattr(m, 'global_name', None) or '',
+                            getattr(m, 'nick', None) or '',
+                            uid,
+                        ]
+                        names[uid] = display
+                        handles[uid] = handle
+                        avatars[uid] = _member_avatar_url(m)
+                        names[uid + '::__q'] = ' '.join(p for p in parts if p).lower()
+                        try:
+                            roles = [
+                                r.name for r in getattr(m, 'roles', []) or []
+                                if getattr(r, 'name', None) and r.name != '@everyone'
+                            ]
+                            role_names[uid] = roles[:8]
+                        except Exception:
+                            role_names[uid] = []
+                        try:
+                            rids = [r.id for r in getattr(m, 'roles', []) or []]
+                            prole = resolve_discord_panel_role(m.id, rids)
+                            if not prole and int(m.id) in owner_ids:
+                                prole = 'owner'
+                            if prole:
+                                panel_roles[uid] = prole
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
     prefer = DATA / f'member_names_{gid}.json' if gid else None
     paths = [prefer] if prefer and prefer.exists() else []
-    paths += [p for p in sorted(DATA.glob('member_names_*.json')) if p not in paths]
-    for p in paths:
-        raw = _read_json(p, {})
+    paths += [pth for pth in sorted(DATA.glob('member_names_*.json')) if pth not in paths]
+    for pth in paths:
+        raw = _read_json(pth, {})
         if isinstance(raw, dict):
             for uid, name in raw.items():
                 uid = str(uid)
@@ -3060,7 +3528,7 @@ def users_page():
                     continue
                 names.setdefault(uid, str(name))
                 names.setdefault(uid + '::__q', f"{name} {uid}".lower())
-        if any(not k.endswith('::__q') for k in names) and gid and prefer and p == prefer:
+        if any(not k.endswith('::__q') for k in names) and gid and prefer and pth == prefer:
             break
 
     stats = {}
@@ -3112,12 +3580,15 @@ def users_page():
             if tokens and not all(tok in blob for tok in tokens):
                 if ql not in blob and ql not in uid:
                     continue
+        prole = panel_roles.get(uid) or ''
         rows.append({
             'user_id': uid,
             'name': display,
             'handle': handles.get(uid) or '',
             'avatar': avatars.get(uid) or f'https://cdn.discordapp.com/embed/avatars/{(int(uid) >> 22) % 6 if uid.isdigit() else 0}.png',
             'roles': role_names.get(uid) or [],
+            'panel_role': prole,
+            'panel_label': ROLE_LABELS.get(prole, prole) if prole else '',
             'warns': st.get('warns', 0),
             'mutes': st.get('mutes', 0),
             'bans': st.get('bans', 0),
@@ -3133,8 +3604,25 @@ def users_page():
         'bans': sum(r['bans'] for r in rows),
         'kicks': sum(r['kicks'] for r in rows),
     }
+    result = (rows[: max(1, int(limit))], kpi)
+    if not ql:
+        try:
+            from services import panel_cache as PC
+            PC.set(cache_key, result, ttl=60.0)
+        except Exception:
+            pass
+    return result
+
+
+@app.route('/users')
+@login_required
+@role_required('helper')
+def users_page():
+    """Участники сервера — профили таблицей + счётчики мер."""
+    q = (request.args.get('q') or '').strip()
+    rows, kpi = _users_directory(q, limit=300)
     return render_template(
-        'users.html', rows=rows[:300], q=q, kpi=kpi,
+        'users.html', rows=rows, q=q, kpi=kpi,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
@@ -3233,6 +3721,13 @@ def member():
             mutes = sum(1 for r in rows if r.get('kind') in ('mute', 'timeout'))
             bans = sum(1 for r in rows if r.get('kind') == 'ban')
             kicks = sum(1 for r in rows if r.get('kind') == 'kick')
+            is_staff = False
+            try:
+                from services.warn_acl import _is_staff_target
+                if member_obj is not None and getattr(member_obj, 'guild', None):
+                    is_staff = bool(_is_staff_target(member_obj.guild, member_obj))
+            except Exception:
+                is_staff = False
             profile = {
                 'id': uid,
                 'name': _best_name(
@@ -3251,9 +3746,11 @@ def member():
                 'kicks': kicks,
                 'total': len(rows),
                 'on_server': member_obj is not None,
+                'is_staff': is_staff,
             }
     rows = _filter_cases_for_viewer(rows)
     proofs = []
+    profile_actions = list(_viewer_punish_actions())
     if profile:
         hidden = _viewer_hidden_kinds()
         if 'ban' in hidden:
@@ -3263,7 +3760,21 @@ def member():
         profile['total'] = len(rows)
         profile['warns'] = sum(1 for r in rows if r.get('kind') == 'warn')
         profile['mutes'] = sum(1 for r in rows if r.get('kind') in ('mute', 'timeout'))
-        # демки этого человека — чтобы из профиля сразу смотреть доказательства
+        # кнопки как /modpanel: staff без ban/kick/mute
+        try:
+            bot = bot_instance
+            gid = _main_guild()
+            mobj = None
+            if bot and gid and str(profile.get('id') or '').isdigit():
+                g = bot.get_guild(int(gid))
+                if g is not None:
+                    mobj = g.get_member(int(profile['id']))
+            profile_actions = _profile_punish_actions(mobj)
+        except Exception:
+            profile_actions = [
+                a for a in _viewer_punish_actions()
+                if not profile.get('is_staff') or a in _LIFT_ACTIONS
+            ]
         try:
             uid = str(profile.get('id') or '')
             for pr in _proofs_list(_main_guild()):
@@ -3273,22 +3784,903 @@ def member():
                     break
         except Exception:
             proofs = []
+    # пустой стейт / не найдено — таблицы людей + живой поиск
+    staff_rows = []
+    punished_rows = []
+    people_rows = []
+    people_kpi = {'total': 0, 'warns': 0, 'mutes': 0, 'bans': 0, 'kicks': 0}
+    if not profile:
+        try:
+            directory, people_kpi = _users_directory('', limit=400)
+            staff_rows = [r for r in directory if r.get('panel_role')]
+            staff_rows.sort(key=lambda r: (
+                staff_board_rank(r.get('panel_role') or '', r.get('panel_label') or ''),
+                str(r.get('name') or '').lower(),
+            ))
+            staff_rows = staff_rows[:80]
+            punished_rows = [r for r in directory if int(r.get('total') or 0) > 0][:60]
+            people_rows = directory[:120]
+        except Exception:
+            pass
+
     return render_template(
         'member.html', q=q, rows=rows, profile=profile, proofs=proofs,
+        staff_rows=staff_rows, punished_rows=punished_rows,
+        people_rows=people_rows, people_kpi=people_kpi,
+        profile_actions=profile_actions,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
+
+
+def _warn_view_row(w, book, guild=None, active_counts=None):
+    """Одна строка варна для шаблона."""
+    uid = str(w.get('user_id') or '')
+    mid = str(w.get('moderator_id') or w.get('mod_id') or '')
+    rtype = w.get('reason_type') or (
+        'staff' if w.get('is_staff_target') else 'member')
+    branch = w.get('branch')
+    branch_label = branch
+    try:
+        from services.warn_config import branch_labels
+        branch_label = branch_labels().get(branch, branch) if branch else None
+    except Exception:
+        pass
+    avatar = ''
+    if guild and uid.isdigit():
+        m = guild.get_member(int(uid))
+        if m is not None:
+            try:
+                avatar = str(m.display_avatar.url)
+            except Exception:
+                avatar = ''
+    ac = 0
+    if active_counts is not None and uid.isdigit():
+        ac = int(active_counts.get(int(uid), 0) or 0)
+    elif uid.isdigit() and w.get('guild_id'):
+        try:
+            from services import warn_store as WS
+            ac = WS.count_active(int(w['guild_id']), int(uid))
+        except Exception:
+            ac = 1 if w.get('active') else 0
+    return {
+        'id': w.get('id'),
+        'user_id': uid,
+        'user_name': _best_name(None, uid, book),
+        'avatar': avatar,
+        'mod_id': mid if _is_id(mid) else '',
+        'mod_name': _best_name(None, mid, book),
+        'reason': w.get('reason') or '—',
+        'reason_type': rtype,
+        'reason_code': w.get('reason_code'),
+        'branch': branch,
+        'branch_label': branch_label,
+        'active': bool(w.get('active')),
+        'active_count': ac,
+        'when': _fmt(w.get('created_at') or w.get('timestamp')),
+        'removed_by': w.get('removed_by'),
+        'removed_at': w.get('removed_at'),
+        'removed_reason': w.get('removed_reason'),
+        'source': w.get('source') or 'discord',
+    }
+
+
+def _staff_role_label(guild, member) -> str:
+    try:
+        from services.warn_dm import staff_role_label
+        return staff_role_label(member) or ''
+    except Exception:
+        pass
+    if member is None:
+        return ''
+    try:
+        roles = sorted(
+            (r for r in (member.roles or []) if not getattr(r, 'is_default', lambda: False)()),
+            key=lambda r: getattr(r, 'position', 0), reverse=True)
+        if roles:
+            return getattr(roles[0], 'name', '') or ''
+    except Exception:
+        pass
+    return ''
+
+
+def _warn_remaining(expires_at) -> dict:
+    """{'text': '3д 4ч', 'urgent': bool, 'iso': ...} из expires_at."""
+    out = {'text': '—', 'urgent': False, 'iso': expires_at or ''}
+    if not expires_at:
+        return out
+    dt = _parse_ts(expires_at)
+    if dt is None:
+        return out
+    now = datetime.now(timezone.utc)
+    sec = int((dt - now).total_seconds())
+    if sec <= 0:
+        return {'text': 'истёк', 'urgent': True, 'iso': expires_at}
+    days, rem = divmod(sec, 86400)
+    hours, rem = divmod(rem, 3600)
+    mins = rem // 60
+    if days > 0:
+        text = f'{days}д {hours}ч'
+    elif hours > 0:
+        text = f'{hours}ч {mins}м'
+    else:
+        text = f'{mins}м'
+    return {'text': f'осталось {text}', 'urgent': sec < 86400, 'iso': expires_at}
+
+
+def _warn_user_row(w, book, guild=None, actor=None):
+    """Строка агрегированного списка — данные из members_cache, не Discord API."""
+    from services.warn_config import role_style, branch_style
+    from services import warn_actions as WA
+    from services import members_cache as MC
+
+    base = _warn_view_row(w, book, guild, {
+        int(w.get('user_id') or 0): int(w.get('active_count') or 0)})
+    base['active_count'] = int(w.get('active_count') or base.get('active_count') or 0)
+    base['first_warn_at'] = _fmt(w.get('first_warn_at'))
+    base['role_label'] = ''
+    base['handle'] = ''
+    base['role_style'] = None
+    live_branch = w.get('live_branch') or w.get('branch')
+    base['branch_style'] = branch_style(live_branch) if live_branch else None
+    base['mod_avatar'] = ''
+    base['mod_role_style'] = None
+    base['can_remove'] = False
+    base['remove_deny'] = ''
+    base['in_guild'] = True
+    base['left_server'] = False
+    rem = _warn_remaining(w.get('next_expires_at') or w.get('expires_at'))
+    base['expires_text'] = rem['text']
+    base['expires_urgent'] = rem['urgent']
+    base['expires_at'] = rem['iso']
+    base['status'] = w.get('status') or (
+        'active' if int(w.get('active') or 0) else (
+            'expired' if int(w.get('expired') or 0) else 'removed'))
+
+    uid = str(base.get('user_id') or '')
+    gid = int(w.get('guild_id') or (_main_guild() or 0) or 0)
+    cached = None
+    if gid and uid.isdigit():
+        try:
+            cached = MC.get_member(gid, int(uid))
+        except Exception:
+            cached = None
+    # live fields из JOIN
+    if w.get('live_display_name'):
+        base['user_name'] = w['live_display_name']
+    if w.get('live_username') is not None:
+        base['handle'] = w.get('live_username') or ''
+    if w.get('live_avatar'):
+        base['avatar'] = w['live_avatar']
+    if w.get('live_top_role_id'):
+        base['role_style'] = role_style(w['live_top_role_id'])
+        base['role_label'] = (base['role_style'] or {}).get('label') or ''
+    if 'live_in_guild' in w:
+        base['in_guild'] = bool(int(w.get('live_in_guild') or 0))
+        base['left_server'] = not base['in_guild']
+
+    if cached:
+        base['user_name'] = cached.get('display_name') or base['user_name']
+        base['handle'] = cached.get('username') or base.get('handle') or ''
+        base['avatar'] = cached.get('avatar_url') or base.get('avatar') or ''
+        if cached.get('top_role_id') and not base.get('role_style'):
+            base['role_style'] = role_style(cached['top_role_id'])
+            base['role_label'] = base['role_style'].get('label') or ''
+        if cached.get('branch') and not base.get('branch_style'):
+            base['branch_style'] = branch_style(cached.get('branch'))
+        base['in_guild'] = bool(int(cached.get('in_guild') or 0))
+        base['left_server'] = not base['in_guild']
+
+    # issuer styling — только cache
+    mid = str(base.get('mod_id') or '')
+    if mid.isdigit() and gid:
+        try:
+            mc = MC.get_member(gid, int(mid))
+            if mc:
+                base['mod_name'] = mc.get('display_name') or base['mod_name']
+                base['mod_avatar'] = mc.get('avatar_url') or ''
+                if mc.get('top_role_id'):
+                    base['mod_role_style'] = role_style(mc['top_role_id'])
+        except Exception:
+            pass
+    if not base.get('mod_role_style') and w.get('issuer_role_id'):
+        base['mod_role_style'] = role_style(w.get('issuer_role_id'))
+
+    if actor is not None and base.get('active_count'):
+        ok, deny = WA.can_remove_warn(actor, w, guild=guild)
+        base['can_remove'] = bool(ok)
+        base['remove_deny'] = deny or ''
+
+    ac = base['active_count']
+    base['badge_class'] = (
+        'badge-red' if ac >= 3 else ('badge-orange' if ac == 2 else 'badge-yellow'))
+    return base
+
+
+def _warns_view_data():
+    """Общий каркас Warn (страница + live API)."""
+    import time as _time
+    _t0 = _time.perf_counter()
+    from services import warn_store as WS
+    from services.warn_config import (
+        branch_labels, branch_grant_roles, styles_public_dict)
+    from services import warn_reasons as WR
+    from services import panel_cache as PC
+    import json as _json
+
+    gid = _main_guild()
+    tab = (request.args.get('tab') or 'members').strip()
+    if tab not in ('members', 'staff'):
+        tab = 'members'
+    q = (request.args.get('q') or '').strip()
+    scope = (request.args.get('scope') or 'active').strip()
+    f_branch = (request.args.get('branch') or '').strip()
+    f_mod = (request.args.get('mod') or '').strip()
+    sort = (request.args.get('sort') or 'count_desc').strip()
+    try:
+        page = max(1, int(request.args.get('page') or 1))
+    except Exception:
+        page = 1
+    per = 25
+    book = _namebook(gid)
+    bot = bot_instance
+    guild = bot.get_guild(int(gid)) if bot and gid else None
+    actor = _panel_actor_member(guild) if guild else None
+
+    rtype = 'staff' if tab == 'staff' else 'member'
+    rows_raw, total = ([], 0)
+    stats = {
+        'active_warns': 0, 'users_member': 0, 'users_staff': 0,
+        'users_total': 0, 'removed_7d': 0,
+    }
+    err = ''
+    cache_key = (
+        f'warns:list:{gid}:{tab}:{scope}:{f_branch}:{f_mod}:{sort}:'
+        f'{page}:{q}')
+    cached = PC.get(cache_key) if not q else None
+    if cached:
+        rows_raw, total, stats = cached
+    elif gid:
+        try:
+            mod_id = int(f_mod) if f_mod.isdigit() else None
+            q_use = q
+            if q and not (q.isdigit() and len(q) >= 5):
+                try:
+                    from services import members_cache as MC
+                    hits = MC.search(
+                        int(gid), q, limit=10,
+                        staff_only=(True if tab == 'staff' else False))
+                    if len(hits) == 1:
+                        q_use = str(hits[0]['user_id'])
+                except Exception:
+                    pass
+            rows_raw, total = WS.list_users_aggregated(
+                int(gid),
+                reason_type=rtype,
+                active_only=(scope != 'all'),
+                branch=f_branch or None,
+                moderator_id=mod_id,
+                q=q_use or None,
+                sort=sort,
+                limit=per,
+                offset=(page - 1) * per,
+            )
+            stats = WS.stats_active(int(gid))
+            stats['users_total'] = (
+                int(stats.get('users_member') or 0)
+                + int(stats.get('users_staff') or 0))
+            if not q:
+                PC.set(cache_key, (rows_raw, total, stats))
+        except Exception as ex:
+            err = str(ex)
+
+    rows = [_warn_user_row(w, book, guild, actor=actor) for w in rows_raw]
+    pages = max(1, (total + per - 1) // per)
+    can_manage = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('mod', 2)
+    can_admin = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('admin', 4)
+    can_extend = can_admin or (session.get('role') == 'owner')
+    ms = int((_time.perf_counter() - _t0) * 1000)
+    qs = {
+        'tab': tab, 'scope': scope, 'sort': sort, 'page': page,
+    }
+    if q:
+        qs['q'] = q
+    if f_branch and tab == 'staff':
+        qs['branch'] = f_branch
+    if f_mod:
+        qs['mod'] = f_mod
+    url = url_for('warns', **qs)
+    ctx = {
+        'rows': rows, 'total': total, 'page': page, 'pages': pages,
+        'tab': tab, 'q': q, 'scope': scope, 'f_branch': f_branch,
+        'f_mod': f_mod, 'sort': sort, 'stats': stats,
+        'branches': sorted(branch_grant_roles().keys()),
+        'branch_labels': branch_labels(),
+        'reasons_json': _json.dumps(WR.as_public_dict(), ensure_ascii=False),
+        'styles_json': _json.dumps(styles_public_dict(), ensure_ascii=False),
+        'csrf_token': _ensure_csrf(),
+        'can_manage': can_manage,
+        'can_admin': can_admin,
+        'can_extend': can_extend,
+        'timing_ms': ms,
+        'url': url,
+        'error': err,
+    }
+    return ctx
 
 
 @app.route('/warns')
 @login_required
 @role_required('helper')
 def warns():
+    """Warn: вкладки Участники / Стафф, агрегация по людям."""
+    ctx = _warns_view_data()
+    if ctx.get('error'):
+        flash(f'БД варнов: {ctx["error"]}', 'err')
+    app.logger.info(
+        'warns page %sms tab=%s q=%r total=%s',
+        ctx['timing_ms'], ctx['tab'], ctx['q'], ctx['total'])
+    return render_template('warns.html', **ctx)
+
+
+@app.get('/api/warns/live')
+@login_required
+@role_required('helper')
+def api_warns_live():
+    """Live-фрагмент Warn без полной перезагрузки страницы."""
+    ctx = _warns_view_data()
+    if ctx.get('error'):
+        return jsonify({'ok': False, 'error': ctx['error']}), 500
+    html = render_template('_warns_live.html', **ctx)
+    app.logger.info(
+        'warns live %sms tab=%s q=%r total=%s',
+        ctx['timing_ms'], ctx['tab'], ctx['q'], ctx['total'])
+    return jsonify({
+        'ok': True,
+        'html': html,
+        'tab': ctx['tab'],
+        'total': ctx['total'],
+        'page': ctx['page'],
+        'pages': ctx['pages'],
+        'url': ctx['url'],
+        'ms': ctx['timing_ms'],
+        'stats': ctx['stats'],
+    })
+
+
+@app.get('/api/warns/search')
+@login_required
+@role_required('helper')
+def api_warns_search():
+    """Живой поиск только из members_cache (без Discord API)."""
+    import time as _time
+    _t0 = _time.perf_counter()
+    from services import members_cache as MC
+    from services import warn_store as WS
+    from services.warn_config import role_style, branch_style
+    q = (request.args.get('q') or '').strip()
+    staff = (request.args.get('staff') or '').strip()
+    staff_only = None
+    if staff == '1':
+        staff_only = True
+    elif staff == '0':
+        staff_only = False
+    try:
+        limit = min(10, max(1, int(request.args.get('limit') or 10)))
+    except Exception:
+        limit = 10
     gid = _main_guild()
-    rows = [r for r in _collect_cases(gid) if r['kind'] == 'warn'][:200]
-    for r in rows:
-        r['when'] = _fmt(r.get('timestamp'))
-    return render_template('warns.html', rows=rows)
+    if not gid or not q:
+        return jsonify({'ok': True, 'items': [], 'ms': 0})
+    items = []
+    try:
+        hits = MC.search(int(gid), q, limit=limit, staff_only=staff_only)
+        for h in hits:
+            warns = 0
+            try:
+                warns = WS.count_active(int(gid), int(h['user_id']))
+            except Exception:
+                warns = 0
+            rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
+            badge = ''
+            if rs and h.get('is_staff'):
+                badge = (
+                    f'<span class="rbadge" style="color:{rs["color"]};'
+                    f'background:{rs["color"]}22;border-color:{rs["color"]}66">'
+                    f'{rs["label"]}</span>')
+            elif h.get('branch'):
+                bs = branch_style(h['branch'])
+                badge = (
+                    f'<span class="rbadge" style="color:{bs["color"]};'
+                    f'background:{bs["color"]}22;border-color:{bs["color"]}66">'
+                    f'{bs["label"]}</span>')
+            items.append({
+                'id': str(h['user_id']),
+                'name': h.get('display_name') or str(h['user_id']),
+                'handle': h.get('username') or '',
+                'avatar': h.get('avatar_url') or '',
+                'is_staff': bool(h.get('is_staff')),
+                'branch': h.get('branch'),
+                'in_guild': bool(h.get('in_guild')),
+                'warns': warns,
+                'role_badge': badge,
+            })
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex), 'items': []}), 500
+    ms = int((_time.perf_counter() - _t0) * 1000)
+    app.logger.info('warns search %sms q=%r n=%s', ms, q, len(items))
+    return jsonify({'ok': True, 'items': items, 'ms': ms})
+
+
+@app.post('/api/warns/resync')
+@login_required
+@role_required('admin')
+def api_warns_resync():
+    """Админ: пересинхронизировать members/roles/channels + expire + warn roles."""
+    data = request.get_json(silent=True) or {}
+    if not _check_csrf(data):
+        return jsonify({'ok': False, 'error': 'CSRF'}), 403
+    bot = bot_instance
+    gid = _main_guild()
+    if not bot or not gid:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+    guild = bot.get_guild(int(gid))
+    if guild is None:
+        return jsonify({'ok': False, 'error': 'Гильдия не найдена'}), 503
+
+    async def _do():
+        from services import members_cache as MC
+        from services import roles_cache as RC
+        from services import channels_cache as CC
+        from services.warn_role import sync_guild_active_warns
+        from services.warn_expire import process_expired_warns
+        n_exp = await process_expired_warns(bot, int(gid))
+        n_m = await MC.sync_guild(guild)
+        n_r = RC.sync_guild(guild)
+        n_c = CC.sync_guild(guild)
+        n_w = await sync_guild_active_warns(guild)
+        try:
+            import asyncio
+            from services.warn_board import schedule_board_refresh
+            asyncio.create_task(schedule_board_refresh(guild))
+        except Exception:
+            pass
+        return {
+            'members': n_m, 'roles': n_r, 'channels': n_c,
+            'warn_roles': n_w, 'expired': n_exp,
+        }
+
+    try:
+        result = _run_bot(_do())
+        from services import panel_cache as PC
+        PC.invalidate_all()
+        return jsonify({'ok': True, **(result or {})})
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)}), 500
+
+
+@app.post('/api/warns/extend')
+@login_required
+@role_required('admin')
+def api_warns_extend():
+    """Продлить варн (owner/admin)."""
+    data = request.get_json(silent=True) or {}
+    if not _check_csrf(data):
+        return jsonify({'ok': False, 'error': 'CSRF'}), 403
+    try:
+        wid = int(data.get('warn_id') or 0)
+    except Exception:
+        wid = 0
+    if not wid:
+        return jsonify({'ok': False, 'error': 'warn_id'}), 400
+    from services import warn_store as WS
+    from services.warn_config import warn_duration_days
+    days = data.get('days')
+    try:
+        days = int(days) if days is not None else warn_duration_days()
+    except Exception:
+        days = warn_duration_days()
+    actor_id = session.get('discord_id') or 0
+    try:
+        actor_id = int(actor_id)
+    except Exception:
+        actor_id = 0
+    row = WS.extend_warn(wid, days=days, actor_id=actor_id or None)
+    if not row:
+        return jsonify({'ok': False, 'error': 'Не удалось продлить'}), 400
+    from services import panel_cache as PC
+    PC.invalidate('warns')
+    return jsonify({'ok': True, 'row': row, 'expires_at': row.get('expires_at')})
+
+
+def _warns_user_view_data(uid):
+    from services import warn_store as WS
+    from services import warn_reasons as WR
+    from services import warn_actions as WA
+    from services import members_cache as MC
+    from services.warn_config import (
+        role_style, branch_style, member_rank_snapshot)
+    from services.warn_acl import is_staff_target, branches_of
+
+    gid = _main_guild()
+    if not str(uid).isdigit() or not gid:
+        return None
+    book = _namebook(gid)
+    bot = bot_instance
+    guild = bot.get_guild(int(gid)) if bot and gid else None
+    actor = _panel_actor_member(guild) if guild else None
+    member = guild.get_member(int(uid)) if guild else None
+    cached = MC.get_member(int(gid), int(uid))
+    if member is not None:
+        try:
+            from services.warn_acl import get_staff_info
+            is_staff, _br, _rk = get_staff_info(member)
+        except Exception:
+            is_staff = bool(is_staff_target(guild, member))
+    else:
+        is_staff = bool(cached and cached.get('is_staff') and cached.get('in_guild'))
+    history_raw = WS.list_warns(int(gid), int(uid), active_only=False)
+    history = []
+    for w in history_raw:
+        row = _warn_view_row(w, book, guild)
+        st = w.get('status') or WS.warn_status(w)
+        row['status'] = st
+        row['expired'] = int(w.get('expired') or 0) or (st == 'expired')
+        row['active'] = (st == 'active')
+        rem = _warn_remaining(w.get('expires_at'))
+        row['expires_text'] = rem['text']
+        row['expires_urgent'] = rem['urgent']
+        row['expires_at'] = rem['iso']
+        row['removed_when'] = _fmt(w.get('removed_at'))
+        rb = w.get('removed_by')
+        row['removed_by_name'] = _best_name(None, str(rb or ''), book) if rb else ''
+        if w.get('issuer_role_id'):
+            row['mod_role_style'] = role_style(w.get('issuer_role_id'))
+        else:
+            row['mod_role_style'] = None
+        if actor is not None and row.get('active'):
+            ok, deny = WA.can_remove_warn(actor, w, guild=guild)
+            row['can_remove'] = bool(ok)
+            row['remove_deny'] = deny or ''
+        else:
+            row['can_remove'] = False
+            row['remove_deny'] = ''
+        history.append(row)
+    active_count = WS.count_active(int(gid), int(uid))
+    rtype = 'staff' if is_staff else 'member'
+    can_manage = LEVEL.get(session.get('role') or 'helper', 0) >= LEVEL.get('mod', 2)
+
+    avatar = (cached or {}).get('avatar_url') or ''
+    handle = (cached or {}).get('username') or ''
+    name = (cached or {}).get('display_name') or _best_name(
+        getattr(member, 'display_name', None), str(uid), book)
+    role_st = None
+    branch_st = None
+    on_server = bool(member) or bool((cached or {}).get('in_guild'))
+    first_at = last_at = ''
+    if history_raw:
+        stamps = [h.get('created_at') or '' for h in history_raw if h.get('created_at')]
+        if stamps:
+            first_at = _fmt(sorted(stamps)[0])
+            last_at = _fmt(sorted(stamps, reverse=True)[0])
+    if member is not None:
+        try:
+            avatar = str(member.display_avatar.url)
+        except Exception:
+            pass
+        handle = getattr(member, 'name', '') or handle
+        name = getattr(member, 'display_name', None) or name
+        _rk, rid, _nm = member_rank_snapshot(member)
+        if rid:
+            role_st = role_style(rid)
+        try:
+            br = branches_of(member)
+            if br:
+                branch_st = branch_style(sorted(br)[0])
+        except Exception:
+            pass
+        on_server = True
+    elif cached:
+        if cached.get('top_role_id'):
+            role_st = role_style(cached['top_role_id'])
+        if cached.get('branch'):
+            branch_st = branch_style(cached['branch'])
+        on_server = bool(cached.get('in_guild'))
+
+    return {
+        'uid': str(uid),
+        'profile': {
+            'name': name,
+            'handle': handle,
+            'avatar': avatar,
+            'branch': (branch_st or {}).get('label') if branch_st else '',
+            'role_label': (role_st or {}).get('label') if role_st else '',
+            'role_style': role_st,
+            'branch_style': branch_st,
+            'first_at': first_at,
+            'last_at': last_at,
+            'on_server': on_server,
+        },
+        'history': history,
+        'active_count': active_count,
+        'is_staff': is_staff,
+        'reason_opts': WR.select_options_data(rtype),
+        'csrf_token': _ensure_csrf(),
+        'can_manage': can_manage,
+    }
+
+
+@app.route('/warns/user/<uid>')
+@login_required
+@role_required('helper')
+def warns_user(uid):
+    ctx = _warns_user_view_data(uid)
+    if ctx is None:
+        abort(404)
+    return render_template('warns_user.html', **ctx)
+
+
+@app.get('/api/warns/user/<uid>/live')
+@login_required
+@role_required('helper')
+def api_warns_user_live(uid):
+    ctx = _warns_user_view_data(uid)
+    if ctx is None:
+        return jsonify({'ok': False, 'error': 'not found'}), 404
+    html = render_template('_warns_user_live.html', **ctx)
+    return jsonify({
+        'ok': True,
+        'html': html,
+        'is_staff': bool(ctx.get('is_staff')),
+        'active_count': ctx.get('active_count') or 0,
+    })
+
+
+@app.route('/bans')
+@login_required
+@role_required('mod')
+def bans_page():
+    bot = bot_instance
+    gid = _main_guild()
+    rows = []
+    error = ''
+    guild = bot.get_guild(int(gid)) if bot and gid else None
+    if guild is None:
+        error = 'Бот офлайн или гильдия не найдена'
+    else:
+        try:
+            async def _fetch():
+                out = []
+                async for entry in guild.bans(limit=200):
+                    u = entry.user
+                    av = ''
+                    try:
+                        av = str(u.display_avatar.url)
+                    except Exception:
+                        pass
+                    out.append({
+                        'user_id': str(u.id),
+                        'name': getattr(u, 'name', str(u.id)),
+                        'avatar': av,
+                        'reason': entry.reason or '',
+                    })
+                return out
+            rows = _run_bot(_fetch())
+        except Exception as ex:
+            error = f'Не удалось загрузить баны: {ex}'
+    actor = _panel_actor_member(guild) if guild else None
+    can_unban = False
+    if actor is not None:
+        try:
+            from services.permission_acl import check_action as _acl
+            from services.warn_acl import _is_bot_owner
+            from services.warn_config import unban_allowed_role_ids
+            allowed = unban_allowed_role_ids()
+            if allowed:
+                have = {int(r.id) for r in (actor.roles or [])}
+                can_unban = bool(have & set(allowed)) or _is_bot_owner(actor)
+            else:
+                can_unban = _is_bot_owner(actor) or _acl(guild.id, actor, 'unban')
+        except Exception:
+            can_unban = session.get('role') in ('admin', 'owner')
+    elif session.get('role') in ('admin', 'owner'):
+        can_unban = True
+    return render_template(
+        'bans.html', rows=rows, error=error,
+        can_unban=can_unban, csrf_token=_ensure_csrf())
+
+
+@app.post('/api/warns/issue')
+@login_required
+@role_required('mod')
+def api_warns_issue():
+    data = request.get_json(silent=True) or {}
+    if not _check_csrf(data):
+        return jsonify({'ok': False, 'error': 'CSRF'}), 403
+    uid = str(data.get('user_id') or '').strip()
+    code = str(data.get('reason_code') or '').strip()
+    detail = str(data.get('detail') or '').strip()[:400]
+    rtype = str(data.get('reason_type') or 'member').strip()
+    if rtype not in ('member', 'staff'):
+        rtype = 'member'
+    if not uid.isdigit():
+        return jsonify({'ok': False, 'error': 'user_id'}), 400
+    if not detail:
+        return jsonify({'ok': False, 'error': 'Нужна формулировка причины'}), 400
+    bot = bot_instance
+    gid = _main_guild()
+    if not bot or not gid:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+    guild = bot.get_guild(int(gid))
+    if guild is None:
+        return jsonify({'ok': False, 'error': 'Гильдия не найдена'}), 503
+    actor = _panel_actor_member(guild)
+    if actor is None:
+        return jsonify({'ok': False, 'error': 'Нужен Discord-вход (OAuth)'}), 403
+
+    async def _do():
+        from services import warn_actions as WA
+        target = guild.get_member(int(uid))
+        if target is None:
+            try:
+                target = await guild.fetch_member(int(uid))
+            except Exception:
+                raise RuntimeError('Участник не на сервере')
+        # тип по реальной цели
+        from services.warn_reasons import reason_type_for_target
+        real_type = reason_type_for_target(guild, target)
+        ok, msg, payload = await WA.issue_warn(
+            guild, target, actor,
+            reason_code=code or None,
+            reason_type=real_type,
+            detail=detail,
+            source='web',
+            check_acl=True,
+        )
+        return ok, msg, payload
+
+    try:
+        ok, msg, payload = _run_bot(_do())
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)}), 500
+    if not ok:
+        status = 403 if 'ветк' in (msg or '').lower() or 'права' in (msg or '').lower() else 400
+        return jsonify({'ok': False, 'error': msg}), status
+    try:
+        from services import panel_cache as PC
+        PC.invalidate('warns')
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'message': msg, 'warn_id': (payload or {}).get('warn_id')})
+
+
+@app.post('/api/warns/remove')
+@login_required
+@role_required('mod')
+def api_warns_remove():
+    data = request.get_json(silent=True) or {}
+    if not _check_csrf(data):
+        return jsonify({'ok': False, 'error': 'CSRF'}), 403
+    uid = str(data.get('user_id') or '').strip()
+    try:
+        wid = int(data.get('warn_id') or 0)
+    except Exception:
+        wid = 0
+    removed_reason = str(data.get('removed_reason') or '').strip()[:200] or None
+    if not uid.isdigit():
+        return jsonify({'ok': False, 'error': 'user_id'}), 400
+    bot = bot_instance
+    gid = _main_guild()
+    if not bot or not gid:
+        return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+    guild = bot.get_guild(int(gid))
+    actor = _panel_actor_member(guild) if guild else None
+    if actor is None:
+        return jsonify({'ok': False, 'error': 'Нужен Discord-вход (OAuth)'}), 403
+
+    async def _do():
+        from services import warn_actions as WA
+        target = guild.get_member(int(uid))
+        if target is None:
+            try:
+                target = await guild.fetch_member(int(uid))
+            except Exception:
+                # цель ушла — снимаем запись без sync роли
+                from services import warn_store as WS
+                if wid:
+                    row = WS.deactivate_warn(
+                        wid, actor.id, removed_reason=removed_reason)
+                    if row:
+                        return True, f'Снято #{wid} (оффлайн)', {'removed': row}
+                raise RuntimeError('Участник не на сервере')
+        return await WA.remove_warn(
+            guild, target, actor, warn_id=wid or None,
+            removed_reason=removed_reason, source='web', check_acl=True)
+
+    try:
+        ok, msg, _payload = _run_bot(_do())
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)}), 500
+    if not ok:
+        status = 403 if 'ветк' in (msg or '').lower() else 400
+        return jsonify({'ok': False, 'error': msg}), status
+    try:
+        from services import panel_cache as PC
+        PC.invalidate('warns')
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'message': msg})
+
+
+@app.post('/api/warns/remove_all')
+@login_required
+@role_required('mod')
+def api_warns_remove_all():
+    data = request.get_json(silent=True) or {}
+    if not _check_csrf(data):
+        return jsonify({'ok': False, 'error': 'CSRF'}), 403
+    uid = str(data.get('user_id') or '').strip()
+    removed_reason = str(data.get('removed_reason') or '').strip()[:200] or None
+    if not uid.isdigit():
+        return jsonify({'ok': False, 'error': 'user_id'}), 400
+    bot = bot_instance
+    gid = _main_guild()
+    guild = bot.get_guild(int(gid)) if bot and gid else None
+    actor = _panel_actor_member(guild) if guild else None
+    if actor is None:
+        return jsonify({'ok': False, 'error': 'Нужен Discord-вход (OAuth)'}), 403
+
+    async def _do():
+        from services import warn_actions as WA
+        target = guild.get_member(int(uid)) or await guild.fetch_member(int(uid))
+        return await WA.remove_all_warns(
+            guild, target, actor, removed_reason=removed_reason,
+            source='web', check_acl=True)
+
+    try:
+        ok, msg, _p = _run_bot(_do())
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)}), 500
+    if not ok:
+        return jsonify({'ok': False, 'error': msg}), 400
+    try:
+        from services import panel_cache as PC
+        PC.invalidate('warns')
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'message': msg})
+
+
+@app.post('/api/bans/unban')
+@login_required
+@role_required('mod')
+def api_bans_unban():
+    data = request.get_json(silent=True) or {}
+    if not _check_csrf(data):
+        return jsonify({'ok': False, 'error': 'CSRF'}), 403
+    uid = str(data.get('user_id') or '').strip()
+    if not uid.isdigit():
+        return jsonify({'ok': False, 'error': 'user_id'}), 400
+    bot = bot_instance
+    gid = _main_guild()
+    guild = bot.get_guild(int(gid)) if bot and gid else None
+    actor = _panel_actor_member(guild) if guild else None
+    if actor is None:
+        return jsonify({'ok': False, 'error': 'Нужен Discord-вход (OAuth)'}), 403
+
+    async def _do():
+        from services import warn_actions as WA
+        return await WA.panel_unban(
+            guild, int(uid), actor, reason='Разбан из веб-панели', source='web')
+
+    try:
+        ok, msg = _run_bot(_do())
+    except Exception as ex:
+        return jsonify({'ok': False, 'error': str(ex)}), 500
+    if not ok:
+        status = 403 if 'прав' in (msg or '').lower() else 400
+        return jsonify({'ok': False, 'error': msg}), status
+    return jsonify({'ok': True, 'message': msg})
 
 
 @app.route('/appeals')
