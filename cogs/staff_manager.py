@@ -2,6 +2,8 @@
 """/staff · /staff_diagnose · /staff_selftest — Staff Manager (Components V2)."""
 from __future__ import annotations
 
+import asyncio
+import os
 import traceback
 from datetime import datetime, timedelta, timezone
 
@@ -720,12 +722,35 @@ class StaffManager(commands.Cog):
 
     async def _boot_config(self):
         await self.bot.wait_until_ready()
-        guild_role_ids = set()
-        for g in self.bot.guilds:
-            for r in g.roles:
-                guild_role_ids.add(r.id)
+        main_gid = int(os.environ.get('MAIN_GUILD_ID') or 0)
+
+        async def _collect_ids() -> set:
+            ids: set = set()
+            for g in self.bot.guilds:
+                if main_gid and int(g.id) != main_gid:
+                    continue
+                # дождаться ролей, если кэш ещё пуст (только @everyone)
+                if len(g.roles) <= 1:
+                    try:
+                        await g.fetch_roles()
+                    except Exception:
+                        pass
+                for r in g.roles:
+                    ids.add(int(r.id))
+            return ids
+
+        guild_role_ids = await _collect_ids()
         ok, err = reload_config(
             guild_role_ids=guild_role_ids if guild_role_ids else None)
+        # кэш ролей иногда пуст на первом on_ready — не глушим модуль
+        if not ok and err and 'не найдена на сервере' in err:
+            _log.warning(
+                'staff_manager: кэш ролей неполный (%s ids), повтор без '
+                'guild-check: %s', len(guild_role_ids), err[:200])
+            await asyncio.sleep(2)
+            guild_role_ids = await _collect_ids()
+            ok, err = reload_config(
+                guild_role_ids=guild_role_ids if len(guild_role_ids) > 10 else None)
         if not ok:
             _log.error('staff_manager DISABLED: %s', err)
         else:
