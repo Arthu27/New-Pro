@@ -144,6 +144,18 @@ def parse_config(raw: dict) -> dict:
         'owner_ids': owner_ids,
         'common_staff_role_id': _as_int(raw.get('common_staff_role_id')),
         'vacation_role_id': _as_int(raw.get('vacation_role_id')),
+        'hidden_admin_role_ids': [
+            _as_int(x) for x in (
+                raw.get('hidden_admin_role_ids')
+                or raw.get('HIDDEN_ADMIN_ROLE_IDS') or [])
+            if _as_int(x)
+        ],
+        'staff_power_role_ids': [
+            _as_int(x) for x in (
+                raw.get('staff_power_role_ids')
+                or raw.get('STAFF_POWER_ROLE_IDS') or [])
+            if _as_int(x)
+        ],
         'log_channel_id': _as_int(raw.get('log_channel_id')),
         'actions_channel_id': _as_int(raw.get('actions_channel_id')),
         'consent_fallback_channel_id': _as_int(

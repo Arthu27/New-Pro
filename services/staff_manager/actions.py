@@ -63,6 +63,26 @@ def _all_entry_role_ids() -> Set[int]:
     return set((idx.get('by_entry') or {}).keys())
 
 
+def _all_responsible_role_ids() -> Set[int]:
+    idx = get_index() or {}
+    return set((idx.get('responsible_of') or {}).keys())
+
+
+def _extra_strip_role_ids(cfg: dict) -> Set[int]:
+    """Скрытые админки + доп. стафф-права + Staff Admin — снимать при remove."""
+    out: Set[int] = set()
+    for rid in (cfg.get('hidden_admin_role_ids') or []):
+        if int(rid or 0):
+            out.add(int(rid))
+    for rid in (cfg.get('staff_power_role_ids') or []):
+        if int(rid or 0):
+            out.add(int(rid))
+    sa = int(cfg.get('staff_admin_role_id') or 0)
+    if sa:
+        out.add(sa)
+    return out
+
+
 def _hierarchy_block_reason(guild, role) -> Optional[str]:
     bot_member = guild.me
     if bot_member is None:
@@ -223,6 +243,14 @@ async def apply_staff_change(
         for rid in _all_entry_role_ids():
             if rid in current:
                 remove_ids.append(rid)
+        # «Отвечаю за …» / «Отвечает за …»
+        for rid in _all_responsible_role_ids():
+            if rid in current:
+                remove_ids.append(rid)
+        # 4 скрытые админки + power-роли (🌂 ☁️) + Staff Admin
+        for rid in _extra_strip_role_ids(cfg):
+            if rid in current:
+                remove_ids.append(rid)
         vac = int(cfg.get('vacation_role_id') or 0)
         if vac and vac in current:
             remove_ids.append(vac)
@@ -244,6 +272,10 @@ async def apply_staff_change(
             if rid in current:
                 remove_ids.append(rid)
         for rid in _all_entry_role_ids():
+            if rid in current:
+                remove_ids.append(rid)
+        # при переводе «отвечаю за» старой ветки не оставляем
+        for rid in _all_responsible_role_ids():
             if rid in current:
                 remove_ids.append(rid)
         new_rid = _role_id_for(new_branch, new_role_key)

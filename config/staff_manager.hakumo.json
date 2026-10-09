@@ -5,6 +5,16 @@
   ],
   "common_staff_role_id": 1553105240398631062,
   "vacation_role_id": 0,
+  "hidden_admin_role_ids": [
+    1554240714529837066,
+    1553157132734431393,
+    1554217328655466576,
+    1394038560361025576
+  ],
+  "staff_power_role_ids": [
+    1554218348663935077,
+    1192970051821772890
+  ],
   "log_channel_id": 0,
   "actions_channel_id": 0,
   "CONSENT_FALLBACK_CHANNEL_ID": 0,
