@@ -2210,14 +2210,18 @@ def _list_login_people(q: str = ''):
                     role = 'admin'
                 elif 'moderat' in lab_l:
                     role = 'mod'
+                elif not role and br:
+                    # ветка известна, ранг нет — базовый тир ветки
+                    role = _BR_ROLE.get(br) or 'helper'
                 elif not role and h.get('is_staff'):
-                    role = 'helper'
+                    # нет ветки и нет лейбла — не сваливаем всех в Helper
+                    role = ''
                 people.append({
                     'id': uid,
                     'name': h.get('display_name') or uid,
                     'handle': h.get('username') or '',
                     'avatar': h.get('avatar_url') or '',
-                    'role': role or ('helper' if h.get('is_staff') else ''),
+                    'role': role or ('helper' if br else ''),
                     'role_label': label or 'Staff',
                     'role_tag': role or '',
                     'branch': br or None,
