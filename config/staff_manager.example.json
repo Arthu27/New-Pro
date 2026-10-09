@@ -4,6 +4,7 @@
   "common_staff_role_id": 0,
   "vacation_role_id": 0,
   "hidden_admin_role_ids": [],
+  "never_strip_role_ids": [],
   "staff_power_role_ids": [],
   "log_channel_id": 0,
   "actions_channel_id": 0,

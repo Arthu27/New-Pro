@@ -30,46 +30,16 @@ from services.staff_manager.emojis import (
 
 _log = get_logger('staff_manager')
 
-ACTION_LABELS = {
-    'assign': 'Назначить',
-    'promote': 'Повысить',
-    'demote': 'Понизить',
-    'remove': 'Снять с должности',
-    'transfer': 'Перевести',
-    'probation': 'Испытательный',
-    'vacation': 'Отпуск',
-    'history': 'История',
-    'request': 'Заявка',
-    'self_leave': 'Уйти по собственному',
-}
-
-ACTION_DESC = {
-    'assign': 'Первое назначение · одна ветка',
-    'promote': 'Выше текущей роли',
-    'demote': 'Ниже текущей роли',
-    'remove': 'Снять все стафф-роли',
-    'transfer': 'Нужно согласие человека',
-    'probation': 'Отметить испытательный',
-    'vacation': 'Роль отпуска',
-    'history': 'Последние действия',
-    'self_leave': 'Добровольный уход',
-}
-
-# Assistent выше Curator (как на сервере)
-ROLE_DESC = {
-    'master': 'ранг 1 · старт',
-    'curator': 'ранг 2 · ниже ассистента',
-    'assistant': 'ранг 3 · выше куратора',
-    'admin': 'ранг 4 · защищённая',
-}
-
-REMOVAL_KINDS = {
-    'own': 'По собственному желанию',
-    'inactive': 'Неактивность',
-    'violation': 'Нарушение',
-    'probation': 'По итогам испытательного',
-    'other': 'Другое',
-}
+from services.staff_manager.texts import (
+    ACTION_LABELS, ACTION_DESC, ROLE_DESC, BRANCH_DESC, REMOVAL_KINDS,
+    PANEL_TITLE, PANEL_MEMBER, PANEL_ROLE_BRANCH, PANEL_VACATION,
+    PANEL_MULTI, PANEL_DOUBLE, PANEL_QUEUE, PANEL_ACTION, PANEL_ROLE,
+    PANEL_BRANCH, PANEL_REMOVAL_KIND, PANEL_CONFIRM,
+    BTN_OK, BTN_CANCEL, BTN_REVOKE, BTN_REQUEST,
+    PLACEHOLDER_ACTION, PLACEHOLDER_ROLE, PLACEHOLDER_BRANCH, PLACEHOLDER_REMOVAL,
+    CONSENT_ACCEPT, CONSENT_DECLINE, REMOVE_DM_TITLE, REMOVE_DM_BODY,
+    ERR_STALE, ERR_NOT_FOUND, ERR_PICK_REMOVAL, OK_DONE, OK_CONSENT_SENT,
+)
 
 ACTION_COLORS = {
     'promote': 0xF0CD7A,
@@ -191,30 +161,39 @@ def build_panel_view(
             step_n = min(step_total, 3)
 
     status_lines = [
-        f'**Участник** · {target.mention}',
-        f'{re} **{role_label}** · {be} {branch_label}',
+        PANEL_MEMBER.format(mention=target.mention),
+        PANEL_ROLE_BRANCH.format(
+            role_emoji=re, role=role_label,
+            branch_emoji=be, branch=branch_label),
     ]
     if info.get('on_vacation'):
-        status_lines.append('-# в отпуске')
+        status_lines.append(PANEL_VACATION)
     if t_ctx.multi_branch:
-        status_lines.append('-# ⚠️ несколько веток — только Стафф админ')
+        status_lines.append(PANEL_MULTI)
     if len(info.get('ladder_role_ids') or []) > 1 or len(info.get('entry_role_ids') or []) > 1:
-        status_lines.append('-# ⚠️ дабл-стафф · сначала снимите лишнее')
+        status_lines.append(PANEL_DOUBLE)
 
-    queue = f'Очередь · шаг {min(step_n, step_total)}/{max(step_total, 1)}'
+    tail = ''
     if sel_act:
-        queue += f' · **{ACTION_LABELS.get(sel_act, sel_act)}**'
+        tail += f' · **{ACTION_LABELS.get(sel_act, sel_act)}**'
     if sel_role:
-        queue += f' · {_emoji_for_role_key(sel_role)} `{sel_role}`'
+        # показываем человекочитаемое имя, не ключ
+        rname = next(
+            (x.get('name') for x in (cfg.get('ladder') or [])
+             if x.get('key') == sel_role), sel_role)
+        tail += f' · {_emoji_for_role_key(sel_role)} {rname}'
     if sel_branch:
-        queue += f' · {_emoji_for_branch(sel_branch)} `{sel_branch}`'
+        blab = ((cfg.get('branches') or {}).get(sel_branch) or {}).get(
+            'label') or sel_branch
+        tail += f' · {_emoji_for_branch(sel_branch)} {blab}'
     if sel_kind:
-        queue += f' · {REMOVAL_KINDS.get(sel_kind, sel_kind)}'
-    status_lines.append(f'-# {queue}')
+        tail += f' · {REMOVAL_KINDS.get(sel_kind, sel_kind)}'
+    status_lines.append(PANEL_QUEUE.format(
+        step=min(step_n, step_total), total=max(step_total, 1), tail=tail))
 
     view = discord.ui.LayoutView(timeout=None)
     view.add_item(_black(
-        discord.ui.TextDisplay('# Staff Manager\n-# HAKUMO'),
+        discord.ui.TextDisplay(PANEL_TITLE),
         discord.ui.Separator(spacing=discord.SeparatorSpacing.large),
         discord.ui.TextDisplay('\n'.join(status_lines)),
     ))
@@ -232,7 +211,7 @@ def build_panel_view(
                 default=(a == sel_act),
             ))
         sel = discord.ui.Select(
-            placeholder='Действие',
+            placeholder=PLACEHOLDER_ACTION,
             options=opts,
             custom_id=f'sm:act:{token}',
             min_values=1, max_values=1,
@@ -244,7 +223,7 @@ def build_panel_view(
         sel.callback = _on_act  # type: ignore
         row = discord.ui.ActionRow()
         row.add_item(sel)
-        view.add_item(_black(discord.ui.TextDisplay('**Действие**'), row))
+        view.add_item(_black(discord.ui.TextDisplay(PANEL_ACTION), row))
 
     roles = allowed.get('roles') or []
     # куратор выше ассистента в списке (rank DESC)
@@ -258,11 +237,11 @@ def build_panel_view(
                 label=str(r.get('name') or key)[:100],
                 value=key,
                 emoji=em,
-                description=(ROLE_DESC.get(key) or f'ранг {r.get("rank")}')[:100],
+                description=(ROLE_DESC.get(key) or '')[:100] or None,
                 default=(key == sel_role),
             ))
         rsel = discord.ui.Select(
-            placeholder='Роль',
+            placeholder=PLACEHOLDER_ROLE,
             options=ropts,
             custom_id=f'sm:role:{token}',
             min_values=1, max_values=1,
@@ -274,7 +253,7 @@ def build_panel_view(
         rsel.callback = _on_role  # type: ignore
         row2 = discord.ui.ActionRow()
         row2.add_item(rsel)
-        view.add_item(_black(discord.ui.TextDisplay('**Роль**'), row2))
+        view.add_item(_black(discord.ui.TextDisplay(PANEL_ROLE), row2))
 
     branches = allowed.get('branches') or []
     show_branch = (
@@ -289,11 +268,11 @@ def build_panel_view(
                 label=(b.get('label') or b['key'])[:100],
                 value=b['key'],
                 emoji=em,
-                description='одна ветка · без дабл-стаффа',
+                description=(BRANCH_DESC.get(b['key']) or '')[:100] or None,
                 default=(b['key'] == sel_branch),
             ))
         bsel = discord.ui.Select(
-            placeholder='Ветка',
+            placeholder=PLACEHOLDER_BRANCH,
             options=bopts,
             custom_id=f'sm:br:{token}',
             min_values=1, max_values=1,
@@ -305,11 +284,11 @@ def build_panel_view(
         bsel.callback = _on_br  # type: ignore
         row3 = discord.ui.ActionRow()
         row3.add_item(bsel)
-        view.add_item(_black(discord.ui.TextDisplay('**Ветка**'), row3))
+        view.add_item(_black(discord.ui.TextDisplay(PANEL_BRANCH), row3))
 
     if sel_act == 'remove':
         ksel = discord.ui.Select(
-            placeholder='Тип снятия',
+            placeholder=PLACEHOLDER_REMOVAL,
             options=[
                 discord.SelectOption(
                     label=v, value=k, default=(k == sel_kind))
@@ -341,15 +320,15 @@ def build_panel_view(
         ksel.callback = _on_rk  # type: ignore
         rowk = discord.ui.ActionRow()
         rowk.add_item(ksel)
-        view.add_item(_black(discord.ui.TextDisplay('**Тип снятия**'), rowk))
+        view.add_item(_black(discord.ui.TextDisplay(PANEL_REMOVAL_KIND), rowk))
 
     row_btn = discord.ui.ActionRow()
     btn_ok = discord.ui.Button(
-        label='Подтвердить', style=discord.ButtonStyle.success,
+        label=BTN_OK, style=discord.ButtonStyle.success,
         emoji=_opt_emoji('action', 'promote') or '✅',
         custom_id=f'sm:ok:{token}')
     btn_no = discord.ui.Button(
-        label='Отмена', style=discord.ButtonStyle.danger,
+        label=BTN_CANCEL, style=discord.ButtonStyle.danger,
         emoji=_opt_emoji('action', 'demote') or '✖️',
         custom_id=f'sm:no:{token}')
 
@@ -371,7 +350,7 @@ def build_panel_view(
     pend = pending_consent_for(actor.guild.id, target.id) if actor.guild else None
     if pend and int(pend.get('initiator_id') or 0) == actor.id:
         btn_cancel = discord.ui.Button(
-            label='Отозвать запрос', style=discord.ButtonStyle.secondary,
+            label=BTN_REVOKE, style=discord.ButtonStyle.secondary,
             custom_id=f'sm:cx:{pend["id"]}')
 
         async def _cx(interaction: discord.Interaction, cid=pend['id']):
@@ -382,7 +361,7 @@ def build_panel_view(
 
     if allowed.get('can_request') and 'assign' not in actions and 'promote' not in actions:
         btn_req = discord.ui.Button(
-            label='Заявка', style=discord.ButtonStyle.primary,
+            label=BTN_REQUEST, style=discord.ButtonStyle.primary,
             emoji=_opt_emoji('action', 'request'),
             custom_id=f'sm:req:{token}')
 
@@ -400,14 +379,14 @@ def build_panel_view(
         btn_req.callback = _req  # type: ignore
         row_btn.add_item(btn_req)
 
-    view.add_item(_black(discord.ui.TextDisplay('**Подтверждение**'), row_btn))
+    view.add_item(_black(discord.ui.TextDisplay(PANEL_CONFIRM), row_btn))
     return view
 
 
 class ConsentAcceptButton(discord.ui.Button):
     def __init__(self, cog: 'StaffManager', consent_id: str):
         super().__init__(
-            label='Принять', style=discord.ButtonStyle.success,
+            label=CONSENT_ACCEPT, style=discord.ButtonStyle.success,
             emoji='✅', custom_id=f'sm:cya:{consent_id}')
         self.cog = cog
         self.consent_id = consent_id
@@ -419,7 +398,7 @@ class ConsentAcceptButton(discord.ui.Button):
 class ConsentDeclineButton(discord.ui.Button):
     def __init__(self, cog: 'StaffManager', consent_id: str):
         super().__init__(
-            label='Отказаться', style=discord.ButtonStyle.danger,
+            label=CONSENT_DECLINE, style=discord.ButtonStyle.danger,
             emoji='✖️', custom_id=f'sm:cno:{consent_id}')
         self.cog = cog
         self.consent_id = consent_id
@@ -1202,12 +1181,14 @@ class StaffManager(commands.Cog):
     async def _dm_removed(self, target, actor, kind, reason, info):
         kind_l = REMOVAL_KINDS.get(kind or '', kind or '')
         body = (
-            f'## Снятие с должности\n'
-            f'Вы сняты с **{info.get("role_label") or "стаффа"}** '
-            f'в ветке **{info.get("branch_label") or "—"}**.\n'
-            f'Тип: {kind_l}\n'
-            f'Кем: {actor.mention}\n'
-            f'Причина: {reason}'
+            f'{REMOVE_DM_TITLE}\n'
+            + REMOVE_DM_BODY.format(
+                role=info.get('role_label') or 'стаффа',
+                branch=info.get('branch_label') or '—',
+                kind=kind_l,
+                actor=actor.mention,
+                reason=reason,
+            )
         )
         try:
             view = discord.ui.LayoutView(timeout=None)

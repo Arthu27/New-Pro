@@ -69,7 +69,11 @@ def _all_responsible_role_ids() -> Set[int]:
 
 
 def _extra_strip_role_ids(cfg: dict) -> Set[int]:
-    """Скрытые админки + доп. стафф-права + Staff Admin — снимать при remove."""
+    """Скрытые админки + доп. стафф-права + Staff Admin — снимать при remove.
+
+    never_strip_role_ids (👑 🌺 и т.п.) никогда не попадают в список.
+    """
+    never = {int(x) for x in (cfg.get('never_strip_role_ids') or []) if int(x or 0)}
     out: Set[int] = set()
     for rid in (cfg.get('hidden_admin_role_ids') or []):
         if int(rid or 0):
@@ -80,7 +84,7 @@ def _extra_strip_role_ids(cfg: dict) -> Set[int]:
     sa = int(cfg.get('staff_admin_role_id') or 0)
     if sa:
         out.add(sa)
-    return out
+    return out - never
 
 
 def _hierarchy_block_reason(guild, role) -> Optional[str]:
@@ -332,7 +336,11 @@ async def apply_staff_change(
         return out
 
     add_ids = _uniq(add_ids)
-    remove_ids = _uniq([r for r in remove_ids if r not in add_ids])
+    never = {int(x) for x in (cfg.get('never_strip_role_ids') or []) if int(x or 0)}
+    remove_ids = _uniq([
+        r for r in remove_ids
+        if r not in add_ids and int(r) not in never
+    ])
 
     # hierarchy / managed / missing
     for rid in add_ids + remove_ids:

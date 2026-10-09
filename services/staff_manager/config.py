@@ -156,6 +156,13 @@ def parse_config(raw: dict) -> dict:
                 or raw.get('STAFF_POWER_ROLE_IDS') or [])
             if _as_int(x)
         ],
+        # 👑 🌺 и любые роли, которые НИКОГДА не снимает бот
+        'never_strip_role_ids': [
+            _as_int(x) for x in (
+                raw.get('never_strip_role_ids')
+                or raw.get('NEVER_STRIP_ROLE_IDS') or [])
+            if _as_int(x)
+        ],
         'log_channel_id': _as_int(raw.get('log_channel_id')),
         'actions_channel_id': _as_int(raw.get('actions_channel_id')),
         'consent_fallback_channel_id': _as_int(
