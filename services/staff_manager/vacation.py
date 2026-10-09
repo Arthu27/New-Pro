@@ -38,10 +38,17 @@ def build_role_snapshot(member) -> Tuple[List[dict], int, str, str]:
     for rid in (cfg.get('staff_power_role_ids') or []):
         if int(rid or 0):
             staff_ids.add(int(rid))
+    for ids in (cfg.get('rank_extra_roles') or {}).values():
+        for rid in ids or []:
+            if int(rid or 0):
+                staff_ids.add(int(rid))
     common = int(cfg.get('common_staff_role_id') or 0)
     if common:
         staff_ids.add(common)
     never = {int(x) for x in (cfg.get('never_strip_role_ids') or []) if int(x or 0)}
+    never |= {
+        int(x) for x in (cfg.get('manual_only_role_ids') or []) if int(x or 0)
+    }
     snap = []
     by_role = idx.get('by_role') or {}
     for rid in sorted(staff_ids & rids - never):

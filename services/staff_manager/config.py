@@ -240,6 +240,24 @@ def parse_config(raw: dict) -> dict:
                 or raw.get('STAFF_POWER_ROLE_IDS') or [])
             if _as_int(x)
         ],
+        # ☁️ и т.п. — только вручную, бот не выдаёт и не снимает
+        'manual_only_role_ids': [
+            _as_int(x) for x in (
+                raw.get('manual_only_role_ids')
+                or raw.get('MANUAL_ONLY_ROLE_IDS') or [])
+            if _as_int(x)
+        ],
+        # доп. роли по ступени: 🦋 admin/assistant, 🌂 curator
+        'rank_extra_roles': {
+            str(k).strip().lower(): [
+                _as_int(x) for x in (v or []) if _as_int(x)
+            ]
+            for k, v in (
+                (raw.get('RANK_EXTRA_ROLES') or raw.get('rank_extra_roles')
+                 or {}).items()
+            )
+            if isinstance(v, (list, tuple))
+        },
         # 👑 🌺 и любые роли, которые НИКОГДА не снимает бот
         'never_strip_role_ids': [
             _as_int(x) for x in (

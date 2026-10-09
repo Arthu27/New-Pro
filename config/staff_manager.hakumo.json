@@ -3,9 +3,16 @@
   "owner_ids": [987430047889637426],
   "common_staff_role_id": 1553105240398631062,
   "vacation_role_id": 1558179989776629811,
-  "hidden_admin_role_ids": [1554217328655466576, 1394038560361025576],
+  "hidden_admin_role_ids": [1554217328655466576],
   "never_strip_role_ids": [1554240714529837066, 1553157132734431393],
-  "staff_power_role_ids": [1554218348663935077, 1192970051821772890],
+  "staff_power_role_ids": [],
+  "manual_only_role_ids": [1192970051821772890],
+  "RANK_EXTRA_ROLES": {
+    "master": [],
+    "curator": [1554218348663935077],
+    "assistant": [1394038560361025576],
+    "admin": [1394038560361025576]
+  },
   "log_channel_id": 0,
   "actions_channel_id": 0,
   "CONSENT_FALLBACK_CHANNEL_ID": 0,

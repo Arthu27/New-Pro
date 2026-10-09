@@ -30,8 +30,15 @@ def _write_cfg(path: str) -> dict:
         'owner_ids': [100],
         'common_staff_role_id': 9002,
         'vacation_role_id': 9003,
-        'hidden_admin_role_ids': [9301, 9302],
-        'staff_power_role_ids': [9303, 9304],
+        'hidden_admin_role_ids': [9301],
+        'staff_power_role_ids': [],
+        'manual_only_role_ids': [9304],
+        'RANK_EXTRA_ROLES': {
+            'master': [],
+            'curator': [9303],
+            'assistant': [9302],
+            'admin': [9302],
+        },
         'never_strip_role_ids': [9999],
         'ROLE_EMOJIS': {
             'master': '⚔️', 'curator': '🌂',
@@ -279,29 +286,34 @@ class BundlesVacationTests(unittest.TestCase):
 
         asyncio.get_event_loop().run_until_complete(_run())
 
-    def test_apply_assign_grants_hidden_admins(self):
+    def _mock_guild_roles(self, pairs):
+        guild = MagicMock()
+        guild.id = 1
+        roles = {}
+        for rid, name in pairs:
+            r = MagicMock()
+            r.id = rid
+            r.name = name
+            r.managed = False
+            r.position = 10
+            r.__ge__ = lambda self, other: False
+            roles[rid] = r
+        guild.get_role = lambda rid: roles.get(int(rid))
+        me = MagicMock()
+        me.guild_permissions.manage_roles = True
+        top = MagicMock(); top.position = 100
+        me.top_role = top
+        guild.me = me
+        return guild, roles
+
+    def test_rank_extras_admin_butterfly_not_cloud(self):
         async def _run():
-            guild = MagicMock()
-            guild.id = 1
-            roles = {}
-            for rid, name in (
-                (9211, 'Master'), (9210, 'Help'), (9002, 'Staff'),
-                (9301, 'h1'), (9302, 'h2'), (9303, 'p1'), (9304, 'p2'),
-                (9999, 'Crown'),
-            ):
-                r = MagicMock()
-                r.id = rid
-                r.name = name
-                r.managed = False
-                r.position = 10
-                r.__ge__ = lambda self, other: False
-                roles[rid] = r
-            guild.get_role = lambda rid: roles.get(int(rid))
-            me = MagicMock()
-            me.guild_permissions.manage_roles = True
-            top = MagicMock(); top.position = 100
-            me.top_role = top
-            guild.me = me
+            guild, roles = self._mock_guild_roles((
+                (9214, 'Admin'), (9210, 'Help'), (9002, 'Staff'),
+                (9200, 'Resp'),
+                (9301, 'star'), (9302, 'butterfly'), (9303, 'umbrella'),
+                (9304, 'cloud'), (9999, 'Crown'),
+            ))
             actor_m = MagicMock(); actor_m.id = 100
             actor_m.roles = [MagicMock(id=9001)]
             target_m = MagicMock(); target_m.id = 55
@@ -333,13 +345,64 @@ class BundlesVacationTests(unittest.TestCase):
                  patch('services.warn_role.sync_warn_role', new_callable=AsyncMock):
                 res = await ACT.apply_staff_change(
                     guild=guild, actor_member=actor_m, target_member=target_m,
-                    action='assign', new_role_key='master', new_branch='helpers',
+                    action='assign', new_role_key='admin', new_branch='helpers',
                     reason='hire', skip_acl=True,
                 )
             self.assertTrue(res.ok, res.reason)
-            for rid in (9211, 9210, 9002, 9301, 9302, 9303, 9304):
-                self.assertIn(rid, res.added, f'missing grant {rid}')
-            self.assertNotIn(9999, res.added)
+            self.assertIn(9302, res.added)  # 🦋
+            self.assertNotIn(9303, res.added)  # 🌂 не админу
+            self.assertNotIn(9304, res.added)  # ☁️ manual
+            self.assertNotIn(9301, res.added)  # 💫 только strip, не grant
+
+        asyncio.get_event_loop().run_until_complete(_run())
+
+    def test_rank_extras_curator_umbrella_swaps(self):
+        async def _run():
+            guild, roles = self._mock_guild_roles((
+                (9213, 'Curator'), (9214, 'Admin'), (9210, 'Help'),
+                (9002, 'Staff'), (9200, 'Resp'),
+                (9302, 'butterfly'), (9303, 'umbrella'), (9304, 'cloud'),
+            ))
+            actor_m = MagicMock(); actor_m.id = 100
+            actor_m.roles = [MagicMock(id=9001)]
+            target_m = MagicMock(); target_m.id = 55
+            # был admin с 🦋
+            target_m.roles = [roles[9214], roles[9210], roles[9002], roles[9302]]
+
+            async def _add(*rs, reason=''):
+                have = {r.id for r in target_m.roles}
+                for r in rs:
+                    if r.id not in have:
+                        target_m.roles.append(r)
+
+            async def _rem(*rs, reason=''):
+                ids = {r.id for r in rs}
+                target_m.roles = [r for r in target_m.roles if r.id not in ids]
+
+            target_m.add_roles = _add
+            target_m.remove_roles = _rem
+
+            async def _fetch(uid):
+                m = MagicMock(); m.id = uid
+                m.roles = list(target_m.roles); m.guild = guild
+                return m
+            guild.fetch_member = _fetch
+
+            with patch('services.staff_manager.store._db_path', return_value=self.db_path), \
+                 patch('services.staff_manager.actions.claim_action_once', return_value=True), \
+                 patch('services.staff_manager.actions.record_action'), \
+                 patch('services.staff_manager.actions.upsert_staff_profile'), \
+                 patch('services.warn_role.sync_warn_role', new_callable=AsyncMock):
+                res = await ACT.apply_staff_change(
+                    guild=guild, actor_member=actor_m, target_member=target_m,
+                    action='demote', new_role_key='curator', new_branch='helpers',
+                    reason='down', skip_acl=True,
+                )
+            self.assertTrue(res.ok, res.reason)
+            self.assertIn(9303, res.added)  # 🌂
+            self.assertIn(9302, res.removed)  # 🦋 снять
+            self.assertNotIn(9304, res.added)
+            self.assertNotIn(9304, res.removed)
 
         asyncio.get_event_loop().run_until_complete(_run())
 
@@ -351,7 +414,8 @@ class BundlesVacationTests(unittest.TestCase):
             for rid, name in (
                 (9111, 'Master'), (9110, 'Mod'), (9002, 'Staff'),
                 (9003, 'Vac'), (9999, 'Crown'),
-                (9301, 'h1'), (9302, 'h2'), (9303, 'p1'), (9304, 'p2'),
+                (9301, 'star'), (9302, 'butterfly'), (9303, 'umbrella'),
+                (9304, 'cloud'),
             ):
                 r = MagicMock()
                 r.id = rid
@@ -377,7 +441,7 @@ class BundlesVacationTests(unittest.TestCase):
             target_m.id = 200
             target_m.roles = [
                 roles[9111], roles[9110], roles[9002], roles[9999],
-                roles[9301], roles[9303],
+                roles[9301], roles[9303], roles[9304],
             ]
 
             async def _add(*rs, reason=''):
@@ -418,8 +482,10 @@ class BundlesVacationTests(unittest.TestCase):
             self.assertIn(9301, res.removed)
             self.assertIn(9303, res.removed)
             self.assertNotIn(9999, res.removed)  # never strip
+            self.assertNotIn(9304, res.removed)  # ☁️ manual_only
             have = {r.id for r in target_m.roles}
             self.assertIn(9999, have)
+            self.assertIn(9304, have)
             self.assertIn(9003, have)
 
         asyncio.get_event_loop().run_until_complete(_run())

@@ -72,32 +72,74 @@ def _all_responsible_role_ids() -> Set[int]:
 
 
 def _never_strip_ids(cfg: dict) -> Set[int]:
-    return {int(x) for x in (cfg.get('never_strip_role_ids') or []) if int(x or 0)}
+    never = {int(x) for x in (cfg.get('never_strip_role_ids') or []) if int(x or 0)}
+    # ☁️ и прочие manual_only — тоже не трогаем
+    never |= {
+        int(x) for x in (cfg.get('manual_only_role_ids') or []) if int(x or 0)
+    }
+    return never
 
 
-def _hidden_grant_role_ids(cfg: dict) -> Set[int]:
-    """Скрытые админки + power (💫🦋 + 🌂☁️) — выдавать при назначении стаффа.
+def _norm_rank_key(key: str) -> str:
+    key = (key or '').strip().lower()
+    return 'assistant' if key == 'assistent' else key
 
-    👑/🌺 в never_strip — бот их не выдаёт и не снимает.
-    """
+
+def _rank_extra_role_ids(role_key: str, cfg: dict) -> Set[int]:
+    """Доп. роли ступени: 🦋 → admin/assistant, 🌂 → curator. Master — пусто."""
+    never = _never_strip_ids(cfg)
+    key = _norm_rank_key(role_key)
+    mapping = cfg.get('rank_extra_roles') or {}
+    out = {int(x) for x in (mapping.get(key) or []) if int(x or 0)}
+    return out - never
+
+
+def _all_rank_extra_role_ids(cfg: dict) -> Set[int]:
+    """Все id из RANK_EXTRA_ROLES — чтобы снять чужие при смене ступени."""
     never = _never_strip_ids(cfg)
     out: Set[int] = set()
+    for ids in (cfg.get('rank_extra_roles') or {}).values():
+        for rid in ids or []:
+            if int(rid or 0):
+                out.add(int(rid))
+    return out - never
+
+
+def _apply_rank_extras(
+    *,
+    role_key: str,
+    cfg: dict,
+    current: Set[int],
+    add_ids: List[int],
+    remove_ids: List[int],
+) -> None:
+    """Выдать extras ступени, снять extras других ступеней. ☁️ не трогаем."""
+    want = _rank_extra_role_ids(role_key, cfg)
+    managed = _all_rank_extra_role_ids(cfg)
+    for rid in managed:
+        if rid in current and rid not in want:
+            remove_ids.append(rid)
+        if rid in want and rid not in current:
+            add_ids.append(rid)
+    # want может содержать id ещё не в managed (на всякий)
+    for rid in want:
+        if rid not in current and rid not in add_ids:
+            add_ids.append(rid)
+
+
+def _extra_strip_role_ids(cfg: dict) -> Set[int]:
+    """Скрытые/rank-extras + legacy power + Staff Admin — снимать при remove.
+
+    never_strip / manual_only (👑 🌺 ☁️) никогда не попадают в список.
+    """
+    never = _never_strip_ids(cfg)
+    out = set(_all_rank_extra_role_ids(cfg))
     for rid in (cfg.get('hidden_admin_role_ids') or []):
         if int(rid or 0):
             out.add(int(rid))
     for rid in (cfg.get('staff_power_role_ids') or []):
         if int(rid or 0):
             out.add(int(rid))
-    return out - never
-
-
-def _extra_strip_role_ids(cfg: dict) -> Set[int]:
-    """Скрытые админки + доп. стафф-права + Staff Admin — снимать при remove.
-
-    never_strip_role_ids (👑 🌺 и т.п.) никогда не попадают в список.
-    """
-    never = _never_strip_ids(cfg)
-    out = set(_hidden_grant_role_ids(cfg))
     sa = int(cfg.get('staff_admin_role_id') or 0)
     if sa:
         out.add(sa)
@@ -272,10 +314,10 @@ async def apply_staff_change(
         )
         add_ids.extend(b_add)
         remove_ids.extend(b_rem)
-        # скрытые админки + power (💫🦋🌂☁️)
-        for rid in _hidden_grant_role_ids(cfg):
-            if rid not in current:
-                add_ids.append(rid)
+        # 🦋 admin/assistant · 🌂 curator · ☁️ не трогаем
+        _apply_rank_extras(
+            role_key=new_role_key, cfg=cfg, current=current,
+            add_ids=add_ids, remove_ids=remove_ids)
 
     elif action in ('remove', 'self_leave'):
         branch = target.primary_branch or branch
@@ -354,9 +396,9 @@ async def apply_staff_change(
         )
         add_ids.extend(b_add)
         remove_ids.extend(b_rem)
-        for rid in _hidden_grant_role_ids(cfg):
-            if rid not in current:
-                add_ids.append(rid)
+        _apply_rank_extras(
+            role_key=new_role_key, cfg=cfg, current=current,
+            add_ids=add_ids, remove_ids=remove_ids)
         branch = new_branch
 
     elif action == 'sync_bundle':
@@ -385,10 +427,10 @@ async def apply_staff_change(
         common = int(cfg.get('common_staff_role_id') or 0)
         if common and common not in current:
             add_ids.append(common)
-        for rid in _hidden_grant_role_ids(cfg):
-            if rid not in current:
-                add_ids.append(rid)
-        if not add_ids:
+        _apply_rank_extras(
+            role_key=key, cfg=cfg, current=current,
+            add_ids=add_ids, remove_ids=remove_ids)
+        if not add_ids and not remove_ids:
             record_action(
                 guild_id=guild.id, actor_id=actor.user_id,
                 target_id=target.user_id, action=action, branch=br,

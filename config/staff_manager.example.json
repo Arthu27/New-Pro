@@ -6,6 +6,13 @@
   "hidden_admin_role_ids": [],
   "never_strip_role_ids": [],
   "staff_power_role_ids": [],
+  "manual_only_role_ids": [],
+  "RANK_EXTRA_ROLES": {
+    "master": [],
+    "curator": [],
+    "assistant": [],
+    "admin": []
+  },
   "log_channel_id": 0,
   "actions_channel_id": 0,
   "CONSENT_FALLBACK_CHANNEL_ID": 0,
