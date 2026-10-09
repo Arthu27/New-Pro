@@ -516,7 +516,11 @@ def build_panel_view(
                     discord.ui.TextDisplay('**Срок испытательного**'), rowp))
                 if sel_days:
                     view.add_item(_black(discord.ui.TextDisplay(
-                        f'-# выбран срок: **{sel_days}** дн.')))
+                        f'-# выбран срок: **{sel_days}** дн. · '
+                        'дальше «Подтвердить» + причина')))
+                else:
+                    view.add_item(_black(discord.ui.TextDisplay(
+                        '-# сначала выберите срок выше, потом «Подтвердить»')))
 
     async def _ok(interaction: discord.Interaction):
         await interaction.response.send_modal(ReasonModal(cog, token))
@@ -1503,9 +1507,19 @@ class StaffManager(commands.Cog):
                     branch=info.get('primary_branch') or branch or '',
                 )
                 if prow:
+                    days = int(prow.get('days') or 0)
+                    end_at = str(prow.get('end_at') or '')[:10]
                     _log.info(
                         'probation auto start target=%s days=%s',
-                        target.id, prow.get('days'))
+                        target.id, days)
+                    try:
+                        await interaction.followup.send(
+                            f'🕘 Авто испытательный · {target.mention} · '
+                            f'**{days}** дн. (до `{end_at}`)',
+                            ephemeral=True,
+                        )
+                    except Exception:
+                        pass
             except Exception as ex:
                 _log.warning('probation auto: %s', ex)
         if action == 'remove':

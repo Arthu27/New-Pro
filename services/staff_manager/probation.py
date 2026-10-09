@@ -146,17 +146,22 @@ def maybe_start_after_promote(
 
 
 def process_due_probations() -> int:
+    """Снять просроченные сроки (раз в ~2 мин из цикла отпуска)."""
     n = 0
     for row in due_probations():
         try:
-            update_probation(
-                row['id'],
-                status='ended',
-                ended_by=0,
-                ended_at=_now().isoformat(),
+            ok, why = end_probation(
+                guild_id=int(row['guild_id']),
+                actor_id=0,
+                user_id=int(row['user_id']),
+                probation=row,
                 end_kind='auto',
+                reason='срок истёк',
             )
-            n += 1
+            if ok:
+                n += 1
+            else:
+                _log.info('probation auto end skip %s: %s', row.get('id'), why)
         except Exception as ex:
             _log.error('probation auto end %s: %s', row.get('id'), ex)
     return n
