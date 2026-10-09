@@ -187,22 +187,16 @@ check('Выберите нарушителя' in _src and 'На кого жал�
       and 'Где происходило нарушение?' in _src and 'Причина жалобы' in _src
       and 'Доказательства' in _src,
       'все 5 полей формы на месте (включая доказательства)')
-check('emoji_for_report' in _src,
-      '«На кого жалоба?» — свои стикеры (Стафф/Участник), не родовые эмодзи')
-import os as _os
-_assets = _os.path.join(_os.path.dirname(_os.path.dirname(
-    _os.path.abspath(__file__))), 'assets', 'stickers')
-check(_os.path.isfile(_os.path.join(_assets, 'staff.png'))
-      and _os.path.isfile(_os.path.join(_assets, 'user.png')),
-      'стикеры staff.png/user.png лежат в assets/stickers')
-_emj_src = open(_os.path.join(_os.path.dirname(_os.path.dirname(
-    _os.path.abspath(__file__))), 'services', 'menu_emojis.py'),
-    encoding='utf-8').read()
-check("'staff'" in _emj_src and "'user'" in _emj_src
-      and 'STICKER_KEYS' in _emj_src,
-      'staff/user в STICKER_KEYS — заливаются как application emoji')
-check('def emoji_for_report' in _emj_src,
-      'emoji_for_report(): кэш стикера или unicode-фолбек')
+# Форма и карточка — webhook v2 без эмодзи в опциях/кнопках
+_modal_src = _src.split('class ReportModal')[1].split('async def on_submit')[0]
+check("label='Пользователь'" in _modal_src and "label='Стафф'" in _modal_src
+      and 'emoji_for_report' not in _modal_src,
+      '«На кого жалоба?» — без эмодзи (Пользователь / Стафф)')
+check("label='Чат'" in _modal_src and "label='Голосовой канал'" in _modal_src,
+      'место нарушения — без эмодзи (Чат / Голосовой канал)')
+check("label='Принять'" in _src and "label='Отклонить'" in _src
+      and "label='Открыть разбор'" in _src,
+      'кнопки карточки без эмодзи')
 
 # ── 2. Вызов уходит в канал модерации ───────────────────────────────────────
 print('== 2. Сигнал в чат модеров (V2-карточка + отдельный пинг) ==')
@@ -255,11 +249,15 @@ run.run_until_complete(
 card2 = MOD_CH.sent[-2]
 view2 = card2.get('view')
 desc2 = _card_text(view2)
-check('Состав модерации' in desc2 and '⚠️' in desc2,
-      'жалоба на стафф — явное предупреждение в карточке')
+check('Состав модерации' in desc2 and 'Жалоба на персонал' in desc2,
+      'жалоба на стафф — явное предупреждение в карточке (без эмодзи)')
 check(getattr(view2, '_accent', None) == 0xF39C12,
       'жалоба на стафф — другой (оранжевый) акцент', f'→ {view2._accent:#x}')
 check('Голосовой канал' in desc2, 'место нарушения — войс, как выбрано в форме')
+# кнопки без эмодзи
+_btns = _card_buttons(view2)
+check(all(not getattr(b, 'emoji', None) for b in _btns),
+      'кнопки карточки без эмодзи')
 
 # ── 4. Ответ вызывавшему ────────────────────────────────────────────────────
 print('== 4. Ответ вызывавшему ==')
@@ -296,6 +294,36 @@ _self_msg = inter_self.followup.sent[-1][0][0] if inter_self.followup.sent else 
 check('нельзя' in _self_msg, 'на себя жаловаться нельзя', f'→ {_self_msg!r}')
 check(len(MOD_CH.sent) == before_self,
       'жалоба на себя не создаёт карточку в канале модерации')
+
+# ── 7. Модератор с ролью может принимать (даже без manage_messages) ───────
+print('== 7. _is_mod: роль Moderator при пустом cfg ==')
+import json
+_empty_cfg = {'mod_role_id': ''}
+# сбрасываем канонический mod_role_id — как на проде, когда cfg пустой
+_cfg_path = f'data/reports_{guild.id}.json'
+if os.path.exists(_cfg_path):
+    with open(_cfg_path, encoding='utf-8') as _f:
+        _cfg_live = json.load(_f)
+    _cfg_live['mod_role_id'] = ''
+    with open(_cfg_path, 'w', encoding='utf-8') as _f:
+        json.dump(_cfg_live, _f)
+os.makedirs('data', exist_ok=True)
+with open('data/role_map.json', 'w', encoding='utf-8') as _f:
+    json.dump({str(MOD_ROLE_ID): 'mod'}, _f)
+_mod_member = NS(
+    id=42, guild=guild, roles=[MOD_ROLE],
+    guild_permissions=NS(
+        administrator=False, manage_guild=False, manage_messages=False,
+        moderate_members=False, ban_members=False, kick_members=False))
+check(R._is_mod(_mod_member, _empty_cfg) is True,
+      '_is_mod: роль Moderator из ping/role_map — можно принимать')
+_user = NS(
+    id=43, guild=guild, roles=[],
+    guild_permissions=NS(
+        administrator=False, manage_guild=False, manage_messages=False,
+        moderate_members=False, ban_members=False, kick_members=False))
+check(R._is_mod(_user, _empty_cfg) is False,
+      '_is_mod: обычный участник — нельзя')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

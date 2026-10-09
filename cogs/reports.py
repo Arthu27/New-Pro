@@ -53,12 +53,57 @@ def _fire_new_event(event, body):
 
 
 def _is_mod(member, cfg) -> bool:
+    """Может ли жать Принять/Отклонить/Разбор.
+
+    Раньше смотрели только manage_messages + reports.mod_role_id.
+    У многих модов роль @Moderator есть, а mod_role_id в конфиге пустой
+    → «Разобрать вызов могут модераторы» при живом пинге той же роли.
+    """
     if member is None:
         return False
-    if member.guild_permissions.manage_messages:
+    guild = getattr(member, 'guild', None)
+    try:
+        from services.mod_role import member_is_mod
+        if member_is_mod(member, guild):
+            return True
+    except Exception as _ex:
+        _log.debug('reports: member_is_mod: %s', _ex)
+    role_ids = {int(r.id) for r in (getattr(member, 'roles', None) or [])
+                if getattr(r, 'id', None)}
+    rid = str((cfg or {}).get('mod_role_id') or '').strip()
+    if rid.isdigit() and int(rid) in role_ids:
         return True
-    rid = str(cfg.get('mod_role_id') or '')
-    return bool(rid) and any(str(r.id) == rid for r in member.roles)
+    if guild is not None:
+        try:
+            for role in _mod_ping_roles(guild):
+                if int(getattr(role, 'id', 0) or 0) in role_ids:
+                    return True
+        except Exception as _ex:
+            _log.debug('reports: is_mod ping-roles: %s', _ex)
+        try:
+            from services.staff_hierarchy import target_panel_role, RANK
+            tier = target_panel_role(guild, member)
+            if RANK.get(tier, -1) >= RANK.get('helper', 1):
+                return True
+        except Exception as _ex:
+            _log.debug('reports: is_mod hierarchy: %s', _ex)
+        try:
+            from services.staff_roles import (
+                KNOWN_MODERATOR_ROLE_ID, KNOWN_HELPER_ROLE_ID)
+            if (int(KNOWN_MODERATOR_ROLE_ID) in role_ids
+                    or int(KNOWN_HELPER_ROLE_ID) in role_ids):
+                return True
+        except Exception as _ex:
+            _log.debug('reports: is_mod known roles: %s', _ex)
+    gp = getattr(member, 'guild_permissions', None)
+    if gp is not None and (
+            getattr(gp, 'administrator', False)
+            or getattr(gp, 'manage_messages', False)
+            or getattr(gp, 'moderate_members', False)
+            or getattr(gp, 'kick_members', False)
+            or getattr(gp, 'ban_members', False)):
+        return True
+    return False
 
 
 def _is_panel_owner(guild, member) -> bool:
@@ -567,13 +612,24 @@ async def _ensure_mod_channel(guild, mod_role):
 
 
 def _mod_role_from_cfg(guild):
-    """Роль модераторов из конфига репортов (панель/`/report-setup`)."""
+    """Роль модераторов: канон mod_role → конфиг репортов → known id."""
+    try:
+        from services.mod_role import resolve_mod_role
+        role = resolve_mod_role(guild)
+        if role is not None:
+            return role
+    except Exception as _ex:
+        _log.debug('reports: resolve_mod_role: %s', _ex)
     rid = str(_cfg(guild.id).get('mod_role_id') or '')
     if rid.isdigit():
         role = guild.get_role(int(rid))
         if role is not None:
             return role
-    return None
+    try:
+        from services.staff_roles import KNOWN_MODERATOR_ROLE_ID
+        return guild.get_role(int(KNOWN_MODERATOR_ROLE_ID))
+    except Exception:
+        return None
 
 
 def _mod_ping_roles(guild):
@@ -815,35 +871,36 @@ def _report_card_body(*, caller, target, against: str, location: str,
                       voice_name: str, channel_mention: str, reason: str,
                       violations_text: str, days, target_tier: str = '',
                       escalation_label: str = '') -> str:
-    """Текст V2-карточки вызова — секции вместо полей эмбеда."""
+    """Текст V2-карточки — чистые секции, без эмодзи (webhook v2)."""
     from services.staff_hierarchy import LABELS as _TIER_LABELS
-    against_label = ('🛡️ Состав модерации (стафф)' if against == 'staff'
-                     else '👤 Обычный участник')
-    location_label = ('🔊 Голосовой канал' if location == 'voice'
-                      else '💬 Чат')
-    lines = []
+    against_label = ('Состав модерации (стафф)' if against == 'staff'
+                     else 'Обычный участник')
+    location_label = ('Голосовой канал' if location == 'voice' else 'Чат')
+
+    def _row(label: str, value: str) -> str:
+        return f'**{label}**\n{value}'
+
+    blocks = []
     if against == 'staff':
         tier_label = _TIER_LABELS.get(target_tier, '') if target_tier else ''
         who = f' ({tier_label})' if tier_label else ''
-        lines.append(f'⚠️ **Жалоба касается персонала{who}** — конфликт '
-                     'интересов, разбирает старший состав.')
+        note = (f'Жалоба на персонал{who}. Конфликт интересов — '
+                'разбирает старший состав.')
         if escalation_label:
-            lines.append(f'**Кто разбирает:** {escalation_label}')
-        lines.append('')
-    lines += [
-        f'**Кто вызвал:** {caller.mention}',
-        f'**Из-за кого:** {target.mention} · `{target.id}`',
-        f'**Категория:** {against_label}',
-        f'**Где произошло:** {location_label}',
-    ]
+            note += f'\nКто разбирает: {escalation_label}'
+        blocks.append(note)
+    blocks.extend([
+        _row('Кто вызвал', caller.mention),
+        _row('Из-за кого', f'{target.mention}\n`{target.id}`'),
+        _row('Категория', against_label),
+        _row('Где произошло', location_label),
+    ])
     if voice_name:
-        lines.append(f'**Сейчас в войсе:** {voice_name}')
-    lines.append(f'**Откуда вызов:** {channel_mention}')
-    lines.append('')
-    lines.append(f'**Что случилось**\n{reason}')
-    lines.append('')
-    lines.append(f'**Прошлые нарушения ({days} дн.)**\n{violations_text}')
-    return '\n'.join(lines)
+        blocks.append(_row('Сейчас в войсе', voice_name))
+    blocks.append(_row('Откуда вызов', channel_mention))
+    blocks.append(_row('Что случилось', reason))
+    blocks.append(_row(f'Прошлые нарушения · {days} дн.', violations_text))
+    return '\n\n'.join(blocks)
 
 
 class ReportCardView(discord.ui.LayoutView):
@@ -858,7 +915,7 @@ class ReportCardView(discord.ui.LayoutView):
     def __init__(self, *, title: str = None, body: str = '',
                 footer: str = '', accent: int = None):
         super().__init__(timeout=None)
-        self._title = title or '🛎️ Вызов модератора'
+        self._title = title or 'Вызов модератора'
         self._body = body or ''
         self._footer = footer or ''
         self._accent = accent if accent is not None else 0xE74C3C
@@ -866,15 +923,15 @@ class ReportCardView(discord.ui.LayoutView):
         self._status_line = None
         self._accept_btn = discord.ui.Button(
             label='Принять', style=discord.ButtonStyle.success,
-            emoji='✅', custom_id='rcard_accept')
+            custom_id='rcard_accept')
         self._accept_btn.callback = self.accept
         self._reject_btn = discord.ui.Button(
             label='Отклонить', style=discord.ButtonStyle.danger,
-            emoji='❌', custom_id='rcard_reject')
+            custom_id='rcard_reject')
         self._reject_btn.callback = self.reject
         self._thread_btn = discord.ui.Button(
             label='Открыть разбор', style=discord.ButtonStyle.primary,
-            emoji='🧵', custom_id='rcard_thread')
+            custom_id='rcard_thread')
         self._thread_btn.callback = self.open_thread
         self._rebuild()
 
@@ -916,7 +973,7 @@ class ReportCardView(discord.ui.LayoutView):
                                            'label': 'Вызов принят'}),
                       closed=datetime.now(timezone.utc).timestamp())
         self._resolved = True
-        self._status_line = f'✅ **Принято** — {interaction.user.mention}'
+        self._status_line = f'**Статус:** принято · {interaction.user.mention}'
         self._accent = 0x2ECC71
         self._rebuild()
         # V2: edit только view= — content/embed в edit ломают компоненты.
@@ -934,7 +991,7 @@ class ReportCardView(discord.ui.LayoutView):
                                            'label': 'Отклонено'}),
                       closed=datetime.now(timezone.utc).timestamp())
         self._resolved = True
-        self._status_line = f'❌ **Отклонено** — {interaction.user.mention}'
+        self._status_line = f'**Статус:** отклонено · {interaction.user.mention}'
         self._accent = 0x99AAB5
         self._rebuild()
         await interaction.response.edit_message(view=self)
@@ -1008,7 +1065,7 @@ class _LegacyReportCardView(discord.ui.View):
         return False
 
     @discord.ui.button(label='Принять', style=discord.ButtonStyle.success,
-                       emoji='✅', custom_id='rcard_accept')
+                       custom_id='rcard_accept')
     async def accept(self, interaction, button):
         if not await self._resolve_ok(interaction):
             return
@@ -1021,7 +1078,7 @@ class _LegacyReportCardView(discord.ui.View):
         if e is not None:
             e.color = discord.Color(0x2ECC71)
             e.add_field(name='Статус',
-                        value=f'✅ Принято — {interaction.user.mention}',
+                        value=f'Принято · {interaction.user.mention}',
                         inline=False)
         for b in self.children:
             b.disabled = b.custom_id not in ('rcard_thread',)
@@ -1032,7 +1089,7 @@ class _LegacyReportCardView(discord.ui.View):
             ephemeral=True)
 
     @discord.ui.button(label='Отклонить', style=discord.ButtonStyle.danger,
-                       emoji='❌', custom_id='rcard_reject')
+                       custom_id='rcard_reject')
     async def reject(self, interaction, button):
         if not await self._resolve_ok(interaction):
             return
@@ -1044,14 +1101,14 @@ class _LegacyReportCardView(discord.ui.View):
         if e is not None:
             e.color = discord.Color(0x99AAB5)
             e.add_field(name='Статус',
-                        value=f'❌ Отклонено — {interaction.user.mention}',
+                        value=f'Отклонено · {interaction.user.mention}',
                         inline=False)
         for b in self.children:
             b.disabled = True
         await interaction.response.edit_message(embed=e, view=self)
 
     @discord.ui.button(label='Открыть разбор', style=discord.ButtonStyle.primary,
-                       emoji='🧵', custom_id='rcard_thread')
+                       custom_id='rcard_thread')
     async def open_thread(self, interaction, button):
         await ReportCardView.open_thread(self, interaction)
 
@@ -1068,24 +1125,22 @@ class ReportModal(discord.ui.Modal, title='Позвать модератора')
 
     def __init__(self):
         super().__init__()
-        from services.menu_emojis import emoji_for_report
         self.target_select = discord.ui.UserSelect(required=True)
         self.against_select = discord.ui.Select(
             required=True,
             options=[
                 discord.SelectOption(label='Пользователь', value='user',
-                                     emoji=emoji_for_report('user'),
                                      description='Обычный участник сервера'),
                 discord.SelectOption(label='Стафф', value='staff',
-                                     emoji=emoji_for_report('staff'),
                                      description='Модератор, куратор или админ'),
             ])
         self.location_select = discord.ui.Select(
             required=True,
             options=[
-                discord.SelectOption(label='Чат', value='chat', emoji='💬'),
+                discord.SelectOption(label='Чат', value='chat',
+                                     description='Текстовый канал'),
                 discord.SelectOption(label='Голосовой канал', value='voice',
-                                     emoji='🔊'),
+                                     description='Войс / трибуна'),
             ])
         self.reason_input = discord.ui.TextInput(
             style=discord.TextStyle.paragraph, required=True,
@@ -1215,12 +1270,12 @@ async def _deliver_report(interaction, target, reason: str, against: str,
         violations_text=_violations_field(guild.id, target.id, cfg),
         target_tier=target_tier, escalation_label=escalation_label)
     if proof_attachments:
-        body += (f'\n\n**Доказательства:** {len(proof_attachments)} влож. '
-                 '→ канал доказательств')
-    accent = 0xF39C12 if against == 'staff' else 0xE74C3C
+        body += (f'\n\n**Доказательства**\n'
+                 f'{len(proof_attachments)} вложение(й) · канал доказательств')
+    accent = 0xF39C12 if against == 'staff' else 0x5865F2
     card_view = ReportCardView(
-        title='🛎️ Вызов модератора', body=body,
-        footer=f'{guild.name} · /report', accent=accent)
+        title='Вызов модератора', body=body,
+        footer=f'HAKUMO · /report · {guild.name}', accent=accent)
 
     ping_bits = [r.mention for r in ping_roles] + [
         u.mention for u in ping_users]
