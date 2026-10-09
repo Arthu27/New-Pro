@@ -63,10 +63,7 @@ def _is_disabled(name):
 PUBLIC_COMMAND_WHITELIST = frozenset({
     'modpanel',      # панель модерации — все действия отсюда
     'update',        # обслуживание (гильдовая, только админам; запуск — владелец бота)
-    'staff',         # Staff Manager
-    'staff_diagnose',
-    'staff_selftest',
-    'afk',           # отойти/вернуться
+    'staff',         # Staff Manager — единственная staff-команда
     'report',        # жалоба на участника
     'my-violations', # свои наказания
 })
@@ -281,8 +278,8 @@ async def sync_tree(bot, guild=None):
     for c in cmds:
         # Снимаем из публикации: (а) выключенные владельцем, либо
         # (б) команды НЕ из белого списка — в Discord должны жить только
-        # шесть боевых команд (modpanel, апелляция, update, afk, report,
-        # my-violations); все служебные/настроечные команды не публикуются.
+        # боевые команды (modpanel, update, staff, report, my-violations);
+        # все служебные/настроечные команды не публикуются.
         if _is_disabled(getattr(c, 'name', '')) or not _is_public(c):
             try:
                 tree.remove_command(c.name, guild=ctx, type=_cmd_type(c))

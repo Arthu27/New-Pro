@@ -581,7 +581,7 @@ async def apply_staff_change(
             if '403' in str(ex) or 'Forbidden' in type(ex).__name__:
                 msg = (
                     f'Discord Forbidden при смене ролей: {ex}. '
-                    f'Проверьте иерархию и Manage Roles (/staff_diagnose).'
+                    f'Проверьте иерархию и Manage Roles у бота.'
                 )
             return _fail(
                 guild_id=guild.id, actor_id=actor.user_id,
@@ -662,7 +662,7 @@ async def apply_staff_change(
                 parts.append('не снялись: ' + ', '.join(names))
             msg = (
                 'Роли не применились по факту (' + '; '.join(parts) + '). '
-                'Откат выполнен. Запустите /staff_diagnose.'
+                'Откат выполнен. Проверьте иерархию ролей бота.'
             )
             _log.error(
                 'verify failed target=%s missing=%s leftover=%s',
