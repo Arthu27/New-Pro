@@ -126,6 +126,36 @@ def ensure_tables() -> None:
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY (guild_id, kind, key)
             );
+
+            CREATE TABLE IF NOT EXISTS staff_transfer_requests (
+                id TEXT PRIMARY KEY,
+                guild_id INTEGER NOT NULL,
+                target_id INTEGER NOT NULL,
+                initiator_id INTEGER NOT NULL,
+                initiator_branch TEXT,
+                initiator_level TEXT,
+                from_branch TEXT,
+                from_role_id INTEGER,
+                to_branch TEXT,
+                to_role_id INTEGER,
+                to_role_key TEXT,
+                reason TEXT,
+                status TEXT NOT NULL,
+                branch_decided_by INTEGER,
+                branch_decided_at TEXT,
+                branch_decision_reason TEXT,
+                target_decided_at TEXT,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                branch_message_id INTEGER,
+                dm_message_id INTEGER,
+                channel_message_id INTEGER,
+                meta TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_str_target_status
+                ON staff_transfer_requests(guild_id, target_id, status);
+            CREATE INDEX IF NOT EXISTS idx_str_status_exp
+                ON staff_transfer_requests(status, expires_at);
             ''')
             conn.commit()
         finally:
