@@ -36,11 +36,15 @@
     <div class="mp-row"><span class="mp-key">На сервере с</span><span class="mp-val">{{ profile.joined }}</span></div>
     <div class="mp-row"><span class="mp-key">Предупреждений</span><span class="mp-val accent">{{ profile.warns }}</span></div>
     <div class="mp-row"><span class="mp-key">Всего мер</span><span class="mp-val">{{ profile.total }}</span></div>
-    {% if punish_actions %}
+    {% if profile.is_staff %}
+    <p class="dim" style="margin:10px 0 0">Staff — ban/kick/mute здесь нельзя (как в /modpanel). Снять варн/мут можно ниже; варн стаффу — через ветку.</p>
+    {% endif %}
+    {% set acts = profile_actions if profile_actions is defined else punish_actions %}
+    {% if acts %}
     <div class="mp-actions">
       <div class="mp-act-grid">
-        {% for a in punish_actions %}
-        <button type="button" class="mp-chip punish-btn"
+        {% for a in acts %}
+        <button type="button" class="mp-chip punish-btn {% if a in ('ban','kick') %}danger{% elif a in ('unwarn','unmute','unban') %}lift{% endif %}"
                 data-uid="{{ profile.id }}" data-name="{{ profile.name }}" data-act="{{ a }}">{{ punish_labels.get(a, a) }}</button>
         {% endfor %}
       </div>

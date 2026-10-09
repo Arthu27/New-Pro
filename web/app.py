@@ -108,10 +108,13 @@ ROLE_PAGE_KEYS = {
     'owner': {p[0] for p in PAGES_ALL},
 }
 
-# Меры, которые роль может ВЫДАТЬ из панели
-_MOD_PUNISH = ('warn', 'mute', 'kick', 'ban')
+# Меры панели = как /modpanel: выдача + снятие (unwarn/unmute/unban).
+_MOD_ISSUE = ('warn', 'mute', 'kick', 'ban')
+_MOD_LIFT = ('unwarn', 'unmute', 'unban')
+_MOD_PUNISH = _MOD_ISSUE + _MOD_LIFT
 ROLE_PUNISH_ACTIONS = {
-    'helper': ('warn', 'mute'),
+    # helper: варн/мут и их снятие; бан/кик скрыты
+    'helper': ('warn', 'mute', 'unwarn', 'unmute'),
     'mod': _MOD_PUNISH,
     'creative': _MOD_PUNISH,
     'broadcaster': _MOD_PUNISH,
@@ -144,7 +147,12 @@ PUNISH_LABELS = {
     'mute': 'Мут',
     'kick': 'Кик',
     'ban': 'Бан',
+    'unwarn': 'Снять варн',
+    'unmute': 'Размут',
+    'unban': 'Разбан',
 }
+_LIFT_ACTIONS = frozenset({'unwarn', 'unmute', 'unban'})
+_ISSUE_ACTIONS = frozenset({'warn', 'mute', 'kick', 'ban'})
 
 ROLE_CARDS = [
     {
@@ -580,6 +588,27 @@ def _session_discord_role_ids():
 def _viewer_punish_actions(role: str | None = None):
     role = role or session.get('role') or 'helper'
     return list(ROLE_PUNISH_ACTIONS.get(role) or ROLE_PUNISH_ACTIONS['helper'])
+
+
+def _profile_punish_actions(member_obj, *, role: str | None = None) -> list:
+    """Кнопки на /member: для staff — без ban/kick/mute (как /modpanel);
+    для обычных участников — выдача + снятие."""
+    allowed = _viewer_punish_actions(role)
+    if member_obj is None:
+        # оффлайн / только ID — оставляем снятие бана + варн-историю через API
+        return [a for a in allowed if a in ('unban', 'unwarn') or a in _ISSUE_ACTIONS]
+    is_staff = False
+    try:
+        from services.warn_acl import _is_staff_target
+        guild = getattr(member_obj, 'guild', None)
+        if guild is not None:
+            is_staff = bool(_is_staff_target(guild, member_obj))
+    except Exception:
+        is_staff = False
+    if is_staff:
+        # стафф: только снятие; выдача ban/kick/mute здесь запрещена
+        return [a for a in allowed if a in _LIFT_ACTIONS]
+    return list(allowed)
 
 
 def _viewer_hidden_kinds(role: str | None = None):
@@ -3133,139 +3162,167 @@ def api_users_search():
 @login_required
 @role_required('helper')
 def api_punish():
-    """Выдать меру из панели (через бота). Учитывает роль и staff_limits."""
+    """Выдать/снять меру — единый путь с /modpanel (apply_panel_action)."""
     data = request.get_json(silent=True) or request.form
     action = str(data.get('action') or '').strip().lower()
     uid = str(data.get('user_id') or '').strip()
     rule = str(data.get('rule') or '').strip()
     note = str(data.get('note') or '').strip()[:200]
     legacy_reason = str(data.get('reason') or '').strip()[:400]
+    mute_kind = str(data.get('mute_kind') or 'timeout').strip().lower()
     try:
         minutes = int(data.get('minutes') or 10)
     except Exception:
         minutes = 10
-    if action not in ('warn', 'mute', 'kick', 'ban'):
-        return jsonify({'ok': False, 'error': 'action: warn|mute|kick|ban'}), 400
+    if action not in (_ISSUE_ACTIONS | _LIFT_ACTIONS):
+        return jsonify({
+            'ok': False,
+            'error': 'action: warn|mute|kick|ban|unwarn|unmute|unban',
+        }), 400
     allowed = _viewer_punish_actions()
     if action not in allowed:
         return jsonify({
             'ok': False,
-            'error': f'Твоя роль не может выдавать: {PUNISH_LABELS.get(action, action)}',
+            'error': f'Твоя роль не может: {PUNISH_LABELS.get(action, action)}',
         }), 403
     if not uid.isdigit():
         return jsonify({'ok': False, 'error': 'user_id'}), 400
-    # хелперу мут — максимум час
     if action == 'mute' and (session.get('role') or 'helper') == 'helper':
         minutes = min(max(1, minutes), 60)
 
-    # причина = правило из каталога (+ комментарий)
+    is_lift = action in _LIFT_ACTIONS
     reason = ''
-    try:
-        from services.mod_reasons import is_known, allows, format_reason
-        if rule:
-            if not is_known(rule):
-                return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
-            act_key = 'timeout' if action == 'mute' else action
-            if action != 'kick' and not allows(rule, act_key):
-                return jsonify({
-                    'ok': False,
-                    'error': f'Правило {rule} не предусматривает: {PUNISH_LABELS.get(action, action)}',
-                }), 400
-            reason = format_reason(rule)
-        elif not legacy_reason:
-            return jsonify({'ok': False, 'error': 'Выбери правило'}), 400
-    except ImportError:
-        pass
+    if not is_lift:
+        try:
+            from services.mod_reasons import is_known, allows, format_reason
+            if rule:
+                if not is_known(rule):
+                    return jsonify({'ok': False, 'error': 'Неизвестное правило'}), 400
+                act_key = 'timeout' if action == 'mute' else action
+                if action != 'kick' and not allows(rule, act_key):
+                    return jsonify({
+                        'ok': False,
+                        'error': (
+                            f'Правило {rule} не предусматривает: '
+                            f'{PUNISH_LABELS.get(action, action)}'),
+                    }), 400
+                reason = format_reason(rule)
+            elif not legacy_reason:
+                return jsonify({'ok': False, 'error': 'Выбери правило'}), 400
+        except ImportError:
+            pass
     if not reason:
-        reason = legacy_reason or 'Панель'
+        reason = legacy_reason or ('Снятие' if is_lift else 'Панель')
     if note:
         reason = f'{reason} · {note}'
     reason = reason[:400]
-    # лимиты staff_limits (owner — без квот)
-    if not _viewer_is_limit_exempt():
-        try:
-            from services.staff_limits import check_limit, limit_deny_text, human_window, get_windows
-            gid0 = _main_guild()
-            actor = str(session.get('discord_id') or '').strip()
-            if gid0 and actor.isdigit():
-                sl_key = 'mute' if action == 'mute' else action
-                role_ids = _session_discord_role_ids()
-                ok_l, used, lim = check_limit(gid0, actor, sl_key, 1, role_ids)
-                if not ok_l and lim > 0:
-                    win = (get_windows(gid0) or {}).get(sl_key)
-                    return jsonify({
-                        'ok': False,
-                        'error': limit_deny_text(sl_key, used, lim, 1, window=win),
-                    }), 429
-        except Exception:
-            pass
+
     bot = bot_instance
     gid = _main_guild()
     if not bot or not gid:
         return jsonify({'ok': False, 'error': 'Бот офлайн'}), 503
+
+    # UI → PANEL_ACTIONS (как /modpanel)
+    kind_map_issue = {
+        'timeout': 'timeout', 'chat': 'mute_chat', 'mute_chat': 'mute_chat',
+        'voice': 'vmute', 'vmute': 'vmute', 'both': 'timeout',
+    }
+    kind_map_lift = {
+        'timeout': 'untimeout', 'chat': 'unmute_chat',
+        'mute_chat': 'unmute_chat', 'voice': 'vunmute', 'vmute': 'vunmute',
+        'both': 'untimeout',
+    }
+    panel_action = action
+    if action == 'mute':
+        panel_action = kind_map_issue.get(mute_kind, 'timeout')
+    elif action == 'unmute':
+        panel_action = kind_map_lift.get(mute_kind, 'untimeout')
+
+    mod_name = session.get('discord_display') or session.get('username') or 'panel'
+    actor_id = str(session.get('discord_id') or '').strip()
 
     async def _do():
         guild = bot.get_guild(int(gid))
         if guild is None:
             raise RuntimeError('guild not found')
         member = guild.get_member(int(uid))
-        if member is None:
-            member = await guild.fetch_member(int(uid))
-        mod_name = session.get('discord_display') or session.get('username') or 'panel'
-        mod_id = session.get('discord_id') or '0'
-        target_name = (
-            getattr(member, 'display_name', None)
-            or getattr(member, 'name', None)
-            or str(member.id)
-        )
-        # В audit Discord исполнителем будет бот — имя модератора в reason
-        ban_reason = f'{reason} · панель: {mod_name}'[:512]
-        cog = bot.get_cog('moderation') or bot.get_cog('Moderation')
-        if action == 'warn':
-            warns = bot.get_cog('warnings')
-            if warns is None:
-                raise RuntimeError('warnings cog offline')
-            await warns.add_warning(member, guild.me, reason)
-            act = 'warn'
-        elif action == 'mute':
-            from datetime import timedelta
-            until = datetime.now(timezone.utc) + timedelta(minutes=max(1, minutes))
-            await member.timeout(until, reason=ban_reason)
-            act = 'timeout'
-        elif action == 'kick':
-            await member.kick(reason=ban_reason)
-            act = 'kick'
-        elif action == 'ban':
-            await member.ban(reason=ban_reason, delete_message_days=0)
-            act = 'ban'
-        else:
-            act = action
-        if cog and hasattr(cog, 'save_case'):
+        if member is None and action != 'unban':
             try:
-                cog.save_case(
-                    guild.id, act, member.id, mod_id, reason,
-                    mod_name=mod_name,
-                    duration=minutes if action == 'mute' else None,
-                    user_name=target_name)
-            except TypeError:
-                cog.save_case(
-                    guild.id, act, member.id, mod_id, reason,
-                    mod_name=mod_name,
-                    duration=minutes if action == 'mute' else None)
-        return {'action': act, 'user': str(member), 'id': str(member.id),
-                'mod': mod_name, 'reason': (rule or reason)[:80]}
+                member = await guild.fetch_member(int(uid))
+            except Exception:
+                member = None
+        if member is None and action not in ('unban', 'ban'):
+            raise RuntimeError('Участник не на сервере')
+
+        # staff: не выдаём ban/kick/mute с /member (иерархия + явный запрет)
+        if member is not None and action in ('ban', 'kick', 'mute'):
+            try:
+                from services.warn_acl import _is_staff_target
+                if _is_staff_target(guild, member):
+                    raise RuntimeError(
+                        'Это staff — ban/kick/mute через профиль нельзя '
+                        '(как в /modpanel). Варн стаффу — только ветка.')
+            except RuntimeError:
+                raise
+            except Exception:
+                pass
+
+        actor = None
+        if actor_id.isdigit():
+            actor = guild.get_member(int(actor_id))
+        cog = bot.get_cog('moderation') or bot.get_cog('Moderation')
+        if cog is None or not hasattr(cog, 'apply_panel_action'):
+            raise RuntimeError('moderation cog offline')
+
+        # kick — отдельный путь (нет в PANEL_ACTIONS)
+        if action == 'kick':
+            if member is None:
+                raise RuntimeError('Участник не на сервере')
+            from services.staff_hierarchy import check as _hchk
+            _actor = actor or mod_name
+            ok_h, deny_h, _, _ = _hchk(guild, _actor, member, 'kick')
+            if not ok_h:
+                raise RuntimeError(deny_h or 'Иерархия')
+            await member.kick(reason=f'{reason} · панель: {mod_name}'[:512])
+            if hasattr(cog, 'save_case'):
+                try:
+                    cog.save_case(
+                        guild.id, 'kick', member.id, actor_id or '0', reason,
+                        mod_name=mod_name,
+                        user_name=getattr(member, 'display_name', None))
+                except Exception:
+                    pass
+            return {
+                'action': 'kick', 'extra': 'Кик',
+                'user': str(member), 'id': str(member.id),
+                'mod': mod_name, 'reason': (rule or reason)[:80],
+            }
+
+        amount = None
+        if panel_action in ('timeout', 'mute_chat', 'vmute'):
+            amount = str(max(1, minutes))
+        target = member if member is not None else uid
+        ok, text = await cog.apply_panel_action(
+            guild, target, panel_action,
+            reason=reason,
+            amount=amount,
+            actor=actor or mod_name,
+            reason_code=rule or None,
+            source='web',
+        )
+        if not ok:
+            raise RuntimeError(text or 'Не получилось')
+        return {
+            'action': panel_action,
+            'extra': text,
+            'user': str(getattr(member, 'display_name', None) or uid),
+            'id': uid,
+            'mod': mod_name,
+            'reason': (rule or reason)[:80],
+        }
 
     try:
         result = _run_on_bot(_do())
-        if not _viewer_is_limit_exempt():
-            try:
-                from services.staff_limits import record_hit
-                actor = str(session.get('discord_id') or '').strip()
-                if gid and actor.isdigit():
-                    sl_key = 'mute' if action == 'mute' else action
-                    record_hit(gid, actor, sl_key, 1)
-            except Exception:
-                pass
         return jsonify({'ok': True, **result})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)[:200]}), 500
@@ -3574,6 +3631,13 @@ def member():
             mutes = sum(1 for r in rows if r.get('kind') in ('mute', 'timeout'))
             bans = sum(1 for r in rows if r.get('kind') == 'ban')
             kicks = sum(1 for r in rows if r.get('kind') == 'kick')
+            is_staff = False
+            try:
+                from services.warn_acl import _is_staff_target
+                if member_obj is not None and getattr(member_obj, 'guild', None):
+                    is_staff = bool(_is_staff_target(member_obj.guild, member_obj))
+            except Exception:
+                is_staff = False
             profile = {
                 'id': uid,
                 'name': _best_name(
@@ -3592,9 +3656,11 @@ def member():
                 'kicks': kicks,
                 'total': len(rows),
                 'on_server': member_obj is not None,
+                'is_staff': is_staff,
             }
     rows = _filter_cases_for_viewer(rows)
     proofs = []
+    profile_actions = list(_viewer_punish_actions())
     if profile:
         hidden = _viewer_hidden_kinds()
         if 'ban' in hidden:
@@ -3604,7 +3670,21 @@ def member():
         profile['total'] = len(rows)
         profile['warns'] = sum(1 for r in rows if r.get('kind') == 'warn')
         profile['mutes'] = sum(1 for r in rows if r.get('kind') in ('mute', 'timeout'))
-        # демки этого человека — чтобы из профиля сразу смотреть доказательства
+        # кнопки как /modpanel: staff без ban/kick/mute
+        try:
+            bot = bot_instance
+            gid = _main_guild()
+            mobj = None
+            if bot and gid and str(profile.get('id') or '').isdigit():
+                g = bot.get_guild(int(gid))
+                if g is not None:
+                    mobj = g.get_member(int(profile['id']))
+            profile_actions = _profile_punish_actions(mobj)
+        except Exception:
+            profile_actions = [
+                a for a in _viewer_punish_actions()
+                if not profile.get('is_staff') or a in _LIFT_ACTIONS
+            ]
         try:
             uid = str(profile.get('id') or '')
             for pr in _proofs_list(_main_guild()):
@@ -3637,6 +3717,7 @@ def member():
         'member.html', q=q, rows=rows, profile=profile, proofs=proofs,
         staff_rows=staff_rows, punished_rows=punished_rows,
         people_rows=people_rows, people_kpi=people_kpi,
+        profile_actions=profile_actions,
         limits=_viewer_limits_card(),
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
