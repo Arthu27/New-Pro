@@ -338,6 +338,43 @@ async def apply_staff_change(
         remove_ids.extend(b_rem)
         branch = new_branch
 
+    elif action == 'sync_bundle':
+        # автосинк: довыдать недостающие роли текущего ROLE_BUNDLES
+        key = target.primary_key or new_role_key or ''
+        br = branch or target.primary_branch or ''
+        if not key or not br:
+            return _fail(
+                guild_id=guild.id, actor_id=actor.user_id,
+                target_id=target.user_id, action=action, branch=br,
+                old_key=old_key, new_key=key, reason=reason,
+                source=source, aid=aid, msg='Нет роли/ветки для синка',
+                actor_role_key=actor_rk, actor_branch=actor_br,
+            )
+        new_key = key
+        branch = br
+        bundle = get_role_bundle(key, br, cfg)
+        for rid in (bundle.get('add_roles') or []):
+            rid = int(rid)
+            if rid and rid not in current:
+                add_ids.append(rid)
+        # entry + common тоже, если вдруг нет
+        entry = _entry_id_for(br)
+        if entry and entry not in current:
+            add_ids.append(entry)
+        common = int(cfg.get('common_staff_role_id') or 0)
+        if common and common not in current:
+            add_ids.append(common)
+        if not add_ids:
+            record_action(
+                guild_id=guild.id, actor_id=actor.user_id,
+                target_id=target.user_id, action=action, branch=br,
+                old_key=old_key, new_key=key, reason=reason or 'already synced',
+                source=source, ok=True, action_id=aid,
+                actor_role_key=actor_rk, actor_branch=actor_br,
+                meta={'note': 'nothing_to_add'},
+            )
+            return StaffChangeResult(True, '', action_id=aid, added=[], removed=[])
+
     elif action in ('probation', 'vacation', 'vacation_end', 'history', 'request'):
         if action == 'vacation':
             vac = int(cfg.get('vacation_role_id') or 0)

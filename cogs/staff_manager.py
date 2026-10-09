@@ -277,6 +277,23 @@ def build_panel_view(
         status_lines.append(PANEL_MULTI)
     if len(info.get('ladder_role_ids') or []) > 1 or len(info.get('entry_role_ids') or []) > 1:
         status_lines.append(PANEL_DOUBLE)
+    # набор роли (кратко)
+    try:
+        from services.staff_manager.bundles import get_role_bundle
+        pk = info.get('primary_key') or ''
+        pb = info.get('primary_branch') or ''
+        if pk and pb:
+            extras = get_role_bundle(pk, pb, cfg).get('add_roles') or []
+            if extras:
+                have = set(_member_role_ids(target))
+                parts = []
+                for rid in extras[:6]:
+                    role = target.guild.get_role(int(rid)) if target.guild else None
+                    mark = '✅' if int(rid) in have else '❌'
+                    parts.append(f'{mark} {role.name if role else rid}')
+                status_lines.append('-# Набор: ' + ' · '.join(parts))
+    except Exception:
+        pass
 
     tail = ''
     if sel_act:
@@ -720,16 +737,34 @@ class StaffManager(commands.Cog):
             return
 
         actor = interaction.user
+        await interaction.response.defer(ephemeral=True)
+        sync_note = ''
+        try:
+            res = await self._sync_member_bundle(
+                interaction.guild, actor, member)
+            member = interaction.guild.get_member(member.id) or member
+            if res and res.ok and res.added:
+                names = []
+                for rid in res.added:
+                    r = interaction.guild.get_role(rid)
+                    names.append(r.name if r else str(rid))
+                sync_note = '🔄 Синк набора: ' + ', '.join(names)
+        except Exception as ex:
+            _log.warning('sync_bundle on /staff: %s', ex)
+
         token = new_action_id()[:16]
         save_menu_state(
             token, interaction.guild.id, actor.id, member.id,
             'card', {'action': '', 'role': '', 'branch': ''})
-        view = build_profile_view(self, token=token, actor=actor, target=member)
+        # select-панель (как раньше); чёрные только Подтвердить/Отмена
+        view = build_panel_view(self, token=token, actor=actor, target=member)
         try:
             self.bot.add_view(view)
         except Exception:
             pass
-        await interaction.response.send_message(view=view, ephemeral=True)
+        await interaction.followup.send(view=view, ephemeral=True)
+        if sync_note:
+            await interaction.followup.send(sync_note, ephemeral=True)
 
     @app_commands.command(
         name='staff_history',
@@ -970,6 +1005,41 @@ class StaffManager(commands.Cog):
 
     # ── menu callbacks ─────────────────────────────────────────────────
 
+    async def _sync_member_bundle(self, guild, actor, member):
+        """Довыдать недостающие роли набора текущей ступени (без смены лестницы)."""
+        info = get_staff_info(member)
+        key = info.get('primary_key') or ''
+        branch = info.get('primary_branch') or ''
+        if not key or not branch or info.get('on_vacation'):
+            return None
+        from services.staff_manager.bundles import get_role_bundle
+        bundle = get_role_bundle(key, branch)
+        need = [int(r) for r in (bundle.get('add_roles') or []) if int(r or 0)]
+        have = set(_member_role_ids(member))
+        missing = [r for r in need if r not in have]
+        if not missing:
+            return None
+        result = await apply_staff_change(
+            guild=guild,
+            actor_member=actor,
+            target_member=member,
+            action='sync_bundle',
+            new_role_key=key,
+            new_branch=branch,
+            reason='auto sync ROLE_BUNDLES',
+            source='auto_sync',
+            skip_acl=True,
+        )
+        if result.ok and result.added:
+            _log.info(
+                'auto sync_bundle target=%s added=%s',
+                member.id, result.added)
+        elif not result.ok:
+            _log.warning(
+                'auto sync_bundle failed target=%s: %s',
+                member.id, result.reason)
+        return result
+
     async def _on_action_select(self, interaction, token, action):
         st = load_menu_state(token)
         if not st or not interaction.guild:
@@ -985,8 +1055,13 @@ class StaffManager(commands.Cog):
         if not target or not actor:
             await interaction.response.send_message('не найден', ephemeral=True)
             return
-        view = _screen_for_action(
-            self, token=token, actor=actor, target=target, action=action)
+        # история / отпуск — отдельные экраны; остальное — select-панель
+        if action in ('history', 'vacation'):
+            view = _screen_for_action(
+                self, token=token, actor=actor, target=target, action=action)
+        else:
+            view = build_panel_view(
+                self, token=token, actor=actor, target=target)
         await interaction.response.edit_message(view=view)
 
     async def _open_action_screen(self, interaction, token, action):
@@ -1030,9 +1105,8 @@ class StaffManager(commands.Cog):
         if not target or not actor:
             await interaction.response.defer()
             return
-        action = payload.get('action') or 'promote'
-        view = _screen_for_action(
-            self, token=token, actor=actor, target=target, action=action)
+        view = build_panel_view(
+            self, token=token, actor=actor, target=target)
         await interaction.response.edit_message(view=view)
 
     async def _on_branch_select(self, interaction, token, branch):
@@ -1051,8 +1125,12 @@ class StaffManager(commands.Cog):
             await interaction.response.defer()
             return
         action = payload.get('action') or 'transfer'
-        view = _screen_for_action(
-            self, token=token, actor=actor, target=target, action=action)
+        if action == 'transfer':
+            view = _screen_for_action(
+                self, token=token, actor=actor, target=target, action=action)
+        else:
+            view = build_panel_view(
+                self, token=token, actor=actor, target=target)
         await interaction.response.edit_message(view=view)
 
     async def _set_bypass_and_reason(self, interaction, token):
