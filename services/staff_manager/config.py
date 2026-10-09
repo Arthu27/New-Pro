@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Конфиг Staff Manager — единственный источник ID ролей.
 
-Файл: data/staff_manager.json (см. data/staff_manager.example.json).
+Файл: data/staff_manager.json (см. config/staff_manager.example.json).
 В Python-коде НЕТ боевых Discord ID — только структура и валидация.
+
+Hakumo: лестница Master/Assistant/Curator/Admin — ОБЩИЕ Discord-роли.
+Ветка определяется через entry_role_id (Moderator/Helper/…).
 """
 from __future__ import annotations
 
@@ -21,7 +24,6 @@ CONFIG_PATH = os.environ.get(
     os.path.join('data', 'staff_manager.json'),
 )
 
-# Шаблон лестницы по умолчанию (ранги можно переопределить в JSON).
 DEFAULT_LADDER = [
     {'key': 'master', 'name': 'Master', 'rank': 1, 'emoji': '🟢', 'protected': False},
     {'key': 'assistant', 'name': 'Assistant', 'rank': 2, 'emoji': '🔵', 'protected': False},
@@ -31,7 +33,7 @@ DEFAULT_LADDER = [
 
 _LOCK = threading.RLock()
 _CFG: Optional[dict] = None
-_INDEX: Optional[dict] = None  # role_id -> {branch, key, rank, name, protected}
+_INDEX: Optional[dict] = None
 _ENABLED = False
 _LAST_ERROR = ''
 
@@ -56,7 +58,6 @@ def _normalize_ladder(raw) -> List[dict]:
         key = str(it.get('key') or '').strip().lower()
         if not key:
             continue
-        # alias: assistent → assistant
         if key == 'assistent':
             key = 'assistant'
         out.append({
@@ -82,7 +83,6 @@ def _normalize_branches(raw, ladder_keys: List[str]) -> Dict[str, dict]:
         roles_in = b.get('roles') or {}
         roles = {}
         for lk in ladder_keys:
-            # accept assistent alias in JSON
             rid = roles_in.get(lk)
             if rid is None and lk == 'assistant':
                 rid = roles_in.get('assistent')
@@ -92,6 +92,7 @@ def _normalize_branches(raw, ladder_keys: List[str]) -> Dict[str, dict]:
             'label': str(b.get('label') or bkey),
             'color': _as_int(b.get('color'), 0x5865F2),
             'responsible_role_id': _as_int(b.get('responsible_role_id')),
+            'entry_role_id': _as_int(b.get('entry_role_id')),
             'roles': roles,
         }
     return out
@@ -101,7 +102,7 @@ def load_raw(path: str | None = None) -> dict:
     path = path or CONFIG_PATH
     if not os.path.isfile(path):
         raise ConfigError(
-            f'Нет файла {path}. Скопируй data/staff_manager.example.json '
+            f'Нет файла {path}. Скопируй config/staff_manager.example.json '
             f'→ data/staff_manager.json и заполни role ID.')
     with open(path, 'r', encoding='utf-8') as f:
         raw = json.load(f)
@@ -120,19 +121,47 @@ def parse_config(raw: dict) -> dict:
         n = _as_int(x)
         if n:
             owner_ids.append(n)
-    # merge OWNER_IDS from Config.env
     try:
         from config import Config
         owner_ids = sorted(set(owner_ids) | set(Config.all_owner_ids() or []))
     except Exception:
         owner_ids = sorted(set(owner_ids))
 
+    role_emojis = {}
+    for k, v in (raw.get('ROLE_EMOJIS') or raw.get('role_emojis') or {}).items():
+        role_emojis[str(k).lower()] = str(v or '')
+    branch_emojis = {}
+    for k, v in (raw.get('BRANCH_EMOJIS') or raw.get('branch_emojis') or {}).items():
+        branch_emojis[str(k)] = str(v or '')
+
+    require_consent = []
+    for x in (raw.get('REQUIRE_CONSENT_FOR') or raw.get('require_consent_for')
+              or ['transfer']):
+        require_consent.append(str(x).strip().lower())
+
     cfg = {
         'staff_admin_role_id': _as_int(raw.get('staff_admin_role_id')),
         'owner_ids': owner_ids,
         'common_staff_role_id': _as_int(raw.get('common_staff_role_id')),
+        'vacation_role_id': _as_int(raw.get('vacation_role_id')),
         'log_channel_id': _as_int(raw.get('log_channel_id')),
         'actions_channel_id': _as_int(raw.get('actions_channel_id')),
+        'consent_fallback_channel_id': _as_int(
+            raw.get('CONSENT_FALLBACK_CHANNEL_ID')
+            or raw.get('consent_fallback_channel_id')),
+        'consent_expire_hours': max(
+            1, _as_int(raw.get('CONSENT_EXPIRE_HOURS')
+                       or raw.get('consent_expire_hours'), 48)),
+        'require_consent_for': require_consent,
+        'selftest_role_id': _as_int(
+            raw.get('SELFTEST_ROLE_ID') or raw.get('selftest_role_id')),
+        'selftest_user_id': _as_int(
+            raw.get('SELFTEST_USER_ID') or raw.get('selftest_user_id')),
+        'undo_window_minutes': max(
+            1, _as_int(raw.get('UNDO_WINDOW_MINUTES')
+                       or raw.get('undo_window_minutes'), 10)),
+        'role_emojis': role_emojis,
+        'branch_emojis': branch_emojis,
         'ladder': ladder,
         'branches': branches,
         'responsible_can_manage': [
@@ -149,18 +178,22 @@ def parse_config(raw: dict) -> dict:
         'allow_promotion_requests': bool(
             raw.get('allow_promotion_requests', True)),
     }
+    # подмешать emoji из ROLE_EMOJIS в ladder
+    for it in cfg['ladder']:
+        if not it.get('emoji') and role_emojis.get(it['key']):
+            it['emoji'] = role_emojis[it['key']]
     return cfg
 
 
 def build_indexes(cfg: dict) -> dict:
     """Индексы ролей.
 
-    Одна Discord-роль может быть общей для нескольких веток (Master/Curator/Admin
-    на Hakumo общие) — тогда shared=True и branches=[...]. Уникальные роли
-    ветки (entry Master = Helper/Moderator/…) имеют shared=False.
+    entry_role_id — уникальный якорь ветки (Moderator/Helper/…).
+    Ladder-роли могут быть общими (shared=True) для всех веток.
     """
     by_role: Dict[int, dict] = {}
     by_branch_key: Dict[Tuple[str, str], int] = {}
+    by_entry: Dict[int, str] = {}
     responsible_of: Dict[int, str] = {}
 
     for bkey, b in (cfg.get('branches') or {}).items():
@@ -171,6 +204,15 @@ def build_indexes(cfg: dict) -> dict:
                     f'responsible_role_id {rid_resp} дублируется в ветках '
                     f'{responsible_of[rid_resp]} и {bkey}')
             responsible_of[rid_resp] = bkey
+
+        entry_rid = int(b.get('entry_role_id') or 0)
+        if entry_rid:
+            if entry_rid in by_entry and by_entry[entry_rid] != bkey:
+                raise ConfigError(
+                    f'entry_role_id {entry_rid} дублируется в '
+                    f'{by_entry[entry_rid]} и {bkey}')
+            by_entry[entry_rid] = bkey
+
         for lk, rid in (b.get('roles') or {}).items():
             rid = int(rid or 0)
             if not rid:
@@ -190,6 +232,7 @@ def build_indexes(cfg: dict) -> dict:
                 'color': int(b.get('color') or 0),
                 'shared': False,
                 'branches': [bkey],
+                'is_entry': False,
             }
             if rid in by_role:
                 prev = by_role[rid]
@@ -200,19 +243,18 @@ def build_indexes(cfg: dict) -> dict:
                 prev['shared'] = True
                 if bkey not in prev['branches']:
                     prev['branches'].append(bkey)
-                # branch field = first; placements resolver uses branches[]
             else:
                 by_role[rid] = entry
 
     return {
         'by_role': by_role,
         'by_branch_key': by_branch_key,
+        'by_entry': by_entry,
         'responsible_of': responsible_of,
     }
 
 
 def validate_config(cfg: dict, *, guild_role_ids: set | None = None) -> List[str]:
-    """Вернёт список ошибок. Пустой = ок."""
     errs: List[str] = []
     if not cfg.get('staff_admin_role_id'):
         errs.append('staff_admin_role_id не задан')
@@ -236,6 +278,8 @@ def validate_config(cfg: dict, *, guild_role_ids: set | None = None) -> List[str
     for bkey, b in branches.items():
         if not b.get('responsible_role_id'):
             errs.append(f'ветка {bkey}: нет responsible_role_id')
+        if not b.get('entry_role_id'):
+            errs.append(f'ветка {bkey}: нет entry_role_id')
         roles = b.get('roles') or {}
         for lk in keys:
             if not int(roles.get(lk) or 0):
@@ -248,8 +292,16 @@ def validate_config(cfg: dict, *, guild_role_ids: set | None = None) -> List[str
     if guild_role_ids is not None:
         need = set()
         need.add(int(cfg.get('staff_admin_role_id') or 0))
+        for x in (
+            cfg.get('common_staff_role_id'),
+            cfg.get('vacation_role_id'),
+            cfg.get('selftest_role_id'),
+        ):
+            if int(x or 0):
+                need.add(int(x))
         for b in branches.values():
             need.add(int(b.get('responsible_role_id') or 0))
+            need.add(int(b.get('entry_role_id') or 0))
             for rid in (b.get('roles') or {}).values():
                 need.add(int(rid or 0))
         for rid in need:
@@ -268,7 +320,6 @@ def load_config(path: str | None = None, *, guild_role_ids=None) -> dict:
 
 
 def reload_config(path: str | None = None, *, guild_role_ids=None) -> Tuple[bool, str]:
-    """Загрузить конфиг в память. (ok, error_message)."""
     global _CFG, _INDEX, _ENABLED, _LAST_ERROR
     with _LOCK:
         try:
@@ -279,9 +330,10 @@ def reload_config(path: str | None = None, *, guild_role_ids=None) -> Tuple[bool
             _ENABLED = True
             _LAST_ERROR = ''
             _log.info(
-                'staff_manager: конфиг OK — ветки=%s ladder=%s',
+                'staff_manager: конфиг OK — ветки=%s ladder=%s entry=%s',
                 list((cfg.get('branches') or {}).keys()),
                 [x['key'] for x in cfg.get('ladder') or []],
+                list((idx.get('by_entry') or {}).values()),
             )
             return True, ''
         except Exception as ex:
@@ -323,3 +375,28 @@ def ladder_by_key(key: str, cfg: dict | None = None) -> Optional[dict]:
 def branch_of_role(role_id: int) -> Optional[dict]:
     idx = get_index() or {}
     return (idx.get('by_role') or {}).get(int(role_id))
+
+
+def entry_branch(role_id: int) -> Optional[str]:
+    idx = get_index() or {}
+    return (idx.get('by_entry') or {}).get(int(role_id))
+
+
+def role_emoji(key: str, cfg: dict | None = None) -> str:
+    cfg = cfg or get_config() or {}
+    key = 'assistant' if key == 'assistent' else (key or '')
+    em = (cfg.get('role_emojis') or {}).get(key) or ''
+    if em:
+        return em
+    item = ladder_by_key(key, cfg)
+    return (item or {}).get('emoji') or ''
+
+
+def branch_emoji(branch: str, cfg: dict | None = None) -> str:
+    cfg = cfg or get_config() or {}
+    return (cfg.get('branch_emojis') or {}).get(branch or '') or ''
+
+
+def requires_consent(action: str, cfg: dict | None = None) -> bool:
+    cfg = cfg or get_config() or {}
+    return str(action or '').lower() in set(cfg.get('require_consent_for') or [])

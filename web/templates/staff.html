@@ -65,6 +65,49 @@
   {% endif %}
 </section>
 
+<section class="panel rise" style="margin-top:12px" id="staff-consents">
+  <h2>Согласия <span class="count" id="consents-count">—</span></h2>
+  <p class="dim" style="margin:0 12px 8px">Переводы между ветками ждут ответа человека (pending / accepted / declined).</p>
+  <div class="feed" id="consents-list"><div class="empty">Загрузка…</div></div>
+  <script>
+  (async () => {
+    const box = document.getElementById('consents-list');
+    const cnt = document.getElementById('consents-count');
+    try {
+      const r = await fetch('/api/staff-manager/consents');
+      const j = await r.json();
+      if (!j.ok) { box.innerHTML = '<div class="empty">нет доступа / выкл</div>'; return; }
+      const rows = j.consents || [];
+      cnt.textContent = rows.length;
+      if (!rows.length) { box.innerHTML = '<div class="empty">Пока пусто</div>'; return; }
+      box.innerHTML = rows.map(c => {
+        const st = c.status || '';
+        const cancel = st === 'pending'
+          ? `<button type="button" data-cid="${c.id}" class="btn-cancel-consent">Отозвать</button>` : '';
+        return `<div class="feed-row">
+          <div class="feed-act">${st}</div>
+          <div class="feed-body">
+            <strong>${c.action}</strong>
+            <span class="dim">${c.from_branch || '—'} → ${c.to_branch || '—'} · ${c.to_role_key || ''}</span>
+            <div class="dim">target ${c.target_id} · by ${c.initiator_id}</div>
+            ${cancel}
+          </div>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('.btn-cancel-consent').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-cid');
+          await fetch('/api/staff-manager/consents/' + id + '/cancel', {method:'POST'});
+          location.reload();
+        });
+      });
+    } catch (e) {
+      box.innerHTML = '<div class="empty">ошибка загрузки</div>';
+    }
+  })();
+  </script>
+</section>
+
 <section class="panel rise" style="margin-top:12px">
   <h2>Лента staff <span class="count">{{ feed|length }}</span></h2>
   {% if not feed %}<div class="empty">Пока пусто</div>
