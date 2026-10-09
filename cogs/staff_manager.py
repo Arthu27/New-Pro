@@ -504,7 +504,7 @@ class ConsentAcceptButton(discord.ui.Button):
     def __init__(self, cog: 'StaffManager', consent_id: str):
         super().__init__(
             label=CONSENT_ACCEPT, style=discord.ButtonStyle.secondary,
-            emoji='✦', custom_id=f'sm:cya:{consent_id}')
+            custom_id=f'sm:cya:{consent_id}')
         self.cog = cog
         self.consent_id = consent_id
 
@@ -516,7 +516,7 @@ class ConsentDeclineButton(discord.ui.Button):
     def __init__(self, cog: 'StaffManager', consent_id: str):
         super().__init__(
             label=CONSENT_DECLINE, style=discord.ButtonStyle.secondary,
-            emoji='✧', custom_id=f'sm:cno:{consent_id}')
+            custom_id=f'sm:cno:{consent_id}')
         self.cog = cog
         self.consent_id = consent_id
 
@@ -738,17 +738,10 @@ class StaffManager(commands.Cog):
 
         actor = interaction.user
         await interaction.response.defer(ephemeral=True)
-        sync_note = ''
+        # тихий автосинк набора (без сообщений в чат)
         try:
-            res = await self._sync_member_bundle(
-                interaction.guild, actor, member)
+            await self._sync_member_bundle(interaction.guild, actor, member)
             member = interaction.guild.get_member(member.id) or member
-            if res and res.ok and res.added:
-                names = []
-                for rid in res.added:
-                    r = interaction.guild.get_role(rid)
-                    names.append(r.name if r else str(rid))
-                sync_note = '🔄 Синк набора: ' + ', '.join(names)
         except Exception as ex:
             _log.warning('sync_bundle on /staff: %s', ex)
 
@@ -756,15 +749,17 @@ class StaffManager(commands.Cog):
         save_menu_state(
             token, interaction.guild.id, actor.id, member.id,
             'card', {'action': '', 'role': '', 'branch': ''})
-        # select-панель (как раньше); чёрные только Подтвердить/Отмена
         view = build_panel_view(self, token=token, actor=actor, target=member)
         try:
             self.bot.add_view(view)
         except Exception:
             pass
-        await interaction.followup.send(view=view, ephemeral=True)
-        if sync_note:
-            await interaction.followup.send(sync_note, ephemeral=True)
+        try:
+            await interaction.followup.send(view=view, ephemeral=True)
+        except discord.HTTPException as ex:
+            _log.error('staff panel send failed: %s', ex)
+            await interaction.followup.send(
+                f'Не удалось открыть панель: {ex}', ephemeral=True)
 
     @app_commands.command(
         name='staff_history',

@@ -33,18 +33,17 @@ def mirror_confirm_row(
     ok_callback=None,
     cancel_callback=None,
 ) -> discord.ui.ActionRow:
-    """Кнопки подтверждения: secondary (тёмные), не зелёный/красный classic."""
+    """Кнопки подтверждения: secondary (тёмные), без невалидных эмодзи."""
     row = discord.ui.ActionRow()
+    # без emoji: Discord отклоняет ✦/✧ (не emoji) → 50035 Invalid Form Body
     btn_ok = discord.ui.Button(
         label=ok_label,
         style=discord.ButtonStyle.secondary,
-        emoji='✦',
         custom_id=ok_id,
     )
     btn_no = discord.ui.Button(
         label=cancel_label,
         style=discord.ButtonStyle.secondary,
-        emoji='✧',
         custom_id=cancel_id,
     )
     if ok_callback:

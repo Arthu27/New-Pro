@@ -28,19 +28,41 @@ def emoji_str(kind: str, key: str, fallback: str = '•') -> str:
     return fallback or '•'
 
 
+def _is_safe_unicode_emoji(s: str) -> bool:
+    """Discord отвергает часть символов (✦ ✧ •) как emoji.name на кнопках/select."""
+    if not s or len(s) > 8:
+        return False
+    bad = {'•', '✦', '✧', '·', '—', '-', '>', '<'}
+    if s in bad:
+        return False
+    try:
+        import unicodedata
+        return any(
+            unicodedata.category(ch) in ('So', 'Sk') or ord(ch) > 0x1F000
+            for ch in s
+        )
+    except Exception:
+        return False
+
+
 def partial_emoji(kind: str, key: str, fallback: str | None = None):
     """discord.PartialEmoji или unicode/None для SelectOption."""
     import discord
     s = emoji_str(kind, key, fallback or '')
     if not s or s == '•':
+        # fallback unicode (ROLE_EMOJIS) — только если Discord примет
+        fb = fallback or ''
+        if fb and _is_safe_unicode_emoji(fb):
+            return fb
         return None
     if s.startswith('<') and ':' in s:
         try:
             return discord.PartialEmoji.from_str(s)
         except Exception:
             return None
-    # unicode
-    return s
+    if _is_safe_unicode_emoji(s):
+        return s
+    return None
 
 
 async def ensure_role_emojis(bot, guild) -> Dict[str, str]:

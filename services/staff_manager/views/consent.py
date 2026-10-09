@@ -43,10 +43,10 @@ def build_consent_view(
     row = discord.ui.ActionRow()
     btn_ok = discord.ui.Button(
         label=CONSENT_ACCEPT, style=discord.ButtonStyle.secondary,
-        emoji='✦', custom_id=f'sm:cya:{consent_id}')
+        custom_id=f'sm:cya:{consent_id}')
     btn_no = discord.ui.Button(
         label=CONSENT_DECLINE, style=discord.ButtonStyle.secondary,
-        emoji='✧', custom_id=f'sm:cno:{consent_id}')
+        custom_id=f'sm:cno:{consent_id}')
 
     async def _ok(interaction: discord.Interaction):
         await cog._consent_accept(interaction, consent_id)

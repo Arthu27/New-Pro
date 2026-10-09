@@ -42,10 +42,10 @@ def build_requests_view(
         row = discord.ui.ActionRow()
         btn_ok = discord.ui.Button(
             label='Одобрить', style=discord.ButtonStyle.secondary,
-            emoji='✦', custom_id=f'sm:req:ok:{tid}')
+            custom_id=f'sm:req:ok:{tid}')
         btn_no = discord.ui.Button(
             label='Отклонить', style=discord.ButtonStyle.secondary,
-            emoji='✧', custom_id=f'sm:req:no:{tid}')
+            custom_id=f'sm:req:no:{tid}')
 
         async def _ok(interaction: discord.Interaction):
             await cog._request_decide(interaction, tid, accept=True)
