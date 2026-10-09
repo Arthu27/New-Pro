@@ -87,6 +87,7 @@ KEEP_SLASH = frozenset({
     # коги music_cog/voice_commands в RETIRED_COGS, команды не публикуются.
     'modpanel',
     'update',
+    'staff',               # Staff Manager: лестница ролей / ветки
     # /proof удалена из бота (заказ владельца 2026-09-04: «/proof убери
     # вообще»): демки к наказаниям грузятся через /report (вложение) и
     # панель («Доказательства» → загрузить напрямую).

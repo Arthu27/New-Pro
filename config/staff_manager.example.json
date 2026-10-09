@@ -1,0 +1,42 @@
+{
+  "_comment": "Скопируй в data/staff_manager.json и подставь реальные Discord role IDs. Без валидного файла staff-manager не стартует.",
+  "staff_admin_role_id": 0,
+  "owner_ids": [],
+  "common_staff_role_id": 0,
+  "log_channel_id": 0,
+  "actions_channel_id": 0,
+  "ladder": [
+    {"key": "master", "name": "Master", "rank": 1, "emoji": "🟢"},
+    {"key": "assistant", "name": "Assistant", "rank": 2, "emoji": "🔵"},
+    {"key": "curator", "name": "Curator", "rank": 3, "emoji": "🟣"},
+    {"key": "admin", "name": "Admin", "rank": 4, "protected": true, "emoji": "🔴"}
+  ],
+  "responsible_can_manage": ["master", "assistant", "curator"],
+  "branch_admin_can_manage": [],
+  "curator_can_manage": [],
+  "allow_promotion_requests": true,
+  "branches": {
+    "moderators": {
+      "label": "Модераторы",
+      "color": 3447003,
+      "responsible_role_id": 0,
+      "roles": {
+        "master": 0,
+        "assistant": 0,
+        "curator": 0,
+        "admin": 0
+      }
+    },
+    "helpers": {
+      "label": "Хелперы",
+      "color": 5763719,
+      "responsible_role_id": 0,
+      "roles": {
+        "master": 0,
+        "assistant": 0,
+        "curator": 0,
+        "admin": 0
+      }
+    }
+  }
+}
