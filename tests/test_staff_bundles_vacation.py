@@ -35,6 +35,8 @@ def _write_cfg(path: str) -> dict:
         'manual_only_role_ids': [9304],
         'RANK_EXTRA_ROLES': {
             'master': [],
+            # curator/assistant ids — только для strip чужих extras;
+            # выдача заблокирована в _rank_extra_role_ids
             'curator': [9303],
             'assistant': [9302],
             'admin': [9302],
@@ -356,7 +358,7 @@ class BundlesVacationTests(unittest.TestCase):
 
         asyncio.get_event_loop().run_until_complete(_run())
 
-    def test_rank_extras_curator_umbrella_swaps(self):
+    def test_rank_extras_curator_gets_nothing_strips_butterfly(self):
         async def _run():
             guild, roles = self._mock_guild_roles((
                 (9213, 'Curator'), (9214, 'Admin'), (9210, 'Help'),
@@ -399,10 +401,58 @@ class BundlesVacationTests(unittest.TestCase):
                     reason='down', skip_acl=True,
                 )
             self.assertTrue(res.ok, res.reason)
-            self.assertIn(9303, res.added)  # 🌂
-            self.assertIn(9302, res.removed)  # 🦋 снять
+            self.assertNotIn(9303, res.added)  # куратору 🌂 не даём
+            self.assertNotIn(9302, res.added)  # и 🦋 тоже нет
+            self.assertIn(9302, res.removed)  # 🦋 снять с бывшего admin
             self.assertNotIn(9304, res.added)
             self.assertNotIn(9304, res.removed)
+
+        asyncio.get_event_loop().run_until_complete(_run())
+
+    def test_rank_extras_assistant_no_butterfly(self):
+        async def _run():
+            guild, roles = self._mock_guild_roles((
+                (9212, 'Assistent'), (9210, 'Help'), (9002, 'Staff'),
+                (9200, 'Resp'),
+                (9302, 'butterfly'), (9303, 'umbrella'), (9304, 'cloud'),
+            ))
+            actor_m = MagicMock(); actor_m.id = 100
+            actor_m.roles = [MagicMock(id=9001)]
+            target_m = MagicMock(); target_m.id = 55
+            target_m.roles = [roles[9210], roles[9002]]
+
+            async def _add(*rs, reason=''):
+                have = {r.id for r in target_m.roles}
+                for r in rs:
+                    if r.id not in have:
+                        target_m.roles.append(r)
+
+            async def _rem(*rs, reason=''):
+                ids = {r.id for r in rs}
+                target_m.roles = [r for r in target_m.roles if r.id not in ids]
+
+            target_m.add_roles = _add
+            target_m.remove_roles = _rem
+
+            async def _fetch(uid):
+                m = MagicMock(); m.id = uid
+                m.roles = list(target_m.roles); m.guild = guild
+                return m
+            guild.fetch_member = _fetch
+
+            with patch('services.staff_manager.store._db_path', return_value=self.db_path), \
+                 patch('services.staff_manager.actions.claim_action_once', return_value=True), \
+                 patch('services.staff_manager.actions.record_action'), \
+                 patch('services.staff_manager.actions.upsert_staff_profile'), \
+                 patch('services.warn_role.sync_warn_role', new_callable=AsyncMock):
+                res = await ACT.apply_staff_change(
+                    guild=guild, actor_member=actor_m, target_member=target_m,
+                    action='promote', new_role_key='assistant',
+                    new_branch='helpers', reason='up', skip_acl=True,
+                )
+            self.assertTrue(res.ok, res.reason)
+            self.assertNotIn(9302, res.added)  # ассистенту 🦋 не даём
+            self.assertNotIn(9303, res.added)
 
         asyncio.get_event_loop().run_until_complete(_run())
 

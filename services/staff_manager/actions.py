@@ -86,9 +86,16 @@ def _norm_rank_key(key: str) -> str:
 
 
 def _rank_extra_role_ids(role_key: str, cfg: dict) -> Set[int]:
-    """Доп. роли ступени: 🦋 → admin/assistant, 🌂 → curator. Master — пусто."""
+    """Доп. роли ступени: 🦋 только admin. Assistant/curator/master — пусто.
+
+    При смене ступени чужие extras всё равно снимаются через
+    _all_rank_extra_role_ids (бабочку с ассистента/куратора убираем).
+    """
     never = _never_strip_ids(cfg)
     key = _norm_rank_key(role_key)
+    # жёстко: ассистенту и куратору extras не выдаём, даже если в JSON остались
+    if key in ('assistant', 'curator', 'master'):
+        return set()
     mapping = cfg.get('rank_extra_roles') or {}
     out = {int(x) for x in (mapping.get(key) or []) if int(x or 0)}
     return out - never
@@ -314,7 +321,7 @@ async def apply_staff_change(
         )
         add_ids.extend(b_add)
         remove_ids.extend(b_rem)
-        # 🦋 admin/assistant · 🌂 curator · ☁️ не трогаем
+        # 🦋 только admin; assistant/curator — без extras (☁️ не трогаем)
         _apply_rank_extras(
             role_key=new_role_key, cfg=cfg, current=current,
             add_ids=add_ids, remove_ids=remove_ids)

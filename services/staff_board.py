@@ -162,11 +162,15 @@ def person_org_branches(person: dict) -> list[str]:
                'event', 'support', 'closemod'):
         return [branch_of_tag(tag)]
     # curator/master/assistent/admin без role_ids — НЕ в Helper
-    if role in ('owner', 'admin', 'assistent', 'master', 'curator') or tag in (
+    if role in ('owner', 'admin', 'assistent', 'master', 'curator',
+                'staff-admin', 'staff-assistent') or tag in (
             'owner', 'admin', 'staff-admin', 'staff-assistent', 'assistent',
             'master', 'curator'):
         return ['leadership']
-    return [branch_of_tag(tag)] if tag else ['leadership']
+    # нет ветки и нет ранга — не засоряем «Админы / старшие» скрытой оболочкой
+    if not tag:
+        return []
+    return [branch_of_tag(tag)]
 
 
 def fmt_voice(seconds: int) -> str:

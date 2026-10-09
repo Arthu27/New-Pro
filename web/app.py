@@ -2214,8 +2214,11 @@ def _list_login_people(q: str = ''):
                     # ветка известна, ранг нет — базовый тир ветки
                     role = _BR_ROLE.get(br) or 'helper'
                 elif not role and h.get('is_staff'):
-                    # нет ветки и нет лейбла — не сваливаем всех в Helper
                     role = ''
+                # Без орг-ветки и без ранга лестницы — скрытая оболочка /
+                # мусор кэша: в Staff board не показываем.
+                if not br and not role:
+                    continue
                 people.append({
                     'id': uid,
                     'name': h.get('display_name') or uid,

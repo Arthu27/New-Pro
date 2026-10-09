@@ -262,9 +262,11 @@ def get_staff_info(member_or_id, role_ids=None, *, guild_id: int | None = None) 
     if primary_key:
         item = ladder_by_key(primary_key, cfg)
         role_label = (item or {}).get('name') or primary_key
+    # Скрытая админ-оболочка / power-роли сами по себе ≠ staff для ростера.
+    # Staff Admin и лестница/entry/responsible/отпуск — да.
     is_staff = bool(
         t.ladder_role_ids or t.entry_roles or t.responsible_roles
-        or t.extra_staff_roles or on_vac)
+        or t.is_staff_admin or on_vac)
     return {
         'user_id': t.user_id,
         'is_staff': is_staff,
@@ -274,7 +276,8 @@ def get_staff_info(member_or_id, role_ids=None, *, guild_id: int | None = None) 
         'role_label': role_label or (
             'в отпуске' if on_vac else (
                 'ответственный' if t.responsible_roles else (
-                    'скрытый стафф' if t.extra_staff_roles else 'участник'))),
+                    'Staff Admin' if t.is_staff_admin else (
+                        'скрытая оболочка' if t.extra_staff_roles else 'участник')))),
         'role_emoji': role_emoji(primary_key or '', branch=primary_branch),
         'branch_emoji': branch_emoji(primary_branch or ''),
         'branches': sorted(t.branches or ({primary_branch} if primary_branch else set())),
