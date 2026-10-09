@@ -126,6 +126,7 @@ MOD_LEAN_COGS = frozenset({
     'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
     'activity_stats.py',   # сбор активности для страницы «Аналитика» (без команд)
     'selfie_role.py',      # канал селфи: фото/видео → роль (без slash-команд)
+    'staff_manager.py',    # /staff: лестница ролей, изоляция веток (Components V2)
     'afk.py',              # /afk (выход авто при сообщении, /afk-remove убран)
     # Щит по максимуму (заказ владельца «добавь все возможные для защиты»):
     # security (антиспам/фейки/сканер ссылок), anti_alt (свежие аккаунты),

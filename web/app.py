@@ -269,6 +269,13 @@ def _secret_key():
 
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+
+try:
+    from web.staff_manager_api import bp as _sm_bp
+    app.register_blueprint(_sm_bp)
+except Exception as _sm_ex:
+    import logging as _logging
+    _logging.getLogger('web').warning('staff_manager_api: %s', _sm_ex)
 app.secret_key = _secret_key()
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'

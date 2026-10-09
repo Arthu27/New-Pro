@@ -83,7 +83,7 @@ def _interaction_lag_sec(interaction) -> float:
         return 0.0
 
 
-async def _ack_or_busy(interaction, *, thinking=True, limit=2.2):
+async def _ack_or_busy(interaction, *, thinking=True, limit=2.75):
     """ACK, либо «бот был занят» если Discord-окно уже почти сгорело.
 
     Возвращает True если можно продолжать работу; False — уже ответили
@@ -4067,7 +4067,7 @@ class ModTargetSelect(discord.ui.UserSelect):
         if pending and prefill:
             # Действие уже ждали — модалка / вид мута сразу.
             # Окно почти сгорело → не открываем форму (Discord откажет).
-            if _interaction_lag_sec(interaction) > 2.2:
+            if _interaction_lag_sec(interaction) > 2.75:
                 try:
                     if not interaction.response.is_done():
                         await interaction.response.send_message(
