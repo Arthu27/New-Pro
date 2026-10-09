@@ -1,0 +1,123 @@
+{
+  "staff_admin_role_id": 1549118975110152263,
+  "owner_ids": [
+    987430047889637426
+  ],
+  "common_staff_role_id": 1553105240398631062,
+  "log_channel_id": 0,
+  "actions_channel_id": 0,
+  "ladder": [
+    {
+      "key": "master",
+      "name": "Master",
+      "rank": 1,
+      "emoji": "🟢"
+    },
+    {
+      "key": "assistant",
+      "name": "Assistant",
+      "rank": 2,
+      "emoji": "🔵"
+    },
+    {
+      "key": "curator",
+      "name": "Curator",
+      "rank": 3,
+      "emoji": "🟣"
+    },
+    {
+      "key": "admin",
+      "name": "Admin",
+      "rank": 4,
+      "protected": true,
+      "emoji": "🔴"
+    }
+  ],
+  "responsible_can_manage": [
+    "master",
+    "assistant",
+    "curator"
+  ],
+  "branch_admin_can_manage": [],
+  "curator_can_manage": [],
+  "allow_promotion_requests": true,
+  "branches": {
+    "moderators": {
+      "label": "Модераторы",
+      "color": 3447003,
+      "responsible_role_id": 1551524708552278036,
+      "roles": {
+        "master": 803553848396349510,
+        "assistant": 1552637932907667466,
+        "curator": 807030012301541377,
+        "admin": 1189999426631122964
+      }
+    },
+    "helpers": {
+      "label": "Хелперы",
+      "color": 5763719,
+      "responsible_role_id": 1551525681207189504,
+      "roles": {
+        "master": 948969471916249119,
+        "assistant": 1552637932907667466,
+        "curator": 807030012301541377,
+        "admin": 1189999426631122964
+      }
+    },
+    "event": {
+      "label": "Events",
+      "color": 15844367,
+      "responsible_role_id": 1551527644326002748,
+      "roles": {
+        "master": 852634463535759461,
+        "assistant": 1552637932907667466,
+        "curator": 807030012301541377,
+        "admin": 1189999426631122964
+      }
+    },
+    "broadcaster": {
+      "label": "Broadcaster",
+      "color": 10181046,
+      "responsible_role_id": 1552639452713848912,
+      "roles": {
+        "master": 1551180629687664670,
+        "assistant": 1552637932907667466,
+        "curator": 807030012301541377,
+        "admin": 1189999426631122964
+      }
+    },
+    "support": {
+      "label": "Support",
+      "color": 3066993,
+      "responsible_role_id": 1553139245735219390,
+      "roles": {
+        "master": 1553138713532563516,
+        "assistant": 1552637932907667466,
+        "curator": 807030012301541377,
+        "admin": 1189999426631122964
+      }
+    },
+    "closemod": {
+      "label": "CloseMod",
+      "color": 15105570,
+      "responsible_role_id": 1553770122966073384,
+      "roles": {
+        "master": 1553769624603201546,
+        "assistant": 1552637932907667466,
+        "curator": 807030012301541377,
+        "admin": 1189999426631122964
+      }
+    },
+    "creative": {
+      "label": "Creative",
+      "color": 15277667,
+      "responsible_role_id": 1553854011449544825,
+      "roles": {
+        "master": 1553853968969638058,
+        "assistant": 1552637932907667466,
+        "curator": 807030012301541377,
+        "admin": 1189999426631122964
+      }
+    }
+  }
+}

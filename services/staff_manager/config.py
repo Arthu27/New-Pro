@@ -153,10 +153,15 @@ def parse_config(raw: dict) -> dict:
 
 
 def build_indexes(cfg: dict) -> dict:
-    """role_id -> {branch, key, rank, name, protected}; reverse maps."""
+    """Индексы ролей.
+
+    Одна Discord-роль может быть общей для нескольких веток (Master/Curator/Admin
+    на Hakumo общие) — тогда shared=True и branches=[...]. Уникальные роли
+    ветки (entry Master = Helper/Moderator/…) имеют shared=False.
+    """
     by_role: Dict[int, dict] = {}
     by_branch_key: Dict[Tuple[str, str], int] = {}
-    responsible_of: Dict[int, str] = {}  # responsible_role_id -> branch
+    responsible_of: Dict[int, str] = {}
 
     for bkey, b in (cfg.get('branches') or {}).items():
         rid_resp = int(b.get('responsible_role_id') or 0)
@@ -170,16 +175,12 @@ def build_indexes(cfg: dict) -> dict:
             rid = int(rid or 0)
             if not rid:
                 continue
-            if rid in by_role:
-                prev = by_role[rid]
-                raise ConfigError(
-                    f'role_id {rid} дубль: {prev["branch"]}/{prev["key"]} '
-                    f'и {bkey}/{lk}')
             ladder_item = next(
                 (x for x in cfg['ladder'] if x['key'] == lk), None)
             if not ladder_item:
                 raise ConfigError(f'ветка {bkey}: неизвестный ключ роли {lk}')
-            by_role[rid] = {
+            by_branch_key[(bkey, lk)] = rid
+            entry = {
                 'branch': bkey,
                 'key': lk,
                 'rank': int(ladder_item['rank']),
@@ -187,8 +188,21 @@ def build_indexes(cfg: dict) -> dict:
                 'protected': bool(ladder_item.get('protected')),
                 'label': b.get('label') or bkey,
                 'color': int(b.get('color') or 0),
+                'shared': False,
+                'branches': [bkey],
             }
-            by_branch_key[(bkey, lk)] = rid
+            if rid in by_role:
+                prev = by_role[rid]
+                if prev.get('key') != lk or prev.get('rank') != entry['rank']:
+                    raise ConfigError(
+                        f'role_id {rid} уже {prev.get("key")} — нельзя '
+                        f'как {lk} в {bkey}')
+                prev['shared'] = True
+                if bkey not in prev['branches']:
+                    prev['branches'].append(bkey)
+                # branch field = first; placements resolver uses branches[]
+            else:
+                by_role[rid] = entry
 
     return {
         'by_role': by_role,

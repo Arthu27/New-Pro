@@ -55,14 +55,30 @@ class TargetContext:
 
 
 def _placements_from_roles(role_ids: Set[int]) -> List[dict]:
+    """Уникальные роли ветки якорят ветку; общие (Master/Curator/Admin) —
+    цепляются только к уже найденным веткам, иначе ко всем своим branches."""
     idx = get_index() or {}
     by_role = idx.get('by_role') or {}
-    out = []
+    unique: List[dict] = []
+    shared: List[dict] = []
     for rid in role_ids:
         info = by_role.get(int(rid))
-        if info:
-            out.append(dict(info))
-    # unique by (branch,key)
+        if not info:
+            continue
+        if info.get('shared'):
+            shared.append(dict(info))
+        else:
+            unique.append(dict(info))
+    branches = {p['branch'] for p in unique}
+    out: List[dict] = list(unique)
+    for s in shared:
+        attach = list(branches) if branches else list(s.get('branches') or [])
+        for b in attach:
+            out.append({
+                **s,
+                'branch': b,
+                'label': s.get('label') or b,
+            })
     seen = set()
     uniq = []
     for p in out:
