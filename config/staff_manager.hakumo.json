@@ -12,25 +12,25 @@
   "SELFTEST_USER_ID": 0,
   "UNDO_WINDOW_MINUTES": 10,
   "ROLE_EMOJIS": {
-    "master": "🟢",
-    "assistant": "🔵",
-    "curator": "🟣",
-    "admin": "🔴"
+    "master": "",
+    "assistant": "",
+    "curator": "",
+    "admin": ""
   },
   "BRANCH_EMOJIS": {
-    "moderators": "🛡️",
-    "helpers": "🤝",
-    "event": "🎉",
-    "broadcaster": "📡",
-    "support": "💬",
-    "closemod": "🔒",
-    "creative": "🎨"
+    "moderators": "",
+    "helpers": "",
+    "event": "",
+    "broadcaster": "",
+    "support": "",
+    "closemod": "",
+    "creative": ""
   },
   "ladder": [
-    {"key": "master", "name": "Master", "rank": 1, "emoji": "🟢"},
-    {"key": "assistant", "name": "Assistant", "rank": 2, "emoji": "🔵"},
-    {"key": "curator", "name": "Curator", "rank": 3, "emoji": "🟣"},
-    {"key": "admin", "name": "Admin", "rank": 4, "protected": true, "emoji": "🔴"}
+    {"key": "master", "name": "Master", "rank": 1},
+    {"key": "assistant", "name": "Assistent", "rank": 2},
+    {"key": "curator", "name": "Curator", "rank": 3},
+    {"key": "admin", "name": "Admin", "rank": 4, "protected": true}
   ],
   "responsible_can_manage": ["master", "assistant", "curator"],
   "branch_admin_can_manage": [],

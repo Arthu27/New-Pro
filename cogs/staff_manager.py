@@ -24,6 +24,9 @@ from services.staff_manager.store import (
     expire_due_consents, pending_consent_for, list_consents,
     save_emoji_cache, get_emoji_cache, record_action,
 )
+from services.staff_manager.emojis import (
+    ensure_role_emojis, ensure_action_emojis, emoji_str, partial_emoji,
+)
 
 _log = get_logger('staff_manager')
 
@@ -38,6 +41,26 @@ ACTION_LABELS = {
     'history': 'История',
     'request': 'Заявка',
     'self_leave': 'Уйти по собственному',
+}
+
+ACTION_DESC = {
+    'assign': 'Первое назначение · одна ветка',
+    'promote': 'Выше текущей роли',
+    'demote': 'Ниже текущей роли',
+    'remove': 'Снять все стафф-роли',
+    'transfer': 'Нужно согласие человека',
+    'probation': 'Отметить испытательный',
+    'vacation': 'Роль отпуска',
+    'history': 'Последние действия',
+    'self_leave': 'Добровольный уход',
+}
+
+# Описание ранга: куратор выше ассистента (rank curator > assistant)
+ROLE_DESC = {
+    'master': 'ранг 1 · старт',
+    'assistant': 'ранг 2 · ниже куратора',
+    'curator': 'ранг 3 · выше ассистента',
+    'admin': 'ранг 4 · защищённая',
 }
 
 REMOVAL_KINDS = {
@@ -57,16 +80,11 @@ ACTION_COLORS = {
     'self_leave': 0xE74C3C,
 }
 
+_BLACK = 0x000000
+
 
 def _member_role_ids(member) -> list:
     return [r.id for r in getattr(member, 'roles', []) or []]
-
-
-def _avatar_url(member) -> str:
-    try:
-        return str(member.display_avatar.url)
-    except Exception:
-        return ''
 
 
 def _is_staff_admin_or_owner(member: discord.Member) -> bool:
@@ -78,11 +96,20 @@ def _is_staff_admin_or_owner(member: discord.Member) -> bool:
 
 
 def _emoji_for_role_key(key: str) -> str:
-    return role_emoji(key) or '•'
+    return emoji_str('role', key, role_emoji(key) or '•')
 
 
 def _emoji_for_branch(key: str) -> str:
-    return branch_emoji(key) or '•'
+    return emoji_str('branch', key, branch_emoji(key) or '•')
+
+
+def _black(*children):
+    return discord.ui.Container(*children, accent_colour=discord.Colour(_BLACK))
+
+
+def _opt_emoji(kind: str, key: str, fallback=None):
+    pe = partial_emoji(kind, key, fallback)
+    return pe
 
 
 class ReasonModal(discord.ui.Modal, title='Причина'):
@@ -125,9 +152,10 @@ def build_panel_view(
     token: str,
     actor: discord.Member,
     target: discord.Member,
-    accent: int = 0x5865F2,
+    accent: int = 0x000000,
     step_hint: str = '',
 ) -> discord.ui.LayoutView:
+    """UI как /modpanel: чёрные блоки + селекты, без большой картинки."""
     a_ctx = resolve_actor(actor.id, _member_role_ids(actor))
     t_ctx = resolve_target(target.id, _member_role_ids(target))
     info = get_staff_info(target)
@@ -136,71 +164,76 @@ def build_panel_view(
     st = load_menu_state(token) or {}
     payload = st.get('payload') or {}
 
-    branch_label = info.get('branch_label') or '—'
-    role_label = info.get('role_label') or 'участник'
-    re = info.get('role_emoji') or ''
-    be = info.get('branch_emoji') or ''
-    color = accent
-    if t_ctx.primary_branch:
-        b = (cfg.get('branches') or {}).get(t_ctx.primary_branch) or {}
-        color = int(b.get('color') or accent)
-
-    head = (
-        f'## {re} {target.display_name}\n'
-        f'`{target.id}` · **{re} {role_label}** · {be} {branch_label}'
-    )
-    if info.get('on_vacation'):
-        head += '\n🏖 в отпуске'
-    if t_ctx.multi_branch:
-        head += '\n⚠️ несколько веток'
-    if step_hint:
-        head = f'{step_hint}\n{head}'
     sel_act = payload.get('action') or ''
     sel_role = payload.get('role') or ''
     sel_branch = payload.get('branch') or ''
-    if sel_act or sel_role or sel_branch:
-        head += (
-            f'\n\nВыбрано: **{ACTION_LABELS.get(sel_act, sel_act) or "—"}**'
-            f' · `{sel_role or "—"}` · `{sel_branch or "—"}`'
-        )
+    sel_kind = payload.get('removal_kind') or ''
+
+    re = _emoji_for_role_key(info.get('primary_key') or '')
+    be = _emoji_for_branch(info.get('primary_branch') or '')
+    role_label = info.get('role_label') or 'участник'
+    branch_label = info.get('branch_label') or '—'
+
+    needs_role = sel_act in ('assign', 'promote', 'demote', 'transfer')
+    needs_branch = sel_act in ('transfer',) or (
+        sel_act == 'assign' and not t_ctx.primary_branch)
+    needs_kind = sel_act == 'remove'
+    step_total = 1 + int(needs_role) + int(needs_branch or (sel_act == 'assign' and len(allowed.get('branches') or []) > 1)) + int(needs_kind) + 1
+    step_n = 1
+    if sel_act:
+        step_n = 2
+    if sel_act and (not needs_role or sel_role):
+        if needs_branch and not sel_branch:
+            step_n = 2
+        elif needs_kind and not sel_kind:
+            step_n = 2
+        else:
+            step_n = min(step_total, 3)
+
+    status_lines = [
+        f'**Участник** · {target.mention}',
+        f'{re} **{role_label}** · {be} {branch_label}',
+    ]
+    if info.get('on_vacation'):
+        status_lines.append('-# в отпуске')
+    if t_ctx.multi_branch:
+        status_lines.append('-# ⚠️ несколько веток — только Стафф админ')
+    if len(info.get('ladder_role_ids') or []) > 1 or len(info.get('entry_role_ids') or []) > 1:
+        status_lines.append('-# ⚠️ дабл-стафф · сначала снимите лишнее')
+
+    queue = f'Очередь · шаг {min(step_n, step_total)}/{max(step_total, 1)}'
+    if sel_act:
+        queue += f' · **{ACTION_LABELS.get(sel_act, sel_act)}**'
+    if sel_role:
+        queue += f' · {_emoji_for_role_key(sel_role)} `{sel_role}`'
+    if sel_branch:
+        queue += f' · {_emoji_for_branch(sel_branch)} `{sel_branch}`'
+    if sel_kind:
+        queue += f' · {REMOVAL_KINDS.get(sel_kind, sel_kind)}'
+    status_lines.append(f'-# {queue}')
 
     view = discord.ui.LayoutView(timeout=None)
-    try:
-        thumb = discord.ui.Thumbnail(media=_avatar_url(target))
-        section = discord.ui.Section(
-            discord.ui.TextDisplay(head),
-            accessory=thumb,
-        )
-        container = discord.ui.Container(
-            section,
-            discord.ui.Separator(),
-            accent_colour=discord.Colour(color),
-        )
-    except Exception:
-        container = discord.ui.Container(
-            discord.ui.TextDisplay(head),
-            accent_colour=discord.Colour(color),
-        )
-    view.add_item(container)
+    view.add_item(_black(
+        discord.ui.TextDisplay('# Staff Manager\n-# HAKUMO'),
+        discord.ui.Separator(spacing=discord.SeparatorSpacing.large),
+        discord.ui.TextDisplay('\n'.join(status_lines)),
+    ))
 
-    actions = [a for a in allowed.get('actions') or []
-               if a not in ('request',)]
+    actions = [a for a in allowed.get('actions') or [] if a != 'request']
     if actions:
+        opts = []
+        for a in actions[:25]:
+            em = _opt_emoji('action', a)
+            opts.append(discord.SelectOption(
+                label=ACTION_LABELS.get(a, a)[:100],
+                value=a,
+                emoji=em,
+                description=(ACTION_DESC.get(a) or '')[:100] or None,
+                default=(a == sel_act),
+            ))
         sel = discord.ui.Select(
-            placeholder='Шаг 1 · Действие',
-            options=[
-                discord.SelectOption(
-                    label=ACTION_LABELS.get(a, a)[:100],
-                    value=a,
-                    emoji='✅' if a == sel_act else None,
-                    description={
-                        'remove': 'Снять все стафф-роли',
-                        'transfer': 'Нужно согласие человека',
-                        'assign': 'Первое назначение в ветку',
-                    }.get(a),
-                )
-                for a in actions[:25]
-            ],
+            placeholder='Действие',
+            options=opts,
             custom_id=f'sm:act:{token}',
             min_values=1, max_values=1,
         )
@@ -211,21 +244,26 @@ def build_panel_view(
         sel.callback = _on_act  # type: ignore
         row = discord.ui.ActionRow()
         row.add_item(sel)
-        view.add_item(row)
+        view.add_item(_black(discord.ui.TextDisplay('**Действие**'), row))
 
     roles = allowed.get('roles') or []
-    if roles and any(a in actions for a in ('assign', 'promote', 'demote', 'transfer')):
+    # куратор выше ассистента в списке (rank DESC)
+    if sel_act in ('assign', 'promote', 'demote', 'transfer') and roles:
+        roles_sorted = sorted(roles, key=lambda r: -int(r.get('rank') or 0))
+        ropts = []
+        for r in roles_sorted[:25]:
+            key = r['key']
+            em = _opt_emoji('role', key, r.get('emoji'))
+            ropts.append(discord.SelectOption(
+                label=str(r.get('name') or key)[:100],
+                value=key,
+                emoji=em,
+                description=(ROLE_DESC.get(key) or f'ранг {r.get("rank")}')[:100],
+                default=(key == sel_role),
+            ))
         rsel = discord.ui.Select(
-            placeholder='Шаг 2 · Роль',
-            options=[
-                discord.SelectOption(
-                    label=f'{r["name"]}'[:100],
-                    value=r['key'],
-                    emoji=(r.get('emoji') or None),
-                    description=f'ранг {r.get("rank")}',
-                )
-                for r in roles[:25]
-            ],
+            placeholder='Роль',
+            options=ropts,
             custom_id=f'sm:role:{token}',
             min_values=1, max_values=1,
         )
@@ -236,25 +274,27 @@ def build_panel_view(
         rsel.callback = _on_role  # type: ignore
         row2 = discord.ui.ActionRow()
         row2.add_item(rsel)
-        view.add_item(row2)
+        view.add_item(_black(discord.ui.TextDisplay('**Роль**'), row2))
 
     branches = allowed.get('branches') or []
-    need_branch = (
-        ('transfer' in actions)
-        or ('assign' in actions and not t_ctx.primary_branch)
-        or (sel_act in ('transfer', 'assign'))
+    show_branch = (
+        sel_act == 'transfer'
+        or (sel_act == 'assign' and (not t_ctx.primary_branch or len(branches) > 1))
     )
-    if branches and need_branch:
+    if show_branch and branches:
+        bopts = []
+        for b in branches[:25]:
+            em = _opt_emoji('branch', b['key'], b.get('emoji'))
+            bopts.append(discord.SelectOption(
+                label=(b.get('label') or b['key'])[:100],
+                value=b['key'],
+                emoji=em,
+                description='одна ветка · без дабл-стаффа',
+                default=(b['key'] == sel_branch),
+            ))
         bsel = discord.ui.Select(
-            placeholder='Шаг 2 · Ветка',
-            options=[
-                discord.SelectOption(
-                    label=(b.get('label') or b['key'])[:100],
-                    value=b['key'],
-                    emoji=(b.get('emoji') or None),
-                )
-                for b in branches[:25]
-            ],
+            placeholder='Ветка',
+            options=bopts,
             custom_id=f'sm:br:{token}',
             min_values=1, max_values=1,
         )
@@ -265,13 +305,14 @@ def build_panel_view(
         bsel.callback = _on_br  # type: ignore
         row3 = discord.ui.ActionRow()
         row3.add_item(bsel)
-        view.add_item(row3)
+        view.add_item(_black(discord.ui.TextDisplay('**Ветка**'), row3))
 
     if sel_act == 'remove':
         ksel = discord.ui.Select(
             placeholder='Тип снятия',
             options=[
-                discord.SelectOption(label=v, value=k)
+                discord.SelectOption(
+                    label=v, value=k, default=(k == sel_kind))
                 for k, v in REMOVAL_KINDS.items()
             ],
             custom_id=f'sm:rk:{token}',
@@ -280,7 +321,7 @@ def build_panel_view(
 
         async def _on_rk(interaction: discord.Interaction, select=ksel):
             st2 = load_menu_state(token)
-            if not st2:
+            if not st2 or not interaction.guild:
                 await interaction.response.send_message('устарело', ephemeral=True)
                 return
             payload2 = st2.get('payload') or {}
@@ -288,20 +329,29 @@ def build_panel_view(
             save_menu_state(
                 token, st2['guild_id'], st2['actor_id'], st2['target_id'],
                 'removal_kind', payload2)
-            await interaction.response.defer()
+            actor2 = interaction.guild.get_member(interaction.user.id)
+            target2 = interaction.guild.get_member(int(st2['target_id']))
+            if actor2 and target2:
+                view2 = build_panel_view(
+                    cog, token=token, actor=actor2, target=target2)
+                await interaction.response.edit_message(view=view2)
+            else:
+                await interaction.response.defer()
 
         ksel.callback = _on_rk  # type: ignore
         rowk = discord.ui.ActionRow()
         rowk.add_item(ksel)
-        view.add_item(rowk)
+        view.add_item(_black(discord.ui.TextDisplay('**Тип снятия**'), rowk))
 
     row_btn = discord.ui.ActionRow()
     btn_ok = discord.ui.Button(
         label='Подтвердить', style=discord.ButtonStyle.success,
-        emoji='✅', custom_id=f'sm:ok:{token}')
+        emoji=_opt_emoji('action', 'promote') or '✅',
+        custom_id=f'sm:ok:{token}')
     btn_no = discord.ui.Button(
         label='Отмена', style=discord.ButtonStyle.danger,
-        emoji='✖️', custom_id=f'sm:no:{token}')
+        emoji=_opt_emoji('action', 'demote') or '✖️',
+        custom_id=f'sm:no:{token}')
 
     async def _ok(interaction: discord.Interaction):
         await interaction.response.send_modal(ReasonModal(cog, token))
@@ -318,12 +368,11 @@ def build_panel_view(
     row_btn.add_item(btn_ok)
     row_btn.add_item(btn_no)
 
-    # отозвать pending согласие на эту цель
     pend = pending_consent_for(actor.guild.id, target.id) if actor.guild else None
     if pend and int(pend.get('initiator_id') or 0) == actor.id:
         btn_cancel = discord.ui.Button(
             label='Отозвать запрос', style=discord.ButtonStyle.secondary,
-            emoji='↩️', custom_id=f'sm:cx:{pend["id"]}')
+            custom_id=f'sm:cx:{pend["id"]}')
 
         async def _cx(interaction: discord.Interaction, cid=pend['id']):
             await cog._consent_cancel(interaction, cid)
@@ -331,9 +380,10 @@ def build_panel_view(
         btn_cancel.callback = _cx  # type: ignore
         row_btn.add_item(btn_cancel)
 
-    if allowed.get('can_request') and not roles:
+    if allowed.get('can_request') and 'assign' not in actions and 'promote' not in actions:
         btn_req = discord.ui.Button(
             label='Заявка', style=discord.ButtonStyle.primary,
+            emoji=_opt_emoji('action', 'request'),
             custom_id=f'sm:req:{token}')
 
         async def _req(interaction: discord.Interaction):
@@ -350,7 +400,7 @@ def build_panel_view(
         btn_req.callback = _req  # type: ignore
         row_btn.add_item(btn_req)
 
-    view.add_item(row_btn)
+    view.add_item(_black(discord.ui.TextDisplay('**Подтверждение**'), row_btn))
     return view
 
 
@@ -479,40 +529,16 @@ class StaffManager(commands.Cog):
         cfg = get_config() or {}
         if not cfg:
             return
+        try:
+            await ensure_action_emojis(self.bot)
+        except Exception as ex:
+            _log.warning('action emojis: %s', ex)
         for g in self.bot.guilds:
-            for item in cfg.get('ladder') or []:
-                key = item['key']
-                cached = get_emoji_cache(g.id, 'role', key)
-                if cached:
-                    continue
-                emoji = await self._find_emoji(g, key, item.get('emoji') or '')
-                save_emoji_cache(g.id, 'role', key, emoji, 'boot')
-                _log.info('emoji role.%s = %s', key, emoji)
-            for bkey in (cfg.get('branches') or {}):
-                cached = get_emoji_cache(g.id, 'branch', bkey)
-                if cached:
-                    continue
-                emoji = await self._find_emoji(
-                    g, bkey, (cfg.get('branch_emojis') or {}).get(bkey) or '')
-                save_emoji_cache(g.id, 'branch', bkey, emoji, 'boot')
-
-    async def _find_emoji(self, guild, name: str, fallback: str) -> str:
-        # 1) role display_icon / unicode — через конфиг roles
-        idx = get_index() or {}
-        by_role = idx.get('by_role') or {}
-        for rid, info in by_role.items():
-            if info.get('key') == name:
-                role = guild.get_role(int(rid))
-                if role is not None:
-                    ue = getattr(role, 'unicode_emoji', None)
-                    if ue:
-                        return str(ue)
-        # 2) guild emoji по имени
-        needle = name.lower().replace(' ', '')
-        for em in guild.emojis:
-            if needle in (em.name or '').lower():
-                return str(em)
-        return fallback or '•'
+            try:
+                got = await ensure_role_emojis(self.bot, g)
+                _log.info('staff emojis ready guild=%s n=%s', g.id, len(got))
+            except Exception as ex:
+                _log.error('ensure_role_emojis: %s\n%s', ex, traceback.format_exc())
 
     async def _reregister_consent_views(self):
         for g in self.bot.guilds:
@@ -809,11 +835,17 @@ class StaffManager(commands.Cog):
         save_menu_state(
             token, st['guild_id'], st['actor_id'], st['target_id'],
             'role', payload)
-        await interaction.response.defer()
+        target = interaction.guild.get_member(int(st['target_id']))
+        actor = interaction.guild.get_member(interaction.user.id)
+        if not target or not actor:
+            await interaction.response.defer()
+            return
+        view = build_panel_view(self, token=token, actor=actor, target=target)
+        await interaction.response.edit_message(view=view)
 
     async def _on_branch_select(self, interaction, token, branch):
         st = load_menu_state(token)
-        if not st:
+        if not st or not interaction.guild:
             await interaction.response.send_message('устарело', ephemeral=True)
             return
         payload = st.get('payload') or {}
@@ -821,7 +853,13 @@ class StaffManager(commands.Cog):
         save_menu_state(
             token, st['guild_id'], st['actor_id'], st['target_id'],
             'branch', payload)
-        await interaction.response.defer()
+        target = interaction.guild.get_member(int(st['target_id']))
+        actor = interaction.guild.get_member(interaction.user.id)
+        if not target or not actor:
+            await interaction.response.defer()
+            return
+        view = build_panel_view(self, token=token, actor=actor, target=target)
+        await interaction.response.edit_message(view=view)
 
     async def _confirm_with_reason(self, interaction, token, reason):
         if not interaction.guild:

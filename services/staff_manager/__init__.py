@@ -24,6 +24,7 @@ from services.staff_manager.store import (
     create_consent, get_consent, claim_consent_decision, update_consent,
     list_consents, expire_due_consents, pending_consent_for,
 )
+from services.staff_manager import emojis as staff_emojis  # noqa: F401
 
 __all__ = [
     'load_config', 'get_config', 'validate_config', 'ConfigError',

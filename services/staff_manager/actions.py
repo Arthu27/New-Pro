@@ -385,6 +385,31 @@ async def apply_staff_change(
         have = {r.id for r in getattr(fresh, 'roles', []) or []}
         missing = [rid for rid in add_ids if rid not in have]
         leftover = [rid for rid in remove_ids if rid in have]
+
+        # дабл-стафф: не больше одной ladder-роли и одной entry-роли
+        ladder_have = [rid for rid in _all_ladder_role_ids() if rid in have]
+        entry_have = [rid for rid in _all_entry_role_ids() if rid in have]
+        if len(ladder_have) > 1 or len(entry_have) > 1:
+            await _rollback(
+                fresh, added=added_roles, removed=removed_roles,
+                reason='double_staff')
+            msg = (
+                'Дабл-стафф запрещён: после смены осталось '
+                f'{len(ladder_have)} ролей лестницы и {len(entry_have)} entry. '
+                'Откат выполнен.'
+            )
+            _log.error(
+                'double staff target=%s ladder=%s entry=%s',
+                target.user_id, ladder_have, entry_have,
+            )
+            return _fail(
+                guild_id=guild.id, actor_id=actor.user_id,
+                target_id=target.user_id, action=action, branch=branch,
+                old_key=old_key, new_key=new_key, reason=reason,
+                source=source, aid=aid, msg=msg,
+                meta={'ladder_have': ladder_have, 'entry_have': entry_have},
+            )
+
         if missing or leftover:
             await _rollback(
                 fresh, added=added_roles, removed=removed_roles,
