@@ -203,20 +203,20 @@ print('== 2. Сигнал в чат модеров (V2-карточка + отд
 inter_final = run.run_until_complete(
     _submit(accused, 'ломают игру, спамят и орут'))
 check(len(MOD_CH.sent) == 2,
-      'карточка + отдельный пинг ушли в канал модерации',
+      'пинг сверху + V2-карточка ушли в канал модерации',
       f'→ {len(MOD_CH.sent)}')
-card = MOD_CH.sent[0]
-ping_msg = MOD_CH.sent[1]
-check('view' in card and 'embed' not in card,
-      'карточка — V2 view, без classic embed', f'→ {card.keys()}')
+ping_msg = MOD_CH.sent[0]
+card = MOD_CH.sent[1]
 check((ping_msg.get('content') or '').strip() == '<@&555>',
-      'пинг — только тег роли модераторов (живой пуш)',
+      'сначала тег роли модераторов (живой пуш сверху)',
       f'→ {ping_msg.get("content")!r}')
 _am = ping_msg.get('allowed_mentions')
 check(_am is not None and getattr(_am, 'roles', None) not in (True, False, None)
       and MOD_ROLE in list(getattr(_am, 'roles', []) or []),
       'AllowedMentions.roles — конкретная роль модеров, не «все роли»',
       f'→ {getattr(_am, "roles", None)!r}')
+check('view' in card and 'embed' not in card,
+      'ниже тега — V2-карточка, без classic embed', f'→ {card.keys()}')
 _view = card.get('view')
 _btn_ids = [b.custom_id for b in _card_buttons(_view)]
 check('rcard_accept' in _btn_ids and 'rcard_reject' in _btn_ids
@@ -246,7 +246,7 @@ staff_target = NS(id=301, display_name='Модератор Б', name='Модер
                   bot=False, mention='<@301>', display_avatar=NS(url='http://a/4'))
 run.run_until_complete(
     _submit(staff_target, 'грубит участникам', against='staff', location='voice'))
-card2 = MOD_CH.sent[-2]
+card2 = MOD_CH.sent[-1]  # порядок: пинг → карточка
 view2 = card2.get('view')
 desc2 = _card_text(view2)
 check('Состав модерации' in desc2 and 'Жалоба на персонал' in desc2,
@@ -267,9 +267,9 @@ check('Модератор вызван' in _fu and '<#1001>' in _fu,
       f'→ {_fu[:80]}')
 check('Доказательство' not in _fu, 'в ответе нет ни слова про доказательства')
 
-# тикет привязан к карточке (разбор в канале работает)
-check(RC.ticket_get(9001) is not None
-      and RC.ticket_get(9001).get('kind') == 'card',
+# тикет привязан к карточке (id сообщения карточки; пинг сверху = 9001)
+check(RC.ticket_get(9002) is not None
+      and RC.ticket_get(9002).get('kind') == 'card',
       'вызов записан в очередь (тикет карточки создан)')
 
 # ── 5. Дубль-вызов на того же ───────────────────────────────────────────────

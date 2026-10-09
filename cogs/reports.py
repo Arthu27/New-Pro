@@ -1286,13 +1286,13 @@ async def _deliver_report(interaction, target, reason: str, against: str,
             'Роль модераторов не найдена — вызовы уходят без тега. '
             'Укажи её в панели → Репорты → роль модераторов.')
     try:
-        card = await ch.send(view=card_view)
+        # Сначала живой тег роли — сверху в ленте, потом V2-карточка.
+        # В одной посылке с view content-тег часто теряет пуш.
         if ping:
-            # Отдельным сообщением: V2-карточка + content в одной посылке
-            # рискует потерять «живой» пуш — тег роли/Owner уходит своей строкой.
             await _deliver_mod_ping(
                 ch, ping_roles, content=ping,
                 extra_users=ping_users)
+        card = await ch.send(view=card_view)
     except discord.Forbidden:
         return await interaction.followup.send(
             'Бот не может отправить вызов в канал модерации — не хватает '
