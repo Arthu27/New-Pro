@@ -68,7 +68,6 @@ PAGES_ALL = [
     ('staff', '/staff', 'Staff', 'fa-user-shield'),
     ('users', '/users', 'Участники', 'fa-users'),
     ('member', '/member', 'Участник', 'fa-user'),
-    ('channels', '/channels', 'Каналы', 'fa-table'),
     ('warns', '/warns', 'Варны', 'fa-triangle-exclamation'),
     ('appeals', '/appeals', 'Апелляции', 'fa-scale-balanced'),
     ('proofs', '/proofs', 'Демки', 'fa-camera'),
@@ -80,7 +79,7 @@ PAGES_ALL = [
     ('access', '/access', 'Доступ', 'fa-key'),
 ]
 PAGES_MOD = [p for p in PAGES_ALL if p[0] in {
-    'today', 'logs', 'staff', 'users', 'member', 'channels',
+    'today', 'logs', 'staff', 'users', 'member',
     'warns', 'appeals', 'proofs', 'reasons'}]
 PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
     'bot', 'modules', 'commands', 'anticrash', 'access'}]
@@ -89,7 +88,7 @@ PAGES_OWNER = [p for p in PAGES_ALL if p[0] in {
 # Admin НЕ видит бот/модули/команды — только owner.
 # Helper видит Правила (не причины наказаний как отдельный список).
 _MOD_PAGES = {
-    'today', 'logs', 'staff', 'users', 'member', 'channels',
+    'today', 'logs', 'staff', 'users', 'member',
     'warns', 'appeals', 'proofs', 'reasons',
 }
 ROLE_PAGE_KEYS = {
@@ -157,8 +156,8 @@ ROLE_CARDS = [
         'key': 'mod',
         'title': 'Moderator',
         'tag': '@Moderator',
-        'blurb': 'Полная мод-панель: апелляции, демки, каналы, правила.',
-        'pages': ['Всё у Helper', '+ Каналы', 'Апелляции', 'Демки', 'Правила'],
+        'blurb': 'Полная мод-панель: апелляции, демки, правила.',
+        'pages': ['Всё у Helper', '+ Апелляции', 'Демки', 'Правила'],
     },
     {
         'key': 'creative',
@@ -1114,7 +1113,7 @@ def inject_nav():
         'is_owner': role == 'owner',
         'auth_via': session.get('auth_via') or '',
         'mod_nav_keys': {
-            'today', 'logs', 'staff', 'users', 'member', 'channels',
+            'today', 'logs', 'staff', 'users', 'member',
             'warns', 'appeals', 'proofs', 'reasons'},
         'owner_nav_keys': {'bot', 'modules', 'commands', 'anticrash', 'access'},
         'viewer_limits': limits,
@@ -2657,164 +2656,6 @@ def staff_page():
         hidden_kinds=sorted(_viewer_hidden_kinds()),
     )
 
-
-@app.route('/channels')
-@login_required
-@role_required('mod')
-def channels_page():
-    """Подробная карта каналов: права, лимиты, маршруты бота."""
-    gid = _main_guild()
-    rows = []
-    bot = bot_instance
-    route_by_id = {}
-    try:
-        from services import channel_routes as CR
-        for key, cid in (CR.KNOWN_CHANNELS or {}).items():
-            if cid:
-                route_by_id[str(int(cid))] = key
-        try:
-            stored = CR.all_routes(gid) if hasattr(CR, 'all_routes') else {}
-        except Exception:
-            stored = {}
-        if isinstance(stored, dict):
-            for key, cid in stored.items():
-                try:
-                    if cid:
-                        route_by_id[str(int(cid))] = key
-                except Exception:
-                    continue
-        route_labels = {
-            s.get('key'): s.get('label')
-            for s in (getattr(CR, 'ROUTE_SPECS', None) or [])
-            if isinstance(s, dict) and s.get('key')
-        }
-    except Exception:
-        route_labels = {}
-    try:
-        guild = bot.get_guild(int(gid)) if bot and gid else None
-    except Exception:
-        guild = None
-    if guild is not None:
-        everyone = guild.default_role
-
-        def _order(c):
-            cat = getattr(c, 'category', None)
-            cp = getattr(cat, 'position', -1) if cat is not None else -1
-            return (cp, getattr(c, 'position', 0), str(getattr(c, 'name', '')).lower())
-
-        for ch in sorted(guild.channels, key=_order):
-            cls = type(ch).__name__
-            if 'Category' in cls:
-                group, kind, icon = 'category', 'категория', 'fa-folder'
-            elif 'Voice' in cls or 'Stage' in cls:
-                group, kind, icon = 'voice', 'голос', 'fa-volume-high'
-            elif 'Forum' in cls:
-                group, kind, icon = 'forum', 'форум', 'fa-comments'
-            else:
-                group, kind, icon = 'text', 'текст', 'fa-hashtag'
-            cat = getattr(getattr(ch, 'category', None), 'name', None) or 'Без категории'
-            perms = None
-            try:
-                perms = ch.permissions_for(everyone) if everyone else None
-            except Exception:
-                perms = None
-
-            def flag(name, _p=perms):
-                return bool(getattr(_p, name, False)) if _p else False
-
-            # перезаписи ролей (кратко)
-            overs = []
-            try:
-                mapping = getattr(ch, 'overwrites', None) or {}
-                for target, ow in list(mapping.items())[:12]:
-                    tname = getattr(target, 'name', None) or str(
-                        getattr(target, 'id', '?'))
-                    allow, deny = [], []
-                    try:
-                        for perm, val in ow:
-                            if val is True:
-                                allow.append(str(perm))
-                            elif val is False:
-                                deny.append(str(perm))
-                    except Exception:
-                        try:
-                            a, d = ow.pair()
-                            allow = [n for n, v in a if v]
-                            deny = [n for n, v in d if v]
-                        except Exception:
-                            continue
-                    if not allow and not deny:
-                        continue
-                    overs.append({
-                        'name': tname,
-                        'allow': ', '.join(allow[:6]) if allow else '—',
-                        'deny': ', '.join(deny[:6]) if deny else '—',
-                    })
-            except Exception:
-                overs = []
-            overs = overs[:8]
-
-            topic = str(getattr(ch, 'topic', None) or '').strip()
-            slow = int(getattr(ch, 'slowmode_delay', 0) or 0)
-            nsfw = bool(getattr(ch, 'nsfw', False))
-            bitrate = int(getattr(ch, 'bitrate', 0) or 0)
-            ulimit = getattr(ch, 'user_limit', None)
-            try:
-                ulimit = int(ulimit or 0)
-            except Exception:
-                ulimit = 0
-            voice_now = 0
-            try:
-                members = getattr(ch, 'members', None)
-                if members is not None:
-                    voice_now = len(list(members))
-            except Exception:
-                voice_now = 0
-            rid = str(ch.id)
-            route_key = route_by_id.get(rid) or ''
-            route_label = route_labels.get(route_key) or (
-                route_key.replace('_', ' ') if route_key else '')
-
-            rows.append({
-                'id': rid,
-                'name': getattr(ch, 'name', '?'),
-                'kind': kind,
-                'group': group,
-                'icon': icon,
-                'cat': cat,
-                'view': flag('view_channel'),
-                'send': flag('send_messages'),
-                'speak': flag('speak'),
-                'connect': flag('connect'),
-                'manage': flag('manage_channels'),
-                'stream': flag('stream'),
-                'topic': topic[:220],
-                'slowmode': slow,
-                'nsfw': nsfw,
-                'bitrate': bitrate // 1000 if bitrate else 0,
-                'user_limit': ulimit,
-                'voice_now': voice_now,
-                'overwrites': overs,
-                'route_key': route_key,
-                'route_label': route_label,
-                'jump': f'https://discord.com/channels/{gid}/{rid}' if gid else '',
-            })
-    shown = [r for r in rows if r.get('group') != 'category']
-    groups, seen = [], {}
-    for r in shown:
-        key = r['cat']
-        if key not in seen:
-            seen[key] = {'name': key, 'items': []}
-            groups.append(seen[key])
-        seen[key]['items'].append(r)
-    kpi = {
-        'total': len(shown),
-        'text': sum(1 for r in shown if r['group'] == 'text'),
-        'voice': sum(1 for r in shown if r['group'] == 'voice'),
-        'closed': sum(1 for r in shown if not r['view']),
-        'routes': sum(1 for r in shown if r.get('route_key')),
-    }
-    return render_template('channels.html', rows=shown, groups=groups, kpi=kpi)
 
 
 @app.get('/api/login/accounts')
