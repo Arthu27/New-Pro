@@ -1,33 +1,72 @@
 {% extends "base.html" %}
-{% block title %}Варны{% endblock %}
-{% block heading %}Варны{% endblock %}
+{% block title %}Warn{% endblock %}
+{% block heading %}Warn{% endblock %}
 {% block body %}
-<p class="lead">Все предупреждения — новые сверху.</p>
-
-<section class="panel rise">
-  <h2>Предупреждения <span class="count">{{ rows|length }}</span></h2>
-  {% if not rows %}<div class="empty">Варнов нет</div>
-  {% else %}
-  <div class="log-timeline">
-    {% for r in rows %}
-    <article class="log-item log-warn click-row" {% if r.user_id %}data-href="{{ url_for('member', q=r.user_id) }}"{% endif %}>
-      <div class="log-rail" aria-hidden="true"></div>
-      <div>
-        <div class="log-top">
-          <span class="pill pill-warn">Варн</span>
-          <a class="log-who" href="{{ url_for('member', q=r.user_id) }}">{{ r.user_name }}</a>
-          <span class="log-when">{{ r.when }}</span>
-        </div>
-        <div class="log-meta"><span>мод ·
-          {% if r.mod_id and (r.mod_id|string)|length >= 15 %}
-          <a href="{{ url_for('member', q=r.mod_id) }}"><b>{{ r.mod_name }}</b></a>
-          {% else %}<b>{{ r.mod_name }}</b>{% endif %}
-        </span></div>
-        {% if r.reason %}<div class="log-reason">{{ r.reason }}</div>{% endif %}
-      </div>
-    </article>
-    {% endfor %}
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=6">
+<div class="warn-page">
+  <div id="warnLiveRoot" class="warn-live-root">
+    {% include '_warns_live.html' %}
   </div>
-  {% endif %}
-</section>
+</div>
+
+<dialog id="warnDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3>Выдать варн</h3>
+      <button type="button" class="dlg-x" id="warnClose">×</button></div>
+    <label>Кому
+      <div class="warn-search" style="margin:0" id="warnUidWrap">
+        <div class="warn-search__box">
+          <input id="warnUidSearch" type="search" placeholder="Ник или ID…"
+                 autocomplete="off" spellcheck="false">
+        </div>
+        <input type="hidden" id="warnUid">
+        <div id="warnUidSuggest" class="warn-suggest" hidden></div>
+      </div>
+    </label>
+    <p id="warnPicked" class="dim" style="margin:0"></p>
+    <label>Тип
+      <select id="warnKind" class="input">
+        <option value="member">Участник</option>
+        <option value="staff">Стафф</option>
+      </select>
+    </label>
+    <label>Причина
+      <select id="warnCode" class="input"></select>
+    </label>
+    <label>Формулировка
+      <textarea id="warnDetail" class="input" required maxlength="400" rows="3" placeholder="Обязательно…"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="warnCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="warnGo">Выдать</button>
+    </div>
+    <p id="warnMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<dialog id="rmDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3>Снять варн</h3>
+      <button type="button" class="dlg-x" id="rmClose">×</button></div>
+    <p class="dim" id="rmHint"></p>
+    <label>Причина <span class="dim">(необязательно)</span>
+      <textarea id="rmReason" class="input" maxlength="200" rows="2"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="rmCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="rmGo">Снять</button>
+    </div>
+    <p id="rmMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<script>
+  window.__WARN_LIVE__ = {
+    csrf: {{ csrf_token|tojson }},
+    tab: {{ tab|tojson }},
+    reasons: {{ reasons_json|safe }},
+    styles: {{ styles_json|safe }}
+  };
+</script>
+<script src="{{ url_for('static', filename='warn-live.js') }}?v=1" defer></script>
 {% endblock %}

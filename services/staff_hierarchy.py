@@ -34,7 +34,8 @@ _log = get_logger('staff_hierarchy')
 # helper/mod < master < curator < assistent < admin < owner (заказ 2026-10-01).
 RANK = {
     'uye': 0, 'helper': 1, 'mod': 1, 'master': 2,
-    'curator': 3, 'assistent': 4, 'admin': 5, 'owner': 6,
+    'curator': 3, 'assistent': 4, 'admin': 5,
+    'staff_admin': 6, 'owner': 7,
 }
 
 LABELS = {
@@ -45,6 +46,7 @@ LABELS = {
     'curator': 'куратор',
     'assistent': 'ассистент',
     'admin': 'администратор',
+    'staff_admin': 'стафф-админ',
     'owner': 'владелец панели',
 }
 
@@ -121,8 +123,9 @@ def _role_map_tiers():
     try:
         from services.staff_roles import KNOWN_STAFF_ADMIN_ROLE_ID
         said = str(int(KNOWN_STAFF_ADMIN_ROLE_ID or 0))
-        if said and said != '0' and said not in out:
-            out[said] = 'admin'
+        if said and said != '0':
+            # отдельный тир: жалоба на Staff Admin → Owner, не peers
+            out[said] = 'staff_admin'
     except Exception as _ex:
         _log.debug('role_map_tiers staff-admin fallback: %s', _ex)
     return out

@@ -64,14 +64,15 @@ keep = slash_budget.KEEP_SLASH
 # /afk-remove удалён (AFK спадает авто). /апелляция убрана 2026-09-08
 # («она у нас в кнопке»). /proof удалена 2026-09-04. /event-panel —
 # публикация панели событий (ивент-моды).
-check(set(keep) == {'modpanel', 'update',
-                    'afk', 'report', 'my-violations', 'event-panel'},
+check(set(keep) == {'modpanel', 'update', 'staff',
+                    'report', 'my-violations', 'event-panel'},
       f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'update', 'afk', 'report', 'my-violations',
+for name in ('modpanel', 'update', 'staff', 'report', 'my-violations',
              'event-panel'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
 check('апелляция' not in keep, '/апелляция убрана из KEEP_SLASH (кнопка вместо команды)')
-for gone in ('afk-remove', 'verify-setup', 'report-setup', 'report-settings'):
+for gone in ('afk', 'afk-remove', 'staff_diagnose', 'staff_selftest',
+             'staff_history', 'verify-setup', 'report-setup', 'report-settings'):
     check(gone not in keep, f'{gone} убран из слеш-меню (настройка в панели/авто)')
 check('play' not in keep, '/play снят — музыка выведена из боевого состава')
 # Тикет-система снята 2026-08-31 — ticket-panel не должен вернуться

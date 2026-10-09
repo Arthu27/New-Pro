@@ -2,28 +2,110 @@
 {% block title %}Staff{% endblock %}
 {% block heading %}Staff{% endblock %}
 {% block body %}
-<p class="lead">Активность команды: меры, чат, войс. Топы по ролям · неделя / месяц.</p>
+<p class="lead">Недельный отчёт по каждому: меры · чат · войс. Новые в команде сразу попадают в рейтинг. День / неделя / месяц сверху.</p>
 
 {% include '_activity.html' %}
 
 <section class="panel rise" style="margin-top:12px">
-  <h2>Команда на сервере <span class="count">{{ people|length }}</span></h2>
+  <h2>Команда · отчёт {% if span == 'day' %}за день{% elif span == 'month' %}за месяц{% else %}за неделю{% endif %} <span class="count">{{ people|length }}</span></h2>
   {% if error %}<div class="flash err" style="margin:12px">{{ error }}</div>{% endif %}
   {% if not people %}<div class="empty">Staff не загрузился</div>
+  {% elif people_by_branch %}
+  <div class="people-branches">
+    {% for br in people_by_branch %}
+    <div class="people-branch branch-{{ br.key }}">
+      <div class="people-branch__head">
+        <h3>{{ br.title }}</h3>
+        <span class="count">{{ br.people|length }}</span>
+      </div>
+      <div class="people-board">
+        {% for p in br.people %}
+        {% set st = week_stats.get(p.id) if week_stats else none %}
+        <a class="p-card" href="{{ url_for('member', q=p.id) }}">
+          <img class="p-card__ava" src="{{ p.avatar }}" alt="">
+          <div class="p-card__body">
+            <strong class="p-card__name">{{ p.name }}</strong>
+            <span class="p-card__handle dim">@{{ p.handle }}</span>
+            <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
+            <span class="p-card__stats dim">
+              {% if st %}
+              <b>{{ st.actions }}</b> мер · <b>{{ st.messages }}</b> чат · <b>{{ st.voice }}</b> войс
+              {% else %}
+              0 мер · 0 чат · 0 войс
+              {% endif %}
+            </span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
   {% else %}
   <div class="people-board">
     {% for p in people %}
+    {% set st = week_stats.get(p.id) if week_stats else none %}
     <a class="p-card" href="{{ url_for('member', q=p.id) }}">
       <img class="p-card__ava" src="{{ p.avatar }}" alt="">
       <div class="p-card__body">
         <strong class="p-card__name">{{ p.name }}</strong>
         <span class="p-card__handle dim">@{{ p.handle }}</span>
         <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
+        <span class="p-card__stats dim">
+          {% if st %}
+          <b>{{ st.actions }}</b> мер · <b>{{ st.messages }}</b> чат · <b>{{ st.voice }}</b> войс
+          {% else %}
+          0 мер · 0 чат · 0 войс
+          {% endif %}
+        </span>
       </div>
     </a>
     {% endfor %}
   </div>
   {% endif %}
+</section>
+
+<section class="panel rise" style="margin-top:12px" id="staff-consents">
+  <h2>Согласия <span class="count" id="consents-count">—</span></h2>
+  <p class="dim" style="margin:0 12px 8px">Переводы между ветками ждут ответа человека (pending / accepted / declined).</p>
+  <div class="feed" id="consents-list"><div class="empty">Загрузка…</div></div>
+  <script>
+  (async () => {
+    const box = document.getElementById('consents-list');
+    const cnt = document.getElementById('consents-count');
+    try {
+      const r = await fetch('/api/staff-manager/consents');
+      const j = await r.json();
+      if (!j.ok) { box.innerHTML = '<div class="empty">нет доступа / выкл</div>'; return; }
+      const rows = j.consents || [];
+      cnt.textContent = rows.length;
+      if (!rows.length) { box.innerHTML = '<div class="empty">Пока пусто</div>'; return; }
+      box.innerHTML = rows.map(c => {
+        const st = c.status || '';
+        const cancel = st === 'pending'
+          ? `<button type="button" data-cid="${c.id}" class="btn-cancel-consent">Отозвать</button>` : '';
+        return `<div class="feed-row">
+          <div class="feed-act">${st}</div>
+          <div class="feed-body">
+            <strong>${c.action}</strong>
+            <span class="dim">${c.from_branch || '—'} → ${c.to_branch || '—'} · ${c.to_role_key || ''}</span>
+            <div class="dim">target ${c.target_id} · by ${c.initiator_id}</div>
+            ${cancel}
+          </div>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('.btn-cancel-consent').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-cid');
+          await fetch('/api/staff-manager/consents/' + id + '/cancel', {method:'POST'});
+          location.reload();
+        });
+      });
+    } catch (e) {
+      box.innerHTML = '<div class="empty">ошибка загрузки</div>';
+    }
+  })();
+  </script>
 </section>
 
 <section class="panel rise" style="margin-top:12px">
