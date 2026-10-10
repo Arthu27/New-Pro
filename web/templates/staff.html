@@ -1,51 +1,35 @@
 {% extends "base.html" %}
 {% block title %}Staff{% endblock %}
-{% block heading %}Команда{% endblock %}
+{% block heading %}Staff{% endblock %}
 {% block body %}
 
-<p class="lead">
-  Недельный отчёт по каждому: меры · чат · войс. Новые в команде сразу попадают в рейтинг.
-</p>
+<p class="lead">Недельный отчёт: меры, активность, согласия. Ветки рядом для удобства.</p>
 
 {% if error %}<div class="flash err" style="margin:12px 0">{{ error }}</div>{% endif %}
 
-<!-- KPI БЛОК -->
-<div class="kpis rise">
-  <div class="kpi"><b>24</b><span>Staff</span></div>
-  <div class="kpi"><b>184</b><span>Меры на неделю</span></div>
-  <div class="kpi"><b>42</b><span>На проверке</span></div>
-  <div class="kpi"><b>12</b><span>Согласия ожидают</span></div>
-</div>
-
-<!-- АКТИВНОСТЬ -->
 {% include '_activity.html' %}
 
-<!-- СОГЛАСИЯ БЛОК -->
+<!-- СОГЛАСИЯ -->
 <section class="panel rise" id="staff-consents" style="margin-top:12px">
-  <h2>
-    Согласия
-    <span class="count" id="consents-count">—</span>
-  </h2>
-  <p class="dim" style="margin:0 12px 8px">Переводы между ветками ждут ответа (pending / accepted / declined)</p>
-  
+  <h2>Согласия <span class="count" id="consents-count">—</span></h2>
   <div class="table-scroll">
-    <table class="staff-consents-table">
+    <table>
       <thead>
         <tr>
           <th>Статус</th>
           <th>Действие</th>
-          <th>Маршрут</th>
+          <th>От</th>
+          <th>Кому</th>
           <th>Роль</th>
           <th>IDs</th>
           <th></th>
         </tr>
       </thead>
       <tbody id="consents-list">
-        <tr><td colspan="6" class="empty">Загрузка…</td></tr>
+        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Загрузка…</td></tr>
       </tbody>
     </table>
   </div>
-
   <script>
   (async () => {
     const tbody = document.getElementById('consents-list');
@@ -54,69 +38,63 @@
       const r = await fetch('/api/staff-manager/consents');
       const j = await r.json();
       if (!j.ok) { 
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">Нет доступа / отключено</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Нет доступа</td></tr>'; 
         return; 
       }
       const rows = j.consents || [];
       cnt.textContent = rows.length;
       if (!rows.length) { 
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">Пока пусто</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Пусто</td></tr>'; 
         return; 
       }
       
       tbody.innerHTML = rows.map(c => {
         const st = c.status || '';
-        const statusClass = st === 'pending' ? 'is-pending' : st === 'accepted' ? 'is-ok' : st === 'declined' ? 'is-danger' : '';
-        const statusLabel = st === 'pending' ? '⏳ Ожидает' : st === 'accepted' ? '✓ Принято' : st === 'declined' ? '✕ Отклонено' : st;
+        const pillClass = st === 'pending' ? 'pill-warn' : st === 'accepted' ? 'pill-ok' : 'pill-ban';
         const cancel = st === 'pending'
-          ? `<button type="button" data-cid="${c.id}" class="btn btn-ghost btn-sm consent-cancel">Отозвать</button>` : '—';
-        return `<tr class="consent-row ${statusClass}">
-          <td><span class="pill pill-${statusClass}">${statusLabel}</span></td>
+          ? `<button type="button" data-cid="${c.id}" class="btn btn-ghost" style="font-size:.8rem;padding:6px 12px">Отозвать</button>` : '—';
+        return `<tr>
+          <td><span class="pill ${pillClass}">${st}</span></td>
           <td><strong>${c.action}</strong></td>
-          <td><code>${c.from_branch || '—'}</code> → <code>${c.to_branch || '—'}</code></td>
-          <td><span class="tag-${(c.to_role_key || '').toLowerCase()}">${c.to_role_key || '—'}</span></td>
-          <td><span class="dim mono">${c.target_id} / ${c.initiator_id}</span></td>
-          <td class="row-actions">${cancel}</td>
+          <td><code style="font-size:.85em">${c.from_branch || '—'}</code></td>
+          <td><code style="font-size:.85em">${c.to_branch || '—'}</code></td>
+          <td><span class="tag">${c.to_role_key || '—'}</span></td>
+          <td class="mono dim" style="font-size:.85em">${c.target_id} / ${c.initiator_id}</td>
+          <td style="text-align:right;white-space:nowrap">${cancel}</td>
         </tr>`;
       }).join('');
       
-      document.querySelectorAll('.consent-cancel').forEach(btn => {
+      document.querySelectorAll('[data-cid]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-cid');
           btn.disabled = true;
-          btn.textContent = '…';
           try {
             await fetch('/api/staff-manager/consents/' + id + '/cancel', {method:'POST'});
             location.reload();
-          } catch (err) {
+          } catch (e) {
             btn.disabled = false;
-            btn.textContent = 'Ошибка';
           }
         });
       });
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">Ошибка загрузки</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Ошибка</td></tr>';
     }
   })();
   </script>
 </section>
 
-<!-- ЛЕНТА STAFF БЛОК -->
+<!-- ЛЕНТА STAFF -->
 <section class="panel rise" style="margin-top:12px">
-  <h2>
-    Лента Staff
-    <span class="count">{{ feed|length }}</span>
-  </h2>
-  
+  <h2>Лента Staff <span class="count">{{ feed|length }}</span></h2>
   {% if not feed %}
-  <div class="empty">Нет событий на этой неделе</div>
+  <div class="empty">Пусто</div>
   {% else %}
   <div class="table-scroll">
-    <table class="staff-feed-table">
+    <table>
       <thead>
         <tr>
           <th>Действие</th>
-          <th>От кого</th>
+          <th>От</th>
           <th>Кому</th>
           <th>Детали</th>
           <th>Когда</th>
@@ -124,38 +102,18 @@
       </thead>
       <tbody>
         {% for f in feed %}
-        <tr class="feed-entry" data-action="{{ f.action|lower }}">
+        <tr>
+          <td><span class="pill">{{ f.action }}</span></td>
           <td>
-            <span class="pill pill-{{ f.action|lower|replace(' ', '-') }}">
-              {% if 'мут' in f.action|lower %}🔇
-              {% elif 'бан' in f.action|lower %}🚫
-              {% elif 'кик' in f.action|lower %}👢
-              {% elif 'варн' in f.action|lower %}⚠
-              {% elif 'кик' in f.action|lower %}❌
-              {% else %}✓{% endif %}
-              {{ f.action }}
-            </span>
+            {% if f.who_id %}<a href="{{ url_for('member', q=f.who_id) }}"><strong>{{ f.who }}</strong></a>
+            {% else %}<strong>{{ f.who }}</strong>{% endif %}
           </td>
           <td>
-            {% if f.who_id %}
-            <a href="{{ url_for('member', q=f.who_id) }}" class="profile-link">
-              <strong>{{ f.who }}</strong>
-            </a>
-            {% else %}
-            <strong>{{ f.who }}</strong>
-            {% endif %}
-          </td>
-          <td>
-            {% if f.target_id %}
-            <a href="{{ url_for('member', q=f.target_id) }}" class="profile-link">
-              {{ f.target }}
-            </a>
-            {% else %}
-            {{ f.target }}
-            {% endif %}
+            {% if f.target_id %}<a href="{{ url_for('member', q=f.target_id) }}">{{ f.target }}</a>
+            {% else %}{{ f.target }}{% endif %}
           </td>
           <td class="dim">{{ f.detail or '—' }}</td>
-          <td class="dim" style="text-align:right"><small>{{ f.when }}</small></td>
+          <td class="dim" style="text-align:right">{{ f.when }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -163,95 +121,5 @@
   </div>
   {% endif %}
 </section>
-
-<style>
-.staff-consents-table,
-.staff-feed-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.staff-consents-table th,
-.staff-feed-table th,
-.staff-consents-table td,
-.staff-feed-table td {
-  padding: 12px 14px;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-  vertical-align: middle;
-}
-
-.staff-consents-table th,
-.staff-feed-table th {
-  color: var(--muted);
-  font-size: .66rem;
-  font-weight: 800;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  background: rgba(255,255,255,.02);
-}
-
-.staff-consents-table tbody tr,
-.staff-feed-table tbody tr {
-  transition: .15s background;
-}
-
-.staff-consents-table tbody tr:hover td,
-.staff-feed-table tbody tr:hover td {
-  background: var(--glass-2);
-}
-
-.staff-consents-table .is-pending td {
-  color: var(--warn);
-}
-
-.staff-consents-table .is-ok td {
-  color: var(--ok);
-}
-
-.staff-consents-table .is-danger td {
-  color: var(--danger);
-}
-
-.staff-consents-table code,
-.staff-feed-table code {
-  font-family: ui-monospace, monospace;
-  font-size: .82em;
-  background: rgba(0,0,0,.3);
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: var(--ink-2);
-}
-
-.consent-row .pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.profile-link {
-  color: var(--ink);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.profile-link:hover {
-  color: var(--accent);
-}
-
-.btn-sm {
-  padding: 6px 10px !important;
-  font-size: .75rem !important;
-}
-
-.row-actions {
-  white-space: nowrap;
-  text-align: right;
-}
-
-.row-actions .btn {
-  margin-left: auto;
-}
-</style>
 
 {% endblock %}
