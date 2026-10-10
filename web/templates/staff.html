@@ -5,47 +5,8 @@
 {% set board = staff_board or {} %}
 {% set summary = board.summary or {} %}
 
-<<<<<<< HEAD
-<p class="lead">Недельный отчёт: меры, активность, согласия. Ветки рядом для удобства.</p>
-
-{% if error %}<div class="flash err" style="margin:12px 0">{{ error }}</div>{% endif %}
-
-{% include '_activity.html' %}
-
-<!-- СОГЛАСИЯ -->
-<section class="panel rise" id="staff-consents" style="margin-top:12px">
-  <h2>Согласия <span class="count" id="consents-count">—</span></h2>
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Статус</th>
-          <th>Действие</th>
-          <th>От</th>
-          <th>Кому</th>
-          <th>Роль</th>
-          <th>IDs</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="consents-list">
-        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Загрузка…</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <script>
-  (async () => {
-    const tbody = document.getElementById('consents-list');
-    const cnt = document.getElementById('consents-count');
-    try {
-      const r = await fetch('/api/staff-manager/consents');
-      const j = await r.json();
-      if (!j.ok) { 
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Нет доступа</td></tr>'; 
-        return; 
-=======
 <div class="staff-page">
-  <p class="lead">Недельный отчёт: меры · чат · войс. День / неделя / месяц — сверху у рейтинга.</p>
+  <p class="lead">Недельный отчёт: меры · чат · войс. Ветки рядом. День / неделя / месяц — у рейтинга.</p>
   {% if error %}<div class="flash err" style="margin:12px 0">{{ error }}</div>{% endif %}
 
   <section class="staff-kpi panel rise">
@@ -88,138 +49,74 @@
     <div class="staff-panel__head">
       <h2>Согласия <span class="count" id="consents-count">—</span></h2>
     </div>
-    <p class="dim staff-panel__desc">Переводы между ветками: pending / accepted / declined</p>
-    <div class="feed staff-feed" id="consents-list"><div class="empty">Загрузка…</div></div>
+    <div class="table-scroll staff-table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Статус</th>
+            <th>Действие</th>
+            <th>От</th>
+            <th>Кому</th>
+            <th>Роль</th>
+            <th>IDs</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="consents-list">
+          <tr><td colspan="7" class="staff-table-empty">Загрузка…</td></tr>
+        </tbody>
+      </table>
+    </div>
     <script>
     (async () => {
-      const box = document.getElementById('consents-list');
+      const tbody = document.getElementById('consents-list');
       const cnt = document.getElementById('consents-count');
       try {
         const r = await fetch('/api/staff-manager/consents');
         const j = await r.json();
         if (!j.ok) {
-          box.innerHTML = '<div class="empty">Нет доступа / выкл</div>';
+          tbody.innerHTML = '<tr><td colspan="7" class="staff-table-empty">Нет доступа</td></tr>';
           return;
         }
         const rows = j.consents || [];
         cnt.textContent = rows.length;
         if (!rows.length) {
-          box.innerHTML = '<div class="empty">Нет согласий</div>';
+          tbody.innerHTML = '<tr><td colspan="7" class="staff-table-empty">Пусто</td></tr>';
           return;
         }
-        box.innerHTML = rows.map(c => {
+        tbody.innerHTML = rows.map(c => {
           const st = c.status || '';
+          const pillClass = st === 'pending' ? 'pill-warn' : st === 'accepted' ? 'pill-ok' : 'pill-ban';
           const cancel = st === 'pending'
-            ? `<button type="button" data-cid="${c.id}" class="btn btn-ghost btn-sm">Отозвать</button>` : '';
-          return `<div class="feed-row">
-            <div class="feed-act">${st || '—'}</div>
-            <div class="feed-body">
-              <strong>${c.action || ''}</strong>
-              <span class="dim">${c.from_branch || '—'} → ${c.to_branch || '—'} · ${c.to_role_key || ''}</span>
-              <span class="dim">target <code>${c.target_id}</code> · by <code>${c.initiator_id}</code></span>
-            </div>
-            <div class="feed-when">${cancel}</div>
-          </div>`;
+            ? `<button type="button" data-cid="${c.id}" class="btn btn-ghost btn-sm">Отозвать</button>` : '—';
+          return `<tr>
+            <td><span class="pill ${pillClass}">${st}</span></td>
+            <td><strong>${c.action || ''}</strong></td>
+            <td><code>${c.from_branch || '—'}</code></td>
+            <td><code>${c.to_branch || '—'}</code></td>
+            <td><span class="tag">${c.to_role_key || '—'}</span></td>
+            <td class="dim mono">${c.target_id} / ${c.initiator_id}</td>
+            <td style="text-align:right;white-space:nowrap">${cancel}</td>
+          </tr>`;
         }).join('');
-        box.querySelectorAll('[data-cid]').forEach(btn => {
+        document.querySelectorAll('[data-cid]').forEach(btn => {
           btn.addEventListener('click', async () => {
             btn.disabled = true;
             try {
               await fetch('/api/staff-manager/consents/' + btn.getAttribute('data-cid') + '/cancel', {method:'POST'});
               location.reload();
-            } catch (err) {
+            } catch (e) {
               btn.disabled = false;
-              btn.textContent = 'Ошибка';
             }
           });
         });
       } catch (e) {
-        box.innerHTML = '<div class="empty">Ошибка загрузки</div>';
->>>>>>> 5b1de72c (Polish Staff page: real KPIs, soft scrollbars, cleaner cards)
+        tbody.innerHTML = '<tr><td colspan="7" class="staff-table-empty">Ошибка</td></tr>';
       }
-      const rows = j.consents || [];
-      cnt.textContent = rows.length;
-      if (!rows.length) { 
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Пусто</td></tr>'; 
-        return; 
-      }
-      
-      tbody.innerHTML = rows.map(c => {
-        const st = c.status || '';
-        const pillClass = st === 'pending' ? 'pill-warn' : st === 'accepted' ? 'pill-ok' : 'pill-ban';
-        const cancel = st === 'pending'
-          ? `<button type="button" data-cid="${c.id}" class="btn btn-ghost" style="font-size:.8rem;padding:6px 12px">Отозвать</button>` : '—';
-        return `<tr>
-          <td><span class="pill ${pillClass}">${st}</span></td>
-          <td><strong>${c.action}</strong></td>
-          <td><code style="font-size:.85em">${c.from_branch || '—'}</code></td>
-          <td><code style="font-size:.85em">${c.to_branch || '—'}</code></td>
-          <td><span class="tag">${c.to_role_key || '—'}</span></td>
-          <td class="mono dim" style="font-size:.85em">${c.target_id} / ${c.initiator_id}</td>
-          <td style="text-align:right;white-space:nowrap">${cancel}</td>
-        </tr>`;
-      }).join('');
-      
-      document.querySelectorAll('[data-cid]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.getAttribute('data-cid');
-          btn.disabled = true;
-          try {
-            await fetch('/api/staff-manager/consents/' + id + '/cancel', {method:'POST'});
-            location.reload();
-          } catch (e) {
-            btn.disabled = false;
-          }
-        });
-      });
-    } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Ошибка</td></tr>';
-    }
-  })();
-  </script>
-</section>
+    })();
+    </script>
+  </section>
 
-<<<<<<< HEAD
-<!-- ЛЕНТА STAFF -->
-<section class="panel rise" style="margin-top:12px">
-  <h2>Лента Staff <span class="count">{{ feed|length }}</span></h2>
-  {% if not feed %}
-  <div class="empty">Пусто</div>
-  {% else %}
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Действие</th>
-          <th>От</th>
-          <th>Кому</th>
-          <th>Детали</th>
-          <th>Когда</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for f in feed %}
-        <tr>
-          <td><span class="pill">{{ f.action }}</span></td>
-          <td>
-            {% if f.who_id %}<a href="{{ url_for('member', q=f.who_id) }}"><strong>{{ f.who }}</strong></a>
-            {% else %}<strong>{{ f.who }}</strong>{% endif %}
-          </td>
-          <td>
-            {% if f.target_id %}<a href="{{ url_for('member', q=f.target_id) }}">{{ f.target }}</a>
-            {% else %}{{ f.target }}{% endif %}
-          </td>
-          <td class="dim">{{ f.detail or '—' }}</td>
-          <td class="dim" style="text-align:right">{{ f.when }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-</section>
-
-=======
   <section class="panel rise staff-panel">
     <div class="staff-panel__head">
       <h2>Лента staff <span class="count">{{ feed|length }}</span></h2>
@@ -246,5 +143,4 @@
     {% endif %}
   </section>
 </div>
->>>>>>> 5b1de72c (Polish Staff page: real KPIs, soft scrollbars, cleaner cards)
 {% endblock %}
