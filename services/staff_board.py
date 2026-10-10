@@ -173,6 +173,30 @@ def person_org_branches(person: dict) -> list[str]:
     return [branch_of_tag(tag)]
 
 
+def primary_org_branch(person: dict) -> str | None:
+    """Ровно одна орг-ветка: без дублей между таблицами."""
+    branches = person_org_branches(person) if isinstance(person, dict) else []
+    if not branches:
+        return None
+    if len(branches) == 1:
+        return branches[0]
+    order = {k: i for i, (k, _, __) in enumerate(BRANCH_GROUPS)}
+    return sorted(branches, key=lambda k: order.get(k, 99))[0]
+
+
+def _dedupe_rows_by_id(rows: list) -> list:
+    """Один человек — одна строка (первый выигрывает)."""
+    seen: set[str] = set()
+    out = []
+    for r in rows or []:
+        pid = str((r or {}).get('id') or '')
+        if not pid or pid in seen:
+            continue
+        seen.add(pid)
+        out.append(r)
+    return out
+
+
 def fmt_voice(seconds: int) -> str:
     try:
         secs = max(0, int(seconds or 0))
@@ -378,9 +402,14 @@ def build_staff_board(
         range_label = ''
 
     hidden = set(hidden_kinds or ())
-    people = list(people or [])
-    staff_ids = {str(p.get('id')) for p in people if str(p.get('id') or '').isdigit()}
-    by_id = {str(p.get('id')): p for p in people if str(p.get('id') or '').isdigit()}
+    # один id → один человек (входной список иногда дублирует)
+    by_id: dict[str, dict] = {}
+    for p in people or []:
+        pid = str((p or {}).get('id') or '')
+        if pid.isdigit():
+            by_id[pid] = p
+    people = list(by_id.values())
+    staff_ids = set(by_id.keys())
 
     mods = {}
     for m in mod_rows or []:
@@ -407,20 +436,26 @@ def build_staff_board(
                 and score <= 0 and actions <= 0
                 and messages <= 0 and voice_s <= 0):
             continue
-        tag = str(p.get('role_tag') or p.get('role') or 'helper')
+        tag = str(p.get('role_tag') or p.get('role') or '')
         rids = p.get('role_ids') or []
-        branches = person_org_branches(p)
-        primary = branches[0] if branches else branch_of_tag(tag)
+        primary = primary_org_branch(p)
+        # без орг-ветки не угадываем Helper — иначе всё смешивается
+        if not primary:
+            if tag in ('owner', 'admin', 'staff-admin', 'staff-assistent',
+                       'assistent', 'master', 'curator'):
+                primary = 'leadership'
+            else:
+                continue
         rows.append({
             'id': uid,
             'name': p.get('name') or m.get('name') or (voice.get(uid) or {}).get('name') or uid,
             'handle': p.get('handle') or '',
             'avatar': p.get('avatar') or (voice.get(uid) or {}).get('avatar') or '',
             'role': p.get('role') or '',
-            'role_tag': tag,
-            'role_label': p.get('role_label') or ROLE_TITLE.get(tag, tag),
+            'role_tag': tag or primary,
+            'role_label': p.get('role_label') or ROLE_TITLE.get(tag or primary, tag or primary),
             'role_ids': list(rids) if rids else [],
-            'branches': branches,
+            'branches': [primary],
             'branch': primary,
             'actions': actions,
             'warns': warns,
@@ -434,6 +469,7 @@ def build_staff_board(
         })
 
     # Только текущий staff из people — без «призраков» из старой mod_activity
+    rows = _dedupe_rows_by_id(rows)
     rows.sort(key=lambda r: (-int(r['score']), -int(r['actions']),
                              -int(r['messages']), -int(r['voice_s']),
                              str(r['name']).lower()))
@@ -447,8 +483,9 @@ def build_staff_board(
     by_branch: dict[str, list] = {}
     for r in rows:
         by_role.setdefault(r['role_tag'], []).append(r)
-        for bk in (r.get('branches') or [r.get('branch') or 'helper']):
-            by_branch.setdefault(str(bk), []).append(r)
+        bk = str(r.get('branch') or '')
+        if bk:
+            by_branch.setdefault(bk, []).append(r)
 
     role_tops = []
     for key in ROLE_ORDER:
@@ -488,7 +525,8 @@ def build_staff_board(
     for key, title, _tags in BRANCH_GROUPS:
         # КОПИИ строк — иначе rank/bar ветки портят общий рейтинг
         bucket = [dict(x) for x in (by_branch.get(key) or [])]
-        people_in = [p for p in people if key in person_org_branches(p)]
+        # только primary-ветка — без копий одного человека в соседние таблицы
+        people_in = [p for p in people if primary_org_branch(p) == key]
         if not bucket and not people_in:
             continue
         seen = {str(x['id']) for x in bucket}
@@ -498,7 +536,7 @@ def build_staff_board(
                 continue
             if not include_zero:
                 continue
-            tag = str(p.get('role_tag') or p.get('role') or 'helper')
+            tag = str(p.get('role_tag') or p.get('role') or key)
             bucket.append({
                 'id': pid,
                 'name': p.get('name') or pid,
@@ -508,12 +546,14 @@ def build_staff_board(
                 'role_tag': tag,
                 'role_label': p.get('role_label') or ROLE_TITLE.get(tag, tag),
                 'role_ids': list(p.get('role_ids') or []),
-                'branches': person_org_branches(p),
+                'branches': [key],
                 'branch': key,
                 'actions': 0, 'warns': 0, 'mutes': 0, 'kicks': 0, 'bans': 0,
                 'messages': 0, 'voice_s': 0, 'voice': '0 мин', 'score': 0,
                 'rank': 0, 'place': 0, 'bar': 4,
             })
+            seen.add(pid)
+        bucket = _dedupe_rows_by_id(bucket)
         bucket.sort(key=_hier_key)
         bmax = max((int(r['score']) for r in bucket), default=1) or 1
         for i, r in enumerate(bucket, 1):

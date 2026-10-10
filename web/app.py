@@ -1566,21 +1566,27 @@ def _people_by_branch(people):
     """Карточки команды по орг-веткам (Helper / Moderator / …)."""
     try:
         from services.staff_board import (
-            BRANCH_GROUPS, person_org_branches, ROLE_TITLE)
+            BRANCH_GROUPS, primary_org_branch, ROLE_TITLE)
     except Exception:
         return []
     buckets = {k: [] for k, _, __ in BRANCH_GROUPS}
     titles = {k: t for k, t, __ in BRANCH_GROUPS}
+    seen: set[str] = set()
     for p in people or []:
+        pid = str((p or {}).get('id') or '')
+        if not pid or pid in seen:
+            continue
         try:
-            keys = person_org_branches(p) or ['leadership']
+            key = primary_org_branch(p)
         except Exception:
-            keys = ['leadership']
-        for key in keys:
-            if key not in buckets:
-                buckets[key] = []
-                titles.setdefault(key, ROLE_TITLE.get(key, key))
-            buckets[key].append(p)
+            key = None
+        if not key:
+            continue
+        seen.add(pid)
+        if key not in buckets:
+            buckets[key] = []
+            titles.setdefault(key, ROLE_TITLE.get(key, key))
+        buckets[key].append(p)
     out = []
     for key, title, _ in BRANCH_GROUPS:
         rows = buckets.get(key) or []
@@ -2184,9 +2190,10 @@ def _list_login_people(q: str = ''):
                 'leadership': 'admin', 'admins': 'admin',
             }
             people = []
+            seen_uid: set[str] = set()
             for h in rows:
                 uid = str(h.get('user_id') or '')
-                if not uid:
+                if not uid or uid in seen_uid:
                     continue
                 rs = role_style(h.get('top_role_id')) if h.get('top_role_id') else None
                 br = str(h.get('branch') or '').strip().lower()
@@ -2216,9 +2223,10 @@ def _list_login_people(q: str = ''):
                 elif not role and h.get('is_staff'):
                     role = ''
                 # Без орг-ветки и без ранга лестницы — скрытая оболочка /
-                # мусор кэша: в Staff board не показываем.
+                # мусор кэша / боты без ветки: в Staff board не показываем.
                 if not br and not role:
                     continue
+                seen_uid.add(uid)
                 people.append({
                     'id': uid,
                     'name': h.get('display_name') or uid,

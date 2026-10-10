@@ -4,66 +4,8 @@
 {% block body %}
 <p class="lead">Недельный отчёт по каждому: меры · чат · войс. Новые в команде сразу попадают в рейтинг. День / неделя / месяц сверху.</p>
 
+{% if error %}<div class="flash err" style="margin:12px 0">{{ error }}</div>{% endif %}
 {% include '_activity.html' %}
-
-<section class="panel rise" style="margin-top:12px">
-  <h2>Команда · отчёт {% if span == 'day' %}за день{% elif span == 'month' %}за месяц{% else %}за неделю{% endif %} <span class="count">{{ people|length }}</span></h2>
-  {% if error %}<div class="flash err" style="margin:12px">{{ error }}</div>{% endif %}
-  {% if not people %}<div class="empty">Staff не загрузился</div>
-  {% elif people_by_branch %}
-  <div class="people-branches">
-    {% for br in people_by_branch %}
-    <div class="people-branch branch-{{ br.key }}">
-      <div class="people-branch__head">
-        <h3>{{ br.title }}</h3>
-        <span class="count">{{ br.people|length }}</span>
-      </div>
-      <div class="people-board">
-        {% for p in br.people %}
-        {% set st = week_stats.get(p.id) if week_stats else none %}
-        <a class="p-card" href="{{ url_for('member', q=p.id) }}">
-          <img class="p-card__ava" src="{{ p.avatar }}" alt="">
-          <div class="p-card__body">
-            <strong class="p-card__name">{{ p.name }}</strong>
-            <span class="p-card__handle dim">@{{ p.handle }}</span>
-            <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
-            <span class="p-card__stats dim">
-              {% if st %}
-              <b>{{ st.actions }}</b> мер · <b>{{ st.messages }}</b> чат · <b>{{ st.voice }}</b> войс
-              {% else %}
-              0 мер · 0 чат · 0 войс
-              {% endif %}
-            </span>
-          </div>
-        </a>
-        {% endfor %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="people-board">
-    {% for p in people %}
-    {% set st = week_stats.get(p.id) if week_stats else none %}
-    <a class="p-card" href="{{ url_for('member', q=p.id) }}">
-      <img class="p-card__ava" src="{{ p.avatar }}" alt="">
-      <div class="p-card__body">
-        <strong class="p-card__name">{{ p.name }}</strong>
-        <span class="p-card__handle dim">@{{ p.handle }}</span>
-        <span class="tag tag-{{ p.role_tag or p.role }}">{{ p.role_label }}</span>
-        <span class="p-card__stats dim">
-          {% if st %}
-          <b>{{ st.actions }}</b> мер · <b>{{ st.messages }}</b> чат · <b>{{ st.voice }}</b> войс
-          {% else %}
-          0 мер · 0 чат · 0 войс
-          {% endif %}
-        </span>
-      </div>
-    </a>
-    {% endfor %}
-  </div>
-  {% endif %}
-</section>
 
 <section class="panel rise" style="margin-top:12px" id="staff-consents">
   <h2>Согласия <span class="count" id="consents-count">—</span></h2>
