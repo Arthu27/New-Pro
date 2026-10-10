@@ -1221,32 +1221,25 @@ h2 .seg { margin-left: auto; font-weight: 800; }
   margin: 0; font-size: .95rem; font-weight: 800; color: var(--ink);
 }
 .act-role-block__head .dim { font-size: .74rem; }
-/* Branch tables — left → right row */
+/* Branch tables — left → right wrap */
 .act-branch-grids,
 .act-branch-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
   margin-bottom: 18px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scroll-snap-type: x proximity;
+  align-items: stretch;
 }
 .act-branch {
-  flex: 0 0 300px;
-  width: 300px;
-  max-width: 300px;
   padding: 10px 10px 8px;
   border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: rgba(0,0,0,.26);
   border-top: 3px solid var(--line-2);
   min-width: 0;
-  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .act-branch.branch-helper { border-top-color: #8ee6b6; }
 .act-branch.branch-moderator { border-top-color: #b4c3ff; }
@@ -1337,14 +1330,25 @@ h2 .seg { margin-left: auto; font-weight: 800; }
 }
 .act-table__who {
   display: flex; align-items: center; gap: 8px; min-width: 0;
+  overflow: hidden;
 }
+.act-ava,
+.act-table__who img.act-ava,
 .act-table__who img {
-  width: 28px; height: 28px; border-radius: 50%; object-fit: cover;
-  border: 1px solid var(--line); flex-shrink: 0;
+  width: 28px !important;
+  height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  flex: 0 0 28px;
+  display: block;
 }
 .act-table__who b {
   font-weight: 800; font-size: .86rem;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
 }
 .act-table__row .tag {
   justify-self: start;
@@ -1369,29 +1373,30 @@ h2 .seg { margin-left: auto; font-weight: 800; }
 .act-table--compact .act-table__who b { font-size: .8rem; }
 .act-table--compact .act-table__num { font-size: .76rem; }
 
-/* Mini branch tables — everyone in their branch */
+/* Mini branch tables — text only, no huge avatars */
 .act-table--mini {
   flex: 1;
   min-height: 0;
 }
 .act-table--mini .act-table__head,
 .act-table--mini .act-table__row {
-  padding: 5px 7px;
-  gap: 5px;
-  grid-template-columns: 16px minmax(0, 1.2fr) 52px 28px 34px 52px;
+  padding: 6px 8px;
+  gap: 6px;
+  grid-template-columns: 18px minmax(0, 1.3fr) minmax(56px, .7fr) 28px 40px minmax(52px, .8fr);
 }
 .act-table--mini .act-table__head {
-  font-size: .58rem; letter-spacing: .06em; padding: 5px 7px;
+  font-size: .58rem; letter-spacing: .06em;
 }
-.act-table--mini .act-table__n { font-size: .68rem; }
-.act-table--mini .act-table__who { gap: 5px; }
-.act-table--mini .act-table__who img { width: 20px; height: 20px; }
-.act-table--mini .act-table__who b { font-size: .72rem; }
-.act-table--mini .act-table__num { font-size: .68rem; }
+.act-table--mini .act-table__n { font-size: .7rem; }
+.act-table--mini .act-table__who { gap: 0; }
+.act-table--mini .act-table__who img,
+.act-table--mini .act-ava { display: none !important; }
+.act-table--mini .act-table__who b { font-size: .78rem; }
+.act-table--mini .act-table__num { font-size: .72rem; }
 .act-table--mini .tag {
-  font-size: .58rem; padding: 1px 5px; max-width: 52px;
+  font-size: .58rem; padding: 1px 6px; max-width: 72px;
 }
-.act-table--mini .act-table__body { max-height: 260px; }
+.act-table--mini .act-table__body { max-height: 280px; }
 
 .act-list { display: flex; flex-direction: column; gap: 7px; }
 .act-row {
@@ -1444,7 +1449,7 @@ h2 .seg { margin-left: auto; font-weight: 800; }
   .act-podium__card.place-2,
   .act-podium__card.place-3 { min-height: 0; }
   .act-menus { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .act-branch { flex-basis: 260px; width: 260px; max-width: 260px; }
+  .act-branch-row { grid-template-columns: 1fr; }
   .act-row {
     grid-template-columns: 28px minmax(0, 1fr);
     gap: 8px 10px;

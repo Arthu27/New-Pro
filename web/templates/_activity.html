@@ -139,19 +139,16 @@
         <div class="act-table__head" aria-hidden="true">
           <span>#</span>
           <span>Кто</span>
-          <span>Р</span>
+          <span>Роль</span>
           <span>М</span>
-          <span>Ч</span>
-          <span>В</span>
+          <span>Чат</span>
+          <span>Войс</span>
         </div>
         <div class="act-table__body">
           {% for t in br.rows %}
           <a class="act-table__row {% if t.score <= 0 %}is-idle{% endif %}" href="{{ url_for('member', q=t.id) }}">
             <span class="act-table__n">{{ loop.index }}</span>
-            <span class="act-table__who">
-              {% if t.avatar %}<img src="{{ t.avatar }}" alt="">{% endif %}
-              <b>{{ t.name }}</b>
-            </span>
+            <span class="act-table__who"><b title="{{ t.name }}">{{ t.name }}</b></span>
             <span class="tag tag-{{ t.role_tag }}" title="{{ t.role_label }}">{{ t.role_label }}</span>
             <span class="act-table__num" title="Меры">{{ t.actions }}</span>
             <span class="act-table__num" title="Чат">{{ t.messages }}</span>
@@ -187,7 +184,9 @@
     <a class="act-table__row {% if a.score <= 0 %}is-idle{% endif %}" href="{% if a.id %}{{ url_for('member', q=a.id) }}{% else %}#{% endif %}">
       <span class="act-table__n">{{ loop.index }}</span>
       <span class="act-table__who">
-        {% if a.avatar %}<img src="{{ a.avatar }}" alt="">{% endif %}
+        {% if a.avatar %}
+        <img class="act-ava" src="{{ a.avatar|replace('size=1024','size=64')|replace('size=512','size=64')|replace('size=256','size=64') }}" alt="" width="28" height="28" loading="lazy">
+        {% endif %}
         <b>{{ a.name }}</b>
       </span>
       <span class="tag tag-{{ a.role_tag }}">{{ a.role_label }}</span>
