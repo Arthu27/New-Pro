@@ -104,7 +104,7 @@ mod = (ROOT / 'cogs' / 'moderation.py').read_text(encoding='utf-8')
 check('cache_only=True' in mod, 'banner cache_only on open')
 check('for_action=' in mod and "for_action='mute_chat'" in mod,
       'selective mute clear')
-check('multi-fix-v19' in mod, 'build bump v19')
+check('multi-fix-v20' in mod, 'build bump v20')
 check('mute_kinds=' in mod and 'unmute_kinds=' in mod, 'kinds precomputed off UI thread')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
