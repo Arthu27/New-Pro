@@ -1,221 +1,257 @@
 {% extends "base.html" %}
 {% block title %}Staff{% endblock %}
-{% block heading %}Staff{% endblock %}
+{% block heading %}Команда{% endblock %}
 {% block body %}
 
-<div class="staff-container">
-  <p class="lead">
-    Недельный отчёт по каждому: меры · чат · войс. Новые в команде сразу попадают в рейтинг. День / неделю / месяц.
-  </p>
+<p class="lead">
+  Недельный отчёт по каждому: меры · чат · войс. Новые в команде сразу попадают в рейтинг.
+</p>
 
-  {% if error %}<div class="flash err" style="margin:12px 0">{{ error }}</div>{% endif %}
+{% if error %}<div class="flash err" style="margin:12px 0">{{ error }}</div>{% endif %}
 
-  <!-- HERO KPI SECTION -->
-  <div class="staff-hero panel rise">
-    <div class="staff-hero__content">
-      <div class="staff-hero__header">
-        <div class="staff-hero__meta">
-          <span class="eyebrow">
-            <i class="fas fa-circle-dot"></i>оперативный центр
-          </span>
-        </div>
-        <h2 class="staff-hero__title">Эффективность команды</h2>
-        <p class="staff-hero__desc">Текущая статистика и активность сотрудников</p>
-      </div>
+<!-- KPI БЛОК -->
+<div class="kpis rise">
+  <div class="kpi"><b>24</b><span>Staff</span></div>
+  <div class="kpi"><b>184</b><span>Меры на неделю</span></div>
+  <div class="kpi"><b>42</b><span>На проверке</span></div>
+  <div class="kpi"><b>12</b><span>Согласия ожидают</span></div>
+</div>
 
-      <div class="staff-kpis">
-        <div class="kpi-card">
-          <div class="kpi-card__header">
-            <span class="kpi-card__icon">📊</span>
-            <span class="kpi-card__label">Активность</span>
-          </div>
-          <div class="kpi-card__value">184</div>
-          <div class="kpi-card__trend positive">
-            <i class="fas fa-arrow-up"></i> +12% за неделю
-          </div>
-        </div>
+<!-- АКТИВНОСТЬ -->
+{% include '_activity.html' %}
 
-        <div class="kpi-card">
-          <div class="kpi-card__header">
-            <span class="kpi-card__icon">✓</span>
-            <span class="kpi-card__label">Проверки</span>
-          </div>
-          <div class="kpi-card__value">42</div>
-          <div class="kpi-card__trend warn">
-            <i class="fas fa-clock"></i> 12 в работе
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-card__header">
-            <span class="kpi-card__icon">⚠</span>
-            <span class="kpi-card__label">Предупреждения</span>
-          </div>
-          <div class="kpi-card__value">19</div>
-          <div class="kpi-card__trend danger">
-            <i class="fas fa-alert-circle"></i> 4 критичных
-          </div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-card__header">
-            <span class="kpi-card__icon">🤝</span>
-            <span class="kpi-card__label">Согласия</span>
-          </div>
-          <div class="kpi-card__value">8</div>
-          <div class="kpi-card__trend pending">
-            <i class="fas fa-hourglass-half"></i> 3 ожидают
-          </div>
-        </div>
-      </div>
-    </div>
+<!-- СОГЛАСИЯ БЛОК -->
+<section class="panel rise" id="staff-consents" style="margin-top:12px">
+  <h2>
+    Согласия
+    <span class="count" id="consents-count">—</span>
+  </h2>
+  <p class="dim" style="margin:0 12px 8px">Переводы между ветками ждут ответа (pending / accepted / declined)</p>
+  
+  <div class="table-scroll">
+    <table class="staff-consents-table">
+      <thead>
+        <tr>
+          <th>Статус</th>
+          <th>Действие</th>
+          <th>Маршрут</th>
+          <th>Роль</th>
+          <th>IDs</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="consents-list">
+        <tr><td colspan="6" class="empty">Загрузка…</td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <!-- ACTIVITY SECTION -->
-  {% include '_activity.html' %}
-
-  <!-- CONSENTS SECTION -->
-  <section class="panel rise staff-panel" id="staff-consents">
-    <div class="panel-header">
-      <h2>
-        Согласия
-        <span class="count" id="consents-count">—</span>
-      </h2>
-      <div class="panel-header__controls">
-        <button type="button" class="btn btn-ghost btn-sm" title="Обновить">
-          <i class="fas fa-rotate-right"></i>
-        </button>
-      </div>
-    </div>
-    <p class="dim panel-desc">Переводы между ветками ждут ответа (pending / accepted / declined)</p>
-    <div class="feed staff-feed" id="consents-list">
-      <div class="empty">Загрузка…</div>
-    </div>
-    <script>
-    (async () => {
-      const box = document.getElementById('consents-list');
-      const cnt = document.getElementById('consents-count');
-      try {
-        const r = await fetch('/api/staff-manager/consents');
-        const j = await r.json();
-        if (!j.ok) { 
-          box.innerHTML = '<div class="empty"><i class="fas fa-lock"></i> Нет доступа или отключено</div>'; 
-          return; 
-        }
-        const rows = j.consents || [];
-        cnt.textContent = rows.length;
-        if (!rows.length) { 
-          box.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i> Нет согласий</div>'; 
-          return; 
-        }
-        box.innerHTML = rows.map(c => {
-          const st = c.status || '';
-          const statusClass = st === 'pending' ? 'is-pending' : st === 'accepted' ? 'is-accepted' : st === 'declined' ? 'is-declined' : '';
-          const statusIcon = st === 'pending' ? '⏳' : st === 'accepted' ? '✓' : st === 'declined' ? '✕' : '○';
-          const cancel = st === 'pending'
-            ? `<button type="button" data-cid="${c.id}" class="btn btn-ghost btn-sm">Отозвать</button>` : '';
-          return `<div class="feed-row staff-feed-row ${statusClass}">
-            <div class="feed-status-badge ${statusClass}">
-              <span class="status-icon">${statusIcon}</span>
-              <span class="status-text">${st}</span>
-            </div>
-            <div class="feed-body">
-              <strong class="feed-action">${c.action}</strong>
-              <div class="feed-details">
-                <span class="feed-branch">${c.from_branch || '—'}</span>
-                <span class="feed-arrow">→</span>
-                <span class="feed-branch">${c.to_branch || '—'}</span>
-                <span class="feed-role">· ${c.to_role_key || ''}</span>
-              </div>
-              <div class="feed-meta">target <code>${c.target_id}</code> · by <code>${c.initiator_id}</code></div>
-            </div>
-            <div class="feed-actions">
-              ${cancel}
-            </div>
-          </div>`;
-        }).join('');
-        box.querySelectorAll('.btn-sm').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-            if (!btn.getAttribute('data-cid')) return;
-            const id = btn.getAttribute('data-cid');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            try {
-              await fetch('/api/staff-manager/consents/' + id + '/cancel', {method:'POST'});
-              location.reload();
-            } catch (err) {
-              btn.disabled = false;
-              btn.innerHTML = 'Ошибка';
-            }
-          });
-        });
-      } catch (e) {
-        box.innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i> Ошибка загрузки</div>';
+  <script>
+  (async () => {
+    const tbody = document.getElementById('consents-list');
+    const cnt = document.getElementById('consents-count');
+    try {
+      const r = await fetch('/api/staff-manager/consents');
+      const j = await r.json();
+      if (!j.ok) { 
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Нет доступа / отключено</td></tr>'; 
+        return; 
       }
-    })();
-    </script>
-  </section>
+      const rows = j.consents || [];
+      cnt.textContent = rows.length;
+      if (!rows.length) { 
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Пока пусто</td></tr>'; 
+        return; 
+      }
+      
+      tbody.innerHTML = rows.map(c => {
+        const st = c.status || '';
+        const statusClass = st === 'pending' ? 'is-pending' : st === 'accepted' ? 'is-ok' : st === 'declined' ? 'is-danger' : '';
+        const statusLabel = st === 'pending' ? '⏳ Ожидает' : st === 'accepted' ? '✓ Принято' : st === 'declined' ? '✕ Отклонено' : st;
+        const cancel = st === 'pending'
+          ? `<button type="button" data-cid="${c.id}" class="btn btn-ghost btn-sm consent-cancel">Отозвать</button>` : '—';
+        return `<tr class="consent-row ${statusClass}">
+          <td><span class="pill pill-${statusClass}">${statusLabel}</span></td>
+          <td><strong>${c.action}</strong></td>
+          <td><code>${c.from_branch || '—'}</code> → <code>${c.to_branch || '—'}</code></td>
+          <td><span class="tag-${(c.to_role_key || '').toLowerCase()}">${c.to_role_key || '—'}</span></td>
+          <td><span class="dim mono">${c.target_id} / ${c.initiator_id}</span></td>
+          <td class="row-actions">${cancel}</td>
+        </tr>`;
+      }).join('');
+      
+      document.querySelectorAll('.consent-cancel').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-cid');
+          btn.disabled = true;
+          btn.textContent = '…';
+          try {
+            await fetch('/api/staff-manager/consents/' + id + '/cancel', {method:'POST'});
+            location.reload();
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = 'Ошибка';
+          }
+        });
+      });
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Ошибка загрузки</td></tr>';
+    }
+  })();
+  </script>
+</section>
 
-  <!-- STAFF FEED SECTION -->
-  <section class="panel rise staff-panel">
-    <div class="panel-header">
-      <h2>
-        Лента staff
-        <span class="count">{{ feed|length }}</span>
-      </h2>
-      <div class="panel-header__controls">
-        <span class="time-range">Текущая неделя</span>
-      </div>
-    </div>
-    {% if not feed %}
-      <div class="empty">
-        <i class="fas fa-history"></i>
-        <span>Нет событий на этой неделе</span>
-      </div>
-    {% else %}
-      <div class="feed staff-feed">
+<!-- ЛЕНТА STAFF БЛОК -->
+<section class="panel rise" style="margin-top:12px">
+  <h2>
+    Лента Staff
+    <span class="count">{{ feed|length }}</span>
+  </h2>
+  
+  {% if not feed %}
+  <div class="empty">Нет событий на этой неделе</div>
+  {% else %}
+  <div class="table-scroll">
+    <table class="staff-feed-table">
+      <thead>
+        <tr>
+          <th>Действие</th>
+          <th>От кого</th>
+          <th>Кому</th>
+          <th>Детали</th>
+          <th>Когда</th>
+        </tr>
+      </thead>
+      <tbody>
         {% for f in feed %}
-        <div class="feed-row staff-feed-row">
-          <div class="feed-status-badge action-{{ f.action|lower|replace(' ', '-') }}">
-            <span class="status-icon">
+        <tr class="feed-entry" data-action="{{ f.action|lower }}">
+          <td>
+            <span class="pill pill-{{ f.action|lower|replace(' ', '-') }}">
               {% if 'мут' in f.action|lower %}🔇
               {% elif 'бан' in f.action|lower %}🚫
               {% elif 'кик' in f.action|lower %}👢
               {% elif 'варн' in f.action|lower %}⚠
-              {% elif 'удал' in f.action|lower %}❌
+              {% elif 'кик' in f.action|lower %}❌
               {% else %}✓{% endif %}
+              {{ f.action }}
             </span>
-            <span class="status-text">{{ f.action }}</span>
-          </div>
-          <div class="feed-body">
-            <div class="feed-actors">
-              {% if f.who_id %}
-                <a href="{{ url_for('member', q=f.who_id) }}" class="feed-actor" title="{{ f.who }}">
-                  <strong>{{ f.who }}</strong>
-                </a>
-              {% else %}
-                <strong class="feed-actor">{{ f.who }}</strong>
-              {% endif %}
-              <span class="feed-arrow">→</span>
-              {% if f.target_id %}
-                <a href="{{ url_for('member', q=f.target_id) }}" class="feed-target" title="{{ f.target }}">
-                  {{ f.target }}
-                </a>
-              {% else %}
-                <span class="feed-target">{{ f.target }}</span>
-              {% endif %}
-            </div>
-            {% if f.detail %}
-              <div class="feed-reason">{{ f.detail }}</div>
+          </td>
+          <td>
+            {% if f.who_id %}
+            <a href="{{ url_for('member', q=f.who_id) }}" class="profile-link">
+              <strong>{{ f.who }}</strong>
+            </a>
+            {% else %}
+            <strong>{{ f.who }}</strong>
             {% endif %}
-          </div>
-          <div class="feed-when">{{ f.when }}</div>
-        </div>
+          </td>
+          <td>
+            {% if f.target_id %}
+            <a href="{{ url_for('member', q=f.target_id) }}" class="profile-link">
+              {{ f.target }}
+            </a>
+            {% else %}
+            {{ f.target }}
+            {% endif %}
+          </td>
+          <td class="dim">{{ f.detail or '—' }}</td>
+          <td class="dim" style="text-align:right"><small>{{ f.when }}</small></td>
+        </tr>
         {% endfor %}
-      </div>
-    {% endif %}
-  </section>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
 
-</div>
+<style>
+.staff-consents-table,
+.staff-feed-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.staff-consents-table th,
+.staff-feed-table th,
+.staff-consents-table td,
+.staff-feed-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.staff-consents-table th,
+.staff-feed-table th {
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,.02);
+}
+
+.staff-consents-table tbody tr,
+.staff-feed-table tbody tr {
+  transition: .15s background;
+}
+
+.staff-consents-table tbody tr:hover td,
+.staff-feed-table tbody tr:hover td {
+  background: var(--glass-2);
+}
+
+.staff-consents-table .is-pending td {
+  color: var(--warn);
+}
+
+.staff-consents-table .is-ok td {
+  color: var(--ok);
+}
+
+.staff-consents-table .is-danger td {
+  color: var(--danger);
+}
+
+.staff-consents-table code,
+.staff-feed-table code {
+  font-family: ui-monospace, monospace;
+  font-size: .82em;
+  background: rgba(0,0,0,.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--ink-2);
+}
+
+.consent-row .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.profile-link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.profile-link:hover {
+  color: var(--accent);
+}
+
+.btn-sm {
+  padding: 6px 10px !important;
+  font-size: .75rem !important;
+}
+
+.row-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.row-actions .btn {
+  margin-left: auto;
+}
+</style>
 
 {% endblock %}
