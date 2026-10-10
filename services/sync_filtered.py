@@ -63,6 +63,9 @@ def _is_disabled(name):
 PUBLIC_COMMAND_WHITELIST = frozenset({
     'modpanel',      # панель модерации — все действия отсюда
     'update',        # обслуживание (гильдовая, только админам; запуск — владелец бота)
+    'staff',         # Staff Manager
+    'staff_diagnose',
+    'staff_selftest',
     'afk',           # отойти/вернуться
     'report',        # жалоба на участника
     'my-violations', # свои наказания

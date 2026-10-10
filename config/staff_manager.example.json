@@ -1,0 +1,63 @@
+{
+  "staff_admin_role_id": 0,
+  "owner_ids": [],
+  "common_staff_role_id": 0,
+  "vacation_role_id": 0,
+  "hidden_admin_role_ids": [],
+  "never_strip_role_ids": [],
+  "staff_power_role_ids": [],
+  "log_channel_id": 0,
+  "actions_channel_id": 0,
+  "CONSENT_FALLBACK_CHANNEL_ID": 0,
+  "CONSENT_EXPIRE_HOURS": 48,
+  "REQUIRE_CONSENT_FOR": ["transfer"],
+  "SELFTEST_ROLE_ID": 0,
+  "SELFTEST_USER_ID": 0,
+  "UNDO_WINDOW_MINUTES": 10,
+  "ROLE_EMOJIS": {
+    "master": "🟢",
+    "assistant": "🔵",
+    "curator": "🟣",
+    "admin": "🔴"
+  },
+  "BRANCH_EMOJIS": {
+    "moderators": "🛡️",
+    "helpers": "🤝"
+  },
+  "ladder": [
+    {"key": "master", "name": "Master", "rank": 1, "emoji": "🟢"},
+    {"key": "curator", "name": "Curator", "rank": 2, "emoji": "🟣"},
+    {"key": "assistant", "name": "Assistent", "rank": 3, "emoji": "🔵"},
+    {"key": "admin", "name": "Admin", "rank": 4, "protected": true, "emoji": "🔴"}
+  ],
+  "responsible_can_manage": ["master", "curator", "assistant"],
+  "branch_admin_can_manage": [],
+  "curator_can_manage": [],
+  "allow_promotion_requests": true,
+  "branches": {
+    "moderators": {
+      "label": "Модераторы",
+      "color": 3447003,
+      "responsible_role_id": 0,
+      "entry_role_id": 0,
+      "roles": {
+        "master": 0,
+        "assistant": 0,
+        "curator": 0,
+        "admin": 0
+      }
+    },
+    "helpers": {
+      "label": "Хелперы",
+      "color": 5763719,
+      "responsible_role_id": 0,
+      "entry_role_id": 0,
+      "roles": {
+        "master": 0,
+        "assistant": 0,
+        "curator": 0,
+        "admin": 0
+      }
+    }
+  }
+}
