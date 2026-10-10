@@ -66,6 +66,19 @@ check(board['summary']['actions'] == 8, f"actions sum ({board['summary']})")
 check(board['summary']['messages'] == 16, f"messages ({board['summary']})")
 # ModOne: 2*12 + 3 + 60мин = 87; HelpOne: 5*12 + 12 + 10 = 82 → топ общий = Mod
 check(board['podium'][0]['id'] == '2', f"overall #1 by score ({board['podium'][0]})")
+places = [r['rank'] for r in board['rows']]
+check(places == list(range(1, len(places) + 1)),
+      f'sequential places after branches ({places})')
+# снятый/ушедший с мерами в mod_activity не должен попасть в рейтинг
+ghost_mods = mod_rows + [
+    {'id': '99', 'name': 'Ghost', 'total': 99, 'warns': 9,
+     'mutes': 0, 'kicks': 0, 'bans': 0},
+]
+with mock.patch.object(sb, 'voice_window_map', return_value=voice_map), \
+     mock.patch.object(sb, 'messages_window_map', return_value=msg_map):
+    board_g = build_staff_board(
+        guild_id=1, days=7, people=people, mod_rows=ghost_mods)
+check('99' not in {r['id'] for r in board_g['rows']}, 'no ghost from mod_activity')
 check(any(r['key'] == 'helper' for r in board['role_tops']), 'role top helper')
 helper_top = next(r for r in board['role_tops'] if r['key'] == 'helper')
 check(helper_top['top'][0]['name'] == 'HelpOne', 'helper #1 among helpers')
@@ -91,7 +104,7 @@ mod = (ROOT / 'cogs' / 'moderation.py').read_text(encoding='utf-8')
 check('cache_only=True' in mod, 'banner cache_only on open')
 check('for_action=' in mod and "for_action='mute_chat'" in mod,
       'selective mute clear')
-check('multi-fix-v19' in mod, 'build bump v19')
+check('multi-fix-v20' in mod, 'build bump v20')
 check('mute_kinds=' in mod and 'unmute_kinds=' in mod, 'kinds precomputed off UI thread')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

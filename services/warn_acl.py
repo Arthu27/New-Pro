@@ -111,22 +111,71 @@ def _is_bot_owner(actor) -> bool:
 
 
 def _is_staff_target(guild, target) -> bool:
-    """Стафф = роль ветки набора или mapped helper+ (не Discord-права)."""
+    """Стафф = ветка набора / role_map / панельный тир / отпуск.
+
+    Важно: owner/admin с Discord Administrator (и люди с manage_messages)
+    тоже стафф — иначе доска активности / KPI обнуляла их чат, войс и меры
+    (members_cache.is_staff=0 → выкидывались из people).
+    """
     if target is None:
         return False
     if branches_of(target):
         return True
     try:
-        from services.staff_hierarchy import best_mapped_tier, RANK
+        from services.staff_hierarchy import (
+            best_mapped_tier, target_panel_role, RANK)
         mapped = best_mapped_tier(target)
-        return RANK.get(mapped, -1) >= RANK.get('helper', 1)
+        if RANK.get(mapped, -1) >= RANK.get('helper', 1):
+            return True
+        g = guild or getattr(target, 'guild', None)
+        tier = target_panel_role(g, target)
+        if RANK.get(tier, -1) >= RANK.get('helper', 1):
+            return True
     except Exception:
-        return False
+        pass
+    # отпуск: нет ladder-ролей, но остаётся стаффом (не выдавать warn)
+    try:
+        from services.staff_manager.acl import get_staff_info as sm_info
+        from services.staff_manager.config import is_enabled
+        if is_enabled():
+            gid = getattr(guild, 'id', None) or getattr(
+                getattr(target, 'guild', None), 'id', None)
+            info = sm_info(target, guild_id=gid)
+            if info.get('is_staff') or info.get('on_vacation'):
+                return True
+    except Exception:
+        pass
+    return False
 
 
 def is_staff_target(guild, target) -> bool:
     """Публичный алиас."""
     return _is_staff_target(guild, target)
+
+
+def get_staff_info(member) -> tuple:
+    """Текущий статус из ролей: (is_staff, branch|None, rank).
+
+    Истина — только роли Discord. Не читать is_staff из БД/варна.
+    """
+    if member is None:
+        return False, None, 0
+    guild = getattr(member, 'guild', None)
+    is_staff = bool(_is_staff_target(guild, member))
+    branch = None
+    rank = 0
+    try:
+        from services.warn_config import member_rank_snapshot
+        rank, _rid, _name = member_rank_snapshot(member)
+    except Exception:
+        rank = 0
+    if is_staff:
+        try:
+            br = branches_of(member)
+            branch = sorted(br)[0] if br else None
+        except Exception:
+            branch = None
+    return is_staff, branch, int(rank or 0)
 
 
 def _mod_plus(actor) -> bool:
