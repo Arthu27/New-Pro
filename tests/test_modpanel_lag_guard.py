@@ -53,20 +53,25 @@ check('_ack_or_busy' in uks and 'thinking=True' in uks,
 # no double schedule 0.45 after every step
 ras = src[src.index('async def _reset_after_step'):src.index('def _bg_reset_after_step')]
 check('delay=0.45' not in ras, 'нет обязательного второго reset через 0.45с')
-check('multi-fix-v17' in src or 'multi-fix-v18' in src, 'build tag v17+')
+check('multi-fix-v' in src or 'hakumo_modpanel_banner_v' in src,
+      'build tag / banner version marker')
 check('_allowed_cache_key' in src, 'кэш allowed на rebuild')
 check('successor' in src or 'нет живого successor' in src
       or '_reset_task' in src[src.index('except _aio.CancelledError'):
                                src.index('except _aio.CancelledError') + 500],
       'CancelledError push respects successor reset-task')
 
-# Action select lag > 2.2 soft nack
+# Не soft-nack по lag на селектах: ACK = send_modal / _launch_action.
+# Раньше lag>2.2 + nack → Discord «Приложение не ответило».
 asel = src[src.index('class ModActionSelect'):src.index('_PUNISH_MODPANEL')]
-check('lag > 2.2' in asel and 'Бот был занят' in asel,
-      'ModActionSelect: soft-nack при lag>2.2')
+check('lag > 2.2' not in asel and '_launch_action' in asel,
+      'ModActionSelect: без soft-nack, путь через _launch_action')
 mks = src[src.index('class MuteKindSelect'):src.index('class MuteKindView')]
-check('lag > 2.2' in mks and 'Бот был занят' in mks,
-      'MuteKindSelect: soft-nack при lag>2.2')
+check('lag > 2.2' not in mks and '_offer_mod_form' in mks
+      and '_ack_or_busy' not in mks,
+      'MuteKindSelect: send_modal без defer/nack')
+check('_PUSH_TO = 5.0' in src or '_PUSH_TO=5.0' in src,
+      'panel push timeout ≥5s при lag цикла')
 
 # Wrong-message / known_target guards
 push_fn = src[src.index('async def _push_panel_view'):src.index('async def _silent_reset_panel')]

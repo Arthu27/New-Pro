@@ -6,10 +6,10 @@
   <title>{% block title %}Панель{% endblock %} · Hakumo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=20">
+  <link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}?v=23">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <meta name="theme-color" content="#07080a">
-  <style>html,body{background:#07080a;color:#f2f4f8}</style>
+  <style>html,body{background:#07080a;color:#f2f4f8}.main.is-soft-loading{opacity:.55;pointer-events:none;transition:opacity .12s ease}</style>
 </head>
 <body>
 {% if hide_shell %}
@@ -124,6 +124,7 @@
   });
 })();
 </script>
+<script src="{{ url_for('static', filename='panel-soft.js') }}?v=2" defer></script>
 {% endif %}
 </body>
 </html>

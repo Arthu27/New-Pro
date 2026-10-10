@@ -66,6 +66,19 @@ check(board['summary']['actions'] == 8, f"actions sum ({board['summary']})")
 check(board['summary']['messages'] == 16, f"messages ({board['summary']})")
 # ModOne: 2*12 + 3 + 60мин = 87; HelpOne: 5*12 + 12 + 10 = 82 → топ общий = Mod
 check(board['podium'][0]['id'] == '2', f"overall #1 by score ({board['podium'][0]})")
+places = [r['rank'] for r in board['rows']]
+check(places == list(range(1, len(places) + 1)),
+      f'sequential places after branches ({places})')
+# снятый/ушедший с мерами в mod_activity не должен попасть в рейтинг
+ghost_mods = mod_rows + [
+    {'id': '99', 'name': 'Ghost', 'total': 99, 'warns': 9,
+     'mutes': 0, 'kicks': 0, 'bans': 0},
+]
+with mock.patch.object(sb, 'voice_window_map', return_value=voice_map), \
+     mock.patch.object(sb, 'messages_window_map', return_value=msg_map):
+    board_g = build_staff_board(
+        guild_id=1, days=7, people=people, mod_rows=ghost_mods)
+check('99' not in {r['id'] for r in board_g['rows']}, 'no ghost from mod_activity')
 check(any(r['key'] == 'helper' for r in board['role_tops']), 'role top helper')
 helper_top = next(r for r in board['role_tops'] if r['key'] == 'helper')
 check(helper_top['top'][0]['name'] == 'HelpOne', 'helper #1 among helpers')
@@ -79,19 +92,53 @@ print('== templates / css ==')
 act = (ROOT / 'web' / 'templates' / '_activity.html').read_text(encoding='utf-8')
 css = (ROOT / 'web' / 'static' / 'panel.css').read_text(encoding='utf-8')
 staff = (ROOT / 'web' / 'templates' / 'staff.html').read_text(encoding='utf-8')
-check('act-podium' in act and 'act-kpi' in act, 'activity template board')
-check('act-roles__chip' in act, 'role filter chips')
-check('act-board' in css and 'act-row' in css, 'activity CSS')
+check('act-kpi' in act and 'act-branch-row' in act, 'activity template board')
+check('act-menus' in act, 'branch menus')
+check('act-table--mini' in act, 'mini branch tables')
+check('act-board' in css and 'act-branch-row' in css, 'activity CSS')
 check("{% include '_activity.html' %}" in staff, 'staff includes board')
+check('people-branches' not in staff, 'no duplicate people cards under board')
 check('staff_board' in (ROOT / 'web' / 'app.py').read_text(encoding='utf-8'),
       'app wires staff_board')
+
+print('== primary branch / no duplicates ==')
+from services.staff_board import primary_org_branch, person_org_branches
+
+multi = {
+    'id': '7', 'name': 'Multi', 'role_tag': 'curator', 'role': 'curator',
+    'role_ids': [
+        948969471916249119,   # helper grant
+        803553848396349510,   # moderator grant
+    ],
+}
+brs = person_org_branches(multi)
+prim = primary_org_branch(multi)
+check(len(brs) >= 2, f'multi grants detected ({brs})')
+check(prim == 'moderator', f'primary prefers first BRANCH_GROUPS ({prim})')
+
+dup_people = people + [
+    {'id': '1', 'name': 'HelpOne DUP', 'handle': 'h1x', 'avatar': '',
+     'role': 'helper', 'role_tag': 'helper', 'role_label': 'Helper',
+     'branch': 'helper'},
+]
+with mock.patch.object(sb, 'voice_window_map', return_value=voice_map), \
+     mock.patch.object(sb, 'messages_window_map', return_value=msg_map):
+    board_d = build_staff_board(
+        guild_id=1, days=7, people=dup_people, mod_rows=mod_rows,
+        include_zero=True)
+ids_all = [r['id'] for b in board_d['branches'] for r in b['rows']]
+check(len(ids_all) == len(set(ids_all)), f'no cross-branch id dupes ({ids_all})')
+check(ids_all.count('1') == 1, 'duplicate input id collapsed to one row')
+# без ветки и без ранга — не падаем в Helper
+ghost = {'id': '55', 'name': 'NoBranch', 'role': '', 'role_tag': '', 'branch': None}
+check(primary_org_branch(ghost) is None, 'no branch → None (not Helper)')
 
 print('== modpanel speed markers ==')
 mod = (ROOT / 'cogs' / 'moderation.py').read_text(encoding='utf-8')
 check('cache_only=True' in mod, 'banner cache_only on open')
 check('for_action=' in mod and "for_action='mute_chat'" in mod,
       'selective mute clear')
-check('multi-fix-v19' in mod, 'build bump v19')
+check('multi-fix-v20' in mod, 'build bump v20')
 check('mute_kinds=' in mod and 'unmute_kinds=' in mod, 'kinds precomputed off UI thread')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

@@ -1,172 +1,216 @@
+<style>
+  .act-branch-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .act-branch, .act-table, .act-table__row, .act-table__who { overflow: hidden; min-width: 0; max-width: 100%; }
+  .act-branch img, .act-table--mini img, .act-table--mini .act-ava {
+    display: none !important; width: 0 !important; height: 0 !important; max-width: 0 !important;
+  }
+  .act-table img.act-ava {
+    display: block !important; width: 22px !important; height: 22px !important;
+    max-width: 22px !important; max-height: 22px !important; object-fit: cover; border-radius: 50%;
+  }
+</style>
 <section class="panel rise act-board" style="margin-top:12px">
+  {% set board = staff_board or {} %}
+  {% set summary = board.summary or {} %}
+  {% set summary_range = summary.range_label or '' %}
+  {% if not summary_range and span_meta is defined and span_meta %}
+    {% set summary_range = span_meta.range_label or '' %}
+  {% endif %}
+  {% set rows = board.rows or [] %}
+  {% set podium = board.podium or [] %}
+  {% set branches = board.branches or [] %}
+  {% set role_tops = board.role_tops or [] %}
+
+  {% if branch_filter and board.by_branch %}
+    {% set rows = board.by_branch.get(branch_filter, []) %}
+  {% elif role_filter and board.by_role %}
+    {% set rows = board.by_role.get(role_filter, []) %}
+  {% endif %}
+
   <div class="act-board__head">
     <div>
-      <h2>Активность staff</h2>
+      <h2>Активность по веткам</h2>
       <p class="dim act-board__sub">
         Меры · чат · войс ·
-        {% if span == 'month' %}месяц{% else %}неделя{% endif %}
-        · топы по ролям
+        {% if span == 'day' %}сегодня
+        {% elif span == 'month' %}месяц
+        {% else %}неделя до воскресенья{% endif %}
+        {% if summary_range %} · {{ summary_range }}{% endif %}
       </p>
     </div>
     <span class="seg">
-      <a href="{% if role_filter %}{{ url_for(request.endpoint, span='week', role=role_filter) }}{% else %}{{ url_for(request.endpoint, span='week') }}{% endif %}"
-         class="{% if span != 'month' %}on{% endif %}"
-         {% if span != 'month' %}aria-current="true"{% endif %}>Неделя</a>
-      <a href="{% if role_filter %}{{ url_for(request.endpoint, span='month', role=role_filter) }}{% else %}{{ url_for(request.endpoint, span='month') }}{% endif %}"
-         class="{% if span == 'month' %}on{% endif %}"
-         {% if span == 'month' %}aria-current="true"{% endif %}>Месяц</a>
+      {% if branch_filter %}
+      <a href="{{ url_for(request.endpoint, span='day', branch=branch_filter) }}" class="{% if span == 'day' %}on{% endif %}" {% if span == 'day' %}aria-current="true"{% endif %}>День</a>
+      <a href="{{ url_for(request.endpoint, span='week', branch=branch_filter) }}" class="{% if span == 'week' %}on{% endif %}" {% if span == 'week' %}aria-current="true"{% endif %}>Неделя</a>
+      <a href="{{ url_for(request.endpoint, span='month', branch=branch_filter) }}" class="{% if span == 'month' %}on{% endif %}" {% if span == 'month' %}aria-current="true"{% endif %}>Месяц</a>
+      {% else %}
+      <a href="{{ url_for(request.endpoint, span='day') }}" class="{% if span == 'day' %}on{% endif %}" {% if span == 'day' %}aria-current="true"{% endif %}>День</a>
+      <a href="{{ url_for(request.endpoint, span='week') }}" class="{% if span == 'week' %}on{% endif %}" {% if span == 'week' %}aria-current="true"{% endif %}>Неделя</a>
+      <a href="{{ url_for(request.endpoint, span='month') }}" class="{% if span == 'month' %}on{% endif %}" {% if span == 'month' %}aria-current="true"{% endif %}>Месяц</a>
+      {% endif %}
     </span>
   </div>
 
-  {% set board = staff_board or {} %}
-  {% set summary = board.summary or {} %}
-  {% set rows = board.rows or [] %}
-  {% set podium = board.podium or [] %}
-  {% set role_tops = board.role_tops or [] %}
-
-  {% if role_filter %}
-    {% set rows = board.by_role.get(role_filter, []) if board.by_role else [] %}
+  {% if branch_filter or role_filter %}
+    {% set kpi_actions = rows|sum(attribute='actions') %}
+    {% set kpi_messages = rows|sum(attribute='messages') %}
+    {% set kpi_voice_s = rows|sum(attribute='voice_s') %}
+    {% set kpi_active = rows|selectattr('score', 'gt', 0)|list|length %}
+    {% set kpi_total = rows|length %}
+    {% set kpi_voice = summary.voice %}
+  {% else %}
+    {% set kpi_actions = summary.actions or 0 %}
+    {% set kpi_messages = summary.messages or 0 %}
+    {% set kpi_voice_s = summary.voice_s or 0 %}
+    {% set kpi_active = summary.staff_active or 0 %}
+    {% set kpi_total = summary.staff_total or 0 %}
+    {% set kpi_voice = summary.voice or '0 мин' %}
   {% endif %}
 
   <div class="act-kpi">
     <div class="act-kpi__item act-kpi__item--act">
       <span class="act-kpi__label">Меры</span>
-      <b class="act-kpi__val">{{ summary.actions or 0 }}</b>
+      <b class="act-kpi__val">{{ kpi_actions }}</b>
     </div>
     <div class="act-kpi__item act-kpi__item--msg">
       <span class="act-kpi__label">Сообщения</span>
-      <b class="act-kpi__val">{{ summary.messages or 0 }}</b>
+      <b class="act-kpi__val">{{ kpi_messages }}</b>
     </div>
     <div class="act-kpi__item act-kpi__item--voice">
       <span class="act-kpi__label">Войс</span>
-      <b class="act-kpi__val">{{ summary.voice or '0 мин' }}</b>
+      <b class="act-kpi__val">
+        {% if branch_filter or role_filter %}
+          {% if kpi_voice_s >= 3600 %}{{ kpi_voice_s // 3600 }} ч {{ (kpi_voice_s % 3600) // 60 }} мин
+          {% elif kpi_voice_s > 0 %}{{ kpi_voice_s // 60 }} мин
+          {% else %}0 мин{% endif %}
+        {% else %}{{ kpi_voice }}{% endif %}
+      </b>
     </div>
     <div class="act-kpi__item act-kpi__item--people">
       <span class="act-kpi__label">В деле</span>
-      <b class="act-kpi__val">{{ summary.staff_active or 0 }}<small>/{{ summary.staff_total or 0 }}</small></b>
+      <b class="act-kpi__val">{{ kpi_active }}<small>/{{ kpi_total }}</small></b>
     </div>
   </div>
 
-  {% if role_tops %}
-  <div class="act-roles">
-    <a class="act-roles__chip {% if not role_filter %}on{% endif %}"
-       href="{{ url_for(request.endpoint, span=span) }}">Все</a>
-    {% for rt in role_tops %}
-    <a class="act-roles__chip tag-{{ rt.key }} {% if role_filter == rt.key %}on{% endif %}"
-       href="{{ url_for(request.endpoint, span=span, role=rt.key) }}">
-      {{ rt.title }} <span>{{ rt.count }}</span>
+  {% if branches %}
+  <nav class="act-menus" aria-label="Ветки">
+    <a class="act-menus__item {% if not branch_filter and not role_filter %}on{% endif %}"
+       href="{{ url_for(request.endpoint, span=span) }}">
+      <span class="act-menus__title">Все</span>
+      <span class="act-menus__meta">ветки</span>
+    </a>
+    {% for br in branches %}
+    <a class="act-menus__item branch-{{ br.key }} {% if branch_filter == br.key %}on{% endif %}"
+       href="{{ url_for(request.endpoint, span=span, branch=br.key) }}">
+      <span class="act-menus__title">{{ br.title }}</span>
+      <span class="act-menus__meta">{{ br.active }}/{{ br.count }}</span>
     </a>
     {% endfor %}
-  </div>
+  </nav>
+  {% elif role_tops %}
+  <nav class="act-menus" aria-label="Роли">
+    <a class="act-menus__item {% if not role_filter %}on{% endif %}"
+       href="{{ url_for(request.endpoint, span=span) }}">
+      <span class="act-menus__title">Все</span>
+      <span class="act-menus__meta">роли</span>
+    </a>
+    {% for rt in role_tops %}
+    <a class="act-menus__item tag-{{ rt.key }} {% if role_filter == rt.key %}on{% endif %}"
+       href="{{ url_for(request.endpoint, span=span, role=rt.key) }}">
+      <span class="act-menus__title">{{ rt.title }}</span>
+      <span class="act-menus__meta">{{ rt.count }}</span>
+    </a>
+    {% endfor %}
+  </nav>
   {% endif %}
 
-  {% if not rows %}
+  {% if not rows and not branches %}
   <div class="empty">За этот срок активности нет</div>
   {% else %}
 
-  {% if not role_filter and podium|length >= 1 %}
-  <div class="act-podium {% if podium|length >= 3 %}act-podium--3{% endif %}">
-    {% if podium|length >= 2 %}
-    {% set p = podium[1] %}
-    <a class="act-podium__card place-2" href="{{ url_for('member', q=p.id) }}">
-      <div class="act-podium__medal">2</div>
-      {% if p.avatar %}<img src="{{ p.avatar }}" alt="">{% endif %}
-      <div class="act-podium__who">
-        <strong>{{ p.name }}</strong>
-        <span class="tag tag-{{ p.role_tag }}">{{ p.role_label }}</span>
-      </div>
-      <div class="act-podium__stats">
-        <span><b>{{ p.actions }}</b> мер</span>
-        <span><b>{{ p.messages }}</b> чат</span>
-        <span><b>{{ p.voice }}</b></span>
-      </div>
-      <i class="act-bar" style="--w: {{ p.bar }}%"></i>
-    </a>
-    {% endif %}
-
-    {% set p = podium[0] %}
-    <a class="act-podium__card place-1" href="{{ url_for('member', q=p.id) }}">
-      <div class="act-podium__medal">1</div>
-      {% if p.avatar %}<img src="{{ p.avatar }}" alt="">{% endif %}
-      <div class="act-podium__who">
-        <strong>{{ p.name }}</strong>
-        <span class="tag tag-{{ p.role_tag }}">{{ p.role_label }}</span>
-      </div>
-      <div class="act-podium__stats">
-        <span><b>{{ p.actions }}</b> мер</span>
-        <span><b>{{ p.messages }}</b> чат</span>
-        <span><b>{{ p.voice }}</b></span>
-      </div>
-      <i class="act-bar" style="--w: {{ p.bar }}%"></i>
-    </a>
-
-    {% if podium|length >= 3 %}
-    {% set p = podium[2] %}
-    <a class="act-podium__card place-3" href="{{ url_for('member', q=p.id) }}">
-      <div class="act-podium__medal">3</div>
-      {% if p.avatar %}<img src="{{ p.avatar }}" alt="">{% endif %}
-      <div class="act-podium__who">
-        <strong>{{ p.name }}</strong>
-        <span class="tag tag-{{ p.role_tag }}">{{ p.role_label }}</span>
-      </div>
-      <div class="act-podium__stats">
-        <span><b>{{ p.actions }}</b> мер</span>
-        <span><b>{{ p.messages }}</b> чат</span>
-        <span><b>{{ p.voice }}</b></span>
-      </div>
-      <i class="act-bar" style="--w: {{ p.bar }}%"></i>
-    </a>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  {% if not role_filter and role_tops %}
-  <div class="act-section-label">Топы по ролям</div>
-  <div class="act-role-grids">
-    {% for rt in role_tops %}
-    <div class="act-role-block role-{{ rt.key }}">
-      <div class="act-role-block__head">
-        <div class="act-role-block__title">
-          <h3>{{ rt.title }}</h3>
-          <span class="tag tag-{{ rt.key }}">топ</span>
+  {% if not branch_filter and not role_filter and branches %}
+  <div class="act-section-label">Ветки · слева направо</div>
+  <div class="act-branch-row">
+    {% for br in branches %}
+    <section class="act-branch branch-{{ br.key }}">
+      <div class="act-branch__head">
+        <div class="act-branch__title">
+          <h3>{{ br.title }}</h3>
+          <span class="act-branch__count">{{ br.active }}/{{ br.count }}</span>
         </div>
-        <span class="dim">{{ rt.actions }} мер · {{ rt.messages }} чат · {{ rt.voice }}</span>
+        <a class="act-branch__link" href="{{ url_for(request.endpoint, span=span, branch=br.key) }}">→</a>
       </div>
-      <ol class="act-mini">
-        {% for t in rt.top %}
-        <li>
-          <a href="{{ url_for('member', q=t.id) }}">
-            <span class="act-mini__n">{{ loop.index }}</span>
-            {% if t.avatar %}<img class="act-mini__ava" src="{{ t.avatar }}" alt="">{% endif %}
-            <span class="act-mini__name">{{ t.name }}</span>
-            <span class="act-mini__meta">{{ t.actions }} · {{ t.messages }} · {{ t.voice }}</span>
+      <div class="act-branch__kpi">
+        <span><b>{{ br.actions }}</b></span>
+        <span><b>{{ br.messages }}</b></span>
+        <span><b>{{ br.voice }}</b></span>
+      </div>
+      {% if br.rows %}
+      <div class="act-table act-table--mini">
+        <div class="act-table__head" aria-hidden="true">
+          <span>#</span>
+          <span>Кто</span>
+          <span>Роль</span>
+          <span>М</span>
+          <span>Чат</span>
+          <span>Войс</span>
+        </div>
+        <div class="act-table__body">
+          {% for t in br.rows %}
+          <a class="act-table__row {% if t.score <= 0 %}is-idle{% endif %}" href="{{ url_for('member', q=t.id) }}">
+            <span class="act-table__n">{{ loop.index }}</span>
+            <span class="act-table__who"><b title="{{ t.name }}">{{ t.name }}</b></span>
+            <span class="tag tag-{{ t.role_tag }}" title="{{ t.role_label }}">{{ t.role_label }}</span>
+            <span class="act-table__num" title="Меры">{{ t.actions }}</span>
+            <span class="act-table__num" title="Чат">{{ t.messages }}</span>
+            <span class="act-table__num" title="Войс">{{ t.voice }}</span>
           </a>
-        </li>
-        {% endfor %}
-      </ol>
-    </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="empty" style="padding:10px">Пусто</div>
+      {% endif %}
+    </section>
     {% endfor %}
   </div>
-  {% endif %}
-
-  <div class="act-section-label">{% if role_filter %}Рейтинг · {{ role_filter }}{% else %}Общий рейтинг{% endif %}</div>
-  <div class="act-list">
+  {% elif branch_filter or role_filter or not branches %}
+  <div class="act-section-label">
+    {% if branch_filter %}
+      {% for br in branches if br.key == branch_filter %}{{ br.title }} · полный список{% endfor %}
+    {% elif role_filter %}Рейтинг · {{ role_filter }}
+    {% else %}Общий рейтинг{% endif %}
+  </div>
+  {% if rows %}
+  <div class="act-table">
+    <div class="act-table__head" aria-hidden="true">
+      <span>#</span>
+      <span>Кто</span>
+      <span>Роль</span>
+      <span>Меры</span>
+      <span>Чат</span>
+      <span>Войс</span>
+    </div>
     {% for a in rows %}
-    <a class="act-row" href="{% if a.id %}{{ url_for('member', q=a.id) }}{% else %}#{% endif %}">
-      <span class="act-row__rank">{{ a.rank if not role_filter else loop.index }}</span>
-      <span class="act-row__who">
-        {% if a.avatar %}<img src="{{ a.avatar }}" alt="">{% endif %}
-        <span>
-          <b>{{ a.name }}</b>
-          <small class="tag tag-{{ a.role_tag }}">{{ a.role_label }}</small>
-        </span>
+    <a class="act-table__row {% if a.score <= 0 %}is-idle{% endif %}" href="{% if a.id %}{{ url_for('member', q=a.id) }}{% else %}#{% endif %}">
+      <span class="act-table__n">{{ loop.index }}</span>
+      <span class="act-table__who">
+        {% if a.avatar %}
+        <img class="act-ava" src="{{ a.avatar|replace('size=1024','size=64')|replace('size=512','size=64')|replace('size=256','size=64') }}" alt="" width="28" height="28" loading="lazy">
+        {% endif %}
+        <b>{{ a.name }}</b>
       </span>
-      <span class="act-row__num" title="Меры"><b>{{ a.actions }}</b><small>мер</small></span>
-      <span class="act-row__num" title="Сообщения"><b>{{ a.messages }}</b><small>чат</small></span>
-      <span class="act-row__num" title="Войс"><b>{{ a.voice }}</b><small>войс</small></span>
+      <span class="tag tag-{{ a.role_tag }}">{{ a.role_label }}</span>
+      <span class="act-table__num">{{ a.actions }}</span>
+      <span class="act-table__num">{{ a.messages }}</span>
+      <span class="act-table__num">{{ a.voice }}</span>
       <i class="act-bar" style="--w: {{ a.bar }}%"></i>
     </a>
     {% endfor %}
   </div>
+  {% else %}
+  <div class="empty">В этой ветке за срок активности нет</div>
+  {% endif %}
+  {% endif %}
   {% endif %}
 </section>
