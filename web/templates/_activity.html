@@ -82,27 +82,35 @@
   </div>
 
   {% if branches %}
-  <div class="act-roles act-roles--branches">
-    <a class="act-roles__chip {% if not branch_filter and not role_filter %}on{% endif %}"
-       href="{{ url_for(request.endpoint, span=span) }}">Все ветки</a>
+  <nav class="act-menus" aria-label="Ветки">
+    <a class="act-menus__item {% if not branch_filter and not role_filter %}on{% endif %}"
+       href="{{ url_for(request.endpoint, span=span) }}">
+      <span class="act-menus__title">Все</span>
+      <span class="act-menus__meta">ветки</span>
+    </a>
     {% for br in branches %}
-    <a class="act-roles__chip branch-{{ br.key }} {% if branch_filter == br.key %}on{% endif %}"
+    <a class="act-menus__item branch-{{ br.key }} {% if branch_filter == br.key %}on{% endif %}"
        href="{{ url_for(request.endpoint, span=span, branch=br.key) }}">
-      {{ br.title }} <span>{{ br.active }}/{{ br.count }}</span>
+      <span class="act-menus__title">{{ br.title }}</span>
+      <span class="act-menus__meta">{{ br.active }}/{{ br.count }}</span>
     </a>
     {% endfor %}
-  </div>
+  </nav>
   {% elif role_tops %}
-  <div class="act-roles">
-    <a class="act-roles__chip {% if not role_filter %}on{% endif %}"
-       href="{{ url_for(request.endpoint, span=span) }}">Все</a>
+  <nav class="act-menus" aria-label="Роли">
+    <a class="act-menus__item {% if not role_filter %}on{% endif %}"
+       href="{{ url_for(request.endpoint, span=span) }}">
+      <span class="act-menus__title">Все</span>
+      <span class="act-menus__meta">роли</span>
+    </a>
     {% for rt in role_tops %}
-    <a class="act-roles__chip tag-{{ rt.key }} {% if role_filter == rt.key %}on{% endif %}"
+    <a class="act-menus__item tag-{{ rt.key }} {% if role_filter == rt.key %}on{% endif %}"
        href="{{ url_for(request.endpoint, span=span, role=rt.key) }}">
-      {{ rt.title }} <span>{{ rt.count }}</span>
+      <span class="act-menus__title">{{ rt.title }}</span>
+      <span class="act-menus__meta">{{ rt.count }}</span>
     </a>
     {% endfor %}
-  </div>
+  </nav>
   {% endif %}
 
   {% if not rows and not branches %}
@@ -166,16 +174,16 @@
   {% endif %}
 
   {% if not branch_filter and not role_filter and branches %}
-  <div class="act-section-label">Ветки · слежка</div>
+  <div class="act-section-label">Ветки · таблицы</div>
   <div class="act-branch-grids">
     {% for br in branches %}
     <section class="act-branch branch-{{ br.key }}">
       <div class="act-branch__head">
         <div class="act-branch__title">
           <h3>{{ br.title }}</h3>
-          <span class="tag">{{ br.active }}/{{ br.count }}</span>
+          <span class="act-branch__count">{{ br.active }}/{{ br.count }}</span>
         </div>
-        <a class="act-branch__link dim" href="{{ url_for(request.endpoint, span=span, branch=br.key) }}">открыть →</a>
+        <a class="act-branch__link" href="{{ url_for(request.endpoint, span=span, branch=br.key) }}">вся ветка →</a>
       </div>
       <div class="act-branch__kpi">
         <span><b>{{ br.actions }}</b> мер</span>
@@ -183,21 +191,31 @@
         <span><b>{{ br.voice }}</b></span>
       </div>
       {% if br.rows %}
-      <ol class="act-mini">
+      <div class="act-table act-table--compact">
+        <div class="act-table__head" aria-hidden="true">
+          <span>#</span>
+          <span>Кто</span>
+          <span>Роль</span>
+          <span>Меры</span>
+          <span>Чат</span>
+          <span>Войс</span>
+        </div>
         {% for t in br.rows[:8] %}
-        <li class="{% if t.score <= 0 %}is-idle{% endif %}">
-          <a href="{{ url_for('member', q=t.id) }}">
-            <span class="act-mini__n">{{ loop.index }}</span>
-            {% if t.avatar %}<img class="act-mini__ava" src="{{ t.avatar }}" alt="">{% endif %}
-            <span class="act-mini__name">{{ t.name }}</span>
-            <span class="tag tag-{{ t.role_tag }}">{{ t.role_label }}</span>
-            <span class="act-mini__meta">{{ t.actions }} · {{ t.messages }} · {{ t.voice }}</span>
-          </a>
-        </li>
+        <a class="act-table__row {% if t.score <= 0 %}is-idle{% endif %}" href="{{ url_for('member', q=t.id) }}">
+          <span class="act-table__n">{{ loop.index }}</span>
+          <span class="act-table__who">
+            {% if t.avatar %}<img src="{{ t.avatar }}" alt="">{% endif %}
+            <b>{{ t.name }}</b>
+          </span>
+          <span class="tag tag-{{ t.role_tag }}">{{ t.role_label }}</span>
+          <span class="act-table__num" title="Меры">{{ t.actions }}</span>
+          <span class="act-table__num" title="Чат">{{ t.messages }}</span>
+          <span class="act-table__num" title="Войс">{{ t.voice }}</span>
+        </a>
         {% endfor %}
-      </ol>
+      </div>
       {% if br.rows|length > 8 %}
-      <div class="act-branch__more dim">ещё {{ br.rows|length - 8 }} → открой ветку</div>
+      <a class="act-branch__more" href="{{ url_for(request.endpoint, span=span, branch=br.key) }}">ещё {{ br.rows|length - 8 }} → открыть ветку</a>
       {% endif %}
       {% else %}
       <div class="empty" style="padding:12px">Пока никого</div>
@@ -207,6 +225,7 @@
   </div>
   {% endif %}
 
+  {% if branch_filter or role_filter or not branches %}
   <div class="act-section-label">
     {% if branch_filter %}
       {% for br in branches if br.key == branch_filter %}{{ br.title }} · полный список{% endfor %}
@@ -214,26 +233,59 @@
     {% else %}Общий рейтинг{% endif %}
   </div>
   {% if rows %}
-  <div class="act-list">
+  <div class="act-table">
+    <div class="act-table__head" aria-hidden="true">
+      <span>#</span>
+      <span>Кто</span>
+      <span>Роль</span>
+      <span>Меры</span>
+      <span>Чат</span>
+      <span>Войс</span>
+    </div>
     {% for a in rows %}
-    <a class="act-row {% if a.score <= 0 %}is-idle{% endif %}" href="{% if a.id %}{{ url_for('member', q=a.id) }}{% else %}#{% endif %}">
-      <span class="act-row__rank" title="Место в рейтинге">{{ loop.index }}</span>
-      <span class="act-row__who">
+    <a class="act-table__row {% if a.score <= 0 %}is-idle{% endif %}" href="{% if a.id %}{{ url_for('member', q=a.id) }}{% else %}#{% endif %}">
+      <span class="act-table__n">{{ loop.index }}</span>
+      <span class="act-table__who">
         {% if a.avatar %}<img src="{{ a.avatar }}" alt="">{% endif %}
-        <span>
-          <b>{{ a.name }}</b>
-          <small class="tag tag-{{ a.role_tag }}">{{ a.role_label }}</small>
-        </span>
+        <b>{{ a.name }}</b>
       </span>
-      <span class="act-row__num" title="Меры"><b>{{ a.actions }}</b><small>мер</small></span>
-      <span class="act-row__num" title="Сообщения"><b>{{ a.messages }}</b><small>чат</small></span>
-      <span class="act-row__num" title="Войс"><b>{{ a.voice }}</b><small>войс</small></span>
+      <span class="tag tag-{{ a.role_tag }}">{{ a.role_label }}</span>
+      <span class="act-table__num">{{ a.actions }}</span>
+      <span class="act-table__num">{{ a.messages }}</span>
+      <span class="act-table__num">{{ a.voice }}</span>
       <i class="act-bar" style="--w: {{ a.bar }}%"></i>
     </a>
     {% endfor %}
   </div>
   {% else %}
   <div class="empty">В этой ветке за срок активности нет</div>
+  {% endif %}
+  {% elif not branch_filter and not role_filter and rows %}
+  <div class="act-section-label">Общий рейтинг</div>
+  <div class="act-table">
+    <div class="act-table__head" aria-hidden="true">
+      <span>#</span>
+      <span>Кто</span>
+      <span>Роль</span>
+      <span>Меры</span>
+      <span>Чат</span>
+      <span>Войс</span>
+    </div>
+    {% for a in rows[:12] %}
+    <a class="act-table__row {% if a.score <= 0 %}is-idle{% endif %}" href="{% if a.id %}{{ url_for('member', q=a.id) }}{% else %}#{% endif %}">
+      <span class="act-table__n">{{ loop.index }}</span>
+      <span class="act-table__who">
+        {% if a.avatar %}<img src="{{ a.avatar }}" alt="">{% endif %}
+        <b>{{ a.name }}</b>
+      </span>
+      <span class="tag tag-{{ a.role_tag }}">{{ a.role_label }}</span>
+      <span class="act-table__num">{{ a.actions }}</span>
+      <span class="act-table__num">{{ a.messages }}</span>
+      <span class="act-table__num">{{ a.voice }}</span>
+      <i class="act-bar" style="--w: {{ a.bar }}%"></i>
+    </a>
+    {% endfor %}
+  </div>
   {% endif %}
   {% endif %}
 </section>
