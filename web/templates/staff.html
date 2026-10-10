@@ -2,7 +2,10 @@
 {% block title %}Staff{% endblock %}
 {% block heading %}Staff{% endblock %}
 {% block body %}
+{% set board = staff_board or {} %}
+{% set summary = board.summary or {} %}
 
+<<<<<<< HEAD
 <p class="lead">Недельный отчёт: меры, активность, согласия. Ветки рядом для удобства.</p>
 
 {% if error %}<div class="flash err" style="margin:12px 0">{{ error }}</div>{% endif %}
@@ -40,6 +43,99 @@
       if (!j.ok) { 
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Нет доступа</td></tr>'; 
         return; 
+=======
+<div class="staff-page">
+  <p class="lead">Недельный отчёт: меры · чат · войс. День / неделя / месяц — сверху у рейтинга.</p>
+  {% if error %}<div class="flash err" style="margin:12px 0">{{ error }}</div>{% endif %}
+
+  <section class="staff-kpi panel rise">
+    <div class="staff-kpi__head">
+      <div>
+        <span class="staff-kpi__eyebrow">команда</span>
+        <h2 class="staff-kpi__title">Сводка за {% if span == 'day' %}день{% elif span == 'month' %}месяц{% else %}неделю{% endif %}</h2>
+      </div>
+      {% if summary.range_label %}
+      <span class="staff-kpi__range">{{ summary.range_label }}</span>
+      {% endif %}
+    </div>
+    <div class="staff-kpi__grid">
+      <article class="skpi skpi--act">
+        <span class="skpi__label">Меры</span>
+        <b class="skpi__val">{{ summary.actions or 0 }}</b>
+        <span class="skpi__hint">варны · муты · баны</span>
+      </article>
+      <article class="skpi skpi--msg">
+        <span class="skpi__label">Чат</span>
+        <b class="skpi__val">{{ summary.messages or 0 }}</b>
+        <span class="skpi__hint">сообщения staff</span>
+      </article>
+      <article class="skpi skpi--voice">
+        <span class="skpi__label">Войс</span>
+        <b class="skpi__val">{{ summary.voice or '0 мин' }}</b>
+        <span class="skpi__hint">время в голосовых</span>
+      </article>
+      <article class="skpi skpi--people">
+        <span class="skpi__label">В деле</span>
+        <b class="skpi__val">{{ summary.staff_active or 0 }}<small>/{{ summary.staff_total or 0 }}</small></b>
+        <span class="skpi__hint">активные / всего</span>
+      </article>
+    </div>
+  </section>
+
+  {% include '_activity.html' %}
+
+  <section class="panel rise staff-panel" id="staff-consents">
+    <div class="staff-panel__head">
+      <h2>Согласия <span class="count" id="consents-count">—</span></h2>
+    </div>
+    <p class="dim staff-panel__desc">Переводы между ветками: pending / accepted / declined</p>
+    <div class="feed staff-feed" id="consents-list"><div class="empty">Загрузка…</div></div>
+    <script>
+    (async () => {
+      const box = document.getElementById('consents-list');
+      const cnt = document.getElementById('consents-count');
+      try {
+        const r = await fetch('/api/staff-manager/consents');
+        const j = await r.json();
+        if (!j.ok) {
+          box.innerHTML = '<div class="empty">Нет доступа / выкл</div>';
+          return;
+        }
+        const rows = j.consents || [];
+        cnt.textContent = rows.length;
+        if (!rows.length) {
+          box.innerHTML = '<div class="empty">Нет согласий</div>';
+          return;
+        }
+        box.innerHTML = rows.map(c => {
+          const st = c.status || '';
+          const cancel = st === 'pending'
+            ? `<button type="button" data-cid="${c.id}" class="btn btn-ghost btn-sm">Отозвать</button>` : '';
+          return `<div class="feed-row">
+            <div class="feed-act">${st || '—'}</div>
+            <div class="feed-body">
+              <strong>${c.action || ''}</strong>
+              <span class="dim">${c.from_branch || '—'} → ${c.to_branch || '—'} · ${c.to_role_key || ''}</span>
+              <span class="dim">target <code>${c.target_id}</code> · by <code>${c.initiator_id}</code></span>
+            </div>
+            <div class="feed-when">${cancel}</div>
+          </div>`;
+        }).join('');
+        box.querySelectorAll('[data-cid]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+              await fetch('/api/staff-manager/consents/' + btn.getAttribute('data-cid') + '/cancel', {method:'POST'});
+              location.reload();
+            } catch (err) {
+              btn.disabled = false;
+              btn.textContent = 'Ошибка';
+            }
+          });
+        });
+      } catch (e) {
+        box.innerHTML = '<div class="empty">Ошибка загрузки</div>';
+>>>>>>> 5b1de72c (Polish Staff page: real KPIs, soft scrollbars, cleaner cards)
       }
       const rows = j.consents || [];
       cnt.textContent = rows.length;
@@ -83,6 +179,7 @@
   </script>
 </section>
 
+<<<<<<< HEAD
 <!-- ЛЕНТА STAFF -->
 <section class="panel rise" style="margin-top:12px">
   <h2>Лента Staff <span class="count">{{ feed|length }}</span></h2>
@@ -122,4 +219,32 @@
   {% endif %}
 </section>
 
+=======
+  <section class="panel rise staff-panel">
+    <div class="staff-panel__head">
+      <h2>Лента staff <span class="count">{{ feed|length }}</span></h2>
+    </div>
+    {% if not feed %}
+      <div class="empty">Нет событий за срок</div>
+    {% else %}
+      <div class="feed staff-feed staff-feed--scroll">
+        {% for f in feed %}
+        <div class="feed-row">
+          <div class="feed-act">{{ f.action }}</div>
+          <div class="feed-body">
+            <strong>
+              {% if f.who_id %}<a href="{{ url_for('member', q=f.who_id) }}">{{ f.who }}</a>{% else %}{{ f.who }}{% endif %}
+              →
+              {% if f.target_id %}<a href="{{ url_for('member', q=f.target_id) }}">{{ f.target }}</a>{% else %}{{ f.target }}{% endif %}
+            </strong>
+            {% if f.detail %}<span class="dim">{{ f.detail }}</span>{% endif %}
+          </div>
+          <div class="feed-when">{{ f.when }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+</div>
+>>>>>>> 5b1de72c (Polish Staff page: real KPIs, soft scrollbars, cleaner cards)
 {% endblock %}

@@ -1,15 +1,13 @@
 <style>
-  .act-branch-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
-  .act-branch, .act-table, .act-table__row, .act-table__who { overflow: hidden; min-width: 0; max-width: 100%; }
   .act-branch img, .act-table--mini img, .act-table--mini .act-ava {
-    display: none !important; width: 0 !important; height: 0 !important; max-width: 0 !important;
+    display: none !important; width: 0 !important; height: 0 !important;
   }
   .act-table img.act-ava {
     display: block !important; width: 22px !important; height: 22px !important;
     max-width: 22px !important; max-height: 22px !important; object-fit: cover; border-radius: 50%;
   }
 </style>
-<section class="panel rise act-board" style="margin-top:12px">
+<section class="panel rise act-board">
   {% set board = staff_board or {} %}
   {% set summary = board.summary or {} %}
   {% set summary_range = summary.range_label or '' %}
@@ -129,7 +127,7 @@
   {% else %}
 
   {% if not branch_filter and not role_filter and branches %}
-  <div class="act-section-label">Ветки · слева направо</div>
+  <div class="act-section-label">Ветки</div>
   <div class="act-branch-row">
     {% for br in branches %}
     <section class="act-branch branch-{{ br.key }}">
@@ -141,8 +139,8 @@
         <a class="act-branch__link" href="{{ url_for(request.endpoint, span=span, branch=br.key) }}">→</a>
       </div>
       <div class="act-branch__kpi">
-        <span><b>{{ br.actions }}</b></span>
-        <span><b>{{ br.messages }}</b></span>
+        <span><b>{{ br.actions }}</b> мер</span>
+        <span><b>{{ br.messages }}</b> чат</span>
         <span><b>{{ br.voice }}</b></span>
       </div>
       {% if br.rows %}
