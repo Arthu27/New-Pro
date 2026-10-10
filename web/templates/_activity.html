@@ -1,3 +1,14 @@
+<style>
+  .act-branch-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .act-branch, .act-table, .act-table__row, .act-table__who { overflow: hidden; min-width: 0; max-width: 100%; }
+  .act-branch img, .act-table--mini img, .act-table--mini .act-ava {
+    display: none !important; width: 0 !important; height: 0 !important; max-width: 0 !important;
+  }
+  .act-table img.act-ava {
+    display: block !important; width: 22px !important; height: 22px !important;
+    max-width: 22px !important; max-height: 22px !important; object-fit: cover; border-radius: 50%;
+  }
+</style>
 <section class="panel rise act-board" style="margin-top:12px">
   {% set board = staff_board or {} %}
   {% set summary = board.summary or {} %}

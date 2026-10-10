@@ -297,6 +297,8 @@ def _secret_key():
 
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+# Шаблоны с диска на каждый запрос — иначе правка HTML на VPS не видна до рестарта.
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 try:
     from web.staff_manager_api import bp as _sm_bp
