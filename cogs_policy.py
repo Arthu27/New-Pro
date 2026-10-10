@@ -125,6 +125,7 @@ MOD_LEAN_COGS = frozenset({
     'age_verification.py',  # верификация молодых аккаунтов: карантин + анкета (заказ 31.08)
     'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
     'activity_stats.py',   # сбор активности для страницы «Аналитика» (без команд)
+    'staff_stats.py',      # /staff-stats: таблица мер/чата/войса модеров
     'selfie_role.py',      # канал селфи: фото/видео → роль (без slash-команд)
     'staff_manager.py',    # /staff: лестница ролей, изоляция веток (Components V2)
     # afk.py снят (заказ владельца: /afk убрать вообще) → RETIRED_COGS

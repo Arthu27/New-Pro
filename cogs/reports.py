@@ -1631,6 +1631,27 @@ class Reports(commands.Cog):
 
         if v['kind'] in ('mute', 'kick', 'ban'):
             _record_verdict(guild, interaction.user, v['kind'])
+            # Пишем в mod_data.json — иначе меры с разбора не видны на
+            # staff-доске / в KPI (там читают только cases + warnings).
+            try:
+                mod_cog = interaction.client.get_cog('Moderation')
+                if mod_cog is not None and hasattr(mod_cog, 'save_case'):
+                    _action = {
+                        'mute': 'timeout',
+                        'kick': 'kick',
+                        'ban': 'ban',
+                    }.get(v['kind'], v['kind'])
+                    _hours = float(v.get('hours') or 0)
+                    mod_cog.save_case(
+                        guild.id, _action,
+                        int(t['accused_id']), interaction.user.id, reason,
+                        mod_name=getattr(interaction.user, 'display_name', None),
+                        duration=int(_hours * 60) if _hours else None,
+                        user_name=(getattr(member, 'display_name', None)
+                                   if member is not None else None),
+                    )
+            except Exception as _sc:
+                _log.debug('report save_case: %s', _sc)
 
         if v['kind'] != 'none':
             RC.add_violation(guild.id, t['accused_id'], v['kind'],

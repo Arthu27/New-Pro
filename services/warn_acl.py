@@ -111,15 +111,25 @@ def _is_bot_owner(actor) -> bool:
 
 
 def _is_staff_target(guild, target) -> bool:
-    """Стафф = роль ветки набора / mapped helper+ / активный отпуск Staff Manager."""
+    """Стафф = ветка набора / role_map / панельный тир / отпуск.
+
+    Важно: owner/admin с Discord Administrator (и люди с manage_messages)
+    тоже стафф — иначе доска активности / KPI обнуляла их чат, войс и меры
+    (members_cache.is_staff=0 → выкидывались из people).
+    """
     if target is None:
         return False
     if branches_of(target):
         return True
     try:
-        from services.staff_hierarchy import best_mapped_tier, RANK
+        from services.staff_hierarchy import (
+            best_mapped_tier, target_panel_role, RANK)
         mapped = best_mapped_tier(target)
         if RANK.get(mapped, -1) >= RANK.get('helper', 1):
+            return True
+        g = guild or getattr(target, 'guild', None)
+        tier = target_panel_role(g, target)
+        if RANK.get(tier, -1) >= RANK.get('helper', 1):
             return True
     except Exception:
         pass

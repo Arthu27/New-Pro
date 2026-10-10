@@ -71,7 +71,23 @@ def collect_actions(guild_id: int) -> list:
                         acts.append((str(h['mod_id']), str(h.get('action', 'temp')), ts))
     except Exception as _ex:
         _log.debug("collect_actions(): подавлено: %s", _ex)
-    # 3) Варны из sqlite
+    # 3) Варны из warn_store (таблица warns) + легаси guild_data
+    try:
+        from services.warn_store import list_guild_warns
+        _pack = list_guild_warns(
+            int(guild_id), active_only=False, limit=5000)
+        rows = _pack[0] if isinstance(_pack, tuple) else (_pack or [])
+        for w in rows or []:
+            if not isinstance(w, dict):
+                continue
+            ts = _parse_ts(w.get('created_at') or w.get('timestamp')
+                           or w.get('created'))
+            mod_id = (w.get('mod_id') or w.get('moderator_id')
+                      or w.get('issuer_id'))
+            if ts and mod_id:
+                acts.append((str(mod_id), 'warn', ts))
+    except Exception as e:
+        log.info(f"[STAFF] не удалось прочитать warns: {e}")
     try:
         from config import Config
         conn = sqlite3.connect(Config.DB_PATH)
@@ -93,7 +109,7 @@ def collect_actions(guild_id: int) -> list:
                     if ts and mod_id:
                         acts.append((str(mod_id), 'warn', ts))
     except Exception as e:
-        log.info(f"[STAFF] не удалось прочитать sqlite: {e}")
+        log.debug("[STAFF] legacy warnings: %s", e)
     return acts
 
 

@@ -128,6 +128,13 @@ def _role_map_tiers():
             out[said] = 'staff_admin'
     except Exception as _ex:
         _log.debug('role_map_tiers staff-admin fallback: %s', _ex)
+    # Роль 「・Owner」 на боевом сервере — иначе владельцы выпадали из staff KPI
+    try:
+        owner_rid = '1551296118791479437'
+        if owner_rid not in out:
+            out[owner_rid] = 'owner'
+    except Exception as _ex:
+        _log.debug('role_map_tiers owner fallback: %s', _ex)
     return out
 
 
