@@ -257,6 +257,22 @@ def rules_for_channel() -> list[dict]:
     return items
 
 
+def extract_code(raw: str) -> str:
+    """Код правила из «1.9», «1.9 — текст» или «1.9 · ярлык — деталь»."""
+    raw = (raw or '').strip()
+    if not raw:
+        return ''
+    if is_known(raw):
+        return raw
+    token = raw.split(None, 1)[0].strip('.,;:·—–-')
+    if is_known(token):
+        return token
+    head = raw.split('—', 1)[0].strip()
+    if is_known(head):
+        return head
+    return ''
+
+
 def resolve_stored_reason(raw: str) -> str:
     """Из кода или уже готовой строки — каноничный текст дела."""
     raw = (raw or '').strip()

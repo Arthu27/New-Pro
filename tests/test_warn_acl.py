@@ -150,6 +150,16 @@ check('1.1' in MR.codes_for_action('ban')
 check('1.8' in MR.codes_for_action('warn')
       and '1.1' in MR.codes_for_action('warn'),
       'warn rules filter')
+check(MR.extract_code('1.9') == '1.9', 'extract 1.9')
+check(MR.extract_code(
+    '1.9 · Провокации / травля — написал в чат') == '1.9',
+    'extract 1.9 с ярлыком и формулировкой')
+check(MR.extract_code(MR.format_reason('1.9')) == '1.9',
+      'extract из полного текста 1.9')
+check(MR.allows(MR.extract_code(
+    '1.9 · Провокации / травля — деталь'), 'warn'),
+    '1.9 после выбора в селекте можно выдать варном')
+check(MR.extract_code('просто текст') == '', 'свободный текст — не правило')
 
 print('== 5. is_staff: Discord Administrator / owner тоже стафф ==')
 class _GP:
