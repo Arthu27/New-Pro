@@ -865,20 +865,40 @@ class Moderation (commands .Cog ):
         # (фото/видео без ссылки). Ссылка в модалке больше не нужна.
         _punish_actions =("ban","timeout","mute_chat","vmute","warn")
 
-        # Причина для наказаний/варна — только правило 1.1–1.9 (не «токс»).
+        # Причина — правило из списка, не свободный текст.
+        # Варн приходит как «1.9 · Провокации / травля — своя формулировка»:
+        # резать только по «—» нельзя, иначе код не находится и варн не выдаётся.
         if action in ('warn', 'ban', 'timeout', 'mute_chat', 'vmute'):
             try:
                 from services import mod_reasons as _MR
                 _raw_r = (reason or '').strip()
-                _code = _raw_r.split('—', 1)[0].strip()
-                _ok_code = (_MR.is_known(_code) and _MR.allows(_code, action))
-                _ok_raw = (_MR.is_known(_raw_r) and _MR.allows(_raw_r, action))
-                if not (_ok_code or _ok_raw):
-                    await _respond(interaction, embed=error_embed(
-                        'Причина — только правило 1.1–1.9 из списка, '
-                        'не свободный текст.'), ephemeral=True)
-                    return
-                reason = _MR.format_reason(_code if _ok_code else _raw_r)
+                _code = (reason_code or '').strip()
+                if action == 'warn' and _code:
+                    from services import warn_reasons as _WR
+                    _kind = reason_type if reason_type in ('member', 'staff') else 'member'
+                    _known_warn = _WR.is_known(_kind, _code)
+                    if not _known_warn:
+                        _other = 'staff' if _kind == 'member' else 'member'
+                        if _WR.is_known(_other, _code):
+                            reason_type = _other
+                            _known_warn = True
+                    if not _known_warn and not (
+                            _MR.is_known(_code) and _MR.allows(_code, 'warn')):
+                        await _respond(interaction, embed=error_embed(
+                            'Неизвестная причина варна.'), ephemeral=True)
+                        return
+                else:
+                    if not _code:
+                        _code = _MR.extract_code(_raw_r)
+                    if not (_code and _MR.is_known(_code)
+                            and _MR.allows(_code, action)):
+                        await _respond(interaction, embed=error_embed(
+                            'Причина — только правило 1.1–1.9 из списка, '
+                            'не свободный текст.'), ephemeral=True)
+                        return
+                    if not _raw_r or _raw_r == _code:
+                        reason = _MR.format_reason(_code)
+                    reason_code = reason_code or _code
             except Exception as _rx:
                 log.debug(f'[MODPANEL] reason gate: {_rx}')
 
