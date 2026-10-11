@@ -2404,6 +2404,75 @@ def welcome():
     return _render_og_landing()
 
 
+_ADMIN_TEST_BRANCHES = (
+    'Moderator', 'Helper', 'Support', 'Eventsmod',
+    'Closemod', 'Creative', 'Broadcaster',
+)
+_ADMIN_TEST_FILE = DATA / 'admin_test_responses.jsonl'
+
+
+@app.route('/forms/administration', methods=['GET', 'POST'])
+@app.route('/forms/admin-test', methods=['GET', 'POST'])
+def admin_test():
+    """Публичный тест на Administration (после устного собеседования)."""
+    form = {}
+    if request.method == 'POST':
+        form = {k: (request.form.get(k) or '').strip() for k in request.form}
+        required = (
+            'nick', 'branch', 'real_name', 'age_tz', 'has_2fa',
+            'exp_general', 'exp_roles', 'exp_servers', 'exp_left', 'tools',
+            'time_ready', 'why_us', 'score_talk', 'score_talk_why',
+            'score_stress', 'score_stress_why',
+            'sit_friend_conflict', 'sit_negativity', 'sit_age_countries',
+            'sit_bad_profile', 'sit_stream_nsfw', 'sit_casino', 'sit_minor',
+            'sit_raid', 'sit_selfharm', 'sit_dox', 'sit_bribe', 'sit_mistake',
+            'sit_disagree', 'sit_alt', 'sit_phish', 'sit_poach',
+            'conf_logs', 'conf_account',
+        )
+        missing = [k for k in required if not form.get(k)]
+        if missing:
+            return render_template(
+                'admin_test.html',
+                branches=_ADMIN_TEST_BRANCHES,
+                form=form,
+                error='Заполни все обязательные поля.',
+                ok='',
+            )
+        if form.get('branch') not in _ADMIN_TEST_BRANCHES:
+            return render_template(
+                'admin_test.html',
+                branches=_ADMIN_TEST_BRANCHES,
+                form=form,
+                error='Выбери ветку из списка.',
+                ok='',
+            )
+        row = {
+            'ts': datetime.now(timezone.utc).isoformat(),
+            'ip': (request.headers.get('X-Forwarded-For') or request.remote_addr or '')[:80],
+            **form,
+        }
+        try:
+            DATA.mkdir(parents=True, exist_ok=True)
+            with _ADMIN_TEST_FILE.open('a', encoding='utf-8') as f:
+                f.write(json.dumps(row, ensure_ascii=False) + '\n')
+        except Exception:
+            return render_template(
+                'admin_test.html',
+                branches=_ADMIN_TEST_BRANCHES,
+                form=form,
+                error='Не удалось сохранить ответ. Попробуй ещё раз.',
+                ok='',
+            )
+        return render_template('admin_test_done.html', nick=form.get('nick') or '')
+    return render_template(
+        'admin_test.html',
+        branches=_ADMIN_TEST_BRANCHES,
+        form={},
+        error='',
+        ok='',
+    )
+
+
 def _safe_next(raw: str | None) -> str:
     nxt = raw or url_for('today')
     if not isinstance(nxt, str) or not nxt.startswith('/'):

@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Тестирование на Administration · Hakumo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07080a;
+      --card: rgba(18,19,24,.92);
+      --ink: #f2f4f8;
+      --ink-2: #c3c8d4;
+      --muted: #7f8798;
+      --line: rgba(255,255,255,.08);
+      --line-2: rgba(255,255,255,.14);
+      --accent: #ff4d3d;
+      --ok: #4fd18b;
+      --info: #8fa6ff;
+      --r: 18px;
+      --font: "Manrope", system-ui, sans-serif;
+      --display: "Syne", "Manrope", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; min-height: 100%;
+      font: 15px/1.55 var(--font);
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(50vw 40vw at 85% 10%, rgba(255,255,255,.08), transparent 55%),
+        radial-gradient(40vw 30vw at 10% 90%, rgba(255,77,61,.08), transparent 55%),
+        linear-gradient(180deg, #0a0b0e, #050608);
+    }
+    .wrap {
+      width: min(760px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 64px;
+    }
+    .hero {
+      margin-bottom: 18px;
+      padding: 28px 26px;
+      border-radius: var(--r);
+      border: 1px solid var(--line-2);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.05), transparent 45%),
+        var(--card);
+      box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    }
+    .eyebrow {
+      display: inline-block;
+      font-size: .68rem; font-weight: 800; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-family: var(--display);
+      font-size: clamp(1.6rem, 4vw, 2.1rem);
+      font-weight: 800; letter-spacing: -.02em;
+    }
+    .lead { margin: 0; color: var(--ink-2); max-width: 52ch; }
+    .progress {
+      margin-top: 18px;
+      height: 6px; border-radius: 99px;
+      background: rgba(255,255,255,.06); overflow: hidden;
+    }
+    .progress > i {
+      display: block; height: 100%; width: 0%;
+      background: linear-gradient(90deg, #ff6b5a, #ffb36a);
+      border-radius: 99px; transition: width .2s ease;
+    }
+    .card {
+      margin-top: 12px;
+      padding: 20px 20px 18px;
+      border-radius: var(--r);
+      border: 1px solid var(--line);
+      background: var(--card);
+    }
+    .card h2 {
+      margin: 0 0 6px;
+      font-size: .72rem; font-weight: 800; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .card p.hint { margin: 0 0 16px; color: var(--ink-2); font-size: .9rem; }
+    .q { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .q:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+    .q label {
+      display: block; font-weight: 800; margin-bottom: 8px;
+      color: var(--ink); line-height: 1.4;
+    }
+    .q label .req { color: var(--accent); }
+    .q .n {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 1.6em; margin-right: 6px;
+      color: var(--muted); font-variant-numeric: tabular-nums;
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line-2);
+      background: rgba(0,0,0,.35);
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+      transition: border-color .15s, background .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(143,166,255,.55);
+      background: rgba(0,0,0,.45);
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .choices { display: flex; flex-direction: column; gap: 8px; }
+    .choice {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.22);
+      cursor: pointer;
+    }
+    .choice:hover { border-color: var(--line-2); background: rgba(255,255,255,.04); }
+    .choice input { width: auto; accent-color: var(--info); }
+    .row-2 {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    @media (max-width: 640px) { .row-2 { grid-template-columns: 1fr; } }
+    .actions {
+      position: sticky; bottom: 0;
+      margin-top: 18px;
+      padding: 14px 0 0;
+      background: linear-gradient(180deg, transparent, var(--bg) 30%);
+    }
+    .btn {
+      width: 100%;
+      appearance: none; border: 0; cursor: pointer;
+      padding: 15px 18px;
+      border-radius: 14px;
+      font: 800 1rem var(--font);
+      color: #fff;
+      background: linear-gradient(180deg, #ff6a57, #e23a2c);
+      box-shadow: 0 12px 30px rgba(255,77,61,.28);
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .flash {
+      margin-bottom: 12px; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid rgba(79,209,139,.35);
+      background: rgba(79,209,139,.12); color: #9ee6bd;
+      font-weight: 700;
+    }
+    .flash.err {
+      border-color: rgba(255,77,61,.35);
+      background: rgba(255,77,61,.12); color: #ffb0a6;
+    }
+    .foot {
+      margin-top: 16px; text-align: center;
+      color: var(--muted); font-size: .8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <span class="eyebrow">после устного собеседования</span>
+      <h1>Тестирование на Administration</h1>
+      <p class="lead">Ответь честно и по делу. Обязательные поля отмечены <span style="color:var(--accent)">*</span>. Можно листать страницу вниз — все блоки по порядку.</p>
+      <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+    </header>
+
+    {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+    {% if ok %}<div class="flash">{{ ok }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('admin_test') }}" id="adminTest">
+      <section class="card">
+        <h2>Старт</h2>
+        <p class="hint">Базовые данные для связи ответа с тобой.</p>
+
+        <div class="q">
+          <label><span class="n">1.</span>Укажите ваш серверный «ник» <span class="req">*</span></label>
+          <input type="text" name="nick" required maxlength="80" placeholder="Ник на сервере" value="{{ form.nick or '' }}">
+        </div>
+
+        <div class="q">
+          <label><span class="n">2.</span>К какой ветке вы относитесь? <span class="req">*</span></label>
+          <div class="choices">
+            {% for b in branches %}
+            <label class="choice">
+              <input type="radio" name="branch" value="{{ b }}" required {% if form.branch == b %}checked{% endif %}>
+              <span>{{ b }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Общие вопросы</h2>
+        <p class="hint">Администратор / Ассистент — устный блок, здесь письменно.</p>
+
+        <div class="q">
+          <label><span class="n">3.</span>Имя, возраст, часовой пояс <span class="req">*</span></label>
+          <div class="row-2">
+            <input type="text" name="real_name" required placeholder="Имя" value="{{ form.real_name or '' }}">
+            <input type="text" name="age_tz" required placeholder="Возраст · часовой пояс" value="{{ form.age_tz or '' }}">
+          </div>
+        </div>
+
+        <div class="q">
+          <label><span class="n">4.</span>Включена ли у тебя двухфакторная аутентификация? <span class="req">*</span></label>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="has_2fa" value="Да" required {% if form.has_2fa == 'Да' %}checked{% endif %}> <span>Да</span></label>
+            <label class="choice"><input type="radio" name="has_2fa" value="Нет" {% if form.has_2fa == 'Нет' %}checked{% endif %}> <span>Нет</span></label>
+          </div>
+        </div>
+
+        <div class="q">
+          <label><span class="n">5.</span>Расскажите о своём опыте на стаффе <span class="req">*</span></label>
+          <textarea name="exp_general" required placeholder="Кратко о опыте">{{ form.exp_general or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">6.</span>Кем работал и чем занимался? <span class="req">*</span></label>
+          <textarea name="exp_roles" required>{{ form.exp_roles or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">7.</span>На каких серверах ты состоял в стаффе? Сколько там было участников и как долго ты там пробыл? <span class="req">*</span></label>
+          <textarea name="exp_servers" required>{{ form.exp_servers or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">8.</span>Почему ты ушёл с прошлых серверов? Были ли наказания, снятия или конфликты с администрацией? <span class="req">*</span></label>
+          <textarea name="exp_left" required>{{ form.exp_left or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">9.</span>С какими ботами и инструментами модерации умеешь работать (логи, автомод, тикеты, мьюты, баны)? <span class="req">*</span></label>
+          <textarea name="tools" required>{{ form.tools or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">10.</span>Сколько времени вы готовы уделять работе с веткой / стаффом? <span class="req">*</span></label>
+          <input type="text" name="time_ready" required placeholder="Например: 3–4 часа в день" value="{{ form.time_ready or '' }}">
+        </div>
+
+        <div class="q">
+          <label><span class="n">11.</span>Почему ты хочешь работать именно у нас и чем можешь быть полезен серверу? <span class="req">*</span></label>
+          <textarea name="why_us" required>{{ form.why_us or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">12.</span>Оцените ваше общение с людьми по 10-балльной шкале и объясните оценку <span class="req">*</span></label>
+          <div class="row-2">
+            <input type="number" name="score_talk" min="1" max="10" required placeholder="1–10" value="{{ form.score_talk or '' }}">
+            <input type="text" name="score_talk_why" required placeholder="Почему такая оценка" value="{{ form.score_talk_why or '' }}">
+          </div>
+        </div>
+
+        <div class="q">
+          <label><span class="n">13.</span>Оцените вашу стрессоустойчивость по 10-балльной шкале и объясните оценку <span class="req">*</span></label>
+          <div class="row-2">
+            <input type="number" name="score_stress" min="1" max="10" required placeholder="1–10" value="{{ form.score_stress or '' }}">
+            <input type="text" name="score_stress_why" required placeholder="Почему такая оценка" value="{{ form.score_stress_why or '' }}">
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Ситуации</h2>
+        <p class="hint">Опиши действия коротко и по шагам.</p>
+
+        <div class="q">
+          <label><span class="n">14.</span>Конфликт между штатным сотрудником и твоим хорошим знакомым с высшего стаффа. Тебя позвали на разбор, знакомый не прав. Твои действия? <span class="req">*</span></label>
+          <textarea name="sit_friend_conflict" required>{{ form.sit_friend_conflict or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">15.</span>Сотрудник негативно высказывается о высшей администрации, сервере и ботах. Твои действия? <span class="req">*</span></label>
+          <textarea name="sit_negativity" required>{{ form.sit_negativity or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">16.</span>Страны-исключения, где возраст Discord отличается от 13 лет. Перечислите страны и возраст. <span class="req">*</span></label>
+          <textarea name="sit_age_countries" required placeholder="Страна — возраст">{{ form.sit_age_countries or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">17.</span>Пользователь ставит в ник / аватар / описание / статус запрещённый правилами Discord контент. Твои действия? <span class="req">*</span></label>
+          <textarea name="sit_bad_profile" required>{{ form.sit_bad_profile or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">18.</span>В приватном канале у стаффа идёт демонстрация с запрещённым правилами Discord контентом. Твои действия? <span class="req">*</span></label>
+          <textarea name="sit_stream_nsfw" required>{{ form.sit_stream_nsfw or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">19.</span>Доверенное лицо на демонстрации играет в онлайн-казино на реальные деньги. Твои действия? <span class="req">*</span></label>
+          <textarea name="sit_casino" required>{{ form.sit_casino or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">20.</span>Участник стаффа завуалированно склоняет пользователя младше 18 к действиям сексуального характера. Опиши действия. <span class="req">*</span></label>
+          <textarea name="sit_minor" required>{{ form.sit_minor or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">21.</span>На сервере рейд или массовый спам. Что сделаешь в первую очередь? <span class="req">*</span></label>
+          <textarea name="sit_raid" required>{{ form.sit_raid or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">22.</span>Участник пишет/говорит о суицидальных мыслях или самоповреждении. Как поступишь? <span class="req">*</span></label>
+          <textarea name="sit_selfharm" required>{{ form.sit_selfharm or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">23.</span>Участнику угрожают или пытаются узнать личные данные. Что будешь делать? <span class="req">*</span></label>
+          <textarea name="sit_dox" required>{{ form.sit_dox or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">24.</span>Тебе предлагают деньги, подарки или услуги за роль / снятие наказания. Как поступишь? <span class="req">*</span></label>
+          <textarea name="sit_bribe" required>{{ form.sit_bribe or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">25.</span>Ты по ошибке выдал наказание. Что будешь делать? <span class="req">*</span></label>
+          <textarea name="sit_mistake" required>{{ form.sit_mistake or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">26.</span>Ты не согласен с решением вышестоящего. Как выскажешь мнение? <span class="req">*</span></label>
+          <textarea name="sit_disagree" required>{{ form.sit_disagree or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">27.</span>Забаненный пользователь вернулся с другого аккаунта. Что сделаешь? <span class="req">*</span></label>
+          <textarea name="sit_alt" required>{{ form.sit_alt or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">28.</span>В чате скинули ссылку, похожую на мошенническую («бесплатный Nitro», вход в Discord). Что будешь делать? <span class="req">*</span></label>
+          <textarea name="sit_phish" required>{{ form.sit_phish or '' }}</textarea>
+        </div>
+
+        <div class="q">
+          <label><span class="n">29.</span>Старый знакомый зовёт тебя и твой штат к себе на сервер. Сообщишь руководству или уйдёшь молча со штатом? <span class="req">*</span></label>
+          <textarea name="sit_poach" required>{{ form.sit_poach or '' }}</textarea>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Конфиденциальность</h2>
+        <div class="q">
+          <label><span class="n">30.</span>Готов ли ты не разглашать информацию из логов, закрытых каналов и внутренних обсуждений стаффа? <span class="req">*</span></label>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="conf_logs" value="Да" required {% if form.conf_logs == 'Да' %}checked{% endif %}> <span>Да</span></label>
+            <label class="choice"><input type="radio" name="conf_logs" value="Нет" {% if form.conf_logs == 'Нет' %}checked{% endif %}> <span>Нет</span></label>
+          </div>
+        </div>
+        <div class="q">
+          <label><span class="n">31.</span>Готов ли ты не передавать доступ к своему аккаунту третьим лицам? <span class="req">*</span></label>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="conf_account" value="Да" required {% if form.conf_account == 'Да' %}checked{% endif %}> <span>Да</span></label>
+            <label class="choice"><input type="radio" name="conf_account" value="Нет" {% if form.conf_account == 'Нет' %}checked{% endif %}> <span>Нет</span></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Концовка</h2>
+        <div class="q">
+          <label><span class="n">32.</span>Желаешь ли ты ещё что-то рассказать о себе? Есть вопросы?</label>
+          <textarea name="extra" placeholder="Необязательно">{{ form.extra or '' }}</textarea>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button class="btn" type="submit">Отправить ответы</button>
+      </div>
+    </form>
+
+    <p class="foot">Hakumo · Administration test · ответы видит только администрация</p>
+  </div>
+  <script>
+    (function () {
+      const form = document.getElementById('adminTest');
+      const bar = document.getElementById('bar');
+      if (!form || !bar) return;
+      const fields = [...form.querySelectorAll('input, textarea, select')];
+      function update() {
+        const named = new Set();
+        let filled = 0, total = 0;
+        for (const el of fields) {
+          if (!el.name || named.has(el.name)) continue;
+          named.add(el.name);
+          if (!el.required && el.name === 'extra') continue;
+          total += 1;
+          const group = form.querySelectorAll(`[name="${el.name}"]`);
+          const ok = [...group].some(x => {
+            if (x.type === 'radio' || x.type === 'checkbox') return x.checked;
+            return String(x.value || '').trim().length > 0;
+          });
+          if (ok) filled += 1;
+        }
+        bar.style.width = (total ? Math.round(100 * filled / total) : 0) + '%';
+      }
+      form.addEventListener('input', update);
+      form.addEventListener('change', update);
+      update();
+    })();
+  </script>
+</body>
+</html>
