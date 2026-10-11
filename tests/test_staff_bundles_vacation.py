@@ -16,6 +16,7 @@ from services.staff_manager.acl import (
 from services.staff_manager.bundles import (
     compute_bundle_delta, format_actor_label, format_role_label,
     format_transition, get_promotion_requirements, get_role_bundle,
+    load_promotion_inputs, tenure_days,
 )
 from services.staff_manager import actions as ACT
 from services.staff_manager.store import (
@@ -176,6 +177,34 @@ class BundlesVacationTests(unittest.TestCase):
         self.assertTrue(any('времени' in m for m in missing))
         self.assertTrue(any('варн' in m.lower() for m in missing))
         self.assertTrue(any('отпуск' in m.lower() for m in missing))
+
+    def test_unknown_tenure_does_not_fake_zero_days(self):
+        ok, missing = get_promotion_requirements(
+            'curator', days_in_role=None, on_probation=True)
+        self.assertFalse(ok)
+        self.assertTrue(any('испытательн' in m for m in missing))
+        self.assertFalse(any('времени' in m for m in missing))
+        ok2, missing2 = get_promotion_requirements(
+            'curator', days_in_role=None, on_probation=False, on_vacation=False,
+            active_warns=0)
+        self.assertTrue(ok2, missing2)
+
+    def test_tenure_from_last_promote(self):
+        with patch('services.staff_manager.store._db_path', return_value=self.db_path):
+            record_action(
+                guild_id=1, actor_id=10, target_id=55, action='promote',
+                branch='helpers', old_key='', new_key='master', ok=True,
+            )
+            days = tenure_days(1, 55, 'master')
+            self.assertIsNotNone(days)
+            self.assertLess(days, 1)
+            self.assertIsNone(tenure_days(1, 55, 'curator'))
+            info = {'primary_key': 'master', 'on_probation': True, 'on_vacation': False}
+            with patch('services.warn_store.count_active', return_value=0):
+                facts = load_promotion_inputs(1, 55, info)
+            self.assertTrue(facts['on_probation'])
+            self.assertIsNotNone(facts['days_in_role'])
+            self.assertLess(facts['days_in_role'], 1)
 
     def test_actor_snapshot_persists(self):
         with patch('services.staff_manager.store._db_path', return_value=self.db_path):

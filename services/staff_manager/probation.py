@@ -2,6 +2,7 @@
 """Испытательный срок: старт/конец, пресеты, авто из ROLE_BUNDLES."""
 from __future__ import annotations
 
+import math
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
@@ -172,7 +173,8 @@ def probation_display(row: dict) -> dict:
         end = datetime.fromisoformat(row['end_at'])
         if end.tzinfo is None:
             end = end.replace(tzinfo=timezone.utc)
-        left = max(0, int((end - _now()).total_seconds() // 86400))
+        secs = (end - _now()).total_seconds()
+        left = 0 if secs <= 0 else int(math.ceil(secs / 86400.0))
     except Exception:
         left = 0
     return {

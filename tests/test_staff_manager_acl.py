@@ -169,6 +169,57 @@ class StaffAclTests(unittest.TestCase):
             ok, r = can_manage_staff(a, t, 'assign', 'master', new_branch='moderators')
             self._check(f'8 {label} manage', False, ok, r)
 
+    def test_08b_assistant_responsible_cannot_grant_own_or_higher(self):
+        """Ассистент + «Отвечаю за» выдаёт только ниже себя."""
+        a = self._actor(10, [9100, 9110, 9112])  # responsible + assistant
+        newbie = self._target(20, [])
+        master = self._target(21, [9110, 9111])
+        peer = self._target(22, [9110, 9112])
+        ok_m, r_m = can_manage_staff(
+            a, newbie, 'assign', 'master', new_branch='moderators')
+        ok_c, r_c = can_manage_staff(
+            a, newbie, 'assign', 'curator', new_branch='moderators')
+        ok_a, r_a = can_manage_staff(
+            a, master, 'promote', 'assistant')
+        ok_ad, r_ad = can_manage_staff(
+            a, master, 'promote', 'admin')
+        ok_up, r_up = can_manage_staff(
+            a, master, 'promote', 'curator')
+        ok_rm_peer, r_peer = can_manage_staff(a, peer, 'remove')
+        ok_rm_low, r_low = can_manage_staff(a, master, 'remove')
+        ok_pr, r_pr = can_manage_staff(a, peer, 'probation')
+        ok_pr_low, r_pr_low = can_manage_staff(a, master, 'probation')
+        self._check('8b assign master', True, ok_m, r_m)
+        self._check('8b assign curator', True, ok_c, r_c)
+        self._check('8b promote assistant', False, ok_a, r_a)
+        self._check('8b promote admin', False, ok_ad, r_ad)
+        self._check('8b promote curator', True, ok_up, r_up)
+        self._check('8b remove peer assistant', False, ok_rm_peer, r_peer)
+        self._check('8b remove master', True, ok_rm_low, r_low)
+        self._check('8b probation peer', False, ok_pr, r_pr)
+        self._check('8b probation master', True, ok_pr_low, r_pr_low)
+        allowed = get_allowed_actions(a, master)
+        keys = [r['key'] for r in allowed['roles']]
+        self.assertNotIn('assistant', keys)
+        self.assertNotIn('admin', keys)
+        self.assertIn('curator', keys)
+        newbie_keys = [
+            r['key'] for r in get_allowed_actions(a, newbie)['roles']]
+        self.assertIn('master', newbie_keys)
+        self.assertIn('curator', newbie_keys)
+        self.assertNotIn('assistant', newbie_keys)
+
+    def test_08c_plain_responsible_still_grants_assistant(self):
+        """Без своей лестницы «Отвечаю за» по-прежнему выдаёт ассистента."""
+        a = self._actor(10, [9100])
+        t = self._target(20, [])
+        ok, r = can_manage_staff(
+            a, t, 'assign', 'assistant', new_branch='moderators')
+        self._check('8c resp only → assistant', True, ok, r)
+        ok_ad, r_ad = can_manage_staff(
+            a, t, 'assign', 'admin', new_branch='moderators')
+        self._check('8c resp only → admin', False, ok_ad, r_ad)
+
     def test_09_staff_admin_admin_ok(self):
         a = self._actor(10, [9001])
         t = self._target(20, [9110, 9113])

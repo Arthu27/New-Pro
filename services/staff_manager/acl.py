@@ -464,9 +464,9 @@ def can_manage_staff(
     if action == 'remove':
         if target.primary_key and _role_protected(target.primary_key):
             return False, 'Роль Admin выдаёт только Стафф админ'
+        # «Отвечаю за» не поднимает потолок: ассистент не снимает ассистента и выше.
         if target.max_rank and actor.max_rank and target.max_rank >= actor.max_rank:
-            if branch not in actor.responsible_branches:
-                return False, 'Нельзя изменить человека с рангом ≥ вашего'
+            return False, 'Нельзя изменить человека с рангом ≥ вашего'
         if branch in actor.responsible_branches:
             cfg = get_config() or {}
             allowed = set(cfg.get('responsible_can_manage') or [])
@@ -483,6 +483,8 @@ def can_manage_staff(
         if target.primary_key and _role_protected(target.primary_key):
             if branch not in actor.responsible_branches and not _is_global(actor):
                 return False, 'Роль Admin выдаёт только Стафф админ'
+        if target.max_rank and actor.max_rank and target.max_rank >= actor.max_rank:
+            return False, 'Нельзя изменить человека с рангом ≥ вашего'
         return True, ''
 
     if action in ('assign', 'promote', 'demote'):
@@ -501,13 +503,13 @@ def can_manage_staff(
             return False, 'Нет прав на эту роль'
 
         new_rank = _role_rank(new_role_key)
-        if actor.max_rank and branch == actor.primary_branch and branch not in actor.responsible_branches:
-            if new_rank >= actor.max_rank:
-                return False, 'Нельзя выдать роль выше или равную вашей'
+        # Потолок по своей лестнице, даже если есть «Отвечаю за …».
+        # Ассистент не выдаёт Assistent и Admin; куратор — не Curator и выше.
+        if actor.max_rank and new_rank >= actor.max_rank:
+            return False, 'Нельзя выдать роль выше или равную вашей'
 
-        if target.max_rank and branch not in actor.responsible_branches:
-            if target.max_rank >= actor.max_rank and actor.max_rank:
-                return False, 'Нельзя изменить человека с рангом ≥ вашего'
+        if target.max_rank and actor.max_rank and target.max_rank >= actor.max_rank:
+            return False, 'Нельзя изменить человека с рангом ≥ вашего'
 
         if action == 'promote' and target.max_rank and new_rank <= target.max_rank:
             return False, 'Новая роль не выше текущей'

@@ -66,10 +66,11 @@ def build_profile_view(
         cur_rank = int((ladder_by_key(key, cfg) or {}).get('rank') or 0)
         nxt = next((x for x in ladder if int(x.get('rank') or 0) > cur_rank), None)
         if nxt:
+            from services.staff_manager.bundles import load_promotion_inputs
+            gid = getattr(getattr(target, 'guild', None), 'id', None) or 0
+            facts = load_promotion_inputs(int(gid or 0), target.id, info)
             ok_req, missing = get_promotion_requirements(
-                nxt['key'], branch=branch, days_in_role=0,
-                active_warns=0, on_probation=False,
-                on_vacation=bool(info.get('on_vacation')), cfg=cfg,
+                nxt['key'], branch=branch, cfg=cfg, **facts,
             )
             lines.append(
                 f'### Следующая ступень · '

@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 from services.staff_manager import config as CFG
 from services.staff_manager.probation import (
     maybe_start_after_promote, start_probation, end_probation,
+    probation_display,
 )
 from services.staff_manager.store import active_probation_for, ensure_tables
 
@@ -119,6 +120,16 @@ class ProbationTests(unittest.TestCase):
                 guild_id=1, actor_id=100, user_id=55, end_kind='early')
             self.assertTrue(ok, why)
             self.assertIsNone(active_probation_for(1, 55))
+
+    def test_days_left_rounds_up(self):
+        from datetime import datetime, timedelta, timezone
+        end = datetime.now(timezone.utc) + timedelta(days=3) - timedelta(minutes=5)
+        disp = probation_display({
+            'days': 3,
+            'end_at': end.isoformat(),
+            'start_at': datetime.now(timezone.utc).isoformat(),
+        })
+        self.assertEqual(disp['days_left'], 3)
 
     def test_auto_from_bundle(self):
         actor = self._member(100, [9001])
