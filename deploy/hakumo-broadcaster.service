@@ -1,0 +1,26 @@
+# Broadcaster bot: /create tribune, /delete tribune, /edit tribune,
+# лав-рума «войти в лав руму», пожелания в 10:00 и 21:00.
+# Установка:
+#   sudo cp deploy/hakumo-broadcaster.service /etc/systemd/system/
+#   # в /opt/hakumo/.env: BROADCASTER_BOT_TOKEN=...
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hakumo-broadcaster
+# Логи: journalctl -u hakumo-broadcaster -f
+# Токен в лог не пишется, только •••• и последние 4 символа.
+[Unit]
+Description=Hakumo Broadcaster bot (tribunes, love rooms, wishes)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hakumo
+EnvironmentFile=-/opt/hakumo/.env
+ExecStart=/opt/hakumo/.venv/bin/python scripts/run_broadcaster.py
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
