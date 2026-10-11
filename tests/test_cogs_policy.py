@@ -93,13 +93,14 @@ for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'voice_tracker.py',
              'ai_chat.py', 'ai_moderation.py',
              'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
-             'afk.py', 'help.py', 'cog_manager.py'):
+             'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
+assert 'afk.py' not in enabled and 'afk.py' in RETIRED_COGS, 'afk.py в RETIRED'
 # Музыка (/play) удалена из проекта 2026-09-01: файлов когов нет на диске,
 # в составе они не фигурируют (ни enabled, ни disabled).
 for gone_music in ('music_cog.py', 'voice_commands.py'):
     assert gone_music not in enabled and gone_music not in ALL_SET, gone_music
-check(True, 'lean: модерация/репорты/AI/приветствие/логи/afk — живы; музыка удалена')
+check(True, 'lean: модерация/репорты/AI/приветствие/логи — живы; afk/музыка сняты')
 # Старая заглушка verification.py физически удалена — её заменил
 # полноценный age_verification.py (карантин + анкета молодых аккаунтов).
 assert 'verification.py' not in ALL_SET, 'verification.py должна быть удалена'
@@ -205,33 +206,36 @@ check(not set(enabled_c) & set(disabled_c)
       'core: разбиение без пересечений и потерь')
 
 print('\n== 6. DISABLED_COGS / EXTRA_COGS ==')
-e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Welcome_Cog.py, afk')
-# welcome_cog жив в FULL — попадает в disabled по флагу; afk тоже выключается.
-check('welcome_cog.py' in d2 and 'afk.py' in d2 and
+e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Welcome_Cog.py, staff_stats')
+# welcome_cog жив в FULL — попадает в disabled по флагу; staff_stats тоже.
+check('welcome_cog.py' in d2 and 'staff_stats.py' in d2 and
       len(e2) == len(NON_HELPERS) - len(RETIRED_COGS) - 2,
       'DISABLED_COGS: работает в полном режиме, имена нечувствительны к виду')
-e2l, d2l = select_cog_files(ALL_FILES, disabled='afk')
-check('afk.py' in d2l and 'moderation.py' in e2l,
+e2l, d2l = select_cog_files(ALL_FILES, disabled='staff_manager')
+check('staff_manager.py' in d2l and 'moderation.py' in e2l,
       'DISABLED_COGS: работает и поверх LEAN (выключает даже боевой модуль)')
 e3, d3 = select_cog_files(ALL_FILES, mod_only=True, disabled='logs,appeals')
 check('logs.py' in d3 and 'appeals.py' in d3,
       'DISABLED_COGS: может выключить даже модер-модуль/хелпер (приоритет над keep)')
 # Удалённые модули (музыка) на диске отсутствуют — EXTRA их не возвращает;
 # проверяем точечный возврат на живых спящих модулях.
-e4, d4 = select_cog_files(ALL_FILES, mod_only=True, extra='welcome_cog.py, afk')
-check('welcome_cog.py' in e4 and 'afk.py' in e4 and 'ai_chat.py' in d4,
+e4, d4 = select_cog_files(ALL_FILES, mod_only=True, extra='welcome_cog.py')
+check('welcome_cog.py' in e4 and 'ai_chat.py' in d4,
       'EXTRA_COGS: возвращает отдельные живые модули поверх MOD_ONLY')
 e4m, d4m = select_cog_files(ALL_FILES, mod_only=True, extra='music_cog')
 check('music_cog.py' not in e4m and 'music_cog.py' not in d4m,
       'EXTRA_COGS: удалённый модуль (music_cog) не воскресает — файла нет')
+e4a, d4a = select_cog_files(ALL_FILES, mod_only=True, extra='afk')
+check('afk.py' not in e4a and 'afk.py' in d4a,
+      'EXTRA_COGS: RETIRED afk.py не воскресает')
 e5, _ = select_cog_files(ALL_FILES, mod_only=True, extra='_card_style,icons')
 check('_card_style.py' not in e5 and 'icons.py' not in e5,
       'EXTRA_COGS: хелпер силой не включить')
 
 print('\n== 7. Чтение из окружения ==')
-env = {'MOD_ONLY': '1', 'EXTRA_COGS': 'welcome_cog', 'DISABLED_COGS': '  afk  '}
+env = {'MOD_ONLY': '1', 'EXTRA_COGS': 'welcome_cog', 'DISABLED_COGS': '  reports  '}
 ee, de = select_from_environment(ALL_FILES, environ=env)
-check('welcome_cog.py' in ee and 'afk.py' in de and 'ai_chat.py' in de,
+check('welcome_cog.py' in ee and 'reports.py' in de and 'ai_chat.py' in de,
       'select_from_environment: MOD_ONLY+EXTRA+DISABLED работают вместе')
 ee2, de2 = select_from_environment(ALL_FILES, environ={})
 check(set(ee2) == LEAN_COGS and set(de2) == (set(NON_HELPERS) - LEAN_COGS),

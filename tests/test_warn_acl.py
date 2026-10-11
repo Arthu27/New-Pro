@@ -151,5 +151,34 @@ check('1.8' in MR.codes_for_action('warn')
       and '1.1' in MR.codes_for_action('warn'),
       'warn rules filter')
 
+print('== 5. is_staff: Discord Administrator / owner тоже стафф ==')
+class _GP:
+    def __init__(self, admin=False, manage_messages=False):
+        self.administrator = admin
+        self.manage_messages = manage_messages
+        self.manage_guild = False
+        self.ban_members = False
+        self.kick_members = False
+        self.moderate_members = False
+
+
+class MemPerm(Mem):
+    def __init__(self, uid, roles, *, admin=False, manage_messages=False):
+        super().__init__(uid, roles, guild=g)
+        self.guild_permissions = _GP(admin=admin, manage_messages=manage_messages)
+
+
+admin_only = MemPerm(77, [], admin=True)
+check(WA._is_staff_target(g, admin_only) is True,
+      'Administrator без role_map → is_staff')
+mm_only = MemPerm(78, [], manage_messages=True)
+check(WA._is_staff_target(g, mm_only) is True,
+      'manage_messages без role_map → is_staff')
+nobody = MemPerm(79, [])
+check(WA._is_staff_target(g, nobody) is False,
+      'без прав и ролей → не стафф')
+info = WA.get_staff_info(admin_only)
+check(info[0] is True, 'get_staff_info(Administrator) → is_staff')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

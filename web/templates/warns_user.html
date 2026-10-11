@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Warn · {{ profile.name }}{% endblock %}
+{% block heading %}Профиль варна{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{{ url_for('static', filename='warn-panel.css') }}?v=6">
+<div class="warn-page">
+  <div id="warnUserLive" class="warn-live-root">
+    {% include '_warns_user_live.html' %}
+  </div>
+</div>
+
+<dialog id="warnDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3>Выдать варн</h3>
+      <button type="button" class="dlg-x" id="warnClose">×</button></div>
+    <label>Причина
+      <select id="warnCode" class="input">
+        {% for r in reason_opts %}
+        <option value="{{ r.code }}">{{ r.code }} · {{ r.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Формулировка
+      <textarea id="warnDetail" class="input" required maxlength="400" rows="3"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="warnCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="warnGo">Выдать</button>
+    </div>
+    <p id="warnMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<dialog id="rmDlg" class="dlg">
+  <form method="dialog" class="dlg-card">
+    <div class="dlg-head"><h3 id="rmTitle">Снять варн</h3>
+      <button type="button" class="dlg-x" id="rmClose">×</button></div>
+    <label>Причина <span class="dim">(необязательно)</span>
+      <textarea id="rmReason" class="input" maxlength="200" rows="2"></textarea>
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="ghost" id="rmCancel">Отмена</button>
+      <button type="button" class="primary-btn" id="rmGo">Подтвердить</button>
+    </div>
+    <p id="rmMsg" class="dim"></p>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  const csrf = {{ csrf_token|tojson }};
+  const uid = {{ uid|tojson }};
+  let rtype = {{ ('staff' if is_staff else 'member')|tojson }};
+  const $ = id => document.getElementById(id);
+  const root = $('warnUserLive');
+  const dlg = $('warnDlg'), rmDlg = $('rmDlg');
+  let mode='one', rmWid=0;
+
+  function toast(text, ok){
+    let el = document.getElementById('warnToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'warnToast';
+      el.className = 'warn-toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.toggle('is-err', !ok);
+    el.classList.add('on');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('on'), 2200);
+  }
+
+  async function liveRefresh(){
+    if (!root) return;
+    root.classList.add('is-live-loading');
+    try {
+      const r = await fetch('/api/warns/user/' + encodeURIComponent(uid) + '/live', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+      const j = await r.json();
+      if (!j.ok) { toast(j.error || 'Ошибка', false); return; }
+      root.innerHTML = j.html || '';
+      if (j.is_staff != null) rtype = j.is_staff ? 'staff' : 'member';
+      bindRows();
+    } catch (_) {
+      toast('Сеть', false);
+    } finally {
+      root.classList.remove('is-live-loading');
+    }
+  }
+
+  function bindRows(){
+    document.querySelectorAll('.btn-rm').forEach(btn => {
+      btn.addEventListener('click', () => openRm('Снять варн #' + btn.dataset.wid, Number(btn.dataset.wid)));
+    });
+    $('btnIssue')?.addEventListener('click', () => dlg.showModal());
+    $('btnClearAll')?.addEventListener('click', () => openRm('Снять все разрешённые варны', 0));
+  }
+
+  $('warnClose')?.addEventListener('click', () => dlg.close());
+  $('warnCancel')?.addEventListener('click', () => dlg.close());
+  $('warnGo')?.addEventListener('click', async () => {
+    const detail = $('warnDetail').value.trim();
+    if (!detail) { $('warnMsg').textContent = 'Нужна формулировка'; return; }
+    const r = await fetch('/api/warns/issue', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: uid, reason_type: rtype, reason_code: $('warnCode').value, detail, csrf})});
+    const j = await r.json();
+    if (!j.ok) { $('warnMsg').textContent = j.error || 'Ошибка'; return; }
+    dlg.close();
+    $('warnDetail').value = '';
+    $('warnMsg').textContent = '';
+    toast('Варн выдан', true);
+    liveRefresh();
+  });
+  function openRm(title, wid){
+    mode = wid ? 'one' : 'all'; rmWid = wid || 0;
+    $('rmTitle').textContent = title; $('rmReason').value=''; $('rmMsg').textContent='';
+    rmDlg.showModal();
+  }
+  $('rmClose')?.addEventListener('click', () => rmDlg.close());
+  $('rmCancel')?.addEventListener('click', () => rmDlg.close());
+  $('rmGo')?.addEventListener('click', async () => {
+    $('rmMsg').textContent='…';
+    const body = {user_id: uid, removed_reason: $('rmReason').value.trim(), csrf};
+    let url = '/api/warns/remove_all';
+    if (mode === 'one') { url = '/api/warns/remove'; body.warn_id = rmWid; }
+    const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    const j = await r.json();
+    if (!j.ok) { $('rmMsg').textContent = j.error || 'Ошибка'; return; }
+    rmDlg.close();
+    toast('Готово', true);
+    liveRefresh();
+  });
+  bindRows();
+})();
+</script>
+{% endblock %}

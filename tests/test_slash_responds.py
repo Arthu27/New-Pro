@@ -44,7 +44,6 @@ print('== 1. Исходники: цикл не должен замирать =='
 logs_src = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
 mod_src = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
 appeal_src = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
-afk_src = open(os.path.join(ROOT, 'cogs', 'afk.py'), encoding='utf-8').read()
 rep_src = open(os.path.join(ROOT, 'cogs', 'reports.py'), encoding='utf-8').read()
 sync = logs_src[logs_src.index('async def _sync_discord_audit_log'):
                 logs_src.index('async def on_ready')]
@@ -190,13 +189,14 @@ ap = appeal_src[appeal_src.index('class AppealModal'):
                 appeal_src.index('class AppealChannelModal')]
 check(ap.find('response.defer') < ap.find('_submit_appeal'),
       'модалка апелляции (кнопка в ЛС): defer до карточки (окно 3с)')
-af = afk_src[afk_src.index('async def afk'):
-             afk_src.index('async def afk') + 1200]
-check(af.find('response .defer') < af.find('user .edit')
-      or af.find('response.defer') < af.find('user.edit'),
-      '/afk: defer до смены ника')
 check('guild.ban(int(' not in rep_src,
       'вердикт бана: не guild.ban(int) — нужен Snowflake')
+# /afk снят с эксплуатации — команды в меню больше нет
+import slash_budget as _SB  # noqa: E402
+check('afk' not in _SB.KEEP_SLASH
+      and 'staff_diagnose' not in _SB.KEEP_SLASH
+      and 'staff_selftest' not in _SB.KEEP_SLASH,
+      '/afk и staff_* diagnose/selftest убраны из KEEP_SLASH')
 
 print('== 2. Аудит-синк: cap + first-run + курсор ==')
 import discord  # noqa: E402

@@ -132,7 +132,7 @@ text_allow = ''.join(f.value for f in e3.fields)
 check('`%s`' % _cmd in text_allow, f'с ролями на {_cmd} команда снова в справке')
 # правило на одну команду не задевает соседнюю из другого раздела
 _other = next((c for k, v in all_categories().items() if k != 'Модерация'
-               for c in v), 'afk')
+               for c in v), 'report')
 check('`%s`' % _other in text_allow,
       f'соседняя команда {_other} правилом на {_cmd} не задета')
 save_acl(GID, {})

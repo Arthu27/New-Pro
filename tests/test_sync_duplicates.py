@@ -152,10 +152,10 @@ def build_bot(cold_cache=False):
     tree.add_command(ContextMenu(name='🎙️ Войс-мут', callback=_user_cb,
                                  type=AppCommandType.user))
     # гильдовые (коги с guilds=Config.guild_objects()):
-    #   боевые (modpanel, update, afk, report) — публикуются;
-    #   служебные/вырезанные (play, afk-remove, ticket-panel) — снимаются с публикации.
-    for n in ('modpanel', 'update', 'play', 'afk', 'report',
-              'afk-remove', 'ticket-panel'):
+    #   боевые (modpanel, update, staff, report) — публикуются;
+    #   служебные/вырезанные (play, afk, afk-remove, ticket-panel) — снимаются.
+    for n in ('modpanel', 'update', 'staff', 'play', 'afk', 'report',
+              'afk-remove', 'ticket-panel', 'staff_diagnose', 'staff_selftest'):
         tree.add_command(mk(n), guild=Object(777))
     return bot
 
@@ -187,12 +187,13 @@ async def main():
     check(_guild_norm <= _wl,
           f'в гильдии только команды белого списка, лишних нет '
           f'({sorted(_guild_norm - _wl)})')
-    check({'modpanel', 'update', 'afk', 'report'} <= set(guild),
+    check({'modpanel', 'update', 'staff', 'report'} <= set(guild),
           f'боевые гильдовые команды на месте, update — гильдовая ({guild})')
     check(any(SF.normalize_cmd(n) == SF.normalize_cmd('🎙️ Войс-мут')
               for n in guild),
           f'ПКМ «🎙️ Войс-мут» публикуется ({guild})')
-    for _hidden in ('play', 'afk-remove', 'ticket-panel', 'Варн за сообщение'):
+    for _hidden in ('play', 'afk', 'afk-remove', 'ticket-panel',
+                    'staff_diagnose', 'staff_selftest', 'Варн за сообщение'):
         check(_hidden not in guild and _hidden not in glob,
               f'«{_hidden}» не публикуется в Discord (не в белом списке)')
     check(rec.last('GUILD', 888) == [],

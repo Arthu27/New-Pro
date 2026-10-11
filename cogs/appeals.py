@@ -583,6 +583,12 @@ class AppealView(discord.ui.LayoutView):
                 btn.label = f'В работе: {interaction.user.display_name}'
                 btn.style = discord.ButtonStyle.secondary
         self.cog._save(gid, state)
+        # ACK до тяжёлой работы (открытие канала / announce) — иначе timeout.
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
+        except Exception as _df:
+            log.debug('appeals claim defer: %s', _df)
         # «Взять в работу» = открыть канал апелляции забаненному: модератор
         # забрал дело — человек сразу видит комнату и может диалог (владелец
         # 2026-09-06). Снятие с работы канал не трогает.
@@ -662,16 +668,18 @@ class AppealView(discord.ui.LayoutView):
             'embed': None,
             'embeds': [],
         }
-        # V2: без content
+        # V2: без content. После defer — правим исходное сообщение.
         try:
-            await interaction.response.edit_message(**edit_kw)
+            if interaction.response.is_done():
+                msg = getattr(interaction, 'message', None)
+                if msg is not None:
+                    await msg.edit(**edit_kw)
+                else:
+                    await interaction.edit_original_response(**edit_kw)
+            else:
+                await interaction.response.edit_message(**edit_kw)
         except Exception as _ed:
             log.debug('appeals claim edit: %s', _ed)
-            try:
-                if not interaction.response.is_done():
-                    await interaction.response.defer(ephemeral=True)
-            except Exception as _df:
-                log.debug('appeals claim defer: %s', _df)
         try:
             await interaction.followup.send(note, ephemeral=True)
         except Exception as _fu:
@@ -708,6 +716,13 @@ class AppealView(discord.ui.LayoutView):
                     return
             except Exception as _ex:
                 log.debug('appeals: limit accept: %s', _ex)
+        # ACK сразу — иначе Discord «бот не ответил», пока идёт unban/DM.
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer(ephemeral=True)
+        except Exception as _ex:
+            log.debug('appeals: defer решения: %s', _ex)
+
         state = self.cog._load(gid)
         _who = (getattr(interaction.user, 'display_name', None)
                 or getattr(interaction.user, 'name', None)
@@ -716,7 +731,10 @@ class AppealView(discord.ui.LayoutView):
             state, self.appeal_id, accept, _who, datetime.now(UTC),
             reviewer_id=getattr(interaction.user, 'id', None))
         if err:
-            await interaction.response.send_message(err, ephemeral=True)
+            try:
+                await interaction.followup.send(err, ephemeral=True)
+            except Exception as _ex2:
+                log.debug('appeals: resolve err followup: %s', _ex2)
             return
         self.cog._save(gid, state)
         unbanned = False
@@ -791,10 +809,6 @@ class AppealView(discord.ui.LayoutView):
         # Карточка остаётся: V2-блок обновляется — кто решил, исход, без кнопок.
         status = ('принята (разбанен)' if (accept and unbanned)
                   else ('принята' if accept else 'отклонена'))
-        try:
-            await interaction.response.defer(ephemeral=True)
-        except Exception as _ex:
-            log.debug('appeals: defer решения: %s', _ex)
         await self.cog._finalize_appeal_card(
             guild, state, item,
             accept=accept, unbanned=unbanned,

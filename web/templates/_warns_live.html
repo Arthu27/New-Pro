@@ -1,0 +1,192 @@
+{# Live-фрагмент Warn: KPI + оболочка списка (без dialogs). #}
+<div class="warn-kpis rise" id="warnKpis">
+  <div class="wk"><b>{{ stats.active_warns }}</b><span>активных</span></div>
+  <div class="wk"><b>{{ stats.users_total or (stats.users_member + stats.users_staff) }}</b><span>людей</span></div>
+  <div class="wk"><b>{{ stats.users_staff }}</b><span>из них стафф</span></div>
+  <div class="wk"><b>{{ stats.removed_7d or 0 }}</b><span>снято за 7 дн.</span></div>
+</div>
+
+<section class="warn-shell rise">
+  <div class="warn-top">
+    <div class="warn-seg" id="warnTabs">
+      <a class="{% if tab=='members' %}on{% endif %}" data-live-tab="members"
+         href="{{ url_for('warns', tab='members', scope=scope, sort=sort) }}">Участники</a>
+      <a class="{% if tab=='staff' %}on{% endif %}" data-live-tab="staff"
+         href="{{ url_for('warns', tab='staff', scope=scope, branch=f_branch, sort=sort) }}">Стафф</a>
+    </div>
+    <div class="warn-top__right">
+      <a class="ghost sm" href="{{ url_for('bans_page') }}">Баны</a>
+      {% if can_admin %}
+      <button type="button" class="ghost sm" id="btnResync">Пересинхронизировать</button>
+      {% endif %}
+      {% if can_manage %}
+      <button type="button" class="primary-btn" id="btnIssueWarn">Выдать варн</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="get" action="{{ url_for('warns') }}" id="warnFilterForm" autocomplete="off" data-live-form="1">
+    <input type="hidden" name="tab" id="wTabHidden" value="{{ tab }}">
+    <input type="hidden" name="q" id="wqHidden" value="{{ q }}">
+    <input type="hidden" name="mod" id="wmodHidden" value="{{ f_mod }}">
+    <input type="hidden" name="page" id="wPageHidden" value="{{ page }}">
+
+    <div class="warn-search" id="wqWrap">
+      <div class="warn-search__box">
+        <span style="color:var(--wp-dim);font-weight:800;font-size:13px" aria-hidden="true">⌕</span>
+        <input type="search" id="wq" value=""
+               placeholder="Поиск по нику, @username или ID…"
+               autocomplete="off" spellcheck="false">
+        <button type="button" class="warn-search__clear" id="wqClear" hidden>очистить</button>
+      </div>
+      <div id="wqSuggest" class="warn-suggest" hidden></div>
+    </div>
+
+    {% if q %}
+    <div class="warn-chip" id="wqChip">
+      <span>фильтр: <b>{{ q }}</b></span>
+      <button type="button" id="wqChipX" title="Убрать" aria-label="Убрать">×</button>
+    </div>
+    {% endif %}
+
+    <div class="warn-filters-row">
+      <select name="scope" id="wScope">
+        <option value="active" {% if scope=='active' %}selected{% endif %}>Активные</option>
+        <option value="all" {% if scope=='all' %}selected{% endif %}>Вся история</option>
+      </select>
+      {% if tab=='staff' %}
+      <select name="branch" id="wBranch">
+        <option value="">Все ветки</option>
+        {% for b in branches %}
+        <option value="{{ b }}" {% if f_branch==b %}selected{% endif %}>{{ branch_labels.get(b, b) }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <input type="hidden" name="branch" value="">
+      {% endif %}
+      <div class="warn-search" style="margin:0;flex:1;min-width:180px" id="wmodWrap">
+        <div class="warn-search__box" style="padding:0 4px 0 12px">
+          <input type="search" id="wmod" value=""
+                 placeholder="Кто выдал…"
+                 autocomplete="off" spellcheck="false"
+                 style="padding:9px 4px;font-size:13px">
+          {% if f_mod %}
+          <button type="button" class="warn-search__clear" id="wmodClear">×</button>
+          {% endif %}
+        </div>
+        <div id="wmodSuggest" class="warn-suggest" hidden></div>
+      </div>
+      {% if f_mod %}
+      <div class="warn-chip" id="wmodChip" style="margin:0">
+        <span>мод: <b>{{ f_mod }}</b></span>
+        <button type="button" id="wmodChipX" title="Убрать">×</button>
+      </div>
+      {% endif %}
+      <select name="sort" id="wSort">
+        <option value="count_desc" {% if sort=='count_desc' %}selected{% endif %}>Варны ↓</option>
+        <option value="count_asc" {% if sort=='count_asc' %}selected{% endif %}>Варны ↑</option>
+        <option value="date_desc" {% if sort=='date_desc' %}selected{% endif %}>Дата ↓</option>
+        <option value="date_asc" {% if sort=='date_asc' %}selected{% endif %}>Дата ↑</option>
+      </select>
+    </div>
+  </form>
+
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:4px 0 14px">
+    <h2 style="margin:0;font:800 16px/1.2 var(--display, Syne, sans-serif)">
+      {% if tab=='staff' %}Стафф{% else %}Участники{% endif %}
+      <span class="count">{{ total }}</span>
+    </h2>
+    {% if timing_ms is defined %}<span class="dim" style="font-size:11px">{{ timing_ms }} мс</span>{% endif %}
+  </div>
+
+  {% if not rows %}
+  <div class="warn-empty"><b>Варнов нет</b>По выбранным фильтрам записей нет</div>
+  {% else %}
+  <div class="warn-list" id="warnList">
+    {% for r in rows %}
+    <article class="warn-card {% if tab=='staff' %}is-staff{% endif %}">
+      <a class="warn-person" href="{{ url_for('warns_user', uid=r.user_id) }}" data-soft>
+        {% if r.avatar %}<img src="{{ r.avatar }}" alt="" loading="lazy" width="42" height="42">
+        {% else %}<span class="warn-ava-fb">{{ (r.user_name or '?')[:1]|upper }}</span>{% endif %}
+        <span>
+          <span class="wp-name">{{ r.user_name }}{% if r.left_server %} <span class="st-pill st-gone">вышел</span>{% endif %}</span>
+          <span class="wp-sub">{% if r.handle %}@{{ r.handle }} · {% endif %}{{ r.user_id }}</span>
+        </span>
+      </a>
+
+      {% if tab=='staff' %}
+      <div>
+        {% if r.role_style %}
+        <span class="rbadge" style="color:{{ r.role_style.color }};background:{{ r.role_style.color }}22;border-color:{{ r.role_style.color }}66">{{ r.role_style.label }}</span>
+        {% else %}<span class="dim">—</span>{% endif %}
+      </div>
+      <div>
+        {% if r.branch_style %}
+        <span class="rbadge" style="color:{{ r.branch_style.color }};background:{{ r.branch_style.color }}22;border-color:{{ r.branch_style.color }}66">{{ r.branch_style.label }}</span>
+        {% else %}<span class="dim">—</span>{% endif %}
+      </div>
+      {% endif %}
+
+      <div class="wbadge-wrap" title="Активных варнов: {{ r.active_count }}">
+        <span class="wbadge w{{ '3' if r.active_count >= 3 else r.active_count }}">{{ r.active_count }}</span>
+        <span class="wbadge-label">варн</span>
+      </div>
+
+      <div class="warn-reason" title="{{ r.reason }}">{{ r.reason }}</div>
+
+      <div class="warn-issuer">
+        {% if r.mod_avatar %}<img src="{{ r.mod_avatar }}" alt="" loading="lazy" width="26" height="26">{% endif %}
+        <span>
+          <span class="wp-name">{{ r.mod_name }}</span>
+          {% if r.mod_role_style %}
+          <span class="rbadge" style="font-size:10px;color:{{ r.mod_role_style.color }};background:{{ r.mod_role_style.color }}22;border-color:{{ r.mod_role_style.color }}66">{{ r.mod_role_style.label }}</span>
+          {% endif %}
+        </span>
+      </div>
+
+      <div class="warn-date">
+        <div>{{ r.when }}</div>
+        {% if r.expires_text and r.expires_text != '—' %}
+        <div class="warn-expires {% if r.expires_urgent %}is-urgent{% endif %}">{{ r.expires_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="warn-actions">
+        <a href="{{ url_for('warns_user', uid=r.user_id) }}" data-soft>профиль</a>
+        {% if can_manage %}
+        <button type="button" class="btn-issue-row"
+                data-uid="{{ r.user_id }}"
+                data-kind="{{ 'staff' if tab=='staff' else 'member' }}"
+                data-name="{{ r.user_name }}">выдать</button>
+        {% endif %}
+        {% if can_extend and r.active_count %}
+        <button type="button" class="btn-extend"
+                data-wid="{{ r.id }}" data-name="{{ r.user_name }}">продлить</button>
+        {% endif %}
+        {% if r.can_remove %}
+        <button type="button" class="btn-unwarn btn-danger"
+                data-wid="{{ r.id }}" data-uid="{{ r.user_id }}"
+                data-name="{{ r.user_name }}">снять</button>
+        {% elif can_manage and r.active_count %}
+        <button type="button" disabled title="{{ r.remove_deny or 'Нет права' }}">снять</button>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  {% if pages > 1 %}
+  <div class="warn-pager" id="warnPager">
+    {% if page > 1 %}
+    <a href="{{ url_for('warns', page=page-1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}"
+       data-live-page="{{ page-1 }}">←</a>
+    {% endif %}
+    <span>{{ page }} / {{ pages }}</span>
+    {% if page < pages %}
+    <a href="{{ url_for('warns', page=page+1, tab=tab, q=q, scope=scope, branch=f_branch, mod=f_mod, sort=sort) }}"
+       data-live-page="{{ page+1 }}">→</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
+</section>

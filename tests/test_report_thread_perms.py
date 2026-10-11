@@ -122,11 +122,16 @@ class _Channel:
 
 class _Guild:
     def __init__(self, me, members=None):
+        self.id = 1484574976580391004
         self.me = me
         self._members = members or {}
+        self.roles = []
 
     def get_member(self, uid):
         return self._members.get(int(uid))
+
+    def get_role(self, rid):
+        return None
 
     async def fetch_member(self, uid):
         m = self._members.get(int(uid))
@@ -174,8 +179,11 @@ async def main():
           'в ветку отправлена панель модерации')
     check(len(inter.followup.calls) == 1 and 'создана' in inter.followup.calls[0],
           'модератору подтверждение со ссылкой на ветку')
-    check(set(msg.threads[0].users) == {rep_u, acc_u},
-          'жаловавшийся и обвинённый добавлены в ветку')
+    check(msg.threads[0].users == [],
+          'участников в ветку не добавляем')
+    panel_view = msg.threads[0].sent[0][1] if msg.threads[0].sent else None
+    check(panel_view is not None and type(panel_view).__name__ == 'ReportPanelView',
+          'в ветку ушла V2-панель разбора')
     check(RC.ticket_get(777001) is None
           and (RC.ticket_get(424242) or {}).get('reporter_id') == '111',
           'тикет переозначен: панель в ветке найдёт его по ID ветки')

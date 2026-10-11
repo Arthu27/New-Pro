@@ -64,13 +64,6 @@ check("не забанены" in _open
       and _open.find('_is_banned') < _open.find('send_modal'),
       'кнопка в ЛС: «не забанены» ДО открытия формы')
 
-afk = _fn(_src('cogs/afk.py'), 'afk')
-check(afk.find('response .defer') < afk.find('user .edit')
-      or afk.find('response.defer') < afk.find('user.edit'),
-      '/afk: defer до смены ника')
-check('guild_id' in afk and 'личке' in afk,
-      '/afk в ЛС — отказ, не падает на None')
-
 mod = _fn(_src('cogs/moderation.py'), 'modpanel')
 check('await _ack' in mod and mod.find('await _ack') < mod.find('actions_for_member'),
       '/modpanel: _ack до меню')
@@ -217,10 +210,10 @@ async def _run():
 asyncio.run(_run())
 
 print('== 4. AST: у всех slash есть description, KEEP без дублей ==')
-keep = {'modpanel', 'update', 'afk', 'report', 'my-violations'}  # 5: /апелляция убрана (владелец 2026-09-08)
+keep = {'modpanel', 'update', 'staff', 'report', 'my-violations'}  # /afk снят
 seen = {}
 bad = []
-for rel in ('cogs/appeals.py', 'cogs/afk.py', 'cogs/reports.py',
+for rel in ('cogs/appeals.py', 'cogs/reports.py', 'cogs/staff_manager.py',
             'cogs/moderation.py', 'cogs/diagnostics.py'):
     tree = ast.parse(_src(rel), filename=rel)
     for node in ast.walk(tree):
