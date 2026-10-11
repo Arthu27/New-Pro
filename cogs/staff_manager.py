@@ -322,6 +322,23 @@ def build_panel_view(
         tail += f' · {_emoji_for_branch(sel_branch)} {blab}'
     if sel_kind:
         tail += f' · {REMOVAL_KINDS.get(sel_kind, sel_kind)}'
+    if sel_act == 'promote' and sel_role and getattr(actor, 'guild', None):
+        try:
+            from services.staff_manager.bundles import (
+                get_promotion_requirements, load_promotion_inputs,
+            )
+            facts = load_promotion_inputs(actor.guild.id, target.id, info)
+            _ok_req, missing = get_promotion_requirements(
+                sel_role,
+                branch=info.get('primary_branch') or sel_branch or None,
+                cfg=cfg,
+                **facts,
+            )
+            if missing:
+                status_lines.append(
+                    '-# Нельзя повысить: ' + '; '.join(missing[:3]))
+        except Exception:
+            pass
     status_lines.append(PANEL_QUEUE.format(
         step=min(step_n, step_total), total=max(step_total, 1), tail=tail))
 
@@ -1214,10 +1231,13 @@ class StaffManager(commands.Cog):
         # условия повышения (кроме bypass Стафф админ/владелец)
         if action == 'promote' and role_key and not payload.get('bypass_rules'):
             t_info = get_staff_info(target)
+            from services.staff_manager.bundles import load_promotion_inputs
+            facts = load_promotion_inputs(
+                interaction.guild.id, target.id, t_info)
             ok_req, missing = get_promotion_requirements(
                 role_key,
                 branch=branch or t_info.get('primary_branch'),
-                on_vacation=bool(t_info.get('on_vacation')),
+                **facts,
             )
             if missing and not (a_ctx.is_owner or a_ctx.is_staff_admin):
                 await interaction.followup.send(
@@ -1285,7 +1305,10 @@ class StaffManager(commands.Cog):
                 from services.staff_manager.probation import (
                     maybe_start_after_promote,
                 )
-                fresh = interaction.guild.get_member(target.id) or target
+                try:
+                    fresh = await interaction.guild.fetch_member(target.id)
+                except Exception:
+                    fresh = interaction.guild.get_member(target.id) or target
                 prow = maybe_start_after_promote(
                     guild_id=interaction.guild.id,
                     actor_member=actor,

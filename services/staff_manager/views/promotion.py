@@ -57,9 +57,11 @@ def build_promotion_view(
                 names.append(r.mention if r else str(rid))
             lines.append('Набор добавит: ' + ', '.join(names))
         if mode == 'promote' and not bypass:
+            from services.staff_manager.bundles import load_promotion_inputs
+            gid = getattr(getattr(target, 'guild', None), 'id', None) or 0
+            facts = load_promotion_inputs(int(gid or 0), target.id, info)
             ok_req, missing = get_promotion_requirements(
-                sel_role, branch=branch,
-                on_vacation=bool(info.get('on_vacation')), cfg=cfg,
+                sel_role, branch=branch, cfg=cfg, **facts,
             )
             if missing:
                 lines.append('**Не хватает:**')

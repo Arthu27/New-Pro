@@ -129,25 +129,67 @@ def format_transition(old_key: str, new_key: str, *,
     return '—'
 
 
+def tenure_days(guild_id: int, user_id: int, role_key: str) -> Optional[float]:
+    """Сколько дней человек в текущей ступени по журналу /staff.
+
+    None — назначения через /staff не было: не подставляем 0, иначе
+    повышение всегда «не хватает 14 дней».
+    """
+    key = _norm_key(role_key)
+    if not guild_id or not user_id or not key:
+        return None
+    try:
+        from services.staff_manager.store import list_actions
+        rows = list_actions(int(guild_id), int(user_id), limit=40)
+    except Exception:
+        return None
+    for row in rows:
+        if not row.get('ok'):
+            continue
+        if (row.get('action') or '') not in (
+                'assign', 'promote', 'demote', 'transfer'):
+            continue
+        if _norm_key(row.get('new_key') or '') != key:
+            continue
+        return days_since(row.get('created_at'))
+    return None
+
+
+def load_promotion_inputs(guild_id: int, user_id: int, info: dict | None) -> dict:
+    """Реальные дни в роли, варны и флаги — для условий повышения."""
+    info = info or {}
+    days = tenure_days(guild_id, user_id, info.get('primary_key') or '')
+    warns = 0
+    try:
+        from services.warn_store import count_active
+        warns = int(count_active(int(guild_id), int(user_id)) or 0)
+    except Exception:
+        warns = 0
+    return {
+        'days_in_role': days,
+        'active_warns': warns,
+        'on_probation': bool(info.get('on_probation')),
+        'on_vacation': bool(info.get('on_vacation')),
+    }
+
+
 def get_promotion_requirements(
     role_key: str,
     *,
     branch: str | None = None,
-    days_in_role: float = 0,
+    days_in_role: float | None = None,
     active_warns: int = 0,
     on_probation: bool = False,
     on_vacation: bool = False,
     cfg: dict | None = None,
 ) -> Tuple[bool, List[str]]:
-    """Проверка условий бандла. Возвращает (ok, список недостач на русском)."""
+    """Проверка условий бандла. Возвращает (ok, список недостач на русском).
+
+    Срок в роли не блокирует повышение: поднимать можно сразу.
+    """
     bundle = get_role_bundle(role_key, branch, cfg)
     req = bundle.get('requires') or {}
     missing: List[str] = []
-
-    min_days = int(req.get('min_days_in_role') or 0)
-    if min_days > 0 and days_in_role < min_days:
-        left = max(0, int(round(min_days - days_in_role)))
-        missing.append(f'Мало времени в роли: осталось {left} дн.')
 
     max_warns = req.get('max_active_warns')
     if max_warns is not None and int(active_warns) > int(max_warns):
