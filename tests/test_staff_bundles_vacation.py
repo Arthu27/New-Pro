@@ -174,7 +174,7 @@ class BundlesVacationTests(unittest.TestCase):
         ok, missing = get_promotion_requirements(
             'curator', days_in_role=2, active_warns=1, on_vacation=True)
         self.assertFalse(ok)
-        self.assertTrue(any('времени' in m for m in missing))
+        self.assertFalse(any('времени' in m for m in missing))
         self.assertTrue(any('варн' in m.lower() for m in missing))
         self.assertTrue(any('отпуск' in m.lower() for m in missing))
 
@@ -188,6 +188,11 @@ class BundlesVacationTests(unittest.TestCase):
             'curator', days_in_role=None, on_probation=False, on_vacation=False,
             active_warns=0)
         self.assertTrue(ok2, missing2)
+        ok3, missing3 = get_promotion_requirements(
+            'curator', days_in_role=0, active_warns=0, on_probation=False,
+            on_vacation=False)
+        self.assertTrue(ok3, missing3)
+        self.assertFalse(any('времени' in m for m in missing3))
 
     def test_tenure_from_last_promote(self):
         with patch('services.staff_manager.store._db_path', return_value=self.db_path):

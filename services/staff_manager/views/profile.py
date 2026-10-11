@@ -75,10 +75,6 @@ def build_profile_view(
             lines.append(
                 f'### Следующая ступень · '
                 f'{format_role_label(nxt["key"], branch=branch)}')
-            req = get_role_bundle(nxt['key'], branch, cfg).get('requires') or {}
-            md = int(req.get('min_days_in_role') or 0)
-            if md:
-                lines.append(f'-# нужно минимум {md} дн. в текущей роли')
             if missing:
                 for m in missing:
                     lines.append(f'• {m}')

@@ -185,16 +185,11 @@ def get_promotion_requirements(
 ) -> Tuple[bool, List[str]]:
     """Проверка условий бандла. Возвращает (ok, список недостач на русском).
 
-    days_in_role=None — срок неизвестен, проверку «N дней в роли» пропускаем.
+    Срок в роли не блокирует повышение: поднимать можно сразу.
     """
     bundle = get_role_bundle(role_key, branch, cfg)
     req = bundle.get('requires') or {}
     missing: List[str] = []
-
-    min_days = int(req.get('min_days_in_role') or 0)
-    if min_days > 0 and days_in_role is not None and days_in_role < min_days:
-        left = max(0, int(round(min_days - days_in_role)))
-        missing.append(f'Мало времени в роли: осталось {left} дн.')
 
     max_warns = req.get('max_active_warns')
     if max_warns is not None and int(active_warns) > int(max_warns):
