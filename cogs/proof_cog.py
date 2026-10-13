@@ -41,7 +41,9 @@ PURPLE = 0x9B59B6
 GREEN = 0x2ECC71
 RED = 0xE74C3C
 
-# больше этого размера бот не сможет перезалить файл (лимит Discord без Nitro)
+# Старый потолок 8 МБ больше не режет демки: лимит берётся с сервера
+# (guild.filesize_limit). Ролик тяжелее лимита сжимается и вкладывается
+# в сообщение, чтобы в канале был плеер, а не протухающая ссылка.
 MAX_REUPLOAD_BYTES = 8 * 1024 * 1024
 
 # В выборе НЕТ ни «таймаута», ни «тихого мута»: дубликаты (жалоба владельца
@@ -489,37 +491,37 @@ class ProofCog(commands.Cog):
         image_inline = False
         note = None
         if attachment is not None:
-            size = attachment.size or 0
-            too_big = bool(attachment.size) and size > MAX_REUPLOAD_BYTES
+            import asyncio
+            from services.proof_upload import SOURCE_MAX, fit_for_discord, upload_budget
+            size = int(attachment.size or 0)
             kind = _media_kind(attachment.filename,
                                getattr(attachment, 'content_type', None))
             raw = None
-            # читаем файл один раз: и для перезалива в канал, и для панели
-            if not too_big or (kind and size <= LOCAL_MEDIA_MAX):
+            # читаем файл один раз: плеер в канале и копия для панели
+            if not size or size <= max(LOCAL_MEDIA_MAX, SOURCE_MAX):
                 try:
                     raw = await attachment.read()
                 except Exception:
                     raw = None
-            # локальная копия для панели — видео/фото смотрятся прямо там,
-            # даже если файл тяжёлый и в канал не перезаливается
             if raw is not None and kind and len(raw) <= LOCAL_MEDIA_MAX:
                 media = proof_save_media(guild.id, entry['id'], attachment.filename,
                                          raw, getattr(attachment, 'content_type', None))
                 if media:
                     proof_update(guild.id, entry['id'], media=media)
                     entry['media'] = media
-            if too_big:
-                # файл тяжёлый — не перезаливаем, оставляем исходную ссылку
-                note = (f'Файл большой ({(attachment.size or 0) // 1024 // 1024} МБ) — не перезалит, '
-                        f'ссылка может протухнуть: {attachment.url}')
-                if entry.get('media'):
-                    note += ' · в панели (/proofs) видео доступно'
-                entry['link'] = entry['link'] or attachment.url
-            elif raw is not None:
-                file = discord.File(io.BytesIO(raw), filename=attachment.filename)
-                image_inline = _is_image_name(attachment.filename)
+            limit = upload_budget(guild)
+            fitted, out_name, _skip = (b'', '', '')
+            if raw:
+                fitted, out_name, _skip = await asyncio.to_thread(
+                    fit_for_discord, raw, attachment.filename or 'proof.bin',
+                    limit=limit, kind=kind or '')
+            if fitted:
+                file = discord.File(io.BytesIO(fitted), filename=out_name)
+                image_inline = _is_image_name(out_name)
+                # исходная CDN-ссылка протухает — в канал кладём сам файл
+                entry['link'] = None
             else:
-                note = 'Не смог перезалить вложение — оставил ссылку.'
+                note = 'Не смог вложить файл в сообщение.'
                 entry['link'] = entry['link'] or getattr(attachment, 'url', None)
         if note:
             proof_update(guild.id, entry['id'], link=entry.get('link'), note=note)
